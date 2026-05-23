@@ -20,7 +20,7 @@ go run ./cmd/council4 -seed 7 -deck-size 8 -verbose
 
 - `-seed` controls deterministic shuffling.
 - `-deck-size` controls how many Forests each test deck contains.
-- `-verbose` prints the per-turn action log.
+- `-verbose` prints the per-turn draw and action log.
 
 ## Current behavior
 
@@ -31,5 +31,6 @@ The minimal loop supports:
 - Playing one land per turn.
 - Passing priority around the table.
 - Player elimination when a player tries to draw from an empty library.
+- Loss reasons in the summary and verbose log.
 
 The command does not yet parse decklists, load real card data, cast spells, produce reports, or simulate combat.

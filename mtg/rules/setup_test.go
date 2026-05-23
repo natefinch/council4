@@ -12,8 +12,12 @@ func TestDrawCardMovesTopLibraryCardToHand(t *testing.T) {
 	engine := NewEngine(nil)
 	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top Card"})
 
-	if !engine.drawCard(g, game.Player1) {
-		t.Fatal("drawCard() = false, want true")
+	got, ok := engine.drawCard(g, game.Player1)
+	if !ok {
+		t.Fatal("drawCard() ok = false, want true")
+	}
+	if got != cardID {
+		t.Fatalf("drawCard() card ID = %v, want %v", got, cardID)
 	}
 	if g.Players[game.Player1].Library.Contains(cardID) {
 		t.Fatal("drawn card remained in library")
@@ -30,8 +34,8 @@ func TestDrawCardEmptyLibrarySetsFailedDraw(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 
-	if engine.drawCard(g, game.Player1) {
-		t.Fatal("drawCard() = true, want false")
+	if _, ok := engine.drawCard(g, game.Player1); ok {
+		t.Fatal("drawCard() ok = true, want false")
 	}
 	if !g.FailedDraws[game.Player1] {
 		t.Fatal("failed draw flag was not set")
@@ -66,13 +70,26 @@ func TestBeginningPhaseDrawsOnFirstTurnInCommander(t *testing.T) {
 	engine := NewEngine(nil)
 	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
 
-	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{})
+	log := TurnLog{}
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &log)
 
 	if !g.Players[game.Player1].Hand.Contains(cardID) {
 		t.Fatal("active player did not draw on first turn")
 	}
 	if g.Turn.Step != game.StepDraw {
 		t.Fatalf("step = %v, want %v", g.Turn.Step, game.StepDraw)
+	}
+	if len(log.Draws) != 1 {
+		t.Fatalf("draw logs = %d, want 1", len(log.Draws))
+	}
+	if log.Draws[0].Player != game.Player1 {
+		t.Fatalf("draw log player = %v, want %v", log.Draws[0].Player, game.Player1)
+	}
+	if log.Draws[0].CardID != cardID {
+		t.Fatalf("draw log card ID = %v, want %v", log.Draws[0].CardID, cardID)
+	}
+	if log.Draws[0].Failed {
+		t.Fatal("draw log failed = true, want false")
 	}
 }
 

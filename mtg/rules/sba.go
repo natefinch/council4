@@ -4,21 +4,25 @@ import "github.com/natefinch/council4/mtg/game"
 
 const maxStateBasedActionPasses = 1000
 
-func (e *Engine) applyStateBasedActions(g *game.Game) {
+func (e *Engine) applyStateBasedActions(g *game.Game) []LossLog {
+	var losses []LossLog
 	for i := 0; i < maxStateBasedActionPasses; i++ {
-		if !e.checkStateBasedActions(g) {
-			return
+		changed, passLosses := e.checkStateBasedActions(g)
+		losses = append(losses, passLosses...)
+		if !changed {
+			return losses
 		}
 	}
 	panic("state-based actions did not converge")
 }
 
-func (e *Engine) checkStateBasedActions(g *game.Game) bool {
+func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 	if g == nil {
-		return false
+		return false, nil
 	}
 
 	changed := false
+	var losses []LossLog
 	for _, player := range g.Players {
 		if player == nil {
 			continue
@@ -31,13 +35,18 @@ func (e *Engine) checkStateBasedActions(g *game.Game) bool {
 			player.HasLethalPoison() ||
 			player.HasLethalCommanderDamage() ||
 			g.FailedDraws[player.ID] {
+			reason := lossReason(g, player)
 			if e.eliminatePlayer(g, player.ID) {
 				changed = true
+				losses = append(losses, LossLog{
+					Player: player.ID,
+					Reason: reason,
+				})
 			}
 			delete(g.FailedDraws, player.ID)
 		}
 	}
-	return changed
+	return changed, losses
 }
 
 func (e *Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
@@ -57,4 +66,20 @@ func (e *Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 	player.Eliminated = true
 	g.TurnOrder.Eliminate(playerID)
 	return true
+}
+
+func lossReason(g *game.Game, player *game.Player) LossReason {
+	if g.FailedDraws[player.ID] {
+		return LossReasonEmptyLibraryDraw
+	}
+	if player.Life <= 0 {
+		return LossReasonZeroLife
+	}
+	if player.HasLethalPoison() {
+		return LossReasonPoisonCounters
+	}
+	if player.HasLethalCommanderDamage() {
+		return LossReasonCommanderDamage
+	}
+	return LossReasonStateBasedEliminate
 }

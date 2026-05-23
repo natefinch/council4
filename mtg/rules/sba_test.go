@@ -9,29 +9,34 @@ import (
 
 func TestCheckStateBasedActionsEliminatesPlayers(t *testing.T) {
 	tests := []struct {
-		name  string
-		setup func(*game.Player, *game.Game)
+		name       string
+		setup      func(*game.Player, *game.Game)
+		wantReason LossReason
 	}{
 		{
-			name: "zero life",
+			name:       "zero life",
+			wantReason: LossReasonZeroLife,
 			setup: func(p *game.Player, g *game.Game) {
 				p.Life = 0
 			},
 		},
 		{
-			name: "lethal poison",
+			name:       "lethal poison",
+			wantReason: LossReasonPoisonCounters,
 			setup: func(p *game.Player, g *game.Game) {
 				p.PoisonCounters = 10
 			},
 		},
 		{
-			name: "lethal commander damage",
+			name:       "lethal commander damage",
+			wantReason: LossReasonCommanderDamage,
 			setup: func(p *game.Player, g *game.Game) {
 				p.CommanderDamage[id.ID(99)] = 21
 			},
 		},
 		{
-			name: "failed draw",
+			name:       "failed draw",
+			wantReason: LossReasonEmptyLibraryDraw,
 			setup: func(p *game.Player, g *game.Game) {
 				g.FailedDraws[p.ID] = true
 			},
@@ -45,8 +50,18 @@ func TestCheckStateBasedActionsEliminatesPlayers(t *testing.T) {
 			player := g.Players[game.Player1]
 			tt.setup(player, g)
 
-			if !engine.checkStateBasedActions(g) {
+			changed, losses := engine.checkStateBasedActions(g)
+			if !changed {
 				t.Fatal("checkStateBasedActions() = false, want true")
+			}
+			if len(losses) != 1 {
+				t.Fatalf("losses = %d, want 1", len(losses))
+			}
+			if losses[0].Player != player.ID {
+				t.Fatalf("loss player = %v, want %v", losses[0].Player, player.ID)
+			}
+			if losses[0].Reason != tt.wantReason {
+				t.Fatalf("loss reason = %q, want %q", losses[0].Reason, tt.wantReason)
 			}
 			if !player.Eliminated {
 				t.Fatal("player was not marked eliminated")
@@ -68,8 +83,12 @@ func TestCheckStateBasedActionsAlreadyEliminatedIsStable(t *testing.T) {
 	if !engine.eliminatePlayer(g, game.Player1) {
 		t.Fatal("first eliminatePlayer() = false, want true")
 	}
-	if engine.checkStateBasedActions(g) {
+	changed, losses := engine.checkStateBasedActions(g)
+	if changed {
 		t.Fatal("checkStateBasedActions() = true for stable eliminated player, want false")
+	}
+	if len(losses) != 0 {
+		t.Fatalf("losses = %d, want 0", len(losses))
 	}
 }
 
@@ -82,10 +101,29 @@ func TestCheckStateBasedActionsClearsFailedDrawForAlreadyEliminatedPlayer(t *tes
 	}
 	g.FailedDraws[game.Player1] = true
 
-	if engine.checkStateBasedActions(g) {
+	changed, losses := engine.checkStateBasedActions(g)
+	if changed {
 		t.Fatal("checkStateBasedActions() = true for already eliminated player, want false")
+	}
+	if len(losses) != 0 {
+		t.Fatalf("losses = %d, want 0", len(losses))
 	}
 	if g.FailedDraws[game.Player1] {
 		t.Fatal("failed draw flag was not cleared")
+	}
+}
+
+func TestApplyStateBasedActionsReturnsLosses(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Players[game.Player1].Life = 0
+
+	losses := engine.applyStateBasedActions(g)
+
+	if len(losses) != 1 {
+		t.Fatalf("losses = %d, want 1", len(losses))
+	}
+	if losses[0].Reason != LossReasonZeroLife {
+		t.Fatalf("loss reason = %q, want %q", losses[0].Reason, LossReasonZeroLife)
 	}
 }

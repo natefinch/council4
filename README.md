@@ -20,7 +20,7 @@ go run ./cmd/council4 -seed 1 -deck-size 8 -verbose
 
 - `-seed` controls deterministic shuffling.
 - `-deck-size` controls how many basic Forests each hardcoded test deck contains.
-- `-verbose` prints the per-turn action log.
+- `-verbose` prints the per-turn draw and action log.
 
 Example output:
 
@@ -79,6 +79,7 @@ Implemented:
 - Multiplayer priority passing.
 - Legal actions for playing lands and passing.
 - State-based player elimination for 0 life, poison, commander damage, and failed draws.
+- Loss logs with reasons for player eliminations.
 - A simple `agent.FirstLegal` agent that plays a land when possible and otherwise passes.
 
 Not implemented yet:

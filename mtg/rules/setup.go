@@ -1,6 +1,9 @@
 package rules
 
-import "github.com/natefinch/council4/mtg/game"
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
+)
 
 const openingHandSize = 7
 
@@ -18,22 +21,22 @@ func (e *Engine) drawOpeningHands(g *game.Game) {
 	}
 }
 
-func (e *Engine) drawCard(g *game.Game, playerID game.PlayerID) bool {
+func (e *Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
 	if g == nil || playerID < 0 || int(playerID) >= len(g.Players) {
-		return false
+		return 0, false
 	}
 	player := g.Players[playerID]
 	if player == nil {
-		return false
+		return 0, false
 	}
 
 	cardID, ok := player.Library.Top()
 	if !ok {
 		g.FailedDraws[playerID] = true
-		return false
+		return 0, false
 	}
 
 	player.Library.Remove(cardID)
 	player.Hand.Add(cardID)
-	return true
+	return cardID, true
 }

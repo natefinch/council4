@@ -68,6 +68,12 @@ func printSummary(g *game.Game, result *rules.GameResult, seed uint64, deckSize 
 		fmt.Println("Winner: none")
 	}
 	fmt.Printf("Battlefield permanents: %d\n", len(g.Battlefield))
+	if len(result.Losses) > 0 {
+		fmt.Println("Losses:")
+		for _, loss := range result.Losses {
+			fmt.Printf("  %s: %s\n", playerName(loss.Player), loss.Reason)
+		}
+	}
 	fmt.Println()
 	fmt.Println("Players:")
 	for _, player := range g.Players {
@@ -90,10 +96,27 @@ func printTurnLog(g *game.Game, result *rules.GameResult) {
 	fmt.Println("Turn log:")
 	for _, turn := range result.Turns {
 		fmt.Printf("Turn %d (%s)\n", turn.TurnNumber, playerName(turn.ActivePlayer))
+		for _, logged := range turn.Draws {
+			fmt.Printf("  %s: %s\n", playerName(logged.Player), formatDraw(g, logged))
+		}
+		for _, logged := range turn.Losses {
+			fmt.Printf("  %s: loses (%s)\n", playerName(logged.Player), logged.Reason)
+		}
 		for _, logged := range turn.Actions {
 			fmt.Printf("  %s: %s\n", playerName(logged.Player), formatAction(g, logged.Action))
 		}
 	}
+}
+
+func formatDraw(g *game.Game, draw rules.DrawLog) string {
+	if draw.Failed {
+		return "draw from empty library"
+	}
+	card := g.GetCardInstance(draw.CardID)
+	if card == nil || card.Def == nil {
+		return fmt.Sprintf("draw card #%d", draw.CardID)
+	}
+	return fmt.Sprintf("draw %q", card.Def.Name)
 }
 
 func formatAction(g *game.Game, act action.Action) string {

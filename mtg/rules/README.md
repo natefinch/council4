@@ -43,7 +43,7 @@ Do not pass `*game.Game` directly to agents; agents should not see hidden inform
 
 ### GameResult
 
-`GameResult` is the structured output from a completed game. It records the winner, elimination order, turn count, and per-turn logs. The `report` package will consume `[]GameResult` to produce deck analytics.
+`GameResult` is the structured output from a completed game. It records the winner, elimination order, loss reasons, turn count, and per-turn draw/loss/action logs. The `report` package will consume `[]GameResult` to produce deck analytics.
 
 ## Current implementation status
 

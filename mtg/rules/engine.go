@@ -37,7 +37,7 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 	}
 
 	e.drawOpeningHands(g)
-	e.applyStateBasedActions(g)
+	result.addLosses(e.applyStateBasedActions(g))
 	if winner := g.Winner(); winner != nil {
 		result.Winner = winner.ID
 		result.HasWinner = true
@@ -46,6 +46,7 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 
 	for !g.IsGameOver() && len(result.Turns) < maxGameTurns {
 		turnLog := e.runTurn(g, agents)
+		result.addLosses(turnLog.Losses)
 		result.Turns = append(result.Turns, turnLog)
 		result.TurnCount = len(result.Turns)
 	}

@@ -73,6 +73,14 @@ func TestRunGameOpeningHandFailedDrawCanEndGame(t *testing.T) {
 	if result.TurnCount != 0 {
 		t.Fatalf("TurnCount = %d, want 0", result.TurnCount)
 	}
+	if len(result.Losses) != 3 {
+		t.Fatalf("losses = %d, want 3", len(result.Losses))
+	}
+	for _, loss := range result.Losses {
+		if loss.Reason != LossReasonEmptyLibraryDraw {
+			t.Fatalf("loss reason = %q, want %q", loss.Reason, LossReasonEmptyLibraryDraw)
+		}
+	}
 }
 
 func TestRunGameDeterministicWithSameSeed(t *testing.T) {

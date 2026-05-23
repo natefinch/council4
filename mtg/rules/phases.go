@@ -8,7 +8,7 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) Turn
 		ActivePlayer: g.Turn.ActivePlayer,
 	}
 
-	e.runBeginningPhase(g, agents)
+	e.runBeginningPhase(g, agents, &log)
 	if g.IsGameOver() {
 		return log
 	}
@@ -33,7 +33,7 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) Turn
 	return log
 }
 
-func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
+func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseBeginning
 
 	g.Turn.Step = game.StepUntap
@@ -49,8 +49,18 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	g.Turn.Step = game.StepUpkeep
 
 	g.Turn.Step = game.StepDraw
-	e.drawCard(g, g.Turn.ActivePlayer)
-	e.applyStateBasedActions(g)
+	cardID, ok := e.drawCard(g, g.Turn.ActivePlayer)
+	if log != nil {
+		log.Draws = append(log.Draws, DrawLog{
+			Player: g.Turn.ActivePlayer,
+			CardID: cardID,
+			Failed: !ok,
+		})
+	}
+	losses := e.applyStateBasedActions(g)
+	if log != nil {
+		log.Losses = append(log.Losses, losses...)
+	}
 }
 
 func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, phase game.Phase, log *TurnLog) {
