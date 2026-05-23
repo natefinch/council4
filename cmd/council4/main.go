@@ -16,6 +16,7 @@ func main() {
 	seed := flag.Uint64("seed", 1, "random seed")
 	deckSize := flag.Int("deck-size", 8, "number of Forests in each test deck")
 	verbose := flag.Bool("verbose", false, "print per-turn action log")
+	noPass := flag.Bool("nopass", false, "omit pass actions from verbose log output")
 	flag.Parse()
 
 	if *deckSize < 0 {
@@ -35,8 +36,12 @@ func main() {
 	result := engine.RunGame(gameState, agents)
 	printSummary(gameState, result, *seed, *deckSize)
 	if *verbose {
-		printTurnLog(gameState, result)
+		printTurnLog(gameState, result, logOptions{OmitPasses: *noPass})
 	}
+}
+
+type logOptions struct {
+	OmitPasses bool
 }
 
 func landOnlyConfigs(deckSize int) [game.NumPlayers]game.PlayerConfig {
@@ -91,7 +96,7 @@ func printSummary(g *game.Game, result *rules.GameResult, seed uint64, deckSize 
 	}
 }
 
-func printTurnLog(g *game.Game, result *rules.GameResult) {
+func printTurnLog(g *game.Game, result *rules.GameResult, opts logOptions) {
 	fmt.Println()
 	fmt.Println("Turn log:")
 	for _, turn := range result.Turns {
@@ -103,6 +108,9 @@ func printTurnLog(g *game.Game, result *rules.GameResult) {
 			fmt.Printf("  %s: loses (%s)\n", playerName(logged.Player), logged.Reason)
 		}
 		for _, logged := range turn.Actions {
+			if opts.OmitPasses && logged.Action.Kind == action.ActionPass {
+				continue
+			}
 			fmt.Printf("  %s: %s\n", playerName(logged.Player), formatAction(g, logged.Action))
 		}
 	}

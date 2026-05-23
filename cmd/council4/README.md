@@ -15,12 +15,13 @@ go run ./cmd/council4
 Useful flags:
 
 ```bash
-go run ./cmd/council4 -seed 7 -deck-size 8 -verbose
+go run ./cmd/council4 -seed 7 -deck-size 8 -verbose -nopass
 ```
 
 - `-seed` controls deterministic shuffling.
 - `-deck-size` controls how many Forests each test deck contains.
 - `-verbose` prints the per-turn draw and action log.
+- `-nopass` omits pass actions from verbose log output.
 
 ## Current behavior
 
