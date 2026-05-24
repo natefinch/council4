@@ -38,5 +38,15 @@ func (e *Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
 
 	player.Library.Remove(cardID)
 	player.Hand.Add(cardID)
+	event := game.GameEvent{
+		Player:   playerID,
+		CardID:   cardID,
+		FromZone: game.ZoneLibrary,
+		ToZone:   game.ZoneHand,
+		Amount:   1,
+	}
+	emitZoneChangeEvent(g, event)
+	event.Kind = game.EventCardDrawn
+	emitEvent(g, event)
 	return cardID, true
 }

@@ -23,6 +23,7 @@ type TurnLog struct {
 	Draws          []DrawLog
 	Losses         []LossLog
 	Actions        []ActionLog
+	Choices        []game.ChoiceDecision
 	Resolves       []ResolveLog
 	CombatDamage   []CombatDamageLog
 	CreatureDamage []CreatureDamageLog

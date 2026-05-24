@@ -98,10 +98,7 @@ func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
 	}
 	cards := player.Hand.All()
 	for i := len(cards) - 1; i >= maximumHandSize; i-- {
-		cardID := cards[i]
-		if player.Hand.Remove(cardID) {
-			player.Graveyard.Add(cardID)
-		}
+		discardCardFromHand(g, playerID, cards[i])
 	}
 }
 
@@ -118,6 +115,7 @@ func (e *Engine) advanceToNextTurn(g *game.Game) {
 	g.Turn.Step = game.StepUntap
 	g.Turn.LandsPlayedThisTurn = 0
 	g.Turn.LandsAllowedThisTurn = 1
+	g.ActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityUse]bool)
 	g.Combat = nil
 }
 

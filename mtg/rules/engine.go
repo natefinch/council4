@@ -14,6 +14,8 @@ type Engine struct {
 	// rng is consumed sequentially by setup and runtime rules. Use one Engine
 	// per independently reproducible game stream.
 	rng *rand.Rand
+
+	cardImplementations map[string]CardImplementation
 }
 
 // NewEngine creates an Engine using rng for deterministic game execution.
@@ -21,7 +23,10 @@ func NewEngine(rng *rand.Rand) *Engine {
 	if rng == nil {
 		rng = rand.New(rand.NewPCG(1, 2))
 	}
-	return &Engine{rng: rng}
+	return &Engine{
+		rng:                 rng,
+		cardImplementations: map[string]CardImplementation{},
+	}
 }
 
 // NewGame creates a game using the engine's RNG for deterministic setup.

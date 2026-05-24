@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
-func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.PlayerID) *game.Permanent {
+func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType) *game.Permanent {
 	if g == nil || card == nil || card.Def == nil {
 		return nil
 	}
@@ -21,6 +21,18 @@ func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.
 	}
 	initializePermanentCounters(permanent, card.Def)
 	g.Battlefield = append(g.Battlefield, permanent)
+	event := game.GameEvent{
+		SourceID:    card.ID,
+		Controller:  controller,
+		Player:      card.Owner,
+		CardID:      card.ID,
+		PermanentID: objectID,
+		FromZone:    fromZone,
+		ToZone:      game.ZoneBattlefield,
+	}
+	emitZoneChangeEvent(g, event)
+	event.Kind = game.EventPermanentEnteredBattlefield
+	emitEvent(g, event)
 	return permanent
 }
 
@@ -54,6 +66,7 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 	if g == nil || permanent == nil {
 		return false
 	}
+
 	detachPermanent(g, permanent)
 	detachAttachmentsFromPermanent(g, permanent)
 	removed := removePermanentFromBattlefield(g, permanent.ObjectID)
@@ -66,10 +79,53 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 	}
 	if removed.Token {
 		zone.Add(removed.ObjectID)
+		emitPermanentLeaveEvents(g, removed, destination)
 		return true
 	}
+
 	zone.Add(removed.CardInstanceID)
+	emitPermanentLeaveEvents(g, removed, destination)
 	return true
+}
+
+func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	player := playerByID(g, playerID)
+	if player == nil || !player.Hand.Remove(cardID) {
+		return false
+	}
+	player.Graveyard.Add(cardID)
+	event := game.GameEvent{
+		Player:   playerID,
+		CardID:   cardID,
+		FromZone: game.ZoneHand,
+		ToZone:   game.ZoneGraveyard,
+		Amount:   1,
+	}
+	emitZoneChangeEvent(g, event)
+	event.Kind = game.EventCardDiscarded
+	emitEvent(g, event)
+	return true
+}
+
+func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destination game.ZoneType) {
+	if permanent == nil {
+		return
+	}
+	event := game.GameEvent{
+		Controller:  permanent.Controller,
+		Player:      permanent.Owner,
+		CardID:      permanent.CardInstanceID,
+		PermanentID: permanent.ObjectID,
+		TokenName:   permanentTokenName(permanent),
+		TokenDef:    permanent.TokenDef,
+		FromZone:    game.ZoneBattlefield,
+		ToZone:      destination,
+	}
+	emitZoneChangeEvent(g, event)
+	if destination == game.ZoneGraveyard {
+		event.Kind = game.EventPermanentDied
+		emitEvent(g, event)
+	}
 }
 
 func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
@@ -78,6 +134,9 @@ func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
 		return nil, false
 	}
 	if hasKeyword(g, permanent, game.Indestructible) {
+		return nil, false
+	}
+	if replaceDestroyPermanent(g, permanent) {
 		return nil, false
 	}
 	if !movePermanentToZone(g, permanent, game.ZoneGraveyard) {

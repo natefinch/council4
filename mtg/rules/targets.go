@@ -10,17 +10,21 @@ import (
 
 func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int) [][]game.Target {
 	specs := spellTargetSpecs(card, chosenModes)
-	return targetChoicesForSpecs(g, controller, specs)
+	return targetChoicesForSpecs(g, controller, card, specs)
 }
 
 func targetChoicesForAbility(g *game.Game, controller game.PlayerID, ability *game.AbilityDef) [][]game.Target {
+	return targetChoicesForAbilityFromSource(g, controller, nil, ability)
+}
+
+func targetChoicesForAbilityFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, ability *game.AbilityDef) [][]game.Target {
 	if ability == nil {
 		return nil
 	}
-	return targetChoicesForSpecs(g, controller, ability.Targets)
+	return targetChoicesForSpecs(g, controller, source, ability.Targets)
 }
 
-func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, specs []game.TargetSpec) [][]game.Target {
+func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, specs []game.TargetSpec) [][]game.Target {
 	if len(specs) == 0 {
 		return [][]game.Target{nil}
 	}
@@ -33,7 +37,7 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, specs []game.
 	if targetSpecAllowsPlayers(spec) {
 		for playerID := game.Player1; playerID < game.NumPlayers; playerID++ {
 			target := game.PlayerTarget(playerID)
-			if targetMatchesSpec(g, controller, spec, target) {
+			if targetMatchesSpec(g, controller, spec, target) && !targetProtectedFromSource(g, source, target) {
 				choices = append(choices, []game.Target{target})
 			}
 		}
@@ -44,7 +48,7 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, specs []game.
 				continue
 			}
 			target := game.PermanentTarget(permanent.ObjectID)
-			if targetMatchesSpec(g, controller, spec, target) {
+			if targetMatchesSpec(g, controller, spec, target) && !targetProtectedFromSource(g, source, target) {
 				choices = append(choices, []game.Target{target})
 			}
 		}
@@ -54,17 +58,21 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, specs []game.
 
 func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target) bool {
 	specs := spellTargetSpecs(card, chosenModes)
-	return targetsValidForSpecs(g, controller, specs, targets)
+	return targetsValidForSpecs(g, controller, card, specs, targets)
 }
 
 func targetsValidForAbility(g *game.Game, controller game.PlayerID, ability *game.AbilityDef, targets []game.Target) bool {
+	return targetsValidForAbilityFromSource(g, controller, nil, ability, targets)
+}
+
+func targetsValidForAbilityFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, ability *game.AbilityDef, targets []game.Target) bool {
 	if ability == nil {
 		return len(targets) == 0
 	}
-	return targetsValidForSpecs(g, controller, ability.Targets, targets)
+	return targetsValidForSpecs(g, controller, source, ability.Targets, targets)
 }
 
-func targetsValidForSpecs(g *game.Game, controller game.PlayerID, specs []game.TargetSpec, targets []game.Target) bool {
+func targetsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, specs []game.TargetSpec, targets []game.Target) bool {
 	if len(specs) == 0 {
 		return len(targets) == 0
 	}
@@ -72,7 +80,7 @@ func targetsValidForSpecs(g *game.Game, controller game.PlayerID, specs []game.T
 		return false
 	}
 	for i, spec := range specs {
-		if !isSingleTargetSpec(spec) || !targetMatchesSpec(g, controller, spec, targets[i]) {
+		if !isSingleTargetSpec(spec) || !targetMatchesSpec(g, controller, spec, targets[i]) || targetProtectedFromSource(g, source, targets[i]) {
 			return false
 		}
 	}
@@ -81,17 +89,21 @@ func targetsValidForSpecs(g *game.Game, controller game.PlayerID, specs []game.T
 
 func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, controller game.PlayerID, chosenModes []int, targets []game.Target) bool {
 	specs := spellTargetSpecs(card, chosenModes)
-	return hasAnyLegalTargetForSpecs(g, controller, specs, targets)
+	return hasAnyLegalTargetForSpecs(g, controller, card, specs, targets)
 }
 
 func abilityHasAnyLegalTargets(g *game.Game, ability *game.AbilityDef, controller game.PlayerID, targets []game.Target) bool {
+	return abilityHasAnyLegalTargetsFromSource(g, nil, ability, controller, targets)
+}
+
+func abilityHasAnyLegalTargetsFromSource(g *game.Game, source *game.CardDef, ability *game.AbilityDef, controller game.PlayerID, targets []game.Target) bool {
 	if ability == nil {
 		return len(targets) == 0
 	}
-	return hasAnyLegalTargetForSpecs(g, controller, ability.Targets, targets)
+	return hasAnyLegalTargetForSpecs(g, controller, source, ability.Targets, targets)
 }
 
-func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, specs []game.TargetSpec, targets []game.Target) bool {
+func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, specs []game.TargetSpec, targets []game.Target) bool {
 	if len(specs) == 0 {
 		return true
 	}
@@ -99,7 +111,7 @@ func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, specs []g
 		return false
 	}
 	for i, spec := range specs {
-		if targetMatchesSpec(g, controller, spec, targets[i]) {
+		if targetMatchesSpec(g, controller, spec, targets[i]) && !targetProtectedFromSource(g, source, targets[i]) {
 			return true
 		}
 	}
@@ -226,6 +238,14 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec gam
 		return card != nil && (card.HasType(game.TypeCreature) || card.HasType(game.TypePlaneswalker) || card.HasType(game.TypeBattle))
 	}
 	return permanentTypeMatchesSpec(g, spec, permanent)
+}
+
+func targetProtectedFromSource(g *game.Game, source *game.CardDef, target game.Target) bool {
+	if source == nil || target.Kind != game.TargetPermanent {
+		return false
+	}
+	permanent := permanentByObjectID(g, target.PermanentID)
+	return permanentProtectedFromSourceDef(g, permanent, source)
 }
 
 func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec game.TargetSpec, permanent *game.Permanent) bool {

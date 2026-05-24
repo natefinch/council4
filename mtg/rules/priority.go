@@ -15,6 +15,11 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		if g.IsGameOver() {
 			return
 		}
+		if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, log) {
+			consecutivePasses = 0
+			g.Turn.PriorityPlayer = g.Turn.ActivePlayer
+			continue
+		}
 
 		activePlayers := g.TurnOrder.ActivePlayerCount()
 		if activePlayers <= 0 {
@@ -56,7 +61,7 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 				if g.Stack.IsEmpty() {
 					return
 				}
-				e.resolveTopOfStack(g, log)
+				e.resolveTopOfStackWithChoices(g, agents, log)
 				consecutivePasses = 0
 				g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 				continue

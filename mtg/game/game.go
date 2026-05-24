@@ -77,8 +77,27 @@ type Game struct {
 	// day/night cycle has not been established.
 	DayNight *DayNightState
 
+	// Events records rules-relevant facts emitted by the rules engine as
+	// state-changing helpers mutate this game. It is distinct from GameResult
+	// logs, which are report-oriented summaries produced by rules.Engine.
+	Events []GameEvent
+
+	// TriggerEventCursor is the index of the next event the rules engine should
+	// inspect for triggered ability detection.
+	TriggerEventCursor int
+
+	// ActivatedAbilitiesThisTurn records once-per-turn activated abilities used
+	// during the current turn.
+	ActivatedAbilitiesThisTurn map[ActivatedAbilityUse]bool
+
 	// IDGen generates unique IDs for game objects.
 	IDGen id.Generator
+}
+
+// ActivatedAbilityUse identifies one activated ability on one source object.
+type ActivatedAbilityUse struct {
+	SourceID     id.ID
+	AbilityIndex int
 }
 
 // NewGame creates and initializes a new 4-player Commander game from the given
@@ -103,9 +122,10 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		panic("nil rng")
 	}
 	g := &Game{
-		CardInstances: make(map[id.ID]*CardInstance),
-		TurnOrder:     NewTurnOrder(),
-		FailedDraws:   make(map[PlayerID]bool),
+		CardInstances:              make(map[id.ID]*CardInstance),
+		TurnOrder:                  NewTurnOrder(),
+		FailedDraws:                make(map[PlayerID]bool),
+		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),
 		Turn: TurnState{
 			TurnNumber:           1,
 			ActivePlayer:         Player1,

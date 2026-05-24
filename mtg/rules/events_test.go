@@ -1,0 +1,406 @@
+package rules
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
+)
+
+func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
+
+	drawn, ok := engine.drawCard(g, game.Player1)
+
+	if !ok || drawn != cardID {
+		t.Fatalf("drawCard() = %v, %v, want %v, true", drawn, ok, cardID)
+	}
+	assertEvent(t, g.Events, game.EventCardDrawn, func(event game.GameEvent) bool {
+		return event.Player == game.Player1 &&
+			event.CardID == cardID &&
+			event.FromZone == game.ZoneLibrary &&
+			event.ToZone == game.ZoneHand &&
+			event.Amount == 1
+	})
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID == cardID &&
+			event.FromZone == game.ZoneLibrary &&
+			event.ToZone == game.ZoneHand
+	})
+	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID == cardID &&
+			event.FromZone == game.ZoneLibrary &&
+			event.ToZone == game.ZoneHand
+	}); zoneIndex > eventIndex(g.Events, game.EventCardDrawn, func(event game.GameEvent) bool {
+		return event.CardID == cardID
+	}) {
+		t.Fatalf("draw zone-change event should precede draw-specific event: %+v", g.Events)
+	}
+}
+
+func TestCastAndResolvePermanentSpellEmitsEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, greenCreature())
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction() = false, want true")
+	}
+
+	assertEvent(t, g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
+		return event.CardID == spellID &&
+			event.Controller == game.Player1 &&
+			event.FromZone == game.ZoneHand &&
+			event.ToZone == game.ZoneStack
+	})
+	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID == spellID &&
+			event.FromZone == game.ZoneHand &&
+			event.ToZone == game.ZoneStack
+	}); zoneIndex > eventIndex(g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
+		return event.CardID == spellID
+	}) {
+		t.Fatalf("cast zone-change event should precede cast-specific event: %+v", g.Events)
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	assertEvent(t, g.Events, game.EventSpellResolved, func(event game.GameEvent) bool {
+		return event.CardID == spellID && event.Controller == game.Player1
+	})
+	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID == spellID &&
+			event.FromZone == game.ZoneStack &&
+			event.ToZone == game.ZoneBattlefield
+	})
+	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.GameEvent) bool {
+		return event.CardID == spellID &&
+			event.Controller == game.Player1 &&
+			event.FromZone == game.ZoneStack &&
+			event.ToZone == game.ZoneBattlefield &&
+			event.PermanentID != 0
+	})
+	if zoneIndex == -1 || etbIndex == -1 || zoneIndex > etbIndex {
+		t.Fatalf("zone change index = %d, ETB index = %d, want zone change before ETB in %+v", zoneIndex, etbIndex, g.Events)
+	}
+}
+
+func TestPlayLandEmitsHandToBattlefieldZoneChange(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	landID := addCardToHand(g, game.Player1, basicLand())
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.PlayLand(landID)) {
+		t.Fatal("applyAction(PlayLand) = false, want true")
+	}
+
+	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID == landID &&
+			event.FromZone == game.ZoneHand &&
+			event.ToZone == game.ZoneBattlefield
+	})
+	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.GameEvent) bool {
+		return event.CardID == landID &&
+			event.FromZone == game.ZoneHand &&
+			event.ToZone == game.ZoneBattlefield
+	})
+	if zoneIndex == -1 || etbIndex == -1 || zoneIndex > etbIndex {
+		t.Fatalf("land play zone change index = %d, ETB index = %d, want hand-to-battlefield zone change before ETB in %+v", zoneIndex, etbIndex, g.Events)
+	}
+	assertNoEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID == landID &&
+			event.FromZone == game.ZoneStack
+	})
+}
+
+func TestDestroyPermanentEmitsZoneChangeAndDeathEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatCreaturePermanent(g, game.Player2)
+
+	_, ok := destroyPermanent(g, permanent.ObjectID)
+
+	if !ok {
+		t.Fatal("destroyPermanent() ok = false, want true")
+	}
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.PermanentID == permanent.ObjectID &&
+			event.CardID == permanent.CardInstanceID &&
+			event.FromZone == game.ZoneBattlefield &&
+			event.ToZone == game.ZoneGraveyard
+	})
+	assertEvent(t, g.Events, game.EventPermanentDied, func(event game.GameEvent) bool {
+		return event.PermanentID == permanent.ObjectID &&
+			event.CardID == permanent.CardInstanceID &&
+			event.Controller == game.Player2
+	})
+}
+
+func TestDamageEffectEmitsDamageEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectDamage,
+		Amount:      3,
+		TargetIndex: 0,
+	}, []game.Target{game.PlayerTarget(game.Player2)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+		return event.Player == game.Player2 &&
+			event.Controller == game.Player1 &&
+			event.Amount == 3 &&
+			event.DamageRecipient == game.DamageRecipientPlayer &&
+			!event.CombatDamage
+	})
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID == sourceID &&
+			event.FromZone == game.ZoneStack &&
+			event.ToZone == game.ZoneGraveyard
+	})
+	assertEvent(t, g.Events, game.EventSpellResolved, func(event game.GameEvent) bool {
+		return event.CardID == sourceID
+	})
+}
+
+func TestCounteredSpellEmitsStackToGraveyardZoneChangeButNoResolveEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanent(g, game.Player2)
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectDamage,
+		Amount:      3,
+		TargetIndex: 0,
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	card := g.GetCardInstance(sourceID)
+	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID == sourceID &&
+			event.FromZone == game.ZoneStack &&
+			event.ToZone == game.ZoneGraveyard
+	})
+	assertNoEvent(t, g.Events, game.EventSpellResolved, func(event game.GameEvent) bool {
+		return event.CardID == sourceID
+	})
+}
+
+func TestMassDamageEffectEmitsDamageEventForEachPermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature1 := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature2 := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	addCombatPermanent(g, game.Player3, &game.CardDef{
+		Name:  "Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:     game.EffectDamage,
+		Amount:   2,
+		Selector: game.EffectSelectorAllCreatures,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+		return event.PermanentID == creature1.ObjectID &&
+			event.Amount == 2 &&
+			event.DamageRecipient == game.DamageRecipientPermanent
+	})
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+		return event.PermanentID == creature2.ObjectID &&
+			event.Amount == 2 &&
+			event.DamageRecipient == game.DamageRecipientPermanent
+	})
+}
+
+func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Pinger",
+		Types: []game.CardType{game.TypeCreature},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.ActivatedAbility,
+				Effects: []game.Effect{
+					{Type: game.EffectDamage, Amount: 1, TargetIndex: 0},
+				},
+				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "target player"}},
+			},
+		},
+	})
+	g.Stack.Push(&game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		AbilityIndex: 0,
+		Controller:   game.Player1,
+		Targets:      []game.Target{game.PlayerTarget(game.Player2)},
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+		return event.SourceID == source.CardInstanceID &&
+			event.SourceObjectID == source.ObjectID &&
+			event.Player == game.Player2 &&
+			event.Amount == 1
+	})
+}
+
+func TestCombatDamageToPermanentEmitsCombatDamageEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
+		},
+	}
+
+	engine.resolveCombatDamage(g, &TurnLog{})
+
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+		return event.SourceObjectID == attacker.ObjectID &&
+			event.PermanentID == blocker.ObjectID &&
+			event.Amount == 3 &&
+			event.DamageRecipient == game.DamageRecipientPermanent &&
+			event.CombatDamage
+	})
+}
+
+func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	token := &game.CardDef{
+		Name:  "Soldier Token",
+		Types: []game.CardType{game.TypeCreature},
+	}
+
+	permanent := createTokenPermanent(g, game.Player1, token)
+
+	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.PermanentID == permanent.ObjectID &&
+			event.TokenName == token.Name &&
+			event.FromZone == game.ZoneNone &&
+			event.ToZone == game.ZoneBattlefield
+	})
+	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.GameEvent) bool {
+		return event.PermanentID == permanent.ObjectID &&
+			event.TokenName == token.Name &&
+			event.FromZone == game.ZoneNone &&
+			event.ToZone == game.ZoneBattlefield
+	})
+	if zoneIndex == -1 || etbIndex == -1 || zoneIndex > etbIndex {
+		t.Fatalf("zone change index = %d, ETB index = %d, want zone change before ETB in %+v", zoneIndex, etbIndex, g.Events)
+	}
+}
+
+func TestDiscardToMaximumHandSizeEmitsDiscardAndZoneChangeEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for i := 0; i < maximumHandSize+1; i++ {
+		addCardToHand(g, game.Player1, &game.CardDef{Name: "Card"})
+	}
+
+	discardToMaximumHandSize(g, game.Player1)
+
+	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
+		return event.Player == game.Player1 &&
+			event.CardID != 0 &&
+			event.FromZone == game.ZoneHand &&
+			event.ToZone == game.ZoneGraveyard &&
+			event.Amount == 1
+	})
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.CardID != 0 &&
+			event.FromZone == game.ZoneHand &&
+			event.ToZone == game.ZoneGraveyard
+	})
+	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.FromZone == game.ZoneHand &&
+			event.ToZone == game.ZoneGraveyard
+	}); zoneIndex > eventIndex(g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
+		return event.FromZone == game.ZoneHand &&
+			event.ToZone == game.ZoneGraveyard
+	}) {
+		t.Fatalf("discard zone-change event should precede discard-specific event: %+v", g.Events)
+	}
+}
+
+func TestDeclareAttackersAndBlockersEmitEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCombatCreaturePermanent(g, game.Player1)
+	blocker := addCombatCreaturePermanent(g, game.Player2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+
+	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+	}).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() = false, want true")
+	}
+	g.Turn.Step = game.StepDeclareBlockers
+	if !engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
+	}).DeclareBlockers) {
+		t.Fatal("applyDeclareBlockers() = false, want true")
+	}
+
+	assertEvent(t, g.Events, game.EventAttackerDeclared, func(event game.GameEvent) bool {
+		return event.PermanentID == attacker.ObjectID &&
+			event.Controller == game.Player1 &&
+			event.AttackTarget.Player == game.Player2
+	})
+	assertEvent(t, g.Events, game.EventBlockerDeclared, func(event game.GameEvent) bool {
+		return event.PermanentID == blocker.ObjectID &&
+			event.Controller == game.Player2 &&
+			event.BlockedAttackerID == attacker.ObjectID
+	})
+}
+
+func assertEvent(t *testing.T, events []game.GameEvent, kind game.EventKind, matches func(game.GameEvent) bool) {
+	t.Helper()
+	for _, event := range events {
+		if event.Kind == kind && matches(event) {
+			return
+		}
+	}
+	t.Fatalf("missing event kind %v in events: %+v", kind, events)
+}
+
+func assertNoEvent(t *testing.T, events []game.GameEvent, kind game.EventKind, matches func(game.GameEvent) bool) {
+	t.Helper()
+	for _, event := range events {
+		if event.Kind == kind && matches(event) {
+			t.Fatalf("unexpected event kind %v in events: %+v", kind, events)
+		}
+	}
+}
+
+func eventIndex(events []game.GameEvent, kind game.EventKind, matches func(game.GameEvent) bool) int {
+	for i, event := range events {
+		if event.Kind == kind && matches(event) {
+			return i
+		}
+	}
+	return -1
+}

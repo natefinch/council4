@@ -21,7 +21,9 @@ The engine receives a `*rand.Rand` so simulations and tests can be deterministic
 
 Use `Engine.NewGame` when you want the engine's RNG to control both initial library shuffles and later in-game randomness.
 
-`RunGame` currently supports opening hands, turn progression, drawing, passing priority, playing lands, mana abilities, spell casting and resolution, common permanent interactions, state-based actions, combat, and game termination.
+Use `Engine.RegisterCardImplementation` to attach rules-side hand-written implementations for card definitions whose `CardDef.ImplementationID` is set. A registered implementation owns spell-effect resolution for that card and should mutate state only through `CardContext` helpers so draw logs, events, prevention/replacement hooks, and zone changes stay coherent with declarative effect primitives. Duplicate, empty, nil, or missing implementation registrations panic because those are card implementation bugs rather than legal in-game outcomes.
+
+`RunGame` currently supports opening hands, turn progression, drawing, passing priority, playing lands, mana abilities, spell casting and resolution, common permanent interactions, state-based actions, combat, game termination, and typed game-event emission at key mutation boundaries.
 
 ### PlayerAgent
 
@@ -35,6 +37,8 @@ type PlayerAgent interface {
 
 The interface lives here because `rules.Engine` consumes it. Concrete agents live in `mtg/agent` later.
 
+Agents may also implement `ChoiceAgent` to answer bounded non-action choices such as triggered-ability target selection, ordering simultaneous triggers, or optional "you may" decisions. If an agent does not implement it, the engine records and uses deterministic fallback choices.
+
 ### PlayerObservation
 
 `PlayerObservation` is the fog-of-war-safe view passed to an agent. It starts minimal and should grow only as agents need more information.
@@ -43,7 +47,7 @@ Do not pass `*game.Game` directly to agents; agents should not see hidden inform
 
 ### GameResult
 
-`GameResult` is the structured output from a completed game. It records the winner, elimination order, loss reasons, turn count, and per-turn draw/loss/action/resolve/combat-damage/creature-damage/permanent-death logs. The `report` package will consume `[]GameResult` to produce deck analytics.
+`GameResult` is the structured output from a completed game. It records the winner, elimination order, loss reasons, turn count, and per-turn draw/loss/action/choice/resolve/combat-damage/creature-damage/permanent-death logs. The `report` package will consume `[]GameResult` to produce deck analytics.
 
 ## Current implementation status
 
@@ -52,17 +56,21 @@ Implemented now:
 - `Engine` skeleton and deterministic RNG configuration.
 - `Engine.NewGame` for deterministic game setup using the engine RNG.
 - `PlayerAgent`, `PlayerObservation`, and result/log data types.
+- `ChoiceAgent` support for non-action decisions with deterministic fallback and per-turn choice logging.
 - Opening hand setup and card drawing.
 - Phase helpers for beginning, main, combat, ending, cleanup, and advancing to the next turn.
 - Extra turn handling in LIFO order, skipping eliminated players.
 - Priority loop with multiplayer pass-around-table behavior and stack-aware all-pass handling.
 - State-based actions for player elimination from 0 life, lethal poison, lethal commander damage, and failed draws.
 - Permanent state-based actions for 0 toughness, lethal damage, deathtouch damage, 0 planeswalker loyalty, 0 battle defense, illegal Auras/attachments, token cleanup, legendary-rule duplicates, and +1/+1/-1/-1 counter cancellation.
-- Legal action generation for passing, playing lands, casting supported spells with player or permanent targets, activating simple mana/equip abilities, and compact attacker declarations.
-- Action application for passing, playing lands, casting supported spells, activating simple mana/equip abilities, and declaring attackers.
+- Legal action generation for passing, playing lands, casting supported spells with player or permanent targets, activating simple mana/equip/general abilities, Cycling from hand, and compact attacker declarations.
+- Action application for passing, playing lands, casting supported spells, activating simple mana/equip/general abilities, Cycling from hand, and declaring attackers.
 - Mana cost payment helpers that use pool mana first, then auto-tap untapped basic lands and simple tap mana abilities from mana rocks or non-summoning-sick mana dorks.
-- Stack resolution for creature spells entering the battlefield, instant/sorcery spells moving to graveyard, modal spell effects, and equip activated abilities.
+- Stack resolution for creature spells entering the battlefield, instant/sorcery spells moving to graveyard, modal spell effects, triggered abilities, equip activated abilities, Cycling abilities, and general non-mana activated abilities.
 - Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, exile, bounce, sacrifice, tap/untap, mass selector effects, token creation, and simple until-end-of-turn P/T modifiers.
+- Hand-written spell implementation escape hatch through `CardDef.ImplementationID`, `Engine.RegisterCardImplementation`, and `CardContext` mutation helpers.
+- Typed `game.GameEvent` emission for spell casts/resolutions, ETB, death, damage, draw, discard, zone changes, and attack/block declarations.
+- Triggered ability detection from `game.TriggerPattern`, choice-mediated target selection, APNAP stack placement with choice-mediated same-controller ordering, optional-trigger resolution choices, and resolution through `StackTriggeredAbility`.
 - Player- and permanent-targeted spell action generation using `TargetSpec` and runtime `game.Target` values.
 - Resolution-time target re-checking with counter-by-rules behavior when all targets become illegal.
 - Colorless and X-cost payment, with legal X choices capped for action generation.
@@ -70,6 +78,7 @@ Implemented now:
 - Choose-one modal spell support using `Mode`, `ChosenModes`, and mode-specific target validation/resolution.
 - Flash timing for non-instant cards with the Flash keyword.
 - Combat step structure, summoning-sickness clearing, compact attacks and multi-blocks, goad attack requirements, Flying/Reach/Menace block legality, planeswalker and battle attack targets, first strike/double strike damage passes, Trample/Deathtouch combat damage assignment, Lifelink and commander combat damage, Indestructible survival from destroy/lethal damage, combat damage to players and permanents, and lethal permanent cleanup.
+- Effective power/toughness calculation from base numeric P/T, +1/+1 and -1/-1 counters, simple until-end-of-turn P/T modifiers, and initial static `EffectModifyPT` continuous effects from battlefield permanents.
 - Battlefield zone-change helpers for moving card-backed permanents and tokens to destination zones, detaching attachments, and removing tokens from non-battlefield zones as an SBA.
 - Aura and Equipment skeleton support with attach/unattach helpers, attach-on-resolution for targeted permanent spells, basic creature-only attachment legality, and illegal attachment/aura SBAs.
 - Cleanup-step maximum hand-size discard to seven cards, using deterministic discard order until a choice framework exists.
@@ -78,16 +87,24 @@ Not implemented yet:
 
 - Hybrid, phyrexian, and snow mana payment; alternative costs; cost reductions/increases; richer additional-cost choices; and attack taxes.
 - Full attachment legality beyond basic creature-only Aura/Equipment support.
-- Mulligans, choice-based discard/sacrifice decisions, replacement/prevention effects, regeneration, and dynamic continuous effects.
-- Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, and other non-combat keyword actions beyond Flash and basic Equip.
+- Mulligans, choice-based discard/sacrifice decisions, full replacement-effect ordering, regeneration, full continuous-effect layers, and dynamic star P/T.
+- Kicker, Flashback, Madness, Escape, Foretell, Morph/Disguise, and other non-combat keyword actions beyond Flash, basic Equip, and Cycling.
+
+## Game events
+
+Rules helpers append `game.GameEvent` values to `game.Game.Events` as mutations happen. Events are the rules-facing stream for triggered abilities, replacement/prevention effects, analytics, and derived logging. They intentionally differ from `TurnLog` and `GameResult`: logs summarize a completed turn or game for reports, while events describe exact facts at the state-change boundary.
+
+Event data types live in `mtg/game` because card definitions and trigger patterns need to reference the same vocabulary. Emission and later consumers live here in `mtg/rules`.
+
+After state-based actions are checked in the priority loop, the engine consumes unprocessed events from `Game.TriggerEventCursor`, detects matching triggered abilities on battlefield permanents, chooses legal targets through the choice protocol when an agent can answer and deterministic fallback otherwise, and puts those abilities on the stack in APNAP order. When one player controls multiple simultaneous triggers, that player can choose their relative order; fallback preserves detection order. Optional triggered abilities still go on the stack and ask the controller whether to apply their effects as they resolve.
 
 ## Legal actions
 
 The current engine generates these actions:
 
 - `action.PlayLand(cardID)` for lands in the active player's hand during a main phase when the stack is empty and the land drop is available.
-- `action.CastSpell(cardID, targets, xValue, modes)` for supported creature, instant, and sorcery spells. Current cast support covers colored, colorless, generic, and X costs; simple player/permanent targets; choose-one modal spells; Flash timing; and simple sacrifice-as-cost.
-- `action.ActivateAbility(sourceID, abilityIndex, targets, xValue)` for simple mana abilities and Equip abilities. Mana abilities resolve immediately without using the stack; Equip abilities use the stack and attach on resolution if their target is still legal.
+- `action.CastSpell(cardID, targets, xValue, modes)` for supported creature, instant, and sorcery spells. Current cast support covers colored, colorless, generic, and X costs; simple player/permanent targets; choose-one modal spells; Flash timing; simple sacrifice-as-cost; and color-based Protection targeting restrictions.
+- `action.ActivateAbility(sourceID, abilityIndex, targets, xValue)` for simple mana abilities, Equip abilities, Cycling abilities, and general non-mana activated abilities. Mana abilities resolve immediately without using the stack; Equip, Cycling, and general non-mana abilities use the stack and re-check targets, including Protection restrictions, on resolution.
 - `action.DeclareAttackers(attackers)` during the declare attackers turn-based action. Current attack generation is intentionally compact: all eligible attackers attack one alive opponent, or no attackers; goad filters out illegal no-attack and goading-player choices when a goaded creature can attack.
 - `action.Pass()` for every player with priority.
 
@@ -103,6 +120,10 @@ The mana-payment layer supports colored, true colorless, generic, and X costs. `
 
 Simple mana abilities are activated abilities marked `IsManaAbility` with no targets, no timing restriction, no loyalty cost, and only add-mana effects. They may be exposed as legal actions for floating mana, or auto-used during cost payment. Creature mana abilities with tap costs respect summoning sickness.
 
+General activated abilities support mana costs, X costs, tap costs, deterministic simple sacrifice costs, timing restrictions (`NoTimingRestriction`, sorcery-only, combat, upkeep, and once-per-turn variants), target generation from `TargetSpec`, and stack resolution through the same effect primitives used by spells and triggers. If a source leaves the battlefield while paying a sacrifice cost, its card or token definition is preserved on the stack so the ability can still resolve.
+
+Cycling is the initial keyword-action carry-forward slice. Cards in hand with an activated ability carrying the `Cycling` keyword, a mana cost, and `AdditionalCost: "Discard this card"` can be activated at instant speed. The engine pays the mana cost, discards the source card with normal discard/zone-change events, puts a `StackActivatedAbility` on the stack with `SourceCardID` preserved, and resolves its effects, usually drawing a card.
+
 Spell cost payment also supports deterministic simple sacrifice-as-cost strings such as `Sacrifice a creature`. The sacrificed permanent is chosen from battlefield order and is excluded from the mana payment plan, so it cannot be used as both a mana source and the sacrificed object.
 
 Mana pools empty at phase and step boundaries before later priority windows can use stale mana.
@@ -115,11 +136,29 @@ Combat follows the real step sequence: beginning of combat, declare attackers, d
 
 The current combat implementation supports compact declare-attackers and declare-blockers actions. Attackers are generated as all eligible attackers attacking one alive opponent, or no attacks. Goaded eligible attackers must attack and prefer non-goading players when such a target is available. Blockers can gang-block a single attacker, and blocker order is recorded for deterministic damage assignment. Flying attackers can be blocked only by creatures with Flying or Reach, and Menace attackers require at least two blockers.
 
-Unblocked attackers deal effective numeric power as combat damage to their attack target: the defending player, a planeswalker, or a battle. Blocked attackers assign lethal damage through blocker order, with non-trample excess assigned to the last blocker. Trample assigns only lethal damage to blockers and sends the remainder to the attack target; Deathtouch makes 1 damage lethal for assignment, and Deathtouch plus Trample combines accordingly. First Strike and Double Strike use a first-strike combat damage step only when at least one attacker or blocker has First Strike or Double Strike. Lifelink gains life as combat damage is dealt, and commander combat damage is tracked for actual commander card instances.
+Unblocked attackers deal effective numeric power as combat damage to their attack target: the defending player, a planeswalker, or a battle. Blocked attackers assign lethal damage through blocker order, with non-trample excess assigned to the last blocker. Trample assigns only lethal damage to blockers and sends the remainder to the attack target; Deathtouch makes 1 damage lethal for assignment, and Deathtouch plus Trample combines accordingly. First Strike and Double Strike use a first-strike combat damage step only when at least one attacker or blocker has First Strike or Double Strike. Lifelink gains life as combat damage is dealt, commander combat damage is tracked for actual commander card instances, and prevented damage does not grant lifelink, mark deathtouch damage, or count as commander damage.
 
-State-based actions destroy creatures with lethal marked damage or 0 effective toughness. Indestructible prevents destroy effects and lethal/deathtouch-damage destruction, but not 0-toughness death; marked damage remains until cleanup. Effective power and toughness currently include base numeric P/T plus +1/+1 and -1/-1 counters and simple until-end-of-turn P/T modifiers. Card-backed permanents move to their owner's graveyard; tokens move through the destination zone and then cease to exist as an SBA.
+State-based actions destroy creatures with lethal marked damage or 0 effective toughness. Indestructible prevents destroy effects and lethal/deathtouch-damage destruction, but not 0-toughness death; marked damage remains until cleanup. Shield counters prevent damage and replace destruction by removing one shield counter before the permanent moves zones. Effective power and toughness currently include base numeric P/T, +1/+1 and -1/-1 counters, simple until-end-of-turn P/T modifiers, and initial static P/T continuous effects from battlefield permanents. Card-backed permanents move to their owner's graveyard; tokens move through the destination zone and then cease to exist as an SBA.
 
-This slice intentionally omits attack taxes, regeneration, protection, damage prevention/replacement, dynamic star P/T, agent-selected damage assignment, and combat tricks beyond the existing priority windows.
+This slice intentionally omits attack taxes, regeneration, dynamic star P/T, agent-selected damage assignment, full replacement-effect ordering, and combat tricks beyond the existing priority windows.
+
+## Static and continuous effects
+
+The continuous-effect skeleton derives effective permanent values on demand rather than mutating `Permanent.TemporaryPowerModifier` or `Permanent.TemporaryToughnessModifier`. Battlefield static abilities with `EffectModifyPT` contribute to matching permanents through source-aware selectors such as `EffectSelectorCreaturesYouControl` and `EffectSelectorOtherCreaturesYouControl`; if the source leaves the battlefield, the next effective-value calculation naturally stops applying the effect.
+
+This is not a full layer system yet. Characteristic-defining abilities, dynamic star P/T, dependency ordering, copy effects, type-changing effects, keyword-granting continuous effects, and turn-duration mass P/T effects remain future work.
+
+## Replacement and prevention
+
+Damage helpers apply prevention before mutating life totals, counters, marked damage, combat logs, or damage events. Shield counters prevent the next damage event to that permanent and emit `EventDamagePrevented` instead of `EventDamageDealt`. Color-based Protection, represented by `AbilityDef.ProtectionFromColors`, prevents damage from matching colored sources and makes those permanents illegal targets for matching spells and abilities both when chosen and when resolved.
+
+Destroy effects use a pre-zone-change replacement hook. If a permanent with a shield counter would be destroyed, the engine removes one shield counter, leaves the permanent on the battlefield, emits `EventDestroyReplaced`, and emits no zone-change or death event. Destruction replacement only applies to destroy events; 0 toughness, 0 loyalty, 0 defense, illegal Auras, sacrifice, exile, and bounce still move through their normal zone-change paths.
+
+## Hand-written card implementations
+
+Most cards should be represented declaratively with `game.AbilityDef` and `game.Effect` primitives. Cards that need behavior outside the current primitive set may set `CardDef.ImplementationID` and register a matching `CardImplementation` on the `Engine`.
+
+This hook currently covers instant and sorcery spell-effect resolution after normal target re-checking. Permanents, triggered abilities, and activated abilities still resolve through the existing declarative paths. Hand-written implementations receive a `CardContext` instead of `*game.Game`; context methods wrap the same rules helpers used by declarative effects, so custom code participates in draw logging, events, damage prevention, and other mutation-boundary behavior.
 
 ## State-based actions
 

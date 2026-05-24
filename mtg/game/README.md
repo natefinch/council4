@@ -20,11 +20,13 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 ├── game.go                    # Game struct, NewGame() constructor, top-level helpers
 ├── card.go                    # CardDef (static card template) & CardInstance (in-game card)
 ├── ability.go                 # AbilityDef, Keywords, TriggerConditions, Effects, Modes
+├── choice.go                  # ChoiceRequest/ChoiceDecision for non-action decisions
 ├── permanent.go               # Permanent — battlefield state for a card or token
 ├── player.go                  # Player — life, zones, commander tracking, designations
 ├── zone.go                    # Zone container & ZoneType enum (library, hand, graveyard…)
 ├── stack.go                   # Stack (LIFO) & StackObject (spells/abilities resolving)
 ├── target.go                  # Target — runtime target choices for spells/abilities
+├── event.go                   # GameEvent — typed rules facts emitted by mtg/rules
 ├── turn.go                    # Phase, Step, TurnState, TurnOrder (4-player rotation)
 ├── combat.go                  # AttackDeclaration, BlockDeclaration, CombatState
 ├── object.go                  # ObjectID, PlayerID — shared identity types
@@ -71,11 +73,12 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 
 | Type | File | Purpose |
 |------|------|---------|
-| `CardDef` | `card.go` | Immutable card template — name, mana cost, types, supertypes/subtypes, abilities, P/T, loyalty, and battle defense. Shared across games. |
+| `CardDef` | `card.go` | Immutable card template — name, mana cost, types, supertypes/subtypes, abilities, P/T, loyalty, battle defense, and optional hand-written implementation ID. Shared across games. |
 | `CardInstance` | `card.go` | A specific card in a specific game. Has a unique `id.ID` and an `Owner`. |
 | `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down, etc. |
 | `StackObject` | `stack.go` | A spell or ability on the stack — source ability index, targets, chosen modes, X value, additional costs. |
 | `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
+| `ChoiceRequest` | `choice.go` | A bounded non-action decision such as trigger target choice, trigger ordering, or optional-effect yes/no. |
 
 ### Player
 
@@ -94,6 +97,7 @@ Each `Player` (`player.go`) tracks:
 - `[4]*Player` — the four players
 - `[]*Permanent` — shared battlefield
 - `Stack` — LIFO spell/ability stack
+- `Events` — rules-relevant facts emitted by `mtg/rules` as mutations occur
 - `TurnState` / `TurnOrder` — turn structure with eliminated-player handling
 - `FailedDraws` — transient per-game flags for players who tried to draw from an empty library
 - `*CombatState` — current attack/block declarations and combat assignment data (nil outside combat)
@@ -130,9 +134,21 @@ Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-play
 | Triggered | `When` / `Whenever` / `At` | "When this enters the battlefield…" |
 | Static | declarative | "Creatures you control get +1/+1." |
 
-50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, flashback, cascade, etc.). `Effect` stores simple effect primitive data such as `Type`, `Amount`, `TargetIndex`, `Selector`, `PowerDelta`, `ToughnessDelta`, `ManaColor`, `UntilEndOfTurn`, `Token`, and `Description`; the rules engine owns execution behavior. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
+50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, protection, flashback, cascade, etc.). `AbilityDef.ProtectionFromColors` parameterizes the initial Protection slice for color-based damage prevention and targeting restrictions. Static abilities may carry `EffectModifyPT` effects with selectors such as `EffectSelectorCreaturesYouControl` or `EffectSelectorOtherCreaturesYouControl`; `mtg/rules` derives those continuous P/T effects dynamically from the battlefield. `Effect` stores simple effect primitive data such as `Type`, `Amount`, `TargetIndex`, `Selector`, `PowerDelta`, `ToughnessDelta`, `ManaColor`, `UntilEndOfTurn`, `Token`, and `Description`; the rules engine owns execution behavior. `CardDef.ImplementationID` is pure data that lets `mtg/rules` route spell resolution to a registered hand-written card implementation when effect primitives are not expressive enough. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
 
-Activated abilities can carry mana costs, an additional-cost string, timing restrictions, target specs, and an `IsManaAbility` marker. The current rules engine uses those fields for simple tap mana abilities and basic Equip abilities.
+Activated abilities can carry mana costs, an additional-cost string, timing restrictions, target specs, X values, and an `IsManaAbility` marker. The current rules engine uses those fields for simple tap mana abilities, basic Equip abilities, Cycling from hand, and general non-mana activated abilities with supported effects. Cycling abilities use the same `StackActivatedAbility` shape with the source card preserved after it is discarded. `Game.ActivatedAbilitiesThisTurn` tracks once-per-turn activation guards by source object and ability index.
+
+Triggered abilities use `TriggerCondition.Pattern` to match typed `GameEvent` values. The first trigger slice supports exact event-kind matching plus filters for controller, source/self, affected player, permanent type, zone transition, and damage recipient. Optional "you may" triggered abilities set `AbilityDef.Optional`; they still use the stack, and the rules engine asks for the yes/no choice when they resolve. The legacy `TriggerCondition.Event` string is documentation only and is not used for rules behavior.
+
+### Choices
+
+`ChoiceRequest` and `ChoiceDecision` (`choice.go`) describe engine-mediated decisions that are not priority actions. The current rules engine uses choices for triggered-ability target selection, ordering simultaneous triggers controlled by the same player, and optional triggered ability resolution. Choice data lives in `mtg/game` so agents and rules code can share the request shape without moving behavior out of `mtg/rules`.
+
+### Game Events
+
+`GameEvent` (`event.go`) is the shared typed vocabulary for rules-relevant facts such as spell casts/resolutions, permanents entering or dying, damage dealt or prevented, destruction replacement, cards drawn/discarded, zone changes, and combat declarations. Token events may carry `TokenDef` as last-known definition data because tokens have no `CardInstanceID`.
+
+Events are not player `Action`s and are not report-oriented `GameResult` logs. `mtg/game` defines the event data so card definitions can refer to event kinds and trigger patterns without importing rules behavior; `mtg/rules` emits and consumes events at mutation boundaries. `Game.TriggerEventCursor` records how far trigger detection has consumed the event stream.
 
 ### Runtime Targets
 
@@ -156,7 +172,7 @@ The `mana` package models the full MTG mana system:
 
 ### Counters
 
-The `counter` package provides 25 counter kinds (+1/+1, -1/-1, loyalty, charge, time, shield, stun, keyword counters, etc.) and a `Set` type that tracks counts per kind. Includes `CancelOpposites()` for the +1/+1 vs -1/-1 state-based action (CR 704.5r).
+The `counter` package provides 25 counter kinds (+1/+1, -1/-1, loyalty, charge, time, shield, stun, keyword counters, etc.) and a `Set` type that tracks counts per kind. Shield counters are consumed by the rules replacement/prevention slice to prevent damage or replace destruction. Includes `CancelOpposites()` for the +1/+1 vs -1/-1 state-based action (CR 704.5r).
 
 ## Design Decisions
 
@@ -167,6 +183,9 @@ The `counter` package provides 25 counter kinds (+1/+1, -1/-1, loyalty, charge, 
 | `Owner` ≠ `Controller` on all objects | Control-changing effects are fundamental to MTG |
 | Token support via `Permanent.Token` + `TokenDef` | Tokens aren't backed by card instances; they need their own `CardDef` |
 | Attachments stored on permanents | `Permanent.AttachedTo` and `Permanent.Attachments` let rules maintain Aura/Equipment relationships without making `game` depend on attachment legality |
+| Typed game events live in `game` | Card definitions need the event vocabulary, while rules behavior remains in `mtg/rules` |
+| Continuous effect data lives in `game` | Card definitions need selectors/effect primitives; `mtg/rules` derives effective values without mutating permanents |
+| Hand-written implementation IDs live in `game` | Card definitions can name an escape-hatch implementation without importing behavior; `mtg/rules` owns the registry and mutation helpers |
 | Placeholder `Effect` type | A full effect/resolution system is a rules-engine concern, not a scaffold concern |
 | Rules live outside `game` | This package defines state. The `mtg/rules` package enforces legality, resolves abilities, and processes state-based actions |
 
@@ -176,4 +195,4 @@ This package is the **data model** used by the rules engine. Future layers will 
 
 - **Card database** — loading real card data (e.g., from Scryfall) into `CardDef` structs
 - **AI agent** — decision-making for automated play (see the reference docs in `Agent Instructions & Rules/`)
-- **Richer rules support** — advanced payment choices, keyword actions beyond Flash/basic Equip, choice-based decisions, the layer system for continuous effects, and replacement/prevention effects
+- **Richer rules support** — advanced payment choices, keyword actions beyond Flash/basic Equip/Cycling, choice-based decisions, the full layer system for continuous effects, and richer replacement/prevention ordering

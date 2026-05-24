@@ -455,7 +455,7 @@ func addPermanentForSBA(g *game.Game, controller game.PlayerID, def *game.CardDe
 		Owner: controller,
 	}
 	g.CardInstances[cardID] = card
-	return createCardPermanent(g, card, controller)
+	return createCardPermanent(g, card, controller, game.ZoneStack)
 }
 
 func deathReasonFound(deaths []PermanentDeathLog, objectID id.ID, reason PermanentDeathReason) bool {

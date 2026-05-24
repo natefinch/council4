@@ -71,6 +71,12 @@ type spellCostPlan struct {
 	additional additionalCostPlan
 }
 
+type abilityCostPlan struct {
+	mana       paymentPlan
+	additional additionalCostPlan
+	tapSource  bool
+}
+
 type additionalCostPlan struct {
 	paid      []string
 	sacrifice *game.Permanent
@@ -90,7 +96,7 @@ type manaSource struct {
 
 func buildSpellCostPlan(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
-	additional, ok := buildAdditionalCostPlan(g, playerID, card)
+	additional, ok := buildAdditionalCostPlanForCost(g, playerID, spellAdditionalCost(card))
 	if !ok {
 		return plan, false
 	}
@@ -104,6 +110,39 @@ func buildSpellCostPlan(g *game.Game, playerID game.PlayerID, card *game.CardDef
 	}
 	plan.additional = additional
 	plan.mana = manaPlan
+	return plan, true
+}
+
+func buildAbilityCostPlan(g *game.Game, playerID game.PlayerID, source *game.Permanent, ability *game.AbilityDef, xValue int) (abilityCostPlan, bool) {
+	plan := abilityCostPlan{}
+	if source == nil || ability == nil {
+		return plan, false
+	}
+	if xValue != 0 && !costHasVariableMana(ability.ManaCost) {
+		return plan, false
+	}
+	tapSource := hasTapCost(ability)
+	if tapSource && !canTapPermanentForAbility(g, source) {
+		return plan, false
+	}
+	additional, ok := buildAdditionalCostPlanForCost(g, playerID, ability.AdditionalCost)
+	if !ok {
+		return plan, false
+	}
+	excluded := make(map[id.ID]bool)
+	if tapSource {
+		excluded[source.ObjectID] = true
+	}
+	if additional.sacrifice != nil {
+		excluded[additional.sacrifice.ObjectID] = true
+	}
+	manaPlan, ok := buildPaymentPlan(g, playerID, ability.ManaCost, xValue, excluded)
+	if !ok {
+		return plan, false
+	}
+	plan.mana = manaPlan
+	plan.additional = additional
+	plan.tapSource = tapSource
 	return plan, true
 }
 
@@ -173,9 +212,12 @@ func buildPaymentPlan(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xVa
 }
 
 func buildAdditionalCostPlan(g *game.Game, playerID game.PlayerID, card *game.CardDef) (additionalCostPlan, bool) {
+	return buildAdditionalCostPlanForCost(g, playerID, spellAdditionalCost(card))
+}
+
+func buildAdditionalCostPlanForCost(g *game.Game, playerID game.PlayerID, cost string) (additionalCostPlan, bool) {
 	plan := additionalCostPlan{}
-	cost := spellAdditionalCost(card)
-	if cost == "" {
+	if cost == "" || isTapCost(cost) {
 		return plan, true
 	}
 	matches, ok := sacrificeCostMatcher(cost)
@@ -252,6 +294,40 @@ func applyAdditionalCostPlan(g *game.Game, plan additionalCostPlan) bool {
 		return true
 	}
 	return movePermanentToZone(g, plan.sacrifice, game.ZoneGraveyard)
+}
+
+func payAbilityCosts(g *game.Game, playerID game.PlayerID, source *game.Permanent, ability *game.AbilityDef, xValue int) (abilityCostPlan, bool) {
+	plan, ok := buildAbilityCostPlan(g, playerID, source, ability, xValue)
+	if !ok {
+		return plan, false
+	}
+	player := playerForCostPayment(g, playerID)
+	if player == nil || !abilityCostPlanStillValid(g, player, source, plan) {
+		return plan, false
+	}
+	if !applyPaymentPlan(g, playerID, plan.mana) {
+		return plan, false
+	}
+	if plan.tapSource {
+		if !tapPermanentForAbility(g, source) {
+			return plan, false
+		}
+	}
+	if !applyAdditionalCostPlan(g, plan.additional) {
+		panic("ability cost plan became invalid while paying additional costs")
+	}
+	return plan, true
+}
+
+func abilityCostPlanStillValid(g *game.Game, player *game.Player, source *game.Permanent, plan abilityCostPlan) bool {
+	if player == nil || source == nil {
+		return false
+	}
+	if plan.tapSource && !canTapPermanentForAbility(g, source) {
+		return false
+	}
+	return additionalCostPlanStillValid(g, player, plan.additional) &&
+		paymentPlanStillValid(g, player, plan.mana)
 }
 
 func applyPaymentPlan(g *game.Game, playerID game.PlayerID, plan paymentPlan) bool {

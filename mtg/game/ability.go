@@ -93,13 +93,63 @@ type TriggerCondition struct {
 	// Type is whether this is a When, Whenever, or At trigger.
 	Type TriggerType
 
+	// Pattern is the structured event pattern this ability listens for.
+	Pattern TriggerPattern
+
 	// Event is a description of the triggering event (e.g., "this creature
 	// enters the battlefield", "a creature dies").
+	// Deprecated: use Pattern for rules behavior.
 	Event string
 
 	// InterveningIf is the "if" condition that must be true both when the
 	// event occurs and when the trigger resolves (CR 603.4). Empty if none.
 	InterveningIf string
+}
+
+// TriggerControllerFilter constrains a trigger by the controller recorded on an event.
+type TriggerControllerFilter int
+
+const (
+	TriggerControllerAny TriggerControllerFilter = iota
+	TriggerControllerYou
+	TriggerControllerOpponent
+)
+
+// TriggerSourceFilter constrains a trigger by the source of the event.
+type TriggerSourceFilter int
+
+const (
+	TriggerSourceAny TriggerSourceFilter = iota
+	TriggerSourceSelf
+)
+
+// TriggerPlayerFilter constrains a trigger by the affected player recorded on an event.
+type TriggerPlayerFilter int
+
+const (
+	TriggerPlayerAny TriggerPlayerFilter = iota
+	TriggerPlayerYou
+	TriggerPlayerOpponent
+)
+
+// TriggerPattern matches a GameEvent for triggered-ability detection.
+// Zero-valued filters are wildcards except Event, which must be set.
+type TriggerPattern struct {
+	Event EventKind
+
+	Controller TriggerControllerFilter
+	Source     TriggerSourceFilter
+	Player     TriggerPlayerFilter
+
+	MatchPermanentType bool
+	PermanentType      CardType
+
+	MatchFromZone bool
+	FromZone      ZoneType
+	MatchToZone   bool
+	ToZone        ZoneType
+
+	DamageRecipient DamageRecipientKind
 }
 
 // TimingRestriction constrains when an activated ability can be used.
@@ -167,12 +217,14 @@ const (
 type EffectSelector string
 
 const (
-	EffectSelectorNone                 EffectSelector = ""
-	EffectSelectorAllCreatures         EffectSelector = "all creatures"
-	EffectSelectorAllArtifacts         EffectSelector = "all artifacts"
-	EffectSelectorAllEnchantments      EffectSelector = "all enchantments"
-	EffectSelectorAllNonlandPermanents EffectSelector = "all nonland permanents"
-	EffectSelectorAllPermanents        EffectSelector = "all permanents"
+	EffectSelectorNone                     EffectSelector = ""
+	EffectSelectorAllCreatures             EffectSelector = "all creatures"
+	EffectSelectorAllArtifacts             EffectSelector = "all artifacts"
+	EffectSelectorAllEnchantments          EffectSelector = "all enchantments"
+	EffectSelectorAllNonlandPermanents     EffectSelector = "all nonland permanents"
+	EffectSelectorAllPermanents            EffectSelector = "all permanents"
+	EffectSelectorCreaturesYouControl      EffectSelector = "creatures you control"
+	EffectSelectorOtherCreaturesYouControl EffectSelector = "other creatures you control"
 )
 
 // Effect describes a single game effect produced by an ability.
@@ -230,6 +282,11 @@ type AbilityDef struct {
 	// A single ability line can grant multiple keywords.
 	Keywords []Keyword
 
+	// ProtectionFromColors parameterizes Protection for the initial protection
+	// slice. Empty means this ability does not currently grant rules-relevant
+	// protection, even if Keywords includes Protection.
+	ProtectionFromColors []mana.Color
+
 	// ManaCost is the mana component of an activated ability's cost.
 	// Nil for non-activated abilities.
 	ManaCost *mana.Cost
@@ -240,6 +297,11 @@ type AbilityDef struct {
 
 	// Trigger defines when a triggered ability fires. Nil for non-triggered.
 	Trigger *TriggerCondition
+
+	// Optional is true for "you may" abilities. Triggered abilities still go on
+	// the stack; the controller chooses whether to apply their effects on
+	// resolution.
+	Optional bool
 
 	// Effects lists the effects this ability produces.
 	Effects []Effect

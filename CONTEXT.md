@@ -52,13 +52,58 @@ _Avoid_: Game loop, controller, runtime
 A tagged struct describing a single player decision — pass priority, play a land, cast a spell, declare attackers, etc. Produced by the engine via `LegalActions`, chosen by agents, applied by the engine. Lives in `game/action/`.
 _Avoid_: Move, choice, command, input
 
+**Payment Choice**:
+An engine-mediated decision about how to pay a legal cost, such as which hybrid side to use, whether to pay life for phyrexian mana, or which card/permanent satisfies an additional cost. Payment choices should use the same bounded choice pathway as other non-action decisions.
+_Avoid_: Hidden payment heuristic, implicit cost branch
+
+**Payment Plan**:
+The concrete rules plan for paying a spell, ability, or attack cost: mana to spend, permanents to tap for mana, life payments, and selected additional costs. Payment plans are built and validated in `mtg/rules` before mutation.
+_Avoid_: Cost guess, mana receipt
+
+**Mana Unit**:
+A spendable unit of mana with color and minimal provenance such as whether it was produced by a snow source. Mana units let the engine answer restrictions like `{S}` without treating all mana of one color as interchangeable.
+_Avoid_: Raw mana count when provenance matters
+
+**Additional Cost**:
+A cost paid in addition to a spell or ability's mana cost, such as sacrificing a creature, discarding a card, paying life, or revealing a card. Additional costs should be typed data rather than freeform text when they affect rules behavior.
+_Avoid_: Cost text parser, deterministic side effect
+
+**Alternative Cost**:
+A cost that replaces a spell or ability's normal mana cost when selected, while still allowing required additional costs. Alternative costs need an explicit cost-selection stage before payment planning.
+_Avoid_: Cost reduction, extra cost
+
+**Choice**:
+An engine-mediated decision that is not a priority **Action**, such as choosing targets for triggered abilities, ordering simultaneous triggers, or deciding whether to apply an optional effect. In code, `game.ChoiceRequest` is answered by a `rules.ChoiceAgent` when available, with deterministic fallback.
+_Avoid_: Action, UI prompt, ad hoc callback
+
 **Stack Object**:
 A spell or ability waiting on the stack to resolve. In code, `game.StackObject` references its source card or permanent, controller, chosen runtime targets, modes, and X value.
 _Avoid_: Stack item, pending spell
 
+**Activated Ability**:
+An ability with a cost and effect that an **Agent** may choose as an **Action** when legal. Non-mana activated abilities use the **Stack Object** path; mana abilities resolve immediately.
+_Avoid_: Manual ability hook, special action
+
 **Runtime Target**:
 The concrete target chosen while casting a spell or activating an ability. In code, `game.Target` is separate from `game.TargetSpec`, which only describes what may be targeted.
 _Avoid_: Target spec, raw target ID
+
+**Game Event**:
+A rules-relevant fact that occurred during a **Game**, such as a spell being cast, a permanent entering the battlefield, damage being dealt, or a creature dying.
+In code, `game.GameEvent` values are appended to `game.Game.Events` by `rules.Engine` helpers at mutation boundaries.
+_Avoid_: Log entry, action history, report record
+
+**Replacement/Prevention Effect**:
+A rules behavior that changes or prevents a pending mutation before it happens, such as preventing damage or replacing destruction with shield-counter removal. In code, the current slice lives in `mtg/rules` before damage and destroy helpers mutate state, while the resulting facts are emitted as `game.GameEvent`s.
+_Avoid_: Post-mutation cleanup, log-only prevention
+
+**Continuous Effect**:
+A persistent rules effect derived from current game state rather than a one-time mutation, such as an anthem that gives other creatures you control +1/+1. In code, the current slice is recalculated through `rules` effective-value helpers instead of being stored on permanents.
+_Avoid_: Permanent mutation, temporary modifier
+
+**Trigger Pattern**:
+A structured matcher on a **Game Event** used by a triggered ability. In code, `game.TriggerPattern` hangs off `game.TriggerCondition` and filters by event kind, controller/player relationship, source/self, zones, permanent type, and damage recipient.
+_Avoid_: Trigger text parser, string trigger
 
 **Game Result**:
 The structured output of a completed game — winner, elimination order, turn count, and per-turn logs of actions taken, mana spent, cards drawn. Produced by `Engine.RunGame()`, consumed by the report package.
@@ -108,6 +153,9 @@ _Avoid_: Card database, card store, card catalog
 - A **Decklist** references **Card Definitions**, each backed by a **Card Implementation**
 - A **Card Implementation** composes one or more **Effect Primitives**
 - An **Agent** uses a **Strategy** to evaluate **Actions** presented in its **Player Observation**
+- An **Activated Ability** is represented as an **Action** and usually becomes a **Stack Object** before its **Effect Primitives** resolve
+- The **Engine** emits **Game Events** while applying rules; **Trigger Patterns** consume those events to put triggered abilities on the stack
+- **Continuous Effects** change effective characteristics while their source remains applicable, without mutating printed **Card Definitions** or battlefield **Permanents**
 - A **Simulation** runs many **Games** via the **Engine** and produces a **Deck Report**
 - The **Engine** produces **Legal Actions**, agents choose one, the engine applies it
 - The **Engine** produces a **Game Result** per game, consumed by the **Deck Report**

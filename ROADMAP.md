@@ -54,11 +54,11 @@ Use this file as the project-level feature checklist. Check items off as they la
 
 - [x] Mana abilities as actions, including mana dorks and mana rocks.
 - [x] Multicolor, colorless, generic, and variable mana costs.
-- (deferred) Hybrid, phyrexian, and snow mana costs.
+- (deferred to Phase 9B) Hybrid, phyrexian, and snow mana costs.
 - [x] X spells and X-cost choice handling.
 - [x] Simple sacrifice-as-cost for spells.
-- (deferred) Alternative costs, cost reductions/increases, richer additional costs, and cost-choice UI.
-- [ ] (deferred from Phase 6) Attack taxes and attack cost payments.
+- (deferred to Phase 9B) Alternative costs, cost reductions/increases, richer additional costs, and cost-choice UI.
+- [ ] (deferred to Phase 9B/Phase 15; from Phase 6) Attack taxes and attack cost payments.
 - [x] Modal spells and mode selection for choose-one modal spell abilities.
 - [x] Equip actions using activated ability actions and stack resolution.
 - (deferred) Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, and other common non-combat keyword actions.
@@ -68,19 +68,35 @@ Use this file as the project-level feature checklist. Check items off as they la
 
 ## Phase 9 — Abilities, events, and effects architecture
 
-- [ ] Event system for game events: cast, resolve, ETB, death, damage, attack, block, draw, discard, zone changes.
-- [ ] Triggered ability detection, trigger ordering, and stack placement.
-- [ ] General activated ability action generation and resolution beyond Phase 8 mana abilities and basic Equip.
-- [ ] Static abilities and continuous effect support.
-- [ ] Replacement and prevention effects.
-- [ ] (deferred from Phase 6) Combat damage prevention and replacement effects.
-- [ ] (deferred from Phase 6) Protection restrictions and prevention behavior.
-- [ ] (deferred from Phase 8) Alternative costs, cost reductions/increases, richer additional costs, and attack cost/tax framework.
-- [ ] (deferred from Phase 8) Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, and other non-combat keyword actions.
-- [ ] Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
-- [ ] Turn-duration effects and cleanup expiry.
-- [ ] Choice framework for may choices, mode choices, ordering, scry/surveil, discard, sacrifice, tutor, and reveal decisions.
-- [ ] Hand-written card implementation escape hatch behind the same card implementation interface.
+- [x] Event system for game events: cast, resolve, ETB, death, damage, attack, block, draw, discard, zone changes.
+- [x] Triggered ability detection, trigger ordering, and stack placement.
+- [x] General activated ability action generation and resolution beyond Phase 8 mana abilities and basic Equip.
+- [x] Initial static abilities and continuous P/T effect support.
+- [x] Initial replacement and prevention effects: shield-counter damage prevention and destroy replacement.
+- [x] (deferred from Phase 6) Initial combat damage prevention/replacement through shield counters and color-based Protection.
+- [x] (deferred from Phase 6) Initial Protection restrictions and prevention behavior for protection from colors.
+- [ ] (deferred to Phase 9B; originally from Phase 8) Alternative costs, cost reductions/increases, richer additional costs, and payment-choice framework.
+- [x] Initial keyword/action carry-forward slice: Cycling as a hand-zone activated ability with discard-as-cost and draw-on-resolution.
+- [ ] (deferred to Phase 11; originally from Phase 8) Kicker, Flashback, Madness, Escape, Foretell, Morph/Disguise, and other non-combat keyword actions.
+- [ ] (deferred to Phase 15) Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
+- [ ] (deferred to Phase 15) Turn-duration effects and cleanup expiry.
+- [x] Initial choice framework for trigger targets, same-controller trigger ordering, and optional triggered effects.
+- [ ] (deferred to Phase 12) Richer choice framework for scry/surveil, discard, sacrifice, tutor, reveal decisions, and other non-action choices.
+- [x] Hand-written card implementation escape hatch behind the same card implementation interface.
+
+## Phase 9B — Costs and payment architecture
+
+This phase makes cost payment a first-class rules subsystem before Commander rules and broad card implementation work depend on it. The focus is reusable infrastructure plus representative vertical slices, not every cost-related mechanic.
+
+- [ ] Concrete payment vocabulary: payment plans, mana units, symbol payments, additional-cost selections, life payments, and payment choices.
+- [ ] Provenance-aware mana pool that preserves existing simple color-count APIs while tracking at least snow mana.
+- [ ] Incremental symbol-level mana planner for colored, generic, colorless, X, hybrid, mono-hybrid, snow, and phyrexian symbols.
+- [ ] Typed additional-cost data for common costs such as sacrifice, discard, pay life, exile, reveal, and tap costs; migrate current string-based sacrifice/Cycling costs.
+- [ ] Payment choice plumbing through the existing choice framework, with deterministic fallback for agents that do not answer payment choices.
+- [ ] Minimal alternative-cost vertical slice where an alternative cost replaces the normal mana cost and can include additional costs.
+- [ ] Cost-modifier seam for future reductions, increases, and taxes without a speculative full modifier/layer pipeline.
+- [ ] Attack-cost/tax design seam; implement a real Ghostly Prison-style slice only after static cost modifiers have a real producer.
+- [ ] Documentation updates for `CONTEXT.md`, package READMEs, and roadmap carry-forward notes.
 
 ## Phase 10 — Commander format rules
 
@@ -102,6 +118,7 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] Commander section parsing (`// Commander`, `COMMANDER:`) and explicit four-deck input.
 - [ ] Unsupported-card reporting with actionable messages.
 - [ ] Declarative card implementation schema built from effect primitives.
+- [ ] (deferred from Phase 9; originally from Phase 8) Kicker, Flashback, Madness, Escape, Foretell, Morph/Disguise, and other non-combat keyword actions beyond Cycling.
 - [ ] LLM-assisted build-time generation pipeline for declarative card implementations from oracle text.
 - [ ] Validation suite for generated card implementations.
 - [ ] Initial supported-card corpus based on common Commander staples and test decks.
@@ -117,6 +134,7 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] Threat assessment and target selection for multiplayer.
 - [ ] Combat attack/block heuristics beyond `FirstLegal`.
 - [ ] (deferred from Phase 6) Attacker-chosen combat damage assignment order.
+- [ ] (deferred from Phase 9) Richer choice framework for scry/surveil, discard, sacrifice, tutor, reveal decisions, and other non-action choices.
 - [ ] Mana planning and sequencing heuristics.
 - [ ] Stack interaction heuristics for removal and counterspells.
 - [ ] Personality/skill knobs: aggression, risk tolerance, politics weight, noise, and archetype bias.
@@ -160,7 +178,9 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] Golden tests for representative Commander staples.
 - [ ] Property/fuzz tests for zone moves, target legality, priority convergence, and SBA convergence.
 - [ ] Comprehensive smart-priority tests so skipped priority never hides legal responses.
-- [ ] (deferred from Phase 8) Hybrid, phyrexian, and snow mana costs after the payment model tracks choice, life payment, and snow provenance.
+- [ ] Full cost-modifier layer system for reductions, increases, cost-setting effects, minimum-cost rules, and attack taxes after Phase 9B establishes the payment seam.
+- [ ] (deferred from Phase 9) Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
+- [ ] (deferred from Phase 9) Turn-duration effects and cleanup expiry.
 - [ ] Performance benchmarks for per-game runtime and simulation throughput.
 - [ ] Determinism tests for fixed seeds and parallel simulation.
 - [ ] Error model for unsupported cards and unsupported mechanics.

@@ -474,6 +474,129 @@ func TestEquipAbilityOnlyAsSorceryToCreatureYouControl(t *testing.T) {
 	}
 }
 
+func TestGeneralActivatedAbilityUsesStackAndResolves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
+		Kind:     game.ActivatedAbility,
+		ManaCost: greenCost(),
+		Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
+		Effects:  []game.Effect{{Type: game.EffectDamage, TargetIndex: 0, Amount: 2}},
+	}))
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhaseBeginning
+	g.Turn.Step = game.StepUpkeep
+	act := action.ActivateAbility(source.ObjectID, 0, []game.Target{game.PlayerTarget(game.Player2)}, 0)
+
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("instant-speed activated ability was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(activated ability) = false, want true")
+	}
+	if !forest.Tapped {
+		t.Fatal("forest was not tapped to pay activation cost")
+	}
+	if got := g.Players[game.Player2].Life; got != 40 {
+		t.Fatalf("player 2 life before resolution = %d, want 40", got)
+	}
+	if g.Stack.Size() != 1 {
+		t.Fatalf("stack size = %d, want 1", g.Stack.Size())
+	}
+	engine.resolveTopOfStack(g, nil)
+	if got := g.Players[game.Player2].Life; got != 38 {
+		t.Fatalf("player 2 life after resolution = %d, want 38", got)
+	}
+}
+
+func TestGeneralActivatedAbilityTapCostRespectsSummoningSickness(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
+		Kind:           game.ActivatedAbility,
+		AdditionalCost: "{T}",
+		Effects:        []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
+	}))
+	source.SummoningSick = true
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("tap activated ability was legal while source creature was summoning sick")
+	}
+	source.SummoningSick = false
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("tap activated ability was not legal after summoning sickness ended")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(tap activated ability) = false, want true")
+	}
+	if !source.Tapped {
+		t.Fatal("source was not tapped to pay activation cost")
+	}
+	engine.resolveTopOfStack(g, nil)
+	if got := g.Players[game.Player1].Life; got != 41 {
+		t.Fatalf("player 1 life = %d, want 41", got)
+	}
+}
+
+func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
+		Kind:    game.ActivatedAbility,
+		Timing:  game.OncePerTurn,
+		Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(once-per-turn ability) = false, want true")
+	}
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("once-per-turn ability remained legal after activation")
+	}
+	engine.resolveTopOfStack(g, nil)
+	engine.advanceToNextTurn(g)
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("once-per-turn ability was not legal after turn reset")
+	}
+}
+
+func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
+		Kind:           game.ActivatedAbility,
+		AdditionalCost: "Sacrifice a creature",
+		Effects:        []game.Effect{{Type: game.EffectDraw, TargetIndex: -1, Amount: 1}},
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(sacrifice ability) = false, want true")
+	}
+	if permanentByObjectID(g, source.ObjectID) != nil {
+		t.Fatal("source was not sacrificed as an activation cost")
+	}
+	engine.resolveTopOfStack(g, nil)
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want sacrificed source ability to draw", got)
+	}
+}
+
 func TestTargetedSpellIsNotLegalBeforeTargetingSupport(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -682,6 +805,17 @@ func equipEquipment() *game.CardDef {
 				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature you control"}},
 			},
 		},
+	}
+}
+
+func activatedAbilityPermanent(ability *game.AbilityDef) *game.CardDef {
+	pt := game.PT{Value: 1}
+	return &game.CardDef{
+		Name:      "Activated Creature",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &pt,
+		Toughness: &pt,
+		Abilities: []game.AbilityDef{*ability},
 	}
 }
 

@@ -46,7 +46,7 @@ The rules engine validates action legality. Agents should normally return one of
 
 Cast-spell actions identify the card to cast and carry chosen targets, chosen modes, and X value. The rules engine currently generates supported casts for simple targeted or untargeted spells, choose-one modal spells, and X spells.
 
-Activate-ability actions identify the source object, ability index, chosen targets, and X value. The rules engine currently uses them for simple mana abilities, which resolve immediately, and Equip abilities, which use the stack.
+Activate-ability actions identify the source object, ability index, chosen targets, and X value. The rules engine currently uses them for simple mana abilities, which resolve immediately, plus Equip and general non-mana activated abilities, which use the stack.
 
 Declare-attackers actions carry concrete `game.AttackDeclaration` values. The rules engine offers them only during the declare attackers turn-based action, before the declare attackers priority window; they are not normal priority actions. The current generator keeps attack choices compact and filters them through attack restrictions and goad requirements.
 

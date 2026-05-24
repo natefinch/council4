@@ -145,6 +145,10 @@ type CardDef struct {
 	// Abilities lists all abilities on this card, parsed from the text box.
 	Abilities []AbilityDef
 
+	// ImplementationID names an optional rules-side hand-written card
+	// implementation for behavior too complex to express declaratively.
+	ImplementationID string
+
 	// OracleText is the full oracle (rules) text of the card.
 	OracleText string
 }

@@ -6,6 +6,9 @@ import (
 )
 
 func (e *Engine) resolveSpellEffects(g *game.Game, obj *game.StackObject, card *game.CardInstance, log *TurnLog) {
+	if e.resolveCardImplementationSpell(g, obj, card, log) {
+		return
+	}
 	ability := firstSpellAbility(card.Def)
 	if ability == nil {
 		return
@@ -37,7 +40,7 @@ func firstSpellAbility(card *game.CardDef) *game.AbilityDef {
 
 func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.Effect, log *TurnLog) {
 	if effect.Selector != game.EffectSelectorNone {
-		resolveMassPermanentEffect(g, effect)
+		resolveMassPermanentEffect(g, obj, effect)
 		return
 	}
 	switch effect.Type {
@@ -49,16 +52,7 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 		if !ok {
 			return
 		}
-		for range effect.Amount {
-			cardID, ok := e.drawCard(g, playerID)
-			if log != nil {
-				log.Draws = append(log.Draws, DrawLog{
-					Player: playerID,
-					CardID: cardID,
-					Failed: !ok,
-				})
-			}
-		}
+		e.drawCards(g, playerID, effect.Amount, log)
 
 	case game.EffectGainLife:
 		if effect.Amount <= 0 {
@@ -95,15 +89,16 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 			return
 		}
 		if playerID, ok := effectPlayer(g, obj, effect); ok {
-			// Damage to players is life loss for now; prevention and damage events come later.
-			g.Players[playerID].Life -= effect.Amount
+			sourceID, sourceObjectID := damageSourceIDs(g, obj)
+			dealPlayerDamage(g, sourceID, sourceObjectID, obj.Controller, playerID, effect.Amount, false)
 			return
 		}
 		permanent := effectPermanent(g, obj, effect)
 		if permanent == nil {
 			return
 		}
-		markPermanentDamage(g, permanent, effect.Amount)
+		sourceID, sourceObjectID := damageSourceIDs(g, obj)
+		dealPermanentDamage(g, sourceID, sourceObjectID, obj.Controller, permanent, effect.Amount, false)
 	case game.EffectDestroy:
 		permanent := effectPermanent(g, obj, effect)
 		if permanent == nil {
@@ -158,8 +153,25 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 	}
 }
 
-func resolveMassPermanentEffect(g *game.Game, effect game.Effect) {
-	permanentIDs := selectedPermanentIDs(g, effect.Selector)
+func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, log *TurnLog) {
+	if amount <= 0 {
+		return
+	}
+	for range amount {
+		cardID, ok := e.drawCard(g, playerID)
+		if log != nil {
+			log.Draws = append(log.Draws, DrawLog{
+				Player: playerID,
+				CardID: cardID,
+				Failed: !ok,
+			})
+		}
+	}
+}
+
+func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game.Effect) {
+	permanentIDs := selectedPermanentIDs(g, obj.Controller, nil, effect.Selector)
+	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	for _, permanentID := range permanentIDs {
 		permanent := permanentByObjectID(g, permanentID)
 		if permanent == nil {
@@ -168,7 +180,7 @@ func resolveMassPermanentEffect(g *game.Game, effect game.Effect) {
 		switch effect.Type {
 		case game.EffectDamage:
 			if effect.Amount > 0 {
-				markPermanentDamage(g, permanent, effect.Amount)
+				dealPermanentDamage(g, sourceID, sourceObjectID, obj.Controller, permanent, effect.Amount, false)
 			}
 		case game.EffectDestroy:
 			destroyPermanent(g, permanent.ObjectID)
@@ -184,13 +196,32 @@ func resolveMassPermanentEffect(g *game.Game, effect game.Effect) {
 	}
 }
 
-func selectedPermanentIDs(g *game.Game, selector game.EffectSelector) []id.ID {
+func damageSourceIDs(g *game.Game, obj *game.StackObject) (id.ID, id.ID) {
+	if obj == nil {
+		return 0, 0
+	}
+	switch obj.Kind {
+	case game.StackActivatedAbility, game.StackTriggeredAbility:
+		if obj.SourceCardID != 0 {
+			return obj.SourceCardID, obj.SourceID
+		}
+		permanent := permanentByObjectID(g, obj.SourceID)
+		if permanent == nil {
+			return 0, obj.SourceID
+		}
+		return permanent.CardInstanceID, permanent.ObjectID
+	default:
+		return obj.SourceID, 0
+	}
+}
+
+func selectedPermanentIDs(g *game.Game, controller game.PlayerID, source *game.Permanent, selector game.EffectSelector) []id.ID {
 	if g == nil {
 		return nil
 	}
 	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
 	for _, permanent := range g.Battlefield {
-		if permanent == nil || !permanentMatchesSelector(g, permanent, selector) {
+		if permanent == nil || !permanentMatchesSelectorForSource(g, source, controller, permanent, selector) {
 			continue
 		}
 		permanentIDs = append(permanentIDs, permanent.ObjectID)
@@ -199,6 +230,10 @@ func selectedPermanentIDs(g *game.Game, selector game.EffectSelector) []id.ID {
 }
 
 func permanentMatchesSelector(g *game.Game, permanent *game.Permanent, selector game.EffectSelector) bool {
+	return permanentMatchesSelectorForSource(g, nil, 0, permanent, selector)
+}
+
+func permanentMatchesSelectorForSource(g *game.Game, source *game.Permanent, controller game.PlayerID, permanent *game.Permanent, selector game.EffectSelector) bool {
 	card := permanentCardDef(g, permanent)
 	if card == nil {
 		return false
@@ -214,6 +249,10 @@ func permanentMatchesSelector(g *game.Game, permanent *game.Permanent, selector 
 		return !card.HasType(game.TypeLand)
 	case game.EffectSelectorAllPermanents:
 		return true
+	case game.EffectSelectorCreaturesYouControl:
+		return permanent.Controller == controller && card.HasType(game.TypeCreature)
+	case game.EffectSelectorOtherCreaturesYouControl:
+		return source != nil && permanent.ObjectID != source.ObjectID && permanent.Controller == controller && card.HasType(game.TypeCreature)
 	default:
 		return false
 	}
@@ -278,5 +317,17 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 	}
 	initializePermanentCounters(permanent, token)
 	g.Battlefield = append(g.Battlefield, permanent)
+	event := game.GameEvent{
+		Controller:  controller,
+		Player:      controller,
+		PermanentID: objectID,
+		TokenName:   token.Name,
+		TokenDef:    token,
+		FromZone:    game.ZoneNone,
+		ToZone:      game.ZoneBattlefield,
+	}
+	emitZoneChangeEvent(g, event)
+	event.Kind = game.EventPermanentEnteredBattlefield
+	emitEvent(g, event)
 	return permanent
 }

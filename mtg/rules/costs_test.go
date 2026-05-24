@@ -385,5 +385,5 @@ func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.C
 		Owner: controller,
 	}
 	g.CardInstances[cardID] = card
-	return createCardPermanent(g, card, controller)
+	return createCardPermanent(g, card, controller, game.ZoneStack)
 }

@@ -10,8 +10,12 @@ import (
 type ZoneType int
 
 const (
+	// ZoneNone means no zone applies, such as a newly created token before it
+	// enters the battlefield.
+	ZoneNone ZoneType = iota
+
 	// ZoneLibrary is a player's draw deck — hidden and ordered (CR 401).
-	ZoneLibrary ZoneType = iota
+	ZoneLibrary
 
 	// ZoneHand is a player's hand — hidden from opponents (CR 402).
 	ZoneHand
@@ -39,6 +43,8 @@ const (
 // String returns the zone name.
 func (z ZoneType) String() string {
 	switch z {
+	case ZoneNone:
+		return "None"
 	case ZoneLibrary:
 		return "Library"
 	case ZoneHand:

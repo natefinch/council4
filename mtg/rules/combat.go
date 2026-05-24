@@ -202,8 +202,11 @@ func markAttackTargetCombatDamage(g *game.Game, source *game.Permanent, target g
 	if permanent == nil || source == nil || damage <= 0 {
 		return
 	}
-	markPermanentDamage(g, permanent, damage)
-	applyLifelink(g, source, damage)
+	dealt := dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, source.Controller, permanent, damage, true)
+	applyLifelink(g, source, dealt)
+	if dealt <= 0 {
+		return
+	}
 	if log != nil {
 		log.CreatureDamage = append(log.CreatureDamage, CreatureDamageLog{
 			SourcePermanent:   source.ObjectID,
@@ -212,7 +215,7 @@ func markAttackTargetCombatDamage(g *game.Game, source *game.Permanent, target g
 			DamagedPermanent:  permanent.ObjectID,
 			DamagedSourceID:   permanent.CardInstanceID,
 			DamagedController: permanent.Controller,
-			Damage:            damage,
+			Damage:            dealt,
 		})
 	}
 }
@@ -221,11 +224,14 @@ func markCreatureCombatDamage(g *game.Game, source *game.Permanent, damaged *gam
 	if source == nil || damaged == nil || damage <= 0 {
 		return
 	}
-	damaged.MarkedDamage += damage
-	if hasKeyword(g, source, game.Deathtouch) {
+	dealt := dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, source.Controller, damaged, damage, true)
+	if dealt > 0 && hasKeyword(g, source, game.Deathtouch) {
 		damaged.MarkedDeathtouchDamage = true
 	}
-	applyLifelink(g, source, damage)
+	applyLifelink(g, source, dealt)
+	if dealt <= 0 {
+		return
+	}
 	if log != nil {
 		log.CreatureDamage = append(log.CreatureDamage, CreatureDamageLog{
 			SourcePermanent:   source.ObjectID,
@@ -234,7 +240,7 @@ func markCreatureCombatDamage(g *game.Game, source *game.Permanent, damaged *gam
 			DamagedPermanent:  damaged.ObjectID,
 			DamagedSourceID:   damaged.CardInstanceID,
 			DamagedController: damaged.Controller,
-			Damage:            damage,
+			Damage:            dealt,
 		})
 	}
 }
@@ -244,18 +250,21 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 		return
 	}
 	defender := g.Players[defendingPlayer]
-	defender.Life -= damage
+	dealt := dealPlayerDamage(g, source.CardInstanceID, source.ObjectID, source.Controller, defendingPlayer, damage, true)
 	if sourceIsControllerCommander(g, source) {
-		defender.CommanderDamage[source.CardInstanceID] += damage
+		defender.CommanderDamage[source.CardInstanceID] += dealt
 	}
-	applyLifelink(g, source, damage)
+	applyLifelink(g, source, dealt)
+	if dealt <= 0 {
+		return
+	}
 	if log != nil {
 		log.CombatDamage = append(log.CombatDamage, CombatDamageLog{
 			Attacker:        source.ObjectID,
 			SourceID:        source.CardInstanceID,
 			Controller:      source.Controller,
 			DefendingPlayer: defendingPlayer,
-			Damage:          damage,
+			Damage:          dealt,
 		})
 	}
 }
@@ -276,6 +285,67 @@ func markPermanentDamage(g *game.Game, permanent *game.Permanent, damage int) {
 	default:
 		permanent.MarkedDamage += damage
 	}
+}
+
+func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, playerID game.PlayerID, damage int, combatDamage bool) int {
+	if g == nil || damage <= 0 || !isPlayerAlive(g, playerID) {
+		return 0
+	}
+	dealt := applyDamagePrevention(g, damageEvent{
+		sourceID:       sourceID,
+		sourceObjectID: sourceObjectID,
+		controller:     controller,
+		player:         playerID,
+		amount:         damage,
+		combatDamage:   combatDamage,
+	})
+	if dealt <= 0 {
+		return 0
+	}
+	g.Players[playerID].Life -= dealt
+	emitEvent(g, game.GameEvent{
+		Kind:            game.EventDamageDealt,
+		SourceID:        sourceID,
+		SourceObjectID:  sourceObjectID,
+		Controller:      controller,
+		Player:          playerID,
+		Amount:          dealt,
+		DamageRecipient: game.DamageRecipientPlayer,
+		CombatDamage:    combatDamage,
+	})
+	return dealt
+}
+
+func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller game.PlayerID, permanent *game.Permanent, damage int, combatDamage bool) int {
+	if permanent == nil || damage <= 0 {
+		return 0
+	}
+	dealt := applyDamagePrevention(g, damageEvent{
+		sourceID:       sourceID,
+		sourceObjectID: sourceObjectID,
+		controller:     controller,
+		permanent:      permanent,
+		amount:         damage,
+		combatDamage:   combatDamage,
+	})
+	if dealt <= 0 {
+		return 0
+	}
+	markPermanentDamage(g, permanent, dealt)
+	emitEvent(g, game.GameEvent{
+		Kind:            game.EventDamageDealt,
+		SourceID:        sourceID,
+		SourceObjectID:  sourceObjectID,
+		Controller:      controller,
+		PermanentID:     permanent.ObjectID,
+		CardID:          permanent.CardInstanceID,
+		TokenName:       permanentTokenName(permanent),
+		TokenDef:        permanent.TokenDef,
+		Amount:          dealt,
+		DamageRecipient: game.DamageRecipientPermanent,
+		CombatDamage:    combatDamage,
+	})
+	return dealt
 }
 
 func applyLifelink(g *game.Game, source *game.Permanent, damage int) {
@@ -339,15 +409,6 @@ func dealsCombatDamageInPass(g *game.Game, permanent *game.Permanent, pass comba
 
 func hasFirstOrDoubleStrike(g *game.Game, permanent *game.Permanent) bool {
 	return hasKeyword(g, permanent, game.FirstStrike) || hasKeyword(g, permanent, game.DoubleStrike)
-}
-
-func hasKeyword(g *game.Game, permanent *game.Permanent, keyword game.Keyword) bool {
-	card := permanentCardDef(g, permanent)
-	if card != nil && card.HasKeyword(keyword) {
-		return true
-	}
-	counterKind, ok := keywordCounterKind(keyword)
-	return ok && permanent != nil && permanent.Counters.Get(counterKind) > 0
 }
 
 func keywordCounterKind(keyword game.Keyword) (counter.Kind, bool) {
@@ -589,6 +650,18 @@ func (e *Engine) applyDeclareBlockers(g *game.Game, playerID game.PlayerID, decl
 	}
 	for _, block := range declare.Blockers {
 		g.Combat.BlockerOrder[block.Blocking] = append(g.Combat.BlockerOrder[block.Blocking], block.Blocker)
+		blocker := eligibleByID[block.Blocker]
+		if blocker == nil {
+			continue
+		}
+		emitEvent(g, game.GameEvent{
+			Kind:              game.EventBlockerDeclared,
+			SourceID:          blocker.CardInstanceID,
+			SourceObjectID:    blocker.ObjectID,
+			Controller:        blocker.Controller,
+			PermanentID:       blocker.ObjectID,
+			BlockedAttackerID: block.Blocking,
+		})
 	}
 	return true
 }
@@ -727,6 +800,14 @@ func (e *Engine) applyDeclareAttackers(g *game.Game, playerID game.PlayerID, dec
 		if !hasKeyword(g, attacker, game.Vigilance) {
 			attacker.Tapped = true
 		}
+		emitEvent(g, game.GameEvent{
+			Kind:           game.EventAttackerDeclared,
+			SourceID:       attacker.CardInstanceID,
+			SourceObjectID: attacker.ObjectID,
+			Controller:     attacker.Controller,
+			PermanentID:    attacker.ObjectID,
+			AttackTarget:   declaration.Target,
+		})
 	}
 	return true
 }
@@ -939,33 +1020,10 @@ func permanentByObjectID(g *game.Game, objectID id.ID) *game.Permanent {
 	return nil
 }
 
-func effectivePower(g *game.Game, permanent *game.Permanent) int {
-	card := permanentCardDef(g, permanent)
-	if card == nil || card.Power == nil || card.Power.IsStar {
-		return 0
-	}
-	return max(0, card.Power.Value+powerToughnessCounterDelta(permanent)+permanent.TemporaryPowerModifier)
-}
-
-func effectiveToughness(g *game.Game, permanent *game.Permanent) (int, bool) {
-	card := permanentCardDef(g, permanent)
-	if card == nil || card.Toughness == nil || card.Toughness.IsStar {
-		return 0, false
-	}
-	return card.Toughness.Value + powerToughnessCounterDelta(permanent) + permanent.TemporaryToughnessModifier, true
-}
-
 func lethalDamageNeeded(g *game.Game, permanent *game.Permanent) (int, bool) {
 	toughness, ok := effectiveToughness(g, permanent)
 	if !ok || toughness <= 0 {
 		return 0, ok
 	}
 	return toughness, true
-}
-
-func powerToughnessCounterDelta(permanent *game.Permanent) int {
-	if permanent == nil {
-		return 0
-	}
-	return permanent.Counters.Get(counter.PlusOnePlusOne) - permanent.Counters.Get(counter.MinusOneMinusOne)
 }
