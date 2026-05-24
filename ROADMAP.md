@@ -52,26 +52,31 @@ Use this file as the project-level feature checklist. Check items off as they la
 
 ## Phase 8 — Mana, casting, and costs
 
-- [ ] Mana abilities as actions, including mana dorks and mana rocks.
-- [ ] Multicolor, colorless, generic, hybrid, phyrexian, snow, and variable mana costs.
-- [ ] X spells and X-cost choice handling.
-- [ ] Additional costs, alternative costs, cost reductions/increases, and sacrifice-as-cost.
+- [x] Mana abilities as actions, including mana dorks and mana rocks.
+- [x] Multicolor, colorless, generic, and variable mana costs.
+- (deferred) Hybrid, phyrexian, and snow mana costs.
+- [x] X spells and X-cost choice handling.
+- [x] Simple sacrifice-as-cost for spells.
+- (deferred) Alternative costs, cost reductions/increases, richer additional costs, and cost-choice UI.
 - [ ] (deferred from Phase 6) Attack taxes and attack cost payments.
-- [ ] Modal spells and mode selection.
-- [ ] Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, Equip, and other common non-combat keyword actions.
-- [ ] (deferred from Phase 7) Equip actions and richer attachment legality beyond the basic Aura/Equipment skeleton.
-- [ ] Flash and instant-speed timing support for non-instant cards.
+- [x] Modal spells and mode selection for choose-one modal spell abilities.
+- [x] Equip actions using activated ability actions and stack resolution.
+- (deferred) Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, and other common non-combat keyword actions.
+- (deferred) Richer attachment legality beyond the basic Aura/Equipment skeleton (deferred from Phase 7).
+- [x] Flash and instant-speed timing support for non-instant cards.
 - [x] (completed in Phase 7) Legal target re-checking on resolution and counter-by-rules for all-targets-illegal spells.
 
 ## Phase 9 — Abilities, events, and effects architecture
 
 - [ ] Event system for game events: cast, resolve, ETB, death, damage, attack, block, draw, discard, zone changes.
 - [ ] Triggered ability detection, trigger ordering, and stack placement.
-- [ ] Activated ability action generation and resolution.
+- [ ] General activated ability action generation and resolution beyond Phase 8 mana abilities and basic Equip.
 - [ ] Static abilities and continuous effect support.
 - [ ] Replacement and prevention effects.
 - [ ] (deferred from Phase 6) Combat damage prevention and replacement effects.
 - [ ] (deferred from Phase 6) Protection restrictions and prevention behavior.
+- [ ] (deferred from Phase 8) Alternative costs, cost reductions/increases, richer additional costs, and attack cost/tax framework.
+- [ ] (deferred from Phase 8) Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, and other non-combat keyword actions.
 - [ ] Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
 - [ ] Turn-duration effects and cleanup expiry.
 - [ ] Choice framework for may choices, mode choices, ordering, scry/surveil, discard, sacrifice, tutor, and reveal decisions.
@@ -155,6 +160,7 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] Golden tests for representative Commander staples.
 - [ ] Property/fuzz tests for zone moves, target legality, priority convergence, and SBA convergence.
 - [ ] Comprehensive smart-priority tests so skipped priority never hides legal responses.
+- [ ] (deferred from Phase 8) Hybrid, phyrexian, and snow mana costs after the payment model tracks choice, life payment, and snow provenance.
 - [ ] Performance benchmarks for per-game runtime and simulation throughput.
 - [ ] Determinism tests for fixed seeds and parallel simulation.
 - [ ] Error model for unsupported cards and unsupported mechanics.

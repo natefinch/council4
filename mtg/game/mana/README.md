@@ -22,9 +22,9 @@ Use `AllColors()` when deterministic color ordering matters.
 
 ```go
 cost := mana.Cost{
-	mana.Generic(2),
-	mana.White(),
-	mana.Blue(),
+	mana.GenericMana(2),
+	mana.ColoredMana(mana.White),
+	mana.ColoredMana(mana.Blue),
 }
 ```
 
@@ -42,7 +42,7 @@ ok := pool.Spend(mana.Green, 1)
 
 Mana pools are emptied by the rules engine as steps and phases end.
 
-The current rules engine can pay normal colored and generic costs by consuming pool mana first and then auto-tapping untapped basic lands. Advanced costs such as X, hybrid, phyrexian, snow, alternate costs, and cost reducers are intentionally deferred.
+The current rules engine can pay colored, true colorless, generic, and X costs by consuming pool mana first and then auto-tapping supported mana sources such as basic lands, mana rocks, and non-summoning-sick mana dorks. Hybrid, phyrexian, snow, alternate-cost, and cost-reducer handling are intentionally deferred to the rules engine.
 
 ### ColorIdentity
 

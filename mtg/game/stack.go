@@ -29,6 +29,10 @@ type StackObject struct {
 	// for activated/triggered abilities.
 	SourceID id.ID
 
+	// AbilityIndex identifies the source ability for activated/triggered
+	// abilities. It is ignored for spells.
+	AbilityIndex int
+
 	// Controller is the player who controls this spell or ability.
 	Controller PlayerID
 

@@ -10,6 +10,17 @@ func (e *Engine) resolveSpellEffects(g *game.Game, obj *game.StackObject, card *
 	if ability == nil {
 		return
 	}
+	if len(ability.Modes) > 0 {
+		for _, modeIndex := range obj.ChosenModes {
+			if modeIndex < 0 || modeIndex >= len(ability.Modes) {
+				continue
+			}
+			for _, effect := range ability.Modes[modeIndex].Effects {
+				e.resolveEffect(g, obj, effect, log)
+			}
+		}
+		return
+	}
 	for _, effect := range ability.Effects {
 		e.resolveEffect(g, obj, effect, log)
 	}
@@ -69,6 +80,16 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 		}
 		player := g.Players[playerID]
 		player.Life -= effect.Amount
+	case game.EffectAddMana:
+		amount := effect.Amount
+		if amount <= 0 {
+			amount = 1
+		}
+		player := playerByID(g, obj.Controller)
+		if player == nil || player.Eliminated {
+			return
+		}
+		player.ManaPool.Add(effect.ManaColor, amount)
 	case game.EffectDamage:
 		if effect.Amount <= 0 {
 			return

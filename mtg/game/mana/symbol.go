@@ -45,6 +45,11 @@ func ColoredMana(c Color) Symbol {
 	return Symbol{Kind: ColoredSymbol, Color: c}
 }
 
+// ColorlessMana creates a colorless mana symbol ({C}).
+func ColorlessMana() Symbol {
+	return Symbol{Kind: ColorlessSymbol, Color: Colorless}
+}
+
 // GenericMana creates a generic mana symbol with the given value.
 func GenericMana(n int) Symbol {
 	return Symbol{Kind: GenericSymbol, Generic: n}

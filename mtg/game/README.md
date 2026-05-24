@@ -42,7 +42,7 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 │   ├── README.md              #   Package guide
 │   ├── doc.go                 #   Package documentation
 │   ├── color.go               #   Color enum (W, U, B, R, G, C)
-│   ├── symbol.go              #   Symbol — colored, generic, hybrid, phyrexian, snow, X
+│   ├── symbol.go              #   Symbol — colored, colorless, generic, hybrid, phyrexian, snow, X
 │   ├── cost.go                #   Cost — ordered list of symbols, ManaValue(), Colors()
 │   └── pool.go                #   Pool — runtime mana tracking; ColorIdentity for Commander
 │
@@ -74,7 +74,7 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `CardDef` | `card.go` | Immutable card template — name, mana cost, types, supertypes/subtypes, abilities, P/T, loyalty, and battle defense. Shared across games. |
 | `CardInstance` | `card.go` | A specific card in a specific game. Has a unique `id.ID` and an `Owner`. |
 | `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down, etc. |
-| `StackObject` | `stack.go` | A spell or ability on the stack — targets, chosen modes, X value, additional costs. |
+| `StackObject` | `stack.go` | A spell or ability on the stack — source ability index, targets, chosen modes, X value, additional costs. |
 | `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
 
 ### Player
@@ -130,7 +130,9 @@ Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-play
 | Triggered | `When` / `Whenever` / `At` | "When this enters the battlefield…" |
 | Static | declarative | "Creatures you control get +1/+1." |
 
-50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, flashback, cascade, etc.). `Effect` stores simple effect primitive data such as `Type`, `Amount`, `TargetIndex`, `Selector`, `PowerDelta`, `ToughnessDelta`, `UntilEndOfTurn`, `Token`, and `Description`; the rules engine owns execution behavior. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
+50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, flashback, cascade, etc.). `Effect` stores simple effect primitive data such as `Type`, `Amount`, `TargetIndex`, `Selector`, `PowerDelta`, `ToughnessDelta`, `ManaColor`, `UntilEndOfTurn`, `Token`, and `Description`; the rules engine owns execution behavior. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
+
+Activated abilities can carry mana costs, an additional-cost string, timing restrictions, target specs, and an `IsManaAbility` marker. The current rules engine uses those fields for simple tap mana abilities and basic Equip abilities.
 
 ### Runtime Targets
 
@@ -143,7 +145,7 @@ Use `PlayerTarget`, `PermanentTarget`, and `StackObjectTarget` to construct targ
 The `mana` package models the full MTG mana system:
 
 - **Colors**: W, U, B, R, G, C (colorless)
-- **Symbols**: colored, generic (`{3}`), variable (`{X}`), hybrid (`{W/U}`), mono-hybrid (`{2/W}`), phyrexian (`{W/P}`), snow (`{S}`)
+- **Symbols**: colored, colorless (`{C}`), generic (`{3}`), variable (`{X}`), hybrid (`{W/U}`), mono-hybrid (`{2/W}`), phyrexian (`{W/P}`), snow (`{S}`)
 - **Cost**: ordered symbol list with `ManaValue()` and `Colors()`
 - **Pool**: runtime mana tracking with `Add`/`Spend`/`Empty`
 - **ColorIdentity**: set of colors for Commander deck legality
@@ -174,4 +176,4 @@ This package is the **data model** used by the rules engine. Future layers will 
 
 - **Card database** — loading real card data (e.g., from Scryfall) into `CardDef` structs
 - **AI agent** — decision-making for automated play (see the reference docs in `Agent Instructions & Rules/`)
-- **Richer rules support** — mana abilities, equip actions, choice-based decisions, the layer system for continuous effects, and replacement/prevention effects
+- **Richer rules support** — advanced payment choices, keyword actions beyond Flash/basic Equip, choice-based decisions, the layer system for continuous effects, and replacement/prevention effects

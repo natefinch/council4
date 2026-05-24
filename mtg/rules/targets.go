@@ -8,8 +8,19 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
-func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef) [][]game.Target {
-	specs := spellTargetSpecs(card)
+func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int) [][]game.Target {
+	specs := spellTargetSpecs(card, chosenModes)
+	return targetChoicesForSpecs(g, controller, specs)
+}
+
+func targetChoicesForAbility(g *game.Game, controller game.PlayerID, ability *game.AbilityDef) [][]game.Target {
+	if ability == nil {
+		return nil
+	}
+	return targetChoicesForSpecs(g, controller, ability.Targets)
+}
+
+func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, specs []game.TargetSpec) [][]game.Target {
 	if len(specs) == 0 {
 		return [][]game.Target{nil}
 	}
@@ -41,8 +52,19 @@ func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.Ca
 	return choices
 }
 
-func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, targets []game.Target) bool {
-	specs := spellTargetSpecs(card)
+func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target) bool {
+	specs := spellTargetSpecs(card, chosenModes)
+	return targetsValidForSpecs(g, controller, specs, targets)
+}
+
+func targetsValidForAbility(g *game.Game, controller game.PlayerID, ability *game.AbilityDef, targets []game.Target) bool {
+	if ability == nil {
+		return len(targets) == 0
+	}
+	return targetsValidForSpecs(g, controller, ability.Targets, targets)
+}
+
+func targetsValidForSpecs(g *game.Game, controller game.PlayerID, specs []game.TargetSpec, targets []game.Target) bool {
 	if len(specs) == 0 {
 		return len(targets) == 0
 	}
@@ -57,8 +79,19 @@ func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.Car
 	return true
 }
 
-func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, controller game.PlayerID, targets []game.Target) bool {
-	specs := spellTargetSpecs(card)
+func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, controller game.PlayerID, chosenModes []int, targets []game.Target) bool {
+	specs := spellTargetSpecs(card, chosenModes)
+	return hasAnyLegalTargetForSpecs(g, controller, specs, targets)
+}
+
+func abilityHasAnyLegalTargets(g *game.Game, ability *game.AbilityDef, controller game.PlayerID, targets []game.Target) bool {
+	if ability == nil {
+		return len(targets) == 0
+	}
+	return hasAnyLegalTargetForSpecs(g, controller, ability.Targets, targets)
+}
+
+func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, specs []game.TargetSpec, targets []game.Target) bool {
 	if len(specs) == 0 {
 		return true
 	}
@@ -73,12 +106,55 @@ func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, controller game.P
 	return false
 }
 
-func spellTargetSpecs(card *game.CardDef) []game.TargetSpec {
+func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 	ability := firstSpellAbility(card)
 	if ability == nil {
 		return nil
 	}
+	if len(ability.Modes) > 0 {
+		if !modesValidForAbility(ability, chosenModes) {
+			return nil
+		}
+		var specs []game.TargetSpec
+		for _, modeIndex := range chosenModes {
+			specs = append(specs, ability.Modes[modeIndex].Targets...)
+		}
+		return specs
+	}
 	return ability.Targets
+}
+
+func modeChoicesForSpell(card *game.CardDef) [][]int {
+	ability := firstSpellAbility(card)
+	if ability == nil || len(ability.Modes) == 0 {
+		return [][]int{nil}
+	}
+	choices := make([][]int, 0, len(ability.Modes))
+	for i := range ability.Modes {
+		choices = append(choices, []int{i})
+	}
+	return choices
+}
+
+func modesValidForSpell(card *game.CardDef, chosenModes []int) bool {
+	ability := firstSpellAbility(card)
+	if ability == nil {
+		return len(chosenModes) == 0
+	}
+	return modesValidForAbility(ability, chosenModes)
+}
+
+func modesValidForAbility(ability *game.AbilityDef, chosenModes []int) bool {
+	if ability == nil {
+		return len(chosenModes) == 0
+	}
+	if len(ability.Modes) == 0 {
+		return len(chosenModes) == 0
+	}
+	if len(chosenModes) != 1 {
+		return false
+	}
+	return chosenModes[0] >= 0 && chosenModes[0] < len(ability.Modes)
 }
 
 func isSingleTargetSpec(spec game.TargetSpec) bool {

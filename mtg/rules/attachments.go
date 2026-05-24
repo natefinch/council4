@@ -61,6 +61,10 @@ func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {
 	return isAuraCard(permanentCardDef(g, permanent))
 }
 
+func isEquipmentPermanent(g *game.Game, permanent *game.Permanent) bool {
+	return isEquipmentCard(permanentCardDef(g, permanent))
+}
+
 func isAttachmentPermanent(g *game.Game, permanent *game.Permanent) bool {
 	card := permanentCardDef(g, permanent)
 	return isAuraCard(card) || isEquipmentCard(card)

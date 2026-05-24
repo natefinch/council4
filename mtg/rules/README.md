@@ -21,7 +21,7 @@ The engine receives a `*rand.Rand` so simulations and tests can be deterministic
 
 Use `Engine.NewGame` when you want the engine's RNG to control both initial library shuffles and later in-game randomness.
 
-`RunGame` currently supports opening hands, turn progression, drawing, passing priority, playing lands, simple spell casting and resolution, common permanent interactions, state-based actions, combat, and game termination.
+`RunGame` currently supports opening hands, turn progression, drawing, passing priority, playing lands, mana abilities, spell casting and resolution, common permanent interactions, state-based actions, combat, and game termination.
 
 ### PlayerAgent
 
@@ -58,13 +58,17 @@ Implemented now:
 - Priority loop with multiplayer pass-around-table behavior and stack-aware all-pass handling.
 - State-based actions for player elimination from 0 life, lethal poison, lethal commander damage, and failed draws.
 - Permanent state-based actions for 0 toughness, lethal damage, deathtouch damage, 0 planeswalker loyalty, 0 battle defense, illegal Auras/attachments, token cleanup, legendary-rule duplicates, and +1/+1/-1/-1 counter cancellation.
-- Legal action generation for passing, playing lands, casting simple spells with player or permanent targets, and compact attacker declarations.
-- Action application for passing, playing lands, casting simple spells, and declaring attackers.
-- Basic mana cost payment helpers that can auto-tap untapped basic lands for colored and generic costs.
-- Simple stack resolution for creature spells entering the battlefield and instant/sorcery spells moving to graveyard.
+- Legal action generation for passing, playing lands, casting supported spells with player or permanent targets, activating simple mana/equip abilities, and compact attacker declarations.
+- Action application for passing, playing lands, casting supported spells, activating simple mana/equip abilities, and declaring attackers.
+- Mana cost payment helpers that use pool mana first, then auto-tap untapped basic lands and simple tap mana abilities from mana rocks or non-summoning-sick mana dorks.
+- Stack resolution for creature spells entering the battlefield, instant/sorcery spells moving to graveyard, modal spell effects, and equip activated abilities.
 - Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, exile, bounce, sacrifice, tap/untap, mass selector effects, token creation, and simple until-end-of-turn P/T modifiers.
 - Player- and permanent-targeted spell action generation using `TargetSpec` and runtime `game.Target` values.
 - Resolution-time target re-checking with counter-by-rules behavior when all targets become illegal.
+- Colorless and X-cost payment, with legal X choices capped for action generation.
+- Simple sacrifice-as-cost for spells, with sacrificed permanents excluded from mana payment plans.
+- Choose-one modal spell support using `Mode`, `ChosenModes`, and mode-specific target validation/resolution.
+- Flash timing for non-instant cards with the Flash keyword.
 - Combat step structure, summoning-sickness clearing, compact attacks and multi-blocks, goad attack requirements, Flying/Reach/Menace block legality, planeswalker and battle attack targets, first strike/double strike damage passes, Trample/Deathtouch combat damage assignment, Lifelink and commander combat damage, Indestructible survival from destroy/lethal damage, combat damage to players and permanents, and lethal permanent cleanup.
 - Battlefield zone-change helpers for moving card-backed permanents and tokens to destination zones, detaching attachments, and removing tokens from non-battlefield zones as an SBA.
 - Aura and Equipment skeleton support with attach/unattach helpers, attach-on-resolution for targeted permanent spells, basic creature-only attachment legality, and illegal attachment/aura SBAs.
@@ -72,19 +76,22 @@ Implemented now:
 
 Not implemented yet:
 
-- Explicit mana ability actions, equip actions, full attachment legality, and advanced combat mechanics.
+- Hybrid, phyrexian, and snow mana payment; alternative costs; cost reductions/increases; richer additional-cost choices; and attack taxes.
+- Full attachment legality beyond basic creature-only Aura/Equipment support.
 - Mulligans, choice-based discard/sacrifice decisions, replacement/prevention effects, regeneration, and dynamic continuous effects.
+- Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, and other non-combat keyword actions beyond Flash and basic Equip.
 
 ## Legal actions
 
 The current engine generates these actions:
 
 - `action.PlayLand(cardID)` for lands in the active player's hand during a main phase when the stack is empty and the land drop is available.
-- `action.CastSpell(cardID, targets, xValue, modes)` for supported creature, instant, and sorcery spells. Current cast support covers non-X mana costs, simple player targets, and untargeted spells.
+- `action.CastSpell(cardID, targets, xValue, modes)` for supported creature, instant, and sorcery spells. Current cast support covers colored, colorless, generic, and X costs; simple player/permanent targets; choose-one modal spells; Flash timing; and simple sacrifice-as-cost.
+- `action.ActivateAbility(sourceID, abilityIndex, targets, xValue)` for simple mana abilities and Equip abilities. Mana abilities resolve immediately without using the stack; Equip abilities use the stack and attach on resolution if their target is still legal.
 - `action.DeclareAttackers(attackers)` during the declare attackers turn-based action. Current attack generation is intentionally compact: all eligible attackers attack one alive opponent, or no attackers; goad filters out illegal no-attack and goading-player choices when a goaded creature can attack.
 - `action.Pass()` for every player with priority.
 
-Legal actions are ordered as play land, cast spell, then pass so simple agents develop mana before spending it and choose productive actions before passing.
+Legal actions are ordered as play land, cast spell, activate ability, then pass so simple agents develop mana before spending it and choose productive actions before passing.
 
 The priority loop treats agent output as untrusted: if an agent returns an action not present in the legal action list, the engine substitutes `Pass`.
 
@@ -92,9 +99,15 @@ When all active players pass in succession, the loop ends the current phase or s
 
 ## Mana payment
 
-The first mana-payment layer supports normal colored and generic costs. `canPayCost` and `payCost` use current mana pools first, then greedily tap untapped basic lands controlled by the player. Basic land mana is inferred from the land's name or subtype: Plains for white, Island for blue, Swamp for black, Mountain for red, and Forest for green.
+The mana-payment layer supports colored, true colorless, generic, and X costs. `canPayCost` and `payCost` use current mana pools first, then greedily tap untapped basic lands or simple tap mana abilities controlled by the player. Basic land mana is inferred from the land's name or subtype: Plains for white, Island for blue, Swamp for black, Mountain for red, and Forest for green.
+
+Simple mana abilities are activated abilities marked `IsManaAbility` with no targets, no timing restriction, no loyalty cost, and only add-mana effects. They may be exposed as legal actions for floating mana, or auto-used during cost payment. Creature mana abilities with tap costs respect summoning sickness.
+
+Spell cost payment also supports deterministic simple sacrifice-as-cost strings such as `Sacrifice a creature`. The sacrificed permanent is chosen from battlefield order and is excluded from the mana payment plan, so it cannot be used as both a mana source and the sacrificed object.
 
 Mana pools empty at phase and step boundaries before later priority windows can use stale mana.
+
+Hybrid, phyrexian, and snow mana costs remain unsupported until the payment model can represent payer choice, life payment, and snow-source provenance.
 
 ## Combat
 

@@ -27,9 +27,40 @@ func (e *Engine) resolveStackObject(g *game.Game, obj *game.StackObject, log *Tu
 	switch obj.Kind {
 	case game.StackSpell:
 		return e.resolveSpell(g, obj, log)
+	case game.StackActivatedAbility:
+		return e.resolveActivatedAbility(g, obj, log)
 	default:
 		return "resolved"
 	}
+}
+
+func (e *Engine) resolveActivatedAbility(g *game.Game, obj *game.StackObject, log *TurnLog) string {
+	permanent := permanentByObjectID(g, obj.SourceID)
+	if permanent == nil {
+		return "missing source"
+	}
+	card := permanentCardDef(g, permanent)
+	if card == nil || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(card.Abilities) {
+		return "missing source"
+	}
+	ability := &card.Abilities[obj.AbilityIndex]
+	if isEquipmentPermanent(g, permanent) && abilityHasKeyword(ability, game.Equip) {
+		if !abilityHasAnyLegalTargets(g, ability, obj.Controller, obj.Targets) {
+			return "countered by rules"
+		}
+		if len(obj.Targets) != 1 || obj.Targets[0].Kind != game.TargetPermanent {
+			return "countered by rules"
+		}
+		target := permanentByObjectID(g, obj.Targets[0].PermanentID)
+		if !attachPermanent(g, permanent, target) {
+			return "countered by rules"
+		}
+		return "resolved"
+	}
+	for _, effect := range ability.Effects {
+		e.resolveEffect(g, obj, effect, log)
+	}
+	return "resolved"
 }
 
 func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog) string {
@@ -38,7 +69,7 @@ func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog)
 		return "missing source"
 	}
 	if card.Def.IsPermanent() {
-		if !spellHasAnyLegalTargets(g, card.Def, obj.Controller, obj.Targets) {
+		if !spellHasAnyLegalTargets(g, card.Def, obj.Controller, obj.ChosenModes, obj.Targets) {
 			owner := playerByID(g, card.Owner)
 			if owner == nil {
 				return "invalid owner"
@@ -57,7 +88,7 @@ func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog)
 		return "battlefield"
 	}
 	if card.Def.HasType(game.TypeInstant) || card.Def.HasType(game.TypeSorcery) {
-		if !spellHasAnyLegalTargets(g, card.Def, obj.Controller, obj.Targets) {
+		if !spellHasAnyLegalTargets(g, card.Def, obj.Controller, obj.ChosenModes, obj.Targets) {
 			owner := playerByID(g, card.Owner)
 			if owner == nil {
 				return "invalid owner"

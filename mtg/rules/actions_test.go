@@ -180,6 +180,25 @@ func TestInstantLegalWhileStackNonEmpty(t *testing.T) {
 	}
 }
 
+func TestFlashCreatureLegalAtInstantSpeed(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	flashID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:      "Ambush Viper",
+		ManaCost:  greenCost(),
+		Types:     []game.CardType{game.TypeCreature},
+		Abilities: []game.AbilityDef{{Keywords: []game.Keyword{game.Flash}}},
+	})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhaseBeginning
+	g.Turn.Step = game.StepUpkeep
+	g.Stack.Push(&game.StackObject{ID: g.IDGen.Next(), Kind: game.StackSpell})
+
+	if !containsAction(engine.legalActions(g, game.Player1), action.CastSpell(flashID, nil, 0, nil)) {
+		t.Fatal("flash creature was not legal at instant speed")
+	}
+}
+
 func TestUnpayableSpellIsNotLegal(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -190,6 +209,268 @@ func TestUnpayableSpellIsNotLegal(t *testing.T) {
 
 	if containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
 		t.Fatal("unpayable spell was legal")
+	}
+}
+
+func TestLegalActionsIncludesPayableXValues(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cost := mana.Cost{mana.VariableMana(), mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Gelatinous Genesis",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+	})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, "Mountain")
+	addBasicLandPermanent(g, game.Player1, "Island")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+	for _, xValue := range []int{0, 1, 2} {
+		if !containsAction(legal, action.CastSpell(spellID, nil, xValue, nil)) {
+			t.Fatalf("legal actions do not include X=%d cast: %+v", xValue, legal)
+		}
+	}
+	if containsAction(legal, action.CastSpell(spellID, nil, 3, nil)) {
+		t.Fatalf("legal actions include unpayable X=3 cast: %+v", legal)
+	}
+}
+
+func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cost := mana.Cost{mana.VariableMana(), mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Gelatinous Genesis",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+	})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, "Mountain")
+	addBasicLandPermanent(g, game.Player1, "Island")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 2, nil)) {
+		t.Fatal("applyAction(cast X=2) = false, want true")
+	}
+	obj := g.Stack.Peek()
+	if obj == nil {
+		t.Fatal("stack is empty after casting X spell")
+	}
+	if obj.XValue != 2 {
+		t.Fatalf("stack X value = %d, want 2", obj.XValue)
+	}
+}
+
+func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Village Rites",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{
+				Kind:           game.SpellAbility,
+				AdditionalCost: "Sacrifice a creature",
+			},
+		},
+	})
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Goblin Token",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 1},
+		Toughness: &game.PT{Value: 1},
+	})
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	act := action.CastSpell(spellID, nil, 0, nil)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("spell with payable sacrifice cost was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(cast with sacrifice cost) = false, want true")
+	}
+	if permanentByObjectID(g, creature.ObjectID) != nil {
+		t.Fatal("sacrificed creature remained on battlefield")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(creature.CardInstanceID) {
+		t.Fatal("sacrificed creature was not put into graveyard")
+	}
+	if !forest.Tapped {
+		t.Fatal("forest was not tapped to pay mana cost")
+	}
+	obj := g.Stack.Peek()
+	if obj == nil || len(obj.AdditionalCostsPaid) != 1 || obj.AdditionalCostsPaid[0] != "Sacrifice a creature" {
+		t.Fatalf("stack additional costs paid = %+v, want sacrifice cost", obj)
+	}
+}
+
+func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Costly Harvest",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{
+				Kind:           game.SpellAbility,
+				AdditionalCost: "Sacrifice a creature",
+			},
+		},
+	})
+	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Llanowar Elves",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 1},
+		Toughness: &game.PT{Value: 1},
+	}, mana.Green, 1)
+	dork.SummoningSick = false
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("spell was legal by using the creature to both produce mana and pay sacrifice cost")
+	}
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast) = true, want false")
+	}
+	if dork.Tapped {
+		t.Fatal("sacrificed candidate was tapped by failed payment")
+	}
+	if permanentByObjectID(g, dork.ObjectID) == nil {
+		t.Fatal("sacrificed candidate left battlefield after failed payment")
+	}
+	if !g.Players[game.Player1].Hand.Contains(spellID) {
+		t.Fatal("spell left hand after failed payment")
+	}
+}
+
+func TestLegalActionsIncludesModalSpellModeChoices(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, modalCharm())
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:      "Silvercoat Lion",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 2},
+		Toughness: &game.PT{Value: 2},
+	})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+	if !containsAction(legal, action.CastSpell(spellID, nil, 0, []int{0})) {
+		t.Fatalf("legal actions do not include untargeted modal choice: %+v", legal)
+	}
+	if !containsAction(legal, action.CastSpell(spellID, []game.Target{game.PermanentTarget(target.ObjectID)}, 0, []int{1})) {
+		t.Fatalf("legal actions do not include targeted modal choice: %+v", legal)
+	}
+	if containsAction(legal, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatalf("legal actions include modal spell without chosen mode: %+v", legal)
+	}
+}
+
+func TestModalSpellResolvesChosenModeOnly(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, modalCharm())
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:      "Silvercoat Lion",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 2},
+		Toughness: &game.PT{Value: 2},
+	})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	act := action.CastSpell(spellID, []game.Target{game.PermanentTarget(target.ObjectID)}, 0, []int{1})
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(modal spell) = false, want true")
+	}
+	engine.resolveTopOfStack(g, nil)
+	if target.MarkedDamage != 2 {
+		t.Fatalf("target damage = %d, want 2", target.MarkedDamage)
+	}
+	if got := g.Players[game.Player1].Life; got != 40 {
+		t.Fatalf("controller life = %d, want 40 because unchosen mode did not resolve", got)
+	}
+}
+
+func TestEquipAbilityUsesStackAndAttachesOnResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	equipment := addCombatPermanent(g, game.Player1, equipEquipment())
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Runeclaw Bear",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 2},
+		Toughness: &game.PT{Value: 2},
+	})
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	act := action.ActivateAbility(equipment.ObjectID, 0, []game.Target{game.PermanentTarget(creature.ObjectID)}, 0)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("equip activation was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(equip) = false, want true")
+	}
+	if !forest.Tapped {
+		t.Fatal("forest was not tapped to pay equip cost")
+	}
+	if equipment.AttachedTo != nil {
+		t.Fatal("equipment attached before equip ability resolved")
+	}
+	if g.Stack.Size() != 1 {
+		t.Fatalf("stack size = %d, want 1", g.Stack.Size())
+	}
+	engine.resolveTopOfStack(g, nil)
+	if equipment.AttachedTo == nil || *equipment.AttachedTo != creature.ObjectID {
+		t.Fatalf("equipment attached to = %v, want %v", equipment.AttachedTo, creature.ObjectID)
+	}
+	if !permanentIDsContain(creature.Attachments, equipment.ObjectID) {
+		t.Fatal("equipped creature does not reference equipment")
+	}
+}
+
+func TestEquipAbilityOnlyAsSorceryToCreatureYouControl(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	equipment := addCombatPermanent(g, game.Player1, equipEquipment())
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Runeclaw Bear",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 2},
+		Toughness: &game.PT{Value: 2},
+	})
+	opponentCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:      "Silvercoat Lion",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 2},
+		Toughness: &game.PT{Value: 2},
+	})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhaseBeginning
+	g.Turn.Step = game.StepUpkeep
+
+	if containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(equipment.ObjectID, 0, []game.Target{game.PermanentTarget(creature.ObjectID)}, 0)) {
+		t.Fatal("equip activation was legal outside sorcery speed")
+	}
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	if containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(equipment.ObjectID, 0, []game.Target{game.PermanentTarget(opponentCreature.ObjectID)}, 0)) {
+		t.Fatal("equip activation was legal targeting opponent's creature")
 	}
 }
 
@@ -360,6 +641,47 @@ func greenSorcery() *game.CardDef {
 		Name:     "Explore",
 		ManaCost: greenCost(),
 		Types:    []game.CardType{game.TypeSorcery},
+	}
+}
+
+func modalCharm() *game.CardDef {
+	return &game.CardDef{
+		Name:  "Test Charm",
+		Types: []game.CardType{game.TypeInstant},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.SpellAbility,
+				Modes: []game.Mode{
+					{
+						Text:    "You gain 3 life.",
+						Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 3}},
+					},
+					{
+						Text:    "Deal 2 damage to target creature.",
+						Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+						Effects: []game.Effect{{Type: game.EffectDamage, TargetIndex: 0, Amount: 2}},
+					},
+				},
+			},
+		},
+	}
+}
+
+func equipEquipment() *game.CardDef {
+	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	return &game.CardDef{
+		Name:     "Test Sword",
+		Types:    []game.CardType{game.TypeArtifact},
+		Subtypes: []string{"Equipment"},
+		Abilities: []game.AbilityDef{
+			{
+				Kind:     game.ActivatedAbility,
+				Keywords: []game.Keyword{game.Equip},
+				ManaCost: &cost,
+				Timing:   game.SorceryOnly,
+				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature you control"}},
+			},
+		},
 	}
 }
 

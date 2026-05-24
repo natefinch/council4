@@ -184,6 +184,7 @@ type Effect struct {
 	TargetIndex    int
 	PowerDelta     int
 	ToughnessDelta int
+	ManaColor      mana.Color
 	UntilEndOfTurn bool
 	Selector       EffectSelector
 	Token          *CardDef
