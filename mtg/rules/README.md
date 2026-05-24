@@ -68,13 +68,13 @@ Implemented now:
 - Action application for passing, playing lands, casting supported spells, command-zone commander casts with tax/count tracking, activating simple mana/equip/loyalty/general abilities, Cycling from hand, paying attack taxes, and declaring attackers.
 - Mana cost payment helpers that use pool mana first, then auto-tap untapped basic lands and simple tap mana abilities from mana rocks or non-summoning-sick mana dorks, with generic spell cost modifiers and attack-tax payment exclusions.
 - Stack resolution for creature spells entering the battlefield, instant/sorcery spells moving to graveyard, modal spell effects, triggered abilities, equip activated abilities, Cycling abilities, Kicker effects, loyalty abilities, delayed triggers, and general non-mana activated abilities.
-- Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, exile, bounce, sacrifice, tap/untap, mass selector effects, token creation, runtime P/T modifiers, scry/surveil/mill, fight, transform, phase out, emblems, prevention, regeneration, and delayed triggers.
+- Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, exile, bounce, sacrifice, tap/untap, adding/removing/moving counters, mass selector effects, token creation, runtime P/T modifiers, declarative runtime continuous effects, scry/surveil/mill, fight, transform, phase out, emblems, prevention, regeneration, and delayed triggers. Unsupported effect primitives are logged instead of silently no-oping.
 - Hand-written spell implementation escape hatch through `CardDef.ImplementationID`, `Engine.RegisterCardImplementation`, and `CardContext` mutation helpers.
 - Typed `game.GameEvent` emission for spell casts/resolutions, ETB, death, damage, draw, discard, zone changes, and attack/block declarations.
 - Triggered ability detection from `game.TriggerPattern`, choice-mediated target selection, APNAP stack placement with choice-mediated same-controller ordering, optional-trigger resolution choices, and resolution through `StackTriggeredAbility`.
-- Player- and permanent-targeted spell action generation using `TargetSpec` and runtime `game.Target` values.
+- Player- and permanent-targeted spell action generation using `TargetSpec` and runtime `game.Target` values, including min/max target counts, mixed target slots, and structured target predicates with legacy string fallback.
 - Resolution-time target re-checking with counter-by-rules behavior when all targets become illegal.
-- Colorless and X-cost payment, with legal X choices capped for action generation.
+- Colorless and X-cost payment, with legal X choices capped for action generation and dynamic X-based effect amounts on resolution.
 - Simple sacrifice-as-cost for spells, with sacrificed permanents excluded from mana payment plans.
 - Choose-one modal spell support using `Mode`, `ChosenModes`, and mode-specific target validation/resolution.
 - Flash timing for non-instant cards with the Flash keyword.

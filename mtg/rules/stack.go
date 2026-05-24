@@ -77,7 +77,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	}
 	ability := &def.Abilities[obj.AbilityIndex]
 	if isEquipmentPermanent(g, permanent) && abilityHasKeyword(ability, game.Equip) {
-		if !abilityHasAnyLegalTargetsFromSource(g, def, ability, obj.Controller, obj.Targets) {
+		if !abilityHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, ability, obj.Controller, obj.Targets) {
 			return "countered by rules"
 		}
 		if len(obj.Targets) != 1 || obj.Targets[0].Kind != game.TargetPermanent {
@@ -89,7 +89,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		}
 		return "resolved"
 	}
-	if !abilityHasAnyLegalTargetsFromSource(g, def, ability, obj.Controller, obj.Targets) {
+	if !abilityHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, ability, obj.Controller, obj.Targets) {
 		return "countered by rules"
 	}
 	for _, effect := range ability.Effects {
@@ -118,10 +118,14 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 	if ability.Kind != game.TriggeredAbility {
 		return "missing source"
 	}
-	if ability.Trigger != nil && !triggerInterveningIf(g, obj.Controller, ability.Trigger) {
+	var event *game.GameEvent
+	if obj.HasTriggerEvent {
+		event = &obj.TriggerEvent
+	}
+	if ability.Trigger != nil && !triggerInterveningIf(g, obj.Controller, ability.Trigger, event) {
 		return "intervening if false"
 	}
-	if !abilityHasAnyLegalTargetsFromSource(g, source, ability, obj.Controller, obj.Targets) {
+	if !abilityHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, ability, obj.Controller, obj.Targets) {
 		return "countered by rules"
 	}
 	if ability.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
@@ -226,6 +230,16 @@ func stackObjectID(obj *game.StackObject) id.ID {
 		return 0
 	}
 	return obj.ID
+}
+
+func stackObjectSourceID(obj *game.StackObject) id.ID {
+	if obj == nil {
+		return 0
+	}
+	if obj.SourceCardID != 0 {
+		return obj.SourceCardID
+	}
+	return obj.SourceID
 }
 
 func stackObjectController(obj *game.StackObject) game.PlayerID {

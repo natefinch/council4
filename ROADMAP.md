@@ -125,11 +125,16 @@ This phase closes major gameplay-rule gaps that are not Commander-specific befor
 - [ ] Multiplayer draw-rule and seating-order hardening beyond the current clockwise `TurnOrder` and Phase 9C eliminated-player cleanup.
 - [x] Optional bracket/power-level metadata pass-through for simulations and reports.
 
-## Phase 11 — Card data, decklists, and card implementations
+## Phase 11 — Card data foundation
 
 - [x] `mtg/cards` registry package mapping canonical card names to card definitions.
 - [x] Scryfall data ingestion (per-card API) as the source of truth for card metadata. Bulk ingestion deferred.
 - [x] Generated `CardDef` data for supported cards (mechanical fields via `cardgen` library; abilities via `card-impl` skill).
+
+See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed card-text feature coverage roadmap that feeds generated card implementation work.
+
+## Phase 11B — Decklists and broad card implementation rollout
+
 - [ ] `mtg/deck` package for Moxfield/MTGO-style text decklist parsing.
 - [ ] Commander section parsing (`// Commander`, `COMMANDER:`) and explicit four-deck input.
 - [ ] Unsupported-card reporting with actionable messages.

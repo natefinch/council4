@@ -47,6 +47,11 @@ type StackObject struct {
 	// are not addressable by AbilityIndex on the source definition.
 	InlineAbility *AbilityDef
 
+	// TriggerEvent is the event that caused this triggered ability to trigger.
+	// HasTriggerEvent distinguishes a real zero-valued event from no event.
+	TriggerEvent    GameEvent
+	HasTriggerEvent bool
+
 	// Controller is the player who controls this spell or ability.
 	Controller PlayerID
 
@@ -67,6 +72,10 @@ type StackObject struct {
 	// AdditionalCostsPaid describes any additional costs that were paid
 	// (e.g., "sacrificed a creature", "discarded a card").
 	AdditionalCostsPaid []string
+
+	// ResolvedAmounts stores named numeric results from earlier effects on this
+	// stack object for "that much" style follow-up effects.
+	ResolvedAmounts map[string]int
 }
 
 // Stack represents the game stack — the zone where spells and abilities

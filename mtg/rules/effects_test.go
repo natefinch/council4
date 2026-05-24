@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
@@ -35,6 +36,62 @@ func TestDrawEffectDrawsRequestedCards(t *testing.T) {
 	}
 }
 
+func TestUnsupportedEffectsAreLogged(t *testing.T) {
+	tests := []game.EffectType{
+		game.EffectCounter,
+		game.EffectDiscard,
+		game.EffectSearch,
+		game.EffectGainControl,
+		game.EffectCopy,
+		game.EffectAttach,
+		game.EffectReplace,
+	}
+	for _, effectType := range tests {
+		t.Run(effectTypeName(effectType), func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+				Type:        effectType,
+				Description: "unsupported test effect",
+			}, nil)
+			log := TurnLog{}
+
+			engine.resolveTopOfStack(g, &log)
+
+			if IsEffectTypeExecuted(effectType) {
+				t.Fatalf("%v reported supported unexpectedly", effectType)
+			}
+			if len(log.Unsupported) != 1 {
+				t.Fatalf("unsupported logs = %d, want 1", len(log.Unsupported))
+			}
+			if log.Unsupported[0].EffectType != effectType || log.Unsupported[0].SourceID != sourceID {
+				t.Fatalf("unsupported log = %+v, want type %v source %v", log.Unsupported[0], effectType, sourceID)
+			}
+		})
+	}
+}
+
+func effectTypeName(effectType game.EffectType) string {
+	switch effectType {
+	case game.EffectCounter:
+		return "counter"
+	case game.EffectDiscard:
+		return "discard"
+	case game.EffectSearch:
+		return "search"
+	case game.EffectGainControl:
+		return "gain-control"
+	case game.EffectCopy:
+		return "copy"
+	case game.EffectAttach:
+		return "attach"
+	case game.EffectReplace:
+		return "replace"
+	default:
+		return "unknown"
+	}
+}
+
 func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -48,6 +105,111 @@ func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 
 	if g.Players[game.Player2].Life != 43 {
 		t.Fatalf("player 2 life = %d, want 43", g.Players[game.Player2].Life)
+	}
+}
+
+func TestDynamicAmountUsesControllerHandSize(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToHand(g, game.Player1, &game.CardDef{Name: "First"})
+	addCardToHand(g, game.Player1, &game.CardDef{Name: "Second"})
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectGainLife,
+		TargetIndex: -1,
+		DynamicAmount: &game.DynamicAmount{
+			Kind: game.DynamicAmountControllerHandSize,
+		},
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != 42 {
+		t.Fatalf("life = %d, want 42", got)
+	}
+}
+
+func TestDynamicAmountUsesXValue(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectDamage,
+		TargetIndex: 0,
+		DynamicAmount: &game.DynamicAmount{
+			Kind: game.DynamicAmountX,
+		},
+	}, []game.Target{game.PlayerTarget(game.Player2)})
+	g.Stack.Peek().XValue = 4
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player2].Life; got != 36 {
+		t.Fatalf("target life = %d, want 36", got)
+	}
+}
+
+func TestDynamicAmountUsesTargetPower(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectDamage,
+		TargetIndex: 0,
+		DynamicAmount: &game.DynamicAmount{
+			Kind:        game.DynamicAmountTargetPower,
+			TargetIndex: 0,
+		},
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := target.MarkedDamage; got != 5 {
+		t.Fatalf("marked damage = %d, want 5", got)
+	}
+}
+
+func TestDynamicAmountCanUsePreviousEffectResult(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	sourceID := g.IDGen.Next()
+	g.CardInstances[sourceID] = &game.CardInstance{
+		ID: sourceID,
+		Def: &game.CardDef{
+			Name:  "Linked Amount Spell",
+			Types: []game.CardType{game.TypeSorcery},
+			Abilities: []game.AbilityDef{
+				{
+					Kind: game.SpellAbility,
+					Effects: []game.Effect{
+						{Type: game.EffectGainLife, TargetIndex: -1, Amount: 3, LinkID: "that-much"},
+						{
+							Type:        game.EffectLoseLife,
+							TargetIndex: 0,
+							DynamicAmount: &game.DynamicAmount{
+								Kind:   game.DynamicAmountPreviousEffectResult,
+								LinkID: "that-much",
+							},
+						},
+					},
+				},
+			},
+		},
+		Owner: game.Player1,
+	}
+	g.Stack.Push(&game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   sourceID,
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PlayerTarget(game.Player2)},
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != 43 {
+		t.Fatalf("controller life = %d, want 43", got)
+	}
+	if got := g.Players[game.Player2].Life; got != 37 {
+		t.Fatalf("target life = %d, want 37", got)
 	}
 }
 
@@ -440,6 +602,165 @@ func TestTemporaryPTModifiersStackDeterministically(t *testing.T) {
 	}
 	if got, ok := effectiveToughness(g, creature); !ok || got != 3 {
 		t.Fatalf("effective toughness = %d ok=%v, want 3 true", got, ok)
+	}
+}
+
+func TestAddCounterEffectAddsCountersToTargetPermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectAddCounter,
+		TargetIndex: 0,
+		Amount:      3,
+		CounterKind: counter.PlusOnePlusOne,
+	}, []game.Target{game.PermanentTarget(artifact.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := artifact.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want 3", got)
+	}
+}
+
+func TestMoveCountersEffectMovesCountersBetweenTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Source Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	destination := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Destination Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	source.Counters.Add(counter.PlusOnePlusOne, 2)
+	source.Counters.Add(counter.Charge, 1)
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectMoveCounters,
+		TargetIndex: 1,
+		CounterSource: game.CounterSourceSpec{
+			Kind:        game.CounterSourceTarget,
+			TargetIndex: 0,
+		},
+	}, []game.Target{
+		game.PermanentTarget(source.ObjectID),
+		game.PermanentTarget(destination.ObjectID),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("source +1/+1 counters = %d, want 0", got)
+	}
+	if got := source.Counters.Get(counter.Charge); got != 0 {
+		t.Fatalf("source charge counters = %d, want 0", got)
+	}
+	if got := destination.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+		t.Fatalf("destination +1/+1 counters = %d, want 2", got)
+	}
+	if got := destination.Counters.Get(counter.Charge); got != 1 {
+		t.Fatalf("destination charge counters = %d, want 1", got)
+	}
+}
+
+func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	zero := game.PT{Value: 0}
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectApplyContinuous,
+		TargetIndex: 0,
+		Condition: &game.EffectCondition{
+			Text:               "it isn't a creature",
+			TargetIndex:        0,
+			MatchPermanentType: true,
+			PermanentType:      game.TypeCreature,
+			Negate:             true,
+		},
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:       game.LayerType,
+				AddTypes:    []game.CardType{game.TypeCreature},
+				AddSubtypes: []string{"Robot"},
+			},
+			{
+				Layer:        game.LayerPowerToughnessSet,
+				SetPower:     &zero,
+				SetToughness: &zero,
+			},
+		},
+	}, []game.Target{game.PermanentTarget(artifact.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !permanentHasType(g, artifact, game.TypeCreature) {
+		t.Fatal("noncreature artifact did not become a creature")
+	}
+	if !permanentHasSubtype(g, artifact, "Robot") {
+		t.Fatal("noncreature artifact did not gain Robot subtype")
+	}
+	if got := effectivePower(g, artifact); got != 0 {
+		t.Fatalf("effective power = %d, want 0", got)
+	}
+	if got, ok := effectiveToughness(g, artifact); !ok || got != 0 {
+		t.Fatalf("effective toughness = %d ok=%v, want 0 true", got, ok)
+	}
+}
+
+func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	two := game.PT{Value: 2}
+	artifactCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Construct",
+		Types:     []game.CardType{game.TypeArtifact, game.TypeCreature},
+		Subtypes:  []string{"Construct"},
+		Power:     &two,
+		Toughness: &two,
+	})
+	zero := game.PT{Value: 0}
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectApplyContinuous,
+		TargetIndex: 0,
+		Condition: &game.EffectCondition{
+			Text:               "it isn't a creature",
+			TargetIndex:        0,
+			MatchPermanentType: true,
+			PermanentType:      game.TypeCreature,
+			Negate:             true,
+		},
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:       game.LayerType,
+				AddTypes:    []game.CardType{game.TypeCreature},
+				AddSubtypes: []string{"Robot"},
+			},
+			{
+				Layer:        game.LayerPowerToughnessSet,
+				SetPower:     &zero,
+				SetToughness: &zero,
+			},
+		},
+	}, []game.Target{game.PermanentTarget(artifactCreature.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if permanentHasSubtype(g, artifactCreature, "Robot") {
+		t.Fatal("creature artifact incorrectly gained Robot subtype")
+	}
+	if got := effectivePower(g, artifactCreature); got != 2 {
+		t.Fatalf("effective power = %d, want 2", got)
+	}
+	if got, ok := effectiveToughness(g, artifactCreature); !ok || got != 2 {
+		t.Fatalf("effective toughness = %d ok=%v, want 2 true", got, ok)
 	}
 }
 

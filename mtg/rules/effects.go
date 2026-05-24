@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
@@ -57,23 +58,33 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 }
 
 func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, effect game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	if !effectConditionSatisfied(g, obj, effect.Condition) {
+		return
+	}
+	amount := effectAmount(g, obj, effect)
+	if !IsEffectTypeExecuted(effect.Type) {
+		logUnsupportedEffect(log, obj, effect)
+		rememberEffectAmount(obj, effect, amount)
+		return
+	}
 	if effect.Selector != game.EffectSelectorNone {
-		resolveMassPermanentEffect(g, obj, effect)
+		resolveMassPermanentEffect(g, obj, effect, amount)
+		rememberEffectAmount(obj, effect, amount)
 		return
 	}
 	switch effect.Type {
 	case game.EffectDraw:
-		if effect.Amount <= 0 {
+		if amount <= 0 {
 			return
 		}
 		playerID, ok := effectPlayer(g, obj, effect)
 		if !ok {
 			return
 		}
-		e.drawCards(g, playerID, effect.Amount, log)
+		e.drawCards(g, playerID, amount, log)
 
 	case game.EffectGainLife:
-		if effect.Amount <= 0 {
+		if amount <= 0 {
 			return
 		}
 		playerID, ok := effectPlayer(g, obj, effect)
@@ -81,9 +92,9 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 			return
 		}
 		player := g.Players[playerID]
-		player.Life += effect.Amount
+		player.Life += amount
 	case game.EffectLoseLife:
-		if effect.Amount <= 0 {
+		if amount <= 0 {
 			return
 		}
 		playerID, ok := effectPlayer(g, obj, effect)
@@ -91,9 +102,8 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 			return
 		}
 		player := g.Players[playerID]
-		player.Life -= effect.Amount
+		player.Life -= amount
 	case game.EffectAddMana:
-		amount := effect.Amount
 		if amount <= 0 {
 			amount = 1
 		}
@@ -107,12 +117,12 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 			player.ManaPool.Add(effect.ManaColor, amount)
 		}
 	case game.EffectDamage:
-		if effect.Amount <= 0 {
+		if amount <= 0 {
 			return
 		}
 		if playerID, ok := effectPlayer(g, obj, effect); ok {
 			sourceID, sourceObjectID := damageSourceIDs(g, obj)
-			dealPlayerDamage(g, sourceID, sourceObjectID, obj.Controller, playerID, effect.Amount, false)
+			dealPlayerDamage(g, sourceID, sourceObjectID, obj.Controller, playerID, amount, false)
 			return
 		}
 		permanent := effectPermanent(g, obj, effect)
@@ -120,7 +130,7 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 			return
 		}
 		sourceID, sourceObjectID := damageSourceIDs(g, obj)
-		dealPermanentDamage(g, sourceID, sourceObjectID, obj.Controller, permanent, effect.Amount, false)
+		dealPermanentDamage(g, sourceID, sourceObjectID, obj.Controller, permanent, amount, false)
 	case game.EffectDestroy:
 		permanent := effectPermanent(g, obj, effect)
 		if permanent == nil {
@@ -167,8 +177,21 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		if permanent != nil && effect.UntilEndOfTurn {
 			g.ContinuousEffects = append(g.ContinuousEffects, untilEndOfTurnContinuousEffect(g, obj, permanent, effect))
 		}
+	case game.EffectAddCounter:
+		permanent := effectPermanent(g, obj, effect)
+		if permanent != nil && amount > 0 {
+			permanent.Counters.Add(effect.CounterKind, amount)
+		}
+	case game.EffectRemoveCounter:
+		permanent := effectPermanent(g, obj, effect)
+		if permanent != nil && amount > 0 {
+			permanent.Counters.Remove(effect.CounterKind, amount)
+		}
+	case game.EffectMoveCounters:
+		moveCounters(g, obj, effect)
+	case game.EffectApplyContinuous:
+		applyContinuousEffectTemplates(g, obj, effectPermanent(g, obj, effect), effect)
 	case game.EffectCreateToken:
-		amount := effect.Amount
 		if amount <= 0 {
 			amount = 1
 		}
@@ -210,20 +233,60 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 	case game.EffectMill:
 		playerID, ok := effectPlayer(g, obj, effect)
 		if ok {
-			millCards(g, playerID, effect.Amount)
+			millCards(g, playerID, amount)
 		}
 	case game.EffectScry:
 		playerID, ok := effectPlayer(g, obj, effect)
 		if ok {
-			e.scryCards(g, agents, log, playerID, effect.Amount)
+			e.scryCards(g, agents, log, playerID, amount)
 		}
 	case game.EffectSurveil:
 		playerID, ok := effectPlayer(g, obj, effect)
 		if ok {
-			e.surveilCards(g, agents, log, playerID, effect.Amount)
+			e.surveilCards(g, agents, log, playerID, amount)
 		}
 	case game.EffectFight:
 		resolveFight(g, obj, effect)
+	}
+	rememberEffectAmount(obj, effect, amount)
+}
+
+// IsEffectTypeExecuted reports whether the generic rules resolver currently
+// implements the given effect primitive.
+func IsEffectTypeExecuted(effectType game.EffectType) bool {
+	switch effectType {
+	case game.EffectDraw,
+		game.EffectGainLife,
+		game.EffectLoseLife,
+		game.EffectAddMana,
+		game.EffectDamage,
+		game.EffectDestroy,
+		game.EffectExile,
+		game.EffectBounce,
+		game.EffectSacrifice,
+		game.EffectTap,
+		game.EffectUntap,
+		game.EffectModifyPT,
+		game.EffectAddCounter,
+		game.EffectRemoveCounter,
+		game.EffectMoveCounters,
+		game.EffectApplyContinuous,
+		game.EffectCreateToken,
+		game.EffectCreateDelayedTrigger,
+		game.EffectPutOnBattlefield,
+		game.EffectPrevent,
+		game.EffectRegenerate,
+		game.EffectSkipStep,
+		game.EffectTransform,
+		game.EffectPhaseOut,
+		game.EffectCreateEmblem,
+		game.EffectMill,
+		game.EffectScry,
+		game.EffectSurveil,
+		game.EffectFight:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -249,7 +312,7 @@ func stackObjectSourceIsSnow(g *game.Game, obj *game.StackObject) bool {
 	return permanentIsSnow(g, permanent)
 }
 
-func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game.Effect) {
+func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game.Effect, amount int) {
 	permanentIDs := selectedPermanentIDs(g, obj.Controller, nil, effect.Selector)
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	for _, permanentID := range permanentIDs {
@@ -259,8 +322,8 @@ func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game
 		}
 		switch effect.Type {
 		case game.EffectDamage:
-			if effect.Amount > 0 {
-				dealPermanentDamage(g, sourceID, sourceObjectID, obj.Controller, permanent, effect.Amount, false)
+			if amount > 0 {
+				dealPermanentDamage(g, sourceID, sourceObjectID, obj.Controller, permanent, amount, false)
 			}
 		case game.EffectDestroy:
 			destroyPermanent(g, permanent.ObjectID)
@@ -272,7 +335,193 @@ func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game
 			permanent.Tapped = true
 		case game.EffectUntap:
 			permanent.Tapped = false
+		case game.EffectAddCounter:
+			if amount > 0 {
+				permanent.Counters.Add(effect.CounterKind, amount)
+			}
+		case game.EffectRemoveCounter:
+			if amount > 0 {
+				permanent.Counters.Remove(effect.CounterKind, amount)
+			}
+		case game.EffectApplyContinuous:
+			applyContinuousEffectTemplates(g, obj, permanent, effect)
 		}
+	}
+}
+
+func logUnsupportedEffect(log *TurnLog, obj *game.StackObject, effect game.Effect) {
+	log.addUnsupportedEffect(UnsupportedEffectLog{
+		StackObjectID: stackObjectID(obj),
+		SourceID:      stackObjectSourceID(obj),
+		Controller:    stackObjectController(obj),
+		EffectType:    effect.Type,
+		Description:   effect.Description,
+	})
+}
+
+func effectAmount(g *game.Game, obj *game.StackObject, effect game.Effect) int {
+	if effect.DynamicAmount == nil || effect.DynamicAmount.Kind == game.DynamicAmountNone {
+		return effect.Amount
+	}
+	dynamic := effect.DynamicAmount
+	amount := 0
+	switch dynamic.Kind {
+	case game.DynamicAmountConstant:
+		amount = dynamic.Constant
+	case game.DynamicAmountX:
+		if obj != nil {
+			amount = obj.XValue
+		}
+	case game.DynamicAmountTargetPower:
+		if permanent := effectPermanent(g, obj, game.Effect{TargetIndex: dynamic.TargetIndex}); permanent != nil {
+			amount = effectivePower(g, permanent)
+		}
+	case game.DynamicAmountTargetToughness:
+		if permanent := effectPermanent(g, obj, game.Effect{TargetIndex: dynamic.TargetIndex}); permanent != nil {
+			if toughness, ok := effectiveToughness(g, permanent); ok {
+				amount = toughness
+			}
+		}
+	case game.DynamicAmountTargetManaValue:
+		if permanent := effectPermanent(g, obj, game.Effect{TargetIndex: dynamic.TargetIndex}); permanent != nil {
+			if def := permanentCardDef(g, permanent); def != nil {
+				amount = def.ManaValue
+			}
+		}
+	case game.DynamicAmountTargetCounters:
+		if permanent := effectPermanent(g, obj, game.Effect{TargetIndex: dynamic.TargetIndex}); permanent != nil {
+			amount = permanent.Counters.Get(dynamic.CounterKind)
+		}
+	case game.DynamicAmountControllerLife:
+		if player := playerByID(g, stackObjectController(obj)); player != nil {
+			amount = player.Life
+		}
+	case game.DynamicAmountControllerHandSize:
+		if player := playerByID(g, stackObjectController(obj)); player != nil {
+			amount = player.Hand.Size()
+		}
+	case game.DynamicAmountControllerGraveyardSize:
+		if player := playerByID(g, stackObjectController(obj)); player != nil {
+			amount = player.Graveyard.Size()
+		}
+	case game.DynamicAmountCountSelector:
+		amount = len(selectedPermanentIDs(g, stackObjectController(obj), nil, dynamic.Selector))
+	case game.DynamicAmountPreviousEffectResult:
+		if obj != nil && dynamic.LinkID != "" {
+			amount = obj.ResolvedAmounts[dynamic.LinkID]
+		}
+	}
+	multiplier := dynamic.Multiplier
+	if multiplier == 0 {
+		multiplier = 1
+	}
+	return amount * multiplier
+}
+
+func rememberEffectAmount(obj *game.StackObject, effect game.Effect, amount int) {
+	if obj == nil || effect.LinkID == "" {
+		return
+	}
+	if obj.ResolvedAmounts == nil {
+		obj.ResolvedAmounts = make(map[string]int)
+	}
+	obj.ResolvedAmounts[effect.LinkID] = amount
+}
+
+func moveCounters(g *game.Game, obj *game.StackObject, effect game.Effect) {
+	destination := effectPermanent(g, obj, effect)
+	if destination == nil {
+		return
+	}
+	counters, source := effectCounterSource(g, obj, effect.CounterSource)
+	if counters.IsEmpty() {
+		return
+	}
+	if source != nil && source.ObjectID == destination.ObjectID {
+		return
+	}
+	for kind, amount := range counters.All() {
+		destination.Counters.Add(kind, amount)
+	}
+	if source == nil {
+		return
+	}
+	for kind, amount := range counters.All() {
+		source.Counters.Remove(kind, amount)
+	}
+}
+
+func effectCounterSource(g *game.Game, obj *game.StackObject, source game.CounterSourceSpec) (counter.Set, *game.Permanent) {
+	switch source.Kind {
+	case game.CounterSourceTarget:
+		permanent := effectPermanent(g, obj, game.Effect{TargetIndex: source.TargetIndex})
+		if permanent == nil {
+			return counter.Set{}, nil
+		}
+		return cloneCounters(permanent.Counters), permanent
+	case game.CounterSourceEventPermanent:
+		if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.PermanentID == 0 {
+			return counter.Set{}, nil
+		}
+		if permanent := permanentByObjectID(g, obj.TriggerEvent.PermanentID); permanent != nil {
+			return cloneCounters(permanent.Counters), permanent
+		}
+		if snapshot, ok := lastKnownObject(g, obj.TriggerEvent.PermanentID); ok {
+			return cloneCounters(snapshot.Counters), nil
+		}
+	}
+	return counter.Set{}, nil
+}
+
+func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition *game.EffectCondition) bool {
+	if condition == nil {
+		return true
+	}
+	if condition.MatchPermanentType {
+		permanent := effectPermanent(g, obj, game.Effect{TargetIndex: condition.TargetIndex})
+		if permanent == nil {
+			return false
+		}
+		matches := permanentHasType(g, permanent, condition.PermanentType)
+		if condition.Negate {
+			matches = !matches
+		}
+		if !matches {
+			return false
+		}
+	}
+	return true
+}
+
+func applyContinuousEffectTemplates(g *game.Game, obj *game.StackObject, permanent *game.Permanent, effect game.Effect) {
+	if g == nil || obj == nil || len(effect.ContinuousEffects) == 0 {
+		return
+	}
+	sourceID, sourceObjectID := damageSourceIDs(g, obj)
+	timestamp := int64(g.IDGen.Next())
+	for _, template := range effect.ContinuousEffects {
+		runtimeEffect := template
+		runtimeEffect.ID = g.IDGen.Next()
+		runtimeEffect.SourceCardID = sourceID
+		runtimeEffect.SourceObjectID = sourceObjectID
+		runtimeEffect.Controller = obj.Controller
+		runtimeEffect.Timestamp = timestamp
+		runtimeEffect.CreatedTurn = g.Turn.TurnNumber
+		if effect.UntilEndOfTurn {
+			runtimeEffect.Duration = game.DurationUntilEndOfTurn
+		} else if effect.Duration != game.DurationPermanent {
+			runtimeEffect.Duration = effect.Duration
+		}
+		if runtimeEffect.Duration == game.DurationUntilYourNextTurn && runtimeEffect.ExpiresFor == game.Player1 {
+			runtimeEffect.ExpiresFor = obj.Controller
+		}
+		if runtimeEffect.AffectedObjectID == 0 && runtimeEffect.Selector == game.EffectSelectorNone {
+			if permanent == nil {
+				continue
+			}
+			runtimeEffect.AffectedObjectID = permanent.ObjectID
+		}
+		g.ContinuousEffects = append(g.ContinuousEffects, runtimeEffect)
 	}
 }
 

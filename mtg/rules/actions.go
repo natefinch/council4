@@ -171,7 +171,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				continue
 			}
 			for _, xValue := range legalXValuesForCost(g, playerID, ability.ManaCost) {
-				for _, targets := range targetChoicesForAbilityFromSource(g, playerID, card, ability) {
+				for _, targets := range targetChoicesForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability) {
 					if canActivateEquipAbility(g, playerID, permanent, ability, i, targets, xValue) ||
 						canActivateLoyaltyAbility(g, playerID, permanent, ability, i, targets, xValue) ||
 						canActivateGeneralAbility(g, playerID, permanent, ability, i, targets, xValue) {
@@ -379,7 +379,7 @@ func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if ability.LoyaltyCost < 0 && permanent.Counters.Get(counter.Loyalty) < -ability.LoyaltyCost {
 		return false
 	}
-	if !targetsValidForAbilityFromSource(g, playerID, permanentCardDef(g, permanent), ability, targets) {
+	if !targetsValidForAbilityFromSourceObject(g, playerID, permanentCardDef(g, permanent), permanent.ObjectID, ability, targets) {
 		return false
 	}
 	_, ok := buildAbilityCostPlan(g, playerID, permanent, ability, xValue)
@@ -582,7 +582,7 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(ability) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
 		return false
 	}
-	if !targetsValidForAbilityFromSource(g, playerID, permanentCardDef(g, permanent), ability, targets) {
+	if !targetsValidForAbilityFromSourceObject(g, playerID, permanentCardDef(g, permanent), permanent.ObjectID, ability, targets) {
 		return false
 	}
 	if len(targets) != 1 || targets[0].Kind != game.TargetPermanent {
@@ -605,7 +605,7 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if !activatedAbilityTimingAllows(g, playerID, ability) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
 		return false
 	}
-	if !targetsValidForAbilityFromSource(g, playerID, permanentCardDef(g, permanent), ability, targets) {
+	if !targetsValidForAbilityFromSourceObject(g, playerID, permanentCardDef(g, permanent), permanent.ObjectID, ability, targets) {
 		return false
 	}
 	_, ok := buildAbilityCostPlan(g, playerID, permanent, ability, xValue)

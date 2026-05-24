@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 func TestSelfETBTriggerGoesOnStackAndResolves(t *testing.T) {
@@ -56,6 +57,112 @@ func TestDeathTriggerGoesOnStack(t *testing.T) {
 
 	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
 		t.Fatalf("hand size = %d, want death trigger to draw one card", got)
+	}
+}
+
+func TestTriggerMovesCountersFromEventPermanentLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	destination := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Target Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	addCounterTransferTriggerSource(g, game.Player1)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Dying Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	source.Counters.Add(counter.PlusOnePlusOne, 2)
+	source.Counters.Add(counter.Charge, 3)
+
+	movePermanentToZone(g, source, game.ZoneGraveyard)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("counter transfer trigger was not put on stack")
+	}
+	obj := g.Stack.Peek()
+	if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.PermanentID != source.ObjectID {
+		t.Fatalf("trigger event = %+v, want event for source %v", obj, source.ObjectID)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := destination.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+		t.Fatalf("destination +1/+1 counters = %d, want 2", got)
+	}
+	if got := destination.Counters.Get(counter.Charge); got != 3 {
+		t.Fatalf("destination charge counters = %d, want 3", got)
+	}
+}
+
+func TestCounterTransferInterveningIfUsesLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Target Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	addCounterTransferTriggerSource(g, game.Player1)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Dying Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+
+	movePermanentToZone(g, source, game.ZoneGraveyard)
+
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("counter transfer trigger was put on stack for artifact with no counters")
+	}
+}
+
+func TestCounterTransferUpToOneTargetMayHaveNoTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCounterTransferTriggerSource(g, game.Player1)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Dying Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	source.Counters.Add(counter.PlusOnePlusOne, 1)
+
+	movePermanentToZone(g, source, game.ZoneGraveyard)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("counter transfer trigger with no legal target was not put on stack")
+	}
+	obj := g.Stack.Peek()
+	if obj == nil || len(obj.Targets) != 0 {
+		t.Fatalf("trigger targets = %+v, want no targets", obj)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+}
+
+func TestCounterTransferUpToOneTargetCanBeDeclined(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	destination := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Target Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	addCounterTransferTriggerSource(g, game.Player1)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Dying Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+	source.Counters.Add(counter.PlusOnePlusOne, 1)
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+
+	movePermanentToZone(g, source, game.ZoneGraveyard)
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("counter transfer trigger was not put on stack")
+	}
+	obj := g.Stack.Peek()
+	if obj == nil || len(obj.Targets) != 0 {
+		t.Fatalf("trigger targets = %+v, want declined target choice", obj)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := destination.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("destination +1/+1 counters = %d, want declined transfer", got)
 	}
 }
 
@@ -482,6 +589,45 @@ func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, 
 	card := g.GetCardInstance(permanent.CardInstanceID)
 	card.Def.Abilities[0].Trigger.InterveningIfControllerLifeAtLeast = lifeAtLeast
 	return permanent
+}
+
+func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{
+		Name:  "Counter Transfer Source",
+		Types: []game.CardType{game.TypeEnchantment},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.TriggeredAbility,
+				Trigger: &game.TriggerCondition{
+					Type: game.TriggerWhenever,
+					Pattern: game.TriggerPattern{
+						Event:              game.EventZoneChanged,
+						Controller:         game.TriggerControllerYou,
+						MatchPermanentType: true,
+						PermanentType:      game.TypeArtifact,
+						MatchFromZone:      true,
+						FromZone:           game.ZoneBattlefield,
+						MatchToZone:        true,
+						ToZone:             game.ZoneGraveyard,
+					},
+					InterveningIf:                          "it had counters on it",
+					InterveningIfEventPermanentHadCounters: true,
+				},
+				Targets: []game.TargetSpec{
+					{MinTargets: 0, MaxTargets: 1, Constraint: "artifact or creature you control"},
+				},
+				Effects: []game.Effect{
+					{
+						Type:        game.EffectMoveCounters,
+						TargetIndex: 0,
+						CounterSource: game.CounterSourceSpec{
+							Kind: game.CounterSourceEventPermanent,
+						},
+					},
+				},
+			},
+		},
+	})
 }
 
 func triggeredCreature(pattern game.TriggerPattern, effects []game.Effect, targets []game.TargetSpec) *game.CardDef {

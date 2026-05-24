@@ -15,6 +15,7 @@ type pendingTriggeredAbility struct {
 	sourceToken  *game.CardDef
 	abilityIndex int
 	targets      []game.Target
+	event        game.GameEvent
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -41,14 +42,16 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	}
 	for _, trigger := range e.orderTriggeredAbilitiesAPNAP(g, pending, agents, log) {
 		g.Stack.Push(&game.StackObject{
-			ID:             g.IDGen.Next(),
-			Kind:           game.StackTriggeredAbility,
-			SourceID:       trigger.sourceID,
-			SourceCardID:   trigger.sourceCardID,
-			SourceTokenDef: trigger.sourceToken,
-			AbilityIndex:   trigger.abilityIndex,
-			Controller:     trigger.controller,
-			Targets:        append([]game.Target(nil), trigger.targets...),
+			ID:              g.IDGen.Next(),
+			Kind:            game.StackTriggeredAbility,
+			SourceID:        trigger.sourceID,
+			SourceCardID:    trigger.sourceCardID,
+			SourceTokenDef:  trigger.sourceToken,
+			AbilityIndex:    trigger.abilityIndex,
+			TriggerEvent:    trigger.event,
+			HasTriggerEvent: true,
+			Controller:      trigger.controller,
+			Targets:         append([]game.Target(nil), trigger.targets...),
 		})
 	}
 	return true
@@ -82,7 +85,7 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 		if ability.Kind != game.TriggeredAbility || ability.Trigger == nil {
 			continue
 		}
-		if !triggerMatchesEvent(g, permanent, ability.Trigger.Pattern, event) || !triggerInterveningIf(g, controller, ability.Trigger) {
+		if !triggerMatchesEvent(g, permanent, ability.Trigger.Pattern, event) || !triggerInterveningIf(g, controller, ability.Trigger, &event) {
 			continue
 		}
 		pending = append(pending, pendingTriggeredAbility{
@@ -91,6 +94,7 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 			sourceCardID: permanent.CardInstanceID,
 			sourceToken:  permanent.TokenDef,
 			abilityIndex: i,
+			event:        event,
 		})
 	}
 	return pending
@@ -126,8 +130,8 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.GameEvent) *game.Perm
 	}
 }
 
-func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
-	choices := targetChoicesForAbilityFromSource(g, controller, source, ability)
+func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	choices := targetChoicesForAbilityFromSourceObject(g, controller, source, sourceObjectID, ability)
 	if len(choices) == 0 {
 		return nil, false
 	}
@@ -171,12 +175,20 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	return true
 }
 
-func triggerInterveningIf(g *game.Game, controller game.PlayerID, trigger *game.TriggerCondition) bool {
-	if trigger == nil || trigger.InterveningIfControllerLifeAtLeast == 0 {
+func triggerInterveningIf(g *game.Game, controller game.PlayerID, trigger *game.TriggerCondition, event *game.GameEvent) bool {
+	if trigger == nil {
 		return true
 	}
-	player := playerByID(g, controller)
-	return player != nil && player.Life >= trigger.InterveningIfControllerLifeAtLeast
+	if trigger.InterveningIfControllerLifeAtLeast != 0 {
+		player := playerByID(g, controller)
+		if player == nil || player.Life < trigger.InterveningIfControllerLifeAtLeast {
+			return false
+		}
+	}
+	if trigger.InterveningIfEventPermanentHadCounters && !eventPermanentHadCounters(g, event) {
+		return false
+	}
+	return true
 }
 
 func triggerControllerMatches(sourceController game.PlayerID, filter game.TriggerControllerFilter, eventController game.PlayerID) bool {
@@ -231,6 +243,19 @@ func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType game.Car
 	return false
 }
 
+func eventPermanentHadCounters(g *game.Game, event *game.GameEvent) bool {
+	if event == nil || event.PermanentID == 0 {
+		return false
+	}
+	if permanent := permanentByObjectID(g, event.PermanentID); permanent != nil {
+		return !permanent.Counters.IsEmpty()
+	}
+	if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
+		return !snapshot.Counters.IsEmpty()
+	}
+	return false
+}
+
 func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
 	if len(triggers) == 0 || g == nil {
 		return triggers
@@ -260,7 +285,7 @@ func (e *Engine) preparePlayerTriggers(g *game.Game, playerID game.PlayerID, tri
 	prepared := make([]pendingTriggeredAbility, 0, len(ordered))
 	for _, trigger := range ordered {
 		source := pendingTriggerSourceDef(g, trigger)
-		targets, ok := e.triggerTargets(g, trigger.controller, source, pendingTriggerAbilityFromDef(source, trigger), agents, log)
+		targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, pendingTriggerAbilityFromDef(source, trigger), agents, log)
 		if !ok {
 			continue
 		}

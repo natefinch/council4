@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/mtg/game/mana"
+import (
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
+)
 
 // AbilityKind classifies an ability by how it functions in the game (CR 113.3).
 type AbilityKind int
@@ -104,6 +107,11 @@ type TriggerCondition struct {
 	// InterveningIfControllerLifeAtLeast is a structured initial intervening-if
 	// condition for life-threshold triggers.
 	InterveningIfControllerLifeAtLeast int
+
+	// InterveningIfEventPermanentHadCounters is true for intervening-if clauses
+	// such as "if it had counters on it" on zone-change triggers. mtg/rules
+	// checks the event permanent's current object or last-known information.
+	InterveningIfEventPermanentHadCounters bool
 }
 
 // TriggerControllerFilter constrains a trigger by the controller recorded on an event.
@@ -216,6 +224,8 @@ const (
 	EffectSkipStep
 	EffectPhaseOut
 	EffectCreateEmblem
+	EffectApplyContinuous
+	EffectMoveCounters
 )
 
 // EffectSelector identifies a set of permanents affected by a mass effect.
@@ -232,25 +242,67 @@ const (
 	EffectSelectorOtherCreaturesYouControl EffectSelector = "other creatures you control"
 )
 
+// CounterSourceKind identifies where an effect reads counters from.
+type CounterSourceKind int
+
+const (
+	CounterSourceNone CounterSourceKind = iota
+
+	// CounterSourceTarget reads counters from another chosen target.
+	CounterSourceTarget
+
+	// CounterSourceEventPermanent reads counters from the event permanent that
+	// caused a triggered ability to trigger. If that permanent has left the
+	// battlefield, mtg/rules reads its last-known information.
+	CounterSourceEventPermanent
+)
+
+// CounterSourceSpec describes the source object for counter-moving effects.
+type CounterSourceSpec struct {
+	Kind        CounterSourceKind
+	TargetIndex int
+}
+
+// EffectCondition describes a simple condition that must be true when an
+// effect resolves. It is data only; mtg/rules owns evaluation.
+type EffectCondition struct {
+	// Text preserves the printed condition for logs, diagnostics, and review.
+	Text string
+
+	// TargetIndex identifies the target whose current characteristics are tested.
+	TargetIndex int
+
+	MatchPermanentType bool
+	PermanentType      CardType
+
+	// Negate inverts the permanent-type match, e.g. "it isn't a creature".
+	Negate bool
+}
+
 // Effect describes a single game effect produced by an ability.
 // TargetIndex indexes into the runtime targets chosen for the spell or ability;
 // -1 means the effect applies to that spell or ability's controller.
 type Effect struct {
-	Type            EffectType
-	Amount          int
-	TargetIndex     int
-	PowerDelta      int
-	ToughnessDelta  int
-	ManaColor       mana.Color
-	UntilEndOfTurn  bool
-	Duration        EffectDuration
-	Step            Step
-	Selector        EffectSelector
-	Token           *CardDef
-	DelayedTrigger  *DelayedTriggerDef
-	EmblemAbilities []AbilityDef
-	LinkID          string
-	Description     string
+	Type              EffectType
+	Amount            int
+	DynamicAmount     *DynamicAmount
+	TargetIndex       int
+	Condition         *EffectCondition
+	PowerDelta        int
+	ToughnessDelta    int
+	CounterKind       counter.Kind
+	CounterSource     CounterSourceSpec
+	ManaColor         mana.Color
+	UntilEndOfTurn    bool
+	Duration          EffectDuration
+	Step              Step
+	Selector          EffectSelector
+	Token             *CardDef
+	ContinuousEffects []ContinuousEffect
+	DelayedTrigger    *DelayedTriggerDef
+	EmblemAbilities   []AbilityDef
+	LinkID            string
+	Description       string
 }
 
 // TargetSpec describes the targeting requirements of an ability.
@@ -264,6 +316,11 @@ type TargetSpec struct {
 	// Constraint describes what can be targeted (e.g., "creature",
 	// "creature or planeswalker", "player").
 	Constraint string
+
+	// Allow and Predicate provide structured target legality for generated card
+	// definitions. Constraint remains for display and as a legacy fallback.
+	Allow     TargetAllow
+	Predicate TargetPredicate
 }
 
 // Mode represents one mode of a modal spell or ability ("Choose one —").

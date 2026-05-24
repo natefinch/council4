@@ -72,7 +72,64 @@ const (
     EffectScry; EffectSurveil; EffectFight; EffectTransform; EffectAttach
     EffectReplace; EffectPrevent; EffectCreateDelayedTrigger
     EffectRegenerate; EffectSkipStep; EffectPhaseOut; EffectCreateEmblem
+    EffectApplyContinuous; EffectMoveCounters
 )
+```
+
+### CounterSourceSpec
+
+```go
+const (
+    CounterSourceNone CounterSourceKind = iota
+    CounterSourceTarget
+    CounterSourceEventPermanent
+)
+
+type CounterSourceSpec struct {
+    Kind        CounterSourceKind
+    TargetIndex int
+}
+```
+
+### EffectCondition
+
+```go
+type EffectCondition struct {
+    Text               string
+    TargetIndex        int
+    MatchPermanentType bool
+    PermanentType      CardType
+    Negate             bool
+}
+```
+
+### DynamicAmount
+
+```go
+const (
+    DynamicAmountNone DynamicAmountKind = iota
+    DynamicAmountConstant
+    DynamicAmountX
+    DynamicAmountTargetPower
+    DynamicAmountTargetToughness
+    DynamicAmountTargetManaValue
+    DynamicAmountTargetCounters
+    DynamicAmountControllerLife
+    DynamicAmountControllerHandSize
+    DynamicAmountControllerGraveyardSize
+    DynamicAmountCountSelector
+    DynamicAmountPreviousEffectResult
+)
+
+type DynamicAmount struct {
+    Kind        DynamicAmountKind
+    Constant    int
+    Multiplier  int
+    TargetIndex int
+    CounterKind counter.Kind
+    Selector    EffectSelector
+    LinkID      string
+}
 ```
 
 ### Effect
@@ -81,21 +138,49 @@ const (
 type Effect struct {
     Type            EffectType
     Amount          int           // Numeric amount (damage, cards drawn, etc.)
+    DynamicAmount   *DynamicAmount // Amount determined on resolution
     TargetIndex     int           // Index into runtime targets; -1 = controller
+    Condition       *EffectCondition
     PowerDelta      int           // For EffectModifyPT
     ToughnessDelta  int           // For EffectModifyPT
+    CounterKind     counter.Kind  // For EffectAddCounter/EffectRemoveCounter
+    CounterSource   CounterSourceSpec  // For EffectMoveCounters
     ManaColor       mana.Color    // For EffectAddMana
     UntilEndOfTurn  bool          // Duration flag
     Duration        EffectDuration
     Step            Step          // For step-related effects
     Selector        EffectSelector  // For mass effects
     Token           *CardDef      // For EffectCreateToken
+    ContinuousEffects []ContinuousEffect  // For EffectApplyContinuous
     DelayedTrigger  *DelayedTriggerDef
     EmblemAbilities []AbilityDef
     LinkID          string
     Description     string        // Human-readable description
 }
 ```
+
+### TargetSpec
+
+```go
+type TargetSpec struct {
+    MinTargets int
+    MaxTargets int
+    Constraint string
+    Allow      TargetAllow
+    Predicate  TargetPredicate
+}
+
+const (
+    TargetAllowUnspecified TargetAllow = 0
+    TargetAllowPermanent   TargetAllow = 1 << 0
+    TargetAllowPlayer      TargetAllow = 1 << 1
+    TargetAllowStackObject TargetAllow = 1 << 2
+)
+```
+
+Use structured `Allow` and `Predicate` for common constraints such as nonblack,
+tapped/untapped, attacking/blocking, mana value, power/toughness, "another",
+and "with flying". Keep `Constraint` as human-readable oracle wording.
 
 ### EffectSelector (for mass effects)
 
@@ -131,6 +216,7 @@ type TriggerCondition struct {
     Pattern       TriggerPattern  // Structured event pattern
     InterveningIf string          // "if" condition (CR 603.4)
     InterveningIfControllerLifeAtLeast int
+    InterveningIfEventPermanentHadCounters bool
 }
 ```
 
@@ -264,6 +350,9 @@ For keywords with parameters:
 | Oracle text pattern | EffectType | Notes |
 |---------------------|------------|-------|
 | "deals N damage to" | `EffectDamage` | `Amount: N`, set `TargetIndex` |
+| "deals X damage to" | `EffectDamage` | `DynamicAmount: &game.DynamicAmount{Kind: game.DynamicAmountX}` |
+| "deals damage equal to [target]'s power" | `EffectDamage` | `DynamicAmount: &game.DynamicAmount{Kind: game.DynamicAmountTargetPower, TargetIndex: N}` |
+| "that much" | any amount effect | Use `LinkID` on the producing effect and `DynamicAmountPreviousEffectResult` on the consuming effect |
 | "destroy target" | `EffectDestroy` | `TargetIndex` from target order |
 | "exile target" | `EffectExile` | |
 | "return target ... to its owner's hand" | `EffectBounce` | |
@@ -273,7 +362,10 @@ For keywords with parameters:
 | "lose(s) N life" | `EffectLoseLife` | `Amount: N` |
 | "add {C}{C}" / "add {G}" | `EffectAddMana` | `Amount: N`, `ManaColor` |
 | "gets +N/+M" | `EffectModifyPT` | `PowerDelta: N`, `ToughnessDelta: M` |
-| "put N +1/+1 counter(s)" | `EffectAddCounter` | `Amount: N` |
+| "put N +1/+1 counter(s)" | `EffectAddCounter` | `Amount: N`, `CounterKind: counter.PlusOnePlusOne` |
+| "move counters from target ... onto target ..." | `EffectMoveCounters` | `CounterSource: CounterSourceSpec{Kind: CounterSourceTarget, TargetIndex: sourceIndex}`, `TargetIndex: destinationIndex` |
+| "put those counters on ..." from a triggered zone-change object | `EffectMoveCounters` | `CounterSource: CounterSourceSpec{Kind: CounterSourceEventPermanent}` reads current/LKI counters from the event permanent |
+| "becomes a N/M [subtype] creature in addition to its other types" | `EffectApplyContinuous` | Add `ContinuousEffects` entries for `LayerType` and `LayerPowerToughnessSet` |
 | "create a N/M token" | `EffectCreateToken` | Set `Token` field |
 | "sacrifice" (as effect) | `EffectSacrifice` | |
 | "tap target" | `EffectTap` | |

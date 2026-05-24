@@ -1,0 +1,96 @@
+package game
+
+import "github.com/natefinch/council4/mtg/game/mana"
+
+// TargetAllow identifies broad categories a target spec can choose from.
+type TargetAllow int
+
+const (
+	TargetAllowUnspecified TargetAllow = 0
+	TargetAllowPermanent   TargetAllow = 1 << 0
+	TargetAllowPlayer      TargetAllow = 1 << 1
+	TargetAllowStackObject TargetAllow = 1 << 2
+)
+
+// ControllerRelation constrains a permanent by its controller relative to the
+// player choosing targets.
+type ControllerRelation int
+
+const (
+	ControllerAny ControllerRelation = iota
+	ControllerYou
+	ControllerOpponent
+	ControllerNotYou
+)
+
+// PlayerRelation constrains a player target relative to the player choosing targets.
+type PlayerRelation int
+
+const (
+	PlayerAny PlayerRelation = iota
+	PlayerYou
+	PlayerOpponent
+	PlayerNotYou
+)
+
+// TriState represents an optional boolean predicate.
+type TriState int
+
+const (
+	TriAny TriState = iota
+	TriTrue
+	TriFalse
+)
+
+// CombatStateFilter constrains a permanent by current combat involvement.
+type CombatStateFilter int
+
+const (
+	CombatStateAny CombatStateFilter = iota
+	CombatStateAttacking
+	CombatStateBlocking
+	CombatStateAttackingOrBlocking
+)
+
+// ComparisonOp identifies an integer comparison operation.
+type ComparisonOp int
+
+const (
+	CompareAny ComparisonOp = iota
+	CompareEqual
+	CompareLessOrEqual
+	CompareGreaterOrEqual
+	CompareLessThan
+	CompareGreaterThan
+)
+
+// IntComparison is a simple comparison against a fixed integer value.
+type IntComparison struct {
+	Op    ComparisonOp
+	Value int
+}
+
+// TargetPredicate carries structured target legality predicates parsed from
+// common oracle text. Empty fields are wildcards.
+type TargetPredicate struct {
+	PermanentTypes []CardType
+	ExcludedTypes  []CardType
+
+	Colors         []mana.Color
+	ExcludedColors []mana.Color
+
+	Controller ControllerRelation
+	Player     PlayerRelation
+
+	Tapped      TriState
+	CombatState CombatStateFilter
+
+	Keyword         Keyword
+	ExcludedKeyword Keyword
+
+	ManaValue *IntComparison
+	Power     *IntComparison
+	Toughness *IntComparison
+
+	Another bool
+}
