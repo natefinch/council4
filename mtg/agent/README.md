@@ -19,7 +19,7 @@ agents := [game.NumPlayers]rules.PlayerAgent{
 }
 ```
 
-The rules engine orders productive actions before `Pass`, so this agent plays a land when possible, then casts the first legal spell when spell actions are available, and otherwise passes.
+The rules engine orders productive actions before `Pass`, so this agent plays a land when possible, casts the first legal spell when spell actions are available, declares the first offered attack or block during combat, and otherwise passes.
 
 ### SimpleCaster
 

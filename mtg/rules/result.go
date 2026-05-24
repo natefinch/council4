@@ -18,12 +18,15 @@ type GameResult struct {
 
 // TurnLog records the decisions and outcomes from a single turn.
 type TurnLog struct {
-	TurnNumber   int
-	ActivePlayer game.PlayerID
-	Draws        []DrawLog
-	Losses       []LossLog
-	Actions      []ActionLog
-	Resolves     []ResolveLog
+	TurnNumber     int
+	ActivePlayer   game.PlayerID
+	Draws          []DrawLog
+	Losses         []LossLog
+	Actions        []ActionLog
+	Resolves       []ResolveLog
+	CombatDamage   []CombatDamageLog
+	CreatureDamage []CreatureDamageLog
+	Deaths         []PermanentDeathLog
 }
 
 // DrawLog records a player draw during a game.
@@ -63,6 +66,43 @@ type ResolveLog struct {
 	Controller    game.PlayerID
 	Kind          game.StackObjectKind
 	Result        string
+}
+
+// CombatDamageLog records combat damage dealt to a player.
+type CombatDamageLog struct {
+	Attacker        id.ID
+	SourceID        id.ID
+	Controller      game.PlayerID
+	DefendingPlayer game.PlayerID
+	Damage          int
+}
+
+// CreatureDamageLog records combat damage dealt to a creature.
+type CreatureDamageLog struct {
+	SourcePermanent   id.ID
+	SourceID          id.ID
+	Controller        game.PlayerID
+	DamagedPermanent  id.ID
+	DamagedSourceID   id.ID
+	DamagedController game.PlayerID
+	Damage            int
+}
+
+// PermanentDeathReason describes why a permanent died or left the battlefield.
+type PermanentDeathReason string
+
+const (
+	PermanentDeathReasonLethalDamage  PermanentDeathReason = "lethal damage"
+	PermanentDeathReasonZeroToughness PermanentDeathReason = "0 toughness"
+)
+
+// PermanentDeathLog records a permanent leaving the battlefield due to rules.
+type PermanentDeathLog struct {
+	Permanent  id.ID
+	SourceID   id.ID
+	Owner      game.PlayerID
+	Controller game.PlayerID
+	Reason     PermanentDeathReason
 }
 
 func (r *GameResult) addLosses(losses []LossLog) {

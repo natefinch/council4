@@ -21,7 +21,7 @@ The engine receives a `*rand.Rand` so simulations and tests can be deterministic
 
 Use `Engine.NewGame` when you want the engine's RNG to control both initial library shuffles and later in-game randomness.
 
-`RunGame` currently supports the minimal game loop: opening hands, turn progression, drawing, passing priority, playing lands, state-based player elimination, and game termination.
+`RunGame` currently supports the minimal game loop: opening hands, turn progression, drawing, passing priority, playing lands, state-based player elimination, the combat step structure, and game termination.
 
 ### PlayerAgent
 
@@ -43,7 +43,7 @@ Do not pass `*game.Game` directly to agents; agents should not see hidden inform
 
 ### GameResult
 
-`GameResult` is the structured output from a completed game. It records the winner, elimination order, loss reasons, turn count, and per-turn draw/loss/action/resolve logs. The `report` package will consume `[]GameResult` to produce deck analytics.
+`GameResult` is the structured output from a completed game. It records the winner, elimination order, loss reasons, turn count, and per-turn draw/loss/action/resolve/combat-damage logs. The `report` package will consume `[]GameResult` to produce deck analytics.
 
 ## Current implementation status
 
@@ -53,20 +53,22 @@ Implemented now:
 - `Engine.NewGame` for deterministic game setup using the engine RNG.
 - `PlayerAgent`, `PlayerObservation`, and result/log data types.
 - Opening hand setup and card drawing.
-- Phase helpers for beginning, main, combat placeholder, ending, cleanup, and advancing to the next turn.
+- Phase helpers for beginning, main, combat, ending, cleanup, and advancing to the next turn.
 - Extra turn handling in LIFO order, skipping eliminated players.
 - Priority loop with multiplayer pass-around-table behavior and stack-aware all-pass handling.
 - State-based actions for player elimination from 0 life, lethal poison, lethal commander damage, and failed draws.
-- Legal action generation for passing and playing lands.
-- Action application for passing and playing lands.
+- Legal action generation for passing, playing lands, casting simple spells, and compact attacker declarations.
+- Action application for passing, playing lands, casting simple spells, and declaring attackers.
 - Basic mana cost payment helpers that can auto-tap untapped basic lands for colored and generic costs.
 - Simple stack resolution for creature spells entering the battlefield and instant/sorcery spells moving to graveyard.
 - Effect primitive execution for drawing cards, gaining life, losing life, and player damage.
 - Player-targeted spell action generation using `TargetSpec` and runtime `game.Target` values.
+- Combat step structure, summoning-sickness clearing, compact attacks and blocks, combat damage to players and creatures, and lethal creature damage cleanup.
+- Battlefield zone-change helpers for moving card-backed permanents to graveyard and removing tokens.
 
 Not implemented yet:
 
-- Explicit mana ability actions, permanent targeting, and combat resolution.
+- Explicit mana ability actions, permanent targeting, attacking planeswalkers or battles, and advanced combat mechanics.
 - Mulligans and maximum hand-size discard.
 
 ## Legal actions
@@ -75,6 +77,7 @@ The current engine generates these actions:
 
 - `action.PlayLand(cardID)` for lands in the active player's hand during a main phase when the stack is empty and the land drop is available.
 - `action.CastSpell(cardID, targets, xValue, modes)` for supported creature, instant, and sorcery spells. Current cast support covers non-X mana costs, simple player targets, and untargeted spells.
+- `action.DeclareAttackers(attackers)` during the declare attackers turn-based action. Current attack generation is intentionally compact: all eligible attackers attack one alive opponent, or no attackers.
 - `action.Pass()` for every player with priority.
 
 Legal actions are ordered as play land, cast spell, then pass so simple agents develop mana before spending it and choose productive actions before passing.
@@ -88,6 +91,16 @@ When all active players pass in succession, the loop ends the current phase or s
 The first mana-payment layer supports normal colored and generic costs. `canPayCost` and `payCost` use current mana pools first, then greedily tap untapped basic lands controlled by the player. Basic land mana is inferred from the land's name or subtype: Plains for white, Island for blue, Swamp for black, Mountain for red, and Forest for green.
 
 Mana pools empty at phase and step boundaries before later priority windows can use stale mana.
+
+## Combat
+
+Combat follows the real step sequence: beginning of combat, declare attackers, declare blockers, combat damage, and end of combat. The engine initializes `game.CombatState` for the duration of the combat phase, asks the active player to declare attackers, gives players priority in each combat step, applies state-based actions after combat damage, and clears combat state when combat ends.
+
+The current combat implementation supports compact declare-attackers and declare-blockers actions. Attackers are generated as all eligible attackers attacking one alive opponent, or no attacks. Blockers are generated as one-blocker/one-attacker pairs, or no blocks. Unblocked attackers deal numeric power as combat damage to the defending player; blocked attackers and blockers mark numeric combat damage on each other. Nil, star, and non-positive power deal 0 and are not logged.
+
+State-based actions destroy creatures with lethal marked damage or 0 toughness. Card-backed permanents move to their owner's graveyard; tokens are removed without entering a zone until triggered abilities need more exact token death semantics.
+
+This slice intentionally omits multi-blocking, attacking planeswalkers or battles, evasion, attack taxes, first strike, double strike, trample, deathtouch, indestructible, regeneration, protection, damage prevention, and combat tricks beyond the existing priority windows.
 
 ## State-based actions
 

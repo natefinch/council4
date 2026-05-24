@@ -10,8 +10,9 @@ import (
 // FirstLegal chooses the first legal action offered by the rules engine.
 //
 // This is intentionally simple: legal actions are ordered by the engine so
-// productive actions appear before Pass. In the current minimal game loop,
-// FirstLegal plays a land when possible and otherwise passes.
+// productive actions appear before Pass. FirstLegal plays lands, casts spells,
+// declares attacks, and declares blocks when those actions are first in the
+// legal action list.
 type FirstLegal struct{}
 
 // ChooseAction implements rules.PlayerAgent.

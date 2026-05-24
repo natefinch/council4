@@ -93,6 +93,58 @@ func TestBeginningPhaseDrawsOnFirstTurnInCommander(t *testing.T) {
 	}
 }
 
+func TestBeginningPhaseUntapsAndClearsSummoningSickForActivePlayer(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	activePermanent := addCreaturePermanent(g, game.Player1)
+	activePermanent.Tapped = true
+	activePermanent.SummoningSick = true
+	opponentPermanent := addCreaturePermanent(g, game.Player2)
+	opponentPermanent.Tapped = true
+	opponentPermanent.SummoningSick = true
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if activePermanent.Tapped {
+		t.Fatal("active player's permanent remained tapped")
+	}
+	if activePermanent.SummoningSick {
+		t.Fatal("active player's permanent remained summoning sick")
+	}
+	if !opponentPermanent.Tapped {
+		t.Fatal("opponent's permanent was untapped")
+	}
+	if !opponentPermanent.SummoningSick {
+		t.Fatal("opponent's permanent had summoning sickness cleared")
+	}
+}
+
+func TestSummoningSickPermanentClearsOnlyOnControllersUntap(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addCreaturePermanent(g, game.Player1)
+	permanent.SummoningSick = true
+	addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Player 2 Draw"})
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player2
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if !permanent.SummoningSick {
+		t.Fatal("summoning sickness cleared during another player's untap")
+	}
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Player 1 Draw"})
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if permanent.SummoningSick {
+		t.Fatal("summoning sickness remained after controller's untap")
+	}
+}
+
 func addCardToLibrary(g *game.Game, playerID game.PlayerID, def *game.CardDef) id.ID {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{
@@ -102,4 +154,24 @@ func addCardToLibrary(g *game.Game, playerID game.PlayerID, def *game.CardDef) i
 	}
 	g.Players[playerID].Library.Add(cardID)
 	return cardID
+}
+
+func addCreaturePermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID: cardID,
+		Def: &game.CardDef{
+			Name:  "Test Creature",
+			Types: []game.CardType{game.TypeCreature},
+		},
+		Owner: controller,
+	}
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: cardID,
+		Owner:          controller,
+		Controller:     controller,
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
 }

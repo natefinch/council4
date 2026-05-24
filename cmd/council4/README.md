@@ -17,12 +17,13 @@ Useful flags:
 ```bash
 go run ./cmd/council4 -mode land -seed 7 -deck-size 8 -verbose -nopass
 go run ./cmd/council4 -mode spells -seed 7 -verbose -nopass
+go run ./cmd/council4 -mode combat -seed 7 -verbose -nopass
 ```
 
-- `-mode` chooses `land` for the original land-only game or `spells` for a Phase 2 spell test deck.
+- `-mode` chooses `land` for the original land-only game, `spells` for a Phase 2 spell test deck, or `combat` for a simple creature combat deck.
 - `-seed` controls deterministic shuffling.
 - `-deck-size` controls how many Forests each land-mode test deck contains.
-- `-verbose` prints the per-turn draw and action log.
+- `-verbose` prints the per-turn draw, action, resolve, combat damage, creature damage, death, and loss log.
 - `-nopass` omits pass actions from verbose log output.
 
 ## Current behavior
@@ -30,7 +31,7 @@ go run ./cmd/council4 -mode spells -seed 7 -verbose -nopass
 Land mode supports:
 
 - Opening hands.
-- Untap, draw, main phases, placeholder combat, cleanup.
+- Untap, draw, main phases, combat, cleanup.
 - Playing one land per turn.
 - Passing priority around the table.
 - Player elimination when a player tries to draw from an empty library.
@@ -38,4 +39,6 @@ Land mode supports:
 
 Spell mode uses Forests plus simple hardcoded creature, draw, life-gain, and player-damage spells. It exercises auto-tap mana payment, cast actions, stack resolution, effect primitives, player targets, and verbose cast/resolve output.
 
-The command does not yet parse decklists, load real card data, produce reports, or simulate combat.
+Combat mode uses Forests plus simple hardcoded vanilla, Haste, Vigilance, and Defender creatures. It exercises attacker declarations, blocker declarations, player and creature combat damage, creature death cleanup, combat loss logs, and verbose combat output. The `FirstLegal` agent always chooses the first productive attack and the first offered block, so combat mode intentionally favors deterministic combat over strategic multiplayer choices.
+
+The command does not yet parse decklists, load real card data, produce reports, or simulate advanced combat mechanics like multi-blocking, evasion, first strike, trample, or prevention.

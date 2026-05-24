@@ -35,8 +35,8 @@ The top-level `Kind` field says which payload is meaningful. Payloads are groupe
 - `ActionPlayLand` - play a land card from hand.
 - `ActionCastSpell` - cast a spell with chosen runtime `game.Target` values.
 - `ActionActivateAbility` - activate an ability from a permanent or other source with chosen runtime `game.Target` values.
-- `ActionDeclareAttackers` - declare attackers during combat.
-- `ActionDeclareBlockers` - declare blockers during combat.
+- `ActionDeclareAttackers` - declare attackers as the active player's combat turn-based action.
+- `ActionDeclareBlockers` - declare blockers as a defending player's combat turn-based action.
 
 ## Package boundaries
 
@@ -45,3 +45,7 @@ The top-level `Kind` field says which payload is meaningful. Payloads are groupe
 The rules engine validates action legality. Agents should normally return one of the legal actions they were given, but the engine still treats returned actions as untrusted input.
 
 Cast-spell actions identify the card to cast and carry chosen targets, modes, and X value. Early spell support only generates untargeted, non-X casts; targeting and modal choices are layered in later.
+
+Declare-attackers actions carry concrete `game.AttackDeclaration` values. The rules engine offers them only during the declare attackers turn-based action, before the declare attackers priority window; they are not normal priority actions.
+
+Declare-blockers actions carry concrete `game.BlockDeclaration` values. The rules engine offers them only to defending players during the declare blockers turn-based action, before the declare blockers priority window.

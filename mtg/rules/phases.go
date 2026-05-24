@@ -16,7 +16,7 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) Turn
 	if g.IsGameOver() {
 		return log
 	}
-	e.runCombatPhase(g, agents)
+	e.runCombatPhase(g, agents, &log)
 	if g.IsGameOver() {
 		return log
 	}
@@ -43,6 +43,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		}
 		if permanent.Controller == g.Turn.ActivePlayer {
 			permanent.Tapped = false
+			permanent.SummoningSick = false
 		}
 	}
 
@@ -57,10 +58,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 			Failed: !ok,
 		})
 	}
-	losses := e.applyStateBasedActions(g)
-	if log != nil {
-		log.Losses = append(log.Losses, losses...)
-	}
+	e.applyStateBasedActionsWithLog(g, log)
 	emptyManaPools(g)
 }
 
@@ -69,14 +67,6 @@ func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
-	emptyManaPools(g)
-}
-
-func (e *Engine) runCombatPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
-	g.Turn.Phase = game.PhaseCombat
-	g.Turn.Step = game.StepBeginningOfCombat
-	g.Combat = nil
-	// TODO: declare attackers, declare blockers, and assign combat damage.
 	emptyManaPools(g)
 }
 

@@ -2,7 +2,7 @@
 
 Council4 is a Go playtesting engine for Magic: The Gathering Commander decks. The goal is to run many automated 4-player games with AI-controlled agents and produce analytics about deck performance.
 
-The current implementation is an early rules-engine slice: land-only games still run, and spell-mode games can cast simple creatures, draw/life spells, and player-damage spells through the stack.
+The current implementation is an early rules-engine slice: land-only games still run, spell-mode games can cast simple creatures, draw/life spells, and player-damage spells through the stack, and combat-mode games can attack players with simple creatures.
 
 ## Run the CLI
 
@@ -17,12 +17,13 @@ Useful flags:
 ```bash
 go run ./cmd/council4 -seed 1 -deck-size 8 -verbose -nopass
 go run ./cmd/council4 -mode spells -seed 1 -verbose -nopass
+go run ./cmd/council4 -mode combat -seed 1 -verbose -nopass
 ```
 
-- `-mode` chooses `land` or `spells`.
+- `-mode` chooses `land`, `spells`, or `combat`.
 - `-seed` controls deterministic shuffling.
 - `-deck-size` controls how many basic Forests each land-mode test deck contains.
-- `-verbose` prints the per-turn draw, action, loss, and resolve log.
+- `-verbose` prints the per-turn draw, action, resolve, combat damage, creature damage, death, and loss log.
 - `-nopass` omits pass actions from verbose log output.
 
 Example output:
@@ -79,13 +80,14 @@ Implemented:
 - 4-player Commander game state.
 - Deterministic game setup via seeded RNG.
 - Opening hands and card drawing.
-- Turn progression through beginning, main, combat placeholder, ending, and cleanup.
+- Turn progression through beginning, main, combat, ending, and cleanup.
 - Multiplayer priority passing.
 - Legal actions for playing lands, casting simple spells, and passing.
 - Auto-tap payment for normal colored and generic costs using basic lands.
 - Stack resolution for creature, instant, and sorcery spells.
 - Effect primitives for draw, gain life, lose life, and player damage.
 - Runtime player targets for simple targeted spells.
+- Combat steps, compact attacker and blocker declarations, combat damage to players and creatures, and lethal creature damage cleanup.
 - State-based player elimination for 0 life, poison, commander damage, and failed draws.
 - Loss logs with reasons for player eliminations.
 - Simple `agent.FirstLegal` and `agent.SimpleCaster` agents for deterministic test games.
@@ -95,7 +97,7 @@ Not implemented yet:
 - Decklist parsing.
 - Card registry and generated card definitions.
 - Explicit mana ability actions and advanced costs.
-- Combat damage.
+- Advanced combat mechanics such as multi-blocking, evasion, first strike, double strike, trample, deathtouch, indestructible, and prevention.
 - Reports and analytics output.
 
 ## Documentation

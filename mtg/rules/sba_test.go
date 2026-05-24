@@ -127,3 +127,84 @@ func TestApplyStateBasedActionsReturnsLosses(t *testing.T) {
 		t.Fatalf("loss reason = %q, want %q", losses[0].Reason, LossReasonZeroLife)
 	}
 }
+
+func TestCheckPermanentStateBasedActionsDestroysCreatureWithLethalDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature.MarkedDamage = 2
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if !changed {
+		t.Fatal("checkPermanentStateBasedActions() = false, want true")
+	}
+	if permanentByObjectID(g, creature.ObjectID) != nil {
+		t.Fatal("creature with lethal damage remained on battlefield")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(creature.CardInstanceID) {
+		t.Fatal("destroyed creature did not move to graveyard")
+	}
+	if len(deaths) != 1 || deaths[0].Permanent != creature.ObjectID || deaths[0].Reason != PermanentDeathReasonLethalDamage {
+		t.Fatalf("death logs = %+v, want lethal damage death", deaths)
+	}
+}
+
+func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	zero := game.PT{Value: 0}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Zero Toughness",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &zero,
+		Toughness: &zero,
+	})
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if !changed {
+		t.Fatal("checkPermanentStateBasedActions() = false, want true")
+	}
+	if permanentByObjectID(g, creature.ObjectID) != nil {
+		t.Fatal("zero-toughness creature remained on battlefield")
+	}
+	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroToughness {
+		t.Fatalf("death logs = %+v, want zero-toughness death", deaths)
+	}
+}
+
+func TestCheckPermanentStateBasedActionsRemovesLethalTokenWithoutGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	pt := game.PT{Value: 1}
+	token := &game.Permanent{
+		ObjectID:     g.IDGen.Next(),
+		Owner:        game.Player1,
+		Controller:   game.Player1,
+		MarkedDamage: 1,
+		Token:        true,
+		TokenDef: &game.CardDef{
+			Name:      "Token",
+			Types:     []game.CardType{game.TypeCreature},
+			Power:     &pt,
+			Toughness: &pt,
+		},
+	}
+	g.Battlefield = append(g.Battlefield, token)
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if !changed {
+		t.Fatal("checkPermanentStateBasedActions() = false, want true")
+	}
+	if permanentByObjectID(g, token.ObjectID) != nil {
+		t.Fatal("lethally damaged token remained on battlefield")
+	}
+	if g.Players[game.Player1].Graveyard.Size() != 0 {
+		t.Fatalf("graveyard size = %d, want 0 for token death", g.Players[game.Player1].Graveyard.Size())
+	}
+	if len(deaths) != 1 || deaths[0].Permanent != token.ObjectID {
+		t.Fatalf("death logs = %+v, want token death", deaths)
+	}
+}

@@ -61,6 +61,10 @@ func (e *Engine) applyAction(g *game.Game, playerID game.PlayerID, act action.Ac
 		return e.applyPlayLand(g, playerID, act.PlayLand.CardID)
 	case action.ActionCastSpell:
 		return e.applyCastSpell(g, playerID, act.CastSpell)
+	case action.ActionDeclareAttackers:
+		return e.applyDeclareAttackers(g, playerID, act.DeclareAttackers)
+	case action.ActionDeclareBlockers:
+		return e.applyDeclareBlockers(g, playerID, act.DeclareBlockers)
 	default:
 		return false
 	}

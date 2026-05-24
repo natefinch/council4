@@ -84,6 +84,28 @@ func TestPriorityLoopCastsAndResolvesPlayerDamageSpell(t *testing.T) {
 	}
 }
 
+func TestCombatVerticalSliceDeclaresAttackersAndDealsDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
+
+	if !sawAttackWith(log.Actions, attacker.ObjectID) {
+		t.Fatalf("declare attackers action for attacker %v was not logged", attacker.ObjectID)
+	}
+	if g.Players[game.Player2].Life != 38 {
+		t.Fatalf("player 2 life = %d, want 38", g.Players[game.Player2].Life)
+	}
+	if len(log.CombatDamage) != 1 {
+		t.Fatalf("combat damage logs = %d, want 1", len(log.CombatDamage))
+	}
+	if log.CombatDamage[0].DefendingPlayer != game.Player2 || log.CombatDamage[0].Damage != 2 {
+		t.Fatalf("combat damage log = %+v, want Player2 damage 2", log.CombatDamage[0])
+	}
+}
+
 type targetPlayerAgent struct {
 	target game.PlayerID
 }
@@ -128,6 +150,20 @@ func sawAction(actions []ActionLog, kind action.ActionKind) bool {
 	for _, logged := range actions {
 		if logged.Action.Kind == kind {
 			return true
+		}
+	}
+	return false
+}
+
+func sawAttackWith(actions []ActionLog, attacker id.ID) bool {
+	for _, logged := range actions {
+		if logged.Action.Kind != action.ActionDeclareAttackers {
+			continue
+		}
+		for _, declaration := range logged.Action.DeclareAttackers.Attackers {
+			if declaration.Attacker == attacker {
+				return true
+			}
 		}
 	}
 	return false

@@ -1,16 +1,36 @@
 package rules
 
-import "github.com/natefinch/council4/mtg/game"
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
+)
 
 const maxStateBasedActionPasses = 1000
 
 func (e *Engine) applyStateBasedActions(g *game.Game) []LossLog {
+	losses, _ := e.applyStateBasedActionsWithDeaths(g)
+	return losses
+}
+
+func (e *Engine) applyStateBasedActionsWithLog(g *game.Game, log *TurnLog) []LossLog {
+	losses, deaths := e.applyStateBasedActionsWithDeaths(g)
+	if log != nil {
+		log.Losses = append(log.Losses, losses...)
+		log.Deaths = append(log.Deaths, deaths...)
+	}
+	return losses
+}
+
+func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []PermanentDeathLog) {
 	var losses []LossLog
+	var deaths []PermanentDeathLog
 	for i := 0; i < maxStateBasedActionPasses; i++ {
 		changed, passLosses := e.checkStateBasedActions(g)
+		permanentsChanged, passDeaths := e.checkPermanentStateBasedActions(g)
 		losses = append(losses, passLosses...)
-		if !changed {
-			return losses
+		deaths = append(deaths, passDeaths...)
+		if !changed && !permanentsChanged {
+			return losses, deaths
 		}
 	}
 	panic("state-based actions did not converge")
@@ -47,6 +67,64 @@ func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 		}
 	}
 	return changed, losses
+}
+
+func (e *Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) {
+	if g == nil {
+		return false, nil
+	}
+
+	type pendingDeath struct {
+		objectID id.ID
+		reason   PermanentDeathReason
+	}
+	var pending []pendingDeath
+	for _, permanent := range g.Battlefield {
+		reason, ok := permanentDeathReason(g, permanent)
+		if ok {
+			pending = append(pending, pendingDeath{
+				objectID: permanent.ObjectID,
+				reason:   reason,
+			})
+		}
+	}
+	if len(pending) == 0 {
+		return false, nil
+	}
+
+	var deaths []PermanentDeathLog
+	for _, death := range pending {
+		permanent, ok := destroyPermanent(g, death.objectID)
+		if !ok {
+			continue
+		}
+		deaths = append(deaths, PermanentDeathLog{
+			Permanent:  permanent.ObjectID,
+			SourceID:   permanent.CardInstanceID,
+			Owner:      permanent.Owner,
+			Controller: permanent.Controller,
+			Reason:     death.reason,
+		})
+	}
+	return len(deaths) > 0, deaths
+}
+
+func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDeathReason, bool) {
+	card := permanentCardDef(g, permanent)
+	if card == nil || !card.HasType(game.TypeCreature) {
+		return "", false
+	}
+	toughness, ok := creatureToughness(card)
+	if !ok {
+		return "", false
+	}
+	if toughness <= 0 {
+		return PermanentDeathReasonZeroToughness, true
+	}
+	if permanent.MarkedDamage >= toughness {
+		return PermanentDeathReasonLethalDamage, true
+	}
+	return "", false
 }
 
 func (e *Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {

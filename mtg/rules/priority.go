@@ -11,10 +11,7 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 	consecutivePasses := 0
 
 	for {
-		losses := e.applyStateBasedActions(g)
-		if log != nil {
-			log.Losses = append(log.Losses, losses...)
-		}
+		e.applyStateBasedActionsWithLog(g, log)
 		if g.IsGameOver() {
 			return
 		}
