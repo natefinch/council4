@@ -59,13 +59,11 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	g.Turn.Step = game.StepDraw
 	if !consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw) {
 		cardID, ok := e.drawCard(g, g.Turn.ActivePlayer)
-		if log != nil {
-			log.Draws = append(log.Draws, DrawLog{
-				Player: g.Turn.ActivePlayer,
-				CardID: cardID,
-				Failed: !ok,
-			})
-		}
+		log.addDraw(DrawLog{
+			Player: g.Turn.ActivePlayer,
+			CardID: cardID,
+			Failed: !ok,
+		})
 	}
 	e.applyStateBasedActionsWithLog(g, log)
 	emptyManaPools(g)

@@ -26,13 +26,11 @@ func (e *Engine) chooseChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 		panic("invalid fallback choice")
 	}
 	selected = append([]int(nil), selected...)
-	if log != nil {
-		log.Choices = append(log.Choices, game.ChoiceDecision{
-			Request:      cloneChoiceRequest(request),
-			Selected:     selected,
-			UsedFallback: usedFallback,
-		})
-	}
+	log.addChoice(game.ChoiceDecision{
+		Request:      cloneChoiceRequest(request),
+		Selected:     selected,
+		UsedFallback: usedFallback,
+	})
 	return selected
 }
 

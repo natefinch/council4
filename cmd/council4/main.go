@@ -297,6 +297,10 @@ func printTurnLog(w io.Writer, g *game.Game, result *rules.GameResult, opts logO
 	fmt.Fprintln(w, "Turn log:")
 	for _, turn := range result.Turns {
 		fmt.Fprintf(w, "Turn %d (%s)\n", turn.TurnNumber, playerName(turn.ActivePlayer))
+		if len(turn.Entries) > 0 {
+			printTurnLogEntries(w, g, turn, opts)
+			continue
+		}
 		for _, logged := range turn.Draws {
 			fmt.Fprintf(w, "  %s: %s\n", playerName(logged.Player), formatDraw(g, logged))
 		}
@@ -304,7 +308,7 @@ func printTurnLog(w io.Writer, g *game.Game, result *rules.GameResult, opts logO
 			if opts.OmitPasses && logged.Action.Kind == action.ActionPass {
 				continue
 			}
-			fmt.Fprintf(w, "  %s: %s\n", playerName(logged.Player), formatAction(g, logged.Action))
+			fmt.Fprintf(w, "  %s: %s\n", playerName(logged.Player), formatActionLog(g, logged))
 		}
 		for _, logged := range turn.Resolves {
 			fmt.Fprintf(w, "  %s\n", formatResolve(g, logged))
@@ -324,6 +328,30 @@ func printTurnLog(w io.Writer, g *game.Game, result *rules.GameResult, opts logO
 	}
 }
 
+func printTurnLogEntries(w io.Writer, g *game.Game, turn rules.TurnLog, opts logOptions) {
+	for _, entry := range turn.Entries {
+		switch entry.Kind {
+		case rules.TurnLogEntryDraw:
+			fmt.Fprintf(w, "  %s: %s\n", playerName(entry.Draw.Player), formatDraw(g, entry.Draw))
+		case rules.TurnLogEntryLoss:
+			fmt.Fprintf(w, "  %s: loses (%s)\n", playerName(entry.Loss.Player), entry.Loss.Reason)
+		case rules.TurnLogEntryAction:
+			if opts.OmitPasses && entry.Action.Action.Kind == action.ActionPass {
+				continue
+			}
+			fmt.Fprintf(w, "  %s: %s\n", playerName(entry.Action.Player), formatActionLog(g, entry.Action))
+		case rules.TurnLogEntryResolve:
+			fmt.Fprintf(w, "  %s\n", formatResolve(g, entry.Resolve))
+		case rules.TurnLogEntryCombatDamage:
+			fmt.Fprintf(w, "  %s\n", formatCombatDamage(g, entry.CombatDamage))
+		case rules.TurnLogEntryCreatureDamage:
+			fmt.Fprintf(w, "  %s\n", formatCreatureDamage(g, entry.CreatureDamage))
+		case rules.TurnLogEntryDeath:
+			fmt.Fprintf(w, "  %s\n", formatPermanentDeath(g, entry.Death))
+		}
+	}
+}
+
 func formatDraw(g *game.Game, draw rules.DrawLog) string {
 	if draw.Failed {
 		return "draw from empty library"
@@ -336,6 +364,11 @@ func formatDraw(g *game.Game, draw rules.DrawLog) string {
 }
 
 func formatAction(g *game.Game, act action.Action) string {
+	return formatActionLog(g, rules.ActionLog{Action: act})
+}
+
+func formatActionLog(g *game.Game, logged rules.ActionLog) string {
+	act := logged.Action
 	switch act.Kind {
 	case action.ActionPass:
 		return "pass"
@@ -352,41 +385,54 @@ func formatAction(g *game.Game, act action.Action) string {
 		}
 		return fmt.Sprintf("cast %q", card.Def.Name)
 	case action.ActionDeclareAttackers:
-		return formatDeclareAttackers(g, act.DeclareAttackers)
+		return formatDeclareAttackers(g, logged, act.DeclareAttackers)
 	case action.ActionDeclareBlockers:
-		return formatDeclareBlockers(g, act.DeclareBlockers)
+		return formatDeclareBlockers(g, logged, act.DeclareBlockers)
 	default:
 		return fmt.Sprintf("action kind %d", act.Kind)
 	}
 }
 
-func formatDeclareAttackers(g *game.Game, declare action.DeclareAttackersAction) string {
+func formatDeclareAttackers(g *game.Game, logged rules.ActionLog, declare action.DeclareAttackersAction) string {
 	if len(declare.Attackers) == 0 {
 		return "declare no attackers"
 	}
 	parts := make([]string, 0, len(declare.Attackers))
 	for _, declaration := range declare.Attackers {
-		parts = append(parts, fmt.Sprintf("%s at %s", formatAttacker(g, declaration), playerName(declaration.Target.Player)))
+		parts = append(parts, fmt.Sprintf("%s at %s", formatAttacker(g, logged, declaration), playerName(declaration.Target.Player)))
 	}
 	return "declare attackers: " + strings.Join(parts, ", ")
 }
 
-func formatAttacker(g *game.Game, declaration game.AttackDeclaration) string {
-	return formatPermanent(g, declaration.Attacker)
+func formatAttacker(g *game.Game, logged rules.ActionLog, declaration game.AttackDeclaration) string {
+	return formatPermanentForAction(g, logged, declaration.Attacker)
 }
 
-func formatDeclareBlockers(g *game.Game, declare action.DeclareBlockersAction) string {
+func formatDeclareBlockers(g *game.Game, logged rules.ActionLog, declare action.DeclareBlockersAction) string {
 	if len(declare.Blockers) == 0 {
 		return "declare no blockers"
 	}
 	parts := make([]string, 0, len(declare.Blockers))
 	for _, declaration := range declare.Blockers {
 		parts = append(parts, fmt.Sprintf("%s blocks %s",
-			formatPermanent(g, declaration.Blocker),
-			formatPermanent(g, declaration.Blocking),
+			formatPermanentForAction(g, logged, declaration.Blocker),
+			formatPermanentForAction(g, logged, declaration.Blocking),
 		))
 	}
 	return "declare blockers: " + strings.Join(parts, ", ")
+}
+
+func formatPermanentForAction(g *game.Game, logged rules.ActionLog, objectID id.ID) string {
+	if cardID, ok := logged.PermanentSources[objectID]; ok {
+		card := g.GetCardInstance(cardID)
+		if card != nil && card.Def != nil {
+			return fmt.Sprintf("%q", card.Def.Name)
+		}
+	}
+	if tokenName := logged.PermanentTokenNames[objectID]; tokenName != "" {
+		return fmt.Sprintf("%q", tokenName)
+	}
+	return formatPermanent(g, objectID)
 }
 
 func formatPermanent(g *game.Game, objectID id.ID) string {

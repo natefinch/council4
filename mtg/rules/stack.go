@@ -27,10 +27,7 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 			CardID:        obj.SourceID,
 		})
 	}
-	if log == nil {
-		return
-	}
-	log.Resolves = append(log.Resolves, ResolveLog{
+	log.addResolve(ResolveLog{
 		StackObjectID: obj.ID,
 		SourceID:      obj.SourceID,
 		Controller:    obj.Controller,

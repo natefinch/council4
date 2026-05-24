@@ -233,13 +233,11 @@ func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, log
 	}
 	for range amount {
 		cardID, ok := e.drawCard(g, playerID)
-		if log != nil {
-			log.Draws = append(log.Draws, DrawLog{
-				Player: playerID,
-				CardID: cardID,
-				Failed: !ok,
-			})
-		}
+		log.addDraw(DrawLog{
+			Player: playerID,
+			CardID: cardID,
+			Failed: !ok,
+		})
 	}
 }
 

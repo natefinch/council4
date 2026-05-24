@@ -20,6 +20,7 @@ type GameResult struct {
 type TurnLog struct {
 	TurnNumber     int
 	ActivePlayer   game.PlayerID
+	Entries        []TurnLogEntry
 	Draws          []DrawLog
 	Losses         []LossLog
 	Actions        []ActionLog
@@ -28,6 +29,34 @@ type TurnLog struct {
 	CombatDamage   []CombatDamageLog
 	CreatureDamage []CreatureDamageLog
 	Deaths         []PermanentDeathLog
+}
+
+// TurnLogEntryKind identifies the kind of chronological turn log entry.
+type TurnLogEntryKind int
+
+const (
+	TurnLogEntryUnknown TurnLogEntryKind = iota
+	TurnLogEntryDraw
+	TurnLogEntryLoss
+	TurnLogEntryAction
+	TurnLogEntryChoice
+	TurnLogEntryResolve
+	TurnLogEntryCombatDamage
+	TurnLogEntryCreatureDamage
+	TurnLogEntryDeath
+)
+
+// TurnLogEntry records one event in the order it happened during the turn.
+type TurnLogEntry struct {
+	Kind           TurnLogEntryKind
+	Draw           DrawLog
+	Loss           LossLog
+	Action         ActionLog
+	Choice         game.ChoiceDecision
+	Resolve        ResolveLog
+	CombatDamage   CombatDamageLog
+	CreatureDamage CreatureDamageLog
+	Death          PermanentDeathLog
 }
 
 // DrawLog records a player draw during a game.
@@ -56,8 +85,10 @@ type LossLog struct {
 
 // ActionLog records a player action that occurred during a game.
 type ActionLog struct {
-	Player game.PlayerID
-	Action action.Action
+	Player              game.PlayerID
+	Action              action.Action
+	PermanentSources    map[id.ID]id.ID
+	PermanentTokenNames map[id.ID]string
 }
 
 // ResolveLog records a stack object resolving.
@@ -109,6 +140,70 @@ type PermanentDeathLog struct {
 	Owner      game.PlayerID
 	Controller game.PlayerID
 	Reason     PermanentDeathReason
+}
+
+func (log *TurnLog) addDraw(draw DrawLog) {
+	if log == nil {
+		return
+	}
+	log.Draws = append(log.Draws, draw)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryDraw, Draw: draw})
+}
+
+func (log *TurnLog) addLoss(loss LossLog) {
+	if log == nil {
+		return
+	}
+	log.Losses = append(log.Losses, loss)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryLoss, Loss: loss})
+}
+
+func (log *TurnLog) addAction(action ActionLog) {
+	if log == nil {
+		return
+	}
+	log.Actions = append(log.Actions, action)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryAction, Action: action})
+}
+
+func (log *TurnLog) addChoice(choice game.ChoiceDecision) {
+	if log == nil {
+		return
+	}
+	log.Choices = append(log.Choices, choice)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryChoice, Choice: choice})
+}
+
+func (log *TurnLog) addResolve(resolve ResolveLog) {
+	if log == nil {
+		return
+	}
+	log.Resolves = append(log.Resolves, resolve)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryResolve, Resolve: resolve})
+}
+
+func (log *TurnLog) addCombatDamage(damage CombatDamageLog) {
+	if log == nil {
+		return
+	}
+	log.CombatDamage = append(log.CombatDamage, damage)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryCombatDamage, CombatDamage: damage})
+}
+
+func (log *TurnLog) addCreatureDamage(damage CreatureDamageLog) {
+	if log == nil {
+		return
+	}
+	log.CreatureDamage = append(log.CreatureDamage, damage)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryCreatureDamage, CreatureDamage: damage})
+}
+
+func (log *TurnLog) addDeath(death PermanentDeathLog) {
+	if log == nil {
+		return
+	}
+	log.Deaths = append(log.Deaths, death)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryDeath, Death: death})
 }
 
 func (r *GameResult) addLosses(losses []LossLog) {

@@ -45,12 +45,10 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			chosen = action.Pass()
 		}
 
-		if log != nil {
-			log.Actions = append(log.Actions, ActionLog{
-				Player: playerID,
-				Action: chosen,
-			})
-		}
+		log.addAction(ActionLog{
+			Player: playerID,
+			Action: chosen,
+		})
 
 		if !e.applyActionWithChoices(g, playerID, chosen, agents, log) {
 			panic("applyAction failed for validated action")

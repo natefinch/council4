@@ -91,12 +91,7 @@ func (e *Engine) declareAttackers(g *game.Game, agents [game.NumPlayers]PlayerAg
 		chosen = legal[len(legal)-1]
 	}
 
-	if log != nil {
-		log.Actions = append(log.Actions, ActionLog{
-			Player: playerID,
-			Action: chosen,
-		})
-	}
+	log.addAction(combatActionLog(g, playerID, chosen))
 
 	if !e.applyDeclareAttackers(g, playerID, chosen.DeclareAttackers) {
 		panic("applyDeclareAttackers failed for validated action")
@@ -118,12 +113,7 @@ func (e *Engine) declareBlockers(g *game.Game, agents [game.NumPlayers]PlayerAge
 			chosen = legal[len(legal)-1]
 		}
 
-		if log != nil {
-			log.Actions = append(log.Actions, ActionLog{
-				Player: playerID,
-				Action: chosen,
-			})
-		}
+		log.addAction(combatActionLog(g, playerID, chosen))
 
 		if !e.applyDeclareBlockers(g, playerID, chosen.DeclareBlockers) {
 			panic("applyDeclareBlockers failed for validated action")
@@ -133,6 +123,43 @@ func (e *Engine) declareBlockers(g *game.Game, agents [game.NumPlayers]PlayerAge
 
 func (e *Engine) resolveCombatDamage(g *game.Game, log *TurnLog) {
 	e.resolveCombatDamagePass(g, normalCombatDamage, log)
+}
+
+func combatActionLog(g *game.Game, playerID game.PlayerID, act action.Action) ActionLog {
+	logged := ActionLog{
+		Player: playerID,
+		Action: act,
+	}
+	switch act.Kind {
+	case action.ActionDeclareAttackers:
+		for _, declaration := range act.DeclareAttackers.Attackers {
+			logged.addPermanentSnapshot(g, declaration.Attacker)
+		}
+	case action.ActionDeclareBlockers:
+		for _, declaration := range act.DeclareBlockers.Blockers {
+			logged.addPermanentSnapshot(g, declaration.Blocker)
+			logged.addPermanentSnapshot(g, declaration.Blocking)
+		}
+	}
+	return logged
+}
+
+func (log *ActionLog) addPermanentSnapshot(g *game.Game, objectID id.ID) {
+	permanent := permanentByObjectID(g, objectID)
+	if permanent == nil {
+		return
+	}
+	if permanent.Token {
+		if log.PermanentTokenNames == nil {
+			log.PermanentTokenNames = make(map[id.ID]string)
+		}
+		log.PermanentTokenNames[objectID] = permanentTokenName(permanent)
+		return
+	}
+	if log.PermanentSources == nil {
+		log.PermanentSources = make(map[id.ID]id.ID)
+	}
+	log.PermanentSources[objectID] = permanent.CardInstanceID
 }
 
 type combatDamagePass int
@@ -209,17 +236,15 @@ func markAttackTargetCombatDamage(g *game.Game, source *game.Permanent, target g
 	if dealt <= 0 {
 		return
 	}
-	if log != nil {
-		log.CreatureDamage = append(log.CreatureDamage, CreatureDamageLog{
-			SourcePermanent:   source.ObjectID,
-			SourceID:          source.CardInstanceID,
-			Controller:        sourceController,
-			DamagedPermanent:  permanent.ObjectID,
-			DamagedSourceID:   permanent.CardInstanceID,
-			DamagedController: effectiveController(g, permanent),
-			Damage:            dealt,
-		})
-	}
+	log.addCreatureDamage(CreatureDamageLog{
+		SourcePermanent:   source.ObjectID,
+		SourceID:          source.CardInstanceID,
+		Controller:        sourceController,
+		DamagedPermanent:  permanent.ObjectID,
+		DamagedSourceID:   permanent.CardInstanceID,
+		DamagedController: effectiveController(g, permanent),
+		Damage:            dealt,
+	})
 }
 
 func markCreatureCombatDamage(g *game.Game, source *game.Permanent, damaged *game.Permanent, damage int, log *TurnLog) {
@@ -235,17 +260,15 @@ func markCreatureCombatDamage(g *game.Game, source *game.Permanent, damaged *gam
 	if dealt <= 0 {
 		return
 	}
-	if log != nil {
-		log.CreatureDamage = append(log.CreatureDamage, CreatureDamageLog{
-			SourcePermanent:   source.ObjectID,
-			SourceID:          source.CardInstanceID,
-			Controller:        sourceController,
-			DamagedPermanent:  damaged.ObjectID,
-			DamagedSourceID:   damaged.CardInstanceID,
-			DamagedController: effectiveController(g, damaged),
-			Damage:            dealt,
-		})
-	}
+	log.addCreatureDamage(CreatureDamageLog{
+		SourcePermanent:   source.ObjectID,
+		SourceID:          source.CardInstanceID,
+		Controller:        sourceController,
+		DamagedPermanent:  damaged.ObjectID,
+		DamagedSourceID:   damaged.CardInstanceID,
+		DamagedController: effectiveController(g, damaged),
+		Damage:            dealt,
+	})
 }
 
 func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlayer game.PlayerID, damage int, log *TurnLog) {
@@ -262,15 +285,13 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 	if dealt <= 0 {
 		return
 	}
-	if log != nil {
-		log.CombatDamage = append(log.CombatDamage, CombatDamageLog{
-			Attacker:        source.ObjectID,
-			SourceID:        source.CardInstanceID,
-			Controller:      sourceController,
-			DefendingPlayer: defendingPlayer,
-			Damage:          dealt,
-		})
-	}
+	log.addCombatDamage(CombatDamageLog{
+		Attacker:        source.ObjectID,
+		SourceID:        source.CardInstanceID,
+		Controller:      sourceController,
+		DefendingPlayer: defendingPlayer,
+		Damage:          dealt,
+	})
 }
 
 func markPermanentDamage(g *game.Game, permanent *game.Permanent, damage int) {

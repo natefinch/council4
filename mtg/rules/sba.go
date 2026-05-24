@@ -15,9 +15,11 @@ func (e *Engine) applyStateBasedActions(g *game.Game) []LossLog {
 
 func (e *Engine) applyStateBasedActionsWithLog(g *game.Game, log *TurnLog) []LossLog {
 	losses, deaths := e.applyStateBasedActionsWithDeaths(g)
-	if log != nil {
-		log.Losses = append(log.Losses, losses...)
-		log.Deaths = append(log.Deaths, deaths...)
+	for _, loss := range losses {
+		log.addLoss(loss)
+	}
+	for _, death := range deaths {
+		log.addDeath(death)
 	}
 	return losses
 }

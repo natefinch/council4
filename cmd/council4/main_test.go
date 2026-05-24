@@ -201,6 +201,40 @@ func TestPrintTurnLogNoPassKeepsOtherEvents(t *testing.T) {
 	}
 }
 
+func TestCombatVerboseLogPrintsResolveBeforeResolvedPermanentAttacks(t *testing.T) {
+	configs, agents, err := gameModeConfig("combat", 8, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := rules.NewEngine(rand.New(rand.NewPCG(1, 1^0x9e3779b97f4a7c15)))
+	g := engine.NewGame(configs)
+	result := engine.RunGame(g, agents)
+	var out bytes.Buffer
+
+	printTurnLog(&out, g, result, logOptions{OmitPasses: true})
+
+	got := out.String()
+	castIndex := strings.Index(got, `Player 1: cast "Hasty Wolf"`)
+	if castIndex < 0 {
+		t.Fatalf("output missing Hasty Wolf cast:\n%s", got)
+	}
+	afterCast := got[castIndex:]
+	resolveIndex := strings.Index(afterCast, `resolve spell "Hasty Wolf" (battlefield)`)
+	if resolveIndex < 0 {
+		t.Fatalf("output missing Hasty Wolf resolve after cast:\n%s", got)
+	}
+	attackIndex := strings.Index(afterCast, `Player 1: declare attackers:`)
+	if attackIndex < 0 {
+		t.Fatalf("output missing Player 1 attack after cast:\n%s", got)
+	}
+	if !strings.Contains(afterCast, `Player 1: declare attackers: "Hasty Wolf" at Player 2`) {
+		t.Fatalf("output did not preserve Hasty Wolf attacker name after later zone changes:\n%s", got)
+	}
+	if resolveIndex > attackIndex {
+		t.Fatalf("Hasty Wolf resolve printed after attack:\n%s", got[castIndex:castIndex+attackIndex+len(`Player 1: declare attackers:`)])
+	}
+}
+
 func addTestCard(g *game.Game, owner game.PlayerID, def *game.CardDef) id.ID {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{

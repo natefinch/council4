@@ -23,7 +23,7 @@ go run ./cmd/council4 -mode combat -seed 7 -verbose -nopass
 - `-mode` chooses `land` for the original land-only game, `spells` for a Phase 2 spell test deck, or `combat` for a simple creature combat deck.
 - `-seed` controls deterministic shuffling.
 - `-deck-size` controls how many Forests each land-mode test deck contains.
-- `-verbose` prints the per-turn draw, action, resolve, combat damage, creature damage, death, and loss log.
+- `-verbose` prints the per-turn draw, action, resolve, combat damage, creature damage, death, and loss log in chronological order.
 - `-nopass` omits pass actions from verbose log output.
 
 ## Current behavior
@@ -39,6 +39,6 @@ Land mode supports:
 
 Spell mode uses Forests plus simple hardcoded creature, draw, life-gain, and player-damage spells. It exercises auto-tap mana payment, cast actions, stack resolution, effect primitives, player targets, and verbose cast/resolve output.
 
-Combat mode uses Forests plus simple hardcoded vanilla, Haste, Vigilance, and Defender creatures. It exercises attacker declarations, blocker declarations, player and creature combat damage, creature death cleanup, combat loss logs, and verbose combat output. The `FirstLegal` agent always chooses the first productive attack and the first offered block, so combat mode intentionally favors deterministic combat over strategic multiplayer choices.
+Combat mode uses Forests plus simple hardcoded vanilla, Haste, Vigilance, and Defender creatures. It exercises attacker declarations, blocker declarations, player and creature combat damage, creature death cleanup, combat loss logs, and chronological verbose combat output. The `FirstLegal` agent always chooses the first productive attack and the first offered block, so combat mode intentionally favors deterministic combat over strategic multiplayer choices.
 
 The command does not yet parse decklists, load real card data, produce reports, or simulate advanced combat mechanics like multi-blocking, evasion, first strike, trample, or prevention.
