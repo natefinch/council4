@@ -40,11 +40,17 @@ func initializePermanentCounters(permanent *game.Permanent, def *game.CardDef) {
 	if permanent == nil || def == nil {
 		return
 	}
+	if def.EntersTapped {
+		permanent.Tapped = true
+	}
 	if def.Loyalty != nil {
 		permanent.Counters.Add(counter.Loyalty, *def.Loyalty)
 	}
 	if def.Defense != nil {
 		permanent.Counters.Add(counter.Defense, *def.Defense)
+	}
+	for _, placement := range def.EntersWithCounters {
+		permanent.Counters.Add(placement.Kind, placement.Amount)
 	}
 }
 
@@ -67,6 +73,10 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 		return false
 	}
 
+	if permanentByObjectID(g, permanent.ObjectID) == nil {
+		return false
+	}
+	rememberLastKnown(g, snapshotPermanent(g, permanent, game.ZoneBattlefield))
 	detachPermanent(g, permanent)
 	detachAttachmentsFromPermanent(g, permanent)
 	removed := removePermanentFromBattlefield(g, permanent.ObjectID)

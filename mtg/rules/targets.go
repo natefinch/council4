@@ -234,8 +234,9 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec gam
 		return false
 	}
 	if normalizedTargetConstraint(spec) == "any target" {
-		card := permanentCardDef(g, permanent)
-		return card != nil && (card.HasType(game.TypeCreature) || card.HasType(game.TypePlaneswalker) || card.HasType(game.TypeBattle))
+		return permanentHasType(g, permanent, game.TypeCreature) ||
+			permanentHasType(g, permanent, game.TypePlaneswalker) ||
+			permanentHasType(g, permanent, game.TypeBattle)
 	}
 	return permanentTypeMatchesSpec(g, spec, permanent)
 }
@@ -250,36 +251,38 @@ func targetProtectedFromSource(g *game.Game, source *game.CardDef, target game.T
 
 func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec game.TargetSpec, permanent *game.Permanent) bool {
 	normalized := normalizedTargetConstraint(spec)
+	permanentController := effectiveController(g, permanent)
 	switch {
 	case strings.Contains(normalized, "you control") || strings.Contains(normalized, "controlled by you"):
-		return permanent.Controller == controller
+		return permanentController == controller
 	case strings.Contains(normalized, "opponent controls") ||
 		strings.Contains(normalized, "opponents control") ||
 		strings.Contains(normalized, "controlled by an opponent") ||
 		strings.Contains(normalized, "controlled by opponent"):
-		return permanent.Controller != controller && isPlayerAlive(g, permanent.Controller)
+		return permanentController != controller && isPlayerAlive(g, permanentController)
 	default:
 		return true
 	}
 }
 
 func permanentTypeMatchesSpec(g *game.Game, spec game.TargetSpec, permanent *game.Permanent) bool {
-	card := permanentCardDef(g, permanent)
-	if card == nil {
+	if permanent == nil {
 		return false
 	}
 	normalized := normalizedTargetConstraint(spec)
 	if strings.Contains(normalized, "nonland permanent") {
-		return !card.HasType(game.TypeLand)
+		return !permanentHasType(g, permanent, game.TypeLand)
 	}
 	if strings.Contains(normalized, "permanent") && !containsAnyPermanentTypeConstraint(normalized) {
-		return card.IsPermanent()
+		return len(effectivePermanentValues(g, permanent).types) > 0
 	}
 	allowedTypes := permanentTypesForConstraint(normalized)
 	if len(allowedTypes) == 0 {
 		return false
 	}
-	return slices.ContainsFunc(allowedTypes, card.HasType)
+	return slices.ContainsFunc(allowedTypes, func(cardType game.CardType) bool {
+		return permanentHasType(g, permanent, cardType)
+	})
 }
 
 func containsAnyPermanentTypeConstraint(normalized string) bool {

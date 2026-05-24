@@ -228,13 +228,13 @@ func checkLegendaryRuleStateBasedActions(g *game.Game) (bool, []PermanentDeathLo
 }
 
 func permanentLegendaryKey(g *game.Game, permanent *game.Permanent) (legendaryKey, bool) {
-	card := permanentCardDef(g, permanent)
-	if card == nil || !card.IsLegendary() || card.Name == "" {
+	name := permanentEffectiveName(g, permanent)
+	if !permanentHasSupertype(g, permanent, game.Legendary) || name == "" {
 		return legendaryKey{}, false
 	}
 	return legendaryKey{
-		controller: permanent.Controller,
-		name:       card.Name,
+		controller: effectiveController(g, permanent),
+		name:       name,
 	}, true
 }
 
@@ -292,17 +292,16 @@ func permanentTokenName(permanent *game.Permanent) string {
 }
 
 func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDeathReason, bool) {
-	card := permanentCardDef(g, permanent)
-	if card == nil {
+	if permanent == nil {
 		return "", false
 	}
-	if card.HasType(game.TypePlaneswalker) && permanent.Counters.Get(counter.Loyalty) <= 0 {
+	if permanentHasType(g, permanent, game.TypePlaneswalker) && permanent.Counters.Get(counter.Loyalty) <= 0 {
 		return PermanentDeathReasonZeroLoyalty, true
 	}
-	if card.HasType(game.TypeBattle) && permanent.Counters.Get(counter.Defense) <= 0 {
+	if permanentHasType(g, permanent, game.TypeBattle) && permanent.Counters.Get(counter.Defense) <= 0 {
 		return PermanentDeathReasonZeroDefense, true
 	}
-	if !card.HasType(game.TypeCreature) {
+	if !permanentHasType(g, permanent, game.TypeCreature) {
 		return "", false
 	}
 	toughness, ok := effectiveToughness(g, permanent)
@@ -351,7 +350,57 @@ func (e *Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 
 	player.Eliminated = true
 	g.TurnOrder.Eliminate(playerID)
+	cleanupEliminatedPlayer(g, playerID)
 	return true
+}
+
+func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
+	if g == nil {
+		return
+	}
+	g.Stack.RemoveControlledBy(playerID)
+	cleanupEliminatedPlayerPermanents(g, playerID)
+	if g.Combat == nil {
+		return
+	}
+	var removeFromCombat []id.ID
+	for _, attack := range g.Combat.Attackers {
+		attacker := permanentByObjectID(g, attack.Attacker)
+		if attack.Target.Player == playerID || effectiveController(g, attacker) == playerID {
+			removeFromCombat = append(removeFromCombat, attack.Attacker)
+		}
+	}
+	for _, block := range g.Combat.Blockers {
+		blocker := permanentByObjectID(g, block.Blocker)
+		if effectiveController(g, blocker) == playerID {
+			removeFromCombat = append(removeFromCombat, block.Blocker)
+		}
+	}
+	for _, objectID := range removeFromCombat {
+		removePermanentFromCombat(g, objectID)
+	}
+}
+
+func cleanupEliminatedPlayerPermanents(g *game.Game, playerID game.PlayerID) {
+	for {
+		var owned *game.Permanent
+		for _, permanent := range g.Battlefield {
+			if permanent == nil {
+				continue
+			}
+			if permanent.Owner == playerID {
+				owned = permanent
+				break
+			}
+			if effectiveController(g, permanent) == playerID {
+				permanent.Controller = permanent.Owner
+			}
+		}
+		if owned == nil {
+			return
+		}
+		movePermanentToZone(g, owned, game.ZoneExile)
+	}
 }
 
 func lossReason(g *game.Game, player *game.Player) LossReason {

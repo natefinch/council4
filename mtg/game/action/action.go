@@ -41,6 +41,7 @@ type CastSpellAction struct {
 	Targets     []game.Target
 	XValue      int
 	ChosenModes []int
+	KickerPaid  bool
 }
 
 // ActivateAbilityAction is the payload for activating an ability.
@@ -87,6 +88,13 @@ func CastSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []in
 			ChosenModes: chosenModes,
 		},
 	}
+}
+
+// CastKickedSpell creates an action to cast a spell with kicker paid.
+func CastKickedSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
+	action := CastSpell(cardID, targets, xValue, chosenModes)
+	action.CastSpell.KickerPaid = true
+	return action
 }
 
 // ActivateAbility creates an action to activate an ability.

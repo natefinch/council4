@@ -76,16 +76,17 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 		return nil
 	}
 	var pending []pendingTriggeredAbility
+	controller := effectiveController(g, permanent)
 	for i := range def.Abilities {
 		ability := &def.Abilities[i]
 		if ability.Kind != game.TriggeredAbility || ability.Trigger == nil {
 			continue
 		}
-		if !triggerMatchesEvent(g, permanent, ability.Trigger.Pattern, event) {
+		if !triggerMatchesEvent(g, permanent, ability.Trigger.Pattern, event) || !triggerInterveningIf(g, controller, ability.Trigger) {
 			continue
 		}
 		pending = append(pending, pendingTriggeredAbility{
-			controller:   permanent.Controller,
+			controller:   controller,
 			sourceID:     permanent.ObjectID,
 			sourceCardID: permanent.CardInstanceID,
 			sourceToken:  permanent.TokenDef,
@@ -144,13 +145,15 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	if source == nil || pattern.Event == game.EventUnknown || pattern.Event != event.Kind {
 		return false
 	}
-	if !triggerControllerMatches(source.Controller, pattern.Controller, event.Controller) {
+
+	sourceController := effectiveController(g, source)
+	if !triggerControllerMatches(sourceController, pattern.Controller, event.Controller) {
 		return false
 	}
 	if !triggerSourceMatches(source, pattern.Source, event) {
 		return false
 	}
-	if !triggerPlayerMatches(source.Controller, pattern.Player, event.Player) {
+	if !triggerPlayerMatches(sourceController, pattern.Player, event.Player) {
 		return false
 	}
 	if pattern.MatchFromZone && pattern.FromZone != event.FromZone {
@@ -166,6 +169,14 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 		return false
 	}
 	return true
+}
+
+func triggerInterveningIf(g *game.Game, controller game.PlayerID, trigger *game.TriggerCondition) bool {
+	if trigger == nil || trigger.InterveningIfControllerLifeAtLeast == 0 {
+		return true
+	}
+	player := playerByID(g, controller)
+	return player != nil && player.Life >= trigger.InterveningIfControllerLifeAtLeast
 }
 
 func triggerControllerMatches(sourceController game.PlayerID, filter game.TriggerControllerFilter, eventController game.PlayerID) bool {
@@ -203,9 +214,10 @@ func triggerPlayerMatches(sourceController game.PlayerID, filter game.TriggerPla
 func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType game.CardType) bool {
 	if event.PermanentID != 0 {
 		if permanent := permanentByObjectID(g, event.PermanentID); permanent != nil {
-			if def := permanentCardDef(g, permanent); def != nil {
-				return def.HasType(cardType)
-			}
+			return permanentHasType(g, permanent, cardType)
+		}
+		if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
+			return slices.Contains(snapshot.Types, cardType)
 		}
 	}
 	if event.CardID != 0 {

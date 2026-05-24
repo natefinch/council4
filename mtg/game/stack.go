@@ -43,6 +43,10 @@ type StackObject struct {
 	// abilities. It is ignored for spells.
 	AbilityIndex int
 
+	// InlineAbility stores generated abilities, such as delayed triggers, that
+	// are not addressable by AbilityIndex on the source definition.
+	InlineAbility *AbilityDef
+
 	// Controller is the player who controls this spell or ability.
 	Controller PlayerID
 
@@ -111,4 +115,16 @@ func (s *Stack) Objects() []*StackObject {
 	result := make([]*StackObject, len(s.objects))
 	copy(result, s.objects)
 	return result
+}
+
+// RemoveControlledBy removes stack objects controlled by playerID.
+func (s *Stack) RemoveControlledBy(playerID PlayerID) {
+	kept := s.objects[:0]
+	for _, obj := range s.objects {
+		if obj == nil || obj.Controller == playerID {
+			continue
+		}
+		kept = append(kept, obj)
+	}
+	s.objects = kept
 }

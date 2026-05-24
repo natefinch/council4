@@ -27,6 +27,9 @@ func applyDamagePrevention(g *game.Game, event damageEvent) int {
 	if event.permanent != nil && permanentProtectedFromSource(g, event.permanent, event.sourceID, event.sourceObjectID) {
 		amount = 0
 	}
+	if amount > 0 {
+		amount = applyPreventionShields(g, event, amount)
+	}
 	if amount > 0 && event.permanent != nil && event.permanent.Counters.Remove(counter.Shield, 1) > 0 {
 		amount = 0
 	}
@@ -36,16 +39,158 @@ func applyDamagePrevention(g *game.Game, event damageEvent) int {
 	return amount
 }
 
+func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
+	var indices []int
+	var options []string
+	for i, shield := range g.PreventionShields {
+		if !preventionShieldApplies(shield, event) || shield.Amount <= 0 {
+			continue
+		}
+		indices = append(indices, i)
+		options = append(options, "prevention shield")
+	}
+	if len(indices) > 1 {
+		recordReplacementDecision(g, replacementDecisionPlayer(g, event), options)
+	}
+	return indices
+}
+
 func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent) bool {
 	if g == nil || permanent == nil {
 		return false
 	}
-	if permanent.Counters.Remove(counter.Shield, 1) == 0 {
+	hasShieldCounter := permanent.Counters.Get(counter.Shield) > 0
+	hasRegeneration := permanent.RegenerationShields > 0
+	if hasShieldCounter && hasRegeneration {
+		recordReplacementDecision(g, effectiveController(g, permanent), []string{"shield counter", "regeneration shield"})
+	}
+	if hasShieldCounter {
+		permanent.Counters.Remove(counter.Shield, 1)
+		emitEvent(g, game.GameEvent{
+			Kind:        game.EventDestroyReplaced,
+			Controller:  effectiveController(g, permanent),
+			Player:      permanent.Owner,
+			CardID:      permanent.CardInstanceID,
+			PermanentID: permanent.ObjectID,
+			TokenName:   permanentTokenName(permanent),
+			TokenDef:    permanent.TokenDef,
+			FromZone:    game.ZoneBattlefield,
+			ToZone:      game.ZoneGraveyard,
+		})
+		return true
+	}
+	return replaceDestroyWithRegeneration(g, permanent)
+}
+
+func replacementDecisionPlayer(g *game.Game, event damageEvent) game.PlayerID {
+	if event.permanent != nil {
+		return effectiveController(g, event.permanent)
+	}
+	return event.player
+}
+
+func recordReplacementDecision(g *game.Game, player game.PlayerID, options []string) {
+	selected := make([]int, len(options))
+	for i := range options {
+		selected[i] = i
+	}
+	g.ReplacementDecisions = append(g.ReplacementDecisions, game.ReplacementDecision{
+		Player:       player,
+		Options:      append([]string(nil), options...),
+		Selected:     selected,
+		UsedFallback: true,
+	})
+}
+
+func createPreventionShield(g *game.Game, obj *game.StackObject, effect game.Effect) {
+	if g == nil || obj == nil || effect.Amount <= 0 {
+		return
+	}
+	shield := game.PreventionShield{
+		ID:          g.IDGen.Next(),
+		Controller:  obj.Controller,
+		Amount:      effect.Amount,
+		Duration:    effectDurationOrDefault(effect.Duration, game.DurationUntilEndOfTurn),
+		CreatedTurn: g.Turn.TurnNumber,
+	}
+	if effect.TargetIndex == -1 {
+		shield.Player = obj.Controller
+		g.PreventionShields = append(g.PreventionShields, shield)
+		return
+	}
+	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {
+		return
+	}
+	target := obj.Targets[effect.TargetIndex]
+	switch target.Kind {
+	case game.TargetPlayer:
+		shield.Player = target.PlayerID
+	case game.TargetPermanent:
+		shield.PermanentID = target.PermanentID
+	default:
+		return
+	}
+	g.PreventionShields = append(g.PreventionShields, shield)
+}
+
+func applyPreventionShields(g *game.Game, event damageEvent, amount int) int {
+	order := orderedPreventionShieldIndices(g, event)
+	for _, i := range order {
+		shield := &g.PreventionShields[i]
+		if !preventionShieldApplies(*shield, event) || shield.Amount <= 0 || amount <= 0 {
+			continue
+		}
+		prevented := min(amount, shield.Amount)
+		amount -= prevented
+		shield.Amount -= prevented
+	}
+	g.PreventionShields = compactPreventionShields(g.PreventionShields)
+	return amount
+}
+
+func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bool {
+	if event.permanent != nil {
+		return shield.PermanentID == event.permanent.ObjectID
+	}
+	return shield.PermanentID == 0 && shield.Player == event.player
+}
+
+func compactPreventionShields(shields []game.PreventionShield) []game.PreventionShield {
+	kept := shields[:0]
+	for _, shield := range shields {
+		if shield.Amount > 0 {
+			kept = append(kept, shield)
+		}
+	}
+	return kept
+}
+
+func expirePreventionShields(g *game.Game) {
+	if g == nil || len(g.PreventionShields) == 0 {
+		return
+	}
+	kept := g.PreventionShields[:0]
+	for _, shield := range g.PreventionShields {
+		if shield.Duration == game.DurationUntilEndOfTurn || shield.Duration == game.DurationThisTurn {
+			continue
+		}
+		kept = append(kept, shield)
+	}
+	g.PreventionShields = kept
+}
+
+func replaceDestroyWithRegeneration(g *game.Game, permanent *game.Permanent) bool {
+	if permanent.RegenerationShields <= 0 {
 		return false
 	}
+	permanent.RegenerationShields--
+	permanent.Tapped = true
+	permanent.MarkedDamage = 0
+	permanent.MarkedDeathtouchDamage = false
+	removePermanentFromCombat(g, permanent.ObjectID)
 	emitEvent(g, game.GameEvent{
 		Kind:        game.EventDestroyReplaced,
-		Controller:  permanent.Controller,
+		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,
 		CardID:      permanent.CardInstanceID,
 		PermanentID: permanent.ObjectID,
@@ -97,14 +242,9 @@ func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, so
 }
 
 func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []mana.Color {
-	def := permanentCardDef(g, permanent)
-	if def == nil {
-		return nil
-	}
 	var colors []mana.Color
-	for i := range def.Abilities {
-		ability := &def.Abilities[i]
-		if !abilityHasKeyword(ability, game.Protection) {
+	for _, ability := range permanentEffectiveAbilities(g, permanent) {
+		if !abilityHasKeyword(&ability, game.Protection) {
 			continue
 		}
 		colors = append(colors, ability.ProtectionFromColors...)

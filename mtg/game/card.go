@@ -136,11 +136,20 @@ type CardDef struct {
 	// Toughness is the creature's base toughness. Nil for non-creatures.
 	Toughness *PT
 
+	// DynamicPower and DynamicToughness describe characteristic-defining
+	// abilities for star P/T values.
+	DynamicPower     *DynamicValue
+	DynamicToughness *DynamicValue
+
 	// Loyalty is the planeswalker's starting loyalty. Nil for non-planeswalkers.
 	Loyalty *int
 
 	// Defense is the battle's starting defense. Nil for non-battles.
 	Defense *int
+
+	// EntersTapped and EntersWithCounters model common ETB replacement effects.
+	EntersTapped       bool
+	EntersWithCounters []CounterPlacement
 
 	// Abilities lists all abilities on this card, parsed from the text box.
 	Abilities []AbilityDef

@@ -46,28 +46,22 @@ func canAttachPermanent(g *game.Game, attachment *game.Permanent, target *game.P
 	if attachment == nil || target == nil || attachment.ObjectID == target.ObjectID {
 		return false
 	}
-	attachmentCard := permanentCardDef(g, attachment)
-	targetCard := permanentCardDef(g, target)
-	if attachmentCard == nil || targetCard == nil {
-		return false
-	}
-	if isAuraCard(attachmentCard) || isEquipmentCard(attachmentCard) {
-		return targetCard.HasType(game.TypeCreature)
+	if isAuraPermanent(g, attachment) || isEquipmentPermanent(g, attachment) {
+		return permanentHasType(g, target, game.TypeCreature)
 	}
 	return false
 }
 
 func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {
-	return isAuraCard(permanentCardDef(g, permanent))
+	return permanentHasType(g, permanent, game.TypeEnchantment) && (permanentHasSubtype(g, permanent, "Aura") || hasKeyword(g, permanent, game.Enchant))
 }
 
 func isEquipmentPermanent(g *game.Game, permanent *game.Permanent) bool {
-	return isEquipmentCard(permanentCardDef(g, permanent))
+	return permanentHasType(g, permanent, game.TypeArtifact) && (permanentHasSubtype(g, permanent, "Equipment") || hasKeyword(g, permanent, game.Equip))
 }
 
 func isAttachmentPermanent(g *game.Game, permanent *game.Permanent) bool {
-	card := permanentCardDef(g, permanent)
-	return isAuraCard(card) || isEquipmentCard(card)
+	return isAuraPermanent(g, permanent) || isEquipmentPermanent(g, permanent)
 }
 
 func isAuraCard(card *game.CardDef) bool {

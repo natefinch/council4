@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 func (e *Engine) runCombatPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -149,7 +150,7 @@ func (e *Engine) resolveCombatDamagePass(g *game.Game, pass combatDamagePass, lo
 	blockersByAttacker := blockersByAttacker(g)
 	for _, declaration := range g.Combat.Attackers {
 		attacker := permanentByObjectID(g, declaration.Attacker)
-		if attacker == nil {
+		if attacker == nil || attacker.PhasedOut {
 			continue
 		}
 		blockers := blockersByAttacker[declaration.Attacker]
@@ -157,7 +158,7 @@ func (e *Engine) resolveCombatDamagePass(g *game.Game, pass combatDamagePass, lo
 			resolveBlockedCombatDamage(g, attacker, blockers, declaration.Target, pass, log)
 			continue
 		}
-		if !isLegalAttackTarget(g, attacker.Controller, declaration.Target) {
+		if !isLegalAttackTarget(g, effectiveController(g, attacker), declaration.Target) {
 			continue
 		}
 		resolveUnblockedCombatDamage(g, attacker, declaration.Target, pass, log)
@@ -202,7 +203,8 @@ func markAttackTargetCombatDamage(g *game.Game, source *game.Permanent, target g
 	if permanent == nil || source == nil || damage <= 0 {
 		return
 	}
-	dealt := dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, source.Controller, permanent, damage, true)
+	sourceController := effectiveController(g, source)
+	dealt := dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, sourceController, permanent, damage, true)
 	applyLifelink(g, source, dealt)
 	if dealt <= 0 {
 		return
@@ -211,10 +213,10 @@ func markAttackTargetCombatDamage(g *game.Game, source *game.Permanent, target g
 		log.CreatureDamage = append(log.CreatureDamage, CreatureDamageLog{
 			SourcePermanent:   source.ObjectID,
 			SourceID:          source.CardInstanceID,
-			Controller:        source.Controller,
+			Controller:        sourceController,
 			DamagedPermanent:  permanent.ObjectID,
 			DamagedSourceID:   permanent.CardInstanceID,
-			DamagedController: permanent.Controller,
+			DamagedController: effectiveController(g, permanent),
 			Damage:            dealt,
 		})
 	}
@@ -224,7 +226,8 @@ func markCreatureCombatDamage(g *game.Game, source *game.Permanent, damaged *gam
 	if source == nil || damaged == nil || damage <= 0 {
 		return
 	}
-	dealt := dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, source.Controller, damaged, damage, true)
+	sourceController := effectiveController(g, source)
+	dealt := dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, sourceController, damaged, damage, true)
 	if dealt > 0 && hasKeyword(g, source, game.Deathtouch) {
 		damaged.MarkedDeathtouchDamage = true
 	}
@@ -236,10 +239,10 @@ func markCreatureCombatDamage(g *game.Game, source *game.Permanent, damaged *gam
 		log.CreatureDamage = append(log.CreatureDamage, CreatureDamageLog{
 			SourcePermanent:   source.ObjectID,
 			SourceID:          source.CardInstanceID,
-			Controller:        source.Controller,
+			Controller:        sourceController,
 			DamagedPermanent:  damaged.ObjectID,
 			DamagedSourceID:   damaged.CardInstanceID,
-			DamagedController: damaged.Controller,
+			DamagedController: effectiveController(g, damaged),
 			Damage:            dealt,
 		})
 	}
@@ -250,7 +253,8 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 		return
 	}
 	defender := g.Players[defendingPlayer]
-	dealt := dealPlayerDamage(g, source.CardInstanceID, source.ObjectID, source.Controller, defendingPlayer, damage, true)
+	sourceController := effectiveController(g, source)
+	dealt := dealPlayerDamage(g, source.CardInstanceID, source.ObjectID, sourceController, defendingPlayer, damage, true)
 	if sourceIsControllerCommander(g, source) {
 		defender.CommanderDamage[source.CardInstanceID] += dealt
 	}
@@ -262,7 +266,7 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 		log.CombatDamage = append(log.CombatDamage, CombatDamageLog{
 			Attacker:        source.ObjectID,
 			SourceID:        source.CardInstanceID,
-			Controller:      source.Controller,
+			Controller:      sourceController,
 			DefendingPlayer: defendingPlayer,
 			Damage:          dealt,
 		})
@@ -273,14 +277,10 @@ func markPermanentDamage(g *game.Game, permanent *game.Permanent, damage int) {
 	if permanent == nil || damage <= 0 {
 		return
 	}
-	card := permanentCardDef(g, permanent)
-	if card == nil {
-		return
-	}
 	switch {
-	case card.HasType(game.TypePlaneswalker):
+	case permanentHasType(g, permanent, game.TypePlaneswalker):
 		permanent.Counters.Remove(counter.Loyalty, damage)
-	case card.HasType(game.TypeBattle):
+	case permanentHasType(g, permanent, game.TypeBattle):
 		permanent.Counters.Remove(counter.Defense, damage)
 	default:
 		permanent.MarkedDamage += damage
@@ -352,10 +352,11 @@ func applyLifelink(g *game.Game, source *game.Permanent, damage int) {
 	if source == nil || damage <= 0 || !hasKeyword(g, source, game.Lifelink) {
 		return
 	}
-	if source.Controller < 0 || int(source.Controller) >= len(g.Players) {
+	controllerID := effectiveController(g, source)
+	if controllerID < 0 || int(controllerID) >= len(g.Players) {
 		return
 	}
-	controller := g.Players[source.Controller]
+	controller := g.Players[controllerID]
 	if controller == nil {
 		return
 	}
@@ -366,10 +367,11 @@ func sourceIsControllerCommander(g *game.Game, source *game.Permanent) bool {
 	if g == nil || source == nil || source.CardInstanceID == 0 {
 		return false
 	}
-	if source.Controller < 0 || int(source.Controller) >= len(g.Players) {
+	controllerID := effectiveController(g, source)
+	if controllerID < 0 || int(controllerID) >= len(g.Players) {
 		return false
 	}
-	controller := g.Players[source.Controller]
+	controller := g.Players[controllerID]
 	return controller != nil && controller.CommanderInstanceID == source.CardInstanceID
 }
 
@@ -391,8 +393,7 @@ func combatHasFirstStrikeDamage(g *game.Game) bool {
 }
 
 func dealsCombatDamageInPass(g *game.Game, permanent *game.Permanent, pass combatDamagePass) bool {
-	card := permanentCardDef(g, permanent)
-	if card == nil {
+	if permanent == nil {
 		return false
 	}
 	hasFirst := hasKeyword(g, permanent, game.FirstStrike)
@@ -450,6 +451,39 @@ func attackerWasBlocked(g *game.Game, attackerID id.ID) bool {
 	return false
 }
 
+func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
+	if g == nil || g.Combat == nil || permanentID == 0 {
+		return
+	}
+	var attackers []game.AttackDeclaration
+	removedAttacker := false
+	for _, attack := range g.Combat.Attackers {
+		if attack.Attacker == permanentID {
+			removedAttacker = true
+			continue
+		}
+		attackers = append(attackers, attack)
+	}
+	g.Combat.Attackers = attackers
+
+	var blockers []game.BlockDeclaration
+	for _, block := range g.Combat.Blockers {
+		if block.Blocker == permanentID || (removedAttacker && block.Blocking == permanentID) {
+			continue
+		}
+		blockers = append(blockers, block)
+	}
+	g.Combat.Blockers = blockers
+	for attackerID, order := range g.Combat.BlockerOrder {
+		if attackerID == permanentID {
+			delete(g.Combat.BlockerOrder, attackerID)
+			continue
+		}
+		g.Combat.BlockerOrder[attackerID] = removePermanentID(order, permanentID)
+	}
+	delete(g.Combat.DamageAssignment, permanentID)
+}
+
 type creatureDamageAssignment struct {
 	permanent *game.Permanent
 	damage    int
@@ -459,6 +493,9 @@ func assignAttackerCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 	damageRemaining := effectivePower(g, attacker)
 	if damageRemaining <= 0 {
 		return nil, 0
+	}
+	if assignments, tramplingDamage, ok := attackerChosenDamageAssignments(g, attacker, blockers, damageRemaining); ok {
+		return assignments, tramplingDamage
 	}
 	assignments := make([]creatureDamageAssignment, 0, len(blockers))
 	hasTrample := hasKeyword(g, attacker, game.Trample)
@@ -483,6 +520,65 @@ func assignAttackerCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 		return assignments, damageRemaining
 	}
 	return assignments, 0
+}
+
+func attackerChosenDamageAssignments(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, damage int) ([]creatureDamageAssignment, int, bool) {
+	if g == nil || g.Combat == nil || attacker == nil || len(g.Combat.DamageAssignment) == 0 {
+		return nil, 0, false
+	}
+	var assignments []creatureDamageAssignment
+	total := 0
+	hasTrample := hasKeyword(g, attacker, game.Trample)
+	for _, blocker := range blockers {
+		if blocker == nil {
+			continue
+		}
+		assigned := g.Combat.DamageAssignment[blocker.ObjectID]
+		if assigned < 0 {
+			return nil, 0, false
+		}
+		if hasTrample && assigned < lethalDamageRemainingFromSource(g, attacker, blocker) {
+			return nil, 0, false
+		}
+		if assigned == 0 {
+			continue
+		}
+		total += assigned
+		assignments = append(assignments, creatureDamageAssignment{permanent: blocker, damage: assigned})
+	}
+	if !hasTrample && !damageAssignmentFollowsBlockerOrder(g, attacker, blockers) {
+		return nil, 0, false
+	}
+	if total == 0 || total > damage {
+		return nil, 0, false
+	}
+	if hasTrample {
+		return assignments, damage - total, true
+	}
+	if total != damage {
+		return nil, 0, false
+	}
+	return assignments, 0, true
+}
+
+func damageAssignmentFollowsBlockerOrder(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent) bool {
+	if g == nil || g.Combat == nil || attacker == nil {
+		return false
+	}
+	mayAssignToLater := true
+	for _, blocker := range blockers {
+		if blocker == nil {
+			continue
+		}
+		assigned := g.Combat.DamageAssignment[blocker.ObjectID]
+		if assigned > 0 && !mayAssignToLater {
+			return false
+		}
+		if assigned < lethalDamageRemainingFromSource(g, attacker, blocker) {
+			mayAssignToLater = false
+		}
+	}
+	return true
 }
 
 func lethalDamageRemainingFromSource(g *game.Game, source *game.Permanent, permanent *game.Permanent) int {
@@ -580,11 +676,13 @@ func eligibleBlockers(g *game.Game, playerID game.PlayerID) []*game.Permanent {
 }
 
 func canBlockWith(g *game.Game, permanent *game.Permanent, playerID game.PlayerID) bool {
-	if permanent == nil || permanent.Controller != playerID || permanent.Tapped {
+	if permanent == nil || effectiveController(g, permanent) != playerID || permanent.Tapped {
 		return false
 	}
-	card := permanentCardDef(g, permanent)
-	return card != nil && card.HasType(game.TypeCreature)
+	if permanent.PhasedOut {
+		return false
+	}
+	return permanentHasType(g, permanent, game.TypeCreature)
 }
 
 func canBlockAttacker(g *game.Game, blocker *game.Permanent, attacker *game.Permanent) bool {
@@ -658,7 +756,7 @@ func (e *Engine) applyDeclareBlockers(g *game.Game, playerID game.PlayerID, decl
 			Kind:              game.EventBlockerDeclared,
 			SourceID:          blocker.CardInstanceID,
 			SourceObjectID:    blocker.ObjectID,
-			Controller:        blocker.Controller,
+			Controller:        effectiveController(g, blocker),
 			PermanentID:       blocker.ObjectID,
 			BlockedAttackerID: block.Blocking,
 		})
@@ -723,11 +821,10 @@ func eligibleAttackers(g *game.Game, playerID game.PlayerID) []*game.Permanent {
 }
 
 func canAttackWith(g *game.Game, permanent *game.Permanent, playerID game.PlayerID) bool {
-	if permanent == nil || permanent.Controller != playerID || permanent.Tapped {
+	if permanent == nil || effectiveController(g, permanent) != playerID || permanent.Tapped || permanent.PhasedOut {
 		return false
 	}
-	card := permanentCardDef(g, permanent)
-	if card == nil || !card.HasType(game.TypeCreature) || hasKeyword(g, permanent, game.Defender) {
+	if !permanentHasType(g, permanent, game.TypeCreature) || hasKeyword(g, permanent, game.Defender) {
 		return false
 	}
 	return !permanent.SummoningSick || hasKeyword(g, permanent, game.Haste)
@@ -746,13 +843,23 @@ func legalDeclareAttackersActions(g *game.Game, playerID game.PlayerID) []action
 		for _, target := range targets {
 			declarations := make([]game.AttackDeclaration, 0, len(attackers))
 			for _, attacker := range attackers {
-				declarations = append(declarations, game.AttackDeclaration{
+				single := []game.AttackDeclaration{{
 					Attacker: attacker.ObjectID,
 					Target:   target,
-				})
+				}}
+				if len(attackers) > 1 && declareAttackersSatisfiesGoad(g, playerID, single, eligibleByID) {
+					action := action.DeclareAttackers(single)
+					if !containsAction(actions, action) && canPayAttackTax(g, playerID, single) {
+						actions = append(actions, action)
+					}
+				}
+				declarations = append(declarations, single[0])
 			}
 			if declareAttackersSatisfiesGoad(g, playerID, declarations, eligibleByID) {
-				actions = append(actions, action.DeclareAttackers(declarations))
+				action := action.DeclareAttackers(declarations)
+				if !containsAction(actions, action) && canPayAttackTax(g, playerID, declarations) {
+					actions = append(actions, action)
+				}
 			}
 		}
 	}
@@ -760,7 +867,9 @@ func legalDeclareAttackersActions(g *game.Game, playerID game.PlayerID) []action
 		actions = append(actions, action.DeclareAttackers(nil))
 	} else if len(actions) == 0 {
 		if declarations := preferredGoadAttackDeclarations(g, playerID, attackers); len(declarations) > 0 {
-			actions = append(actions, action.DeclareAttackers(declarations))
+			if canPayAttackTax(g, playerID, declarations) {
+				actions = append(actions, action.DeclareAttackers(declarations))
+			}
 		}
 	}
 	return actions
@@ -793,6 +902,10 @@ func (e *Engine) applyDeclareAttackers(g *game.Game, playerID game.PlayerID, dec
 	if !declareAttackersSatisfiesGoad(g, playerID, declare.Attackers, eligibleByID) {
 		return false
 	}
+	tax := attackTaxCost(g, declare.Attackers)
+	if !payAttackTax(g, playerID, declare.Attackers, tax) {
+		return false
+	}
 
 	g.Combat.Attackers = append([]game.AttackDeclaration(nil), declare.Attackers...)
 	for _, declaration := range declare.Attackers {
@@ -800,16 +913,55 @@ func (e *Engine) applyDeclareAttackers(g *game.Game, playerID game.PlayerID, dec
 		if !hasKeyword(g, attacker, game.Vigilance) {
 			attacker.Tapped = true
 		}
+
 		emitEvent(g, game.GameEvent{
 			Kind:           game.EventAttackerDeclared,
 			SourceID:       attacker.CardInstanceID,
 			SourceObjectID: attacker.ObjectID,
-			Controller:     attacker.Controller,
+			Controller:     effectiveController(g, attacker),
 			PermanentID:    attacker.ObjectID,
 			AttackTarget:   declaration.Target,
 		})
 	}
 	return true
+}
+
+func canPayAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration) bool {
+	cost := attackTaxCost(g, declarations)
+	_, ok := buildPaymentPlan(g, playerID, cost, 0, attackingPermanentExclusions(declarations))
+	return ok
+}
+
+func payAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, cost *mana.Cost) bool {
+	plan, ok := buildPaymentPlan(g, playerID, cost, 0, attackingPermanentExclusions(declarations))
+	if !ok {
+		return false
+	}
+	return applyPaymentPlan(g, playerID, plan)
+}
+
+func attackingPermanentExclusions(declarations []game.AttackDeclaration) map[id.ID]bool {
+	excluded := make(map[id.ID]bool, len(declarations))
+	for _, declaration := range declarations {
+		excluded[declaration.Attacker] = true
+	}
+	return excluded
+}
+
+func attackTaxCost(g *game.Game, declarations []game.AttackDeclaration) *mana.Cost {
+	total := 0
+	for _, declaration := range declarations {
+		for _, tax := range g.AttackTaxes {
+			if tax.DefendingPlayer == declaration.Target.Player && tax.Amount > 0 {
+				total += tax.Amount
+			}
+		}
+	}
+	if total <= 0 {
+		return nil
+	}
+	cost := mana.Cost{mana.GenericMana(total)}
+	return &cost
 }
 
 func canDeclareAttackers(g *game.Game, playerID game.PlayerID) bool {
@@ -829,15 +981,14 @@ func isLegalAttackTarget(g *game.Game, attackerController game.PlayerID, target 
 		return true
 	}
 	permanent := attackTargetPermanent(g, target)
-	if permanent == nil || permanent.Controller != target.Player {
+	if permanent == nil || effectiveController(g, permanent) != target.Player {
 		return false
 	}
-	card := permanentCardDef(g, permanent)
 	if target.PlaneswalkerID != 0 {
-		return target.BattleID == 0 && card != nil && card.HasType(game.TypePlaneswalker)
+		return target.BattleID == 0 && permanentHasType(g, permanent, game.TypePlaneswalker)
 	}
 	if target.BattleID != 0 {
-		return card != nil && card.HasType(game.TypeBattle)
+		return permanentHasType(g, permanent, game.TypeBattle)
 	}
 	return false
 }
@@ -921,18 +1072,15 @@ func legalAttackTargets(g *game.Game, attackerController game.PlayerID) []game.A
 		targets = append(targets, game.AttackTarget{Player: opponent})
 	}
 	for _, permanent := range g.Battlefield {
-		if permanent == nil || permanent.Controller == attackerController || !isPlayerAlive(g, permanent.Controller) {
-			continue
-		}
-		card := permanentCardDef(g, permanent)
-		if card == nil {
+		permanentController := effectiveController(g, permanent)
+		if permanent == nil || permanent.PhasedOut || permanentController == attackerController || !isPlayerAlive(g, permanentController) {
 			continue
 		}
 		switch {
-		case card.HasType(game.TypePlaneswalker):
-			targets = append(targets, game.AttackTarget{Player: permanent.Controller, PlaneswalkerID: permanent.ObjectID})
-		case card.HasType(game.TypeBattle):
-			targets = append(targets, game.AttackTarget{Player: permanent.Controller, BattleID: permanent.ObjectID})
+		case permanentHasType(g, permanent, game.TypePlaneswalker):
+			targets = append(targets, game.AttackTarget{Player: permanentController, PlaneswalkerID: permanent.ObjectID})
+		case permanentHasType(g, permanent, game.TypeBattle):
+			targets = append(targets, game.AttackTarget{Player: permanentController, BattleID: permanent.ObjectID})
 		}
 	}
 	return targets

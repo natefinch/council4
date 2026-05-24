@@ -45,6 +45,7 @@ const (
 	Trample
 	Vigilance
 	Ward
+	SplitSecond
 	// Non-combat keywords
 	Equip
 	Enchant
@@ -104,6 +105,10 @@ type TriggerCondition struct {
 	// InterveningIf is the "if" condition that must be true both when the
 	// event occurs and when the trigger resolves (CR 603.4). Empty if none.
 	InterveningIf string
+
+	// InterveningIfControllerLifeAtLeast is a structured initial intervening-if
+	// condition for life-threshold triggers.
+	InterveningIfControllerLifeAtLeast int
 }
 
 // TriggerControllerFilter constrains a trigger by the controller recorded on an event.
@@ -211,6 +216,11 @@ const (
 	EffectAttach
 	EffectReplace
 	EffectPrevent
+	EffectCreateDelayedTrigger
+	EffectRegenerate
+	EffectSkipStep
+	EffectPhaseOut
+	EffectCreateEmblem
 )
 
 // EffectSelector identifies a set of permanents affected by a mass effect.
@@ -231,16 +241,21 @@ const (
 // TargetIndex indexes into the runtime targets chosen for the spell or ability;
 // -1 means the effect applies to that spell or ability's controller.
 type Effect struct {
-	Type           EffectType
-	Amount         int
-	TargetIndex    int
-	PowerDelta     int
-	ToughnessDelta int
-	ManaColor      mana.Color
-	UntilEndOfTurn bool
-	Selector       EffectSelector
-	Token          *CardDef
-	Description    string
+	Type            EffectType
+	Amount          int
+	TargetIndex     int
+	PowerDelta      int
+	ToughnessDelta  int
+	ManaColor       mana.Color
+	UntilEndOfTurn  bool
+	Duration        EffectDuration
+	Step            Step
+	Selector        EffectSelector
+	Token           *CardDef
+	DelayedTrigger  *DelayedTriggerDef
+	EmblemAbilities []AbilityDef
+	LinkID          string
+	Description     string
 }
 
 // TargetSpec describes the targeting requirements of an ability.
@@ -303,6 +318,12 @@ type AbilityDef struct {
 	// AlternativeCosts are optional costs that replace the normal mana cost
 	// when selected. Required additional costs still apply.
 	AlternativeCosts []AlternativeCost
+
+	// KickerCost is an optional additional mana cost for Kicker.
+	KickerCost *mana.Cost
+
+	// KickerEffects are additional effects applied if the spell was kicked.
+	KickerEffects []Effect
 
 	// Trigger defines when a triggered ability fires. Nil for non-triggered.
 	Trigger *TriggerCondition

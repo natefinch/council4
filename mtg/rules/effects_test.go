@@ -118,6 +118,72 @@ func TestFailedDrawEffectLogsAndEliminatesPlayer(t *testing.T) {
 	}
 }
 
+func TestMillScryAndSurveilLibraryEffectsUseDeterministicFallback(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
+	second := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Second"})
+	third := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Third"})
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectScry, Amount: 2, TargetIndex: -1}, nil)
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Library.All(); len(got) < 3 || got[0] != third || got[1] != second || got[2] != top {
+		t.Fatalf("library after scry = %+v, want deterministic keep-top order", got)
+	}
+
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectSurveil, Amount: 2, TargetIndex: -1}, nil)
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Library.All(); len(got) < 3 || got[0] != third || got[1] != second || got[2] != top {
+		t.Fatalf("library after surveil = %+v, want deterministic keep-top order", got)
+	}
+
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectMill, Amount: 2, TargetIndex: -1}, nil)
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !g.Players[game.Player1].Graveyard.Contains(third) || !g.Players[game.Player1].Graveyard.Contains(second) {
+		t.Fatal("mill did not move top two cards to graveyard")
+	}
+	if got := g.Players[game.Player1].Library.All(); len(got) != 1 || got[0] != top {
+		t.Fatalf("library after mill = %+v, want only original bottom card", got)
+	}
+}
+
+func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
+	t.Run("scry bottom", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		bottom := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Bottom"})
+		top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
+		addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectScry, Amount: 1, TargetIndex: -1}, nil)
+		log := TurnLog{}
+		agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+		engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+		if got := g.Players[game.Player1].Library.All(); len(got) != 2 || got[0] != bottom || got[1] != top {
+			t.Fatalf("library after scry = %+v, want chosen card on bottom", got)
+		}
+		if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceScry || log.Choices[0].UsedFallback {
+			t.Fatalf("choices = %+v, want non-fallback scry choice", log.Choices)
+		}
+	})
+	t.Run("surveil graveyard", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
+		addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectSurveil, Amount: 1, TargetIndex: -1}, nil)
+		log := TurnLog{}
+		agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+		engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+		if g.Players[game.Player1].Library.Contains(top) || !g.Players[game.Player1].Graveyard.Contains(top) {
+			t.Fatal("surveil choice did not move card to graveyard")
+		}
+		if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceSurveil || log.Choices[0].UsedFallback {
+			t.Fatalf("choices = %+v, want non-fallback surveil choice", log.Choices)
+		}
+	})
+}
+
 func TestDestroyEffectMovesPermanentToGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

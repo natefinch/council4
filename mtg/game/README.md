@@ -27,6 +27,11 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 ├── stack.go                   # Stack (LIFO) & StackObject (spells/abilities resolving)
 ├── target.go                  # Target — runtime target choices for spells/abilities
 ├── event.go                   # GameEvent — typed rules facts emitted by mtg/rules
+├── continuous.go              # ContinuousEffect layers, CopyableValues, DynamicValue
+├── cost_modifier.go           # CostModifier and AttackTax runtime cost data
+├── duration.go                # EffectDuration and delayed-trigger data
+├── lki.go                     # ObjectSnapshot and linked-object references
+├── replacement.go             # PreventionShield, ReplacementDecision, ETB counter data
 ├── turn.go                    # Phase, Step, TurnState, TurnOrder (4-player rotation)
 ├── combat.go                  # AttackDeclaration, BlockDeclaration, CombatState
 ├── object.go                  # ObjectID, PlayerID — shared identity types
@@ -134,7 +139,7 @@ Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-play
 | Triggered | `When` / `Whenever` / `At` | "When this enters the battlefield…" |
 | Static | declarative | "Creatures you control get +1/+1." |
 
-50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, protection, flashback, cascade, etc.). `AbilityDef.ProtectionFromColors` parameterizes the initial Protection slice for color-based damage prevention and targeting restrictions. Static abilities may carry `EffectModifyPT` effects with selectors such as `EffectSelectorCreaturesYouControl` or `EffectSelectorOtherCreaturesYouControl`; `mtg/rules` derives those continuous P/T effects dynamically from the battlefield. `Effect` stores simple effect primitive data such as `Type`, `Amount`, `TargetIndex`, `Selector`, `PowerDelta`, `ToughnessDelta`, `ManaColor`, `UntilEndOfTurn`, `Token`, and `Description`; the rules engine owns execution behavior. `AbilityDef.AdditionalCosts` and `AbilityDef.AlternativeCosts` are typed cost data used by the rules payment planner, while the legacy `AdditionalCost` string remains only as a compatibility bridge. `CardDef.ImplementationID` is pure data that lets `mtg/rules` route spell resolution to a registered hand-written card implementation when effect primitives are not expressive enough. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
+50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, protection, flashback, cascade, etc.). `AbilityDef.ProtectionFromColors` parameterizes Protection for color-based damage prevention and targeting restrictions. Static abilities may carry `EffectModifyPT` effects with selectors such as `EffectSelectorCreaturesYouControl` or `EffectSelectorOtherCreaturesYouControl`; `mtg/rules` derives those continuous P/T effects dynamically from the battlefield. `AbilityDef.KickerCost` and `KickerEffects` model the initial Kicker slice. `Effect` stores simple effect primitive data such as `Type`, `Amount`, `TargetIndex`, `Selector`, `PowerDelta`, `ToughnessDelta`, `ManaColor`, `Duration`, `UntilEndOfTurn`, `Token`, `DelayedTrigger`, `EmblemAbilities`, `LinkID`, and `Description`; the rules engine owns execution behavior. `AbilityDef.AdditionalCosts`, `AlternativeCosts`, and runtime `CostModifier` data are used by the rules payment planner, while the legacy `AdditionalCost` string remains only as a compatibility bridge. `CardDef.ImplementationID` is pure data that lets `mtg/rules` route spell resolution to a registered hand-written card implementation when effect primitives are not expressive enough. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
 
 Activated abilities can carry mana costs, typed additional costs, timing restrictions, target specs, X values, and an `IsManaAbility` marker. The current rules engine uses those fields for simple tap mana abilities, basic Equip abilities, Cycling from hand, and general non-mana activated abilities with supported effects. Cycling abilities use the same `StackActivatedAbility` shape with the source card preserved after it is discarded. `Game.ActivatedAbilitiesThisTurn` tracks once-per-turn activation guards by source object and ability index.
 
@@ -142,7 +147,11 @@ Triggered abilities use `TriggerCondition.Pattern` to match typed `GameEvent` va
 
 ### Choices
 
-`ChoiceRequest` and `ChoiceDecision` (`choice.go`) describe engine-mediated decisions that are not priority actions. The current rules engine uses choices for triggered-ability target selection, ordering simultaneous triggers controlled by the same player, and optional triggered ability resolution. Choice data lives in `mtg/game` so agents and rules code can share the request shape without moving behavior out of `mtg/rules`.
+`ChoiceRequest` and `ChoiceDecision` (`choice.go`) describe engine-mediated decisions that are not priority actions. The current rules engine uses choices for triggered-ability target selection, ordering simultaneous triggers controlled by the same player, optional triggered ability resolution, payment choices, and scry/surveil top-card decisions. Choice data lives in `mtg/game` so agents and rules code can share the request shape without moving behavior out of `mtg/rules`.
+
+### Runtime rules data
+
+`ContinuousEffect`, `EffectDuration`, `PreventionShield`, `CostModifier`, `AttackTax`, `ObjectSnapshot`, and linked-object reference types are runtime data owned by `mtg/rules` behavior but stored in `game.Game` so cloned games, agents, logs, and later simulation tooling can observe a complete rules state. The data package defines shapes only; ordering, expiry, replacement, and payment behavior remain in `mtg/rules`.
 
 ### Game Events
 
@@ -195,4 +204,4 @@ This package is the **data model** used by the rules engine. Future layers will 
 
 - **Card database** — loading real card data (e.g., from Scryfall) into `CardDef` structs
 - **AI agent** — decision-making for automated play (see the reference docs in `Agent Instructions & Rules/`)
-- **Richer rules support** — advanced payment choices, keyword actions beyond Flash/basic Equip/Cycling, choice-based decisions, the full layer system for continuous effects, and richer replacement/prevention ordering
+- **Richer rules support** — remaining keyword actions beyond Flash/basic Equip/Cycling/Kicker, choice-based discard/search/modal decisions, exact DFC/card-form handling, and agent-selected replacement/prevention ordering

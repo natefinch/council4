@@ -9,6 +9,11 @@ const (
 	ChoiceTarget
 	ChoiceOrder
 	ChoicePayment
+	ChoiceScry
+	ChoiceSurveil
+	ChoiceZoneSelection
+	ChoiceSearch
+	ChoiceModal
 )
 
 // ChoiceOption is one legal option in a ChoiceRequest.

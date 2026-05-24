@@ -38,6 +38,7 @@ type paymentAdditionalCostOption struct {
 // reductions, and taxes produced by static or continuous effects.
 type costModificationContext struct {
 	player game.PlayerID
+	card   *game.CardDef
 	option spellCostOption
 }
 

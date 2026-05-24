@@ -6,6 +6,10 @@ import (
 )
 
 func (e *Engine) resolveSpellEffects(g *game.Game, obj *game.StackObject, card *game.CardInstance, log *TurnLog) {
+	e.resolveSpellEffectsWithChoices(g, obj, card, [game.NumPlayers]PlayerAgent{}, log)
+}
+
+func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObject, card *game.CardInstance, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	if e.resolveCardImplementationSpell(g, obj, card, log) {
 		return
 	}
@@ -19,14 +23,24 @@ func (e *Engine) resolveSpellEffects(g *game.Game, obj *game.StackObject, card *
 				continue
 			}
 			for _, effect := range ability.Modes[modeIndex].Effects {
-				e.resolveEffect(g, obj, effect, log)
+				e.resolveEffectWithChoices(g, obj, effect, agents, log)
 			}
 		}
 		return
 	}
 	for _, effect := range ability.Effects {
-		e.resolveEffect(g, obj, effect, log)
+		e.resolveEffectWithChoices(g, obj, effect, agents, log)
 	}
+	if obj.KickerPaid {
+		for _, effect := range ability.KickerEffects {
+			e.resolveEffectWithChoices(g, obj, effect, agents, log)
+		}
+	}
+}
+
+func spellHasKicker(card *game.CardDef) bool {
+	ability := firstSpellAbility(card)
+	return ability != nil && ability.KickerCost != nil
 }
 
 func firstSpellAbility(card *game.CardDef) *game.AbilityDef {
@@ -39,6 +53,10 @@ func firstSpellAbility(card *game.CardDef) *game.AbilityDef {
 }
 
 func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.Effect, log *TurnLog) {
+	e.resolveEffectWithChoices(g, obj, effect, [game.NumPlayers]PlayerAgent{}, log)
+}
+
+func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, effect game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	if effect.Selector != game.EffectSelectorNone {
 		resolveMassPermanentEffect(g, obj, effect)
 		return
@@ -114,7 +132,11 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 		if permanent == nil {
 			return
 		}
+		linkedObjectRef := permanentLinkedObjectRef(permanent)
 		movePermanentToZone(g, permanent, game.ZoneExile)
+		if effect.LinkID != "" {
+			rememberLinkedObject(g, linkedObjectSourceKey(g, obj, effect.LinkID), linkedObjectRef)
+		}
 	case game.EffectBounce:
 		permanent := effectPermanent(g, obj, effect)
 		if permanent == nil {
@@ -126,7 +148,7 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 		if permanent == nil {
 			permanent = firstPermanentControlledBy(g, obj.Controller)
 		}
-		if permanent == nil || permanent.Controller != obj.Controller {
+		if permanent == nil || effectiveController(g, permanent) != obj.Controller {
 			return
 		}
 		movePermanentToZone(g, permanent, game.ZoneGraveyard)
@@ -143,8 +165,7 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 	case game.EffectModifyPT:
 		permanent := effectPermanent(g, obj, effect)
 		if permanent != nil && effect.UntilEndOfTurn {
-			permanent.TemporaryPowerModifier += effect.PowerDelta
-			permanent.TemporaryToughnessModifier += effect.ToughnessDelta
+			g.ContinuousEffects = append(g.ContinuousEffects, untilEndOfTurnContinuousEffect(g, obj, permanent, effect))
 		}
 	case game.EffectCreateToken:
 		amount := effect.Amount
@@ -154,6 +175,55 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 		for range amount {
 			createTokenPermanent(g, obj.Controller, effect.Token)
 		}
+	case game.EffectCreateDelayedTrigger:
+		scheduleDelayedTrigger(g, obj, effect.DelayedTrigger)
+	case game.EffectPutOnBattlefield:
+		if effect.LinkID != "" {
+			returnLinkedExiledObjects(g, obj, effect.LinkID)
+		}
+	case game.EffectPrevent:
+		createPreventionShield(g, obj, effect)
+	case game.EffectRegenerate:
+		permanent := effectPermanent(g, obj, effect)
+		if permanent != nil {
+			permanent.RegenerationShields++
+		}
+	case game.EffectSkipStep:
+		playerID, ok := effectPlayer(g, obj, effect)
+		if ok {
+			scheduleSkipStep(g, playerID, effect.Step)
+		}
+	case game.EffectTransform:
+		permanent := effectPermanent(g, obj, effect)
+		if permanent != nil {
+			// TODO: apply back-face copiable values when double-faced card data exists.
+			permanent.Transformed = !permanent.Transformed
+		}
+	case game.EffectPhaseOut:
+		permanent := effectPermanent(g, obj, effect)
+		if permanent != nil {
+			permanent.PhasedOut = true
+			removePermanentFromCombat(g, permanent.ObjectID)
+		}
+	case game.EffectCreateEmblem:
+		g.Emblems = append(g.Emblems, game.Emblem{Owner: obj.Controller, Abilities: append([]game.AbilityDef(nil), effect.EmblemAbilities...)})
+	case game.EffectMill:
+		playerID, ok := effectPlayer(g, obj, effect)
+		if ok {
+			millCards(g, playerID, effect.Amount)
+		}
+	case game.EffectScry:
+		playerID, ok := effectPlayer(g, obj, effect)
+		if ok {
+			e.scryCards(g, agents, log, playerID, effect.Amount)
+		}
+	case game.EffectSurveil:
+		playerID, ok := effectPlayer(g, obj, effect)
+		if ok {
+			e.surveilCards(g, agents, log, playerID, effect.Amount)
+		}
+	case game.EffectFight:
+		resolveFight(g, obj, effect)
 	}
 }
 
@@ -246,25 +316,24 @@ func permanentMatchesSelector(g *game.Game, permanent *game.Permanent, selector 
 }
 
 func permanentMatchesSelectorForSource(g *game.Game, source *game.Permanent, controller game.PlayerID, permanent *game.Permanent, selector game.EffectSelector) bool {
-	card := permanentCardDef(g, permanent)
-	if card == nil {
+	if permanent == nil {
 		return false
 	}
 	switch selector {
 	case game.EffectSelectorAllCreatures:
-		return card.HasType(game.TypeCreature)
+		return permanentHasType(g, permanent, game.TypeCreature)
 	case game.EffectSelectorAllArtifacts:
-		return card.HasType(game.TypeArtifact)
+		return permanentHasType(g, permanent, game.TypeArtifact)
 	case game.EffectSelectorAllEnchantments:
-		return card.HasType(game.TypeEnchantment)
+		return permanentHasType(g, permanent, game.TypeEnchantment)
 	case game.EffectSelectorAllNonlandPermanents:
-		return !card.HasType(game.TypeLand)
+		return !permanentHasType(g, permanent, game.TypeLand)
 	case game.EffectSelectorAllPermanents:
 		return true
 	case game.EffectSelectorCreaturesYouControl:
-		return permanent.Controller == controller && card.HasType(game.TypeCreature)
+		return effectiveController(g, permanent) == controller && permanentHasType(g, permanent, game.TypeCreature)
 	case game.EffectSelectorOtherCreaturesYouControl:
-		return source != nil && permanent.ObjectID != source.ObjectID && permanent.Controller == controller && card.HasType(game.TypeCreature)
+		return source != nil && permanent.ObjectID != source.ObjectID && effectiveController(g, permanent) == controller && permanentHasType(g, permanent, game.TypeCreature)
 	default:
 		return false
 	}
@@ -306,11 +375,37 @@ func firstPermanentControlledBy(g *game.Game, controller game.PlayerID) *game.Pe
 		return nil
 	}
 	for _, permanent := range g.Battlefield {
-		if permanent != nil && permanent.Controller == controller {
+		if permanent != nil && effectiveController(g, permanent) == controller {
 			return permanent
 		}
 	}
 	return nil
+}
+
+func permanentLinkedObjectRef(permanent *game.Permanent) game.LinkedObjectRef {
+	if permanent == nil || permanent.CardInstanceID == 0 {
+		return game.LinkedObjectRef{}
+	}
+	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
+}
+
+func returnLinkedExiledObjects(g *game.Game, obj *game.StackObject, linkID string) {
+	key := linkedObjectSourceKey(g, obj, linkID)
+	for _, ref := range linkedObjects(g, key) {
+		if snapshot, ok := lastKnownObject(g, ref.ObjectID); !ok || snapshot.CardID != ref.CardID {
+			continue
+		}
+		card := g.GetCardInstance(ref.CardID)
+		if card == nil {
+			continue
+		}
+		owner := playerByID(g, card.Owner)
+		if owner == nil || !owner.Exile.Remove(ref.CardID) {
+			continue
+		}
+		createCardPermanent(g, card, obj.Controller, game.ZoneExile)
+	}
+	clearLinkedObjects(g, key)
 }
 
 func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.CardDef) *game.Permanent {

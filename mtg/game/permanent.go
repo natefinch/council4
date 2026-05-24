@@ -73,6 +73,9 @@ type Permanent struct {
 	TemporaryPowerModifier     int
 	TemporaryToughnessModifier int
 
+	// RegenerationShields replace future destruction events for this permanent.
+	RegenerationShields int
+
 	// --- Attachments ---
 
 	// Attachments lists the ObjectIDs of permanents attached to this one

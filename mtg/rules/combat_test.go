@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 func TestCombatPhaseVisitsPriorityStepsInOrder(t *testing.T) {
@@ -132,24 +133,27 @@ func TestLegalDeclareAttackersActionsProductiveFirstThenNoAttacks(t *testing.T) 
 
 	legal := legalDeclareAttackersActions(g, game.Player1)
 
-	if len(legal) != 3 {
-		t.Fatalf("legal declare attackers actions = %d, want 3", len(legal))
+	if len(legal) != 7 {
+		t.Fatalf("legal declare attackers actions = %d, want 7", len(legal))
 	}
 	wantTargets := []game.PlayerID{game.Player2, game.Player4}
-	for i, target := range wantTargets {
-		if legal[i].Kind != action.ActionDeclareAttackers {
-			t.Fatalf("action %d kind = %v, want declare attackers", i, legal[i].Kind)
+	for targetIndex, target := range wantTargets {
+		allAttackersAction := targetIndex*3 + 2
+		for i := targetIndex * 3; i <= allAttackersAction; i++ {
+			if legal[i].Kind != action.ActionDeclareAttackers {
+				t.Fatalf("action %d kind = %v, want declare attackers", i, legal[i].Kind)
+			}
 		}
 		want := []game.AttackDeclaration{
 			{Attacker: attacker1.ObjectID, Target: game.AttackTarget{Player: target}},
 			{Attacker: attacker2.ObjectID, Target: game.AttackTarget{Player: target}},
 		}
-		if !slices.Equal(legal[i].DeclareAttackers.Attackers, want) {
-			t.Fatalf("action %d attackers = %+v, want %+v", i, legal[i].DeclareAttackers.Attackers, want)
+		if !slices.Equal(legal[allAttackersAction].DeclareAttackers.Attackers, want) {
+			t.Fatalf("action %d attackers = %+v, want %+v", allAttackersAction, legal[allAttackersAction].DeclareAttackers.Attackers, want)
 		}
 	}
-	if len(legal[2].DeclareAttackers.Attackers) != 0 {
-		t.Fatalf("last declare attackers action = %+v, want no attacks", legal[2].DeclareAttackers.Attackers)
+	if len(legal[6].DeclareAttackers.Attackers) != 0 {
+		t.Fatalf("last declare attackers action = %+v, want no attacks", legal[6].DeclareAttackers.Attackers)
 	}
 }
 
@@ -700,6 +704,237 @@ func TestResolveCombatDamageMultipleAttackersDealSeparateDamage(t *testing.T) {
 	}
 	if log.CombatDamage[0].Damage != 2 || log.CombatDamage[1].Damage != 3 {
 		t.Fatalf("combat damage log amounts = [%d %d], want [2 3]", log.CombatDamage[0].Damage, log.CombatDamage[1].Damage)
+	}
+}
+
+func TestAttackerChosenCombatDamageAssignmentIsUsed(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		DamageAssignment: map[id.ID]int{
+			first.ObjectID:  4,
+			second.ObjectID: 1,
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if first.MarkedDamage != 4 || second.MarkedDamage != 1 {
+		t.Fatalf("blocker damage = %d/%d, want attacker-chosen 4/1", first.MarkedDamage, second.MarkedDamage)
+	}
+}
+
+func TestOutOfOrderCombatDamageAssignmentFallsBackToDeterministicAssignment(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		DamageAssignment: map[id.ID]int{
+			first.ObjectID:  1,
+			second.ObjectID: 4,
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if first.MarkedDamage != 3 || second.MarkedDamage != 2 {
+		t.Fatalf("blocker damage = %d/%d, want deterministic fallback 3/2", first.MarkedDamage, second.MarkedDamage)
+	}
+}
+
+func TestUnderAssignedCombatDamageFallsBackToDeterministicAssignment(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		DamageAssignment: map[id.ID]int{
+			first.ObjectID: 1,
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if first.MarkedDamage != 3 || second.MarkedDamage != 2 {
+		t.Fatalf("blocker damage = %d/%d, want deterministic fallback 3/2", first.MarkedDamage, second.MarkedDamage)
+	}
+}
+
+func TestAttackerChosenTrampleDeathtouchAssignmentCarriesExcessToPlayer(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5, game.Trample, game.Deathtouch)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		DamageAssignment: map[id.ID]int{
+			first.ObjectID:  1,
+			second.ObjectID: 1,
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if first.MarkedDamage != 1 || second.MarkedDamage != 1 {
+		t.Fatalf("blocker damage = %d/%d, want deathtouch lethal 1/1", first.MarkedDamage, second.MarkedDamage)
+	}
+	if g.Players[game.Player2].Life != 37 {
+		t.Fatalf("defending player life = %d, want 3 trample damage", g.Players[game.Player2].Life)
+	}
+}
+
+func TestLegalDeclareAttackersIncludesSingleAttackerChoices(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+
+	actions := legalDeclareAttackersActions(g, game.Player1)
+
+	if !declareAttackersActionsContainTarget(actions, first.ObjectID, game.AttackTarget{Player: game.Player2}) {
+		t.Fatal("legal attacks did not include first creature attacking alone")
+	}
+	if !declareAttackersActionsContainTarget(actions, second.ObjectID, game.AttackTarget{Player: game.Player2}) {
+		t.Fatal("legal attacks did not include second creature attacking alone")
+	}
+}
+
+func TestPhasedOutCreatureCannotAttackBlockOrBeAttacked(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:    "Phased Walker",
+		Types:   []game.CardType{game.TypePlaneswalker},
+		Loyalty: intPtr(3),
+	})
+	attacker.PhasedOut = true
+	blocker.PhasedOut = true
+	planeswalker.PhasedOut = true
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+
+	if canAttackWith(g, attacker, game.Player1) {
+		t.Fatal("phased-out creature can attack")
+	}
+	if canBlockWith(g, blocker, game.Player2) {
+		t.Fatal("phased-out creature can block")
+	}
+	for _, target := range legalAttackTargets(g, game.Player1) {
+		if target.PlaneswalkerID == planeswalker.ObjectID {
+			t.Fatal("phased-out planeswalker is an attack target")
+		}
+	}
+}
+
+func TestEliminatedPlayerCleanupRemovesCombatAndStackObjects(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	owned := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	controlled := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	controlled.Controller = game.Player2
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers:  []game.BlockDeclaration{{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID}},
+	}
+	g.Stack.Push(&game.StackObject{ID: g.IDGen.Next(), Controller: game.Player2})
+
+	engine.eliminatePlayer(g, game.Player2)
+
+	if len(g.Combat.Attackers) != 0 || len(g.Combat.Blockers) != 0 {
+		t.Fatalf("combat after elimination attackers=%+v blockers=%+v, want cleared", g.Combat.Attackers, g.Combat.Blockers)
+	}
+	if g.Stack.Size() != 0 {
+		t.Fatalf("stack size after elimination = %d, want 0", g.Stack.Size())
+	}
+	if permanentByObjectID(g, owned.ObjectID) != nil || !g.Players[game.Player2].Exile.Contains(owned.CardInstanceID) {
+		t.Fatal("eliminated player's owned permanent did not leave battlefield")
+	}
+	if permanentByObjectID(g, controlled.ObjectID) == nil || controlled.Controller != game.Player1 {
+		t.Fatalf("controlled permanent after elimination = %+v, want returned to owner control", controlled)
+	}
+}
+
+func TestAttackTaxFiltersAndChargesDeclareAttackers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: game.Player2, Amount: 1})
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+
+	actions := legalDeclareAttackersActions(g, game.Player1)
+	if declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player2}) {
+		t.Fatal("taxed attack was legal without mana")
+	}
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	actions = legalDeclareAttackersActions(g, game.Player1)
+	if !declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player2}) {
+		t.Fatal("taxed attack was not legal with mana available")
+	}
+
+	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}}).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() = false, want tax payment to succeed")
+	}
+	if !forest.Tapped {
+		t.Fatal("attack tax did not tap mana source")
+	}
+}
+
+func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	manaDork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Mana Dork",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 1},
+		Toughness: &game.PT{Value: 1},
+		Abilities: []game.AbilityDef{{
+			Kind:     game.StaticAbility,
+			Keywords: []game.Keyword{game.Haste},
+		}},
+	}, mana.Green, 1)
+	manaDork.SummoningSick = false
+	g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: game.Player2, Amount: 1})
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+
+	actions := legalDeclareAttackersActions(g, game.Player1)
+
+	if declareAttackersActionsContainTarget(actions, manaDork.ObjectID, game.AttackTarget{Player: game.Player2}) {
+		t.Fatal("taxed attack was legal by using the declared attacker as its own mana source")
 	}
 }
 

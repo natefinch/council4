@@ -201,6 +201,55 @@ func TestVariableCostCanIncludeFixedColoredSymbols(t *testing.T) {
 	}
 }
 
+func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
+	t.Run("reduction", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, "Forest")
+		addBasicLandPermanent(g, game.Player1, "Mountain")
+		cost := mana.Cost{mana.GenericMana(3), mana.ColoredMana(mana.Green)}
+		card := &game.CardDef{Name: "Reduced Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: &cost}
+		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
+			Kind:             game.CostModifierSpell,
+			GenericReduction: 2,
+		})
+
+		if !canPaySpellCosts(g, game.Player1, card, 0) {
+			t.Fatal("canPaySpellCosts() = false, want reduction to make {3}{G} payable with two lands")
+		}
+	})
+	t.Run("increase", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, "Forest")
+		cost := mana.Cost{mana.ColoredMana(mana.Green)}
+		card := &game.CardDef{Name: "Taxed Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: &cost}
+		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
+			Kind:            game.CostModifierSpell,
+			GenericIncrease: 1,
+		})
+
+		if canPaySpellCosts(g, game.Player1, card, 0) {
+			t.Fatal("canPaySpellCosts() = true, want increase to require a second mana")
+		}
+	})
+	t.Run("minimum", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		cost := mana.Cost{mana.GenericMana(3)}
+		card := &game.CardDef{Name: "Minimum Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: &cost}
+		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
+			Kind:             game.CostModifierSpell,
+			GenericReduction: 5,
+			MinimumGeneric:   1,
+		})
+		if canPaySpellCosts(g, game.Player1, card, 0) {
+			t.Fatal("canPaySpellCosts() = true without mana, want minimum generic cost")
+		}
+		addBasicLandPermanent(g, game.Player1, "Island")
+		if !canPaySpellCosts(g, game.Player1, card, 0) {
+			t.Fatal("canPaySpellCosts() = false with one mana, want minimum generic cost payable")
+		}
+	})
+}
+
 func TestHybridCostCanBePaidByEitherColor(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, "Plains")

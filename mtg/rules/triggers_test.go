@@ -339,6 +339,77 @@ func TestCastTriggerGoesOnStackAboveCastSpell(t *testing.T) {
 	}
 }
 
+func TestInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
+	t.Run("not put on stack when false at trigger time", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		g.Players[game.Player1].Life = 40
+		addTriggeredPermanentWithCondition(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}})
+		addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Drawn"})
+		if _, ok := engine.drawCard(g, game.Player2); !ok {
+			t.Fatal("drawCard() = false, want true")
+		}
+		if engine.putTriggeredAbilitiesOnStack(g) {
+			t.Fatal("intervening-if false trigger was put on stack")
+		}
+	})
+	t.Run("does not resolve when false at resolution time", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		g.Players[game.Player1].Life = 41
+		addTriggeredPermanentWithCondition(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}})
+		addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Event Drawn"})
+		addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Trigger Drawn"})
+		if _, ok := engine.drawCard(g, game.Player2); !ok {
+			t.Fatal("drawCard() = false, want true")
+		}
+		if !engine.putTriggeredAbilitiesOnStack(g) {
+			t.Fatal("intervening-if true trigger was not put on stack")
+		}
+		g.Players[game.Player1].Life = 40
+		log := TurnLog{}
+		engine.resolveTopOfStack(g, &log)
+		if g.Players[game.Player1].Hand.Size() != 0 {
+			t.Fatal("intervening-if false on resolution still applied effect")
+		}
+		if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+			t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+		}
+	})
+}
+
+func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Players[game.Player1].Life = 10
+	g.Players[game.Player2].Life = 41
+	triggerSource := addTriggeredPermanentWithCondition(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}})
+	newController := game.Player2
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               1,
+		AffectedObjectID: triggerSource.ObjectID,
+		Layer:            game.LayerControl,
+		NewController:    &newController,
+	})
+	addCardToLibrary(g, game.Player3, &game.CardDef{Name: "Event Drawn"})
+	addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Trigger Drawn"})
+
+	if _, ok := engine.drawCard(g, game.Player3); !ok {
+		t.Fatal("drawCard() = false, want true")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("trigger controlled by Player2 should use Player2 life for intervening-if")
+	}
+	obj := g.Stack.Peek()
+	if obj == nil || obj.Controller != game.Player2 {
+		t.Fatalf("trigger controller = %+v, want Player2", obj)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if g.Players[game.Player2].Hand.Size() != 1 {
+		t.Fatal("trigger did not resolve for effective controller")
+	}
+}
+
 func TestTriggeredAbilitiesUseAPNAPStackOrder(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -404,6 +475,13 @@ func addOptionalTriggeredPermanent(g *game.Game, controller game.PlayerID, patte
 	card := triggeredCreature(pattern, effects, targets)
 	card.Abilities[0].Optional = true
 	return addCombatPermanent(g, controller, card)
+}
+
+func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, pattern game.TriggerPattern, lifeAtLeast int, effects []game.Effect) *game.Permanent {
+	permanent := addTriggeredPermanent(g, controller, pattern, effects, nil)
+	card := g.GetCardInstance(permanent.CardInstanceID)
+	card.Def.Abilities[0].Trigger.InterveningIfControllerLifeAtLeast = lifeAtLeast
+	return permanent
 }
 
 func triggeredCreature(pattern game.TriggerPattern, effects []game.Effect, targets []game.TargetSpec) *game.CardDef {

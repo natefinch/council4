@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
@@ -970,6 +971,219 @@ func TestApplyActionInvalidCastDoesNotMutate(t *testing.T) {
 	}
 	if g.Stack.Size() != 0 {
 		t.Fatalf("stack size = %d, want 0", g.Stack.Size())
+	}
+}
+
+func TestSplitSecondAllowsOnlyManaAbilitiesAndPass(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	manaRock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Mana Rock",
+		Types: []game.CardType{game.TypeArtifact},
+	}, mana.Colorless, 1)
+	instantID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:  "Response",
+		Types: []game.CardType{game.TypeInstant},
+	})
+	splitSecondID := g.IDGen.Next()
+	g.CardInstances[splitSecondID] = &game.CardInstance{
+		ID: splitSecondID,
+		Def: &game.CardDef{
+			Name:  "Split Second Spell",
+			Types: []game.CardType{game.TypeInstant},
+			Abilities: []game.AbilityDef{{
+				Kind:     game.StaticAbility,
+				Keywords: []game.Keyword{game.SplitSecond},
+			}},
+		},
+		Owner: game.Player2,
+	}
+	g.Stack.Push(&game.StackObject{ID: g.IDGen.Next(), Kind: game.StackSpell, SourceID: splitSecondID, Controller: game.Player2})
+	g.Turn.PriorityPlayer = game.Player1
+
+	actions := engine.legalActions(g, game.Player1)
+
+	if containsAction(actions, action.CastSpell(instantID, nil, 0, nil)) {
+		t.Fatal("split second allowed casting a non-mana response")
+	}
+	if !containsAction(actions, action.ActivateAbility(manaRock.ObjectID, 0, nil, 0)) {
+		t.Fatal("split second suppressed a mana ability")
+	}
+	if !containsAction(actions, action.Pass()) {
+		t.Fatal("split second legal actions omitted pass")
+	}
+}
+
+func TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:    "Test Walker",
+		Types:   []game.CardType{game.TypePlaneswalker},
+		Loyalty: intPtr(3),
+		Abilities: []game.AbilityDef{{
+			Kind:             game.ActivatedAbility,
+			IsLoyaltyAbility: true,
+			LoyaltyCost:      -2,
+			Effects:          []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+		}},
+	})
+	planeswalker.Counters.Add(counter.Loyalty, 3)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	act := action.ActivateAbility(planeswalker.ObjectID, 0, nil, 0)
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction loyalty ability = false, want true")
+	}
+	if got := planeswalker.Counters.Get(counter.Loyalty); got != 1 {
+		t.Fatalf("loyalty counters = %d, want 1", got)
+	}
+	card := g.GetCardInstance(planeswalker.CardInstanceID)
+	if canActivateLoyaltyAbility(g, game.Player1, planeswalker, &card.Def.Abilities[0], 0, nil, 0) {
+		t.Fatal("loyalty ability could be activated twice in one turn")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if g.Players[game.Player1].Hand.Size() != 1 {
+		t.Fatal("loyalty ability did not resolve its effect")
+	}
+}
+
+func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	kickerCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:  "Kicker Spell",
+		Types: []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{{
+			Kind:          game.SpellAbility,
+			Effects:       []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: -1}},
+			KickerCost:    &kickerCost,
+			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+		}},
+	})
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastKickedSpell(spellID, nil, 0, nil)) {
+		t.Fatal("kicked spell cast failed")
+	}
+
+	if !forest.Tapped {
+		t.Fatal("kicker cost did not tap mana source")
+	}
+	obj := g.Stack.Peek()
+	if obj == nil || !obj.KickerPaid {
+		t.Fatalf("stack object = %+v, want KickerPaid", obj)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if g.Players[game.Player1].Life != 41 || g.Players[game.Player1].Hand.Size() != 1 {
+		t.Fatalf("life/hand = %d/%d, want base and kicker effects", g.Players[game.Player1].Life, g.Players[game.Player1].Hand.Size())
+	}
+}
+
+func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	baseCost := mana.Cost{mana.GenericMana(1)}
+	kickerCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Greedy Kicker Spell",
+		Types:    []game.CardType{game.TypeSorcery},
+		ManaCost: &baseCost,
+		Abilities: []game.AbilityDef{{
+			Kind:          game.SpellAbility,
+			KickerCost:    &kickerCost,
+			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+		}},
+	})
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if engine.canCastSpellWithKicker(g, game.Player1, spellID, nil, 0, nil, true) {
+		t.Fatal("canCastSpellWithKicker() = true with one Forest for {1}+{G}, want false")
+	}
+	if engine.applyAction(g, game.Player1, action.CastKickedSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction kicked spell = true, want false")
+	}
+	if forest.Tapped || !g.Players[game.Player1].Hand.Contains(spellID) || g.Stack.Size() != 0 {
+		t.Fatal("failed kicked cast mutated mana, hand, or stack")
+	}
+}
+
+func TestFightEffectDealsMutualCreatureDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets: []game.Target{
+			game.PermanentTarget(first.ObjectID),
+			game.PermanentTarget(second.ObjectID),
+		},
+	}
+
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectFight}, nil)
+
+	if first.MarkedDamage != 2 || second.MarkedDamage != 3 {
+		t.Fatalf("fight damage = %d/%d, want 2/3", first.MarkedDamage, second.MarkedDamage)
+	}
+}
+
+func TestTransformPhaseOutAndEmblemEffects(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: permanent.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+	}
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PermanentTarget(permanent.ObjectID)},
+	}
+
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectTransform, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPhaseOut, TargetIndex: 0}, nil)
+	emblemAbility := game.AbilityDef{Kind: game.StaticAbility, Text: "Test emblem ability"}
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectCreateEmblem, EmblemAbilities: []game.AbilityDef{emblemAbility}}, nil)
+
+	if !permanent.Transformed || !permanent.PhasedOut {
+		t.Fatalf("permanent transformed/phased = %v/%v, want true/true", permanent.Transformed, permanent.PhasedOut)
+	}
+	if len(g.Combat.Attackers) != 0 {
+		t.Fatalf("attackers after phase out = %+v, want removed from combat", g.Combat.Attackers)
+	}
+	if len(g.Emblems) != 1 || g.Emblems[0].Owner != game.Player1 || len(g.Emblems[0].Abilities) != 1 || g.Emblems[0].Abilities[0].Text != emblemAbility.Text {
+		t.Fatalf("emblems = %+v, want one Player1 emblem", g.Emblems)
+	}
+}
+
+func TestPhasedOutPermanentsPhaseInAndCannotActivate(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	manaRock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Mana Rock",
+		Types: []game.CardType{game.TypeArtifact},
+	}, mana.Colorless, 1)
+	manaRock.PhasedOut = true
+	g.Turn.PriorityPlayer = game.Player1
+
+	if len(engine.legalManaAbilityActions(g, game.Player1)) != 0 {
+		t.Fatal("phased-out permanent produced a legal mana ability")
+	}
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if manaRock.PhasedOut {
+		t.Fatal("phased-out permanent did not phase in during controller's untap step")
 	}
 }
 

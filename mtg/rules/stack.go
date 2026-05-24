@@ -46,9 +46,9 @@ func (e *Engine) resolveStackObject(g *game.Game, obj *game.StackObject, log *Tu
 func (e *Engine) resolveStackObjectWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	switch obj.Kind {
 	case game.StackSpell:
-		return e.resolveSpell(g, obj, log)
+		return e.resolveSpellWithChoices(g, obj, agents, log)
 	case game.StackActivatedAbility:
-		return e.resolveActivatedAbility(g, obj, log)
+		return e.resolveActivatedAbilityWithChoices(g, obj, agents, log)
 	case game.StackTriggeredAbility:
 		return e.resolveTriggeredAbilityWithChoices(g, obj, agents, log)
 	default:
@@ -66,6 +66,10 @@ func spellResolved(result string) bool {
 }
 
 func (e *Engine) resolveActivatedAbility(g *game.Game, obj *game.StackObject, log *TurnLog) string {
+	return e.resolveActivatedAbilityWithChoices(g, obj, [game.NumPlayers]PlayerAgent{}, log)
+}
+
+func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	permanent := permanentByObjectID(g, obj.SourceID)
 	def := stackObjectSourceDef(g, obj)
 	if def == nil && permanent != nil {
@@ -92,7 +96,7 @@ func (e *Engine) resolveActivatedAbility(g *game.Game, obj *game.StackObject, lo
 		return "countered by rules"
 	}
 	for _, effect := range ability.Effects {
-		e.resolveEffect(g, obj, effect, log)
+		e.resolveEffectWithChoices(g, obj, effect, agents, log)
 	}
 	return "resolved"
 }
@@ -102,22 +106,32 @@ func (e *Engine) resolveTriggeredAbility(g *game.Game, obj *game.StackObject, lo
 }
 
 func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	if obj.InlineAbility != nil {
+		return e.resolveTriggeredAbilityDefWithChoices(g, obj, nil, obj.InlineAbility, agents, log)
+	}
 	def := stackObjectSourceDef(g, obj)
 	if def == nil || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(def.Abilities) {
 		return "missing source"
 	}
 	ability := &def.Abilities[obj.AbilityIndex]
+	return e.resolveTriggeredAbilityDefWithChoices(g, obj, def, ability, agents, log)
+}
+
+func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.StackObject, source *game.CardDef, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	if ability.Kind != game.TriggeredAbility {
 		return "missing source"
 	}
-	if !abilityHasAnyLegalTargetsFromSource(g, def, ability, obj.Controller, obj.Targets) {
+	if ability.Trigger != nil && !triggerInterveningIf(g, obj.Controller, ability.Trigger) {
+		return "intervening if false"
+	}
+	if !abilityHasAnyLegalTargetsFromSource(g, source, ability, obj.Controller, obj.Targets) {
 		return "countered by rules"
 	}
 	if ability.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
 		return "declined"
 	}
 	for _, effect := range ability.Effects {
-		e.resolveEffect(g, obj, effect, log)
+		e.resolveEffectWithChoices(g, obj, effect, agents, log)
 	}
 	return "resolved"
 }
@@ -142,6 +156,10 @@ func stackObjectSourceDef(g *game.Game, obj *game.StackObject) *game.CardDef {
 }
 
 func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog) string {
+	return e.resolveSpellWithChoices(g, obj, [game.NumPlayers]PlayerAgent{}, log)
+}
+
+func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	card := g.GetCardInstance(obj.SourceID)
 	if card == nil || card.Def == nil {
 		return "missing source"
@@ -170,7 +188,7 @@ func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog)
 			}
 			return "countered by rules"
 		}
-		e.resolveSpellEffects(g, obj, card, log)
+		e.resolveSpellEffectsWithChoices(g, obj, card, agents, log)
 		if !moveStackCardToGraveyard(g, obj, card) {
 			return "invalid owner"
 		}

@@ -72,6 +72,10 @@ _Avoid_: Cost text parser, deterministic side effect
 A cost that replaces a spell or ability's normal mana cost when selected, while still allowing required additional costs. Alternative costs need an explicit cost-selection stage before payment planning.
 _Avoid_: Cost reduction, extra cost
 
+**Cost Modifier**:
+A runtime cost increase, reduction, set, minimum, or tax applied after normal/alternative cost selection and before payment planning.
+_Avoid_: Alternative cost, payment result
+
 **Choice**:
 An engine-mediated decision that is not a priority **Action**, such as choosing targets for triggered abilities, ordering simultaneous triggers, or deciding whether to apply an optional effect. In code, `game.ChoiceRequest` is answered by a `rules.ChoiceAgent` when available, with deterministic fallback.
 _Avoid_: Action, UI prompt, ad hoc callback
@@ -100,6 +104,10 @@ _Avoid_: Post-mutation cleanup, log-only prevention
 **Continuous Effect**:
 A persistent rules effect derived from current game state rather than a one-time mutation, such as an anthem that gives other creatures you control +1/+1. In code, the current slice is recalculated through `rules` effective-value helpers instead of being stored on permanents.
 _Avoid_: Permanent mutation, temporary modifier
+
+**Last-Known Information**:
+A snapshot of an object's effective characteristics immediately before it changes zones, used by dies/leaves-the-battlefield triggers and linked effects.
+_Avoid_: Current card definition, stale battlefield pointer
 
 **Trigger Pattern**:
 A structured matcher on a **Game Event** used by a triggered ability. In code, `game.TriggerPattern` hangs off `game.TriggerCondition` and filters by event kind, controller/player relationship, source/self, zones, permanent type, and damage recipient.

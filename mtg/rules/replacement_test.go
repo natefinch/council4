@@ -134,6 +134,195 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 	}
 }
 
+func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	sourceID := addColoredSourceCard(g, game.Player1, mana.Red)
+	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	obj := &game.StackObject{
+		Controller: game.Player2,
+		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
+	}
+
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPrevent, Amount: 2, TargetIndex: 0}, nil)
+	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, target, 5, false)
+
+	if dealt != 3 {
+		t.Fatalf("dealt damage = %d, want 3 after prevention shield", dealt)
+	}
+	if target.MarkedDamage != 3 {
+		t.Fatalf("marked damage = %d, want 3", target.MarkedDamage)
+	}
+	if len(g.PreventionShields) != 0 {
+		t.Fatalf("prevention shields = %+v, want consumed", g.PreventionShields)
+	}
+	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.GameEvent) bool {
+		return event.PermanentID == target.ObjectID && event.Amount == 2
+	})
+
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+	if len(g.PreventionShields) != 0 {
+		t.Fatalf("prevention shields after cleanup = %+v, want expired", g.PreventionShields)
+	}
+}
+
+func TestMultiplePreventionShieldsRecordDeterministicReplacementOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	sourceID := addColoredSourceCard(g, game.Player1, mana.Red)
+	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	obj := &game.StackObject{
+		Controller: game.Player2,
+		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
+	}
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
+
+	dealPermanentDamage(g, sourceID, 0, game.Player1, target, 3, false)
+
+	if len(g.ReplacementDecisions) != 1 {
+		t.Fatalf("replacement decisions = %+v, want one deterministic prevention order", g.ReplacementDecisions)
+	}
+	decision := g.ReplacementDecisions[0]
+	if decision.Player != game.Player2 || !decision.UsedFallback || len(decision.Selected) != 2 || decision.Selected[0] != 0 || decision.Selected[1] != 1 {
+		t.Fatalf("replacement decision = %+v, want Player2 fallback order [0 1]", decision)
+	}
+}
+
+func TestRegenerationReplacesDestroyAndRemovesFromCombat(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	blocker.MarkedDamage = 2
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers:  []game.BlockDeclaration{{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID}},
+		BlockerOrder: map[id.ID][]id.ID{
+			attacker.ObjectID: []id.ID{blocker.ObjectID},
+		},
+	}
+
+	engine.resolveEffect(g, &game.StackObject{
+		Controller: game.Player2,
+		Targets:    []game.Target{game.PermanentTarget(blocker.ObjectID)},
+	}, game.Effect{Type: game.EffectRegenerate, TargetIndex: 0}, nil)
+	removed, ok := destroyPermanent(g, blocker.ObjectID)
+
+	if ok || removed != nil {
+		t.Fatalf("destroyPermanent() = %+v, %v, want regenerated replacement", removed, ok)
+	}
+	if permanentByObjectID(g, blocker.ObjectID) == nil {
+		t.Fatal("regenerated blocker left battlefield")
+	}
+	if !blocker.Tapped || blocker.MarkedDamage != 0 || blocker.RegenerationShields != 0 {
+		t.Fatalf("regenerated blocker tapped=%v damage=%d shields=%d, want tapped, no damage, no shields", blocker.Tapped, blocker.MarkedDamage, blocker.RegenerationShields)
+	}
+	if len(g.Combat.Blockers) != 0 || len(g.Combat.BlockerOrder[attacker.ObjectID]) != 0 {
+		t.Fatalf("combat after regeneration blockers=%+v order=%+v, want blocker removed", g.Combat.Blockers, g.Combat.BlockerOrder)
+	}
+	assertEvent(t, g.Events, game.EventDestroyReplaced, func(event game.GameEvent) bool {
+		return event.PermanentID == blocker.ObjectID
+	})
+}
+
+func TestRegenerationShieldExpiresDuringCleanup(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature.RegenerationShields = 1
+
+	NewEngine(nil).runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if creature.RegenerationShields != 0 {
+		t.Fatalf("regeneration shields = %d, want cleanup expiry", creature.RegenerationShields)
+	}
+}
+
+func TestShieldAndRegenerationReplacementOrderIsRecorded(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature.Counters.Add(counter.Shield, 1)
+	creature.RegenerationShields = 1
+
+	destroyPermanent(g, creature.ObjectID)
+
+	if len(g.ReplacementDecisions) != 1 {
+		t.Fatalf("replacement decisions = %+v, want one shield/regeneration order", g.ReplacementDecisions)
+	}
+	decision := g.ReplacementDecisions[0]
+	if decision.Player != game.Player1 || !decision.UsedFallback || len(decision.Selected) != 2 {
+		t.Fatalf("replacement decision = %+v, want Player1 fallback order", decision)
+	}
+	if creature.Counters.Get(counter.Shield) != 0 || creature.RegenerationShields != 1 {
+		t.Fatalf("shield counters=%d regeneration=%d, want shield used before regeneration", creature.Counters.Get(counter.Shield), creature.RegenerationShields)
+	}
+}
+
+func TestRegenerationReplacesLethalDamageSBA(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature.MarkedDamage = 2
+	creature.RegenerationShields = 1
+
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if len(deaths) != 0 {
+		t.Fatalf("deaths = %+v, want regeneration to replace lethal-damage destruction", deaths)
+	}
+	if permanentByObjectID(g, creature.ObjectID) == nil || !creature.Tapped || creature.MarkedDamage != 0 {
+		t.Fatalf("creature after regeneration = %+v, want tapped on battlefield with no damage", creature)
+	}
+}
+
+func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{
+		Name:         "Tapped Walker",
+		Types:        []game.CardType{game.TypeCreature},
+		Power:        &game.PT{Value: 1},
+		Toughness:    &game.PT{Value: 1},
+		EntersTapped: true,
+		EntersWithCounters: []game.CounterPlacement{
+			{Kind: counter.PlusOnePlusOne, Amount: 2},
+		},
+	}
+
+	cardID := addCardToHand(g, game.Player1, def)
+	card := g.GetCardInstance(cardID)
+	g.Players[game.Player1].Hand.Remove(cardID)
+
+	permanent := createCardPermanent(g, card, game.Player1, game.ZoneHand)
+
+	if permanent == nil || !permanent.Tapped {
+		t.Fatalf("permanent = %+v, want enters tapped", permanent)
+	}
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+		t.Fatalf("+1/+1 counters = %d, want 2", got)
+	}
+}
+
+func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Would Draw"})
+	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
+		Type:        game.EffectSkipStep,
+		TargetIndex: -1,
+		Step:        game.StepDraw,
+	}, nil)
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+		t.Fatalf("hand size = %d, want skipped draw step", got)
+	}
+	if g.Players[game.Player1].Library.Size() != 1 {
+		t.Fatalf("library size = %d, want card not drawn", g.Players[game.Player1].Library.Size())
+	}
+}
+
 func addColoredSourceCard(g *game.Game, owner game.PlayerID, color mana.Color) id.ID {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{

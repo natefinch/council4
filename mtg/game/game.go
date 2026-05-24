@@ -57,6 +57,35 @@ type Game struct {
 	// Stack is the game stack where spells and abilities wait to resolve.
 	Stack Stack
 
+	// ContinuousEffects are runtime continuous effects applied through the
+	// layer system when rules need effective permanent values.
+	ContinuousEffects []ContinuousEffect
+
+	// DelayedTriggers are delayed triggered abilities waiting for a future
+	// timing condition such as the next end step.
+	DelayedTriggers []DelayedTrigger
+
+	// PreventionShields are runtime damage-prevention replacement effects.
+	PreventionShields []PreventionShield
+
+	// ReplacementDecisions records deterministic fallback ordering decisions.
+	ReplacementDecisions []ReplacementDecision
+
+	// SkippedSteps records upcoming turn steps a player should skip.
+	SkippedSteps map[PlayerID]map[Step]int
+
+	// CostModifiers are runtime generic cost increases/reductions/taxes.
+	CostModifiers []CostModifier
+
+	// AttackTaxes are Ghostly Prison-style costs to attack a player.
+	AttackTaxes []AttackTax
+
+	// LastKnownInformation stores snapshots for objects that have moved zones.
+	LastKnownInformation map[id.ID]ObjectSnapshot
+
+	// LinkedObjects stores objects associated with linked ability pairs.
+	LinkedObjects map[LinkedObjectKey][]LinkedObjectRef
+
 	// Turn tracks the current turn, phase, step, and priority.
 	Turn TurnState
 
@@ -123,6 +152,9 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 	}
 	g := &Game{
 		CardInstances:              make(map[id.ID]*CardInstance),
+		LastKnownInformation:       make(map[id.ID]ObjectSnapshot),
+		LinkedObjects:              make(map[LinkedObjectKey][]LinkedObjectRef),
+		SkippedSteps:               make(map[PlayerID]map[Step]int),
 		TurnOrder:                  NewTurnOrder(),
 		FailedDraws:                make(map[PlayerID]bool),
 		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),

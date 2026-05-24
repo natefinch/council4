@@ -39,11 +39,16 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	g.Turn.Phase = game.PhaseBeginning
 
 	g.Turn.Step = game.StepUntap
+	expireTurnStartDurations(g)
 	for _, permanent := range g.Battlefield {
 		if permanent == nil {
 			continue
 		}
-		if permanent.Controller == g.Turn.ActivePlayer {
+		if effectiveController(g, permanent) == g.Turn.ActivePlayer {
+			if permanent.PhasedOut {
+				permanent.PhasedOut = false
+				continue
+			}
 			permanent.Tapped = false
 			permanent.SummoningSick = false
 		}
@@ -52,13 +57,15 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	g.Turn.Step = game.StepUpkeep
 
 	g.Turn.Step = game.StepDraw
-	cardID, ok := e.drawCard(g, g.Turn.ActivePlayer)
-	if log != nil {
-		log.Draws = append(log.Draws, DrawLog{
-			Player: g.Turn.ActivePlayer,
-			CardID: cardID,
-			Failed: !ok,
-		})
+	if !consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw) {
+		cardID, ok := e.drawCard(g, g.Turn.ActivePlayer)
+		if log != nil {
+			log.Draws = append(log.Draws, DrawLog{
+				Player: g.Turn.ActivePlayer,
+				CardID: cardID,
+				Failed: !ok,
+			})
+		}
 	}
 	e.applyStateBasedActionsWithLog(g, log)
 	emptyManaPools(g)
@@ -75,6 +82,14 @@ func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
 	g.Turn.Phase = game.PhaseEnding
 	g.Turn.Step = game.StepEnd
+	putBeginningOfEndStepDelayedTriggersOnStack(g)
+	if !g.Stack.IsEmpty() {
+		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
+		e.runPriorityLoop(g, agents, nil)
+		if g.IsGameOver() {
+			return
+		}
+	}
 
 	g.Turn.Step = game.StepCleanup
 	discardToMaximumHandSize(g, g.Turn.ActivePlayer)
@@ -86,7 +101,11 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		permanent.MarkedDeathtouchDamage = false
 		permanent.TemporaryPowerModifier = 0
 		permanent.TemporaryToughnessModifier = 0
+		permanent.RegenerationShields = 0
 	}
+	expireCleanupDurations(g)
+	expirePreventionShields(g)
+	e.applyStateBasedActions(g)
 	emptyManaPools(g)
 	g.Combat = nil
 }

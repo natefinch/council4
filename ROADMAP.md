@@ -29,11 +29,11 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [x] Deathtouch lethal-damage assignment rules.
 - [x] Lifelink life gain from combat damage.
 - [x] Indestructible survival from destroy effects and lethal-damage SBAs.
-- (deferred) Combat damage prevention and replacement effects.
+- [x] (completed in Phase 9) Initial combat damage prevention and replacement effects. Full replacement/prevention ordering is deferred to Phase 9C.
 - [x] Commander combat damage tracking from commander permanents.
-- (deferred) Attacking planeswalkers and battles.
+- [x] (completed in Phase 7) Attacking planeswalkers and battles.
 - [x] Basic attack requirements and goad target preference.
-- (deferred) Attacker-chosen damage assignment order, protection, regeneration, attack taxes, and other prevention/replacement behavior.
+- [x] (completed in Phase 9C) Attacker-chosen damage assignment order/division, regeneration, attack taxes, and broader prevention/replacement behavior. Protection and the initial prevention slice were completed in Phase 9.
 
 ## Phase 7 — Permanent interaction and richer state-based actions
 
@@ -44,25 +44,25 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [x] +1/+1 and -1/-1 counters, including counter cancellation.
 - [x] P/T modifications from +1/+1 and -1/-1 counters for combat and lethal-damage SBAs.
 - [x] Aura and Equipment skeleton: attach/unattach helpers, attach-on-resolution for targeted permanent spells, basic creature-only legality, and illegal attachment/aura SBAs.
-- (deferred) Equip actions and richer attachment legality beyond the implemented Aura/Equipment skeleton.
+- (deferred to Phase 9C) Richer attachment legality beyond the implemented Aura/Equipment skeleton. Basic Equip actions were completed in Phase 8.
 - [x] Maximum hand size and cleanup discard.
 - [x] More state-based actions: 0 toughness, lethal damage, legendary rule, +1/+1/-1/-1 counter cancellation, illegal attachments, aura legality, planeswalker loyalty, battle defense.
 - [x] (deferred from Phase 6) Attacking planeswalkers and battles.
-- (deferred) Regeneration and other destruction replacement behavior (deferred from Phase 6).
+- [x] (completed in Phase 9C) Regeneration and other destruction replacement behavior (deferred from Phase 6).
 
 ## Phase 8 — Mana, casting, and costs
 
 - [x] Mana abilities as actions, including mana dorks and mana rocks.
 - [x] Multicolor, colorless, generic, and variable mana costs.
-- (deferred to Phase 9B) Hybrid, phyrexian, and snow mana costs.
+- [x] (completed in Phase 9B) Hybrid, phyrexian, and snow mana costs.
 - [x] X spells and X-cost choice handling.
 - [x] Simple sacrifice-as-cost for spells.
-- (deferred to Phase 9B) Alternative costs, cost reductions/increases, richer additional costs, and cost-choice UI.
-- [ ] (deferred to Phase 9B/Phase 15; from Phase 6) Attack taxes and attack cost payments.
+- [x] (completed in Phase 9B) Alternative costs, richer additional costs, and cost-choice UI. Full cost reductions/increases are deferred to Phase 9C.
+- [x] (completed in Phase 9C; from Phase 6) Attack taxes and attack cost payments.
 - [x] Modal spells and mode selection for choose-one modal spell abilities.
 - [x] Equip actions using activated ability actions and stack resolution.
-- (deferred) Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, and other common non-combat keyword actions.
-- (deferred) Richer attachment legality beyond the basic Aura/Equipment skeleton (deferred from Phase 7).
+- (partially completed in Phase 9C) Kicker was completed; Flashback, Madness, Escape, Foretell, Morph/Disguise, and other common non-combat keyword actions remain carry-forward work. Cycling was completed in Phase 9.
+- (deferred to Phase 9C) Richer attachment legality beyond the basic Aura/Equipment skeleton (deferred from Phase 7).
 - [x] Flash and instant-speed timing support for non-instant cards.
 - [x] (completed in Phase 7) Legal target re-checking on resolution and counter-by-rules for all-targets-illegal spells.
 
@@ -75,13 +75,13 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [x] Initial replacement and prevention effects: shield-counter damage prevention and destroy replacement.
 - [x] (deferred from Phase 6) Initial combat damage prevention/replacement through shield counters and color-based Protection.
 - [x] (deferred from Phase 6) Initial Protection restrictions and prevention behavior for protection from colors.
-- [ ] (deferred to Phase 9B; originally from Phase 8) Alternative costs, cost reductions/increases, richer additional costs, and payment-choice framework.
+- [x] (completed in Phase 9B; originally from Phase 8) Alternative costs, richer additional costs, and payment-choice framework. Full cost reductions/increases are deferred to Phase 9C.
 - [x] Initial keyword/action carry-forward slice: Cycling as a hand-zone activated ability with discard-as-cost and draw-on-resolution.
-- [ ] (deferred to Phase 11; originally from Phase 8) Kicker, Flashback, Madness, Escape, Foretell, Morph/Disguise, and other non-combat keyword actions.
-- [ ] (deferred to Phase 15) Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
-- [ ] (deferred to Phase 15) Turn-duration effects and cleanup expiry.
+- [x] (partially completed in Phase 9C; originally from Phase 8) Kicker and several keyword/action primitives. Flashback, Madness, Escape, Foretell, Morph/Disguise, and many non-combat keyword actions remain carry-forward work.
+- [x] (completed in Phase 9C) Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
+- [x] (completed in Phase 9C) Turn-duration effects and cleanup expiry.
 - [x] Initial choice framework for trigger targets, same-controller trigger ordering, and optional triggered effects.
-- [ ] (deferred to Phase 12) Richer choice framework for scry/surveil, discard, sacrifice, tutor, reveal decisions, and other non-action choices.
+- [x] (partially completed in Phase 9C) Richer choice framework for scry/surveil. Discard, sacrifice, tutor, reveal, and other non-action choices remain carry-forward work.
 - [x] Hand-written card implementation escape hatch behind the same card implementation interface.
 
 ## Phase 9B — Costs and payment architecture
@@ -98,6 +98,22 @@ This phase makes cost payment a first-class rules subsystem before Commander rul
 - [x] Attack-cost/tax design seam; implement a real Ghostly Prison-style slice only after static cost modifiers have a real producer.
 - [x] Documentation updates for `CONTEXT.md`, package READMEs, and roadmap carry-forward notes.
 
+## Phase 9C — Non-Commander gameplay rules completion
+
+This phase closes major gameplay-rule gaps that are not Commander-specific before card data generation and broad simulations depend on them. It is a dependency-ordered umbrella of implementation slices, not a single small feature. It is based on the Magic Comprehensive Rules effective 2026-04-17, especially CR 510, 514, 603, 606-616, 701-702, 704, 707-714, 723-724, and 731, plus the card text parsing guide.
+
+- [x] Effective characteristics foundation: runtime continuous effects, copyable values, copy effects, control/type/subtype/supertype/color/text/ability/keyword changes, layer ordering with timestamps/dependencies, face-down baseline values, and dynamic star P/T.
+- [x] Runtime durations and cleanup expiry: until end of turn, this turn, until your next turn, cleanup damage/removal expiry, delayed triggers, and next-end-step scheduling. Carry-forward: richer next-time replacement consumption.
+- [x] Last-known information and linked ability infrastructure for battlefield exits, dies/LTB trigger type matching, delayed source identity, and paired exile/return effects. Carry-forward: pruning stale LKI/linked records and exact exile object identity across repeated zone changes.
+- [x] Replacement/prevention engine slice: deterministic replacement-order records, prevention shields, regeneration shields, ETB tapped/counter replacements, draw-step skip effects, and replacement-aware damage/destroy events. Carry-forward: agent-selected CR 616 ordering and broader as-enters choices.
+- [x] Combat choices and cleanup hardening: single-attacker choices, attacker-provided blocker damage division with order/trample/deathtouch validation, attack taxes through payment planning, regeneration removal from combat, phasing checks, and eliminated-player combat/stack/permanent cleanup.
+- [x] Real cost modifiers and taxes through the Phase 9B seam: generic reductions/increases/set/minimum rules, Ghostly Prison-style attack taxes, and split second action restriction. Carry-forward: ability cost modifiers, X enumeration after reductions, and "can't be countered" once counter effects exist.
+- [x] Expanded choice framework slice: scry/surveil choices through `ChoiceAgent` with deterministic fallback and logging, plus mill. Carry-forward: tutor/search with shuffle, discard/sacrifice/exile/reveal choices, modal variants beyond choose-one, full top/bottom ordering payloads, and generic APNAP simultaneous choices.
+- [x] Special action/card-form slice: planeswalker loyalty abilities, emblems with ability data, transform and phase-out primitives, and phase-in during untap. Carry-forward: face-up actions, suspend/foretell setup, cast-from-zone/play-vs-cast permissions, exile-on-resolution replacement, Sagas, DFC back faces, day/night, and richer attachment legality.
+- [x] Keyword-action infrastructure slices: Kicker/if-kicked hooks, fight, scry, surveil, mill, and transform primitives. Carry-forward: Flashback, Madness, Escape, Foretell, Morph/Disguise, Suspend, Evoke, Convoke, Delve, Ward, Prowess, search, reveal, proliferate, goad, copy-on-stack, and cast-without-paying.
+- [x] Trigger hardening slice: delayed triggers, next-end-step scheduling, intervening-if checks at trigger and resolution, dies/LTB LKI matching, cast triggers, and APNAP/same-controller ordering choices. Carry-forward: general state triggers, copy triggers, delayed-trigger intervening-if data, and string-condition parsing.
+- [x] Scenario/unit fixtures for representative 9C slices plus `CONTEXT.md`, package README, and roadmap updates.
+
 ## Phase 10 — Commander format rules
 
 - [ ] Deck legality checks: 100 cards, singleton, commander legality, and color identity.
@@ -106,7 +122,7 @@ This phase makes cost payment a first-class rules subsystem before Commander rul
 - [ ] Commander tax and commander cast-count tracking.
 - [ ] Commander damage from each commander to each player.
 - [ ] Commander mulligan flow, including multiplayer first-mulligan behavior.
-- [ ] Multiplayer draw rules, seating order, and eliminated-player cleanup hardening.
+- [ ] Multiplayer draw-rule and seating-order hardening beyond the current clockwise `TurnOrder` and Phase 9C eliminated-player cleanup.
 - [ ] Optional bracket/power-level metadata for simulations and reports.
 
 ## Phase 11 — Card data, decklists, and card implementations
@@ -118,7 +134,7 @@ This phase makes cost payment a first-class rules subsystem before Commander rul
 - [ ] Commander section parsing (`// Commander`, `COMMANDER:`) and explicit four-deck input.
 - [ ] Unsupported-card reporting with actionable messages.
 - [ ] Declarative card implementation schema built from effect primitives.
-- [ ] (deferred from Phase 9; originally from Phase 8) Kicker, Flashback, Madness, Escape, Foretell, Morph/Disguise, and other non-combat keyword actions beyond Cycling.
+- [ ] Generated card implementations should target the Phase 9C keyword/action infrastructure for Kicker, Flashback, Madness, Escape, Foretell, Morph/Disguise, and other non-combat keywords beyond Cycling.
 - [ ] LLM-assisted build-time generation pipeline for declarative card implementations from oracle text.
 - [ ] Validation suite for generated card implementations.
 - [ ] Initial supported-card corpus based on common Commander staples and test decks.
@@ -133,8 +149,7 @@ This phase makes cost payment a first-class rules subsystem before Commander rul
 - [ ] Deck pre-analysis: tags, mana curve, commander profile, archetype classification, and power-level estimate.
 - [ ] Threat assessment and target selection for multiplayer.
 - [ ] Combat attack/block heuristics beyond `FirstLegal`.
-- [ ] (deferred from Phase 6) Attacker-chosen combat damage assignment order.
-- [ ] (deferred from Phase 9) Richer choice framework for scry/surveil, discard, sacrifice, tutor, reveal decisions, and other non-action choices.
+- [ ] Combat and non-action choice heuristics for Phase 9C gameplay choices, after the rules engine exposes them in observations.
 - [ ] Mana planning and sequencing heuristics.
 - [ ] Stack interaction heuristics for removal and counterspells.
 - [ ] Personality/skill knobs: aggression, risk tolerance, politics weight, noise, and archetype bias.
@@ -178,9 +193,7 @@ This phase makes cost payment a first-class rules subsystem before Commander rul
 - [ ] Golden tests for representative Commander staples.
 - [ ] Property/fuzz tests for zone moves, target legality, priority convergence, and SBA convergence.
 - [ ] Comprehensive smart-priority tests so skipped priority never hides legal responses.
-- [ ] Full cost-modifier layer system for reductions, increases, cost-setting effects, minimum-cost rules, and attack taxes after Phase 9B establishes the payment seam.
-- [ ] (deferred from Phase 9) Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
-- [ ] (deferred from Phase 9) Turn-duration effects and cleanup expiry.
+- [ ] Hardening and property tests for Phase 9C cost modifiers, continuous effects, durations, replacement/prevention ordering, and combat choices.
 - [ ] Performance benchmarks for per-game runtime and simulation throughput.
 - [ ] Determinism tests for fixed seeds and parallel simulation.
 - [ ] Error model for unsupported cards and unsupported mechanics.
