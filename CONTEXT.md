@@ -40,6 +40,14 @@ _Avoid_: Game loop, controller, runtime
 A tagged struct describing a single player decision — pass priority, play a land, cast a spell, declare attackers, etc. Produced by the engine via `LegalActions`, chosen by agents, applied by the engine. Lives in `game/action/`.
 _Avoid_: Move, choice, command, input
 
+**Stack Object**:
+A spell or ability waiting on the stack to resolve. In code, `game.StackObject` references its source card or permanent, controller, chosen runtime targets, modes, and X value.
+_Avoid_: Stack item, pending spell
+
+**Runtime Target**:
+The concrete target chosen while casting a spell or activating an ability. In code, `game.Target` is separate from `game.TargetSpec`, which only describes what may be targeted.
+_Avoid_: Target spec, raw target ID
+
 **Game Result**:
 The structured output of a completed game — winner, elimination order, turn count, and per-turn logs of actions taken, mana spent, cards drawn. Produced by `Engine.RunGame()`, consumed by the report package.
 _Avoid_: Game log, match result, outcome
@@ -47,6 +55,10 @@ _Avoid_: Game log, match result, outcome
 **Player Observation**:
 A purpose-built fog-of-war view of the game state for a specific player — own hand, public zones, opponent hand sizes, but never hidden cards. Passed to agents when they choose actions.
 _Avoid_: Game view, player state, info set, visible state
+
+**Effect Resolver**:
+The rules-engine code that executes `game.Effect` primitives when a spell or ability resolves. Effect data lives in `game`; behavior lives in `rules`.
+_Avoid_: Card script, effect data
 
 ### AI Concepts
 

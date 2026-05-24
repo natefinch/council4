@@ -32,10 +32,10 @@ type StackObject struct {
 	// Controller is the player who controls this spell or ability.
 	Controller PlayerID
 
-	// Targets are the chosen target IDs (permanents, players, etc.).
+	// Targets are the chosen runtime targets (permanents, players, etc.).
 	// Targets are locked in when the spell/ability is put on the stack
 	// (CR 601.2c, 603.3d).
-	Targets []id.ID
+	Targets []Target
 
 	// ChosenModes are the indices of chosen modes for modal spells/abilities.
 	ChosenModes []int

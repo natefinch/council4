@@ -33,13 +33,15 @@ The top-level `Kind` field says which payload is meaningful. Payloads are groupe
 
 - `ActionPass` - pass priority or decline to take an available action.
 - `ActionPlayLand` - play a land card from hand.
-- `ActionCastSpell` - cast a spell. The payload is present now so the rules engine can grow into it.
-- `ActionActivateAbility` - activate an ability from a permanent or other source.
+- `ActionCastSpell` - cast a spell with chosen runtime `game.Target` values.
+- `ActionActivateAbility` - activate an ability from a permanent or other source with chosen runtime `game.Target` values.
 - `ActionDeclareAttackers` - declare attackers during combat.
 - `ActionDeclareBlockers` - declare blockers during combat.
 
 ## Package boundaries
 
-`action` imports `mtg/game` for shared domain types such as `AttackDeclaration` and `BlockDeclaration`. The dependency intentionally points from action data to core game data; `mtg/game` must not import `mtg/game/action`.
+`action` imports `mtg/game` for shared domain types such as `AttackDeclaration`, `BlockDeclaration`, and runtime `Target` values. The dependency intentionally points from action data to core game data; `mtg/game` must not import `mtg/game/action`.
 
 The rules engine validates action legality. Agents should normally return one of the legal actions they were given, but the engine still treats returned actions as untrusted input.
+
+Cast-spell actions identify the card to cast and carry chosen targets, modes, and X value. Early spell support only generates untargeted, non-X casts; targeting and modal choices are layered in later.

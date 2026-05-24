@@ -19,7 +19,11 @@ agents := [game.NumPlayers]rules.PlayerAgent{
 }
 ```
 
-The rules engine orders productive actions before `Pass`, so in the current minimal game loop this agent plays one land when possible and otherwise passes.
+The rules engine orders productive actions before `Pass`, so this agent plays a land when possible, then casts the first legal spell when spell actions are available, and otherwise passes.
+
+### SimpleCaster
+
+`SimpleCaster` is a slightly less naive test agent for spell-mode games. It still plays lands before spells, but when choosing among cast actions it prefers spells that do not only target itself. This keeps hardcoded CLI spell games readable without making `FirstLegal` smarter.
 
 ## Package boundaries
 

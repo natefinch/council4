@@ -164,10 +164,12 @@ const (
 )
 
 // Effect describes a single game effect produced by an ability.
-// This is a placeholder structure — the rules engine will expand this
-// with concrete implementations.
+// TargetIndex indexes into the runtime targets chosen for the spell or ability;
+// -1 means the effect applies to that spell or ability's controller.
 type Effect struct {
 	Type        EffectType
+	Amount      int
+	TargetIndex int
 	Description string
 }
 

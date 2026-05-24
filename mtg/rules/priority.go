@@ -56,7 +56,13 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		if chosen.Kind == action.ActionPass {
 			consecutivePasses++
 			if consecutivePasses >= activePlayers {
-				return
+				if g.Stack.IsEmpty() {
+					return
+				}
+				e.resolveTopOfStack(g, log)
+				consecutivePasses = 0
+				g.Turn.PriorityPlayer = g.Turn.ActivePlayer
+				continue
 			}
 			g.Turn.PriorityPlayer = g.TurnOrder.NextPriority(playerID)
 			continue

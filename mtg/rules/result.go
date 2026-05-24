@@ -23,6 +23,7 @@ type TurnLog struct {
 	Draws        []DrawLog
 	Losses       []LossLog
 	Actions      []ActionLog
+	Resolves     []ResolveLog
 }
 
 // DrawLog records a player draw during a game.
@@ -53,6 +54,15 @@ type LossLog struct {
 type ActionLog struct {
 	Player game.PlayerID
 	Action action.Action
+}
+
+// ResolveLog records a stack object resolving.
+type ResolveLog struct {
+	StackObjectID id.ID
+	SourceID      id.ID
+	Controller    game.PlayerID
+	Kind          game.StackObjectKind
+	Result        string
 }
 
 func (r *GameResult) addLosses(losses []LossLog) {

@@ -61,6 +61,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	if log != nil {
 		log.Losses = append(log.Losses, losses...)
 	}
+	emptyManaPools(g)
 }
 
 func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, phase game.Phase, log *TurnLog) {
@@ -68,7 +69,7 @@ func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
-	// TODO: empty mana pools between steps and phases per CR 500.4.
+	emptyManaPools(g)
 }
 
 func (e *Engine) runCombatPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
@@ -76,6 +77,7 @@ func (e *Engine) runCombatPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	g.Turn.Step = game.StepBeginningOfCombat
 	g.Combat = nil
 	// TODO: declare attackers, declare blockers, and assign combat damage.
+	emptyManaPools(g)
 }
 
 func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent) {

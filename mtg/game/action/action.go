@@ -38,7 +38,7 @@ type PlayLandAction struct {
 // CastSpellAction is the payload for casting a spell.
 type CastSpellAction struct {
 	CardID      id.ID
-	Targets     []id.ID
+	Targets     []game.Target
 	XValue      int
 	ChosenModes []int
 }
@@ -47,7 +47,7 @@ type CastSpellAction struct {
 type ActivateAbilityAction struct {
 	SourceID     id.ID
 	AbilityIndex int
-	Targets      []id.ID
+	Targets      []game.Target
 	XValue       int
 }
 
@@ -77,7 +77,7 @@ func PlayLand(cardID id.ID) Action {
 }
 
 // CastSpell creates an action to cast a spell.
-func CastSpell(cardID id.ID, targets []id.ID, xValue int, chosenModes []int) Action {
+func CastSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
 	return Action{
 		Kind: ActionCastSpell,
 		CastSpell: CastSpellAction{
@@ -90,7 +90,7 @@ func CastSpell(cardID id.ID, targets []id.ID, xValue int, chosenModes []int) Act
 }
 
 // ActivateAbility creates an action to activate an ability.
-func ActivateAbility(sourceID id.ID, abilityIndex int, targets []id.ID, xValue int) Action {
+func ActivateAbility(sourceID id.ID, abilityIndex int, targets []game.Target, xValue int) Action {
 	return Action{
 		Kind: ActionActivateAbility,
 		ActivateAbility: ActivateAbilityAction{

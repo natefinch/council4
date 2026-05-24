@@ -24,6 +24,7 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 ├── player.go                  # Player — life, zones, commander tracking, designations
 ├── zone.go                    # Zone container & ZoneType enum (library, hand, graveyard…)
 ├── stack.go                   # Stack (LIFO) & StackObject (spells/abilities resolving)
+├── target.go                  # Target — runtime target choices for spells/abilities
 ├── turn.go                    # Phase, Step, TurnState, TurnOrder (4-player rotation)
 ├── combat.go                  # AttackDeclaration, BlockDeclaration, CombatState
 ├── object.go                  # ObjectID, PlayerID — shared identity types
@@ -74,6 +75,7 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `CardInstance` | `card.go` | A specific card in a specific game. Has a unique `id.ID` and an `Owner`. |
 | `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down, etc. |
 | `StackObject` | `stack.go` | A spell or ability on the stack — targets, chosen modes, X value, additional costs. |
+| `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
 
 ### Player
 
@@ -126,7 +128,13 @@ Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-play
 | Triggered | `When` / `Whenever` / `At` | "When this enters the battlefield…" |
 | Static | declarative | "Creatures you control get +1/+1." |
 
-50+ keywords are enumerated (flying, haste, hexproof, flashback, cascade, etc.). `Effect` is a placeholder struct — the future rules engine will provide concrete implementations.
+50+ keywords are enumerated (flying, haste, hexproof, flashback, cascade, etc.). `Effect` stores simple effect primitive data (`Type`, `Amount`, `TargetIndex`, and `Description`); the rules engine owns execution behavior.
+
+### Runtime Targets
+
+`Target` (`target.go`) records the concrete target choices made while casting a spell or activating an ability. It is separate from `TargetSpec`: `TargetSpec` describes what an ability can target, while `Target` records what was actually chosen at runtime.
+
+Use `PlayerTarget`, `PermanentTarget`, and `StackObjectTarget` to construct targets so unused ID fields remain zeroed and equality comparisons stay reliable.
 
 ### Mana
 

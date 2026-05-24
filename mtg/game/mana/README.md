@@ -42,6 +42,8 @@ ok := pool.Spend(mana.Green, 1)
 
 Mana pools are emptied by the rules engine as steps and phases end.
 
+The current rules engine can pay normal colored and generic costs by consuming pool mana first and then auto-tapping untapped basic lands. Advanced costs such as X, hybrid, phyrexian, snow, alternate costs, and cost reducers are intentionally deferred.
+
 ### ColorIdentity
 
 `ColorIdentity` represents a Commander deck's color identity. Use it to validate whether a card belongs in a commander's deck.

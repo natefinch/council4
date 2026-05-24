@@ -142,7 +142,8 @@ func landOnlyConfigs(cardsPerPlayer int) [game.NumPlayers]game.PlayerConfig {
 
 func basicLand() *game.CardDef {
 	return &game.CardDef{
-		Name:  "Forest",
-		Types: []game.CardType{game.TypeLand},
+		Name:     "Forest",
+		Types:    []game.CardType{game.TypeLand},
+		Subtypes: []string{"Forest"},
 	}
 }
