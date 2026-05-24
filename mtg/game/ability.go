@@ -97,11 +97,6 @@ type TriggerCondition struct {
 	// Pattern is the structured event pattern this ability listens for.
 	Pattern TriggerPattern
 
-	// Event is a description of the triggering event (e.g., "this creature
-	// enters the battlefield", "a creature dies").
-	// Deprecated: use Pattern for rules behavior.
-	Event string
-
 	// InterveningIf is the "if" condition that must be true both when the
 	// event occurs and when the trigger resolves (CR 603.4). Empty if none.
 	InterveningIf string
@@ -305,11 +300,6 @@ type AbilityDef struct {
 	// ManaCost is the mana component of an activated ability's cost.
 	// Nil for non-activated abilities.
 	ManaCost *mana.Cost
-
-	// AdditionalCost describes non-mana costs (e.g., "Sacrifice a creature",
-	// "Tap", "Pay 2 life"). Empty if none.
-	// Deprecated: use AdditionalCosts for rules-relevant costs.
-	AdditionalCost string
 
 	// AdditionalCosts describes typed non-mana costs. mtg/rules owns choosing
 	// and applying these costs.

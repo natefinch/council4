@@ -559,9 +559,11 @@ func addSnowBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype s
 
 func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef, color mana.Color, amount int) *game.Permanent {
 	def.Abilities = append(def.Abilities, game.AbilityDef{
-		Kind:           game.ActivatedAbility,
-		AdditionalCost: "{T}",
-		IsManaAbility:  true,
+		Kind: game.ActivatedAbility,
+		AdditionalCosts: []game.AdditionalCost{
+			{Kind: game.AdditionalCostTap},
+		},
+		IsManaAbility: true,
 		Effects: []game.Effect{
 			{
 				Type:      game.EffectAddMana,

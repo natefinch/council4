@@ -15,7 +15,6 @@ type AbilityDef struct {
     Keywords           []Keyword           // Keyword abilities this provides
     ProtectionFromColors []mana.Color       // For Protection keyword
     ManaCost           *mana.Cost           // Mana component of activated ability cost
-    AdditionalCost     string              // Deprecated: use AdditionalCosts
     AdditionalCosts    []AdditionalCost    // Typed non-mana costs
     AlternativeCosts   []AlternativeCost   // Optional replacement costs
     KickerCost         *mana.Cost          // Optional Kicker mana cost
@@ -130,7 +129,6 @@ type TargetSpec struct {
 type TriggerCondition struct {
     Type          TriggerType     // TriggerWhen, TriggerWhenever, or TriggerAt
     Pattern       TriggerPattern  // Structured event pattern
-    Event         string          // Deprecated: use Pattern
     InterveningIf string          // "if" condition (CR 603.4)
     InterveningIfControllerLifeAtLeast int
 }

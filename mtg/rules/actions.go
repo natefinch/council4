@@ -683,24 +683,12 @@ func hasTapCost(ability *game.AbilityDef) bool {
 	if ability == nil {
 		return false
 	}
-	if isTapCost(ability.AdditionalCost) {
-		return true
-	}
 	for _, cost := range ability.AdditionalCosts {
 		if cost.Kind == game.AdditionalCostTap {
 			return true
 		}
 	}
 	return false
-}
-
-func isTapCost(cost string) bool {
-	switch cost {
-	case "Tap", "{T}", "T":
-		return true
-	default:
-		return false
-	}
 }
 
 func abilityHasNonTapAdditionalCosts(ability *game.AbilityDef) bool {

@@ -392,17 +392,13 @@ func buildAdditionalCostPlan(g *game.Game, playerID game.PlayerID, card *game.Ca
 	return buildAdditionalCostPlanForCosts(g, playerID, spellAdditionalCosts(card), nil)
 }
 
-func buildAdditionalCostPlanForCost(g *game.Game, playerID game.PlayerID, cost string) (additionalCostPlan, bool) {
-	return buildAdditionalCostPlanForCosts(g, playerID, additionalCostsFromString(cost), nil)
-}
-
 func buildAdditionalCostPlanForCosts(g *game.Game, playerID game.PlayerID, costs []game.AdditionalCost, prefs *paymentPreferences) (additionalCostPlan, bool) {
 	plan := additionalCostPlan{}
 	for _, cost := range costs {
 		amount := additionalCostAmount(cost)
 		switch cost.Kind {
 		case game.AdditionalCostUnknown:
-			if cost.Text == "" || isTapCost(cost.Text) {
+			if cost.Text == "" {
 				continue
 			}
 			return plan, false
@@ -497,27 +493,7 @@ func abilityAdditionalCosts(ability *game.AbilityDef) []game.AdditionalCost {
 	if ability == nil {
 		return nil
 	}
-	if len(ability.AdditionalCosts) > 0 {
-		return append([]game.AdditionalCost(nil), ability.AdditionalCosts...)
-	}
-	return additionalCostsFromString(ability.AdditionalCost)
-}
-
-func additionalCostsFromString(cost string) []game.AdditionalCost {
-	if cost == "" {
-		return nil
-	}
-	if isTapCost(cost) {
-		return []game.AdditionalCost{{Kind: game.AdditionalCostTap, Text: cost}}
-	}
-	if typed, ok := sacrificeAdditionalCost(cost); ok {
-		return []game.AdditionalCost{typed}
-	}
-	normalized := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(cost)), ".")
-	if normalized == "discard this card" {
-		return []game.AdditionalCost{{Kind: game.AdditionalCostDiscard, Text: cost, Amount: 1, Zone: game.ZoneHand}}
-	}
-	return []game.AdditionalCost{{Kind: game.AdditionalCostUnknown, Text: cost}}
+	return append([]game.AdditionalCost(nil), ability.AdditionalCosts...)
 }
 
 func sacrificeCostMatcher(cost string) (func(*game.CardDef) bool, bool) {

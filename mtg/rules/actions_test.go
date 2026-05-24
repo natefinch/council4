@@ -756,9 +756,11 @@ func TestGeneralActivatedAbilityTapCostRespectsSummoningSickness(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
-		Kind:           game.ActivatedAbility,
-		AdditionalCost: "{T}",
-		Effects:        []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
+		Kind: game.ActivatedAbility,
+		AdditionalCosts: []game.AdditionalCost{
+			{Kind: game.AdditionalCostTap},
+		},
+		Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
 	}))
 	source.SummoningSick = true
 	g.Turn.Phase = game.PhasePrecombatMain
