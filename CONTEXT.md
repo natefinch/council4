@@ -184,6 +184,7 @@ _Avoid_: Card database, card store, card catalog
 - [Commander Strategy](docs/research/COMMANDER-STRATEGY.md) — strategy concepts and patterns specific to Commander
 - [Commander Agent Playbook](docs/research/COMMANDER-AGENT-PLAYBOOK.md) — how AI agents should approach Commander decision-making
 - [Card Text Parsing](docs/research/CARD-TEXT-PARSING.md) — how to parse MTG oracle text into structured data, used when generating card implementations
+- [Card Implementation Guide](.agents/skills/card-impl/CARD-IMPLEMENTATION-GUIDE.md) — council4-specific guide for converting oracle text into `AbilityDef` structs, used by the `card-impl` skill
 - [MTG General Research](docs/research/MTG-General-Research.md) — broader research on MTG game mechanics
 - Magic Comprehensive Rules — official rules referenced externally; local full-text copies are not committed.
 

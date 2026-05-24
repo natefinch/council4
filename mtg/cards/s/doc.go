@@ -1,0 +1,4 @@
+// Package s contains card definitions for cards starting with S.
+package s
+
+//go:generate go run github.com/natefinch/council4/gencardlist

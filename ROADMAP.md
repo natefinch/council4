@@ -127,9 +127,9 @@ This phase closes major gameplay-rule gaps that are not Commander-specific befor
 
 ## Phase 11 — Card data, decklists, and card implementations
 
-- [ ] `mtg/cards` registry package mapping canonical card names to card definitions.
-- [ ] Scryfall bulk data ingestion as the source of truth for card metadata.
-- [ ] Generated `CardDef` data for supported cards.
+- [x] `mtg/cards` registry package mapping canonical card names to card definitions.
+- [x] Scryfall data ingestion (per-card API) as the source of truth for card metadata. Bulk ingestion deferred.
+- [x] Generated `CardDef` data for supported cards (mechanical fields via `cardgen` library; abilities via `card-impl` skill).
 - [ ] `mtg/deck` package for Moxfield/MTGO-style text decklist parsing.
 - [ ] Commander section parsing (`// Commander`, `COMMANDER:`) and explicit four-deck input.
 - [ ] Unsupported-card reporting with actionable messages.
