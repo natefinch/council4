@@ -163,14 +163,31 @@ const (
 	EffectPrevent
 )
 
+// EffectSelector identifies a set of permanents affected by a mass effect.
+type EffectSelector string
+
+const (
+	EffectSelectorNone                 EffectSelector = ""
+	EffectSelectorAllCreatures         EffectSelector = "all creatures"
+	EffectSelectorAllArtifacts         EffectSelector = "all artifacts"
+	EffectSelectorAllEnchantments      EffectSelector = "all enchantments"
+	EffectSelectorAllNonlandPermanents EffectSelector = "all nonland permanents"
+	EffectSelectorAllPermanents        EffectSelector = "all permanents"
+)
+
 // Effect describes a single game effect produced by an ability.
 // TargetIndex indexes into the runtime targets chosen for the spell or ability;
 // -1 means the effect applies to that spell or ability's controller.
 type Effect struct {
-	Type        EffectType
-	Amount      int
-	TargetIndex int
-	Description string
+	Type           EffectType
+	Amount         int
+	TargetIndex    int
+	PowerDelta     int
+	ToughnessDelta int
+	UntilEndOfTurn bool
+	Selector       EffectSelector
+	Token          *CardDef
+	Description    string
 }
 
 // TargetSpec describes the targeting requirements of an ability.

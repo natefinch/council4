@@ -353,6 +353,41 @@ func TestApplyDeclareAttackersInvalidDoesNotMutate(t *testing.T) {
 	}
 }
 
+func TestDeclareAttackersCanTargetPlaneswalkersAndBattles(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanent(g, game.Player1)
+	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:    "Test Planeswalker",
+		Types:   []game.CardType{game.TypePlaneswalker},
+		Loyalty: intPtr(3),
+	})
+	battle := addCombatPermanent(g, game.Player3, &game.CardDef{
+		Name:    "Test Battle",
+		Types:   []game.CardType{game.TypeBattle},
+		Defense: intPtr(4),
+	})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+
+	wantPlaneswalker := game.AttackTarget{Player: game.Player2, PlaneswalkerID: planeswalker.ObjectID}
+	wantBattle := game.AttackTarget{Player: game.Player3, BattleID: battle.ObjectID}
+	if !declareAttackersActionsContainTarget(legal, attacker.ObjectID, wantPlaneswalker) {
+		t.Fatalf("legal actions = %+v, want planeswalker target %v", legal, wantPlaneswalker)
+	}
+	if !declareAttackersActionsContainTarget(legal, attacker.ObjectID, wantBattle) {
+		t.Fatalf("legal actions = %+v, want battle target %v", legal, wantBattle)
+	}
+	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: attacker.ObjectID, Target: wantPlaneswalker},
+	}).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() rejected valid planeswalker target")
+	}
+}
+
 func TestLegalDeclareBlockersActionsProductiveFirstThenNoBlocks(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
@@ -714,6 +749,73 @@ func TestLifelinkGainsLifeFromCombatDamageToCreatures(t *testing.T) {
 	}
 	if attacker.MarkedDamage != 2 {
 		t.Fatalf("attacker marked damage = %d, want 2", attacker.MarkedDamage)
+	}
+}
+
+func TestCombatDamageToPlaneswalkerRemovesLoyaltyAndSBA(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:    "Test Planeswalker",
+		Types:   []game.CardType{game.TypePlaneswalker},
+		Loyalty: intPtr(3),
+	})
+	planeswalker.Counters.Add(counter.Loyalty, 3)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2, PlaneswalkerID: planeswalker.ObjectID}},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if planeswalker.Counters.Get(counter.Loyalty) != 0 {
+		t.Fatalf("planeswalker loyalty = %d, want 0", planeswalker.Counters.Get(counter.Loyalty))
+	}
+	if permanentByObjectID(g, planeswalker.ObjectID) != nil {
+		t.Fatal("zero-loyalty planeswalker remained on battlefield")
+	}
+	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroLoyalty {
+		t.Fatalf("deaths = %+v, want one zero-loyalty death", deaths)
+	}
+	if g.Players[game.Player2].Life != 40 {
+		t.Fatalf("defending player life = %d, want unchanged 40", g.Players[game.Player2].Life)
+	}
+	if len(log.CreatureDamage) != 1 || log.CreatureDamage[0].DamagedPermanent != planeswalker.ObjectID {
+		t.Fatalf("creature damage logs = %+v, want planeswalker damage", log.CreatureDamage)
+	}
+}
+
+func TestCombatDamageToBattleRemovesDefenseAndSBA(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 4)
+	battle := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:    "Test Battle",
+		Types:   []game.CardType{game.TypeBattle},
+		Defense: intPtr(4),
+	})
+	battle.Counters.Add(counter.Defense, 4)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2, BattleID: battle.ObjectID}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	engine.resolveCombatDamage(g, &TurnLog{})
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if battle.Counters.Get(counter.Defense) != 0 {
+		t.Fatalf("battle defense = %d, want 0", battle.Counters.Get(counter.Defense))
+	}
+	if permanentByObjectID(g, battle.ObjectID) != nil {
+		t.Fatal("zero-defense battle remained on battlefield")
+	}
+	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroDefense {
+		t.Fatalf("deaths = %+v, want one zero-defense death", deaths)
 	}
 }
 
@@ -1179,6 +1281,48 @@ func TestCleanupStepClearsMarkedDamageOnSurvivors(t *testing.T) {
 	}
 }
 
+func TestCleanupStepDiscardsActivePlayerToMaximumHandSize(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	var cards []id.ID
+	for i := range 10 {
+		cards = append(cards, addCardToHand(g, game.Player1, &game.CardDef{Name: string(rune('A' + i))}))
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != maximumHandSize {
+		t.Fatalf("hand size = %d, want %d", got, maximumHandSize)
+	}
+	for _, cardID := range cards[:3] {
+		if !g.Players[game.Player1].Graveyard.Contains(cardID) {
+			t.Fatalf("oldest overflow card %v was not discarded", cardID)
+		}
+	}
+	for _, cardID := range cards[3:] {
+		if !g.Players[game.Player1].Hand.Contains(cardID) {
+			t.Fatalf("card %v should have remained in hand", cardID)
+		}
+	}
+}
+
+func TestCleanupStepDoesNotDiscardAtOrBelowMaximumHandSize(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	for i := range maximumHandSize {
+		addCardToHand(g, game.Player1, &game.CardDef{Name: string(rune('A' + i))})
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != maximumHandSize {
+		t.Fatalf("hand size = %d, want %d", got, maximumHandSize)
+	}
+	if got := g.Players[game.Player1].Graveyard.Size(); got != 0 {
+		t.Fatalf("graveyard size = %d, want 0", got)
+	}
+}
+
 func TestResolveCombatDamageNilAndStarPowerDealZero(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	nilPower := addCombatCreaturePermanent(g, game.Player1)
@@ -1305,6 +1449,21 @@ func addCombatPermanent(g *game.Game, controller game.PlayerID, def *game.CardDe
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
 	return permanent
+}
+
+func declareAttackersActionsContainTarget(actions []action.Action, attacker id.ID, target game.AttackTarget) bool {
+	for _, act := range actions {
+		for _, declaration := range act.DeclareAttackers.Attackers {
+			if declaration.Attacker == attacker && declaration.Target == target {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func intPtr(value int) *int {
+	return &value
 }
 
 func permanentIDs(permanents []*game.Permanent) []id.ID {

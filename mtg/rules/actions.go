@@ -44,7 +44,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 		if card == nil || card.Def == nil {
 			continue
 		}
-		for _, targets := range targetChoicesForSpell(g, card.Def) {
+		for _, targets := range targetChoicesForSpell(g, playerID, card.Def) {
 			if e.canCastSpell(g, playerID, cardID, targets, 0, nil) {
 				actions = append(actions, action.CastSpell(cardID, append([]game.Target(nil), targets...), 0, nil))
 			}
@@ -84,15 +84,7 @@ func (e *Engine) applyPlayLand(g *game.Game, playerID game.PlayerID, cardID id.I
 		return false
 	}
 
-	objectID := g.IDGen.Next()
-	g.Battlefield = append(g.Battlefield, &game.Permanent{
-		ObjectID:       objectID,
-		CardInstanceID: cardID,
-		Owner:          card.Owner,
-		Controller:     playerID,
-		SummoningSick:  entersSummoningSick(card.Def),
-		Timestamp:      int64(objectID), // Placeholder until timestamps need their own counter.
-	})
+	createCardPermanent(g, card, playerID)
 	g.Turn.LandsPlayedThisTurn++
 	return true
 }
@@ -132,7 +124,7 @@ func (e *Engine) canCastSpell(g *game.Game, playerID game.PlayerID, cardID id.ID
 	if card == nil || card.Def == nil || !player.Hand.Contains(cardID) {
 		return false
 	}
-	if !isSupportedSpell(card.Def) || !targetsValidForSpell(g, card.Def, targets) {
+	if !isSupportedSpell(card.Def) || !targetsValidForSpell(g, playerID, card.Def, targets) {
 		return false
 	}
 	if !canCastAtCurrentTiming(g, playerID, card.Def) {

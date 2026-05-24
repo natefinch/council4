@@ -94,12 +94,17 @@ type PermanentDeathReason string
 const (
 	PermanentDeathReasonLethalDamage  PermanentDeathReason = "lethal damage"
 	PermanentDeathReasonZeroToughness PermanentDeathReason = "0 toughness"
+	PermanentDeathReasonZeroLoyalty   PermanentDeathReason = "0 loyalty"
+	PermanentDeathReasonZeroDefense   PermanentDeathReason = "0 defense"
+	PermanentDeathReasonIllegalAura   PermanentDeathReason = "illegal aura"
+	PermanentDeathReasonLegendaryRule PermanentDeathReason = "legendary rule"
 )
 
 // PermanentDeathLog records a permanent leaving the battlefield due to rules.
 type PermanentDeathLog struct {
 	Permanent  id.ID
 	SourceID   id.ID
+	TokenName  string
 	Owner      game.PlayerID
 	Controller game.PlayerID
 	Reason     PermanentDeathReason

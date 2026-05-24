@@ -2,8 +2,39 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 )
+
+func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.PlayerID) *game.Permanent {
+	if g == nil || card == nil || card.Def == nil {
+		return nil
+	}
+	objectID := g.IDGen.Next()
+	permanent := &game.Permanent{
+		ObjectID:       objectID,
+		CardInstanceID: card.ID,
+		Owner:          card.Owner,
+		Controller:     controller,
+		SummoningSick:  entersSummoningSick(card.Def),
+		Timestamp:      int64(objectID),
+	}
+	initializePermanentCounters(permanent, card.Def)
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
+}
+
+func initializePermanentCounters(permanent *game.Permanent, def *game.CardDef) {
+	if permanent == nil || def == nil {
+		return
+	}
+	if def.Loyalty != nil {
+		permanent.Counters.Add(counter.Loyalty, *def.Loyalty)
+	}
+	if def.Defense != nil {
+		permanent.Counters.Add(counter.Defense, *def.Defense)
+	}
+}
 
 func removePermanentFromBattlefield(g *game.Game, objectID id.ID) *game.Permanent {
 	if g == nil {
@@ -23,16 +54,19 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 	if g == nil || permanent == nil {
 		return false
 	}
+	detachPermanent(g, permanent)
+	detachAttachmentsFromPermanent(g, permanent)
 	removed := removePermanentFromBattlefield(g, permanent.ObjectID)
 	if removed == nil {
 		return false
 	}
-	if removed.Token {
-		return true
-	}
 	zone := destinationZone(g, removed.Owner, destination)
 	if zone == nil {
 		return false
+	}
+	if removed.Token {
+		zone.Add(removed.ObjectID)
+		return true
 	}
 	zone.Add(removed.CardInstanceID)
 	return true

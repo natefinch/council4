@@ -37,17 +37,18 @@ Use this file as the project-level feature checklist. Check items off as they la
 
 ## Phase 7 — Permanent interaction and richer state-based actions
 
-- [ ] Runtime permanent targets and target legality checks.
-- [ ] Destroy, exile, bounce, sacrifice, tap/untap, and damage-to-permanent effect primitives.
-- [ ] Board wipes and mass-effect execution.
-- [ ] Token creation and token cleanup semantics.
-- [ ] +1/+1 and -1/-1 counters, including counter cancellation.
+- [x] Runtime permanent targets and target legality checks.
+- [x] Destroy, exile, bounce, sacrifice, tap/untap, and damage-to-permanent effect primitives.
+- [x] Board wipes and mass-effect execution.
+- [x] Token creation and token cleanup semantics.
+- [x] +1/+1 and -1/-1 counters, including counter cancellation.
 - [x] P/T modifications from +1/+1 and -1/-1 counters for combat and lethal-damage SBAs.
-- [ ] Auras, Equipment, attach/unattach, and equip actions.
-- [ ] Maximum hand size and cleanup discard.
-- [ ] More state-based actions: 0 toughness, lethal damage, legendary rule, illegal attachments, aura legality, planeswalker loyalty, battle defense.
-- [ ] (deferred from Phase 6) Attacking planeswalkers and battles.
-- [ ] (deferred from Phase 6) Regeneration and other destruction replacement behavior.
+- [x] Aura and Equipment skeleton: attach/unattach helpers, attach-on-resolution for targeted permanent spells, basic creature-only legality, and illegal attachment/aura SBAs.
+- (deferred) Equip actions and richer attachment legality beyond the implemented Aura/Equipment skeleton.
+- [x] Maximum hand size and cleanup discard.
+- [x] More state-based actions: 0 toughness, lethal damage, legendary rule, +1/+1/-1/-1 counter cancellation, illegal attachments, aura legality, planeswalker loyalty, battle defense.
+- [x] (deferred from Phase 6) Attacking planeswalkers and battles.
+- (deferred) Regeneration and other destruction replacement behavior (deferred from Phase 6).
 
 ## Phase 8 — Mana, casting, and costs
 
@@ -58,8 +59,9 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] (deferred from Phase 6) Attack taxes and attack cost payments.
 - [ ] Modal spells and mode selection.
 - [ ] Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, Equip, and other common non-combat keyword actions.
+- [ ] (deferred from Phase 7) Equip actions and richer attachment legality beyond the basic Aura/Equipment skeleton.
 - [ ] Flash and instant-speed timing support for non-instant cards.
-- [ ] Legal target re-checking on resolution and counter-by-rules for all-targets-illegal spells.
+- [x] (completed in Phase 7) Legal target re-checking on resolution and counter-by-rules for all-targets-illegal spells.
 
 ## Phase 9 — Abilities, events, and effects architecture
 

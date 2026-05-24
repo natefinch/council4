@@ -68,6 +68,11 @@ type Permanent struct {
 	// cleanup step alongside MarkedDamage.
 	MarkedDeathtouchDamage bool
 
+	// TemporaryPowerModifier and TemporaryToughnessModifier are additive
+	// until-end-of-turn P/T changes. They are cleared during cleanup.
+	TemporaryPowerModifier     int
+	TemporaryToughnessModifier int
+
 	// --- Attachments ---
 
 	// Attachments lists the ObjectIDs of permanents attached to this one

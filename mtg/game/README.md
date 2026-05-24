@@ -71,7 +71,7 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 
 | Type | File | Purpose |
 |------|------|---------|
-| `CardDef` | `card.go` | Immutable card template — name, mana cost, types, abilities, P/T, loyalty. Shared across games. |
+| `CardDef` | `card.go` | Immutable card template — name, mana cost, types, supertypes/subtypes, abilities, P/T, loyalty, and battle defense. Shared across games. |
 | `CardInstance` | `card.go` | A specific card in a specific game. Has a unique `id.ID` and an `Owner`. |
 | `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down, etc. |
 | `StackObject` | `stack.go` | A spell or ability on the stack — targets, chosen modes, X value, additional costs. |
@@ -117,7 +117,7 @@ Beginning ──▶ Precombat Main ──▶ Combat ──▶ Postcombat Main �
 
 Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-player clockwise rotation and skips eliminated players.
 
-`CombatState` is populated by the rules engine during combat. The current rules slice stores player attack declarations, block declarations, and blocker order for deterministic multi-block damage assignment. `Permanent.Goaded` stores which players have goaded a creature so the rules engine can enforce attack requirements during declare attackers. Combat damage and creature death logs live in `mtg/rules.GameResult`.
+`CombatState` is populated by the rules engine during combat. The current rules slice stores attack declarations against players, planeswalkers, or battles; block declarations; and blocker order for deterministic multi-block damage assignment. `Permanent.Goaded` stores which players have goaded a creature so the rules engine can enforce attack requirements during declare attackers. Combat damage, creature damage, and permanent death logs live in `mtg/rules.GameResult`.
 
 ### Abilities
 
@@ -130,7 +130,7 @@ Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-play
 | Triggered | `When` / `Whenever` / `At` | "When this enters the battlefield…" |
 | Static | declarative | "Creatures you control get +1/+1." |
 
-50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, flashback, cascade, etc.). `Effect` stores simple effect primitive data (`Type`, `Amount`, `TargetIndex`, and `Description`); the rules engine owns execution behavior. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
+50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, flashback, cascade, etc.). `Effect` stores simple effect primitive data such as `Type`, `Amount`, `TargetIndex`, `Selector`, `PowerDelta`, `ToughnessDelta`, `UntilEndOfTurn`, `Token`, and `Description`; the rules engine owns execution behavior. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
 
 ### Runtime Targets
 
@@ -164,14 +164,14 @@ The `counter` package provides 25 counter kinds (+1/+1, -1/-1, loyalty, charge, 
 | Commander damage keyed by `CardInstance` ID | Survives zone changes — a commander re-cast from the command zone is the same card instance |
 | `Owner` ≠ `Controller` on all objects | Control-changing effects are fundamental to MTG |
 | Token support via `Permanent.Token` + `TokenDef` | Tokens aren't backed by card instances; they need their own `CardDef` |
+| Attachments stored on permanents | `Permanent.AttachedTo` and `Permanent.Attachments` let rules maintain Aura/Equipment relationships without making `game` depend on attachment legality |
 | Placeholder `Effect` type | A full effect/resolution system is a rules-engine concern, not a scaffold concern |
-| No game logic | This scaffold defines *state*, not *rules*. A future rules engine will enforce legality, resolve abilities, and process state-based actions |
+| Rules live outside `game` | This package defines state. The `mtg/rules` package enforces legality, resolves abilities, and processes state-based actions |
 
 ## What's Not Here (Yet)
 
-This is a **data-structure scaffold**, not a rules engine. Future layers will add:
+This package is the **data model** used by the rules engine. Future layers will add:
 
-- **Rules engine** — casting, resolution, state-based actions, the layer system for continuous effects
 - **Card database** — loading real card data (e.g., from Scryfall) into `CardDef` structs
 - **AI agent** — decision-making for automated play (see the reference docs in `Agent Instructions & Rules/`)
-- **Game loop** — priority passing, phase advancement, win/loss checking
+- **Richer rules support** — mana abilities, equip actions, choice-based decisions, the layer system for continuous effects, and replacement/prevention effects

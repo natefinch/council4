@@ -108,6 +108,117 @@ func TestTargetThatDiesBeforeResolutionDoesNotApplyEffect(t *testing.T) {
 	}
 }
 
+func TestPermanentTargetedSpellCreatesActionsForMatchingPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCreaturePermanent(g, game.Player1)
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player2, "Forest")
+	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("creature"))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	want := action.CastSpell(spellID, []game.Target{game.PermanentTarget(creature.ObjectID)}, 0, nil)
+	if !containsAction(legal, want) {
+		t.Fatalf("legal actions did not include creature target action %+v", want)
+	}
+	for _, act := range legal {
+		if act.Kind != action.ActionCastSpell || act.CastSpell.CardID != spellID {
+			continue
+		}
+		if len(act.CastSpell.Targets) != 1 || act.CastSpell.Targets[0] != game.PermanentTarget(creature.ObjectID) {
+			t.Fatalf("unexpected cast target %+v", act.CastSpell.Targets)
+		}
+	}
+}
+
+func TestPermanentTargetConstraintsCanRequireOpponentControlledNonland(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	ownCreature := addCreaturePermanent(g, game.Player1)
+	opponentCreature := addCreaturePermanent(g, game.Player2)
+	opponentLand := addBasicLandPermanent(g, game.Player2, "Forest")
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("nonland permanent an opponent controls"))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	want := action.CastSpell(spellID, []game.Target{game.PermanentTarget(opponentCreature.ObjectID)}, 0, nil)
+	if !containsAction(legal, want) {
+		t.Fatalf("legal actions did not include opponent nonland permanent target %+v", want)
+	}
+	for _, forbidden := range []game.Target{game.PermanentTarget(ownCreature.ObjectID), game.PermanentTarget(opponentLand.ObjectID)} {
+		if containsAction(legal, action.CastSpell(spellID, []game.Target{forbidden}, 0, nil)) {
+			t.Fatalf("legal actions included forbidden target %+v", forbidden)
+		}
+	}
+}
+
+func TestIllegalPermanentTargetIsRejectedDuringCast(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	land := addBasicLandPermanent(g, game.Player2, "Forest")
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("creature"))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(land.ObjectID)}, 0, nil)) {
+		t.Fatal("cast with illegal permanent target succeeded")
+	}
+}
+
+func TestPermanentTargetThatLeavesBeforeResolutionCountersSpellByRules(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCreaturePermanent(g, game.Player2)
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectDamage,
+		Amount:      3,
+		TargetIndex: 0,
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	card := g.GetCardInstance(sourceID)
+	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+	log := TurnLog{}
+
+	engine.resolveTopOfStack(g, &log)
+
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "countered by rules" {
+		t.Fatalf("resolve log = %+v, want countered by rules", log.Resolves)
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(sourceID) {
+		t.Fatal("countered spell did not move to graveyard")
+	}
+}
+
+func TestPermanentTargetedDamageMarksDamageOnResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCreaturePermanent(g, game.Player2)
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectDamage,
+		Amount:      3,
+		TargetIndex: 0,
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	card := g.GetCardInstance(sourceID)
+	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if target.MarkedDamage != 3 {
+		t.Fatalf("marked damage = %d, want 3", target.MarkedDamage)
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(sourceID) {
+		t.Fatal("resolved spell did not move to graveyard")
+	}
+}
 func playerDamageSpell() *game.CardDef {
 	return &game.CardDef{
 		Name:  "Needle Drop",
@@ -120,6 +231,22 @@ func playerDamageSpell() *game.CardDef {
 				},
 				Effects: []game.Effect{
 					{Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
+				},
+			},
+		},
+	}
+}
+
+func permanentTargetSpell(constraint string) *game.CardDef {
+	return &game.CardDef{
+		Name:     "Permanent Target Spell",
+		ManaCost: greenCost(),
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.SpellAbility,
+				Targets: []game.TargetSpec{
+					{MinTargets: 1, MaxTargets: 1, Constraint: constraint},
 				},
 			},
 		},

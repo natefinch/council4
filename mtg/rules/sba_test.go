@@ -313,7 +313,27 @@ func TestCheckPermanentStateBasedActionsUsesMinusCounterForZeroToughness(t *test
 	}
 }
 
-func TestCheckPermanentStateBasedActionsRemovesLethalTokenWithoutGraveyard(t *testing.T) {
+func TestCounterStateBasedActionsCancelPlusOneAndMinusOneCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature.Counters.Add(counter.PlusOnePlusOne, 2)
+	creature.Counters.Add(counter.MinusOneMinusOne, 1)
+
+	if !checkCounterStateBasedActions(g) {
+		t.Fatal("checkCounterStateBasedActions() = false, want true")
+	}
+	if got := creature.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("+1/+1 counters = %d, want 1", got)
+	}
+	if got := creature.Counters.Get(counter.MinusOneMinusOne); got != 0 {
+		t.Fatalf("-1/-1 counters = %d, want 0", got)
+	}
+	if checkCounterStateBasedActions(g) {
+		t.Fatal("checkCounterStateBasedActions() = true after counters already canceled, want false")
+	}
+}
+
+func TestStateBasedActionsMoveThenRemoveLethalToken(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	pt := game.PT{Value: 1}
@@ -332,11 +352,8 @@ func TestCheckPermanentStateBasedActionsRemovesLethalTokenWithoutGraveyard(t *te
 	}
 	g.Battlefield = append(g.Battlefield, token)
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
-	if !changed {
-		t.Fatal("checkPermanentStateBasedActions() = false, want true")
-	}
 	if permanentByObjectID(g, token.ObjectID) != nil {
 		t.Fatal("lethally damaged token remained on battlefield")
 	}
@@ -346,4 +363,106 @@ func TestCheckPermanentStateBasedActionsRemovesLethalTokenWithoutGraveyard(t *te
 	if len(deaths) != 1 || deaths[0].Permanent != token.ObjectID {
 		t.Fatalf("death logs = %+v, want token death", deaths)
 	}
+	if deaths[0].TokenName != "Token" {
+		t.Fatalf("death token name = %q, want Token", deaths[0].TokenName)
+	}
+}
+
+func TestLegendaryRuleKeepsOldestPermanentPerControllerAndName(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	first := addLegendaryPermanent(g, game.Player1, "Godo")
+	second := addLegendaryPermanent(g, game.Player1, "Godo")
+	otherController := addLegendaryPermanent(g, game.Player2, "Godo")
+	differentName := addLegendaryPermanent(g, game.Player1, "Sisay")
+
+	changed, deaths := checkLegendaryRuleStateBasedActions(g)
+
+	if !changed {
+		t.Fatal("checkLegendaryRuleStateBasedActions() = false, want true")
+	}
+	if permanentByObjectID(g, first.ObjectID) == nil {
+		t.Fatal("oldest legendary permanent should remain on battlefield")
+	}
+	if permanentByObjectID(g, second.ObjectID) != nil {
+		t.Fatal("newer duplicate legendary permanent remained on battlefield")
+	}
+	if permanentByObjectID(g, otherController.ObjectID) == nil {
+		t.Fatal("same-name legendary permanent controlled by another player should remain")
+	}
+	if permanentByObjectID(g, differentName.ObjectID) == nil {
+		t.Fatal("different-name legendary permanent should remain")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(second.CardInstanceID) {
+		t.Fatal("legendary rule permanent did not move to owner's graveyard")
+	}
+	if len(deaths) != 1 || deaths[0].Permanent != second.ObjectID || deaths[0].Reason != PermanentDeathReasonLegendaryRule {
+		t.Fatalf("death logs = %+v, want newer duplicate legendary rule death", deaths)
+	}
+}
+
+func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	keep := addLegendaryPermanent(g, game.Player1, "Godo")
+	duplicate := addLegendaryPermanent(g, game.Player1, "Godo")
+	aura := addPermanentForSBA(g, game.Player1, &game.CardDef{
+		Name:     "Test Aura",
+		Types:    []game.CardType{game.TypeEnchantment},
+		Subtypes: []string{"Aura"},
+	})
+	attachPermanent(g, aura, duplicate)
+
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if permanentByObjectID(g, keep.ObjectID) == nil {
+		t.Fatal("oldest legendary permanent should remain on battlefield")
+	}
+	if permanentByObjectID(g, duplicate.ObjectID) != nil {
+		t.Fatal("duplicate legendary permanent remained on battlefield")
+	}
+	if permanentByObjectID(g, aura.ObjectID) != nil {
+		t.Fatal("aura detached by legendary rule should be put into graveyard by next SBA pass")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(duplicate.CardInstanceID) {
+		t.Fatal("duplicate legendary permanent did not move to graveyard")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(aura.CardInstanceID) {
+		t.Fatal("illegal detached aura did not move to graveyard")
+	}
+	if !deathReasonFound(deaths, duplicate.ObjectID, PermanentDeathReasonLegendaryRule) {
+		t.Fatalf("death logs = %+v, want duplicate legendary rule death", deaths)
+	}
+	if !deathReasonFound(deaths, aura.ObjectID, PermanentDeathReasonIllegalAura) {
+		t.Fatalf("death logs = %+v, want detached aura illegal aura death", deaths)
+	}
+}
+
+func addLegendaryPermanent(g *game.Game, controller game.PlayerID, name string) *game.Permanent {
+	return addPermanentForSBA(g, controller, &game.CardDef{
+		Name:       name,
+		Supertypes: []game.Supertype{game.Legendary},
+		Types:      []game.CardType{game.TypeCreature},
+		Power:      &game.PT{Value: 2},
+		Toughness:  &game.PT{Value: 2},
+	})
+}
+
+func addPermanentForSBA(g *game.Game, controller game.PlayerID, def *game.CardDef) *game.Permanent {
+	cardID := g.IDGen.Next()
+	card := &game.CardInstance{
+		ID:    cardID,
+		Def:   def,
+		Owner: controller,
+	}
+	g.CardInstances[cardID] = card
+	return createCardPermanent(g, card, controller)
+}
+
+func deathReasonFound(deaths []PermanentDeathLog, objectID id.ID, reason PermanentDeathReason) bool {
+	for _, death := range deaths {
+		if death.Permanent == objectID && death.Reason == reason {
+			return true
+		}
+	}
+	return false
 }

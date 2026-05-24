@@ -38,18 +38,33 @@ func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog)
 		return "missing source"
 	}
 	if card.Def.IsPermanent() {
-		objectID := g.IDGen.Next()
-		g.Battlefield = append(g.Battlefield, &game.Permanent{
-			ObjectID:       objectID,
-			CardInstanceID: obj.SourceID,
-			Owner:          card.Owner,
-			Controller:     obj.Controller,
-			SummoningSick:  entersSummoningSick(card.Def),
-			Timestamp:      int64(objectID),
-		})
+		if !spellHasAnyLegalTargets(g, card.Def, obj.Controller, obj.Targets) {
+			owner := playerByID(g, card.Owner)
+			if owner == nil {
+				return "invalid owner"
+			}
+			owner.Graveyard.Add(card.ID)
+			return "countered by rules"
+		}
+		permanent := createCardPermanent(g, card, obj.Controller)
+		if permanent != nil && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
+			target := effectPermanent(g, obj, game.Effect{TargetIndex: 0})
+			if !attachPermanent(g, permanent, target) {
+				movePermanentToZone(g, permanent, game.ZoneGraveyard)
+				return "graveyard"
+			}
+		}
 		return "battlefield"
 	}
 	if card.Def.HasType(game.TypeInstant) || card.Def.HasType(game.TypeSorcery) {
+		if !spellHasAnyLegalTargets(g, card.Def, obj.Controller, obj.Targets) {
+			owner := playerByID(g, card.Owner)
+			if owner == nil {
+				return "invalid owner"
+			}
+			owner.Graveyard.Add(card.ID)
+			return "countered by rules"
+		}
 		e.resolveSpellEffects(g, obj, card, log)
 		owner := playerByID(g, card.Owner)
 		if owner == nil {

@@ -36,7 +36,7 @@ func TestMovePermanentToZoneMovesCardBackedPermanent(t *testing.T) {
 	}
 }
 
-func TestMovePermanentToZoneRemovesTokenWithoutAddingCardToZone(t *testing.T) {
+func TestMovePermanentToZoneMovesTokenObjectIDToDestination(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	token := &game.Permanent{
 		ObjectID:   g.IDGen.Next(),
@@ -56,8 +56,8 @@ func TestMovePermanentToZoneRemovesTokenWithoutAddingCardToZone(t *testing.T) {
 	if len(g.Battlefield) != 0 {
 		t.Fatalf("battlefield permanents = %d, want 0", len(g.Battlefield))
 	}
-	if g.Players[game.Player1].Graveyard.Size() != 0 {
-		t.Fatalf("graveyard size = %d, want 0 for token", g.Players[game.Player1].Graveyard.Size())
+	if !g.Players[game.Player1].Graveyard.Contains(token.ObjectID) {
+		t.Fatal("token object ID did not move to graveyard")
 	}
 }
 
@@ -98,10 +98,91 @@ func TestDestroyPermanentDoesNotMoveIndestructiblePermanent(t *testing.T) {
 	}
 }
 
+func TestAttachPermanentAttachesAuraToLegalCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	aura := addAuraPermanent(g, game.Player1)
+	creature := addCombatCreaturePermanent(g, game.Player2)
+
+	if !attachPermanent(g, aura, creature) {
+		t.Fatal("attachPermanent() = false, want true")
+	}
+	if aura.AttachedTo == nil || *aura.AttachedTo != creature.ObjectID {
+		t.Fatalf("aura attached to = %v, want %v", aura.AttachedTo, creature.ObjectID)
+	}
+	if len(creature.Attachments) != 1 || creature.Attachments[0] != aura.ObjectID {
+		t.Fatalf("creature attachments = %+v, want aura %v", creature.Attachments, aura.ObjectID)
+	}
+}
+
+func TestIllegalAuraStateBasedActionMovesAuraToGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	aura := addAuraPermanent(g, game.Player1)
+	creature := addCombatCreaturePermanent(g, game.Player2)
+	if !attachPermanent(g, aura, creature) {
+		t.Fatal("attachPermanent() = false, want true")
+	}
+
+	movePermanentToZone(g, creature, game.ZoneGraveyard)
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if permanentByObjectID(g, aura.ObjectID) != nil {
+		t.Fatal("unattached aura remained on battlefield")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(aura.CardInstanceID) {
+		t.Fatal("unattached aura did not move to graveyard")
+	}
+	if len(deaths) != 1 || deaths[0].Permanent != aura.ObjectID || deaths[0].Reason != PermanentDeathReasonIllegalAura {
+		t.Fatalf("death logs = %+v, want illegal aura death", deaths)
+	}
+}
+
+func TestEquipmentRemainsWhenEquippedCreatureLeaves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	equipment := addEquipmentPermanent(g, game.Player1)
+	creature := addCombatCreaturePermanent(g, game.Player1)
+	if !attachPermanent(g, equipment, creature) {
+		t.Fatal("attachPermanent() = false, want true")
+	}
+
+	movePermanentToZone(g, creature, game.ZoneGraveyard)
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if len(deaths) != 0 {
+		t.Fatalf("death logs = %+v, want no equipment death", deaths)
+	}
+	if permanentByObjectID(g, equipment.ObjectID) == nil {
+		t.Fatal("equipment left battlefield when equipped creature left")
+	}
+	if equipment.AttachedTo != nil {
+		t.Fatalf("equipment attached to = %v, want nil", *equipment.AttachedTo)
+	}
+	if len(creature.Attachments) != 0 {
+		t.Fatalf("removed creature attachments = %+v, want none", creature.Attachments)
+	}
+}
+
 func TestRemovePermanentFromBattlefieldMissingPermanentReturnsNil(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 
 	if removed := removePermanentFromBattlefield(g, 999); removed != nil {
 		t.Fatalf("removed permanent = %+v, want nil", removed)
 	}
+}
+
+func addAuraPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{
+		Name:     "Test Aura",
+		Types:    []game.CardType{game.TypeEnchantment},
+		Subtypes: []string{"Aura"},
+	})
+}
+
+func addEquipmentPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{
+		Name:     "Test Equipment",
+		Types:    []game.CardType{game.TypeArtifact},
+		Subtypes: []string{"Equipment"},
+	})
 }

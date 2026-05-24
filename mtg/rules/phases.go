@@ -2,6 +2,8 @@ package rules
 
 import "github.com/natefinch/council4/mtg/game"
 
+const maximumHandSize = 7
+
 func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) TurnLog {
 	log := TurnLog{
 		TurnNumber:   g.Turn.TurnNumber,
@@ -75,16 +77,32 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	g.Turn.Step = game.StepEnd
 
 	g.Turn.Step = game.StepCleanup
+	discardToMaximumHandSize(g, g.Turn.ActivePlayer)
 	for _, permanent := range g.Battlefield {
 		if permanent == nil {
 			continue
 		}
 		permanent.MarkedDamage = 0
 		permanent.MarkedDeathtouchDamage = false
+		permanent.TemporaryPowerModifier = 0
+		permanent.TemporaryToughnessModifier = 0
 	}
 	emptyManaPools(g)
 	g.Combat = nil
-	// TODO: remove "until end of turn" effects when continuous effects exist.
+}
+
+func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
+	player := playerByID(g, playerID)
+	if player == nil || player.Eliminated || player.Hand.Size() <= maximumHandSize {
+		return
+	}
+	cards := player.Hand.All()
+	for i := len(cards) - 1; i >= maximumHandSize; i-- {
+		cardID := cards[i]
+		if player.Hand.Remove(cardID) {
+			player.Graveyard.Add(cardID)
+		}
+	}
 }
 
 func (e *Engine) advanceToNextTurn(g *game.Game) {
