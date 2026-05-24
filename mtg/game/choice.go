@@ -8,6 +8,7 @@ const (
 	ChoiceMay ChoiceKind = iota
 	ChoiceTarget
 	ChoiceOrder
+	ChoicePayment
 )
 
 // ChoiceOption is one legal option in a ChoiceRequest.

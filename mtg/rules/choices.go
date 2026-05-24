@@ -77,6 +77,16 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 			return nil
 		}
 		return []int{request.Options[0].Index}
+	case game.ChoicePayment:
+		if len(request.Options) == 0 || request.MaxChoices == 0 {
+			return nil
+		}
+		count := min(request.MaxChoices, len(request.Options))
+		selected := make([]int, 0, count)
+		for i := 0; i < count; i++ {
+			selected = append(selected, request.Options[i].Index)
+		}
+		return selected
 	default:
 		return nil
 	}

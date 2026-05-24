@@ -155,8 +155,13 @@ type CardDef struct {
 
 // IsLegendary reports whether this card has the Legendary supertype.
 func (c *CardDef) IsLegendary() bool {
+	return c.HasSupertype(Legendary)
+}
+
+// HasSupertype reports whether this card has the given supertype.
+func (c *CardDef) HasSupertype(supertype Supertype) bool {
 	for _, st := range c.Supertypes {
-		if st == Legendary {
+		if st == supertype {
 			return true
 		}
 	}

@@ -293,7 +293,16 @@ type AbilityDef struct {
 
 	// AdditionalCost describes non-mana costs (e.g., "Sacrifice a creature",
 	// "Tap", "Pay 2 life"). Empty if none.
+	// Deprecated: use AdditionalCosts for rules-relevant costs.
 	AdditionalCost string
+
+	// AdditionalCosts describes typed non-mana costs. mtg/rules owns choosing
+	// and applying these costs.
+	AdditionalCosts []AdditionalCost
+
+	// AlternativeCosts are optional costs that replace the normal mana cost
+	// when selected. Required additional costs still apply.
+	AlternativeCosts []AlternativeCost
 
 	// Trigger defines when a triggered ability fires. Nil for non-triggered.
 	Trigger *TriggerCondition

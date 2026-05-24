@@ -88,15 +88,15 @@ Use this file as the project-level feature checklist. Check items off as they la
 
 This phase makes cost payment a first-class rules subsystem before Commander rules and broad card implementation work depend on it. The focus is reusable infrastructure plus representative vertical slices, not every cost-related mechanic.
 
-- [ ] Concrete payment vocabulary: payment plans, mana units, symbol payments, additional-cost selections, life payments, and payment choices.
-- [ ] Provenance-aware mana pool that preserves existing simple color-count APIs while tracking at least snow mana.
-- [ ] Incremental symbol-level mana planner for colored, generic, colorless, X, hybrid, mono-hybrid, snow, and phyrexian symbols.
-- [ ] Typed additional-cost data for common costs such as sacrifice, discard, pay life, exile, reveal, and tap costs; migrate current string-based sacrifice/Cycling costs.
-- [ ] Payment choice plumbing through the existing choice framework, with deterministic fallback for agents that do not answer payment choices.
-- [ ] Minimal alternative-cost vertical slice where an alternative cost replaces the normal mana cost and can include additional costs.
-- [ ] Cost-modifier seam for future reductions, increases, and taxes without a speculative full modifier/layer pipeline.
-- [ ] Attack-cost/tax design seam; implement a real Ghostly Prison-style slice only after static cost modifiers have a real producer.
-- [ ] Documentation updates for `CONTEXT.md`, package READMEs, and roadmap carry-forward notes.
+- [x] Concrete payment vocabulary: payment plans, mana units, symbol payments, additional-cost selections, life payments, and payment choices.
+- [x] Provenance-aware mana pool that preserves existing simple color-count APIs while tracking at least snow mana.
+- [x] Incremental symbol-level mana planner for colored, generic, colorless, X, hybrid, mono-hybrid, snow, and phyrexian symbols.
+- [x] Typed additional-cost data for common costs such as sacrifice, discard, pay life, exile, reveal, and tap costs; migrate current string-based sacrifice/Cycling costs.
+- [x] Payment choice plumbing through the existing choice framework, with deterministic fallback for agents that do not answer payment choices.
+- [x] Minimal alternative-cost vertical slice where an alternative cost replaces the normal mana cost and can include additional costs.
+- [x] Cost-modifier seam for future reductions, increases, and taxes without a speculative full modifier/layer pipeline.
+- [x] Attack-cost/tax design seam; implement a real Ghostly Prison-style slice only after static cost modifiers have a real producer.
+- [x] Documentation updates for `CONTEXT.md`, package READMEs, and roadmap carry-forward notes.
 
 ## Phase 10 — Commander format rules
 

@@ -116,15 +116,17 @@ When all active players pass in succession, the loop ends the current phase or s
 
 ## Mana payment
 
-The mana-payment layer supports colored, true colorless, generic, and X costs. `canPayCost` and `payCost` use current mana pools first, then greedily tap untapped basic lands or simple tap mana abilities controlled by the player. Basic land mana is inferred from the land's name or subtype: Plains for white, Island for blue, Swamp for black, Mountain for red, and Forest for green.
+The mana-payment layer supports colored, true colorless, generic, X, hybrid, mono-hybrid, phyrexian, and snow costs. `canPayCost` and `payCost` use current mana pools first, then tap untapped basic lands or simple tap mana abilities controlled by the player while preserving scarce constrained resources such as colored and snow mana. Basic land mana is inferred from the land's name or subtype: Plains for white, Island for blue, Swamp for black, Mountain for red, and Forest for green.
 
 Simple mana abilities are activated abilities marked `IsManaAbility` with no targets, no timing restriction, no loyalty cost, and only add-mana effects. They may be exposed as legal actions for floating mana, or auto-used during cost payment. Creature mana abilities with tap costs respect summoning sickness.
 
-General activated abilities support mana costs, X costs, tap costs, deterministic simple sacrifice costs, timing restrictions (`NoTimingRestriction`, sorcery-only, combat, upkeep, and once-per-turn variants), target generation from `TargetSpec`, and stack resolution through the same effect primitives used by spells and triggers. If a source leaves the battlefield while paying a sacrifice cost, its card or token definition is preserved on the stack so the ability can still resolve.
+General activated abilities support mana costs, X costs, tap costs, typed sacrifice/discard additional costs, timing restrictions (`NoTimingRestriction`, sorcery-only, combat, upkeep, and once-per-turn variants), target generation from `TargetSpec`, and stack resolution through the same effect primitives used by spells and triggers. If a source leaves the battlefield while paying a sacrifice cost, its card or token definition is preserved on the stack so the ability can still resolve.
 
-Cycling is the initial keyword-action carry-forward slice. Cards in hand with an activated ability carrying the `Cycling` keyword, a mana cost, and `AdditionalCost: "Discard this card"` can be activated at instant speed. The engine pays the mana cost, discards the source card with normal discard/zone-change events, puts a `StackActivatedAbility` on the stack with `SourceCardID` preserved, and resolves its effects, usually drawing a card.
+Cycling is the initial keyword-action carry-forward slice. Cards in hand with an activated ability carrying the `Cycling` keyword, a mana cost, and a typed discard-this-card additional cost can be activated at instant speed. The engine pays the mana cost, discards the source card with normal discard/zone-change events, puts a `StackActivatedAbility` on the stack with `SourceCardID` preserved, and resolves its effects, usually drawing a card.
 
-Spell cost payment also supports deterministic simple sacrifice-as-cost strings such as `Sacrifice a creature`. The sacrificed permanent is chosen from battlefield order and is excluded from the mana payment plan, so it cannot be used as both a mana source and the sacrificed object.
+Spell cost payment supports typed additional costs, payment choices through the existing `ChoiceAgent` path, phyrexian mana-vs-life choices, and minimal spell alternative costs that replace the normal mana cost while preserving required additional costs. Deterministic fallback chooses the first valid payment option for agents that do not answer payment choices. Sacrificed permanents are excluded from the mana payment plan, so they cannot be used as both mana sources and sacrificed objects.
+
+The current cost-modifier seam runs after normal/alternative cost selection and before additional/mana payment planning. Full reductions, increases, cost-setting effects, and Ghostly Prison-style attack taxes are intentionally left for future slices with real static-effect producers.
 
 Mana pools empty at phase and step boundaries before later priority windows can use stale mana.
 

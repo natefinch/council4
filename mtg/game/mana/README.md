@@ -42,7 +42,9 @@ ok := pool.Spend(mana.Green, 1)
 
 Mana pools are emptied by the rules engine as steps and phases end.
 
-The current rules engine can pay colored, true colorless, generic, and X costs by consuming pool mana first and then auto-tapping supported mana sources such as basic lands, mana rocks, and non-summoning-sick mana dorks. Hybrid, phyrexian, snow, alternate-cost, and cost-reducer handling are intentionally deferred to the rules engine.
+Internally, the pool stores mana as `Unit` values so rules can preserve provenance such as whether mana was produced by a snow source. The simple `Add`, `Amount`, and `Spend` APIs still work by color; use `AddSnow`, `SnowAmount`, and `SpendSnow` when a rule specifically cares about snow mana.
+
+The current rules engine can pay colored, true colorless, generic, X, hybrid, mono-hybrid, phyrexian, and snow costs by consuming pool mana first and then auto-tapping supported mana sources such as basic lands, mana rocks, and non-summoning-sick mana dorks. Alternative-cost and typed additional-cost selection live in `mtg/rules`; full cost-reducer and attack-tax handling remain future rules-engine work.
 
 ### ColorIdentity
 

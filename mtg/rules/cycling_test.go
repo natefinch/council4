@@ -75,10 +75,12 @@ func cyclingCard() *game.CardDef {
 		Name: "Cycling Test Card",
 		Abilities: []game.AbilityDef{
 			{
-				Kind:           game.ActivatedAbility,
-				Keywords:       []game.Keyword{game.Cycling},
-				ManaCost:       &cost,
-				AdditionalCost: "Discard this card",
+				Kind:     game.ActivatedAbility,
+				Keywords: []game.Keyword{game.Cycling},
+				ManaCost: &cost,
+				AdditionalCosts: []game.AdditionalCost{
+					{Kind: game.AdditionalCostDiscard, Text: "Discard this card", Amount: 1, Zone: game.ZoneHand},
+				},
 				Effects: []game.Effect{
 					{Type: game.EffectDraw, TargetIndex: -1, Amount: 1},
 				},

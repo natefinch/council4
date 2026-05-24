@@ -83,7 +83,11 @@ func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.
 		if player == nil || player.Eliminated {
 			return
 		}
-		player.ManaPool.Add(effect.ManaColor, amount)
+		if stackObjectSourceIsSnow(g, obj) {
+			player.ManaPool.AddSnow(effect.ManaColor, amount)
+		} else {
+			player.ManaPool.Add(effect.ManaColor, amount)
+		}
 	case game.EffectDamage:
 		if effect.Amount <= 0 {
 			return
@@ -167,6 +171,14 @@ func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, log
 			})
 		}
 	}
+}
+
+func stackObjectSourceIsSnow(g *game.Game, obj *game.StackObject) bool {
+	if g == nil || obj == nil {
+		return false
+	}
+	permanent := permanentByObjectID(g, obj.SourceID)
+	return permanentIsSnow(g, permanent)
 }
 
 func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game.Effect) {

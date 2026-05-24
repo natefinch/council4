@@ -275,8 +275,10 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{
-				Kind:           game.SpellAbility,
-				AdditionalCost: "Sacrifice a creature",
+				Kind: game.SpellAbility,
+				AdditionalCosts: []game.AdditionalCost{
+					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+				},
 			},
 		},
 	})
@@ -312,6 +314,242 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	}
 }
 
+func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Chosen Offering",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.SpellAbility,
+				AdditionalCosts: []game.AdditionalCost{
+					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+				},
+			},
+		},
+	})
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+	log := TurnLog{}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &log) {
+		t.Fatal("applyActionWithChoices(cast with sacrifice choice) = false, want true")
+	}
+	if permanentByObjectID(g, first.ObjectID) == nil {
+		t.Fatal("first creature was sacrificed, want second")
+	}
+	if permanentByObjectID(g, second.ObjectID) != nil {
+		t.Fatal("chosen second creature remained on battlefield")
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoicePayment || log.Choices[0].Selected[0] != 1 {
+		t.Fatalf("payment choice log = %+v, want selected payment option 1", log.Choices)
+	}
+}
+
+func TestPaymentChoiceCanPayPhyrexianManaWithLife(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Phyrexian Choice",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{Kind: game.SpellAbility},
+		},
+	})
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+	log := TurnLog{}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &log) {
+		t.Fatal("applyActionWithChoices(cast with phyrexian life choice) = false, want true")
+	}
+	if got := g.Players[game.Player1].Life; got != 38 {
+		t.Fatalf("life = %d, want 38", got)
+	}
+	if forest.Tapped {
+		t.Fatal("forest was tapped despite choosing phyrexian life payment")
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoicePayment || log.Choices[0].Selected[0] != 1 {
+		t.Fatalf("payment choice log = %+v, want selected payment option 1", log.Choices)
+	}
+}
+
+func TestPaymentChoiceRejectsUnavailablePhyrexianLifeOption(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Players[game.Player1].Life = 1
+	cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Phyrexian Choice",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{Kind: game.SpellAbility},
+		},
+	})
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatal("applyActionWithChoices(cast with invalid phyrexian life choice) = false, want fallback to mana")
+	}
+	if got := g.Players[game.Player1].Life; got != 1 {
+		t.Fatalf("life = %d, want 1", got)
+	}
+	if !forest.Tapped {
+		t.Fatal("forest was not tapped after invalid life choice fell back to mana")
+	}
+}
+
+func TestPaymentChoiceDoesNotOvercommitPhyrexianLife(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Players[game.Player1].Life = 3
+	cost := mana.Cost{mana.PhyrexianMana(mana.Black), mana.PhyrexianMana(mana.Black)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Double Phyrexian Choice",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{Kind: game.SpellAbility},
+		},
+	})
+	firstSwamp := addBasicLandPermanent(g, game.Player1, "Swamp")
+	secondSwamp := addBasicLandPermanent(g, game.Player1, "Swamp")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}, {1}}}}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatal("applyActionWithChoices(cast with overcommitted phyrexian choices) = false, want fallback to mana")
+	}
+	if got := g.Players[game.Player1].Life; got != 1 {
+		t.Fatalf("life = %d, want 1", got)
+	}
+	if !firstSwamp.Tapped && !secondSwamp.Tapped {
+		t.Fatal("neither swamp was tapped for the second phyrexian symbol")
+	}
+}
+
+func TestPaymentChoiceFallbackSelectsMultipleAdditionalCostObjects(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Double Offering",
+		ManaCost: &cost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.SpellAbility,
+				AdditionalCosts: []game.AdditionalCost{
+					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice two creatures", Amount: 2, MatchPermanentType: true, PermanentType: game.TypeCreature},
+				},
+			},
+		},
+	})
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	third := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Third", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast with two sacrifices) = false, want true")
+	}
+	if permanentByObjectID(g, first.ObjectID) != nil || permanentByObjectID(g, second.ObjectID) != nil {
+		t.Fatal("fallback did not sacrifice the first two creatures")
+	}
+	if permanentByObjectID(g, third.ObjectID) == nil {
+		t.Fatal("fallback sacrificed the third creature, want it to remain")
+	}
+}
+
+func TestAlternativeCostCanMakeSpellPayable(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	normalCost := mana.Cost{mana.GenericMana(5)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Free Alternate",
+		ManaCost: &normalCost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.SpellAbility,
+				AlternativeCosts: []game.AlternativeCost{
+					{Label: "Cast for free"},
+				},
+			},
+		},
+	})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.CastSpell(spellID, nil, 0, nil)
+
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("spell with payable alternative cost was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(cast with alternative cost) = false, want true")
+	}
+	if obj := g.Stack.Peek(); obj == nil || obj.SourceID != spellID {
+		t.Fatalf("stack top = %+v, want alternative-cost spell", obj)
+	}
+}
+
+func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	normalCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Alternate Offering",
+		ManaCost: &normalCost,
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.SpellAbility,
+				AlternativeCosts: []game.AlternativeCost{
+					{
+						Label: "Sacrifice instead",
+						AdditionalCosts: []game.AdditionalCost{
+							{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+						},
+					},
+				},
+			},
+		},
+	})
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Offering", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatal("applyActionWithChoices(cast with chosen alternative cost) = false, want true")
+	}
+	if forest.Tapped {
+		t.Fatal("normal mana cost was paid despite choosing alternative cost")
+	}
+	if permanentByObjectID(g, creature.ObjectID) != nil {
+		t.Fatal("alternative additional sacrifice cost was not paid")
+	}
+}
+
 func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -322,8 +560,10 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{
-				Kind:           game.SpellAbility,
-				AdditionalCost: "Sacrifice a creature",
+				Kind: game.SpellAbility,
+				AdditionalCosts: []game.AdditionalCost{
+					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+				},
 			},
 		},
 	})
@@ -577,9 +817,11 @@ func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
-		Kind:           game.ActivatedAbility,
-		AdditionalCost: "Sacrifice a creature",
-		Effects:        []game.Effect{{Type: game.EffectDraw, TargetIndex: -1, Amount: 1}},
+		Kind: game.ActivatedAbility,
+		AdditionalCosts: []game.AdditionalCost{
+			{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+		},
+		Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: -1, Amount: 1}},
 	}))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone

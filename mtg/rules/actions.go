@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"strings"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -63,15 +65,19 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 }
 
 func (e *Engine) applyAction(g *game.Game, playerID game.PlayerID, act action.Action) bool {
+	return e.applyActionWithChoices(g, playerID, act, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	switch act.Kind {
 	case action.ActionPass:
 		return true
 	case action.ActionPlayLand:
 		return e.applyPlayLand(g, playerID, act.PlayLand.CardID)
 	case action.ActionCastSpell:
-		return e.applyCastSpell(g, playerID, act.CastSpell)
+		return e.applyCastSpellWithChoices(g, playerID, act.CastSpell, agents, log)
 	case action.ActionActivateAbility:
-		return e.applyActivateAbility(g, playerID, act.ActivateAbility)
+		return e.applyActivateAbilityWithChoices(g, playerID, act.ActivateAbility, agents, log)
 	case action.ActionDeclareAttackers:
 		return e.applyDeclareAttackers(g, playerID, act.DeclareAttackers)
 	case action.ActionDeclareBlockers:
@@ -157,13 +163,18 @@ func (e *Engine) applyPlayLand(g *game.Game, playerID game.PlayerID, cardID id.I
 }
 
 func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction) bool {
+	return e.applyCastSpellWithChoices(g, playerID, cast, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if !e.canCastSpell(g, playerID, cast.CardID, cast.Targets, cast.XValue, cast.ChosenModes) {
 		return false
 	}
 
 	player := g.Players[playerID]
 	card := g.GetCardInstance(cast.CardID)
-	additionalCostsPaid, ok := paySpellCosts(g, playerID, card.Def, cast.XValue)
+	prefs := e.paymentPreferencesForSpell(g, playerID, card.Def, cast.XValue, agents, log)
+	additionalCostsPaid, ok := paySpellCostsWithPreferences(g, playerID, card.Def, cast.XValue, prefs)
 	if !ok {
 		return false
 	}
@@ -196,7 +207,11 @@ func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast actio
 }
 
 func (e *Engine) applyActivateAbility(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) bool {
-	if e.applyCyclingAbility(g, playerID, activate) {
+	return e.applyActivateAbilityWithChoices(g, playerID, activate, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if e.applyCyclingAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
 	permanent, ability, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
@@ -207,7 +222,8 @@ func (e *Engine) applyActivateAbility(g *game.Game, playerID game.PlayerID, acti
 		if len(activate.Targets) != 0 || activate.XValue != 0 {
 			return false
 		}
-		if _, ok := payAbilityCosts(g, playerID, permanent, ability, 0); !ok {
+		prefs := e.paymentPreferencesForCost(g, playerID, ability.ManaCost, abilityAdditionalCosts(ability), agents, log)
+		if _, ok := payAbilityCostsWithPreferences(g, playerID, permanent, ability, 0, prefs); !ok {
 			return false
 		}
 		obj := &game.StackObject{
@@ -232,7 +248,8 @@ func (e *Engine) applyActivateAbility(g *game.Game, playerID game.PlayerID, acti
 	}
 	sourceCardID := permanent.CardInstanceID
 	sourceTokenDef := permanent.TokenDef
-	if _, ok := payAbilityCosts(g, playerID, permanent, ability, activate.XValue); !ok {
+	prefs := e.paymentPreferencesForCost(g, playerID, ability.ManaCost, abilityAdditionalCosts(ability), agents, log)
+	if _, ok := payAbilityCostsWithPreferences(g, playerID, permanent, ability, activate.XValue, prefs); !ok {
 		return false
 	}
 	g.Stack.Push(&game.StackObject{
@@ -251,6 +268,10 @@ func (e *Engine) applyActivateAbility(g *game.Game, playerID game.PlayerID, acti
 }
 
 func (e *Engine) applyCyclingAbility(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) bool {
+	return e.applyCyclingAbilityWithChoices(g, playerID, activate, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	card, ability, ok := cyclingAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
 	if !ok {
 		return false
@@ -258,7 +279,9 @@ func (e *Engine) applyCyclingAbility(g *game.Game, playerID game.PlayerID, activ
 	if !canActivateCyclingAbility(g, playerID, activate.SourceID, ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
 	}
-	if !payCostWithX(g, playerID, ability.ManaCost, activate.XValue) {
+	prefs := e.paymentPreferencesForCost(g, playerID, ability.ManaCost, nil, agents, log)
+	plan, ok := buildPaymentPlanWithPreferences(g, playerID, ability.ManaCost, activate.XValue, nil, prefs)
+	if !ok || !applyPaymentPlan(g, playerID, plan) {
 		return false
 	}
 	if !discardCardFromHand(g, playerID, card.ID) {
@@ -387,7 +410,7 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 	if !abilityHasKeyword(ability, game.Equip) && ability.Timing != game.SorceryOnly {
 		return false
 	}
-	if !isSorcerySpeed(g, playerID) || ability.AdditionalCost != "" || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
+	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(ability) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
 		return false
 	}
 	if !targetsValidForAbilityFromSource(g, playerID, permanentCardDef(g, permanent), ability, targets) {
@@ -427,7 +450,7 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 	if xValue != 0 || abilityIndex < 0 || ability.Kind != game.ActivatedAbility || ability.IsManaAbility || !abilityHasKeyword(ability, game.Cycling) {
 		return false
 	}
-	if ability.Timing != game.NoTimingRestriction || ability.AdditionalCost != "Discard this card" {
+	if ability.Timing != game.NoTimingRestriction || !abilityHasDiscardThisCardCost(ability) {
 		return false
 	}
 	if len(targets) != 0 || len(ability.Targets) != 0 {
@@ -469,7 +492,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 		if !canTapPermanentForAbility(g, permanent) {
 			return false
 		}
-	} else if ability.AdditionalCost != "" {
+	} else if abilityHasNonTapAdditionalCosts(ability) {
 		return false
 	}
 	return canPayCost(g, playerID, ability.ManaCost)
@@ -491,7 +514,15 @@ func hasTapCost(ability *game.AbilityDef) bool {
 	if ability == nil {
 		return false
 	}
-	return isTapCost(ability.AdditionalCost)
+	if isTapCost(ability.AdditionalCost) {
+		return true
+	}
+	for _, cost := range ability.AdditionalCosts {
+		if cost.Kind == game.AdditionalCostTap {
+			return true
+		}
+	}
+	return false
 }
 
 func isTapCost(cost string) bool {
@@ -501,6 +532,30 @@ func isTapCost(cost string) bool {
 	default:
 		return false
 	}
+}
+
+func abilityHasNonTapAdditionalCosts(ability *game.AbilityDef) bool {
+	for _, cost := range abilityAdditionalCosts(ability) {
+		if cost.Kind != game.AdditionalCostTap {
+			return true
+		}
+	}
+	return false
+}
+
+func abilityHasDiscardThisCardCost(ability *game.AbilityDef) bool {
+	costs := abilityAdditionalCosts(ability)
+	if len(costs) != 1 {
+		return false
+	}
+	cost := costs[0]
+	if cost.Kind != game.AdditionalCostDiscard || additionalCostAmount(cost) != 1 {
+		return false
+	}
+	if cost.Text != "" {
+		return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(cost.Text)), ".") == "discard this card"
+	}
+	return cost.Zone == game.ZoneHand
 }
 
 func canTapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
