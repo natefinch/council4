@@ -47,12 +47,16 @@ func payCostWithX(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValue 
 }
 
 func canPaySpellCosts(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int) bool {
-	return canPaySpellCostsWithKicker(g, playerID, card, xValue, false)
+	return canPaySpellCostsWithKickerFromZone(g, playerID, 0, game.ZoneHand, card, xValue, false)
 }
 
 func canPaySpellCostsWithKicker(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int, kickerPaid bool) bool {
+	return canPaySpellCostsWithKickerFromZone(g, playerID, 0, game.ZoneHand, card, xValue, kickerPaid)
+}
+
+func canPaySpellCostsWithKickerFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, kickerPaid bool) bool {
 	for _, option := range spellCostOptionsForKicker(card, kickerPaid) {
-		if _, ok := buildSpellCostPlanForOption(g, playerID, option, xValue, nil); ok {
+		if _, ok := buildSpellCostPlanForOption(g, playerID, cardID, sourceZone, option, xValue, nil); ok {
 			return true
 		}
 	}
@@ -68,7 +72,11 @@ func paySpellCostsWithPreferences(g *game.Game, playerID game.PlayerID, card *ga
 }
 
 func paySpellCostsWithKickerAndPreferences(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int, kickerPaid bool, prefs *paymentPreferences) ([]string, bool) {
-	plan, ok := buildSpellCostPlanWithKickerAndPreferences(g, playerID, card, xValue, kickerPaid, prefs)
+	return paySpellCostsWithKickerFromZoneAndPreferences(g, playerID, 0, game.ZoneHand, card, xValue, kickerPaid, prefs)
+}
+
+func paySpellCostsWithKickerFromZoneAndPreferences(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, kickerPaid bool, prefs *paymentPreferences) ([]string, bool) {
+	plan, ok := buildSpellCostPlanWithKickerFromZoneAndPreferences(g, playerID, cardID, sourceZone, card, xValue, kickerPaid, prefs)
 	if !ok {
 		return nil, false
 	}
@@ -133,6 +141,10 @@ func buildSpellCostPlanWithPreferences(g *game.Game, playerID game.PlayerID, car
 }
 
 func buildSpellCostPlanWithKickerAndPreferences(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int, kickerPaid bool, prefs *paymentPreferences) (spellCostPlan, bool) {
+	return buildSpellCostPlanWithKickerFromZoneAndPreferences(g, playerID, 0, game.ZoneHand, card, xValue, kickerPaid, prefs)
+}
+
+func buildSpellCostPlanWithKickerFromZoneAndPreferences(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, kickerPaid bool, prefs *paymentPreferences) (spellCostPlan, bool) {
 	options := spellCostOptionsForKicker(card, kickerPaid)
 	if len(options) == 0 {
 		return spellCostPlan{}, false
@@ -140,21 +152,21 @@ func buildSpellCostPlanWithKickerAndPreferences(g *game.Game, playerID game.Play
 	if prefs != nil {
 		for _, option := range options {
 			if option.index == prefs.alternativeIndex {
-				return buildSpellCostPlanForOption(g, playerID, option, xValue, prefs)
+				return buildSpellCostPlanForOption(g, playerID, cardID, sourceZone, option, xValue, prefs)
 			}
 		}
 		return spellCostPlan{}, false
 	}
 	for _, option := range options {
-		if plan, ok := buildSpellCostPlanForOption(g, playerID, option, xValue, nil); ok {
+		if plan, ok := buildSpellCostPlanForOption(g, playerID, cardID, sourceZone, option, xValue, nil); ok {
 			return plan, true
 		}
 	}
 	return spellCostPlan{}, false
 }
 
-func buildSpellCostPlanForOption(g *game.Game, playerID game.PlayerID, option spellCostOption, xValue int, prefs *paymentPreferences) (spellCostPlan, bool) {
-	option = applyCostModifiers(g, costModificationContext{player: playerID, card: option.card, option: option})
+func buildSpellCostPlanForOption(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, option spellCostOption, xValue int, prefs *paymentPreferences) (spellCostPlan, bool) {
+	option = applyCostModifiers(g, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, option: option})
 	plan := spellCostPlan{option: option}
 	additional, ok := buildAdditionalCostPlanForCosts(g, playerID, option.additionalCosts, prefs)
 	if !ok {
@@ -191,6 +203,15 @@ func costModifiersForContext(g *game.Game, context costModificationContext) []ga
 			continue
 		}
 		modifiers = append(modifiers, modifier)
+	}
+	if context.sourceZone == game.ZoneCommand && context.cardID != 0 {
+		player := playerByID(g, context.player)
+		if player != nil && player.CommanderInstanceID == context.cardID && player.CommanderTax() > 0 {
+			modifiers = append(modifiers, game.CostModifier{
+				Kind:            game.CostModifierSpell,
+				GenericIncrease: player.CommanderTax(),
+			})
+		}
 	}
 	return modifiers
 }

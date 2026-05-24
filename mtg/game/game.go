@@ -36,6 +36,12 @@ type PlayerConfig struct {
 	// Deck is the list of card definitions for the player's 99-card deck
 	// (not including the commander).
 	Deck []*CardDef
+
+	// PowerBracket is optional deck metadata for future simulations/reports.
+	PowerBracket string
+
+	// PowerLevel is optional numeric deck metadata for future simulations/reports.
+	PowerLevel int
 }
 
 // Game is the top-level state of a 4-player Commander game. It ties
@@ -53,6 +59,9 @@ type Game struct {
 	// This is the registry of all card instances in the game (deck cards
 	// and any cards created during play).
 	CardInstances map[id.ID]*CardInstance
+
+	// CommanderIDs records the original commander card instances for the game.
+	CommanderIDs map[id.ID]bool
 
 	// Stack is the game stack where spells and abilities wait to resolve.
 	Stack Stack
@@ -152,6 +161,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 	}
 	g := &Game{
 		CardInstances:              make(map[id.ID]*CardInstance),
+		CommanderIDs:               make(map[id.ID]bool),
 		LastKnownInformation:       make(map[id.ID]ObjectSnapshot),
 		LinkedObjects:              make(map[LinkedObjectKey][]LinkedObjectRef),
 		SkippedSteps:               make(map[PlayerID]map[Step]int),
@@ -171,6 +181,8 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 	for i, cfg := range configs {
 		pid := PlayerID(i)
 		p := NewPlayer(pid, cfg.Name)
+		p.PowerBracket = cfg.PowerBracket
+		p.PowerLevel = cfg.PowerLevel
 
 		// Create commander CardInstance and place in command zone.
 		if cfg.Commander != nil {
@@ -180,6 +192,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 				Owner: pid,
 			}
 			g.CardInstances[ci.ID] = ci
+			g.CommanderIDs[ci.ID] = true
 			p.CommanderInstanceID = ci.ID
 			p.CommandZone.Add(ci.ID)
 		}

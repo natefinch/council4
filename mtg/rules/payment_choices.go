@@ -24,14 +24,22 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 }
 
 func (e *Engine) paymentPreferencesForSpell(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *paymentPreferences {
-	option := e.chooseSpellCostOption(g, playerID, card, xValue, agents, log)
+	return e.paymentPreferencesForSpellFromZone(g, playerID, 0, game.ZoneHand, card, xValue, agents, log)
+}
+
+func (e *Engine) paymentPreferencesForSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *paymentPreferences {
+	option := e.chooseSpellCostOptionFromZone(g, playerID, cardID, sourceZone, card, xValue, agents, log)
 	prefs := e.paymentPreferencesForCost(g, playerID, option.manaCost, option.additionalCosts, agents, log)
 	prefs.alternativeIndex = option.index
 	return prefs
 }
 
 func (e *Engine) chooseSpellCostOption(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) spellCostOption {
-	options := payableSpellCostOptions(g, playerID, card, xValue)
+	return e.chooseSpellCostOptionFromZone(g, playerID, 0, game.ZoneHand, card, xValue, agents, log)
+}
+
+func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) spellCostOption {
+	options := payableSpellCostOptionsFromZone(g, playerID, cardID, sourceZone, card, xValue)
 	if len(options) == 0 {
 		return spellCostOption{}
 	}
@@ -63,9 +71,13 @@ func (e *Engine) chooseSpellCostOption(g *game.Game, playerID game.PlayerID, car
 }
 
 func payableSpellCostOptions(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int) []spellCostOption {
+	return payableSpellCostOptionsFromZone(g, playerID, 0, game.ZoneHand, card, xValue)
+}
+
+func payableSpellCostOptionsFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int) []spellCostOption {
 	var payable []spellCostOption
 	for _, option := range spellCostOptions(card) {
-		if _, ok := buildSpellCostPlanForOption(g, playerID, option, xValue, nil); ok {
+		if _, ok := buildSpellCostPlanForOption(g, playerID, cardID, sourceZone, option, xValue, nil); ok {
 			payable = append(payable, option)
 		}
 	}

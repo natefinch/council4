@@ -1084,6 +1084,7 @@ func TestNonCommanderCombatDamageDoesNotTrackCommanderDamage(t *testing.T) {
 			{Attacker: creature.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
 		},
 	}
+
 	engine := NewEngine(nil)
 	log := TurnLog{}
 
@@ -1091,6 +1092,43 @@ func TestNonCommanderCombatDamageDoesNotTrackCommanderDamage(t *testing.T) {
 
 	if len(g.Players[game.Player2].CommanderDamage) != 0 {
 		t.Fatalf("commander damage = %+v, want none", g.Players[game.Player2].CommanderDamage)
+	}
+}
+
+func TestStolenCommanderStillDealsCommanderDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	commander := addCombatCreaturePermanentWithPower(g, game.Player1, 7)
+	g.Players[game.Player1].CommanderInstanceID = commander.CardInstanceID
+	g.CommanderIDs = map[id.ID]bool{commander.CardInstanceID: true}
+	commander.Controller = game.Player2
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: commander.ObjectID, Target: game.AttackTarget{Player: game.Player3}},
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if got := g.Players[game.Player3].CommanderDamage[commander.CardInstanceID]; got != 7 {
+		t.Fatalf("commander damage from stolen commander = %d, want 7", got)
+	}
+}
+
+func TestTokenCopyOfCommanderDoesNotDealCommanderDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	commander := addCombatCreaturePermanentWithPower(g, game.Player1, 7)
+	g.CommanderIDs = map[id.ID]bool{commander.CardInstanceID: true}
+	token := createTokenPermanent(g, game.Player1, g.GetCardInstance(commander.CardInstanceID).Def)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: token.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if len(g.Players[game.Player2].CommanderDamage) != 0 {
+		t.Fatalf("token copy commander damage = %+v, want none", g.Players[game.Player2].CommanderDamage)
 	}
 }
 

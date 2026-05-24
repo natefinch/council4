@@ -205,7 +205,12 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 	if owner == nil {
 		return false
 	}
-	owner.Graveyard.Add(card.ID)
+	destination := commanderReplacementDestination(g, card.ID, game.ZoneGraveyard)
+	zone := destinationZone(g, card.Owner, destination)
+	if zone == nil {
+		return false
+	}
+	zone.Add(card.ID)
 	event := game.GameEvent{
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
@@ -213,7 +218,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		Player:        card.Owner,
 		CardID:        card.ID,
 		FromZone:      game.ZoneStack,
-		ToZone:        game.ZoneGraveyard,
+		ToZone:        destination,
 	}
 	emitZoneChangeEvent(g, event)
 	return true

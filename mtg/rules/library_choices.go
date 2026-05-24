@@ -16,12 +16,21 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 			return
 		}
 		player.Library.Remove(cardID)
-		player.Graveyard.Add(cardID)
+		destination := commanderReplacementDestination(g, cardID, game.ZoneGraveyard)
+		zoneOwner := playerID
+		if card := g.GetCardInstance(cardID); destination == game.ZoneCommand && card != nil {
+			zoneOwner = card.Owner
+		}
+		zone := destinationZone(g, zoneOwner, destination)
+		if zone == nil {
+			return
+		}
+		zone.Add(cardID)
 		emitZoneChangeEvent(g, game.GameEvent{
 			Player:   playerID,
 			CardID:   cardID,
 			FromZone: game.ZoneLibrary,
-			ToZone:   game.ZoneGraveyard,
+			ToZone:   destination,
 			Amount:   1,
 		})
 	}
@@ -50,12 +59,21 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	for _, cardID := range peekLibrary(player, amount) {
 		selected := e.chooseChoice(g, agents, libraryChoiceRequest(game.ChoiceSurveil, playerID, "Surveil: choose where to put card.", []string{"top", "graveyard"}), log)
 		if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
-			player.Graveyard.Add(cardID)
+			destination := commanderReplacementDestination(g, cardID, game.ZoneGraveyard)
+			zoneOwner := playerID
+			if card := g.GetCardInstance(cardID); destination == game.ZoneCommand && card != nil {
+				zoneOwner = card.Owner
+			}
+			zone := destinationZone(g, zoneOwner, destination)
+			if zone == nil {
+				continue
+			}
+			zone.Add(cardID)
 			emitZoneChangeEvent(g, game.GameEvent{
 				Player:   playerID,
 				CardID:   cardID,
 				FromZone: game.ZoneLibrary,
-				ToZone:   game.ZoneGraveyard,
+				ToZone:   destination,
 				Amount:   1,
 			})
 		}

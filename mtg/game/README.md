@@ -90,9 +90,10 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 Each `Player` (`player.go`) tracks:
 
 - **Life** (starts at 40), **poison counters**, **commander damage** received (per commander)
-- **Commander tax** (cast count from command zone × 2)
+- **Commander tax** (cast count from command zone × 2) and Commander mulligan count
 - **Five zones**: Library, Hand, Graveyard, Exile, Command Zone
 - **Mana pool** (`mana.Pool`)
+- Optional **PowerBracket** and **PowerLevel** metadata for later simulations/reports
 - **Designations**: monarch, initiative, city's blessing, ring level, energy, experience
 
 ### Game
@@ -102,6 +103,7 @@ Each `Player` (`player.go`) tracks:
 - `[4]*Player` — the four players
 - `[]*Permanent` — shared battlefield
 - `Stack` — LIFO spell/ability stack
+- `CommanderIDs` — original commander card instances for commander damage and command-zone replacement
 - `Events` — rules-relevant facts emitted by `mtg/rules` as mutations occur
 - `TurnState` / `TurnOrder` — turn structure with eliminated-player handling
 - `FailedDraws` — transient per-game flags for players who tried to draw from an empty library

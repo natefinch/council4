@@ -116,14 +116,14 @@ This phase closes major gameplay-rule gaps that are not Commander-specific befor
 
 ## Phase 10 — Commander format rules
 
-- [ ] Deck legality checks: 100 cards, singleton, commander legality, and color identity.
-- [ ] Commander zone replacement for zone changes.
-- [ ] Casting commanders from the command zone.
-- [ ] Commander tax and commander cast-count tracking.
-- [ ] Commander damage from each commander to each player.
-- [ ] Commander mulligan flow, including multiplayer first-mulligan behavior.
+- [x] Conservative deck legality checks: 99-card deck plus commander, singleton nonbasic names, simple legendary-creature commander legality, and trusted `CardDef.ColorIdentity` subset checks. Carry-forward: partners/backgrounds, "any number of" singleton exceptions, and computed color identity from card data.
+- [x] Commander zone replacement for battlefield, stack, hand-discard, mill, and surveil zone changes. Carry-forward: owner choice instead of deterministic command-zone replacement.
+- [x] Casting commanders from the command zone using explicit cast source zones.
+- [x] Commander tax and commander cast-count tracking through the cost/payment seam.
+- [x] Commander damage from each original commander card instance to each player, including stolen commanders and excluding token/copy object IDs.
+- [x] Commander mulligan scaffolding, including multiplayer first-free mulligan and deterministic bottoming. Carry-forward: real agent mulligan decisions and non-draw mulligan event semantics.
 - [ ] Multiplayer draw-rule and seating-order hardening beyond the current clockwise `TurnOrder` and Phase 9C eliminated-player cleanup.
-- [ ] Optional bracket/power-level metadata for simulations and reports.
+- [x] Optional bracket/power-level metadata pass-through for simulations and reports.
 
 ## Phase 11 — Card data, decklists, and card implementations
 

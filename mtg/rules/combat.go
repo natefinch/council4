@@ -255,7 +255,7 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 	defender := g.Players[defendingPlayer]
 	sourceController := effectiveController(g, source)
 	dealt := dealPlayerDamage(g, source.CardInstanceID, source.ObjectID, sourceController, defendingPlayer, damage, true)
-	if sourceIsControllerCommander(g, source) {
+	if sourceIsCommander(g, source) {
 		defender.CommanderDamage[source.CardInstanceID] += dealt
 	}
 	applyLifelink(g, source, dealt)
@@ -363,16 +363,19 @@ func applyLifelink(g *game.Game, source *game.Permanent, damage int) {
 	controller.Life += damage
 }
 
-func sourceIsControllerCommander(g *game.Game, source *game.Permanent) bool {
+func sourceIsCommander(g *game.Game, source *game.Permanent) bool {
 	if g == nil || source == nil || source.CardInstanceID == 0 {
 		return false
 	}
-	controllerID := effectiveController(g, source)
-	if controllerID < 0 || int(controllerID) >= len(g.Players) {
-		return false
+	if g.CommanderIDs[source.CardInstanceID] {
+		return true
 	}
-	controller := g.Players[controllerID]
-	return controller != nil && controller.CommanderInstanceID == source.CardInstanceID
+	for _, player := range g.Players {
+		if player != nil && player.CommanderInstanceID == source.CardInstanceID {
+			return true
+		}
+	}
+	return false
 }
 
 func combatHasFirstStrikeDamage(g *game.Game) bool {

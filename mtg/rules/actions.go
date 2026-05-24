@@ -24,10 +24,18 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 
 	actions := e.legalLandActions(g, playerID)
 	actions = append(actions, e.legalCastActions(g, playerID)...)
+	actions = append(actions, e.legalCommanderCastActions(g, playerID)...)
 	actions = append(actions, e.legalActivateAbilityActions(g, playerID)...)
 	actions = append(actions, e.legalCyclingActions(g, playerID)...)
 	actions = append(actions, action.Pass())
 	return actions
+}
+
+func normalizedCastSourceZone(cast action.CastSpellAction) game.ZoneType {
+	if cast.SourceZone == game.ZoneNone {
+		return game.ZoneHand
+	}
+	return cast.SourceZone
 }
 
 func splitSecondOnStack(g *game.Game) bool {
@@ -76,12 +84,42 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 		for _, xValue := range legalXValuesForCost(g, playerID, card.Def.ManaCost) {
 			for _, modes := range modeChoicesForSpell(card.Def) {
 				for _, targets := range targetChoicesForSpell(g, playerID, card.Def, modes) {
-					if e.canCastSpell(g, playerID, cardID, targets, xValue, modes) {
+					if e.canCastSpellFromZoneWithKicker(g, playerID, cardID, game.ZoneHand, targets, xValue, modes, false) {
 						actions = append(actions, action.CastSpell(cardID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
 					}
-					if spellHasKicker(card.Def) && e.canCastSpellWithKicker(g, playerID, cardID, targets, xValue, modes, true) {
+					if spellHasKicker(card.Def) && e.canCastSpellFromZoneWithKicker(g, playerID, cardID, game.ZoneHand, targets, xValue, modes, true) {
 						actions = append(actions, action.CastKickedSpell(cardID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
 					}
+				}
+			}
+		}
+	}
+	return actions
+}
+
+func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return nil
+	}
+	player := playerByID(g, playerID)
+	if player == nil || player.CommanderInstanceID == 0 || !player.CommandZone.Contains(player.CommanderInstanceID) {
+		return nil
+	}
+	card := g.GetCardInstance(player.CommanderInstanceID)
+	if card == nil || card.Def == nil {
+		return nil
+	}
+	var actions []action.Action
+	for _, xValue := range legalXValuesForCost(g, playerID, card.Def.ManaCost) {
+		for _, modes := range modeChoicesForSpell(card.Def) {
+			for _, targets := range targetChoicesForSpell(g, playerID, card.Def, modes) {
+				if e.canCastSpellFromZoneWithKicker(g, playerID, card.ID, game.ZoneCommand, targets, xValue, modes, false) {
+					actions = append(actions, action.CastCommanderSpell(card.ID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
+				}
+				if spellHasKicker(card.Def) && e.canCastSpellFromZoneWithKicker(g, playerID, card.ID, game.ZoneCommand, targets, xValue, modes, true) {
+					act := action.CastCommanderSpell(card.ID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...))
+					act.CastSpell.KickerPaid = true
+					actions = append(actions, act)
 				}
 			}
 		}
@@ -216,19 +254,23 @@ func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast actio
 }
 
 func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if !e.canCastSpellWithKicker(g, playerID, cast.CardID, cast.Targets, cast.XValue, cast.ChosenModes, cast.KickerPaid) {
+	sourceZone := normalizedCastSourceZone(cast)
+	if !e.canCastSpellFromZoneWithKicker(g, playerID, cast.CardID, sourceZone, cast.Targets, cast.XValue, cast.ChosenModes, cast.KickerPaid) {
 		return false
 	}
 
 	player := g.Players[playerID]
 	card := g.GetCardInstance(cast.CardID)
-	prefs := e.paymentPreferencesForSpell(g, playerID, card.Def, cast.XValue, agents, log)
-	additionalCostsPaid, ok := paySpellCostsWithKickerAndPreferences(g, playerID, card.Def, cast.XValue, cast.KickerPaid, prefs)
+	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, card.Def, cast.XValue, agents, log)
+	additionalCostsPaid, ok := paySpellCostsWithKickerFromZoneAndPreferences(g, playerID, card.ID, sourceZone, card.Def, cast.XValue, cast.KickerPaid, prefs)
 	if !ok {
 		return false
 	}
-	if !player.Hand.Remove(cast.CardID) {
-		panic("cast spell disappeared from hand after validation")
+	if !removeCastSourceCard(player, cast.CardID, sourceZone) {
+		panic("cast spell disappeared from source zone after validation")
+	}
+	if sourceZone == game.ZoneCommand && player.CommanderInstanceID == cast.CardID {
+		player.CommanderCastCount++
 	}
 	obj := &game.StackObject{
 		ID:                  g.IDGen.Next(),
@@ -247,7 +289,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,
 		CardID:        cast.CardID,
-		FromZone:      game.ZoneHand,
+		FromZone:      sourceZone,
 		ToZone:        game.ZoneStack,
 	}
 	emitZoneChangeEvent(g, event)
@@ -391,6 +433,10 @@ func (e *Engine) canCastSpell(g *game.Game, playerID game.PlayerID, cardID id.ID
 }
 
 func (e *Engine) canCastSpellWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
+	return e.canCastSpellFromZoneWithKicker(g, playerID, cardID, game.ZoneHand, targets, xValue, chosenModes, kickerPaid)
+}
+
+func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -399,7 +445,10 @@ func (e *Engine) canCastSpellWithKicker(g *game.Game, playerID game.PlayerID, ca
 	}
 	player := g.Players[playerID]
 	card := g.GetCardInstance(cardID)
-	if card == nil || card.Def == nil || !player.Hand.Contains(cardID) {
+	if card == nil || card.Def == nil || !castSourceContains(player, cardID, sourceZone) {
+		return false
+	}
+	if sourceZone == game.ZoneCommand && player.CommanderInstanceID != cardID {
 		return false
 	}
 	if xValue != 0 && !costHasVariableMana(card.Def.ManaCost) {
@@ -414,10 +463,35 @@ func (e *Engine) canCastSpellWithKicker(g *game.Game, playerID game.PlayerID, ca
 	if kickerPaid && !spellHasKicker(card.Def) {
 		return false
 	}
-	if !canPaySpellCostsWithKicker(g, playerID, card.Def, xValue, kickerPaid) {
+	if !canPaySpellCostsWithKickerFromZone(g, playerID, card.ID, sourceZone, card.Def, xValue, kickerPaid) {
 		return false
 	}
 	return true
+}
+
+func castSourceContains(player *game.Player, cardID id.ID, sourceZone game.ZoneType) bool {
+	if player == nil {
+		return false
+	}
+	switch sourceZone {
+	case game.ZoneHand:
+		return player.Hand.Contains(cardID)
+	case game.ZoneCommand:
+		return player.CommandZone.Contains(cardID)
+	default:
+		return false
+	}
+}
+
+func removeCastSourceCard(player *game.Player, cardID id.ID, sourceZone game.ZoneType) bool {
+	switch sourceZone {
+	case game.ZoneHand:
+		return player.Hand.Remove(cardID)
+	case game.ZoneCommand:
+		return player.CommandZone.Remove(cardID)
+	default:
+		return false
+	}
 }
 
 func canAct(g *game.Game, playerID game.PlayerID) bool {

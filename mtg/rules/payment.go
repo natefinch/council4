@@ -37,9 +37,11 @@ type paymentAdditionalCostOption struct {
 // costModificationContext is the future attachment point for cost increases,
 // reductions, and taxes produced by static or continuous effects.
 type costModificationContext struct {
-	player game.PlayerID
-	card   *game.CardDef
-	option spellCostOption
+	player     game.PlayerID
+	card       *game.CardDef
+	cardID     id.ID
+	sourceZone game.ZoneType
+	option     spellCostOption
 }
 
 type paymentPreferences struct {

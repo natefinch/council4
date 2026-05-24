@@ -40,6 +40,10 @@ type Player struct {
 	// per previous cast (CR 903.8).
 	CommanderCastCount int
 
+	// CommanderMulligansTaken is the number of mulligans this player has taken
+	// during the current game's Commander mulligan procedure.
+	CommanderMulligansTaken int
+
 	// --- Mana ---
 
 	// ManaPool is the player's current available mana.
@@ -95,6 +99,11 @@ type Player struct {
 	// ExperienceCounters tracks the player's experience counter total
 	// (Commander 2015 mechanic).
 	ExperienceCounters int
+
+	// PowerBracket and PowerLevel are optional deck metadata carried from setup
+	// for later simulation/reporting. They do not affect rules behavior.
+	PowerBracket string
+	PowerLevel   int
 }
 
 // NewPlayer creates a new player with the given seat and name,

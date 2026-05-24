@@ -62,9 +62,10 @@ Implemented now:
 - Extra turn handling in LIFO order, skipping eliminated players.
 - Priority loop with multiplayer pass-around-table behavior and stack-aware all-pass handling.
 - State-based actions for player elimination from 0 life, lethal poison, lethal commander damage, and failed draws.
+- Conservative Commander deck legality validation for 99-card decks plus commander, singleton nonbasic names, simple legendary-creature commanders, and trusted color identity data.
 - Permanent state-based actions for 0 toughness, lethal damage, deathtouch damage, 0 planeswalker loyalty, 0 battle defense, illegal Auras/attachments, token cleanup, legendary-rule duplicates, and +1/+1/-1/-1 counter cancellation.
-- Legal action generation for passing, playing lands, casting supported spells with player or permanent targets, activating simple mana/equip/loyalty/general abilities, Cycling from hand, Kicker spell variants, and richer attacker declarations.
-- Action application for passing, playing lands, casting supported spells, activating simple mana/equip/loyalty/general abilities, Cycling from hand, paying attack taxes, and declaring attackers.
+- Legal action generation for passing, playing lands, casting supported spells from hand or a commander from the command zone with player or permanent targets, activating simple mana/equip/loyalty/general abilities, Cycling from hand, Kicker spell variants, and richer attacker declarations.
+- Action application for passing, playing lands, casting supported spells, command-zone commander casts with tax/count tracking, activating simple mana/equip/loyalty/general abilities, Cycling from hand, paying attack taxes, and declaring attackers.
 - Mana cost payment helpers that use pool mana first, then auto-tap untapped basic lands and simple tap mana abilities from mana rocks or non-summoning-sick mana dorks, with generic spell cost modifiers and attack-tax payment exclusions.
 - Stack resolution for creature spells entering the battlefield, instant/sorcery spells moving to graveyard, modal spell effects, triggered abilities, equip activated abilities, Cycling abilities, Kicker effects, loyalty abilities, delayed triggers, and general non-mana activated abilities.
 - Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, exile, bounce, sacrifice, tap/untap, mass selector effects, token creation, runtime P/T modifiers, scry/surveil/mill, fight, transform, phase out, emblems, prevention, regeneration, and delayed triggers.
@@ -80,15 +81,17 @@ Implemented now:
 - Combat step structure, summoning-sickness clearing, single/all attacker choices, multi-blocks, goad attack requirements, attack taxes, Flying/Reach/Menace block legality, planeswalker and battle attack targets, first strike/double strike damage passes, Trample/Deathtouch combat damage assignment including validated attacker-provided assignments, Lifelink and commander combat damage, Indestructible/regeneration survival from destroy/lethal damage, phasing checks, combat damage to players and permanents, and lethal permanent cleanup.
 - Effective characteristic calculation through runtime continuous effects: copy/control/text/type/color/ability/P-T layers, timestamps/dependencies, face-down baseline values, dynamic star P/T, counters, temporary modifiers, and static `EffectModifyPT` effects from battlefield permanents.
 - Battlefield zone-change helpers for moving card-backed permanents and tokens to destination zones, detaching attachments, and removing tokens from non-battlefield zones as an SBA.
+- Deterministic Commander command-zone replacement for supported battlefield, stack, discard, mill, and surveil zone changes.
+- Commander mulligan scaffolding with first-free multiplayer mulligan and deterministic bottoming; default simulations currently keep opening seven.
 - Aura and Equipment skeleton support with attach/unattach helpers, attach-on-resolution for targeted permanent spells, basic creature-only attachment legality, and illegal attachment/aura SBAs.
 - Cleanup-step maximum hand-size discard to seven cards, runtime duration/prevention/regeneration expiry, and marked-damage removal.
 
 Not implemented yet:
 
 - Full attachment legality beyond basic creature-only Aura/Equipment support.
-- Mulligans, choice-based discard/sacrifice/exile/reveal/tutor decisions, agent-selected replacement ordering, state triggers, copy triggers, and generic APNAP simultaneous choices beyond trigger ordering.
+- Agent-driven mulligan decisions, choice-based discard/sacrifice/exile/reveal/tutor decisions, agent-selected replacement ordering, state triggers, copy triggers, and generic APNAP simultaneous choices beyond trigger ordering.
 - Flashback, Madness, Escape, Foretell, Morph/Disguise, Suspend, Evoke, Convoke, Delve, Ward, Prowess, proliferate, goad, copy-on-stack, cast-without-paying, and other non-combat keyword actions beyond Flash, basic Equip, Cycling, Kicker, scry/surveil/mill, fight, and transform.
-- Cast-from-zone permissions, play-vs-cast effects, face-up special actions, Saga chapters, DFC back-face characteristics, day/night transitions, exile-on-resolution replacements, and full "can't be countered" support once counter effects exist.
+- Non-commander cast-from-zone permissions, play-vs-cast effects, face-up special actions, Saga chapters, DFC back-face characteristics, day/night transitions, exile-on-resolution replacements, and full "can't be countered" support once counter effects exist.
 
 ## Game events
 

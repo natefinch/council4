@@ -77,24 +77,28 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 		return false
 	}
 	rememberLastKnown(g, snapshotPermanent(g, permanent, game.ZoneBattlefield))
+	actualDestination := destination
+	if !permanent.Token {
+		actualDestination = commanderReplacementDestination(g, permanent.CardInstanceID, destination)
+	}
 	detachPermanent(g, permanent)
 	detachAttachmentsFromPermanent(g, permanent)
 	removed := removePermanentFromBattlefield(g, permanent.ObjectID)
 	if removed == nil {
 		return false
 	}
-	zone := destinationZone(g, removed.Owner, destination)
+	zone := destinationZone(g, removed.Owner, actualDestination)
 	if zone == nil {
 		return false
 	}
 	if removed.Token {
 		zone.Add(removed.ObjectID)
-		emitPermanentLeaveEvents(g, removed, destination)
+		emitPermanentLeaveEvents(g, removed, actualDestination)
 		return true
 	}
 
 	zone.Add(removed.CardInstanceID)
-	emitPermanentLeaveEvents(g, removed, destination)
+	emitPermanentLeaveEvents(g, removed, actualDestination)
 	return true
 }
 
@@ -103,15 +107,29 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	if player == nil || !player.Hand.Remove(cardID) {
 		return false
 	}
-	player.Graveyard.Add(cardID)
+	card := g.GetCardInstance(cardID)
+	destination := game.ZoneGraveyard
+	if card != nil {
+		destination = commanderReplacementDestination(g, card.ID, destination)
+	}
+	zoneOwner := playerID
+	if destination == game.ZoneCommand && card != nil {
+		zoneOwner = card.Owner
+	}
+	zone := destinationZone(g, zoneOwner, destination)
+	if zone == nil {
+		return false
+	}
+	zone.Add(cardID)
 	event := game.GameEvent{
 		Player:   playerID,
 		CardID:   cardID,
 		FromZone: game.ZoneHand,
-		ToZone:   game.ZoneGraveyard,
+		ToZone:   destination,
 		Amount:   1,
 	}
 	emitZoneChangeEvent(g, event)
+	// A command-zone replacement changes the destination, but the discard still happened.
 	event.Kind = game.EventCardDiscarded
 	emitEvent(g, event)
 	return true
@@ -147,6 +165,10 @@ func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
 		return nil, false
 	}
 	if replaceDestroyPermanent(g, permanent) {
+		return nil, false
+	}
+	if commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand {
+		movePermanentToZone(g, permanent, game.ZoneGraveyard)
 		return nil, false
 	}
 	if !movePermanentToZone(g, permanent, game.ZoneGraveyard) {

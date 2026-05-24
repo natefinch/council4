@@ -44,7 +44,7 @@ The top-level `Kind` field says which payload is meaningful. Payloads are groupe
 
 The rules engine validates action legality. Agents should normally return one of the legal actions they were given, but the engine still treats returned actions as untrusted input.
 
-Cast-spell actions identify the card to cast and carry chosen targets, chosen modes, X value, and whether Kicker is paid (`KickerPaid`, usually via `action.CastKickedSpell`). The rules engine currently generates supported casts for simple targeted or untargeted spells, choose-one modal spells, X spells, and Kicker spell variants.
+Cast-spell actions identify the card to cast, the source zone (`SourceZone`, defaulting to hand), chosen targets, chosen modes, X value, and whether Kicker is paid (`KickerPaid`, usually via `action.CastKickedSpell`). The rules engine currently generates supported casts for simple targeted or untargeted spells, choose-one modal spells, X spells, Kicker spell variants, and command-zone commander casts.
 
 Activate-ability actions identify the source object, ability index, chosen targets, and X value. The rules engine currently uses them for simple mana abilities, which resolve immediately, plus Equip and general non-mana activated abilities, which use the stack.
 

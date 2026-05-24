@@ -38,6 +38,7 @@ type PlayLandAction struct {
 // CastSpellAction is the payload for casting a spell.
 type CastSpellAction struct {
 	CardID      id.ID
+	SourceZone  game.ZoneType
 	Targets     []game.Target
 	XValue      int
 	ChosenModes []int
@@ -79,10 +80,16 @@ func PlayLand(cardID id.ID) Action {
 
 // CastSpell creates an action to cast a spell.
 func CastSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
+	return CastSpellFromZone(cardID, game.ZoneHand, targets, xValue, chosenModes)
+}
+
+// CastSpellFromZone creates an action to cast a spell from a specific zone.
+func CastSpellFromZone(cardID id.ID, sourceZone game.ZoneType, targets []game.Target, xValue int, chosenModes []int) Action {
 	return Action{
 		Kind: ActionCastSpell,
 		CastSpell: CastSpellAction{
 			CardID:      cardID,
+			SourceZone:  sourceZone,
 			Targets:     targets,
 			XValue:      xValue,
 			ChosenModes: chosenModes,
@@ -92,9 +99,14 @@ func CastSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []in
 
 // CastKickedSpell creates an action to cast a spell with kicker paid.
 func CastKickedSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
-	action := CastSpell(cardID, targets, xValue, chosenModes)
+	action := CastSpellFromZone(cardID, game.ZoneHand, targets, xValue, chosenModes)
 	action.CastSpell.KickerPaid = true
 	return action
+}
+
+// CastCommanderSpell creates an action to cast a commander from the command zone.
+func CastCommanderSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
+	return CastSpellFromZone(cardID, game.ZoneCommand, targets, xValue, chosenModes)
 }
 
 // ActivateAbility creates an action to activate an ability.

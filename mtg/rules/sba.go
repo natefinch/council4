@@ -104,7 +104,11 @@ func (e *Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []Permanen
 		var permanent *game.Permanent
 		if permanentDeathBypassesDestroy(death.reason) {
 			permanent = permanentByObjectID(g, death.objectID)
+			replacedToCommand := permanent != nil && commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
 			if permanent == nil || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+				continue
+			}
+			if replacedToCommand {
 				continue
 			}
 		} else {
@@ -159,10 +163,14 @@ func checkAttachmentStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) 
 	var deaths []PermanentDeathLog
 	for _, auraID := range illegalAuras {
 		aura := permanentByObjectID(g, auraID)
+		replacedToCommand := aura != nil && commanderReplacementDestination(g, aura.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
 		if aura == nil || !movePermanentToZone(g, aura, game.ZoneGraveyard) {
 			continue
 		}
 		changed = true
+		if replacedToCommand {
+			continue
+		}
 		deaths = append(deaths, PermanentDeathLog{
 			Permanent:  aura.ObjectID,
 			SourceID:   aura.CardInstanceID,
@@ -212,7 +220,11 @@ func checkLegendaryRuleStateBasedActions(g *game.Game) (bool, []PermanentDeathLo
 	var deaths []PermanentDeathLog
 	for _, objectID := range pending {
 		permanent := permanentByObjectID(g, objectID)
+		replacedToCommand := permanent != nil && commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
 		if permanent == nil || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+			continue
+		}
+		if replacedToCommand {
 			continue
 		}
 		deaths = append(deaths, PermanentDeathLog{
