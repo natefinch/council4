@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
@@ -149,6 +150,114 @@ func TestLegalDeclareAttackersActionsProductiveFirstThenNoAttacks(t *testing.T) 
 	}
 	if len(legal[2].DeclareAttackers.Attackers) != 0 {
 		t.Fatalf("last declare attackers action = %+v, want no attacks", legal[2].DeclareAttackers.Attackers)
+	}
+}
+
+func TestGoadedCreatureMustAttackIfAble(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanent(g, game.Player1)
+	attacker.Goaded = map[game.PlayerID]bool{game.Player2: true}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+
+	for _, act := range legal {
+		if len(act.DeclareAttackers.Attackers) == 0 {
+			t.Fatalf("legal actions included no attacks despite goaded eligible attacker: %+v", legal)
+		}
+	}
+	if engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers(nil).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() accepted no attacks with goaded eligible attacker")
+	}
+	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player3}},
+	}).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() rejected legal goaded attack")
+	}
+}
+
+func TestGoadedCreatureAttacksNonGoadingPlayerIfAble(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanent(g, game.Player1)
+	attacker.Goaded = map[game.PlayerID]bool{game.Player2: true}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+
+	for _, act := range legal {
+		for _, attack := range act.DeclareAttackers.Attackers {
+			if attack.Target.Player == game.Player2 {
+				t.Fatalf("legal actions included attack at goading player while alternatives exist: %+v", legal)
+			}
+		}
+	}
+	if engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+	}).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() accepted goaded attack at goading player while alternatives exist")
+	}
+	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player4}},
+	}).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() rejected attack at non-goading player")
+	}
+}
+
+func TestGoadedByTwoPlayersMustAttackRemainingNonGoadingOpponentIfAble(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanent(g, game.Player1)
+	attacker.Goaded = map[game.PlayerID]bool{
+		game.Player2: true,
+		game.Player3: true,
+	}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+
+	if len(legal) != 1 {
+		t.Fatalf("legal actions = %d, want only attack at remaining non-goading opponent", len(legal))
+	}
+	want := action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player4}},
+	})
+	if !actionsEqual(legal[0], want) {
+		t.Fatalf("legal action = %+v, want %+v", legal[0], want)
+	}
+	if engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+	}).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() accepted attack at goading player while remaining opponent exists")
+	}
+	if !engine.applyDeclareAttackers(g, game.Player1, want.DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() rejected attack at remaining non-goading opponent")
+	}
+}
+
+func TestGoadDoesNotForceIllegalAttacks(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	defender := addCombatCreaturePermanent(g, game.Player1, game.Defender)
+	defender.Goaded = map[game.PlayerID]bool{game.Player2: true}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+
+	if len(legal) != 1 || len(legal[0].DeclareAttackers.Attackers) != 0 {
+		t.Fatalf("legal actions = %+v, want only no attacks", legal)
+	}
+	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers(nil).DeclareAttackers) {
+		t.Fatal("applyDeclareAttackers() rejected no attacks when goaded creature could not legally attack")
 	}
 }
 
@@ -324,12 +433,12 @@ func TestApplyDeclareBlockersInvalidDoesNotMutate(t *testing.T) {
 			},
 		},
 		{
-			name: "duplicate attacker",
+			name: "unknown attacker",
 			declare: func(g *game.Game, attacker *game.Permanent, blocker *game.Permanent) action.DeclareBlockersAction {
 				other := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 				return action.DeclareBlockers([]game.BlockDeclaration{
 					{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
-					{Blocker: other.ObjectID, Blocking: attacker.ObjectID},
+					{Blocker: other.ObjectID, Blocking: attacker.ObjectID + 100},
 				}).DeclareBlockers
 			},
 		},
@@ -377,6 +486,129 @@ func TestApplyDeclareBlockersInvalidDoesNotMutate(t *testing.T) {
 				t.Fatalf("blocker order = %+v, want empty", g.Combat.BlockerOrder)
 			}
 		})
+	}
+}
+
+func TestApplyDeclareBlockersAllowsMultipleBlockersAndRecordsOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+	declare := action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+		{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+	}).DeclareBlockers
+
+	if !engine.applyDeclareBlockers(g, game.Player2, declare) {
+		t.Fatal("applyDeclareBlockers() = false, want true")
+	}
+	if !slices.Equal(g.Combat.Blockers, declare.Blockers) {
+		t.Fatalf("combat blockers = %+v, want %+v", g.Combat.Blockers, declare.Blockers)
+	}
+	wantOrder := []id.ID{first.ObjectID, second.ObjectID}
+	if !slices.Equal(g.Combat.BlockerOrder[attacker.ObjectID], wantOrder) {
+		t.Fatalf("blocker order = %+v, want %+v", g.Combat.BlockerOrder[attacker.ObjectID], wantOrder)
+	}
+}
+
+func TestFlyingBlockLegalityRequiresFlyingOrReach(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Flying)
+	ground := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	flying := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Flying)
+	reach := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Reach)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	if engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: ground.ObjectID, Blocking: attacker.ObjectID},
+	}).DeclareBlockers) {
+		t.Fatal("ground blocker blocked flying attacker")
+	}
+	if !engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: flying.ObjectID, Blocking: attacker.ObjectID},
+		{Blocker: reach.ObjectID, Blocking: attacker.ObjectID},
+	}).DeclareBlockers) {
+		t.Fatal("flying and reach blockers could not block flying attacker")
+	}
+}
+
+func TestLegalDeclareBlockersActionsExcludeIllegalFlyingAndSingleMenaceBlocks(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	flyingMenace := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Flying, game.Menace)
+	ground := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	reach := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Reach)
+	flying := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Flying)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: flyingMenace.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+
+	legal := legalDeclareBlockersActions(g, game.Player2)
+
+	if len(legal) != 2 {
+		t.Fatalf("legal declare blockers actions = %d, want 2", len(legal))
+	}
+	wantBlock := action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: reach.ObjectID, Blocking: flyingMenace.ObjectID},
+		{Blocker: flying.ObjectID, Blocking: flyingMenace.ObjectID},
+	})
+	if !actionsEqual(legal[0], wantBlock) {
+		t.Fatalf("first legal block action = %+v, want %+v", legal[0], wantBlock)
+	}
+	if len(legal[1].DeclareBlockers.Blockers) != 0 {
+		t.Fatalf("last block action = %+v, want no blocks", legal[1].DeclareBlockers.Blockers)
+	}
+	for _, act := range legal {
+		for _, block := range act.DeclareBlockers.Blockers {
+			if block.Blocker == ground.ObjectID {
+				t.Fatalf("ground blocker appeared in legal flying block action %+v", act)
+			}
+		}
+	}
+}
+
+func TestMenaceRequiresAtLeastTwoBlockers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Menace)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	if engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+	}).DeclareBlockers) {
+		t.Fatal("single blocker blocked menace attacker")
+	}
+	if !engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+		{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+	}).DeclareBlockers) {
+		t.Fatal("two blockers could not block menace attacker")
 	}
 }
 
@@ -436,6 +668,127 @@ func TestResolveCombatDamageMultipleAttackersDealSeparateDamage(t *testing.T) {
 	}
 }
 
+func TestLifelinkGainsLifeFromCombatDamageToPlayers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Lifelink)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if g.Players[game.Player1].Life != 43 {
+		t.Fatalf("attacking player life = %d, want 43", g.Players[game.Player1].Life)
+	}
+	if g.Players[game.Player2].Life != 37 {
+		t.Fatalf("defending player life = %d, want 37", g.Players[game.Player2].Life)
+	}
+}
+
+func TestLifelinkGainsLifeFromCombatDamageToCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Lifelink)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if g.Players[game.Player1].Life != 43 {
+		t.Fatalf("attacking player life = %d, want 43", g.Players[game.Player1].Life)
+	}
+	if blocker.MarkedDamage != 3 {
+		t.Fatalf("blocker marked damage = %d, want 3", blocker.MarkedDamage)
+	}
+	if attacker.MarkedDamage != 2 {
+		t.Fatalf("attacker marked damage = %d, want 2", attacker.MarkedDamage)
+	}
+}
+
+func TestCommanderCombatDamageEliminatesPlayer(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	commander := addCombatCreaturePermanentWithPower(g, game.Player1, 21)
+	g.Players[game.Player1].CommanderInstanceID = commander.CardInstanceID
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
+
+	if got := g.Players[game.Player2].CommanderDamage[commander.CardInstanceID]; got != 21 {
+		t.Fatalf("commander damage = %d, want 21", got)
+	}
+	if !g.Players[game.Player2].Eliminated {
+		t.Fatal("defending player was not eliminated by commander damage")
+	}
+	if len(log.Losses) != 1 || log.Losses[0].Player != game.Player2 || log.Losses[0].Reason != LossReasonCommanderDamage {
+		t.Fatalf("loss logs = %+v, want Player2 commander damage loss", log.Losses)
+	}
+}
+
+func TestNonCommanderCombatDamageDoesNotTrackCommanderDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	commander := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	g.Players[game.Player1].CommanderInstanceID = commander.CardInstanceID
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: creature.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if len(g.Players[game.Player2].CommanderDamage) != 0 {
+		t.Fatalf("commander damage = %+v, want none", g.Players[game.Player2].CommanderDamage)
+	}
+}
+
+func TestCombatDamageUsesPowerCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pumped := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	pumped.Counters.Add(counter.PlusOnePlusOne, 1)
+	shrunken := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	shrunken.Counters.Add(counter.MinusOneMinusOne, 1)
+	zeroBase := addCombatCreaturePermanentWithPower(g, game.Player1, 0)
+	zeroBase.Counters.Add(counter.PlusOnePlusOne, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: pumped.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: shrunken.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: zeroBase.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if g.Players[game.Player2].Life != 34 {
+		t.Fatalf("defending player life = %d, want 34", g.Players[game.Player2].Life)
+	}
+	if len(log.CombatDamage) != 3 {
+		t.Fatalf("combat damage logs = %d, want 3", len(log.CombatDamage))
+	}
+	if log.CombatDamage[0].Damage != 3 || log.CombatDamage[1].Damage != 1 || log.CombatDamage[2].Damage != 2 {
+		t.Fatalf("combat damage = [%d %d %d], want [3 1 2]",
+			log.CombatDamage[0].Damage, log.CombatDamage[1].Damage, log.CombatDamage[2].Damage)
+	}
+}
+
 func TestBlockedCombatDamageMarksCreaturesAndPreventsPlayerDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
@@ -470,6 +823,256 @@ func TestBlockedCombatDamageMarksCreaturesAndPreventsPlayerDamage(t *testing.T) 
 	}
 }
 
+func TestMultiBlockCombatDamageAssignsLethalDamageInOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		BlockerOrder: map[id.ID][]id.ID{
+			attacker.ObjectID: {first.ObjectID, second.ObjectID},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if first.MarkedDamage != 2 {
+		t.Fatalf("first blocker marked damage = %d, want 2", first.MarkedDamage)
+	}
+	if second.MarkedDamage != 3 {
+		t.Fatalf("second blocker marked damage = %d, want 3", second.MarkedDamage)
+	}
+	if attacker.MarkedDamage != 4 {
+		t.Fatalf("attacker marked damage = %d, want 4", attacker.MarkedDamage)
+	}
+	if g.Players[game.Player2].Life != 40 {
+		t.Fatalf("defending player life = %d, want 40", g.Players[game.Player2].Life)
+	}
+	if len(log.CreatureDamage) != 4 {
+		t.Fatalf("creature damage logs = %d, want 4", len(log.CreatureDamage))
+	}
+}
+
+func TestMultiBlockCombatDamageStopsWhenInsufficientForFirstBlocker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 4)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		BlockerOrder: map[id.ID][]id.ID{
+			attacker.ObjectID: {first.ObjectID, second.ObjectID},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if first.MarkedDamage != 3 {
+		t.Fatalf("first blocker marked damage = %d, want 3", first.MarkedDamage)
+	}
+	if second.MarkedDamage != 0 {
+		t.Fatalf("second blocker marked damage = %d, want 0", second.MarkedDamage)
+	}
+	if attacker.MarkedDamage != 6 {
+		t.Fatalf("attacker marked damage = %d, want 6", attacker.MarkedDamage)
+	}
+}
+
+func TestTrampleAssignsExcessDamageToDefendingPlayer(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5, game.Trample)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if blocker.MarkedDamage != 2 {
+		t.Fatalf("blocker marked damage = %d, want 2", blocker.MarkedDamage)
+	}
+	if g.Players[game.Player2].Life != 37 {
+		t.Fatalf("defending player life = %d, want 37", g.Players[game.Player2].Life)
+	}
+	if len(log.CombatDamage) != 1 || log.CombatDamage[0].Damage != 3 {
+		t.Fatalf("combat damage logs = %+v, want 3 trample damage", log.CombatDamage)
+	}
+}
+
+func TestDeathtouchAssignsOneDamageAsLethal(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5, game.Deathtouch)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		BlockerOrder: map[id.ID][]id.ID{
+			attacker.ObjectID: {first.ObjectID, second.ObjectID},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if first.MarkedDamage != 1 {
+		t.Fatalf("first blocker marked damage = %d, want 1", first.MarkedDamage)
+	}
+	if !first.MarkedDeathtouchDamage {
+		t.Fatal("first blocker did not record deathtouch damage")
+	}
+	if second.MarkedDamage != 4 {
+		t.Fatalf("second blocker marked damage = %d, want 4", second.MarkedDamage)
+	}
+	if !second.MarkedDeathtouchDamage {
+		t.Fatal("second blocker did not record deathtouch damage")
+	}
+	if g.Players[game.Player2].Life != 40 {
+		t.Fatalf("defending player life = %d, want 40", g.Players[game.Player2].Life)
+	}
+}
+
+func TestDeathtouchAssignsFreshDamageDespitePreexistingMarkedDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5, game.Deathtouch)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	first.MarkedDamage = 1
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		BlockerOrder: map[id.ID][]id.ID{
+			attacker.ObjectID: {first.ObjectID, second.ObjectID},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if first.MarkedDamage != 2 {
+		t.Fatalf("first blocker marked damage = %d, want 2", first.MarkedDamage)
+	}
+	if !first.MarkedDeathtouchDamage {
+		t.Fatal("first blocker did not record deathtouch damage")
+	}
+	if second.MarkedDamage != 4 {
+		t.Fatalf("second blocker marked damage = %d, want 4", second.MarkedDamage)
+	}
+}
+
+func TestDeathtouchTrampleAssignsOneDamageBeforeTramplingOver(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5, game.Deathtouch, game.Trample)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 10)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
+		},
+	}
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.resolveCombatDamage(g, &log)
+
+	if blocker.MarkedDamage != 1 {
+		t.Fatalf("blocker marked damage = %d, want 1", blocker.MarkedDamage)
+	}
+	if !blocker.MarkedDeathtouchDamage {
+		t.Fatal("blocker did not record deathtouch damage")
+	}
+	if g.Players[game.Player2].Life != 36 {
+		t.Fatalf("defending player life = %d, want 36", g.Players[game.Player2].Life)
+	}
+	if len(log.CombatDamage) != 1 || log.CombatDamage[0].Damage != 4 {
+		t.Fatalf("combat damage logs = %+v, want 4 trample damage", log.CombatDamage)
+	}
+}
+
+func TestDoubleStrikeTrampleDealsDamageWhenAllBlockersDieFirst(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.DoubleStrike, game.Trample)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
+
+	if permanentByObjectID(g, blocker.ObjectID) != nil {
+		t.Fatal("blocker survived first-strike trample damage")
+	}
+	if g.Players[game.Player2].Life != 36 {
+		t.Fatalf("defending player life = %d, want 36", g.Players[game.Player2].Life)
+	}
+	if len(log.CombatDamage) != 2 {
+		t.Fatalf("combat damage logs = %+v, want first-strike excess and normal trample damage", log.CombatDamage)
+	}
+	if log.CombatDamage[0].Damage != 1 || log.CombatDamage[1].Damage != 3 {
+		t.Fatalf("combat damage amounts = [%d %d], want [1 3]", log.CombatDamage[0].Damage, log.CombatDamage[1].Damage)
+	}
+}
+
+func TestFirstStrikeDeathtouchKillsBlockerBeforeNormalCombatDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 1, game.FirstStrike, game.Deathtouch)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
+
+	if permanentByObjectID(g, attacker.ObjectID) == nil {
+		t.Fatal("first-strike deathtouch attacker died")
+	}
+	if attacker.MarkedDamage != 0 {
+		t.Fatalf("attacker marked damage = %d, want 0", attacker.MarkedDamage)
+	}
+	if permanentByObjectID(g, blocker.ObjectID) != nil {
+		t.Fatal("blocker survived first-strike deathtouch damage")
+	}
+	if len(log.Deaths) != 1 || log.Deaths[0].Permanent != blocker.ObjectID || log.Deaths[0].Reason != PermanentDeathReasonLethalDamage {
+		t.Fatalf("death logs = %+v, want blocker lethal damage death", log.Deaths)
+	}
+}
+
 func TestCombatWithFirstLegalBlockerKillsBlockedAttacker(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
@@ -496,16 +1099,83 @@ func TestCombatWithFirstLegalBlockerKillsBlockedAttacker(t *testing.T) {
 	}
 }
 
+func TestFirstStrikeKillsBlockerBeforeNormalCombatDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.FirstStrike)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
+
+	if permanentByObjectID(g, attacker.ObjectID) == nil {
+		t.Fatal("first-strike attacker died")
+	}
+	if attacker.MarkedDamage != 0 {
+		t.Fatalf("first-strike attacker marked damage = %d, want 0", attacker.MarkedDamage)
+	}
+	if permanentByObjectID(g, blocker.ObjectID) != nil {
+		t.Fatal("blocker survived first-strike lethal damage")
+	}
+	if !g.Players[game.Player2].Graveyard.Contains(blocker.CardInstanceID) {
+		t.Fatal("dead blocker did not move to graveyard")
+	}
+	if len(log.Deaths) != 1 || log.Deaths[0].Permanent != blocker.ObjectID {
+		t.Fatalf("death logs = %+v, want blocker death", log.Deaths)
+	}
+}
+
+func TestDoubleStrikeDealsDamageInBothCombatDamagePasses(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.DoubleStrike)
+	engine := NewEngine(nil)
+	log := TurnLog{}
+
+	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
+
+	if g.Players[game.Player2].Life != 36 {
+		t.Fatalf("defending player life = %d, want 36", g.Players[game.Player2].Life)
+	}
+	if len(log.CombatDamage) != 2 {
+		t.Fatalf("combat damage logs = %d, want 2", len(log.CombatDamage))
+	}
+	if log.CombatDamage[0].Damage != 2 || log.CombatDamage[1].Damage != 2 {
+		t.Fatalf("combat damage amounts = [%d %d], want [2 2]", log.CombatDamage[0].Damage, log.CombatDamage[1].Damage)
+	}
+}
+
+func TestCombatPhaseSkipsFirstStrikeStepWithoutFirstOrDoubleStrike(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	recorder := &combatStepRecorder{}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: recorder,
+		game.Player2: recorder,
+		game.Player3: recorder,
+		game.Player4: recorder,
+	}
+
+	engine.runCombatPhase(g, agents, &TurnLog{})
+
+	if slices.Contains(recorder.firstVisits, game.StepFirstStrikeDamage) {
+		t.Fatalf("visited steps = %v, want no first-strike damage step", recorder.firstVisits)
+	}
+}
+
 func TestCleanupStepClearsMarkedDamageOnSurvivors(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	survivor := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 	survivor.MarkedDamage = 2
+	survivor.MarkedDeathtouchDamage = true
 	engine := NewEngine(nil)
 
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 
 	if survivor.MarkedDamage != 0 {
 		t.Fatalf("marked damage after cleanup = %d, want 0", survivor.MarkedDamage)
+	}
+	if survivor.MarkedDeathtouchDamage {
+		t.Fatal("marked deathtouch damage was not cleared during cleanup")
 	}
 }
 

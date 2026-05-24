@@ -78,6 +78,26 @@ func TestDestroyPermanentMovesToOwnersGraveyard(t *testing.T) {
 	}
 }
 
+func TestDestroyPermanentDoesNotMoveIndestructiblePermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatCreaturePermanent(g, game.Player1, game.Indestructible)
+
+	removed, ok := destroyPermanent(g, permanent.ObjectID)
+
+	if ok {
+		t.Fatal("destroyPermanent() ok = true, want false")
+	}
+	if removed != nil {
+		t.Fatalf("destroyed permanent = %+v, want nil", removed)
+	}
+	if permanentByObjectID(g, permanent.ObjectID) == nil {
+		t.Fatal("indestructible permanent left the battlefield")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(permanent.CardInstanceID) {
+		t.Fatal("indestructible permanent moved to graveyard")
+	}
+}
+
 func TestRemovePermanentFromBattlefieldMissingPermanentReturnsNil(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 

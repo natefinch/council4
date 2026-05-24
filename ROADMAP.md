@@ -22,17 +22,18 @@ Use this file as the project-level feature checklist. Check items off as they la
 
 ## Phase 6 — Complete core combat
 
-- [ ] Multi-blocking and attacker damage assignment order.
-- [ ] Evasion and blocking restrictions: Flying, Reach, Menace, Protection-like restrictions.
-- [ ] First Strike and Double Strike combat damage steps.
-- [ ] Trample damage assignment to defending players.
-- [ ] Deathtouch lethal-damage assignment rules.
-- [ ] Lifelink life gain from damage.
-- [ ] Indestructible, regeneration, and destruction replacement/prevention behavior.
-- [ ] Combat damage prevention and replacement effects.
-- [ ] Commander combat damage tracking from commander permanents.
-- [ ] Attacking planeswalkers and battles.
-- [ ] Attack requirements, attack restrictions, goad, and attack taxes.
+- [x] Multi-blocking with deterministic blocker order.
+- [x] Evasion and blocking restrictions: Flying, Reach, and Menace.
+- [x] First Strike and Double Strike combat damage steps.
+- [x] Trample damage assignment to defending players.
+- [x] Deathtouch lethal-damage assignment rules.
+- [x] Lifelink life gain from combat damage.
+- [x] Indestructible survival from destroy effects and lethal-damage SBAs.
+- (deferred) Combat damage prevention and replacement effects.
+- [x] Commander combat damage tracking from commander permanents.
+- (deferred) Attacking planeswalkers and battles.
+- [x] Basic attack requirements and goad target preference.
+- (deferred) Attacker-chosen damage assignment order, protection, regeneration, attack taxes, and other prevention/replacement behavior.
 
 ## Phase 7 — Permanent interaction and richer state-based actions
 
@@ -41,10 +42,12 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] Board wipes and mass-effect execution.
 - [ ] Token creation and token cleanup semantics.
 - [ ] +1/+1 and -1/-1 counters, including counter cancellation.
-- [ ] P/T modifications from counters and simple temporary effects.
+- [x] P/T modifications from +1/+1 and -1/-1 counters for combat and lethal-damage SBAs.
 - [ ] Auras, Equipment, attach/unattach, and equip actions.
 - [ ] Maximum hand size and cleanup discard.
 - [ ] More state-based actions: 0 toughness, lethal damage, legendary rule, illegal attachments, aura legality, planeswalker loyalty, battle defense.
+- [ ] (deferred from Phase 6) Attacking planeswalkers and battles.
+- [ ] (deferred from Phase 6) Regeneration and other destruction replacement behavior.
 
 ## Phase 8 — Mana, casting, and costs
 
@@ -52,6 +55,7 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] Multicolor, colorless, generic, hybrid, phyrexian, snow, and variable mana costs.
 - [ ] X spells and X-cost choice handling.
 - [ ] Additional costs, alternative costs, cost reductions/increases, and sacrifice-as-cost.
+- [ ] (deferred from Phase 6) Attack taxes and attack cost payments.
 - [ ] Modal spells and mode selection.
 - [ ] Kicker, Flashback, Madness, Escape, Foretell, Cycling, Morph/Disguise, Equip, and other common non-combat keyword actions.
 - [ ] Flash and instant-speed timing support for non-instant cards.
@@ -64,6 +68,8 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] Activated ability action generation and resolution.
 - [ ] Static abilities and continuous effect support.
 - [ ] Replacement and prevention effects.
+- [ ] (deferred from Phase 6) Combat damage prevention and replacement effects.
+- [ ] (deferred from Phase 6) Protection restrictions and prevention behavior.
 - [ ] Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
 - [ ] Turn-duration effects and cleanup expiry.
 - [ ] Choice framework for may choices, mode choices, ordering, scry/surveil, discard, sacrifice, tutor, and reveal decisions.
@@ -103,6 +109,7 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [ ] Deck pre-analysis: tags, mana curve, commander profile, archetype classification, and power-level estimate.
 - [ ] Threat assessment and target selection for multiplayer.
 - [ ] Combat attack/block heuristics beyond `FirstLegal`.
+- [ ] (deferred from Phase 6) Attacker-chosen combat damage assignment order.
 - [ ] Mana planning and sequencing heuristics.
 - [ ] Stack interaction heuristics for removal and counterspells.
 - [ ] Personality/skill knobs: aggression, risk tolerance, politics weight, noise, and archetype bias.

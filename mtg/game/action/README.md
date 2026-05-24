@@ -46,6 +46,6 @@ The rules engine validates action legality. Agents should normally return one of
 
 Cast-spell actions identify the card to cast and carry chosen targets, modes, and X value. Early spell support only generates untargeted, non-X casts; targeting and modal choices are layered in later.
 
-Declare-attackers actions carry concrete `game.AttackDeclaration` values. The rules engine offers them only during the declare attackers turn-based action, before the declare attackers priority window; they are not normal priority actions.
+Declare-attackers actions carry concrete `game.AttackDeclaration` values. The rules engine offers them only during the declare attackers turn-based action, before the declare attackers priority window; they are not normal priority actions. The current generator keeps attack choices compact and filters them through attack restrictions and goad requirements.
 
-Declare-blockers actions carry concrete `game.BlockDeclaration` values. The rules engine offers them only to defending players during the declare blockers turn-based action, before the declare blockers priority window.
+Declare-blockers actions carry concrete `game.BlockDeclaration` values. The rules engine offers them only to defending players during the declare blockers turn-based action, before the declare blockers priority window. Multiple blockers can block one attacker, and declaration order becomes the deterministic blocker order used by combat damage assignment.

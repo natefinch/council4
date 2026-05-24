@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
@@ -150,6 +151,125 @@ func TestCheckPermanentStateBasedActionsDestroysCreatureWithLethalDamage(t *test
 	}
 }
 
+func TestCheckPermanentStateBasedActionsUsesCounterAdjustedToughness(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	pumped := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	pumped.Counters.Add(counter.PlusOnePlusOne, 1)
+	pumped.MarkedDamage = 2
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if changed {
+		t.Fatalf("checkPermanentStateBasedActions() = true, deaths %+v; want pumped 3 toughness creature to survive 2 damage", deaths)
+	}
+	pumped.MarkedDamage = 3
+
+	changed, deaths = engine.checkPermanentStateBasedActions(g)
+
+	if !changed {
+		t.Fatal("checkPermanentStateBasedActions() = false, want true after lethal counter-adjusted damage")
+	}
+	if permanentByObjectID(g, pumped.ObjectID) != nil {
+		t.Fatal("creature with lethal counter-adjusted damage remained on battlefield")
+	}
+	if len(deaths) != 1 || deaths[0].Permanent != pumped.ObjectID || deaths[0].Reason != PermanentDeathReasonLethalDamage {
+		t.Fatalf("death logs = %+v, want pumped lethal damage death", deaths)
+	}
+}
+
+func TestCheckPermanentStateBasedActionsDestroysCreatureWithDeathtouchDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	creature.MarkedDamage = 1
+	creature.MarkedDeathtouchDamage = true
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if !changed {
+		t.Fatal("checkPermanentStateBasedActions() = false, want true")
+	}
+	if permanentByObjectID(g, creature.ObjectID) != nil {
+		t.Fatal("creature with deathtouch damage remained on battlefield")
+	}
+	if len(deaths) != 1 || deaths[0].Permanent != creature.ObjectID || deaths[0].Reason != PermanentDeathReasonLethalDamage {
+		t.Fatalf("death logs = %+v, want deathtouch lethal damage death", deaths)
+	}
+}
+
+func TestCheckPermanentStateBasedActionsDoesNotDestroyIndestructibleWithLethalDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Indestructible)
+	creature.MarkedDamage = 5
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if changed {
+		t.Fatalf("checkPermanentStateBasedActions() = true, deaths %+v; want indestructible creature to survive", deaths)
+	}
+	if permanentByObjectID(g, creature.ObjectID) == nil {
+		t.Fatal("indestructible creature with lethal damage left the battlefield")
+	}
+	if creature.MarkedDamage != 5 {
+		t.Fatalf("marked damage = %d, want 5 until cleanup", creature.MarkedDamage)
+	}
+	if g.Players[game.Player1].Graveyard.Contains(creature.CardInstanceID) {
+		t.Fatal("indestructible creature moved to graveyard")
+	}
+}
+
+func TestCheckPermanentStateBasedActionsDoesNotDestroyIndestructibleWithDeathtouchDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 5, game.Indestructible)
+	creature.MarkedDamage = 1
+	creature.MarkedDeathtouchDamage = true
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if changed {
+		t.Fatalf("checkPermanentStateBasedActions() = true, deaths %+v; want indestructible creature to survive deathtouch damage", deaths)
+	}
+	if permanentByObjectID(g, creature.ObjectID) == nil {
+		t.Fatal("indestructible creature with deathtouch damage left the battlefield")
+	}
+	if creature.MarkedDamage != 1 || !creature.MarkedDeathtouchDamage {
+		t.Fatalf("marked damage = %d deathtouch=%v, want retained marked damage until cleanup", creature.MarkedDamage, creature.MarkedDeathtouchDamage)
+	}
+}
+
+func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	zero := game.PT{Value: 0}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Indestructible Zero Toughness",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &zero,
+		Toughness: &zero,
+		Abilities: []game.AbilityDef{
+			{
+				Kind:     game.StaticAbility,
+				Keywords: []game.Keyword{game.Indestructible},
+			},
+		},
+	})
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if !changed {
+		t.Fatal("checkPermanentStateBasedActions() = false, want true")
+	}
+	if permanentByObjectID(g, creature.ObjectID) != nil {
+		t.Fatal("indestructible zero-toughness creature remained on battlefield")
+	}
+	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroToughness {
+		t.Fatalf("death logs = %+v, want zero-toughness death", deaths)
+	}
+}
+
 func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -168,6 +288,25 @@ func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing
 	}
 	if permanentByObjectID(g, creature.ObjectID) != nil {
 		t.Fatal("zero-toughness creature remained on battlefield")
+	}
+	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroToughness {
+		t.Fatalf("death logs = %+v, want zero-toughness death", deaths)
+	}
+}
+
+func TestCheckPermanentStateBasedActionsUsesMinusCounterForZeroToughness(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
+	creature.Counters.Add(counter.MinusOneMinusOne, 1)
+
+	changed, deaths := engine.checkPermanentStateBasedActions(g)
+
+	if !changed {
+		t.Fatal("checkPermanentStateBasedActions() = false, want true")
+	}
+	if permanentByObjectID(g, creature.ObjectID) != nil {
+		t.Fatal("minus-countered zero-toughness creature remained on battlefield")
 	}
 	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroToughness {
 		t.Fatalf("death logs = %+v, want zero-toughness death", deaths)

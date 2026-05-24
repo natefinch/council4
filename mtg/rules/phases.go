@@ -80,6 +80,7 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 			continue
 		}
 		permanent.MarkedDamage = 0
+		permanent.MarkedDeathtouchDamage = false
 	}
 	emptyManaPools(g)
 	g.Combat = nil

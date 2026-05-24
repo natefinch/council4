@@ -30,6 +30,18 @@ _Avoid_: Card logic, card script, card handler
 A composable building-block game action — deal damage, destroy permanent, draw cards, create token, etc. Card implementations are composed from these.
 _Avoid_: Effect type, action type
 
+**Combat**:
+The turn phase where creatures attack players or other attackable objects and deal combat damage.
+_Avoid_: Battle, fight, attack phase
+
+**Attacker**:
+A creature declared to attack during combat.
+_Avoid_: Combatant, assailant
+
+**Combat Damage**:
+Damage dealt by attacking and blocking creatures during the combat damage step.
+_Avoid_: Attack damage, battle damage
+
 ### Engine Concepts
 
 **Engine**:

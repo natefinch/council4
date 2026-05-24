@@ -43,6 +43,9 @@ func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
 	if permanent == nil {
 		return nil, false
 	}
+	if hasKeyword(g, permanent, game.Indestructible) {
+		return nil, false
+	}
 	if !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
 		return nil, false
 	}

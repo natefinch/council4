@@ -94,9 +94,18 @@ func (e *Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []Permanen
 
 	var deaths []PermanentDeathLog
 	for _, death := range pending {
-		permanent, ok := destroyPermanent(g, death.objectID)
-		if !ok {
-			continue
+		var permanent *game.Permanent
+		if death.reason == PermanentDeathReasonZeroToughness {
+			permanent = permanentByObjectID(g, death.objectID)
+			if permanent == nil || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+				continue
+			}
+		} else {
+			var ok bool
+			permanent, ok = destroyPermanent(g, death.objectID)
+			if !ok {
+				continue
+			}
 		}
 		deaths = append(deaths, PermanentDeathLog{
 			Permanent:  permanent.ObjectID,
@@ -114,14 +123,21 @@ func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDea
 	if card == nil || !card.HasType(game.TypeCreature) {
 		return "", false
 	}
-	toughness, ok := creatureToughness(card)
+	toughness, ok := effectiveToughness(g, permanent)
 	if !ok {
 		return "", false
 	}
 	if toughness <= 0 {
 		return PermanentDeathReasonZeroToughness, true
 	}
-	if permanent.MarkedDamage >= toughness {
+	if hasKeyword(g, permanent, game.Indestructible) {
+		return "", false
+	}
+	if permanent.MarkedDeathtouchDamage {
+		return PermanentDeathReasonLethalDamage, true
+	}
+	lethal, ok := lethalDamageNeeded(g, permanent)
+	if ok && permanent.MarkedDamage >= lethal {
 		return PermanentDeathReasonLethalDamage, true
 	}
 	return "", false

@@ -63,6 +63,11 @@ type Permanent struct {
 	// permanent. Cleared during the cleanup step (CR 120.3).
 	MarkedDamage int
 
+	// MarkedDeathtouchDamage records whether any damage currently marked on
+	// this permanent came from a source with deathtouch. Cleared during the
+	// cleanup step alongside MarkedDamage.
+	MarkedDeathtouchDamage bool
+
 	// --- Attachments ---
 
 	// Attachments lists the ObjectIDs of permanents attached to this one

@@ -117,7 +117,7 @@ Beginning ──▶ Precombat Main ──▶ Combat ──▶ Postcombat Main �
 
 Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-player clockwise rotation and skips eliminated players.
 
-`CombatState` is populated by the rules engine during combat. The current rules slice stores player attack declarations, single-blocker declarations, and trivial one-blocker order. Explicit multi-blocker damage assignment is left for a later combat phase; combat damage and creature death logs live in `mtg/rules.GameResult`.
+`CombatState` is populated by the rules engine during combat. The current rules slice stores player attack declarations, block declarations, and blocker order for deterministic multi-block damage assignment. `Permanent.Goaded` stores which players have goaded a creature so the rules engine can enforce attack requirements during declare attackers. Combat damage and creature death logs live in `mtg/rules.GameResult`.
 
 ### Abilities
 
@@ -130,7 +130,7 @@ Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-play
 | Triggered | `When` / `Whenever` / `At` | "When this enters the battlefield…" |
 | Static | declarative | "Creatures you control get +1/+1." |
 
-50+ keywords are enumerated (flying, haste, hexproof, flashback, cascade, etc.). `Effect` stores simple effect primitive data (`Type`, `Amount`, `TargetIndex`, and `Description`); the rules engine owns execution behavior.
+50+ keywords are enumerated (flying, haste, deathtouch, lifelink, indestructible, flashback, cascade, etc.). `Effect` stores simple effect primitive data (`Type`, `Amount`, `TargetIndex`, and `Description`); the rules engine owns execution behavior. Current combat rules also consult supported keyword counters such as Flying, First Strike, Deathtouch, Lifelink, Trample, Vigilance, and Indestructible.
 
 ### Runtime Targets
 
