@@ -36,6 +36,8 @@ const (
 	Reach                        // Reach counter
 	Trample                      // Trample counter
 	Vigilance                    // Vigilance counter
+	Energy                       // Energy counter (on players)
+	Experience                   // Experience counter (on players)
 )
 
 // String returns the human-readable name of the counter kind.
@@ -91,6 +93,10 @@ func (k Kind) String() string {
 		return "trample"
 	case Vigilance:
 		return "vigilance"
+	case Energy:
+		return "energy"
+	case Experience:
+		return "experience"
 	default:
 		return "unknown"
 	}

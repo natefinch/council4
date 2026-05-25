@@ -250,6 +250,34 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 	})
 }
 
+func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	card := &game.CardDef{Name: "Taxed Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: &cost}
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Spell Tax",
+		Types: []game.CardType{game.TypeEnchantment},
+		Abilities: []game.AbilityDef{{
+			Kind: game.StaticAbility,
+			Effects: []game.Effect{{
+				Type: game.EffectApplyRule,
+				RuleEffects: []game.RuleEffect{{
+					Kind: game.RuleEffectCostModifier,
+					CostModifier: game.CostModifier{
+						Kind:            game.CostModifierSpell,
+						GenericIncrease: 1,
+					},
+				}},
+			}},
+		}},
+	})
+
+	if canPaySpellCosts(g, game.Player1, card, 0) {
+		t.Fatal("static spell tax allowed {G} spell with only one mana")
+	}
+}
+
 func TestHybridCostCanBePaidByEitherColor(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, "Plains")

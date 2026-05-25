@@ -206,6 +206,12 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 	if owner == nil {
 		return false
 	}
+	intendedDestination := game.ZoneGraveyard
+	if obj != nil && obj.Flashback {
+		// Flashback replaces any move from the stack to anywhere else with exile
+		// after the spell was cast from a graveyard (CR 702.34a, CR 702.34c).
+		intendedDestination = game.ZoneExile
+	}
 	destination := replacementZoneChangeDestination(g, game.GameEvent{
 		Kind:          game.EventZoneChanged,
 		SourceID:      card.ID,
@@ -214,7 +220,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		Player:        card.Owner,
 		CardID:        card.ID,
 		FromZone:      game.ZoneStack,
-		ToZone:        game.ZoneGraveyard,
+		ToZone:        intendedDestination,
 	})
 	destination = commanderReplacementDestination(g, card.ID, destination)
 	zone := destinationZone(g, card.Owner, destination)

@@ -40,6 +40,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 
 	g.Turn.Step = game.StepUntap
 	expireTurnStartDurations(g)
+	expireGoadForActivePlayer(g)
 	for _, permanent := range g.Battlefield {
 		if permanent == nil {
 			continue
@@ -122,6 +123,7 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	expireCleanupDurations(g)
 	expirePreventionShields(g)
 	expireReplacementEffects(g)
+	expireRuleEffects(g)
 	e.applyStateBasedActions(g)
 	emptyManaPools(g)
 	g.Combat = nil

@@ -56,7 +56,7 @@ Implemented now:
 - `Engine` skeleton and deterministic RNG configuration.
 - `Engine.NewGame` for deterministic game setup using the engine RNG.
 - `PlayerAgent`, `PlayerObservation`, and result/log data types.
-- `ChoiceAgent` support for non-action decisions with deterministic fallback and per-turn choice logging, including trigger targets/order, optional effects, payment choices, and scry/surveil decisions.
+- `ChoiceAgent` support for non-action decisions with deterministic fallback and per-turn choice logging, including trigger targets/order, optional effects, payment choices, resolution/proliferate choices, and scry/surveil decisions.
 - Opening hand setup and card drawing.
 - Phase helpers for beginning, main, combat, ending, cleanup, and advancing to the next turn.
 - Extra turn handling in LIFO order, skipping eliminated players.
@@ -64,21 +64,21 @@ Implemented now:
 - State-based actions for player elimination from 0 life, lethal poison, lethal commander damage, and failed draws.
 - Conservative Commander deck legality validation for 99-card decks plus commander, singleton nonbasic names, simple legendary-creature commanders, and trusted color identity data.
 - Permanent state-based actions for 0 toughness, lethal damage, deathtouch damage, 0 planeswalker loyalty, 0 battle defense, illegal Auras/attachments, token cleanup, legendary-rule duplicates, and +1/+1/-1/-1 counter cancellation.
-- Legal action generation for passing, playing lands, casting supported spells from hand or a commander from the command zone with player or permanent targets, activating simple mana/equip/loyalty/general abilities, Cycling from hand, Kicker spell variants, and richer attacker declarations.
+- Legal action generation for passing, playing lands, casting supported spells from hand, graveyard when permitted, or a commander from the command zone with player or permanent targets, activating simple mana/equip/loyalty/general abilities, Cycling from hand, Kicker spell variants, and richer attacker declarations.
 - Action application for passing, playing lands, casting supported spells, command-zone commander casts with tax/count tracking, activating simple mana/equip/loyalty/general abilities, Cycling from hand, paying attack taxes, and declaring attackers.
 - Mana cost payment helpers that use pool mana first, then auto-tap untapped basic lands and simple tap mana abilities from mana rocks or non-summoning-sick mana dorks, with generic spell cost modifiers and attack-tax payment exclusions.
 - Stack resolution for creature spells entering the battlefield, instant/sorcery spells moving to graveyard, modal spell effects, triggered abilities, equip activated abilities, Cycling abilities, Kicker effects, loyalty abilities, delayed triggers, and general non-mana activated abilities.
-- Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, exile, bounce, sacrifice, tap/untap, adding/removing/moving counters, mass selector effects, token creation, runtime P/T modifiers, declarative runtime continuous effects, scry/surveil/mill, fight, transform, phase out, emblems, prevention, regeneration, and delayed triggers. Unsupported effect primitives are logged instead of silently no-oping.
+- Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, exile, bounce, sacrifice, tap/untap, adding/removing/moving counters, mass selector effects, token creation, runtime P/T modifiers, declarative runtime continuous and rule effects, scry/surveil/mill, fight, transform, phase out, emblems, proliferate, goad, prevention, regeneration, and delayed triggers. Unsupported effect primitives are logged instead of silently no-oping.
 - Hand-written spell implementation escape hatch through `CardDef.ImplementationID`, `Engine.RegisterCardImplementation`, and `CardContext` mutation helpers.
 - Typed `game.GameEvent` emission for spell casts/resolutions, ETB, death, damage, draw, discard, zone changes, attack/block declarations, and supported beginning-of-step events.
-- Triggered ability detection from `game.TriggerPattern`, choice-mediated target selection, APNAP stack placement with choice-mediated same-controller ordering, optional-trigger resolution choices, spell/permanent type filters, supported beginning-of-step triggers, and resolution through `StackTriggeredAbility`.
+- Triggered ability detection from `game.TriggerPattern`, choice-mediated target selection, APNAP stack placement with choice-mediated same-controller ordering, optional-trigger resolution choices, spell/permanent type filters, supported beginning-of-step triggers, latched state triggers, implicit Prowess triggers, and resolution through `StackTriggeredAbility`.
 - Player- and permanent-targeted spell action generation using `TargetSpec` and runtime `game.Target` values, including min/max target counts, mixed target slots, and structured target predicates with legacy string fallback.
 - Resolution-time target re-checking with counter-by-rules behavior when all targets become illegal.
 - Colorless and X-cost payment, with legal X choices capped for action generation and dynamic X-based effect amounts on resolution.
 - Simple sacrifice-as-cost for spells, with sacrificed permanents excluded from mana payment plans.
 - Modal spell support using `Mode`, `ChosenModes`, min/max mode counts, duplicate-mode flags, and mode-specific target validation/resolution.
-- Flash timing for non-instant cards with the Flash keyword.
-- Combat step structure, summoning-sickness clearing, single/all attacker choices, multi-blocks, goad attack requirements, attack taxes, Flying/Reach/Menace block legality, planeswalker and battle attack targets, first strike/double strike damage passes, Trample/Deathtouch combat damage assignment including validated attacker-provided assignments, Lifelink and commander combat damage, Indestructible/regeneration survival from destroy/lethal damage, phasing checks, combat damage to players and permanents, and lethal permanent cleanup.
+- Flash timing for non-instant cards with the Flash keyword, and Flashback-style graveyard casting for cards with a `Flashback` alternative cost.
+- Combat step structure, summoning-sickness clearing, single/all attacker choices, multi-blocks, goad attack requirements with expiry, attack taxes, Flying/Reach/Menace block legality, static attack/block prohibitions, planeswalker and battle attack targets, first strike/double strike damage passes, Trample/Deathtouch combat damage assignment including validated attacker-provided assignments, Lifelink and commander combat damage, Indestructible/regeneration survival from destroy/lethal damage, phasing checks, combat damage to players and permanents, and lethal permanent cleanup.
 - Effective characteristic calculation through runtime continuous effects: copy/control/text/type/color/ability/P-T layers, timestamps/dependencies, face-down baseline values, dynamic star P/T, counters, temporary modifiers, and static `EffectModifyPT` effects from battlefield permanents.
 - Battlefield zone-change helpers for moving card-backed permanents and tokens to destination zones, detaching attachments, and removing tokens from non-battlefield zones as an SBA.
 - Deterministic Commander command-zone replacement for supported battlefield, stack, discard, mill, and surveil zone changes.
@@ -90,8 +90,8 @@ Not implemented yet:
 
 - Full attachment legality beyond basic creature-only Aura/Equipment support.
 - Agent-driven mulligan decisions, choice-based discard/sacrifice/exile/reveal/tutor decisions, agent-selected replacement ordering, state triggers, copy triggers, and generic APNAP simultaneous choices beyond trigger ordering.
-- Flashback, Madness, Escape, Foretell, Morph/Disguise, Suspend, Evoke, Convoke, Delve, Ward, Prowess, proliferate, goad, copy-on-stack, cast-without-paying, and other non-combat keyword actions beyond Flash, basic Equip, Cycling, Kicker, scry/surveil/mill, fight, and transform.
-- Non-commander cast-from-zone permissions, play-vs-cast effects, face-up special actions, Saga chapters, DFC back-face characteristics, day/night transitions, exile-on-resolution replacements, and full "can't be countered" support once counter effects exist.
+- Madness, Escape, Foretell, Morph/Disguise, Suspend, Evoke, Convoke, Delve, Ward, Storm, Cascade, copy-on-stack, cast-without-paying, and other non-combat keyword actions beyond Flash, Flashback, Prowess, basic Equip, Cycling, Kicker, proliferate, goad, scry/surveil/mill, fight, and transform.
+- Play-vs-cast effects, face-up special actions, Saga chapters, DFC back-face characteristics, day/night transitions, exile-on-resolution replacements beyond Flashback, and full "can't be countered" support once counter effects exist.
 
 ## Game events
 

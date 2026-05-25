@@ -69,6 +69,10 @@ type StackObject struct {
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool
 
+	// Flashback is true if this spell was cast from a graveyard using
+	// flashback; it is exiled if it would leave the stack (CR 702.34).
+	Flashback bool
+
 	// AdditionalCostsPaid describes any additional costs that were paid
 	// (e.g., "sacrificed a creature", "discarded a card").
 	AdditionalCostsPaid []string

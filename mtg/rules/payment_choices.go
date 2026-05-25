@@ -76,7 +76,7 @@ func payableSpellCostOptions(g *game.Game, playerID game.PlayerID, card *game.Ca
 
 func payableSpellCostOptionsFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int) []spellCostOption {
 	var payable []spellCostOption
-	for _, option := range spellCostOptions(card) {
+	for _, option := range spellCostOptionsForZoneAndKicker(card, sourceZone, false) {
 		if _, ok := buildSpellCostPlanForOption(g, playerID, cardID, sourceZone, option, xValue, nil); ok {
 			payable = append(payable, option)
 		}

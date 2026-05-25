@@ -15,6 +15,7 @@ const (
 	ChoiceSearch
 	ChoiceModal
 	ChoiceResolution
+	ChoiceProliferate
 )
 
 // ChoiceOption is one legal option in a ChoiceRequest.

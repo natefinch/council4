@@ -93,6 +93,9 @@ type Game struct {
 	// AttackTaxes are Ghostly Prison-style costs to attack a player.
 	AttackTaxes []AttackTax
 
+	// RuleEffects are runtime permission/prohibition/cost effects.
+	RuleEffects []RuleEffect
+
 	// LastKnownInformation stores snapshots for objects that have moved zones.
 	LastKnownInformation map[id.ID]ObjectSnapshot
 

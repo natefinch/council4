@@ -123,9 +123,7 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		if !ok {
 			return
 		}
-		player := g.Players[playerID]
-		player.Life += amount
-		succeeded = true
+		succeeded = gainLife(g, playerID, amount) > 0
 	case game.EffectLoseLife:
 		if amount <= 0 {
 			return
@@ -303,6 +301,16 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		succeeded = createReplacementEffect(g, obj, effect)
 	case game.EffectChoose, game.EffectPay:
 		succeeded = true
+	case game.EffectApplyRule:
+		succeeded = createRuleEffects(g, obj, effect)
+	case game.EffectProliferate:
+		succeeded = e.resolveProliferate(g, obj, agents, log)
+	case game.EffectGoad:
+		permanent := effectPermanent(g, obj, effect)
+		if permanent != nil && permanentHasType(g, permanent, game.TypeCreature) {
+			goadPermanent(g, permanent, obj.Controller)
+			succeeded = true
+		}
 	}
 }
 
@@ -341,7 +349,10 @@ func IsEffectTypeExecuted(effectType game.EffectType) bool {
 		game.EffectFight,
 		game.EffectReplace,
 		game.EffectChoose,
-		game.EffectPay:
+		game.EffectPay,
+		game.EffectApplyRule,
+		game.EffectProliferate,
+		game.EffectGoad:
 		return true
 	default:
 		return false
@@ -733,6 +744,9 @@ func effectManaColor(obj *game.StackObject, effect game.Effect) mana.Color {
 }
 
 func effectPermanent(g *game.Game, obj *game.StackObject, effect game.Effect) *game.Permanent {
+	if effect.TargetIndex == -2 {
+		return sourcePermanent(g, obj)
+	}
 	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {
 		return nil
 	}
@@ -741,6 +755,13 @@ func effectPermanent(g *game.Game, obj *game.StackObject, effect game.Effect) *g
 		return nil
 	}
 	return permanentByObjectID(g, target.PermanentID)
+}
+
+func sourcePermanent(g *game.Game, obj *game.StackObject) *game.Permanent {
+	if obj == nil {
+		return nil
+	}
+	return permanentByObjectID(g, obj.SourceID)
 }
 
 func firstPermanentControlledBy(g *game.Game, controller game.PlayerID) *game.Permanent {

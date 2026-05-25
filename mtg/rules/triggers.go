@@ -17,6 +17,7 @@ type pendingTriggeredAbility struct {
 	targets      []game.Target
 	event        game.GameEvent
 	hasEvent     bool
+	inline       *game.AbilityDef
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -48,6 +49,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			AbilityIndex:    trigger.abilityIndex,
 			TriggerEvent:    trigger.event,
 			HasTriggerEvent: trigger.hasEvent,
+			InlineAbility:   trigger.inline,
 			Controller:      trigger.controller,
 			Targets:         append([]game.Target(nil), trigger.targets...),
 		})
@@ -96,7 +98,40 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 			hasEvent:     true,
 		})
 	}
+	if prowess := prowessTriggerForEvent(g, permanent, controller, event); prowess != nil {
+		pending = append(pending, pendingTriggeredAbility{
+			controller:   controller,
+			sourceID:     permanent.ObjectID,
+			sourceCardID: permanent.CardInstanceID,
+			sourceToken:  permanent.TokenDef,
+			inline:       prowess,
+			event:        event,
+			hasEvent:     true,
+		})
+	}
 	return pending
+}
+
+func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) *game.AbilityDef {
+	if event.Kind != game.EventSpellCast || event.Controller != controller || permanent == nil || !hasKeyword(g, permanent, game.Prowess) {
+		return nil
+	}
+	if slices.Contains(event.CardTypes, game.TypeCreature) {
+		return nil
+	}
+	return &game.AbilityDef{
+		Kind: game.TriggeredAbility,
+		Text: "Prowess",
+		Effects: []game.Effect{
+			{
+				Type:           game.EffectModifyPT,
+				TargetIndex:    -2,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+				UntilEndOfTurn: true,
+			},
+		},
+	}
 }
 
 func (e *Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbility {
@@ -432,6 +467,9 @@ func pendingTriggerSourceDef(g *game.Game, trigger pendingTriggeredAbility) *gam
 }
 
 func pendingTriggerAbilityFromDef(def *game.CardDef, trigger pendingTriggeredAbility) *game.AbilityDef {
+	if trigger.inline != nil {
+		return trigger.inline
+	}
 	if def == nil || trigger.abilityIndex < 0 || trigger.abilityIndex >= len(def.Abilities) {
 		return nil
 	}

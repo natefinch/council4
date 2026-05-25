@@ -160,7 +160,7 @@ func TestLegalDeclareAttackersActionsProductiveFirstThenNoAttacks(t *testing.T) 
 func TestGoadedCreatureMustAttackIfAble(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanent(g, game.Player1)
-	attacker.Goaded = map[game.PlayerID]bool{game.Player2: true}
+	attacker.Goaded = map[game.PlayerID]game.GoadStatus{game.Player2: {CreatedTurn: 1, ExpiresFor: game.Player2}}
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
 	g.Combat = &game.CombatState{}
@@ -186,7 +186,7 @@ func TestGoadedCreatureMustAttackIfAble(t *testing.T) {
 func TestGoadedCreatureAttacksNonGoadingPlayerIfAble(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanent(g, game.Player1)
-	attacker.Goaded = map[game.PlayerID]bool{game.Player2: true}
+	attacker.Goaded = map[game.PlayerID]game.GoadStatus{game.Player2: {CreatedTurn: 1, ExpiresFor: game.Player2}}
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
 	g.Combat = &game.CombatState{}
@@ -216,9 +216,9 @@ func TestGoadedCreatureAttacksNonGoadingPlayerIfAble(t *testing.T) {
 func TestGoadedByTwoPlayersMustAttackRemainingNonGoadingOpponentIfAble(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanent(g, game.Player1)
-	attacker.Goaded = map[game.PlayerID]bool{
-		game.Player2: true,
-		game.Player3: true,
+	attacker.Goaded = map[game.PlayerID]game.GoadStatus{
+		game.Player2: {CreatedTurn: 1, ExpiresFor: game.Player2},
+		game.Player3: {CreatedTurn: 1, ExpiresFor: game.Player3},
 	}
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
@@ -249,7 +249,7 @@ func TestGoadedByTwoPlayersMustAttackRemainingNonGoadingOpponentIfAble(t *testin
 func TestGoadDoesNotForceIllegalAttacks(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	defender := addCombatCreaturePermanent(g, game.Player1, game.Defender)
-	defender.Goaded = map[game.PlayerID]bool{game.Player2: true}
+	defender.Goaded = map[game.PlayerID]game.GoadStatus{game.Player2: {CreatedTurn: 1, ExpiresFor: game.Player2}}
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
 	g.Combat = &game.CombatState{}
@@ -851,6 +851,76 @@ func TestPhasedOutCreatureCannotAttackBlockOrBeAttacked(t *testing.T) {
 		if target.PlaneswalkerID == planeswalker.ObjectID {
 			t.Fatal("phased-out planeswalker is an attack target")
 		}
+	}
+}
+
+func TestStaticRuleEffectsCanProhibitAttackingAndBlocking(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Pacifying Law",
+		Types: []game.CardType{game.TypeEnchantment},
+		Abilities: []game.AbilityDef{{
+			Kind: game.StaticAbility,
+			Effects: []game.Effect{{
+				Type: game.EffectApplyRule,
+				RuleEffects: []game.RuleEffect{
+					{
+						Kind:               game.RuleEffectCantAttack,
+						AffectedController: game.ControllerOpponent,
+						PermanentTypes:     []game.CardType{game.TypeCreature},
+					},
+					{
+						Kind:               game.RuleEffectCantBlock,
+						AffectedController: game.ControllerOpponent,
+						PermanentTypes:     []game.CardType{game.TypeCreature},
+					},
+				},
+			}},
+		}},
+	})
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player2
+
+	if canAttackWith(g, attacker, game.Player2) {
+		t.Fatal("opponent creature could attack through cant-attack rule effect")
+	}
+	if canBlockWith(g, blocker, game.Player2) {
+		t.Fatal("opponent creature could block through cant-block rule effect")
+	}
+}
+
+func TestCantAttackRuleCanApplyOnlyToSpecificDefender(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "No Attacks Here",
+		Types: []game.CardType{game.TypeEnchantment},
+		Abilities: []game.AbilityDef{{
+			Kind: game.StaticAbility,
+			Effects: []game.Effect{{
+				Type: game.EffectApplyRule,
+				RuleEffects: []game.RuleEffect{{
+					Kind:               game.RuleEffectCantAttack,
+					AffectedController: game.ControllerOpponent,
+					PermanentTypes:     []game.CardType{game.TypeCreature},
+					DefendingPlayer:    game.PlayerYou,
+				}},
+			}},
+		}},
+	})
+
+	if !canAttackWith(g, attacker, game.Player2) {
+		t.Fatal("target-specific cant-attack effect should not remove attack eligibility")
+	}
+	if canAttackTarget(g, attacker, game.AttackTarget{Player: game.Player1}) {
+		t.Fatal("creature could attack protected player")
+	}
+	if !canAttackTarget(g, attacker, game.AttackTarget{Player: game.Player3}) {
+		t.Fatal("creature could not attack unprotected player")
 	}
 }
 

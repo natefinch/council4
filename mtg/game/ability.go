@@ -251,6 +251,9 @@ const (
 	EffectMoveCounters
 	EffectChoose
 	EffectPay
+	EffectApplyRule
+	EffectProliferate
+	EffectGoad
 )
 
 // EffectSelector identifies a set of permanents affected by a mass effect.
@@ -345,6 +348,7 @@ type Effect struct {
 	DelayedTrigger    *DelayedTriggerDef
 	EmblemAbilities   []AbilityDef
 	Replacement       *ReplacementEffect
+	RuleEffects       []RuleEffect
 	LinkID            string
 	Description       string
 }

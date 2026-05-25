@@ -95,10 +95,10 @@ type Permanent struct {
 
 	// --- Combat modifiers ---
 
-	// Goaded tracks which players have goaded this creature. A goaded
-	// creature must attack each combat if able, and must attack a player
-	// other than the one who goaded it if able (CR 701.15).
-	Goaded map[PlayerID]bool
+	// Goaded tracks which players have goaded this creature. A goaded creature
+	// must attack each combat if able, and must attack a player other than the
+	// one who goaded it if able until the goading player's next turn (CR 701.38).
+	Goaded map[PlayerID]GoadStatus
 
 	// --- Token support ---
 
@@ -108,4 +108,10 @@ type Permanent struct {
 	// TokenDef holds the card definition for tokens. Nil for non-tokens.
 	// Tokens use this instead of CardInstanceID.
 	TokenDef *CardDef
+}
+
+// GoadStatus records the duration for one player's goad effect.
+type GoadStatus struct {
+	CreatedTurn int
+	ExpiresFor  PlayerID
 }

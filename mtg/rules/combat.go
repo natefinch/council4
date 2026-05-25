@@ -378,11 +378,7 @@ func applyLifelink(g *game.Game, source *game.Permanent, damage int) {
 	if controllerID < 0 || int(controllerID) >= len(g.Players) {
 		return
 	}
-	controller := g.Players[controllerID]
-	if controller == nil {
-		return
-	}
-	controller.Life += damage
+	gainLife(g, controllerID, damage)
 }
 
 func sourceIsCommander(g *game.Game, source *game.Permanent) bool {
@@ -707,7 +703,14 @@ func canBlockWith(g *game.Game, permanent *game.Permanent, playerID game.PlayerI
 	if permanent.PhasedOut {
 		return false
 	}
+	if ruleEffectProhibitsBlock(g, permanent) {
+		return false
+	}
 	return permanentHasType(g, permanent, game.TypeCreature)
+}
+
+func canAttackTarget(g *game.Game, attacker *game.Permanent, target game.AttackTarget) bool {
+	return !ruleEffectProhibitsAttack(g, attacker, &target)
 }
 
 func canBlockAttacker(g *game.Game, blocker *game.Permanent, attacker *game.Permanent) bool {
@@ -852,6 +855,9 @@ func canAttackWith(g *game.Game, permanent *game.Permanent, playerID game.Player
 	if !permanentHasType(g, permanent, game.TypeCreature) || hasKeyword(g, permanent, game.Defender) {
 		return false
 	}
+	if ruleEffectProhibitsAttack(g, permanent, nil) {
+		return false
+	}
 	return !permanent.SummoningSick || hasKeyword(g, permanent, game.Haste)
 }
 
@@ -872,6 +878,9 @@ func legalDeclareAttackersActions(g *game.Game, playerID game.PlayerID) []action
 					Attacker: attacker.ObjectID,
 					Target:   target,
 				}}
+				if !canAttackTarget(g, attacker, target) {
+					continue
+				}
 				if len(attackers) > 1 && declareAttackersSatisfiesGoad(g, playerID, single, eligibleByID) {
 					action := action.DeclareAttackers(single)
 					if !containsAction(actions, action) && canPayAttackTax(g, playerID, single) {
@@ -921,6 +930,9 @@ func (e *Engine) applyDeclareAttackers(g *game.Game, playerID game.PlayerID, dec
 			return false
 		}
 		if !isLegalAttackTarget(g, playerID, declaration.Target) {
+			return false
+		}
+		if !canAttackTarget(g, eligibleByID[declaration.Attacker], declaration.Target) {
 			return false
 		}
 	}
@@ -1135,8 +1147,8 @@ func isGoaded(permanent *game.Permanent) bool {
 	if permanent == nil {
 		return false
 	}
-	for _, goaded := range permanent.Goaded {
-		if goaded {
+	for _, status := range permanent.Goaded {
+		if status.ExpiresFor >= 0 {
 			return true
 		}
 	}
@@ -1144,7 +1156,37 @@ func isGoaded(permanent *game.Permanent) bool {
 }
 
 func wasGoadedBy(permanent *game.Permanent, player game.PlayerID) bool {
-	return permanent != nil && permanent.Goaded[player]
+	if permanent == nil {
+		return false
+	}
+	_, ok := permanent.Goaded[player]
+	return ok
+}
+
+func goadPermanent(g *game.Game, permanent *game.Permanent, player game.PlayerID) {
+	if permanent == nil {
+		return
+	}
+	if permanent.Goaded == nil {
+		permanent.Goaded = make(map[game.PlayerID]game.GoadStatus)
+	}
+	permanent.Goaded[player] = game.GoadStatus{CreatedTurn: g.Turn.TurnNumber, ExpiresFor: player}
+}
+
+func expireGoadForActivePlayer(g *game.Game) {
+	if g == nil {
+		return
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent == nil || len(permanent.Goaded) == 0 {
+			continue
+		}
+		for player, status := range permanent.Goaded {
+			if status.ExpiresFor == g.Turn.ActivePlayer && status.CreatedTurn < g.Turn.TurnNumber {
+				delete(permanent.Goaded, player)
+			}
+		}
+	}
 }
 
 func permanentMapByObjectID(permanents []*game.Permanent) map[id.ID]*game.Permanent {

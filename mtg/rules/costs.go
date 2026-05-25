@@ -17,6 +17,8 @@ var paymentColors = []mana.Color{
 	mana.Colorless,
 }
 
+const flashbackAlternativeLabel = "Flashback"
+
 type spellCostOption struct {
 	index           int
 	label           string
@@ -55,7 +57,7 @@ func canPaySpellCostsWithKicker(g *game.Game, playerID game.PlayerID, card *game
 }
 
 func canPaySpellCostsWithKickerFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, kickerPaid bool) bool {
-	for _, option := range spellCostOptionsForKicker(card, kickerPaid) {
+	for _, option := range spellCostOptionsForZoneAndKicker(card, sourceZone, kickerPaid) {
 		if _, ok := buildSpellCostPlanForOption(g, playerID, cardID, sourceZone, option, xValue, nil); ok {
 			return true
 		}
@@ -147,7 +149,7 @@ func buildSpellCostPlanWithKickerAndPreferences(g *game.Game, playerID game.Play
 }
 
 func buildSpellCostPlanWithKickerFromZoneAndPreferences(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, kickerPaid bool, prefs *paymentPreferences) (spellCostPlan, bool) {
-	options := spellCostOptionsForKicker(card, kickerPaid)
+	options := spellCostOptionsForZoneAndKicker(card, sourceZone, kickerPaid)
 	if len(options) == 0 {
 		return spellCostPlan{}, false
 	}
@@ -215,6 +217,7 @@ func costModifiersForContext(g *game.Game, context costModificationContext) []ga
 			})
 		}
 	}
+	modifiers = append(modifiers, staticCostModifiersForContext(g, context)...)
 	return modifiers
 }
 
@@ -451,6 +454,10 @@ func spellCostOptions(card *game.CardDef) []spellCostOption {
 }
 
 func spellCostOptionsForKicker(card *game.CardDef, kickerPaid bool) []spellCostOption {
+	return spellCostOptionsForZoneAndKicker(card, game.ZoneHand, kickerPaid)
+}
+
+func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone game.ZoneType, kickerPaid bool) []spellCostOption {
 	if card == nil {
 		return nil
 	}
@@ -469,6 +476,12 @@ func spellCostOptionsForKicker(card *game.CardDef, kickerPaid bool) []spellCostO
 		},
 	}
 	for i, alternative := range ability.AlternativeCosts {
+		if isFlashbackAlternative(alternative) && sourceZone != game.ZoneGraveyard {
+			continue
+		}
+		if sourceZone == game.ZoneGraveyard && !isFlashbackAlternative(alternative) {
+			continue
+		}
 		additional := append([]game.AdditionalCost(nil), requiredAdditional...)
 		additional = append(additional, alternative.AdditionalCosts...)
 		label := alternative.Label
@@ -483,7 +496,14 @@ func spellCostOptionsForKicker(card *game.CardDef, kickerPaid bool) []spellCostO
 			additionalCosts: additional,
 		})
 	}
+	if sourceZone == game.ZoneGraveyard {
+		return options[1:]
+	}
 	return options
+}
+
+func isFlashbackAlternative(alternative game.AlternativeCost) bool {
+	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
 }
 
 func spellManaCostWithKicker(base *mana.Cost, ability *game.AbilityDef, kickerPaid bool) *mana.Cost {

@@ -17,6 +17,8 @@ This roadmap tracks card-text features needed by generated `CardDef` implementat
 - [x] Resolution choices and payments for "choose a color/card type/player/card" and "you may pay..." during resolution, with linked choice/payment results.
 - [x] Broader beginning-of-step and state trigger support, including explicit draw/beginning-of-combat step events and CR 603.8 state-trigger latching.
 - [x] Generic runtime replacement effects for zone-destination replacement and simple ETB tapped/counter modifiers, with deterministic fallback ordering for matching generic replacements.
+- [x] Static rule-changing effects for life-gain prohibitions, attack/block prohibitions, generic spell cost modifiers, and graveyard cast permissions via `RuleEffect`.
+- [x] High-frequency keyword/action slice: Prowess, Flashback-style graveyard casting/exile, Proliferate, and Goad with expiry.
 
 ## High-priority parser/model gaps
 
@@ -28,8 +30,8 @@ This roadmap tracks card-text features needed by generated `CardDef` implementat
 - [x] Resolution choices inside effects: "you may...", "if you do", "if you don't", "choose a color/card/type/player", and "you may pay..." during resolution. Carry-forward: add more consumers for chosen values as new card templates need them.
 - [x] Common trigger patterns beyond the initial event filters: beginning-of-step triggers, state triggers, noncreature/artifact/permanent spell casts, opponent-controlled objects, and richer negated conditions. Carry-forward: richer negated trigger conditions beyond existing include/exclude type filters.
 - [x] General replacement effects: zone-destination replacement and ETB tapped/counter modifiers via runtime `ReplacementEffect`. Carry-forward: ETB-as-copy/as-choice, full APNAP/self-replacement ordering choices, and richer arbitrary event rewrites.
-- [ ] Static rule-changing effects: "players can't gain life", "creatures can't attack/block", "spells cost less/more", "you may cast/play from...", and other permission/prohibition effects.
-- [ ] High-frequency keyword mechanics from the parsing guide and rules README: Ward, Prowess, Flashback, Madness, Suspend, Storm, Cascade, Convoke, Delve, Proliferate, Goad, Morph/Disguise, and related keyword actions.
+- [x] Static rule-changing effects: "players can't gain life", "creatures can't attack/block", "spells cost less/more", "you may cast/play from...", and other permission/prohibition effects. Carry-forward: richer conditional/tax/permission variants.
+- [ ] High-frequency keyword mechanics from the parsing guide and rules README: Ward, Madness, Suspend, Storm, Cascade, Convoke, Delve, Morph/Disguise, and related keyword actions. Covered so far: Prowess, Flashback, Proliferate, Goad; plus existing Flash, Equip, Cycling, Kicker.
 
 ## Lower-level infrastructure follow-ups
 

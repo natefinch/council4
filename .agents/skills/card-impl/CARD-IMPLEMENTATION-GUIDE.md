@@ -76,6 +76,7 @@ const (
     EffectReplace; EffectPrevent; EffectCreateDelayedTrigger
     EffectRegenerate; EffectSkipStep; EffectPhaseOut; EffectCreateEmblem
     EffectApplyContinuous; EffectMoveCounters; EffectChoose; EffectPay
+    EffectApplyRule; EffectProliferate; EffectGoad
 )
 ```
 
@@ -163,6 +164,7 @@ type Effect struct {
     DelayedTrigger  *DelayedTriggerDef
     EmblemAbilities []AbilityDef
     Replacement     *ReplacementEffect // For EffectReplace
+    RuleEffects     []RuleEffect // For EffectApplyRule
     LinkID          string
     Description     string        // Human-readable description
 }
@@ -248,6 +250,38 @@ modifiers (CR 614). The generic replacement slice applies each matching effect
 at most once to the event and records deterministic fallback ordering when
 multiple generic replacements apply (CR 614.5, CR 616). ETB-as-copy,
 ETB-as-choice, and full APNAP replacement ordering are still follow-ups.
+
+### RuleEffect
+
+```go
+const (
+    RuleEffectNone RuleEffectKind = iota
+    RuleEffectCantGainLife
+    RuleEffectCantAttack
+    RuleEffectCantBlock
+    RuleEffectCostModifier
+    RuleEffectCastFromZone
+)
+
+type RuleEffect struct {
+    Kind               RuleEffectKind
+    Controller         PlayerID
+    Duration           EffectDuration
+    AffectedPlayer     PlayerRelation
+    AffectedController ControllerRelation
+    PermanentTypes     []CardType
+    DefendingPlayer    PlayerRelation
+    CostModifier       CostModifier
+    CastFromZone       ZoneType
+}
+```
+
+Use `EffectApplyRule` with `RuleEffects` for static rule-changing text such as
+"players can't gain life" (CR 119.6), "creatures can't attack/block" (CR 506.2,
+CR 509.1b), "spells cost N more/less", and "you may cast [cards] from your
+graveyard" permissions (CR 601.3). Rule effects in static abilities are derived
+while their source is on the battlefield; rule effects created by resolving an
+effect can use normal duration fields.
 
 ### TargetSpec
 
@@ -401,6 +435,8 @@ For keywords with parameters:
 - **Ward {N}**: `Keywords: []game.Keyword{game.Ward}`, `ManaCost: &mana.Cost{mana.GenericMana(N)}`
 - **Equip {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Equip}`, `ManaCost: &mana.Cost{mana.GenericMana(N)}`, `Timing: game.SorceryOnly`
 - **Cycling {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Cycling}`, `ManaCost: &mana.Cost{...}`, `AdditionalCosts` with discard self
+- **Prowess**: `Keywords: []game.Keyword{game.Prowess}` on a static ability; the rules engine creates the implicit trigger (CR 702.108)
+- **Flashback {cost}**: `Keywords: []game.Keyword{game.Flashback}` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 
 #### Spell abilities (instants/sorceries)
 
@@ -452,6 +488,10 @@ For keywords with parameters:
 - Common patterns:
   - "Creatures you control get +N/+M" → `Effects` with `EffectModifyPT`, `Selector: game.EffectSelectorCreaturesYouControl`
   - "Other creatures you control get +N/+M" → same with `EffectSelectorOtherCreaturesYouControl`
+  - "Players can't gain life" → `EffectApplyRule` with `RuleEffectCantGainLife`
+  - "Creatures can't attack/block" → `EffectApplyRule` with `RuleEffectCantAttack` / `RuleEffectCantBlock`
+  - "Spells cost N more/less" → `EffectApplyRule` with `RuleEffectCostModifier`
+  - "You may cast ... from your graveyard" → `EffectApplyRule` with `RuleEffectCastFromZone`
 
 ---
 
@@ -490,6 +530,12 @@ For keywords with parameters:
 | "fight" | `EffectFight` | |
 | "if [zone change] would happen, instead..." | `EffectReplace` | Set `Replacement` with match zones and `ReplaceToZone` |
 | "enters tapped / with counters" as a runtime effect | `EffectReplace` | Set `Replacement.EntersTapped` / `EntersWithCounters` |
+| "players can't gain life" | `EffectApplyRule` | Add `RuleEffectCantGainLife` |
+| "creatures can't attack/block" | `EffectApplyRule` | Add `RuleEffectCantAttack` / `RuleEffectCantBlock` with controller/type filters |
+| "spells cost N more/less" | `EffectApplyRule` | Add `RuleEffectCostModifier` with `CostModifier` |
+| "you may cast ... from your graveyard" | `EffectApplyRule` | Add `RuleEffectCastFromZone` with `CastFromZone: game.ZoneGraveyard` |
+| "proliferate" | `EffectProliferate` | Chooses one existing counter kind per eligible permanent/player (CR 701.27) |
+| "goad target creature" | `EffectGoad` | `TargetIndex` points at the target creature; expires on goading player's next turn (CR 701.38) |
 | "counter target spell" | `EffectCounter` | |
 
 ### TargetIndex convention
@@ -497,6 +543,7 @@ For keywords with parameters:
 - `TargetIndex: 0` = first target declared
 - `TargetIndex: 1` = second target declared
 - `TargetIndex: -1` = the ability's controller (for "you draw", "you gain life")
+- `TargetIndex: -2` = the source permanent (used internally by Prowess-style source effects)
 
 ### TargetSpec.Constraint values
 

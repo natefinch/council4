@@ -108,6 +108,43 @@ func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 	}
 }
 
+func TestCantGainLifeRuleEffectStopsLifeGainAndLifelink(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "No Lifegain",
+		Types: []game.CardType{game.TypeEnchantment},
+		Abilities: []game.AbilityDef{{
+			Kind: game.StaticAbility,
+			Effects: []game.Effect{{
+				Type: game.EffectApplyRule,
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectCantGainLife,
+					AffectedPlayer: game.PlayerAny,
+				}},
+			}},
+		}},
+	})
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectGainLife,
+		Amount:      3,
+		TargetIndex: -1,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != 40 {
+		t.Fatalf("life = %d, want gain prevented", got)
+	}
+
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Lifelink)
+	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}}}
+	engine.resolveCombatDamage(g, &TurnLog{})
+	if got := g.Players[game.Player1].Life; got != 40 {
+		t.Fatalf("life after lifelink = %d, want gain prevented", got)
+	}
+}
+
 func TestDynamicAmountUsesControllerHandSize(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -554,6 +591,54 @@ func TestMillScryAndSurveilLibraryEffectsUseDeterministicFallback(t *testing.T) 
 	}
 	if got := g.Players[game.Player1].Library.All(); len(got) != 1 || got[0] != top {
 		t.Fatalf("library after mill = %+v, want only original bottom card", got)
+	}
+}
+
+func TestProliferateAddsOneChosenCounterKind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	permanent.Counters.Add(counter.PlusOnePlusOne, 1)
+	permanent.Counters.Add(counter.Charge, 1)
+	g.Players[game.Player2].PoisonCounters = 1
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectProliferate}, nil)
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {0}}},
+	}
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+		t.Fatalf("+1/+1 counters = %d, want chosen counter incremented", got)
+	}
+	if got := permanent.Counters.Get(counter.Charge); got != 1 {
+		t.Fatalf("charge counters = %d, want unchosen counter unchanged", got)
+	}
+	if got := g.Players[game.Player2].PoisonCounters; got != 2 {
+		t.Fatalf("poison counters = %d, want proliferated player counter", got)
+	}
+	if len(log.Choices) != 2 || log.Choices[0].Request.Kind != game.ChoiceProliferate {
+		t.Fatalf("choices = %+v, want proliferate choices", log.Choices)
+	}
+}
+
+func TestGoadEffectExpiresOnGoadingPlayersNextTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectGoad, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !wasGoadedBy(target, game.Player1) {
+		t.Fatal("target was not goaded")
+	}
+	g.Turn.TurnNumber = 5
+	g.Turn.ActivePlayer = game.Player1
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if wasGoadedBy(target, game.Player1) {
+		t.Fatal("goad did not expire on goading player's next turn")
 	}
 }
 

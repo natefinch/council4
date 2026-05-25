@@ -76,19 +76,21 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 
 	player := g.Players[playerID]
 	var actions []action.Action
-	for _, cardID := range player.Hand.All() {
-		card := g.GetCardInstance(cardID)
-		if card == nil || card.Def == nil {
-			continue
-		}
-		for _, xValue := range legalXValuesForCost(g, playerID, card.Def.ManaCost) {
-			for _, modes := range modeChoicesForSpell(card.Def) {
-				for _, targets := range targetChoicesForSpell(g, playerID, card.Def, modes) {
-					if e.canCastSpellFromZoneWithKicker(g, playerID, cardID, game.ZoneHand, targets, xValue, modes, false) {
-						actions = append(actions, action.CastSpell(cardID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
-					}
-					if spellHasKicker(card.Def) && e.canCastSpellFromZoneWithKicker(g, playerID, cardID, game.ZoneHand, targets, xValue, modes, true) {
-						actions = append(actions, action.CastKickedSpell(cardID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
+	for _, sourceZone := range castableZonesForPlayer(g, playerID) {
+		for _, cardID := range castSourceZoneCards(player, sourceZone) {
+			card := g.GetCardInstance(cardID)
+			if card == nil || card.Def == nil {
+				continue
+			}
+			for _, xValue := range legalXValuesForCost(g, playerID, card.Def.ManaCost) {
+				for _, modes := range modeChoicesForSpell(card.Def) {
+					for _, targets := range targetChoicesForSpell(g, playerID, card.Def, modes) {
+						if e.canCastSpellFromZoneWithKicker(g, playerID, cardID, sourceZone, targets, xValue, modes, false) {
+							actions = append(actions, action.CastSpellFromZone(cardID, sourceZone, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
+						}
+						if sourceZone == game.ZoneHand && spellHasKicker(card.Def) && e.canCastSpellFromZoneWithKicker(g, playerID, cardID, sourceZone, targets, xValue, modes, true) {
+							actions = append(actions, action.CastKickedSpell(cardID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
+						}
 					}
 				}
 			}
@@ -281,6 +283,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ChosenModes:         append([]int(nil), cast.ChosenModes...),
 		XValue:              cast.XValue,
 		KickerPaid:          cast.KickerPaid,
+		Flashback:           sourceZone == game.ZoneGraveyard && card.Def.HasKeyword(game.Flashback),
 		AdditionalCostsPaid: additionalCostsPaid,
 	}
 	g.Stack.Push(obj)
@@ -449,7 +452,17 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 	if card == nil || card.Def == nil || !castSourceContains(player, cardID, sourceZone) {
 		return false
 	}
-	if sourceZone == game.ZoneCommand && player.CommanderInstanceID != cardID {
+	switch sourceZone {
+	case game.ZoneCommand:
+		if player.CommanderInstanceID != cardID {
+			return false
+		}
+	case game.ZoneHand:
+	case game.ZoneGraveyard:
+		if !canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone) {
+			return false
+		}
+	default:
 		return false
 	}
 	if xValue != 0 && !costHasVariableMana(card.Def.ManaCost) {
@@ -479,8 +492,24 @@ func castSourceContains(player *game.Player, cardID id.ID, sourceZone game.ZoneT
 		return player.Hand.Contains(cardID)
 	case game.ZoneCommand:
 		return player.CommandZone.Contains(cardID)
+	case game.ZoneGraveyard:
+		return player.Graveyard.Contains(cardID)
 	default:
 		return false
+	}
+}
+
+func castSourceZoneCards(player *game.Player, sourceZone game.ZoneType) []id.ID {
+	if player == nil {
+		return nil
+	}
+	switch sourceZone {
+	case game.ZoneHand:
+		return player.Hand.All()
+	case game.ZoneGraveyard:
+		return player.Graveyard.All()
+	default:
+		return nil
 	}
 }
 
@@ -490,6 +519,8 @@ func removeCastSourceCard(player *game.Player, cardID id.ID, sourceZone game.Zon
 		return player.Hand.Remove(cardID)
 	case game.ZoneCommand:
 		return player.CommandZone.Remove(cardID)
+	case game.ZoneGraveyard:
+		return player.Graveyard.Remove(cardID)
 	default:
 		return false
 	}

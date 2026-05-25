@@ -1209,6 +1209,133 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 	}
 }
 
+func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	flashbackCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cardID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Flashback Spell",
+		Types:    []game.CardType{game.TypeSorcery},
+		ManaCost: &mana.Cost{mana.GenericMana(5)},
+		Abilities: []game.AbilityDef{
+			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
+			{
+				Kind: game.SpellAbility,
+				AlternativeCosts: []game.AlternativeCost{{
+					Label:    flashbackAlternativeLabel,
+					ManaCost: &flashbackCost,
+				}},
+				Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+			},
+		},
+	})
+	g.Players[game.Player1].Hand.Remove(cardID)
+	g.Players[game.Player1].Graveyard.Add(cardID)
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	act := action.CastSpellFromZone(cardID, game.ZoneGraveyard, nil, 0, nil)
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("flashback cast from graveyard failed")
+	}
+	obj := g.Stack.Peek()
+	if obj == nil || !obj.Flashback {
+		t.Fatalf("stack object = %+v, want flashback marker", obj)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("flashback spell returned to graveyard")
+	}
+	if !g.Players[game.Player1].Exile.Contains(cardID) {
+		t.Fatal("flashback spell was not exiled")
+	}
+}
+
+func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	flashbackCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cardID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Expensive Flashback Spell",
+		Types:    []game.CardType{game.TypeSorcery},
+		ManaCost: &mana.Cost{mana.GenericMana(5)},
+		Abilities: []game.AbilityDef{
+			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
+			{
+				Kind: game.SpellAbility,
+				AlternativeCosts: []game.AlternativeCost{{
+					Label:    flashbackAlternativeLabel,
+					ManaCost: &flashbackCost,
+				}},
+			},
+		},
+	})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if engine.applyAction(g, game.Player1, action.CastSpell(cardID, nil, 0, nil)) {
+		t.Fatal("flashback alternative cost was payable from hand")
+	}
+}
+
+func TestRuleEffectAllowsCastingFromGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToHand(g, game.Player1, greenInstant())
+	g.Players[game.Player1].Hand.Remove(cardID)
+	g.Players[game.Player1].Graveyard.Add(cardID)
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Graveyard Permission",
+		Types: []game.CardType{game.TypeEnchantment},
+		Abilities: []game.AbilityDef{{
+			Kind: game.StaticAbility,
+			Effects: []game.Effect{{
+				Type: game.EffectApplyRule,
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectCastFromZone,
+					AffectedPlayer: game.PlayerYou,
+					CastFromZone:   game.ZoneGraveyard,
+				}},
+			}},
+		}},
+	})
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastSpellFromZone(cardID, game.ZoneGraveyard, nil, 0, nil)) {
+		t.Fatal("rule effect did not allow graveyard cast")
+	}
+}
+
+func TestProwessTriggersOnNoncreatureSpellCast(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	prowess := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Prowess)
+	spellID := addCardToHand(g, game.Player1, greenInstant())
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast instant failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("prowess trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectivePower(g, prowess); got != 3 {
+		t.Fatalf("prowess power = %d, want 3", got)
+	}
+}
+
 func TestFightEffectDealsMutualCreatureDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
