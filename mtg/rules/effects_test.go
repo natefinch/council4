@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 func TestDrawEffectDrawsRequestedCards(t *testing.T) {
@@ -44,7 +45,6 @@ func TestUnsupportedEffectsAreLogged(t *testing.T) {
 		game.EffectGainControl,
 		game.EffectCopy,
 		game.EffectAttach,
-		game.EffectReplace,
 	}
 	for _, effectType := range tests {
 		t.Run(effectTypeName(effectType), func(t *testing.T) {
@@ -358,6 +358,107 @@ func TestDeclinedOptionalEffectDoesNotPublishPreviousAmount(t *testing.T) {
 
 	if got := g.Players[game.Player1].Life; got != 40 {
 		t.Fatalf("life = %d, want declined linked amount to be unavailable", got)
+	}
+}
+
+func TestResolutionChoiceCanFeedLaterEffect(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addLinkedResultSpellToStack(g, []game.Effect{
+		{
+			Type:   game.EffectChoose,
+			LinkID: "chosen-player",
+			Choice: &game.ResolutionChoice{
+				Kind:           game.ResolutionChoicePlayer,
+				PlayerRelation: game.PlayerOpponent,
+			},
+		},
+		{
+			Type:         game.EffectLoseLife,
+			Amount:       3,
+			ChoiceLinkID: "chosen-player",
+		},
+	})
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if got := g.Players[game.Player2].Life; got != 40 {
+		t.Fatalf("player 2 life = %d, want unchosen opponent unchanged", got)
+	}
+	if got := g.Players[game.Player3].Life; got != 37 {
+		t.Fatalf("player 3 life = %d, want chosen opponent to lose life", got)
+	}
+}
+
+func TestResolutionChoiceCanChooseManaColor(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addLinkedResultSpellToStack(g, []game.Effect{
+		{
+			Type:   game.EffectChoose,
+			LinkID: "chosen-color",
+			Choice: &game.ResolutionChoice{
+				Kind: game.ResolutionChoiceColor,
+			},
+		},
+		{
+			Type:         game.EffectAddMana,
+			Amount:       1,
+			ChoiceLinkID: "chosen-color",
+		},
+	})
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{3}}},
+	}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if got := g.Players[game.Player1].ManaPool.Total(); got != 1 {
+		t.Fatalf("mana pool total = %d, want one chosen mana", got)
+	}
+	if !g.Players[game.Player1].ManaPool.Spend(mana.Red, 1) {
+		t.Fatal("chosen mana was not red")
+	}
+}
+
+func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	addLinkedResultSpellToStack(g, []game.Effect{
+		{
+			Type:   game.EffectPay,
+			LinkID: "paid",
+			Payment: &game.ResolutionPayment{
+				Prompt:   "Pay {G}?",
+				ManaCost: &cost,
+			},
+		},
+		{
+			Type:        game.EffectDraw,
+			Amount:      1,
+			TargetIndex: -1,
+			ResultCondition: &game.EffectResultCondition{
+				LinkID:    "paid",
+				Accepted:  game.TriTrue,
+				Succeeded: game.TriTrue,
+			},
+		},
+	})
+	log := TurnLog{}
+
+	engine.resolveTopOfStack(g, &log)
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want payment branch to draw", got)
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceMay {
+		t.Fatalf("choices = %+v, want payment may choice", log.Choices)
 	}
 }
 

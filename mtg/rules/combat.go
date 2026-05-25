@@ -63,6 +63,7 @@ func (e *Engine) runCombatPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 
 func (e *Engine) runCombatPriorityStep(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, step game.Step) bool {
 	g.Turn.Step = step
+	emitBeginningOfStepEvent(g, step)
 	if !e.runCombatPriority(g, agents, log) {
 		return false
 	}

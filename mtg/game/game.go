@@ -80,6 +80,10 @@ type Game struct {
 	// ReplacementDecisions records deterministic fallback ordering decisions.
 	ReplacementDecisions []ReplacementDecision
 
+	// ReplacementEffects are runtime effects that modify future events before
+	// they happen (CR 614). mtg/rules owns matching, ordering, and expiry.
+	ReplacementEffects []ReplacementEffect
+
 	// SkippedSteps records upcoming turn steps a player should skip.
 	SkippedSteps map[PlayerID]map[Step]int
 
@@ -124,6 +128,10 @@ type Game struct {
 	// inspect for triggered ability detection.
 	TriggerEventCursor int
 
+	// StateTriggerLatches prevents state triggers from repeatedly triggering
+	// while their condition remains true (CR 603.8).
+	StateTriggerLatches map[StateTriggerKey]bool
+
 	// ActivatedAbilitiesThisTurn records once-per-turn activated abilities used
 	// during the current turn.
 	ActivatedAbilitiesThisTurn map[ActivatedAbilityUse]bool
@@ -167,6 +175,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		SkippedSteps:               make(map[PlayerID]map[Step]int),
 		TurnOrder:                  NewTurnOrder(),
 		FailedDraws:                make(map[PlayerID]bool),
+		StateTriggerLatches:        make(map[StateTriggerKey]bool),
 		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),
 		Turn: TurnState{
 			TurnNumber:           1,

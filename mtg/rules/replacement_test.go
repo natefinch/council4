@@ -303,6 +303,155 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	}
 }
 
+func TestGenericReplacementChangesZoneDestination(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
+		Type: game.EffectReplace,
+		Replacement: &game.ReplacementEffect{
+			Description:   "exile instead",
+			MatchEvent:    game.EventZoneChanged,
+			MatchFromZone: true,
+			FromZone:      game.ZoneBattlefield,
+			MatchToZone:   true,
+			ToZone:        game.ZoneGraveyard,
+			ReplaceToZone: game.ZoneExile,
+		},
+	}, nil)
+
+	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+
+	if g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
+		t.Fatal("replacement did not redirect away from graveyard")
+	}
+	if !g.Players[game.Player1].Exile.Contains(target.CardInstanceID) {
+		t.Fatal("replacement did not move card to exile")
+	}
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+		return event.PermanentID == target.ObjectID && event.ToZone == game.ZoneExile
+	})
+}
+
+func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
+		Type: game.EffectReplace,
+		Replacement: &game.ReplacementEffect{
+			Description:  "enter modified",
+			MatchEvent:   game.EventPermanentEnteredBattlefield,
+			MatchToZone:  true,
+			ToZone:       game.ZoneBattlefield,
+			EntersTapped: true,
+			EntersWithCounters: []game.CounterPlacement{
+				{Kind: counter.PlusOnePlusOne, Amount: 1},
+			},
+		},
+	}, nil)
+	cardID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:      "Entering Creature",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     &game.PT{Value: 1},
+		Toughness: &game.PT{Value: 1},
+	})
+	card := g.GetCardInstance(cardID)
+	g.Players[game.Player1].Hand.Remove(cardID)
+
+	permanent := createCardPermanent(g, card, game.Player1, game.ZoneHand)
+
+	if permanent == nil || !permanent.Tapped {
+		t.Fatalf("permanent = %+v, want tapped by replacement", permanent)
+	}
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("+1/+1 counters = %d, want 1", got)
+	}
+}
+
+func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	for _, replacement := range []game.ReplacementEffect{
+		{
+			Description:   "exile instead",
+			MatchEvent:    game.EventZoneChanged,
+			MatchFromZone: true,
+			FromZone:      game.ZoneBattlefield,
+			MatchToZone:   true,
+			ToZone:        game.ZoneGraveyard,
+			ReplaceToZone: game.ZoneExile,
+		},
+		{
+			Description:   "hand instead",
+			MatchEvent:    game.EventZoneChanged,
+			MatchFromZone: true,
+			FromZone:      game.ZoneBattlefield,
+			ReplaceToZone: game.ZoneHand,
+		},
+	} {
+		engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
+			Type:        game.EffectReplace,
+			Replacement: &replacement,
+		}, nil)
+	}
+
+	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+
+	if len(g.ReplacementDecisions) != 1 {
+		t.Fatalf("replacement decisions = %+v, want one order decision", g.ReplacementDecisions)
+	}
+	decision := g.ReplacementDecisions[0]
+	if decision.Player != game.Player1 || len(decision.Selected) != 2 || decision.Selected[0] != 0 || decision.Selected[1] != 1 {
+		t.Fatalf("replacement decision = %+v, want deterministic Player1 order", decision)
+	}
+	if !g.Players[game.Player1].Hand.Contains(target.CardInstanceID) {
+		t.Fatal("second replacement in fallback order should move card to hand")
+	}
+}
+
+func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Replacement Source",
+		Types: []game.CardType{game.TypeEnchantment},
+	})
+	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	engine.resolveEffect(g, &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		Controller:   game.Player1,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+	}, game.Effect{
+		Type: game.EffectReplace,
+		Replacement: &game.ReplacementEffect{
+			Description:   "exile instead",
+			MatchEvent:    game.EventZoneChanged,
+			MatchFromZone: true,
+			FromZone:      game.ZoneBattlefield,
+			MatchToZone:   true,
+			ToZone:        game.ZoneGraveyard,
+			ReplaceToZone: game.ZoneExile,
+		},
+	}, nil)
+
+	if !movePermanentToZone(g, source, game.ZoneGraveyard) {
+		t.Fatal("source should leave battlefield")
+	}
+	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+		t.Fatal("target should move to graveyard")
+	}
+
+	if !g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
+		t.Fatal("replacement from departed source should not apply")
+	}
+}
+
 func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

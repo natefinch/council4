@@ -14,6 +14,7 @@ const (
 	ChoiceZoneSelection
 	ChoiceSearch
 	ChoiceModal
+	ChoiceResolution
 )
 
 // ChoiceOption is one legal option in a ChoiceRequest.

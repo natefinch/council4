@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 func (e *Engine) resolveSpellEffects(g *game.Game, obj *game.StackObject, card *game.CardInstance, log *TurnLog) {
@@ -80,6 +81,21 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		accepted = false
 		return
 	}
+	if effect.Choice != nil {
+		if !e.resolveResolutionChoice(g, obj, effect, agents, log) {
+			return
+		}
+		succeeded = true
+		if effect.Type == game.EffectChoose {
+			return
+		}
+	}
+	if effect.Payment != nil {
+		accepted, succeeded = e.resolveResolutionPayment(g, obj, effect, agents, log)
+		if !succeeded || effect.Type == game.EffectPay {
+			return
+		}
+	}
 	if !IsEffectTypeExecuted(effect.Type) {
 		logUnsupportedEffect(log, obj, effect)
 		return
@@ -130,9 +146,9 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 			return
 		}
 		if stackObjectSourceIsSnow(g, obj) {
-			player.ManaPool.AddSnow(effect.ManaColor, amount)
+			player.ManaPool.AddSnow(effectManaColor(obj, effect), amount)
 		} else {
-			player.ManaPool.Add(effect.ManaColor, amount)
+			player.ManaPool.Add(effectManaColor(obj, effect), amount)
 		}
 		succeeded = true
 	case game.EffectDamage:
@@ -283,6 +299,10 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 	case game.EffectFight:
 		resolveFight(g, obj, effect)
 		succeeded = true
+	case game.EffectReplace:
+		succeeded = createReplacementEffect(g, obj, effect)
+	case game.EffectChoose, game.EffectPay:
+		succeeded = true
 	}
 }
 
@@ -318,7 +338,10 @@ func IsEffectTypeExecuted(effectType game.EffectType) bool {
 		game.EffectMill,
 		game.EffectScry,
 		game.EffectSurveil,
-		game.EffectFight:
+		game.EffectFight,
+		game.EffectReplace,
+		game.EffectChoose,
+		game.EffectPay:
 		return true
 	default:
 		return false
@@ -677,6 +700,12 @@ func permanentMatchesSelectorForSource(g *game.Game, source *game.Permanent, con
 }
 
 func effectPlayer(g *game.Game, obj *game.StackObject, effect game.Effect) (game.PlayerID, bool) {
+	if choice, ok := linkedResolutionChoice(obj, effect.ChoiceLinkID); ok && choice.Kind == game.ResolutionChoicePlayer {
+		if !isPlayerAlive(g, choice.Player) {
+			return 0, false
+		}
+		return choice.Player, true
+	}
 	if effect.TargetIndex == -1 {
 		if !isPlayerAlive(g, obj.Controller) {
 			return 0, false
@@ -694,6 +723,13 @@ func effectPlayer(g *game.Game, obj *game.StackObject, effect game.Effect) (game
 		return 0, false
 	}
 	return target.PlayerID, true
+}
+
+func effectManaColor(obj *game.StackObject, effect game.Effect) mana.Color {
+	if choice, ok := linkedResolutionChoice(obj, effect.ChoiceLinkID); ok && choice.Kind == game.ResolutionChoiceColor {
+		return choice.Color
+	}
+	return effect.ManaColor
 }
 
 func effectPermanent(g *game.Game, obj *game.StackObject, effect game.Effect) *game.Permanent {

@@ -90,6 +90,7 @@ const (
 	TriggerWhen     TriggerType = iota // "When [event]" — fires once
 	TriggerWhenever                    // "Whenever [event]" — fires each time
 	TriggerAt                          // "At the beginning of [step]"
+	TriggerState                       // State trigger checked whenever a player would get priority
 )
 
 // TriggerCondition describes when a triggered ability fires.
@@ -112,6 +113,17 @@ type TriggerCondition struct {
 	// such as "if it had counters on it" on zone-change triggers. mtg/rules
 	// checks the event permanent's current object or last-known information.
 	InterveningIfEventPermanentHadCounters bool
+
+	// State describes a state trigger. State triggers latch while true and only
+	// trigger again after becoming false, then true again (CR 603.8).
+	State *StateTriggerCondition
+}
+
+// StateTriggerCondition describes a simple state trigger condition. Empty
+// fields mean no state condition is active.
+type StateTriggerCondition struct {
+	MatchControllerLifeLessOrEqual bool
+	ControllerLifeLessOrEqual      int
 }
 
 // TriggerControllerFilter constrains a trigger by the controller recorded on an event.
@@ -237,6 +249,8 @@ const (
 	EffectCreateEmblem
 	EffectApplyContinuous
 	EffectMoveCounters
+	EffectChoose
+	EffectPay
 )
 
 // EffectSelector identifies a set of permanents affected by a mass effect.
@@ -307,11 +321,21 @@ type Effect struct {
 	Optional        bool
 	ResultCondition *EffectResultCondition
 
-	PowerDelta        int
-	ToughnessDelta    int
-	CounterKind       counter.Kind
-	CounterSource     CounterSourceSpec
-	ManaColor         mana.Color
+	PowerDelta     int
+	ToughnessDelta int
+	CounterKind    counter.Kind
+	CounterSource  CounterSourceSpec
+	ManaColor      mana.Color
+	// Choice asks for a value while resolving this instruction and stores it
+	// under LinkID for later instructions to consume (CR 608.2c, CR 609.3).
+	Choice *ResolutionChoice
+	// ChoiceLinkID consumes a value produced by a prior resolution choice, such
+	// as a chosen color for mana or a chosen player for player effects.
+	ChoiceLinkID string
+	// Payment asks the controller whether to pay a cost during resolution; the
+	// payment result is recorded through LinkID/ResultCondition (CR 608.2c,
+	// CR 117.12).
+	Payment           *ResolutionPayment
 	UntilEndOfTurn    bool
 	Duration          EffectDuration
 	Step              Step
@@ -320,6 +344,7 @@ type Effect struct {
 	ContinuousEffects []ContinuousEffect
 	DelayedTrigger    *DelayedTriggerDef
 	EmblemAbilities   []AbilityDef
+	Replacement       *ReplacementEffect
 	LinkID            string
 	Description       string
 }

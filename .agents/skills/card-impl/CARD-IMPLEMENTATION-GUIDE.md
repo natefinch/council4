@@ -75,7 +75,7 @@ const (
     EffectScry; EffectSurveil; EffectFight; EffectTransform; EffectAttach
     EffectReplace; EffectPrevent; EffectCreateDelayedTrigger
     EffectRegenerate; EffectSkipStep; EffectPhaseOut; EffectCreateEmblem
-    EffectApplyContinuous; EffectMoveCounters
+    EffectApplyContinuous; EffectMoveCounters; EffectChoose; EffectPay
 )
 ```
 
@@ -151,6 +151,9 @@ type Effect struct {
     CounterKind     counter.Kind  // For EffectAddCounter/EffectRemoveCounter
     CounterSource   CounterSourceSpec  // For EffectMoveCounters
     ManaColor       mana.Color    // For EffectAddMana
+    Choice          *ResolutionChoice  // Value chosen during resolution (CR 608.2c, CR 609.3)
+    ChoiceLinkID    string        // Consume a prior choice value
+    Payment         *ResolutionPayment // Optional "you may pay..." during resolution (CR 608.2c, CR 117.12)
     UntilEndOfTurn  bool          // Duration flag
     Duration        EffectDuration
     Step            Step          // For step-related effects
@@ -159,6 +162,7 @@ type Effect struct {
     ContinuousEffects []ContinuousEffect  // For EffectApplyContinuous
     DelayedTrigger  *DelayedTriggerDef
     EmblemAbilities []AbilityDef
+    Replacement     *ReplacementEffect // For EffectReplace
     LinkID          string
     Description     string        // Human-readable description
 }
@@ -178,6 +182,72 @@ Use `LinkID` on an earlier effect and `ResultCondition` on later effects for
 "if you do" / "if you don't" branches. `Succeeded` checks whether the previous
 effect actually did anything, so a failed draw from an empty library does not
 count as "if you do" (CR 608.2c, CR 101.3).
+
+### ResolutionChoice and ResolutionPayment
+
+```go
+const (
+    ResolutionChoiceNone ResolutionChoiceKind = iota
+    ResolutionChoiceColor
+    ResolutionChoiceCardType
+    ResolutionChoicePlayer
+    ResolutionChoiceCard
+)
+
+type ResolutionChoice struct {
+    Kind           ResolutionChoiceKind
+    Prompt         string
+    Player         PlayerID
+    UsePlayer      bool
+    Colors         []mana.Color
+    CardTypes      []CardType
+    PlayerRelation PlayerRelation
+    Zone           ZoneType
+}
+
+type ResolutionPayment struct {
+    Prompt          string
+    ManaCost        *mana.Cost
+    AdditionalCosts []AdditionalCost
+    XValue          int
+}
+```
+
+Use `EffectChoose` with `Choice` and `LinkID` for "choose a color/card
+type/player/card" instructions. Later effects can consume a chosen color for
+`EffectAddMana` or a chosen player for player effects by setting
+`ChoiceLinkID`. Use `EffectPay` with `Payment` and `LinkID` for "you may pay..."
+during resolution; follow-up "if you do" effects should use `ResultCondition`
+with `Accepted: game.TriTrue` and `Succeeded: game.TriTrue`.
+
+### ReplacementEffect
+
+```go
+type ReplacementEffect struct {
+    Controller       PlayerID
+    SourceObjectID   id.ID
+    SourceCardID     id.ID
+    Description      string
+    Duration         EffectDuration
+    CreatedTurn      int
+    MatchEvent       EventKind
+    ControllerFilter TriggerControllerFilter
+    MatchFromZone    bool
+    FromZone         ZoneType
+    MatchToZone      bool
+    ToZone           ZoneType
+    ReplaceToZone    ZoneType
+    EntersTapped     bool
+    EntersWithCounters []CounterPlacement
+}
+```
+
+Use `EffectReplace` with `Replacement` to create runtime replacement effects
+for zone-change destination replacement and simple enters-the-battlefield
+modifiers (CR 614). The generic replacement slice applies each matching effect
+at most once to the event and records deterministic fallback ordering when
+multiple generic replacements apply (CR 614.5, CR 616). ETB-as-copy,
+ETB-as-choice, and full APNAP replacement ordering are still follow-ups.
 
 ### TargetSpec
 
@@ -228,6 +298,12 @@ type TriggerCondition struct {
     InterveningIf string          // "if" condition (CR 603.4)
     InterveningIfControllerLifeAtLeast int
     InterveningIfEventPermanentHadCounters bool
+    State         *StateTriggerCondition
+}
+
+type StateTriggerCondition struct {
+    MatchControllerLifeLessOrEqual bool
+    ControllerLifeLessOrEqual      int
 }
 ```
 
@@ -257,9 +333,11 @@ type TriggerPattern struct {
 Use `RequireCardTypes` / `ExcludeCardTypes` for cast triggers such as
 "Whenever an opponent casts a noncreature spell" (CR 603.2). Use
 `RequirePermanentTypes` / `ExcludePermanentTypes` for ETB/LTB/dies triggers;
-LTB and dies triggers use last-known information (CR 603.10). Use `Step` with
-`EventBeginningOfStep` for "At the beginning of your upkeep/end step"
-(CR 603.6c).
+LTB and dies triggers use last-known information (CR 603.10). Use explicit
+`Step` with `EventBeginningOfStep` for "At the beginning of your upkeep/draw
+step/beginning of combat/end step" (CR 603.6c); broad beginning-of-step
+patterns with `StepNone` do not match. Use `State` for state triggers; the
+rules engine latches them until the condition becomes false (CR 603.8).
 
 ### EventKind (for trigger patterns)
 
@@ -353,17 +431,20 @@ For keywords with parameters:
   - "enters" / "enters the battlefield" → `EventPermanentEnteredBattlefield`
   - "dies" → `EventPermanentDied`
   - "leaves the battlefield" → `EventZoneChanged` with `FromZone: game.ZoneBattlefield`
-  - "At the beginning of your upkeep" → `EventBeginningOfStep`
+  - "At the beginning of your upkeep/draw step/beginning of combat/end step" → `EventBeginningOfStep` with explicit `Step`
   - "Whenever ... attacks" → `EventAttackerDeclared`
   - "Whenever ... deals damage" → `EventDamageDealt`
   - "Whenever ... is cast" → `EventSpellCast`
 - Set controller/source filters based on "you", "an opponent", "another creature", "this creature"
 - If "you may" appears → `Optional: true`
-- For "At the beginning of your upkeep/end step", use
-  `EventBeginningOfStep` with `Step: game.StepUpkeep` or `game.StepEnd`.
+- For "At the beginning of your upkeep/draw step/beginning of combat/end step",
+  use `EventBeginningOfStep` with `Step: game.StepUpkeep`, `game.StepDraw`,
+  `game.StepBeginningOfCombat`, or `game.StepEnd`.
 - For cast triggers such as "Whenever an opponent casts a noncreature spell",
   use `EventSpellCast`, `Controller: game.TriggerControllerOpponent`, and
   `ExcludeCardTypes: []game.CardType{game.TypeCreature}`.
+- For state triggers, set `Trigger.Type: game.TriggerState` and fill
+  `Trigger.State`; do not set an event pattern.
 
 #### Static abilities
 
@@ -384,6 +465,8 @@ For keywords with parameters:
 | "that much" | any amount effect | Use `LinkID` on the producing effect and `DynamicAmountPreviousEffectResult` on the consuming effect |
 | "you may [do X]. If you do, [Y]" | any effect(s) | Put `Optional: true` and `LinkID` on X; put `ResultCondition` with `Accepted: game.TriTrue`, `Succeeded: game.TriTrue` on Y |
 | "if you don't" | any effect | Put `ResultCondition` with `Accepted: game.TriFalse` on the branch effect |
+| "choose a color/player/card type/card" | `EffectChoose` | Set `Choice` and `LinkID`; later effects consume with `ChoiceLinkID` where supported |
+| "you may pay [cost]. If you do..." | `EffectPay` | Set `Payment` and `LinkID`; gate the branch with `ResultCondition` |
 | "destroy target" | `EffectDestroy` | `TargetIndex` from target order |
 | "exile target" | `EffectExile` | |
 | "return target ... to its owner's hand" | `EffectBounce` | |
@@ -405,6 +488,8 @@ For keywords with parameters:
 | "surveil N" | `EffectSurveil` | `Amount: N` |
 | "mill N" | `EffectMill` | `Amount: N` |
 | "fight" | `EffectFight` | |
+| "if [zone change] would happen, instead..." | `EffectReplace` | Set `Replacement` with match zones and `ReplaceToZone` |
+| "enters tapped / with counters" as a runtime effect | `EffectReplace` | Set `Replacement.EntersTapped` / `EntersWithCounters` |
 | "counter target spell" | `EffectCounter` | |
 
 ### TargetIndex convention
@@ -577,4 +662,4 @@ Abilities: []game.AbilityDef{
 
 7. **Variable amounts**: When an effect says "equal to its power" or "equal to the number of...", the current `Effect.Amount` field can't express this. Use `Description` to document it, and consider setting `ImplementationID` if the card needs full rules accuracy.
 
-8. **Cards that need ImplementationID**: If a card does things the declarative system can't express (variable amounts based on game state, choices within resolution, complex conditional logic), set `ImplementationID` to a descriptive kebab-case string like `"swords-to-plowshares"` and leave a comment explaining what the hand-written code needs to do.
+8. **Cards that need ImplementationID**: If a card does things the declarative system can't express (unsupported choice consumers, ETB-as-copy/as-choice, full replacement ordering, or complex conditional logic), set `ImplementationID` to a descriptive kebab-case string like `"swords-to-plowshares"` and leave a comment explaining what the hand-written code needs to do.

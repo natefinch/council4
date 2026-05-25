@@ -20,6 +20,7 @@ func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.
 		Timestamp:      int64(objectID),
 	}
 	initializePermanentCounters(permanent, card.Def)
+	applyEnterBattlefieldReplacementEffects(g, permanent, fromZone)
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.GameEvent{
 		SourceID:    card.ID,
@@ -77,9 +78,20 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 		return false
 	}
 	rememberLastKnown(g, snapshotPermanent(g, permanent, game.ZoneBattlefield))
-	actualDestination := destination
+	event := game.GameEvent{
+		Kind:        game.EventZoneChanged,
+		Controller:  effectiveController(g, permanent),
+		Player:      permanent.Owner,
+		CardID:      permanent.CardInstanceID,
+		PermanentID: permanent.ObjectID,
+		TokenName:   permanentTokenName(permanent),
+		TokenDef:    permanent.TokenDef,
+		FromZone:    game.ZoneBattlefield,
+		ToZone:      destination,
+	}
+	actualDestination := replacementZoneChangeDestination(g, event)
 	if !permanent.Token {
-		actualDestination = commanderReplacementDestination(g, permanent.CardInstanceID, destination)
+		actualDestination = commanderReplacementDestination(g, permanent.CardInstanceID, actualDestination)
 	}
 	detachPermanent(g, permanent)
 	detachAttachmentsFromPermanent(g, permanent)
@@ -110,6 +122,14 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	card := g.GetCardInstance(cardID)
 	destination := game.ZoneGraveyard
 	if card != nil {
+		destination = replacementZoneChangeDestination(g, game.GameEvent{
+			Kind:       game.EventZoneChanged,
+			Controller: playerID,
+			Player:     playerID,
+			CardID:     cardID,
+			FromZone:   game.ZoneHand,
+			ToZone:     destination,
+		})
 		destination = commanderReplacementDestination(g, card.ID, destination)
 	}
 	zoneOwner := playerID

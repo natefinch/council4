@@ -16,6 +16,7 @@ type pendingTriggeredAbility struct {
 	abilityIndex int
 	targets      []game.Target
 	event        game.GameEvent
+	hasEvent     bool
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -32,11 +33,8 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	}
 	events := append([]game.GameEvent(nil), g.Events[start:]...)
 	g.TriggerEventCursor = len(g.Events)
-	if len(events) == 0 {
-		return false
-	}
-
 	pending := e.detectTriggeredAbilities(g, events)
+	pending = append(pending, e.detectStateTriggeredAbilities(g)...)
 	if len(pending) == 0 {
 		return false
 	}
@@ -49,7 +47,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			SourceTokenDef:  trigger.sourceToken,
 			AbilityIndex:    trigger.abilityIndex,
 			TriggerEvent:    trigger.event,
-			HasTriggerEvent: true,
+			HasTriggerEvent: trigger.hasEvent,
 			Controller:      trigger.controller,
 			Targets:         append([]game.Target(nil), trigger.targets...),
 		})
@@ -95,9 +93,79 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 			sourceToken:  permanent.TokenDef,
 			abilityIndex: i,
 			event:        event,
+			hasEvent:     true,
 		})
 	}
 	return pending
+}
+
+func (e *Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbility {
+	if g == nil {
+		return nil
+	}
+	if g.StateTriggerLatches == nil {
+		g.StateTriggerLatches = make(map[game.StateTriggerKey]bool)
+	}
+	var pending []pendingTriggeredAbility
+	seen := make(map[game.StateTriggerKey]bool)
+	for _, permanent := range g.Battlefield {
+		if permanent == nil {
+			continue
+		}
+		def := permanentCardDef(g, permanent)
+		if def == nil {
+			continue
+		}
+		controller := effectiveController(g, permanent)
+		for i := range def.Abilities {
+			ability := &def.Abilities[i]
+			if ability.Kind != game.TriggeredAbility || ability.Trigger == nil || ability.Trigger.State == nil {
+				continue
+			}
+			key := game.StateTriggerKey{
+				SourceObjectID: permanent.ObjectID,
+				SourceCardID:   permanent.CardInstanceID,
+				AbilityIndex:   i,
+			}
+			seen[key] = true
+			if !stateTriggerConditionSatisfied(g, controller, ability.Trigger.State) {
+				delete(g.StateTriggerLatches, key)
+				continue
+			}
+			if g.StateTriggerLatches[key] {
+				continue
+			}
+			// State triggers fire once while their condition is true and do not
+			// trigger again until the condition becomes false, then true (CR 603.8).
+			g.StateTriggerLatches[key] = true
+			pending = append(pending, pendingTriggeredAbility{
+				controller:   controller,
+				sourceID:     permanent.ObjectID,
+				sourceCardID: permanent.CardInstanceID,
+				sourceToken:  permanent.TokenDef,
+				abilityIndex: i,
+			})
+		}
+	}
+	for key := range g.StateTriggerLatches {
+		if !seen[key] {
+			delete(g.StateTriggerLatches, key)
+		}
+	}
+	return pending
+}
+
+func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, condition *game.StateTriggerCondition) bool {
+	if condition == nil {
+		return false
+	}
+	if condition.MatchControllerLifeLessOrEqual {
+		player := playerByID(g, controller)
+		if player == nil || player.Life > condition.ControllerLifeLessOrEqual {
+			return false
+		}
+	}
+	return true
 }
 
 func leftBattlefieldTriggerSource(g *game.Game, event game.GameEvent) *game.Permanent {
@@ -172,8 +240,10 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient != event.DamageRecipient {
 		return false
 	}
-	if pattern.Event == game.EventBeginningOfStep && pattern.Step != game.StepNone && pattern.Step != event.Step {
-		return false
+	if pattern.Event == game.EventBeginningOfStep {
+		if pattern.Step == game.StepNone || pattern.Step != event.Step {
+			return false
+		}
 	}
 	if pattern.MatchPermanentType && !eventPermanentHasType(g, event, pattern.PermanentType) {
 		return false

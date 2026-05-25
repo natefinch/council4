@@ -113,9 +113,11 @@ type abilityCostPlan struct {
 }
 
 type additionalCostPlan struct {
+	player     game.PlayerID
 	paid       []string
 	sacrifices []*game.Permanent
 	discards   []id.ID
+	lifePaid   int
 }
 
 type manaTap struct {
@@ -393,7 +395,7 @@ func buildAdditionalCostPlan(g *game.Game, playerID game.PlayerID, card *game.Ca
 }
 
 func buildAdditionalCostPlanForCosts(g *game.Game, playerID game.PlayerID, costs []game.AdditionalCost, prefs *paymentPreferences) (additionalCostPlan, bool) {
-	plan := additionalCostPlan{}
+	plan := additionalCostPlan{player: playerID}
 	for _, cost := range costs {
 		amount := additionalCostAmount(cost)
 		switch cost.Kind {
@@ -417,6 +419,13 @@ func buildAdditionalCostPlanForCosts(g *game.Game, playerID game.PlayerID, costs
 				return plan, false
 			}
 			plan.discards = append(plan.discards, chosen...)
+			plan.paid = append(plan.paid, additionalCostText(cost))
+		case game.AdditionalCostPayLife:
+			player := playerByID(g, playerID)
+			if player == nil || player.Life < amount {
+				return plan, false
+			}
+			plan.lifePaid += amount
 			plan.paid = append(plan.paid, additionalCostText(cost))
 		default:
 			return plan, false
@@ -719,6 +728,9 @@ func additionalCostPlanStillValid(g *game.Game, player *game.Player, plan additi
 			return false
 		}
 	}
+	if plan.lifePaid > 0 && player.Life < plan.lifePaid {
+		return false
+	}
 	return true
 }
 
@@ -733,6 +745,13 @@ func applyAdditionalCostPlan(g *game.Game, plan additionalCostPlan) bool {
 		if card == nil || !discardCardFromHand(g, card.Owner, cardID) {
 			return false
 		}
+	}
+	if plan.lifePaid > 0 {
+		player := playerByID(g, plan.player)
+		if player == nil || player.Life < plan.lifePaid {
+			return false
+		}
+		player.Life -= plan.lifePaid
 	}
 	return true
 }

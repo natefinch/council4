@@ -64,14 +64,20 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		return
 	}
 
-	g.Turn.Step = game.StepDraw
 	if !consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw) {
+		g.Turn.Step = game.StepDraw
+		emitBeginningOfStepEvent(g, game.StepDraw)
 		cardID, ok := e.drawCard(g, g.Turn.ActivePlayer)
 		log.addDraw(DrawLog{
 			Player: g.Turn.ActivePlayer,
 			CardID: cardID,
 			Failed: !ok,
 		})
+		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
+		e.runPriorityLoop(g, agents, log)
+		if g.IsGameOver() {
+			return
+		}
 	}
 	e.applyStateBasedActionsWithLog(g, log)
 	emptyManaPools(g)
@@ -115,6 +121,7 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	}
 	expireCleanupDurations(g)
 	expirePreventionShields(g)
+	expireReplacementEffects(g)
 	e.applyStateBasedActions(g)
 	emptyManaPools(g)
 	g.Combat = nil

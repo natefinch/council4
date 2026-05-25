@@ -80,6 +80,10 @@ type StackObject struct {
 	// ResolutionResults stores named success/choice results from earlier
 	// effects on this stack object for "if you do" / "if you don't" branches.
 	ResolutionResults map[string]EffectResolutionResult
+
+	// ResolutionChoices stores named values chosen while resolving this stack
+	// object, for later instructions such as "of the chosen color" (CR 608.2c).
+	ResolutionChoices map[string]ResolutionChoiceResult
 }
 
 // Stack represents the game stack — the zone where spells and abilities

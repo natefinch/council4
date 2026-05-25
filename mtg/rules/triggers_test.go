@@ -479,6 +479,83 @@ func TestBeginningOfEndStepTriggerResolves(t *testing.T) {
 	}
 }
 
+func TestBeginningOfDrawStepTriggerResolvesAfterTurnDraw(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Trigger Draw"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Turn Draw"})
+	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.StepDraw,
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 2 {
+		t.Fatalf("hand size = %d, want turn draw plus draw-step trigger", got)
+	}
+}
+
+func TestBeginningOfCombatTriggerResolves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Combat Draw"})
+	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.StepBeginningOfCombat,
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+
+	engine.runCombatPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want beginning-of-combat trigger draw", got)
+	}
+}
+
+func TestBeginningOfStepTriggerRequiresExplicitStep(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Should Not Draw"})
+	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want only turn draw without broad step trigger", got)
+	}
+}
+
+func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "First"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Second"})
+	source := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+	card := g.GetCardInstance(source.CardInstanceID)
+	card.Def.Abilities[0].Trigger.Type = game.TriggerState
+	card.Def.Abilities[0].Trigger.State = &game.StateTriggerCondition{
+		MatchControllerLifeLessOrEqual: true,
+		ControllerLifeLessOrEqual:      10,
+	}
+	g.Players[game.Player1].Life = 10
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger re-fired while condition remained true")
+	}
+	g.Players[game.Player1].Life = 11
+	engine.putTriggeredAbilitiesOnStack(g)
+	g.Players[game.Player1].Life = 10
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger did not re-arm after condition became false")
+	}
+}
+
 func TestSpellCastTriggerFiltersCardTypesAndController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
