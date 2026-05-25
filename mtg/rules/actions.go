@@ -289,6 +289,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,
 		CardID:        cast.CardID,
+		CardTypes:     append([]game.CardType(nil), card.Def.Types...),
 		FromZone:      sourceZone,
 		ToZone:        game.ZoneStack,
 	}

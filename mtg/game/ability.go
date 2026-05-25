@@ -149,8 +149,15 @@ type TriggerPattern struct {
 	Source     TriggerSourceFilter
 	Player     TriggerPlayerFilter
 
-	MatchPermanentType bool
-	PermanentType      CardType
+	MatchPermanentType    bool
+	PermanentType         CardType
+	RequirePermanentTypes []CardType
+	ExcludePermanentTypes []CardType
+
+	// RequireCardTypes and ExcludeCardTypes filter spell-cast events by the
+	// spell's types as chosen/cast on the stack (CR 601.2, CR 603.2).
+	RequireCardTypes []CardType
+	ExcludeCardTypes []CardType
 
 	MatchFromZone bool
 	FromZone      ZoneType
@@ -158,6 +165,10 @@ type TriggerPattern struct {
 	ToZone        ZoneType
 
 	DamageRecipient DamageRecipientKind
+
+	// Step filters EventBeginningOfStep triggers such as "At the beginning of
+	// your upkeep" (CR 603.6c).
+	Step Step
 }
 
 // TimingRestriction constrains when an activated ability can be used.
@@ -283,11 +294,19 @@ type EffectCondition struct {
 // TargetIndex indexes into the runtime targets chosen for the spell or ability;
 // -1 means the effect applies to that spell or ability's controller.
 type Effect struct {
-	Type              EffectType
-	Amount            int
-	DynamicAmount     *DynamicAmount
-	TargetIndex       int
-	Condition         *EffectCondition
+	Type          EffectType
+	Amount        int
+	DynamicAmount *DynamicAmount
+	TargetIndex   int
+	Condition     *EffectCondition
+
+	// Optional asks the effect's controller whether to apply this single
+	// resolution instruction. LinkID can be used with ResultCondition on later
+	// effects to model "if you do" / "if you don't" branches as instructions are
+	// followed in order (CR 608.2c).
+	Optional        bool
+	ResultCondition *EffectResultCondition
+
 	PowerDelta        int
 	ToughnessDelta    int
 	CounterKind       counter.Kind
@@ -323,7 +342,8 @@ type TargetSpec struct {
 	Predicate TargetPredicate
 }
 
-// Mode represents one mode of a modal spell or ability ("Choose one —").
+// Mode represents one mode of a modal spell or ability ("Choose one —",
+// "Choose two —", etc.; CR 700.2).
 type Mode struct {
 	// Text is the oracle text of this mode.
 	Text string
@@ -388,6 +408,17 @@ type AbilityDef struct {
 
 	// Modes lists the modes for modal spells/abilities. Empty for non-modal.
 	Modes []Mode
+
+	// MinModes and MaxModes constrain modal choices locked in while casting or
+	// activating a modal object (CR 601.2d, CR 700.2). For legacy choose-one
+	// modal abilities, leave both zero and the rules layer treats the ability as
+	// choosing exactly one mode.
+	MinModes int
+	MaxModes int
+
+	// AllowDuplicateModes permits the same mode to be chosen more than once when
+	// the modal text explicitly allows it (CR 700.2d).
+	AllowDuplicateModes bool
 
 	// ZoneOfFunction is the zone where this ability functions.
 	// Defaults to Battlefield for permanents (CR 113.6).

@@ -76,6 +76,10 @@ type StackObject struct {
 	// ResolvedAmounts stores named numeric results from earlier effects on this
 	// stack object for "that much" style follow-up effects.
 	ResolvedAmounts map[string]int
+
+	// ResolutionResults stores named success/choice results from earlier
+	// effects on this stack object for "if you do" / "if you don't" branches.
+	ResolutionResults map[string]EffectResolutionResult
 }
 
 // Stack represents the game stack — the zone where spells and abilities

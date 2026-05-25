@@ -102,9 +102,9 @@ func recordReplacementDecision(g *game.Game, player game.PlayerID, options []str
 	})
 }
 
-func createPreventionShield(g *game.Game, obj *game.StackObject, effect game.Effect) {
+func createPreventionShield(g *game.Game, obj *game.StackObject, effect game.Effect) bool {
 	if g == nil || obj == nil || effect.Amount <= 0 {
-		return
+		return false
 	}
 	shield := game.PreventionShield{
 		ID:          g.IDGen.Next(),
@@ -116,10 +116,10 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, effect game.Eff
 	if effect.TargetIndex == -1 {
 		shield.Player = obj.Controller
 		g.PreventionShields = append(g.PreventionShields, shield)
-		return
+		return true
 	}
 	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {
-		return
+		return false
 	}
 	target := obj.Targets[effect.TargetIndex]
 	switch target.Kind {
@@ -128,9 +128,10 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, effect game.Eff
 	case game.TargetPermanent:
 		shield.PermanentID = target.PermanentID
 	default:
-		return
+		return false
 	}
 	g.PreventionShields = append(g.PreventionShields, shield)
+	return true
 }
 
 func applyPreventionShields(g *game.Game, event damageEvent, amount int) int {

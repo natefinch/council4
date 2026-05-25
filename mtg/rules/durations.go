@@ -63,9 +63,9 @@ func filterContinuousEffects(effects []game.ContinuousEffect, expired func(game.
 	return kept
 }
 
-func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) {
+func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) bool {
 	if g == nil || obj == nil || def == nil || def.Timing == 0 {
-		return
+		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	ability := game.AbilityDef{
@@ -84,6 +84,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		Timing:         def.Timing,
 		Ability:        ability,
 	})
+	return true
 }
 
 func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {

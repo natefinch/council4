@@ -446,6 +446,118 @@ func TestCastTriggerGoesOnStackAboveCastSpell(t *testing.T) {
 	}
 }
 
+func TestBeginningOfUpkeepTriggerResolvesBeforeDrawStep(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Upkeep Draw"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Draw Step Draw"})
+	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.StepUpkeep,
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 2 {
+		t.Fatalf("hand size = %d, want upkeep trigger plus draw step draw", got)
+	}
+}
+
+func TestBeginningOfEndStepTriggerResolves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "End Step Draw"})
+	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.StepEnd,
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want end-step trigger draw", got)
+	}
+}
+
+func TestSpellCastTriggerFiltersCardTypesAndController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+		Event:            game.EventSpellCast,
+		Controller:       game.TriggerControllerOpponent,
+		RequireCardTypes: []game.CardType{game.TypeInstant},
+		ExcludeCardTypes: []game.CardType{game.TypeCreature},
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+	spellID := addCardToHand(g, game.Player2, greenInstant())
+	addBasicLandPermanent(g, game.Player2, "Forest")
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player2
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player2, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast instant failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("opponent instant cast trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want spell-cast trigger draw", got)
+	}
+}
+
+func TestSpellCastTriggerExcludesCreatureSpells(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+		Event:            game.EventSpellCast,
+		Controller:       game.TriggerControllerOpponent,
+		ExcludeCardTypes: []game.CardType{game.TypeCreature},
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+	spellID := addCardToHand(g, game.Player2, greenCreature())
+	addBasicLandPermanent(g, game.Player2, "Forest")
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player2
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player2, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast creature failed")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("noncreature spell trigger fired for creature spell")
+	}
+}
+
+func TestPermanentTriggerRequireExcludeTypeFilters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+		Event:                 game.EventPermanentDied,
+		Controller:            game.TriggerControllerOpponent,
+		RequirePermanentTypes: []game.CardType{game.TypeArtifact},
+		ExcludePermanentTypes: []game.CardType{game.TypeCreature},
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+	artifact := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:  "Relic",
+		Types: []game.CardType{game.TypeArtifact},
+	})
+
+	destroyPermanent(g, artifact.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("artifact death trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want artifact death trigger draw", got)
+	}
+}
+
 func TestInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 	t.Run("not put on stack when false at trigger time", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

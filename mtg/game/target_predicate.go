@@ -2,7 +2,9 @@ package game
 
 import "github.com/natefinch/council4/mtg/game/mana"
 
-// TargetAllow identifies broad categories a target spec can choose from.
+// TargetAllow identifies broad categories a target spec can choose from. The
+// targetability test starts with the word "target" and the target kind chosen as
+// part of casting/activating/trigger placement (CR 115, CR 601.2c, CR 603.3d).
 type TargetAllow int
 
 const (
@@ -71,7 +73,9 @@ type IntComparison struct {
 }
 
 // TargetPredicate carries structured target legality predicates parsed from
-// common oracle text. Empty fields are wildcards.
+// common oracle text. Empty fields are wildcards. These predicates model target
+// restrictions that must be legal when chosen and again on resolution
+// (CR 115.1, CR 608.2b).
 type TargetPredicate struct {
 	PermanentTypes []CardType
 	ExcludedTypes  []CardType

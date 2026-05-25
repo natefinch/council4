@@ -19,6 +19,7 @@ const (
 	EventCardDiscarded
 	EventDamagePrevented
 	EventDestroyReplaced
+	EventBeginningOfStep
 )
 
 // DamageRecipientKind identifies what received damage.
@@ -57,6 +58,11 @@ type GameEvent struct {
 	// CardID identifies the card that moved, was drawn, discarded, or became a permanent.
 	CardID id.ID
 
+	// CardTypes records the relevant card types at event time for spell-cast
+	// filters such as "noncreature spell" or "artifact spell"; cast triggers
+	// look at the spell as cast on the stack (CR 601.2, CR 603.2).
+	CardTypes []CardType
+
 	// PermanentID identifies the permanent that entered, left, was damaged, attacked, or blocked.
 	PermanentID id.ID
 
@@ -85,4 +91,8 @@ type GameEvent struct {
 
 	// BlockedAttackerID is set for EventBlockerDeclared.
 	BlockedAttackerID id.ID
+
+	// Step identifies the turn step for EventBeginningOfStep triggers
+	// (CR 603.6c).
+	Step Step
 }

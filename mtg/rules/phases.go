@@ -55,6 +55,14 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	}
 
 	g.Turn.Step = game.StepUpkeep
+	// Beginning-of-step triggers fire at the start of the upkeep and are put on
+	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
+	e.runPriorityLoop(g, agents, log)
+	if g.IsGameOver() {
+		return
+	}
 
 	g.Turn.Step = game.StepDraw
 	if !consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw) {
@@ -80,8 +88,12 @@ func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
 	g.Turn.Phase = game.PhaseEnding
 	g.Turn.Step = game.StepEnd
+	// "At the beginning of the end step" triggers use the same event as delayed
+	// next-end-step triggers before the end-step priority window (CR 603.6c,
+	// CR 603.7b).
+	emitBeginningOfStepEvent(g, game.StepEnd)
 	putBeginningOfEndStepDelayedTriggersOnStack(g)
-	if !g.Stack.IsEmpty() {
+	if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, nil) || !g.Stack.IsEmpty() {
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 		e.runPriorityLoop(g, agents, nil)
 		if g.IsGameOver() {
@@ -106,6 +118,17 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	e.applyStateBasedActions(g)
 	emptyManaPools(g)
 	g.Combat = nil
+}
+
+func emitBeginningOfStepEvent(g *game.Game, step game.Step) {
+	// Triggered abilities with "At the beginning of [step]" look for this
+	// turn-based event (CR 603.6c).
+	emitEvent(g, game.GameEvent{
+		Kind:       game.EventBeginningOfStep,
+		Controller: g.Turn.ActivePlayer,
+		Player:     g.Turn.ActivePlayer,
+		Step:       step,
+	})
 }
 
 func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {

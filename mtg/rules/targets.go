@@ -227,12 +227,25 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 
 func modeChoicesForSpell(card *game.CardDef) [][]int {
 	ability := firstSpellAbility(card)
+	return modeChoicesForAbility(ability)
+}
+
+func modeChoicesForAbility(ability *game.AbilityDef) [][]int {
 	if ability == nil || len(ability.Modes) == 0 {
 		return [][]int{nil}
 	}
-	choices := make([][]int, 0, len(ability.Modes))
-	for i := range ability.Modes {
-		choices = append(choices, []int{i})
+	// Modal choices are made before targets/costs are finalized and are locked
+	// into the stack object (CR 601.2d, CR 700.2).
+	minModes, maxModes := modeChoiceRange(ability)
+	if minModes < 0 || maxModes < minModes || maxModes > len(ability.Modes) {
+		return nil
+	}
+	if ability.AllowDuplicateModes {
+		return duplicateModeChoices(len(ability.Modes), minModes, maxModes)
+	}
+	var choices [][]int
+	for count := minModes; count <= maxModes; count++ {
+		choices = append(choices, modeCombinations(len(ability.Modes), count)...)
 	}
 	return choices
 }
@@ -252,10 +265,82 @@ func modesValidForAbility(ability *game.AbilityDef, chosenModes []int) bool {
 	if len(ability.Modes) == 0 {
 		return len(chosenModes) == 0
 	}
-	if len(chosenModes) != 1 {
+	minModes, maxModes := modeChoiceRange(ability)
+	if len(chosenModes) < minModes || len(chosenModes) > maxModes {
 		return false
 	}
-	return chosenModes[0] >= 0 && chosenModes[0] < len(ability.Modes)
+	seen := make(map[int]bool, len(chosenModes))
+	for i, modeIndex := range chosenModes {
+		if modeIndex < 0 || modeIndex >= len(ability.Modes) {
+			return false
+		}
+		if i > 0 && chosenModes[i-1] > modeIndex {
+			return false
+		}
+		// Canonical nondecreasing order avoids representing the same modal
+		// choice multiple ways while preserving duplicate-mode templates that
+		// explicitly permit repeats (CR 700.2d).
+		if !ability.AllowDuplicateModes {
+			if seen[modeIndex] {
+				return false
+			}
+			seen[modeIndex] = true
+		}
+	}
+	return true
+}
+
+func modeChoiceRange(ability *game.AbilityDef) (int, int) {
+	if ability == nil || len(ability.Modes) == 0 {
+		return 0, 0
+	}
+	minModes := ability.MinModes
+	maxModes := ability.MaxModes
+	if minModes == 0 && maxModes == 0 {
+		return 1, 1
+	}
+	return minModes, maxModes
+}
+
+func modeCombinations(modeCount int, chooseCount int) [][]int {
+	if chooseCount == 0 {
+		return [][]int{nil}
+	}
+	if chooseCount > modeCount {
+		return nil
+	}
+	var result [][]int
+	var walk func(start int, chosen []int)
+	walk = func(start int, chosen []int) {
+		if len(chosen) == chooseCount {
+			result = append(result, append([]int(nil), chosen...))
+			return
+		}
+		need := chooseCount - len(chosen)
+		for i := start; i <= modeCount-need; i++ {
+			walk(i+1, append(chosen, i))
+		}
+	}
+	walk(0, nil)
+	return result
+}
+
+func duplicateModeChoices(modeCount int, minModes int, maxModes int) [][]int {
+	var result [][]int
+	var walk func(start int, chosen []int)
+	walk = func(start int, chosen []int) {
+		if len(chosen) >= minModes {
+			result = append(result, append([]int(nil), chosen...))
+		}
+		if len(chosen) == maxModes {
+			return
+		}
+		for i := start; i < modeCount; i++ {
+			walk(i, append(chosen, i))
+		}
+	}
+	walk(0, nil)
+	return result
 }
 
 func normalizeTargetSpec(spec game.TargetSpec) game.TargetSpec {

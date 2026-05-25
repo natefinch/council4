@@ -213,6 +213,154 @@ func TestDynamicAmountCanUsePreviousEffectResult(t *testing.T) {
 	}
 }
 
+func TestOptionalEffectCanBeAcceptedOrDeclined(t *testing.T) {
+	t.Run("accepted by fallback", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+		addEffectSpellToStack(g, game.Player1, game.Effect{
+			Type:        game.EffectDraw,
+			TargetIndex: -1,
+			Amount:      1,
+			Optional:    true,
+		}, nil)
+		log := TurnLog{}
+
+		engine.resolveTopOfStack(g, &log)
+
+		if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+			t.Fatalf("hand size = %d, want optional draw accepted", got)
+		}
+		if len(log.Choices) != 1 || log.Choices[0].Selected[0] != 1 {
+			t.Fatalf("choices = %+v, want accepted optional effect", log.Choices)
+		}
+	})
+	t.Run("declined by agent", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+		addEffectSpellToStack(g, game.Player1, game.Effect{
+			Type:        game.EffectDraw,
+			TargetIndex: -1,
+			Amount:      1,
+			Optional:    true,
+		}, nil)
+		agents := [game.NumPlayers]PlayerAgent{
+			game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+		}
+		log := TurnLog{}
+
+		engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+		if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+			t.Fatalf("hand size = %d, want optional draw declined", got)
+		}
+		if len(log.Choices) != 1 || log.Choices[0].Selected[0] != 0 {
+			t.Fatalf("choices = %+v, want declined optional effect", log.Choices)
+		}
+	})
+}
+
+func TestEffectResultConditionBranchesOnIfYouDoAndDont(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	sourceID := addLinkedResultSpellToStack(g, []game.Effect{
+		{Type: game.EffectDraw, TargetIndex: -1, Amount: 1, Optional: true, LinkID: "choice"},
+		{
+			Type:        game.EffectGainLife,
+			TargetIndex: -1,
+			Amount:      3,
+			ResultCondition: &game.EffectResultCondition{
+				LinkID:    "choice",
+				Accepted:  game.TriTrue,
+				Succeeded: game.TriTrue,
+			},
+		},
+		{
+			Type:        game.EffectLoseLife,
+			TargetIndex: -1,
+			Amount:      3,
+			ResultCondition: &game.EffectResultCondition{
+				LinkID:   "choice",
+				Accepted: game.TriFalse,
+			},
+		},
+	})
+	if sourceID == 0 {
+		t.Fatal("missing source id")
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != 43 {
+		t.Fatalf("life = %d, want if-you-do branch only", got)
+	}
+}
+
+func TestEffectResultConditionRequiresActualSuccess(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addLinkedResultSpellToStack(g, []game.Effect{
+		{Type: game.EffectDraw, TargetIndex: -1, Amount: 1, LinkID: "draw"},
+		{
+			Type:        game.EffectGainLife,
+			TargetIndex: -1,
+			Amount:      3,
+			ResultCondition: &game.EffectResultCondition{
+				LinkID:    "draw",
+				Succeeded: game.TriTrue,
+			},
+		},
+		{
+			Type:        game.EffectLoseLife,
+			TargetIndex: -1,
+			Amount:      2,
+			ResultCondition: &game.EffectResultCondition{
+				LinkID:    "draw",
+				Succeeded: game.TriFalse,
+			},
+		},
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != 38 {
+		t.Fatalf("life = %d, want failed-draw branch", got)
+	}
+}
+
+func TestDeclinedOptionalEffectDoesNotPublishPreviousAmount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addLinkedResultSpellToStack(g, []game.Effect{
+		{
+			Type:        game.EffectGainLife,
+			TargetIndex: -1,
+			Amount:      5,
+			Optional:    true,
+			LinkID:      "amount",
+		},
+		{
+			Type:        game.EffectLoseLife,
+			TargetIndex: -1,
+			DynamicAmount: &game.DynamicAmount{
+				Kind:   game.DynamicAmountPreviousEffectResult,
+				LinkID: "amount",
+			},
+		},
+	})
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+	}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != 40 {
+		t.Fatalf("life = %d, want declined linked amount to be unavailable", got)
+	}
+}
+
 func TestDamageAndLoseLifeEffectsCanEliminatePlayers(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -851,6 +999,14 @@ func TestTokenCanBlockTakeCombatDamageAndDie(t *testing.T) {
 }
 
 func addEffectSpellToStack(g *game.Game, controller game.PlayerID, effect game.Effect, targets []game.Target) id.ID {
+	return addLinkedResultSpellToStackForController(g, controller, []game.Effect{effect}, targets)
+}
+
+func addLinkedResultSpellToStack(g *game.Game, effects []game.Effect) id.ID {
+	return addLinkedResultSpellToStackForController(g, game.Player1, effects, nil)
+}
+
+func addLinkedResultSpellToStackForController(g *game.Game, controller game.PlayerID, effects []game.Effect, targets []game.Target) id.ID {
 	sourceID := g.IDGen.Next()
 	g.CardInstances[sourceID] = &game.CardInstance{
 		ID: sourceID,
@@ -860,7 +1016,7 @@ func addEffectSpellToStack(g *game.Game, controller game.PlayerID, effect game.E
 			Abilities: []game.AbilityDef{
 				{
 					Kind:    game.SpellAbility,
-					Effects: []game.Effect{effect},
+					Effects: append([]game.Effect(nil), effects...),
 				},
 			},
 		},

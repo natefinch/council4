@@ -24,6 +24,9 @@ type AbilityDef struct {
     Effects            []Effect            // Effects this ability produces
     Targets            []TargetSpec        // Targeting requirements
     Modes              []Mode              // Modal spell/ability modes
+    MinModes           int                 // Modal choice minimum (CR 601.2d, CR 700.2)
+    MaxModes           int                 // Modal choice maximum; 0/0 with Modes = choose one
+    AllowDuplicateModes bool               // True for "choose the same mode more than once" (CR 700.2d)
     ZoneOfFunction     ZoneType            // Zone where ability functions (default: Battlefield)
     Timing             TimingRestriction   // When activated ability can be used
     IsLoyaltyAbility   bool                // True for planeswalker loyalty abilities
@@ -138,8 +141,10 @@ type DynamicAmount struct {
 type Effect struct {
     Type            EffectType
     Amount          int           // Numeric amount (damage, cards drawn, etc.)
-    DynamicAmount   *DynamicAmount // Amount determined on resolution
+    DynamicAmount   *DynamicAmount // Amount determined on resolution (CR 107.3, CR 608.2c)
     TargetIndex     int           // Index into runtime targets; -1 = controller
+    Optional        bool          // Ask whether to apply this single instruction (CR 608.2c)
+    ResultCondition *EffectResultCondition // Gate on prior linked effect result
     Condition       *EffectCondition
     PowerDelta      int           // For EffectModifyPT
     ToughnessDelta  int           // For EffectModifyPT
@@ -158,6 +163,21 @@ type Effect struct {
     Description     string        // Human-readable description
 }
 ```
+
+### EffectResultCondition
+
+```go
+type EffectResultCondition struct {
+    LinkID    string
+    Accepted  TriState
+    Succeeded TriState
+}
+```
+
+Use `LinkID` on an earlier effect and `ResultCondition` on later effects for
+"if you do" / "if you don't" branches. `Succeeded` checks whether the previous
+effect actually did anything, so a failed draw from an empty library does not
+count as "if you do" (CR 608.2c, CR 101.3).
 
 ### TargetSpec
 
@@ -180,7 +200,9 @@ const (
 
 Use structured `Allow` and `Predicate` for common constraints such as nonblack,
 tapped/untapped, attacking/blocking, mana value, power/toughness, "another",
-and "with flying". Keep `Constraint` as human-readable oracle wording.
+and "with flying". Keep `Constraint` as human-readable oracle wording. Targets
+must be legal when chosen and again on resolution (CR 115, CR 601.2c,
+CR 603.3d, CR 608.2b).
 
 ### EffectSelector (for mass effects)
 
@@ -195,17 +217,6 @@ const (
     EffectSelectorCreaturesYouControl      EffectSelector = "creatures you control"
     EffectSelectorOtherCreaturesYouControl EffectSelector = "other creatures you control"
 )
-```
-
-### TargetSpec
-
-```go
-type TargetSpec struct {
-    MinTargets int     // 0 for "up to"
-    MaxTargets int
-    Constraint string  // e.g., "creature", "creature or planeswalker", "player",
-                       // "any target", "creature or player"
-}
 ```
 
 ### TriggerCondition
@@ -230,27 +241,36 @@ type TriggerPattern struct {
     Player     TriggerPlayerFilter      // TriggerPlayerAny/You/Opponent
     MatchPermanentType bool
     PermanentType      CardType
+    RequirePermanentTypes []CardType
+    ExcludePermanentTypes []CardType
+    RequireCardTypes []CardType
+    ExcludeCardTypes []CardType
     MatchFromZone bool
     FromZone      ZoneType
     MatchToZone   bool
     ToZone        ZoneType
     DamageRecipient DamageRecipientKind
+    Step Step
 }
 ```
+
+Use `RequireCardTypes` / `ExcludeCardTypes` for cast triggers such as
+"Whenever an opponent casts a noncreature spell" (CR 603.2). Use
+`RequirePermanentTypes` / `ExcludePermanentTypes` for ETB/LTB/dies triggers;
+LTB and dies triggers use last-known information (CR 603.10). Use `Step` with
+`EventBeginningOfStep` for "At the beginning of your upkeep/end step"
+(CR 603.6c).
 
 ### EventKind (for trigger patterns)
 
 ```go
 const (
-    EventSpellCast EventKind = iota
-    EventAbilityActivated; EventAbilityTriggered
-    EventPermanentETB; EventPermanentLTB
-    EventCreatureDied; EventZoneChange
-    EventDamageDealt; EventLifeGained; EventLifeLost
-    EventDrawCard; EventDiscardCard; EventMillCard
-    EventCounterAdded; EventCounterRemoved
-    EventAttackDeclared; EventBlockDeclared
-    EventCombatDamageDealt
+    EventUnknown EventKind = iota
+    EventSpellCast; EventSpellResolved
+    EventPermanentEnteredBattlefield; EventPermanentDied
+    EventDamageDealt; EventCardDrawn; EventZoneChanged
+    EventAttackerDeclared; EventBlockerDeclared; EventCardDiscarded
+    EventDamagePrevented; EventDestroyReplaced
     EventBeginningOfStep
 )
 ```
@@ -310,6 +330,10 @@ For keywords with parameters:
 - `Text:` full oracle text
 - Extract `Targets` from "target [constraint]" phrases
 - Extract `Effects` from the action verbs (see Effect Mapping below)
+- For modal text (`Choose one —`, `Choose two —`, `Choose one or both —`,
+  `Choose up to one —`), fill `Modes` and set `MinModes` / `MaxModes` from the
+  choice count. Leave `MinModes` and `MaxModes` at zero only for legacy
+  choose-one mode lists.
 
 #### Activated abilities
 
@@ -326,15 +350,20 @@ For keywords with parameters:
 - Parse the trigger word → `Trigger.Type` (TriggerWhen/TriggerWhenever/TriggerAt)
 - Parse the event → `Trigger.Pattern`
 - Common patterns:
-  - "enters" / "enters the battlefield" → `EventPermanentETB`
-  - "dies" → `EventCreatureDied`
-  - "leaves the battlefield" → `EventPermanentLTB`
+  - "enters" / "enters the battlefield" → `EventPermanentEnteredBattlefield`
+  - "dies" → `EventPermanentDied`
+  - "leaves the battlefield" → `EventZoneChanged` with `FromZone: game.ZoneBattlefield`
   - "At the beginning of your upkeep" → `EventBeginningOfStep`
-  - "Whenever ... attacks" → `EventAttackDeclared`
+  - "Whenever ... attacks" → `EventAttackerDeclared`
   - "Whenever ... deals damage" → `EventDamageDealt`
   - "Whenever ... is cast" → `EventSpellCast`
 - Set controller/source filters based on "you", "an opponent", "another creature", "this creature"
 - If "you may" appears → `Optional: true`
+- For "At the beginning of your upkeep/end step", use
+  `EventBeginningOfStep` with `Step: game.StepUpkeep` or `game.StepEnd`.
+- For cast triggers such as "Whenever an opponent casts a noncreature spell",
+  use `EventSpellCast`, `Controller: game.TriggerControllerOpponent`, and
+  `ExcludeCardTypes: []game.CardType{game.TypeCreature}`.
 
 #### Static abilities
 
@@ -353,6 +382,8 @@ For keywords with parameters:
 | "deals X damage to" | `EffectDamage` | `DynamicAmount: &game.DynamicAmount{Kind: game.DynamicAmountX}` |
 | "deals damage equal to [target]'s power" | `EffectDamage` | `DynamicAmount: &game.DynamicAmount{Kind: game.DynamicAmountTargetPower, TargetIndex: N}` |
 | "that much" | any amount effect | Use `LinkID` on the producing effect and `DynamicAmountPreviousEffectResult` on the consuming effect |
+| "you may [do X]. If you do, [Y]" | any effect(s) | Put `Optional: true` and `LinkID` on X; put `ResultCondition` with `Accepted: game.TriTrue`, `Succeeded: game.TriTrue` on Y |
+| "if you don't" | any effect | Put `ResultCondition` with `Accepted: game.TriFalse` on the branch effect |
 | "destroy target" | `EffectDestroy` | `TargetIndex` from target order |
 | "exile target" | `EffectExile` | |
 | "return target ... to its owner's hand" | `EffectBounce` | |
@@ -475,7 +506,10 @@ Abilities: []game.AbilityDef{
 },
 ```
 
-Note: Swords to Plowshares has a variable life gain amount (equal to the creature's power). Since the current `Effect.Amount` is a static int, we use `Description` to document the dynamic behavior. This card may need an `ImplementationID` for full rules accuracy.
+Note: Swords to Plowshares needs both a dynamic amount
+(`DynamicAmountTargetPower`) and "that permanent's controller" as the life-gain
+recipient. The dynamic amount is supported, but target-controller-as-recipient
+still needs either a future recipient primitive or `ImplementationID`.
 
 ### Example 5: Soul Warden (triggered ability)
 
@@ -489,7 +523,7 @@ Abilities: []game.AbilityDef{
         Trigger: &game.TriggerCondition{
             Type: game.TriggerWhenever,
             Pattern: game.TriggerPattern{
-                Event:              game.EventPermanentETB,
+                Event:              game.EventPermanentEnteredBattlefield,
                 Source:             game.TriggerSourceAny,
                 MatchPermanentType: true,
                 PermanentType:      game.TypeCreature,
@@ -533,7 +567,7 @@ Abilities: []game.AbilityDef{
 
 2. **Reminder text**: Text in parentheses like "(Attacking doesn't cause this creature to tap.)" is reminder text — it's not rules text. Ignore it when parsing abilities. The keyword itself carries the rules meaning.
 
-3. **"Any target"**: This means "target creature, player, or planeswalker" (CR 115.4). Use `Constraint: "any target"`.
+3. **"Any target"**: This means target creature, player, planeswalker, or battle (CR 115.4). Use `Constraint: "any target"` or `Allow: game.TargetAllowPermanent | game.TargetAllowPlayer`.
 
 4. **"You" as target vs. controller**: When the text says "you gain 1 life", "you" is the controller, not a target. Use `TargetIndex: -1`. Only use `TargetIndex: 0+` when there's an explicit "target" word.
 

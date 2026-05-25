@@ -150,6 +150,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 		return false
 	}
 
+	// Trigger patterns are checked when the triggering event is processed, and
+	// LTB/dies checks may need last-known information for the moved permanent
+	// (CR 603.2, CR 603.6c, CR 603.10).
 	sourceController := effectiveController(g, source)
 	if !triggerControllerMatches(sourceController, pattern.Controller, event.Controller) {
 		return false
@@ -169,7 +172,16 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient != event.DamageRecipient {
 		return false
 	}
+	if pattern.Event == game.EventBeginningOfStep && pattern.Step != game.StepNone && pattern.Step != event.Step {
+		return false
+	}
 	if pattern.MatchPermanentType && !eventPermanentHasType(g, event, pattern.PermanentType) {
+		return false
+	}
+	if !eventPermanentTypeFiltersMatch(g, event, pattern.RequirePermanentTypes, pattern.ExcludePermanentTypes) {
+		return false
+	}
+	if !eventCardTypeFiltersMatch(g, event, pattern.RequireCardTypes, pattern.ExcludeCardTypes) {
 		return false
 	}
 	return true
@@ -179,6 +191,8 @@ func triggerInterveningIf(g *game.Game, controller game.PlayerID, trigger *game.
 	if trigger == nil {
 		return true
 	}
+	// Intervening "if" conditions are checked both as the event triggers and as
+	// the ability resolves (CR 603.4).
 	if trigger.InterveningIfControllerLifeAtLeast != 0 {
 		player := playerByID(g, controller)
 		if player == nil || player.Life < trigger.InterveningIfControllerLifeAtLeast {
@@ -228,6 +242,8 @@ func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType game.Car
 		if permanent := permanentByObjectID(g, event.PermanentID); permanent != nil {
 			return permanentHasType(g, permanent, cardType)
 		}
+		// Leaves-the-battlefield and dies triggers look back at the permanent's
+		// last existence on the battlefield (CR 603.10).
 		if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
 			return slices.Contains(snapshot.Types, cardType)
 		}
@@ -241,6 +257,40 @@ func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType game.Car
 		return event.TokenDef.HasType(cardType)
 	}
 	return false
+}
+
+func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required []game.CardType, excluded []game.CardType) bool {
+	for _, cardType := range required {
+		if !eventPermanentHasType(g, event, cardType) {
+			return false
+		}
+	}
+	for _, cardType := range excluded {
+		if eventPermanentHasType(g, event, cardType) {
+			return false
+		}
+	}
+	return true
+}
+
+func eventCardTypeFiltersMatch(g *game.Game, event game.GameEvent, required []game.CardType, excluded []game.CardType) bool {
+	types := event.CardTypes
+	if len(types) == 0 && event.CardID != 0 {
+		if card := g.GetCardInstance(event.CardID); card != nil && card.Def != nil {
+			types = card.Def.Types
+		}
+	}
+	for _, cardType := range required {
+		if !slices.Contains(types, cardType) {
+			return false
+		}
+	}
+	for _, cardType := range excluded {
+		if slices.Contains(types, cardType) {
+			return false
+		}
+	}
+	return true
 }
 
 func eventPermanentHadCounters(g *game.Game, event *game.GameEvent) bool {

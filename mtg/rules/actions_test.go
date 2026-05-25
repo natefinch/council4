@@ -620,6 +620,94 @@ func TestLegalActionsIncludesModalSpellModeChoices(t *testing.T) {
 	}
 }
 
+func TestModalSpellSupportsChooseTwo(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, modalSpellWithModeRange(2, 2))
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	if !containsAction(legal, action.CastSpell(spellID, nil, 0, []int{0, 1})) {
+		t.Fatal("legal actions did not include first choose-two combination")
+	}
+	if !containsAction(legal, action.CastSpell(spellID, nil, 0, []int{1, 2})) {
+		t.Fatal("legal actions did not include second choose-two combination")
+	}
+	if containsAction(legal, action.CastSpell(spellID, nil, 0, []int{0})) {
+		t.Fatal("legal actions included too few chosen modes")
+	}
+}
+
+func TestModalSpellSupportsOneOrBothAndUpToOne(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	oneOrBothID := addCardToHand(g, game.Player1, modalSpellWithModeRange(1, 2))
+	upToOneID := addCardToHand(g, game.Player1, modalSpellWithModeRange(0, 1))
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	if !containsAction(legal, action.CastSpell(oneOrBothID, nil, 0, []int{0, 1})) {
+		t.Fatal("one-or-both modal spell did not include both modes")
+	}
+	if containsAction(legal, action.CastSpell(oneOrBothID, nil, 0, nil)) {
+		t.Fatal("one-or-both modal spell included no modes")
+	}
+	if !containsAction(legal, action.CastSpell(upToOneID, nil, 0, nil)) {
+		t.Fatal("choose-up-to-one modal spell did not include no modes")
+	}
+	if !containsAction(legal, action.CastSpell(upToOneID, nil, 0, []int{1})) {
+		t.Fatal("choose-up-to-one modal spell did not include one mode")
+	}
+}
+
+func TestModalSpellSupportsChooseThreeAndAllModes(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	chooseThreeID := addCardToHand(g, game.Player1, modalSpellWithModeRange(3, 3))
+	allModesID := addCardToHand(g, game.Player1, modalSpellWithModeRange(3, 3))
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	if !containsAction(legal, action.CastSpell(chooseThreeID, nil, 0, []int{0, 1, 2})) {
+		t.Fatal("choose-three modal spell did not include all three modes")
+	}
+	if containsAction(legal, action.CastSpell(chooseThreeID, nil, 0, []int{0, 1})) {
+		t.Fatal("choose-three modal spell included too few modes")
+	}
+	if !containsAction(legal, action.CastSpell(allModesID, nil, 0, []int{0, 1, 2})) {
+		t.Fatal("all-modes modal spell did not include all modes")
+	}
+}
+
+func TestModalSpellDuplicateModesAreCanonicalized(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, modalSpellWithDuplicateModes(2, 2))
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	for _, modes := range [][]int{{0, 0}, {0, 1}, {1, 1}} {
+		if !containsAction(legal, action.CastSpell(spellID, nil, 0, modes)) {
+			t.Fatalf("legal actions did not include duplicate-mode choice %+v", modes)
+		}
+	}
+	if containsAction(legal, action.CastSpell(spellID, nil, 0, []int{1, 0})) {
+		t.Fatal("legal actions included non-canonical duplicate-mode permutation")
+	}
+}
+
 func TestModalSpellResolvesChosenModeOnly(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -1242,6 +1330,35 @@ func modalCharm() *game.CardDef {
 						Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
 						Effects: []game.Effect{{Type: game.EffectDamage, TargetIndex: 0, Amount: 2}},
 					},
+				},
+			},
+		},
+	}
+}
+
+func modalSpellWithModeRange(minModes int, maxModes int) *game.CardDef {
+	return modalSpellWithModeRangeAndDuplicates(minModes, maxModes, false)
+}
+
+func modalSpellWithDuplicateModes(minModes int, maxModes int) *game.CardDef {
+	return modalSpellWithModeRangeAndDuplicates(minModes, maxModes, true)
+}
+
+func modalSpellWithModeRangeAndDuplicates(minModes int, maxModes int, allowDuplicates bool) *game.CardDef {
+	return &game.CardDef{
+		Name:     "Flexible Charm",
+		ManaCost: greenCost(),
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{
+			{
+				Kind:                game.SpellAbility,
+				MinModes:            minModes,
+				MaxModes:            maxModes,
+				AllowDuplicateModes: allowDuplicates,
+				Modes: []game.Mode{
+					{Text: "You gain 1 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}}},
+					{Text: "You gain 2 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 2}}},
+					{Text: "You gain 3 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 3}}},
 				},
 			},
 		},
