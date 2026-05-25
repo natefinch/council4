@@ -18,7 +18,10 @@ This roadmap tracks card-text features needed by generated `CardDef` implementat
 - [x] Broader beginning-of-step and state trigger support, including explicit draw/beginning-of-combat step events and CR 603.8 state-trigger latching.
 - [x] Generic runtime replacement effects for zone-destination replacement and simple ETB tapped/counter modifiers, with deterministic fallback ordering for matching generic replacements.
 - [x] Static rule-changing effects for life-gain prohibitions, attack/block prohibitions, generic spell cost modifiers, and graveyard cast permissions via `RuleEffect`.
-- [x] High-frequency keyword/action slice: Prowess, Flashback-style graveyard casting/exile, Proliferate, and Goad with expiry.
+- [x] Prowess implicit triggers for noncreature spells.
+- [x] Flashback-style graveyard casting and exile-on-leave-stack handling.
+- [x] Proliferate counter-kind choices for permanents and players.
+- [x] Goad effects with expiry on the goading player's next turn.
 
 ## High-priority parser/model gaps
 
@@ -31,7 +34,39 @@ This roadmap tracks card-text features needed by generated `CardDef` implementat
 - [x] Common trigger patterns beyond the initial event filters: beginning-of-step triggers, state triggers, noncreature/artifact/permanent spell casts, opponent-controlled objects, and richer negated conditions. Carry-forward: richer negated trigger conditions beyond existing include/exclude type filters.
 - [x] General replacement effects: zone-destination replacement and ETB tapped/counter modifiers via runtime `ReplacementEffect`. Carry-forward: ETB-as-copy/as-choice, full APNAP/self-replacement ordering choices, and richer arbitrary event rewrites.
 - [x] Static rule-changing effects: "players can't gain life", "creatures can't attack/block", "spells cost less/more", "you may cast/play from...", and other permission/prohibition effects. Carry-forward: richer conditional/tax/permission variants.
-- [ ] High-frequency keyword mechanics from the parsing guide and rules README: Ward, Madness, Suspend, Storm, Cascade, Convoke, Delve, Morph/Disguise, and related keyword actions. Covered so far: Prowess, Flashback, Proliferate, Goad; plus existing Flash, Equip, Cycling, Kicker.
+- [ ] High-frequency keyword mechanics from the parsing guide and rules README:
+  - [x] Deathtouch
+  - [x] Defender
+  - [x] Double strike
+  - [x] First strike
+  - [x] Flash
+  - [x] Flying
+  - [x] Haste
+  - [x] Indestructible
+  - [x] Lifelink
+  - [x] Menace
+  - [x] Protection
+  - [x] Reach
+  - [x] Trample
+  - [x] Vigilance
+  - [x] Equip
+  - [x] Cycling
+  - [x] Kicker
+  - [x] Prowess
+  - [x] Flashback
+  - [x] Proliferate
+  - [x] Goad
+  - [ ] Enchant
+  - [ ] Hexproof
+  - [ ] Ward
+  - [ ] Madness
+  - [ ] Suspend
+  - [ ] Storm
+  - [ ] Cascade
+  - [ ] Convoke
+  - [ ] Delve
+  - [ ] Morph/Disguise
+  - [ ] Related keyword actions not listed above
 
 ## Lower-level infrastructure follow-ups
 
