@@ -289,6 +289,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		AdditionalCostsPaid: additionalCostsPaid,
 	}
 	g.Stack.Push(obj)
+	emitTargetEvents(g, obj)
 	event := game.GameEvent{
 		SourceID:      cast.CardID,
 		StackObjectID: obj.ID,
@@ -354,7 +355,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if ability.IsLoyaltyAbility {
 		applyLoyaltyCost(permanent, ability.LoyaltyCost)
 	}
-	g.Stack.Push(&game.StackObject{
+	obj := &game.StackObject{
 		ID:             g.IDGen.Next(),
 		Kind:           game.StackActivatedAbility,
 		SourceID:       permanent.ObjectID,
@@ -364,7 +365,9 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		Controller:     playerID,
 		Targets:        append([]game.Target(nil), activate.Targets...),
 		XValue:         activate.XValue,
-	})
+	}
+	g.Stack.Push(obj)
+	emitTargetEvents(g, obj)
 	recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, ability)
 	if ability.IsLoyaltyAbility {
 		recordActivatedAbilityUse(g, permanent.ObjectID, -1, &game.AbilityDef{Timing: game.OncePerTurn})
@@ -421,7 +424,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	if !discardCardFromHand(g, playerID, card.ID) {
 		panic("cycling card disappeared from hand after validation")
 	}
-	g.Stack.Push(&game.StackObject{
+	obj := &game.StackObject{
 		ID:                  g.IDGen.Next(),
 		Kind:                game.StackActivatedAbility,
 		SourceID:            card.ID,
@@ -431,7 +434,9 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 		Targets:             append([]game.Target(nil), activate.Targets...),
 		XValue:              activate.XValue,
 		AdditionalCostsPaid: []string{"Discard this card"},
-	})
+	}
+	g.Stack.Push(obj)
+	emitTargetEvents(g, obj)
 	return true
 }
 
@@ -757,7 +762,7 @@ func tapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
 	if !canTapPermanentForAbility(g, permanent) {
 		return false
 	}
-	permanent.Tapped = true
+	setPermanentTapped(g, permanent, true)
 	return true
 }
 

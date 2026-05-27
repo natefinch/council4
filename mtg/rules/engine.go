@@ -38,6 +38,7 @@ func (e *Engine) NewGame(configs [game.NumPlayers]game.PlayerConfig) *game.Game 
 func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *GameResult {
 	result := &GameResult{}
 	e.drawOpeningHands(g)
+	markCurrentTurnEventStart(g)
 	result.addLosses(e.applyStateBasedActions(g))
 	if winner, ok := g.Winner(); ok {
 		result.Winner = winner.ID

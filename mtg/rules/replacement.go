@@ -164,7 +164,7 @@ func applyEnterBattlefieldReplacementEffects(g *game.Game, permanent *game.Perma
 	}
 	for _, replacement := range matches {
 		if replacement.EntersTapped {
-			permanent.Tapped = true
+			setPermanentTapped(g, permanent, true)
 		}
 		for _, placement := range replacement.EntersWithCounters {
 			permanent.Counters.Add(placement.Kind, placement.Amount)
@@ -343,7 +343,7 @@ func replaceDestroyWithRegeneration(g *game.Game, permanent *game.Permanent) boo
 		return false
 	}
 	permanent.RegenerationShields--
-	permanent.Tapped = true
+	setPermanentTapped(g, permanent, true)
 	permanent.MarkedDamage = 0
 	permanent.MarkedDeathtouchDamage = false
 	removePermanentFromCombat(g, permanent.ObjectID)

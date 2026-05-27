@@ -20,6 +20,11 @@ const (
 	EventDamagePrevented
 	EventDestroyReplaced
 	EventBeginningOfStep
+	EventLifeGained
+	EventLifeLost
+	EventPermanentTapped
+	EventPermanentUntapped
+	EventObjectBecameTarget
 )
 
 // DamageRecipientKind identifies what received damage.
@@ -95,4 +100,37 @@ type GameEvent struct {
 	// Step identifies the turn step for EventBeginningOfStep triggers
 	// (CR 603.6c).
 	Step Step
+
+	// Target records the object or player that became a target.
+	Target Target
+}
+
+// EventsForTurn returns the rules events emitted during the requested turn.
+func (g *Game) EventsForTurn(turnNumber int) []GameEvent {
+	if turnNumber <= 0 {
+		return nil
+	}
+	index := turnNumber - 1
+	if index < 0 || index >= len(g.EventTurnStarts) {
+		return nil
+	}
+	start := g.EventTurnStarts[index]
+	end := len(g.Events)
+	if index+1 < len(g.EventTurnStarts) {
+		end = g.EventTurnStarts[index+1]
+	}
+	if start < 0 || start > end || end > len(g.Events) {
+		return nil
+	}
+	return g.Events[start:end]
+}
+
+// EventsThisTurn returns the rules events emitted during the current turn.
+func (g *Game) EventsThisTurn() []GameEvent {
+	return g.EventsForTurn(g.Turn.TurnNumber)
+}
+
+// EventsPreviousTurn returns the rules events emitted during the previous turn.
+func (g *Game) EventsPreviousTurn() []GameEvent {
+	return g.EventsForTurn(g.Turn.TurnNumber - 1)
 }

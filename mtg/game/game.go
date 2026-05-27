@@ -127,6 +127,10 @@ type Game struct {
 	// logs, which are report-oriented summaries produced by rules.Engine.
 	Events []GameEvent
 
+	// EventTurnStarts records the Events index where each turn's partition
+	// starts. Turn N uses index N-1.
+	EventTurnStarts []int
+
 	// TriggerEventCursor is the index of the next event the rules engine should
 	// inspect for triggered ability detection.
 	TriggerEventCursor int
@@ -180,6 +184,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		FailedDraws:                make(map[PlayerID]bool),
 		StateTriggerLatches:        make(map[StateTriggerKey]bool),
 		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),
+		EventTurnStarts:            []int{0},
 		Turn: TurnState{
 			TurnNumber:           1,
 			ActivePlayer:         Player1,

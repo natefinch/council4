@@ -117,6 +117,28 @@ func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 		return 0
 	}
 	player.Life += amount
+	emitEvent(g, game.GameEvent{
+		Kind:   game.EventLifeGained,
+		Player: playerID,
+		Amount: amount,
+	})
+	return amount
+}
+
+func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
+	if amount <= 0 {
+		return 0
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok || player.Eliminated {
+		return 0
+	}
+	player.Life -= amount
+	emitEvent(g, game.GameEvent{
+		Kind:   game.EventLifeLost,
+		Player: playerID,
+		Amount: amount,
+	})
 	return amount
 }
 

@@ -764,7 +764,7 @@ func applyAdditionalCostPlan(g *game.Game, plan additionalCostPlan) bool {
 		if !ok || player.Life < plan.lifePaid {
 			return false
 		}
-		player.Life -= plan.lifePaid
+		loseLife(g, plan.player, plan.lifePaid)
 	}
 	return true
 }
@@ -830,7 +830,7 @@ func applyPaymentPlan(g *game.Game, playerID game.PlayerID, plan paymentPlan) bo
 		if player.Life < plan.lifePayment {
 			return false
 		}
-		player.Life -= plan.lifePayment
+		loseLife(g, playerID, plan.lifePayment)
 	}
 	return true
 }
@@ -1147,7 +1147,7 @@ func tapPermanentForMana(g *game.Game, permanent *game.Permanent, color mana.Col
 	if !ok || output.color != color || output.amount != amount || output.snow != snow {
 		return false
 	}
-	permanent.Tapped = true
+	setPermanentTapped(g, permanent, true)
 	if output.snow {
 		player.ManaPool.AddSnow(color, amount)
 	} else {

@@ -133,9 +133,7 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		if !ok {
 			return
 		}
-		player := g.Players[playerID]
-		player.Life -= amount
-		succeeded = true
+		succeeded = loseLife(g, playerID, amount) > 0
 	case game.EffectAddMana:
 		if amount <= 0 {
 			amount = 1
@@ -200,12 +198,12 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		succeeded = movePermanentToZone(g, permanent, game.ZoneGraveyard)
 	case game.EffectTap:
 		if permanent, ok := effectPermanent(g, obj, effect); ok {
-			permanent.Tapped = true
+			setPermanentTapped(g, permanent, true)
 			succeeded = true
 		}
 	case game.EffectUntap:
 		if permanent, ok := effectPermanent(g, obj, effect); ok {
-			permanent.Tapped = false
+			setPermanentTapped(g, permanent, false)
 			succeeded = true
 		}
 	case game.EffectModifyPT:
@@ -402,10 +400,10 @@ func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game
 		case game.EffectBounce:
 			succeeded = movePermanentToZone(g, permanent, game.ZoneHand) || succeeded
 		case game.EffectTap:
-			permanent.Tapped = true
+			setPermanentTapped(g, permanent, true)
 			succeeded = true
 		case game.EffectUntap:
-			permanent.Tapped = false
+			setPermanentTapped(g, permanent, false)
 			succeeded = true
 		case game.EffectAddCounter:
 			if amount > 0 {

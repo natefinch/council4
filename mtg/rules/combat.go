@@ -324,7 +324,7 @@ func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, 
 	if dealt <= 0 {
 		return 0
 	}
-	g.Players[playerID].Life -= dealt
+	loseLife(g, playerID, dealt)
 	emitEvent(g, game.GameEvent{
 		Kind:            game.EventDamageDealt,
 		SourceID:        sourceID,
@@ -950,7 +950,7 @@ func (e *Engine) applyDeclareAttackers(g *game.Game, playerID game.PlayerID, dec
 	for _, declaration := range declare.Attackers {
 		attacker := eligibleByID[declaration.Attacker]
 		if !hasKeyword(g, attacker, game.Vigilance) {
-			attacker.Tapped = true
+			setPermanentTapped(g, attacker, true)
 		}
 
 		emitEvent(g, game.GameEvent{

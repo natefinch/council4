@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
@@ -380,6 +381,113 @@ func TestDeclareAttackersAndBlockersEmitEvents(t *testing.T) {
 		return event.PermanentID == blocker.ObjectID &&
 			event.Controller == game.Player2 &&
 			event.BlockedAttackerID == attacker.ObjectID
+	})
+}
+
+func TestEventsArePartitionedByTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	emitEvent(g, game.GameEvent{Kind: game.EventLifeGained, Player: game.Player1, Amount: 1})
+
+	engine.advanceToNextTurn(g)
+	emitEvent(g, game.GameEvent{Kind: game.EventLifeLost, Player: game.Player2, Amount: 2})
+
+	turnOne := g.EventsForTurn(1)
+	if len(turnOne) != 1 || turnOne[0].Kind != game.EventLifeGained {
+		t.Fatalf("turn one events = %+v, want life gained event", turnOne)
+	}
+	turnTwo := g.EventsForTurn(2)
+	if len(turnTwo) != 1 || turnTwo[0].Kind != game.EventLifeLost {
+		t.Fatalf("turn two events = %+v, want life lost event", turnTwo)
+	}
+	if got := g.EventsPreviousTurn(); len(got) != 1 || got[0].Kind != game.EventLifeGained {
+		t.Fatalf("previous turn events = %+v, want turn one events", got)
+	}
+	if got := g.EventsThisTurn(); len(got) != 1 || got[0].Kind != game.EventLifeLost {
+		t.Fatalf("this turn events = %+v, want turn two events", got)
+	}
+}
+
+func TestLifeGainAndLossEmitEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+
+	if gained := gainLife(g, game.Player1, 3); gained != 3 {
+		t.Fatalf("gainLife() = %d, want 3", gained)
+	}
+	if lost := loseLife(g, game.Player2, 4); lost != 4 {
+		t.Fatalf("loseLife() = %d, want 4", lost)
+	}
+
+	assertEvent(t, g.Events, game.EventLifeGained, func(event game.GameEvent) bool {
+		return event.Player == game.Player1 && event.Amount == 3
+	})
+	assertEvent(t, g.Events, game.EventLifeLost, func(event game.GameEvent) bool {
+		return event.Player == game.Player2 && event.Amount == 4
+	})
+}
+
+func TestTapUntapAndTargetEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addCombatCreaturePermanent(g, game.Player1)
+
+	setPermanentTapped(g, permanent, true)
+	setPermanentTapped(g, permanent, false)
+
+	assertEvent(t, g.Events, game.EventPermanentTapped, func(event game.GameEvent) bool {
+		return event.PermanentID == permanent.ObjectID && event.Controller == game.Player1
+	})
+	assertEvent(t, g.Events, game.EventPermanentUntapped, func(event game.GameEvent) bool {
+		return event.PermanentID == permanent.ObjectID && event.Controller == game.Player1
+	})
+
+	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("creature"))
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(permanent.ObjectID)}, 0, nil)) {
+		t.Fatal("targeted spell cast failed")
+	}
+	assertEvent(t, g.Events, game.EventObjectBecameTarget, func(event game.GameEvent) bool {
+		return event.SourceID == spellID &&
+			event.Controller == game.Player1 &&
+			event.PermanentID == permanent.ObjectID &&
+			event.Target == game.PermanentTarget(permanent.ObjectID)
+	})
+}
+
+func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:    "Pain Walker",
+		Types:   []game.CardType{game.TypePlaneswalker},
+		Loyalty: optInt(3),
+		Abilities: []game.AbilityDef{{
+			Kind:             game.ActivatedAbility,
+			IsLoyaltyAbility: true,
+			LoyaltyCost:      -1,
+			AdditionalCosts: []game.AdditionalCost{
+				{Kind: game.AdditionalCostPayLife, Amount: 2},
+			},
+			Effects: []game.Effect{{Type: game.EffectLoseLife, TargetIndex: -1, Amount: 3}},
+		}},
+	})
+	planeswalker.Counters.Add(counter.Loyalty, 3)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(planeswalker.ObjectID, 0, nil, 0)) {
+		t.Fatal("life-payment loyalty ability activation failed")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	assertEvent(t, g.Events, game.EventLifeLost, func(event game.GameEvent) bool {
+		return event.Player == game.Player1 && event.Amount == 2
+	})
+	assertEvent(t, g.Events, game.EventLifeLost, func(event game.GameEvent) bool {
+		return event.Player == game.Player1 && event.Amount == 3
 	})
 }
 

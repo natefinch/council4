@@ -384,8 +384,20 @@ const (
     EventAttackerDeclared; EventBlockerDeclared; EventCardDiscarded
     EventDamagePrevented; EventDestroyReplaced
     EventBeginningOfStep
+    EventLifeGained; EventLifeLost
+    EventPermanentTapped; EventPermanentUntapped
+    EventObjectBecameTarget
 )
 ```
+
+Use `EventZoneChanged` for "leaves [zone]" triggers by setting `FromZone`; set
+`ToZone` as well when the destination matters. Use `EventLifeGained` and
+`EventLifeLost` for life-total-change triggers; player damage also emits
+`EventLifeLost` in addition to `EventDamageDealt`. Use `EventPermanentTapped`
+and `EventPermanentUntapped` for tap/untap triggers. Use
+`EventObjectBecameTarget` for "becomes the target of..." triggers; the event's
+`Target` field identifies whether a permanent, player, or stack object became
+the target.
 
 ### Mana construction helpers
 
@@ -467,9 +479,17 @@ For keywords with parameters:
   - "enters" / "enters the battlefield" → `EventPermanentEnteredBattlefield`
   - "dies" → `EventPermanentDied`
   - "leaves the battlefield" → `EventZoneChanged` with `FromZone: game.ZoneBattlefield`
+  - "leaves your graveyard/hand/library/exile/command zone" → `EventZoneChanged` with the matching `FromZone`
+  - "is put into [zone] from [zone]" → `EventZoneChanged` with both `FromZone` and `ToZone`
   - "At the beginning of your upkeep/draw step/beginning of combat/end step" → `EventBeginningOfStep` with explicit `Step`
   - "Whenever ... attacks" → `EventAttackerDeclared`
+  - "Whenever ... blocks" / "becomes blocked by ..." → `EventBlockerDeclared`
   - "Whenever ... deals damage" → `EventDamageDealt`
+  - "Whenever you gain life" → `EventLifeGained`
+  - "Whenever an opponent loses life" → `EventLifeLost`
+  - "Whenever ... becomes tapped" → `EventPermanentTapped`
+  - "Whenever ... becomes untapped" → `EventPermanentUntapped`
+  - "Whenever ... becomes the target of..." → `EventObjectBecameTarget`
   - "Whenever ... is cast" → `EventSpellCast`
 - Set controller/source filters based on "you", "an opponent", "another creature", "this creature"
 - If "you may" appears → `Optional: true`

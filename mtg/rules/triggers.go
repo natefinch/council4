@@ -37,7 +37,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		return false
 	}
 	for _, trigger := range e.orderTriggeredAbilitiesAPNAP(g, pending, agents, log) {
-		g.Stack.Push(&game.StackObject{
+		obj := &game.StackObject{
 			ID:              g.IDGen.Next(),
 			Kind:            game.StackTriggeredAbility,
 			SourceID:        trigger.sourceID,
@@ -49,7 +49,9 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			InlineAbility:   trigger.inline,
 			Controller:      trigger.controller,
 			Targets:         append([]game.Target(nil), trigger.targets...),
-		})
+		}
+		g.Stack.Push(obj)
+		emitTargetEvents(g, obj)
 	}
 	return true
 }

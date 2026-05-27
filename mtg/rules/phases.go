@@ -47,7 +47,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 				permanent.PhasedOut = false
 				continue
 			}
-			permanent.Tapped = false
+			setPermanentTapped(g, permanent, false)
 			permanent.SummoningSick = false
 		}
 	}
@@ -160,6 +160,7 @@ func (e *Engine) advanceToNextTurn(g *game.Game) {
 	g.Turn.LandsAllowedThisTurn = 1
 	g.ActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityUse]bool)
 	g.Combat = nil
+	markCurrentTurnEventStart(g)
 }
 
 func popExtraTurn(extraTurns *[]game.PlayerID, turnOrder *game.TurnOrder) (game.PlayerID, bool) {
