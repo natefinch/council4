@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 func attachPermanent(g *game.Game, attachment *game.Permanent, target *game.Permanent) bool {
@@ -10,8 +11,7 @@ func attachPermanent(g *game.Game, attachment *game.Permanent, target *game.Perm
 		return false
 	}
 	detachPermanent(g, attachment)
-	targetID := target.ObjectID
-	attachment.AttachedTo = &targetID
+	attachment.AttachedTo = opt.Val(target.ObjectID)
 	if !permanentIDsContain(target.Attachments, attachment.ObjectID) {
 		target.Attachments = append(target.Attachments, attachment.ObjectID)
 	}
@@ -19,31 +19,27 @@ func attachPermanent(g *game.Game, attachment *game.Permanent, target *game.Perm
 }
 
 func detachPermanent(g *game.Game, attachment *game.Permanent) {
-	if g == nil || attachment == nil || attachment.AttachedTo == nil {
+	if !attachment.AttachedTo.Exists {
 		return
 	}
-	target := permanentByObjectID(g, *attachment.AttachedTo)
-	if target != nil {
+	if target, ok := permanentByObjectID(g, attachment.AttachedTo.Val); ok {
 		target.Attachments = removePermanentID(target.Attachments, attachment.ObjectID)
 	}
-	attachment.AttachedTo = nil
+	attachment.AttachedTo = opt.V[id.ID]{}
 }
 
 func detachAttachmentsFromPermanent(g *game.Game, target *game.Permanent) {
-	if g == nil || target == nil {
-		return
-	}
 	for _, attachmentID := range target.Attachments {
-		attachment := permanentByObjectID(g, attachmentID)
-		if attachment != nil && attachment.AttachedTo != nil && *attachment.AttachedTo == target.ObjectID {
-			attachment.AttachedTo = nil
+		attachment, ok := permanentByObjectID(g, attachmentID)
+		if ok && attachment.AttachedTo.Exists && attachment.AttachedTo.Val == target.ObjectID {
+			attachment.AttachedTo = opt.V[id.ID]{}
 		}
 	}
 	target.Attachments = nil
 }
 
 func canAttachPermanent(g *game.Game, attachment *game.Permanent, target *game.Permanent) bool {
-	if attachment == nil || target == nil || attachment.ObjectID == target.ObjectID {
+	if attachment.ObjectID == target.ObjectID {
 		return false
 	}
 	if isAuraPermanent(g, attachment) || isEquipmentPermanent(g, attachment) {

@@ -28,8 +28,8 @@ func TestSelfETBTriggerGoesOnStackAndResolves(t *testing.T) {
 		t.Fatal("ETB trigger was not put on stack")
 	}
 
-	obj := g.Stack.Peek()
-	if obj == nil || obj.Kind != game.StackTriggeredAbility || obj.SourceCardID != spellID {
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.Kind != game.StackTriggeredAbility || obj.SourceCardID != spellID {
 		t.Fatalf("top of stack = %+v, want triggered ability from %v", obj, spellID)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -79,8 +79,8 @@ func TestTriggerMovesCountersFromEventPermanentLKI(t *testing.T) {
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("counter transfer trigger was not put on stack")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.PermanentID != source.ObjectID {
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.HasTriggerEvent || obj.TriggerEvent.PermanentID != source.ObjectID {
 		t.Fatalf("trigger event = %+v, want event for source %v", obj, source.ObjectID)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -127,8 +127,8 @@ func TestCounterTransferUpToOneTargetMayHaveNoTarget(t *testing.T) {
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("counter transfer trigger with no legal target was not put on stack")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || len(obj.Targets) != 0 {
+	obj, ok := g.Stack.Peek()
+	if !ok || len(obj.Targets) != 0 {
 		t.Fatalf("trigger targets = %+v, want no targets", obj)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -155,8 +155,8 @@ func TestCounterTransferUpToOneTargetCanBeDeclined(t *testing.T) {
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
 		t.Fatal("counter transfer trigger was not put on stack")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || len(obj.Targets) != 0 {
+	obj, ok := g.Stack.Peek()
+	if !ok || len(obj.Targets) != 0 {
 		t.Fatalf("trigger targets = %+v, want declined target choice", obj)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -179,8 +179,8 @@ func TestSelfDeathTriggerUsesLeftBattlefieldSource(t *testing.T) {
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("self-death trigger was not put on stack")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || obj.SourceID != permanent.ObjectID || obj.SourceCardID != permanent.CardInstanceID {
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != permanent.ObjectID || obj.SourceCardID != permanent.CardInstanceID {
 		t.Fatalf("top of stack = %+v, want self-death trigger source %+v", obj, permanent)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -199,12 +199,15 @@ func TestTokenTriggersUseTokenDefinition(t *testing.T) {
 		Source: game.TriggerSourceSelf,
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 
-	permanent := createTokenPermanent(g, game.Player1, token)
+	permanent, ok := createTokenPermanent(g, game.Player1, token)
+	if !ok {
+		t.Fatal("token was not created")
+	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("token ETB trigger was not put on stack")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || obj.SourceID != permanent.ObjectID || obj.SourceCardID != 0 || obj.SourceTokenDef != token {
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != permanent.ObjectID || obj.SourceCardID != 0 || obj.SourceTokenDef != token {
 		t.Fatalf("top of stack = %+v, want token trigger source %+v", obj, permanent)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -224,13 +227,18 @@ func TestTokenSelfETBTriggerDoesNotMatchOtherToken(t *testing.T) {
 		Source: game.TriggerSourceSelf,
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 
-	createTokenPermanent(g, game.Player1, token)
+	if _, ok := createTokenPermanent(g, game.Player1, token); !ok {
+		t.Fatal("first token was not created")
+	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("first token ETB trigger was not put on stack")
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	second := createTokenPermanent(g, game.Player1, token)
+	second, ok := createTokenPermanent(g, game.Player1, token)
+	if !ok {
+		t.Fatal("second token was not created")
+	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("second token ETB trigger was not put on stack")
 	}
@@ -257,13 +265,16 @@ func TestTokenSelfDeathTriggerUsesLeftBattlefieldSource(t *testing.T) {
 		Source: game.TriggerSourceSelf,
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 
-	permanent := createTokenPermanent(g, game.Player1, token)
+	permanent, ok := createTokenPermanent(g, game.Player1, token)
+	if !ok {
+		t.Fatal("token was not created")
+	}
 	destroyPermanent(g, permanent.ObjectID)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("token self-death trigger was not put on stack")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || obj.SourceID != permanent.ObjectID || obj.SourceCardID != 0 || obj.SourceTokenDef != token {
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != permanent.ObjectID || obj.SourceCardID != 0 || obj.SourceTokenDef != token {
 		t.Fatalf("top of stack = %+v, want token self-death trigger source %+v", obj, permanent)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -282,8 +293,13 @@ func TestTokenSelfDeathTriggerDoesNotMatchOtherToken(t *testing.T) {
 		Source: game.TriggerSourceSelf,
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 
-	first := createTokenPermanent(g, game.Player1, token)
-	createTokenPermanent(g, game.Player1, token)
+	first, ok := createTokenPermanent(g, game.Player1, token)
+	if !ok {
+		t.Fatal("first token was not created")
+	}
+	if _, ok := createTokenPermanent(g, game.Player1, token); !ok {
+		t.Fatal("second token was not created")
+	}
 	destroyPermanent(g, first.ObjectID)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("token self-death trigger was not put on stack")
@@ -436,8 +452,8 @@ func TestCastTriggerGoesOnStackAboveCastSpell(t *testing.T) {
 		t.Fatal("cast trigger was not put on stack")
 	}
 
-	obj := g.Stack.Peek()
-	if obj == nil || obj.Kind != game.StackTriggeredAbility {
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.Kind != game.StackTriggeredAbility {
 		t.Fatalf("top of stack = %+v, want cast trigger above cast spell", obj)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -533,12 +549,15 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "First"})
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Second"})
 	source := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
-	card := g.GetCardInstance(source.CardInstanceID)
-	card.Def.Abilities[0].Trigger.Type = game.TriggerState
-	card.Def.Abilities[0].Trigger.State = &game.StateTriggerCondition{
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.Abilities[0].Trigger.Val.Type = game.TriggerState
+	card.Def.Abilities[0].Trigger.Val.State = optStateTrigger(game.StateTriggerCondition{
 		MatchControllerLifeLessOrEqual: true,
 		ControllerLifeLessOrEqual:      10,
-	}
+	})
 	g.Players[game.Player1].Life = 10
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -685,7 +704,7 @@ func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
 		ID:               1,
 		AffectedObjectID: triggerSource.ObjectID,
 		Layer:            game.LayerControl,
-		NewController:    &newController,
+		NewController:    optController(newController),
 	})
 	addCardToLibrary(g, game.Player3, &game.CardDef{Name: "Event Drawn"})
 	addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Trigger Drawn"})
@@ -696,8 +715,8 @@ func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("trigger controlled by Player2 should use Player2 life for intervening-if")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || obj.Controller != game.Player2 {
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.Controller != game.Player2 {
 		t.Fatalf("trigger controller = %+v, want Player2", obj)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -775,8 +794,11 @@ func addOptionalTriggeredPermanent(g *game.Game, controller game.PlayerID, patte
 
 func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, pattern game.TriggerPattern, lifeAtLeast int, effects []game.Effect) *game.Permanent {
 	permanent := addTriggeredPermanent(g, controller, pattern, effects, nil)
-	card := g.GetCardInstance(permanent.CardInstanceID)
-	card.Def.Abilities[0].Trigger.InterveningIfControllerLifeAtLeast = lifeAtLeast
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok {
+		panic("triggered permanent card instance not found")
+	}
+	card.Def.Abilities[0].Trigger.Val.InterveningIfControllerLifeAtLeast = lifeAtLeast
 	return permanent
 }
 
@@ -787,7 +809,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.TriggeredAbility,
-				Trigger: &game.TriggerCondition{
+				Trigger: optTrigger(game.TriggerCondition{
 					Type: game.TriggerWhenever,
 					Pattern: game.TriggerPattern{
 						Event:              game.EventZoneChanged,
@@ -801,7 +823,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 					},
 					InterveningIf:                          "it had counters on it",
 					InterveningIfEventPermanentHadCounters: true,
-				},
+				}),
 				Targets: []game.TargetSpec{
 					{MinTargets: 0, MaxTargets: 1, Constraint: "artifact or creature you control"},
 				},
@@ -825,15 +847,15 @@ func triggeredCreature(pattern game.TriggerPattern, effects []game.Effect, targe
 		Name:      "Triggered Creature",
 		Types:     []game.CardType{game.TypeCreature},
 		ManaCost:  greenCost(),
-		Power:     &pt,
-		Toughness: &pt,
+		Power:     optPT(pt),
+		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.TriggeredAbility,
-				Trigger: &game.TriggerCondition{
+				Trigger: optTrigger(game.TriggerCondition{
 					Type:    game.TriggerWhenever,
 					Pattern: pattern,
-				},
+				}),
 				Effects: effects,
 				Targets: targets,
 			},

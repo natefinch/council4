@@ -48,8 +48,8 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 	if g.Stack.Size() != 1 {
 		t.Fatalf("stack size = %d, want 1 cycling ability", g.Stack.Size())
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || obj.Kind != game.StackActivatedAbility || obj.SourceID != cyclingID || obj.SourceCardID != cyclingID || len(obj.AdditionalCostsPaid) != 1 {
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.Kind != game.StackActivatedAbility || obj.SourceID != cyclingID || obj.SourceCardID != cyclingID || len(obj.AdditionalCostsPaid) != 1 {
 		t.Fatalf("cycling stack object = %+v, want activated ability sourced from cycled card", obj)
 	}
 	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
@@ -77,7 +77,7 @@ func cyclingCard() *game.CardDef {
 			{
 				Kind:     game.ActivatedAbility,
 				Keywords: []game.Keyword{game.Cycling},
-				ManaCost: &cost,
+				ManaCost: optCost(cost),
 				AdditionalCosts: []game.AdditionalCost{
 					{Kind: game.AdditionalCostDiscard, Text: "Discard this card", Amount: 1, Zone: game.ZoneHand},
 				},

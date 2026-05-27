@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 // ObjectSnapshot is last-known information for an object that changed zones.
@@ -20,10 +21,8 @@ type ObjectSnapshot struct {
 	Supertypes     []Supertype
 	Types          []CardType
 	Subtypes       []string
-	Power          int
-	PowerOK        bool
-	Toughness      int
-	ToughnessOK    bool
+	Power          opt.V[int]
+	Toughness      opt.V[int]
 	Counters       counter.Set
 	MarkedDamage   int
 	ZoneOrderIndex int

@@ -153,9 +153,9 @@ func TestDynamicAmountUsesControllerHandSize(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, game.Effect{
 		Type:        game.EffectGainLife,
 		TargetIndex: -1,
-		DynamicAmount: &game.DynamicAmount{
+		DynamicAmount: optDynamicAmount(game.DynamicAmount{
 			Kind: game.DynamicAmountControllerHandSize,
-		},
+		}),
 	}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -171,11 +171,15 @@ func TestDynamicAmountUsesXValue(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, game.Effect{
 		Type:        game.EffectDamage,
 		TargetIndex: 0,
-		DynamicAmount: &game.DynamicAmount{
+		DynamicAmount: optDynamicAmount(game.DynamicAmount{
 			Kind: game.DynamicAmountX,
-		},
+		}),
 	}, []game.Target{game.PlayerTarget(game.Player2)})
-	g.Stack.Peek().XValue = 4
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("stack is empty")
+	}
+	obj.XValue = 4
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -191,10 +195,10 @@ func TestDynamicAmountUsesTargetPower(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, game.Effect{
 		Type:        game.EffectDamage,
 		TargetIndex: 0,
-		DynamicAmount: &game.DynamicAmount{
+		DynamicAmount: optDynamicAmount(game.DynamicAmount{
 			Kind:        game.DynamicAmountTargetPower,
 			TargetIndex: 0,
-		},
+		}),
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -221,10 +225,10 @@ func TestDynamicAmountCanUsePreviousEffectResult(t *testing.T) {
 						{
 							Type:        game.EffectLoseLife,
 							TargetIndex: 0,
-							DynamicAmount: &game.DynamicAmount{
+							DynamicAmount: optDynamicAmount(game.DynamicAmount{
 								Kind:   game.DynamicAmountPreviousEffectResult,
 								LinkID: "that-much",
-							},
+							}),
 						},
 					},
 				},
@@ -308,20 +312,20 @@ func TestEffectResultConditionBranchesOnIfYouDoAndDont(t *testing.T) {
 			Type:        game.EffectGainLife,
 			TargetIndex: -1,
 			Amount:      3,
-			ResultCondition: &game.EffectResultCondition{
+			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "choice",
 				Accepted:  game.TriTrue,
 				Succeeded: game.TriTrue,
-			},
+			}),
 		},
 		{
 			Type:        game.EffectLoseLife,
 			TargetIndex: -1,
 			Amount:      3,
-			ResultCondition: &game.EffectResultCondition{
+			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:   "choice",
 				Accepted: game.TriFalse,
-			},
+			}),
 		},
 	})
 	if sourceID == 0 {
@@ -344,19 +348,19 @@ func TestEffectResultConditionRequiresActualSuccess(t *testing.T) {
 			Type:        game.EffectGainLife,
 			TargetIndex: -1,
 			Amount:      3,
-			ResultCondition: &game.EffectResultCondition{
+			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "draw",
 				Succeeded: game.TriTrue,
-			},
+			}),
 		},
 		{
 			Type:        game.EffectLoseLife,
 			TargetIndex: -1,
 			Amount:      2,
-			ResultCondition: &game.EffectResultCondition{
+			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "draw",
 				Succeeded: game.TriFalse,
-			},
+			}),
 		},
 	})
 
@@ -381,10 +385,10 @@ func TestDeclinedOptionalEffectDoesNotPublishPreviousAmount(t *testing.T) {
 		{
 			Type:        game.EffectLoseLife,
 			TargetIndex: -1,
-			DynamicAmount: &game.DynamicAmount{
+			DynamicAmount: optDynamicAmount(game.DynamicAmount{
 				Kind:   game.DynamicAmountPreviousEffectResult,
 				LinkID: "amount",
-			},
+			}),
 		},
 	})
 	agents := [game.NumPlayers]PlayerAgent{
@@ -405,10 +409,10 @@ func TestResolutionChoiceCanFeedLaterEffect(t *testing.T) {
 		{
 			Type:   game.EffectChoose,
 			LinkID: "chosen-player",
-			Choice: &game.ResolutionChoice{
+			Choice: optResolutionChoice(game.ResolutionChoice{
 				Kind:           game.ResolutionChoicePlayer,
 				PlayerRelation: game.PlayerOpponent,
-			},
+			}),
 		},
 		{
 			Type:         game.EffectLoseLife,
@@ -437,9 +441,9 @@ func TestResolutionChoiceCanChooseManaColor(t *testing.T) {
 		{
 			Type:   game.EffectChoose,
 			LinkID: "chosen-color",
-			Choice: &game.ResolutionChoice{
+			Choice: optResolutionChoice(game.ResolutionChoice{
 				Kind: game.ResolutionChoiceColor,
-			},
+			}),
 		},
 		{
 			Type:         game.EffectAddMana,
@@ -471,20 +475,20 @@ func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
 		{
 			Type:   game.EffectPay,
 			LinkID: "paid",
-			Payment: &game.ResolutionPayment{
+			Payment: optResolutionPayment(game.ResolutionPayment{
 				Prompt:   "Pay {G}?",
-				ManaCost: &cost,
-			},
+				ManaCost: optCost(cost),
+			}),
 		},
 		{
 			Type:        game.EffectDraw,
 			Amount:      1,
 			TargetIndex: -1,
-			ResultCondition: &game.EffectResultCondition{
+			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "paid",
 				Accepted:  game.TriTrue,
 				Succeeded: game.TriTrue,
-			},
+			}),
 		},
 	})
 	log := TurnLog{}
@@ -688,7 +692,7 @@ func TestDestroyEffectMovesPermanentToGraveyard(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	if permanentByObjectID(g, target.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
 		t.Fatal("destroyed permanent remained on battlefield")
 	}
 	if !g.Players[game.Player2].Graveyard.Contains(target.CardInstanceID) {
@@ -714,7 +718,7 @@ func TestExileAndBounceEffectsMovePermanentsToOwnerZones(t *testing.T) {
 
 			engine.resolveTopOfStack(g, &TurnLog{})
 
-			if permanentByObjectID(g, target.ObjectID) != nil {
+			if _, ok := permanentByObjectID(g, target.ObjectID); ok {
 				t.Fatal("moved permanent remained on battlefield")
 			}
 			var zone *game.Zone
@@ -739,7 +743,7 @@ func TestSacrificeEffectMovesControllerPermanentThroughGraveyardIgnoringIndestru
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	if permanentByObjectID(g, target.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
 		t.Fatal("sacrificed permanent remained on battlefield")
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
@@ -776,7 +780,7 @@ func TestDamageToPermanentEffectCanCauseLethalSBA(t *testing.T) {
 	if len(deaths) != 1 {
 		t.Fatalf("deaths = %d, want 1", len(deaths))
 	}
-	if permanentByObjectID(g, target.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
 		t.Fatal("lethally damaged permanent remained on battlefield")
 	}
 }
@@ -799,16 +803,16 @@ func TestMassDestroyCreaturesUsesSnapshotAndRespectsIndestructible(t *testing.T)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	if permanentByObjectID(g, creature1.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature1.ObjectID); ok {
 		t.Fatal("first creature survived mass destroy")
 	}
-	if permanentByObjectID(g, creature2.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature2.ObjectID); ok {
 		t.Fatal("second creature survived mass destroy")
 	}
-	if permanentByObjectID(g, indestructible.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, indestructible.ObjectID); !ok {
 		t.Fatal("indestructible creature did not survive mass destroy")
 	}
-	if permanentByObjectID(g, artifact.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, artifact.ObjectID); !ok {
 		t.Fatal("noncreature artifact did not survive mass destroy")
 	}
 }
@@ -836,13 +840,13 @@ func TestMassDestroyNonlandPermanentsLeavesLands(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	if permanentByObjectID(g, land.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, land.ObjectID); !ok {
 		t.Fatal("land did not survive nonland permanent wipe")
 	}
-	if permanentByObjectID(g, artifact.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, artifact.ObjectID); ok {
 		t.Fatal("artifact survived nonland permanent wipe")
 	}
-	if permanentByObjectID(g, enchantment.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, enchantment.ObjectID); ok {
 		t.Fatal("enchantment survived nonland permanent wipe")
 	}
 }
@@ -869,13 +873,13 @@ func TestMassDamageDeathsAreLoggedTogetherBySBA(t *testing.T) {
 	if len(deaths) != 2 {
 		t.Fatalf("deaths = %d, want 2", len(deaths))
 	}
-	if permanentByObjectID(g, creature1.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature1.ObjectID); ok {
 		t.Fatal("first damaged creature survived SBA")
 	}
-	if permanentByObjectID(g, creature2.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature2.ObjectID); ok {
 		t.Fatal("second damaged creature survived SBA")
 	}
-	if permanentByObjectID(g, artifact.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, artifact.ObjectID); !ok {
 		t.Fatal("noncreature artifact was affected by creature mass damage")
 	}
 }
@@ -908,10 +912,10 @@ func TestTemporaryPTModifierChangesCombatDamageAndLethalThreshold(t *testing.T) 
 	if blocker.MarkedDamage != 5 {
 		t.Fatalf("blocker marked damage = %d, want 5", blocker.MarkedDamage)
 	}
-	if permanentByObjectID(g, blocker.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, blocker.ObjectID); ok {
 		t.Fatal("blocker survived pumped combat damage")
 	}
-	if permanentByObjectID(g, creature.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); !ok {
 		t.Fatal("pumped creature died despite increased toughness")
 	}
 	if len(deaths) != 1 || deaths[0].Permanent != blocker.ObjectID {
@@ -1012,13 +1016,13 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, game.Effect{
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
-		Condition: &game.EffectCondition{
+		Condition: optEffectCondition(game.EffectCondition{
 			Text:               "it isn't a creature",
 			TargetIndex:        0,
 			MatchPermanentType: true,
 			PermanentType:      game.TypeCreature,
 			Negate:             true,
-		},
+		}),
 		ContinuousEffects: []game.ContinuousEffect{
 			{
 				Layer:       game.LayerType,
@@ -1027,8 +1031,8 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 			},
 			{
 				Layer:        game.LayerPowerToughnessSet,
-				SetPower:     &zero,
-				SetToughness: &zero,
+				SetPower:     optPT(zero),
+				SetToughness: optPT(zero),
 			},
 		},
 	}, []game.Target{game.PermanentTarget(artifact.ObjectID)})
@@ -1057,20 +1061,20 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 		Name:      "Construct",
 		Types:     []game.CardType{game.TypeArtifact, game.TypeCreature},
 		Subtypes:  []string{"Construct"},
-		Power:     &two,
-		Toughness: &two,
+		Power:     optPT(two),
+		Toughness: optPT(two),
 	})
 	zero := game.PT{Value: 0}
 	addEffectSpellToStack(g, game.Player1, game.Effect{
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
-		Condition: &game.EffectCondition{
+		Condition: optEffectCondition(game.EffectCondition{
 			Text:               "it isn't a creature",
 			TargetIndex:        0,
 			MatchPermanentType: true,
 			PermanentType:      game.TypeCreature,
 			Negate:             true,
-		},
+		}),
 		ContinuousEffects: []game.ContinuousEffect{
 			{
 				Layer:       game.LayerType,
@@ -1079,8 +1083,8 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 			},
 			{
 				Layer:        game.LayerPowerToughnessSet,
-				SetPower:     &zero,
-				SetToughness: &zero,
+				SetPower:     optPT(zero),
+				SetToughness: optPT(zero),
 			},
 		},
 	}, []game.Target{game.PermanentTarget(artifactCreature.ObjectID)})
@@ -1121,10 +1125,10 @@ func TestCreateTokenEffectCreatesTokenPermanent(t *testing.T) {
 	token := &game.CardDef{
 		Name:      "Soldier Token",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 1},
-		Toughness: &game.PT{Value: 1},
+		Power:     optPT(game.PT{Value: 1}),
+		Toughness: optPT(game.PT{Value: 1}),
 	}
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectCreateToken, Amount: 2, TargetIndex: -1, Token: token}, nil)
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectCreateToken, Amount: 2, TargetIndex: -1, Token: optToken(token)}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1154,12 +1158,15 @@ func TestTokenCanBlockTakeCombatDamageAndDie(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	pt := game.PT{Value: 2}
-	token := createTokenPermanent(g, game.Player2, &game.CardDef{
+	token, ok := createTokenPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Bear Token",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &pt,
-		Toughness: &pt,
+		Power:     optPT(pt),
+		Toughness: optPT(pt),
 	})
+	if !ok {
+		t.Fatal("token was not created")
+	}
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 	g.Combat = &game.CombatState{
 		Attackers: []game.AttackDeclaration{
@@ -1173,7 +1180,7 @@ func TestTokenCanBlockTakeCombatDamageAndDie(t *testing.T) {
 	engine.resolveCombatDamage(g, &TurnLog{})
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
-	if permanentByObjectID(g, token.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, token.ObjectID); ok {
 		t.Fatal("lethally damaged token remained on battlefield")
 	}
 	if g.Players[game.Player2].Graveyard.Contains(token.ObjectID) {

@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 // Donatello, Mutant Mechanic
@@ -17,18 +18,18 @@ import (
 //	Whenever an artifact you control is put into a graveyard from the battlefield, if it had counters on it, put those counters on up to one target artifact or creature you control.
 var DonatelloMutantMechanic = &game.CardDef{
 	Name: "Donatello, Mutant Mechanic",
-	ManaCost: &mana.Cost{
+	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(3),
 		mana.ColoredMana(mana.Blue),
-	},
+	}),
 	ManaValue:     4,
 	Colors:        []mana.Color{mana.Blue},
 	ColorIdentity: mana.NewColorIdentity(mana.Blue),
 	Supertypes:    []game.Supertype{game.Legendary},
 	Types:         []game.CardType{game.TypeCreature},
 	Subtypes:      []string{"Mutant", "Ninja", "Turtle"},
-	Power:         &game.PT{Value: 3},
-	Toughness:     &game.PT{Value: 5},
+	Power:         opt.Val(game.PT{Value: 3}),
+	Toughness:     opt.Val(game.PT{Value: 5}),
 	OracleText:    "{T}: Put three +1/+1 counters on target artifact you control. If it isn't a creature, it becomes a 0/0 Robot creature in addition to its other types. Activate only as a sorcery.\nWhenever an artifact you control is put into a graveyard from the battlefield, if it had counters on it, put those counters on up to one target artifact or creature you control.",
 	Abilities: []game.AbilityDef{
 		{
@@ -46,13 +47,13 @@ var DonatelloMutantMechanic = &game.CardDef{
 				{
 					Type:        game.EffectApplyContinuous,
 					TargetIndex: 0,
-					Condition: &game.EffectCondition{
+					Condition: opt.Val(game.EffectCondition{
 						Text:               "it isn't a creature",
 						TargetIndex:        0,
 						MatchPermanentType: true,
 						PermanentType:      game.TypeCreature,
 						Negate:             true,
-					},
+					}),
 					ContinuousEffects: []game.ContinuousEffect{
 						{
 							Layer:       game.LayerType,
@@ -61,8 +62,8 @@ var DonatelloMutantMechanic = &game.CardDef{
 						},
 						{
 							Layer:        game.LayerPowerToughnessSet,
-							SetPower:     &game.PT{Value: 0},
-							SetToughness: &game.PT{Value: 0},
+							SetPower:     opt.Val(game.PT{Value: 0}),
+							SetToughness: opt.Val(game.PT{Value: 0}),
 						},
 					},
 				},
@@ -71,7 +72,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 		{
 			Kind: game.TriggeredAbility,
 			Text: "Whenever an artifact you control is put into a graveyard from the battlefield, if it had counters on it, put those counters on up to one target artifact or creature you control.",
-			Trigger: &game.TriggerCondition{
+			Trigger: opt.Val(game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
 					Event:              game.EventZoneChanged,
@@ -85,7 +86,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 				},
 				InterveningIf:                          "it had counters on it",
 				InterveningIfEventPermanentHadCounters: true,
-			},
+			}),
 			Targets: []game.TargetSpec{
 				{MinTargets: 0, MaxTargets: 1, Constraint: "artifact or creature you control"},
 			},

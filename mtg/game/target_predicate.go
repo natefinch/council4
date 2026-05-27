@@ -1,5 +1,7 @@
 package game
 
+import "github.com/natefinch/council4/opt"
+
 import "github.com/natefinch/council4/mtg/game/mana"
 
 // TargetAllow identifies broad categories a target spec can choose from. The
@@ -92,9 +94,9 @@ type TargetPredicate struct {
 	Keyword         Keyword
 	ExcludedKeyword Keyword
 
-	ManaValue *IntComparison
-	Power     *IntComparison
-	Toughness *IntComparison
+	ManaValue opt.V[IntComparison]
+	Power     opt.V[IntComparison]
+	Toughness opt.V[IntComparison]
 
 	Another bool
 }

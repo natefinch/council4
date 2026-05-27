@@ -47,7 +47,7 @@ func TestShieldCounterReplacesDestroyBeforeZoneChange(t *testing.T) {
 	if ok || removed != nil {
 		t.Fatalf("destroyPermanent() = %+v, %v, want nil, false for replaced destroy", removed, ok)
 	}
-	if permanentByObjectID(g, target.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, target.ObjectID); !ok {
 		t.Fatal("shield-replaced permanent left the battlefield")
 	}
 	if target.Counters.Get(counter.Shield) != 0 {
@@ -213,7 +213,7 @@ func TestRegenerationReplacesDestroyAndRemovesFromCombat(t *testing.T) {
 	if ok || removed != nil {
 		t.Fatalf("destroyPermanent() = %+v, %v, want regenerated replacement", removed, ok)
 	}
-	if permanentByObjectID(g, blocker.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, blocker.ObjectID); !ok {
 		t.Fatal("regenerated blocker left battlefield")
 	}
 	if !blocker.Tapped || blocker.MarkedDamage != 0 || blocker.RegenerationShields != 0 {
@@ -271,7 +271,7 @@ func TestRegenerationReplacesLethalDamageSBA(t *testing.T) {
 	if len(deaths) != 0 {
 		t.Fatalf("deaths = %+v, want regeneration to replace lethal-damage destruction", deaths)
 	}
-	if permanentByObjectID(g, creature.ObjectID) == nil || !creature.Tapped || creature.MarkedDamage != 0 {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); !ok || !creature.Tapped || creature.MarkedDamage != 0 {
 		t.Fatalf("creature after regeneration = %+v, want tapped on battlefield with no damage", creature)
 	}
 }
@@ -281,8 +281,8 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	def := &game.CardDef{
 		Name:         "Tapped Walker",
 		Types:        []game.CardType{game.TypeCreature},
-		Power:        &game.PT{Value: 1},
-		Toughness:    &game.PT{Value: 1},
+		Power:        optPT(game.PT{Value: 1}),
+		Toughness:    optPT(game.PT{Value: 1}),
 		EntersTapped: true,
 		EntersWithCounters: []game.CounterPlacement{
 			{Kind: counter.PlusOnePlusOne, Amount: 2},
@@ -290,12 +290,15 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	}
 
 	cardID := addCardToHand(g, game.Player1, def)
-	card := g.GetCardInstance(cardID)
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
 	g.Players[game.Player1].Hand.Remove(cardID)
 
-	permanent := createCardPermanent(g, card, game.Player1, game.ZoneHand)
+	permanent, ok := createCardPermanent(g, card, game.Player1, game.ZoneHand)
 
-	if permanent == nil || !permanent.Tapped {
+	if !ok || !permanent.Tapped {
 		t.Fatalf("permanent = %+v, want enters tapped", permanent)
 	}
 	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 2 {
@@ -309,7 +312,7 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
 		Type: game.EffectReplace,
-		Replacement: &game.ReplacementEffect{
+		Replacement: optReplacement(game.ReplacementEffect{
 			Description:   "exile instead",
 			MatchEvent:    game.EventZoneChanged,
 			MatchFromZone: true,
@@ -317,7 +320,7 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 			MatchToZone:   true,
 			ToZone:        game.ZoneGraveyard,
 			ReplaceToZone: game.ZoneExile,
-		},
+		}),
 	}, nil)
 
 	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
@@ -340,7 +343,7 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	engine := NewEngine(nil)
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
 		Type: game.EffectReplace,
-		Replacement: &game.ReplacementEffect{
+		Replacement: optReplacement(game.ReplacementEffect{
 			Description:  "enter modified",
 			MatchEvent:   game.EventPermanentEnteredBattlefield,
 			MatchToZone:  true,
@@ -349,20 +352,23 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 			EntersWithCounters: []game.CounterPlacement{
 				{Kind: counter.PlusOnePlusOne, Amount: 1},
 			},
-		},
+		}),
 	}, nil)
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:      "Entering Creature",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 1},
-		Toughness: &game.PT{Value: 1},
+		Power:     optPT(game.PT{Value: 1}),
+		Toughness: optPT(game.PT{Value: 1}),
 	})
-	card := g.GetCardInstance(cardID)
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
 	g.Players[game.Player1].Hand.Remove(cardID)
 
-	permanent := createCardPermanent(g, card, game.Player1, game.ZoneHand)
+	permanent, ok := createCardPermanent(g, card, game.Player1, game.ZoneHand)
 
-	if permanent == nil || !permanent.Tapped {
+	if !ok || !permanent.Tapped {
 		t.Fatalf("permanent = %+v, want tapped by replacement", permanent)
 	}
 	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 1 {
@@ -394,7 +400,7 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 	} {
 		engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
 			Type:        game.EffectReplace,
-			Replacement: &replacement,
+			Replacement: optReplacement(replacement),
 		}, nil)
 	}
 
@@ -429,7 +435,7 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 		SourceCardID: source.CardInstanceID,
 	}, game.Effect{
 		Type: game.EffectReplace,
-		Replacement: &game.ReplacementEffect{
+		Replacement: optReplacement(game.ReplacementEffect{
 			Description:   "exile instead",
 			MatchEvent:    game.EventZoneChanged,
 			MatchFromZone: true,
@@ -437,7 +443,7 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 			MatchToZone:   true,
 			ToZone:        game.ZoneGraveyard,
 			ReplaceToZone: game.ZoneExile,
-		},
+		}),
 	}, nil)
 
 	if !movePermanentToZone(g, source, game.ZoneGraveyard) {
@@ -491,8 +497,8 @@ func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, col
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Protected Creature",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &pt,
-		Toughness: &pt,
+		Power:     optPT(pt),
+		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{
 			{
 				Kind:                 game.StaticAbility,

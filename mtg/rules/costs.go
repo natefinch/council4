@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 var paymentColors = []mana.Color{
@@ -18,6 +19,13 @@ var paymentColors = []mana.Color{
 }
 
 const flashbackAlternativeLabel = "Flashback"
+
+func manaCostPtr(cost opt.V[mana.Cost]) *mana.Cost {
+	if !cost.Exists {
+		return nil
+	}
+	return &cost.Val
+}
 
 type spellCostOption struct {
 	index           int
@@ -82,8 +90,8 @@ func paySpellCostsWithKickerFromZoneAndPreferences(g *game.Game, playerID game.P
 	if !ok {
 		return nil, false
 	}
-	player := playerForCostPayment(g, playerID)
-	if player == nil || !additionalCostPlanStillValid(g, player, plan.additional) || !paymentPlanStillValid(g, player, plan.mana) {
+	player, ok := playerForCostPayment(g, playerID)
+	if !ok || !additionalCostPlanStillValid(g, player, plan.additional) || !paymentPlanStillValid(g, player, plan.mana) {
 		return nil, false
 	}
 	if !applyPaymentPlan(g, playerID, plan.mana) {
@@ -195,9 +203,6 @@ func applyCostModifiers(g *game.Game, context costModificationContext) spellCost
 }
 
 func costModifiersForContext(g *game.Game, context costModificationContext) []game.CostModifier {
-	if g == nil {
-		return nil
-	}
 	var modifiers []game.CostModifier
 	for _, modifier := range g.CostModifiers {
 		if modifier.Kind != game.CostModifierSpell {
@@ -209,8 +214,8 @@ func costModifiersForContext(g *game.Game, context costModificationContext) []ga
 		modifiers = append(modifiers, modifier)
 	}
 	if context.sourceZone == game.ZoneCommand && context.cardID != 0 {
-		player := playerByID(g, context.player)
-		if player != nil && player.CommanderInstanceID == context.cardID && player.CommanderTax() > 0 {
+		player, ok := playerByID(g, context.player)
+		if ok && player.CommanderInstanceID == context.cardID && player.CommanderTax() > 0 {
 			modifiers = append(modifiers, game.CostModifier{
 				Kind:            game.CostModifierSpell,
 				GenericIncrease: player.CommanderTax(),
@@ -229,8 +234,8 @@ func applyGenericCostModifiers(cost *mana.Cost, modifiers []game.CostModifier) *
 	minimum := 0
 	set := (*int)(nil)
 	for _, modifier := range modifiers {
-		if modifier.SetGeneric != nil {
-			set = modifier.SetGeneric
+		if modifier.SetGeneric.Exists {
+			set = &modifier.SetGeneric.Val
 		}
 		generic += modifier.GenericIncrease
 		generic -= modifier.GenericReduction
@@ -287,7 +292,7 @@ func buildAbilityCostPlanWithPreferences(g *game.Game, playerID game.PlayerID, s
 	if source == nil || ability == nil {
 		return plan, false
 	}
-	if xValue != 0 && !costHasVariableMana(ability.ManaCost) {
+	if xValue != 0 && !costHasVariableMana(manaCostPtr(ability.ManaCost)) {
 		return plan, false
 	}
 	tapSource := hasTapCost(ability)
@@ -305,7 +310,7 @@ func buildAbilityCostPlanWithPreferences(g *game.Game, playerID game.PlayerID, s
 	for _, sacrifice := range additional.sacrifices {
 		excluded[sacrifice.ObjectID] = true
 	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(g, playerID, ability.ManaCost, xValue, excluded, prefs)
+	manaPlan, ok := buildPaymentPlanWithPreferences(g, playerID, manaCostPtr(ability.ManaCost), xValue, excluded, prefs)
 	if !ok {
 		return plan, false
 	}
@@ -321,8 +326,8 @@ func buildPaymentPlan(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xVa
 
 func buildPaymentPlanWithPreferences(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValue int, exclude map[id.ID]bool, prefs *paymentPreferences) (paymentPlan, bool) {
 	plan := paymentPlan{poolSpend: make(map[mana.Unit]int)}
-	player := playerForCostPayment(g, playerID)
-	if player == nil {
+	player, ok := playerForCostPayment(g, playerID)
+	if !ok {
 		return plan, false
 	}
 	pool := snapshotPool(player)
@@ -424,8 +429,8 @@ func buildAdditionalCostPlanForCosts(g *game.Game, playerID game.PlayerID, costs
 			plan.discards = append(plan.discards, chosen...)
 			plan.paid = append(plan.paid, additionalCostText(cost))
 		case game.AdditionalCostPayLife:
-			player := playerByID(g, playerID)
-			if player == nil || player.Life < amount {
+			player, ok := playerByID(g, playerID)
+			if !ok || player.Life < amount {
 				return plan, false
 			}
 			plan.lifePaid += amount
@@ -461,9 +466,9 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone game.ZoneTy
 	if card == nil {
 		return nil
 	}
-	ability := firstSpellAbility(card)
-	if ability == nil {
-		return []spellCostOption{{index: 0, label: "Normal cost", card: card, manaCost: card.ManaCost}}
+	ability, ok := firstSpellAbility(card)
+	if !ok {
+		return []spellCostOption{{index: 0, label: "Normal cost", card: card, manaCost: manaCostPtr(card.ManaCost)}}
 	}
 	requiredAdditional := abilityAdditionalCosts(ability)
 	options := []spellCostOption{
@@ -471,7 +476,7 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone game.ZoneTy
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
-			manaCost:        spellManaCostWithKicker(card.ManaCost, ability, kickerPaid),
+			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), ability, kickerPaid),
 			additionalCosts: append([]game.AdditionalCost(nil), requiredAdditional...),
 		},
 	}
@@ -492,7 +497,7 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone game.ZoneTy
 			index:           i + 1,
 			label:           label,
 			card:            card,
-			manaCost:        spellManaCostWithKicker(alternative.ManaCost, ability, kickerPaid),
+			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), ability, kickerPaid),
 			additionalCosts: additional,
 		})
 	}
@@ -507,14 +512,14 @@ func isFlashbackAlternative(alternative game.AlternativeCost) bool {
 }
 
 func spellManaCostWithKicker(base *mana.Cost, ability *game.AbilityDef, kickerPaid bool) *mana.Cost {
-	if !kickerPaid || ability == nil || ability.KickerCost == nil {
+	if !kickerPaid || ability == nil || !ability.KickerCost.Exists {
 		return base
 	}
 	combined := mana.Cost{}
 	if base != nil {
 		combined = append(combined, (*base)...)
 	}
-	combined = append(combined, (*ability.KickerCost)...)
+	combined = append(combined, ability.KickerCost.Val...)
 	return &combined
 }
 
@@ -551,34 +556,30 @@ func sacrificeAdditionalCost(cost string) (game.AdditionalCost, bool) {
 	}
 }
 
-func chooseSacrificePermanent(g *game.Game, playerID game.PlayerID, matches func(*game.CardDef) bool) *game.Permanent {
-	if g == nil || matches == nil {
-		return nil
+func chooseSacrificePermanent(g *game.Game, playerID game.PlayerID, matches func(*game.CardDef) bool) (*game.Permanent, bool) {
+	if matches == nil {
+		return nil, false
 	}
 	for _, permanent := range g.Battlefield {
-		if permanent == nil || effectiveController(g, permanent) != playerID {
+		if effectiveController(g, permanent) != playerID {
 			continue
 		}
-		if matches(permanentCardDef(g, permanent)) {
-			return permanent
+		def, ok := permanentCardDef(g, permanent)
+		if ok && matches(def) {
+			return permanent, true
 		}
 	}
-	return nil
+	return nil, false
 }
 
 func chooseSacrificePermanents(g *game.Game, playerID game.PlayerID, cost game.AdditionalCost, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
-	if g == nil {
-		return nil
-	}
 	chosenIDs := make(map[id.ID]bool)
 	for _, permanent := range alreadyChosen {
-		if permanent != nil {
-			chosenIDs[permanent.ObjectID] = true
-		}
+		chosenIDs[permanent.ObjectID] = true
 	}
 	var chosen []*game.Permanent
 	for _, permanent := range g.Battlefield {
-		if permanent == nil || effectiveController(g, permanent) != playerID || chosenIDs[permanent.ObjectID] {
+		if effectiveController(g, permanent) != playerID || chosenIDs[permanent.ObjectID] {
 			continue
 		}
 		if additionalCostMatchesPermanent(g, permanent, cost) {
@@ -597,15 +598,13 @@ func preferredSacrificePermanents(g *game.Game, playerID game.PlayerID, cost gam
 	}
 	chosenIDs := make(map[id.ID]bool)
 	for _, permanent := range alreadyChosen {
-		if permanent != nil {
-			chosenIDs[permanent.ObjectID] = true
-		}
+		chosenIDs[permanent.ObjectID] = true
 	}
 	var chosen []*game.Permanent
 	var consumed int
 	for _, permanentID := range prefs.sacrificeChoices {
-		permanent := permanentByObjectID(g, permanentID)
-		if permanent == nil || effectiveController(g, permanent) != playerID || chosenIDs[permanentID] || !additionalCostMatchesPermanent(g, permanent, cost) {
+		permanent, ok := permanentByObjectID(g, permanentID)
+		if !ok || effectiveController(g, permanent) != playerID || chosenIDs[permanentID] || !additionalCostMatchesPermanent(g, permanent, cost) {
 			return nil
 		}
 		chosen = append(chosen, permanent)
@@ -620,8 +619,8 @@ func preferredSacrificePermanents(g *game.Game, playerID game.PlayerID, cost gam
 }
 
 func chooseDiscardCards(g *game.Game, playerID game.PlayerID, cost game.AdditionalCost, amount int, alreadyChosen []id.ID) []id.ID {
-	player := playerByID(g, playerID)
-	if player == nil {
+	player, ok := playerByID(g, playerID)
+	if !ok {
 		return nil
 	}
 	chosenIDs := make(map[id.ID]bool)
@@ -633,8 +632,8 @@ func chooseDiscardCards(g *game.Game, playerID game.PlayerID, cost game.Addition
 		if chosenIDs[cardID] {
 			continue
 		}
-		card := g.GetCardInstance(cardID)
-		if card == nil || !additionalCostMatchesCard(card.Def, cost) {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || !additionalCostMatchesCard(card.Def, cost) {
 			continue
 		}
 		chosen = append(chosen, cardID)
@@ -649,8 +648,8 @@ func preferredDiscardCards(g *game.Game, playerID game.PlayerID, cost game.Addit
 	if prefs == nil || len(prefs.discardChoices) == 0 {
 		return chooseDiscardCards(g, playerID, cost, amount, alreadyChosen)
 	}
-	player := playerByID(g, playerID)
-	if player == nil {
+	player, ok := playerByID(g, playerID)
+	if !ok {
 		return nil
 	}
 	chosenIDs := make(map[id.ID]bool)
@@ -660,8 +659,8 @@ func preferredDiscardCards(g *game.Game, playerID game.PlayerID, cost game.Addit
 	var chosen []id.ID
 	var consumed int
 	for _, cardID := range prefs.discardChoices {
-		card := g.GetCardInstance(cardID)
-		if card == nil || !player.Hand.Contains(cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(card.Def, cost) {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || !player.Hand.Contains(cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(card.Def, cost) {
 			return nil
 		}
 		chosen = append(chosen, cardID)
@@ -676,9 +675,6 @@ func preferredDiscardCards(g *game.Game, playerID game.PlayerID, cost game.Addit
 }
 
 func additionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, cost game.AdditionalCost) bool {
-	if permanent == nil {
-		return false
-	}
 	if cost.MatchPermanentType && !permanentHasType(g, permanent, cost.PermanentType) {
 		return false
 	}
@@ -734,12 +730,9 @@ func additionalCostText(cost game.AdditionalCost) string {
 }
 
 func additionalCostPlanStillValid(g *game.Game, player *game.Player, plan additionalCostPlan) bool {
-	if player == nil {
-		return false
-	}
 	for _, sacrifice := range plan.sacrifices {
-		permanent := permanentByObjectID(g, sacrifice.ObjectID)
-		if permanent == nil || effectiveController(g, permanent) != player.ID || permanent != sacrifice {
+		permanent, ok := permanentByObjectID(g, sacrifice.ObjectID)
+		if !ok || effectiveController(g, permanent) != player.ID || permanent != sacrifice {
 			return false
 		}
 	}
@@ -761,14 +754,14 @@ func applyAdditionalCostPlan(g *game.Game, plan additionalCostPlan) bool {
 		}
 	}
 	for _, cardID := range plan.discards {
-		card := g.GetCardInstance(cardID)
-		if card == nil || !discardCardFromHand(g, card.Owner, cardID) {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || !discardCardFromHand(g, card.Owner, cardID) {
 			return false
 		}
 	}
 	if plan.lifePaid > 0 {
-		player := playerByID(g, plan.player)
-		if player == nil || player.Life < plan.lifePaid {
+		player, ok := playerByID(g, plan.player)
+		if !ok || player.Life < plan.lifePaid {
 			return false
 		}
 		player.Life -= plan.lifePaid
@@ -785,8 +778,8 @@ func payAbilityCostsWithPreferences(g *game.Game, playerID game.PlayerID, source
 	if !ok {
 		return plan, false
 	}
-	player := playerForCostPayment(g, playerID)
-	if player == nil || !abilityCostPlanStillValid(g, player, source, plan) {
+	player, ok := playerForCostPayment(g, playerID)
+	if !ok || !abilityCostPlanStillValid(g, player, source, plan) {
 		return plan, false
 	}
 	if !applyPaymentPlan(g, playerID, plan.mana) {
@@ -804,7 +797,7 @@ func payAbilityCostsWithPreferences(g *game.Game, playerID game.PlayerID, source
 }
 
 func abilityCostPlanStillValid(g *game.Game, player *game.Player, source *game.Permanent, plan abilityCostPlan) bool {
-	if player == nil || source == nil {
+	if source == nil {
 		return false
 	}
 	if plan.tapSource && !canTapPermanentForAbility(g, source) {
@@ -815,8 +808,8 @@ func abilityCostPlanStillValid(g *game.Game, player *game.Player, source *game.P
 }
 
 func applyPaymentPlan(g *game.Game, playerID game.PlayerID, plan paymentPlan) bool {
-	player := playerForCostPayment(g, playerID)
-	if player == nil || !paymentPlanStillValid(g, player, plan) {
+	player, ok := playerForCostPayment(g, playerID)
+	if !ok || !paymentPlanStillValid(g, player, plan) {
 		return false
 	}
 	for _, tap := range plan.manaTaps {
@@ -845,7 +838,7 @@ func applyPaymentPlan(g *game.Game, playerID game.PlayerID, plan paymentPlan) bo
 func paymentPlanStillValid(g *game.Game, player *game.Player, plan paymentPlan) bool {
 	tappedMana := make(map[mana.Unit]int)
 	for _, tap := range plan.manaTaps {
-		if tap.permanent == nil || tap.permanent.Tapped || effectiveController(g, tap.permanent) != player.ID {
+		if tap.permanent.Tapped || effectiveController(g, tap.permanent) != player.ID {
 			return false
 		}
 		output, ok := permanentManaOutput(g, tap.permanent)
@@ -915,7 +908,7 @@ func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana
 	if spendUnitFromSnapshot(plan, pool, mana.Unit{Color: color}, 1) {
 		return true
 	}
-	if source := takeNonSnowManaSource(sources, color); source != nil {
+	if source, ok := takeNonSnowManaSource(sources, color); ok {
 		plan.manaTaps = append(plan.manaTaps, manaTap{permanent: source.permanent, color: source.color, amount: source.amount, snow: source.snow})
 		pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
 		return paySpecificMana(plan, pool, sources, color)
@@ -923,8 +916,8 @@ func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana
 	if spendUnitFromSnapshot(plan, pool, mana.Unit{Color: color, Snow: true}, 1) {
 		return true
 	}
-	source := takeManaSource(sources, color)
-	if source == nil {
+	source, ok := takeManaSource(sources, color)
+	if !ok {
 		return false
 	}
 	plan.manaTaps = append(plan.manaTaps, manaTap{permanent: source.permanent, color: source.color, amount: source.amount, snow: source.snow})
@@ -954,8 +947,8 @@ func payGenericMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.
 			remaining--
 			continue
 		}
-		source := takeAnyManaSource(sources)
-		if source == nil {
+		source, ok := takeAnyManaSource(sources)
+		if !ok {
 			return false
 		}
 		plan.manaTaps = append(plan.manaTaps, manaTap{permanent: source.permanent, color: source.color, amount: source.amount, snow: source.snow})
@@ -1002,8 +995,8 @@ func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Col
 	if spendAnySnowUnitFromSnapshot(plan, pool) {
 		return true
 	}
-	source := takeAnySnowManaSource(sources)
-	if source == nil {
+	source, ok := takeAnySnowManaSource(sources)
+	if !ok {
 		return false
 	}
 	plan.manaTaps = append(plan.manaTaps, manaTap{permanent: source.permanent, color: source.color, amount: source.amount, snow: source.snow})
@@ -1124,11 +1117,8 @@ func replaceUnitCounts(dst, src map[mana.Unit]int) {
 
 func availableManaSources(g *game.Game, playerID game.PlayerID, exclude map[id.ID]bool) map[mana.Color][]manaSource {
 	available := make(map[mana.Color][]manaSource)
-	if g == nil {
-		return available
-	}
 	for _, permanent := range g.Battlefield {
-		if permanent == nil || effectiveController(g, permanent) != playerID || permanent.Tapped || exclude[permanent.ObjectID] {
+		if effectiveController(g, permanent) != playerID || permanent.Tapped || exclude[permanent.ObjectID] {
 			continue
 		}
 		output, ok := permanentManaOutput(g, permanent)
@@ -1146,11 +1136,11 @@ func availableManaSources(g *game.Game, playerID game.PlayerID, exclude map[id.I
 }
 
 func tapPermanentForMana(g *game.Game, permanent *game.Permanent, color mana.Color, amount int, snow bool) bool {
-	if g == nil || permanent == nil || permanent.Tapped {
+	if permanent.Tapped {
 		return false
 	}
-	player := playerForCostPayment(g, effectiveController(g, permanent))
-	if player == nil {
+	player, ok := playerForCostPayment(g, effectiveController(g, permanent))
+	if !ok {
 		return false
 	}
 	output, ok := permanentManaOutput(g, permanent)
@@ -1188,8 +1178,8 @@ func permanentManaOutput(g *game.Game, permanent *game.Permanent) (manaOutput, b
 }
 
 func basicLandManaColor(g *game.Game, permanent *game.Permanent) (mana.Color, bool) {
-	card := g.GetCardInstance(permanent.CardInstanceID)
-	if card == nil || card.Def == nil || !card.Def.HasType(game.TypeLand) {
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok || !card.Def.HasType(game.TypeLand) {
 		return 0, false
 	}
 	for _, landType := range basicLandTypes {
@@ -1216,8 +1206,8 @@ var basicLandTypes = []struct {
 }
 
 func simpleTapManaAbility(g *game.Game, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
-	card := permanentCardDef(g, permanent)
-	if card == nil {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok {
 		return 0, nil, false
 	}
 	for i := range card.Abilities {
@@ -1225,7 +1215,7 @@ func simpleTapManaAbility(g *game.Game, permanent *game.Permanent) (int, *game.A
 		if ability.Kind == game.ActivatedAbility &&
 			ability.IsManaAbility &&
 			hasTapCost(ability) &&
-			ability.ManaCost == nil &&
+			!ability.ManaCost.Exists &&
 			len(ability.Targets) == 0 &&
 			len(ability.Effects) == 1 &&
 			ability.Effects[0].Type == game.EffectAddMana {
@@ -1238,49 +1228,49 @@ func simpleTapManaAbility(g *game.Game, permanent *game.Permanent) (int, *game.A
 	return 0, nil, false
 }
 
-func takeManaSource(sources map[mana.Color][]manaSource, color mana.Color) *manaSource {
-	if source := takeNonSnowManaSource(sources, color); source != nil {
-		return source
+func takeManaSource(sources map[mana.Color][]manaSource, color mana.Color) (manaSource, bool) {
+	if source, ok := takeNonSnowManaSource(sources, color); ok {
+		return source, true
 	}
 	if len(sources[color]) > 0 {
 		source := sources[color][0]
 		sources[color] = sources[color][1:]
-		return &source
+		return source, true
 	}
-	return nil
+	return manaSource{}, false
 }
 
-func takeNonSnowManaSource(sources map[mana.Color][]manaSource, color mana.Color) *manaSource {
+func takeNonSnowManaSource(sources map[mana.Color][]manaSource, color mana.Color) (manaSource, bool) {
 	for i, source := range sources[color] {
 		if source.snow {
 			continue
 		}
 		sources[color] = append(sources[color][:i], sources[color][i+1:]...)
-		return &source
+		return source, true
 	}
-	return nil
+	return manaSource{}, false
 }
 
-func takeAnyManaSource(sources map[mana.Color][]manaSource) *manaSource {
+func takeAnyManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
 	for _, color := range paymentColors {
-		if source := takeManaSource(sources, color); source != nil {
-			return source
+		if source, ok := takeManaSource(sources, color); ok {
+			return source, true
 		}
 	}
-	return nil
+	return manaSource{}, false
 }
 
-func takeAnySnowManaSource(sources map[mana.Color][]manaSource) *manaSource {
+func takeAnySnowManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
 	for _, color := range paymentColors {
 		for i, source := range sources[color] {
 			if !source.snow {
 				continue
 			}
 			sources[color] = append(sources[color][:i], sources[color][i+1:]...)
-			return &source
+			return source, true
 		}
 	}
-	return nil
+	return manaSource{}, false
 }
 
 func cloneManaSources(sources map[mana.Color][]manaSource) map[mana.Color][]manaSource {
@@ -1300,13 +1290,13 @@ func replaceManaSources(dst, src map[mana.Color][]manaSource) {
 	}
 }
 
-func playerForCostPayment(g *game.Game, playerID game.PlayerID) *game.Player {
-	if g == nil || playerID < 0 || int(playerID) >= len(g.Players) {
-		return nil
+func playerForCostPayment(g *game.Game, playerID game.PlayerID) (*game.Player, bool) {
+	if playerID < 0 || int(playerID) >= len(g.Players) {
+		return nil, false
 	}
 	player := g.Players[playerID]
-	if player == nil || player.Eliminated || g.TurnOrder.IsEliminated(playerID) {
-		return nil
+	if player.Eliminated || g.TurnOrder.IsEliminated(playerID) {
+		return nil, false
 	}
-	return player
+	return player, true
 }

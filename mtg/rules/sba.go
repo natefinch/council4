@@ -46,16 +46,9 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 }
 
 func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
-	if g == nil {
-		return false, nil
-	}
-
 	changed := false
 	var losses []LossLog
 	for _, player := range g.Players {
-		if player == nil {
-			continue
-		}
 		if player.Eliminated {
 			delete(g.FailedDraws, player.ID)
 			continue
@@ -79,10 +72,6 @@ func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 }
 
 func (e *Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) {
-	if g == nil {
-		return false, nil
-	}
-
 	type pendingDeath struct {
 		objectID id.ID
 		reason   PermanentDeathReason
@@ -105,9 +94,10 @@ func (e *Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []Permanen
 	for _, death := range pending {
 		var permanent *game.Permanent
 		if permanentDeathBypassesDestroy(death.reason) {
-			permanent = permanentByObjectID(g, death.objectID)
-			replacedToCommand := permanent != nil && commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
-			if permanent == nil || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+			var ok bool
+			permanent, ok = permanentByObjectID(g, death.objectID)
+			replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
+			if !ok || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
 				continue
 			}
 			if replacedToCommand {
@@ -133,23 +123,17 @@ func (e *Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []Permanen
 }
 
 func checkAttachmentStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) {
-	if g == nil {
-		return false, nil
-	}
 	var illegalAuras []id.ID
 	changed := false
 	for _, permanent := range g.Battlefield {
-		if permanent == nil {
-			continue
-		}
-		if permanent.AttachedTo == nil {
+		if !permanent.AttachedTo.Exists {
 			if isAuraPermanent(g, permanent) {
 				illegalAuras = append(illegalAuras, permanent.ObjectID)
 			}
 			continue
 		}
-		target := permanentByObjectID(g, *permanent.AttachedTo)
-		if canAttachPermanent(g, permanent, target) {
+		target, ok := permanentByObjectID(g, permanent.AttachedTo.Val)
+		if ok && canAttachPermanent(g, permanent, target) {
 			continue
 		}
 		if isAuraPermanent(g, permanent) {
@@ -164,9 +148,9 @@ func checkAttachmentStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) 
 	}
 	var deaths []PermanentDeathLog
 	for _, auraID := range illegalAuras {
-		aura := permanentByObjectID(g, auraID)
-		replacedToCommand := aura != nil && commanderReplacementDestination(g, aura.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
-		if aura == nil || !movePermanentToZone(g, aura, game.ZoneGraveyard) {
+		aura, ok := permanentByObjectID(g, auraID)
+		replacedToCommand := ok && commanderReplacementDestination(g, aura.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
+		if !ok || !movePermanentToZone(g, aura, game.ZoneGraveyard) {
 			continue
 		}
 		changed = true
@@ -191,9 +175,6 @@ type legendaryKey struct {
 }
 
 func checkLegendaryRuleStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) {
-	if g == nil {
-		return false, nil
-	}
 	keepers := make(map[legendaryKey]*game.Permanent)
 	counts := make(map[legendaryKey]int)
 	for _, permanent := range g.Battlefield {
@@ -221,9 +202,9 @@ func checkLegendaryRuleStateBasedActions(g *game.Game) (bool, []PermanentDeathLo
 
 	var deaths []PermanentDeathLog
 	for _, objectID := range pending {
-		permanent := permanentByObjectID(g, objectID)
-		replacedToCommand := permanent != nil && commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
-		if permanent == nil || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+		permanent, ok := permanentByObjectID(g, objectID)
+		replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
+		if !ok || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
 			continue
 		}
 		if replacedToCommand {
@@ -260,14 +241,8 @@ func permanentOlderThan(left, right *game.Permanent) bool {
 }
 
 func checkCounterStateBasedActions(g *game.Game) bool {
-	if g == nil {
-		return false
-	}
 	changed := false
 	for _, permanent := range g.Battlefield {
-		if permanent == nil {
-			continue
-		}
 		if permanent.Counters.CancelOpposites() > 0 {
 			changed = true
 		}
@@ -276,14 +251,8 @@ func checkCounterStateBasedActions(g *game.Game) bool {
 }
 
 func removeTokensFromNonBattlefieldZones(g *game.Game) bool {
-	if g == nil {
-		return false
-	}
 	changed := false
 	for _, player := range g.Players {
-		if player == nil {
-			continue
-		}
 		for _, zone := range []*game.Zone{&player.Library, &player.Hand, &player.Graveyard, &player.Exile, &player.CommandZone} {
 			for _, cardID := range zone.All() {
 				if g.CardInstances[cardID] != nil {
@@ -299,16 +268,13 @@ func removeTokensFromNonBattlefieldZones(g *game.Game) bool {
 }
 
 func permanentTokenName(permanent *game.Permanent) string {
-	if permanent == nil || !permanent.Token || permanent.TokenDef == nil {
+	if !permanent.Token || permanent.TokenDef == nil {
 		return ""
 	}
 	return permanent.TokenDef.Name
 }
 
 func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDeathReason, bool) {
-	if permanent == nil {
-		return "", false
-	}
 	if permanentHasType(g, permanent, game.TypePlaneswalker) && permanent.Counters.Get(counter.Loyalty) <= 0 {
 		return PermanentDeathReasonZeroLoyalty, true
 	}
@@ -349,14 +315,11 @@ func permanentDeathBypassesDestroy(reason PermanentDeathReason) bool {
 }
 
 func (e *Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
-	if g == nil || playerID < 0 || int(playerID) >= len(g.Players) {
+	if playerID < 0 || int(playerID) >= len(g.Players) {
 		return false
 	}
 
 	player := g.Players[playerID]
-	if player == nil {
-		return false
-	}
 
 	if player.Eliminated && g.TurnOrder.IsEliminated(playerID) {
 		return false
@@ -369,9 +332,6 @@ func (e *Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 }
 
 func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
-	if g == nil {
-		return
-	}
 	g.Stack.RemoveControlledBy(playerID)
 	cleanupEliminatedPlayerPermanents(g, playerID)
 	if g.Combat == nil {
@@ -379,14 +339,14 @@ func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 	}
 	var removeFromCombat []id.ID
 	for _, attack := range g.Combat.Attackers {
-		attacker := permanentByObjectID(g, attack.Attacker)
-		if attack.Target.Player == playerID || effectiveController(g, attacker) == playerID {
+		attacker, ok := permanentByObjectID(g, attack.Attacker)
+		if attack.Target.Player == playerID || (ok && effectiveController(g, attacker) == playerID) {
 			removeFromCombat = append(removeFromCombat, attack.Attacker)
 		}
 	}
 	for _, block := range g.Combat.Blockers {
-		blocker := permanentByObjectID(g, block.Blocker)
-		if effectiveController(g, blocker) == playerID {
+		blocker, ok := permanentByObjectID(g, block.Blocker)
+		if ok && effectiveController(g, blocker) == playerID {
 			removeFromCombat = append(removeFromCombat, block.Blocker)
 		}
 	}
@@ -399,9 +359,6 @@ func cleanupEliminatedPlayerPermanents(g *game.Game, playerID game.PlayerID) {
 	for {
 		var owned *game.Permanent
 		for _, permanent := range g.Battlefield {
-			if permanent == nil {
-				continue
-			}
 			if permanent.Owner == playerID {
 				owned = permanent
 				break

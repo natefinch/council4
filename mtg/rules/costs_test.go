@@ -207,7 +207,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 		addBasicLandPermanent(g, game.Player1, "Forest")
 		addBasicLandPermanent(g, game.Player1, "Mountain")
 		cost := mana.Cost{mana.GenericMana(3), mana.ColoredMana(mana.Green)}
-		card := &game.CardDef{Name: "Reduced Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: &cost}
+		card := &game.CardDef{Name: "Reduced Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: optCost(cost)}
 		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 			Kind:             game.CostModifierSpell,
 			GenericReduction: 2,
@@ -221,7 +221,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		addBasicLandPermanent(g, game.Player1, "Forest")
 		cost := mana.Cost{mana.ColoredMana(mana.Green)}
-		card := &game.CardDef{Name: "Taxed Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: &cost}
+		card := &game.CardDef{Name: "Taxed Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: optCost(cost)}
 		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 			Kind:            game.CostModifierSpell,
 			GenericIncrease: 1,
@@ -234,7 +234,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 	t.Run("minimum", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		cost := mana.Cost{mana.GenericMana(3)}
-		card := &game.CardDef{Name: "Minimum Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: &cost}
+		card := &game.CardDef{Name: "Minimum Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: optCost(cost)}
 		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 			Kind:             game.CostModifierSpell,
 			GenericReduction: 5,
@@ -254,7 +254,7 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, "Forest")
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
-	card := &game.CardDef{Name: "Taxed Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: &cost}
+	card := &game.CardDef{Name: "Taxed Creature", Types: []game.CardType{game.TypeCreature}, ManaCost: optCost(cost)}
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Spell Tax",
 		Types: []game.CardType{game.TypeEnchantment},
@@ -441,8 +441,8 @@ func TestCreatureTapManaAbilityRespectsSummoningSickness(t *testing.T) {
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Elvish Mystic",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 1},
-		Toughness: &game.PT{Value: 1},
+		Power:     optPT(game.PT{Value: 1}),
+		Toughness: optPT(game.PT{Value: 1}),
 	}, mana.Green, 1)
 	want := action.ActivateAbility(dork.ObjectID, 0, nil, 0)
 
@@ -499,8 +499,8 @@ func TestPayCostAutoActivatesMultiOutputSourceForRequiredColor(t *testing.T) {
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Llanowar Tribe",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 3},
-		Toughness: &game.PT{Value: 3},
+		Power:     optPT(game.PT{Value: 3}),
+		Toughness: optPT(game.PT{Value: 3}),
 	}, mana.Green, 3)
 	dork.SummoningSick = false
 	cost := mana.Cost{mana.ColoredMana(mana.Green), mana.ColoredMana(mana.Green)}
@@ -540,8 +540,8 @@ func TestPayCostAutoActivatesNonSummoningSickManaDork(t *testing.T) {
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Elvish Mystic",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 1},
-		Toughness: &game.PT{Value: 1},
+		Power:     optPT(game.PT{Value: 1}),
+		Toughness: optPT(game.PT{Value: 1}),
 	}, mana.Green, 1)
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 
@@ -580,7 +580,10 @@ func addBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype strin
 
 func addSnowBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype string) *game.Permanent {
 	permanent := addBasicLandPermanent(g, controller, subtype)
-	card := g.GetCardInstance(permanent.CardInstanceID)
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok {
+		panic("snow basic land card instance not found")
+	}
 	card.Def.Supertypes = append(card.Def.Supertypes, game.Snow)
 	return permanent
 }
@@ -607,5 +610,9 @@ func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.C
 		Owner: controller,
 	}
 	g.CardInstances[cardID] = card
-	return createCardPermanent(g, card, controller, game.ZoneStack)
+	permanent, ok := createCardPermanent(g, card, controller, game.ZoneStack)
+	if !ok {
+		panic("mana ability permanent was not created")
+	}
+	return permanent
 }

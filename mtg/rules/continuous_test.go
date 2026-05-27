@@ -48,7 +48,7 @@ func TestStaticPTEffectRaisesLethalDamageThreshold(t *testing.T) {
 	engine.resolveCombatDamage(g, &TurnLog{})
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
-	if permanentByObjectID(g, blocker.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, blocker.ObjectID); !ok {
 		t.Fatal("anthem-pumped blocker died to nonlethal marked damage")
 	}
 	for _, death := range deaths {
@@ -67,7 +67,7 @@ func TestStaticPTEffectDisappearingChangesLethalDamageThreshold(t *testing.T) {
 
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
-	if permanentByObjectID(g, creature.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); !ok {
 		t.Fatal("anthem-pumped creature died before anthem left")
 	}
 	if len(deaths) != 0 {
@@ -77,7 +77,7 @@ func TestStaticPTEffectDisappearingChangesLethalDamageThreshold(t *testing.T) {
 	movePermanentToZone(g, anthem, game.ZoneGraveyard)
 	_, deaths = engine.applyStateBasedActionsWithDeaths(g)
 
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("creature survived after anthem left and marked damage became lethal")
 	}
 	if len(deaths) != 1 || deaths[0].Permanent != creature.ObjectID || deaths[0].Reason != PermanentDeathReasonLethalDamage {
@@ -98,8 +98,8 @@ func TestContinuousEffectsApplyInLayerOrderBeforeTimestamp(t *testing.T) {
 			AffectedObjectID: animatedLand.ObjectID,
 			Timestamp:        20,
 			Layer:            game.LayerPowerToughnessSet,
-			SetPower:         &two,
-			SetToughness:     &two,
+			SetPower:         optPT(two),
+			SetToughness:     optPT(two),
 		},
 		game.ContinuousEffect{
 			ID:               2,
@@ -130,8 +130,8 @@ func TestContinuousEffectDependenciesOverrideTimestampWithinLayer(t *testing.T) 
 			AffectedObjectID: creature.ObjectID,
 			Timestamp:        20,
 			Layer:            game.LayerPowerToughnessSet,
-			SetPower:         &four,
-			SetToughness:     &four,
+			SetPower:         optPT(four),
+			SetToughness:     optPT(four),
 		},
 		game.ContinuousEffect{
 			ID:               11,
@@ -139,8 +139,8 @@ func TestContinuousEffectDependenciesOverrideTimestampWithinLayer(t *testing.T) 
 			Timestamp:        10,
 			DependsOn:        []id.ID{10},
 			Layer:            game.LayerPowerToughnessSet,
-			SetPower:         &one,
-			SetToughness:     &one,
+			SetPower:         optPT(one),
+			SetToughness:     optPT(one),
 		},
 	)
 
@@ -167,8 +167,8 @@ func TestTypeAndPTContinuousEffectsAffectCombatAndSBAs(t *testing.T) {
 			ID:               2,
 			AffectedObjectID: land.ObjectID,
 			Layer:            game.LayerPowerToughnessSet,
-			SetPower:         &two,
-			SetToughness:     &two,
+			SetPower:         optPT(two),
+			SetToughness:     optPT(two),
 		},
 	)
 	land.MarkedDamage = 2
@@ -178,7 +178,7 @@ func TestTypeAndPTContinuousEffectsAffectCombatAndSBAs(t *testing.T) {
 	}
 	_, deaths := NewEngine(nil).applyStateBasedActionsWithDeaths(g)
 
-	if permanentByObjectID(g, land.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, land.ObjectID); ok {
 		t.Fatal("animated land survived lethal marked damage")
 	}
 	if len(deaths) != 1 || deaths[0].Permanent != land.ObjectID {
@@ -193,10 +193,10 @@ func TestDynamicStarPowerAffectsCombatDamage(t *testing.T) {
 	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:             "Hand Avatar",
 		Types:            []game.CardType{game.TypeCreature},
-		Power:            &star,
-		Toughness:        &star,
-		DynamicPower:     &dynamic,
-		DynamicToughness: &dynamic,
+		Power:            optPT(star),
+		Toughness:        optPT(star),
+		DynamicPower:     optDynamicValue(dynamic),
+		DynamicToughness: optDynamicValue(dynamic),
 	})
 	for range 3 {
 		addCardToHand(g, game.Player1, &game.CardDef{Name: "Card in Hand"})
@@ -222,13 +222,13 @@ func TestCopyEffectChangesEffectiveCombatKeywords(t *testing.T) {
 		ID:               1,
 		AffectedObjectID: copier.ObjectID,
 		Layer:            game.LayerCopy,
-		CopyValues: &game.CopyableValues{
+		CopyValues: optCopyValues(game.CopyableValues{
 			Name:      "Copied Dragon",
 			Types:     []game.CardType{game.TypeCreature},
-			Power:     &copyPower,
-			Toughness: &copyPower,
+			Power:     optPT(copyPower),
+			Toughness: optPT(copyPower),
 			Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}},
-		},
+		}),
 	})
 
 	if got := permanentEffectiveName(g, copier); got != "Copied Dragon" {
@@ -276,7 +276,7 @@ func TestControlChangeEffectsAffectLegalityAndSelectors(t *testing.T) {
 		ID:               1,
 		AffectedObjectID: creature.ObjectID,
 		Layer:            game.LayerControl,
-		NewController:    &newController,
+		NewController:    optController(newController),
 	})
 
 	if canAttackWith(g, creature, game.Player1) {
@@ -302,14 +302,14 @@ func TestCopyEffectPreservesDynamicStarValues(t *testing.T) {
 		ID:               1,
 		AffectedObjectID: copier.ObjectID,
 		Layer:            game.LayerCopy,
-		CopyValues: &game.CopyableValues{
+		CopyValues: optCopyValues(game.CopyableValues{
 			Name:             "Copied Star",
 			Types:            []game.CardType{game.TypeCreature},
-			Power:            &star,
-			Toughness:        &star,
-			DynamicPower:     &dynamic,
-			DynamicToughness: &dynamic,
-		},
+			Power:            optPT(star),
+			Toughness:        optPT(star),
+			DynamicPower:     optDynamicValue(dynamic),
+			DynamicToughness: optDynamicValue(dynamic),
+		}),
 	})
 
 	if got := effectivePower(g, copier); got != 4 {
@@ -325,8 +325,8 @@ func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent 
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Anthem Captain",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &pt,
-		Toughness: &pt,
+		Power:     optPT(pt),
+		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.StaticAbility,

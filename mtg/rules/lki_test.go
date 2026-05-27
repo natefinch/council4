@@ -33,8 +33,8 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 			ID:               2,
 			AffectedObjectID: land.ObjectID,
 			Layer:            game.LayerPowerToughnessSet,
-			SetPower:         &one,
-			SetToughness:     &one,
+			SetPower:         optPT(one),
+			SetToughness:     optPT(one),
 		},
 	)
 
@@ -44,7 +44,7 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 	if !ok {
 		t.Fatal("missing last-known snapshot for destroyed animated land")
 	}
-	if !slices.Contains(snapshot.Types, game.TypeCreature) || snapshot.Toughness != 1 || !snapshot.ToughnessOK {
+	if !slices.Contains(snapshot.Types, game.TypeCreature) || !snapshot.Toughness.Exists || snapshot.Toughness.Val != 1 {
 		t.Fatalf("snapshot = %+v, want effective creature with toughness 1", snapshot)
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -70,10 +70,10 @@ func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 
 	engine.resolveEffect(g, obj, game.Effect{
 		Type: game.EffectCreateDelayedTrigger,
-		DelayedTrigger: &game.DelayedTriggerDef{
+		DelayedTrigger: optDelayedTrigger(game.DelayedTriggerDef{
 			Timing:  game.DelayedAtBeginningOfNextEndStep,
 			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
-		},
+		}),
 	}, nil)
 	movePermanentToZone(g, source, game.ZoneGraveyard)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})

@@ -11,9 +11,9 @@ func TestRemovePermanentFromBattlefield(t *testing.T) {
 	first := addCombatCreaturePermanent(g, game.Player1)
 	second := addCombatCreaturePermanent(g, game.Player1)
 
-	removed := removePermanentFromBattlefield(g, first.ObjectID)
+	removed, ok := removePermanentFromBattlefield(g, first.ObjectID)
 
-	if removed != first {
+	if !ok || removed != first {
 		t.Fatalf("removed permanent = %+v, want %+v", removed, first)
 	}
 	if len(g.Battlefield) != 1 || g.Battlefield[0] != second {
@@ -90,7 +90,7 @@ func TestDestroyPermanentDoesNotMoveIndestructiblePermanent(t *testing.T) {
 	if removed != nil {
 		t.Fatalf("destroyed permanent = %+v, want nil", removed)
 	}
-	if permanentByObjectID(g, permanent.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
 		t.Fatal("indestructible permanent left the battlefield")
 	}
 	if g.Players[game.Player1].Graveyard.Contains(permanent.CardInstanceID) {
@@ -106,7 +106,7 @@ func TestAttachPermanentAttachesAuraToLegalCreature(t *testing.T) {
 	if !attachPermanent(g, aura, creature) {
 		t.Fatal("attachPermanent() = false, want true")
 	}
-	if aura.AttachedTo == nil || *aura.AttachedTo != creature.ObjectID {
+	if !aura.AttachedTo.Exists || aura.AttachedTo.Val != creature.ObjectID {
 		t.Fatalf("aura attached to = %v, want %v", aura.AttachedTo, creature.ObjectID)
 	}
 	if len(creature.Attachments) != 1 || creature.Attachments[0] != aura.ObjectID {
@@ -126,7 +126,7 @@ func TestIllegalAuraStateBasedActionMovesAuraToGraveyard(t *testing.T) {
 	movePermanentToZone(g, creature, game.ZoneGraveyard)
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
-	if permanentByObjectID(g, aura.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, aura.ObjectID); ok {
 		t.Fatal("unattached aura remained on battlefield")
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(aura.CardInstanceID) {
@@ -152,11 +152,11 @@ func TestEquipmentRemainsWhenEquippedCreatureLeaves(t *testing.T) {
 	if len(deaths) != 0 {
 		t.Fatalf("death logs = %+v, want no equipment death", deaths)
 	}
-	if permanentByObjectID(g, equipment.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, equipment.ObjectID); !ok {
 		t.Fatal("equipment left battlefield when equipped creature left")
 	}
-	if equipment.AttachedTo != nil {
-		t.Fatalf("equipment attached to = %v, want nil", *equipment.AttachedTo)
+	if equipment.AttachedTo.Exists {
+		t.Fatalf("equipment attached to = %v, want absent", equipment.AttachedTo.Val)
 	}
 	if len(creature.Attachments) != 0 {
 		t.Fatalf("removed creature attachments = %+v, want none", creature.Attachments)
@@ -166,8 +166,8 @@ func TestEquipmentRemainsWhenEquippedCreatureLeaves(t *testing.T) {
 func TestRemovePermanentFromBattlefieldMissingPermanentReturnsNil(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 
-	if removed := removePermanentFromBattlefield(g, 999); removed != nil {
-		t.Fatalf("removed permanent = %+v, want nil", removed)
+	if removed, ok := removePermanentFromBattlefield(g, 999); ok || removed != nil {
+		t.Fatalf("removed permanent = %+v, %v, want nil, false", removed, ok)
 	}
 }
 

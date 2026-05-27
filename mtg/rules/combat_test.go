@@ -363,12 +363,12 @@ func TestDeclareAttackersCanTargetPlaneswalkersAndBattles(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:    "Test Planeswalker",
 		Types:   []game.CardType{game.TypePlaneswalker},
-		Loyalty: intPtr(3),
+		Loyalty: optInt(3),
 	})
 	battle := addCombatPermanent(g, game.Player3, &game.CardDef{
 		Name:    "Test Battle",
 		Types:   []game.CardType{game.TypeBattle},
-		Defense: intPtr(4),
+		Defense: optInt(4),
 	})
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
@@ -831,7 +831,7 @@ func TestPhasedOutCreatureCannotAttackBlockOrBeAttacked(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:    "Phased Walker",
 		Types:   []game.CardType{game.TypePlaneswalker},
-		Loyalty: intPtr(3),
+		Loyalty: optInt(3),
 	})
 	attacker.PhasedOut = true
 	blocker.PhasedOut = true
@@ -946,10 +946,10 @@ func TestEliminatedPlayerCleanupRemovesCombatAndStackObjects(t *testing.T) {
 	if g.Stack.Size() != 0 {
 		t.Fatalf("stack size after elimination = %d, want 0", g.Stack.Size())
 	}
-	if permanentByObjectID(g, owned.ObjectID) != nil || !g.Players[game.Player2].Exile.Contains(owned.CardInstanceID) {
+	if _, ok := permanentByObjectID(g, owned.ObjectID); ok || !g.Players[game.Player2].Exile.Contains(owned.CardInstanceID) {
 		t.Fatal("eliminated player's owned permanent did not leave battlefield")
 	}
-	if permanentByObjectID(g, controlled.ObjectID) == nil || controlled.Controller != game.Player1 {
+	if _, ok := permanentByObjectID(g, controlled.ObjectID); !ok || controlled.Controller != game.Player1 {
 		t.Fatalf("controlled permanent after elimination = %+v, want returned to owner control", controlled)
 	}
 }
@@ -987,8 +987,8 @@ func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 	manaDork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Mana Dork",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 1},
-		Toughness: &game.PT{Value: 1},
+		Power:     optPT(game.PT{Value: 1}),
+		Toughness: optPT(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Haste},
@@ -1063,7 +1063,7 @@ func TestCombatDamageToPlaneswalkerRemovesLoyaltyAndSBA(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:    "Test Planeswalker",
 		Types:   []game.CardType{game.TypePlaneswalker},
-		Loyalty: intPtr(3),
+		Loyalty: optInt(3),
 	})
 	planeswalker.Counters.Add(counter.Loyalty, 3)
 	g.Combat = &game.CombatState{
@@ -1080,7 +1080,7 @@ func TestCombatDamageToPlaneswalkerRemovesLoyaltyAndSBA(t *testing.T) {
 	if planeswalker.Counters.Get(counter.Loyalty) != 0 {
 		t.Fatalf("planeswalker loyalty = %d, want 0", planeswalker.Counters.Get(counter.Loyalty))
 	}
-	if permanentByObjectID(g, planeswalker.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, planeswalker.ObjectID); ok {
 		t.Fatal("zero-loyalty planeswalker remained on battlefield")
 	}
 	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroLoyalty {
@@ -1100,7 +1100,7 @@ func TestCombatDamageToBattleRemovesDefenseAndSBA(t *testing.T) {
 	battle := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:    "Test Battle",
 		Types:   []game.CardType{game.TypeBattle},
-		Defense: intPtr(4),
+		Defense: optInt(4),
 	})
 	battle.Counters.Add(counter.Defense, 4)
 	g.Combat = &game.CombatState{
@@ -1116,7 +1116,7 @@ func TestCombatDamageToBattleRemovesDefenseAndSBA(t *testing.T) {
 	if battle.Counters.Get(counter.Defense) != 0 {
 		t.Fatalf("battle defense = %d, want 0", battle.Counters.Get(counter.Defense))
 	}
-	if permanentByObjectID(g, battle.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, battle.ObjectID); ok {
 		t.Fatal("zero-defense battle remained on battlefield")
 	}
 	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroDefense {
@@ -1188,7 +1188,14 @@ func TestTokenCopyOfCommanderDoesNotDealCommanderDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	commander := addCombatCreaturePermanentWithPower(g, game.Player1, 7)
 	g.CommanderIDs = map[id.ID]bool{commander.CardInstanceID: true}
-	token := createTokenPermanent(g, game.Player1, g.GetCardInstance(commander.CardInstanceID).Def)
+	card, ok := g.GetCardInstance(commander.CardInstanceID)
+	if !ok {
+		t.Fatal("commander card instance not found")
+	}
+	token, ok := createTokenPermanent(g, game.Player1, card.Def)
+	if !ok {
+		t.Fatal("token was not created")
+	}
 	g.Combat = &game.CombatState{
 		Attackers: []game.AttackDeclaration{
 			{Attacker: token.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
@@ -1481,7 +1488,7 @@ func TestDoubleStrikeTrampleDealsDamageWhenAllBlockersDieFirst(t *testing.T) {
 
 	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
 
-	if permanentByObjectID(g, blocker.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, blocker.ObjectID); ok {
 		t.Fatal("blocker survived first-strike trample damage")
 	}
 	if g.Players[game.Player2].Life != 36 {
@@ -1504,13 +1511,13 @@ func TestFirstStrikeDeathtouchKillsBlockerBeforeNormalCombatDamage(t *testing.T)
 
 	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
 
-	if permanentByObjectID(g, attacker.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, attacker.ObjectID); !ok {
 		t.Fatal("first-strike deathtouch attacker died")
 	}
 	if attacker.MarkedDamage != 0 {
 		t.Fatalf("attacker marked damage = %d, want 0", attacker.MarkedDamage)
 	}
-	if permanentByObjectID(g, blocker.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, blocker.ObjectID); ok {
 		t.Fatal("blocker survived first-strike deathtouch damage")
 	}
 	if len(log.Deaths) != 1 || log.Deaths[0].Permanent != blocker.ObjectID || log.Deaths[0].Reason != PermanentDeathReasonLethalDamage {
@@ -1527,10 +1534,10 @@ func TestCombatWithFirstLegalBlockerKillsBlockedAttacker(t *testing.T) {
 
 	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
 
-	if permanentByObjectID(g, attacker.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, attacker.ObjectID); ok {
 		t.Fatal("attacker survived lethal blocked combat damage")
 	}
-	if permanentByObjectID(g, blocker.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, blocker.ObjectID); !ok {
 		t.Fatal("blocker died despite nonlethal damage")
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(attacker.CardInstanceID) {
@@ -1553,13 +1560,13 @@ func TestFirstStrikeKillsBlockerBeforeNormalCombatDamage(t *testing.T) {
 
 	engine.runCombatPhase(g, allFirstLegalAgents(), &log)
 
-	if permanentByObjectID(g, attacker.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, attacker.ObjectID); !ok {
 		t.Fatal("first-strike attacker died")
 	}
 	if attacker.MarkedDamage != 0 {
 		t.Fatalf("first-strike attacker marked damage = %d, want 0", attacker.MarkedDamage)
 	}
-	if permanentByObjectID(g, blocker.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, blocker.ObjectID); ok {
 		t.Fatal("blocker survived first-strike lethal damage")
 	}
 	if !g.Players[game.Player2].Graveyard.Contains(blocker.CardInstanceID) {
@@ -1672,7 +1679,7 @@ func TestResolveCombatDamageNilAndStarPowerDealZero(t *testing.T) {
 	starPower := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Star Creature",
 		Types: []game.CardType{game.TypeCreature},
-		Power: &game.PT{IsStar: true},
+		Power: optPT(game.PT{IsStar: true}),
 	})
 	g.Combat = &game.CombatState{
 		Attackers: []game.AttackDeclaration{
@@ -1766,8 +1773,8 @@ func addCombatCreaturePermanentWithPower(g *game.Game, controller game.PlayerID,
 		Types: []game.CardType{
 			game.TypeCreature,
 		},
-		Power:     &pt,
-		Toughness: &pt,
+		Power:     optPT(pt),
+		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.StaticAbility,

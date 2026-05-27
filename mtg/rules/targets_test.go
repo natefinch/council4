@@ -254,16 +254,16 @@ func TestStructuredTargetPredicates(t *testing.T) {
 		ManaValue: 2,
 		Colors:    []mana.Color{mana.Black},
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 3},
-		Toughness: &game.PT{Value: 3},
+		Power:     optPT(game.PT{Value: 3}),
+		Toughness: optPT(game.PT{Value: 3}),
 	})
 	whiteCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "White Creature",
 		ManaValue: 4,
 		Colors:    []mana.Color{mana.White},
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 2},
-		Toughness: &game.PT{Value: 2},
+		Power:     optPT(game.PT{Value: 2}),
+		Toughness: optPT(game.PT{Value: 2}),
 		Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}},
 	})
 	whiteCreature.Tapped = true
@@ -280,7 +280,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 				Controller:     game.ControllerOpponent,
 				Tapped:         game.TriTrue,
 				Keyword:        game.Flying,
-				ManaValue:      &game.IntComparison{Op: game.CompareLessOrEqual, Value: 4},
+				ManaValue:      optIntComparison(game.IntComparison{Op: game.CompareLessOrEqual, Value: 4}),
 			},
 		},
 	}))
@@ -432,7 +432,10 @@ func TestPermanentTargetThatLeavesBeforeResolutionCountersSpellByRules(t *testin
 		Amount:      3,
 		TargetIndex: 0,
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
-	card := g.GetCardInstance(sourceID)
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
 	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
 	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
@@ -458,7 +461,10 @@ func TestPermanentTargetedDamageMarksDamageOnResolution(t *testing.T) {
 		Amount:      3,
 		TargetIndex: 0,
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
-	card := g.GetCardInstance(sourceID)
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
 	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
 
 	engine.resolveTopOfStack(g, &TurnLog{})

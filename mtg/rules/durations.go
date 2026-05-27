@@ -30,9 +30,6 @@ func effectDurationOrDefault(duration game.EffectDuration, fallback game.EffectD
 }
 
 func expireTurnStartDurations(g *game.Game) {
-	if g == nil {
-		return
-	}
 	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect game.ContinuousEffect) bool {
 		return effect.Duration == game.DurationUntilYourNextTurn &&
 			effect.ExpiresFor == g.Turn.ActivePlayer &&
@@ -41,9 +38,6 @@ func expireTurnStartDurations(g *game.Game) {
 }
 
 func expireCleanupDurations(g *game.Game) {
-	if g == nil {
-		return
-	}
 	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect game.ContinuousEffect) bool {
 		return effect.Duration == game.DurationUntilEndOfTurn || effect.Duration == game.DurationThisTurn
 	})
@@ -64,7 +58,7 @@ func filterContinuousEffects(effects []game.ContinuousEffect, expired func(game.
 }
 
 func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) bool {
-	if g == nil || obj == nil || def == nil || def.Timing == 0 {
+	if obj == nil || def == nil || def.Timing == 0 {
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
@@ -88,7 +82,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 }
 
 func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {
-	if g == nil || len(g.DelayedTriggers) == 0 {
+	if len(g.DelayedTriggers) == 0 {
 		return
 	}
 	remaining := g.DelayedTriggers[:0]
@@ -116,7 +110,7 @@ func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {
 }
 
 func orderDelayedTriggersAPNAP(g *game.Game, triggers []game.DelayedTrigger) []game.DelayedTrigger {
-	if len(triggers) <= 1 || g == nil {
+	if len(triggers) <= 1 {
 		return triggers
 	}
 	ordered := make([]game.DelayedTrigger, 0, len(triggers))

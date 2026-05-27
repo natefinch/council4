@@ -6,9 +6,9 @@ func resolveFight(g *game.Game, obj *game.StackObject, effect game.Effect) {
 	if obj == nil || len(obj.Targets) < 2 {
 		return
 	}
-	first := permanentByObjectID(g, obj.Targets[0].PermanentID)
-	second := permanentByObjectID(g, obj.Targets[1].PermanentID)
-	if first == nil || second == nil || first.ObjectID == second.ObjectID || !permanentHasType(g, first, game.TypeCreature) || !permanentHasType(g, second, game.TypeCreature) {
+	first, firstOK := permanentByObjectID(g, obj.Targets[0].PermanentID)
+	second, secondOK := permanentByObjectID(g, obj.Targets[1].PermanentID)
+	if !firstOK || !secondOK || first.ObjectID == second.ObjectID || !permanentHasType(g, first, game.TypeCreature) || !permanentHasType(g, second, game.TypeCreature) {
 		return
 	}
 	dealPermanentDamage(g, first.CardInstanceID, first.ObjectID, effectiveController(g, first), second, effectivePower(g, first), false)

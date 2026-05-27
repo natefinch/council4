@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 // CounterPlacement describes counters a permanent enters with.
@@ -84,7 +85,7 @@ type ResolutionChoiceResult struct {
 // resolution (CR 608.2c, CR 117.12).
 type ResolutionPayment struct {
 	Prompt          string
-	ManaCost        *mana.Cost
+	ManaCost        opt.V[mana.Cost]
 	AdditionalCosts []AdditionalCost
 	XValue          int
 }

@@ -109,11 +109,18 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 	t.Run("stack", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		commanderID := addCommanderCardToHand(g, game.Player1)
-		card := g.GetCardInstance(commanderID)
+		card, ok := g.GetCardInstance(commanderID)
+		if !ok {
+			t.Fatal("commander card instance not found")
+		}
 		g.Players[game.Player1].Hand.Remove(commanderID)
 		g.Stack.Push(&game.StackObject{ID: g.IDGen.Next(), Kind: game.StackSpell, SourceID: commanderID, Controller: game.Player1})
 
-		if !moveStackCardToGraveyard(g, g.Stack.Pop(), card) {
+		obj, ok := g.Stack.Pop()
+		if !ok {
+			t.Fatal("stack is empty")
+		}
+		if !moveStackCardToGraveyard(g, obj, card) {
 			t.Fatal("moveStackCardToGraveyard() = false, want true")
 		}
 		if !g.Players[game.Player1].CommandZone.Contains(commanderID) || g.Players[game.Player1].Graveyard.Contains(commanderID) {
@@ -157,7 +164,8 @@ func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 	if player.CommanderCastCount != 2 {
 		t.Fatalf("commander cast count = %d, want 2", player.CommanderCastCount)
 	}
-	if player.CommandZone.Contains(commanderID) || g.Stack.Peek().SourceID != commanderID {
+	obj, ok := g.Stack.Peek()
+	if player.CommandZone.Contains(commanderID) || !ok || obj.SourceID != commanderID {
 		t.Fatal("commander was not moved from command zone to stack")
 	}
 	if !forest.Tapped {
@@ -196,9 +204,12 @@ func TestCommanderZeroToughnessReplacementDoesNotLogDeath(t *testing.T) {
 	engine := NewEngine(nil)
 	commander := addCommanderPermanent(g, game.Player1)
 	zero := game.PT{Value: 0}
-	card := g.GetCardInstance(commander.CardInstanceID)
-	card.Def.Power = &zero
-	card.Def.Toughness = &zero
+	card, ok := g.GetCardInstance(commander.CardInstanceID)
+	if !ok {
+		t.Fatal("commander card instance not found")
+	}
+	card.Def.Power = optPT(zero)
+	card.Def.Toughness = optPT(zero)
 
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
@@ -333,7 +344,7 @@ func newCommanderCastGame(commander *game.CardDef) *game.Game {
 func greenCommanderWithCost() *game.CardDef {
 	commander := commanderDef("Castable Commander", mana.Green)
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
-	commander.ManaCost = &cost
+	commander.ManaCost = optCost(cost)
 	return commander
 }
 

@@ -42,9 +42,6 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	expireTurnStartDurations(g)
 	expireGoadForActivePlayer(g)
 	for _, permanent := range g.Battlefield {
-		if permanent == nil {
-			continue
-		}
 		if effectiveController(g, permanent) == g.Turn.ActivePlayer {
 			if permanent.PhasedOut {
 				permanent.PhasedOut = false
@@ -111,9 +108,6 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	g.Turn.Step = game.StepCleanup
 	discardToMaximumHandSize(g, g.Turn.ActivePlayer)
 	for _, permanent := range g.Battlefield {
-		if permanent == nil {
-			continue
-		}
 		permanent.MarkedDamage = 0
 		permanent.MarkedDeathtouchDamage = false
 		permanent.TemporaryPowerModifier = 0
@@ -141,8 +135,8 @@ func emitBeginningOfStepEvent(g *game.Game, step game.Step) {
 }
 
 func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
-	player := playerByID(g, playerID)
-	if player == nil || player.Eliminated || player.Hand.Size() <= maximumHandSize {
+	player, ok := playerByID(g, playerID)
+	if !ok || player.Eliminated || player.Hand.Size() <= maximumHandSize {
 		return
 	}
 	cards := player.Hand.All()
@@ -182,9 +176,6 @@ func popExtraTurn(extraTurns *[]game.PlayerID, turnOrder *game.TurnOrder) (game.
 
 func emptyManaPools(g *game.Game) {
 	for _, player := range g.Players {
-		if player == nil {
-			continue
-		}
 		player.ManaPool.Empty()
 	}
 }

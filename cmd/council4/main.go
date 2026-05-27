@@ -14,6 +14,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules"
+	"github.com/natefinch/council4/opt"
 )
 
 func main() {
@@ -152,8 +153,8 @@ func grizzlyBears() *game.CardDef {
 		ManaValue: 1,
 		Types:     []game.CardType{game.TypeCreature},
 		Subtypes:  []string{"Bear"},
-		Power:     &power,
-		Toughness: &toughness,
+		Power:     opt.Val(power),
+		Toughness: opt.Val(toughness),
 	}
 }
 
@@ -181,8 +182,8 @@ func creatureCard(name string, power int, toughness int, keywords ...game.Keywor
 		ManaCost:  greenCost(),
 		ManaValue: 1,
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &p,
-		Toughness: &t,
+		Power:     opt.Val(p),
+		Toughness: opt.Val(t),
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.StaticAbility,
@@ -246,9 +247,9 @@ func lavaSpikeLike() *game.CardDef {
 	}
 }
 
-func greenCost() *mana.Cost {
+func greenCost() opt.V[mana.Cost] {
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
-	return &cost
+	return opt.Val(cost)
 }
 
 func printSummary(g *game.Game, result *rules.GameResult, seed uint64, mode string, deckSize int) {
@@ -278,9 +279,6 @@ func printSummary(g *game.Game, result *rules.GameResult, seed uint64, mode stri
 	fmt.Println()
 	fmt.Println("Players:")
 	for _, player := range g.Players {
-		if player == nil {
-			continue
-		}
 		fmt.Printf("  %s: life=%d hand=%d library=%d lands=%d eliminated=%t\n",
 			playerName(player.ID),
 			player.Life,
@@ -356,8 +354,8 @@ func formatDraw(g *game.Game, draw rules.DrawLog) string {
 	if draw.Failed {
 		return "draw from empty library"
 	}
-	card := g.GetCardInstance(draw.CardID)
-	if card == nil || card.Def == nil {
+	card, ok := g.GetCardInstance(draw.CardID)
+	if !ok {
 		return fmt.Sprintf("draw card #%d", draw.CardID)
 	}
 	return fmt.Sprintf("draw %q", card.Def.Name)
@@ -373,14 +371,14 @@ func formatActionLog(g *game.Game, logged rules.ActionLog) string {
 	case action.ActionPass:
 		return "pass"
 	case action.ActionPlayLand:
-		card := g.GetCardInstance(act.PlayLand.CardID)
-		if card == nil || card.Def == nil {
+		card, ok := g.GetCardInstance(act.PlayLand.CardID)
+		if !ok {
 			return fmt.Sprintf("play land #%d", act.PlayLand.CardID)
 		}
 		return fmt.Sprintf("play land %q", card.Def.Name)
 	case action.ActionCastSpell:
-		card := g.GetCardInstance(act.CastSpell.CardID)
-		if card == nil || card.Def == nil {
+		card, ok := g.GetCardInstance(act.CastSpell.CardID)
+		if !ok {
 			return fmt.Sprintf("cast spell #%d", act.CastSpell.CardID)
 		}
 		return fmt.Sprintf("cast %q", card.Def.Name)
@@ -424,8 +422,8 @@ func formatDeclareBlockers(g *game.Game, logged rules.ActionLog, declare action.
 
 func formatPermanentForAction(g *game.Game, logged rules.ActionLog, objectID id.ID) string {
 	if cardID, ok := logged.PermanentSources[objectID]; ok {
-		card := g.GetCardInstance(cardID)
-		if card != nil && card.Def != nil {
+		card, ok := g.GetCardInstance(cardID)
+		if ok {
 			return fmt.Sprintf("%q", card.Def.Name)
 		}
 	}
@@ -440,8 +438,8 @@ func formatPermanent(g *game.Game, objectID id.ID) string {
 		if permanent == nil || permanent.ObjectID != objectID {
 			continue
 		}
-		card := g.GetCardInstance(permanent.CardInstanceID)
-		if card != nil && card.Def != nil {
+		card, ok := g.GetCardInstance(permanent.CardInstanceID)
+		if ok {
 			return fmt.Sprintf("%q", card.Def.Name)
 		}
 	}
@@ -449,8 +447,8 @@ func formatPermanent(g *game.Game, objectID id.ID) string {
 }
 
 func formatResolve(g *game.Game, resolve rules.ResolveLog) string {
-	card := g.GetCardInstance(resolve.SourceID)
-	if card == nil || card.Def == nil {
+	card, ok := g.GetCardInstance(resolve.SourceID)
+	if !ok {
 		return fmt.Sprintf("resolve %s #%d", stackObjectKindName(resolve.Kind), resolve.SourceID)
 	}
 	if resolve.Result == "" || resolve.Result == "resolved" {
@@ -460,8 +458,8 @@ func formatResolve(g *game.Game, resolve rules.ResolveLog) string {
 }
 
 func formatCombatDamage(g *game.Game, damage rules.CombatDamageLog) string {
-	card := g.GetCardInstance(damage.SourceID)
-	if card == nil || card.Def == nil {
+	card, ok := g.GetCardInstance(damage.SourceID)
+	if !ok {
 		return fmt.Sprintf("%s: permanent #%d deals %d combat damage to %s",
 			playerName(damage.Controller),
 			damage.Attacker,
@@ -494,8 +492,8 @@ func formatPermanentOrCard(g *game.Game, objectID id.ID, cardID id.ID) string {
 	if formatted := formatPermanent(g, objectID); !strings.HasPrefix(formatted, "permanent #") {
 		return formatted
 	}
-	card := g.GetCardInstance(cardID)
-	if card == nil || card.Def == nil {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
 		return fmt.Sprintf("permanent #%d", objectID)
 	}
 	return fmt.Sprintf("%q", card.Def.Name)
@@ -520,8 +518,8 @@ func countLandsControlled(g *game.Game, playerID game.PlayerID) int {
 		if permanent == nil || permanent.Controller != playerID {
 			continue
 		}
-		card := g.GetCardInstance(permanent.CardInstanceID)
-		if card != nil && card.Def != nil && card.Def.HasType(game.TypeLand) {
+		card, ok := g.GetCardInstance(permanent.CardInstanceID)
+		if ok && card.Def.HasType(game.TypeLand) {
 			count++
 		}
 	}

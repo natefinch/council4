@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 // AbilityKind classifies an ability by how it functions in the game (CR 113.3).
@@ -116,7 +117,7 @@ type TriggerCondition struct {
 
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
-	State *StateTriggerCondition
+	State opt.V[StateTriggerCondition]
 }
 
 // StateTriggerCondition describes a simple state trigger condition. Empty
@@ -313,16 +314,16 @@ type EffectCondition struct {
 type Effect struct {
 	Type          EffectType
 	Amount        int
-	DynamicAmount *DynamicAmount
+	DynamicAmount opt.V[DynamicAmount]
 	TargetIndex   int
-	Condition     *EffectCondition
+	Condition     opt.V[EffectCondition]
 
 	// Optional asks the effect's controller whether to apply this single
 	// resolution instruction. LinkID can be used with ResultCondition on later
 	// effects to model "if you do" / "if you don't" branches as instructions are
 	// followed in order (CR 608.2c).
 	Optional        bool
-	ResultCondition *EffectResultCondition
+	ResultCondition opt.V[EffectResultCondition]
 
 	PowerDelta     int
 	ToughnessDelta int
@@ -331,23 +332,23 @@ type Effect struct {
 	ManaColor      mana.Color
 	// Choice asks for a value while resolving this instruction and stores it
 	// under LinkID for later instructions to consume (CR 608.2c, CR 609.3).
-	Choice *ResolutionChoice
+	Choice opt.V[ResolutionChoice]
 	// ChoiceLinkID consumes a value produced by a prior resolution choice, such
 	// as a chosen color for mana or a chosen player for player effects.
 	ChoiceLinkID string
 	// Payment asks the controller whether to pay a cost during resolution; the
 	// payment result is recorded through LinkID/ResultCondition (CR 608.2c,
 	// CR 117.12).
-	Payment           *ResolutionPayment
+	Payment           opt.V[ResolutionPayment]
 	UntilEndOfTurn    bool
 	Duration          EffectDuration
 	Step              Step
 	Selector          EffectSelector
-	Token             *CardDef
+	Token             opt.V[*CardDef]
 	ContinuousEffects []ContinuousEffect
-	DelayedTrigger    *DelayedTriggerDef
+	DelayedTrigger    opt.V[DelayedTriggerDef]
 	EmblemAbilities   []AbilityDef
-	Replacement       *ReplacementEffect
+	Replacement       opt.V[ReplacementEffect]
 	RuleEffects       []RuleEffect
 	LinkID            string
 	Description       string
@@ -405,7 +406,7 @@ type AbilityDef struct {
 
 	// ManaCost is the mana component of an activated ability's cost.
 	// Nil for non-activated abilities.
-	ManaCost *mana.Cost
+	ManaCost opt.V[mana.Cost]
 
 	// AdditionalCosts describes typed non-mana costs. mtg/rules owns choosing
 	// and applying these costs.
@@ -416,13 +417,13 @@ type AbilityDef struct {
 	AlternativeCosts []AlternativeCost
 
 	// KickerCost is an optional additional mana cost for Kicker.
-	KickerCost *mana.Cost
+	KickerCost opt.V[mana.Cost]
 
 	// KickerEffects are additional effects applied if the spell was kicked.
 	KickerEffects []Effect
 
 	// Trigger defines when a triggered ability fires. Nil for non-triggered.
-	Trigger *TriggerCondition
+	Trigger opt.V[TriggerCondition]
 
 	// Optional is true for "you may" abilities. Triggered abilities still go on
 	// the stack; the controller chooses whether to apply their effects on

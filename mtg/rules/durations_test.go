@@ -128,7 +128,7 @@ func TestCleanupChecksSBAsAfterDurationExpiry(t *testing.T) {
 
 	NewEngine(nil).runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("0-toughness creature survived cleanup after duration expiry")
 	}
 }
@@ -139,12 +139,12 @@ func TestDelayedNextEndStepTriggerFiresOnce(t *testing.T) {
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
 	addEffectSpellToStack(g, game.Player1, game.Effect{
 		Type: game.EffectCreateDelayedTrigger,
-		DelayedTrigger: &game.DelayedTriggerDef{
+		DelayedTrigger: optDelayedTrigger(game.DelayedTriggerDef{
 			Timing: game.DelayedAtBeginningOfNextEndStep,
 			Effects: []game.Effect{
 				{Type: game.EffectDraw, Amount: 1, TargetIndex: -1},
 			},
-		},
+		}),
 	}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 

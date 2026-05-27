@@ -6,22 +6,23 @@ import (
 )
 
 func (e *Engine) resolveResolutionPayment(g *game.Game, obj *game.StackObject, effect game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (bool, bool) {
-	if effect.Payment == nil {
+	if !effect.Payment.Exists {
 		return true, true
 	}
+	payment := &effect.Payment.Val
 	playerID := stackObjectController(obj)
-	if !canPayResolutionPayment(g, playerID, effect.Payment) {
+	if !canPayResolutionPayment(g, playerID, payment) {
 		return false, false
 	}
-	prompt := effect.Payment.Prompt
+	prompt := payment.Prompt
 	if prompt == "" {
 		prompt = "Pay resolution cost?"
 	}
 	if !e.chooseMay(g, agents, playerID, prompt, log) {
 		return false, false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, effect.Payment.ManaCost, effect.Payment.AdditionalCosts, agents, log)
-	if !payResolutionPaymentWithPreferences(g, playerID, effect.Payment, prefs) {
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(payment.ManaCost), payment.AdditionalCosts, agents, log)
+	if !payResolutionPaymentWithPreferences(g, playerID, payment, prefs) {
 		return true, false
 	}
 	return true, true
@@ -42,8 +43,8 @@ func payResolutionPaymentWithPreferences(g *game.Game, playerID game.PlayerID, p
 	if !ok {
 		return false
 	}
-	player := playerForCostPayment(g, playerID)
-	if player == nil || !additionalCostPlanStillValid(g, player, plan.additional) || !paymentPlanStillValid(g, player, plan.mana) {
+	player, ok := playerForCostPayment(g, playerID)
+	if !ok || !additionalCostPlanStillValid(g, player, plan.additional) || !paymentPlanStillValid(g, player, plan.mana) {
 		return false
 	}
 	if !applyPaymentPlan(g, playerID, plan.mana) {
@@ -68,7 +69,7 @@ func buildResolutionPaymentPlan(g *game.Game, playerID game.PlayerID, payment *g
 	for _, sacrifice := range additional.sacrifices {
 		excluded[sacrifice.ObjectID] = true
 	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(g, playerID, payment.ManaCost, payment.XValue, excluded, prefs)
+	manaPlan, ok := buildPaymentPlanWithPreferences(g, playerID, manaCostPtr(payment.ManaCost), payment.XValue, excluded, prefs)
 	if !ok {
 		return plan, false
 	}

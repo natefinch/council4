@@ -65,7 +65,10 @@ func (c *CardContext) TargetPermanentID(obj *game.StackObject, index int) (id.ID
 		return 0, false
 	}
 	target := obj.Targets[index]
-	if target.Kind != game.TargetPermanent || permanentByObjectID(c.g, target.PermanentID) == nil {
+	if target.Kind != game.TargetPermanent {
+		return 0, false
+	}
+	if _, ok := permanentByObjectID(c.g, target.PermanentID); !ok {
 		return 0, false
 	}
 	return target.PermanentID, true
@@ -85,8 +88,8 @@ func (c *CardContext) DealPermanentDamageFromStack(obj *game.StackObject, perman
 	if c == nil || obj == nil {
 		return 0
 	}
-	permanent := permanentByObjectID(c.g, permanentID)
-	if permanent == nil {
+	permanent, ok := permanentByObjectID(c.g, permanentID)
+	if !ok {
 		return 0
 	}
 	sourceID, sourceObjectID := damageSourceIDs(c.g, obj)
@@ -94,7 +97,7 @@ func (c *CardContext) DealPermanentDamageFromStack(obj *game.StackObject, perman
 }
 
 func (e *Engine) resolveCardImplementationSpell(g *game.Game, obj *game.StackObject, card *game.CardInstance, log *TurnLog) bool {
-	if card == nil || card.Def == nil || card.Def.ImplementationID == "" {
+	if card.Def.ImplementationID == "" {
 		return false
 	}
 	impl, ok := e.cardImplementations[card.Def.ImplementationID]

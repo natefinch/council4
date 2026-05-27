@@ -102,23 +102,22 @@ func (s *Stack) Push(obj *StackObject) {
 }
 
 // Pop removes and returns the top object from the stack.
-// Returns nil if the stack is empty.
-func (s *Stack) Pop() *StackObject {
+func (s *Stack) Pop() (*StackObject, bool) {
 	if len(s.objects) == 0 {
-		return nil
+		return nil, false
 	}
 	top := s.objects[len(s.objects)-1]
 	s.objects = s.objects[:len(s.objects)-1]
-	return top
+	return top, true
 }
 
 // Peek returns the top object without removing it.
-// Returns nil if the stack is empty.
-func (s *Stack) Peek() *StackObject {
+func (s *Stack) Peek() (*StackObject, bool) {
 	if len(s.objects) == 0 {
-		return nil
+		return nil, false
 	}
-	return s.objects[len(s.objects)-1]
+	top := s.objects[len(s.objects)-1]
+	return top, true
 }
 
 // IsEmpty reports whether the stack has no objects.
@@ -142,7 +141,7 @@ func (s *Stack) Objects() []*StackObject {
 func (s *Stack) RemoveControlledBy(playerID PlayerID) {
 	kept := s.objects[:0]
 	for _, obj := range s.objects {
-		if obj == nil || obj.Controller == playerID {
+		if obj.Controller == playerID {
 			continue
 		}
 		kept = append(kept, obj)

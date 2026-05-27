@@ -3,8 +3,8 @@ package rules
 import "github.com/natefinch/council4/mtg/game"
 
 func (e *Engine) performCommanderMulligan(g *game.Game, playerID game.PlayerID) bool {
-	player := playerByID(g, playerID)
-	if player == nil {
+	player, ok := playerByID(g, playerID)
+	if !ok {
 		return false
 	}
 	for _, cardID := range player.Hand.All() {
@@ -27,7 +27,7 @@ func (e *Engine) performCommanderMulligan(g *game.Game, playerID game.PlayerID) 
 }
 
 func bottomCardsFromHand(player *game.Player, count int) {
-	if player == nil || count <= 0 {
+	if count <= 0 {
 		return
 	}
 	cards := player.Hand.All()

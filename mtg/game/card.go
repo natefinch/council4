@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 // Supertype represents a card's supertype (CR 205.4).
@@ -106,8 +107,8 @@ type CardDef struct {
 	Name string
 
 	// ManaCost is the mana cost printed in the upper right (CR 202).
-	// Nil for lands and some special cards.
-	ManaCost *mana.Cost
+	// Absent for lands and some special cards.
+	ManaCost opt.V[mana.Cost]
 
 	// ManaValue is the card's mana value / converted mana cost (CR 202.3).
 	ManaValue int
@@ -130,22 +131,22 @@ type CardDef struct {
 	// Subtypes are the card's subtypes (Goblin, Equipment, Aura, etc.).
 	Subtypes []string
 
-	// Power is the creature's base power. Nil for non-creatures.
-	Power *PT
+	// Power is the creature's base power. Absent for non-creatures.
+	Power opt.V[PT]
 
-	// Toughness is the creature's base toughness. Nil for non-creatures.
-	Toughness *PT
+	// Toughness is the creature's base toughness. Absent for non-creatures.
+	Toughness opt.V[PT]
 
 	// DynamicPower and DynamicToughness describe characteristic-defining
 	// abilities for star P/T values.
-	DynamicPower     *DynamicValue
-	DynamicToughness *DynamicValue
+	DynamicPower     opt.V[DynamicValue]
+	DynamicToughness opt.V[DynamicValue]
 
-	// Loyalty is the planeswalker's starting loyalty. Nil for non-planeswalkers.
-	Loyalty *int
+	// Loyalty is the planeswalker's starting loyalty. Absent for non-planeswalkers.
+	Loyalty opt.V[int]
 
-	// Defense is the battle's starting defense. Nil for non-battles.
-	Defense *int
+	// Defense is the battle's starting defense. Absent for non-battles.
+	Defense opt.V[int]
 
 	// EntersTapped and EntersWithCounters model common ETB replacement effects.
 	EntersTapped       bool

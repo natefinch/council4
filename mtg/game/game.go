@@ -240,19 +240,19 @@ func (g *Game) PriorityHolder() *Player {
 }
 
 // GetCardInstance looks up a CardInstance by its ID.
-func (g *Game) GetCardInstance(cardID id.ID) *CardInstance {
-	return g.CardInstances[cardID]
+func (g *Game) GetCardInstance(cardID id.ID) (*CardInstance, bool) {
+	card, ok := g.CardInstances[cardID]
+	return card, ok
 }
 
 // PermanentByID finds a permanent on the battlefield by its ObjectID.
-// Returns nil if not found.
-func (g *Game) PermanentByID(objID id.ID) *Permanent {
+func (g *Game) PermanentByID(objID id.ID) (*Permanent, bool) {
 	for _, p := range g.Battlefield {
 		if p.ObjectID == objID {
-			return p
+			return p, true
 		}
 	}
-	return nil
+	return nil, false
 }
 
 // PermanentsControlledBy returns all permanents controlled by the given player.
@@ -282,12 +282,11 @@ func (g *Game) IsGameOver() bool {
 	return g.TurnOrder.ActivePlayerCount() <= 1
 }
 
-// Winner returns the last remaining player, or nil if the game is not over
-// or ended in a draw.
-func (g *Game) Winner() *Player {
+// Winner returns the last remaining player when the game is over.
+func (g *Game) Winner() (*Player, bool) {
 	alive := g.AlivePlayers()
 	if len(alive) == 1 {
-		return alive[0]
+		return alive[0], true
 	}
-	return nil
+	return nil, false
 }

@@ -21,7 +21,7 @@ type damageEvent struct {
 }
 
 func applyDamagePrevention(g *game.Game, event damageEvent) int {
-	if g == nil || event.amount <= 0 {
+	if event.amount <= 0 {
 		return 0
 	}
 	amount := event.amount
@@ -57,7 +57,7 @@ func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
 }
 
 func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent) bool {
-	if g == nil || permanent == nil {
+	if permanent == nil {
 		return false
 	}
 	hasShieldCounter := permanent.Counters.Get(counter.Shield) > 0
@@ -104,10 +104,10 @@ func recordReplacementDecision(g *game.Game, player game.PlayerID, options []str
 }
 
 func createReplacementEffect(g *game.Game, obj *game.StackObject, effect game.Effect) bool {
-	if g == nil || obj == nil || effect.Replacement == nil {
+	if !effect.Replacement.Exists {
 		return false
 	}
-	replacement := *effect.Replacement
+	replacement := effect.Replacement.Val
 	replacement.ID = g.IDGen.Next()
 	replacement.Controller = obj.Controller
 	replacement.SourceCardID, replacement.SourceObjectID = damageSourceIDs(g, obj)
@@ -123,9 +123,6 @@ func createReplacementEffect(g *game.Game, obj *game.StackObject, effect game.Ef
 }
 
 func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) game.ZoneType {
-	if g == nil {
-		return event.ToZone
-	}
 	destination := event.ToZone
 	applied := make(map[id.ID]bool)
 	for {
@@ -147,7 +144,7 @@ func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) game.Z
 }
 
 func applyEnterBattlefieldReplacementEffects(g *game.Game, permanent *game.Permanent, fromZone game.ZoneType) {
-	if g == nil || permanent == nil {
+	if permanent == nil {
 		return
 	}
 	event := game.GameEvent{
@@ -223,7 +220,8 @@ func replacementSourceStillApplies(g *game.Game, replacement game.ReplacementEff
 	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
 		return true
 	}
-	return permanentByObjectID(g, replacement.SourceObjectID) != nil
+	_, ok := permanentByObjectID(g, replacement.SourceObjectID)
+	return ok
 }
 
 func replacementEventPlayer(event game.GameEvent) game.PlayerID {
@@ -246,7 +244,7 @@ func replacementEffectLabels(replacements []game.ReplacementEffect) []string {
 }
 
 func createPreventionShield(g *game.Game, obj *game.StackObject, effect game.Effect) bool {
-	if g == nil || obj == nil || effect.Amount <= 0 {
+	if effect.Amount <= 0 {
 		return false
 	}
 	shield := game.PreventionShield{
@@ -310,7 +308,7 @@ func compactPreventionShields(shields []game.PreventionShield) []game.Prevention
 }
 
 func expirePreventionShields(g *game.Game) {
-	if g == nil || len(g.PreventionShields) == 0 {
+	if len(g.PreventionShields) == 0 {
 		return
 	}
 	kept := g.PreventionShields[:0]
@@ -324,7 +322,7 @@ func expirePreventionShields(g *game.Game) {
 }
 
 func expireReplacementEffects(g *game.Game) {
-	if g == nil || len(g.ReplacementEffects) == 0 {
+	if len(g.ReplacementEffects) == 0 {
 		return
 	}
 	kept := g.ReplacementEffects[:0]
@@ -386,8 +384,8 @@ func emitDamagePreventedEvent(g *game.Game, event damageEvent, prevented int) {
 }
 
 func permanentProtectedFromSource(g *game.Game, permanent *game.Permanent, sourceID, sourceObjectID id.ID) bool {
-	source := damageSourceDef(g, sourceID, sourceObjectID)
-	return permanentProtectedFromSourceDef(g, permanent, source)
+	source, ok := damageSourceDef(g, sourceID, sourceObjectID)
+	return ok && permanentProtectedFromSourceDef(g, permanent, source)
 }
 
 func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, source *game.CardDef) bool {
@@ -413,14 +411,14 @@ func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []mana.C
 	return colors
 }
 
-func damageSourceDef(g *game.Game, sourceID, sourceObjectID id.ID) *game.CardDef {
-	if g == nil {
-		return nil
-	}
+func damageSourceDef(g *game.Game, sourceID, sourceObjectID id.ID) (*game.CardDef, bool) {
 	if sourceID != 0 {
-		if card := g.GetCardInstance(sourceID); card != nil {
-			return card.Def
+		if card, ok := g.GetCardInstance(sourceID); ok {
+			return card.Def, true
 		}
 	}
-	return permanentCardDef(g, permanentByObjectID(g, sourceObjectID))
+	if permanent, ok := permanentByObjectID(g, sourceObjectID); ok {
+		return permanentCardDef(g, permanent)
+	}
+	return nil, false
 }

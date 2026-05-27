@@ -5,7 +5,15 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
+
+func optionalInt(value int, ok bool) opt.V[int] {
+	if !ok {
+		return opt.V[int]{}
+	}
+	return opt.Val(value)
+}
 
 func snapshotPermanent(g *game.Game, permanent *game.Permanent, zone game.ZoneType) game.ObjectSnapshot {
 	values := effectivePermanentValues(g, permanent)
@@ -22,10 +30,8 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zone game.ZoneTy
 		Supertypes:     append([]game.Supertype(nil), values.supertypes...),
 		Types:          append([]game.CardType(nil), values.types...),
 		Subtypes:       append([]string(nil), values.subtypes...),
-		Power:          values.power,
-		PowerOK:        values.powerOK,
-		Toughness:      values.toughness,
-		ToughnessOK:    values.toughnessOK,
+		Power:          optionalInt(values.power, values.powerOK),
+		Toughness:      optionalInt(values.toughness, values.toughnessOK),
 		MarkedDamage:   permanent.MarkedDamage,
 		ZoneOrderIndex: -1,
 	}
@@ -42,7 +48,7 @@ func cloneCounters(counters counter.Set) counter.Set {
 }
 
 func rememberLastKnown(g *game.Game, snapshot game.ObjectSnapshot) {
-	if g == nil || snapshot.ObjectID == 0 {
+	if snapshot.ObjectID == 0 {
 		return
 	}
 	if g.LastKnownInformation == nil {
@@ -52,7 +58,7 @@ func rememberLastKnown(g *game.Game, snapshot game.ObjectSnapshot) {
 }
 
 func lastKnownObject(g *game.Game, objectID id.ID) (game.ObjectSnapshot, bool) {
-	if g == nil || objectID == 0 {
+	if objectID == 0 {
 		return game.ObjectSnapshot{}, false
 	}
 	snapshot, ok := g.LastKnownInformation[objectID]
@@ -68,7 +74,7 @@ func linkedObjectSourceKey(g *game.Game, obj *game.StackObject, linkID string) g
 }
 
 func rememberLinkedObject(g *game.Game, key game.LinkedObjectKey, ref game.LinkedObjectRef) {
-	if g == nil || key.SourceID == 0 || key.LinkID == "" || ref.ObjectID == 0 || ref.CardID == 0 {
+	if key.SourceID == 0 || key.LinkID == "" || ref.ObjectID == 0 || ref.CardID == 0 {
 		return
 	}
 	if g.LinkedObjects == nil {
@@ -78,14 +84,14 @@ func rememberLinkedObject(g *game.Game, key game.LinkedObjectKey, ref game.Linke
 }
 
 func linkedObjects(g *game.Game, key game.LinkedObjectKey) []game.LinkedObjectRef {
-	if g == nil || key.SourceID == 0 || key.LinkID == "" {
+	if key.SourceID == 0 || key.LinkID == "" {
 		return nil
 	}
 	return append([]game.LinkedObjectRef(nil), g.LinkedObjects[key]...)
 }
 
 func clearLinkedObjects(g *game.Game, key game.LinkedObjectKey) {
-	if g == nil || key.SourceID == 0 || key.LinkID == "" {
+	if key.SourceID == 0 || key.LinkID == "" {
 		return
 	}
 	delete(g.LinkedObjects, key)

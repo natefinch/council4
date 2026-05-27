@@ -84,9 +84,6 @@ func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *gam
 	}
 	if targetSpecAllowsPermanents(spec) {
 		for _, permanent := range g.Battlefield {
-			if permanent == nil {
-				continue
-			}
 			target := game.PermanentTarget(permanent.ObjectID)
 			if targetMatchesSpec(g, controller, sourceObjectID, spec, target) && !targetProtectedFromSource(g, source, target) {
 				candidates = append(candidates, target)
@@ -208,8 +205,8 @@ func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, source *g
 }
 
 func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
-	ability := firstSpellAbility(card)
-	if ability == nil {
+	ability, ok := firstSpellAbility(card)
+	if !ok {
 		return nil
 	}
 	if len(ability.Modes) > 0 {
@@ -226,7 +223,7 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 }
 
 func modeChoicesForSpell(card *game.CardDef) [][]int {
-	ability := firstSpellAbility(card)
+	ability, _ := firstSpellAbility(card)
 	return modeChoicesForAbility(ability)
 }
 
@@ -251,8 +248,8 @@ func modeChoicesForAbility(ability *game.AbilityDef) [][]int {
 }
 
 func modesValidForSpell(card *game.CardDef, chosenModes []int) bool {
-	ability := firstSpellAbility(card)
-	if ability == nil {
+	ability, ok := firstSpellAbility(card)
+	if !ok {
 		return len(chosenModes) == 0
 	}
 	return modesValidForAbility(ability, chosenModes)
@@ -419,8 +416,8 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 	if !targetSpecAllowsPermanents(spec) {
 		return false
 	}
-	permanent := permanentByObjectID(g, permanentID)
-	if permanent == nil || permanent.PhasedOut {
+	permanent, ok := permanentByObjectID(g, permanentID)
+	if !ok || permanent.PhasedOut {
 		return false
 	}
 	if spec.Predicate.Another && sourceObjectID != 0 && permanent.ObjectID == sourceObjectID {
@@ -477,18 +474,18 @@ func structuredPermanentPredicateMatches(g *game.Game, predicate game.TargetPred
 	if predicate.ExcludedKeyword != game.KeywordNone && hasKeyword(g, permanent, predicate.ExcludedKeyword) {
 		return false
 	}
-	if predicate.ManaValue != nil {
-		def := permanentCardDef(g, permanent)
-		if def == nil || !intComparisonMatches(def.ManaValue, *predicate.ManaValue) {
+	if predicate.ManaValue.Exists {
+		def, ok := permanentCardDef(g, permanent)
+		if !ok || !intComparisonMatches(def.ManaValue, predicate.ManaValue.Val) {
 			return false
 		}
 	}
-	if predicate.Power != nil && !intComparisonMatches(effectivePower(g, permanent), *predicate.Power) {
+	if predicate.Power.Exists && !intComparisonMatches(effectivePower(g, permanent), predicate.Power.Val) {
 		return false
 	}
-	if predicate.Toughness != nil {
+	if predicate.Toughness.Exists {
 		toughness, ok := effectiveToughness(g, permanent)
-		if !ok || !intComparisonMatches(toughness, *predicate.Toughness) {
+		if !ok || !intComparisonMatches(toughness, predicate.Toughness.Val) {
 			return false
 		}
 	}
@@ -501,7 +498,7 @@ func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.Com
 	}
 	attacking := false
 	blocking := false
-	if g != nil && g.Combat != nil && permanent != nil {
+	if g.Combat != nil {
 		attacking = slices.ContainsFunc(g.Combat.Attackers, func(declaration game.AttackDeclaration) bool {
 			return declaration.Attacker == permanent.ObjectID
 		})
@@ -542,8 +539,8 @@ func targetProtectedFromSource(g *game.Game, source *game.CardDef, target game.T
 	if source == nil || target.Kind != game.TargetPermanent {
 		return false
 	}
-	permanent := permanentByObjectID(g, target.PermanentID)
-	return permanentProtectedFromSourceDef(g, permanent, source)
+	permanent, ok := permanentByObjectID(g, target.PermanentID)
+	return ok && permanentProtectedFromSourceDef(g, permanent, source)
 }
 
 func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec game.TargetSpec, permanent *game.Permanent) bool {
@@ -569,9 +566,6 @@ func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec
 }
 
 func permanentTypeMatchesSpec(g *game.Game, spec game.TargetSpec, permanent *game.Permanent) bool {
-	if permanent == nil {
-		return false
-	}
 	if len(spec.Predicate.PermanentTypes) > 0 || len(spec.Predicate.ExcludedTypes) > 0 {
 		return true
 	}
@@ -638,9 +632,9 @@ func normalizedTargetConstraint(spec game.TargetSpec) string {
 }
 
 func isPlayerAlive(g *game.Game, playerID game.PlayerID) bool {
-	if g == nil || playerID < 0 || int(playerID) >= len(g.Players) {
+	if playerID < 0 || int(playerID) >= len(g.Players) {
 		return false
 	}
 	player := g.Players[playerID]
-	return player != nil && !player.Eliminated && !g.TurnOrder.IsEliminated(playerID)
+	return !player.Eliminated && !g.TurnOrder.IsEliminated(playerID)
 }

@@ -69,14 +69,14 @@ func validateCommanderConfig(playerID game.PlayerID, config game.PlayerConfig) [
 }
 
 func isCommanderCardID(g *game.Game, cardID id.ID) bool {
-	if g == nil || cardID == 0 {
+	if cardID == 0 {
 		return false
 	}
 	if g.CommanderIDs[cardID] {
 		return true
 	}
 	for _, player := range g.Players {
-		if player != nil && player.CommanderInstanceID == cardID {
+		if player.CommanderInstanceID == cardID {
 			return true
 		}
 	}

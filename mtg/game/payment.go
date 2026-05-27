@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 // AdditionalCostKind classifies a non-mana cost component.
@@ -59,7 +60,7 @@ type AdditionalCostSelection struct {
 // normal mana cost when selected.
 type AlternativeCost struct {
 	Label           string
-	ManaCost        *mana.Cost
+	ManaCost        opt.V[mana.Cost]
 	AdditionalCosts []AdditionalCost
 }
 

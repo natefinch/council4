@@ -179,7 +179,10 @@ func TestCounteredSpellEmitsStackToGraveyardZoneChangeButNoResolveEvent(t *testi
 		Amount:      3,
 		TargetIndex: 0,
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
-	card := g.GetCardInstance(sourceID)
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
 	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
 	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
@@ -294,7 +297,10 @@ func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
 		Types: []game.CardType{game.TypeCreature},
 	}
 
-	permanent := createTokenPermanent(g, game.Player1, token)
+	permanent, ok := createTokenPermanent(g, game.Player1, token)
+	if !ok {
+		t.Fatal("token was not created")
+	}
 
 	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
 		return event.PermanentID == permanent.ObjectID &&

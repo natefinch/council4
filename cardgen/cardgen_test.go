@@ -234,8 +234,8 @@ func TestGenerateCardSourceCreature(t *testing.T) {
 		`Name: "Serra Angel"`,
 		"game.TypeCreature",
 		`"Angel"`,
-		"Power: &game.PT{Value: 4}",
-		"Toughness: &game.PT{Value: 4}",
+		"Power: opt.Val(game.PT{Value: 4})",
+		"Toughness: opt.Val(game.PT{Value: 4})",
 	}
 
 	for _, check := range checks {

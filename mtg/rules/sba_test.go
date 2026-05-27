@@ -140,7 +140,7 @@ func TestCheckPermanentStateBasedActionsDestroysCreatureWithLethalDamage(t *test
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
 	}
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("creature with lethal damage remained on battlefield")
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(creature.CardInstanceID) {
@@ -170,7 +170,7 @@ func TestCheckPermanentStateBasedActionsUsesCounterAdjustedToughness(t *testing.
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true after lethal counter-adjusted damage")
 	}
-	if permanentByObjectID(g, pumped.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, pumped.ObjectID); ok {
 		t.Fatal("creature with lethal counter-adjusted damage remained on battlefield")
 	}
 	if len(deaths) != 1 || deaths[0].Permanent != pumped.ObjectID || deaths[0].Reason != PermanentDeathReasonLethalDamage {
@@ -190,7 +190,7 @@ func TestCheckPermanentStateBasedActionsDestroysCreatureWithDeathtouchDamage(t *
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
 	}
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("creature with deathtouch damage remained on battlefield")
 	}
 	if len(deaths) != 1 || deaths[0].Permanent != creature.ObjectID || deaths[0].Reason != PermanentDeathReasonLethalDamage {
@@ -209,7 +209,7 @@ func TestCheckPermanentStateBasedActionsDoesNotDestroyIndestructibleWithLethalDa
 	if changed {
 		t.Fatalf("checkPermanentStateBasedActions() = true, deaths %+v; want indestructible creature to survive", deaths)
 	}
-	if permanentByObjectID(g, creature.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); !ok {
 		t.Fatal("indestructible creature with lethal damage left the battlefield")
 	}
 	if creature.MarkedDamage != 5 {
@@ -232,7 +232,7 @@ func TestCheckPermanentStateBasedActionsDoesNotDestroyIndestructibleWithDeathtou
 	if changed {
 		t.Fatalf("checkPermanentStateBasedActions() = true, deaths %+v; want indestructible creature to survive deathtouch damage", deaths)
 	}
-	if permanentByObjectID(g, creature.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); !ok {
 		t.Fatal("indestructible creature with deathtouch damage left the battlefield")
 	}
 	if creature.MarkedDamage != 1 || !creature.MarkedDeathtouchDamage {
@@ -247,8 +247,8 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Indestructible Zero Toughness",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &zero,
-		Toughness: &zero,
+		Power:     optPT(zero),
+		Toughness: optPT(zero),
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.StaticAbility,
@@ -262,7 +262,7 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
 	}
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("indestructible zero-toughness creature remained on battlefield")
 	}
 	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroToughness {
@@ -277,8 +277,8 @@ func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Zero Toughness",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &zero,
-		Toughness: &zero,
+		Power:     optPT(zero),
+		Toughness: optPT(zero),
 	})
 
 	changed, deaths := engine.checkPermanentStateBasedActions(g)
@@ -286,7 +286,7 @@ func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
 	}
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("zero-toughness creature remained on battlefield")
 	}
 	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroToughness {
@@ -305,7 +305,7 @@ func TestCheckPermanentStateBasedActionsUsesMinusCounterForZeroToughness(t *test
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
 	}
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("minus-countered zero-toughness creature remained on battlefield")
 	}
 	if len(deaths) != 1 || deaths[0].Reason != PermanentDeathReasonZeroToughness {
@@ -346,15 +346,15 @@ func TestStateBasedActionsMoveThenRemoveLethalToken(t *testing.T) {
 		TokenDef: &game.CardDef{
 			Name:      "Token",
 			Types:     []game.CardType{game.TypeCreature},
-			Power:     &pt,
-			Toughness: &pt,
+			Power:     optPT(pt),
+			Toughness: optPT(pt),
 		},
 	}
 	g.Battlefield = append(g.Battlefield, token)
 
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
-	if permanentByObjectID(g, token.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, token.ObjectID); ok {
 		t.Fatal("lethally damaged token remained on battlefield")
 	}
 	if g.Players[game.Player1].Graveyard.Size() != 0 {
@@ -380,16 +380,16 @@ func TestLegendaryRuleKeepsOldestPermanentPerControllerAndName(t *testing.T) {
 	if !changed {
 		t.Fatal("checkLegendaryRuleStateBasedActions() = false, want true")
 	}
-	if permanentByObjectID(g, first.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, first.ObjectID); !ok {
 		t.Fatal("oldest legendary permanent should remain on battlefield")
 	}
-	if permanentByObjectID(g, second.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, second.ObjectID); ok {
 		t.Fatal("newer duplicate legendary permanent remained on battlefield")
 	}
-	if permanentByObjectID(g, otherController.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, otherController.ObjectID); !ok {
 		t.Fatal("same-name legendary permanent controlled by another player should remain")
 	}
-	if permanentByObjectID(g, differentName.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, differentName.ObjectID); !ok {
 		t.Fatal("different-name legendary permanent should remain")
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(second.CardInstanceID) {
@@ -414,13 +414,13 @@ func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
 
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
-	if permanentByObjectID(g, keep.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, keep.ObjectID); !ok {
 		t.Fatal("oldest legendary permanent should remain on battlefield")
 	}
-	if permanentByObjectID(g, duplicate.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, duplicate.ObjectID); ok {
 		t.Fatal("duplicate legendary permanent remained on battlefield")
 	}
-	if permanentByObjectID(g, aura.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, aura.ObjectID); ok {
 		t.Fatal("aura detached by legendary rule should be put into graveyard by next SBA pass")
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(duplicate.CardInstanceID) {
@@ -442,8 +442,8 @@ func addLegendaryPermanent(g *game.Game, controller game.PlayerID, name string) 
 		Name:       name,
 		Supertypes: []game.Supertype{game.Legendary},
 		Types:      []game.CardType{game.TypeCreature},
-		Power:      &game.PT{Value: 2},
-		Toughness:  &game.PT{Value: 2},
+		Power:      optPT(game.PT{Value: 2}),
+		Toughness:  optPT(game.PT{Value: 2}),
 	})
 }
 
@@ -455,7 +455,11 @@ func addPermanentForSBA(g *game.Game, controller game.PlayerID, def *game.CardDe
 		Owner: controller,
 	}
 	g.CardInstances[cardID] = card
-	return createCardPermanent(g, card, controller, game.ZoneStack)
+	permanent, ok := createCardPermanent(g, card, controller, game.ZoneStack)
+	if !ok {
+		panic("permanent for SBA was not created")
+	}
+	return permanent
 }
 
 func deathReasonFound(deaths []PermanentDeathLog, objectID id.ID, reason PermanentDeathReason) bool {

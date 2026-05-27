@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/mtg/game/id"
+import (
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
+)
 
 // CostModifierKind identifies which costs a modifier applies to.
 type CostModifierKind int
@@ -19,7 +22,7 @@ type CostModifier struct {
 	CardType         CardType
 	GenericIncrease  int
 	GenericReduction int
-	SetGeneric       *int
+	SetGeneric       opt.V[int]
 	MinimumGeneric   int
 }
 

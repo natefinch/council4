@@ -9,10 +9,10 @@ import (
 )
 
 func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, effect game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if effect.Choice == nil {
+	if !effect.Choice.Exists {
 		return true
 	}
-	request, values := resolutionChoiceRequest(g, obj, effect.Choice)
+	request, values := resolutionChoiceRequest(g, obj, &effect.Choice.Val)
 	if len(values) == 0 {
 		return false
 	}
@@ -108,8 +108,8 @@ func choicePlayerMatches(controller, candidate game.PlayerID, relation game.Play
 }
 
 func resolutionChoiceCardIDs(g *game.Game, playerID game.PlayerID, zone game.ZoneType) []id.ID {
-	player := playerByID(g, playerID)
-	if player == nil {
+	player, ok := playerByID(g, playerID)
+	if !ok {
 		return nil
 	}
 	switch zone {

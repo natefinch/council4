@@ -10,11 +10,8 @@ func (e *Engine) resolveTopOfStack(g *game.Game, log *TurnLog) {
 }
 
 func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	if g == nil {
-		return
-	}
-	obj := g.Stack.Pop()
-	if obj == nil {
+	obj, ok := g.Stack.Pop()
+	if !ok {
 		return
 	}
 	result := e.resolveStackObjectWithChoices(g, obj, agents, log)
@@ -67,24 +64,24 @@ func (e *Engine) resolveActivatedAbility(g *game.Game, obj *game.StackObject, lo
 }
 
 func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
-	permanent := permanentByObjectID(g, obj.SourceID)
-	def := stackObjectSourceDef(g, obj)
-	if def == nil && permanent != nil {
-		def = permanentCardDef(g, permanent)
+	permanent, permanentOK := permanentByObjectID(g, obj.SourceID)
+	def, defOK := stackObjectSourceDef(g, obj)
+	if !defOK && permanentOK {
+		def, defOK = permanentCardDef(g, permanent)
 	}
-	if def == nil || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(def.Abilities) {
+	if !defOK || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(def.Abilities) {
 		return "missing source"
 	}
 	ability := &def.Abilities[obj.AbilityIndex]
-	if isEquipmentPermanent(g, permanent) && abilityHasKeyword(ability, game.Equip) {
+	if permanentOK && isEquipmentPermanent(g, permanent) && abilityHasKeyword(ability, game.Equip) {
 		if !abilityHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, ability, obj.Controller, obj.Targets) {
 			return "countered by rules"
 		}
 		if len(obj.Targets) != 1 || obj.Targets[0].Kind != game.TargetPermanent {
 			return "countered by rules"
 		}
-		target := permanentByObjectID(g, obj.Targets[0].PermanentID)
-		if !attachPermanent(g, permanent, target) {
+		target, ok := permanentByObjectID(g, obj.Targets[0].PermanentID)
+		if !ok || !attachPermanent(g, permanent, target) {
 			return "countered by rules"
 		}
 		return "resolved"
@@ -106,8 +103,8 @@ func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.Stac
 	if obj.InlineAbility != nil {
 		return e.resolveTriggeredAbilityDefWithChoices(g, obj, nil, obj.InlineAbility, agents, log)
 	}
-	def := stackObjectSourceDef(g, obj)
-	if def == nil || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(def.Abilities) {
+	def, ok := stackObjectSourceDef(g, obj)
+	if !ok || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(def.Abilities) {
 		return "missing source"
 	}
 	ability := &def.Abilities[obj.AbilityIndex]
@@ -122,7 +119,7 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 	if obj.HasTriggerEvent {
 		event = &obj.TriggerEvent
 	}
-	if ability.Trigger != nil && !triggerInterveningIf(g, obj.Controller, ability.Trigger, event) {
+	if ability.Trigger.Exists && !triggerInterveningIf(g, obj.Controller, &ability.Trigger.Val, event) {
 		return "intervening if false"
 	}
 	if !abilityHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, ability, obj.Controller, obj.Targets) {
@@ -142,18 +139,15 @@ func (e *Engine) chooseMay(g *game.Game, agents [game.NumPlayers]PlayerAgent, pl
 	return len(selected) == 1 && selected[0] == 1
 }
 
-func stackObjectSourceDef(g *game.Game, obj *game.StackObject) *game.CardDef {
-	if obj == nil {
-		return nil
-	}
+func stackObjectSourceDef(g *game.Game, obj *game.StackObject) (*game.CardDef, bool) {
 	if obj.SourceCardID != 0 {
-		card := g.GetCardInstance(obj.SourceCardID)
-		if card == nil {
-			return nil
+		card, ok := g.GetCardInstance(obj.SourceCardID)
+		if !ok {
+			return nil, false
 		}
-		return card.Def
+		return card.Def, true
 	}
-	return obj.SourceTokenDef
+	return obj.SourceTokenDef, obj.SourceTokenDef != nil
 }
 
 func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog) string {
@@ -161,8 +155,8 @@ func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog)
 }
 
 func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
-	card := g.GetCardInstance(obj.SourceID)
-	if card == nil || card.Def == nil {
+	card, ok := g.GetCardInstance(obj.SourceID)
+	if !ok {
 		return "missing source"
 	}
 	if card.Def.IsPermanent() {
@@ -172,10 +166,10 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 			}
 			return "countered by rules"
 		}
-		permanent := createCardPermanent(g, card, obj.Controller, game.ZoneStack)
-		if permanent != nil && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
-			target := effectPermanent(g, obj, game.Effect{TargetIndex: 0})
-			if !attachPermanent(g, permanent, target) {
+		permanent, ok := createCardPermanent(g, card, obj.Controller, game.ZoneStack)
+		if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
+			target, targetOK := effectPermanent(g, obj, game.Effect{TargetIndex: 0})
+			if !targetOK || !attachPermanent(g, permanent, target) {
 				movePermanentToZone(g, permanent, game.ZoneGraveyard)
 				return "graveyard"
 			}
@@ -199,11 +193,7 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 }
 
 func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {
-	if card == nil {
-		return false
-	}
-	owner := playerByID(g, card.Owner)
-	if owner == nil {
+	if _, ok := playerByID(g, card.Owner); !ok {
 		return false
 	}
 	intendedDestination := game.ZoneGraveyard
@@ -223,8 +213,8 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		ToZone:        intendedDestination,
 	})
 	destination = commanderReplacementDestination(g, card.ID, destination)
-	zone := destinationZone(g, card.Owner, destination)
-	if zone == nil {
+	zone, ok := destinationZone(g, card.Owner, destination)
+	if !ok {
 		return false
 	}
 	zone.Add(card.ID)
@@ -242,16 +232,10 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 }
 
 func stackObjectID(obj *game.StackObject) id.ID {
-	if obj == nil {
-		return 0
-	}
 	return obj.ID
 }
 
 func stackObjectSourceID(obj *game.StackObject) id.ID {
-	if obj == nil {
-		return 0
-	}
 	if obj.SourceCardID != 0 {
 		return obj.SourceCardID
 	}
@@ -259,15 +243,12 @@ func stackObjectSourceID(obj *game.StackObject) id.ID {
 }
 
 func stackObjectController(obj *game.StackObject) game.PlayerID {
-	if obj == nil {
-		return 0
-	}
 	return obj.Controller
 }
 
-func playerByID(g *game.Game, playerID game.PlayerID) *game.Player {
-	if g == nil || playerID < 0 || int(playerID) >= len(g.Players) {
-		return nil
+func playerByID(g *game.Game, playerID game.PlayerID) (*game.Player, bool) {
+	if playerID < 0 || int(playerID) >= len(g.Players) {
+		return nil, false
 	}
-	return g.Players[playerID]
+	return g.Players[playerID], true
 }

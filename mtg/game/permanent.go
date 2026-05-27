@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 // Permanent represents a card (or token) on the battlefield with all its
@@ -83,8 +84,8 @@ type Permanent struct {
 	Attachments []id.ID
 
 	// AttachedTo is the ObjectID of the permanent this is attached to,
-	// if this is an Aura, Equipment, or Fortification. Nil if not attached.
-	AttachedTo *id.ID
+	// if this is an Aura, Equipment, or Fortification. Absent if not attached.
+	AttachedTo opt.V[id.ID]
 
 	// --- Timestamps and layer ordering ---
 

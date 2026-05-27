@@ -8,7 +8,7 @@ import (
 )
 
 func createRuleEffects(g *game.Game, obj *game.StackObject, effect game.Effect) bool {
-	if g == nil || obj == nil || len(effect.RuleEffects) == 0 {
+	if len(effect.RuleEffects) == 0 {
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
@@ -30,9 +30,6 @@ func createRuleEffects(g *game.Game, obj *game.StackObject, effect game.Effect) 
 }
 
 func activeRuleEffects(g *game.Game) []game.RuleEffect {
-	if g == nil {
-		return nil
-	}
 	effects := make([]game.RuleEffect, 0, len(g.RuleEffects))
 	for _, effect := range g.RuleEffects {
 		if ruleEffectSourceStillApplies(g, effect) {
@@ -46,11 +43,11 @@ func activeRuleEffects(g *game.Game) []game.RuleEffect {
 func staticRuleEffects(g *game.Game) []game.RuleEffect {
 	var effects []game.RuleEffect
 	for _, source := range g.Battlefield {
-		if source == nil || source.PhasedOut {
+		if source.PhasedOut {
 			continue
 		}
-		sourceDef := permanentCardDef(g, source)
-		if sourceDef == nil {
+		sourceDef, ok := permanentCardDef(g, source)
+		if !ok {
 			continue
 		}
 		for i := range sourceDef.Abilities {
@@ -78,11 +75,12 @@ func ruleEffectSourceStillApplies(g *game.Game, effect game.RuleEffect) bool {
 	if effect.Duration != game.DurationPermanent || effect.SourceObjectID == 0 {
 		return true
 	}
-	return permanentByObjectID(g, effect.SourceObjectID) != nil
+	_, ok := permanentByObjectID(g, effect.SourceObjectID)
+	return ok
 }
 
 func expireRuleEffects(g *game.Game) {
-	if g == nil || len(g.RuleEffects) == 0 {
+	if len(g.RuleEffects) == 0 {
 		return
 	}
 	kept := g.RuleEffects[:0]
@@ -114,8 +112,8 @@ func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	if amount <= 0 || !canGainLife(g, playerID) {
 		return 0
 	}
-	player := playerByID(g, playerID)
-	if player == nil || player.Eliminated {
+	player, ok := playerByID(g, playerID)
+	if !ok || player.Eliminated {
 		return 0
 	}
 	player.Life += amount
@@ -208,7 +206,8 @@ func staticCostModifiersForContext(g *game.Game, context costModificationContext
 }
 
 func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType) bool {
-	if sourceZone == game.ZoneGraveyard && cardHasFlashbackAlternative(g.GetCardInstance(cardID)) {
+	card, cardOK := g.GetCardInstance(cardID)
+	if sourceZone == game.ZoneGraveyard && cardOK && cardHasFlashbackAlternative(card) {
 		return true
 	}
 	for _, effect := range activeRuleEffects(g) {
@@ -225,7 +224,7 @@ func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id
 
 func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []game.ZoneType {
 	zones := []game.ZoneType{game.ZoneHand}
-	if player := playerByID(g, playerID); player != nil {
+	if player, ok := playerByID(g, playerID); ok {
 		for _, cardID := range player.Graveyard.All() {
 			if canCastFromZoneByRuleEffect(g, playerID, cardID, game.ZoneGraveyard) {
 				zones = append(zones, game.ZoneGraveyard)
@@ -237,7 +236,7 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []game.ZoneTyp
 }
 
 func cardHasFlashbackAlternative(card *game.CardInstance) bool {
-	if card == nil || card.Def == nil || !card.Def.HasKeyword(game.Flashback) {
+	if !card.Def.HasKeyword(game.Flashback) {
 		return false
 	}
 	for _, option := range spellCostOptionsForZoneAndKicker(card.Def, game.ZoneGraveyard, false) {

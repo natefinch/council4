@@ -8,7 +8,22 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
+
+func ptPtr(v opt.V[game.PT]) *game.PT {
+	if !v.Exists {
+		return nil
+	}
+	return &v.Val
+}
+
+func dynamicValuePtr(v opt.V[game.DynamicValue]) *game.DynamicValue {
+	if !v.Exists {
+		return nil
+	}
+	return &v.Val
+}
 
 type permanentEffectiveValues struct {
 	name       string
@@ -75,13 +90,10 @@ func permanentEffectiveName(g *game.Game, permanent *game.Permanent) string {
 }
 
 func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID {
-	if g == nil || permanent == nil {
-		return 0
-	}
 	values := basePermanentValues(g, permanent)
 	for _, effect := range orderContinuousEffects(continuousEffectsForLayer(g, permanent, &values, game.LayerControl)) {
-		if effect.NewController != nil {
-			values.controller = *effect.NewController
+		if effect.NewController.Exists {
+			values.controller = effect.NewController.Val
 		}
 	}
 	return values.controller
@@ -99,9 +111,6 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 
 func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
 	values := permanentEffectiveValues{keywords: make(map[game.Keyword]bool)}
-	if permanent == nil {
-		return values
-	}
 	values.controller = permanent.Controller
 	if permanent.FaceDown {
 		values.types = []game.CardType{game.TypeCreature}
@@ -109,8 +118,8 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 		values.toughness, values.toughnessOK = 2, true
 		return values
 	}
-	card := permanentCardDef(g, permanent)
-	if card == nil {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok {
 		return values
 	}
 	values.name = card.Name
@@ -120,15 +129,15 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values.types = append([]game.CardType(nil), card.Types...)
 	values.subtypes = append([]string(nil), card.Subtypes...)
 	values.abilities = append([]game.AbilityDef(nil), card.Abilities...)
-	if card.Power != nil {
-		values.powerPT = card.Power
-		values.dynamicPower = card.DynamicPower
-		values.power, values.powerOK = ptValue(g, values.controller, card.Power, card.DynamicPower)
+	if card.Power.Exists {
+		values.powerPT = ptPtr(card.Power)
+		values.dynamicPower = dynamicValuePtr(card.DynamicPower)
+		values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, values.dynamicPower)
 	}
-	if card.Toughness != nil {
-		values.toughnessPT = card.Toughness
-		values.dynamicToughness = card.DynamicToughness
-		values.toughness, values.toughnessOK = ptValue(g, values.controller, card.Toughness, card.DynamicToughness)
+	if card.Toughness.Exists {
+		values.toughnessPT = ptPtr(card.Toughness)
+		values.dynamicToughness = dynamicValuePtr(card.DynamicToughness)
+		values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, values.dynamicToughness)
 	}
 	rebuildKeywords(&values)
 	return values
@@ -155,11 +164,11 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 	case game.DynamicValueConstant:
 		return dynamic.Value
 	case game.DynamicValueControllerHandSize:
-		if player := playerByID(g, controller); player != nil {
+		if player, ok := playerByID(g, controller); ok {
 			return player.Hand.Size()
 		}
 	case game.DynamicValueControllerGraveyardSize:
-		if player := playerByID(g, controller); player != nil {
+		if player, ok := playerByID(g, controller); ok {
 			return player.Graveyard.Size()
 		}
 	case game.DynamicValueControllerCreatureCount:
@@ -181,12 +190,9 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 }
 
 func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType game.CardType) int {
-	if g == nil {
-		return 0
-	}
 	count := 0
 	for _, permanent := range g.Battlefield {
-		if permanent != nil && permanent.Controller == controller && basePermanentHasType(g, permanent, cardType) {
+		if permanent.Controller == controller && basePermanentHasType(g, permanent, cardType) {
 			count++
 		}
 	}
@@ -194,20 +200,14 @@ func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, c
 }
 
 func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType game.CardType) bool {
-	if permanent == nil {
-		return false
-	}
 	if permanent.FaceDown {
 		return cardType == game.TypeCreature
 	}
-	card := permanentCardDef(g, permanent)
-	return card != nil && card.HasType(cardType)
+	card, ok := permanentCardDef(g, permanent)
+	return ok && card.HasType(cardType)
 }
 
 func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues) {
-	if g == nil || permanent == nil || values == nil {
-		return
-	}
 	for _, layer := range []game.ContinuousLayer{
 		game.LayerCopy,
 		game.LayerControl,
@@ -240,13 +240,10 @@ func continuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *
 }
 
 func staticPTContinuousEffects(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues) []game.ContinuousEffect {
-	if g == nil || permanent == nil {
-		return nil
-	}
 	var effects []game.ContinuousEffect
 	for _, source := range g.Battlefield {
-		sourceDef := permanentCardDef(g, source)
-		if sourceDef == nil {
+		sourceDef, ok := permanentCardDef(g, source)
+		if !ok {
 			continue
 		}
 		for i := range sourceDef.Abilities {
@@ -277,23 +274,17 @@ func staticPTContinuousEffects(g *game.Game, permanent *game.Permanent, values *
 }
 
 func continuousEffectApplies(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, effect game.ContinuousEffect) bool {
-	if permanent == nil {
-		return false
-	}
 	if effect.AffectedObjectID != 0 {
 		return effect.AffectedObjectID == permanent.ObjectID
 	}
 	if effect.Selector == game.EffectSelectorNone {
 		return false
 	}
-	source := permanentByObjectID(g, effect.SourceObjectID)
+	source, _ := permanentByObjectID(g, effect.SourceObjectID)
 	return permanentValuesMatchSelectorForSource(source, effect.Controller, permanent, values, effect.Selector)
 }
 
 func permanentValuesMatchSelectorForSource(source *game.Permanent, controller game.PlayerID, permanent *game.Permanent, values *permanentEffectiveValues, selector game.EffectSelector) bool {
-	if permanent == nil || values == nil {
-		return false
-	}
 	switch selector {
 	case game.EffectSelectorAllCreatures:
 		return valuesHasType(values, game.TypeCreature)
@@ -315,7 +306,7 @@ func permanentValuesMatchSelectorForSource(source *game.Permanent, controller ga
 }
 
 func valuesHasType(values *permanentEffectiveValues, cardType game.CardType) bool {
-	return values != nil && slices.Contains(values.types, cardType)
+	return slices.Contains(values.types, cardType)
 }
 
 func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEffect {
@@ -381,10 +372,12 @@ func dependenciesSatisfied(effect game.ContinuousEffect, applied map[id.ID]bool,
 func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, effect game.ContinuousEffect) {
 	switch effect.Layer {
 	case game.LayerCopy:
-		applyCopyValues(g, permanent, values, effect.CopyValues)
+		if effect.CopyValues.Exists {
+			applyCopyValues(g, permanent, values, &effect.CopyValues.Val)
+		}
 	case game.LayerControl:
-		if effect.NewController != nil {
-			values.controller = *effect.NewController
+		if effect.NewController.Exists {
+			values.controller = effect.NewController.Val
 			recalculateDynamicPT(g, values)
 		}
 	case game.LayerText:
@@ -413,15 +406,15 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.keywords[keyword] = true
 		}
 	case game.LayerPowerToughnessSet:
-		if effect.SetPower != nil {
-			values.powerPT = effect.SetPower
+		if effect.SetPower.Exists {
+			values.powerPT = ptPtr(effect.SetPower)
 			values.dynamicPower = nil
-			values.power, values.powerOK = ptValue(g, values.controller, effect.SetPower, nil)
+			values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, nil)
 		}
-		if effect.SetToughness != nil {
-			values.toughnessPT = effect.SetToughness
+		if effect.SetToughness.Exists {
+			values.toughnessPT = ptPtr(effect.SetToughness)
 			values.dynamicToughness = nil
-			values.toughness, values.toughnessOK = ptValue(g, values.controller, effect.SetToughness, nil)
+			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
 		}
 	case game.LayerPowerToughnessModify:
 		if values.powerOK {
@@ -447,12 +440,12 @@ func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentE
 	values.types = append([]game.CardType(nil), copyValues.Types...)
 	values.subtypes = append([]string(nil), copyValues.Subtypes...)
 	values.abilities = append([]game.AbilityDef(nil), copyValues.Abilities...)
-	values.powerPT = copyValues.Power
-	values.dynamicPower = copyValues.DynamicPower
-	values.toughnessPT = copyValues.Toughness
-	values.dynamicToughness = copyValues.DynamicToughness
-	values.power, values.powerOK = ptValue(g, values.controller, copyValues.Power, copyValues.DynamicPower)
-	values.toughness, values.toughnessOK = ptValue(g, values.controller, copyValues.Toughness, copyValues.DynamicToughness)
+	values.powerPT = ptPtr(copyValues.Power)
+	values.dynamicPower = dynamicValuePtr(copyValues.DynamicPower)
+	values.toughnessPT = ptPtr(copyValues.Toughness)
+	values.dynamicToughness = dynamicValuePtr(copyValues.DynamicToughness)
+	values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, values.dynamicPower)
+	values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, values.dynamicToughness)
 	rebuildKeywords(values)
 }
 
@@ -490,9 +483,6 @@ func applyTypeLayer(values *permanentEffectiveValues, effect game.ContinuousEffe
 }
 
 func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanentEffectiveValues) {
-	if permanent == nil || values == nil {
-		return
-	}
 	counterDelta := powerToughnessCounterDelta(permanent)
 	if values.powerOK {
 		values.power += counterDelta + permanent.TemporaryPowerModifier
@@ -503,9 +493,6 @@ func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanent
 }
 
 func rebuildKeywords(values *permanentEffectiveValues) {
-	if values == nil {
-		return
-	}
 	values.keywords = make(map[game.Keyword]bool)
 	for i := range values.abilities {
 		for _, keyword := range values.abilities[i].Keywords {
@@ -519,16 +506,10 @@ func abilityFunctionsOnBattlefield(ability *game.AbilityDef) bool {
 }
 
 func powerToughnessCounterDelta(permanent *game.Permanent) int {
-	if permanent == nil {
-		return 0
-	}
 	return permanent.Counters.Get(counter.PlusOnePlusOne) - permanent.Counters.Get(counter.MinusOneMinusOne)
 }
 
 func keywordCounters(permanent *game.Permanent) []game.Keyword {
-	if permanent == nil {
-		return nil
-	}
 	var keywords []game.Keyword
 	for _, keyword := range []game.Keyword{
 		game.Deathtouch,

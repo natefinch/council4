@@ -13,9 +13,13 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 	var b strings.Builder
 
 	needsMana := card.ManaCost != "" || len(card.Colors) > 0 || len(card.ColorIdentity) > 0
+	needsOpt := card.ManaCost != "" || card.Power != nil || card.Toughness != nil || card.Loyalty != nil || card.Defense != nil
 
 	b.WriteString(fmt.Sprintf("package %s\n\n", pkgName))
 	b.WriteString("import (\n")
+	if needsOpt {
+		b.WriteString("\t\"github.com/natefinch/council4/opt\"\n")
+	}
 	b.WriteString("\t\"github.com/natefinch/council4/mtg/game\"\n")
 	if needsMana {
 		b.WriteString("\t\"github.com/natefinch/council4/mtg/game/mana\"\n")
@@ -49,7 +53,7 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 		return "", fmt.Errorf("parsing mana cost for %s: %w", card.Name, err)
 	}
 	if costLiteral != "" {
-		b.WriteString(fmt.Sprintf("\tManaCost: %s,\n", costLiteral))
+		b.WriteString(fmt.Sprintf("\tManaCost: opt.Val(%s),\n", costLiteral))
 	}
 
 	// ManaValue
@@ -102,23 +106,23 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 
 	// Power/Toughness
 	if card.Power != nil {
-		b.WriteString(fmt.Sprintf("\tPower: %s,\n", ptLiteral(*card.Power)))
+		b.WriteString(fmt.Sprintf("\tPower: opt.Val(%s),\n", ptLiteral(*card.Power)))
 	}
 	if card.Toughness != nil {
-		b.WriteString(fmt.Sprintf("\tToughness: %s,\n", ptLiteral(*card.Toughness)))
+		b.WriteString(fmt.Sprintf("\tToughness: opt.Val(%s),\n", ptLiteral(*card.Toughness)))
 	}
 
 	// Loyalty
 	if card.Loyalty != nil {
 		if n, err := strconv.Atoi(*card.Loyalty); err == nil {
-			b.WriteString(fmt.Sprintf("\tLoyalty: ptrInt(%d),\n", n))
+			b.WriteString(fmt.Sprintf("\tLoyalty: opt.Val(%d),\n", n))
 		}
 	}
 
 	// Defense
 	if card.Defense != nil {
 		if n, err := strconv.Atoi(*card.Defense); err == nil {
-			b.WriteString(fmt.Sprintf("\tDefense: ptrInt(%d),\n", n))
+			b.WriteString(fmt.Sprintf("\tDefense: opt.Val(%d),\n", n))
 		}
 	}
 
@@ -131,23 +135,18 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 
 	b.WriteString("}\n")
 
-	// Emit ptrInt helper if needed by loyalty or defense fields.
-	if card.Loyalty != nil || card.Defense != nil {
-		b.WriteString("\nfunc ptrInt(n int) *int { return &n }\n")
-	}
-
 	return b.String(), nil
 }
 
 func ptLiteral(val string) string {
 	if val == "*" {
-		return "&game.PT{IsStar: true}"
+		return "game.PT{IsStar: true}"
 	}
 	n, err := strconv.Atoi(val)
 	if err != nil {
-		return fmt.Sprintf("&game.PT{} /* unparseable: %q */", val)
+		return fmt.Sprintf("game.PT{} /* unparseable: %q */", val)
 	}
-	return fmt.Sprintf("&game.PT{Value: %d}", n)
+	return fmt.Sprintf("game.PT{Value: %d}", n)
 }
 
 // CardNameToVarName converts a card name to a Go exported variable name.

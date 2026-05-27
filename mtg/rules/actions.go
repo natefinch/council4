@@ -39,15 +39,12 @@ func normalizedCastSourceZone(cast action.CastSpellAction) game.ZoneType {
 }
 
 func splitSecondOnStack(g *game.Game) bool {
-	if g == nil {
-		return false
-	}
 	for _, obj := range g.Stack.Objects() {
-		if obj == nil || obj.Kind != game.StackSpell {
+		if obj.Kind != game.StackSpell {
 			continue
 		}
-		card := g.GetCardInstance(obj.SourceID)
-		if card != nil && card.Def != nil && card.Def.HasKeyword(game.SplitSecond) {
+		card, ok := g.GetCardInstance(obj.SourceID)
+		if ok && card.Def.HasKeyword(game.SplitSecond) {
 			return true
 		}
 	}
@@ -78,11 +75,11 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 	var actions []action.Action
 	for _, sourceZone := range castableZonesForPlayer(g, playerID) {
 		for _, cardID := range castSourceZoneCards(player, sourceZone) {
-			card := g.GetCardInstance(cardID)
-			if card == nil || card.Def == nil {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
 				continue
 			}
-			for _, xValue := range legalXValuesForCost(g, playerID, card.Def.ManaCost) {
+			for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(card.Def.ManaCost)) {
 				for _, modes := range modeChoicesForSpell(card.Def) {
 					for _, targets := range targetChoicesForSpell(g, playerID, card.Def, modes) {
 						if e.canCastSpellFromZoneWithKicker(g, playerID, cardID, sourceZone, targets, xValue, modes, false) {
@@ -103,16 +100,16 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return nil
 	}
-	player := playerByID(g, playerID)
-	if player == nil || player.CommanderInstanceID == 0 || !player.CommandZone.Contains(player.CommanderInstanceID) {
+	player, ok := playerByID(g, playerID)
+	if !ok || player.CommanderInstanceID == 0 || !player.CommandZone.Contains(player.CommanderInstanceID) {
 		return nil
 	}
-	card := g.GetCardInstance(player.CommanderInstanceID)
-	if card == nil || card.Def == nil {
+	card, ok := g.GetCardInstance(player.CommanderInstanceID)
+	if !ok {
 		return nil
 	}
 	var actions []action.Action
-	for _, xValue := range legalXValuesForCost(g, playerID, card.Def.ManaCost) {
+	for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(card.Def.ManaCost)) {
 		for _, modes := range modeChoicesForSpell(card.Def) {
 			for _, targets := range targetChoicesForSpell(g, playerID, card.Def, modes) {
 				if e.canCastSpellFromZoneWithKicker(g, playerID, card.ID, game.ZoneCommand, targets, xValue, modes, false) {
@@ -159,11 +156,11 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 
 	var actions []action.Action
 	for _, permanent := range g.Battlefield {
-		if permanent == nil || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
+		if permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 			continue
 		}
-		card := permanentCardDef(g, permanent)
-		if card == nil {
+		card, ok := permanentCardDef(g, permanent)
+		if !ok {
 			continue
 		}
 		for i := range card.Abilities {
@@ -172,7 +169,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				actions = append(actions, action.ActivateAbility(permanent.ObjectID, i, nil, 0))
 				continue
 			}
-			for _, xValue := range legalXValuesForCost(g, playerID, ability.ManaCost) {
+			for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(ability.ManaCost)) {
 				for _, targets := range targetChoicesForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability) {
 					if canActivateEquipAbility(g, playerID, permanent, ability, i, targets, xValue) ||
 						canActivateLoyaltyAbility(g, playerID, permanent, ability, i, targets, xValue) ||
@@ -192,11 +189,11 @@ func (e *Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) [
 	}
 	var actions []action.Action
 	for _, permanent := range g.Battlefield {
-		if permanent == nil || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
+		if permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 			continue
 		}
-		card := permanentCardDef(g, permanent)
-		if card == nil {
+		card, ok := permanentCardDef(g, permanent)
+		if !ok {
 			continue
 		}
 		for i := range card.Abilities {
@@ -212,14 +209,14 @@ func (e *Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []act
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return nil
 	}
-	player := playerByID(g, playerID)
-	if player == nil {
+	player, ok := playerByID(g, playerID)
+	if !ok {
 		return nil
 	}
 	var actions []action.Action
 	for _, cardID := range player.Hand.All() {
-		card := g.GetCardInstance(cardID)
-		if card == nil || card.Def == nil {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
 			continue
 		}
 		for i := range card.Def.Abilities {
@@ -246,7 +243,9 @@ func (e *Engine) applyPlayLand(g *game.Game, playerID game.PlayerID, cardID id.I
 		return false
 	}
 
-	createCardPermanent(g, card, playerID, game.ZoneHand)
+	if _, ok := createCardPermanent(g, card, playerID, game.ZoneHand); !ok {
+		return false
+	}
 	g.Turn.LandsPlayedThisTurn++
 	return true
 }
@@ -262,7 +261,10 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 
 	player := g.Players[playerID]
-	card := g.GetCardInstance(cast.CardID)
+	card, ok := g.GetCardInstance(cast.CardID)
+	if !ok {
+		return false
+	}
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, card.Def, cast.XValue, agents, log)
 	additionalCostsPaid, ok := paySpellCostsWithKickerFromZoneAndPreferences(g, playerID, card.ID, sourceZone, card.Def, cast.XValue, cast.KickerPaid, prefs)
 	if !ok {
@@ -318,7 +320,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		if len(activate.Targets) != 0 || activate.XValue != 0 {
 			return false
 		}
-		prefs := e.paymentPreferencesForCost(g, playerID, ability.ManaCost, abilityAdditionalCosts(ability), agents, log)
+		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability), agents, log)
 		if _, ok := payAbilityCostsWithPreferences(g, playerID, permanent, ability, 0, prefs); !ok {
 			return false
 		}
@@ -345,7 +347,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	}
 	sourceCardID := permanent.CardInstanceID
 	sourceTokenDef := permanent.TokenDef
-	prefs := e.paymentPreferencesForCost(g, playerID, ability.ManaCost, abilityAdditionalCosts(ability), agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability), agents, log)
 	if _, ok := payAbilityCostsWithPreferences(g, playerID, permanent, ability, activate.XValue, prefs); !ok {
 		return false
 	}
@@ -371,7 +373,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 }
 
 func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent == nil || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
 	if xValue != 0 || ability.Kind != game.ActivatedAbility || !ability.IsLoyaltyAbility || !permanentHasType(g, permanent, game.TypePlaneswalker) {
@@ -383,11 +385,12 @@ func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if ability.LoyaltyCost < 0 && permanent.Counters.Get(counter.Loyalty) < -ability.LoyaltyCost {
 		return false
 	}
-	if !targetsValidForAbilityFromSourceObject(g, playerID, permanentCardDef(g, permanent), permanent.ObjectID, ability, targets) {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok || !targetsValidForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability, targets) {
 		return false
 	}
-	_, ok := buildAbilityCostPlan(g, playerID, permanent, ability, xValue)
-	return ok
+	_, canPay := buildAbilityCostPlan(g, playerID, permanent, ability, xValue)
+	return canPay
 }
 
 func applyLoyaltyCost(permanent *game.Permanent, cost int) {
@@ -410,8 +413,8 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	if !canActivateCyclingAbility(g, playerID, activate.SourceID, ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, ability.ManaCost, nil, agents, log)
-	plan, ok := buildPaymentPlanWithPreferences(g, playerID, ability.ManaCost, activate.XValue, nil, prefs)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, agents, log)
+	plan, ok := buildPaymentPlanWithPreferences(g, playerID, manaCostPtr(ability.ManaCost), activate.XValue, nil, prefs)
 	if !ok || !applyPaymentPlan(g, playerID, plan) {
 		return false
 	}
@@ -448,8 +451,8 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 		return false
 	}
 	player := g.Players[playerID]
-	card := g.GetCardInstance(cardID)
-	if card == nil || card.Def == nil || !castSourceContains(player, cardID, sourceZone) {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok || !castSourceContains(player, cardID, sourceZone) {
 		return false
 	}
 	switch sourceZone {
@@ -465,7 +468,7 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 	default:
 		return false
 	}
-	if xValue != 0 && !costHasVariableMana(card.Def.ManaCost) {
+	if xValue != 0 && !costHasVariableMana(manaCostPtr(card.Def.ManaCost)) {
 		return false
 	}
 	if !modesValidForSpell(card.Def, chosenModes) || !isSupportedSpell(card.Def) || !targetsValidForSpell(g, playerID, card.Def, chosenModes, targets) {
@@ -484,9 +487,6 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 }
 
 func castSourceContains(player *game.Player, cardID id.ID, sourceZone game.ZoneType) bool {
-	if player == nil {
-		return false
-	}
 	switch sourceZone {
 	case game.ZoneHand:
 		return player.Hand.Contains(cardID)
@@ -500,9 +500,6 @@ func castSourceContains(player *game.Player, cardID id.ID, sourceZone game.ZoneT
 }
 
 func castSourceZoneCards(player *game.Player, sourceZone game.ZoneType) []id.ID {
-	if player == nil {
-		return nil
-	}
 	switch sourceZone {
 	case game.ZoneHand:
 		return player.Hand.All()
@@ -575,12 +572,12 @@ func activatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 	if abilityIndex < 0 {
 		return nil, nil, false
 	}
-	permanent := permanentByObjectID(g, sourceID)
-	if permanent == nil || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
+	permanent, ok := permanentByObjectID(g, sourceID)
+	if !ok || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return nil, nil, false
 	}
-	card := permanentCardDef(g, permanent)
-	if card == nil || abilityIndex >= len(card.Abilities) {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok || abilityIndex >= len(card.Abilities) {
 		return nil, nil, false
 	}
 	return permanent, &card.Abilities[abilityIndex], true
@@ -590,19 +587,19 @@ func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, 
 	if abilityIndex < 0 {
 		return nil, nil, false
 	}
-	player := playerByID(g, playerID)
-	if player == nil || !player.Hand.Contains(sourceID) {
+	player, ok := playerByID(g, playerID)
+	if !ok || !player.Hand.Contains(sourceID) {
 		return nil, nil, false
 	}
-	card := g.GetCardInstance(sourceID)
-	if card == nil || card.Def == nil || abilityIndex >= len(card.Def.Abilities) {
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok || abilityIndex >= len(card.Def.Abilities) {
 		return nil, nil, false
 	}
 	return card, &card.Def.Abilities[abilityIndex], true
 }
 
 func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent == nil || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
 	if xValue != 0 || ability.Kind != game.ActivatedAbility || ability.IsManaAbility || !isEquipmentPermanent(g, permanent) {
@@ -614,21 +611,22 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(ability) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
 		return false
 	}
-	if !targetsValidForAbilityFromSourceObject(g, playerID, permanentCardDef(g, permanent), permanent.ObjectID, ability, targets) {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok || !targetsValidForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability, targets) {
 		return false
 	}
 	if len(targets) != 1 || targets[0].Kind != game.TargetPermanent {
 		return false
 	}
-	target := permanentByObjectID(g, targets[0].PermanentID)
-	if target == nil || effectiveController(g, target) != playerID || !canAttachPermanent(g, permanent, target) {
+	target, ok := permanentByObjectID(g, targets[0].PermanentID)
+	if !ok || effectiveController(g, target) != playerID || !canAttachPermanent(g, permanent, target) {
 		return false
 	}
-	return canPayCost(g, playerID, ability.ManaCost)
+	return canPayCost(g, playerID, manaCostPtr(ability.ManaCost))
 }
 
 func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent == nil || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
 	if ability.Kind != game.ActivatedAbility || ability.IsManaAbility || ability.IsLoyaltyAbility || abilityHasKeyword(ability, game.Equip) {
@@ -637,11 +635,12 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if !activatedAbilityTimingAllows(g, playerID, ability) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
 		return false
 	}
-	if !targetsValidForAbilityFromSourceObject(g, playerID, permanentCardDef(g, permanent), permanent.ObjectID, ability, targets) {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok || !targetsValidForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability, targets) {
 		return false
 	}
-	_, ok := buildAbilityCostPlan(g, playerID, permanent, ability, xValue)
-	return ok
+	_, canPay := buildAbilityCostPlan(g, playerID, permanent, ability, xValue)
+	return canPay
 }
 
 func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -657,11 +656,11 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 	if len(targets) != 0 || len(ability.Targets) != 0 {
 		return false
 	}
-	card, gotAbility, ok := cyclingAbilitySource(g, playerID, cardID, abilityIndex)
-	if !ok || gotAbility != ability || card == nil {
+	_, gotAbility, ok := cyclingAbilitySource(g, playerID, cardID, abilityIndex)
+	if !ok || gotAbility != ability {
 		return false
 	}
-	return canPayCost(g, playerID, ability.ManaCost)
+	return canPayCost(g, playerID, manaCostPtr(ability.ManaCost))
 }
 
 func abilityHasKeyword(ability *game.AbilityDef, keyword game.Keyword) bool {
@@ -677,7 +676,7 @@ func abilityHasKeyword(ability *game.AbilityDef, keyword game.Keyword) bool {
 }
 
 func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef, abilityIndex int) bool {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent == nil || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
 	if ability.Kind != game.ActivatedAbility || !ability.IsManaAbility || ability.IsLoyaltyAbility {
@@ -696,7 +695,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	} else if abilityHasNonTapAdditionalCosts(ability) {
 		return false
 	}
-	return canPayCost(g, playerID, ability.ManaCost)
+	return canPayCost(g, playerID, manaCostPtr(ability.ManaCost))
 }
 
 func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
@@ -748,7 +747,7 @@ func abilityHasDiscardThisCardCost(ability *game.AbilityDef) bool {
 }
 
 func canTapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
-	if permanent == nil || permanent.Tapped {
+	if permanent.Tapped {
 		return false
 	}
 	return !permanentHasType(g, permanent, game.TypeCreature) || !permanent.SummoningSick
@@ -772,16 +771,16 @@ func activatedAbilityTimingAllows(g *game.Game, playerID game.PlayerID, ability 
 	case game.SorceryOnly, game.SorceryOncePerTurn:
 		return isSorcerySpeed(g, playerID)
 	case game.DuringCombat:
-		return g != nil && g.Turn.Phase == game.PhaseCombat
+		return g.Turn.Phase == game.PhaseCombat
 	case game.DuringUpkeep:
-		return g != nil && g.Turn.Phase == game.PhaseBeginning && g.Turn.Step == game.StepUpkeep
+		return g.Turn.Phase == game.PhaseBeginning && g.Turn.Step == game.StepUpkeep
 	default:
 		return false
 	}
 }
 
 func activatedAbilityUsedThisTurn(g *game.Game, sourceID id.ID, abilityIndex int, ability *game.AbilityDef) bool {
-	if g == nil || ability == nil || !abilityHasOncePerTurnRestriction(ability) {
+	if ability == nil || !abilityHasOncePerTurnRestriction(ability) {
 		return false
 	}
 	return g.ActivatedAbilitiesThisTurn[game.ActivatedAbilityUse{
@@ -791,7 +790,7 @@ func activatedAbilityUsedThisTurn(g *game.Game, sourceID id.ID, abilityIndex int
 }
 
 func recordActivatedAbilityUse(g *game.Game, sourceID id.ID, abilityIndex int, ability *game.AbilityDef) {
-	if g == nil || ability == nil || !abilityHasOncePerTurnRestriction(ability) {
+	if ability == nil || !abilityHasOncePerTurnRestriction(ability) {
 		return
 	}
 	if g.ActivatedAbilitiesThisTurn == nil {
@@ -812,18 +811,18 @@ func isSorcerySpeed(g *game.Game, playerID game.PlayerID) bool {
 }
 
 func landCardInstance(g *game.Game, player *game.Player, cardID id.ID) (*game.CardInstance, bool) {
-	if player == nil || !player.Hand.Contains(cardID) {
+	if !player.Hand.Contains(cardID) {
 		return nil, false
 	}
-	card := g.GetCardInstance(cardID)
-	if card == nil || card.Def == nil || !card.Def.HasType(game.TypeLand) {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok || !card.Def.HasType(game.TypeLand) {
 		return nil, false
 	}
 	return card, true
 }
 
 func entersSummoningSick(card *game.CardDef) bool {
-	return card != nil && !card.HasKeyword(game.Haste)
+	return !card.HasKeyword(game.Haste)
 }
 
 func isSupportedSpell(card *game.CardDef) bool {

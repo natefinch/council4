@@ -37,13 +37,9 @@ func (e *Engine) NewGame(configs [game.NumPlayers]game.PlayerConfig) *game.Game 
 // RunGame runs a game to completion and returns its structured result.
 func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *GameResult {
 	result := &GameResult{}
-	if g == nil {
-		return result
-	}
-
 	e.drawOpeningHands(g)
 	result.addLosses(e.applyStateBasedActions(g))
-	if winner := g.Winner(); winner != nil {
+	if winner, ok := g.Winner(); ok {
 		result.Winner = winner.ID
 		result.HasWinner = true
 		return result
@@ -56,7 +52,7 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 		result.TurnCount = len(result.Turns)
 	}
 
-	if winner := g.Winner(); winner != nil {
+	if winner, ok := g.Winner(); ok {
 		result.Winner = winner.ID
 		result.HasWinner = true
 	}

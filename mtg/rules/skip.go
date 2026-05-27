@@ -3,7 +3,7 @@ package rules
 import "github.com/natefinch/council4/mtg/game"
 
 func scheduleSkipStep(g *game.Game, playerID game.PlayerID, step game.Step) {
-	if g == nil || step == game.StepNone {
+	if step == game.StepNone {
 		return
 	}
 	if g.SkippedSteps == nil {
@@ -16,7 +16,7 @@ func scheduleSkipStep(g *game.Game, playerID game.PlayerID, step game.Step) {
 }
 
 func consumeSkipStep(g *game.Game, playerID game.PlayerID, step game.Step) bool {
-	if g == nil || g.SkippedSteps[playerID] == nil || g.SkippedSteps[playerID][step] <= 0 {
+	if g.SkippedSteps[playerID] == nil || g.SkippedSteps[playerID][step] <= 0 {
 		return false
 	}
 	g.SkippedSteps[playerID][step]--

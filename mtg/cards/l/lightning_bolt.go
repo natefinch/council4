@@ -3,6 +3,7 @@ package l
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 // Lightning Bolt
@@ -15,9 +16,9 @@ import (
 //	Lightning Bolt deals 3 damage to any target.
 var LightningBolt = &game.CardDef{
 	Name: "Lightning Bolt",
-	ManaCost: &mana.Cost{
+	ManaCost: opt.Val(mana.Cost{
 		mana.ColoredMana(mana.Red),
-	},
+	}),
 	ManaValue:     1,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),

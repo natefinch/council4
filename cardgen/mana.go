@@ -34,7 +34,7 @@ func ParseManaCostLiteral(cost string) (string, error) {
 		symbols = append(symbols, literal)
 	}
 
-	return "&mana.Cost{\n\t\t\t" + strings.Join(symbols, ",\n\t\t\t") + ",\n\t\t}", nil
+	return "mana.Cost{\n\t\t\t" + strings.Join(symbols, ",\n\t\t\t") + ",\n\t\t}", nil
 }
 
 func symbolToLiteral(sym string) (string, error) {

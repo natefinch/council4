@@ -16,9 +16,6 @@ type proliferateTarget struct {
 }
 
 func (e *Engine) resolveProliferate(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if g == nil || obj == nil {
-		return false
-	}
 	applied := false
 	for _, target := range proliferateTargets(g) {
 		if len(target.counters) == 0 {
@@ -38,7 +35,7 @@ func (e *Engine) resolveProliferate(g *game.Game, obj *game.StackObject, agents 
 func proliferateTargets(g *game.Game) []proliferateTarget {
 	var targets []proliferateTarget
 	for _, permanent := range g.Battlefield {
-		if permanent == nil || permanent.Counters.IsEmpty() {
+		if permanent.Counters.IsEmpty() {
 			continue
 		}
 		targets = append(targets, proliferateTarget{
@@ -47,7 +44,7 @@ func proliferateTargets(g *game.Game) []proliferateTarget {
 		})
 	}
 	for playerID, player := range g.Players {
-		if player == nil || player.Eliminated {
+		if player.Eliminated {
 			continue
 		}
 		var counters []counter.Kind
@@ -111,15 +108,15 @@ func proliferateChoiceRequest(player game.PlayerID, target proliferateTarget) ga
 
 func addProliferatedCounter(g *game.Game, target proliferateTarget, kind counter.Kind) bool {
 	if target.permanentID != 0 {
-		permanent := permanentByObjectID(g, target.permanentID)
-		if permanent == nil {
+		permanent, ok := permanentByObjectID(g, target.permanentID)
+		if !ok {
 			return false
 		}
 		permanent.Counters.Add(kind, 1)
 		return true
 	}
-	player := playerByID(g, target.player)
-	if player == nil {
+	player, ok := playerByID(g, target.player)
+	if !ok {
 		return false
 	}
 	switch kind {

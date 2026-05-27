@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestLegalActionsIncludesPlayableLandBeforePass(t *testing.T) {
@@ -219,7 +220,7 @@ func TestLegalActionsIncludesPayableXValues(t *testing.T) {
 	cost := mana.Cost{mana.VariableMana(), mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Gelatinous Genesis",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 	})
 	addBasicLandPermanent(g, game.Player1, "Forest")
@@ -245,7 +246,7 @@ func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
 	cost := mana.Cost{mana.VariableMana(), mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Gelatinous Genesis",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 	})
 	addBasicLandPermanent(g, game.Player1, "Forest")
@@ -257,8 +258,8 @@ func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 2, nil)) {
 		t.Fatal("applyAction(cast X=2) = false, want true")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil {
+	obj, ok := g.Stack.Peek()
+	if !ok {
 		t.Fatal("stack is empty after casting X spell")
 	}
 	if obj.XValue != 2 {
@@ -272,7 +273,7 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Village Rites",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{
@@ -286,8 +287,8 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Goblin Token",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 1},
-		Toughness: &game.PT{Value: 1},
+		Power:     optPT(game.PT{Value: 1}),
+		Toughness: optPT(game.PT{Value: 1}),
 	})
 	forest := addBasicLandPermanent(g, game.Player1, "Forest")
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -300,7 +301,7 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("applyAction(cast with sacrifice cost) = false, want true")
 	}
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("sacrificed creature remained on battlefield")
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(creature.CardInstanceID) {
@@ -309,8 +310,8 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	if !forest.Tapped {
 		t.Fatal("forest was not tapped to pay mana cost")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || len(obj.AdditionalCostsPaid) != 1 || obj.AdditionalCostsPaid[0] != "Sacrifice a creature" {
+	obj, ok := g.Stack.Peek()
+	if !ok || len(obj.AdditionalCostsPaid) != 1 || obj.AdditionalCostsPaid[0] != "Sacrifice a creature" {
 		t.Fatalf("stack additional costs paid = %+v, want sacrifice cost", obj)
 	}
 }
@@ -321,7 +322,7 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Chosen Offering",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{
@@ -332,8 +333,8 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 			},
 		},
 	})
-	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
-	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
 	addBasicLandPermanent(g, game.Player1, "Forest")
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -343,10 +344,10 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &log) {
 		t.Fatal("applyActionWithChoices(cast with sacrifice choice) = false, want true")
 	}
-	if permanentByObjectID(g, first.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, first.ObjectID); !ok {
 		t.Fatal("first creature was sacrificed, want second")
 	}
-	if permanentByObjectID(g, second.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, second.ObjectID); ok {
 		t.Fatal("chosen second creature remained on battlefield")
 	}
 	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoicePayment || log.Choices[0].Selected[0] != 1 {
@@ -360,7 +361,7 @@ func TestPaymentChoiceCanPayPhyrexianManaWithLife(t *testing.T) {
 	cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Phyrexian Choice",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{Kind: game.SpellAbility},
@@ -393,7 +394,7 @@ func TestPaymentChoiceRejectsUnavailablePhyrexianLifeOption(t *testing.T) {
 	cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Phyrexian Choice",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{Kind: game.SpellAbility},
@@ -422,7 +423,7 @@ func TestPaymentChoiceDoesNotOvercommitPhyrexianLife(t *testing.T) {
 	cost := mana.Cost{mana.PhyrexianMana(mana.Black), mana.PhyrexianMana(mana.Black)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Double Phyrexian Choice",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{Kind: game.SpellAbility},
@@ -451,7 +452,7 @@ func TestPaymentChoiceFallbackSelectsMultipleAdditionalCostObjects(t *testing.T)
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Double Offering",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{
@@ -462,9 +463,9 @@ func TestPaymentChoiceFallbackSelectsMultipleAdditionalCostObjects(t *testing.T)
 			},
 		},
 	})
-	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
-	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
-	third := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Third", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	third := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Third", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
 	addBasicLandPermanent(g, game.Player1, "Forest")
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -472,10 +473,13 @@ func TestPaymentChoiceFallbackSelectsMultipleAdditionalCostObjects(t *testing.T)
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
 		t.Fatal("applyAction(cast with two sacrifices) = false, want true")
 	}
-	if permanentByObjectID(g, first.ObjectID) != nil || permanentByObjectID(g, second.ObjectID) != nil {
-		t.Fatal("fallback did not sacrifice the first two creatures")
+	if _, ok := permanentByObjectID(g, first.ObjectID); ok {
+		t.Fatal("fallback did not sacrifice the first creature")
 	}
-	if permanentByObjectID(g, third.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, second.ObjectID); ok {
+		t.Fatal("fallback did not sacrifice the second creature")
+	}
+	if _, ok := permanentByObjectID(g, third.ObjectID); !ok {
 		t.Fatal("fallback sacrificed the third creature, want it to remain")
 	}
 }
@@ -486,7 +490,7 @@ func TestAlternativeCostCanMakeSpellPayable(t *testing.T) {
 	normalCost := mana.Cost{mana.GenericMana(5)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Free Alternate",
-		ManaCost: &normalCost,
+		ManaCost: optCost(normalCost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{
@@ -507,7 +511,7 @@ func TestAlternativeCostCanMakeSpellPayable(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("applyAction(cast with alternative cost) = false, want true")
 	}
-	if obj := g.Stack.Peek(); obj == nil || obj.SourceID != spellID {
+	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != spellID {
 		t.Fatalf("stack top = %+v, want alternative-cost spell", obj)
 	}
 }
@@ -518,7 +522,7 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 	normalCost := mana.Cost{mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Alternate Offering",
-		ManaCost: &normalCost,
+		ManaCost: optCost(normalCost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{
@@ -534,7 +538,7 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 			},
 		},
 	})
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Offering", Types: []game.CardType{game.TypeCreature}, Power: &game.PT{Value: 1}, Toughness: &game.PT{Value: 1}})
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Offering", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
 	forest := addBasicLandPermanent(g, game.Player1, "Forest")
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -546,7 +550,7 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 	if forest.Tapped {
 		t.Fatal("normal mana cost was paid despite choosing alternative cost")
 	}
-	if permanentByObjectID(g, creature.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
 		t.Fatal("alternative additional sacrifice cost was not paid")
 	}
 }
@@ -557,7 +561,7 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Costly Harvest",
-		ManaCost: &cost,
+		ManaCost: optCost(cost),
 		Types:    []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{
@@ -571,8 +575,8 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Llanowar Elves",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 1},
-		Toughness: &game.PT{Value: 1},
+		Power:     optPT(game.PT{Value: 1}),
+		Toughness: optPT(game.PT{Value: 1}),
 	}, mana.Green, 1)
 	dork.SummoningSick = false
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -587,7 +591,7 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 	if dork.Tapped {
 		t.Fatal("sacrificed candidate was tapped by failed payment")
 	}
-	if permanentByObjectID(g, dork.ObjectID) == nil {
+	if _, ok := permanentByObjectID(g, dork.ObjectID); !ok {
 		t.Fatal("sacrificed candidate left battlefield after failed payment")
 	}
 	if !g.Players[game.Player1].Hand.Contains(spellID) {
@@ -602,8 +606,8 @@ func TestLegalActionsIncludesModalSpellModeChoices(t *testing.T) {
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Silvercoat Lion",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 2},
-		Toughness: &game.PT{Value: 2},
+		Power:     optPT(game.PT{Value: 2}),
+		Toughness: optPT(game.PT{Value: 2}),
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -715,8 +719,8 @@ func TestModalSpellResolvesChosenModeOnly(t *testing.T) {
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Silvercoat Lion",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 2},
-		Toughness: &game.PT{Value: 2},
+		Power:     optPT(game.PT{Value: 2}),
+		Toughness: optPT(game.PT{Value: 2}),
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -741,8 +745,8 @@ func TestEquipAbilityUsesStackAndAttachesOnResolution(t *testing.T) {
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Runeclaw Bear",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 2},
-		Toughness: &game.PT{Value: 2},
+		Power:     optPT(game.PT{Value: 2}),
+		Toughness: optPT(game.PT{Value: 2}),
 	})
 	forest := addBasicLandPermanent(g, game.Player1, "Forest")
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -758,14 +762,14 @@ func TestEquipAbilityUsesStackAndAttachesOnResolution(t *testing.T) {
 	if !forest.Tapped {
 		t.Fatal("forest was not tapped to pay equip cost")
 	}
-	if equipment.AttachedTo != nil {
+	if equipment.AttachedTo.Exists {
 		t.Fatal("equipment attached before equip ability resolved")
 	}
 	if g.Stack.Size() != 1 {
 		t.Fatalf("stack size = %d, want 1", g.Stack.Size())
 	}
 	engine.resolveTopOfStack(g, nil)
-	if equipment.AttachedTo == nil || *equipment.AttachedTo != creature.ObjectID {
+	if !equipment.AttachedTo.Exists || equipment.AttachedTo.Val != creature.ObjectID {
 		t.Fatalf("equipment attached to = %v, want %v", equipment.AttachedTo, creature.ObjectID)
 	}
 	if !permanentIDsContain(creature.Attachments, equipment.ObjectID) {
@@ -780,14 +784,14 @@ func TestEquipAbilityOnlyAsSorceryToCreatureYouControl(t *testing.T) {
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Runeclaw Bear",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 2},
-		Toughness: &game.PT{Value: 2},
+		Power:     optPT(game.PT{Value: 2}),
+		Toughness: optPT(game.PT{Value: 2}),
 	})
 	opponentCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Silvercoat Lion",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &game.PT{Value: 2},
-		Toughness: &game.PT{Value: 2},
+		Power:     optPT(game.PT{Value: 2}),
+		Toughness: optPT(game.PT{Value: 2}),
 	})
 	addBasicLandPermanent(g, game.Player1, "Forest")
 	g.Turn.Phase = game.PhaseBeginning
@@ -921,7 +925,7 @@ func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("applyAction(sacrifice ability) = false, want true")
 	}
-	if permanentByObjectID(g, source.ObjectID) != nil {
+	if _, ok := permanentByObjectID(g, source.ObjectID); ok {
 		t.Fatal("source was not sacrificed as an activation cost")
 	}
 	engine.resolveTopOfStack(g, nil)
@@ -1009,7 +1013,10 @@ func TestApplyActionCastSpellPaysAndPushesStackObject(t *testing.T) {
 	if g.Stack.Size() != 1 {
 		t.Fatalf("stack size = %d, want 1", g.Stack.Size())
 	}
-	obj := g.Stack.Peek()
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("stack is empty after casting spell")
+	}
 	if obj.SourceID != spellID {
 		t.Fatalf("stack source ID = %v, want %v", obj.SourceID, spellID)
 	}
@@ -1110,7 +1117,7 @@ func TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:    "Test Walker",
 		Types:   []game.CardType{game.TypePlaneswalker},
-		Loyalty: intPtr(3),
+		Loyalty: optInt(3),
 		Abilities: []game.AbilityDef{{
 			Kind:             game.ActivatedAbility,
 			IsLoyaltyAbility: true,
@@ -1131,7 +1138,10 @@ func TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn(t *testing.T) {
 	if got := planeswalker.Counters.Get(counter.Loyalty); got != 1 {
 		t.Fatalf("loyalty counters = %d, want 1", got)
 	}
-	card := g.GetCardInstance(planeswalker.CardInstanceID)
+	card, ok := g.GetCardInstance(planeswalker.CardInstanceID)
+	if !ok {
+		t.Fatal("planeswalker card instance not found")
+	}
 	if canActivateLoyaltyAbility(g, game.Player1, planeswalker, &card.Def.Abilities[0], 0, nil, 0) {
 		t.Fatal("loyalty ability could be activated twice in one turn")
 	}
@@ -1151,7 +1161,7 @@ func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 		Abilities: []game.AbilityDef{{
 			Kind:          game.SpellAbility,
 			Effects:       []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: -1}},
-			KickerCost:    &kickerCost,
+			KickerCost:    optCost(kickerCost),
 			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
 		}},
 	})
@@ -1168,8 +1178,8 @@ func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 	if !forest.Tapped {
 		t.Fatal("kicker cost did not tap mana source")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || !obj.KickerPaid {
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.KickerPaid {
 		t.Fatalf("stack object = %+v, want KickerPaid", obj)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -1186,10 +1196,10 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Greedy Kicker Spell",
 		Types:    []game.CardType{game.TypeSorcery},
-		ManaCost: &baseCost,
+		ManaCost: optCost(baseCost),
 		Abilities: []game.AbilityDef{{
 			Kind:          game.SpellAbility,
-			KickerCost:    &kickerCost,
+			KickerCost:    optCost(kickerCost),
 			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
 		}},
 	})
@@ -1216,14 +1226,14 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Flashback Spell",
 		Types:    []game.CardType{game.TypeSorcery},
-		ManaCost: &mana.Cost{mana.GenericMana(5)},
+		ManaCost: optCost(mana.Cost{mana.GenericMana(5)}),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
 			{
 				Kind: game.SpellAbility,
 				AlternativeCosts: []game.AlternativeCost{{
 					Label:    flashbackAlternativeLabel,
-					ManaCost: &flashbackCost,
+					ManaCost: optCost(flashbackCost),
 				}},
 				Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
 			},
@@ -1241,8 +1251,8 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("flashback cast from graveyard failed")
 	}
-	obj := g.Stack.Peek()
-	if obj == nil || !obj.Flashback {
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.Flashback {
 		t.Fatalf("stack object = %+v, want flashback marker", obj)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -1262,14 +1272,14 @@ func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Expensive Flashback Spell",
 		Types:    []game.CardType{game.TypeSorcery},
-		ManaCost: &mana.Cost{mana.GenericMana(5)},
+		ManaCost: optCost(mana.Cost{mana.GenericMana(5)}),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
 			{
 				Kind: game.SpellAbility,
 				AlternativeCosts: []game.AlternativeCost{{
 					Label:    flashbackAlternativeLabel,
-					ManaCost: &flashbackCost,
+					ManaCost: optCost(flashbackCost),
 				}},
 			},
 		},
@@ -1502,7 +1512,7 @@ func equipEquipment() *game.CardDef {
 			{
 				Kind:     game.ActivatedAbility,
 				Keywords: []game.Keyword{game.Equip},
-				ManaCost: &cost,
+				ManaCost: optCost(cost),
 				Timing:   game.SorceryOnly,
 				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature you control"}},
 			},
@@ -1515,13 +1525,13 @@ func activatedAbilityPermanent(ability *game.AbilityDef) *game.CardDef {
 	return &game.CardDef{
 		Name:      "Activated Creature",
 		Types:     []game.CardType{game.TypeCreature},
-		Power:     &pt,
-		Toughness: &pt,
+		Power:     optPT(pt),
+		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{*ability},
 	}
 }
 
-func greenCost() *mana.Cost {
+func greenCost() opt.V[mana.Cost] {
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
-	return &cost
+	return optCost(cost)
 }

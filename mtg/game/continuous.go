@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 // DynamicValueKind describes a small rules-derived integer used for
@@ -28,17 +29,17 @@ type DynamicValue struct {
 }
 
 // CopyableValues records the copiable printed/effective values copied in layer
-// 1 (CR 707, CR 613). Nil pointer fields mean "leave that value absent."
+// 1 (CR 707, CR 613). Optional fields mean "leave that value absent."
 type CopyableValues struct {
 	Name             string
 	Colors           []mana.Color
 	Supertypes       []Supertype
 	Types            []CardType
 	Subtypes         []string
-	Power            *PT
-	Toughness        *PT
-	DynamicPower     *DynamicValue
-	DynamicToughness *DynamicValue
+	Power            opt.V[PT]
+	Toughness        opt.V[PT]
+	DynamicPower     opt.V[DynamicValue]
+	DynamicToughness opt.V[DynamicValue]
 	Abilities        []AbilityDef
 	OracleText       string
 }
@@ -78,9 +79,9 @@ type ContinuousEffect struct {
 
 	Layer ContinuousLayer
 
-	CopyValues *CopyableValues
+	CopyValues opt.V[CopyableValues]
 
-	NewController *PlayerID
+	NewController opt.V[PlayerID]
 
 	TextFrom string
 	TextTo   string
@@ -105,8 +106,8 @@ type ContinuousEffect struct {
 	RemoveKeywords []Keyword
 	AddAbilities   []AbilityDef
 
-	SetPower       *PT
-	SetToughness   *PT
+	SetPower       opt.V[PT]
+	SetToughness   opt.V[PT]
 	PowerDelta     int
 	ToughnessDelta int
 }

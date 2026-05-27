@@ -6,8 +6,8 @@ import (
 )
 
 func millCards(g *game.Game, playerID game.PlayerID, amount int) {
-	player := playerByID(g, playerID)
-	if player == nil || amount <= 0 {
+	player, ok := playerByID(g, playerID)
+	if !ok || amount <= 0 {
 		return
 	}
 	for range amount {
@@ -18,11 +18,11 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 		player.Library.Remove(cardID)
 		destination := commanderReplacementDestination(g, cardID, game.ZoneGraveyard)
 		zoneOwner := playerID
-		if card := g.GetCardInstance(cardID); destination == game.ZoneCommand && card != nil {
+		if card, ok := g.GetCardInstance(cardID); destination == game.ZoneCommand && ok {
 			zoneOwner = card.Owner
 		}
-		zone := destinationZone(g, zoneOwner, destination)
-		if zone == nil {
+		zone, ok := destinationZone(g, zoneOwner, destination)
+		if !ok {
 			return
 		}
 		zone.Add(cardID)
@@ -37,8 +37,8 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 }
 
 func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, amount int) {
-	player := playerByID(g, playerID)
-	if player == nil || amount <= 0 {
+	player, ok := playerByID(g, playerID)
+	if !ok || amount <= 0 {
 		return
 	}
 	// TODO: replace sequential prompts with one partition+ordering choice.
@@ -51,8 +51,8 @@ func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, lo
 }
 
 func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, amount int) {
-	player := playerByID(g, playerID)
-	if player == nil || amount <= 0 {
+	player, ok := playerByID(g, playerID)
+	if !ok || amount <= 0 {
 		return
 	}
 	// TODO: replace sequential prompts with one partition+ordering choice.
@@ -61,11 +61,11 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 		if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
 			destination := commanderReplacementDestination(g, cardID, game.ZoneGraveyard)
 			zoneOwner := playerID
-			if card := g.GetCardInstance(cardID); destination == game.ZoneCommand && card != nil {
+			if card, ok := g.GetCardInstance(cardID); destination == game.ZoneCommand && ok {
 				zoneOwner = card.Owner
 			}
-			zone := destinationZone(g, zoneOwner, destination)
-			if zone == nil {
+			zone, ok := destinationZone(g, zoneOwner, destination)
+			if !ok {
 				continue
 			}
 			zone.Add(cardID)
@@ -81,7 +81,7 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 }
 
 func peekLibrary(player *game.Player, amount int) []id.ID {
-	if player == nil || amount <= 0 {
+	if amount <= 0 {
 		return nil
 	}
 	cards := player.Library.All()
@@ -92,7 +92,7 @@ func peekLibrary(player *game.Player, amount int) []id.ID {
 }
 
 func reorderLibraryTop(player *game.Player, cards []id.ID) {
-	if player == nil || len(cards) == 0 {
+	if len(cards) == 0 {
 		return
 	}
 

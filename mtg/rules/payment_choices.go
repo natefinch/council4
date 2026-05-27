@@ -90,7 +90,7 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, c
 	}
 	var choices []bool
 	availableLife := 0
-	if player := playerByID(g, playerID); player != nil {
+	if player, ok := playerByID(g, playerID); ok {
 		availableLife = player.Life
 	}
 	for _, symbol := range *cost {
@@ -173,12 +173,9 @@ func firstChoiceIndices(amount int) []int {
 }
 
 func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, cost game.AdditionalCost) []*game.Permanent {
-	if g == nil {
-		return nil
-	}
 	var candidates []*game.Permanent
 	for _, permanent := range g.Battlefield {
-		if permanent != nil && permanent.Controller == playerID && additionalCostMatchesPermanent(g, permanent, cost) {
+		if permanent.Controller == playerID && additionalCostMatchesPermanent(g, permanent, cost) {
 			candidates = append(candidates, permanent)
 		}
 	}
@@ -186,14 +183,14 @@ func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, cost gam
 }
 
 func candidateDiscardCards(g *game.Game, playerID game.PlayerID, cost game.AdditionalCost) []id.ID {
-	player := playerByID(g, playerID)
-	if player == nil {
+	player, ok := playerByID(g, playerID)
+	if !ok {
 		return nil
 	}
 	var candidates []id.ID
 	for _, cardID := range player.Hand.All() {
-		card := g.GetCardInstance(cardID)
-		if card != nil && additionalCostMatchesCard(card.Def, cost) {
+		card, ok := g.GetCardInstance(cardID)
+		if ok && additionalCostMatchesCard(card.Def, cost) {
 			candidates = append(candidates, cardID)
 		}
 	}
@@ -229,16 +226,16 @@ func selectedCardIDs(candidates []id.ID, selected []int) []id.ID {
 }
 
 func permanentChoiceLabel(g *game.Game, permanent *game.Permanent) string {
-	card := permanentCardDef(g, permanent)
-	if card == nil {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok {
 		return fmt.Sprintf("Permanent %d", permanent.ObjectID)
 	}
 	return card.Name
 }
 
 func cardChoiceLabel(g *game.Game, cardID id.ID) string {
-	card := g.GetCardInstance(cardID)
-	if card == nil || card.Def == nil {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
 		return fmt.Sprintf("Card %d", cardID)
 	}
 	return card.Def.Name
