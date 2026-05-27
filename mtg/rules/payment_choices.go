@@ -190,7 +190,7 @@ func candidateDiscardCards(g *game.Game, playerID game.PlayerID, cost game.Addit
 	var candidates []id.ID
 	for _, cardID := range player.Hand.All() {
 		card, ok := g.GetCardInstance(cardID)
-		if ok && additionalCostMatchesCard(card.Def, cost) {
+		if ok && additionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), cost) {
 			candidates = append(candidates, cardID)
 		}
 	}
@@ -238,5 +238,5 @@ func cardChoiceLabel(g *game.Game, cardID id.ID) string {
 	if !ok {
 		return fmt.Sprintf("Card %d", cardID)
 	}
-	return card.Def.Name
+	return cardFaceOrDefault(card, game.FaceFront).Name
 }

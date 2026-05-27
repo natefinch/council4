@@ -44,7 +44,7 @@ func splitSecondOnStack(g *game.Game) bool {
 			continue
 		}
 		card, ok := g.GetCardInstance(obj.SourceID)
-		if ok && card.Def.HasKeyword(game.SplitSecond) {
+		if ok && cardFaceOrDefault(card, obj.Face).HasKeyword(game.SplitSecond) {
 			return true
 		}
 	}
@@ -59,8 +59,20 @@ func (e *Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action
 	player := g.Players[playerID]
 	var actions []action.Action
 	for _, cardID := range player.Hand.All() {
-		if _, ok := landCardInstance(g, player, cardID); ok {
-			actions = append(actions, action.PlayLand(cardID))
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || !player.Hand.Contains(cardID) {
+			continue
+		}
+		for face := range card.Def.Faces {
+			faceIndex := game.FaceIndex(face)
+			if _, ok := landCardInstanceFace(g, player, cardID, faceIndex); ok {
+				actions = append(actions, action.PlayLandFace(cardID, faceIndex))
+			}
+		}
+		if len(card.Def.Faces) == 0 {
+			if _, ok := landCardInstanceFace(g, player, cardID, game.FaceFront); ok {
+				actions = append(actions, action.PlayLand(cardID))
+			}
 		}
 	}
 	return actions
@@ -79,14 +91,19 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 			if !ok {
 				continue
 			}
-			for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(card.Def.ManaCost)) {
-				for _, modes := range modeChoicesForSpell(card.Def) {
-					for _, targets := range targetChoicesForSpell(g, playerID, card.Def, modes) {
-						if e.canCastSpellFromZoneWithKicker(g, playerID, cardID, sourceZone, targets, xValue, modes, false) {
-							actions = append(actions, action.CastSpellFromZone(cardID, sourceZone, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
-						}
-						if sourceZone == game.ZoneHand && spellHasKicker(card.Def) && e.canCastSpellFromZoneWithKicker(g, playerID, cardID, sourceZone, targets, xValue, modes, true) {
-							actions = append(actions, action.CastKickedSpell(cardID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
+			for _, face := range legalCastFacesForZone(card.Def, sourceZone) {
+				spellDef := cardFaceOrDefault(card, face)
+				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
+					for _, modes := range modeChoicesForSpell(spellDef) {
+						for _, targets := range targetChoicesForSpell(g, playerID, spellDef, modes) {
+							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
+								actions = append(actions, action.CastSpellFaceFromZone(cardID, sourceZone, face, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
+							}
+							if sourceZone == game.ZoneHand && spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
+								act := action.CastSpellFaceFromZone(cardID, sourceZone, face, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...))
+								act.CastSpell.KickerPaid = true
+								actions = append(actions, act)
+							}
 						}
 					}
 				}
@@ -109,16 +126,19 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 		return nil
 	}
 	var actions []action.Action
-	for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(card.Def.ManaCost)) {
-		for _, modes := range modeChoicesForSpell(card.Def) {
-			for _, targets := range targetChoicesForSpell(g, playerID, card.Def, modes) {
-				if e.canCastSpellFromZoneWithKicker(g, playerID, card.ID, game.ZoneCommand, targets, xValue, modes, false) {
-					actions = append(actions, action.CastCommanderSpell(card.ID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
-				}
-				if spellHasKicker(card.Def) && e.canCastSpellFromZoneWithKicker(g, playerID, card.ID, game.ZoneCommand, targets, xValue, modes, true) {
-					act := action.CastCommanderSpell(card.ID, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...))
-					act.CastSpell.KickerPaid = true
-					actions = append(actions, act)
+	for _, face := range legalCastFacesForZone(card.Def, game.ZoneCommand) {
+		spellDef := cardFaceOrDefault(card, face)
+		for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
+			for _, modes := range modeChoicesForSpell(spellDef) {
+				for _, targets := range targetChoicesForSpell(g, playerID, spellDef, modes) {
+					if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, game.ZoneCommand, face, targets, xValue, modes, false) {
+						actions = append(actions, action.CastSpellFaceFromZone(card.ID, game.ZoneCommand, face, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...)))
+					}
+					if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, game.ZoneCommand, face, targets, xValue, modes, true) {
+						act := action.CastSpellFaceFromZone(card.ID, game.ZoneCommand, face, append([]game.Target(nil), targets...), xValue, append([]int(nil), modes...))
+						act.CastSpell.KickerPaid = true
+						actions = append(actions, act)
+					}
 				}
 			}
 		}
@@ -135,7 +155,7 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 	case action.ActionPass:
 		return true
 	case action.ActionPlayLand:
-		return e.applyPlayLand(g, playerID, act.PlayLand.CardID)
+		return e.applyPlayLandFace(g, playerID, act.PlayLand.CardID, act.PlayLand.Face)
 	case action.ActionCastSpell:
 		return e.applyCastSpellWithChoices(g, playerID, act.CastSpell, agents, log)
 	case action.ActionActivateAbility:
@@ -219,8 +239,9 @@ func (e *Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []act
 		if !ok {
 			continue
 		}
-		for i := range card.Def.Abilities {
-			ability := &card.Def.Abilities[i]
+		frontDef := cardFaceOrDefault(card, game.FaceFront)
+		for i := range frontDef.Abilities {
+			ability := &frontDef.Abilities[i]
 			if canActivateCyclingAbility(g, playerID, cardID, ability, i, nil, 0) {
 				actions = append(actions, action.ActivateAbility(cardID, i, nil, 0))
 			}
@@ -230,12 +251,16 @@ func (e *Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []act
 }
 
 func (e *Engine) applyPlayLand(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	return e.applyPlayLandFace(g, playerID, cardID, game.FaceFront)
+}
+
+func (e *Engine) applyPlayLandFace(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex) bool {
 	if !canPlayAnyLand(g, playerID) {
 		return false
 	}
 
 	player := g.Players[playerID]
-	card, ok := landCardInstance(g, player, cardID)
+	card, ok := landCardInstanceFace(g, player, cardID, face)
 	if !ok {
 		return false
 	}
@@ -243,7 +268,7 @@ func (e *Engine) applyPlayLand(g *game.Game, playerID game.PlayerID, cardID id.I
 		return false
 	}
 
-	if _, ok := createCardPermanent(g, card, playerID, game.ZoneHand); !ok {
+	if _, ok := createCardPermanentFace(g, card, playerID, game.ZoneHand, face); !ok {
 		return false
 	}
 	g.Turn.LandsPlayedThisTurn++
@@ -256,7 +281,7 @@ func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast actio
 
 func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	sourceZone := normalizedCastSourceZone(cast)
-	if !e.canCastSpellFromZoneWithKicker(g, playerID, cast.CardID, sourceZone, cast.Targets, cast.XValue, cast.ChosenModes, cast.KickerPaid) {
+	if !e.canCastSpellFaceFromZoneWithKicker(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, cast.KickerPaid) {
 		return false
 	}
 
@@ -265,8 +290,9 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	if !ok {
 		return false
 	}
-	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, card.Def, cast.XValue, agents, log)
-	additionalCostsPaid, ok := paySpellCostsWithKickerFromZoneAndPreferences(g, playerID, card.ID, sourceZone, card.Def, cast.XValue, cast.KickerPaid, prefs)
+	spellDef := cardFaceOrDefault(card, cast.Face)
+	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, cast.XValue, agents, log)
+	additionalCostsPaid, ok := paySpellCostsWithKickerFromZoneAndPreferences(g, playerID, card.ID, sourceZone, spellDef, cast.XValue, cast.KickerPaid, prefs)
 	if !ok {
 		return false
 	}
@@ -280,12 +306,13 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ID:                  g.IDGen.Next(),
 		Kind:                game.StackSpell,
 		SourceID:            cast.CardID,
+		Face:                cast.Face,
 		Controller:          playerID,
 		Targets:             append([]game.Target(nil), cast.Targets...),
 		ChosenModes:         append([]int(nil), cast.ChosenModes...),
 		XValue:              cast.XValue,
 		KickerPaid:          cast.KickerPaid,
-		Flashback:           sourceZone == game.ZoneGraveyard && card.Def.HasKeyword(game.Flashback),
+		Flashback:           sourceZone == game.ZoneGraveyard && spellDef.HasKeyword(game.Flashback),
 		AdditionalCostsPaid: additionalCostsPaid,
 	}
 	g.Stack.Push(obj)
@@ -295,7 +322,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,
 		CardID:        cast.CardID,
-		CardTypes:     append([]game.CardType(nil), card.Def.Types...),
+		Face:          cast.Face,
+		CardTypes:     cardTypes(spellDef),
 		FromZone:      sourceZone,
 		ToZone:        game.ZoneStack,
 	}
@@ -329,6 +357,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			ID:             g.IDGen.Next(),
 			Kind:           game.StackActivatedAbility,
 			SourceID:       permanent.ObjectID,
+			Face:           permanent.Face,
 			SourceCardID:   permanent.CardInstanceID,
 			SourceTokenDef: permanent.TokenDef,
 			AbilityIndex:   activate.AbilityIndex,
@@ -359,6 +388,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		ID:             g.IDGen.Next(),
 		Kind:           game.StackActivatedAbility,
 		SourceID:       permanent.ObjectID,
+		Face:           permanent.Face,
 		SourceCardID:   sourceCardID,
 		SourceTokenDef: sourceTokenDef,
 		AbilityIndex:   activate.AbilityIndex,
@@ -445,10 +475,14 @@ func (e *Engine) canCastSpell(g *game.Game, playerID game.PlayerID, cardID id.ID
 }
 
 func (e *Engine) canCastSpellWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFromZoneWithKicker(g, playerID, cardID, game.ZoneHand, targets, xValue, chosenModes, kickerPaid)
+	return e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, game.ZoneHand, game.FaceFront, targets, xValue, chosenModes, kickerPaid)
 }
 
 func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
+	return e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, game.FaceFront, targets, xValue, chosenModes, kickerPaid)
+}
+
+func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -458,6 +492,13 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 	player := g.Players[playerID]
 	card, ok := g.GetCardInstance(cardID)
 	if !ok || !castSourceContains(player, cardID, sourceZone) {
+		return false
+	}
+	spellDef, ok := cardFaceDef(card, face)
+	if !ok || !card.Def.CanChooseCastFace(face) {
+		return false
+	}
+	if sourceZone != game.ZoneHand && sourceZone != game.ZoneCommand && face != game.FaceFront {
 		return false
 	}
 	switch sourceZone {
@@ -473,22 +514,32 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 	default:
 		return false
 	}
-	if xValue != 0 && !costHasVariableMana(manaCostPtr(card.Def.ManaCost)) {
+	if xValue != 0 && !costHasVariableMana(manaCostPtr(spellDef.ManaCost)) {
 		return false
 	}
-	if !modesValidForSpell(card.Def, chosenModes) || !isSupportedSpell(card.Def) || !targetsValidForSpell(g, playerID, card.Def, chosenModes, targets) {
+	if !modesValidForSpell(spellDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, spellDef, chosenModes, targets) {
 		return false
 	}
-	if !canCastAtCurrentTiming(g, playerID, card.Def) {
+	if !canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
-	if kickerPaid && !spellHasKicker(card.Def) {
+	if kickerPaid && !spellHasKicker(spellDef) {
 		return false
 	}
-	if !canPaySpellCostsWithKickerFromZone(g, playerID, card.ID, sourceZone, card.Def, xValue, kickerPaid) {
+	if !canPaySpellCostsWithKickerFromZone(g, playerID, card.ID, sourceZone, spellDef, xValue, kickerPaid) {
 		return false
 	}
 	return true
+}
+
+func legalCastFacesForZone(card *game.CardDef, sourceZone game.ZoneType) []game.FaceIndex {
+	if sourceZone != game.ZoneHand && sourceZone != game.ZoneCommand {
+		if card.CanChooseCastFace(game.FaceFront) {
+			return []game.FaceIndex{game.FaceFront}
+		}
+		return nil
+	}
+	return card.LegalCastFaces()
 }
 
 func castSourceContains(player *game.Player, cardID id.ID, sourceZone game.ZoneType) bool {
@@ -597,10 +648,14 @@ func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, 
 		return nil, nil, false
 	}
 	card, ok := g.GetCardInstance(sourceID)
-	if !ok || abilityIndex >= len(card.Def.Abilities) {
+	if !ok {
 		return nil, nil, false
 	}
-	return card, &card.Def.Abilities[abilityIndex], true
+	frontDef := cardFaceOrDefault(card, game.FaceFront)
+	if abilityIndex >= len(frontDef.Abilities) {
+		return nil, nil, false
+	}
+	return card, &frontDef.Abilities[abilityIndex], true
 }
 
 func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -662,7 +717,7 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 		return false
 	}
 	_, gotAbility, ok := cyclingAbilitySource(g, playerID, cardID, abilityIndex)
-	if !ok || gotAbility != ability {
+	if !ok || !abilityHasKeyword(gotAbility, game.Cycling) {
 		return false
 	}
 	return canPayCost(g, playerID, manaCostPtr(ability.ManaCost))
@@ -816,11 +871,15 @@ func isSorcerySpeed(g *game.Game, playerID game.PlayerID) bool {
 }
 
 func landCardInstance(g *game.Game, player *game.Player, cardID id.ID) (*game.CardInstance, bool) {
+	return landCardInstanceFace(g, player, cardID, game.FaceFront)
+}
+
+func landCardInstanceFace(g *game.Game, player *game.Player, cardID id.ID, face game.FaceIndex) (*game.CardInstance, bool) {
 	if !player.Hand.Contains(cardID) {
 		return nil, false
 	}
 	card, ok := g.GetCardInstance(cardID)
-	if !ok || !card.Def.HasType(game.TypeLand) {
+	if !ok || !card.Def.CanChooseLandFace(face) {
 		return nil, false
 	}
 	return card, true
@@ -832,7 +891,7 @@ func entersSummoningSick(card *game.CardDef) bool {
 
 func isSupportedSpell(card *game.CardDef) bool {
 	return !card.HasType(game.TypeLand) &&
-		(card.HasType(game.TypeCreature) ||
+		(card.IsPermanent() ||
 			card.HasType(game.TypeInstant) ||
 			card.HasType(game.TypeSorcery))
 }

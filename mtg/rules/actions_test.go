@@ -19,8 +19,7 @@ func TestLegalActionsIncludesPlayableLandBeforePass(t *testing.T) {
 		Types: []game.CardType{game.TypeLand},
 	})
 	addCardToHand(g, game.Player1, &game.CardDef{
-		Name:  "Sol Ring",
-		Types: []game.CardType{game.TypeArtifact},
+		Name: "Unsupported Card",
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -1383,8 +1382,8 @@ func TestTransformPhaseOutAndEmblemEffects(t *testing.T) {
 	emblemAbility := game.AbilityDef{Kind: game.StaticAbility, Text: "Test emblem ability"}
 	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectCreateEmblem, EmblemAbilities: []game.AbilityDef{emblemAbility}}, nil)
 
-	if !permanent.Transformed || !permanent.PhasedOut {
-		t.Fatalf("permanent transformed/phased = %v/%v, want true/true", permanent.Transformed, permanent.PhasedOut)
+	if permanent.Transformed || !permanent.PhasedOut {
+		t.Fatalf("permanent transformed/phased = %v/%v, want false/true", permanent.Transformed, permanent.PhasedOut)
 	}
 	if len(g.Combat.Attackers) != 0 {
 		t.Fatalf("attackers after phase out = %+v, want removed from combat", g.Combat.Attackers)

@@ -633,7 +633,7 @@ func chooseDiscardCards(g *game.Game, playerID game.PlayerID, cost game.Addition
 			continue
 		}
 		card, ok := g.GetCardInstance(cardID)
-		if !ok || !additionalCostMatchesCard(card.Def, cost) {
+		if !ok || !additionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), cost) {
 			continue
 		}
 		chosen = append(chosen, cardID)
@@ -660,7 +660,7 @@ func preferredDiscardCards(g *game.Game, playerID game.PlayerID, cost game.Addit
 	var consumed int
 	for _, cardID := range prefs.discardChoices {
 		card, ok := g.GetCardInstance(cardID)
-		if !ok || !player.Hand.Contains(cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(card.Def, cost) {
+		if !ok || !player.Hand.Contains(cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), cost) {
 			return nil
 		}
 		chosen = append(chosen, cardID)
@@ -1178,12 +1178,12 @@ func permanentManaOutput(g *game.Game, permanent *game.Permanent) (manaOutput, b
 }
 
 func basicLandManaColor(g *game.Game, permanent *game.Permanent) (mana.Color, bool) {
-	card, ok := g.GetCardInstance(permanent.CardInstanceID)
-	if !ok || !card.Def.HasType(game.TypeLand) {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok || !card.HasType(game.TypeLand) {
 		return 0, false
 	}
 	for _, landType := range basicLandTypes {
-		if card.Def.HasSubtype(landType.subtype) || strings.EqualFold(card.Def.Name, landType.subtype) {
+		if card.HasSubtype(landType.subtype) || strings.EqualFold(card.Name, landType.subtype) {
 			return landType.color, true
 		}
 	}

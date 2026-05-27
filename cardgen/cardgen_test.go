@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"go/format"
 	"strings"
 	"testing"
 )
@@ -189,6 +190,7 @@ func TestGenerateCardSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCardSource error: %v", err)
 	}
+	assertGoSourceFormats(t, got)
 
 	checks := []string{
 		"package l",
@@ -228,6 +230,7 @@ func TestGenerateCardSourceCreature(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCardSource error: %v", err)
 	}
+	assertGoSourceFormats(t, got)
 
 	checks := []string{
 		"package s",
@@ -245,6 +248,85 @@ func TestGenerateCardSourceCreature(t *testing.T) {
 	}
 }
 
+func TestGenerateCardSourceModalDFC(t *testing.T) {
+	card := &ScryfallCard{
+		Name:          "Front Spell // Back Land",
+		Layout:        "modal_dfc",
+		ColorIdentity: []string{"G"},
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:       "Front Spell",
+				ManaCost:   "{2}{G}",
+				TypeLine:   "Sorcery",
+				OracleText: "Create a token.",
+				Colors:     []string{"G"},
+			},
+			{
+				Name:       "Back Land",
+				TypeLine:   "Land — Forest",
+				OracleText: "Back Land enters tapped.",
+			},
+		},
+	}
+
+	got, err := GenerateCardSource(card, "f")
+	if err != nil {
+		t.Fatalf("GenerateCardSource error: %v", err)
+	}
+	assertGoSourceFormats(t, got)
+
+	checks := []string{
+		"Layout: game.LayoutModalDFC",
+		"Faces: []game.CardFace",
+		`Name: "Front Spell"`,
+		`Name: "Back Land"`,
+		"ManaValue: 3",
+		"game.TypeSorcery",
+		"game.TypeLand",
+		`"Forest"`,
+		"mana.NewColorIdentity(mana.Green)",
+		"EntersTapped: true",
+	}
+	for _, check := range checks {
+		if !strings.Contains(got, check) {
+			t.Errorf("output missing %q\nfull output:\n%s", check, got)
+		}
+	}
+}
+
+func TestGenerateCardSourceReversibleEmitsSeparateDefs(t *testing.T) {
+	card := &ScryfallCard{
+		Name:          "Side A // Side B",
+		Layout:        "reversible_card",
+		ColorIdentity: []string{"R", "W"},
+		CardFaces: []ScryfallCardFace{
+			{Name: "Side A", ManaCost: "{R}", TypeLine: "Creature — Goblin", OracleText: "Haste", Colors: []string{"R"}},
+			{Name: "Side B", ManaCost: "{W}", TypeLine: "Creature — Soldier", OracleText: "Vigilance", Colors: []string{"W"}},
+		},
+	}
+
+	got, err := GenerateCardSource(card, "s")
+	if err != nil {
+		t.Fatalf("GenerateCardSource error: %v", err)
+	}
+	assertGoSourceFormats(t, got)
+
+	checks := []string{
+		"var SideA = &game.CardDef",
+		"var SideB = &game.CardDef",
+		"Layout: game.LayoutReversibleCard",
+		"mana.NewColorIdentity(mana.Red, mana.White)",
+	}
+	for _, check := range checks {
+		if !strings.Contains(got, check) {
+			t.Errorf("output missing %q\nfull output:\n%s", check, got)
+		}
+	}
+	if strings.Contains(got, "Faces: []game.CardFace") {
+		t.Fatalf("reversible card generated face-selectable definition:\n%s", got)
+	}
+}
+
 func sliceEqual(a, b []string) bool {
 	if len(a) == 0 && len(b) == 0 {
 		return true
@@ -258,4 +340,11 @@ func sliceEqual(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func assertGoSourceFormats(t *testing.T, source string) {
+	t.Helper()
+	if _, err := format.Source([]byte(source)); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, source)
+	}
 }

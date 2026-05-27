@@ -67,7 +67,9 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	permanent, permanentOK := permanentByObjectID(g, obj.SourceID)
 	def, defOK := stackObjectSourceDef(g, obj)
 	if !defOK && permanentOK {
-		def, defOK = permanentCardDef(g, permanent)
+		if physicalDef, ok := physicalPermanentDef(g, permanent); ok {
+			def, defOK = physicalDef.FaceDef(obj.Face)
+		}
 	}
 	if !defOK || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(def.Abilities) {
 		return "missing source"
@@ -145,9 +147,12 @@ func stackObjectSourceDef(g *game.Game, obj *game.StackObject) (*game.CardDef, b
 		if !ok {
 			return nil, false
 		}
-		return card.Def, true
+		return card.Def.FaceDef(obj.Face)
 	}
-	return obj.SourceTokenDef, obj.SourceTokenDef != nil
+	if obj.SourceTokenDef == nil {
+		return nil, false
+	}
+	return obj.SourceTokenDef.FaceDef(obj.Face)
 }
 
 func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog) string {
@@ -159,14 +164,18 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 	if !ok {
 		return "missing source"
 	}
-	if card.Def.IsPermanent() {
-		if !spellHasAnyLegalTargets(g, card.Def, obj.Controller, obj.ChosenModes, obj.Targets) {
+	spellDef, ok := cardFaceDef(card, obj.Face)
+	if !ok {
+		return "missing source"
+	}
+	if spellDef.IsPermanent() {
+		if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
 			if !moveStackCardToGraveyard(g, obj, card) {
 				return "invalid owner"
 			}
 			return "countered by rules"
 		}
-		permanent, ok := createCardPermanent(g, card, obj.Controller, game.ZoneStack)
+		permanent, ok := createCardPermanentFace(g, card, obj.Controller, game.ZoneStack, obj.Face)
 		if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
 			target, targetOK := effectPermanent(g, obj, game.Effect{TargetIndex: 0})
 			if !targetOK || !attachPermanent(g, permanent, target) {
@@ -176,8 +185,8 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 		}
 		return "battlefield"
 	}
-	if card.Def.HasType(game.TypeInstant) || card.Def.HasType(game.TypeSorcery) {
-		if !spellHasAnyLegalTargets(g, card.Def, obj.Controller, obj.ChosenModes, obj.Targets) {
+	if spellDef.HasType(game.TypeInstant) || spellDef.HasType(game.TypeSorcery) {
+		if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
 			if !moveStackCardToGraveyard(g, obj, card) {
 				return "invalid owner"
 			}
@@ -209,6 +218,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		Controller:    stackObjectController(obj),
 		Player:        card.Owner,
 		CardID:        card.ID,
+		Face:          stackObjectFace(obj),
 		FromZone:      game.ZoneStack,
 		ToZone:        intendedDestination,
 	})
@@ -224,6 +234,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		Controller:    stackObjectController(obj),
 		Player:        card.Owner,
 		CardID:        card.ID,
+		Face:          stackObjectFace(obj),
 		FromZone:      game.ZoneStack,
 		ToZone:        destination,
 	}

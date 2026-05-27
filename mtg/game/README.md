@@ -78,10 +78,10 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 
 | Type | File | Purpose |
 |------|------|---------|
-| `CardDef` | `card.go` | Immutable card template — name, mana cost, types, supertypes/subtypes, abilities, P/T, loyalty, battle defense, and optional hand-written implementation ID. Shared across games. |
+| `CardDef` | `card.go` | Immutable card template — name, mana cost, types, supertypes/subtypes, abilities, P/T, loyalty, battle defense, optional hand-written implementation ID, and optional `CardFace` data for double-faced layouts. Shared across games. |
 | `CardInstance` | `card.go` | A specific card in a specific game. Has a unique `id.ID` and an `Owner`. |
-| `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down, etc. |
-| `StackObject` | `stack.go` | A spell or ability on the stack — source ability index, targets, chosen modes, X value, additional costs. |
+| `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down, current printed face, etc. |
+| `StackObject` | `stack.go` | A spell or ability on the stack — selected/source face, source ability index, targets, chosen modes, X value, additional costs. |
 | `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
 | `ChoiceRequest` | `choice.go` | A bounded non-action decision such as trigger target choice, trigger ordering, or optional-effect yes/no. |
 
@@ -206,4 +206,8 @@ This package is the **data model** used by the rules engine. Future layers will 
 
 - **Card database** — loading real card data (e.g., from Scryfall) into `CardDef` structs
 - **AI agent** — decision-making for automated play (see the reference docs in `Agent Instructions & Rules/`)
-- **Richer rules support** — remaining keyword actions beyond Flash/basic Equip/Cycling/Kicker, choice-based discard/search/modal decisions, exact DFC/card-form handling, and agent-selected replacement/prevention ordering
+- **Richer rules support** — remaining keyword actions beyond Flash/basic Equip/Cycling/Kicker, choice-based discard/search/modal decisions, full day/night and meld behavior, and agent-selected replacement/prevention ordering
+
+### Double-faced cards
+
+`CardDef.Layout` and `CardDef.Faces` model transform, modal DFC, and double-faced token layouts. Cards in zones other than the stack and battlefield use their front-face/default characteristics. Cast actions, stack objects, permanents, events, and LKI snapshots carry `FaceIndex` so modal DFC faces and transformed permanents use the correct face-specific costs, types, abilities, P/T, and ETB data while they are on the stack or battlefield.

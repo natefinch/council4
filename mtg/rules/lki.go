@@ -22,6 +22,7 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zone game.ZoneTy
 		CardID:         permanent.CardInstanceID,
 		TokenName:      permanentTokenName(permanent),
 		TokenDef:       permanent.TokenDef,
+		Face:           permanent.Face,
 		Name:           values.name,
 		Owner:          permanent.Owner,
 		Controller:     values.controller,

@@ -48,6 +48,10 @@ type Permanent struct {
 	// no type, no abilities, and no mana cost (CR 708.2).
 	FaceDown bool
 
+	// Face is the printed face currently visible for face-up double-faced
+	// permanents. Single-faced cards use FaceFront.
+	Face FaceIndex
+
 	// Flipped is true for flip cards that have been flipped (CR 710).
 	Flipped bool
 

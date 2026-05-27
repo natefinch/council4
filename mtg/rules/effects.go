@@ -16,7 +16,8 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	if e.resolveCardImplementationSpell(g, obj, card, log) {
 		return
 	}
-	ability, ok := firstSpellAbility(card.Def)
+	spellDef := cardFaceOrDefault(card, obj.Face)
+	ability, ok := firstSpellAbility(spellDef)
 	if !ok {
 		return
 	}
@@ -260,9 +261,7 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		}
 	case game.EffectTransform:
 		if permanent, ok := effectPermanent(g, obj, effect); ok {
-			// TODO: apply back-face copiable values when double-faced card data exists.
-			permanent.Transformed = !permanent.Transformed
-			succeeded = true
+			succeeded = transformPermanent(g, permanent)
 		}
 	case game.EffectPhaseOut:
 		if permanent, ok := effectPermanent(g, obj, effect); ok {

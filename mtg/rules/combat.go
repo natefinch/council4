@@ -1200,14 +1200,7 @@ func aliveOpponents(g *game.Game, playerID game.PlayerID) []game.PlayerID {
 }
 
 func permanentCardDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, bool) {
-	if permanent.Token {
-		return permanent.TokenDef, permanent.TokenDef != nil
-	}
-	card, ok := g.GetCardInstance(permanent.CardInstanceID)
-	if !ok {
-		return nil, false
-	}
-	return card.Def, true
+	return permanentFaceDef(g, permanent)
 }
 
 func permanentByObjectID(g *game.Game, objectID id.ID) (*game.Permanent, bool) {

@@ -13,6 +13,7 @@ type ObjectSnapshot struct {
 	CardID         id.ID
 	TokenName      string
 	TokenDef       *CardDef
+	Face           FaceIndex
 	Name           string
 	Owner          PlayerID
 	Controller     PlayerID

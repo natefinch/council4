@@ -258,10 +258,11 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []game.ZoneTyp
 }
 
 func cardHasFlashbackAlternative(card *game.CardInstance) bool {
-	if !card.Def.HasKeyword(game.Flashback) {
+	frontDef := cardFaceOrDefault(card, game.FaceFront)
+	if !frontDef.HasKeyword(game.Flashback) {
 		return false
 	}
-	for _, option := range spellCostOptionsForZoneAndKicker(card.Def, game.ZoneGraveyard, false) {
+	for _, option := range spellCostOptionsForZoneAndKicker(frontDef, game.ZoneGraveyard, false) {
 		if option.index > 0 {
 			return true
 		}

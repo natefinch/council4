@@ -33,12 +33,14 @@ type Action struct {
 // PlayLandAction is the payload for playing a land from hand.
 type PlayLandAction struct {
 	CardID id.ID
+	Face   game.FaceIndex
 }
 
 // CastSpellAction is the payload for casting a spell.
 type CastSpellAction struct {
 	CardID      id.ID
 	SourceZone  game.ZoneType
+	Face        game.FaceIndex
 	Targets     []game.Target
 	XValue      int
 	ChosenModes []int
@@ -70,10 +72,16 @@ func Pass() Action {
 
 // PlayLand creates an action to play a land from hand.
 func PlayLand(cardID id.ID) Action {
+	return PlayLandFace(cardID, game.FaceFront)
+}
+
+// PlayLandFace creates an action to play a specific land face from hand.
+func PlayLandFace(cardID id.ID, face game.FaceIndex) Action {
 	return Action{
 		Kind: ActionPlayLand,
 		PlayLand: PlayLandAction{
 			CardID: cardID,
+			Face:   face,
 		},
 	}
 }
@@ -85,11 +93,23 @@ func CastSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []in
 
 // CastSpellFromZone creates an action to cast a spell from a specific zone.
 func CastSpellFromZone(cardID id.ID, sourceZone game.ZoneType, targets []game.Target, xValue int, chosenModes []int) Action {
+	return CastSpellFaceFromZone(cardID, sourceZone, game.FaceFront, targets, xValue, chosenModes)
+}
+
+// CastSpellFace creates an action to cast a specific printed face from hand.
+func CastSpellFace(cardID id.ID, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
+	return CastSpellFaceFromZone(cardID, game.ZoneHand, face, targets, xValue, chosenModes)
+}
+
+// CastSpellFaceFromZone creates an action to cast a specific printed face from
+// a specific source zone.
+func CastSpellFaceFromZone(cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
 	return Action{
 		Kind: ActionCastSpell,
 		CastSpell: CastSpellAction{
 			CardID:      cardID,
 			SourceZone:  sourceZone,
+			Face:        face,
 			Targets:     targets,
 			XValue:      xValue,
 			ChosenModes: chosenModes,

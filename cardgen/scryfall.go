@@ -13,37 +13,56 @@ import (
 
 // ScryfallCard holds the subset of Scryfall card JSON we care about.
 type ScryfallCard struct {
-	Name          string   `json:"name"`
-	Layout        string   `json:"layout"`
-	ManaCost      string   `json:"mana_cost"`
-	CMC           float64  `json:"cmc"`
-	TypeLine      string   `json:"type_line"`
-	OracleText    string   `json:"oracle_text"`
-	Colors        []string `json:"colors"`
-	ColorIdentity []string `json:"color_identity"`
-	Keywords      []string `json:"keywords"`
-	Power         *string  `json:"power"`
-	Toughness     *string  `json:"toughness"`
-	Loyalty       *string  `json:"loyalty"`
-	Defense       *string  `json:"defense"`
+	Name          string             `json:"name"`
+	Layout        string             `json:"layout"`
+	ManaCost      string             `json:"mana_cost"`
+	CMC           float64            `json:"cmc"`
+	TypeLine      string             `json:"type_line"`
+	OracleText    string             `json:"oracle_text"`
+	Colors        []string           `json:"colors"`
+	ColorIdentity []string           `json:"color_identity"`
+	Keywords      []string           `json:"keywords"`
+	Power         *string            `json:"power"`
+	Toughness     *string            `json:"toughness"`
+	Loyalty       *string            `json:"loyalty"`
+	Defense       *string            `json:"defense"`
+	CardFaces     []ScryfallCardFace `json:"card_faces"`
+}
+
+// ScryfallCardFace holds per-face Scryfall fields for multi-face cards.
+type ScryfallCardFace struct {
+	Name       string   `json:"name"`
+	ManaCost   string   `json:"mana_cost"`
+	TypeLine   string   `json:"type_line"`
+	OracleText string   `json:"oracle_text"`
+	Colors     []string `json:"colors"`
+	Power      *string  `json:"power"`
+	Toughness  *string  `json:"toughness"`
+	Loyalty    *string  `json:"loyalty"`
+	Defense    *string  `json:"defense"`
 }
 
 // supportedLayouts are Scryfall card layouts that the generator can handle.
 var supportedLayouts = map[string]bool{
-	"normal":     true,
-	"token":      true,
-	"leveler":    true,
-	"saga":       true,
-	"class":      true,
-	"case":       true,
-	"prototype":  true,
-	"host":       true,
-	"augment":    true,
-	"emblem":     true,
-	"mutate":     true,
-	"planar":     true,
-	"scheme":     true,
-	"vanguard":   true,
+	"normal":             true,
+	"token":              true,
+	"leveler":            true,
+	"saga":               true,
+	"class":              true,
+	"case":               true,
+	"prototype":          true,
+	"host":               true,
+	"augment":            true,
+	"emblem":             true,
+	"mutate":             true,
+	"planar":             true,
+	"scheme":             true,
+	"vanguard":           true,
+	"transform":          true,
+	"modal_dfc":          true,
+	"meld":               true,
+	"double_faced_token": true,
+	"reversible_card":    true,
 }
 
 var scryfallClient = &http.Client{Timeout: 15 * time.Second}
@@ -75,7 +94,7 @@ func FetchCard(name string) (*ScryfallCard, error) {
 	}
 
 	if !supportedLayouts[card.Layout] {
-		return nil, fmt.Errorf("unsupported card layout %q for %q — multi-face and split cards are not yet supported", card.Layout, card.Name)
+		return nil, fmt.Errorf("unsupported card layout %q for %q", card.Layout, card.Name)
 	}
 
 	return &card, nil

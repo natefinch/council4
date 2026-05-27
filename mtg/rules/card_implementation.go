@@ -97,12 +97,13 @@ func (c *CardContext) DealPermanentDamageFromStack(obj *game.StackObject, perman
 }
 
 func (e *Engine) resolveCardImplementationSpell(g *game.Game, obj *game.StackObject, card *game.CardInstance, log *TurnLog) bool {
-	if card.Def.ImplementationID == "" {
+	spellDef := cardFaceOrDefault(card, obj.Face)
+	if spellDef.ImplementationID == "" {
 		return false
 	}
-	impl, ok := e.cardImplementations[card.Def.ImplementationID]
+	impl, ok := e.cardImplementations[spellDef.ImplementationID]
 	if !ok {
-		panic(fmt.Sprintf("rules: card implementation %q is not registered", card.Def.ImplementationID))
+		panic(fmt.Sprintf("rules: card implementation %q is not registered", spellDef.ImplementationID))
 	}
 	impl.ResolveSpell(&CardContext{engine: e, g: g, log: log}, obj, card)
 	return true

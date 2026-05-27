@@ -13,6 +13,7 @@ type pendingTriggeredAbility struct {
 	sourceID     id.ID
 	sourceCardID id.ID
 	sourceToken  *game.CardDef
+	face         game.FaceIndex
 	abilityIndex int
 	targets      []game.Target
 	event        game.GameEvent
@@ -41,6 +42,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			ID:              g.IDGen.Next(),
 			Kind:            game.StackTriggeredAbility,
 			SourceID:        trigger.sourceID,
+			Face:            trigger.face,
 			SourceCardID:    trigger.sourceCardID,
 			SourceTokenDef:  trigger.sourceToken,
 			AbilityIndex:    trigger.abilityIndex,
@@ -90,6 +92,7 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 			sourceID:     permanent.ObjectID,
 			sourceCardID: permanent.CardInstanceID,
 			sourceToken:  permanent.TokenDef,
+			face:         permanent.Face,
 			abilityIndex: i,
 			event:        event,
 			hasEvent:     true,
@@ -101,6 +104,7 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 			sourceID:     permanent.ObjectID,
 			sourceCardID: permanent.CardInstanceID,
 			sourceToken:  permanent.TokenDef,
+			face:         permanent.Face,
 			inline:       prowess,
 			event:        event,
 			hasEvent:     true,
@@ -169,6 +173,7 @@ func (e *Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredA
 				sourceID:     permanent.ObjectID,
 				sourceCardID: permanent.CardInstanceID,
 				sourceToken:  permanent.TokenDef,
+				face:         permanent.Face,
 				abilityIndex: i,
 			})
 		}
@@ -210,6 +215,7 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.GameEvent) (*game.Per
 			CardInstanceID: event.CardID,
 			Owner:          event.Player,
 			Controller:     event.Controller,
+			Face:           event.Face,
 		}, true
 	}
 	if event.TokenDef == nil {
@@ -219,6 +225,7 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.GameEvent) (*game.Per
 		ObjectID:   event.PermanentID,
 		Owner:      event.Player,
 		Controller: event.Controller,
+		Face:       event.Face,
 		Token:      true,
 		TokenDef:   event.TokenDef,
 	}, true
@@ -346,7 +353,7 @@ func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType game.Car
 	}
 	if event.CardID != 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
-			return card.Def.HasType(cardType)
+			return cardFaceOrDefault(card, game.FaceFront).HasType(cardType)
 		}
 	}
 	if event.TokenDef != nil {
@@ -373,7 +380,7 @@ func eventCardTypeFiltersMatch(g *game.Game, event game.GameEvent, required []ga
 	types := event.CardTypes
 	if len(types) == 0 && event.CardID != 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
-			types = card.Def.Types
+			types = cardFaceOrDefault(card, game.FaceFront).Types
 		}
 	}
 	for _, cardType := range required {
@@ -453,11 +460,14 @@ func pendingTriggerAbility(g *game.Game, trigger pendingTriggeredAbility) (*game
 func pendingTriggerSourceDef(g *game.Game, trigger pendingTriggeredAbility) (*game.CardDef, bool) {
 	if trigger.sourceCardID != 0 {
 		if card, ok := g.GetCardInstance(trigger.sourceCardID); ok {
-			return card.Def, true
+			return card.Def.FaceDef(trigger.face)
 		}
 		return nil, false
 	}
-	return trigger.sourceToken, trigger.sourceToken != nil
+	if trigger.sourceToken == nil {
+		return nil, false
+	}
+	return trigger.sourceToken.FaceDef(trigger.face)
 }
 
 func pendingTriggerAbilityFromDef(def *game.CardDef, trigger pendingTriggeredAbility) (*game.AbilityDef, bool) {

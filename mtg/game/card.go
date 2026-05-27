@@ -6,6 +6,28 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// CardLayout identifies a card layout that affects how printed card faces are
+// represented.
+type CardLayout string
+
+const (
+	LayoutNormal           CardLayout = ""
+	LayoutTransform        CardLayout = "transform"
+	LayoutModalDFC         CardLayout = "modal_dfc"
+	LayoutMeld             CardLayout = "meld"
+	LayoutDoubleFacedToken CardLayout = "double_faced_token"
+	LayoutReversibleCard   CardLayout = "reversible_card"
+)
+
+// FaceIndex identifies one printed face of a card. The zero value is the front
+// face so existing single-face cards and actions keep their historical meaning.
+type FaceIndex int
+
+const (
+	FaceFront FaceIndex = iota
+	FaceBack
+)
+
 // Supertype represents a card's supertype (CR 205.4).
 type Supertype int
 
@@ -106,6 +128,10 @@ type CardDef struct {
 	// Name is the card's name (CR 201).
 	Name string
 
+	// Layout records the card layout when it changes face behavior.
+	// Empty means a normal single-faced card.
+	Layout CardLayout
+
 	// ManaCost is the mana cost printed in the upper right (CR 202).
 	// Absent for lands and some special cards.
 	ManaCost opt.V[mana.Cost]
@@ -161,6 +187,34 @@ type CardDef struct {
 
 	// OracleText is the full oracle (rules) text of the card.
 	OracleText string
+
+	// Faces holds printed per-face characteristics for double-faced layouts.
+	// In non-stack and non-battlefield zones, cards use front-face/root
+	// characteristics. Stack objects and permanents carry the selected face.
+	Faces []CardFace
+}
+
+// CardFace is one printed face of a card. It mirrors the printed
+// characteristics from CardDef that can differ between faces.
+type CardFace struct {
+	Name               string
+	ManaCost           opt.V[mana.Cost]
+	ManaValue          int
+	Colors             []mana.Color
+	Supertypes         []Supertype
+	Types              []CardType
+	Subtypes           []string
+	Power              opt.V[PT]
+	Toughness          opt.V[PT]
+	DynamicPower       opt.V[DynamicValue]
+	DynamicToughness   opt.V[DynamicValue]
+	Loyalty            opt.V[int]
+	Defense            opt.V[int]
+	EntersTapped       bool
+	EntersWithCounters []CounterPlacement
+	Abilities          []AbilityDef
+	ImplementationID   string
+	OracleText         string
 }
 
 // IsLegendary reports whether this card has the Legendary supertype.
@@ -170,7 +224,147 @@ func (c *CardDef) IsLegendary() bool {
 
 // HasSupertype reports whether this card has the given supertype.
 func (c *CardDef) HasSupertype(supertype Supertype) bool {
-	for _, st := range c.Supertypes {
+	return c.DefaultFace().HasSupertype(supertype)
+}
+
+// HasType reports whether this card has the given card type.
+func (c *CardDef) HasType(t CardType) bool {
+	return c.DefaultFace().HasType(t)
+}
+
+// HasSubtype reports whether this card has the given subtype.
+func (c *CardDef) HasSubtype(sub string) bool {
+	return c.DefaultFace().HasSubtype(sub)
+}
+
+// HasKeyword reports whether any of this card's abilities grants the
+// given keyword.
+func (c *CardDef) HasKeyword(kw Keyword) bool {
+	return c.DefaultFace().HasKeyword(kw)
+}
+
+// IsPermanent reports whether this card becomes a permanent when it resolves
+// (i.e., it has at least one permanent card type).
+func (c *CardDef) IsPermanent() bool {
+	return c.DefaultFace().IsPermanent()
+}
+
+// DefaultFace returns the card characteristics used outside the stack and
+// battlefield. For double-faced cards, that is the front face.
+func (c *CardDef) DefaultFace() CardFace {
+	if face, ok := c.Face(FaceFront); ok {
+		return face
+	}
+	return c.rootFace()
+}
+
+// Face returns the requested printed face. For single-faced cards, FaceFront
+// maps to the root card characteristics.
+func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
+	if len(c.Faces) == 0 {
+		if index == FaceFront {
+			return c.rootFace(), true
+		}
+		return CardFace{}, false
+	}
+	if index < 0 || int(index) >= len(c.Faces) {
+		return CardFace{}, false
+	}
+	return c.Faces[index], true
+}
+
+// FaceDef returns a CardDef-shaped copy of one face's characteristics. It is a
+// bridge for rules helpers that still operate on CardDef values.
+func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
+	face, ok := c.Face(index)
+	if !ok {
+		return nil, false
+	}
+	return face.ToCardDef(c), true
+}
+
+// CanChooseCastFace reports whether this face can be chosen while casting the
+// card as a spell. Modal DFCs may choose any non-land face; other layouts cast
+// only their front face.
+func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
+	face, ok := c.Face(index)
+	if !ok || face.HasType(TypeLand) {
+		return false
+	}
+	if c.IsModalDoubleFaced() {
+		return true
+	}
+	return index == FaceFront
+}
+
+// CanChooseLandFace reports whether this face can be played as a land.
+func (c *CardDef) CanChooseLandFace(index FaceIndex) bool {
+	face, ok := c.Face(index)
+	if !ok || !face.HasType(TypeLand) {
+		return false
+	}
+	if len(c.Faces) == 0 {
+		return index == FaceFront
+	}
+	if c.IsModalDoubleFaced() {
+		return true
+	}
+	return index == FaceFront
+}
+
+// LegalCastFaces returns all faces that may be chosen while casting this card.
+func (c *CardDef) LegalCastFaces() []FaceIndex {
+	count := 1
+	if len(c.Faces) > 0 {
+		count = len(c.Faces)
+	}
+	var faces []FaceIndex
+	for i := 0; i < count; i++ {
+		face := FaceIndex(i)
+		if c.CanChooseCastFace(face) {
+			faces = append(faces, face)
+		}
+	}
+	return faces
+}
+
+// IsModalDoubleFaced reports whether this card is a modal double-faced card.
+func (c *CardDef) IsModalDoubleFaced() bool {
+	return c.Layout == LayoutModalDFC
+}
+
+// IsTransformingDoubleFaced reports whether this card can use transform-style
+// face switching. Meld and reversible cards are intentionally excluded.
+func (c *CardDef) IsTransformingDoubleFaced() bool {
+	return c.Layout == LayoutTransform || c.Layout == LayoutDoubleFacedToken
+}
+
+func (c *CardDef) rootFace() CardFace {
+	return CardFace{
+		Name:               c.Name,
+		ManaCost:           c.ManaCost,
+		ManaValue:          c.ManaValue,
+		Colors:             append([]mana.Color(nil), c.Colors...),
+		Supertypes:         append([]Supertype(nil), c.Supertypes...),
+		Types:              append([]CardType(nil), c.Types...),
+		Subtypes:           append([]string(nil), c.Subtypes...),
+		Power:              c.Power,
+		Toughness:          c.Toughness,
+		DynamicPower:       c.DynamicPower,
+		DynamicToughness:   c.DynamicToughness,
+		Loyalty:            c.Loyalty,
+		Defense:            c.Defense,
+		EntersTapped:       c.EntersTapped,
+		EntersWithCounters: append([]CounterPlacement(nil), c.EntersWithCounters...),
+		Abilities:          append([]AbilityDef(nil), c.Abilities...),
+		ImplementationID:   c.ImplementationID,
+		OracleText:         c.OracleText,
+	}
+}
+
+// HasSupertype reports whether this face has the given supertype.
+func (f CardFace) HasSupertype(supertype Supertype) bool {
+	for _, st := range f.Supertypes {
 		if st == supertype {
 			return true
 		}
@@ -178,9 +372,9 @@ func (c *CardDef) HasSupertype(supertype Supertype) bool {
 	return false
 }
 
-// HasType reports whether this card has the given card type.
-func (c *CardDef) HasType(t CardType) bool {
-	for _, ct := range c.Types {
+// HasType reports whether this face has the given card type.
+func (f CardFace) HasType(t CardType) bool {
+	for _, ct := range f.Types {
 		if ct == t {
 			return true
 		}
@@ -188,9 +382,9 @@ func (c *CardDef) HasType(t CardType) bool {
 	return false
 }
 
-// HasSubtype reports whether this card has the given subtype.
-func (c *CardDef) HasSubtype(sub string) bool {
-	for _, s := range c.Subtypes {
+// HasSubtype reports whether this face has the given subtype.
+func (f CardFace) HasSubtype(sub string) bool {
+	for _, s := range f.Subtypes {
 		if s == sub {
 			return true
 		}
@@ -198,10 +392,9 @@ func (c *CardDef) HasSubtype(sub string) bool {
 	return false
 }
 
-// HasKeyword reports whether any of this card's abilities grants the
-// given keyword.
-func (c *CardDef) HasKeyword(kw Keyword) bool {
-	for _, a := range c.Abilities {
+// HasKeyword reports whether any ability on this face grants the given keyword.
+func (f CardFace) HasKeyword(kw Keyword) bool {
+	for _, a := range f.Abilities {
 		for _, k := range a.Keywords {
 			if k == kw {
 				return true
@@ -211,15 +404,40 @@ func (c *CardDef) HasKeyword(kw Keyword) bool {
 	return false
 }
 
-// IsPermanent reports whether this card becomes a permanent when it resolves
-// (i.e., it has at least one permanent card type).
-func (c *CardDef) IsPermanent() bool {
-	for _, t := range c.Types {
+// IsPermanent reports whether this face becomes a permanent when it resolves.
+func (f CardFace) IsPermanent() bool {
+	for _, t := range f.Types {
 		if t.IsPermanentType() {
 			return true
 		}
 	}
 	return false
+}
+
+// ToCardDef converts a face into a CardDef-shaped value for existing rules
+// helpers. ColorIdentity stays on the physical card and is copied from parent.
+func (f CardFace) ToCardDef(parent *CardDef) *CardDef {
+	return &CardDef{
+		Name:               f.Name,
+		ManaCost:           f.ManaCost,
+		ManaValue:          f.ManaValue,
+		Colors:             append([]mana.Color(nil), f.Colors...),
+		ColorIdentity:      parent.ColorIdentity,
+		Supertypes:         append([]Supertype(nil), f.Supertypes...),
+		Types:              append([]CardType(nil), f.Types...),
+		Subtypes:           append([]string(nil), f.Subtypes...),
+		Power:              f.Power,
+		Toughness:          f.Toughness,
+		DynamicPower:       f.DynamicPower,
+		DynamicToughness:   f.DynamicToughness,
+		Loyalty:            f.Loyalty,
+		Defense:            f.Defense,
+		EntersTapped:       f.EntersTapped,
+		EntersWithCounters: append([]CounterPlacement(nil), f.EntersWithCounters...),
+		Abilities:          append([]AbilityDef(nil), f.Abilities...),
+		ImplementationID:   f.ImplementationID,
+		OracleText:         f.OracleText,
+	}
 }
 
 // CardInstance represents a specific card in a game — one of the 100 cards

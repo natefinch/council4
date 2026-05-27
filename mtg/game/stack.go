@@ -30,6 +30,10 @@ type StackObject struct {
 	// abilities.
 	SourceID id.ID
 
+	// Face is the selected spell face or the source face captured when an
+	// ability was put on the stack.
+	Face FaceIndex
+
 	// SourceCardID is the source CardInstance ID for activated/triggered
 	// abilities when it is known. It lets ability resolution preserve source
 	// identity even if the source permanent has left the battlefield.

@@ -7,16 +7,25 @@ import (
 )
 
 func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType) (*game.Permanent, bool) {
+	return createCardPermanentFace(g, card, controller, fromZone, game.FaceFront)
+}
+
+func createCardPermanentFace(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex) (*game.Permanent, bool) {
+	faceDef, ok := cardFaceDef(card, face)
+	if !ok {
+		return nil, false
+	}
 	objectID := g.IDGen.Next()
 	permanent := &game.Permanent{
 		ObjectID:       objectID,
 		CardInstanceID: card.ID,
 		Owner:          card.Owner,
 		Controller:     controller,
-		SummoningSick:  entersSummoningSick(card.Def),
+		Face:           face,
+		SummoningSick:  entersSummoningSick(faceDef),
 		Timestamp:      int64(objectID),
 	}
-	initializePermanentCounters(permanent, card.Def)
+	initializePermanentCounters(permanent, faceDef)
 	applyEnterBattlefieldReplacementEffects(g, permanent, fromZone)
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.GameEvent{
@@ -24,6 +33,7 @@ func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.
 		Controller:  controller,
 		Player:      card.Owner,
 		CardID:      card.ID,
+		Face:        face,
 		PermanentID: objectID,
 		FromZone:    fromZone,
 		ToZone:      game.ZoneBattlefield,
@@ -70,6 +80,7 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,
 		CardID:      permanent.CardInstanceID,
+		Face:        permanent.Face,
 		PermanentID: permanent.ObjectID,
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,
@@ -147,6 +158,7 @@ func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destinati
 		Controller:  permanent.Controller,
 		Player:      permanent.Owner,
 		CardID:      permanent.CardInstanceID,
+		Face:        permanent.Face,
 		PermanentID: permanent.ObjectID,
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,

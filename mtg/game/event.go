@@ -63,6 +63,12 @@ type GameEvent struct {
 	// CardID identifies the card that moved, was drawn, discarded, or became a permanent.
 	CardID id.ID
 
+	// Face records the visible/chosen face at the time this event happened.
+	// If a card moved to a non-stack, non-battlefield zone, that destination
+	// card still uses front-face characteristics even when this records the
+	// face it had while leaving the stack or battlefield.
+	Face FaceIndex
+
 	// CardTypes records the relevant card types at event time for spell-cast
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).
