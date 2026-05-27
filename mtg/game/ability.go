@@ -399,6 +399,20 @@ type AbilityDef struct {
 	// A single ability line can grant multiple keywords.
 	Keywords []Keyword
 
+	// EnchantTarget parameterizes Enchant for Aura attachment legality. When
+	// absent, Aura attachment defaults to "enchant creature".
+	EnchantTarget opt.V[TargetSpec]
+
+	// WardCost parameterizes Ward for mana-valued ward costs.
+	WardCost opt.V[mana.Cost]
+
+	// MadnessCost parameterizes Madness for mana-valued madness costs.
+	MadnessCost opt.V[mana.Cost]
+
+	// SuspendCost and SuspendTimeCounters parameterize Suspend.
+	SuspendCost         opt.V[mana.Cost]
+	SuspendTimeCounters int
+
 	// ProtectionFromColors parameterizes Protection for the initial protection
 	// slice. Empty means this ability does not currently grant rules-relevant
 	// protection, even if Keywords includes Protection.

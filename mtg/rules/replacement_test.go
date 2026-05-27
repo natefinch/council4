@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -131,6 +132,55 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 
 	if engine.canCastSpell(g, game.Player1, spellID, []game.Target{game.PermanentTarget(protected.ObjectID)}, 0, nil) {
 		t.Fatal("red spell could target a permanent with protection from red")
+	}
+}
+
+func TestHexproofPreventsOpponentTargetsButAllowsControllerTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	hexproof := addHexproofPermanent(g, game.Player2)
+	opponentSpell := addCardToHand(g, game.Player1, targetCreatureInstant())
+	controllerSpell := addCardToHand(g, game.Player2, targetCreatureInstant())
+
+	g.Turn.PriorityPlayer = game.Player1
+	if engine.canCastSpell(g, game.Player1, opponentSpell, []game.Target{game.PermanentTarget(hexproof.ObjectID)}, 0, nil) {
+		t.Fatal("opponent spell could target hexproof permanent")
+	}
+
+	g.Turn.PriorityPlayer = game.Player2
+	if !engine.canCastSpell(g, game.Player2, controllerSpell, []game.Target{game.PermanentTarget(hexproof.ObjectID)}, 0, nil) {
+		t.Fatal("controller spell could not target own hexproof permanent")
+	}
+}
+
+func TestLegalActionsOmitOpponentHexproofTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	hexproof := addHexproofPermanent(g, game.Player2)
+	targetable := addCombatCreaturePermanent(g, game.Player3)
+	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
+	g.Turn.PriorityPlayer = game.Player1
+
+	legal := engine.legalActions(g, game.Player1)
+
+	if actionsContain(legal, action.CastSpell(spellID, []game.Target{game.PermanentTarget(hexproof.ObjectID)}, 0, nil)) {
+		t.Fatalf("legal actions include hexproof target: %+v", legal)
+	}
+	if !actionsContain(legal, action.CastSpell(spellID, []game.Target{game.PermanentTarget(targetable.ObjectID)}, 0, nil)) {
+		t.Fatalf("legal actions omit non-hexproof target: %+v", legal)
+	}
+}
+
+func TestHexproofCounterPreventsOpponentTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanent(g, game.Player2)
+	target.Counters.Add(counter.Hexproof, 1)
+	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
+	g.Turn.PriorityPlayer = game.Player1
+
+	if engine.canCastSpell(g, game.Player1, spellID, []game.Target{game.PermanentTarget(target.ObjectID)}, 0, nil) {
+		t.Fatal("opponent spell could target permanent with hexproof counter")
 	}
 }
 
@@ -507,4 +557,29 @@ func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, col
 			},
 		},
 	})
+}
+
+func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	pt := game.PT{Value: 2}
+	return addCombatPermanent(g, controller, &game.CardDef{
+		Name:      "Hexproof Creature",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     optPT(pt),
+		Toughness: optPT(pt),
+		Abilities: []game.AbilityDef{{
+			Kind:     game.StaticAbility,
+			Keywords: []game.Keyword{game.Hexproof},
+		}},
+	})
+}
+
+func targetCreatureInstant() *game.CardDef {
+	return &game.CardDef{
+		Name:  "Target Creature Instant",
+		Types: []game.CardType{game.TypeInstant},
+		Abilities: []game.AbilityDef{{
+			Kind:    game.SpellAbility,
+			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+		}},
+	}
 }

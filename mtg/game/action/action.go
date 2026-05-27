@@ -15,6 +15,7 @@ const (
 	ActionPlayLand
 	ActionCastSpell
 	ActionActivateAbility
+	ActionSuspendCard
 	ActionDeclareAttackers
 	ActionDeclareBlockers
 )
@@ -26,6 +27,7 @@ type Action struct {
 	PlayLand         PlayLandAction
 	CastSpell        CastSpellAction
 	ActivateAbility  ActivateAbilityAction
+	SuspendCard      SuspendCardAction
 	DeclareAttackers DeclareAttackersAction
 	DeclareBlockers  DeclareBlockersAction
 }
@@ -53,6 +55,11 @@ type ActivateAbilityAction struct {
 	AbilityIndex int
 	Targets      []game.Target
 	XValue       int
+}
+
+// SuspendCardAction is the payload for suspending a card from hand.
+type SuspendCardAction struct {
+	CardID id.ID
 }
 
 // DeclareAttackersAction is the payload for declaring attackers.
@@ -139,6 +146,14 @@ func ActivateAbility(sourceID id.ID, abilityIndex int, targets []game.Target, xV
 			Targets:      targets,
 			XValue:       xValue,
 		},
+	}
+}
+
+// SuspendCard creates an action to exile a card from hand with time counters.
+func SuspendCard(cardID id.ID) Action {
+	return Action{
+		Kind:        ActionSuspendCard,
+		SuspendCard: SuspendCardAction{CardID: cardID},
 	}
 }
 

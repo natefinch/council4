@@ -42,10 +42,21 @@ func canAttachPermanent(g *game.Game, attachment *game.Permanent, target *game.P
 	if attachment.ObjectID == target.ObjectID {
 		return false
 	}
-	if isAuraPermanent(g, attachment) || isEquipmentPermanent(g, attachment) {
+	if isAuraPermanent(g, attachment) {
+		return auraCanAttachToPermanent(g, attachment, target)
+	}
+	if isEquipmentPermanent(g, attachment) {
 		return permanentHasType(g, target, game.TypeCreature)
 	}
 	return false
+}
+
+func auraCanAttachToPermanent(g *game.Game, aura *game.Permanent, target *game.Permanent) bool {
+	spec := enchantTargetSpecForPermanent(g, aura)
+	if spec.Allow != game.TargetAllowUnspecified && spec.Allow&game.TargetAllowPermanent == 0 {
+		return false
+	}
+	return permanentTargetMatchesSpec(g, effectiveController(g, aura), aura.ObjectID, spec, target.ObjectID)
 }
 
 func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {
@@ -62,6 +73,42 @@ func isAttachmentPermanent(g *game.Game, permanent *game.Permanent) bool {
 
 func isAuraCard(card *game.CardDef) bool {
 	return card != nil && card.HasType(game.TypeEnchantment) && (card.HasSubtype("Aura") || card.HasKeyword(game.Enchant))
+}
+
+func enchantTargetSpecForPermanent(g *game.Game, aura *game.Permanent) game.TargetSpec {
+	def, ok := permanentCardDef(g, aura)
+	if !ok {
+		return defaultEnchantTargetSpec()
+	}
+	return enchantTargetSpecForCard(def)
+}
+
+func enchantTargetSpecForCard(card *game.CardDef) game.TargetSpec {
+	for _, ability := range card.Abilities {
+		if !abilityHasKeyword(&ability, game.Enchant) || !ability.EnchantTarget.Exists {
+			continue
+		}
+		spec := ability.EnchantTarget.Val
+		if spec.MinTargets == 0 {
+			spec.MinTargets = 1
+		}
+		if spec.MaxTargets == 0 {
+			spec.MaxTargets = 1
+		}
+		return spec
+	}
+	return defaultEnchantTargetSpec()
+}
+
+func defaultEnchantTargetSpec() game.TargetSpec {
+	return game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowPermanent,
+		Predicate: game.TargetPredicate{
+			PermanentTypes: []game.CardType{game.TypeCreature},
+		},
+	}
 }
 
 func isEquipmentCard(card *game.CardDef) bool {

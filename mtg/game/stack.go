@@ -56,6 +56,10 @@ type StackObject struct {
 	TriggerEvent    GameEvent
 	HasTriggerEvent bool
 
+	// WardTargetStackObjectID is the spell or ability a Ward trigger may
+	// counter unless its controller pays the Ward cost.
+	WardTargetStackObjectID id.ID
+
 	// Controller is the player who controls this spell or ability.
 	Controller PlayerID
 
@@ -76,6 +80,13 @@ type StackObject struct {
 	// Flashback is true if this spell was cast from a graveyard using
 	// flashback; it is exiled if it would leave the stack (CR 702.34).
 	Flashback bool
+
+	// Suspend is true if this spell was cast from exile by suspend.
+	Suspend bool
+
+	// Copy is true if this stack object is a copy of a spell rather than the
+	// physical source card.
+	Copy bool
 
 	// AdditionalCostsPaid describes any additional costs that were paid
 	// (e.g., "sacrificed a creature", "discarded a card").
@@ -122,6 +133,18 @@ func (s *Stack) Peek() (*StackObject, bool) {
 	}
 	top := s.objects[len(s.objects)-1]
 	return top, true
+}
+
+// RemoveByID removes and returns the stack object with the given ID.
+func (s *Stack) RemoveByID(objectID id.ID) (*StackObject, bool) {
+	for i, obj := range s.objects {
+		if obj.ID != objectID {
+			continue
+		}
+		s.objects = append(s.objects[:i], s.objects[i+1:]...)
+		return obj, true
+	}
+	return nil, false
 }
 
 // IsEmpty reports whether the stack has no objects.

@@ -105,6 +105,10 @@ type Permanent struct {
 	// one who goaded it if able until the goading player's next turn (CR 701.38).
 	Goaded map[PlayerID]GoadStatus
 
+	// SuspendHasteController grants haste while that player controls this
+	// permanent after it was cast from suspend.
+	SuspendHasteController opt.V[PlayerID]
+
 	// --- Token support ---
 
 	// Token is true if this permanent is a token rather than a card.

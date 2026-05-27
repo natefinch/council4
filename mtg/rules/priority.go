@@ -121,6 +121,8 @@ func actionsEqual(a, b action.Action) bool {
 			a.ActivateAbility.AbilityIndex == b.ActivateAbility.AbilityIndex &&
 			a.ActivateAbility.XValue == b.ActivateAbility.XValue &&
 			slices.Equal(a.ActivateAbility.Targets, b.ActivateAbility.Targets)
+	case action.ActionSuspendCard:
+		return a.SuspendCard == b.SuspendCard
 	case action.ActionDeclareAttackers:
 		return slices.Equal(a.DeclareAttackers.Attackers, b.DeclareAttackers.Attackers)
 	case action.ActionDeclareBlockers:

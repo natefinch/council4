@@ -27,6 +27,7 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 	actions = append(actions, e.legalCommanderCastActions(g, playerID)...)
 	actions = append(actions, e.legalActivateAbilityActions(g, playerID)...)
 	actions = append(actions, e.legalCyclingActions(g, playerID)...)
+	actions = append(actions, e.legalSuspendActions(g, playerID)...)
 	actions = append(actions, action.Pass())
 	return actions
 }
@@ -160,6 +161,8 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 		return e.applyCastSpellWithChoices(g, playerID, act.CastSpell, agents, log)
 	case action.ActionActivateAbility:
 		return e.applyActivateAbilityWithChoices(g, playerID, act.ActivateAbility, agents, log)
+	case action.ActionSuspendCard:
+		return e.applySuspendCard(g, playerID, act.SuspendCard.CardID, agents, log)
 	case action.ActionDeclareAttackers:
 		return e.applyDeclareAttackers(g, playerID, act.DeclareAttackers)
 	case action.ActionDeclareBlockers:
@@ -315,6 +318,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		Flashback:           sourceZone == game.ZoneGraveyard && spellDef.HasKeyword(game.Flashback),
 		AdditionalCostsPaid: additionalCostsPaid,
 	}
+	stormCopies := stormCopyCount(g, spellDef)
 	g.Stack.Push(obj)
 	emitTargetEvents(g, obj)
 	event := game.GameEvent{
@@ -330,6 +334,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	emitZoneChangeEvent(g, event)
 	event.Kind = game.EventSpellCast
 	emitEvent(g, event)
+	createStormCopies(g, obj, stormCopies)
+	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }
 

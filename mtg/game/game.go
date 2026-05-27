@@ -24,6 +24,13 @@ type Emblem struct {
 	Abilities []AbilityDef
 }
 
+// SuspendedCard tracks a card exiled with suspend.
+type SuspendedCard struct {
+	Owner        PlayerID
+	Controller   PlayerID
+	TimeCounters int
+}
+
 // PlayerConfig holds the configuration for a single player when setting
 // up a new game — their name, deck list, and commander.
 type PlayerConfig struct {
@@ -95,6 +102,9 @@ type Game struct {
 
 	// RuleEffects are runtime permission/prohibition/cost effects.
 	RuleEffects []RuleEffect
+
+	// SuspendedCards tracks cards exiled with suspend and their time counters.
+	SuspendedCards map[id.ID]SuspendedCard
 
 	// LastKnownInformation stores snapshots for objects that have moved zones.
 	LastKnownInformation map[id.ID]ObjectSnapshot
@@ -177,6 +187,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 	g := &Game{
 		CardInstances:              make(map[id.ID]*CardInstance),
 		CommanderIDs:               make(map[id.ID]bool),
+		SuspendedCards:             make(map[id.ID]SuspendedCard),
 		LastKnownInformation:       make(map[id.ID]ObjectSnapshot),
 		LinkedObjects:              make(map[LinkedObjectKey][]LinkedObjectRef),
 		SkippedSteps:               make(map[PlayerID]map[Step]int),

@@ -77,7 +77,7 @@ func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *gam
 	if targetSpecAllowsPlayers(spec) {
 		for playerID := game.Player1; playerID < game.NumPlayers; playerID++ {
 			target := game.PlayerTarget(playerID)
-			if targetMatchesSpec(g, controller, sourceObjectID, spec, target) && !targetProtectedFromSource(g, source, target) {
+			if targetMatchesSpec(g, controller, sourceObjectID, spec, target) && !targetProtectedFromSource(g, controller, source, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -85,7 +85,7 @@ func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *gam
 	if targetSpecAllowsPermanents(spec) {
 		for _, permanent := range g.Battlefield {
 			target := game.PermanentTarget(permanent.ObjectID)
-			if targetMatchesSpec(g, controller, sourceObjectID, spec, target) && !targetProtectedFromSource(g, source, target) {
+			if targetMatchesSpec(g, controller, sourceObjectID, spec, target) && !targetProtectedFromSource(g, controller, source, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -169,7 +169,7 @@ func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.
 	}
 	seen := make(map[game.Target]bool, len(targets))
 	for _, target := range targets {
-		if seen[target] || !targetMatchesSpec(g, controller, sourceObjectID, spec, target) || targetProtectedFromSource(g, source, target) {
+		if seen[target] || !targetMatchesSpec(g, controller, sourceObjectID, spec, target) || targetProtectedFromSource(g, controller, source, target) {
 			return false
 		}
 		seen[target] = true
@@ -205,6 +205,9 @@ func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, source *g
 }
 
 func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
+	if isAuraCard(card) {
+		return []game.TargetSpec{enchantTargetSpecForCard(card)}
+	}
 	ability, ok := firstSpellAbility(card)
 	if !ok {
 		return nil
@@ -535,12 +538,18 @@ func intComparisonMatches(value int, comparison game.IntComparison) bool {
 	}
 }
 
-func targetProtectedFromSource(g *game.Game, source *game.CardDef, target game.Target) bool {
-	if source == nil || target.Kind != game.TargetPermanent {
+func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, target game.Target) bool {
+	if target.Kind != game.TargetPermanent {
 		return false
 	}
 	permanent, ok := permanentByObjectID(g, target.PermanentID)
-	return ok && permanentProtectedFromSourceDef(g, permanent, source)
+	if !ok {
+		return false
+	}
+	if hasKeyword(g, permanent, game.Hexproof) && effectiveController(g, permanent) != controller {
+		return true
+	}
+	return source != nil && permanentProtectedFromSourceDef(g, permanent, source)
 }
 
 func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec game.TargetSpec, permanent *game.Permanent) bool {

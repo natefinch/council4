@@ -1,0 +1,125 @@
+package rules
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
+)
+
+func TestDelveMakesGenericSpellPayableAndExilesGraveyardCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, delveSpell(mana.Cost{mana.GenericMana(2)}))
+	first := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
+	second := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
+	setMainPhasePriority(g, game.Player1)
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("delve spell cast failed")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(first) || g.Players[game.Player1].Graveyard.Contains(second) {
+		t.Fatal("delve cards remained in graveyard")
+	}
+	if !g.Players[game.Player1].Exile.Contains(first) || !g.Players[game.Player1].Exile.Contains(second) {
+		t.Fatal("delve cards did not move to exile")
+	}
+}
+
+func TestDelveDoesNotExileWhenManaCanPay(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, delveSpell(mana.Cost{mana.GenericMana(1)}))
+	graveID := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Graveyard Card"})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	setMainPhasePriority(g, game.Player1)
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("delve spell cast failed")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(graveID) {
+		t.Fatal("delve exiled graveyard card even though mana could pay")
+	}
+}
+
+func TestDelveExilesOnlyCardsNeededAfterAvailableMana(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, delveSpell(mana.Cost{mana.GenericMana(2)}))
+	first := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
+	second := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
+	addBasicLandPermanent(g, game.Player1, "Forest")
+	setMainPhasePriority(g, game.Player1)
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("delve spell cast failed")
+	}
+	if !g.Players[game.Player1].Exile.Contains(second) {
+		t.Fatal("top graveyard card was not exiled for delve")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(first) {
+		t.Fatal("delve exiled more graveyard cards than needed")
+	}
+}
+
+func TestDelveIgnoresCardsOutsideGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, delveSpell(mana.Cost{mana.GenericMana(1)}))
+	exileID := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Exiled Card"})
+	g.Players[game.Player1].Graveyard.Remove(exileID)
+	g.Players[game.Player1].Exile.Add(exileID)
+	setMainPhasePriority(g, game.Player1)
+
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("delve spell cast using non-graveyard card, want failure")
+	}
+}
+
+func TestDelveCanPayXGenericCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, delveSpell(mana.Cost{mana.VariableMana()}))
+	addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
+	setMainPhasePriority(g, game.Player1)
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 2, nil)) {
+		t.Fatal("delve spell with X cost failed")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.XValue != 2 {
+		t.Fatalf("stack object = %+v, want XValue 2", obj)
+	}
+}
+
+func TestDelvePaymentExcludesSourceCardFromGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	sourceID := addCardToGraveyard(g, game.Player1, delveSpell(mana.Cost{mana.GenericMana(1)}))
+
+	exiles, _, ok := delveCandidates(g, game.Player1, &mana.Cost{mana.GenericMana(1)}, 0, sourceID, game.ZoneGraveyard)
+	if ok || len(exiles) != 0 {
+		t.Fatalf("delvePayment() = %+v, %v, want no source-card exile", exiles, ok)
+	}
+}
+
+func delveSpell(cost mana.Cost) *game.CardDef {
+	return &game.CardDef{
+		Name:     "Delve Spell",
+		Types:    []game.CardType{game.TypeSorcery},
+		ManaCost: optCost(cost),
+		Abilities: []game.AbilityDef{
+			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Delve}},
+			{Kind: game.SpellAbility},
+		},
+	}
+}
+
+func addCardToGraveyard(g *game.Game, playerID game.PlayerID, def *game.CardDef) id.ID {
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{ID: cardID, Def: def, Owner: playerID}
+	g.Players[playerID].Graveyard.Add(cardID)
+	return cardID
+}

@@ -56,6 +56,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	// Beginning-of-step triggers fire at the start of the upkeep and are put on
 	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
 	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	e.processSuspendUpkeep(g, g.Turn.ActivePlayer)
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
 	if g.IsGameOver() {

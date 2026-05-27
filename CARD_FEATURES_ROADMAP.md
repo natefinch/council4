@@ -56,15 +56,15 @@ This roadmap tracks card-text features needed by generated `CardDef` implementat
   - [x] Flashback
   - [x] Proliferate
   - [x] Goad
-  - [ ] Enchant
-  - [ ] Hexproof
-  - [ ] Ward
-  - [ ] Madness
-  - [ ] Suspend
-  - [ ] Storm
-  - [ ] Cascade
-  - [ ] Convoke
-  - [ ] Delve
+  - [x] Enchant
+  - [x] Hexproof
+  - [x] Ward
+  - [x] Madness
+  - [x] Suspend
+  - [x] Storm
+  - [x] Cascade
+  - [x] Convoke
+  - [x] Delve
   - [ ] Morph/Disguise
   - [ ] Related keyword actions not listed above
 

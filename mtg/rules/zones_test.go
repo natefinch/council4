@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestRemovePermanentFromBattlefield(t *testing.T) {
@@ -114,6 +117,82 @@ func TestAttachPermanentAttachesAuraToLegalCreature(t *testing.T) {
 	}
 }
 
+func TestEnchantTargetRestrictsAuraAttachment(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	aura := addCombatPermanent(g, game.Player1, landAuraCard())
+	land := addCombatPermanent(g, game.Player2, &game.CardDef{Name: "Forest", Types: []game.CardType{game.TypeLand}})
+	creature := addCombatCreaturePermanent(g, game.Player2)
+
+	if !canAttachPermanent(g, aura, land) {
+		t.Fatal("canAttachPermanent() = false for matching enchant land target, want true")
+	}
+	if canAttachPermanent(g, aura, creature) {
+		t.Fatal("canAttachPermanent() = true for creature with enchant land, want false")
+	}
+}
+
+func TestAuraSpellUsesEnchantTargetForCastLegality(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	auraID := addCardToHand(g, game.Player1, landAuraCard())
+	land := addCombatPermanent(g, game.Player2, &game.CardDef{Name: "Forest", Types: []game.CardType{game.TypeLand}})
+	creature := addCombatCreaturePermanent(g, game.Player2)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if engine.canCastSpell(g, game.Player1, auraID, []game.Target{game.PermanentTarget(creature.ObjectID)}, 0, nil) {
+		t.Fatal("canCastSpell() = true for creature target with enchant land, want false")
+	}
+	if !engine.canCastSpell(g, game.Player1, auraID, []game.Target{game.PermanentTarget(land.ObjectID)}, 0, nil) {
+		t.Fatal("canCastSpell() = false for land target with enchant land, want true")
+	}
+}
+
+func TestAuraSpellAttachesToEnchantTargetOnResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	auraID := addCardToHand(g, game.Player1, landAuraCard())
+	land := addCombatPermanent(g, game.Player2, &game.CardDef{Name: "Forest", Types: []game.CardType{game.TypeLand}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(auraID, []game.Target{game.PermanentTarget(land.ObjectID)}, 0, nil)) {
+		t.Fatal("casting land Aura failed")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	aura, ok := findPermanentByCardID(g, auraID)
+	if !ok {
+		t.Fatal("Aura did not enter the battlefield")
+	}
+	if !aura.AttachedTo.Exists || aura.AttachedTo.Val != land.ObjectID {
+		t.Fatalf("aura attached to = %v, want land %v", aura.AttachedTo, land.ObjectID)
+	}
+}
+
+func TestIllegalEnchantTargetStateBasedActionMovesAuraToGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	aura := addCombatPermanent(g, game.Player1, landAuraCard())
+	creature := addCombatCreaturePermanent(g, game.Player2)
+	aura.AttachedTo = opt.Val(creature.ObjectID)
+	creature.Attachments = append(creature.Attachments, aura.ObjectID)
+
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if _, ok := permanentByObjectID(g, aura.ObjectID); ok {
+		t.Fatal("illegally attached land Aura remained on battlefield")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(aura.CardInstanceID) {
+		t.Fatal("illegally attached land Aura did not move to graveyard")
+	}
+	if len(deaths) != 1 || deaths[0].Permanent != aura.ObjectID || deaths[0].Reason != PermanentDeathReasonIllegalAura {
+		t.Fatalf("death logs = %+v, want illegal aura death", deaths)
+	}
+}
+
 func TestIllegalAuraStateBasedActionMovesAuraToGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -177,6 +256,33 @@ func addAuraPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 		Types:    []game.CardType{game.TypeEnchantment},
 		Subtypes: []string{"Aura"},
 	})
+}
+
+func landAuraCard() *game.CardDef {
+	return &game.CardDef{
+		Name:     "Land Aura",
+		Types:    []game.CardType{game.TypeEnchantment},
+		Subtypes: []string{"Aura"},
+		Abilities: []game.AbilityDef{{
+			Kind:     game.StaticAbility,
+			Keywords: []game.Keyword{game.Enchant},
+			EnchantTarget: opt.Val(game.TargetSpec{
+				Allow: game.TargetAllowPermanent,
+				Predicate: game.TargetPredicate{
+					PermanentTypes: []game.CardType{game.TypeLand},
+				},
+			}),
+		}},
+	}
+}
+
+func findPermanentByCardID(g *game.Game, cardID id.ID) (*game.Permanent, bool) {
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == cardID {
+			return permanent, true
+		}
+	}
+	return nil, false
 }
 
 func addEquipmentPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {

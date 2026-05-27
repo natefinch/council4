@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 func (e *Engine) resolveTopOfStack(g *game.Game, log *TurnLog) {
@@ -117,6 +118,12 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 	if ability.Kind != game.TriggeredAbility {
 		return "missing source"
 	}
+	if abilityHasKeyword(ability, game.Ward) && ability.WardCost.Exists {
+		return e.resolveWardTriggeredAbilityWithChoices(g, obj, ability, agents, log)
+	}
+	if abilityHasKeyword(ability, game.Madness) && ability.MadnessCost.Exists {
+		return e.resolveMadnessTriggeredAbilityWithChoices(g, obj, ability, agents, log)
+	}
 	var event *game.GameEvent
 	if obj.HasTriggerEvent {
 		event = &obj.TriggerEvent
@@ -133,6 +140,24 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 	for _, effect := range ability.Effects {
 		e.resolveEffectWithChoices(g, obj, effect, agents, log)
 	}
+	return "resolved"
+}
+
+func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	targetObj, ok := stackObjectByID(g, obj.WardTargetStackObjectID)
+	if !ok {
+		return "resolved"
+	}
+	payer := targetObj.Controller
+	cost := manaCostPtr(ability.WardCost)
+	if canPayCost(g, payer, cost) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
+		prefs := e.paymentPreferencesForCost(g, payer, cost, nil, agents, log)
+		plan, ok := buildPaymentPlanWithPreferences(g, payer, cost, 0, nil, prefs)
+		if ok && applyPaymentPlan(g, payer, plan) {
+			return "resolved"
+		}
+	}
+	counterStackObject(g, obj.WardTargetStackObjectID)
 	return "resolved"
 }
 
@@ -155,6 +180,33 @@ func stackObjectSourceDef(g *game.Game, obj *game.StackObject) (*game.CardDef, b
 	return obj.SourceTokenDef.FaceDef(obj.Face)
 }
 
+func stackObjectByID(g *game.Game, objectID id.ID) (*game.StackObject, bool) {
+	for _, obj := range g.Stack.Objects() {
+		if obj.ID == objectID {
+			return obj, true
+		}
+	}
+	return nil, false
+}
+
+func counterStackObject(g *game.Game, objectID id.ID) bool {
+	obj, ok := g.Stack.RemoveByID(objectID)
+	if !ok {
+		return false
+	}
+	if obj.Kind != game.StackSpell {
+		return true
+	}
+	if obj.Copy {
+		return true
+	}
+	card, ok := g.GetCardInstance(obj.SourceID)
+	if !ok {
+		return false
+	}
+	return moveStackCardToGraveyard(g, obj, card)
+}
+
 func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog) string {
 	return e.resolveSpellWithChoices(g, obj, [game.NumPlayers]PlayerAgent{}, log)
 }
@@ -170,12 +222,21 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 	}
 	if spellDef.IsPermanent() {
 		if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
+			if obj.Copy {
+				return "countered by rules"
+			}
 			if !moveStackCardToGraveyard(g, obj, card) {
 				return "invalid owner"
 			}
 			return "countered by rules"
 		}
+		if obj.Copy {
+			return "resolved"
+		}
 		permanent, ok := createCardPermanentFace(g, card, obj.Controller, game.ZoneStack, obj.Face)
+		if ok && obj.Suspend && permanentHasType(g, permanent, game.TypeCreature) {
+			permanent.SuspendHasteController = opt.Val(obj.Controller)
+		}
 		if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
 			target, targetOK := effectPermanent(g, obj, game.Effect{TargetIndex: 0})
 			if !targetOK || !attachPermanent(g, permanent, target) {
@@ -187,12 +248,18 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 	}
 	if spellDef.HasType(game.TypeInstant) || spellDef.HasType(game.TypeSorcery) {
 		if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
+			if obj.Copy {
+				return "countered by rules"
+			}
 			if !moveStackCardToGraveyard(g, obj, card) {
 				return "invalid owner"
 			}
 			return "countered by rules"
 		}
 		e.resolveSpellEffectsWithChoices(g, obj, card, agents, log)
+		if obj.Copy {
+			return "resolved"
+		}
 		if !moveStackCardToGraveyard(g, obj, card) {
 			return "invalid owner"
 		}

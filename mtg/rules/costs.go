@@ -106,6 +106,8 @@ func paySpellCostsWithKickerFromZoneAndPreferences(g *game.Game, playerID game.P
 type paymentPlan struct {
 	poolSpend      map[mana.Unit]int
 	manaTaps       []manaTap
+	convokeTaps    []*game.Permanent
+	delveExiles    []id.ID
 	lifePayment    int
 	symbolPayments []game.SymbolPayment
 }
@@ -190,7 +192,30 @@ func buildSpellCostPlanForOption(g *game.Game, playerID game.PlayerID, cardID id
 	}
 	manaPlan, ok := buildPaymentPlanWithPreferences(g, playerID, option.manaCost, xValue, excluded, prefs)
 	if !ok {
-		return plan, false
+		convokeTaps, convokedCost, convokeOK := convokePayment(g, playerID, option.manaCost, xValue, excluded)
+		if option.card.HasKeyword(game.Convoke) && convokeOK {
+			for _, permanent := range convokeTaps {
+				excluded[permanent.ObjectID] = true
+			}
+			manaPlan, ok = buildPaymentPlanWithPreferences(g, playerID, convokedCost, xValue, excluded, prefs)
+			if ok {
+				manaPlan.convokeTaps = convokeTaps
+			}
+		}
+		if !ok && option.card.HasKeyword(game.Delve) {
+			delveExiles, generic, delveOK := delveCandidates(g, playerID, option.manaCost, xValue, cardID, sourceZone)
+			for exiledCount := 1; delveOK && exiledCount <= min(generic, len(delveExiles)); exiledCount++ {
+				delvedCost := costWithGenericRequirement(option.manaCost, generic-exiledCount)
+				manaPlan, ok = buildPaymentPlanWithPreferences(g, playerID, delvedCost, 0, excluded, prefs)
+				if ok {
+					manaPlan.delveExiles = append([]id.ID(nil), delveExiles[:exiledCount]...)
+					break
+				}
+			}
+		}
+		if !ok {
+			return plan, false
+		}
 	}
 	plan.additional = additional
 	plan.mana = manaPlan
@@ -281,6 +306,148 @@ func costWithGenericAmount(cost *mana.Cost, generic int) *mana.Cost {
 		}
 	}
 	return &modified
+}
+
+func convokePayment(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValue int, exclude map[id.ID]bool) ([]*game.Permanent, *mana.Cost, bool) {
+	_, generic, ok := costRequirements(cost, xValue)
+	if !ok {
+		return nil, cost, false
+	}
+	candidates := convokeCandidates(g, playerID, exclude)
+	paidColored := make(map[int]bool)
+	var taps []*game.Permanent
+	used := make(map[id.ID]bool)
+	if cost != nil {
+		for symbolIndex, symbol := range *cost {
+			if symbol.Kind != mana.ColoredSymbol {
+				continue
+			}
+			permanent, ok := chooseConvokeColoredCreature(g, candidates, used, symbol.Color)
+			if !ok {
+				continue
+			}
+			taps = append(taps, permanent)
+			used[permanent.ObjectID] = true
+			paidColored[symbolIndex] = true
+		}
+	}
+	genericReduction := 0
+	for _, permanent := range candidates {
+		if genericReduction == generic {
+			break
+		}
+		if used[permanent.ObjectID] {
+			continue
+		}
+		taps = append(taps, permanent)
+		used[permanent.ObjectID] = true
+		genericReduction++
+	}
+	if len(taps) == 0 {
+		return nil, cost, false
+	}
+	return taps, costWithConvokePayments(cost, genericReduction, paidColored), true
+}
+
+func chooseConvokeColoredCreature(g *game.Game, candidates []*game.Permanent, used map[id.ID]bool, color mana.Color) (*game.Permanent, bool) {
+	for _, permanent := range candidates {
+		if used[permanent.ObjectID] {
+			continue
+		}
+		for _, permanentColor := range permanentEffectiveColors(g, permanent) {
+			if permanentColor == color {
+				return permanent, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func costWithConvokePayments(cost *mana.Cost, genericReduction int, paidColored map[int]bool) *mana.Cost {
+	generic := genericCostAmount(cost) - genericReduction
+	if generic < 0 {
+		generic = 0
+	}
+	var modified mana.Cost
+	if generic > 0 {
+		modified = append(modified, mana.GenericMana(generic))
+	}
+	if cost != nil {
+		for i, symbol := range *cost {
+			if symbol.Kind == mana.GenericSymbol || paidColored[i] {
+				continue
+			}
+			modified = append(modified, symbol)
+		}
+	}
+	return &modified
+}
+
+func delveCandidates(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValue int, sourceCardID id.ID, sourceZone game.ZoneType) ([]id.ID, int, bool) {
+	_, generic, ok := costRequirements(cost, xValue)
+	if !ok || generic <= 0 {
+		return nil, 0, false
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil, 0, false
+	}
+	var exiles []id.ID
+	for _, cardID := range player.Graveyard.All() {
+		if len(exiles) == generic {
+			break
+		}
+		if sourceZone == game.ZoneGraveyard && cardID == sourceCardID {
+			continue
+		}
+		exiles = append(exiles, cardID)
+	}
+	if len(exiles) == 0 {
+		return nil, 0, false
+	}
+	return exiles, generic, true
+}
+
+func costWithGenericRequirement(cost *mana.Cost, generic int) *mana.Cost {
+	if generic < 0 {
+		generic = 0
+	}
+	var modified mana.Cost
+	if generic > 0 {
+		modified = append(modified, mana.GenericMana(generic))
+	}
+	if cost != nil {
+		for _, symbol := range *cost {
+			if symbol.Kind == mana.GenericSymbol || symbol.Kind == mana.VariableSymbol {
+				continue
+			}
+			modified = append(modified, symbol)
+		}
+	}
+	return &modified
+}
+
+func convokeCandidates(g *game.Game, playerID game.PlayerID, exclude map[id.ID]bool) []*game.Permanent {
+	var nonMana []*game.Permanent
+	var manaCreatures []*game.Permanent
+	for _, permanent := range g.Battlefield {
+		if !canConvokeWith(g, playerID, permanent, exclude) {
+			continue
+		}
+		if _, ok := permanentManaOutput(g, permanent); ok {
+			manaCreatures = append(manaCreatures, permanent)
+			continue
+		}
+		nonMana = append(nonMana, permanent)
+	}
+	return append(nonMana, manaCreatures...)
+}
+
+func canConvokeWith(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, exclude map[id.ID]bool) bool {
+	if exclude[permanent.ObjectID] || permanent.Tapped || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
+		return false
+	}
+	return permanentHasType(g, permanent, game.TypeCreature)
 }
 
 func buildAbilityCostPlan(g *game.Game, playerID game.PlayerID, source *game.Permanent, ability *game.AbilityDef, xValue int) (abilityCostPlan, bool) {
@@ -817,6 +984,24 @@ func applyPaymentPlan(g *game.Game, playerID game.PlayerID, plan paymentPlan) bo
 			panic("payment plan became invalid while tapping mana sources")
 		}
 	}
+	for _, permanent := range plan.convokeTaps {
+		if !canConvokeWith(g, playerID, permanent, nil) {
+			panic("payment plan became invalid while tapping convoke creatures")
+		}
+		setPermanentTapped(g, permanent, true)
+	}
+	for _, cardID := range plan.delveExiles {
+		if !player.Graveyard.Remove(cardID) {
+			panic("payment plan became invalid while exiling delve cards")
+		}
+		player.Exile.Add(cardID)
+		emitZoneChangeEvent(g, game.GameEvent{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: game.ZoneGraveyard,
+			ToZone:   game.ZoneExile,
+		})
+	}
 	for _, color := range paymentColors {
 		for _, snow := range []bool{false, true} {
 			unit := mana.Unit{Color: color, Snow: snow}
@@ -846,6 +1031,16 @@ func paymentPlanStillValid(g *game.Game, player *game.Player, plan paymentPlan) 
 			return false
 		}
 		tappedMana[mana.Unit{Color: tap.color, Snow: tap.snow}] += tap.amount
+	}
+	for _, permanent := range plan.convokeTaps {
+		if !canConvokeWith(g, player.ID, permanent, nil) {
+			return false
+		}
+	}
+	for _, cardID := range plan.delveExiles {
+		if !player.Graveyard.Contains(cardID) {
+			return false
+		}
 	}
 	for _, color := range paymentColors {
 		for _, snow := range []bool{false, true} {

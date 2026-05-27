@@ -859,7 +859,11 @@ func canAttackWith(g *game.Game, permanent *game.Permanent, playerID game.Player
 	if ruleEffectProhibitsAttack(g, permanent, nil) {
 		return false
 	}
-	return !permanent.SummoningSick || hasKeyword(g, permanent, game.Haste)
+	return !permanent.SummoningSick || hasKeyword(g, permanent, game.Haste) || suspendHasteApplies(g, permanent)
+}
+
+func suspendHasteApplies(g *game.Game, permanent *game.Permanent) bool {
+	return permanent.SuspendHasteController.Exists && permanent.SuspendHasteController.Val == effectiveController(g, permanent)
 }
 
 func legalDeclareAttackersActions(g *game.Game, playerID game.PlayerID) []action.Action {

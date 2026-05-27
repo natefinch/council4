@@ -120,6 +120,9 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	card, cardOK := g.GetCardInstance(cardID)
 	destination := game.ZoneGraveyard
 	if cardOK {
+		if _, ok := madnessCostForCard(cardFaceOrDefault(card, game.FaceFront)); ok {
+			destination = game.ZoneExile
+		}
 		destination = replacementZoneChangeDestination(g, game.GameEvent{
 			Kind:       game.EventZoneChanged,
 			Controller: playerID,

@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 type pendingTriggeredAbility struct {
@@ -19,6 +20,7 @@ type pendingTriggeredAbility struct {
 	event        game.GameEvent
 	hasEvent     bool
 	inline       *game.AbilityDef
+	wardTargetID id.ID
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -33,29 +35,63 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	events := append([]game.GameEvent(nil), g.Events[start:]...)
 	g.TriggerEventCursor = len(g.Events)
 	pending := e.detectTriggeredAbilities(g, events)
+	pending = append(pending, e.detectMadnessTriggeredAbilities(g, events)...)
 	pending = append(pending, e.detectStateTriggeredAbilities(g)...)
 	if len(pending) == 0 {
 		return false
 	}
 	for _, trigger := range e.orderTriggeredAbilitiesAPNAP(g, pending, agents, log) {
 		obj := &game.StackObject{
-			ID:              g.IDGen.Next(),
-			Kind:            game.StackTriggeredAbility,
-			SourceID:        trigger.sourceID,
-			Face:            trigger.face,
-			SourceCardID:    trigger.sourceCardID,
-			SourceTokenDef:  trigger.sourceToken,
-			AbilityIndex:    trigger.abilityIndex,
-			TriggerEvent:    trigger.event,
-			HasTriggerEvent: trigger.hasEvent,
-			InlineAbility:   trigger.inline,
-			Controller:      trigger.controller,
-			Targets:         append([]game.Target(nil), trigger.targets...),
+			ID:                      g.IDGen.Next(),
+			Kind:                    game.StackTriggeredAbility,
+			SourceID:                trigger.sourceID,
+			Face:                    trigger.face,
+			SourceCardID:            trigger.sourceCardID,
+			SourceTokenDef:          trigger.sourceToken,
+			AbilityIndex:            trigger.abilityIndex,
+			TriggerEvent:            trigger.event,
+			HasTriggerEvent:         trigger.hasEvent,
+			InlineAbility:           trigger.inline,
+			WardTargetStackObjectID: trigger.wardTargetID,
+			Controller:              trigger.controller,
+			Targets:                 append([]game.Target(nil), trigger.targets...),
 		}
 		g.Stack.Push(obj)
 		emitTargetEvents(g, obj)
 	}
 	return true
+}
+
+func (e *Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.GameEvent) []pendingTriggeredAbility {
+	var pending []pendingTriggeredAbility
+	for _, event := range events {
+		if event.Kind != game.EventCardDiscarded || event.ToZone != game.ZoneExile || event.CardID == 0 {
+			continue
+		}
+		card, ok := g.GetCardInstance(event.CardID)
+		if !ok {
+			continue
+		}
+		cost, ok := madnessCostForCard(cardFaceOrDefault(card, event.Face))
+		if !ok {
+			continue
+		}
+		pending = append(pending, pendingTriggeredAbility{
+			controller:   event.Player,
+			sourceID:     event.CardID,
+			sourceCardID: event.CardID,
+			face:         game.FaceFront,
+			inline: &game.AbilityDef{
+				Kind:        game.TriggeredAbility,
+				Text:        "Madness",
+				Keywords:    []game.Keyword{game.Madness},
+				MadnessCost: opt.Val(cost),
+			},
+			event:    event,
+			hasEvent: true,
+		})
+	}
+	return pending
 }
 
 func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.GameEvent) []pendingTriggeredAbility {
@@ -81,6 +117,19 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 	for i := range def.Abilities {
 		ability := &def.Abilities[i]
 		if ability.Kind != game.TriggeredAbility || !ability.Trigger.Exists {
+			if ward, ok := wardTriggerForEvent(g, permanent, controller, ability, event); ok {
+				pending = append(pending, pendingTriggeredAbility{
+					controller:   controller,
+					sourceID:     permanent.ObjectID,
+					sourceCardID: permanent.CardInstanceID,
+					sourceToken:  permanent.TokenDef,
+					face:         permanent.Face,
+					inline:       ward,
+					event:        event,
+					hasEvent:     true,
+					wardTargetID: event.StackObjectID,
+				})
+			}
 			continue
 		}
 		trigger := &ability.Trigger.Val
@@ -111,6 +160,21 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 		})
 	}
 	return pending
+}
+
+func wardTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, ability *game.AbilityDef, event game.GameEvent) (*game.AbilityDef, bool) {
+	if event.Kind != game.EventObjectBecameTarget || event.PermanentID != permanent.ObjectID || event.StackObjectID == 0 {
+		return nil, false
+	}
+	if event.Controller == controller || !abilityHasKeyword(ability, game.Ward) || !ability.WardCost.Exists {
+		return nil, false
+	}
+	return &game.AbilityDef{
+		Kind:     game.TriggeredAbility,
+		Text:     "Ward",
+		Keywords: []game.Keyword{game.Ward},
+		WardCost: ability.WardCost,
+	}, true
 }
 
 func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) (*game.AbilityDef, bool) {
