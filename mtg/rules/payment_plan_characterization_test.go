@@ -16,9 +16,11 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 	// decomposition. Keep the coverage when the overload-chain entry point is
 	// collapsed; update only the call seam, not the behavior being summarized.
 	tests := []struct {
-		name  string
-		setup func() (*game.Game, *game.CardDef, id.ID, int)
-		want  []string
+		name       string
+		setup      func() (*game.Game, *game.CardDef, id.ID, int)
+		sourceZone game.ZoneType // defaults to ZoneHand when zero
+		kickerPaid bool
+		want       []string
 	}{
 		{
 			name: "convoke pays colored symbols before generic symbols",
@@ -114,13 +116,54 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 				"life=0",
 			},
 		},
+		{
+			name: "kicker paid combines base and kicker mana in plan",
+			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
+				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+				addBasicLandPermanent(g, game.Player1, "Forest")
+				addBasicLandPermanent(g, game.Player1, "Forest")
+				return g, kickerSpell(), 0, 0
+			},
+			kickerPaid: true,
+			want: []string{
+				"option=0:Normal cost",
+				"manaTaps=[Forest:G:1, Forest:G:1]",
+				"convoke=[]",
+				"delve=[]",
+				"additional=[]",
+				"sacrifices=[]",
+				"life=0",
+			},
+		},
+		{
+			name: "flashback alternative cost replaces base cost when cast from graveyard",
+			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
+				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+				addBasicLandPermanent(g, game.Player1, "Forest")
+				return g, flashbackSpell(), 0, 0
+			},
+			sourceZone: game.ZoneGraveyard,
+			want: []string{
+				"option=1:Flashback",
+				"manaTaps=[Forest:G:1]",
+				"convoke=[]",
+				"delve=[]",
+				"additional=[]",
+				"sacrifices=[]",
+				"life=0",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g, card, cardID, xValue := tt.setup()
 
-			plan, ok := paymentOrch.buildSpellCostPlan(g, spellPaymentRequest{playerID: game.Player1, cardID: cardID, sourceZone: game.ZoneHand, card: card, xValue: xValue})
+			zone := tt.sourceZone
+			if zone == game.ZoneNone {
+				zone = game.ZoneHand
+			}
+			plan, ok := paymentOrch.buildSpellCostPlan(g, spellPaymentRequest{playerID: game.Player1, cardID: cardID, sourceZone: zone, card: card, xValue: xValue, kickerPaid: tt.kickerPaid})
 			if !ok {
 				t.Fatal("buildSpellCostPlan() = false, want true")
 			}
@@ -218,6 +261,20 @@ func sacrificeCostSpell() *game.CardDef {
 				MatchPermanentType: true,
 				PermanentType:      game.TypeCreature,
 			}},
+		}},
+	}
+}
+
+// kickerSpell returns a sorcery with a {G} base cost and a {G} kicker cost.
+// When kicked (kickerPaid=true) the combined cost is {G}{G}.
+func kickerSpell() *game.CardDef {
+	return &game.CardDef{
+		Name:     "Kicker Spell",
+		ManaCost: greenCost(),
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{{
+			Kind:       game.SpellAbility,
+			KickerCost: greenCost(),
 		}},
 	}
 }
