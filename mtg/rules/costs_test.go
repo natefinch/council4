@@ -213,7 +213,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericReduction: 2,
 		})
 
-		if !canPaySpellCosts(g, game.Player1, card, 0) {
+		if !canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 			t.Fatal("canPaySpellCosts() = false, want reduction to make {3}{G} payable with two lands")
 		}
 	})
@@ -227,7 +227,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericIncrease: 1,
 		})
 
-		if canPaySpellCosts(g, game.Player1, card, 0) {
+		if canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 			t.Fatal("canPaySpellCosts() = true, want increase to require a second mana")
 		}
 	})
@@ -240,11 +240,11 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericReduction: 5,
 			MinimumGeneric:   1,
 		})
-		if canPaySpellCosts(g, game.Player1, card, 0) {
+		if canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 			t.Fatal("canPaySpellCosts() = true without mana, want minimum generic cost")
 		}
 		addBasicLandPermanent(g, game.Player1, "Island")
-		if !canPaySpellCosts(g, game.Player1, card, 0) {
+		if !canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 			t.Fatal("canPaySpellCosts() = false with one mana, want minimum generic cost payable")
 		}
 	})
@@ -273,7 +273,7 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 		}},
 	})
 
-	if canPaySpellCosts(g, game.Player1, card, 0) {
+	if canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 		t.Fatal("static spell tax allowed {G} spell with only one mana")
 	}
 }

@@ -56,8 +56,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			Controller:              trigger.controller,
 			Targets:                 append([]game.Target(nil), trigger.targets...),
 		}
-		g.Stack.Push(obj)
-		emitTargetEvents(g, obj)
+		pushAbilityToStack(g, obj)
 	}
 	return true
 }
@@ -296,10 +295,12 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.GameEvent) (*game.Per
 }
 
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
-	choices := targetChoicesForAbilityFromSourceObject(g, controller, source, sourceObjectID, ability)
-	if len(choices) == 0 {
+	result := targetChoicesForAbilityFromSourceObject(g, controller, source, sourceObjectID, ability)
+	switch result.kind {
+	case targetNoLegalChoices, targetInvalidSpec:
 		return nil, false
 	}
+	choices := result.choices
 	if len(choices) == 1 {
 		return append([]game.Target(nil), choices[0]...), true
 	}

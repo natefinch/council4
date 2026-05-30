@@ -117,10 +117,11 @@ func (a targetPlayerAgent) ChooseAction(obs PlayerObservation, legal []action.Ac
 		}
 	}
 	for _, act := range legal {
-		if act.Kind != action.ActionCastSpell || len(act.CastSpell.Targets) != 1 {
+		cast, ok := act.CastSpellPayload()
+		if !ok || len(cast.Targets) != 1 {
 			continue
 		}
-		target := act.CastSpell.Targets[0]
+		target := cast.Targets[0]
 		if target.Kind == game.TargetPlayer && target.PlayerID == a.target {
 			return act
 		}
@@ -160,7 +161,11 @@ func sawAttackWith(actions []ActionLog, attacker id.ID) bool {
 		if logged.Action.Kind != action.ActionDeclareAttackers {
 			continue
 		}
-		for _, declaration := range logged.Action.DeclareAttackers.Attackers {
+		payload, ok := logged.Action.DeclareAttackersPayload()
+		if !ok {
+			continue
+		}
+		for _, declaration := range payload.Attackers {
 			if declaration.Attacker == attacker {
 				return true
 			}

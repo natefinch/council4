@@ -371,21 +371,37 @@ func formatActionLog(g *game.Game, logged rules.ActionLog) string {
 	case action.ActionPass:
 		return "pass"
 	case action.ActionPlayLand:
-		card, ok := g.GetCardInstance(act.PlayLand.CardID)
+		playLand, payloadOK := act.PlayLandPayload()
+		card, ok := g.GetCardInstance(playLand.CardID)
 		if !ok {
-			return fmt.Sprintf("play land #%d", act.PlayLand.CardID)
+			if !payloadOK {
+				return "invalid play land"
+			}
+			return fmt.Sprintf("play land #%d", playLand.CardID)
 		}
 		return fmt.Sprintf("play land %q", card.Def.Name)
 	case action.ActionCastSpell:
-		card, ok := g.GetCardInstance(act.CastSpell.CardID)
+		cast, payloadOK := act.CastSpellPayload()
+		card, ok := g.GetCardInstance(cast.CardID)
 		if !ok {
-			return fmt.Sprintf("cast spell #%d", act.CastSpell.CardID)
+			if !payloadOK {
+				return "invalid cast spell"
+			}
+			return fmt.Sprintf("cast spell #%d", cast.CardID)
 		}
 		return fmt.Sprintf("cast %q", card.Def.Name)
 	case action.ActionDeclareAttackers:
-		return formatDeclareAttackers(g, logged, act.DeclareAttackers)
+		attackers, ok := act.DeclareAttackersPayload()
+		if !ok {
+			return "invalid declare attackers"
+		}
+		return formatDeclareAttackers(g, logged, attackers)
 	case action.ActionDeclareBlockers:
-		return formatDeclareBlockers(g, logged, act.DeclareBlockers)
+		blockers, ok := act.DeclareBlockersPayload()
+		if !ok {
+			return "invalid declare blockers"
+		}
+		return formatDeclareBlockers(g, logged, blockers)
 	default:
 		return fmt.Sprintf("action kind %d", act.Kind)
 	}

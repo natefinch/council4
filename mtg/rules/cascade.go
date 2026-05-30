@@ -82,9 +82,7 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 		ChosenModes: append([]int(nil), modes...),
 	}
 	stormCopies := stormCopyCount(g, spellDef)
-	g.Stack.Push(obj)
-	emitTargetEvents(g, obj)
-	event := game.GameEvent{
+	pushSpellToStack(g, obj, game.GameEvent{
 		SourceID:      cardID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,
@@ -92,10 +90,7 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 		CardTypes:     cardTypes(spellDef),
 		FromZone:      game.ZoneExile,
 		ToZone:        game.ZoneStack,
-	}
-	emitZoneChangeEvent(g, event)
-	event.Kind = game.EventSpellCast
-	emitEvent(g, event)
+	})
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true

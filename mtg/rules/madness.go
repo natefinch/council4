@@ -63,9 +63,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		Targets:     append([]game.Target(nil), targets...),
 		ChosenModes: append([]int(nil), modes...),
 	}
-	g.Stack.Push(stackObj)
-	emitTargetEvents(g, stackObj)
-	event := game.GameEvent{
+	pushSpellToStack(g, stackObj, game.GameEvent{
 		SourceID:      card.ID,
 		StackObjectID: stackObj.ID,
 		Controller:    playerID,
@@ -73,10 +71,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		CardTypes:     cardTypes(spellDef),
 		FromZone:      game.ZoneExile,
 		ToZone:        game.ZoneStack,
-	}
-	emitZoneChangeEvent(g, event)
-	event.Kind = game.EventSpellCast
-	emitEvent(g, event)
+	})
 	return true
 }
 
@@ -85,7 +80,7 @@ func firstLegalSpellCastChoice(g *game.Game, playerID game.PlayerID, spellDef *g
 		return nil, nil, false
 	}
 	for _, modes := range modeChoicesForSpell(spellDef) {
-		for _, targets := range targetChoicesForSpell(g, playerID, spellDef, modes) {
+		for _, targets := range targetChoicesForSpell(g, playerID, spellDef, modes).choices {
 			if modesValidForSpell(spellDef, modes) && targetsValidForSpell(g, playerID, spellDef, modes, targets) {
 				return append([]int(nil), modes...), append([]game.Target(nil), targets...), true
 			}

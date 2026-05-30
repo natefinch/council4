@@ -34,15 +34,15 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 
 		legal := e.legalActions(g, playerID)
 		if len(legal) == 0 {
-			legal = []action.Action{action.Pass()}
+			legal = []action.Action{actionBuild.pass()}
 		}
 
-		chosen := action.Pass()
+		chosen := actionBuild.pass()
 		if agent := agentFor(agents, playerID); agent != nil {
 			chosen = agent.ChooseAction(observe(g, playerID), legal)
 		}
 		if !containsAction(legal, chosen) {
-			chosen = action.Pass()
+			chosen = actionBuild.pass()
 		}
 
 		log.addAction(ActionLog{
@@ -110,23 +110,40 @@ func actionsEqual(a, b action.Action) bool {
 	case action.ActionPass:
 		return true
 	case action.ActionPlayLand:
-		return a.PlayLand == b.PlayLand
+		aPayload, aOK := a.PlayLandPayload()
+		bPayload, bOK := b.PlayLandPayload()
+		return aOK && bOK && aPayload == bPayload
 	case action.ActionCastSpell:
-		return a.CastSpell.CardID == b.CastSpell.CardID &&
-			a.CastSpell.XValue == b.CastSpell.XValue &&
-			slices.Equal(a.CastSpell.Targets, b.CastSpell.Targets) &&
-			slices.Equal(a.CastSpell.ChosenModes, b.CastSpell.ChosenModes)
+		aPayload, aOK := a.CastSpellPayload()
+		bPayload, bOK := b.CastSpellPayload()
+		return aOK && bOK &&
+			aPayload.CardID == bPayload.CardID &&
+			aPayload.SourceZone == bPayload.SourceZone &&
+			aPayload.Face == bPayload.Face &&
+			aPayload.XValue == bPayload.XValue &&
+			aPayload.KickerPaid == bPayload.KickerPaid &&
+			slices.Equal(aPayload.Targets, bPayload.Targets) &&
+			slices.Equal(aPayload.ChosenModes, bPayload.ChosenModes)
 	case action.ActionActivateAbility:
-		return a.ActivateAbility.SourceID == b.ActivateAbility.SourceID &&
-			a.ActivateAbility.AbilityIndex == b.ActivateAbility.AbilityIndex &&
-			a.ActivateAbility.XValue == b.ActivateAbility.XValue &&
-			slices.Equal(a.ActivateAbility.Targets, b.ActivateAbility.Targets)
+		aPayload, aOK := a.ActivateAbilityPayload()
+		bPayload, bOK := b.ActivateAbilityPayload()
+		return aOK && bOK &&
+			aPayload.SourceID == bPayload.SourceID &&
+			aPayload.AbilityIndex == bPayload.AbilityIndex &&
+			aPayload.XValue == bPayload.XValue &&
+			slices.Equal(aPayload.Targets, bPayload.Targets)
 	case action.ActionSuspendCard:
-		return a.SuspendCard == b.SuspendCard
+		aPayload, aOK := a.SuspendCardPayload()
+		bPayload, bOK := b.SuspendCardPayload()
+		return aOK && bOK && aPayload == bPayload
 	case action.ActionDeclareAttackers:
-		return slices.Equal(a.DeclareAttackers.Attackers, b.DeclareAttackers.Attackers)
+		aPayload, aOK := a.DeclareAttackersPayload()
+		bPayload, bOK := b.DeclareAttackersPayload()
+		return aOK && bOK && slices.Equal(aPayload.Attackers, bPayload.Attackers)
 	case action.ActionDeclareBlockers:
-		return slices.Equal(a.DeclareBlockers.Blockers, b.DeclareBlockers.Blockers)
+		aPayload, aOK := a.DeclareBlockersPayload()
+		bPayload, bOK := b.DeclareBlockersPayload()
+		return aOK && bOK && slices.Equal(aPayload.Blockers, bPayload.Blockers)
 	default:
 		return false
 	}

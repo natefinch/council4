@@ -84,7 +84,7 @@ func (e *Engine) legalSuspendActions(g *game.Game, playerID game.PlayerID) []act
 	var actions []action.Action
 	for _, cardID := range player.Hand.All() {
 		if e.canSuspendCard(g, playerID, cardID) {
-			actions = append(actions, action.SuspendCard(cardID))
+			actions = append(actions, actionBuild.suspendCard(cardID))
 		}
 	}
 	return actions
@@ -145,9 +145,7 @@ func (e *Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID 
 		ChosenModes: append([]int(nil), modes...),
 		Suspend:     true,
 	}
-	g.Stack.Push(obj)
-	emitTargetEvents(g, obj)
-	event := game.GameEvent{
+	pushSpellToStack(g, obj, game.GameEvent{
 		SourceID:      cardID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,
@@ -155,9 +153,6 @@ func (e *Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID 
 		CardTypes:     cardTypes(spellDef),
 		FromZone:      game.ZoneExile,
 		ToZone:        game.ZoneStack,
-	}
-	emitZoneChangeEvent(g, event)
-	event.Kind = game.EventSpellCast
-	emitEvent(g, event)
+	})
 	return true
 }

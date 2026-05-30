@@ -22,11 +22,12 @@ func TestPlayerTargetedSpellCreatesOneLegalActionPerAlivePlayer(t *testing.T) {
 
 	var castTargets []game.Target
 	for _, act := range legal {
-		if act.Kind == action.ActionCastSpell && act.CastSpell.CardID == spellID {
-			if len(act.CastSpell.Targets) != 1 {
-				t.Fatalf("cast targets = %d, want 1", len(act.CastSpell.Targets))
+		cast, ok := act.CastSpellPayload()
+		if ok && cast.CardID == spellID {
+			if len(cast.Targets) != 1 {
+				t.Fatalf("cast targets = %d, want 1", len(cast.Targets))
 			}
-			castTargets = append(castTargets, act.CastSpell.Targets[0])
+			castTargets = append(castTargets, cast.Targets[0])
 		}
 	}
 	wantTargets := []game.Target{
@@ -126,11 +127,12 @@ func TestPermanentTargetedSpellCreatesActionsForMatchingPermanents(t *testing.T)
 		t.Fatalf("legal actions did not include creature target action %+v", want)
 	}
 	for _, act := range legal {
-		if act.Kind != action.ActionCastSpell || act.CastSpell.CardID != spellID {
+		cast, ok := act.CastSpellPayload()
+		if !ok || cast.CardID != spellID {
 			continue
 		}
-		if len(act.CastSpell.Targets) != 1 || act.CastSpell.Targets[0] != game.PermanentTarget(creature.ObjectID) {
-			t.Fatalf("unexpected cast target %+v", act.CastSpell.Targets)
+		if len(cast.Targets) != 1 || cast.Targets[0] != game.PermanentTarget(creature.ObjectID) {
+			t.Fatalf("unexpected cast target %+v", cast.Targets)
 		}
 	}
 }
@@ -160,15 +162,105 @@ func TestOptionalPermanentTargetAllowsTargetOrNoTarget(t *testing.T) {
 func TestOptionalTargetWithNoCandidatesHasSingleNoTargetChoice(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 
-	choices := targetChoicesForSpecs(g, game.Player1, nil, 0, []game.TargetSpec{
+	result := targetChoicesForSpecs(g, game.Player1, nil, 0, []game.TargetSpec{
 		{MinTargets: 0, MaxTargets: 2, Constraint: "creature"},
 	})
 
-	if len(choices) != 1 {
-		t.Fatalf("choices = %d, want one no-target choice", len(choices))
+	if result.kind != targetLegalChoicesFound {
+		t.Fatalf("kind = %v, want targetLegalChoicesFound", result.kind)
 	}
-	if choices[0] != nil {
-		t.Fatalf("choice = %+v, want nil no-target choice", choices[0])
+	if len(result.choices) != 1 {
+		t.Fatalf("choices = %d, want one no-target choice", len(result.choices))
+	}
+	if result.choices[0] != nil {
+		t.Fatalf("choice = %+v, want nil no-target choice", result.choices[0])
+	}
+}
+
+func TestTargetChoiceResultKinds(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCreaturePermanent(g, game.Player1)
+
+	tests := []struct {
+		name     string
+		specs    []game.TargetSpec
+		wantKind targetChoiceKind
+		wantErr  bool
+	}{
+		{
+			name:     "no specs means no targets required",
+			specs:    nil,
+			wantKind: targetNoTargetsRequired,
+		},
+		{
+			name:     "empty specs means no targets required",
+			specs:    []game.TargetSpec{},
+			wantKind: targetNoTargetsRequired,
+		},
+		{
+			name: "required target with legal candidate",
+			specs: []game.TargetSpec{
+				{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
+			},
+			wantKind: targetLegalChoicesFound,
+		},
+		{
+			name: "required target with no legal candidates",
+			specs: []game.TargetSpec{
+				{MinTargets: 1, MaxTargets: 1, Constraint: "planeswalker"},
+			},
+			wantKind: targetNoLegalChoices,
+		},
+		{
+			name: "optional target with candidates produces legal choices",
+			specs: []game.TargetSpec{
+				{MinTargets: 0, MaxTargets: 1, Constraint: "creature"},
+			},
+			wantKind: targetLegalChoicesFound,
+		},
+		{
+			name: "invalid spec max less than min returns error",
+			specs: []game.TargetSpec{
+				{MinTargets: 2, MaxTargets: 1, Constraint: "creature"},
+			},
+			wantKind: targetInvalidSpec,
+			wantErr:  true,
+		},
+		{
+			name: "invalid spec negative min returns error",
+			specs: []game.TargetSpec{
+				{MinTargets: -1, MaxTargets: 1, Constraint: "creature"},
+			},
+			wantKind: targetInvalidSpec,
+			wantErr:  true,
+		},
+	}
+
+	_ = creature // used as a board-state fixture for legal-candidate cases
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := targetChoicesForSpecs(g, game.Player1, nil, 0, tt.specs)
+			if result.kind != tt.wantKind {
+				t.Errorf("kind = %v, want %v", result.kind, tt.wantKind)
+			}
+			if tt.wantErr && result.err == nil {
+				t.Error("err = nil, want non-nil error for invalid spec")
+			}
+			if !tt.wantErr && result.err != nil {
+				t.Errorf("err = %v, want nil", result.err)
+			}
+			if tt.wantKind == targetNoTargetsRequired || tt.wantKind == targetLegalChoicesFound {
+				if len(result.choices) == 0 {
+					t.Error("choices is empty, want at least one choice")
+				}
+			}
+			if tt.wantKind == targetNoLegalChoices || tt.wantKind == targetInvalidSpec {
+				if len(result.choices) != 0 {
+					t.Errorf("choices = %d, want 0 for %v", len(result.choices), tt.wantKind)
+				}
+			}
+		})
 	}
 }
 

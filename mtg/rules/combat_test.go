@@ -148,12 +148,14 @@ func TestLegalDeclareAttackersActionsProductiveFirstThenNoAttacks(t *testing.T) 
 			{Attacker: attacker1.ObjectID, Target: game.AttackTarget{Player: target}},
 			{Attacker: attacker2.ObjectID, Target: game.AttackTarget{Player: target}},
 		}
-		if !slices.Equal(legal[allAttackersAction].DeclareAttackers.Attackers, want) {
-			t.Fatalf("action %d attackers = %+v, want %+v", allAttackersAction, legal[allAttackersAction].DeclareAttackers.Attackers, want)
+		attackers := mustDeclareAttackersPayload(t, legal[allAttackersAction])
+		if !slices.Equal(attackers.Attackers, want) {
+			t.Fatalf("action %d attackers = %+v, want %+v", allAttackersAction, attackers.Attackers, want)
 		}
 	}
-	if len(legal[6].DeclareAttackers.Attackers) != 0 {
-		t.Fatalf("last declare attackers action = %+v, want no attacks", legal[6].DeclareAttackers.Attackers)
+	attackers := mustDeclareAttackersPayload(t, legal[6])
+	if len(attackers.Attackers) != 0 {
+		t.Fatalf("last declare attackers action = %+v, want no attacks", attackers.Attackers)
 	}
 }
 
@@ -169,16 +171,18 @@ func TestGoadedCreatureMustAttackIfAble(t *testing.T) {
 	legal := legalDeclareAttackersActions(g, game.Player1)
 
 	for _, act := range legal {
-		if len(act.DeclareAttackers.Attackers) == 0 {
+		attackers := mustDeclareAttackersPayload(t, act)
+		if len(attackers.Attackers) == 0 {
 			t.Fatalf("legal actions included no attacks despite goaded eligible attacker: %+v", legal)
 		}
 	}
-	if engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers(nil).DeclareAttackers) {
+	if engine.applyDeclareAttackers(g, game.Player1, mustDeclareAttackersPayload(t, action.DeclareAttackers(nil))) {
 		t.Fatal("applyDeclareAttackers() accepted no attacks with goaded eligible attacker")
 	}
-	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+	legalAttack := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player3}},
-	}).DeclareAttackers) {
+	}))
+	if !engine.applyDeclareAttackers(g, game.Player1, legalAttack) {
 		t.Fatal("applyDeclareAttackers() rejected legal goaded attack")
 	}
 }
@@ -195,20 +199,23 @@ func TestGoadedCreatureAttacksNonGoadingPlayerIfAble(t *testing.T) {
 	legal := legalDeclareAttackersActions(g, game.Player1)
 
 	for _, act := range legal {
-		for _, attack := range act.DeclareAttackers.Attackers {
+		attackers := mustDeclareAttackersPayload(t, act)
+		for _, attack := range attackers.Attackers {
 			if attack.Target.Player == game.Player2 {
 				t.Fatalf("legal actions included attack at goading player while alternatives exist: %+v", legal)
 			}
 		}
 	}
-	if engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+	goadingAttack := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-	}).DeclareAttackers) {
+	}))
+	if engine.applyDeclareAttackers(g, game.Player1, goadingAttack) {
 		t.Fatal("applyDeclareAttackers() accepted goaded attack at goading player while alternatives exist")
 	}
-	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+	nonGoadingAttack := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player4}},
-	}).DeclareAttackers) {
+	}))
+	if !engine.applyDeclareAttackers(g, game.Player1, nonGoadingAttack) {
 		t.Fatal("applyDeclareAttackers() rejected attack at non-goading player")
 	}
 }
@@ -236,12 +243,13 @@ func TestGoadedByTwoPlayersMustAttackRemainingNonGoadingOpponentIfAble(t *testin
 	if !actionsEqual(legal[0], want) {
 		t.Fatalf("legal action = %+v, want %+v", legal[0], want)
 	}
-	if engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+	goadingAttack := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-	}).DeclareAttackers) {
+	}))
+	if engine.applyDeclareAttackers(g, game.Player1, goadingAttack) {
 		t.Fatal("applyDeclareAttackers() accepted attack at goading player while remaining opponent exists")
 	}
-	if !engine.applyDeclareAttackers(g, game.Player1, want.DeclareAttackers) {
+	if !engine.applyDeclareAttackers(g, game.Player1, mustDeclareAttackersPayload(t, want)) {
 		t.Fatal("applyDeclareAttackers() rejected attack at remaining non-goading opponent")
 	}
 }
@@ -257,10 +265,11 @@ func TestGoadDoesNotForceIllegalAttacks(t *testing.T) {
 
 	legal := legalDeclareAttackersActions(g, game.Player1)
 
-	if len(legal) != 1 || len(legal[0].DeclareAttackers.Attackers) != 0 {
+	attackers := mustDeclareAttackersPayload(t, legal[0])
+	if len(legal) != 1 || len(attackers.Attackers) != 0 {
 		t.Fatalf("legal actions = %+v, want only no attacks", legal)
 	}
-	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers(nil).DeclareAttackers) {
+	if !engine.applyDeclareAttackers(g, game.Player1, mustDeclareAttackersPayload(t, action.DeclareAttackers(nil))) {
 		t.Fatal("applyDeclareAttackers() rejected no attacks when goaded creature could not legally attack")
 	}
 }
@@ -273,10 +282,10 @@ func TestApplyDeclareAttackersTapsNormalButNotVigilanceAttackers(t *testing.T) {
 	g.Turn.Step = game.StepDeclareAttackers
 	g.Combat = &game.CombatState{}
 	engine := NewEngine(nil)
-	declare := action.DeclareAttackers([]game.AttackDeclaration{
+	declare := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 		{Attacker: normal.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
 		{Attacker: vigilance.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-	}).DeclareAttackers
+	}))
 
 	if !engine.applyDeclareAttackers(g, game.Player1, declare) {
 		t.Fatal("applyDeclareAttackers() = false, want true")
@@ -300,10 +309,10 @@ func TestApplyDeclareAttackersInvalidDoesNotMutate(t *testing.T) {
 		{
 			name: "duplicate attacker",
 			declare: func(g *game.Game, attacker *game.Permanent) action.DeclareAttackersAction {
-				return action.DeclareAttackers([]game.AttackDeclaration{
+				return mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 					{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
 					{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player3}},
-				}).DeclareAttackers
+				}))
 			},
 		},
 		{
@@ -311,26 +320,26 @@ func TestApplyDeclareAttackersInvalidDoesNotMutate(t *testing.T) {
 			declare: func(g *game.Game, attacker *game.Permanent) action.DeclareAttackersAction {
 				g.Players[game.Player2].Eliminated = true
 				g.TurnOrder.Eliminate(game.Player2)
-				return action.DeclareAttackers([]game.AttackDeclaration{
+				return mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 					{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-				}).DeclareAttackers
+				}))
 			},
 		},
 		{
 			name: "planeswalker target",
 			declare: func(g *game.Game, attacker *game.Permanent) action.DeclareAttackersAction {
-				return action.DeclareAttackers([]game.AttackDeclaration{
+				return mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 					{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2, PlaneswalkerID: 99}},
-				}).DeclareAttackers
+				}))
 			},
 		},
 		{
 			name: "summoning sick attacker",
 			declare: func(g *game.Game, attacker *game.Permanent) action.DeclareAttackersAction {
 				attacker.SummoningSick = true
-				return action.DeclareAttackers([]game.AttackDeclaration{
+				return mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 					{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-				}).DeclareAttackers
+				}))
 			},
 		},
 	}
@@ -385,9 +394,10 @@ func TestDeclareAttackersCanTargetPlaneswalkersAndBattles(t *testing.T) {
 	if !declareAttackersActionsContainTarget(legal, attacker.ObjectID, wantBattle) {
 		t.Fatalf("legal actions = %+v, want battle target %v", legal, wantBattle)
 	}
-	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+	declare := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
 		{Attacker: attacker.ObjectID, Target: wantPlaneswalker},
-	}).DeclareAttackers) {
+	}))
+	if !engine.applyDeclareAttackers(g, game.Player1, declare) {
 		t.Fatal("applyDeclareAttackers() rejected valid planeswalker target")
 	}
 }
@@ -418,11 +428,13 @@ func TestLegalDeclareBlockersActionsProductiveFirstThenNoBlocks(t *testing.T) {
 	if !actionsEqual(legal[0], wantBlock) {
 		t.Fatalf("first legal block action = %+v, want %+v", legal[0], wantBlock)
 	}
-	if len(legal[1].DeclareBlockers.Blockers) != 0 {
-		t.Fatalf("last block action = %+v, want no blocks", legal[1].DeclareBlockers.Blockers)
+	noBlocks := mustDeclareBlockersPayload(t, legal[1])
+	if len(noBlocks.Blockers) != 0 {
+		t.Fatalf("last block action = %+v, want no blocks", noBlocks.Blockers)
 	}
 	for _, act := range legal {
-		for _, block := range act.DeclareBlockers.Blockers {
+		blockers := mustDeclareBlockersPayload(t, act)
+		for _, block := range blockers.Blockers {
 			if block.Blocker == tapped.ObjectID || block.Blocker == opponentCreature.ObjectID {
 				t.Fatalf("ineligible blocker %v appeared in legal action %+v", block.Blocker, act)
 			}
@@ -442,9 +454,9 @@ func TestApplyDeclareBlockersRecordsBlockerOrder(t *testing.T) {
 		},
 	}
 	engine := NewEngine(nil)
-	declare := action.DeclareBlockers([]game.BlockDeclaration{
+	declare := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
-	}).DeclareBlockers
+	}))
 
 	if !engine.applyDeclareBlockers(g, game.Player2, declare) {
 		t.Fatal("applyDeclareBlockers() = false, want true")
@@ -465,38 +477,38 @@ func TestApplyDeclareBlockersInvalidDoesNotMutate(t *testing.T) {
 		{
 			name: "duplicate blocker",
 			declare: func(g *game.Game, attacker *game.Permanent, blocker *game.Permanent) action.DeclareBlockersAction {
-				return action.DeclareBlockers([]game.BlockDeclaration{
+				return mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 					{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
 					{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID + 100},
-				}).DeclareBlockers
+				}))
 			},
 		},
 		{
 			name: "unknown attacker",
 			declare: func(g *game.Game, attacker *game.Permanent, blocker *game.Permanent) action.DeclareBlockersAction {
 				other := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
-				return action.DeclareBlockers([]game.BlockDeclaration{
+				return mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 					{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
 					{Blocker: other.ObjectID, Blocking: attacker.ObjectID + 100},
-				}).DeclareBlockers
+				}))
 			},
 		},
 		{
 			name: "tapped blocker",
 			declare: func(g *game.Game, attacker *game.Permanent, blocker *game.Permanent) action.DeclareBlockersAction {
 				blocker.Tapped = true
-				return action.DeclareBlockers([]game.BlockDeclaration{
+				return mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 					{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
-				}).DeclareBlockers
+				}))
 			},
 		},
 		{
 			name: "attacker not attacking controller",
 			declare: func(g *game.Game, attacker *game.Permanent, blocker *game.Permanent) action.DeclareBlockersAction {
 				g.Combat.Attackers[0].Target.Player = game.Player3
-				return action.DeclareBlockers([]game.BlockDeclaration{
+				return mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 					{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
-				}).DeclareBlockers
+				}))
 			},
 		},
 	}
@@ -541,10 +553,10 @@ func TestApplyDeclareBlockersAllowsMultipleBlockersAndRecordsOrder(t *testing.T)
 		},
 	}
 	engine := NewEngine(nil)
-	declare := action.DeclareBlockers([]game.BlockDeclaration{
+	declare := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
 		{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
-	}).DeclareBlockers
+	}))
 
 	if !engine.applyDeclareBlockers(g, game.Player2, declare) {
 		t.Fatal("applyDeclareBlockers() = false, want true")
@@ -573,15 +585,17 @@ func TestFlyingBlockLegalityRequiresFlyingOrReach(t *testing.T) {
 	}
 	engine := NewEngine(nil)
 
-	if engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+	groundBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: ground.ObjectID, Blocking: attacker.ObjectID},
-	}).DeclareBlockers) {
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, groundBlock) {
 		t.Fatal("ground blocker blocked flying attacker")
 	}
-	if !engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+	flyingBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: flying.ObjectID, Blocking: attacker.ObjectID},
 		{Blocker: reach.ObjectID, Blocking: attacker.ObjectID},
-	}).DeclareBlockers) {
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, flyingBlock) {
 		t.Fatal("flying and reach blockers could not block flying attacker")
 	}
 }
@@ -612,11 +626,13 @@ func TestLegalDeclareBlockersActionsExcludeIllegalFlyingAndSingleMenaceBlocks(t 
 	if !actionsEqual(legal[0], wantBlock) {
 		t.Fatalf("first legal block action = %+v, want %+v", legal[0], wantBlock)
 	}
-	if len(legal[1].DeclareBlockers.Blockers) != 0 {
-		t.Fatalf("last block action = %+v, want no blocks", legal[1].DeclareBlockers.Blockers)
+	noBlocks := mustDeclareBlockersPayload(t, legal[1])
+	if len(noBlocks.Blockers) != 0 {
+		t.Fatalf("last block action = %+v, want no blocks", noBlocks.Blockers)
 	}
 	for _, act := range legal {
-		for _, block := range act.DeclareBlockers.Blockers {
+		blockers := mustDeclareBlockersPayload(t, act)
+		for _, block := range blockers.Blockers {
 			if block.Blocker == ground.ObjectID {
 				t.Fatalf("ground blocker appeared in legal flying block action %+v", act)
 			}
@@ -638,15 +654,17 @@ func TestMenaceRequiresAtLeastTwoBlockers(t *testing.T) {
 	}
 	engine := NewEngine(nil)
 
-	if engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+	singleBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
-	}).DeclareBlockers) {
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, singleBlock) {
 		t.Fatal("single blocker blocked menace attacker")
 	}
-	if !engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+	twoBlocks := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
 		{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
-	}).DeclareBlockers) {
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, twoBlocks) {
 		t.Fatal("two blockers could not block menace attacker")
 	}
 }
@@ -974,7 +992,8 @@ func TestAttackTaxFiltersAndChargesDeclareAttackers(t *testing.T) {
 		t.Fatal("taxed attack was not legal with mana available")
 	}
 
-	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}}).DeclareAttackers) {
+	declare := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}}))
+	if !engine.applyDeclareAttackers(g, game.Player1, declare) {
 		t.Fatal("applyDeclareAttackers() = false, want tax payment to succeed")
 	}
 	if !forest.Tapped {
@@ -1803,13 +1822,35 @@ func addCombatPermanent(g *game.Game, controller game.PlayerID, def *game.CardDe
 
 func declareAttackersActionsContainTarget(actions []action.Action, attacker id.ID, target game.AttackTarget) bool {
 	for _, act := range actions {
-		for _, declaration := range act.DeclareAttackers.Attackers {
+		payload, ok := act.DeclareAttackersPayload()
+		if !ok {
+			continue
+		}
+		for _, declaration := range payload.Attackers {
 			if declaration.Attacker == attacker && declaration.Target == target {
 				return true
 			}
 		}
 	}
 	return false
+}
+
+func mustDeclareAttackersPayload(t *testing.T, act action.Action) action.DeclareAttackersAction {
+	t.Helper()
+	payload, ok := act.DeclareAttackersPayload()
+	if !ok {
+		t.Fatalf("DeclareAttackersPayload() ok = false for %+v", act)
+	}
+	return payload
+}
+
+func mustDeclareBlockersPayload(t *testing.T, act action.Action) action.DeclareBlockersAction {
+	t.Helper()
+	payload, ok := act.DeclareBlockersPayload()
+	if !ok {
+		t.Fatalf("DeclareBlockersPayload() ok = false for %+v", act)
+	}
+	return payload
 }
 
 func intPtr(value int) *int {

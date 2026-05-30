@@ -212,11 +212,7 @@ func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog)
 }
 
 func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
-	card, ok := g.GetCardInstance(obj.SourceID)
-	if !ok {
-		return "missing source"
-	}
-	spellDef, ok := cardFaceDef(card, obj.Face)
+	card, spellDef, ok := cardInstanceFaceDef(g, obj.SourceID, obj.Face)
 	if !ok {
 		return "missing source"
 	}

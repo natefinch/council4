@@ -3,36 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 )
-
-// paymentTransaction is the internal rules plan for paying a spell, ability,
-// or future attack cost. Current payment code still uses paymentPlan; Phase 9B
-// migrates behavior into this richer shape one slice at a time.
-type paymentTransaction struct {
-	poolSpend        []mana.Unit
-	manaTaps         []manaTap
-	lifePayments     map[game.PlayerID]int
-	symbolPayments   []game.SymbolPayment
-	additionalCosts  []game.AdditionalCostSelection
-	alternativeLabel string
-}
-
-type paymentSymbolOption struct {
-	symbol  mana.Symbol
-	method  game.SymbolPaymentMethod
-	color   mana.Color
-	generic int
-	life    int
-	snow    bool
-}
-
-type paymentAdditionalCostOption struct {
-	cost         game.AdditionalCost
-	permanents   []id.ID
-	cards        []id.ID
-	lifeRequired int
-}
 
 // costModificationContext is the future attachment point for cost increases,
 // reductions, and taxes produced by static or continuous effects.
@@ -42,6 +13,28 @@ type costModificationContext struct {
 	cardID     id.ID
 	sourceZone game.ZoneType
 	option     spellCostOption
+}
+
+// spellPaymentRequest bundles all parameters needed to check or pay spell costs,
+// replacing the old WithKickerFromZoneAndPreferences overload chain.
+type spellPaymentRequest struct {
+	playerID   game.PlayerID
+	cardID     id.ID
+	sourceZone game.ZoneType
+	card       *game.CardDef
+	xValue     int
+	kickerPaid bool
+	prefs      *paymentPreferences
+}
+
+// abilityPaymentRequest bundles all parameters needed to check or pay ability costs,
+// replacing the old WithPreferences overload chain.
+type abilityPaymentRequest struct {
+	playerID game.PlayerID
+	source   *game.Permanent
+	ability  *game.AbilityDef
+	xValue   int
+	prefs    *paymentPreferences
 }
 
 type paymentPreferences struct {

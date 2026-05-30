@@ -18,7 +18,9 @@ func TestFirstLegalChoosesFirstAction(t *testing.T) {
 		action.Pass(),
 	})
 
-	if got.Kind != want.Kind || got.PlayLand != want.PlayLand {
+	gotPlayLand, gotOK := got.PlayLandPayload()
+	wantPlayLand, wantOK := want.PlayLandPayload()
+	if got.Kind != want.Kind || !gotOK || !wantOK || gotPlayLand != wantPlayLand {
 		t.Fatalf("ChooseAction() = %+v, want %+v", got, want)
 	}
 }
@@ -64,8 +66,12 @@ func TestSimpleCasterPrefersLandThenNonSelfCast(t *testing.T) {
 }
 
 func sameCast(a, b action.Action) bool {
+	aCast, aOK := a.CastSpellPayload()
+	bCast, bOK := b.CastSpellPayload()
 	return a.Kind == action.ActionCastSpell &&
 		b.Kind == action.ActionCastSpell &&
-		a.CastSpell.CardID == b.CastSpell.CardID &&
-		slices.Equal(a.CastSpell.Targets, b.CastSpell.Targets)
+		aOK &&
+		bOK &&
+		aCast.CardID == bCast.CardID &&
+		slices.Equal(aCast.Targets, bCast.Targets)
 }

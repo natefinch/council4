@@ -1,0 +1,63 @@
+package rules
+
+import (
+	"fmt"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/id"
+)
+
+// actionBuilderType is the single point in the rules package for constructing
+// action.Action values. Every method validates the constructed action via
+// Action.Validate() and panics on a programming error (invalid inputs that
+// should have been checked by the caller before building the action).
+//
+// All legal action generation and action application code in the rules package
+// must use actionBuild instead of calling action package constructors directly.
+type actionBuilderType struct{}
+
+// actionBuild is the package-level singleton for constructing actions.
+var actionBuild actionBuilderType
+
+func (actionBuilderType) mustBuild(act action.Action) action.Action {
+	if err := act.Validate(); err != nil {
+		panic(fmt.Sprintf("rules: actionBuilder produced invalid action: %v", err))
+	}
+	return act
+}
+
+func (b actionBuilderType) pass() action.Action {
+	return b.mustBuild(action.Pass())
+}
+
+func (b actionBuilderType) playLand(cardID id.ID, face game.FaceIndex) action.Action {
+	return b.mustBuild(action.PlayLandFace(cardID, face))
+}
+
+// castSpell builds a normal (non-kicked) CastSpell action for the given card,
+// source zone, face, targets, X value, and chosen modes.
+func (b actionBuilderType) castSpell(cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
+	return b.mustBuild(action.CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
+}
+
+// castKickedSpell builds a kicked CastSpell action.
+func (b actionBuilderType) castKickedSpell(cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
+	return b.mustBuild(action.CastKickedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
+}
+
+func (b actionBuilderType) activateAbility(sourceID id.ID, abilityIndex int, targets []game.Target, xValue int) action.Action {
+	return b.mustBuild(action.ActivateAbility(sourceID, abilityIndex, targets, xValue))
+}
+
+func (b actionBuilderType) suspendCard(cardID id.ID) action.Action {
+	return b.mustBuild(action.SuspendCard(cardID))
+}
+
+func (b actionBuilderType) declareAttackers(attackers []game.AttackDeclaration) action.Action {
+	return b.mustBuild(action.DeclareAttackers(attackers))
+}
+
+func (b actionBuilderType) declareBlockers(blockers []game.BlockDeclaration) action.Action {
+	return b.mustBuild(action.DeclareBlockers(blockers))
+}

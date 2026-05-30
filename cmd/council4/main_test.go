@@ -282,7 +282,8 @@ func countAttacksAndDamage(result *rules.GameResult) (int, int) {
 	damage := 0
 	for _, turn := range result.Turns {
 		for _, logged := range turn.Actions {
-			if logged.Action.Kind == action.ActionDeclareAttackers && len(logged.Action.DeclareAttackers.Attackers) > 0 {
+			attackers, ok := logged.Action.DeclareAttackersPayload()
+			if ok && len(attackers.Attackers) > 0 {
 				attacks++
 			}
 		}

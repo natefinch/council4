@@ -360,15 +360,17 @@ func TestDeclareAttackersAndBlockersEmitEvents(t *testing.T) {
 	g.Turn.Step = game.StepDeclareAttackers
 	g.Combat = &game.CombatState{}
 
-	if !engine.applyDeclareAttackers(g, game.Player1, action.DeclareAttackers([]game.AttackDeclaration{
+	attackers, ok := action.DeclareAttackers([]game.AttackDeclaration{
 		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-	}).DeclareAttackers) {
+	}).DeclareAttackersPayload()
+	if !ok || !engine.applyDeclareAttackers(g, game.Player1, attackers) {
 		t.Fatal("applyDeclareAttackers() = false, want true")
 	}
 	g.Turn.Step = game.StepDeclareBlockers
-	if !engine.applyDeclareBlockers(g, game.Player2, action.DeclareBlockers([]game.BlockDeclaration{
+	blockers, ok := action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
-	}).DeclareBlockers) {
+	}).DeclareBlockersPayload()
+	if !ok || !engine.applyDeclareBlockers(g, game.Player2, blockers) {
 		t.Fatal("applyDeclareBlockers() = false, want true")
 	}
 

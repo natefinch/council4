@@ -57,10 +57,30 @@ func firstSpellAbility(card *game.CardDef) (*game.AbilityDef, bool) {
 }
 
 func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect game.Effect, log *TurnLog) {
-	e.resolveEffectWithChoices(g, obj, effect, [game.NumPlayers]PlayerAgent{}, log)
+	newEffectResolver(e, g, obj, [game.NumPlayers]PlayerAgent{}, log).resolve(effect)
 }
 
 func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, effect game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	newEffectResolver(e, g, obj, agents, log).resolve(effect)
+}
+
+// effectResolver bundles the per-resolution context so the resolution body
+// can be a method rather than a free function with five repeated parameters.
+type effectResolver struct {
+	engine *Engine
+	game   *game.Game
+	obj    *game.StackObject
+	agents [game.NumPlayers]PlayerAgent
+	log    *TurnLog
+}
+
+func newEffectResolver(e *Engine, g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *effectResolver {
+	return &effectResolver{engine: e, game: g, obj: obj, agents: agents, log: log}
+}
+
+func (r *effectResolver) resolve(effect game.Effect) {
+	g := r.game
+	obj := r.obj
 	if !effectConditionSatisfied(g, obj, effect.Condition) {
 		return
 	}
@@ -79,12 +99,12 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		}
 		rememberEffectResolutionResult(obj, effect, accepted, succeeded, amount)
 	}()
-	if effect.Optional && !e.chooseMay(g, agents, stackObjectController(obj), "Apply optional effect?", log) {
+	if effect.Optional && !r.engine.chooseMay(g, r.agents, stackObjectController(obj), "Apply optional effect?", r.log) {
 		accepted = false
 		return
 	}
 	if effect.Choice.Exists {
-		if !e.resolveResolutionChoice(g, obj, effect, agents, log) {
+		if !r.engine.resolveResolutionChoice(g, obj, effect, r.agents, r.log) {
 			return
 		}
 		succeeded = true
@@ -93,13 +113,13 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		}
 	}
 	if effect.Payment.Exists {
-		accepted, succeeded = e.resolveResolutionPayment(g, obj, effect, agents, log)
+		accepted, succeeded = r.engine.resolveResolutionPayment(g, obj, effect, r.agents, r.log)
 		if !succeeded || effect.Type == game.EffectPay {
 			return
 		}
 	}
 	if !IsEffectTypeExecuted(effect.Type) {
-		logUnsupportedEffect(log, obj, effect)
+		logUnsupportedEffect(r.log, obj, effect)
 		return
 	}
 	if effect.Selector != game.EffectSelectorNone {
@@ -115,7 +135,7 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 		if !ok {
 			return
 		}
-		succeeded = e.drawCards(g, playerID, amount, log)
+		succeeded = r.engine.drawCards(g, playerID, amount, r.log)
 
 	case game.EffectGainLife:
 		if amount <= 0 {
@@ -281,13 +301,13 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 	case game.EffectScry:
 		playerID, ok := effectPlayer(g, obj, effect)
 		if ok {
-			e.scryCards(g, agents, log, playerID, amount)
+			r.engine.scryCards(g, r.agents, r.log, playerID, amount)
 			succeeded = amount > 0
 		}
 	case game.EffectSurveil:
 		playerID, ok := effectPlayer(g, obj, effect)
 		if ok {
-			e.surveilCards(g, agents, log, playerID, amount)
+			r.engine.surveilCards(g, r.agents, r.log, playerID, amount)
 			succeeded = amount > 0
 		}
 	case game.EffectFight:
@@ -300,7 +320,7 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 	case game.EffectApplyRule:
 		succeeded = createRuleEffects(g, obj, effect)
 	case game.EffectProliferate:
-		succeeded = e.resolveProliferate(g, obj, agents, log)
+		succeeded = r.engine.resolveProliferate(g, obj, r.agents, r.log)
 	case game.EffectGoad:
 		if permanent, ok := effectPermanent(g, obj, effect); ok && permanentHasType(g, permanent, game.TypeCreature) {
 			goadPermanent(g, permanent, obj.Controller)

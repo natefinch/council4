@@ -133,6 +133,30 @@ Cost modifiers run after normal/alternative/kicker cost selection and before add
 
 Mana pools empty at phase and step boundaries before later priority windows can use stale mana.
 
+## Payment planner
+
+Cost payment is structured around two request types:
+
+- `spellPaymentRequest` — bundles player, card, source zone, X value, kicker flag, and optional preferences for checking or paying a spell's mana and additional costs.
+- `abilityPaymentRequest` — bundles player, ability source permanent, ability definition, X value, and optional preferences for checking or paying an activated-ability cost.
+
+Entry points:
+
+- `canPaySpellCosts(g, req)` — returns true if the spell costs are currently payable.
+- `paySpellCosts(g, req)` — pays costs and returns additional-cost labels; fails if plan is stale.
+- `buildSpellCostPlan(g, req)` — builds a plan without applying it (used for validation and AI).
+- `buildAbilityCostPlan(g, req)` — builds an ability cost plan without applying it.
+- `payAbilityCosts(g, req)` — pays ability costs, including tap and additional costs.
+
+Internal planning is split across focused files:
+
+- `cost_options.go` — spell cost option enumeration, kicker/zone-specific options, alternative costs.
+- `cost_modifiers.go` — cost modifier application (reductions, increases, set-generic).
+- `additional_costs.go` — additional-cost plan building and application (sacrifice, discard, life).
+- `payment_plan.go` — payment plan structs and mana-symbol payment logic.
+- `payment_sources.go` — mana source discovery, Convoke, and Delve support.
+- `payment_apply.go` — mana pool and permanent mutation that executes a committed plan.
+
 ## Combat
 
 Combat follows the real step sequence: beginning of combat, declare attackers, declare blockers, combat damage, and end of combat. The engine initializes `game.CombatState` for the duration of the combat phase, asks the active player to declare attackers, gives players priority in each combat step, applies state-based actions after combat damage, and clears combat state when combat ends.
@@ -151,7 +175,24 @@ The continuous-effect layer derives effective permanent values on demand rather 
 
 The layer system still has carry-forward work for richer CDA forms, exact copy/back-face interactions, and performance memoization as card coverage grows.
 
-## Replacement and prevention
+## Targeting result semantics
+
+Target enumeration uses an explicit `targetChoiceResult` struct so callers never infer outcome from nil-slice shape. The `kind` field carries one of four states:
+
+- `targetNoTargetsRequired` — the spell or ability has no target specs; the single legal choice is nil (cast with no targets).
+- `targetLegalChoicesFound` — at least one legal target combination exists; `choices` contains one entry per combination. Optional specs with no board candidates produce a single nil choice (no targets selected).
+- `targetNoLegalChoices` — specs are present and valid but no legal candidates exist on the current board state.
+- `targetInvalidSpec` — a spec has an invalid min/max range (e.g. min > max); `err` describes the problem. This represents a card-definition bug rather than a board-state outcome.
+
+The entry points for action enumeration and trigger target selection consume `targetChoiceResult` directly:
+
+- `targetChoicesForSpell` — resolves target specs for a spell given its card def and chosen modes.
+- `targetChoicesForAbilityFromSourceObject` — resolves target specs for an ability with an explicit source object ID (used when the source permanent's identity must be excluded via the "another" predicate).
+- `targetChoicesForSpecs` — low-level entry point for tests and special cases.
+
+Callers iterate `result.choices` to produce one legal action per target combination. `triggerTargets` returns `(nil, false)` when the result kind is `targetNoLegalChoices` or `targetInvalidSpec`, keeping those triggers off the stack until a board state with legal targets exists.
+
+
 
 Damage helpers apply prevention before mutating life totals, counters, marked damage, combat logs, or damage events. Prevention shields track remaining amount and expire with turn duration. Shield counters prevent the next damage event to that permanent and emit `EventDamagePrevented` instead of `EventDamageDealt`. Color-based Protection, represented by `AbilityDef.ProtectionFromColors`, prevents damage from matching colored sources and makes those permanents illegal targets for matching spells and abilities both when chosen and when resolved.
 
@@ -173,6 +214,87 @@ This hook currently covers instant and sorcery spell-effect resolution after nor
 - A failed draw from an empty library (`game.Game.FailedDraws`).
 
 Permanent SBAs handle lethal and deathtouch-marked creature damage, 0 toughness, 0 loyalty planeswalkers, 0 defense battles, illegal Auras, illegal non-Aura attachments, legendary-rule duplicates, +1/+1 and -1/-1 counter cancellation, and tokens ceasing to exist outside the battlefield. Permanent death logs record the permanent object ID, source card ID when present, token name when needed, owner/controller, and death reason.
+
+## Action builder
+
+All `action.Action` values produced inside the `rules` package must be constructed through the package-local `actionBuild` singleton (`actionBuilderType`). `actionBuild` is the only place in the package that calls `mtg/game/action` constructors directly.
+
+Every builder method calls `Action.Validate()` on the newly-constructed action and panics if validation fails — this catches programming errors (e.g. zero card IDs) at the construction site rather than silently emitting invalid actions.
+
+The action package constructors already copy all slice arguments; the builder provides an additional validation layer without duplicating those copies.
+
+## Payment orchestration
+
+All spell and ability payment operations inside production `rules` code must go through the package-local `paymentOrch` singleton (`paymentOrchestratorType`). The orchestrator currently delegates to the package-level payment functions without changing their behaviour; its purpose is to be the production seam for future transactional payment concerns such as rollback, logging, and plan instrumentation. Payment planner unit tests may still exercise lower-level package functions directly, while characterization tests should cover `paymentOrch` so future wrapper behavior is not invisible.
+
+`Engine.applyActionWithChoices` validates incoming actions before applying them. Invalid or hand-built actions that do not match the `action.Action` constructor invariants are rejected instead of being applied with zero-valued payloads.
+
+Methods:
+
+- `paymentOrch.canPaySpellCosts(g, req)` — wraps `canPaySpellCosts`.
+- `paymentOrch.paySpellCosts(g, req)` — wraps `paySpellCosts`.
+- `paymentOrch.buildSpellCostPlan(g, req)` — wraps `buildSpellCostPlan`.
+- `paymentOrch.buildAbilityCostPlan(g, req)` — wraps `buildAbilityCostPlan`.
+- `paymentOrch.payAbilityCosts(g, req)` — wraps `payAbilityCosts`.
+
+The request structs (`spellPaymentRequest`, `abilityPaymentRequest`) and the orchestrator remain package-local.
+
+## Effect resolver
+
+All effect-primitive execution routes through the package-local `effectResolver` struct (`effects.go`). `Engine.resolveEffect` and `Engine.resolveEffectWithChoices` construct an `effectResolver` via `newEffectResolver(e, g, obj, agents, log)` and then call `resolver.resolve(effect)`.
+
+`effectResolver` bundles the five parameters that every effect case previously threaded individually:
+
+```go
+type effectResolver struct {
+    engine *Engine
+    game   *game.Game
+    obj    *game.StackObject
+    agents [game.NumPlayers]PlayerAgent
+    log    *TurnLog
+}
+```
+
+The `resolve` method contains the full resolution body: condition guards, optional/choice/payment handling, the amount-and-result-remembering defer (CR 608.2c), the unsupported-effect log path, selector-driven mass effects, and the per-type switch covering all current primitives.
+
+This struct is the intended seam for a future effect pipeline: middleware, logging wrappers, cached target lookup, or per-effect handler methods can be introduced here without changing `Engine`'s public resolution entry points.
+
+## Mutation boundaries
+
+`mutations.go` defines the package-local helpers that form the intended mutation boundaries for high-churn `game.Game` state changes. New rules code must route through these helpers rather than calling stack, zone, or event primitives directly.
+
+### Stack push helpers
+
+All code that puts an object onto the stack must use one of:
+
+- **`pushSpellToStack(g, obj, castEvent)`** — pushes a spell stack object, emits `EventObjectBecameTarget` for each target, emits the `EventZoneChanged` event pre-built by the caller, then emits `EventSpellCast` from the same event. Used for all spell casts (hand, command zone, graveyard, exile, suspend, cascade, madness). Callers that produce storm copies must call `stormCopyCount` *before* this helper because `EventSpellCast` is emitted inside.
+
+- **`pushAbilityToStack(g, obj)`** — pushes an activated or triggered ability stack object and emits target events. Used for non-mana activated abilities, cycling, and triggered abilities.
+
+Delayed triggered abilities with no targets may call `g.Stack.Push` directly (no target events to emit). Storm copies call `g.Stack.Push` directly because copies are silent (no zone-change or cast events).
+
+### Card lookup helper
+
+**`cardInstanceFaceDef(g, cardID, face)`** retrieves a `*CardInstance` and its `*CardDef` face in one call. Returns `(nil, nil, false)` when the card is absent or has no such face. Use this instead of the two-step `GetCardInstance` + `cardFaceDef` pattern in resolution paths where both the card and its face def are needed.
+
+### Existing mutation helpers
+
+The following helpers in `zones.go`, `events.go`, and `payment_apply.go` predate Phase 4 and follow the same boundary convention:
+
+- `createCardPermanentFace` — moves a card to the battlefield and emits `EventZoneChanged` + `EventPermanentEnteredBattlefield`.
+- `removePermanentFromBattlefield` — removes a permanent from `g.Battlefield` without events (callers emit events via `emitPermanentLeaveEvents`).
+- `movePermanentToZone` — handles replacement effects, commander zone replacement, detachment, and zone-change events for battlefield exits.
+- `discardCardFromHand` — moves a card hand→destination with replacement and commander zone replacement, emits `EventZoneChanged` + `EventCardDiscarded`.
+- `moveStackCardToGraveyard` — moves a spell from the stack to its destination zone (respecting Flashback exile replacement) with `EventZoneChanged`.
+- `moveExiledCardToGraveyard` — moves a card exile→graveyard with `EventZoneChanged`.
+- `setPermanentTapped` — sets tapped state and emits `EventPermanentTapped` or `EventPermanentUntapped`.
+- `emitEvent` / `emitZoneChangeEvent` — the only two paths that may append to `g.Events`.
+
+### Conventions
+
+- Emit `EventZoneChanged` before the domain-specific event for the same transition (e.g. emit zone change before `EventSpellCast`).
+- Do not append directly to `g.Events` outside `emitEvent`.
+- Do not call `g.Stack.Push` outside `pushSpellToStack`, `pushAbilityToStack`, or the two explicit exceptions above (delayed triggers and storm copies).
 
 ## Package boundaries
 

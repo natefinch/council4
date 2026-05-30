@@ -21,13 +21,18 @@ Use this package anywhere code needs to represent a player choice:
 act := action.PlayLand(cardID)
 switch act.Kind {
 case action.ActionPlayLand:
-	// use act.PlayLand.CardID
+	playLand, ok := act.PlayLandPayload()
+	// use playLand.CardID when ok
 case action.ActionPass:
 	// pass priority
 }
 ```
 
 The top-level `Kind` field says which payload is meaningful. Payloads are grouped by kind (`PlayLandAction`, `CastSpellAction`, etc.) so action data stays explicit without using an interface hierarchy.
+
+Construct actions with the package constructors (`action.CastSpell`, `action.ActivateAbility`, and so on) instead of struct literals. Constructors copy caller-owned slices such as targets, chosen modes, attackers, and blockers, so later mutation of the input slices cannot change the action. Payloads are stored privately; use the comma-ok payload accessors (`CastSpellPayload`, `DeclareAttackersPayload`, etc.) to read them. Accessors return copied slice fields so callers cannot mutate action-owned slices.
+
+Use `act.Validate()` at package boundaries that accept untrusted or hand-built actions. Validation checks that `Kind` matches the populated payload, unrelated payloads are empty, and required IDs and non-negative choice values are present.
 
 ## Current action kinds
 

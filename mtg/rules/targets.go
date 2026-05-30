@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -9,33 +10,77 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
-func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int) [][]game.Target {
+// targetChoiceKind distinguishes the four outcomes of target enumeration so
+// callers never need to infer state from nil-slice shape.
+type targetChoiceKind int
+
+const (
+	// targetNoTargetsRequired: the spell or ability has no target specs.
+	targetNoTargetsRequired targetChoiceKind = iota
+	// targetLegalChoicesFound: at least one legal target combination exists,
+	// including the "choose no targets" combination for optional specs.
+	targetLegalChoicesFound
+	// targetNoLegalChoices: target specs are present and valid but no legal
+	// candidates exist on the current board state.
+	targetNoLegalChoices
+	// targetInvalidSpec: a target spec has an invalid range (e.g. min > max)
+	// and represents a card-definition bug rather than a board-state outcome.
+	targetInvalidSpec
+)
+
+// targetChoiceResult carries the outcome of target enumeration with an
+// explicit kind so all four states are distinguishable without nil inspection.
+type targetChoiceResult struct {
+	choices [][]game.Target
+	kind    targetChoiceKind
+	err     error
+}
+
+func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int) targetChoiceResult {
 	specs := spellTargetSpecs(card, chosenModes)
 	return targetChoicesForSpecs(g, controller, card, 0, specs)
 }
 
-func targetChoicesForAbility(g *game.Game, controller game.PlayerID, ability *game.AbilityDef) [][]game.Target {
+func targetChoicesForAbility(g *game.Game, controller game.PlayerID, ability *game.AbilityDef) targetChoiceResult {
 	return targetChoicesForAbilityFromSource(g, controller, nil, ability)
 }
 
-func targetChoicesForAbilityFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, ability *game.AbilityDef) [][]game.Target {
+func targetChoicesForAbilityFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, ability *game.AbilityDef) targetChoiceResult {
 	return targetChoicesForAbilityFromSourceObject(g, controller, source, 0, ability)
 }
 
-func targetChoicesForAbilityFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef) [][]game.Target {
+func targetChoicesForAbilityFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef) targetChoiceResult {
 	if ability == nil {
-		return nil
+		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}}
 	}
 	return targetChoicesForSpecs(g, controller, source, sourceObjectID, ability.Targets)
 }
 
-func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec) [][]game.Target {
+// targetChoicesForSpecs enumerates every legal target combination for specs.
+// Returns an explicit result kind so callers never infer state from nil-slice shape:
+//   - targetNoTargetsRequired when specs is empty
+//   - targetLegalChoicesFound when at least one combination is legal (including optional no-target choices)
+//   - targetNoLegalChoices when specs are valid but no board-legal combination exists
+//   - targetInvalidSpec (with err) when a spec has an invalid min/max range
+func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec) targetChoiceResult {
 	if len(specs) == 0 {
-		return [][]game.Target{nil}
+		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}}
+	}
+	for _, spec := range specs {
+		normalized := normalizeTargetSpec(spec)
+		if !targetSpecRangeValid(normalized) {
+			return targetChoiceResult{
+				kind: targetInvalidSpec,
+				err:  fmt.Errorf("target spec %q has invalid range: min=%d max=%d", spec.Constraint, normalized.MinTargets, normalized.MaxTargets),
+			}
+		}
 	}
 	var result [][]game.Target
 	appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, 0, nil, &result)
-	return result
+	if len(result) == 0 {
+		return targetChoiceResult{kind: targetNoLegalChoices}
+	}
+	return targetChoiceResult{kind: targetLegalChoicesFound, choices: result}
 }
 
 func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, specIndex int, prefix []game.Target, result *[][]game.Target) {

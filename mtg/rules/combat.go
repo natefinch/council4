@@ -94,7 +94,8 @@ func (e *Engine) declareAttackers(g *game.Game, agents [game.NumPlayers]PlayerAg
 
 	log.addAction(combatActionLog(g, playerID, chosen))
 
-	if !e.applyDeclareAttackers(g, playerID, chosen.DeclareAttackers) {
+	attackers, ok := chosen.DeclareAttackersPayload()
+	if !ok || !e.applyDeclareAttackers(g, playerID, attackers) {
 		panic("applyDeclareAttackers failed for validated action")
 	}
 }
@@ -116,7 +117,8 @@ func (e *Engine) declareBlockers(g *game.Game, agents [game.NumPlayers]PlayerAge
 
 		log.addAction(combatActionLog(g, playerID, chosen))
 
-		if !e.applyDeclareBlockers(g, playerID, chosen.DeclareBlockers) {
+		blockers, ok := chosen.DeclareBlockersPayload()
+		if !ok || !e.applyDeclareBlockers(g, playerID, blockers) {
 			panic("applyDeclareBlockers failed for validated action")
 		}
 	}
@@ -133,11 +135,19 @@ func combatActionLog(g *game.Game, playerID game.PlayerID, act action.Action) Ac
 	}
 	switch act.Kind {
 	case action.ActionDeclareAttackers:
-		for _, declaration := range act.DeclareAttackers.Attackers {
+		payload, ok := act.DeclareAttackersPayload()
+		if !ok {
+			return logged
+		}
+		for _, declaration := range payload.Attackers {
 			logged.addPermanentSnapshot(g, declaration.Attacker)
 		}
 	case action.ActionDeclareBlockers:
-		for _, declaration := range act.DeclareBlockers.Blockers {
+		payload, ok := act.DeclareBlockersPayload()
+		if !ok {
+			return logged
+		}
+		for _, declaration := range payload.Blockers {
 			logged.addPermanentSnapshot(g, declaration.Blocker)
 			logged.addPermanentSnapshot(g, declaration.Blocking)
 		}
@@ -672,16 +682,16 @@ func legalDeclareBlockersActions(g *game.Game, playerID game.PlayerID) []action.
 			}
 			allBlockers = append(allBlockers, block)
 			if !attackerRequiresMultipleBlockers(g, attackingPermanent) {
-				actions = append(actions, action.DeclareBlockers([]game.BlockDeclaration{
+				actions = append(actions, actionBuild.declareBlockers([]game.BlockDeclaration{
 					block,
 				}))
 			}
 		}
 		if len(allBlockers) > 1 {
-			actions = append(actions, action.DeclareBlockers(allBlockers))
+			actions = append(actions, actionBuild.declareBlockers(allBlockers))
 		}
 	}
-	actions = append(actions, action.DeclareBlockers(nil))
+	actions = append(actions, actionBuild.declareBlockers(nil))
 	return actions
 }
 
@@ -887,27 +897,27 @@ func legalDeclareAttackersActions(g *game.Game, playerID game.PlayerID) []action
 					continue
 				}
 				if len(attackers) > 1 && declareAttackersSatisfiesGoad(g, playerID, single, eligibleByID) {
-					action := action.DeclareAttackers(single)
-					if !containsAction(actions, action) && canPayAttackTax(g, playerID, single) {
-						actions = append(actions, action)
+					act := actionBuild.declareAttackers(single)
+					if !containsAction(actions, act) && canPayAttackTax(g, playerID, single) {
+						actions = append(actions, act)
 					}
 				}
 				declarations = append(declarations, single[0])
 			}
 			if declareAttackersSatisfiesGoad(g, playerID, declarations, eligibleByID) {
-				action := action.DeclareAttackers(declarations)
-				if !containsAction(actions, action) && canPayAttackTax(g, playerID, declarations) {
-					actions = append(actions, action)
+				act := actionBuild.declareAttackers(declarations)
+				if !containsAction(actions, act) && canPayAttackTax(g, playerID, declarations) {
+					actions = append(actions, act)
 				}
 			}
 		}
 	}
 	if !hasGoadedEligibleAttacker(attackers) {
-		actions = append(actions, action.DeclareAttackers(nil))
+		actions = append(actions, actionBuild.declareAttackers(nil))
 	} else if len(actions) == 0 {
 		if declarations := preferredGoadAttackDeclarations(g, playerID, attackers); len(declarations) > 0 {
 			if canPayAttackTax(g, playerID, declarations) {
-				actions = append(actions, action.DeclareAttackers(declarations))
+				actions = append(actions, actionBuild.declareAttackers(declarations))
 			}
 		}
 	}

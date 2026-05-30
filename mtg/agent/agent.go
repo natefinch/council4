@@ -35,7 +35,8 @@ func (SimpleCaster) ChooseAction(obs rules.PlayerObservation, legal []action.Act
 		}
 	}
 	for _, act := range legal {
-		if act.Kind == action.ActionCastSpell && !targetsOnlySelf(obs.Player, act.CastSpell.Targets) {
+		cast, ok := act.CastSpellPayload()
+		if ok && !targetsOnlySelf(obs.Player, cast.Targets) {
 			return act
 		}
 	}
