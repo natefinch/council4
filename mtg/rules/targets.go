@@ -33,7 +33,9 @@ const (
 type targetChoiceResult struct {
 	choices [][]game.Target
 	kind    targetChoiceKind
-	err     error
+	// err is diagnostic context for invalid card-definition input. Production
+	// enumeration currently treats invalid specs as unavailable actions/triggers.
+	err error
 }
 
 func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int) targetChoiceResult {

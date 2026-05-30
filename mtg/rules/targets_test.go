@@ -568,9 +568,114 @@ func TestPermanentTargetedDamageMarksDamageOnResolution(t *testing.T) {
 		t.Fatal("resolved spell did not move to graveyard")
 	}
 }
+
+func TestTargetChoiceKindsAtActionEnumerationLevel(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupSpell      func() *game.CardDef
+		setupBoard      func(g *game.Game)
+		wantCastActions int // number of cast-spell actions for the spell
+	}{
+		{
+			name: "no targets required produces one cast action",
+			setupSpell: func() *game.CardDef {
+				return &game.CardDef{
+					Name:  "Shock No Target",
+					Types: []game.CardType{game.TypeSorcery},
+					Abilities: []game.AbilityDef{
+						{Kind: game.SpellAbility},
+					},
+				}
+			},
+			setupBoard:      func(g *game.Game) {},
+			wantCastActions: 1,
+		},
+		{
+			name: "required target with one legal candidate produces one cast action",
+			setupSpell: func() *game.CardDef {
+				return permanentTargetSpell("creature")
+			},
+			setupBoard: func(g *game.Game) {
+				addCreaturePermanent(g, game.Player2)
+				addBasicLandPermanent(g, game.Player1, "Forest")
+			},
+			wantCastActions: 1,
+		},
+		{
+			name: "required target with no legal candidates produces no cast actions",
+			setupSpell: func() *game.CardDef {
+				return permanentTargetSpell("planeswalker")
+			},
+			setupBoard:      func(g *game.Game) {},
+			wantCastActions: 0,
+		},
+		{
+			name: "invalid target spec (min > max) produces no cast actions",
+			setupSpell: func() *game.CardDef {
+				return permanentTargetSpellWithRange("creature", 3, 1)
+			},
+			setupBoard: func(g *game.Game) {
+				addCreaturePermanent(g, game.Player2)
+			},
+			wantCastActions: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			spellID := addCardToHand(g, game.Player1, tt.setupSpell())
+			tt.setupBoard(g)
+			g.Turn.Phase = game.PhasePrecombatMain
+			g.Turn.Step = game.StepNone
+
+			legal := engine.legalActions(g, game.Player1)
+
+			var castCount int
+			for _, act := range legal {
+				if cast, ok := act.CastSpellPayload(); ok && cast.CardID == spellID {
+					castCount++
+				}
+			}
+			if castCount != tt.wantCastActions {
+				t.Errorf("cast actions = %d, want %d", castCount, tt.wantCastActions)
+			}
+		})
+	}
+}
+
+func TestInvalidTargetSpecAbilityProducesNoActivateActions(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Broken Ability Source",
+		Types: []game.CardType{game.TypeCreature},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.ActivatedAbility,
+				Targets: []game.TargetSpec{
+					{MinTargets: 3, MaxTargets: 1, Constraint: "creature"},
+				},
+				Effects: []game.Effect{{Type: game.EffectTap, TargetIndex: 0}},
+			},
+		},
+	})
+	addCreaturePermanent(g, game.Player2)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	for _, act := range legal {
+		if activate, ok := act.ActivateAbilityPayload(); ok && activate.SourceID == source.ObjectID {
+			t.Fatalf("invalid ability target spec produced activate action: %+v", act)
+		}
+	}
+}
+
 func playerDamageSpell() *game.CardDef {
 	return &game.CardDef{
-		Name:  "Needle Drop",
 		Types: []game.CardType{game.TypeSorcery},
 		Abilities: []game.AbilityDef{
 			{

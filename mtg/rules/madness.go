@@ -80,7 +80,11 @@ func firstLegalSpellCastChoice(g *game.Game, playerID game.PlayerID, spellDef *g
 		return nil, nil, false
 	}
 	for _, modes := range modeChoicesForSpell(spellDef) {
-		for _, targets := range targetChoicesForSpell(g, playerID, spellDef, modes).choices {
+		targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
+		if targetResult.kind == targetInvalidSpec {
+			continue
+		}
+		for _, targets := range targetResult.choices {
 			if modesValidForSpell(spellDef, modes) && targetsValidForSpell(g, playerID, spellDef, modes, targets) {
 				return append([]int(nil), modes...), append([]game.Target(nil), targets...), true
 			}

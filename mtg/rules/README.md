@@ -190,7 +190,7 @@ The entry points for action enumeration and trigger target selection consume `ta
 - `targetChoicesForAbilityFromSourceObject` — resolves target specs for an ability with an explicit source object ID (used when the source permanent's identity must be excluded via the "another" predicate).
 - `targetChoicesForSpecs` — low-level entry point for tests and special cases.
 
-Callers iterate `result.choices` to produce one legal action per target combination. `triggerTargets` returns `(nil, false)` when the result kind is `targetNoLegalChoices` or `targetInvalidSpec`, keeping those triggers off the stack until a board state with legal targets exists.
+Callers iterate `result.choices` to produce one legal action per target combination. Action enumeration callers (`legalCastActions`, `legalCommanderCastActions`, `legalActivateAbilityActions`, `firstLegalSpellCastChoice`) check `result.kind` before ranging over `result.choices`: `targetInvalidSpec` is an explicit branch with diagnostic `err` context, although current runtime behavior still skips those actions the same way it skips no-legal-target board states. `triggerTargets` returns `(nil, false)` when the result kind is `targetNoLegalChoices` or `targetInvalidSpec`, keeping those triggers off the stack until a board state with legal targets exists.
 
 
 

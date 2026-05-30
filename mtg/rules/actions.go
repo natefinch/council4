@@ -96,7 +96,11 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 				spellDef := cardFaceOrDefault(card, face)
 				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
 					for _, modes := range modeChoicesForSpell(spellDef) {
-						for _, targets := range targetChoicesForSpell(g, playerID, spellDef, modes).choices {
+						targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
+						if targetResult.kind == targetInvalidSpec {
+							continue
+						}
+						for _, targets := range targetResult.choices {
 							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
 								actions = append(actions, actionBuild.castSpell(cardID, sourceZone, face, targets, xValue, modes))
 							}
@@ -129,7 +133,11 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 		spellDef := cardFaceOrDefault(card, face)
 		for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
 			for _, modes := range modeChoicesForSpell(spellDef) {
-				for _, targets := range targetChoicesForSpell(g, playerID, spellDef, modes).choices {
+				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
+				if targetResult.kind == targetInvalidSpec {
+					continue
+				}
+				for _, targets := range targetResult.choices {
 					if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, game.ZoneCommand, face, targets, xValue, modes, false) {
 						actions = append(actions, actionBuild.castSpell(card.ID, game.ZoneCommand, face, targets, xValue, modes))
 					}
@@ -198,7 +206,11 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				continue
 			}
 			for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(ability.ManaCost)) {
-				for _, targets := range targetChoicesForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability).choices {
+				targetResult := targetChoicesForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability)
+				if targetResult.kind == targetInvalidSpec {
+					continue
+				}
+				for _, targets := range targetResult.choices {
 					if canActivateEquipAbility(g, playerID, permanent, ability, i, targets, xValue) ||
 						canActivateLoyaltyAbility(g, playerID, permanent, ability, i, targets, xValue) ||
 						canActivateGeneralAbility(g, playerID, permanent, ability, i, targets, xValue) {
