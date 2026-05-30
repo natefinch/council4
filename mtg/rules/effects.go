@@ -78,255 +78,297 @@ func newEffectResolver(e *Engine, g *game.Game, obj *game.StackObject, agents [g
 	return &effectResolver{engine: e, game: g, obj: obj, agents: agents, log: log}
 }
 
+// effectResolved captures the outcome of executing one effect: whether it was
+// accepted by the player (for optional effects), whether it successfully
+// applied, and the computed amount (used by linked "that much" follow-ups,
+// CR 608.2c).
+type effectResolved struct {
+	accepted  bool
+	succeeded bool
+	amount    int
+}
+
+// record writes the resolution state into the stack object so that follow-up
+// "if you do" / "that much" effects see what actually happened
+// (CR 608.2c; impossible actions CR 101.3).
+func (res effectResolved) record(obj *game.StackObject, effect game.Effect) {
+	if res.accepted && res.succeeded {
+		rememberEffectAmount(obj, effect, res.amount)
+	}
+	rememberEffectResolutionResult(obj, effect, res.accepted, res.succeeded, res.amount)
+}
+
+// amount returns the computed effect amount, resolving any dynamic formula.
+func (r *effectResolver) amount(effect game.Effect) int {
+	return effectAmount(r.game, r.obj, effect)
+}
+
+// permanent resolves the target permanent for this effect, using the effect's
+// TargetIndex to look up the chosen target on the stack object.
+func (r *effectResolver) permanent(effect game.Effect) (*game.Permanent, bool) {
+	return effectPermanent(r.game, r.obj, effect)
+}
+
+// player resolves the target player for this effect.
+func (r *effectResolver) player(effect game.Effect) (game.PlayerID, bool) {
+	return effectPlayer(r.game, r.obj, effect)
+}
+
+// manaColor returns the mana color for an add-mana effect, respecting any
+// resolution choice that overrides the effect's declared color.
+func (r *effectResolver) manaColor(effect game.Effect) mana.Color {
+	return effectManaColor(r.obj, effect)
+}
+
+// resolve checks conditions and then executes the effect, recording the result
+// for any linked follow-up effects.
 func (r *effectResolver) resolve(effect game.Effect) {
-	g := r.game
-	obj := r.obj
-	if !effectConditionSatisfied(g, obj, effect.Condition) {
+	if !effectConditionSatisfied(r.game, r.obj, effect.Condition) {
 		return
 	}
-	if !effectResultConditionSatisfied(obj, effect.ResultCondition) {
+	if !effectResultConditionSatisfied(r.obj, effect.ResultCondition) {
 		return
 	}
-	amount := effectAmount(g, obj, effect)
-	accepted := true
-	succeeded := false
-	// Record linked resolution state after the instruction is attempted so
-	// follow-up "if you do" / "that much" effects see what actually happened
-	// during sequential resolution (CR 608.2c; impossible actions CR 101.3).
-	defer func() {
-		if accepted && succeeded {
-			rememberEffectAmount(obj, effect, amount)
-		}
-		rememberEffectResolutionResult(obj, effect, accepted, succeeded, amount)
-	}()
-	if effect.Optional && !r.engine.chooseMay(g, r.agents, stackObjectController(obj), "Apply optional effect?", r.log) {
-		accepted = false
+	res := r.executeEffect(effect)
+	res.record(r.obj, effect)
+}
+
+// executeEffect runs the effect instruction and returns the outcome. It does
+// not record the result; the caller (resolve) handles that so the deferred
+// memory write is explicit rather than scattered through the switch.
+// Each branch mutates res before returning so early returns keep the same
+// state the old deferred recorder observed.
+func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) {
+	res.accepted = true
+	res.amount = r.amount(effect)
+	if effect.Optional && !r.engine.chooseMay(r.game, r.agents, stackObjectController(r.obj), "Apply optional effect?", r.log) {
+		res.accepted = false
 		return
 	}
 	if effect.Choice.Exists {
-		if !r.engine.resolveResolutionChoice(g, obj, effect, r.agents, r.log) {
+		if !r.engine.resolveResolutionChoice(r.game, r.obj, effect, r.agents, r.log) {
 			return
 		}
-		succeeded = true
+		res.succeeded = true
 		if effect.Type == game.EffectChoose {
 			return
 		}
 	}
 	if effect.Payment.Exists {
-		accepted, succeeded = r.engine.resolveResolutionPayment(g, obj, effect, r.agents, r.log)
-		if !succeeded || effect.Type == game.EffectPay {
+		res.accepted, res.succeeded = r.engine.resolveResolutionPayment(r.game, r.obj, effect, r.agents, r.log)
+		if !res.succeeded || effect.Type == game.EffectPay {
 			return
 		}
 	}
 	if !IsEffectTypeExecuted(effect.Type) {
-		logUnsupportedEffect(r.log, obj, effect)
+		logUnsupportedEffect(r.log, r.obj, effect)
 		return
 	}
 	if effect.Selector != game.EffectSelectorNone {
-		succeeded = resolveMassPermanentEffect(g, obj, effect, amount)
+		res.succeeded = resolveMassPermanentEffect(r.game, r.obj, effect, res.amount)
 		return
 	}
 	switch effect.Type {
 	case game.EffectDraw:
-		if amount <= 0 {
+		if res.amount <= 0 {
 			return
 		}
-		playerID, ok := effectPlayer(g, obj, effect)
+		playerID, ok := r.player(effect)
 		if !ok {
 			return
 		}
-		succeeded = r.engine.drawCards(g, playerID, amount, r.log)
-
+		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log)
 	case game.EffectGainLife:
-		if amount <= 0 {
+		if res.amount <= 0 {
 			return
 		}
-		playerID, ok := effectPlayer(g, obj, effect)
+		playerID, ok := r.player(effect)
 		if !ok {
 			return
 		}
-		succeeded = gainLife(g, playerID, amount) > 0
+		res.succeeded = gainLife(r.game, playerID, res.amount) > 0
 	case game.EffectLoseLife:
-		if amount <= 0 {
+		if res.amount <= 0 {
 			return
 		}
-		playerID, ok := effectPlayer(g, obj, effect)
+		playerID, ok := r.player(effect)
 		if !ok {
 			return
 		}
-		succeeded = loseLife(g, playerID, amount) > 0
+		res.succeeded = loseLife(r.game, playerID, res.amount) > 0
 	case game.EffectAddMana:
-		if amount <= 0 {
-			amount = 1
+		if res.amount <= 0 {
+			res.amount = 1
 		}
-		player, ok := playerByID(g, obj.Controller)
+		player, ok := playerByID(r.game, r.obj.Controller)
 		if !ok || player.Eliminated {
 			return
 		}
-		if stackObjectSourceIsSnow(g, obj) {
-			player.ManaPool.AddSnow(effectManaColor(obj, effect), amount)
+		if stackObjectSourceIsSnow(r.game, r.obj) {
+			player.ManaPool.AddSnow(r.manaColor(effect), res.amount)
 		} else {
-			player.ManaPool.Add(effectManaColor(obj, effect), amount)
+			player.ManaPool.Add(r.manaColor(effect), res.amount)
 		}
-		succeeded = true
+		res.succeeded = true
 	case game.EffectDamage:
-		if amount <= 0 {
+		if res.amount <= 0 {
 			return
 		}
-		if playerID, ok := effectPlayer(g, obj, effect); ok {
-			sourceID, sourceObjectID := damageSourceIDs(g, obj)
-			dealPlayerDamage(g, sourceID, sourceObjectID, obj.Controller, playerID, amount, false)
-			succeeded = true
+		if playerID, ok := r.player(effect); ok {
+			sourceID, sourceObjectID := damageSourceIDs(r.game, r.obj)
+			dealPlayerDamage(r.game, sourceID, sourceObjectID, r.obj.Controller, playerID, res.amount, false)
+			res.succeeded = true
 			return
 		}
-		permanent, ok := effectPermanent(g, obj, effect)
+		permanent, ok := r.permanent(effect)
 		if !ok {
 			return
 		}
-		sourceID, sourceObjectID := damageSourceIDs(g, obj)
-		dealPermanentDamage(g, sourceID, sourceObjectID, obj.Controller, permanent, amount, false)
-		succeeded = true
+		sourceID, sourceObjectID := damageSourceIDs(r.game, r.obj)
+		dealPermanentDamage(r.game, sourceID, sourceObjectID, r.obj.Controller, permanent, res.amount, false)
+		res.succeeded = true
 	case game.EffectDestroy:
-		permanent, ok := effectPermanent(g, obj, effect)
+		permanent, ok := r.permanent(effect)
 		if !ok {
 			return
 		}
-		_, succeeded = destroyPermanent(g, permanent.ObjectID)
+		_, res.succeeded = destroyPermanent(r.game, permanent.ObjectID)
 	case game.EffectExile:
-		permanent, ok := effectPermanent(g, obj, effect)
+		permanent, ok := r.permanent(effect)
 		if !ok {
 			return
 		}
 		linkedObjectRef := permanentLinkedObjectRef(permanent)
-		succeeded = movePermanentToZone(g, permanent, game.ZoneExile)
+		res.succeeded = movePermanentToZone(r.game, permanent, game.ZoneExile)
 		if effect.LinkID != "" {
-			rememberLinkedObject(g, linkedObjectSourceKey(g, obj, effect.LinkID), linkedObjectRef)
+			rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, effect.LinkID), linkedObjectRef)
 		}
 	case game.EffectBounce:
-		permanent, ok := effectPermanent(g, obj, effect)
+		permanent, ok := r.permanent(effect)
 		if !ok {
 			return
 		}
-		succeeded = movePermanentToZone(g, permanent, game.ZoneHand)
+		res.succeeded = movePermanentToZone(r.game, permanent, game.ZoneHand)
 	case game.EffectSacrifice:
-		permanent, ok := effectPermanent(g, obj, effect)
+		permanent, ok := r.permanent(effect)
 		if !ok {
-			permanent, ok = firstPermanentControlledBy(g, obj.Controller)
+			permanent, ok = firstPermanentControlledBy(r.game, r.obj.Controller)
 		}
-		if !ok || effectiveController(g, permanent) != obj.Controller {
+		if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
 			return
 		}
-		succeeded = movePermanentToZone(g, permanent, game.ZoneGraveyard)
+		res.succeeded = movePermanentToZone(r.game, permanent, game.ZoneGraveyard)
 	case game.EffectTap:
-		if permanent, ok := effectPermanent(g, obj, effect); ok {
-			setPermanentTapped(g, permanent, true)
-			succeeded = true
+		if permanent, ok := r.permanent(effect); ok {
+			setPermanentTapped(r.game, permanent, true)
+			res.succeeded = true
 		}
 	case game.EffectUntap:
-		if permanent, ok := effectPermanent(g, obj, effect); ok {
-			setPermanentTapped(g, permanent, false)
-			succeeded = true
+		if permanent, ok := r.permanent(effect); ok {
+			setPermanentTapped(r.game, permanent, false)
+			res.succeeded = true
 		}
 	case game.EffectModifyPT:
-		if permanent, ok := effectPermanent(g, obj, effect); ok && effect.UntilEndOfTurn {
-			g.ContinuousEffects = append(g.ContinuousEffects, untilEndOfTurnContinuousEffect(g, obj, permanent, effect))
-			succeeded = true
+		if permanent, ok := r.permanent(effect); ok && effect.UntilEndOfTurn {
+			r.game.ContinuousEffects = append(r.game.ContinuousEffects, untilEndOfTurnContinuousEffect(r.game, r.obj, permanent, effect))
+			res.succeeded = true
 		}
 	case game.EffectAddCounter:
-		if permanent, ok := effectPermanent(g, obj, effect); ok && amount > 0 {
-			permanent.Counters.Add(effect.CounterKind, amount)
-			succeeded = true
+		if permanent, ok := r.permanent(effect); ok && res.amount > 0 {
+			permanent.Counters.Add(effect.CounterKind, res.amount)
+			res.succeeded = true
 		}
 	case game.EffectRemoveCounter:
-		if permanent, ok := effectPermanent(g, obj, effect); ok && amount > 0 {
-			permanent.Counters.Remove(effect.CounterKind, amount)
-			succeeded = true
+		if permanent, ok := r.permanent(effect); ok && res.amount > 0 {
+			permanent.Counters.Remove(effect.CounterKind, res.amount)
+			res.succeeded = true
 		}
 	case game.EffectMoveCounters:
-		succeeded = moveCounters(g, obj, effect)
+		res.succeeded = moveCounters(r.game, r.obj, effect)
 	case game.EffectApplyContinuous:
-		permanent, _ := effectPermanent(g, obj, effect)
-		succeeded = applyContinuousEffectTemplates(g, obj, permanent, effect)
+		permanent, _ := r.permanent(effect)
+		res.succeeded = applyContinuousEffectTemplates(r.game, r.obj, permanent, effect)
 	case game.EffectCreateToken:
-		if amount <= 0 {
-			amount = 1
+		if res.amount <= 0 {
+			res.amount = 1
 		}
 		if !effect.Token.Exists {
 			return
 		}
-		for range amount {
-			if _, ok := createTokenPermanent(g, obj.Controller, effect.Token.Val); !ok {
+		for range res.amount {
+			if _, ok := createTokenPermanent(r.game, r.obj.Controller, effect.Token.Val); !ok {
 				return
 			}
 		}
-		succeeded = amount > 0
+		res.succeeded = res.amount > 0
 	case game.EffectCreateDelayedTrigger:
-		succeeded = effect.DelayedTrigger.Exists && scheduleDelayedTrigger(g, obj, &effect.DelayedTrigger.Val)
+		res.succeeded = effect.DelayedTrigger.Exists && scheduleDelayedTrigger(r.game, r.obj, &effect.DelayedTrigger.Val)
 	case game.EffectPutOnBattlefield:
 		if effect.LinkID != "" {
-			succeeded = returnLinkedExiledObjects(g, obj, effect.LinkID)
+			res.succeeded = returnLinkedExiledObjects(r.game, r.obj, effect.LinkID)
 		}
 	case game.EffectPrevent:
-		succeeded = createPreventionShield(g, obj, effect)
+		res.succeeded = createPreventionShield(r.game, r.obj, effect)
 	case game.EffectRegenerate:
-		if permanent, ok := effectPermanent(g, obj, effect); ok {
+		if permanent, ok := r.permanent(effect); ok {
 			permanent.RegenerationShields++
-			succeeded = true
+			res.succeeded = true
 		}
 	case game.EffectSkipStep:
-		playerID, ok := effectPlayer(g, obj, effect)
+		playerID, ok := r.player(effect)
 		if ok {
-			scheduleSkipStep(g, playerID, effect.Step)
-			succeeded = true
+			scheduleSkipStep(r.game, playerID, effect.Step)
+			res.succeeded = true
 		}
 	case game.EffectTransform:
-		if permanent, ok := effectPermanent(g, obj, effect); ok {
-			succeeded = transformPermanent(g, permanent)
+		if permanent, ok := r.permanent(effect); ok {
+			res.succeeded = transformPermanent(r.game, permanent)
 		}
 	case game.EffectPhaseOut:
-		if permanent, ok := effectPermanent(g, obj, effect); ok {
+		if permanent, ok := r.permanent(effect); ok {
 			permanent.PhasedOut = true
-			removePermanentFromCombat(g, permanent.ObjectID)
-			succeeded = true
+			removePermanentFromCombat(r.game, permanent.ObjectID)
+			res.succeeded = true
 		}
 	case game.EffectCreateEmblem:
-		g.Emblems = append(g.Emblems, game.Emblem{Owner: obj.Controller, Abilities: append([]game.AbilityDef(nil), effect.EmblemAbilities...)})
-		succeeded = true
+		r.game.Emblems = append(r.game.Emblems, game.Emblem{Owner: r.obj.Controller, Abilities: append([]game.AbilityDef(nil), effect.EmblemAbilities...)})
+		res.succeeded = true
 	case game.EffectMill:
-		playerID, ok := effectPlayer(g, obj, effect)
+		playerID, ok := r.player(effect)
 		if ok {
-			millCards(g, playerID, amount)
-			succeeded = amount > 0
+			millCards(r.game, playerID, res.amount)
+			res.succeeded = res.amount > 0
 		}
 	case game.EffectScry:
-		playerID, ok := effectPlayer(g, obj, effect)
+		playerID, ok := r.player(effect)
 		if ok {
-			r.engine.scryCards(g, r.agents, r.log, playerID, amount)
-			succeeded = amount > 0
+			r.engine.scryCards(r.game, r.agents, r.log, playerID, res.amount)
+			res.succeeded = res.amount > 0
 		}
 	case game.EffectSurveil:
-		playerID, ok := effectPlayer(g, obj, effect)
+		playerID, ok := r.player(effect)
 		if ok {
-			r.engine.surveilCards(g, r.agents, r.log, playerID, amount)
-			succeeded = amount > 0
+			r.engine.surveilCards(r.game, r.agents, r.log, playerID, res.amount)
+			res.succeeded = res.amount > 0
 		}
 	case game.EffectFight:
-		resolveFight(g, obj, effect)
-		succeeded = true
+		resolveFight(r.game, r.obj, effect)
+		res.succeeded = true
 	case game.EffectReplace:
-		succeeded = createReplacementEffect(g, obj, effect)
+		res.succeeded = createReplacementEffect(r.game, r.obj, effect)
 	case game.EffectChoose, game.EffectPay:
-		succeeded = true
+		res.succeeded = true
 	case game.EffectApplyRule:
-		succeeded = createRuleEffects(g, obj, effect)
+		res.succeeded = createRuleEffects(r.game, r.obj, effect)
 	case game.EffectProliferate:
-		succeeded = r.engine.resolveProliferate(g, obj, r.agents, r.log)
+		res.succeeded = r.engine.resolveProliferate(r.game, r.obj, r.agents, r.log)
 	case game.EffectGoad:
-		if permanent, ok := effectPermanent(g, obj, effect); ok && permanentHasType(g, permanent, game.TypeCreature) {
-			goadPermanent(g, permanent, obj.Controller)
-			succeeded = true
+		if permanent, ok := r.permanent(effect); ok && permanentHasType(r.game, permanent, game.TypeCreature) {
+			goadPermanent(r.game, permanent, r.obj.Controller)
+			res.succeeded = true
 		}
 	}
+	return
 }
 
 // IsEffectTypeExecuted reports whether the generic rules resolver currently

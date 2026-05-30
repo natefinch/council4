@@ -192,7 +192,25 @@ The entry points for action enumeration and trigger target selection consume `ta
 
 Callers iterate `result.choices` to produce one legal action per target combination. Action enumeration callers (`legalCastActions`, `legalCommanderCastActions`, `legalActivateAbilityActions`, `firstLegalSpellCastChoice`) check `result.kind` before ranging over `result.choices`: `targetInvalidSpec` is an explicit branch with diagnostic `err` context, although current runtime behavior still skips those actions the same way it skips no-legal-target board states. `triggerTargets` returns `(nil, false)` when the result kind is `targetNoLegalChoices` or `targetInvalidSpec`, keeping those triggers off the stack until a board state with legal targets exists.
 
+## Effect resolver
 
+Single-effect resolution is structured around `effectResolver` in `effects.go`. The resolver bundles the per-resolution context (`*Engine`, `*game.Game`, `*game.StackObject`, agents array, `*TurnLog`) so the resolution body is a method rather than a free function with five repeated parameters.
+
+`effectResolver` exposes convenience methods that remove the repeated parameter passing from the switch body:
+
+- `amount(effect)` — resolves the dynamic or static amount for the effect.
+- `permanent(effect)` — looks up the target permanent from the stack object's target list.
+- `player(effect)` — looks up the target player from the target list or controller.
+- `manaColor(effect)` — returns the mana color, respecting resolution-time color choices.
+
+Resolution follows a two-step call chain:
+
+1. `resolve(effect)` checks `EffectCondition` and `EffectResultCondition` guards, then calls `executeEffect` and records the result.
+2. `executeEffect(effect) effectResolved` runs the effect instruction and returns the outcome as an `effectResolved` value.
+
+`effectResolved` captures three fields: `accepted` (the player did not decline an optional effect), `succeeded` (the effect applied), and `amount` (the computed amount, used by linked "that much" follow-ups). Its `record(obj, effect)` method writes the outcome into `obj.ResolvedAmounts` and `obj.ResolutionResults` so downstream "if you do" / "that much" effects see the correct state (CR 608.2c).
+
+Splitting execution from recording eliminates the deferred closure that previously threaded `accepted`, `succeeded`, and `amount` back to the remembering logic, making the control flow explicit.
 
 Damage helpers apply prevention before mutating life totals, counters, marked damage, combat logs, or damage events. Prevention shields track remaining amount and expire with turn duration. Shield counters prevent the next damage event to that permanent and emit `EventDamagePrevented` instead of `EventDamageDealt`. Color-based Protection, represented by `AbilityDef.ProtectionFromColors`, prevents damage from matching colored sources and makes those permanents illegal targets for matching spells and abilities both when chosen and when resolved.
 
