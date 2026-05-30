@@ -6,32 +6,49 @@ Reference for parsing Magic: The Gathering oracle text into council4 `game.Abili
 
 These are the exact types you must use. Do not invent new enum values.
 
+### opt.V — optional values
+
+Optional fields use `opt.V[T]` instead of `*T`. To set an optional field use
+`opt.Val(value)`; to leave it absent, simply omit it (zero value means absent).
+Check presence with `.Exists`. Import path: `"github.com/natefinch/council4/opt"`.
+
+```go
+// Set a value:
+ManaCost: opt.Val(mana.Cost{mana.ColoredMana(mana.Red)})
+// Absent (default): just omit the field
+```
+
 ### AbilityDef
 
 ```go
 type AbilityDef struct {
     Kind               AbilityKind
-    Text               string              // Full oracle text of this ability paragraph
-    Keywords           []Keyword           // Keyword abilities this provides
-    ProtectionFromColors []mana.Color       // For Protection keyword
-    ManaCost           *mana.Cost           // Mana component of activated ability cost
-    AdditionalCosts    []AdditionalCost    // Typed non-mana costs
-    AlternativeCosts   []AlternativeCost   // Optional replacement costs
-    KickerCost         *mana.Cost          // Optional Kicker mana cost
-    KickerEffects      []Effect            // Additional effects if kicked
-    Trigger            *TriggerCondition   // When triggered ability fires (nil for non-triggered)
-    Optional           bool                // True for "you may" abilities
-    Effects            []Effect            // Effects this ability produces
-    Targets            []TargetSpec        // Targeting requirements
-    Modes              []Mode              // Modal spell/ability modes
-    MinModes           int                 // Modal choice minimum (CR 601.2d, CR 700.2)
-    MaxModes           int                 // Modal choice maximum; 0/0 with Modes = choose one
-    AllowDuplicateModes bool               // True for "choose the same mode more than once" (CR 700.2d)
-    ZoneOfFunction     ZoneType            // Zone where ability functions (default: Battlefield)
-    Timing             TimingRestriction   // When activated ability can be used
-    IsLoyaltyAbility   bool                // True for planeswalker loyalty abilities
-    LoyaltyCost        int                 // Loyalty cost for loyalty abilities
-    IsManaAbility      bool                // True for mana abilities (CR 605.1)
+    Text               string                  // Full oracle text of this ability paragraph
+    Keywords           []Keyword               // Keyword abilities this provides
+    ProtectionFromColors []mana.Color           // For Protection keyword
+    EnchantTarget      opt.V[TargetSpec]       // Parameterizes Enchant for Aura attachment legality
+    WardCost           opt.V[mana.Cost]        // Mana cost for Ward (CR 702.20)
+    MadnessCost        opt.V[mana.Cost]        // Mana cost for Madness (CR 702.35)
+    SuspendCost        opt.V[mana.Cost]        // Mana cost for Suspend (CR 702.62)
+    SuspendTimeCounters int                    // Number of time counters for Suspend
+    ManaCost           opt.V[mana.Cost]        // Mana component of activated ability cost
+    AdditionalCosts    []AdditionalCost        // Typed non-mana costs
+    AlternativeCosts   []AlternativeCost       // Optional replacement costs
+    KickerCost         opt.V[mana.Cost]        // Optional Kicker mana cost
+    KickerEffects      []Effect                // Additional effects if kicked
+    Trigger            opt.V[TriggerCondition] // When triggered ability fires (absent for non-triggered)
+    Optional           bool                    // True for "you may" abilities
+    Effects            []Effect                // Effects this ability produces
+    Targets            []TargetSpec            // Targeting requirements
+    Modes              []Mode                  // Modal spell/ability modes
+    MinModes           int                     // Modal choice minimum (CR 601.2d, CR 700.2)
+    MaxModes           int                     // Modal choice maximum; 0/0 with Modes = choose one
+    AllowDuplicateModes bool                   // True for "choose the same mode more than once" (CR 700.2d)
+    ZoneOfFunction     ZoneType                // Zone where ability functions (default: Battlefield)
+    Timing             TimingRestriction       // When activated ability can be used
+    IsLoyaltyAbility   bool                    // True for planeswalker loyalty abilities
+    LoyaltyCost        int                     // Loyalty cost for loyalty abilities
+    IsManaAbility      bool                    // True for mana abilities (CR 605.1)
 }
 ```
 
@@ -141,32 +158,32 @@ type DynamicAmount struct {
 ```go
 type Effect struct {
     Type            EffectType
-    Amount          int           // Numeric amount (damage, cards drawn, etc.)
-    DynamicAmount   *DynamicAmount // Amount determined on resolution (CR 107.3, CR 608.2c)
-    TargetIndex     int           // Index into runtime targets; -1 = controller
-    Optional        bool          // Ask whether to apply this single instruction (CR 608.2c)
-    ResultCondition *EffectResultCondition // Gate on prior linked effect result
-    Condition       *EffectCondition
-    PowerDelta      int           // For EffectModifyPT
-    ToughnessDelta  int           // For EffectModifyPT
-    CounterKind     counter.Kind  // For EffectAddCounter/EffectRemoveCounter
-    CounterSource   CounterSourceSpec  // For EffectMoveCounters
-    ManaColor       mana.Color    // For EffectAddMana
-    Choice          *ResolutionChoice  // Value chosen during resolution (CR 608.2c, CR 609.3)
-    ChoiceLinkID    string        // Consume a prior choice value
-    Payment         *ResolutionPayment // Optional "you may pay..." during resolution (CR 608.2c, CR 117.12)
-    UntilEndOfTurn  bool          // Duration flag
+    Amount          int                        // Numeric amount (damage, cards drawn, etc.)
+    DynamicAmount   opt.V[DynamicAmount]       // Amount determined on resolution (CR 107.3, CR 608.2c)
+    TargetIndex     int                        // Index into runtime targets; -1 = controller
+    Optional        bool                       // Ask whether to apply this single instruction (CR 608.2c)
+    ResultCondition opt.V[EffectResultCondition] // Gate on prior linked effect result
+    Condition       opt.V[EffectCondition]
+    PowerDelta      int                        // For EffectModifyPT
+    ToughnessDelta  int                        // For EffectModifyPT
+    CounterKind     counter.Kind               // For EffectAddCounter/EffectRemoveCounter
+    CounterSource   CounterSourceSpec          // For EffectMoveCounters
+    ManaColor       mana.Color                 // For EffectAddMana
+    Choice          opt.V[ResolutionChoice]    // Value chosen during resolution (CR 608.2c, CR 609.3)
+    ChoiceLinkID    string                     // Consume a prior choice value
+    Payment         opt.V[ResolutionPayment]   // Optional "you may pay..." during resolution (CR 608.2c, CR 117.12)
+    UntilEndOfTurn  bool                       // Duration flag
     Duration        EffectDuration
-    Step            Step          // For step-related effects
-    Selector        EffectSelector  // For mass effects
-    Token           *CardDef      // For EffectCreateToken
-    ContinuousEffects []ContinuousEffect  // For EffectApplyContinuous
-    DelayedTrigger  *DelayedTriggerDef
+    Step            Step                       // For step-related effects
+    Selector        EffectSelector             // For mass effects
+    Token           opt.V[*CardDef]            // For EffectCreateToken
+    ContinuousEffects []ContinuousEffect       // For EffectApplyContinuous
+    DelayedTrigger  opt.V[DelayedTriggerDef]
     EmblemAbilities []AbilityDef
-    Replacement     *ReplacementEffect // For EffectReplace
-    RuleEffects     []RuleEffect // For EffectApplyRule
+    Replacement     opt.V[ReplacementEffect]   // For EffectReplace
+    RuleEffects     []RuleEffect               // For EffectApplyRule
     LinkID          string
-    Description     string        // Human-readable description
+    Description     string                     // Human-readable description
 }
 ```
 
@@ -209,7 +226,7 @@ type ResolutionChoice struct {
 
 type ResolutionPayment struct {
     Prompt          string
-    ManaCost        *mana.Cost
+    ManaCost        opt.V[mana.Cost]
     AdditionalCosts []AdditionalCost
     XValue          int
 }
@@ -444,9 +461,9 @@ If a paragraph is just a keyword name (or comma-separated keywords), create one 
 
 For keywords with parameters:
 - **Protection from [color]**: `Keywords: []game.Keyword{game.Protection}`, `ProtectionFromColors: []mana.Color{mana.Red}`
-- **Ward {N}**: `Keywords: []game.Keyword{game.Ward}`, `ManaCost: &mana.Cost{mana.GenericMana(N)}`
-- **Equip {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Equip}`, `ManaCost: &mana.Cost{mana.GenericMana(N)}`, `Timing: game.SorceryOnly`
-- **Cycling {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Cycling}`, `ManaCost: &mana.Cost{...}`, `AdditionalCosts` with discard self
+- **Ward {N}**: `Keywords: []game.Keyword{game.Ward}`, `WardCost: opt.Val(mana.Cost{mana.GenericMana(N)})`
+- **Equip {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Equip}`, `ManaCost: opt.Val(mana.Cost{mana.GenericMana(N)})`, `Timing: game.SorceryOnly`
+- **Cycling {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Cycling}`, `ManaCost: opt.Val(mana.Cost{...})`, `AdditionalCosts` with discard self
 - **Prowess**: `Keywords: []game.Keyword{game.Prowess}` on a static ability; the rules engine creates the implicit trigger (CR 702.108)
 - **Flashback {cost}**: `Keywords: []game.Keyword{game.Flashback}` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 
@@ -520,8 +537,8 @@ For keywords with parameters:
 | Oracle text pattern | EffectType | Notes |
 |---------------------|------------|-------|
 | "deals N damage to" | `EffectDamage` | `Amount: N`, set `TargetIndex` |
-| "deals X damage to" | `EffectDamage` | `DynamicAmount: &game.DynamicAmount{Kind: game.DynamicAmountX}` |
-| "deals damage equal to [target]'s power" | `EffectDamage` | `DynamicAmount: &game.DynamicAmount{Kind: game.DynamicAmountTargetPower, TargetIndex: N}` |
+| "deals X damage to" | `EffectDamage` | `DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountX})` |
+| "deals damage equal to [target]'s power" | `EffectDamage` | `DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountTargetPower, TargetIndex: N})` |
 | "that much" | any amount effect | Use `LinkID` on the producing effect and `DynamicAmountPreviousEffectResult` on the consuming effect |
 | "you may [do X]. If you do, [Y]" | any effect(s) | Put `Optional: true` and `LinkID` on X; put `ResultCondition` with `Accepted: game.TriTrue`, `Succeeded: game.TriTrue` on Y |
 | "if you don't" | any effect | Put `ResultCondition` with `Accepted: game.TriFalse` on the branch effect |
@@ -672,7 +689,7 @@ Abilities: []game.AbilityDef{
     {
         Kind: game.TriggeredAbility,
         Text: "Whenever another creature enters, you gain 1 life.",
-        Trigger: &game.TriggerCondition{
+        Trigger: opt.Val(game.TriggerCondition{
             Type: game.TriggerWhenever,
             Pattern: game.TriggerPattern{
                 Event:              game.EventPermanentEnteredBattlefield,
@@ -680,7 +697,7 @@ Abilities: []game.AbilityDef{
                 MatchPermanentType: true,
                 PermanentType:      game.TypeCreature,
             },
-        },
+        }),
         Effects: []game.Effect{
             {Type: game.EffectGainLife, Amount: 1, TargetIndex: -1},
         },
