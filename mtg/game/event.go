@@ -81,6 +81,8 @@ type GameEvent struct {
 	TokenName string
 
 	// TokenDef preserves last-known card definition data for token events.
+	// CardDef values are shared immutable definitions; event consumers must not
+	// mutate data reachable through this pointer.
 	TokenDef *CardDef
 
 	// FromZone and ToZone describe a zone transition. ZoneBattlefield is the
@@ -111,6 +113,14 @@ type GameEvent struct {
 	Target Target
 }
 
+// AppendEvent records a rules event. Unknown events are ignored.
+func (g *Game) AppendEvent(event GameEvent) {
+	if event.Kind == EventUnknown {
+		return
+	}
+	g.Events = append(g.Events, cloneGameEvent(event))
+}
+
 // EventsForTurn returns the rules events emitted during the requested turn.
 func (g *Game) EventsForTurn(turnNumber int) []GameEvent {
 	if turnNumber <= 0 {
@@ -128,7 +138,7 @@ func (g *Game) EventsForTurn(turnNumber int) []GameEvent {
 	if start < 0 || start > end || end > len(g.Events) {
 		return nil
 	}
-	return g.Events[start:end]
+	return cloneGameEvents(g.Events[start:end])
 }
 
 // EventsThisTurn returns the rules events emitted during the current turn.
@@ -139,4 +149,20 @@ func (g *Game) EventsThisTurn() []GameEvent {
 // EventsPreviousTurn returns the rules events emitted during the previous turn.
 func (g *Game) EventsPreviousTurn() []GameEvent {
 	return g.EventsForTurn(g.Turn.TurnNumber - 1)
+}
+
+func cloneGameEvents(events []GameEvent) []GameEvent {
+	if len(events) == 0 {
+		return nil
+	}
+	cloned := make([]GameEvent, len(events))
+	for i, event := range events {
+		cloned[i] = cloneGameEvent(event)
+	}
+	return cloned
+}
+
+func cloneGameEvent(event GameEvent) GameEvent {
+	event.CardTypes = append([]CardType(nil), event.CardTypes...)
+	return event
 }

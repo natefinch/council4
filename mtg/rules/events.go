@@ -3,10 +3,7 @@ package rules
 import "github.com/natefinch/council4/mtg/game"
 
 func emitEvent(g *game.Game, event game.GameEvent) {
-	if event.Kind == game.EventUnknown {
-		return
-	}
-	g.Events = append(g.Events, event)
+	g.AppendEvent(event)
 }
 
 func emitZoneChangeEvent(g *game.Game, event game.GameEvent) {

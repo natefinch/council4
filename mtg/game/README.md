@@ -161,6 +161,8 @@ Triggered abilities use `TriggerCondition.Pattern` to match typed `GameEvent` va
 
 Events are not player `Action`s and are not report-oriented `GameResult` logs. `mtg/game` defines the event data so card definitions can refer to event kinds and trigger patterns without importing rules behavior; `mtg/rules` emits and consumes events at mutation boundaries. `Game.TriggerEventCursor` records how far trigger detection has consumed the event stream.
 
+Use `Game.AppendEvent` to add events so event-owned slice fields are copied at the boundary. `EventsForTurn`, `EventsThisTurn`, and `EventsPreviousTurn` return copies; callers may inspect or mutate the returned slices without mutating `Game.Events`. `TokenDef` pointers in token events point at shared immutable card definitions and must not be mutated by event consumers.
+
 ### Runtime Targets
 
 `Target` (`target.go`) records the concrete target choices made while casting a spell or activating an ability. It is separate from `TargetSpec`: `TargetSpec` describes what an ability can target, while `Target` records what was actually chosen at runtime.
