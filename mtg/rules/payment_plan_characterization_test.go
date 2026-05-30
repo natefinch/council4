@@ -12,9 +12,9 @@ import (
 )
 
 func TestSpellPaymentPlanCharacterization(t *testing.T) {
-	// This pins current planner behavior before the Phase 2 cost-planner
-	// decomposition. Keep the coverage when the overload-chain entry point is
-	// collapsed; update only the call seam, not the behavior being summarized.
+	// This pins payment planner behavior across structural refactors. Keep the
+	// coverage when entry points move; update only the call seam, not the
+	// behavior being summarized.
 	tests := []struct {
 		name       string
 		setup      func() (*game.Game, *game.CardDef, id.ID, int)
