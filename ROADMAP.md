@@ -57,31 +57,31 @@ Use this file as the project-level feature checklist. Check items off as they la
 - [x] (completed in Phase 9B) Hybrid, phyrexian, and snow mana costs.
 - [x] X spells and X-cost choice handling.
 - [x] Simple sacrifice-as-cost for spells.
-- [x] (completed in Phase 9B) Alternative costs, richer additional costs, and cost-choice UI. Full cost reductions/increases are deferred to Phase 9C.
+- [x] (completed in Phase 9B) Alternative costs, richer additional costs, and cost-choice UI. Cost reductions/increases were completed in Phase 9C.
 - [x] (completed in Phase 9C; from Phase 6) Attack taxes and attack cost payments.
 - [x] Modal spells and mode selection for choose-one modal spell abilities.
 - [x] Equip actions using activated ability actions and stack resolution.
-- (partially completed in Phase 9C) Kicker was completed; Flashback, Madness, Escape, Foretell, Morph/Disguise, and other common non-combat keyword actions remain carry-forward work. Cycling was completed in Phase 9.
+- [x] Kicker, Flashback, Madness, Morph/Disguise, Cycling, Suspend, Convoke, Delve, Ward, Storm, Cascade, and a broad first slice of non-combat keyword actions. Carry-forward: Escape, Foretell, Evoke, copy-on-stack, cast-without-paying, and richer choice-heavy variants.
 - (deferred to Phase 9C) Richer attachment legality beyond the basic Aura/Equipment skeleton (deferred from Phase 7).
 - [x] Flash and instant-speed timing support for non-instant cards.
 - [x] (completed in Phase 7) Legal target re-checking on resolution and counter-by-rules for all-targets-illegal spells.
 
 ## Phase 9 — Abilities, events, and effects architecture
 
-- [x] Event system for game events: cast, resolve, ETB, death, damage, attack, block, draw, discard, zone changes.
+- [x] Event system for game events: cast, resolve, ETB, death, damage, attack, block, draw, discard, reveal, face-up turns, and zone changes.
 - [x] Triggered ability detection, trigger ordering, and stack placement.
 - [x] General activated ability action generation and resolution beyond Phase 8 mana abilities and basic Equip.
 - [x] Initial static abilities and continuous P/T effect support.
 - [x] Initial replacement and prevention effects: shield-counter damage prevention and destroy replacement.
 - [x] (deferred from Phase 6) Initial combat damage prevention/replacement through shield counters and color-based Protection.
 - [x] (deferred from Phase 6) Initial Protection restrictions and prevention behavior for protection from colors.
-- [x] (completed in Phase 9B; originally from Phase 8) Alternative costs, richer additional costs, and payment-choice framework. Full cost reductions/increases are deferred to Phase 9C.
+- [x] (completed in Phase 9B; originally from Phase 8) Alternative costs, richer additional costs, and payment-choice framework. Cost reductions/increases were completed in Phase 9C.
 - [x] Initial keyword/action carry-forward slice: Cycling as a hand-zone activated ability with discard-as-cost and draw-on-resolution.
-- [x] (partially completed in Phase 9C; originally from Phase 8) Kicker and several keyword/action primitives. Flashback, Madness, Escape, Foretell, Morph/Disguise, and many non-combat keyword actions remain carry-forward work.
+- [x] (completed across Phase 9C and follow-up work; originally from Phase 8) Kicker, Flashback, Madness, Morph/Disguise, Suspend, Convoke, Delve, Ward, Storm, Cascade, and many non-combat keyword/action primitives. Carry-forward: Escape, Foretell, Evoke, copy-on-stack, cast-without-paying, and richer choice-heavy variants.
 - [x] (completed in Phase 9C) Continuous effect layer system, including characteristic-defining abilities and dynamic star P/T.
 - [x] (completed in Phase 9C) Turn-duration effects and cleanup expiry.
 - [x] Initial choice framework for trigger targets, same-controller trigger ordering, and optional triggered effects.
-- [x] (partially completed in Phase 9C) Richer choice framework for scry/surveil. Discard, sacrifice, tutor, reveal, and other non-action choices remain carry-forward work.
+- [x] (partially completed in Phase 9C) Richer choice framework for scry/surveil plus deterministic first slices for discard, supported search, and reveal effects. Carry-forward: agent-driven discard/sacrifice/exile/reveal/tutor choices, richer search destinations, and other non-action choices.
 - [x] Hand-written card implementation escape hatch behind the same card implementation interface.
 
 ## Phase 9B — Costs and payment architecture
@@ -94,7 +94,7 @@ This phase makes cost payment a first-class rules subsystem before Commander rul
 - [x] Typed additional-cost data for common costs such as sacrifice, discard, pay life, exile, reveal, and tap costs; migrate current string-based sacrifice/Cycling costs.
 - [x] Payment choice plumbing through the existing choice framework, with deterministic fallback for agents that do not answer payment choices.
 - [x] Minimal alternative-cost vertical slice where an alternative cost replaces the normal mana cost and can include additional costs.
-- [x] Cost-modifier seam for future reductions, increases, and taxes without a speculative full modifier/layer pipeline.
+- [x] Cost-modifier seam for reductions, increases, and taxes without a speculative full modifier/layer pipeline; real producers landed in Phase 9C.
 - [x] Attack-cost/tax design seam; implement a real Ghostly Prison-style slice only after static cost modifiers have a real producer.
 - [x] Documentation updates for `CONTEXT.md`, package READMEs, and roadmap carry-forward notes.
 
@@ -107,10 +107,10 @@ This phase closes major gameplay-rule gaps that are not Commander-specific befor
 - [x] Last-known information and linked ability infrastructure for battlefield exits, dies/LTB trigger type matching, delayed source identity, and paired exile/return effects. Carry-forward: pruning stale LKI/linked records and exact exile object identity across repeated zone changes.
 - [x] Replacement/prevention engine slice: deterministic replacement-order records, prevention shields, regeneration shields, ETB tapped/counter replacements, draw-step skip effects, and replacement-aware damage/destroy events. Carry-forward: agent-selected CR 616 ordering and broader as-enters choices.
 - [x] Combat choices and cleanup hardening: single-attacker choices, attacker-provided blocker damage division with order/trample/deathtouch validation, attack taxes through payment planning, regeneration removal from combat, phasing checks, and eliminated-player combat/stack/permanent cleanup.
-- [x] Real cost modifiers and taxes through the Phase 9B seam: generic reductions/increases/set/minimum rules, Ghostly Prison-style attack taxes, and split second action restriction. Carry-forward: ability cost modifiers, X enumeration after reductions, and "can't be countered" once counter effects exist.
-- [x] Expanded choice framework slice: scry/surveil choices through `ChoiceAgent` with deterministic fallback and logging, plus mill. Carry-forward: tutor/search with shuffle, discard/sacrifice/exile/reveal choices, modal variants beyond choose-one, full top/bottom ordering payloads, and generic APNAP simultaneous choices.
-- [x] Special action/card-form slice: planeswalker loyalty abilities, emblems with ability data, transform and phase-out primitives, and phase-in during untap. Carry-forward: face-up actions, suspend/foretell setup, cast-from-zone/play-vs-cast permissions, exile-on-resolution replacement, Sagas, DFC back faces, day/night, and richer attachment legality.
-- [x] Keyword-action infrastructure slices: Kicker/if-kicked hooks, fight, scry, surveil, mill, and transform primitives. Carry-forward: Flashback, Madness, Escape, Foretell, Morph/Disguise, Suspend, Evoke, Convoke, Delve, Ward, Prowess, search, reveal, proliferate, goad, copy-on-stack, and cast-without-paying.
+- [x] Real cost modifiers and taxes through the Phase 9B seam: generic reductions/increases/set/minimum rules, Ghostly Prison-style attack taxes, and split second action restriction. Carry-forward: ability cost modifiers, X enumeration after reductions, and "can't be countered" for counter effects.
+- [x] Expanded choice framework slice: scry/surveil choices through `ChoiceAgent` with deterministic fallback and logging, plus mill. Follow-up keyword-action work added deterministic discard, library-to-hand search with optional reveal/shuffle, and reveal events. Carry-forward: agent-driven tutor/search, discard/sacrifice/exile/reveal choices, modal variants beyond choose-one, full top/bottom ordering payloads, and generic APNAP simultaneous choices.
+- [x] Special action/card-form slice: planeswalker loyalty abilities, emblems with ability data, transform and phase-out primitives, phase-in during untap, Suspend setup, and Morph/Disguise face-down/turn-face-up actions. Carry-forward: Foretell setup, cast-from-zone/play-vs-cast permissions, exile-on-resolution replacement, Sagas, DFC back faces, day/night, and richer attachment legality.
+- [x] Keyword-action infrastructure slices: Kicker/if-kicked hooks, fight, scry, surveil, mill, transform, proliferate, goad, counter, discard, supported search, reveal, and investigate primitives. Carry-forward: Escape, Foretell, Evoke, copy-on-stack, cast-without-paying, "can't be countered", richer search variants, and richer choice-backed keyword actions.
 - [x] Trigger hardening slice: delayed triggers, next-end-step scheduling, intervening-if checks at trigger and resolution, dies/LTB LKI matching, cast triggers, and APNAP/same-controller ordering choices. Carry-forward: general state triggers, copy triggers, delayed-trigger intervening-if data, and string-condition parsing.
 - [x] Scenario/unit fixtures for representative 9C slices plus `CONTEXT.md`, package README, and roadmap updates.
 
@@ -130,19 +130,25 @@ This phase closes major gameplay-rule gaps that are not Commander-specific befor
 - [x] `mtg/cards` registry package mapping canonical card names to card definitions.
 - [x] Scryfall data ingestion (per-card API) as the source of truth for card metadata. Bulk ingestion deferred.
 - [x] Generated `CardDef` data for supported cards (mechanical fields via `cardgen` library; abilities via `card-impl` skill).
+- [x] Isolated card-generation tooling under the top-level `cardgen/` directory, including Scryfall fetch/source generation helpers, `gencardlist`, generated-card validation, and batch workflow commands. Agent skills remain under `.agents/skills/`.
 
 See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed card-text feature coverage roadmap that feeds generated card implementation work.
 
 ## Phase 11B — Decklists and broad card implementation rollout
 
-- [ ] `mtg/deck` package for Moxfield/MTGO-style text decklist parsing.
-- [ ] Commander section parsing (`// Commander`, `COMMANDER:`) and explicit four-deck input.
-- [ ] Unsupported-card reporting with actionable messages.
-- [ ] Declarative card implementation schema built from effect primitives.
-- [ ] Generated card implementations should target the Phase 9C keyword/action infrastructure for Kicker, Flashback, Madness, Escape, Foretell, Morph/Disguise, and other non-combat keywords beyond Cycling.
-- [ ] LLM-assisted build-time generation pipeline for declarative card implementations from oracle text.
-- [ ] Validation suite for generated card implementations.
-- [ ] Initial supported-card corpus based on common Commander staples and test decks.
+- [x] Isolate non-runtime card-generation tooling in `cardgen/`, including the moved `cardgen/cmd/gencardlist` command. Keep agent skills and runtime `mtg/cards` definitions outside that tooling area.
+- [x] Batch card-list parser and resumable manifest workflow in `cardgen/cmd/cardbatch` for plain text lists, `// Commander` / `COMMANDER:`-style section headers, Scryfall fetch/cache, expected generated source paths, and missing-card worklists.
+- [x] Attempt-then-validate workflow support: `cardbatch worklist` emits small `card-impl` batches without Go code invoking the agent skill, and `cardbatch validate` regenerates card lists when requested and records validation status/issues in the manifest.
+- [x] Generated-card validation suite for static support checks: unexecuted effect types, unsupported/missing `SearchSpec`, target/effect shape mismatches, unregistered implementation IDs when known, missing generated registry entries, validation run failures, and nontrivial oracle text with empty abilities.
+- [x] Unsupported-card reporting with actionable Markdown/JSON output from fetch errors, missing generated files, pending validation, and validation failures.
+- [ ] `mtg/deck` runtime package for Moxfield/MTGO-style decklist parsing used by simulations. `cardbatch` has workflow list parsing, but runtime deck loading still needs a dedicated domain package.
+- [ ] Explicit four-deck input model and Commander deck loading path that turns card names into validated `CardDef` references.
+- [ ] Declarative card implementation schema/parser hardening built from effect primitives, so `card-impl` can more reliably fill abilities and avoid unsupported-looking "successful" output.
+- [ ] Generated card implementations should target the current keyword/action infrastructure for Kicker, Flashback, Madness, Morph/Disguise, Suspend, Convoke, Delve, Ward, Storm, Cascade, counter, discard, supported search/reveal, proliferate, goad, investigate, and related primitives. Carry-forward: Escape, Foretell, Evoke, copy-on-stack, cast-without-paying, and richer choice-backed variants.
+- [ ] Broaden the supported-card corpus using `cardbatch`: run common Commander staples/test deck lists through `card-impl`, validate, report unsupported cards, and use the report to drive new rules work.
+- [ ] Add smoke fixtures for batch manifests/reports and representative generated card definitions, preferably using cached Scryfall JSON instead of live network calls.
+- [ ] Add runtime smoke validation for generated card implementations, beyond static `cardgen` checks, so sample casts/activations fail if they produce `TurnLog.Unsupported` or illegal-action regressions.
+- [ ] Decide how `cardbatch` validation learns registered `ImplementationID`s from the runtime engine, or keep hand-written implementation validation as an explicit caller-provided check.
 
 ## Phase 12 — Agent and observation system
 
