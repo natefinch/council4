@@ -3,7 +3,7 @@
 //
 // Usage (typically via go generate):
 //
-//	go run ../../gencardlist/main.go
+//	go run github.com/natefinch/council4/cardgen/cmd/gencardlist
 //
 // Run from the letter sub-package directory (e.g., mtg/cards/l/).
 package main

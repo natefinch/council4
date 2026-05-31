@@ -43,7 +43,7 @@ Each card is an exported `*game.CardDef` variable in its letter sub-package (e.g
 4. If this is a new letter directory, add a `doc.go` with the `go:generate` directive:
    ```go
    package x
-   //go:generate go run github.com/natefinch/council4/gencardlist
+   //go:generate go run github.com/natefinch/council4/cardgen/cmd/gencardlist
    ```
 
 ## Using the registry

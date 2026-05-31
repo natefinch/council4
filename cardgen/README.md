@@ -1,6 +1,10 @@
 # cardgen
 
-Package `cardgen` fetches card data from the Scryfall API and generates partial `game.CardDef` Go source files for the council4 card registry.
+Package `cardgen` is the isolated home for card-generation tooling. It fetches
+card data from the Scryfall API, generates partial `game.CardDef` Go source
+files for the council4 card registry, and owns supporting generator commands.
+Runtime game, rules, card registry, and simulation code live outside this
+directory.
 
 ## What it does
 
@@ -20,6 +24,15 @@ go run .agents/skills/card-impl/main.go "Lightning Bolt"
 
 This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populated.
 
+## Tooling layout
+
+- `cardgen` package: Scryfall fetch and `CardDef` source-generation helpers.
+- `cardgen/cmd/gencardlist`: `go generate` helper that writes each
+  `mtg/cards/<letter>/cards.go` list.
+- `.agents/skills/card-impl`: agent skill instructions and entrypoint. The skill
+  stays outside `cardgen/`, but it imports this package for deterministic
+  generation work.
+
 ## Double-faced layouts
 
 `cardgen` accepts Scryfall `transform`, `modal_dfc`, `double_faced_token`, `meld`, and `reversible_card` layouts. Transform, modal DFC, and double-faced token cards emit `Layout` plus per-face `[]game.CardFace` data. Meld cards generate the front card with `LayoutMeld`; full melded-permanent behavior is rules/card-implementation work. Reversible cards generate separate `CardDef` variables for each playable side rather than a face-selectable card.
@@ -34,3 +47,5 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 - `CardNameToVarName(name)` — converts card names to Go exported variable names.
 - `CardNameToFileName(name)` — converts card names to snake_case file names.
 - `CardNameToPackageLetter(name)` — returns the first letter for sub-package routing.
+- `cardgen/cmd/gencardlist` — scans a letter package and regenerates its
+  `Cards` slice.

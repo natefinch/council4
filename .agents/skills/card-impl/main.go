@@ -43,7 +43,7 @@ func main() {
 	// Create doc.go with go:generate directive if this is a new letter directory.
 	docPath := filepath.Join(dir, "doc.go")
 	if _, err := os.Stat(docPath); os.IsNotExist(err) {
-		docContent := fmt.Sprintf("// Package %s contains card definitions for cards starting with %s.\npackage %s\n\n//go:generate go run github.com/natefinch/council4/gencardlist\n", letter, strings.ToUpper(letter), letter)
+		docContent := fmt.Sprintf("// Package %s contains card definitions for cards starting with %s.\npackage %s\n\n//go:generate go run github.com/natefinch/council4/cardgen/cmd/gencardlist\n", letter, strings.ToUpper(letter), letter)
 		if err := os.WriteFile(docPath, []byte(docContent), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "error writing %s: %v\n", docPath, err)
 			os.Exit(1)
