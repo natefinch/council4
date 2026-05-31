@@ -1,37 +1,23 @@
-package rules
+package payment
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
-func applyCostModifiers(g *game.Game, context costModificationContext) spellCostOption {
-	context.option.manaCost = applyGenericCostModifiers(context.option.manaCost, costModifiersForContext(g, context))
-	return context.option
+// costModificationContext carries the context needed to apply cost modifiers.
+type costModificationContext struct {
+	player     game.PlayerID
+	card       *game.CardDef
+	cardID     id.ID
+	sourceZone game.ZoneType
+	option     spellCostOption
 }
 
-func costModifiersForContext(g *game.Game, context costModificationContext) []game.CostModifier {
-	var modifiers []game.CostModifier
-	for _, modifier := range g.CostModifiers {
-		if modifier.Kind != game.CostModifierSpell {
-			continue
-		}
-		if modifier.MatchCardType && (context.card == nil || !context.card.HasType(modifier.CardType)) {
-			continue
-		}
-		modifiers = append(modifiers, modifier)
-	}
-	if context.sourceZone == game.ZoneCommand && context.cardID != 0 {
-		player, ok := playerByID(g, context.player)
-		if ok && player.CommanderInstanceID == context.cardID && player.CommanderTax() > 0 {
-			modifiers = append(modifiers, game.CostModifier{
-				Kind:            game.CostModifierSpell,
-				GenericIncrease: player.CommanderTax(),
-			})
-		}
-	}
-	modifiers = append(modifiers, staticCostModifiersForContext(g, context)...)
-	return modifiers
+func applyCostModifiers(s State, ctx costModificationContext) spellCostOption {
+	ctx.option.manaCost = applyGenericCostModifiers(ctx.option.manaCost, s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone))
+	return ctx.option
 }
 
 func applyGenericCostModifiers(cost *mana.Cost, modifiers []game.CostModifier) *mana.Cost {

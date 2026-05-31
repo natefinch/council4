@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func suspendCostForCard(card *game.CardDef) (mana.Cost, int, bool) {
@@ -35,7 +36,7 @@ func (e *Engine) canSuspendCard(g *game.Game, playerID game.PlayerID, cardID id.
 	if !ok || !canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
-	return canPayCost(g, playerID, &cost)
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &cost})
 }
 
 func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -47,8 +48,7 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	cost, counters, _ := suspendCostForCard(spellDef)
 	prefs := e.paymentPreferencesForCost(g, playerID, &cost, nil, agents, log)
-	plan, ok := buildPaymentPlanWithPreferences(g, playerID, &cost, 0, nil, prefs)
-	if !ok || !paymentPlanStillValid(g, player, plan) || !applyPaymentPlan(g, playerID, plan) {
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &cost, Prefs: prefs}) {
 		return false
 	}
 	if !player.Hand.Remove(cardID) {

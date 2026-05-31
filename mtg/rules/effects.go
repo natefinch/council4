@@ -438,6 +438,10 @@ func stackObjectSourceIsSnow(g *game.Game, obj *game.StackObject) bool {
 	return ok && permanentIsSnow(g, permanent)
 }
 
+func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
+	return permanentHasSupertype(g, permanent, game.Snow)
+}
+
 func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game.Effect, amount int) bool {
 	permanentIDs := selectedPermanentIDs(g, obj.Controller, nil, effect.Selector)
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)

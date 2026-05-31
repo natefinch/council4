@@ -104,7 +104,7 @@ func TestPayCostTapsLandUsed(t *testing.T) {
 	forest := addBasicLandPermanent(g, game.Player1, "Forest")
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 
-	if !payCost(g, game.Player1, &cost) {
+	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false, want true")
 	}
 	if !forest.Tapped {
@@ -120,7 +120,7 @@ func TestTappedLandCannotPayAgain(t *testing.T) {
 	addBasicLandPermanent(g, game.Player1, "Forest")
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 
-	if !payCost(g, game.Player1, &cost) {
+	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("first payCost() = false, want true")
 	}
 	if canPayCost(g, game.Player1, &cost) {
@@ -133,7 +133,7 @@ func TestPayCostFailureDoesNotMutate(t *testing.T) {
 	forest := addBasicLandPermanent(g, game.Player1, "Forest")
 	cost := mana.Cost{mana.ColoredMana(mana.Green), mana.ColoredMana(mana.Green)}
 
-	if payCost(g, game.Player1, &cost) {
+	if payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = true with insufficient mana, want false")
 	}
 	if forest.Tapped {
@@ -150,7 +150,7 @@ func TestPayCostUsesPoolBeforeTappingLands(t *testing.T) {
 	g.Players[game.Player1].ManaPool.Add(mana.Green, 1)
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 
-	if !payCost(g, game.Player1, &cost) {
+	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false, want true")
 	}
 	if forest.Tapped {
@@ -213,7 +213,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericReduction: 2,
 		})
 
-		if !canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 			t.Fatal("canPaySpellCosts() = false, want reduction to make {3}{G} payable with two lands")
 		}
 	})
@@ -227,7 +227,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericIncrease: 1,
 		})
 
-		if canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 			t.Fatal("canPaySpellCosts() = true, want increase to require a second mana")
 		}
 	})
@@ -240,11 +240,11 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericReduction: 5,
 			MinimumGeneric:   1,
 		})
-		if canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 			t.Fatal("canPaySpellCosts() = true without mana, want minimum generic cost")
 		}
 		addBasicLandPermanent(g, game.Player1, "Island")
-		if !canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 			t.Fatal("canPaySpellCosts() = false with one mana, want minimum generic cost payable")
 		}
 	})
@@ -273,7 +273,7 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 		}},
 	})
 
-	if canPaySpellCosts(g, spellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+	if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
 		t.Fatal("static spell tax allowed {G} spell with only one mana")
 	}
 }
@@ -324,7 +324,7 @@ func TestPhyrexianCostCanBePaidWithManaOrLife(t *testing.T) {
 		addBasicLandPermanent(g, game.Player1, "Forest")
 		cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
 
-		if !payCost(g, game.Player1, &cost) {
+		if !payTestGenericCost(g, game.Player1, &cost) {
 			t.Fatal("payCost() = false for phyrexian mana with Forest, want true")
 		}
 		if got := g.Players[game.Player1].Life; got != 40 {
@@ -335,7 +335,7 @@ func TestPhyrexianCostCanBePaidWithManaOrLife(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
 
-		if !payCost(g, game.Player1, &cost) {
+		if !payTestGenericCost(g, game.Player1, &cost) {
 			t.Fatal("payCost() = false for phyrexian mana with life, want true")
 		}
 		if got := g.Players[game.Player1].Life; got != 38 {
@@ -359,7 +359,7 @@ func TestSnowCostRequiresSnowMana(t *testing.T) {
 		addSnowBasicLandPermanent(g, game.Player1, "Forest")
 		cost := mana.Cost{mana.SnowMana()}
 
-		if !payCost(g, game.Player1, &cost) {
+		if !payTestGenericCost(g, game.Player1, &cost) {
 			t.Fatal("payCost() = false for {S} with snow Forest, want true")
 		}
 	})
@@ -483,7 +483,7 @@ func TestPayCostAutoActivatesManaRock(t *testing.T) {
 	}, mana.Colorless, 2)
 	cost := mana.Cost{mana.GenericMana(2)}
 
-	if !payCost(g, game.Player1, &cost) {
+	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false, want true")
 	}
 	if !rock.Tapped {
@@ -505,7 +505,7 @@ func TestPayCostAutoActivatesMultiOutputSourceForRequiredColor(t *testing.T) {
 	dork.SummoningSick = false
 	cost := mana.Cost{mana.ColoredMana(mana.Green), mana.ColoredMana(mana.Green)}
 
-	if !payCost(g, game.Player1, &cost) {
+	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false, want true")
 	}
 	if !dork.Tapped {
@@ -524,7 +524,7 @@ func TestPayCostAutoActivatesMultiOutputSourceForColorlessSymbols(t *testing.T) 
 	}, mana.Colorless, 2)
 	cost := mana.Cost{mana.ColorlessMana(), mana.ColorlessMana()}
 
-	if !payCost(g, game.Player1, &cost) {
+	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false, want true")
 	}
 	if !rock.Tapped {
@@ -549,7 +549,7 @@ func TestPayCostAutoActivatesNonSummoningSickManaDork(t *testing.T) {
 		t.Fatal("canPayCost() = true with summoning-sick mana dork, want false")
 	}
 	dork.SummoningSick = false
-	if !payCost(g, game.Player1, &cost) {
+	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false with ready mana dork, want true")
 	}
 	if !dork.Tapped {

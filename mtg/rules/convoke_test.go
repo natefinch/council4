@@ -74,16 +74,16 @@ func TestConvokeIgnoresTappedCreatures(t *testing.T) {
 
 func TestConvokePaymentPlanValidityChecksConvokeTapsWithoutManaTaps(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1)}))
 	creature := addCombatCreaturePermanent(g, game.Player1)
-	player := g.Players[game.Player1]
-	plan := paymentPlan{poolSpend: make(map[mana.Unit]int), convokeTaps: []*game.Permanent{creature}}
+	setMainPhasePriority(g, game.Player1)
 
-	if !paymentPlanStillValid(g, player, plan) {
-		t.Fatal("paymentPlanStillValid() = false for valid convoke-only plan")
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("convoke-only spell cast failed")
 	}
-	creature.Tapped = true
-	if paymentPlanStillValid(g, player, plan) {
-		t.Fatal("paymentPlanStillValid() = true for tapped convoke creature, want false")
+	if !creature.Tapped {
+		t.Fatal("convoke-only payment did not tap creature")
 	}
 }
 

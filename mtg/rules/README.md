@@ -135,27 +135,28 @@ Mana pools empty at phase and step boundaries before later priority windows can 
 
 ## Payment planner
 
-Cost payment is structured around two request types:
+Cost payment is implemented by the `mtg/rules/payment` package. `rules`
+adapts `*game.Game` and rules-only helpers to the payment package through
+`rulesPaymentState`; production rules code goes through the package-local
+`paymentOrch` seam instead of calling the payment package directly.
 
-- `spellPaymentRequest` — bundles player, card, source zone, X value, kicker flag, and optional preferences for checking or paying a spell's mana and additional costs.
-- `abilityPaymentRequest` — bundles player, ability source permanent, ability definition, X value, and optional preferences for checking or paying an activated-ability cost.
+Payment request types:
 
-Entry points:
+- `payment.SpellRequest` — bundles player, card, source zone, X value, kicker flag, and optional preferences for checking or paying a spell's mana and additional costs.
+- `payment.AbilityRequest` — bundles player, ability source permanent, ability definition, X value, and optional preferences for checking or paying an activated-ability cost.
+- `payment.GenericRequest` — covers generic mana payments such as attack taxes, Cycling, Ward, Madness, Suspend, and resolution-payment effects.
 
-- `canPaySpellCosts(g, req)` — returns true if the spell costs are currently payable.
-- `paySpellCosts(g, req)` — pays costs and returns additional-cost labels; fails if plan is stale.
-- `buildSpellCostPlan(g, req)` — builds a plan without applying it (used for validation and AI).
-- `buildAbilityCostPlan(g, req)` — builds an ability cost plan without applying it.
-- `payAbilityCosts(g, req)` — pays ability costs, including tap and additional costs.
+Payment orchestrator entry points:
 
-Internal planning is split across focused files:
+- `paymentOrch.canPaySpellCosts(g, req)` — returns true if spell costs are currently payable.
+- `paymentOrch.paySpellCosts(g, req)` — pays spell costs and returns additional-cost labels; fails if the plan is stale.
+- `paymentOrch.buildAbilityCostPlan(g, req)` — checks activated-ability cost planning without applying it.
+- `paymentOrch.payAbilityCosts(g, req)` — pays activated-ability costs, including tap and additional costs.
+- `paymentOrch.canPayGenericCost(g, req)` / `paymentOrch.payGenericCost(g, req)` — check or pay generic mana and additional costs.
 
-- `cost_options.go` — spell cost option enumeration, kicker/zone-specific options, alternative costs.
-- `cost_modifiers.go` — cost modifier application (reductions, increases, set-generic).
-- `additional_costs.go` — additional-cost plan building and application (sacrifice, discard, life).
-- `payment_plan.go` — payment plan structs and mana-symbol payment logic.
-- `payment_sources.go` — mana source discovery, Convoke, and Delve support.
-- `payment_apply.go` — mana pool and permanent mutation that executes a committed plan.
+The payment package keeps payment-plan internals private: mana source discovery,
+Convoke/Delve selection, additional-cost matching, and plan application are
+implementation details behind `payment.Planner`.
 
 ## Combat
 

@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func madnessCostForCard(card *game.CardDef) (mana.Cost, bool) {
@@ -47,8 +48,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		return false
 	}
 	prefs := e.paymentPreferencesForCost(g, playerID, &cost, nil, agents, log)
-	plan, ok := buildPaymentPlanWithPreferences(g, playerID, &cost, 0, nil, prefs)
-	if !ok || !paymentPlanStillValid(g, player, plan) || !applyPaymentPlan(g, playerID, plan) {
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &cost, Prefs: prefs}) {
 		return false
 	}
 	if !player.Exile.Remove(card.ID) {

@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	payment "github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -150,10 +151,9 @@ func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.
 	}
 	payer := targetObj.Controller
 	cost := manaCostPtr(ability.WardCost)
-	if canPayCost(g, payer, cost) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
+	if paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost}) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
 		prefs := e.paymentPreferencesForCost(g, payer, cost, nil, agents, log)
-		plan, ok := buildPaymentPlanWithPreferences(g, payer, cost, 0, nil, prefs)
-		if ok && applyPaymentPlan(g, payer, plan) {
+		if paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost, Prefs: prefs}) {
 			return "resolved"
 		}
 	}

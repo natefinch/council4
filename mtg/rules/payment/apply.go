@@ -1,32 +1,32 @@
-package rules
+package payment
 
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
-func applyPaymentPlan(g *game.Game, playerID game.PlayerID, plan paymentPlan) bool {
-	player, ok := playerForCostPayment(g, playerID)
-	if !ok || !paymentPlanStillValid(g, player, plan) {
+func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
+	player, ok := s.Player(playerID)
+	if !ok || !paymentPlanStillValid(s, player, plan) {
 		return false
 	}
 	for _, tap := range plan.manaTaps {
-		if !tapPermanentForMana(g, tap.permanent, tap.color, tap.amount, tap.snow) {
+		if !tapForMana(s, tap.permanent, tap.color, tap.amount, tap.snow) {
 			panic("payment plan became invalid while tapping mana sources")
 		}
 	}
 	for _, permanent := range plan.convokeTaps {
-		if !canConvokeWith(g, playerID, permanent, nil) {
+		if !canConvokeWith(s, playerID, permanent, nil) {
 			panic("payment plan became invalid while tapping convoke creatures")
 		}
-		setPermanentTapped(g, permanent, true)
+		s.SetTapped(permanent, true)
 	}
 	for _, cardID := range plan.delveExiles {
 		if !player.Graveyard.Remove(cardID) {
 			panic("payment plan became invalid while exiling delve cards")
 		}
 		player.Exile.Add(cardID)
-		emitZoneChangeEvent(g, game.GameEvent{
+		s.EmitZoneChange(game.GameEvent{
 			Player:   playerID,
 			CardID:   cardID,
 			FromZone: game.ZoneGraveyard,
@@ -46,41 +46,32 @@ func applyPaymentPlan(g *game.Game, playerID game.PlayerID, plan paymentPlan) bo
 		if player.Life < plan.lifePayment {
 			return false
 		}
-		loseLife(g, playerID, plan.lifePayment)
+		s.LoseLife(playerID, plan.lifePayment)
 	}
 	return true
 }
 
-func tapPermanentForMana(g *game.Game, permanent *game.Permanent, color mana.Color, amount int, snow bool) bool {
+// tapForMana taps a permanent to produce mana and adds it to the controller's pool.
+func tapForMana(s State, permanent *game.Permanent, color mana.Color, amount int, snow bool) bool {
 	if permanent.Tapped {
 		return false
 	}
-	player, ok := playerForCostPayment(g, effectiveController(g, permanent))
+	controllerID := s.EffectiveController(permanent)
+	player, ok := s.Player(controllerID)
 	if !ok {
 		return false
 	}
-	output, ok := permanentManaOutput(g, permanent)
-	if !ok || output.color != color || output.amount != amount || output.snow != snow {
+	c, a, sn, ok := permanentManaOutput(s, permanent)
+	if !ok || c != color || a != amount || sn != snow {
 		return false
 	}
-	setPermanentTapped(g, permanent, true)
-	if output.snow {
+	s.SetTapped(permanent, true)
+	if sn {
 		player.ManaPool.AddSnow(color, amount)
 	} else {
 		player.ManaPool.Add(color, amount)
 	}
 	return true
-}
-
-func playerForCostPayment(g *game.Game, playerID game.PlayerID) (*game.Player, bool) {
-	if playerID < 0 || int(playerID) >= len(g.Players) {
-		return nil, false
-	}
-	player := g.Players[playerID]
-	if player.Eliminated || g.TurnOrder.IsEliminated(playerID) {
-		return nil, false
-	}
-	return player, true
 }
 
 func payColoredSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol mana.Symbol, color mana.Color, method game.SymbolPaymentMethod) bool {
@@ -195,8 +186,8 @@ func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Col
 	return spendAnySnowUnitFromSnapshot(plan, pool)
 }
 
-func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol mana.Symbol, prefs *paymentPreferences) bool {
-	if prefs != nil && prefs.nextPhyrexianLifeChoice() {
+func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol mana.Symbol, prefs *Preferences) bool {
+	if prefs != nil && prefs.NextPhyrexianLifeChoice() {
 		if player.Life-plan.lifePayment < 2 {
 			return false
 		}

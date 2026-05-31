@@ -60,6 +60,10 @@ _Avoid_: Hidden payment heuristic, implicit cost branch
 The concrete rules plan for paying a spell, ability, or attack cost: mana to spend, permanents to tap for mana, life payments, and selected additional costs. Payment plans are built and validated in `mtg/rules` before mutation.
 _Avoid_: Cost guess, mana receipt
 
+**Payment Planner**:
+The rules module (`mtg/rules/payment`) that builds, validates, and applies **Payment Plans** through a small state adapter supplied by `mtg/rules`.
+_Avoid_: Mana helper, cost utility
+
 **Mana Unit**:
 A spendable unit of mana with color and minimal provenance such as whether it was produced by a snow source. Mana units let the engine answer restrictions like `{S}` without treating all mana of one color as interchangeable.
 _Avoid_: Raw mana count when provenance matters

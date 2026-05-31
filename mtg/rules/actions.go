@@ -8,9 +8,18 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
 
 const maxLegalXValue = 20
+
+func canPayCost(g *game.Game, playerID game.PlayerID, cost *mana.Cost) bool {
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost})
+}
+
+func canPayCostWithX(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValue int) bool {
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, XValue: xValue})
+}
 
 func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canAct(g, playerID) {
@@ -312,7 +321,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	spellDef := cardFaceOrDefault(card, cast.Face)
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, cast.XValue, agents, log)
-	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, spellPaymentRequest{playerID: playerID, cardID: card.ID, sourceZone: sourceZone, card: spellDef, xValue: cast.XValue, kickerPaid: cast.KickerPaid, prefs: prefs})
+	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: cast.XValue, KickerPaid: cast.KickerPaid, Prefs: prefs})
 	if !ok {
 		return false
 	}
@@ -368,7 +377,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			return false
 		}
 		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability), agents, log)
-		if _, ok := paymentOrch.payAbilityCosts(g, abilityPaymentRequest{playerID: playerID, source: permanent, ability: ability, xValue: 0, prefs: prefs}); !ok {
+		if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{PlayerID: playerID, Source: permanent, Ability: ability, XValue: 0, Prefs: prefs}) {
 			return false
 		}
 		obj := &game.StackObject{
@@ -396,7 +405,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	sourceCardID := permanent.CardInstanceID
 	sourceTokenDef := permanent.TokenDef
 	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability), agents, log)
-	if _, ok := paymentOrch.payAbilityCosts(g, abilityPaymentRequest{playerID: playerID, source: permanent, ability: ability, xValue: activate.XValue, prefs: prefs}); !ok {
+	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{PlayerID: playerID, Source: permanent, Ability: ability, XValue: activate.XValue, Prefs: prefs}) {
 		return false
 	}
 	if ability.IsLoyaltyAbility {
@@ -439,8 +448,7 @@ func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if !ok || !targetsValidForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability, targets) {
 		return false
 	}
-	_, canPay := paymentOrch.buildAbilityCostPlan(g, abilityPaymentRequest{playerID: playerID, source: permanent, ability: ability, xValue: xValue})
-	return canPay
+	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{PlayerID: playerID, Source: permanent, Ability: ability, XValue: xValue})
 }
 
 func applyLoyaltyCost(permanent *game.Permanent, cost int) {
@@ -464,8 +472,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 		return false
 	}
 	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, agents, log)
-	plan, ok := buildPaymentPlanWithPreferences(g, playerID, manaCostPtr(ability.ManaCost), activate.XValue, nil, prefs)
-	if !ok || !applyPaymentPlan(g, playerID, plan) {
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), XValue: activate.XValue, Prefs: prefs}) {
 		return false
 	}
 	if !discardCardFromHand(g, playerID, card.ID) {
@@ -542,7 +549,7 @@ func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.
 	if kickerPaid && !spellHasKicker(spellDef) {
 		return false
 	}
-	if !paymentOrch.canPaySpellCosts(g, spellPaymentRequest{playerID: playerID, cardID: card.ID, sourceZone: sourceZone, card: spellDef, xValue: xValue, kickerPaid: kickerPaid}) {
+	if !paymentOrch.canPaySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: xValue, KickerPaid: kickerPaid}) {
 		return false
 	}
 	return true
@@ -620,7 +627,7 @@ func legalXValuesForCost(g *game.Game, playerID game.PlayerID, cost *mana.Cost) 
 	}
 	var values []int
 	for x := 0; x <= maxLegalXValue; x++ {
-		if !canPayCostWithX(g, playerID, cost, x) {
+		if !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, XValue: x}) {
 			break
 		}
 		values = append(values, x)
@@ -698,7 +705,7 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 	if !ok || effectiveController(g, target) != playerID || !canAttachPermanent(g, permanent, target) {
 		return false
 	}
-	return canPayCost(g, playerID, manaCostPtr(ability.ManaCost))
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost)})
 }
 
 func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -715,8 +722,7 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if !ok || !targetsValidForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability, targets) {
 		return false
 	}
-	_, canPay := paymentOrch.buildAbilityCostPlan(g, abilityPaymentRequest{playerID: playerID, source: permanent, ability: ability, xValue: xValue})
-	return canPay
+	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{PlayerID: playerID, Source: permanent, Ability: ability, XValue: xValue})
 }
 
 func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -736,7 +742,7 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 	if !ok || !abilityHasKeyword(gotAbility, game.Cycling) {
 		return false
 	}
-	return canPayCost(g, playerID, manaCostPtr(ability.ManaCost))
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost)})
 }
 
 func abilityHasKeyword(ability *game.AbilityDef, keyword game.Keyword) bool {
@@ -771,7 +777,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	} else if abilityHasNonTapAdditionalCosts(ability) {
 		return false
 	}
-	return canPayCost(g, playerID, manaCostPtr(ability.ManaCost))
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost)})
 }
 
 func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
@@ -813,7 +819,7 @@ func abilityHasDiscardThisCardCost(ability *game.AbilityDef) bool {
 		return false
 	}
 	cost := costs[0]
-	if cost.Kind != game.AdditionalCostDiscard || additionalCostAmount(cost) != 1 {
+	if cost.Kind != game.AdditionalCostDiscard || payment.AdditionalCostAmount(cost) != 1 {
 		return false
 	}
 	if cost.Text != "" {

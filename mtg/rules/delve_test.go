@@ -97,11 +97,11 @@ func TestDelveCanPayXGenericCost(t *testing.T) {
 
 func TestDelvePaymentExcludesSourceCardFromGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	sourceID := addCardToGraveyard(g, game.Player1, delveSpell(mana.Cost{mana.GenericMana(1)}))
+	card := delveSpell(mana.Cost{mana.GenericMana(1)})
+	sourceID := addCardToGraveyard(g, game.Player1, card)
 
-	exiles, _, ok := delveCandidates(g, game.Player1, &mana.Cost{mana.GenericMana(1)}, 0, sourceID, game.ZoneGraveyard)
-	if ok || len(exiles) != 0 {
-		t.Fatalf("delvePayment() = %+v, %v, want no source-card exile", exiles, ok)
+	if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, cardID: sourceID, sourceZone: game.ZoneGraveyard, card: card}) {
+		t.Fatal("canPaySpellCosts() = true using source card for delve, want false")
 	}
 }
 

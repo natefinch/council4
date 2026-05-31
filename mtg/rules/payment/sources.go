@@ -1,35 +1,32 @@
-package rules
+package payment
 
 import (
+	"strings"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
-	"strings"
 )
 
-type manaOutput struct {
-	color  mana.Color
-	amount int
-	snow   bool
+// permanentManaOutput derives the mana output of a permanent by checking
+// basic land types and simple tap mana abilities.
+func permanentManaOutput(s State, permanent *game.Permanent) (color mana.Color, amount int, snow bool, ok bool) {
+	if c, ok2 := basicLandManaColor(s, permanent); ok2 {
+		return c, 1, s.PermanentHasSupertype(permanent, game.Snow), true
+	}
+	_, ability, ok2 := simpleTapManaAbility(s, permanent)
+	if !ok2 {
+		return 0, 0, false, false
+	}
+	a := ability.Effects[0].Amount
+	if a <= 0 {
+		a = 1
+	}
+	return ability.Effects[0].ManaColor, a, s.PermanentHasSupertype(permanent, game.Snow), true
 }
 
-func permanentManaOutput(g *game.Game, permanent *game.Permanent) (manaOutput, bool) {
-	if color, ok := basicLandManaColor(g, permanent); ok {
-		return manaOutput{color: color, amount: 1, snow: permanentIsSnow(g, permanent)}, true
-	}
-	_, ability, ok := simpleTapManaAbility(g, permanent)
-	if !ok {
-		return manaOutput{}, false
-	}
-	amount := ability.Effects[0].Amount
-	if amount <= 0 {
-		amount = 1
-	}
-	return manaOutput{color: ability.Effects[0].ManaColor, amount: amount, snow: permanentIsSnow(g, permanent)}, true
-}
-
-func basicLandManaColor(g *game.Game, permanent *game.Permanent) (mana.Color, bool) {
-	card, ok := permanentCardDef(g, permanent)
+func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
+	card, ok := s.PermanentCardDef(permanent)
 	if !ok || !card.HasType(game.TypeLand) {
 		return 0, false
 	}
@@ -39,10 +36,6 @@ func basicLandManaColor(g *game.Game, permanent *game.Permanent) (mana.Color, bo
 		}
 	}
 	return 0, false
-}
-
-func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
-	return permanentHasSupertype(g, permanent, game.Snow)
 }
 
 var basicLandTypes = []struct {
@@ -56,8 +49,8 @@ var basicLandTypes = []struct {
 	{subtype: "Forest", color: mana.Green},
 }
 
-func simpleTapManaAbility(g *game.Game, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
-	card, ok := permanentCardDef(g, permanent)
+func simpleTapManaAbility(s State, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
+	card, ok := s.PermanentCardDef(permanent)
 	if !ok {
 		return 0, nil, false
 	}
@@ -70,7 +63,7 @@ func simpleTapManaAbility(g *game.Game, permanent *game.Permanent) (int, *game.A
 			len(ability.Targets) == 0 &&
 			len(ability.Effects) == 1 &&
 			ability.Effects[0].Type == game.EffectAddMana {
-			if permanentHasType(g, permanent, game.TypeCreature) && permanent.SummoningSick {
+			if s.PermanentHasType(permanent, game.TypeCreature) && permanent.SummoningSick {
 				return 0, nil, false
 			}
 			return i, ability, true
@@ -79,14 +72,14 @@ func simpleTapManaAbility(g *game.Game, permanent *game.Permanent) (int, *game.A
 	return 0, nil, false
 }
 
-func convokeCandidates(g *game.Game, playerID game.PlayerID, exclude map[id.ID]bool) []*game.Permanent {
+func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) []*game.Permanent {
 	var nonMana []*game.Permanent
 	var manaCreatures []*game.Permanent
-	for _, permanent := range g.Battlefield {
-		if !canConvokeWith(g, playerID, permanent, exclude) {
+	for _, permanent := range s.Battlefield() {
+		if !canConvokeWith(s, playerID, permanent, exclude) {
 			continue
 		}
-		if _, ok := permanentManaOutput(g, permanent); ok {
+		if _, _, _, ok := permanentManaOutput(s, permanent); ok {
 			manaCreatures = append(manaCreatures, permanent)
 			continue
 		}
@@ -95,19 +88,12 @@ func convokeCandidates(g *game.Game, playerID game.PlayerID, exclude map[id.ID]b
 	return append(nonMana, manaCreatures...)
 }
 
-func canConvokeWith(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, exclude map[id.ID]bool) bool {
-	if exclude[permanent.ObjectID] || permanent.Tapped || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
-		return false
-	}
-	return permanentHasType(g, permanent, game.TypeCreature)
-}
-
-func delveCandidates(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValue int, sourceCardID id.ID, sourceZone game.ZoneType) ([]id.ID, int, bool) {
+func delveCandidates(s State, playerID game.PlayerID, cost *mana.Cost, xValue int, sourceCardID id.ID, sourceZone game.ZoneType) ([]id.ID, int, bool) {
 	_, generic, ok := costRequirements(cost, xValue)
 	if !ok || generic <= 0 {
 		return nil, 0, false
 	}
-	player, ok := playerByID(g, playerID)
+	player, ok := s.Player(playerID)
 	if !ok {
 		return nil, 0, false
 	}
@@ -127,12 +113,12 @@ func delveCandidates(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xVal
 	return exiles, generic, true
 }
 
-func convokePayment(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValue int, exclude map[id.ID]bool) ([]*game.Permanent, *mana.Cost, bool) {
+func convokePayment(s State, playerID game.PlayerID, cost *mana.Cost, xValue int, exclude map[id.ID]bool) ([]*game.Permanent, *mana.Cost, bool) {
 	_, generic, ok := costRequirements(cost, xValue)
 	if !ok {
 		return nil, cost, false
 	}
-	candidates := convokeCandidates(g, playerID, exclude)
+	candidates := convokeCandidates(s, playerID, exclude)
 	paidColored := make(map[int]bool)
 	var taps []*game.Permanent
 	used := make(map[id.ID]bool)
@@ -141,7 +127,7 @@ func convokePayment(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValu
 			if symbol.Kind != mana.ColoredSymbol {
 				continue
 			}
-			permanent, ok := chooseConvokeColoredCreature(g, candidates, used, symbol.Color)
+			permanent, ok := chooseConvokeColoredCreature(s, candidates, used, symbol.Color)
 			if !ok {
 				continue
 			}
@@ -168,12 +154,12 @@ func convokePayment(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValu
 	return taps, costWithConvokePayments(cost, genericReduction, paidColored), true
 }
 
-func chooseConvokeColoredCreature(g *game.Game, candidates []*game.Permanent, used map[id.ID]bool, color mana.Color) (*game.Permanent, bool) {
+func chooseConvokeColoredCreature(s State, candidates []*game.Permanent, used map[id.ID]bool, color mana.Color) (*game.Permanent, bool) {
 	for _, permanent := range candidates {
 		if used[permanent.ObjectID] {
 			continue
 		}
-		for _, permanentColor := range permanentEffectiveColors(g, permanent) {
+		for _, permanentColor := range s.PermanentEffectiveColors(permanent) {
 			if permanentColor == color {
 				return permanent, true
 			}
@@ -224,21 +210,21 @@ func costWithGenericRequirement(cost *mana.Cost, generic int) *mana.Cost {
 // availableManaSources groups sources by color. Callers must consume it through
 // paymentColors or explicit symbol colors, never by ranging over the map, so
 // payment ordering remains deterministic.
-func availableManaSources(g *game.Game, playerID game.PlayerID, exclude map[id.ID]bool) map[mana.Color][]manaSource {
+func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]bool) map[mana.Color][]manaSource {
 	available := make(map[mana.Color][]manaSource)
-	for _, permanent := range g.Battlefield {
-		if effectiveController(g, permanent) != playerID || permanent.Tapped || exclude[permanent.ObjectID] {
+	for _, permanent := range s.Battlefield() {
+		if s.EffectiveController(permanent) != playerID || permanent.Tapped || exclude[permanent.ObjectID] {
 			continue
 		}
-		output, ok := permanentManaOutput(g, permanent)
+		color, amount, snow, ok := permanentManaOutput(s, permanent)
 		if !ok {
 			continue
 		}
-		available[output.color] = append(available[output.color], manaSource{
+		available[color] = append(available[color], manaSource{
 			permanent: permanent,
-			color:     output.color,
-			amount:    output.amount,
-			snow:      output.snow,
+			color:     color,
+			amount:    amount,
+			snow:      snow,
 		})
 	}
 	return available

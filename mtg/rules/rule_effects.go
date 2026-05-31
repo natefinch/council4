@@ -209,7 +209,7 @@ func playerRelationMatches(sourceController, candidate game.PlayerID, relation g
 	}
 }
 
-func staticCostModifiersForContext(g *game.Game, context costModificationContext) []game.CostModifier {
+func staticCostModifiersForContext(g *game.Game, card *game.CardDef) []game.CostModifier {
 	var modifiers []game.CostModifier
 	for _, effect := range activeRuleEffects(g) {
 		if effect.Kind != game.RuleEffectCostModifier {
@@ -219,7 +219,7 @@ func staticCostModifiersForContext(g *game.Game, context costModificationContext
 		if modifier.Kind != game.CostModifierSpell {
 			continue
 		}
-		if modifier.MatchCardType && (context.card == nil || !context.card.HasType(modifier.CardType)) {
+		if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
 			continue
 		}
 		modifiers = append(modifiers, modifier)
@@ -262,8 +262,12 @@ func cardHasFlashbackAlternative(card *game.CardInstance) bool {
 	if !frontDef.HasKeyword(game.Flashback) {
 		return false
 	}
-	for _, option := range spellCostOptionsForZoneAndKicker(frontDef, game.ZoneGraveyard, false) {
-		if option.index > 0 {
+	ability, ok := firstSpellAbility(frontDef)
+	if !ok {
+		return false
+	}
+	for _, alternative := range ability.AlternativeCosts {
+		if isFlashbackAlternative(alternative) {
 			return true
 		}
 	}

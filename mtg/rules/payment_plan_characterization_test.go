@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func TestSpellPaymentPlanCharacterization(t *testing.T) {
@@ -32,11 +33,10 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			},
 			want: []string{
 				"option=0:Normal cost",
-				"manaTaps=[]",
-				"convoke=[Green Convoke Creature, Plain Convoke Creature]",
-				"delve=[]",
+				"tapped=[Green Convoke Creature, Plain Convoke Creature]",
+				"exile=[]",
+				"graveyard=[]",
 				"additional=[]",
-				"sacrifices=[]",
 				"life=0",
 			},
 		},
@@ -50,11 +50,10 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			},
 			want: []string{
 				"option=0:Normal cost",
-				"manaTaps=[]",
-				"convoke=[]",
-				"delve=[Second Graveyard Card, First Graveyard Card]",
+				"tapped=[]",
+				"exile=[First Graveyard Card, Second Graveyard Card]",
+				"graveyard=[]",
 				"additional=[]",
-				"sacrifices=[]",
 				"life=0",
 			},
 		},
@@ -68,11 +67,10 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			},
 			want: []string{
 				"option=0:Normal cost",
-				"manaTaps=[Forest:G:1, Island:U:1]",
-				"convoke=[]",
-				"delve=[]",
+				"tapped=[Forest, Island]",
+				"exile=[]",
+				"graveyard=[]",
 				"additional=[]",
-				"sacrifices=[]",
 				"life=0",
 			},
 		},
@@ -90,11 +88,10 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			},
 			want: []string{
 				"option=0:Normal cost",
-				"manaTaps=[Island:U:1, Forest:G:1]",
-				"convoke=[]",
-				"delve=[]",
+				"tapped=[Forest, Island]",
+				"exile=[]",
+				"graveyard=[]",
 				"additional=[]",
-				"sacrifices=[]",
 				"life=0",
 			},
 		},
@@ -108,11 +105,10 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			},
 			want: []string{
 				"option=0:Normal cost",
-				"manaTaps=[Forest:G:1]",
-				"convoke=[]",
-				"delve=[]",
+				"tapped=[Forest]",
+				"exile=[]",
+				"graveyard=[Offering Creature]",
 				"additional=[Sacrifice a creature]",
-				"sacrifices=[Offering Creature]",
 				"life=0",
 			},
 		},
@@ -127,11 +123,10 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			kickerPaid: true,
 			want: []string{
 				"option=0:Normal cost",
-				"manaTaps=[Forest:G:1, Forest:G:1]",
-				"convoke=[]",
-				"delve=[]",
+				"tapped=[Forest, Forest]",
+				"exile=[]",
+				"graveyard=[]",
 				"additional=[]",
-				"sacrifices=[]",
 				"life=0",
 			},
 		},
@@ -145,11 +140,10 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			sourceZone: game.ZoneGraveyard,
 			want: []string{
 				"option=1:Flashback",
-				"manaTaps=[Forest:G:1]",
-				"convoke=[]",
-				"delve=[]",
+				"tapped=[Forest]",
+				"exile=[]",
+				"graveyard=[]",
 				"additional=[]",
-				"sacrifices=[]",
 				"life=0",
 			},
 		},
@@ -163,39 +157,44 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			if zone == game.ZoneNone {
 				zone = game.ZoneHand
 			}
-			plan, ok := paymentOrch.buildSpellCostPlan(g, spellPaymentRequest{playerID: game.Player1, cardID: cardID, sourceZone: zone, card: card, xValue: xValue, kickerPaid: tt.kickerPaid})
-			if !ok {
-				t.Fatal("buildSpellCostPlan() = false, want true")
+			req := payment.SpellRequest{PlayerID: game.Player1, CardID: cardID, SourceZone: zone, Card: card, XValue: xValue, KickerPaid: tt.kickerPaid}
+			options := paymentOrch.planner(g).PayableSpellOptions(req)
+			if len(options) == 0 {
+				t.Fatal("PayableSpellOptions() empty, want payable option")
 			}
-			got := summarizeSpellCostPlan(g, plan)
+			lifeBefore := g.Players[game.Player1].Life
+			additionalPaid, ok := paymentOrch.paySpellCosts(g, req)
+			if !ok {
+				t.Fatal("PaySpellCosts() = false, want true")
+			}
+			got := summarizeSpellPayment(g, options[0], additionalPaid, lifeBefore)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("payment plan:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(tt.want, "\n"))
+				t.Fatalf("payment summary:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(tt.want, "\n"))
 			}
 		})
 	}
 }
 
-func summarizeSpellCostPlan(g *game.Game, plan spellCostPlan) []string {
+func summarizeSpellPayment(g *game.Game, option payment.SpellOptionSummary, additionalPaid []string, lifeBefore int) []string {
+	player := g.Players[game.Player1]
 	return []string{
-		fmt.Sprintf("option=%d:%s", plan.option.index, plan.option.label),
-		"manaTaps=" + manaTapList(g, plan.mana.manaTaps),
-		"convoke=" + permanentList(g, plan.mana.convokeTaps),
-		"delve=" + cardList(g, plan.mana.delveExiles),
-		"additional=" + stringList(plan.additional.paid),
-		"sacrifices=" + permanentList(g, plan.additional.sacrifices),
-		fmt.Sprintf("life=%d", plan.additional.lifePaid+plan.mana.lifePayment),
+		fmt.Sprintf("option=%d:%s", option.Index, option.Label),
+		"tapped=" + tappedPermanentList(g),
+		"exile=" + cardList(g, player.Exile.All()),
+		"graveyard=" + cardList(g, player.Graveyard.All()),
+		"additional=" + stringList(additionalPaid),
+		fmt.Sprintf("life=%d", lifeBefore-player.Life),
 	}
 }
 
-func manaTapList(g *game.Game, taps []manaTap) string {
-	if len(taps) == 0 {
-		return "[]"
+func tappedPermanentList(g *game.Game) string {
+	var permanents []*game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.Tapped {
+			permanents = append(permanents, permanent)
+		}
 	}
-	parts := make([]string, 0, len(taps))
-	for _, tap := range taps {
-		parts = append(parts, fmt.Sprintf("%s:%s:%d", sourceName(g, tap.permanent.ObjectID), tap.color, tap.amount))
-	}
-	return "[" + strings.Join(parts, ", ") + "]"
+	return permanentList(g, permanents)
 }
 
 func permanentList(g *game.Game, permanents []*game.Permanent) string {

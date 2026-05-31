@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func (e *Engine) runCombatPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -984,16 +985,11 @@ func canPayAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.A
 	if !ok {
 		return true
 	}
-	_, canPay := buildPaymentPlan(g, playerID, cost, 0, attackingPermanentExclusions(declarations))
-	return canPay
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, Exclude: attackingPermanentExclusions(declarations)})
 }
 
 func payAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, cost *mana.Cost) bool {
-	plan, ok := buildPaymentPlan(g, playerID, cost, 0, attackingPermanentExclusions(declarations))
-	if !ok {
-		return false
-	}
-	return applyPaymentPlan(g, playerID, plan)
+	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, Exclude: attackingPermanentExclusions(declarations)})
 }
 
 func attackingPermanentExclusions(declarations []game.AttackDeclaration) map[id.ID]bool {
