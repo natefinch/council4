@@ -255,6 +255,8 @@ const (
 	EffectApplyRule
 	EffectProliferate
 	EffectGoad
+	EffectReveal
+	EffectInvestigate
 )
 
 // EffectSelector identifies a set of permanents affected by a mass effect.
@@ -290,6 +292,20 @@ const (
 type CounterSourceSpec struct {
 	Kind        CounterSourceKind
 	TargetIndex int
+}
+
+// SearchSpec describes the supported deterministic library-search slice. The
+// initial rules implementation supports only library -> hand. More complex
+// search templates should stay unsupported until explicitly modeled.
+type SearchSpec struct {
+	SourceZone  ZoneType
+	Destination ZoneType
+
+	MatchCardType bool
+	CardType      CardType
+
+	Reveal  bool
+	Shuffle bool
 }
 
 // EffectCondition describes a simple condition that must be true when an
@@ -350,6 +366,7 @@ type Effect struct {
 	EmblemAbilities   []AbilityDef
 	Replacement       opt.V[ReplacementEffect]
 	RuleEffects       []RuleEffect
+	Search            opt.V[SearchSpec]
 	LinkID            string
 	Description       string
 }
@@ -412,6 +429,12 @@ type AbilityDef struct {
 	// SuspendCost and SuspendTimeCounters parameterize Suspend.
 	SuspendCost         opt.V[mana.Cost]
 	SuspendTimeCounters int
+
+	// MorphCost and DisguiseCost parameterize face-down cast keywords. A card
+	// with either keyword may be cast face-down for {3}; the recorded cost is
+	// paid to turn the resulting face-down permanent face up.
+	MorphCost    opt.V[mana.Cost]
+	DisguiseCost opt.V[mana.Cost]
 
 	// ProtectionFromColors parameterizes Protection for the initial protection
 	// slice. Empty means this ability does not currently grant rules-relevant

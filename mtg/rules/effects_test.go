@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestDrawEffectDrawsRequestedCards(t *testing.T) {
@@ -39,9 +40,6 @@ func TestDrawEffectDrawsRequestedCards(t *testing.T) {
 
 func TestUnsupportedEffectsAreLogged(t *testing.T) {
 	tests := []game.EffectType{
-		game.EffectCounter,
-		game.EffectDiscard,
-		game.EffectSearch,
 		game.EffectGainControl,
 		game.EffectCopy,
 		game.EffectAttach,
@@ -79,6 +77,10 @@ func effectTypeName(effectType game.EffectType) string {
 		return "discard"
 	case game.EffectSearch:
 		return "search"
+	case game.EffectReveal:
+		return "reveal"
+	case game.EffectInvestigate:
+		return "investigate"
 	case game.EffectGainControl:
 		return "gain-control"
 	case game.EffectCopy:
@@ -595,6 +597,153 @@ func TestMillScryAndSurveilLibraryEffectsUseDeterministicFallback(t *testing.T) 
 	}
 	if got := g.Players[game.Player1].Library.All(); len(got) != 1 || got[0] != top {
 		t.Fatalf("library after mill = %+v, want only original bottom card", got)
+	}
+}
+
+func TestCounterEffectCountersTargetStackObject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	targetID := g.IDGen.Next()
+	g.CardInstances[targetID] = &game.CardInstance{
+		ID: targetID,
+		Def: &game.CardDef{
+			Name:  "Target Spell",
+			Types: []game.CardType{game.TypeSorcery},
+		},
+		Owner: game.Player2,
+	}
+	targetObj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   targetID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetObj)
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectCounter, TargetIndex: 0}, []game.Target{game.StackObjectTarget(targetObj.ID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := stackObjectByID(g, targetObj.ID); ok {
+		t.Fatal("target stack object remained after counter effect")
+	}
+	if !g.Players[game.Player2].Graveyard.Contains(targetID) {
+		t.Fatal("countered spell did not move to graveyard")
+	}
+}
+
+func TestDiscardEffectDiscardsDeterministicHandCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	bottom := addCardToHand(g, game.Player2, &game.CardDef{Name: "Bottom"})
+	top := addCardToHand(g, game.Player2, &game.CardDef{Name: "Top"})
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDiscard, Amount: 1, TargetIndex: 0}, []game.Target{game.PlayerTarget(game.Player2)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if g.Players[game.Player2].Hand.Contains(top) || !g.Players[game.Player2].Graveyard.Contains(top) {
+		t.Fatal("discard effect did not discard deterministic top hand card")
+	}
+	if !g.Players[game.Player2].Hand.Contains(bottom) {
+		t.Fatal("discard effect discarded more cards than requested")
+	}
+}
+
+func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
+	t.Run("search library to hand with reveal", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		creature := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Creature", Types: []game.CardType{game.TypeCreature}})
+		_ = addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Instant", Types: []game.CardType{game.TypeInstant}})
+		addEffectSpellToStack(g, game.Player1, game.Effect{
+			Type:        game.EffectSearch,
+			Amount:      1,
+			TargetIndex: -1,
+			Search: opt.Val(game.SearchSpec{
+				SourceZone:    game.ZoneLibrary,
+				Destination:   game.ZoneHand,
+				MatchCardType: true,
+				CardType:      game.TypeCreature,
+				Reveal:        true,
+				Shuffle:       true,
+			}),
+		}, nil)
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if !g.Players[game.Player1].Hand.Contains(creature) || g.Players[game.Player1].Library.Contains(creature) {
+			t.Fatal("search effect did not move matching card library -> hand")
+		}
+		if !hasEvent(g, game.EventCardRevealed) {
+			t.Fatalf("events = %+v, want reveal event for searched card", g.Events)
+		}
+	})
+
+	t.Run("reveal top library card", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
+		addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectReveal, Amount: 1, TargetIndex: -1}, nil)
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if !g.Players[game.Player1].Library.Contains(cardID) {
+			t.Fatal("reveal effect moved the card")
+		}
+		if !hasEvent(g, game.EventCardRevealed) {
+			t.Fatalf("events = %+v, want reveal event", g.Events)
+		}
+	})
+
+	t.Run("investigate creates clue token", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		drawn := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+		addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectInvestigate, Amount: 2, TargetIndex: -1}, nil)
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if len(g.Battlefield) != 2 {
+			t.Fatalf("battlefield size = %d, want 2 clues", len(g.Battlefield))
+		}
+		clue := g.Battlefield[0]
+		if !clue.Token || clue.TokenDef == nil || clue.TokenDef.Name != "Clue Token" || !clue.TokenDef.HasSubtype("Clue") {
+			t.Fatalf("clue token = %+v def=%+v", clue, clue.TokenDef)
+		}
+		if len(clue.TokenDef.Abilities) != 1 {
+			t.Fatalf("clue abilities = %d, want activated draw ability", len(clue.TokenDef.Abilities))
+		}
+		g.Players[game.Player1].ManaPool.Add(mana.Colorless, 2)
+		if !engine.applyAction(g, game.Player1, actionBuild.activateAbility(clue.ObjectID, 0, nil, 0)) {
+			t.Fatal("clue activation failed")
+		}
+		if _, ok := permanentByObjectID(g, clue.ObjectID); ok {
+			t.Fatal("clue activation did not sacrifice its source")
+		}
+		engine.resolveTopOfStack(g, &TurnLog{})
+		if !g.Players[game.Player1].Hand.Contains(drawn) {
+			t.Fatal("clue activation did not draw a card")
+		}
+	})
+}
+
+func TestUnsupportedSearchSpecIsLogged(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.Effect{
+		Type:        game.EffectSearch,
+		TargetIndex: -1,
+		Search: opt.Val(game.SearchSpec{
+			SourceZone:  game.ZoneLibrary,
+			Destination: game.ZoneExile,
+		}),
+		Description: "unsupported search destination",
+	}, nil)
+	log := TurnLog{}
+
+	engine.resolveTopOfStack(g, &log)
+
+	if len(log.Unsupported) != 1 || log.Unsupported[0].EffectType != game.EffectSearch {
+		t.Fatalf("unsupported logs = %+v, want EffectSearch unsupported log", log.Unsupported)
 	}
 }
 

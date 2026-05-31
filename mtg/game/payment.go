@@ -12,6 +12,7 @@ type AdditionalCostKind int
 const (
 	AdditionalCostUnknown AdditionalCostKind = iota
 	AdditionalCostSacrifice
+	AdditionalCostSacrificeSource
 	AdditionalCostDiscard
 	AdditionalCostPayLife
 	AdditionalCostExile

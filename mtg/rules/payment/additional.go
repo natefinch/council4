@@ -13,7 +13,7 @@ type additionalCostPlan struct {
 	lifePaid   int
 }
 
-func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []game.AdditionalCost, prefs *Preferences) (additionalCostPlan, bool) {
+func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []game.AdditionalCost, prefs *Preferences, source *game.Permanent) (additionalCostPlan, bool) {
 	plan := additionalCostPlan{player: playerID}
 	for _, cost := range costs {
 		amount := AdditionalCostAmount(cost)
@@ -31,6 +31,12 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []ga
 				return plan, false
 			}
 			plan.sacrifices = append(plan.sacrifices, chosen...)
+			plan.paid = append(plan.paid, AdditionalCostText(cost))
+		case game.AdditionalCostSacrificeSource:
+			if amount != 1 || source == nil || s.EffectiveController(source) != playerID || !additionalCostMatchesPermanent(s, source, cost) {
+				return plan, false
+			}
+			plan.sacrifices = append(plan.sacrifices, source)
 			plan.paid = append(plan.paid, AdditionalCostText(cost))
 		case game.AdditionalCostDiscard:
 			chosen := preferredDiscardCards(s, playerID, cost, amount, plan.discards, prefs)
@@ -186,6 +192,8 @@ func AdditionalCostText(cost game.AdditionalCost) string {
 	switch cost.Kind {
 	case game.AdditionalCostSacrifice:
 		return "Sacrifice a permanent"
+	case game.AdditionalCostSacrificeSource:
+		return "Sacrifice this permanent"
 	case game.AdditionalCostDiscard:
 		return "Discard a card"
 	case game.AdditionalCostPayLife:

@@ -102,6 +102,34 @@ func TestActionBuilderProducesValidActions(t *testing.T) {
 		}
 	})
 
+	t.Run("castFaceDown", func(t *testing.T) {
+		act := actionBuild.castFaceDown(cardID, game.FaceFront, game.FaceDownDisguise)
+		if err := act.Validate(); err != nil {
+			t.Fatalf("castFaceDown() produced invalid action: %v", err)
+		}
+		payload, ok := act.CastFaceDownPayload()
+		if !ok {
+			t.Fatal("castFaceDown() missing CastFaceDownPayload")
+		}
+		if payload.CardID != cardID || payload.Face != game.FaceFront || payload.FaceDownKind != game.FaceDownDisguise {
+			t.Fatalf("castFaceDown() payload = %+v, want card %v face front disguise", payload, cardID)
+		}
+	})
+
+	t.Run("turnFaceUp", func(t *testing.T) {
+		act := actionBuild.turnFaceUp(sourceID)
+		if err := act.Validate(); err != nil {
+			t.Fatalf("turnFaceUp() produced invalid action: %v", err)
+		}
+		payload, ok := act.TurnFaceUpPayload()
+		if !ok {
+			t.Fatal("turnFaceUp() missing TurnFaceUpPayload")
+		}
+		if payload.PermanentID != sourceID {
+			t.Fatalf("turnFaceUp() PermanentID = %v, want %v", payload.PermanentID, sourceID)
+		}
+	})
+
 	t.Run("declareAttackers_nil", func(t *testing.T) {
 		act := actionBuild.declareAttackers(nil)
 		if err := act.Validate(); err != nil {
@@ -120,6 +148,8 @@ func TestActionBuilderProducesValidActions(t *testing.T) {
 // TestActionBuilderPanicsOnInvalidInput verifies that the builder fails loudly
 // when given inputs that would produce an invalid action.
 func TestActionBuilderPanicsOnInvalidInput(t *testing.T) {
+	cardID := id.ID(1)
+
 	t.Run("playLand_zeroCardID", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r == nil {
@@ -163,6 +193,33 @@ func TestActionBuilderPanicsOnInvalidInput(t *testing.T) {
 			}
 		}()
 		actionBuild.suspendCard(0)
+	})
+
+	t.Run("castFaceDown_zeroCardID", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("castFaceDown(0) did not panic, want panic for zero card ID")
+			}
+		}()
+		actionBuild.castFaceDown(0, game.FaceFront, game.FaceDownMorph)
+	})
+
+	t.Run("castFaceDown_noKind", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("castFaceDown(..., FaceDownNone) did not panic, want panic for missing face-down kind")
+			}
+		}()
+		actionBuild.castFaceDown(cardID, game.FaceFront, game.FaceDownNone)
+	})
+
+	t.Run("turnFaceUp_zeroPermanentID", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("turnFaceUp(0) did not panic, want panic for zero permanent ID")
+			}
+		}()
+		actionBuild.turnFaceUp(0)
 	})
 
 	t.Run("declareAttackers_zeroAttacker", func(t *testing.T) {

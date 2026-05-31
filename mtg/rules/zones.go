@@ -44,6 +44,41 @@ func createCardPermanentFace(g *game.Game, card *game.CardInstance, controller g
 	return permanent, true
 }
 
+func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, kind game.FaceDownKind) (*game.Permanent, bool) {
+	if _, ok := cardFaceDef(card, face); !ok || kind == game.FaceDownNone {
+		return nil, false
+	}
+	objectID := g.IDGen.Next()
+	permanent := &game.Permanent{
+		ObjectID:       objectID,
+		CardInstanceID: card.ID,
+		Owner:          card.Owner,
+		Controller:     controller,
+		Face:           face,
+		FaceDown:       true,
+		FaceDownFace:   face,
+		FaceDownKind:   kind,
+		SummoningSick:  true,
+		Timestamp:      int64(objectID),
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	event := game.GameEvent{
+		SourceID:    card.ID,
+		Controller:  controller,
+		Player:      card.Owner,
+		CardID:      card.ID,
+		Face:        face,
+		PermanentID: objectID,
+		CardTypes:   []game.CardType{game.TypeCreature},
+		FromZone:    fromZone,
+		ToZone:      game.ZoneBattlefield,
+	}
+	emitZoneChangeEvent(g, event)
+	event.Kind = game.EventPermanentEnteredBattlefield
+	emitEvent(g, event)
+	return permanent, true
+}
+
 func initializePermanentCounters(permanent *game.Permanent, def *game.CardDef) {
 	if def.EntersTapped {
 		permanent.Tapped = true
@@ -90,6 +125,9 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 	actualDestination := replacementZoneChangeDestination(g, event)
 	if !permanent.Token {
 		actualDestination = commanderReplacementDestination(g, permanent.CardInstanceID, actualDestination)
+	}
+	if permanent.FaceDown {
+		emitFaceDownRevealEvent(g, permanent)
 	}
 	detachPermanent(g, permanent)
 	detachAttachmentsFromPermanent(g, permanent)

@@ -18,6 +18,8 @@ const (
 	ActionCastSpell
 	ActionActivateAbility
 	ActionSuspendCard
+	ActionCastFaceDown
+	ActionTurnFaceUp
 	ActionDeclareAttackers
 	ActionDeclareBlockers
 )
@@ -30,6 +32,8 @@ type Action struct {
 	castSpell        CastSpellAction
 	activateAbility  ActivateAbilityAction
 	suspendCard      SuspendCardAction
+	castFaceDown     CastFaceDownAction
+	turnFaceUp       TurnFaceUpAction
 	declareAttackers DeclareAttackersAction
 	declareBlockers  DeclareBlockersAction
 }
@@ -62,6 +66,19 @@ type ActivateAbilityAction struct {
 // SuspendCardAction is the payload for suspending a card from hand.
 type SuspendCardAction struct {
 	CardID id.ID
+}
+
+// CastFaceDownAction is the payload for casting a card face-down via Morph or
+// Disguise.
+type CastFaceDownAction struct {
+	CardID       id.ID
+	Face         game.FaceIndex
+	FaceDownKind game.FaceDownKind
+}
+
+// TurnFaceUpAction is the payload for turning a face-down permanent face up.
+type TurnFaceUpAction struct {
+	PermanentID id.ID
 }
 
 // DeclareAttackersAction is the payload for declaring attackers.
@@ -171,6 +188,26 @@ func SuspendCard(cardID id.ID) Action {
 	}
 }
 
+// CastFaceDown creates an action to cast a card face-down via Morph or Disguise.
+func CastFaceDown(cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) Action {
+	return Action{
+		Kind: ActionCastFaceDown,
+		castFaceDown: CastFaceDownAction{
+			CardID:       cardID,
+			Face:         face,
+			FaceDownKind: kind,
+		},
+	}
+}
+
+// TurnFaceUp creates an action to turn a face-down permanent face up.
+func TurnFaceUp(permanentID id.ID) Action {
+	return Action{
+		Kind:       ActionTurnFaceUp,
+		turnFaceUp: TurnFaceUpAction{PermanentID: permanentID},
+	}
+}
+
 // DeclareAttackers creates an action to declare attackers.
 func DeclareAttackers(attackers []game.AttackDeclaration) Action {
 	return Action{
@@ -228,6 +265,24 @@ func (a Action) SuspendCardPayload() (SuspendCardAction, bool) {
 		return SuspendCardAction{}, false
 	}
 	return a.suspendCard, true
+}
+
+// CastFaceDownPayload returns the face-down cast payload when this action casts
+// a card face-down.
+func (a Action) CastFaceDownPayload() (CastFaceDownAction, bool) {
+	if a.Kind != ActionCastFaceDown {
+		return CastFaceDownAction{}, false
+	}
+	return a.castFaceDown, true
+}
+
+// TurnFaceUpPayload returns the turn-face-up payload when this action turns a
+// face-down permanent face up.
+func (a Action) TurnFaceUpPayload() (TurnFaceUpAction, bool) {
+	if a.Kind != ActionTurnFaceUp {
+		return TurnFaceUpAction{}, false
+	}
+	return a.turnFaceUp, true
 }
 
 // DeclareAttackersPayload returns the declare-attackers payload when this action
@@ -289,6 +344,17 @@ func (a Action) Validate() error {
 		if a.suspendCard.CardID == 0 {
 			return fmt.Errorf("suspend card action missing card ID")
 		}
+	case ActionCastFaceDown:
+		if a.castFaceDown.CardID == 0 {
+			return fmt.Errorf("cast face-down action missing card ID")
+		}
+		if a.castFaceDown.FaceDownKind == game.FaceDownNone {
+			return fmt.Errorf("cast face-down action missing face-down kind")
+		}
+	case ActionTurnFaceUp:
+		if a.turnFaceUp.PermanentID == 0 {
+			return fmt.Errorf("turn face-up action missing permanent ID")
+		}
 	case ActionDeclareAttackers:
 		for _, attacker := range a.declareAttackers.Attackers {
 			if attacker.Attacker == 0 {
@@ -319,6 +385,12 @@ func (a Action) validatePayloadIsolation() error {
 	}
 	if a.Kind != ActionSuspendCard && !suspendCardActionEmpty(a.suspendCard) {
 		return fmt.Errorf("action kind %d includes suspend card payload", a.Kind)
+	}
+	if a.Kind != ActionCastFaceDown && !castFaceDownActionEmpty(a.castFaceDown) {
+		return fmt.Errorf("action kind %d includes cast face-down payload", a.Kind)
+	}
+	if a.Kind != ActionTurnFaceUp && !turnFaceUpActionEmpty(a.turnFaceUp) {
+		return fmt.Errorf("action kind %d includes turn face-up payload", a.Kind)
 	}
 	if a.Kind != ActionDeclareAttackers && !declareAttackersActionEmpty(a.declareAttackers) {
 		return fmt.Errorf("action kind %d includes declare attackers payload", a.Kind)
@@ -352,6 +424,14 @@ func activateAbilityActionEmpty(a ActivateAbilityAction) bool {
 
 func suspendCardActionEmpty(a SuspendCardAction) bool {
 	return a.CardID == 0
+}
+
+func castFaceDownActionEmpty(a CastFaceDownAction) bool {
+	return a.CardID == 0 && a.Face == 0 && a.FaceDownKind == game.FaceDownNone
+}
+
+func turnFaceUpActionEmpty(a TurnFaceUpAction) bool {
+	return a.PermanentID == 0
 }
 
 func declareAttackersActionEmpty(a DeclareAttackersAction) bool {

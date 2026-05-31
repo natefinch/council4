@@ -107,14 +107,11 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.GameEvent)
 }
 
 func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.GameEvent) []pendingTriggeredAbility {
-	def, ok := permanentCardDef(g, permanent)
-	if !ok {
-		return nil
-	}
+	abilities := permanentEffectiveAbilities(g, permanent)
 	var pending []pendingTriggeredAbility
 	controller := effectiveController(g, permanent)
-	for i := range def.Abilities {
-		ability := &def.Abilities[i]
+	for i := range abilities {
+		ability := &abilities[i]
 		if ability.Kind != game.TriggeredAbility || !ability.Trigger.Exists {
 			if ward, ok := wardTriggerForEvent(g, permanent, controller, ability, event); ok {
 				pending = append(pending, pendingTriggeredAbility{

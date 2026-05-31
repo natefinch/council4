@@ -229,6 +229,13 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 		if obj.Copy {
 			return "resolved"
 		}
+		if obj.FaceDown {
+			_, ok := createCardPermanentFaceDown(g, card, obj.Controller, game.ZoneStack, obj.FaceDownFace, obj.FaceDownKind)
+			if !ok {
+				return "invalid face-down"
+			}
+			return "battlefield"
+		}
 		permanent, ok := createCardPermanentFace(g, card, obj.Controller, game.ZoneStack, obj.Face)
 		if ok && obj.Suspend && permanentHasType(g, permanent, game.TypeCreature) {
 			permanent.SuspendHasteController = opt.Val(obj.Controller)

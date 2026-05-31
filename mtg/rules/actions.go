@@ -27,16 +27,19 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 	}
 	if splitSecondOnStack(g) {
 		actions := e.legalManaAbilityActions(g, playerID)
+		actions = append(actions, e.legalTurnFaceUpActions(g, playerID)...)
 		actions = append(actions, actionBuild.pass())
 		return actions
 	}
 
 	actions := e.legalLandActions(g, playerID)
 	actions = append(actions, e.legalCastActions(g, playerID)...)
+	actions = append(actions, e.legalFaceDownCastActions(g, playerID)...)
 	actions = append(actions, e.legalCommanderCastActions(g, playerID)...)
 	actions = append(actions, e.legalActivateAbilityActions(g, playerID)...)
 	actions = append(actions, e.legalCyclingActions(g, playerID)...)
 	actions = append(actions, e.legalSuspendActions(g, playerID)...)
+	actions = append(actions, e.legalTurnFaceUpActions(g, playerID)...)
 	actions = append(actions, actionBuild.pass())
 	return actions
 }
@@ -183,6 +186,12 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 	case action.ActionSuspendCard:
 		suspend, ok := act.SuspendCardPayload()
 		return ok && e.applySuspendCard(g, playerID, suspend.CardID, agents, log)
+	case action.ActionCastFaceDown:
+		faceDown, ok := act.CastFaceDownPayload()
+		return ok && e.applyCastFaceDownWithChoices(g, playerID, faceDown, agents, log)
+	case action.ActionTurnFaceUp:
+		turnFaceUp, ok := act.TurnFaceUpPayload()
+		return ok && e.applyTurnFaceUpWithChoices(g, playerID, turnFaceUp.PermanentID, agents, log)
 	case action.ActionDeclareAttackers:
 		attackers, ok := act.DeclareAttackersPayload()
 		return ok && e.applyDeclareAttackers(g, playerID, attackers)

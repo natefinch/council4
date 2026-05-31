@@ -47,8 +47,8 @@ Files are split by responsibility:
 - `options.go` enumerates spell cost options such as normal cost, kicker, and
   alternative costs.
 - `modifiers.go` applies cost increases, reductions, set values, and minimums.
-- `additional.go` plans and applies sacrifice, discard, and life additional
-  costs.
+- `additional.go` plans and applies sacrifice, source-only sacrifice, discard,
+  and life additional costs.
 - `plan.go` builds spell, ability, and generic payment plans.
 - `sources.go` discovers and orders mana sources, including Convoke and Delve.
 - `apply.go` mutates mana pools, permanents, graveyards, exile, and life totals

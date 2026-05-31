@@ -206,6 +206,18 @@ func summarizeLegalAction(g *game.Game, act action.Action) string {
 			activate.XValue,
 			targetList(g, activate.Targets),
 		)
+	case action.ActionCastFaceDown:
+		cast, ok := act.CastFaceDownPayload()
+		if !ok {
+			return "invalid cast-face-down"
+		}
+		return fmt.Sprintf("cast-face-down %s face=%d kind=%d", cardName(g, cast.CardID), cast.Face, cast.FaceDownKind)
+	case action.ActionTurnFaceUp:
+		turn, ok := act.TurnFaceUpPayload()
+		if !ok {
+			return "invalid turn-face-up"
+		}
+		return fmt.Sprintf("turn-face-up %s", sourceName(g, turn.PermanentID))
 	default:
 		return fmt.Sprintf("action-kind %d", act.Kind)
 	}

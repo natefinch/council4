@@ -233,6 +233,8 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 			return
 		}
 		_, res.succeeded = destroyPermanent(r.game, permanent.ObjectID)
+	case game.EffectCounter:
+		res.succeeded = counterTargetStackObject(r.game, r.obj, effect)
 	case game.EffectExile:
 		permanent, ok := r.permanent(effect)
 		if !ok {
@@ -258,6 +260,11 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 			return
 		}
 		res.succeeded = movePermanentToZone(r.game, permanent, game.ZoneGraveyard)
+	case game.EffectDiscard:
+		playerID, ok := r.player(effect)
+		if ok {
+			res.succeeded = discardCards(r.game, playerID, res.amount)
+		}
 	case game.EffectTap:
 		if permanent, ok := r.permanent(effect); ok {
 			setPermanentTapped(r.game, permanent, true)
@@ -301,6 +308,16 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 			}
 		}
 		res.succeeded = res.amount > 0
+	case game.EffectInvestigate:
+		if res.amount <= 0 {
+			res.amount = 1
+		}
+		for range res.amount {
+			if _, ok := createTokenPermanent(r.game, r.obj.Controller, clueTokenDef()); !ok {
+				return
+			}
+		}
+		res.succeeded = true
 	case game.EffectCreateDelayedTrigger:
 		res.succeeded = effect.DelayedTrigger.Exists && scheduleDelayedTrigger(r.game, r.obj, &effect.DelayedTrigger.Val)
 	case game.EffectPutOnBattlefield:
@@ -338,6 +355,20 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 		if ok {
 			millCards(r.game, playerID, res.amount)
 			res.succeeded = res.amount > 0
+		}
+	case game.EffectSearch:
+		if !effect.Search.Exists || !searchSpecSupported(effect.Search.Val) {
+			logUnsupportedEffect(r.log, r.obj, effect)
+			return
+		}
+		playerID, ok := r.player(effect)
+		if ok {
+			res.succeeded = r.engine.searchLibrary(r.game, r.obj, playerID, effect.Search.Val, res.amount)
+		}
+	case game.EffectReveal:
+		playerID, ok := r.player(effect)
+		if ok {
+			res.succeeded = revealCards(r.game, r.obj, playerID, game.ZoneLibrary, res.amount)
 		}
 	case game.EffectScry:
 		playerID, ok := r.player(effect)
@@ -381,9 +412,11 @@ func IsEffectTypeExecuted(effectType game.EffectType) bool {
 		game.EffectAddMana,
 		game.EffectDamage,
 		game.EffectDestroy,
+		game.EffectCounter,
 		game.EffectExile,
 		game.EffectBounce,
 		game.EffectSacrifice,
+		game.EffectDiscard,
 		game.EffectTap,
 		game.EffectUntap,
 		game.EffectModifyPT,
@@ -401,6 +434,8 @@ func IsEffectTypeExecuted(effectType game.EffectType) bool {
 		game.EffectPhaseOut,
 		game.EffectCreateEmblem,
 		game.EffectMill,
+		game.EffectSearch,
+		game.EffectReveal,
 		game.EffectScry,
 		game.EffectSurveil,
 		game.EffectFight,
@@ -409,7 +444,8 @@ func IsEffectTypeExecuted(effectType game.EffectType) bool {
 		game.EffectPay,
 		game.EffectApplyRule,
 		game.EffectProliferate,
-		game.EffectGoad:
+		game.EffectGoad,
+		game.EffectInvestigate:
 		return true
 	default:
 		return false

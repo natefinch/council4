@@ -25,6 +25,8 @@ const (
 	EventPermanentTapped
 	EventPermanentUntapped
 	EventObjectBecameTarget
+	EventCardRevealed
+	EventPermanentTurnedFaceUp
 )
 
 // DamageRecipientKind identifies what received damage.

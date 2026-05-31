@@ -64,13 +64,13 @@ Implemented now:
 - State-based actions for player elimination from 0 life, lethal poison, lethal commander damage, and failed draws.
 - Conservative Commander deck legality validation for 99-card decks plus commander, singleton nonbasic names, simple legendary-creature commanders, and trusted color identity data.
 - Permanent state-based actions for 0 toughness, lethal damage, deathtouch damage, 0 planeswalker loyalty, 0 battle defense, illegal Auras/attachments, token cleanup, legendary-rule duplicates, and +1/+1/-1/-1 counter cancellation.
-- Legal action generation for passing, playing lands, casting supported spells from hand, graveyard when permitted, or a commander from the command zone with player or permanent targets, activating simple mana/equip/loyalty/general abilities, Cycling from hand, Kicker spell variants, and richer attacker declarations.
-- Action application for passing, playing lands, casting supported spells, command-zone commander casts with tax/count tracking, activating simple mana/equip/loyalty/general abilities, Cycling from hand, paying attack taxes, and declaring attackers.
-- Mana cost payment helpers that use pool mana first, then auto-tap untapped basic lands and simple tap mana abilities from mana rocks or non-summoning-sick mana dorks, with generic spell cost modifiers and attack-tax payment exclusions.
-- Stack resolution for creature spells entering the battlefield, instant/sorcery spells moving to graveyard, modal spell effects, triggered abilities, equip activated abilities, Cycling abilities, Kicker effects, loyalty abilities, delayed triggers, and general non-mana activated abilities.
-- Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, exile, bounce, sacrifice, tap/untap, adding/removing/moving counters, mass selector effects, token creation, runtime P/T modifiers, declarative runtime continuous and rule effects, scry/surveil/mill, fight, transform, phase out, emblems, proliferate, goad, prevention, regeneration, and delayed triggers. Unsupported effect primitives are logged instead of silently no-oping.
+- Legal action generation for passing, playing lands, casting supported spells from hand, graveyard when permitted, or a commander from the command zone with player or permanent targets, casting Morph/Disguise cards face-down, turning face-down permanents face up, activating simple mana/equip/loyalty/general abilities, Cycling from hand, Kicker spell variants, and richer attacker declarations.
+- Action application for passing, playing lands, casting supported spells, command-zone commander casts with tax/count tracking, Morph/Disguise face-down casts and turn-face-up special actions, activating simple mana/equip/loyalty/general abilities, Cycling from hand, paying attack taxes, and declaring attackers.
+- Mana cost payment helpers that use pool mana first, then auto-tap untapped basic lands and simple tap mana abilities from mana rocks or non-summoning-sick mana dorks, with generic spell cost modifiers, source-only sacrifice costs, face-down turn-up costs, and attack-tax payment exclusions.
+- Stack resolution for creature spells entering the battlefield, face-down permanent spells entering as hidden 2/2 creatures, instant/sorcery spells moving to graveyard, modal spell effects, triggered abilities, equip activated abilities, Cycling abilities, Kicker effects, loyalty abilities, delayed triggers, and general non-mana activated abilities.
+- Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, counter, exile, bounce, sacrifice, discard, tap/untap, adding/removing/moving counters, mass selector effects, token creation/investigate, supported library-to-hand search, reveal, runtime P/T modifiers, declarative runtime continuous and rule effects, scry/surveil/mill, fight, transform, phase out, emblems, proliferate, goad, prevention, regeneration, and delayed triggers. Unsupported effect primitives and unsupported variants are logged instead of silently no-oping.
 - Hand-written spell implementation escape hatch through `CardDef.ImplementationID`, `Engine.RegisterCardImplementation`, and `CardContext` mutation helpers.
-- Typed `game.GameEvent` emission for spell casts/resolutions, ETB, death, damage, draw, discard, zone changes, attack/block declarations, and supported beginning-of-step events.
+- Typed `game.GameEvent` emission for spell casts/resolutions, ETB, death, damage, draw, discard, reveal, face-up turns, zone changes, attack/block declarations, and supported beginning-of-step events.
 - Triggered ability detection from `game.TriggerPattern`, choice-mediated target selection, APNAP stack placement with choice-mediated same-controller ordering, optional-trigger resolution choices, spell/permanent type filters, supported beginning-of-step triggers, latched state triggers, implicit Prowess triggers, and resolution through `StackTriggeredAbility`.
 - Player- and permanent-targeted spell action generation using `TargetSpec` and runtime `game.Target` values, including min/max target counts, mixed target slots, and structured target predicates with legacy string fallback.
 - Resolution-time target re-checking with counter-by-rules behavior when all targets become illegal.
@@ -90,8 +90,8 @@ Not implemented yet:
 
 - Full attachment legality beyond basic creature-only Aura/Equipment support.
 - Agent-driven mulligan decisions, choice-based discard/sacrifice/exile/reveal/tutor decisions, agent-selected replacement ordering, state triggers, copy triggers, and generic APNAP simultaneous choices beyond trigger ordering.
-- Madness, Escape, Foretell, Morph/Disguise, Suspend, Evoke, Convoke, Delve, Ward, Storm, Cascade, copy-on-stack, cast-without-paying, and other non-combat keyword actions beyond Flash, Flashback, Prowess, basic Equip, Cycling, Kicker, proliferate, goad, scry/surveil/mill, fight, and transform.
-- Play-vs-cast effects, face-up special actions, Saga chapters, DFC back-face characteristics, day/night transitions, exile-on-resolution replacements beyond Flashback, and full "can't be countered" support once counter effects exist.
+- Escape, Foretell, Evoke, copy-on-stack, cast-without-paying, and choice-rich keyword-action variants beyond the currently supported deterministic primitives.
+- Play-vs-cast effects, Saga chapters, DFC back-face characteristics, day/night transitions, exile-on-resolution replacements beyond Flashback, unsupported search destinations/choice flows, and full "can't be countered" support.
 
 ## Game events
 
@@ -107,11 +107,13 @@ The current engine generates these actions:
 
 - `action.PlayLand(cardID)` for lands in the active player's hand during a main phase when the stack is empty and the land drop is available.
 - `action.CastSpell(cardID, targets, xValue, modes)` for supported creature, instant, and sorcery spells. Current cast support covers colored, colorless, generic, and X costs; simple player/permanent targets; choose-one modal spells; Flash timing; simple sacrifice-as-cost; and color-based Protection targeting restrictions.
+- `action.CastFaceDown(cardID, face, kind)` for Morph/Disguise cards in hand during sorcery-speed windows, using the face-down `{3}` alternative cost.
+- `action.TurnFaceUp(permanentID)` for controlled face-down permanents whose Morph/Disguise turn-up cost is payable. This is a special action and does not use the stack.
 - `action.ActivateAbility(sourceID, abilityIndex, targets, xValue)` for simple mana abilities, Equip abilities, Cycling abilities, and general non-mana activated abilities. Mana abilities resolve immediately without using the stack; Equip, Cycling, and general non-mana abilities use the stack and re-check targets, including Protection restrictions, on resolution.
 - `action.DeclareAttackers(attackers)` during the declare attackers turn-based action. Current attack generation is intentionally compact: all eligible attackers attack one alive opponent, or no attackers; goad filters out illegal no-attack and goading-player choices when a goaded creature can attack.
 - `action.Pass()` for every player with priority.
 
-Legal actions are ordered as play land, cast spell, activate ability, then pass so simple agents develop mana before spending it and choose productive actions before passing.
+Legal actions are ordered as play land, cast spell, face-down cast, activate ability, Cycling/Suspend/special actions, then pass so simple agents develop mana before spending it and choose productive actions before passing.
 
 The priority loop treats agent output as untrusted: if an agent returns an action not present in the legal action list, the engine substitutes `Pass`.
 

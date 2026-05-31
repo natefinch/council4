@@ -40,6 +40,9 @@ Use `act.Validate()` at package boundaries that accept untrusted or hand-built a
 - `ActionPlayLand` - play a land card from hand.
 - `ActionCastSpell` - cast a spell with chosen runtime `game.Target` values.
 - `ActionActivateAbility` - activate an ability from a permanent or other source with chosen runtime `game.Target` values.
+- `ActionSuspendCard` - take the special suspend action from hand.
+- `ActionCastFaceDown` - cast a card face-down via Morph or Disguise.
+- `ActionTurnFaceUp` - take the special action to turn a face-down permanent face up.
 - `ActionDeclareAttackers` - declare attackers as the active player's combat turn-based action.
 - `ActionDeclareBlockers` - declare blockers as a defending player's combat turn-based action.
 
@@ -49,7 +52,7 @@ Use `act.Validate()` at package boundaries that accept untrusted or hand-built a
 
 The rules engine validates action legality. Agents should normally return one of the legal actions they were given, but the engine still treats returned actions as untrusted input.
 
-Cast-spell actions identify the card to cast, the source zone (`SourceZone`, defaulting to hand), selected printed face (`Face`, defaulting to `game.FaceFront`), chosen targets, chosen modes, X value, and whether Kicker is paid (`KickerPaid`, usually via `action.CastKickedSpell`). Use `action.CastSpellFace` / `action.CastSpellFaceFromZone` when an action intentionally chooses a modal DFC face. The rules engine currently generates supported casts for simple targeted or untargeted spells, choose-one modal spells, X spells, Kicker spell variants, modal DFC faces, and command-zone commander casts.
+Cast-spell actions identify the card to cast, the source zone (`SourceZone`, defaulting to hand), selected printed face (`Face`, defaulting to `game.FaceFront`), chosen targets, chosen modes, X value, and whether Kicker is paid (`KickerPaid`, usually via `action.CastKickedSpell`). Use `action.CastSpellFace` / `action.CastSpellFaceFromZone` when an action intentionally chooses a modal DFC face. `CastFaceDown` is separate because Morph/Disguise uses hidden characteristics and a fixed `{3}` alternative cost. The rules engine currently generates supported casts for simple targeted or untargeted spells, choose-one modal spells, X spells, Kicker spell variants, modal DFC faces, face-down Morph/Disguise casts, and command-zone commander casts.
 
 Activate-ability actions identify the source object, ability index, chosen targets, and X value. The rules engine currently uses them for simple mana abilities, which resolve immediately, plus Equip and general non-mana activated abilities, which use the stack.
 

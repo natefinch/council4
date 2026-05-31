@@ -65,12 +65,12 @@ This roadmap tracks card-text features needed by generated `CardDef` implementat
   - [x] Cascade
   - [x] Convoke
   - [x] Delve
-  - [ ] Morph/Disguise
-  - [ ] Related keyword actions not listed above
+  - [x] Morph/Disguise: face-down 2/2 cast for `{3}`, turn face up for morph/disguise cost, including Disguise Ward `{2}`/shield counters.
+  - [x] Related keyword actions not listed above: counter, discard, supported library search, reveal, and investigate now have first-class effect support.
 
 ## Lower-level infrastructure follow-ups
 
 - [ ] Convert natural-language target constraints into structured predicates instead of relying on string matching.
 - [x] Add a dynamic value model for effect amounts, separate from the existing P/T-only `DynamicValue`.
-- [ ] Ensure generated card definitions cannot appear fully supported when they use an effect enum that the resolver does not execute.
+- [ ] Ensure generated card definitions cannot appear fully supported when they use an effect enum that the resolver does not execute. Carry-forward: search variants outside explicit library-to-hand `SearchSpec` remain unsupported and logged until modeled; "can't be countered" is not modeled yet.
 - [ ] Add fixture cards for each supported card-text pattern so generation regressions are caught before broad Commander staple ingestion.

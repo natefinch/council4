@@ -84,6 +84,17 @@ type StackObject struct {
 	// Suspend is true if this spell was cast from exile by suspend.
 	Suspend bool
 
+	// FaceDown is true if this spell was cast face-down via Morph or Disguise.
+	FaceDown bool
+
+	// FaceDownFace records the printed face hidden under a face-down spell.
+	// It is ignored unless FaceDown is true.
+	FaceDownFace FaceIndex
+
+	// FaceDownKind records whether this spell was cast face-down by Morph,
+	// Disguise, or a future face-down mechanic.
+	FaceDownKind FaceDownKind
+
 	// Copy is true if this stack object is a copy of a spell rather than the
 	// physical source card.
 	Copy bool

@@ -6,6 +6,17 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// FaceDownKind identifies how a face-down spell or permanent became face-down.
+// The kind determines rules text not visible in the printed characteristics,
+// such as Disguise's Ward {2} and shield counter when turned face up.
+type FaceDownKind int
+
+const (
+	FaceDownNone FaceDownKind = iota
+	FaceDownMorph
+	FaceDownDisguise
+)
+
 // Permanent represents a card (or token) on the battlefield with all its
 // in-game state. A Permanent is created when a spell resolves as a permanent
 // or when a token is created, and is destroyed when it leaves the battlefield.
@@ -47,6 +58,14 @@ type Permanent struct {
 	// or Disguise). Face-down permanents are 2/2 creatures with no name,
 	// no type, no abilities, and no mana cost (CR 708.2).
 	FaceDown bool
+
+	// FaceDownFace records the printed face hidden under a face-down permanent.
+	// It is ignored unless FaceDown is true.
+	FaceDownFace FaceIndex
+
+	// FaceDownKind records whether this was cast or created face-down by Morph,
+	// Disguise, or a future face-down mechanic. It is ignored unless FaceDown is true.
+	FaceDownKind FaceDownKind
 
 	// Face is the printed face currently visible for face-up double-faced
 	// permanents. Single-faced cards use FaceFront.

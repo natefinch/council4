@@ -114,6 +114,10 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values.controller = permanent.Controller
 	if permanent.FaceDown {
 		values.types = []game.CardType{game.TypeCreature}
+		if permanent.FaceDownKind == game.FaceDownDisguise {
+			values.abilities = []game.AbilityDef{faceDownDisguiseWardAbility()}
+			rebuildKeywords(&values)
+		}
 		values.power, values.powerOK = 2, true
 		values.toughness, values.toughnessOK = 2, true
 		return values

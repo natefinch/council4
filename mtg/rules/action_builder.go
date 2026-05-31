@@ -54,6 +54,14 @@ func (b actionBuilderType) suspendCard(cardID id.ID) action.Action {
 	return b.mustBuild(action.SuspendCard(cardID))
 }
 
+func (b actionBuilderType) castFaceDown(cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) action.Action {
+	return b.mustBuild(action.CastFaceDown(cardID, face, kind))
+}
+
+func (b actionBuilderType) turnFaceUp(permanentID id.ID) action.Action {
+	return b.mustBuild(action.TurnFaceUp(permanentID))
+}
+
 func (b actionBuilderType) declareAttackers(attackers []game.AttackDeclaration) action.Action {
 	return b.mustBuild(action.DeclareAttackers(attackers))
 }
