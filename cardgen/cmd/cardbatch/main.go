@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen"
@@ -27,6 +28,8 @@ func main() {
 		err = runWorklist(os.Args[2:])
 	case "validate":
 		err = runValidate(os.Args[2:])
+	case "report":
+		err = runReport(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)
@@ -174,6 +177,55 @@ func runValidate(args []string) error {
 	return cardgen.SaveManifest(*outPath, manifest)
 }
 
+func runReport(args []string) error {
+	flags := flag.NewFlagSet("report", flag.ExitOnError)
+	manifestPath := flags.String("manifest", ".cardwork/cards.json", "manifest path")
+	repoRoot := flags.String("repo", ".", "repository root")
+	mdPath := flags.String("md", ".cardwork/unsupported.md", "Markdown report path; use - for stdout")
+	jsonPath := flags.String("json", ".cardwork/unsupported.json", "JSON report path; use - for stdout")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	manifest, err := cardgen.LoadManifest(*manifestPath)
+	if err != nil {
+		return err
+	}
+	cardgen.MarkExistingFiles(&manifest, *repoRoot)
+	report := cardgen.BuildUnsupportedReport(manifest)
+	if err := writeReport(*mdPath, func(w *os.File) error {
+		return cardgen.WriteUnsupportedReportMarkdown(w, report)
+	}); err != nil {
+		return err
+	}
+	if err := writeReport(*jsonPath, func(w *os.File) error {
+		return cardgen.WriteUnsupportedReportJSON(w, report)
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeReport(path string, write func(*os.File) error) error {
+	if path == "" {
+		return nil
+	}
+	if path == "-" {
+		return write(os.Stdout)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if err := write(file); err != nil {
+		file.Close()
+		return err
+	}
+	return file.Close()
+}
+
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: cardbatch <parse|fetch|missing|worklist|validate> [flags]")
+	fmt.Fprintln(os.Stderr, "usage: cardbatch <parse|fetch|missing|worklist|validate|report> [flags]")
 }
