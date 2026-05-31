@@ -29,6 +29,8 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 ## Tooling layout
 
 - `cardgen` package: Scryfall fetch and `CardDef` source-generation helpers.
+- `cardgen/cmd/cardbatch`: resumable batch workflow for parsing card lists,
+  fetching Scryfall oracle data, and identifying missing generated card files.
 - `cardgen/cmd/gencardlist`: `go generate` helper that writes each
   `mtg/cards/<letter>/cards.go` list.
 - `.agents/skills/card-impl`: agent skill instructions and entrypoint. The skill
@@ -45,6 +47,8 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 - `GenerateCardSource(card, pkgName)` — generates Go source for a `CardDef`.
 - `ValidateCard(card, opts)` / `ValidateCards(cards, opts)` — report static
   support issues in generated `CardDef` values.
+- `ParseCardList`, `NewManifestFromItems`, `FetchManifest`, and
+  `MarkExistingFiles` — build and update card batch manifests.
 - `ParseManaCostLiteral(cost)` — converts Scryfall mana cost strings to Go code.
 - `ManaValueFromCost(cost)` — computes a face's mana value from a mana-cost string.
 - `ParseTypeLine(typeLine)` — splits a type line into supertypes, types, subtypes.
