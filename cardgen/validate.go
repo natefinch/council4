@@ -21,15 +21,17 @@ const (
 	IssueTargetIndexOutOfRange      ValidationCode = "target-index-out-of-range"
 	IssueInvalidTargetSpec          ValidationCode = "invalid-target-spec"
 	IssueUnregisteredImplementation ValidationCode = "unregistered-implementation"
+	IssueGeneratedCardNotFound      ValidationCode = "generated-card-not-found"
+	IssueValidationRunFailed        ValidationCode = "validation-run-failed"
 )
 
 // ValidationIssue describes one problem found in a generated card definition.
 type ValidationIssue struct {
-	CardName string
-	FaceName string
-	Path     string
-	Code     ValidationCode
-	Message  string
+	CardName string         `json:"card_name"`
+	FaceName string         `json:"face_name,omitempty"`
+	Path     string         `json:"path,omitempty"`
+	Code     ValidationCode `json:"code"`
+	Message  string         `json:"message"`
 }
 
 // ValidationOptions configures generated-card validation.

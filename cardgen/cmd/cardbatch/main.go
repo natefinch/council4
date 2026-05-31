@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen"
 )
@@ -22,6 +23,10 @@ func main() {
 		err = runFetch(os.Args[2:])
 	case "missing":
 		err = runMissing(os.Args[2:])
+	case "worklist":
+		err = runWorklist(os.Args[2:])
+	case "validate":
+		err = runValidate(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)
@@ -110,6 +115,65 @@ func runMissing(args []string) error {
 	return cardgen.SaveManifest(*outPath, manifest)
 }
 
+func runWorklist(args []string) error {
+	flags := flag.NewFlagSet("worklist", flag.ExitOnError)
+	manifestPath := flags.String("manifest", ".cardwork/cards.json", "manifest path")
+	repoRoot := flags.String("repo", ".", "repository root")
+	limit := flags.Int("limit", 0, "maximum number of cards to print; 0 means all")
+	format := flags.String("format", "names", "output format: names or commands")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	manifest, err := cardgen.LoadManifest(*manifestPath)
+	if err != nil {
+		return err
+	}
+	cardgen.MarkExistingFiles(&manifest, *repoRoot)
+	for _, name := range cardgen.MissingWorklist(manifest, *limit) {
+		switch *format {
+		case "names":
+			fmt.Println(name)
+		case "commands":
+			fmt.Printf("go run .agents/skills/card-impl/main.go %s\n", shellQuote(name))
+		default:
+			return fmt.Errorf("unknown worklist format %q", *format)
+		}
+	}
+	return nil
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
+}
+
+func runValidate(args []string) error {
+	flags := flag.NewFlagSet("validate", flag.ExitOnError)
+	manifestPath := flags.String("manifest", ".cardwork/cards.json", "manifest path")
+	outPath := flags.String("out", "", "manifest output path; defaults to -manifest")
+	repoRoot := flags.String("repo", ".", "repository root")
+	generate := flags.Bool("generate", false, "run go generate ./mtg/cards/... before validation")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if *outPath == "" {
+		*outPath = *manifestPath
+	}
+	if *generate {
+		if err := cardgen.RunGoGenerateCards(*repoRoot); err != nil {
+			return err
+		}
+	}
+	manifest, err := cardgen.LoadManifest(*manifestPath)
+	if err != nil {
+		return err
+	}
+	cardgen.MarkExistingFiles(&manifest, *repoRoot)
+	if err := cardgen.ValidateManifestGeneratedCards(&manifest, *repoRoot); err != nil {
+		return err
+	}
+	return cardgen.SaveManifest(*outPath, manifest)
+}
+
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: cardbatch <parse|fetch|missing> [flags]")
+	fmt.Fprintln(os.Stderr, "usage: cardbatch <parse|fetch|missing|worklist|validate> [flags]")
 }

@@ -27,6 +27,12 @@ const (
 	BatchFileStatusExisting = "existing"
 )
 
+const (
+	BatchValidationStatusUnvalidated = ""
+	BatchValidationStatusValid       = "valid"
+	BatchValidationStatusInvalid     = "invalid"
+)
+
 // CardListItem is one parsed card-list entry before Scryfall canonicalization.
 type CardListItem struct {
 	InputName string `json:"input_name"`
@@ -56,6 +62,7 @@ type ManifestCard struct {
 	Faces         []ManifestFace    `json:"faces,omitempty"`
 	FetchError    string            `json:"fetch_error,omitempty"`
 	FilePath      string            `json:"file_path,omitempty"`
+	Validation    string            `json:"validation,omitempty"`
 	Issues        []ValidationIssue `json:"issues,omitempty"`
 }
 
