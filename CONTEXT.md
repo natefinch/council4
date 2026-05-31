@@ -34,6 +34,10 @@ _Avoid_: Effect type, action type
 The turn phase where creatures attack players or other attackable objects and deal combat damage.
 _Avoid_: Battle, fight, attack phase
 
+**Combat Module**:
+The in-place rules module (`mtg/rules` `combatEngine`) that owns combat phase orchestration, attack/block declaration, combat damage assignment, and attack-tax payment integration.
+_Avoid_: Combat package until a small adapter seam exists
+
 **Attacker**:
 A creature declared to attack during combat.
 _Avoid_: Combatant, assailant

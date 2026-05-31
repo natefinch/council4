@@ -170,6 +170,39 @@ State-based actions destroy creatures with lethal marked damage or 0 effective t
 
 This slice intentionally omits combat tricks beyond the existing priority windows and richer attack-tax producers beyond explicit `Game.AttackTaxes`; those carry forward to broader card implementation work.
 
+## Combat in-place module
+
+Combat behavior is concentrated in `combatEngine` (`combat_engine.go`), an in-place module following the same seam pattern as `effectResolver` and `paymentOrchestratorType`. `Engine.runCombatPhase` is a one-liner that constructs `combatEngine{e}` and calls `runPhase`; all combat logic lives on `combatEngine`.
+
+`combatEngine` methods and their responsibilities:
+
+- `runPhase` — full combat-phase sequence: step setup, priority windows, attacker/blocker declaration, first-strike and normal damage passes, mana-pool draining.
+- `runPriorityStep` — set step, emit beginning-of-step event, run priority loop, drain mana pools.
+- `runPriority` — grant priority to the active player and run the priority loop.
+- `declareAttackers` — enumerate legal attacker choices, ask the active player's agent, log and apply the chosen declaration.
+- `declareBlockers` — same for each defending player in priority order.
+- `legalAttackers` — enumerate legal `DeclareAttackers` actions, including goad constraints and attack-tax affordability checks.
+- `legalBlockers` — enumerate legal `DeclareBlockers` actions, including Flying/Reach/Menace restrictions.
+- `applyAttackers` — validate and apply a `DeclareAttackersAction`: goad satisfaction, attack-tax payment via `paymentOrch`, tapping non-Vigilance attackers, and attacker-declared event emission.
+- `applyBlockers` — validate and apply a `DeclareBlockersAction`: eligibility re-check, Menace count enforcement, blocker-order tracking, and blocker-declared event emission.
+- `resolveDamagePass` — assign and mark combat damage for all attackers in one damage pass (first-strike or normal), dispatching to the package-level `resolveBlockedCombatDamage` / `resolveUnblockedCombatDamage` helpers.
+- `canPayAttackTax` / `payAttackTax` / `attackTaxCost` / `attackingPermanentExclusions` — attack-tax integration through `paymentOrch`.
+
+`Engine` methods `applyDeclareAttackers` and `applyDeclareBlockers` and the package-level functions `legalDeclareAttackersActions` and `legalDeclareBlockersActions` are thin wrappers that preserve the existing call surface used by `actions.go` and tests.
+
+Pure game-state helpers (eligibility predicates, damage computation, goad bookkeeping, blocker ordering) remain as package-level free functions in `combat.go` because they carry no `combatEngine` state and are independently useful.
+
+### Extraction decision criteria
+
+Promote `combatEngine` to a `mtg/rules/combat` subpackage when **all** of the following hold:
+
+1. The subpackage boundary removes a meaningful coupling (the pure helpers in `combat.go` would move with it, or their callers are already isolated).
+2. At least one non-combat caller (e.g. a card implementation) needs to import a combat type that is currently unexported. Moving avoids awkward re-exports.
+3. The subpackage would have its own tests that are faster to run in isolation than the full `mtg/rules` suite.
+4. The interface surface is stable enough that further churn won't force repeated cross-package changes.
+
+Do **not** extract solely to reduce file size or to match the `payment` precedent; `payment` moved because it has a well-defined algorithmic boundary and no direct game-mutation needs. Combat orchestration calls `Engine` methods (`runPriorityLoop`, `applyStateBasedActionsWithLog`) and mutates `*game.Game` directly, so extraction would require passing either an `Engine` interface or callbacks — that interface should be designed only when the payoff is clear.
+
 ## Static and continuous effects
 
 The continuous-effect layer derives effective permanent values on demand rather than mutating printed card definitions. Runtime `ContinuousEffect` values cover copy, control, text, type, color, ability, and P/T layers with timestamp/dependency ordering. Battlefield static abilities with `EffectModifyPT` contribute to matching permanents through source-aware selectors such as `EffectSelectorCreaturesYouControl` and `EffectSelectorOtherCreaturesYouControl`; if the source leaves the battlefield, the next effective-value calculation naturally stops applying the effect.
