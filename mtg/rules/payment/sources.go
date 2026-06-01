@@ -14,7 +14,8 @@ func permanentManaOutput(s State, permanent *game.Permanent) (color mana.Color, 
 	if c, ok2 := basicLandManaColor(s, permanent); ok2 {
 		return c, 1, s.PermanentHasSupertype(permanent, game.Snow), true
 	}
-	_, ability, ok2 := simpleTapManaAbility(s, permanent)
+	controller := s.EffectiveController(permanent)
+	_, ability, ok2 := simpleTapManaAbility(s, controller, permanent)
 	if !ok2 {
 		return 0, 0, false, false
 	}
@@ -49,7 +50,7 @@ var basicLandTypes = []struct {
 	{subtype: "Forest", color: mana.Green},
 }
 
-func simpleTapManaAbility(s State, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
+func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
 	card, ok := s.PermanentCardDef(permanent)
 	if !ok {
 		return 0, nil, false
@@ -65,6 +66,9 @@ func simpleTapManaAbility(s State, permanent *game.Permanent) (int, *game.Abilit
 			ability.Effects[0].Type == game.EffectAddMana {
 			if s.PermanentHasType(permanent, game.TypeCreature) && permanent.SummoningSick {
 				return 0, nil, false
+			}
+			if !s.ActivationConditionSatisfied(playerID, permanent, ability) {
+				continue
 			}
 			return i, ability, true
 		}

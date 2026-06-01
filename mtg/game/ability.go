@@ -106,6 +106,10 @@ type TriggerCondition struct {
 	// event occurs and when the trigger resolves (CR 603.4). Empty if none.
 	InterveningIf string
 
+	// InterveningCondition is the structured form of InterveningIf. The rules
+	// layer evaluates it with the trigger controller and triggering event bound.
+	InterveningCondition opt.V[Condition]
+
 	// InterveningIfControllerLifeAtLeast is a structured initial intervening-if
 	// condition for life-threshold triggers.
 	InterveningIfControllerLifeAtLeast int
@@ -322,6 +326,10 @@ type EffectCondition struct {
 
 	// Negate inverts the permanent-type match, e.g. "it isn't a creature".
 	Negate bool
+
+	// Condition is an additional shared condition evaluated with the resolving
+	// stack object bound.
+	Condition opt.V[Condition]
 }
 
 // Effect describes a single game effect produced by an ability.
@@ -412,6 +420,11 @@ type AbilityDef struct {
 	// Text is the full oracle text of this ability paragraph.
 	Text string
 
+	// Condition restricts when a static ability functions. It is currently used
+	// only for static abilities; activation restrictions belong in
+	// ActivationCondition.
+	Condition opt.V[Condition]
+
 	// Keywords lists keyword abilities this provides (e.g., Flying, Haste).
 	// A single ability line can grant multiple keywords.
 	Keywords []Keyword
@@ -493,6 +506,10 @@ type AbilityDef struct {
 
 	// Timing restricts when an activated ability can be used.
 	Timing TimingRestriction
+
+	// ActivationCondition restricts when an activated ability can be activated,
+	// e.g. "Activate only if you control a Mountain".
+	ActivationCondition opt.V[Condition]
 
 	// IsLoyaltyAbility is true for planeswalker loyalty abilities (CR 606).
 	IsLoyaltyAbility bool

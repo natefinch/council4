@@ -40,6 +40,10 @@ type State interface {
 	// PermanentEffectiveColors returns the effective colors of the permanent.
 	PermanentEffectiveColors(p *game.Permanent) []mana.Color
 
+	// ActivationConditionSatisfied reports whether an activated ability's
+	// non-timing activation restriction is satisfied.
+	ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef) bool
+
 	// PermanentByObjectID looks up a permanent by its object ID.
 	PermanentByObjectID(objectID id.ID) (*game.Permanent, bool)
 

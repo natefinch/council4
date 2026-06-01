@@ -367,6 +367,12 @@ func triggerInterveningIf(g *game.Game, controller game.PlayerID, trigger *game.
 	if trigger.InterveningIfEventPermanentHadCounters && !eventPermanentHadCounters(g, event) {
 		return false
 	}
+	if !conditionSatisfied(g, conditionContext{
+		controller: controller,
+		event:      event,
+	}, trigger.InterveningCondition) {
+		return false
+	}
 	return true
 }
 

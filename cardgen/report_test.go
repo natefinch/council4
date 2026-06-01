@@ -272,20 +272,20 @@ func cardFunctionalityPlan1Manifest() Manifest {
 		}
 	}
 	return Manifest{Version: ManifestVersion, Cards: []ManifestCard{
-		card("Anger", filepath.Join("mtg", "cards", "a", "anger.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Anger", filepath.Join("mtg", "cards", "a", "anger.go"), BatchValidationStatusValid),
 		card("Arena", filepath.Join("mtg", "cards", "a", "arena.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Basilisk Collar", filepath.Join("mtg", "cards", "b", "basilisk_collar.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Beast Within", filepath.Join("mtg", "cards", "b", "beast_within.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Birds of Paradise", filepath.Join("mtg", "cards", "b", "birds_of_paradise.go"), BatchValidationStatusValid),
 		card("Bite Down", filepath.Join("mtg", "cards", "b", "bite_down.go"), BatchValidationStatusValid),
-		card("Blazemire Verge", filepath.Join("mtg", "cards", "b", "blazemire_verge.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Blazemire Verge", filepath.Join("mtg", "cards", "b", "blazemire_verge.go"), BatchValidationStatusValid),
 		card("Blazing Sunsteel", filepath.Join("mtg", "cards", "b", "blazing_sunsteel.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Bridgeworks Battle // Tanglespan Bridgeworks", filepath.Join("mtg", "cards", "b", "bridgeworks_battle_tanglespan_bridgeworks.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Bugenhagen, Wise Elder", filepath.Join("mtg", "cards", "b", "bugenhagen_wise_elder.go"), BatchValidationStatusValid),
 		card("Bushwhack", filepath.Join("mtg", "cards", "b", "bushwhack.go"), BatchValidationStatusValid),
 		card("Chandra's Ignition", filepath.Join("mtg", "cards", "c", "chandra_s_ignition.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Chaos Warp", filepath.Join("mtg", "cards", "c", "chaos_warp.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
-		card("Cinder Glade", filepath.Join("mtg", "cards", "c", "cinder_glade.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Cinder Glade", filepath.Join("mtg", "cards", "c", "cinder_glade.go"), BatchValidationStatusValid),
 		card("Command Tower", filepath.Join("mtg", "cards", "c", "command_tower.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 	}}
 }
@@ -310,12 +310,6 @@ func writePlan1SourceStubs(t *testing.T, repoRoot string, manifest Manifest) {
 
 func plan1MissingFunctionalityComments() map[string]string {
 	return map[string]string{
-		"Anger": `// Missing primitives:
-	//   - AbilityDef has no structured condition for "as long as you control a permanent
-	//     with subtype X" on a static ability. ImplementationID "anger" is set on the
-	//     CardDef so hand-written rules code can check for Mountain control before
-	//     applying the graveyard static effect.
-	`,
 		"Arena": `// Missing primitives:
 	//   - TargetSpec has no "chooser" field; there is no way to declare that the
 	//     second target is chosen by an opponent rather than the active player.
@@ -342,11 +336,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 	// not trigger via this effect. A future "creature-sourced damage" primitive
 	// (or ImplementationID) would be needed for full rules accuracy.
 	`,
-		"Blazemire Verge": `// Missing primitives:
-	//   - TimingRestriction has no "activate only if you control [subtype]" condition.
-	//     ImplementationID "blazemire-verge" is set so the rules engine can enforce
-	//     the Swamp-or-Mountain prerequisite on the {R} mana ability.
-	`,
 		"Blazing Sunsteel": `// Missing primitives:
 	//   - EffectSelectorEquippedCreature does not exist; the static P/T boost cannot
 	//     select the equipped creature declaratively.
@@ -364,11 +353,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 	//     the conditional ETB cannot be expressed declaratively.
 	//     ImplementationID "tanglespan-bridgeworks" on the back face delegates to a
 	//     hand-written rules handler that prompts for the life payment on entry.
-	`,
-		"Bugenhagen, Wise Elder": `// Missing primitives:
-	//   - TriggerCondition.InterveningIf only stores text; there is no structured
-	//     "controller controls a creature with power >= N" check. The trigger will
-	//     fire on every upkeep unless the rules engine gains that primitive.
 	`,
 		"Bushwhack": `// Missing primitives:
 	//   - SearchSpec has no MatchSupertype field; "basic" cannot be enforced
@@ -388,15 +372,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 	//   - The conditional "if it's a permanent card, put it onto the battlefield" requires checking
 	//     the card type of the newly revealed top card, which EffectCondition/EffectResultCondition
 	//     cannot express declaratively. ImplementationID "chaos-warp" must handle all three steps.
-	`,
-		"Cinder Glade": `// Missing primitives:
-	//   - "Enters tapped unless you control two or more basic lands" is a conditional ETB-tapped
-	//     replacement effect. CardDef.EntersTapped is unconditional; EffectCondition has no
-	//     "count of basic lands you control >= N" predicate. ImplementationID "cinder-glade"
-	//     must evaluate the condition and apply EntersTapped accordingly.
-	//   - The parenthetical mana ability is reminder text for the Mountain and Forest subtypes.
-	//     It is modelled explicitly here because council4 does not auto-derive subtype mana
-	//     abilities at runtime; the choice between {R} and {G} follows the Birds of Paradise pattern.
 	`,
 		"Command Tower": `// Missing primitives:
 	//   - ResolutionChoice.Colors is a static slice; it cannot express "the colors in your

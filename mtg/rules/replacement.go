@@ -144,9 +144,6 @@ func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) game.Z
 }
 
 func applyEnterBattlefieldReplacementEffects(g *game.Game, permanent *game.Permanent, fromZone game.ZoneType) {
-	if permanent == nil {
-		return
-	}
 	event := game.GameEvent{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  effectiveController(g, permanent),
@@ -157,6 +154,23 @@ func applyEnterBattlefieldReplacementEffects(g *game.Game, permanent *game.Perma
 		TokenDef:    permanent.TokenDef,
 		FromZone:    fromZone,
 		ToZone:      game.ZoneBattlefield,
+	}
+	if def, ok := permanentCardDef(g, permanent); ok && def.EntersTappedCondition.Exists {
+		replacement := game.ReplacementEffect{
+			Controller:   event.Controller,
+			SourceCardID: permanent.CardInstanceID,
+			Description:  "enters tapped condition",
+			MatchEvent:   game.EventPermanentEnteredBattlefield,
+			MatchToZone:  true,
+			ToZone:       game.ZoneBattlefield,
+			Condition:    def.EntersTappedCondition,
+			EntersTapped: true,
+			Duration:     game.DurationPermanent,
+			CreatedTurn:  g.Turn.TurnNumber,
+		}
+		if replacementEffectMatchesEvent(g, replacement, event) {
+			setPermanentTapped(g, permanent, true)
+		}
 	}
 	matches := matchingETBReplacementEffects(g, event)
 	if len(matches) > 1 {
@@ -211,6 +225,12 @@ func replacementEffectMatchesEvent(g *game.Game, replacement game.ReplacementEff
 		return false
 	}
 	if replacement.MatchToZone && replacement.ToZone != event.ToZone {
+		return false
+	}
+	if !conditionSatisfied(g, conditionContext{
+		controller: replacement.Controller,
+		event:      &event,
+	}, replacement.Condition) {
 		return false
 	}
 	return true

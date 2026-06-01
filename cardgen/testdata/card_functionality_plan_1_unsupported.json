@@ -1,23 +1,14 @@
 {
   "summary": {
     "manifest_total": 15,
-    "unsupported_total": 14,
+    "unsupported_total": 10,
     "fetch_error": 0,
     "missing_generated_file": 0,
-    "invalid": 11,
+    "invalid": 8,
     "validation_pending": 0,
-    "functionality_blocked": 14
+    "functionality_blocked": 10
   },
   "cards": [
-    {
-      "name": "Anger",
-      "issues": [
-        "implementation-required"
-      ],
-      "functionality": [
-        "AbilityDef"
-      ]
-    },
     {
       "name": "Arena",
       "issues": [
@@ -52,15 +43,6 @@
       ]
     },
     {
-      "name": "Blazemire Verge",
-      "issues": [
-        "implementation-required"
-      ],
-      "functionality": [
-        "TimingRestriction"
-      ]
-    },
-    {
       "name": "Blazing Sunsteel",
       "issues": [
         "implementation-required"
@@ -79,12 +61,6 @@
       ],
       "functionality": [
         "pay-life ETB replacement"
-      ]
-    },
-    {
-      "name": "Bugenhagen, Wise Elder",
-      "functionality": [
-        "TriggerCondition.InterveningIf"
       ]
     },
     {
@@ -115,16 +91,6 @@
       ]
     },
     {
-      "name": "Cinder Glade",
-      "issues": [
-        "implementation-required"
-      ],
-      "functionality": [
-        "conditional ETB-tapped replacement",
-        "subtype mana ability derivation"
-      ]
-    },
-    {
       "name": "Command Tower",
       "issues": [
         "implementation-required"
@@ -135,12 +101,6 @@
     }
   ],
   "functionality": [
-    {
-      "capability": "AbilityDef",
-      "cards": [
-        "Anger"
-      ]
-    },
     {
       "capability": "DynamicAmountCountOpponents",
       "cards": [
@@ -203,27 +163,9 @@
       ]
     },
     {
-      "capability": "TimingRestriction",
-      "cards": [
-        "Blazemire Verge"
-      ]
-    },
-    {
-      "capability": "TriggerCondition.InterveningIf",
-      "cards": [
-        "Bugenhagen, Wise Elder"
-      ]
-    },
-    {
       "capability": "TriggerPattern",
       "cards": [
         "Blazing Sunsteel"
-      ]
-    },
-    {
-      "capability": "conditional ETB-tapped replacement",
-      "cards": [
-        "Cinder Glade"
       ]
     },
     {
@@ -242,12 +184,6 @@
       "capability": "shuffle permanent into owner's library",
       "cards": [
         "Chaos Warp"
-      ]
-    },
-    {
-      "capability": "subtype mana ability derivation",
-      "cards": [
-        "Cinder Glade"
       ]
     },
     {

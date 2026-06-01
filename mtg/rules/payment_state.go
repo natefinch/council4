@@ -44,6 +44,10 @@ func (s *rulesPaymentState) PermanentEffectiveColors(p *game.Permanent) []mana.C
 	return permanentEffectiveColors(s.g, p)
 }
 
+func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef) bool {
+	return activationConditionSatisfied(s.g, playerID, permanent, ability)
+}
+
 func (s *rulesPaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent, bool) {
 	return permanentByObjectID(s.g, objectID)
 }

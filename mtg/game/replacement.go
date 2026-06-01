@@ -113,6 +113,9 @@ type ReplacementEffect struct {
 	MatchToZone   bool
 	ToZone        ZoneType
 
+	// Condition gates this replacement against the in-flight event.
+	Condition opt.V[Condition]
+
 	ReplaceToZone      ZoneType
 	EntersTapped       bool
 	EntersWithCounters []CounterPlacement

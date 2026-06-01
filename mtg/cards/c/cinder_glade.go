@@ -1,0 +1,64 @@
+package c
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
+)
+
+// Cinder Glade
+//
+// Type: Land — Mountain Forest
+//
+// Oracle text:
+//
+//	({T}: Add {R} or {G}.)
+//	This land enters tapped unless you control two or more basic lands.
+//
+// The parenthetical mana ability is reminder text for the Mountain and Forest
+// subtypes. It is modelled explicitly because council4 does not auto-derive
+// subtype mana abilities at runtime.
+var CinderGlade = &game.CardDef{
+	Name:          "Cinder Glade",
+	ManaValue:     0,
+	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	Types:         []game.CardType{game.TypeLand},
+	Subtypes:      []string{"Mountain", "Forest"},
+	OracleText:    "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",
+	EntersTappedCondition: opt.Val(game.Condition{
+		Negate: true,
+		ControllerControls: game.PermanentFilter{
+			Types:      []game.CardType{game.TypeLand},
+			Supertypes: []game.Supertype{game.Basic},
+			MinCount:   2,
+		},
+	}),
+	Abilities: []game.AbilityDef{
+		{
+			Kind:          game.ActivatedAbility,
+			Text:          "{T}: Add {R} or {G}.",
+			IsManaAbility: true,
+			AdditionalCosts: []game.AdditionalCost{
+				{Kind: game.AdditionalCostTap},
+			},
+			Effects: []game.Effect{
+				{
+					Type:        game.EffectChoose,
+					TargetIndex: -1,
+					Choice: opt.Val(game.ResolutionChoice{
+						Kind:   game.ResolutionChoiceColor,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{mana.Red, mana.Green},
+					}),
+					LinkID: "cinder-glade-color",
+				},
+				{
+					Type:         game.EffectAddMana,
+					Amount:       1,
+					TargetIndex:  -1,
+					ChoiceLinkID: "cinder-glade-color",
+				},
+			},
+		},
+	},
+}

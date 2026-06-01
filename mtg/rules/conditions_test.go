@@ -1,0 +1,315 @@
+package rules
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
+)
+
+func TestConditionControllerControlsPermanentFilter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:       "Snow Mountain",
+		Supertypes: []game.Supertype{game.Basic, game.Snow},
+		Types:      []game.CardType{game.TypeLand},
+		Subtypes:   []string{"Mountain"},
+	})
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Large Creature",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     opt.Val(game.PT{Value: 7}),
+		Toughness: opt.Val(game.PT{Value: 7}),
+	})
+
+	condition := opt.Val(game.Condition{
+		ControllerControls: game.PermanentFilter{
+			Types:      []game.CardType{game.TypeLand},
+			Supertypes: []game.Supertype{game.Basic},
+			SubtypesAny: []string{
+				"Swamp",
+				"Mountain",
+			},
+			MinCount: 1,
+		},
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not match controlled basic Mountain")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("condition matched another player's Mountain")
+	}
+
+	powerCondition := opt.Val(game.Condition{
+		ControllerControls: game.PermanentFilter{
+			Types: []game.CardType{game.TypeCreature},
+			Power: opt.Val(game.IntComparison{
+				Op:    game.CompareGreaterOrEqual,
+				Value: 7,
+			}),
+		},
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, powerCondition) {
+		t.Fatal("condition did not match controlled creature with power >= 7")
+	}
+	powerCondition.Val.Negate = true
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, powerCondition) {
+		t.Fatal("negated condition matched")
+	}
+}
+
+func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	verge := addCombatPermanent(g, game.Player1, conditionalRedManaLand())
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Red Spell",
+		ManaCost: opt.Val(mana.Cost{mana.ColoredMana(mana.Red)}),
+		Types:    []game.CardType{game.TypeSorcery},
+		Abilities: []game.AbilityDef{{
+			Kind: game.SpellAbility,
+			Text: "Do nothing.",
+		}},
+	})
+
+	if containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
+		t.Fatal("conditional red mana ability was legal without Swamp or Mountain")
+	}
+	if containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("auto-payment treated conditional red mana as available without Swamp or Mountain")
+	}
+
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:     "Mountain",
+		Types:    []game.CardType{game.TypeLand},
+		Subtypes: []string{"Mountain"},
+	})
+	if !containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
+		t.Fatal("conditional red mana ability was not legal with Mountain")
+	}
+	if !containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("auto-payment did not use conditional red mana with Mountain")
+	}
+}
+
+func TestInterveningConditionChecksControllerPermanentPower(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addBugenhagenLikePermanent(g, game.Player1)
+	addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Drawn"})
+
+	if _, ok := engine.drawCard(g, game.Player2); !ok {
+		t.Fatal("drawCard() = false, want true")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("trigger fired without controlled creature with power >= 7")
+	}
+
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Large Creature",
+		Types: []game.CardType{game.TypeCreature},
+		Power: opt.Val(game.PT{Value: 7}),
+	})
+	addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Drawn Again"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Reward"})
+	if _, ok := engine.drawCard(g, game.Player2); !ok {
+		t.Fatal("drawCard() = false, want true")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("trigger did not fire with controlled creature with power >= 7")
+	}
+	g.Battlefield = g.Battlefield[:1]
+	log := TurnLog{}
+	engine.resolveTopOfStack(g, &log)
+	if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+		t.Fatalf("hand size = %d, want intervening-if recheck to skip draw", got)
+	}
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+		t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+	}
+}
+
+func TestStaticConditionGraveyardAbilityGrantsHaste(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Creature",
+		Types: []game.CardType{game.TypeCreature},
+	})
+	other := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:  "Other Creature",
+		Types: []game.CardType{game.TypeCreature},
+	})
+	angerID := addCardToGraveyard(g, game.Player1, angerLikeCard())
+	angerCard := g.CardInstances[angerID]
+
+	if hasKeyword(g, creature, game.Haste) {
+		t.Fatal("Anger-like graveyard ability granted haste without Mountain")
+	}
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:     "Mountain",
+		Types:    []game.CardType{game.TypeLand},
+		Subtypes: []string{"Mountain"},
+	})
+	if !hasKeyword(g, creature, game.Haste) {
+		t.Fatal("Anger-like graveyard ability did not grant haste with Mountain")
+	}
+	if hasKeyword(g, other, game.Haste) {
+		t.Fatal("Anger-like graveyard ability granted haste to opponent's creature")
+	}
+
+	g.Players[game.Player1].Graveyard.Remove(angerID)
+	battlefieldAnger := addCombatPermanent(g, game.Player1, angerCard.Def)
+	if hasKeyword(g, creature, game.Haste) {
+		t.Fatal("graveyard-only Anger-like static ability functioned from battlefield")
+	}
+	if !hasKeyword(g, battlefieldAnger, game.Haste) {
+		t.Fatal("battlefield Anger-like source did not have its own haste keyword")
+	}
+}
+
+func TestConditionalEntersTappedCondition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	cardID := addCardToHand(g, game.Player1, cinderLikeLand())
+	engine := NewEngine(nil)
+	if !engine.applyPlayLand(g, game.Player1, cardID) {
+		t.Fatal("play land without basics failed")
+	}
+	if got := g.Battlefield[len(g.Battlefield)-1]; !got.Tapped {
+		t.Fatalf("land = %+v, want tapped without two basic lands", got)
+	}
+
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:       "Forest",
+		Supertypes: []game.Supertype{game.Basic},
+		Types:      []game.CardType{game.TypeLand},
+		Subtypes:   []string{"Forest"},
+	})
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:       "Island",
+		Supertypes: []game.Supertype{game.Basic},
+		Types:      []game.CardType{game.TypeLand},
+		Subtypes:   []string{"Island"},
+	})
+	cardID = addCardToHand(g, game.Player1, cinderLikeLand())
+	if !engine.applyPlayLand(g, game.Player1, cardID) {
+		t.Fatal("play land with basics failed")
+	}
+	if got := g.Battlefield[len(g.Battlefield)-1]; got.Tapped {
+		t.Fatalf("land = %+v, want untapped with two basic lands", got)
+	}
+}
+
+func setSorcerySpeedTurn(g *game.Game, playerID game.PlayerID) {
+	g.Turn.ActivePlayer = playerID
+	g.Turn.PriorityPlayer = playerID
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+}
+
+func conditionalRedManaLand() *game.CardDef {
+	return &game.CardDef{
+		Name:  "Conditional Red Land",
+		Types: []game.CardType{game.TypeLand},
+		Abilities: []game.AbilityDef{{
+			Kind:          game.ActivatedAbility,
+			Text:          "{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
+			IsManaAbility: true,
+			ActivationCondition: opt.Val(game.Condition{
+				ControllerControls: game.PermanentFilter{
+					SubtypesAny: []string{"Swamp", "Mountain"},
+				},
+			}),
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			Effects: []game.Effect{{
+				Type:        game.EffectAddMana,
+				Amount:      1,
+				ManaColor:   mana.Red,
+				TargetIndex: -1,
+			}},
+		}},
+	}
+}
+
+func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{
+		Name:  "Bugenhagen-like",
+		Types: []game.CardType{game.TypeCreature},
+		Abilities: []game.AbilityDef{{
+			Kind: game.TriggeredAbility,
+			Text: "At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.",
+			Trigger: opt.Val(game.TriggerCondition{
+				Type: game.TriggerWhenever,
+				Pattern: game.TriggerPattern{
+					Event: game.EventCardDrawn,
+				},
+				InterveningIf: "if you control a creature with power 7 or greater",
+				InterveningCondition: opt.Val(game.Condition{
+					ControllerControls: game.PermanentFilter{
+						Types: []game.CardType{game.TypeCreature},
+						Power: opt.Val(game.IntComparison{
+							Op:    game.CompareGreaterOrEqual,
+							Value: 7,
+						}),
+					},
+				}),
+			}),
+			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+		}},
+	})
+}
+
+func angerLikeCard() *game.CardDef {
+	return &game.CardDef{
+		Name:  "Anger-like",
+		Types: []game.CardType{game.TypeCreature},
+		Abilities: []game.AbilityDef{
+			{
+				Kind:     game.StaticAbility,
+				Text:     "Haste",
+				Keywords: []game.Keyword{game.Haste},
+			},
+			{
+				Kind:           game.StaticAbility,
+				Text:           "As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
+				ZoneOfFunction: game.ZoneGraveyard,
+				Condition: opt.Val(game.Condition{
+					ControllerControls: game.PermanentFilter{
+						SubtypesAny: []string{"Mountain"},
+					},
+				}),
+				Effects: []game.Effect{{
+					Type: game.EffectApplyContinuous,
+					ContinuousEffects: []game.ContinuousEffect{{
+						Layer:       game.LayerAbility,
+						Selector:    game.EffectSelectorCreaturesYouControl,
+						AddKeywords: []game.Keyword{game.Haste},
+					}},
+				}},
+			},
+		},
+	}
+}
+
+func cinderLikeLand() *game.CardDef {
+	return &game.CardDef{
+		Name:  "Cinder-like",
+		Types: []game.CardType{game.TypeLand},
+		EntersTappedCondition: opt.Val(game.Condition{
+			Negate: true,
+			ControllerControls: game.PermanentFilter{
+				Types:      []game.CardType{game.TypeLand},
+				Supertypes: []game.Supertype{game.Basic},
+				MinCount:   2,
+			},
+		}),
+	}
+}

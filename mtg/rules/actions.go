@@ -453,6 +453,9 @@ func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if ability.LoyaltyCost < 0 && permanent.Counters.Get(counter.Loyalty) < -ability.LoyaltyCost {
 		return false
 	}
+	if !activationConditionSatisfied(g, playerID, permanent, ability) {
+		return false
+	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !targetsValidForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability, targets) {
 		return false
@@ -703,6 +706,9 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(ability) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
 		return false
 	}
+	if !activationConditionSatisfied(g, playerID, permanent, ability) {
+		return false
+	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !targetsValidForAbilityFromSourceObject(g, playerID, card, permanent.ObjectID, ability, targets) {
 		return false
@@ -725,6 +731,9 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 		return false
 	}
 	if !activatedAbilityTimingAllows(g, playerID, ability) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
+		return false
+	}
+	if !activationConditionSatisfied(g, playerID, permanent, ability) {
 		return false
 	}
 	card, ok := permanentCardDef(g, permanent)
@@ -777,6 +786,9 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 		return false
 	}
 	if ability.Timing != game.NoTimingRestriction || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
+		return false
+	}
+	if !activationConditionSatisfied(g, playerID, permanent, ability) {
 		return false
 	}
 	if hasTapCost(ability) {
