@@ -77,7 +77,7 @@ func linkedObjectSourceKey(g *game.Game, obj *game.StackObject, linkID string) g
 }
 
 func rememberLinkedObject(g *game.Game, key game.LinkedObjectKey, ref game.LinkedObjectRef) {
-	if key.SourceID == 0 || key.LinkID == "" || ref.ObjectID == 0 || ref.CardID == 0 {
+	if key.SourceID == 0 || key.LinkID == "" || (ref.ObjectID == 0 && ref.CardID == 0) {
 		return
 	}
 	if g.LinkedObjects == nil {

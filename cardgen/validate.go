@@ -177,11 +177,17 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	}
 	if effect.Recipient.Exists {
 		switch effect.Type {
-		case game.EffectCreateToken, game.EffectInvestigate:
+		case game.EffectCreateToken, game.EffectInvestigate, game.EffectReveal, game.EffectPutOnBattlefield:
 		default:
-			v.add(faceName, appendPath(path, "Recipient"), IssueInvalidReference, "Recipient is only supported on token-creating effects")
+			v.add(faceName, appendPath(path, "Recipient"), IssueInvalidReference, "Recipient is only supported on token/reveal/battlefield effects")
 		}
 		v.validatePlayerReference(faceName, appendPath(path, "Recipient"), effect.Recipient.Val, targets)
+	}
+	if effect.CardCondition.Exists {
+		v.validateCardCondition(faceName, appendPath(path, "CardCondition"), effect.CardCondition.Val)
+	}
+	if effect.Type == game.EffectReveal && effect.LinkID != "" && effect.Amount > 1 {
+		v.add(faceName, path, IssueInvalidReference, "linked reveal effects must reveal exactly one card")
 	}
 	if effect.Condition.Exists {
 		v.validateTargetIndex(faceName, appendPath(path, "Condition"), effect.Condition.Val.TargetIndex, targets, "condition target")
@@ -281,6 +287,15 @@ func (v *cardValidator) validatePlayerReference(faceName string, path string, re
 		v.add(faceName, path, IssueInvalidReference, "player reference has no kind")
 	default:
 		v.add(faceName, path, IssueInvalidReference, fmt.Sprintf("unknown player reference kind %d", ref.Kind))
+	}
+}
+
+func (v *cardValidator) validateCardCondition(faceName string, path string, condition game.CardCondition) {
+	if condition.Card.Kind != game.CardReferenceLinked || condition.Card.LinkID == "" {
+		v.add(faceName, appendPath(path, "Card"), IssueInvalidReference, "card condition requires a linked card reference with LinkID")
+	}
+	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 {
+		v.add(faceName, path, IssueInvalidReference, "card condition has no filters")
 	}
 }
 

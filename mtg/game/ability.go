@@ -262,6 +262,7 @@ const (
 	EffectGoad
 	EffectReveal
 	EffectInvestigate
+	EffectShufflePermanentIntoLibrary
 )
 
 // EffectSelector identifies a set of permanents affected by a mass effect.
@@ -354,6 +355,7 @@ type Effect struct {
 	DamageSource  opt.V[ObjectReference]
 	Recipient     opt.V[PlayerReference]
 	Condition     opt.V[EffectCondition]
+	CardCondition opt.V[CardCondition]
 
 	// Optional asks the effect's controller whether to apply this single
 	// resolution instruction. LinkID can be used with ResultCondition on later

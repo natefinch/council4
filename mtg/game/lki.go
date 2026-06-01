@@ -38,7 +38,8 @@ type LinkedObjectKey struct {
 	LinkID   string
 }
 
-// LinkedObjectRef records the object/card pair tracked by a linked ability.
+// LinkedObjectRef records an object/card pair or a card-only reference tracked
+// by a linked ability.
 type LinkedObjectRef struct {
 	ObjectID id.ID
 	CardID   id.ID

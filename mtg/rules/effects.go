@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -114,6 +116,20 @@ func (r *effectResolver) player(effect game.Effect) (game.PlayerID, bool) {
 	return effectPlayer(r.game, r.obj, effect)
 }
 
+func (r *effectResolver) effectRecipientOrPlayer(effect game.Effect) (game.PlayerID, bool) {
+	if effect.Recipient.Exists {
+		return resolvePlayerReference(r.game, r.obj, effect.Recipient.Val)
+	}
+	return r.player(effect)
+}
+
+func (r *effectResolver) effectRecipientOrController(effect game.Effect) (game.PlayerID, bool) {
+	if effect.Recipient.Exists {
+		return resolvePlayerReference(r.game, r.obj, effect.Recipient.Val)
+	}
+	return r.obj.Controller, true
+}
+
 // manaColor returns the mana color for an add-mana effect, respecting any
 // resolution choice that overrides the effect's declared color.
 func (r *effectResolver) manaColor(effect game.Effect) mana.Color {
@@ -124,6 +140,9 @@ func (r *effectResolver) manaColor(effect game.Effect) mana.Color {
 // for any linked follow-up effects.
 func (r *effectResolver) resolve(effect game.Effect) {
 	if !effectConditionSatisfied(r.game, r.obj, effect.Condition) {
+		return
+	}
+	if !cardConditionSatisfied(r.game, r.obj, effect.CardCondition) {
 		return
 	}
 	if !effectResultConditionSatisfied(r.obj, effect.ResultCondition) {
@@ -348,7 +367,10 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 		res.succeeded = effect.DelayedTrigger.Exists && scheduleDelayedTrigger(r.game, r.obj, &effect.DelayedTrigger.Val)
 	case game.EffectPutOnBattlefield:
 		if effect.LinkID != "" {
-			res.succeeded = returnLinkedExiledObjects(r.game, r.obj, effect.LinkID)
+			res.succeeded = r.putLinkedCardOnBattlefield(effect)
+			if !res.succeeded {
+				res.succeeded = returnLinkedExiledObjects(r.game, r.obj, effect.LinkID)
+			}
 		}
 	case game.EffectPrevent:
 		res.succeeded = createPreventionShield(r.game, r.obj, effect)
@@ -392,9 +414,15 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 			res.succeeded = r.engine.searchLibrary(r.game, r.obj, playerID, effect.Search.Val, res.amount)
 		}
 	case game.EffectReveal:
-		playerID, ok := r.player(effect)
+		playerID, ok := r.effectRecipientOrPlayer(effect)
 		if ok {
-			res.succeeded = revealCards(r.game, r.obj, playerID, game.ZoneLibrary, res.amount)
+			revealed := revealCardIDs(r.game, r.obj, playerID, game.ZoneLibrary, res.amount)
+			if effect.LinkID != "" {
+				for _, cardID := range revealed {
+					rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, effect.LinkID), game.LinkedObjectRef{CardID: cardID})
+				}
+			}
+			res.succeeded = len(revealed) > 0
 		}
 	case game.EffectScry:
 		playerID, ok := r.player(effect)
@@ -424,8 +452,52 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 			goadPermanent(r.game, permanent, r.obj.Controller)
 			res.succeeded = true
 		}
+	case game.EffectShufflePermanentIntoLibrary:
+		permanent, ok := r.permanent(effect)
+		if !ok {
+			return
+		}
+		owner := permanent.Owner
+		if !movePermanentToZone(r.game, permanent, game.ZoneLibrary) {
+			return
+		}
+		if player, ok := playerByID(r.game, owner); ok {
+			player.Library.Shuffle(r.engine.rng)
+		}
+		res.succeeded = true
 	}
 	return
+}
+
+func (r *effectResolver) putLinkedCardOnBattlefield(effect game.Effect) bool {
+	key := linkedObjectSourceKey(r.game, r.obj, effect.LinkID)
+	refs := linkedObjects(r.game, key)
+	if len(refs) == 0 {
+		return false
+	}
+	controller, ok := r.effectRecipientOrController(effect)
+	if !ok {
+		return false
+	}
+	for _, ref := range refs {
+		if ref.CardID == 0 {
+			continue
+		}
+		card, ok := r.game.GetCardInstance(ref.CardID)
+		if !ok || !cardMatchesCondition(card.Def, effect.CardCondition) {
+			continue
+		}
+		owner, ok := playerByID(r.game, card.Owner)
+		if !ok || !owner.Library.Remove(card.ID) {
+			continue
+		}
+		if _, ok := createCardPermanent(r.game, card, controller, game.ZoneLibrary); ok {
+			clearLinkedObjects(r.game, key)
+			return true
+		}
+		owner.Library.Add(card.ID)
+	}
+	return false
 }
 
 // IsEffectTypeExecuted reports whether the generic rules resolver currently
@@ -471,7 +543,8 @@ func IsEffectTypeExecuted(effectType game.EffectType) bool {
 		game.EffectApplyRule,
 		game.EffectProliferate,
 		game.EffectGoad,
-		game.EffectInvestigate:
+		game.EffectInvestigate,
+		game.EffectShufflePermanentIntoLibrary:
 		return true
 	default:
 		return false
@@ -743,6 +816,54 @@ func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt
 		controller: stackObjectController(obj),
 		obj:        obj,
 	}, cond.Condition) {
+		return false
+	}
+	return true
+}
+
+func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V[game.CardCondition]) bool {
+	if !condition.Exists {
+		return true
+	}
+	cond := condition.Val
+	if cond.Card.Kind != game.CardReferenceLinked || cond.Card.LinkID == "" {
+		return false
+	}
+	for _, ref := range linkedObjects(g, linkedObjectSourceKey(g, obj, cond.Card.LinkID)) {
+		if ref.CardID == 0 {
+			continue
+		}
+		card, ok := g.GetCardInstance(ref.CardID)
+		if ok && cardMatchesCondition(card.Def, condition) {
+			return true
+		}
+	}
+	return false
+}
+
+func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition]) bool {
+	if !condition.Exists {
+		return true
+	}
+	if card == nil {
+		return false
+	}
+	cond := condition.Val
+	if cond.RequirePermanentCard && !card.IsPermanent() {
+		return false
+	}
+	face := card.DefaultFace()
+	for _, cardType := range cond.Types {
+		if !face.HasType(cardType) {
+			return false
+		}
+	}
+	for _, supertype := range cond.Supertypes {
+		if !face.HasSupertype(supertype) {
+			return false
+		}
+	}
+	if len(cond.SubtypesAny) > 0 && !slices.ContainsFunc(cond.SubtypesAny, face.HasSubtype) {
 		return false
 	}
 	return true

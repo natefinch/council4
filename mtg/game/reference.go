@@ -49,3 +49,31 @@ type PlayerReference struct {
 	// Object binds controller/owner lookups to a reusable object reference.
 	Object opt.V[ObjectReference]
 }
+
+// CardReferenceKind identifies a runtime card binding used by declarative
+// effects.
+type CardReferenceKind int
+
+const (
+	CardReferenceNone CardReferenceKind = iota
+	CardReferenceLinked
+)
+
+// CardReference describes how a rules effect finds a card at resolution.
+type CardReference struct {
+	Kind CardReferenceKind
+
+	// LinkID identifies a linked card recorded by an earlier effect.
+	LinkID string
+}
+
+// CardCondition describes characteristics a referenced card must have for an
+// effect to apply.
+type CardCondition struct {
+	Card CardReference
+
+	RequirePermanentCard bool
+	Types                []CardType
+	Supertypes           []Supertype
+	SubtypesAny          []string
+}

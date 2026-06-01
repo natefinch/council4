@@ -284,7 +284,7 @@ func cardFunctionalityPlan1Manifest() Manifest {
 		card("Bugenhagen, Wise Elder", filepath.Join("mtg", "cards", "b", "bugenhagen_wise_elder.go"), BatchValidationStatusValid),
 		card("Bushwhack", filepath.Join("mtg", "cards", "b", "bushwhack.go"), BatchValidationStatusValid),
 		card("Chandra's Ignition", filepath.Join("mtg", "cards", "c", "chandra_s_ignition.go"), BatchValidationStatusValid),
-		card("Chaos Warp", filepath.Join("mtg", "cards", "c", "chaos_warp.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Chaos Warp", filepath.Join("mtg", "cards", "c", "chaos_warp.go"), BatchValidationStatusValid),
 		card("Cinder Glade", filepath.Join("mtg", "cards", "c", "cinder_glade.go"), BatchValidationStatusValid),
 		card("Command Tower", filepath.Join("mtg", "cards", "c", "command_tower.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 	}}
@@ -325,13 +325,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 		"Bushwhack": `// Missing primitives:
 	//   - SearchSpec has no MatchSupertype field; "basic" cannot be enforced
 	//     declaratively -- the search allows any land card.
-	`,
-		"Chaos Warp": `// Missing primitives:
-	//   - No EffectType for "shuffle a permanent into its owner's library" (not Bounce/Exile/Destroy).
-	//   - No EffectReveal for "reveals the top card of their library."
-	//   - The conditional "if it's a permanent card, put it onto the battlefield" requires checking
-	//     the card type of the newly revealed top card, which EffectCondition/EffectResultCondition
-	//     cannot express declaratively. ImplementationID "chaos-warp" must handle all three steps.
 	`,
 		"Command Tower": `// Missing primitives:
 	//   - ResolutionChoice.Colors is a static slice; it cannot express "the colors in your

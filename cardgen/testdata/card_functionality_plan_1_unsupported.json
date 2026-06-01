@@ -1,12 +1,12 @@
 {
   "summary": {
     "manifest_total": 15,
-    "unsupported_total": 5,
+    "unsupported_total": 4,
     "fetch_error": 0,
     "missing_generated_file": 0,
-    "invalid": 4,
+    "invalid": 3,
     "validation_pending": 0,
-    "functionality_blocked": 5
+    "functionality_blocked": 4
   },
   "cards": [
     {
@@ -34,17 +34,6 @@
       ]
     },
     {
-      "name": "Chaos Warp",
-      "issues": [
-        "implementation-required"
-      ],
-      "functionality": [
-        "EffectCondition",
-        "EffectReveal",
-        "shuffle permanent into owner's library"
-      ]
-    },
-    {
       "name": "Command Tower",
       "issues": [
         "implementation-required"
@@ -55,18 +44,6 @@
     }
   ],
   "functionality": [
-    {
-      "capability": "EffectCondition",
-      "cards": [
-        "Chaos Warp"
-      ]
-    },
-    {
-      "capability": "EffectReveal",
-      "cards": [
-        "Chaos Warp"
-      ]
-    },
     {
       "capability": "ResolutionChoice.Colors",
       "cards": [
@@ -83,12 +60,6 @@
       "capability": "pay-life ETB replacement",
       "cards": [
         "Bridgeworks Battle // Tanglespan Bridgeworks"
-      ]
-    },
-    {
-      "capability": "shuffle permanent into owner's library",
-      "cards": [
-        "Chaos Warp"
       ]
     },
     {

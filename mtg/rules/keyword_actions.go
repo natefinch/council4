@@ -116,20 +116,24 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 }
 
 func revealCards(g *game.Game, obj *game.StackObject, playerID game.PlayerID, zone game.ZoneType, amount int) bool {
+	return len(revealCardIDs(g, obj, playerID, zone, amount)) > 0
+}
+
+func revealCardIDs(g *game.Game, obj *game.StackObject, playerID game.PlayerID, zone game.ZoneType, amount int) []id.ID {
 	if amount <= 0 {
 		amount = 1
 	}
 	player, ok := playerByID(g, playerID)
 	if !ok || zone != game.ZoneLibrary {
-		return false
+		return nil
 	}
-	revealed := false
+	var revealed []id.ID
 	for i, cardID := range player.Library.All() {
 		if i >= amount {
 			break
 		}
 		emitCardRevealEvent(g, obj, playerID, cardID, zone)
-		revealed = true
+		revealed = append(revealed, cardID)
 	}
 	return revealed
 }
