@@ -191,7 +191,7 @@ func runReport(args []string) error {
 		return err
 	}
 	cardgen.MarkExistingFiles(&manifest, *repoRoot)
-	report := cardgen.BuildUnsupportedReport(manifest)
+	report := cardgen.BuildUnsupportedReportWithSource(manifest, *repoRoot)
 	if err := writeReport(*mdPath, func(w *os.File) error {
 		return cardgen.WriteUnsupportedReportMarkdown(w, report)
 	}); err != nil {

@@ -54,3 +54,9 @@ go run ./cardgen/cmd/cardbatch report \
   -md .cardwork/run/unsupported.md \
   -json .cardwork/run/unsupported.json
 ```
+
+After generating the static `cardbatch` report, the rollout skill should append
+a Markdown `## Missing functionality rollup` section to the report. Build it
+from subagent summaries, validation issues, generated-card comments, and
+`ImplementationID` notes. Group entries by reusable capability and list the
+cards that need each capability.

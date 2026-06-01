@@ -15,6 +15,9 @@ Given a Magic: The Gathering card name, the library:
 3. Generates a Go source file with a `game.CardDef` literal, leaving the `Abilities` slice empty for LLM completion.
 4. Validates generated card definitions against the currently executable rules
    model before batch workflows mark them supported.
+5. Reports cards that still rely on missing rules/parser functionality, including
+   generated-source `Missing primitives` comments and `ImplementationID` escape
+   hatches.
 
 ## Usage
 
@@ -53,9 +56,9 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
   `MarkExistingFiles` — build and update card batch manifests.
 - `MissingWorklist` and `ValidateManifestGeneratedCards` — support the
   attempt-then-validate batch workflow.
-- `BuildUnsupportedReport`, `WriteUnsupportedReportMarkdown`, and
-  `WriteUnsupportedReportJSON` — turn manifest failures into human- and
-  machine-readable reports.
+- `BuildUnsupportedReportWithSource`, `WriteUnsupportedReportMarkdown`, and
+  `WriteUnsupportedReportJSON` — turn manifest failures and generated-source
+  missing-functionality notes into human- and machine-readable reports.
 - `ParseManaCostLiteral(cost)` — converts Scryfall mana cost strings to Go code.
 - `ManaValueFromCost(cost)` — computes a face's mana value from a mana-cost string.
 - `ParseTypeLine(typeLine)` — splits a type line into supertypes, types, subtypes.

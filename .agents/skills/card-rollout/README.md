@@ -1,7 +1,8 @@
 # Card Rollout
 
 Batch-orchestrates council4 card implementation from a card-list file using
-`cardbatch`, `card-impl`, validation, and unsupported-card reports.
+`cardbatch`, `card-impl`, validation, and unsupported-card reports with a
+rollup of missing rules/parser functionality by affected card.
 
 ## When to Use This Skill
 
@@ -45,6 +46,8 @@ The skill will:
 4. Regenerate card registries.
 5. Validate generated card definitions.
 6. Produce Markdown and JSON unsupported-card reports.
+7. Add a missing-functionality rollup that groups reusable rules/parser gaps and
+   lists which cards need each gap filled.
 
 ## Features
 
@@ -54,6 +57,9 @@ The skill will:
   `cardbatch validate` passes.
 - **Unsupported reports** - Reports fetch errors, missing files, pending
   validation, and static validation failures.
+- **Functionality rollup** - Groups missing rules/parser capabilities and lists
+  the cards and oracle clauses that would use each capability, including cards
+  that validate only because they delegate behavior to `ImplementationID`.
 
 ## Examples
 

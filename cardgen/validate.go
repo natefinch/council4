@@ -21,6 +21,7 @@ const (
 	IssueTargetIndexOutOfRange      ValidationCode = "target-index-out-of-range"
 	IssueInvalidTargetSpec          ValidationCode = "invalid-target-spec"
 	IssueUnregisteredImplementation ValidationCode = "unregistered-implementation"
+	IssueImplementationRequired     ValidationCode = "implementation-required"
 	IssueGeneratedCardNotFound      ValidationCode = "generated-card-not-found"
 	IssueValidationRunFailed        ValidationCode = "validation-run-failed"
 )
@@ -40,6 +41,11 @@ type ValidationOptions struct {
 	// IDs registered by the runtime. When non-empty, any card or face
 	// ImplementationID outside this set is reported.
 	KnownImplementationIDs map[string]bool
+
+	// ReportImplementationIDs reports every hand-written ImplementationID as an
+	// unsupported-card issue. Batch rollout uses this because ImplementationID is
+	// an escape hatch for behavior that is not represented by generated data.
+	ReportImplementationIDs bool
 }
 
 // ValidateCards validates a collection of generated CardDef values.
@@ -93,6 +99,9 @@ func (v *cardValidator) validateFace(faceName string, path string, oracleText st
 	}
 	if implementationID != "" && len(v.opts.KnownImplementationIDs) > 0 && !v.opts.KnownImplementationIDs[implementationID] {
 		v.add(faceName, path, IssueUnregisteredImplementation, fmt.Sprintf("implementation ID %q is not registered", implementationID))
+	}
+	if implementationID != "" && v.opts.ReportImplementationIDs {
+		v.add(faceName, path, IssueImplementationRequired, fmt.Sprintf("implementation ID %q requires hand-written rules support", implementationID))
 	}
 	if !walkAbilities {
 		return

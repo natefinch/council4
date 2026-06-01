@@ -52,6 +52,20 @@ func TestValidateCardReportsUnregisteredImplementationID(t *testing.T) {
 	}
 }
 
+func TestValidateCardReportsImplementationIDWhenRequested(t *testing.T) {
+	card := &game.CardDef{
+		Name:             "Implemented Elsewhere",
+		OracleText:       "Do something bespoke.",
+		ImplementationID: "bespoke",
+	}
+
+	issues := ValidateCard(card, ValidationOptions{ReportImplementationIDs: true})
+
+	if !hasIssue(issues, IssueImplementationRequired) {
+		t.Fatalf("issues = %+v, want %s", issues, IssueImplementationRequired)
+	}
+}
+
 func TestValidateCardReportsUnexecutedEffect(t *testing.T) {
 	card := &game.CardDef{
 		Name:       "Unsupported Effect",

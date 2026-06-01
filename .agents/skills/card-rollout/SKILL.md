@@ -12,7 +12,9 @@ description: >
 
 Use this skill to take a disk-backed list of Magic cards, fetch oracle text,
 attempt supported `CardDef` implementations in small batches, validate the
-results, and produce an unsupported-card report for follow-up rules work.
+results, and produce an unsupported-card report for follow-up rules work. The
+report must also summarize missing rules/parser functionality by capability and
+list which cards would benefit from each capability.
 
 This skill is orchestration. The deterministic Go tooling lives under
 `cardgen/`; the per-card oracle parsing lives in the `card-impl` skill.
@@ -147,7 +149,15 @@ For each card:
 6. Run gofmt on edited card files.
 
 Return changed files, implemented cards, skipped/blocking cards, and any missing
-rules primitives. Do not commit.
+rules primitives. For every missing primitive, use this format so the rollout
+report can group repeated gaps:
+
+- Capability: <short reusable rules/parser capability, not a card-specific fix>
+- Cards: <card names in this batch that need it>
+- Oracle clauses: <short quoted clauses that require it>
+- Current workaround: <ImplementationID, partial declarative approximation, or unsupported>
+
+Do not commit.
 ```
 
 Do not have two subagents edit the same card file or the same letter-package
@@ -199,6 +209,49 @@ Read the Markdown report before summarizing. Use it to distinguish:
 - cards with invalid generated definitions;
 - likely rules/parser follow-up areas.
 
+Then add a **Missing functionality rollup** to the Markdown report. Use the
+subagent batch summaries, validation issues, generated-card comments, and
+`ImplementationID` notes to group gaps by reusable capability rather than by
+card. Include this rollup even when `cardbatch report` says there are zero
+unsupported cards, because cards may validate while still relying on
+`ImplementationID` escape hatches or partial declarative approximations.
+
+For each capability, include:
+
+- the concise capability name;
+- affected cards;
+- the oracle clauses or behavior that require it;
+- whether the current implementation is blocked, approximated, or delegated to
+  `ImplementationID`;
+- likely code area when known, such as `game.Effect`, `TargetSpec`,
+  `TriggerPattern`, replacement effects, mana choices, or parser mapping.
+
+Use stable, reusable capability names so future reports can merge repeated
+needs. Prefer names like `equipped-creature selector`,
+`controller controls land subtype condition`, `commander color identity mana
+choice`, or `shuffle permanent into owner's library` over one-off names like
+`Basilisk Collar support`.
+
+Append the section after the generated unsupported-card details:
+
+```markdown
+## Missing functionality rollup
+
+### Equipped-creature selector
+
+- Cards: Basilisk Collar, Blazing Sunsteel
+- Needed for: "Equipped creature has ..."; "Equipped creature gets ..."
+- Current state: delegated to `ImplementationID`
+- Likely area: effect selectors / attachment-aware continuous effects
+
+### Commander color identity mana choice
+
+- Cards: Command Tower
+- Needed for: "{T}: Add one mana of any color in your commander's color identity."
+- Current state: approximated as any-color mana plus `ImplementationID`
+- Likely area: mana choice resolution / commander metadata
+```
+
 ### Step 7: Iterate or stop
 
 If the user asked for a full rollout, repeat worklist -> implementation ->
@@ -221,6 +274,10 @@ Implemented:
 Still unsupported:
 - Card C — oracle-without-abilities; needs parser/rules support for ...
 - Card D — unsupported SearchSpec; needs richer tutor modeling
+
+Missing functionality:
+- Equipped-creature selector — Basilisk Collar, Blazing Sunsteel
+- Commander color identity mana choice — Command Tower
 
 Reports:
 - .cardwork/<run>/unsupported.md

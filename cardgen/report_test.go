@@ -2,6 +2,8 @@ package cardgen
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -90,5 +92,61 @@ func TestBuildUnsupportedReportIncludesValidationPending(t *testing.T) {
 	}
 	if !strings.Contains(report.Cards[0].NextWork[0], "validate") {
 		t.Fatalf("next work = %+v", report.Cards[0].NextWork)
+	}
+}
+
+func TestBuildUnsupportedReportWithSourceIncludesMissingFunctionality(t *testing.T) {
+	repoRoot := t.TempDir()
+	cardPath := filepath.Join("mtg", "cards", "b", "blocked_card.go")
+	if err := os.MkdirAll(filepath.Join(repoRoot, filepath.Dir(cardPath)), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := `package b
+
+// Blocked Card
+//
+// Missing primitives:
+//   - EffectSelectorEquippedCreature does not exist; equipped creature cannot
+//     be selected declaratively.
+//   - DynamicAmountCountOpponents does not exist.
+var BlockedCard = nil
+`
+	if err := os.WriteFile(filepath.Join(repoRoot, cardPath), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifest := Manifest{Version: ManifestVersion, Cards: []ManifestCard{{
+		CanonicalName: "Blocked Card",
+		Quantity:      1,
+		FileStatus:    BatchFileStatusExisting,
+		Validation:    BatchValidationStatusValid,
+		FilePath:      cardPath,
+	}}}
+
+	report := BuildUnsupportedReportWithSource(manifest, repoRoot)
+
+	if report.Summary.UnsupportedTotal != 1 || report.Summary.FunctionalityBlocked != 1 {
+		t.Fatalf("summary = %+v", report.Summary)
+	}
+	if got := report.Cards[0].Functionality; len(got) != 2 {
+		t.Fatalf("functionality = %+v", got)
+	}
+	if len(report.Functionality) != 2 {
+		t.Fatalf("rollup = %+v", report.Functionality)
+	}
+	var buf bytes.Buffer
+	if err := WriteUnsupportedReportMarkdown(&buf, report); err != nil {
+		t.Fatal(err)
+	}
+	output := buf.String()
+	for _, want := range []string{
+		"functionality-blocked cards: 1",
+		"- Missing functionality:",
+		"## Missing functionality rollup",
+		"### EffectSelectorEquippedCreature",
+		"- Cards: Blocked Card",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("markdown missing %q:\n%s", want, output)
+		}
 	}
 }

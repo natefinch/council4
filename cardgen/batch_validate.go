@@ -192,7 +192,7 @@ func validationProgram(wanted map[string]bool) string {
 	for i := range letters {
 		b.WriteString(fmt.Sprintf("\tfor _, card := range p%d.Cards { if wanted[card.Name] { cards = append(cards, card) } }\n", i))
 	}
-	b.WriteString("\tres := result{Issues: cardgen.ValidateCards(cards, cardgen.ValidationOptions{})}\n")
+	b.WriteString("\tres := result{Issues: cardgen.ValidateCards(cards, cardgen.ValidationOptions{ReportImplementationIDs: true})}\n")
 	b.WriteString("\tfor _, card := range cards { res.Found = append(res.Found, card.Name) }\n")
 	b.WriteString("\tif err := json.NewEncoder(os.Stdout).Encode(res); err != nil { panic(err) }\n")
 	b.WriteString("}\n")

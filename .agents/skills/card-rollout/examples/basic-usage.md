@@ -42,7 +42,21 @@ go run ./cardgen/cmd/cardbatch report \
   -json .cardwork/commander-staples/unsupported.json
 ```
 
+The agent then appends a functionality rollup to the Markdown report:
+
+```markdown
+## Missing functionality rollup
+
+### Equipped-creature selector
+
+- Cards: Basilisk Collar, Blazing Sunsteel
+- Needed for: "Equipped creature has ..."; "Equipped creature gets ..."
+- Current state: delegated to `ImplementationID`
+- Likely area: effect selectors / attachment-aware continuous effects
+```
+
 ## Outcome
 
 The final response lists implemented cards, blocked cards, validation failures,
-and report paths. The report becomes input for future rules-roadmap work.
+missing functionality grouped by reusable capability, and report paths. The
+report becomes input for future rules-roadmap work.
