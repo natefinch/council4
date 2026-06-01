@@ -320,7 +320,7 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	if !triggerControllerMatches(sourceController, pattern.Controller, event.Controller) {
 		return false
 	}
-	if !triggerSourceMatches(source, pattern.Source, event) {
+	if !triggerSourceMatches(g, source, pattern.Source, event) {
 		return false
 	}
 	if !triggerPlayerMatches(sourceController, pattern.Player, event.Player) {
@@ -387,7 +387,10 @@ func triggerControllerMatches(sourceController game.PlayerID, filter game.Trigge
 	}
 }
 
-func triggerSourceMatches(source *game.Permanent, filter game.TriggerSourceFilter, event game.GameEvent) bool {
+func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.TriggerSourceFilter, event game.GameEvent) bool {
+	if filter == game.TriggerSourceAttachedPermanent {
+		return triggerSourceAttachedPermanentMatches(g, source, event)
+	}
 	if filter != game.TriggerSourceSelf {
 		return true
 	}
@@ -395,6 +398,19 @@ func triggerSourceMatches(source *game.Permanent, filter game.TriggerSourceFilte
 		(source.ObjectID != 0 && event.PermanentID == source.ObjectID) ||
 		(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID) ||
 		(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
+}
+
+func triggerSourceAttachedPermanentMatches(g *game.Game, source *game.Permanent, event game.GameEvent) bool {
+	if source.ObjectID == 0 || event.PermanentID == 0 {
+		return false
+	}
+	if source.AttachedTo.Exists && source.AttachedTo.Val == event.PermanentID {
+		return true
+	}
+	if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
+		return slices.Contains(snapshot.Attachments, source.ObjectID)
+	}
+	return false
 }
 
 func triggerPlayerMatches(sourceController game.PlayerID, filter game.TriggerPlayerFilter, eventPlayer game.PlayerID) bool {

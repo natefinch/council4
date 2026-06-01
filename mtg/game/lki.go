@@ -26,6 +26,8 @@ type ObjectSnapshot struct {
 	Toughness      opt.V[int]
 	Counters       counter.Set
 	MarkedDamage   int
+	Attachments    []id.ID
+	AttachedTo     opt.V[id.ID]
 	ZoneOrderIndex int
 }
 

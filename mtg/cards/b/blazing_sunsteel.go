@@ -16,49 +16,63 @@ import (
 //	Equipped creature gets +1/+0 for each opponent you have.
 //	Whenever equipped creature is dealt damage, it deals that much damage to any target.
 //	Equip {4}
-//
-// Missing primitives:
-//   - EffectSelectorEquippedCreature does not exist; the static P/T boost cannot
-//     select the equipped creature declaratively.
-//   - DynamicAmountCountOpponents does not exist; "for each opponent you have"
-//     cannot be expressed as a DynamicAmount.
-//   - TriggerPattern has no TriggerSourceEquipped filter; the triggered ability
-//     cannot be confined to damage dealt to the equipped creature only.
-//   - DynamicAmountEventDamage does not exist; "that much" (the damage amount from
-//     the triggering event) cannot be forwarded as a DynamicAmount.
-//     ImplementationID "blazing-sunsteel" is set so a hand-written rules handler
-//     can apply the continuous +N/+0 effect and wire the damage-redirection trigger.
 var BlazingSunsteel = &game.CardDef{
 	Name: "Blazing Sunsteel",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
 		mana.ColoredMana(mana.Red),
 	}),
-	ManaValue:        2,
-	Colors:           []mana.Color{mana.Red},
-	ColorIdentity:    mana.NewColorIdentity(mana.Red),
-	Types:            []game.CardType{game.TypeArtifact},
-	Subtypes:         []string{"Equipment"},
-	OracleText:       "Equipped creature gets +1/+0 for each opponent you have.\nWhenever equipped creature is dealt damage, it deals that much damage to any target.\nEquip {4}",
-	ImplementationID: "blazing-sunsteel",
+	ManaValue:     2,
+	Colors:        []mana.Color{mana.Red},
+	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	Types:         []game.CardType{game.TypeArtifact},
+	Subtypes:      []string{"Equipment"},
+	OracleText:    "Equipped creature gets +1/+0 for each opponent you have.\nWhenever equipped creature is dealt damage, it deals that much damage to any target.\nEquip {4}",
 	Abilities: []game.AbilityDef{
 		{
-			// No EffectSelectorEquippedCreature or DynamicAmountCountOpponents;
-			// rules engine applies the +N/+0 effect via ImplementationID.
 			Kind: game.StaticAbility,
 			Text: "Equipped creature gets +1/+0 for each opponent you have.",
+			Effects: []game.Effect{
+				{
+					Type:        game.EffectModifyPT,
+					TargetIndex: -2,
+					Selector:    game.EffectSelectorEquippedCreature,
+					DynamicAmount: opt.Val(game.DynamicAmount{
+						Kind: game.DynamicAmountOpponentCount,
+					}),
+				},
+			},
 		},
 		{
-			// No TriggerSourceEquipped and no DynamicAmountEventDamage;
-			// rules engine wires the damage-redirection trigger via ImplementationID.
 			Kind: game.TriggeredAbility,
 			Text: "Whenever equipped creature is dealt damage, it deals that much damage to any target.",
+			Trigger: opt.Val(game.TriggerCondition{
+				Type: game.TriggerWhenever,
+				Pattern: game.TriggerPattern{
+					Event:           game.EventDamageDealt,
+					Source:          game.TriggerSourceAttachedPermanent,
+					DamageRecipient: game.DamageRecipientPermanent,
+				},
+			}),
 			Targets: []game.TargetSpec{
 				{
 					MinTargets: 1,
 					MaxTargets: 1,
 					Constraint: "any target",
 					Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+				},
+			},
+			Effects: []game.Effect{
+				{
+					Type:        game.EffectDamage,
+					TargetIndex: 0,
+					DamageSource: opt.Val(game.ObjectReference{
+						Kind:        game.ObjectReferenceAttachedPermanent,
+						TargetIndex: -1,
+					}),
+					DynamicAmount: opt.Val(game.DynamicAmount{
+						Kind: game.DynamicAmountEventDamage,
+					}),
 				},
 			},
 		},

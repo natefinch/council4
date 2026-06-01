@@ -21,6 +21,8 @@ const (
 	DynamicAmountControllerGraveyardSize
 	DynamicAmountCountSelector
 	DynamicAmountPreviousEffectResult
+	DynamicAmountOpponentCount
+	DynamicAmountEventDamage
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

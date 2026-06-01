@@ -95,6 +95,9 @@ func attachedPermanentObjectID(g *game.Game, obj *game.StackObject, ref game.Obj
 		permanent, ok = sourcePermanent(g, obj)
 	}
 	if !ok || !permanent.AttachedTo.Exists {
+		if ref.TargetIndex < 0 && obj.HasTriggerEvent && obj.TriggerEvent.PermanentID != 0 {
+			return obj.TriggerEvent.PermanentID, true
+		}
 		return 0, false
 	}
 	return permanent.AttachedTo.Val, true

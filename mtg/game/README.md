@@ -87,7 +87,7 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
 | `ChoiceRequest` | `choice.go` | A bounded non-action decision such as trigger target choice, trigger ordering, or optional-effect yes/no. |
 | `Condition` | `condition.go` | Reusable data-only predicates for static ability conditions, activation restrictions, intervening-if checks, effect conditions, and replacement effects. |
-| `ObjectReference`, `PlayerReference` | `reference.go` | Reusable resolution-time bindings for effects that need source objects, target-derived controllers/owners, linked objects, or non-default recipients. |
+| `ObjectReference`, `PlayerReference` | `reference.go` | Reusable resolution-time bindings for effects that need source objects, target-derived controllers/owners, linked objects, damage sources, or non-default recipients. |
 
 ### Player
 

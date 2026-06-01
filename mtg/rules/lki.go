@@ -34,6 +34,8 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zone game.ZoneTy
 		Power:          optionalInt(values.power, values.powerOK),
 		Toughness:      optionalInt(values.toughness, values.toughnessOK),
 		MarkedDamage:   permanent.MarkedDamage,
+		Attachments:    append([]id.ID(nil), permanent.Attachments...),
+		AttachedTo:     permanent.AttachedTo,
 		ZoneOrderIndex: -1,
 	}
 	snapshot.Counters = cloneCounters(permanent.Counters)

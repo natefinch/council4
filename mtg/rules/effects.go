@@ -168,6 +168,10 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 		res.succeeded = resolveMassPermanentEffect(r.game, r.obj, effect, res.amount)
 		return
 	}
+	if effect.PlayerSelector != game.PlayerSelectorNone {
+		res.succeeded = resolveMassPlayerEffect(r.game, r.obj, effect, res.amount)
+		return
+	}
 	switch effect.Type {
 	case game.EffectDraw:
 		if res.amount <= 0 {
@@ -501,8 +505,11 @@ func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
 }
 
 func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game.Effect, amount int) bool {
-	permanentIDs := selectedPermanentIDs(g, obj.Controller, nil, effect.Selector)
-	sourceID, sourceObjectID := damageSourceIDs(g, obj)
+	damageSource, sourceOK := resolveEffectDamageSource(g, obj, effect)
+	if !sourceOK {
+		return false
+	}
+	permanentIDs := selectedPermanentIDsForEffect(g, obj, effect, obj.Controller, damageSource.permanent)
 	succeeded := false
 	for _, permanentID := range permanentIDs {
 		permanent, ok := permanentByObjectID(g, permanentID)
@@ -512,8 +519,9 @@ func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game
 		switch effect.Type {
 		case game.EffectDamage:
 			if amount > 0 {
-				dealPermanentDamage(g, sourceID, sourceObjectID, obj.Controller, permanent, amount, false)
-				succeeded = true
+				dealt := dealPermanentDamage(g, damageSource.sourceID, damageSource.sourceObjectID, damageSource.controller, permanent, amount, false)
+				applyDamageSourceKeywordEffects(g, damageSource.permanent, permanent, dealt)
+				succeeded = dealt > 0 || succeeded
 			}
 		case game.EffectDestroy:
 			_, ok := destroyPermanent(g, permanent.ObjectID)
@@ -545,6 +553,25 @@ func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game
 	return succeeded
 }
 
+func resolveMassPlayerEffect(g *game.Game, obj *game.StackObject, effect game.Effect, amount int) bool {
+	if effect.Type != game.EffectDamage || amount <= 0 {
+		return false
+	}
+	damageSource, ok := resolveEffectDamageSource(g, obj, effect)
+	if !ok {
+		return false
+	}
+	succeeded := false
+	for _, playerID := range selectedPlayerIDs(g, obj.Controller, effect.PlayerSelector) {
+		dealt := dealPlayerDamage(g, damageSource.sourceID, damageSource.sourceObjectID, damageSource.controller, playerID, amount, false)
+		if damageSource.permanent != nil {
+			applyLifelink(g, damageSource.permanent, dealt)
+		}
+		succeeded = dealt > 0 || succeeded
+	}
+	return succeeded
+}
+
 func logUnsupportedEffect(log *TurnLog, obj *game.StackObject, effect game.Effect) {
 	log.addUnsupportedEffect(UnsupportedEffectLog{
 		StackObjectID: stackObjectID(obj),
@@ -559,50 +586,73 @@ func effectAmount(g *game.Game, obj *game.StackObject, effect game.Effect) int {
 	if !effect.DynamicAmount.Exists || effect.DynamicAmount.Val.Kind == game.DynamicAmountNone {
 		return effect.Amount
 	}
-	dynamic := effect.DynamicAmount.Val
+	return dynamicAmountValue(g, obj, stackObjectController(obj), effect.DynamicAmount.Val)
+}
+
+func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount) int {
 	amount := 0
 	switch dynamic.Kind {
 	case game.DynamicAmountConstant:
 		amount = dynamic.Constant
 	case game.DynamicAmountX:
-		amount = obj.XValue
+		if obj != nil {
+			amount = obj.XValue
+		}
 	case game.DynamicAmountTargetPower:
+		if obj == nil {
+			break
+		}
 		if permanent, ok := effectPermanent(g, obj, game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
 			amount = effectivePower(g, permanent)
 		}
 	case game.DynamicAmountTargetToughness:
+		if obj == nil {
+			break
+		}
 		if permanent, ok := effectPermanent(g, obj, game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
 			if toughness, ok := effectiveToughness(g, permanent); ok {
 				amount = toughness
 			}
 		}
 	case game.DynamicAmountTargetManaValue:
+		if obj == nil {
+			break
+		}
 		if permanent, ok := effectPermanent(g, obj, game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
 			if def, ok := permanentCardDef(g, permanent); ok {
 				amount = def.ManaValue
 			}
 		}
 	case game.DynamicAmountTargetCounters:
+		if obj == nil {
+			break
+		}
 		if permanent, ok := effectPermanent(g, obj, game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
 			amount = permanent.Counters.Get(dynamic.CounterKind)
 		}
 	case game.DynamicAmountControllerLife:
-		if player, ok := playerByID(g, stackObjectController(obj)); ok {
+		if player, ok := playerByID(g, controller); ok {
 			amount = player.Life
 		}
 	case game.DynamicAmountControllerHandSize:
-		if player, ok := playerByID(g, stackObjectController(obj)); ok {
+		if player, ok := playerByID(g, controller); ok {
 			amount = player.Hand.Size()
 		}
 	case game.DynamicAmountControllerGraveyardSize:
-		if player, ok := playerByID(g, stackObjectController(obj)); ok {
+		if player, ok := playerByID(g, controller); ok {
 			amount = player.Graveyard.Size()
 		}
 	case game.DynamicAmountCountSelector:
-		amount = len(selectedPermanentIDs(g, stackObjectController(obj), nil, dynamic.Selector))
+		amount = len(selectedPermanentIDs(g, controller, nil, dynamic.Selector))
 	case game.DynamicAmountPreviousEffectResult:
-		if dynamic.LinkID != "" {
+		if obj != nil && dynamic.LinkID != "" {
 			amount = obj.ResolvedAmounts[dynamic.LinkID]
+		}
+	case game.DynamicAmountOpponentCount:
+		amount = len(aliveOpponents(g, controller))
+	case game.DynamicAmountEventDamage:
+		if obj != nil && obj.HasTriggerEvent {
+			amount = obj.TriggerEvent.Amount
 		}
 	}
 	multiplier := dynamic.Multiplier
@@ -804,8 +854,18 @@ func resolveEffectDamageSource(g *game.Game, obj *game.StackObject, effect game.
 		}, true
 	}
 	resolved, ok := resolveObjectReference(g, obj, effect.DamageSource.Val)
-	if !ok || resolved.permanent == nil {
+	if !ok {
 		return effectDamageSource{}, false
+	}
+	if resolved.permanent == nil {
+		if resolved.snapshot.ObjectID == 0 {
+			return effectDamageSource{}, false
+		}
+		return effectDamageSource{
+			sourceID:       resolved.snapshot.CardID,
+			sourceObjectID: resolved.snapshot.ObjectID,
+			controller:     resolved.snapshot.Controller,
+		}, true
 	}
 	return effectDamageSource{
 		sourceID:       resolved.permanent.CardInstanceID,
@@ -836,6 +896,30 @@ func selectedPermanentIDs(g *game.Game, controller game.PlayerID, source *game.P
 	return permanentIDs
 }
 
+func selectedPermanentIDsForEffect(g *game.Game, obj *game.StackObject, effect game.Effect, controller game.PlayerID, source *game.Permanent) []id.ID {
+	if effect.Selector != game.EffectSelectorAllCreaturesExceptTarget {
+		return selectedPermanentIDs(g, controller, source, effect.Selector)
+	}
+	excluded, _ := targetPermanentObjectID(obj, effect.TargetIndex)
+	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
+	for _, permanent := range g.Battlefield {
+		if permanent.ObjectID == excluded || !permanentHasType(g, permanent, game.TypeCreature) {
+			continue
+		}
+		permanentIDs = append(permanentIDs, permanent.ObjectID)
+	}
+	return permanentIDs
+}
+
+func selectedPlayerIDs(g *game.Game, controller game.PlayerID, selector game.PlayerSelector) []game.PlayerID {
+	switch selector {
+	case game.PlayerSelectorOpponents:
+		return aliveOpponents(g, controller)
+	default:
+		return nil
+	}
+}
+
 func permanentMatchesSelector(g *game.Game, permanent *game.Permanent, selector game.EffectSelector) bool {
 	return permanentMatchesSelectorForSource(g, nil, 0, permanent, selector)
 }
@@ -856,6 +940,8 @@ func permanentMatchesSelectorForSource(g *game.Game, source *game.Permanent, con
 		return effectiveController(g, permanent) == controller && permanentHasType(g, permanent, game.TypeCreature)
 	case game.EffectSelectorOtherCreaturesYouControl:
 		return source != nil && permanent.ObjectID != source.ObjectID && effectiveController(g, permanent) == controller && permanentHasType(g, permanent, game.TypeCreature)
+	case game.EffectSelectorEquippedCreature:
+		return source != nil && source.AttachedTo.Exists && permanent.ObjectID == source.AttachedTo.Val
 	default:
 		return false
 	}

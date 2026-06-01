@@ -317,6 +317,10 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 		}
 		for _, effect := range ability.Effects {
 			if layer == game.LayerPowerToughnessModify && effect.Type == game.EffectModifyPT && permanentValuesMatchSelectorForSource(source.permanent, source.controller, permanent, values, effect.Selector) {
+				powerDelta := effect.PowerDelta
+				if effect.DynamicAmount.Exists {
+					powerDelta = dynamicAmountValue(g, nil, source.controller, effect.DynamicAmount.Val)
+				}
 				effects = append(effects, game.ContinuousEffect{
 					SourceObjectID:   sourceObjectID(source),
 					SourceCardID:     source.cardID,
@@ -324,7 +328,7 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 					Timestamp:        source.timestamp,
 					AffectedObjectID: permanent.ObjectID,
 					Layer:            game.LayerPowerToughnessModify,
-					PowerDelta:       effect.PowerDelta,
+					PowerDelta:       powerDelta,
 					ToughnessDelta:   effect.ToughnessDelta,
 				})
 			}
@@ -463,6 +467,8 @@ func permanentValuesMatchSelectorForSource(source *game.Permanent, controller ga
 		return values.controller == controller && valuesHasType(values, game.TypeCreature)
 	case game.EffectSelectorOtherCreaturesYouControl:
 		return source != nil && permanent.ObjectID != source.ObjectID && values.controller == controller && valuesHasType(values, game.TypeCreature)
+	case game.EffectSelectorEquippedCreature:
+		return source != nil && source.AttachedTo.Exists && permanent.ObjectID == source.AttachedTo.Val
 	default:
 		return false
 	}

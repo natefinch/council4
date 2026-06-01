@@ -14,14 +14,6 @@ import (
 // Oracle text:
 //
 //	Target creature you control deals damage equal to its power to each other creature and each opponent.
-//
-// Missing primitives:
-//   - No EffectSelectorAllCreaturesExceptTarget / "each other creature" selector;
-//     EffectSelectorAllCreatures is used but incorrectly includes the targeting
-//     creature itself. ImplementationID "chandras-ignition" must exclude it.
-//   - No EffectSelectorAllOpponents selector for the "each opponent" clause.
-//     ImplementationID "chandras-ignition" must add a separate pass damaging
-//     each opponent for the same dynamic amount.
 var ChandraSIgnition = &game.CardDef{
 	Name: "Chandra's Ignition",
 	ManaCost: opt.Val(mana.Cost{
@@ -29,12 +21,11 @@ var ChandraSIgnition = &game.CardDef{
 		mana.ColoredMana(mana.Red),
 		mana.ColoredMana(mana.Red),
 	}),
-	ManaValue:        5,
-	Colors:           []mana.Color{mana.Red},
-	ColorIdentity:    mana.NewColorIdentity(mana.Red),
-	Types:            []game.CardType{game.TypeSorcery},
-	OracleText:       "Target creature you control deals damage equal to its power to each other creature and each opponent.",
-	ImplementationID: "chandras-ignition",
+	ManaValue:     5,
+	Colors:        []mana.Color{mana.Red},
+	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	Types:         []game.CardType{game.TypeSorcery},
+	OracleText:    "Target creature you control deals damage equal to its power to each other creature and each opponent.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -53,15 +44,31 @@ var ChandraSIgnition = &game.CardDef{
 			},
 			Effects: []game.Effect{
 				{
-					// Approximation: should be "each OTHER creature" (excluding target 0)
-					// and also hit each opponent. ImplementationID handles both corrections.
-					Type:     game.EffectDamage,
-					Selector: game.EffectSelectorAllCreatures,
+					Type:        game.EffectDamage,
+					TargetIndex: 0,
+					Selector:    game.EffectSelectorAllCreaturesExceptTarget,
+					DamageSource: opt.Val(game.ObjectReference{
+						Kind:        game.ObjectReferenceTargetPermanent,
+						TargetIndex: 0,
+					}),
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind:        game.DynamicAmountTargetPower,
 						TargetIndex: 0,
 					}),
-					Description: "deals damage equal to its power to each other creature and each opponent",
+					Description: "deals damage equal to its power to each other creature",
+				},
+				{
+					Type:           game.EffectDamage,
+					PlayerSelector: game.PlayerSelectorOpponents,
+					DamageSource: opt.Val(game.ObjectReference{
+						Kind:        game.ObjectReferenceTargetPermanent,
+						TargetIndex: 0,
+					}),
+					DynamicAmount: opt.Val(game.DynamicAmount{
+						Kind:        game.DynamicAmountTargetPower,
+						TargetIndex: 0,
+					}),
+					Description: "deals damage equal to its power to each opponent",
 				},
 			},
 		},

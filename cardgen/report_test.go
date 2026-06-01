@@ -274,16 +274,16 @@ func cardFunctionalityPlan1Manifest() Manifest {
 	return Manifest{Version: ManifestVersion, Cards: []ManifestCard{
 		card("Anger", filepath.Join("mtg", "cards", "a", "anger.go"), BatchValidationStatusValid),
 		card("Arena", filepath.Join("mtg", "cards", "a", "arena.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
-		card("Basilisk Collar", filepath.Join("mtg", "cards", "b", "basilisk_collar.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Basilisk Collar", filepath.Join("mtg", "cards", "b", "basilisk_collar.go"), BatchValidationStatusValid),
 		card("Beast Within", filepath.Join("mtg", "cards", "b", "beast_within.go"), BatchValidationStatusValid),
 		card("Birds of Paradise", filepath.Join("mtg", "cards", "b", "birds_of_paradise.go"), BatchValidationStatusValid),
 		card("Bite Down", filepath.Join("mtg", "cards", "b", "bite_down.go"), BatchValidationStatusValid),
 		card("Blazemire Verge", filepath.Join("mtg", "cards", "b", "blazemire_verge.go"), BatchValidationStatusValid),
-		card("Blazing Sunsteel", filepath.Join("mtg", "cards", "b", "blazing_sunsteel.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Blazing Sunsteel", filepath.Join("mtg", "cards", "b", "blazing_sunsteel.go"), BatchValidationStatusValid),
 		card("Bridgeworks Battle // Tanglespan Bridgeworks", filepath.Join("mtg", "cards", "b", "bridgeworks_battle_tanglespan_bridgeworks.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Bugenhagen, Wise Elder", filepath.Join("mtg", "cards", "b", "bugenhagen_wise_elder.go"), BatchValidationStatusValid),
 		card("Bushwhack", filepath.Join("mtg", "cards", "b", "bushwhack.go"), BatchValidationStatusValid),
-		card("Chandra's Ignition", filepath.Join("mtg", "cards", "c", "chandra_s_ignition.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Chandra's Ignition", filepath.Join("mtg", "cards", "c", "chandra_s_ignition.go"), BatchValidationStatusValid),
 		card("Chaos Warp", filepath.Join("mtg", "cards", "c", "chaos_warp.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Cinder Glade", filepath.Join("mtg", "cards", "c", "cinder_glade.go"), BatchValidationStatusValid),
 		card("Command Tower", filepath.Join("mtg", "cards", "c", "command_tower.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
@@ -316,25 +316,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 	//     ImplementationID "arena" is set so a hand-written rules handler can prompt
 	//     the correct player to choose the opponent-controlled creature.
 	`,
-		"Basilisk Collar": `// Missing primitives:
-	//   - There is no EffectSelectorEquippedCreature (or equivalent) to declaratively
-	//     target the equipped creature in a static ability. ImplementationID
-	//     "basilisk-collar" is set on the CardDef so the rules engine can
-	//     apply the deathtouch/lifelink continuous effect to whatever creature this
-	//     equipment is currently attached to.
-	`,
-		"Blazing Sunsteel": `// Missing primitives:
-	//   - EffectSelectorEquippedCreature does not exist; the static P/T boost cannot
-	//     select the equipped creature declaratively.
-	//   - DynamicAmountCountOpponents does not exist; "for each opponent you have"
-	//     cannot be expressed as a DynamicAmount.
-	//   - TriggerPattern has no TriggerSourceEquipped filter; the triggered ability
-	//     cannot be confined to damage dealt to the equipped creature only.
-	//   - DynamicAmountEventDamage does not exist; "that much" (the damage amount from
-	//     the triggering event) cannot be forwarded as a DynamicAmount.
-	//     ImplementationID "blazing-sunsteel" is set so a hand-written rules handler
-	//     can apply the continuous +N/+0 effect and wire the damage-redirection trigger.
-	`,
 		"Bridgeworks Battle // Tanglespan Bridgeworks": `// Missing primitives (back face):
 	//   - ReplacementEffect has no "pay life to suppress enters-tapped" pattern;
 	//     the conditional ETB cannot be expressed declaratively.
@@ -344,14 +325,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 		"Bushwhack": `// Missing primitives:
 	//   - SearchSpec has no MatchSupertype field; "basic" cannot be enforced
 	//     declaratively -- the search allows any land card.
-	`,
-		"Chandra's Ignition": `// Missing primitives:
-	//   - No EffectSelectorAllCreaturesExceptTarget / "each other creature" selector;
-	//     EffectSelectorAllCreatures is used but incorrectly includes the targeting
-	//     creature itself. ImplementationID "chandras-ignition" must exclude it.
-	//   - No EffectSelectorAllOpponents selector for the "each opponent" clause.
-	//     ImplementationID "chandras-ignition" must add a separate pass damaging
-	//     each opponent for the same dynamic amount.
 	`,
 		"Chaos Warp": `// Missing primitives:
 	//   - No EffectType for "shuffle a permanent into its owner's library" (not Bounce/Exile/Destroy).

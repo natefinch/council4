@@ -162,6 +162,12 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 			v.add(faceName, path, IssueUnsupportedSearchSpec, "only library-to-hand SearchSpec is currently supported")
 		}
 	}
+	if effect.Selector != game.EffectSelectorNone && effect.PlayerSelector != game.PlayerSelectorNone {
+		v.add(faceName, path, IssueInvalidReference, "Effect cannot set both Selector and PlayerSelector")
+	}
+	if effect.PlayerSelector != game.PlayerSelectorNone && effect.Type != game.EffectDamage {
+		v.add(faceName, appendPath(path, "PlayerSelector"), IssueInvalidReference, "PlayerSelector is only supported on damage effects")
+	}
 	v.validateTargetIndex(faceName, path, effect.TargetIndex, targets, "effect target")
 	if effect.DamageSource.Exists {
 		if effect.Type != game.EffectDamage {

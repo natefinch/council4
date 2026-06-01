@@ -146,6 +146,7 @@ type TriggerSourceFilter int
 const (
 	TriggerSourceAny TriggerSourceFilter = iota
 	TriggerSourceSelf
+	TriggerSourceAttachedPermanent
 )
 
 // TriggerPlayerFilter constrains a trigger by the affected player recorded on an event.
@@ -269,12 +270,22 @@ type EffectSelector string
 const (
 	EffectSelectorNone                     EffectSelector = ""
 	EffectSelectorAllCreatures             EffectSelector = "all creatures"
+	EffectSelectorAllCreaturesExceptTarget EffectSelector = "all creatures except target"
 	EffectSelectorAllArtifacts             EffectSelector = "all artifacts"
 	EffectSelectorAllEnchantments          EffectSelector = "all enchantments"
 	EffectSelectorAllNonlandPermanents     EffectSelector = "all nonland permanents"
 	EffectSelectorAllPermanents            EffectSelector = "all permanents"
 	EffectSelectorCreaturesYouControl      EffectSelector = "creatures you control"
 	EffectSelectorOtherCreaturesYouControl EffectSelector = "other creatures you control"
+	EffectSelectorEquippedCreature         EffectSelector = "equipped creature"
+)
+
+// PlayerSelector identifies a set of players affected by a mass effect.
+type PlayerSelector string
+
+const (
+	PlayerSelectorNone      PlayerSelector = ""
+	PlayerSelectorOpponents PlayerSelector = "opponents"
 )
 
 // CounterSourceKind identifies where an effect reads counters from.
@@ -370,6 +381,7 @@ type Effect struct {
 	Duration          EffectDuration
 	Step              Step
 	Selector          EffectSelector
+	PlayerSelector    PlayerSelector
 	Token             opt.V[*CardDef]
 	ContinuousEffects []ContinuousEffect
 	DelayedTrigger    opt.V[DelayedTriggerDef]
