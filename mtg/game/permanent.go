@@ -112,12 +112,7 @@ type Permanent struct {
 	// if this is an Aura, Equipment, or Fortification. Absent if not attached.
 	AttachedTo opt.V[id.ID]
 
-	// --- Timestamps and layer ordering ---
-
-	// Timestamp records when this permanent entered the battlefield or
-	// when its most recent control-change occurred, for continuous effect
-	// ordering in the layer system (CR 613.7).
-	Timestamp int64
+	// --- Layer ordering ---
 
 	// --- Combat modifiers ---
 
@@ -138,6 +133,15 @@ type Permanent struct {
 	// TokenDef holds the card definition for tokens. Nil for non-tokens.
 	// Tokens use this instead of CardInstanceID.
 	TokenDef *CardDef
+}
+
+// Timestamp returns the permanent's timestamp for continuous-effect ordering.
+// Permanent timestamps are derived from ObjectID because permanents receive
+// monotonically increasing object IDs as they enter the battlefield. Control
+// changes are modeled as continuous effects with their own timestamps, so a
+// permanent does not need separate mutable timestamp state.
+func (p *Permanent) Timestamp() Timestamp {
+	return Timestamp(p.ObjectID)
 }
 
 // GoadStatus records the duration for one player's goad effect.

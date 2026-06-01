@@ -12,7 +12,7 @@ func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permane
 		SourceCardID:     sourceID,
 		SourceObjectID:   sourceObjectID,
 		Controller:       obj.Controller,
-		Timestamp:        int64(effectID),
+		Timestamp:        game.Timestamp(effectID),
 		Duration:         game.DurationUntilEndOfTurn,
 		CreatedTurn:      g.Turn.TurnNumber,
 		AffectedObjectID: permanent.ObjectID,

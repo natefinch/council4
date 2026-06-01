@@ -247,7 +247,7 @@ type staticAbilitySource struct {
 	card       *game.CardDef
 	cardID     id.ID
 	controller game.PlayerID
-	timestamp  int64
+	timestamp  game.Timestamp
 }
 
 func staticAbilityContinuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer) []game.ContinuousEffect {
@@ -277,7 +277,7 @@ func staticAbilitySources(g *game.Game, layer game.ContinuousLayer) []staticAbil
 			card:       card,
 			cardID:     permanent.CardInstanceID,
 			controller: controller,
-			timestamp:  permanent.Timestamp,
+			timestamp:  permanent.Timestamp(),
 		})
 	}
 	for playerID := game.PlayerID(0); playerID < game.NumPlayers; playerID++ {
@@ -295,7 +295,7 @@ func staticAbilitySources(g *game.Game, layer game.ContinuousLayer) []staticAbil
 				card:       def,
 				cardID:     card.ID,
 				controller: card.Owner,
-				timestamp:  int64(card.ID),
+				timestamp:  game.Timestamp(card.ID),
 			})
 		}
 	}

@@ -44,7 +44,6 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		Controller:     controller,
 		Face:           face,
 		SummoningSick:  entersSummoningSick(faceDef),
-		Timestamp:      int64(objectID),
 	}
 	initializePermanentCounters(permanent, faceDef)
 	applyInitialContinuousEffects(g, permanent, continuous)
@@ -79,7 +78,7 @@ func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, cont
 		effect.SourceObjectID = permanent.ObjectID
 		effect.SourceCardID = permanent.CardInstanceID
 		effect.Controller = permanent.Controller
-		effect.Timestamp = permanent.Timestamp
+		effect.Timestamp = permanent.Timestamp()
 		effect.AffectedObjectID = permanent.ObjectID
 		if effect.Duration == game.DurationPermanent {
 			effect.Duration = game.DurationPermanent
@@ -103,7 +102,6 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 		FaceDownFace:   face,
 		FaceDownKind:   kind,
 		SummoningSick:  true,
-		Timestamp:      int64(objectID),
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.GameEvent{

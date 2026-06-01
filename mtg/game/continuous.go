@@ -62,6 +62,9 @@ const (
 	LayerPowerToughnessSwitch
 )
 
+// Timestamp records relative effect ordering for the layer system.
+type Timestamp uint64
+
 // ContinuousEffect is a rules-data representation of a runtime continuous
 // effect. mtg/rules owns interpretation and expiry.
 type ContinuousEffect struct {
@@ -69,7 +72,7 @@ type ContinuousEffect struct {
 	SourceObjectID id.ID
 	SourceCardID   id.ID
 	Controller     PlayerID
-	Timestamp      int64
+	Timestamp      Timestamp
 	DependsOn      []id.ID
 	Duration       EffectDuration
 	CreatedTurn    int

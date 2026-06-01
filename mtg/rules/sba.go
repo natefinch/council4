@@ -235,8 +235,10 @@ func permanentLegendaryKey(g *game.Game, permanent *game.Permanent) (legendaryKe
 }
 
 func permanentOlderThan(left, right *game.Permanent) bool {
-	if left.Timestamp != right.Timestamp {
-		return left.Timestamp < right.Timestamp
+	leftTimestamp := left.Timestamp()
+	rightTimestamp := right.Timestamp()
+	if leftTimestamp != rightTimestamp {
+		return leftTimestamp < rightTimestamp
 	}
 	return left.ObjectID < right.ObjectID
 }

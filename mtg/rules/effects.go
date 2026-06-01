@@ -1174,7 +1174,7 @@ func applyContinuousEffectTemplates(g *game.Game, obj *game.StackObject, permane
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
-	timestamp := int64(g.IDGen.Next())
+	timestamp := game.Timestamp(g.IDGen.Next())
 	applied := false
 	for _, template := range effect.ContinuousEffects {
 		// Runtime continuous effects are applied by the layer system; animation
@@ -1440,7 +1440,6 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 		Owner:         controller,
 		Controller:    controller,
 		SummoningSick: entersSummoningSick(token),
-		Timestamp:     int64(objectID),
 		Token:         true,
 		TokenDef:      token,
 	}
