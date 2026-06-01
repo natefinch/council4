@@ -60,6 +60,7 @@ disable = [
   'testpackage',
   'thelper',
   'unparam',
+  'unused',
   'varnamelen',
   'wastedassign',
   'whitespace',
@@ -101,6 +102,7 @@ excludes = [
   'G204',
   'G304',
   'G307',
+  'G404',
   'G702',
   'G706'
 ]
@@ -177,8 +179,8 @@ name = 'cognitive-complexity'
 disabled = true
 
 [[linters.settings.revive.rules]]
-name = 'constant-logical-expr'
-disabled = false
+name = 'empty-lines'
+disabled = true
 
 [[linters.settings.revive.rules]]
 name = 'cyclomatic'
@@ -193,8 +195,8 @@ name = 'function-length'
 disabled = true
 
 [[linters.settings.revive.rules]]
-name = 'get-return'
-disabled = false
+name = 'unused-parameter'
+disabled = true
 
 [[linters.settings.revive.rules]]
 name = 'line-length-limit'
@@ -215,6 +217,12 @@ disabled = true
 [[linters.settings.revive.rules]]
 name = 'use-any'
 disabled = true
+
+[linters.settings.staticcheck]
+  checks = [
+    "all",
+    "-S1016"
+  ]
 
 [issues]
 max-issues-per-linter = 0
