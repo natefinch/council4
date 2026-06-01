@@ -2,7 +2,9 @@ package f
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -25,8 +27,8 @@ var FanaticOfRhonas = &game.CardDef{
 	ManaValue:     2,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
-	Types:         []game.CardType{game.TypeCreature},
-	Subtypes:      []string{game.CreatureSubtypeSnake, game.CreatureSubtypeDruid},
+	Types:         []types.Card{types.Creature},
+	Subtypes:      []types.Sub{types.Snake, types.Druid},
 	Power:         opt.Val(game.PT{Value: 1}),
 	Toughness:     opt.Val(game.PT{Value: 4}),
 	OracleText:    "{T}: Add {G}.\nFerocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.\nEternalize {2}{G}{G} ({2}{G}{G}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a 4/4 black Zombie Snake Druid with no mana cost. Eternalize only as a sorcery.)",
@@ -52,9 +54,9 @@ var FanaticOfRhonas = &game.CardDef{
 			ActivationCondition: opt.Val(game.Condition{
 				Text: "you control a creature with power 4 or greater",
 				ControllerControls: game.PermanentFilter{
-					Types: []game.CardType{game.TypeCreature},
-					Power: opt.Val(game.IntComparison{
-						Op:    game.CompareGreaterOrEqual,
+					Types: []types.Card{types.Creature},
+					Power: opt.Val(compare.Int{
+						Op:    compare.GreaterOrEqual,
 						Value: 4,
 					}),
 				},
@@ -68,7 +70,7 @@ var FanaticOfRhonas = &game.CardDef{
 		},
 		game.EternalizeAbility(
 			mana.Cost{mana.GenericMana(2), mana.ColoredMana(mana.Green), mana.ColoredMana(mana.Green)},
-			game.CreatureSubtypeSnake, game.CreatureSubtypeDruid,
+			types.Snake, types.Druid,
 		),
 	},
 }

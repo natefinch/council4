@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func cardFaceDef(card *game.CardInstance, face game.FaceIndex) (*game.CardDef, bool) {
@@ -50,7 +51,7 @@ func transformPermanent(g *game.Game, permanent *game.Permanent) bool {
 	if !ok {
 		return false
 	}
-	if !def.IsTransformingDoubleFaced() || len(def.Faces) < 2 {
+	if !def.IsTransformingDoubleFaced() || !def.Back.Exists {
 		return false
 	}
 	if permanent.Face == game.FaceFront {
@@ -74,8 +75,8 @@ func physicalPermanentDef(g *game.Game, permanent *game.Permanent) (*game.CardDe
 	return card.Def, true
 }
 
-func cardTypes(def *game.CardDef) []game.CardType {
-	return append([]game.CardType(nil), def.Types...)
+func cardTypes(def *game.CardDef) []types.Card {
+	return append([]types.Card(nil), def.Types...)
 }
 
 func permanentCardID(permanent *game.Permanent) id.ID {

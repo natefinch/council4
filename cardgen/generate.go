@@ -37,7 +37,7 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 		faces = facesFromAllCardFaces(card)
 	}
 	needsMana := fieldsNeedMana(root) || anyFaceNeedsMana(faces)
-	needsOpt := fieldsNeedOpt(root) || anyFaceNeedsOpt(faces)
+	needsOpt := fieldsNeedOpt(root) || anyFaceNeedsOpt(faces) || len(faces) > 0
 
 	b.WriteString(fmt.Sprintf("package %s\n\n", pkgName))
 	b.WriteString("import (\n")
@@ -45,6 +45,7 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 		b.WriteString("\t\"github.com/natefinch/council4/opt\"\n")
 	}
 	b.WriteString("\t\"github.com/natefinch/council4/mtg/game\"\n")
+	b.WriteString("\t\"github.com/natefinch/council4/mtg/game/types\"\n")
 	if needsMana {
 		b.WriteString("\t\"github.com/natefinch/council4/mtg/game/mana\"\n")
 	}
@@ -111,11 +112,11 @@ func fieldsFromFace(face ScryfallCardFace) generatedCardFields {
 }
 
 func generatedFaces(card *ScryfallCard) []generatedCardFields {
-	if len(card.CardFaces) == 0 || !layoutEmitsFaces(card.Layout) {
+	if len(card.CardFaces) < 2 || !layoutEmitsFaces(card.Layout) {
 		return nil
 	}
-	faces := make([]generatedCardFields, 0, len(card.CardFaces))
-	for _, face := range card.CardFaces {
+	faces := make([]generatedCardFields, 0, len(card.CardFaces)-1)
+	for _, face := range card.CardFaces[1:] {
 		faces = append(faces, fieldsFromFace(face))
 	}
 	return faces
@@ -243,15 +244,14 @@ func writeCardDef(b *strings.Builder, root generatedCardFields, layout string, f
 		b.WriteString(fmt.Sprintf("\tLayout: %s,\n", layoutLiteral))
 	}
 	if len(faces) > 0 {
-		b.WriteString("\tFaces: []game.CardFace{\n")
-		for _, face := range faces {
-			b.WriteString("\t\t{\n")
-			if err := writeFields(b, face, "\t\t\t", true, false); err != nil {
-				return err
-			}
-			b.WriteString("\t\t},\n")
+		if len(faces) > 1 {
+			return fmt.Errorf("%s has %d non-front faces; CardDef supports one optional Back face", root.Name, len(faces))
 		}
-		b.WriteString("\t},\n")
+		b.WriteString("\tBack: opt.Val(game.CardFace{\n")
+		if err := writeFields(b, faces[0], "\t\t", true, false); err != nil {
+			return err
+		}
+		b.WriteString("\t}),\n")
 	}
 	b.WriteString("}\n")
 	return nil
@@ -283,21 +283,21 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 		for _, st := range parsed.Supertypes {
 			literals = append(literals, SupertypeToLiteral(st))
 		}
-		b.WriteString(fmt.Sprintf("%sSupertypes: []game.Supertype{%s},\n", indent, strings.Join(literals, ", ")))
+		b.WriteString(fmt.Sprintf("%sSupertypes: []types.Super{%s},\n", indent, strings.Join(literals, ", ")))
 	}
 	if len(parsed.Types) > 0 {
 		var literals []string
 		for _, t := range parsed.Types {
 			literals = append(literals, CardTypeToLiteral(t))
 		}
-		b.WriteString(fmt.Sprintf("%sTypes: []game.CardType{%s},\n", indent, strings.Join(literals, ", ")))
+		b.WriteString(fmt.Sprintf("%sTypes: []types.Card{%s},\n", indent, strings.Join(literals, ", ")))
 	}
 	if len(parsed.Subtypes) > 0 {
 		var literals []string
 		for _, s := range parsed.Subtypes {
 			literals = append(literals, SubtypeToLiteral(s, parsed.Types))
 		}
-		b.WriteString(fmt.Sprintf("%sSubtypes: []string{%s},\n", indent, strings.Join(literals, ", ")))
+		b.WriteString(fmt.Sprintf("%sSubtypes: []types.Sub{%s},\n", indent, strings.Join(literals, ", ")))
 	}
 	if fields.Power != nil {
 		b.WriteString(fmt.Sprintf("%sPower: opt.Val(%s),\n", indent, ptLiteral(*fields.Power)))

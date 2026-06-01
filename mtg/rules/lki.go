@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -28,9 +29,9 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zone game.ZoneTy
 		Controller:     values.controller,
 		FromZone:       zone,
 		Colors:         append([]mana.Color(nil), values.colors...),
-		Supertypes:     append([]game.Supertype(nil), values.supertypes...),
-		Types:          append([]game.CardType(nil), values.types...),
-		Subtypes:       append([]string(nil), values.subtypes...),
+		Supertypes:     append([]types.Super(nil), values.supertypes...),
+		Types:          append([]types.Card(nil), values.types...),
+		Subtypes:       append([]types.Sub(nil), values.subtypes...),
 		Power:          optionalInt(values.power, values.powerOK),
 		Toughness:      optionalInt(values.toughness, values.toughnessOK),
 		MarkedDamage:   permanent.MarkedDamage,

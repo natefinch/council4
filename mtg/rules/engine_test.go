@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestEngineNewGameUsesEngineRand(t *testing.T) {
@@ -143,7 +144,7 @@ func landOnlyConfigs(cardsPerPlayer int) [game.NumPlayers]game.PlayerConfig {
 func basicLand() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Forest",
-		Types:    []game.CardType{game.TypeLand},
-		Subtypes: []string{game.LandSubtypeForest},
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Forest},
 	}
 }

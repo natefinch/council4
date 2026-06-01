@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -13,7 +14,7 @@ func TestChaosWarpLikeEffectsUseTargetOwnerAndLinkedReveal(t *testing.T) {
 	engine := NewEngine(nil)
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:  "Warped Creature",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 	})
 	target.Controller = game.Player3
 	obj := &game.StackObject{
@@ -54,7 +55,7 @@ func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 	engine := NewEngine(nil)
 	instantID := addCardToLibrary(g, game.Player2, &game.CardDef{
 		Name:  "Not Permanent",
-		Types: []game.CardType{game.TypeInstant},
+		Types: []types.Card{types.Instant},
 	})
 	obj := &game.StackObject{
 		ID:         g.IDGen.Next(),

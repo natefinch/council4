@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -19,7 +20,7 @@ type CostModifier struct {
 	Kind             CostModifierKind
 	Controller       PlayerID
 	MatchCardType    bool
-	CardType         CardType
+	CardType         types.Card
 	GenericIncrease  int
 	GenericReduction int
 	SetGeneric       opt.V[int]
@@ -59,8 +60,8 @@ type RuleEffect struct {
 
 	AffectedPlayer     PlayerRelation
 	AffectedController ControllerRelation
-	PermanentTypes     []CardType
-	SpellTypes         []CardType
+	PermanentTypes     []types.Card
+	SpellTypes         []types.Card
 	DefendingPlayer    PlayerRelation
 
 	CostModifier CostModifier

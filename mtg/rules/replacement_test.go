@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -115,7 +116,7 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:   "Red Strike",
-		Types:  []game.CardType{game.TypeInstant},
+		Types:  []types.Card{types.Instant},
 		Colors: []mana.Color{mana.Red},
 		Abilities: []game.AbilityDef{
 			{
@@ -331,7 +332,7 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	def := &game.CardDef{
 		Name:         "Tapped Walker",
-		Types:        []game.CardType{game.TypeCreature},
+		Types:        []types.Card{types.Creature},
 		Power:        optPT(game.PT{Value: 1}),
 		Toughness:    optPT(game.PT{Value: 1}),
 		EntersTapped: true,
@@ -470,23 +471,17 @@ func payLifeETBModalLand() *game.CardDef {
 	return &game.CardDef{
 		Name:   "Front Spell // Pay Life Land",
 		Layout: game.LayoutModalDFC,
-		Types:  []game.CardType{game.TypeSorcery},
-		Faces: []game.CardFace{
-			{
-				Name:  "Front Spell",
-				Types: []game.CardType{game.TypeSorcery},
-			},
-			{
-				Name:  "Pay Life Land",
-				Types: []game.CardType{game.TypeLand},
-				EntersTappedUnlessPaid: opt.Val(game.ResolutionPayment{
-					Prompt: "Pay 3 life?",
-					AdditionalCosts: []game.AdditionalCost{
-						{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
-					},
-				}),
-			},
-		},
+		Types:  []types.Card{types.Sorcery},
+		Back: opt.Val(game.CardFace{
+			Name:  "Pay Life Land",
+			Types: []types.Card{types.Land},
+			EntersTappedUnlessPaid: opt.Val(game.ResolutionPayment{
+				Prompt: "Pay 3 life?",
+				AdditionalCosts: []game.AdditionalCost{
+					{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
+				},
+			}),
+		}),
 	}
 }
 
@@ -508,7 +503,7 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	}, nil)
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:      "Entering Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
 	})
@@ -577,7 +572,7 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Replacement Source",
-		Types: []game.CardType{game.TypeEnchantment},
+		Types: []types.Card{types.Enchantment},
 	})
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	engine.resolveEffect(g, &game.StackObject{
@@ -636,7 +631,7 @@ func addColoredSourceCard(g *game.Game, owner game.PlayerID, color mana.Color) i
 		ID: cardID,
 		Def: &game.CardDef{
 			Name:   "Colored Source",
-			Types:  []game.CardType{game.TypeInstant},
+			Types:  []types.Card{types.Instant},
 			Colors: []mana.Color{color},
 		},
 		Owner: owner,
@@ -648,7 +643,7 @@ func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, col
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Protected Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(pt),
 		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{
@@ -665,7 +660,7 @@ func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanen
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Hexproof Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(pt),
 		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{{
@@ -678,7 +673,7 @@ func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanen
 func targetCreatureInstant() *game.CardDef {
 	return &game.CardDef{
 		Name:  "Target Creature Instant",
-		Types: []game.CardType{game.TypeInstant},
+		Types: []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.SpellAbility,
 			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},

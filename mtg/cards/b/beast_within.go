@@ -3,6 +3,7 @@ package b
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -23,7 +24,7 @@ var BeastWithin = &game.CardDef{
 	ManaValue:     3,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
-	Types:         []game.CardType{game.TypeInstant},
+	Types:         []types.Card{types.Instant},
 	OracleText:    "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
 	Abilities: []game.AbilityDef{
 		{
@@ -59,8 +60,8 @@ var BeastWithin = &game.CardDef{
 var beastWithinToken = &game.CardDef{
 	Name:      "Beast",
 	Colors:    []mana.Color{mana.Green},
-	Types:     []game.CardType{game.TypeCreature},
-	Subtypes:  []string{game.CreatureSubtypeBeast},
+	Types:     []types.Card{types.Creature},
+	Subtypes:  []types.Sub{types.Beast},
 	Power:     opt.Val(game.PT{Value: 3}),
 	Toughness: opt.Val(game.PT{Value: 3}),
 }

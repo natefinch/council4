@@ -226,11 +226,11 @@ func TestValidateCardReportsInvalidTargetChooserSpec(t *testing.T) {
 
 func TestValidateCardChecksFaces(t *testing.T) {
 	card := &game.CardDef{
-		Name: "Double Faced",
-		Faces: []game.CardFace{{
+		Name: "Front",
+		Back: opt.Val(game.CardFace{
 			Name:       "Front",
 			OracleText: "Draw a card.",
-		}},
+		}),
 	}
 
 	issues := ValidateCard(card, ValidationOptions{})
@@ -240,34 +240,28 @@ func TestValidateCardChecksFaces(t *testing.T) {
 	}
 }
 
-func TestValidateCardChecksDoubleFacedRootFieldsWithoutWalkingRootEffects(t *testing.T) {
+func TestValidateCardChecksDoubleFacedRootFieldsAndBack(t *testing.T) {
 	card := &game.CardDef{
-		Name:             "Double Faced",
-		OracleText:       "Root text.",
-		ImplementationID: "missing",
+		Name:       "Double Faced",
+		OracleText: "Root text.",
 		Abilities: []game.AbilityDef{{
 			Kind:    game.SpellAbility,
 			Effects: []game.Effect{{Type: game.EffectCopy}},
 		}},
-		Faces: []game.CardFace{{
-			Name:       "Front",
+		Back: opt.Val(game.CardFace{
+			Name:       "Back",
 			OracleText: "Draw a card.",
 			Abilities: []game.AbilityDef{{
 				Kind:    game.SpellAbility,
 				Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: -1}},
 			}},
-		}},
+		}),
 	}
 
-	issues := ValidateCard(card, ValidationOptions{
-		KnownImplementationIDs: map[string]bool{"other": true},
-	})
+	issues := ValidateCard(card, ValidationOptions{})
 
-	if !hasIssue(issues, IssueUnregisteredImplementation) {
-		t.Fatalf("issues = %+v, want root implementation issue", issues)
-	}
-	if hasIssue(issues, IssueUnexecutedEffect) {
-		t.Fatalf("issues = %+v, did not want duplicate root ability walk for DFC", issues)
+	if !hasIssue(issues, IssueUnexecutedEffect) {
+		t.Fatalf("issues = %+v, want root ability walk for DFC front face", issues)
 	}
 }
 

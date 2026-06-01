@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/mtg/game/id"
+import (
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
+)
 
 // EventKind identifies a rules-relevant fact that occurred during a game.
 type EventKind int
@@ -74,7 +77,7 @@ type GameEvent struct {
 	// CardTypes records the relevant card types at event time for spell-cast
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).
-	CardTypes []CardType
+	CardTypes []types.Card
 
 	// PermanentID identifies the permanent that entered, left, was damaged, attacked, or blocked.
 	PermanentID id.ID
@@ -165,6 +168,6 @@ func cloneGameEvents(events []GameEvent) []GameEvent {
 }
 
 func cloneGameEvent(event GameEvent) GameEvent {
-	event.CardTypes = append([]CardType(nil), event.CardTypes...)
+	event.CardTypes = append([]types.Card(nil), event.CardTypes...)
 	return event
 }

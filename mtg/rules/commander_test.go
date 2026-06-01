@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestValidateCommanderConfigsAcceptsLegalDeck(t *testing.T) {
@@ -132,7 +133,7 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 func TestLegalActionsIncludeCommanderCastFromCommandZone(t *testing.T) {
 	g := newCommanderCastGame(greenCommanderWithCost())
 	engine := NewEngine(nil)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
@@ -148,9 +149,9 @@ func TestLegalActionsIncludeCommanderCastFromCommandZone(t *testing.T) {
 func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 	g := newCommanderCastGame(greenCommanderWithCost())
 	engine := NewEngine(nil)
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeIsland)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeMountain)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	addBasicLandPermanent(g, game.Player1, types.Island)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
 	player := g.Players[game.Player1]
 	player.CommanderCastCount = 1
 	commanderID := player.CommanderInstanceID
@@ -179,7 +180,7 @@ func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 func TestFailedCommanderTaxCastDoesNotMutate(t *testing.T) {
 	g := newCommanderCastGame(greenCommanderWithCost())
 	engine := NewEngine(nil)
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	player := g.Players[game.Player1]
 	player.CommanderCastCount = 1
 	commanderID := player.CommanderInstanceID
@@ -233,13 +234,13 @@ func TestValidateCommanderConfigRejectsWrongDeckSize(t *testing.T) {
 func TestValidateCommanderConfigRejectsDuplicateNonbasicButAllowsBasic(t *testing.T) {
 	config := legalCommanderConfig()
 	config.Deck[1] = config.Deck[0]
-	config.Deck[2] = basicLandDef(game.LandSubtypeForest)
-	config.Deck[3] = basicLandDef(game.LandSubtypeForest)
+	config.Deck[2] = basicLandDef(types.Forest)
+	config.Deck[3] = basicLandDef(types.Forest)
 
 	errs := validateCommanderConfig(game.Player1, config)
 
 	assertCommanderLegalityError(t, errs, "duplicate nonbasic")
-	if countCommanderLegalityErrors(errs, game.LandSubtypeForest) != 0 {
+	if countCommanderLegalityErrors(errs, string(types.Forest)) != 0 {
 		t.Fatalf("basic duplicate produced errors: %+v", errs)
 	}
 }
@@ -250,7 +251,7 @@ func TestValidateCommanderConfigRejectsInvalidCommander(t *testing.T) {
 		commander *game.CardDef
 	}{
 		{name: "nonlegendary", commander: creatureDef("Bear", mana.Green)},
-		{name: "noncreature", commander: &game.CardDef{Name: "Legendary Artifact", Supertypes: []game.Supertype{game.Legendary}, Types: []game.CardType{game.TypeArtifact}}},
+		{name: "noncreature", commander: &game.CardDef{Name: "types.Legendary Artifact", Supertypes: []types.Super{types.Legendary}, Types: []types.Card{types.Artifact}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -296,23 +297,24 @@ func legalCommanderConfig() game.PlayerConfig {
 
 func commanderDef(name string, colors ...mana.Color) *game.CardDef {
 	card := creatureDef(name, colors...)
-	card.Supertypes = append(card.Supertypes, game.Legendary)
+	card.Supertypes = append(card.Supertypes, types.Legendary)
 	return card
 }
 
 func creatureDef(name string, colors ...mana.Color) *game.CardDef {
 	return &game.CardDef{
 		Name:          name,
-		Types:         []game.CardType{game.TypeCreature},
+		Types:         []types.Card{types.Creature},
 		ColorIdentity: mana.NewColorIdentity(colors...),
 	}
 }
 
-func basicLandDef(name string) *game.CardDef {
+func basicLandDef(name types.Sub) *game.CardDef {
 	return &game.CardDef{
-		Name:       name,
-		Supertypes: []game.Supertype{game.Basic},
-		Types:      []game.CardType{game.TypeLand},
+		Name:       string(name),
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{name},
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -19,9 +20,9 @@ type ObjectSnapshot struct {
 	Controller     PlayerID
 	FromZone       ZoneType
 	Colors         []mana.Color
-	Supertypes     []Supertype
-	Types          []CardType
-	Subtypes       []string
+	Supertypes     []types.Super
+	Types          []types.Card
+	Subtypes       []types.Sub
 	Power          opt.V[int]
 	Toughness      opt.V[int]
 	Counters       counter.Set

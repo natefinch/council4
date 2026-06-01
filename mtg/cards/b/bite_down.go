@@ -3,6 +3,7 @@ package b
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -24,7 +25,7 @@ var BiteDown = &game.CardDef{
 	ManaValue:     2,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
-	Types:         []game.CardType{game.TypeInstant},
+	Types:         []types.Card{types.Instant},
 	OracleText:    "Target creature you control deals damage equal to its power to target creature or planeswalker you don't control.",
 	Abilities: []game.AbilityDef{
 		{
@@ -37,7 +38,7 @@ var BiteDown = &game.CardDef{
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature},
+						PermanentTypes: []types.Card{types.Creature},
 						Controller:     game.ControllerYou,
 					},
 				},
@@ -47,7 +48,7 @@ var BiteDown = &game.CardDef{
 					Constraint: "creature or planeswalker you don't control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature, game.TypePlaneswalker},
+						PermanentTypes: []types.Card{types.Creature, types.Planeswalker},
 						Controller:     game.ControllerOpponent,
 					},
 				},

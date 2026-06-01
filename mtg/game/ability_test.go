@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	cost := mana.Cost{mana.GenericMana(2), mana.ColoredMana(mana.Green)}
-	ability := EternalizeAbility(cost, CreatureSubtypeSnake, CreatureSubtypeDruid)
+	ability := EternalizeAbility(cost, types.Snake, types.Druid)
 	cost[0] = mana.GenericMana(9)
 
 	if ability.Kind != ActivatedAbility || !slices.Equal(ability.Keywords, []Keyword{Eternalize}) {
@@ -31,7 +32,7 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	if spec.Source != TokenCopySourceSourceCard || !spec.NoManaCost {
 		t.Fatalf("token copy source/no-cost = %v/%v, want source card with no mana cost", spec.Source, spec.NoManaCost)
 	}
-	if !slices.Equal(spec.SetColors, []mana.Color{mana.Black}) || !slices.Equal(spec.SetSubtypes, []string{CreatureSubtypeZombie, CreatureSubtypeSnake, CreatureSubtypeDruid}) {
+	if !slices.Equal(spec.SetColors, []mana.Color{mana.Black}) || !slices.Equal(spec.SetSubtypes, []types.Sub{types.Zombie, types.Snake, types.Druid}) {
 		t.Fatalf("token colors/subtypes = %+v/%+v, want black Zombie Snake Druid", spec.SetColors, spec.SetSubtypes)
 	}
 	if !spec.SetPower.Exists || spec.SetPower.Val.Value != 4 || !spec.SetToughness.Exists || spec.SetToughness.Val.Value != 4 {

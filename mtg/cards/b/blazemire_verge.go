@@ -3,6 +3,7 @@ package b
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -18,7 +19,7 @@ var BlazemireVerge = &game.CardDef{
 	Name:          "Blazemire Verge",
 	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Red),
-	Types:         []game.CardType{game.TypeLand},
+	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {B}.\n{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
 	Abilities: []game.AbilityDef{
 		{
@@ -38,7 +39,7 @@ var BlazemireVerge = &game.CardDef{
 			IsManaAbility: true,
 			ActivationCondition: opt.Val(game.Condition{
 				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []string{game.LandSubtypeSwamp, game.LandSubtypeMountain},
+					SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
 				},
 			}),
 			AdditionalCosts: []game.AdditionalCost{

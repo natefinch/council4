@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 type chooseActionAgent struct {
@@ -83,7 +84,7 @@ func TestRunPriorityLoopNonPassActionKeepsPriorityWithActor(t *testing.T) {
 	engine := NewEngine(nil)
 	landID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Forest",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone

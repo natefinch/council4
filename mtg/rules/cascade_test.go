@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCascadeExilesUntilLowerManaNonlandAndCastsIt(t *testing.T) {
@@ -13,7 +14,7 @@ func TestCascadeExilesUntilLowerManaNonlandAndCastsIt(t *testing.T) {
 	engine := NewEngine(nil)
 	cascadeID := addCardToHand(g, game.Player1, cascadeSpell(5))
 	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Cascade Hit", 2))
-	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []game.CardType{game.TypeLand}})
+	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []types.Card{types.Land}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 7))
 	g.Turn.PriorityPlayer = game.Player1
 
@@ -40,7 +41,7 @@ func TestCascadeBottomsCardsWhenNoEligibleCardExists(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cascadeID := addCardToHand(g, game.Player1, cascadeSpell(3))
-	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []game.CardType{game.TypeLand}})
+	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []types.Card{types.Land}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 7))
 	g.Turn.PriorityPlayer = game.Player1
 
@@ -88,7 +89,7 @@ func TestDiscoverExilesUntilEligibleCardAndCastsIt(t *testing.T) {
 	engine := NewEngine(nil)
 	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDiscover, Amount: 3}, nil)
 	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Discover Hit", 3))
-	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []game.CardType{game.TypeLand}})
+	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []types.Card{types.Land}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 4))
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -129,7 +130,7 @@ func TestDiscoverDeclinePutsFoundCardIntoHand(t *testing.T) {
 func cascadeSpell(manaValue int) *game.CardDef {
 	return &game.CardDef{
 		Name:      "Cascade Spell",
-		Types:     []game.CardType{game.TypeInstant},
+		Types:     []types.Card{types.Instant},
 		ManaValue: manaValue,
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Cascade}},

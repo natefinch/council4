@@ -125,12 +125,12 @@ func TestSubtypeToLiteralUsesGameConstants(t *testing.T) {
 		types   []string
 		want    string
 	}{
-		{name: "creature", subtype: "Bird", types: []string{"Creature"}, want: "game.CreatureSubtypeBird"},
-		{name: "kindred", subtype: "Human", types: []string{"Kindred"}, want: "game.CreatureSubtypeHuman"},
-		{name: "land", subtype: "Mountain", types: []string{"Land"}, want: "game.LandSubtypeMountain"},
-		{name: "artifact", subtype: "Equipment", types: []string{"Artifact"}, want: "game.ArtifactSubtypeEquipment"},
-		{name: "enchantment", subtype: "Aura", types: []string{"Enchantment"}, want: "game.EnchantmentSubtypeAura"},
-		{name: "unknown", subtype: "Unlisted", types: []string{"Creature"}, want: `"Unlisted"`},
+		{name: "creature", subtype: "Bird", types: []string{"Creature"}, want: "types.Bird"},
+		{name: "kindred", subtype: "Human", types: []string{"Kindred"}, want: "types.Human"},
+		{name: "land", subtype: "Mountain", types: []string{"Land"}, want: "types.Mountain"},
+		{name: "artifact", subtype: "Equipment", types: []string{"Artifact"}, want: "types.Equipment"},
+		{name: "enchantment", subtype: "Aura", types: []string{"Enchantment"}, want: "types.Aura"},
+		{name: "unknown", subtype: "Unlisted", types: []string{"Creature"}, want: `types.Sub("Unlisted")`},
 	}
 
 	for _, tt := range tests {
@@ -221,7 +221,7 @@ func TestGenerateCardSource(t *testing.T) {
 		`Name: "Lightning Bolt"`,
 		"mana.ColoredMana(mana.Red)",
 		"ManaValue: 1",
-		"game.TypeInstant",
+		"types.Instant",
 		"mana.Red",
 		"Abilities: []game.AbilityDef{}",
 		"Oracle text:",
@@ -259,8 +259,8 @@ func TestGenerateCardSourceCreature(t *testing.T) {
 	checks := []string{
 		"package s",
 		`Name: "Serra Angel"`,
-		"game.TypeCreature",
-		"game.CreatureSubtypeAngel",
+		"types.Creature",
+		"types.Angel",
 		"Power: opt.Val(game.PT{Value: 4})",
 		"Toughness: opt.Val(game.PT{Value: 4})",
 	}
@@ -301,13 +301,13 @@ func TestGenerateCardSourceModalDFC(t *testing.T) {
 
 	checks := []string{
 		"Layout: game.LayoutModalDFC",
-		"Faces: []game.CardFace",
+		"Back: opt.Val(game.CardFace",
 		`Name: "Front Spell"`,
 		`Name: "Back Land"`,
 		"ManaValue: 3",
-		"game.TypeSorcery",
-		"game.TypeLand",
-		"game.LandSubtypeForest",
+		"types.Sorcery",
+		"types.Land",
+		"types.Forest",
 		"mana.NewColorIdentity(mana.Green)",
 		"EntersTapped: true",
 	}
@@ -346,7 +346,7 @@ func TestGenerateCardSourceReversibleEmitsSeparateDefs(t *testing.T) {
 			t.Errorf("output missing %q\nfull output:\n%s", check, got)
 		}
 	}
-	if strings.Contains(got, "Faces: []game.CardFace") {
+	if strings.Contains(got, "Back: opt.Val(game.CardFace") {
 		t.Fatalf("reversible card generated face-selectable definition:\n%s", got)
 	}
 }

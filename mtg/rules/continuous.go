@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -29,9 +30,9 @@ type permanentEffectiveValues struct {
 	name       string
 	oracleText string
 	colors     []mana.Color
-	supertypes []game.Supertype
-	types      []game.CardType
-	subtypes   []string
+	supertypes []types.Super
+	types      []types.Card
+	subtypes   []types.Sub
 	abilities  []game.AbilityDef
 	controller game.PlayerID
 
@@ -63,15 +64,15 @@ func hasKeyword(g *game.Game, permanent *game.Permanent, keyword game.Keyword) b
 	return effectivePermanentValues(g, permanent).keywords[keyword]
 }
 
-func permanentHasType(g *game.Game, permanent *game.Permanent, cardType game.CardType) bool {
+func permanentHasType(g *game.Game, permanent *game.Permanent, cardType types.Card) bool {
 	return slices.Contains(effectivePermanentValues(g, permanent).types, cardType)
 }
 
-func permanentHasSubtype(g *game.Game, permanent *game.Permanent, subtype string) bool {
+func permanentHasSubtype(g *game.Game, permanent *game.Permanent, subtype types.Sub) bool {
 	return slices.Contains(effectivePermanentValues(g, permanent).subtypes, subtype)
 }
 
-func permanentHasSupertype(g *game.Game, permanent *game.Permanent, supertype game.Supertype) bool {
+func permanentHasSupertype(g *game.Game, permanent *game.Permanent, supertype types.Super) bool {
 	return slices.Contains(effectivePermanentValues(g, permanent).supertypes, supertype)
 }
 
@@ -113,7 +114,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values := permanentEffectiveValues{keywords: make(map[game.Keyword]bool)}
 	values.controller = permanent.Controller
 	if permanent.FaceDown {
-		values.types = []game.CardType{game.TypeCreature}
+		values.types = []types.Card{types.Creature}
 		if permanent.FaceDownKind == game.FaceDownDisguise {
 			values.abilities = []game.AbilityDef{faceDownDisguiseWardAbility()}
 			rebuildKeywords(&values)
@@ -129,9 +130,9 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values.name = card.Name
 	values.oracleText = card.OracleText
 	values.colors = append([]mana.Color(nil), card.Colors...)
-	values.supertypes = append([]game.Supertype(nil), card.Supertypes...)
-	values.types = append([]game.CardType(nil), card.Types...)
-	values.subtypes = append([]string(nil), card.Subtypes...)
+	values.supertypes = append([]types.Super(nil), card.Supertypes...)
+	values.types = append([]types.Card(nil), card.Types...)
+	values.subtypes = append([]types.Sub(nil), card.Subtypes...)
 	values.abilities = append([]game.AbilityDef(nil), card.Abilities...)
 	if card.Power.Exists {
 		values.powerPT = ptPtr(card.Power)
@@ -176,15 +177,15 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 			return player.Graveyard.Size()
 		}
 	case game.DynamicValueControllerCreatureCount:
-		return countControlledPermanentsWithType(g, controller, game.TypeCreature)
+		return countControlledPermanentsWithType(g, controller, types.Creature)
 	case game.DynamicValueControllerLandCount:
-		return countControlledPermanentsWithType(g, controller, game.TypeLand)
+		return countControlledPermanentsWithType(g, controller, types.Land)
 	case game.DynamicValueControllerArtifactCount:
-		return countControlledPermanentsWithType(g, controller, game.TypeArtifact)
+		return countControlledPermanentsWithType(g, controller, types.Artifact)
 	case game.DynamicValueAllBattlefieldCreatureCount:
 		count := 0
 		for _, permanent := range g.Battlefield {
-			if basePermanentHasType(g, permanent, game.TypeCreature) {
+			if basePermanentHasType(g, permanent, types.Creature) {
 				count++
 			}
 		}
@@ -193,7 +194,7 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 	return 0
 }
 
-func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType game.CardType) int {
+func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType types.Card) int {
 	count := 0
 	for _, permanent := range g.Battlefield {
 		if permanent.Controller == controller && basePermanentHasType(g, permanent, cardType) {
@@ -203,9 +204,9 @@ func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, c
 	return count
 }
 
-func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType game.CardType) bool {
+func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType types.Card) bool {
 	if permanent.FaceDown {
-		return cardType == game.TypeCreature
+		return cardType == types.Creature
 	}
 	card, ok := permanentCardDef(g, permanent)
 	return ok && card.HasType(cardType)
@@ -361,7 +362,7 @@ func staticAbilityPermanentCardDef(g *game.Game, permanent *game.Permanent) (*ga
 		if permanent.TokenDef == nil {
 			return nil, false
 		}
-		if len(permanent.TokenDef.Faces) == 0 && permanent.Face == game.FaceFront {
+		if !permanent.TokenDef.Back.Exists && permanent.Face == game.FaceFront {
 			return permanent.TokenDef, true
 		}
 		return permanent.TokenDef.FaceDef(permanent.Face)
@@ -370,7 +371,7 @@ func staticAbilityPermanentCardDef(g *game.Game, permanent *game.Permanent) (*ga
 	if !ok {
 		return nil, false
 	}
-	if len(card.Def.Faces) == 0 && permanent.Face == game.FaceFront {
+	if !card.Def.Back.Exists && permanent.Face == game.FaceFront {
 		return card.Def, true
 	}
 	return card.Def.FaceDef(permanent.Face)
@@ -380,7 +381,7 @@ func staticAbilityCardInstanceDef(card *game.CardInstance, face game.FaceIndex) 
 	if card == nil {
 		return nil
 	}
-	if len(card.Def.Faces) == 0 && face == game.FaceFront {
+	if !card.Def.Back.Exists && face == game.FaceFront {
 		return card.Def
 	}
 	return cardFaceOrDefault(card, face)
@@ -454,19 +455,19 @@ func continuousEffectApplies(g *game.Game, permanent *game.Permanent, values *pe
 func permanentValuesMatchSelectorForSource(source *game.Permanent, controller game.PlayerID, permanent *game.Permanent, values *permanentEffectiveValues, selector game.EffectSelector) bool {
 	switch selector {
 	case game.EffectSelectorAllCreatures:
-		return valuesHasType(values, game.TypeCreature)
+		return valuesHasType(values, types.Creature)
 	case game.EffectSelectorAllArtifacts:
-		return valuesHasType(values, game.TypeArtifact)
+		return valuesHasType(values, types.Artifact)
 	case game.EffectSelectorAllEnchantments:
-		return valuesHasType(values, game.TypeEnchantment)
+		return valuesHasType(values, types.Enchantment)
 	case game.EffectSelectorAllNonlandPermanents:
-		return !valuesHasType(values, game.TypeLand)
+		return !valuesHasType(values, types.Land)
 	case game.EffectSelectorAllPermanents:
 		return true
 	case game.EffectSelectorCreaturesYouControl:
-		return values.controller == controller && valuesHasType(values, game.TypeCreature)
+		return values.controller == controller && valuesHasType(values, types.Creature)
 	case game.EffectSelectorOtherCreaturesYouControl:
-		return source != nil && permanent.ObjectID != source.ObjectID && values.controller == controller && valuesHasType(values, game.TypeCreature)
+		return source != nil && permanent.ObjectID != source.ObjectID && values.controller == controller && valuesHasType(values, types.Creature)
 	case game.EffectSelectorEquippedCreature:
 		return source != nil && source.AttachedTo.Exists && permanent.ObjectID == source.AttachedTo.Val
 	default:
@@ -474,7 +475,7 @@ func permanentValuesMatchSelectorForSource(source *game.Permanent, controller ga
 	}
 }
 
-func valuesHasType(values *permanentEffectiveValues, cardType game.CardType) bool {
+func valuesHasType(values *permanentEffectiveValues, cardType types.Card) bool {
 	return slices.Contains(values.types, cardType)
 }
 
@@ -605,9 +606,9 @@ func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentE
 	values.name = copyValues.Name
 	values.oracleText = copyValues.OracleText
 	values.colors = append([]mana.Color(nil), copyValues.Colors...)
-	values.supertypes = append([]game.Supertype(nil), copyValues.Supertypes...)
-	values.types = append([]game.CardType(nil), copyValues.Types...)
-	values.subtypes = append([]string(nil), copyValues.Subtypes...)
+	values.supertypes = append([]types.Super(nil), copyValues.Supertypes...)
+	values.types = append([]types.Card(nil), copyValues.Types...)
+	values.subtypes = append([]types.Sub(nil), copyValues.Subtypes...)
 	values.abilities = append([]game.AbilityDef(nil), copyValues.Abilities...)
 	values.powerPT = ptPtr(copyValues.Power)
 	values.dynamicPower = dynamicValuePtr(copyValues.DynamicPower)
@@ -633,22 +634,22 @@ func recalculateDynamicPT(g *game.Game, values *permanentEffectiveValues) {
 
 func applyTypeLayer(values *permanentEffectiveValues, effect game.ContinuousEffect) {
 	if effect.SetSupertypes != nil {
-		values.supertypes = append([]game.Supertype(nil), effect.SetSupertypes...)
+		values.supertypes = append([]types.Super(nil), effect.SetSupertypes...)
 	}
 	values.supertypes = removeSupertypes(values.supertypes, effect.RemoveSupertypes)
 	values.supertypes = appendUniqueSupertypes(values.supertypes, effect.AddSupertypes...)
 
 	if effect.SetTypes != nil {
-		values.types = append([]game.CardType(nil), effect.SetTypes...)
+		values.types = append([]types.Card(nil), effect.SetTypes...)
 	}
 	values.types = removeTypes(values.types, effect.RemoveTypes)
 	values.types = appendUniqueTypes(values.types, effect.AddTypes...)
 
 	if effect.SetSubtypes != nil {
-		values.subtypes = append([]string(nil), effect.SetSubtypes...)
+		values.subtypes = append([]types.Sub(nil), effect.SetSubtypes...)
 	}
-	values.subtypes = removeStrings(values.subtypes, effect.RemoveSubtypes)
-	values.subtypes = appendUniqueStrings(values.subtypes, effect.AddSubtypes...)
+	values.subtypes = removeSubtypes(values.subtypes, effect.RemoveSubtypes)
+	values.subtypes = appendUniqueSubtypes(values.subtypes, effect.AddSubtypes...)
 }
 
 func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanentEffectiveValues) {
@@ -715,13 +716,13 @@ func appendUniqueColors(colors []mana.Color, add ...mana.Color) []mana.Color {
 	return colors
 }
 
-func removeSupertypes(supertypes []game.Supertype, remove []game.Supertype) []game.Supertype {
-	return slices.DeleteFunc(supertypes, func(supertype game.Supertype) bool {
+func removeSupertypes(supertypes []types.Super, remove []types.Super) []types.Super {
+	return slices.DeleteFunc(supertypes, func(supertype types.Super) bool {
 		return slices.Contains(remove, supertype)
 	})
 }
 
-func appendUniqueSupertypes(supertypes []game.Supertype, add ...game.Supertype) []game.Supertype {
+func appendUniqueSupertypes(supertypes []types.Super, add ...types.Super) []types.Super {
 	for _, supertype := range add {
 		if !slices.Contains(supertypes, supertype) {
 			supertypes = append(supertypes, supertype)
@@ -730,28 +731,28 @@ func appendUniqueSupertypes(supertypes []game.Supertype, add ...game.Supertype) 
 	return supertypes
 }
 
-func removeTypes(types []game.CardType, remove []game.CardType) []game.CardType {
-	return slices.DeleteFunc(types, func(cardType game.CardType) bool {
+func removeTypes(cardTypes []types.Card, remove []types.Card) []types.Card {
+	return slices.DeleteFunc(cardTypes, func(cardType types.Card) bool {
 		return slices.Contains(remove, cardType)
 	})
 }
 
-func appendUniqueTypes(types []game.CardType, add ...game.CardType) []game.CardType {
+func appendUniqueTypes(cardTypes []types.Card, add ...types.Card) []types.Card {
 	for _, cardType := range add {
-		if !slices.Contains(types, cardType) {
-			types = append(types, cardType)
+		if !slices.Contains(cardTypes, cardType) {
+			cardTypes = append(cardTypes, cardType)
 		}
 	}
-	return types
+	return cardTypes
 }
 
-func removeStrings(values []string, remove []string) []string {
-	return slices.DeleteFunc(values, func(value string) bool {
+func removeSubtypes(values []types.Sub, remove []types.Sub) []types.Sub {
+	return slices.DeleteFunc(values, func(value types.Sub) bool {
 		return slices.Contains(remove, value)
 	})
 }
 
-func appendUniqueStrings(values []string, add ...string) []string {
+func appendUniqueSubtypes(values []types.Sub, add ...types.Sub) []types.Sub {
 	for _, value := range add {
 		if !slices.Contains(values, value) {
 			values = append(values, value)

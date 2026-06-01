@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -54,7 +55,7 @@ func conditionObjectMatches(g *game.Game, ctx conditionContext, cond game.Condit
 	return true
 }
 
-func resolvedObjectHasType(g *game.Game, resolved resolvedObjectReference, cardType game.CardType) bool {
+func resolvedObjectHasType(g *game.Game, resolved resolvedObjectReference, cardType types.Card) bool {
 	if resolved.permanent != nil {
 		return permanentHasType(g, resolved.permanent, cardType)
 	}
@@ -103,7 +104,7 @@ func permanentMatchesConditionFilter(g *game.Game, permanent *game.Permanent, fi
 			return false
 		}
 	}
-	if len(filter.SubtypesAny) > 0 && !slices.ContainsFunc(filter.SubtypesAny, func(subtype string) bool {
+	if len(filter.SubtypesAny) > 0 && !slices.ContainsFunc(filter.SubtypesAny, func(subtype types.Sub) bool {
 		return slices.Contains(values.subtypes, subtype)
 	}) {
 		return false
@@ -112,7 +113,7 @@ func permanentMatchesConditionFilter(g *game.Game, permanent *game.Permanent, fi
 		if useBase {
 			return false
 		}
-		if !values.powerOK || !intComparisonMatches(values.power, filter.Power.Val) {
+		if !values.powerOK || !filter.Power.Val.Matches(values.power) {
 			return false
 		}
 	}
@@ -120,7 +121,7 @@ func permanentMatchesConditionFilter(g *game.Game, permanent *game.Permanent, fi
 		if useBase {
 			return false
 		}
-		if !values.toughnessOK || !intComparisonMatches(values.toughness, filter.Toughness.Val) {
+		if !values.toughnessOK || !filter.Toughness.Val.Matches(values.toughness) {
 			return false
 		}
 	}

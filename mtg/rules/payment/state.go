@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // State is the adapter interface that the payment planner requires from the
@@ -32,10 +33,10 @@ type State interface {
 
 	// PermanentHasType reports whether the permanent currently has the given
 	// card type, accounting for continuous type-changing effects.
-	PermanentHasType(p *game.Permanent, t game.CardType) bool
+	PermanentHasType(p *game.Permanent, t types.Card) bool
 
 	// PermanentHasSupertype reports whether the permanent has the given supertype.
-	PermanentHasSupertype(p *game.Permanent, s game.Supertype) bool
+	PermanentHasSupertype(p *game.Permanent, s types.Super) bool
 
 	// PermanentEffectiveColors returns the effective colors of the permanent.
 	PermanentEffectiveColors(p *game.Permanent) []mana.Color

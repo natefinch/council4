@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -13,7 +14,7 @@ func resolveFight(g *game.Game, obj *game.StackObject, effect game.Effect) {
 	}
 	first, firstOK := permanentByObjectID(g, obj.Targets[0].PermanentID)
 	second, secondOK := permanentByObjectID(g, obj.Targets[1].PermanentID)
-	if !firstOK || !secondOK || first.ObjectID == second.ObjectID || !permanentHasType(g, first, game.TypeCreature) || !permanentHasType(g, second, game.TypeCreature) {
+	if !firstOK || !secondOK || first.ObjectID == second.ObjectID || !permanentHasType(g, first, types.Creature) || !permanentHasType(g, second, types.Creature) {
 		return
 	}
 	dealPermanentDamage(g, first.CardInstanceID, first.ObjectID, effectiveController(g, first), second, effectivePower(g, first), false)
@@ -158,8 +159,8 @@ func clueTokenDef() *game.CardDef {
 	two := mana.Cost{mana.GenericMana(2)}
 	return &game.CardDef{
 		Name:     "Clue Token",
-		Types:    []game.CardType{game.TypeArtifact},
-		Subtypes: []string{game.ArtifactSubtypeClue},
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Clue},
 		Abilities: []game.AbilityDef{{
 			Kind:     game.ActivatedAbility,
 			Text:     "{2}, Sacrifice this artifact: Draw a card.",
@@ -169,7 +170,7 @@ func clueTokenDef() *game.CardDef {
 				Text:               "Sacrifice this artifact",
 				Amount:             1,
 				MatchPermanentType: true,
-				PermanentType:      game.TypeArtifact,
+				PermanentType:      types.Artifact,
 			}},
 			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
 		}},

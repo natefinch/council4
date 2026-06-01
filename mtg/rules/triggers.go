@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -177,7 +178,7 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	if event.Kind != game.EventSpellCast || event.Controller != controller || !hasKeyword(g, permanent, game.Prowess) {
 		return nil, false
 	}
-	if slices.Contains(event.CardTypes, game.TypeCreature) {
+	if slices.Contains(event.CardTypes, types.Creature) {
 		return nil, false
 	}
 	return &game.AbilityDef{
@@ -424,7 +425,7 @@ func triggerPlayerMatches(sourceController game.PlayerID, filter game.TriggerPla
 	}
 }
 
-func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType game.CardType) bool {
+func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType types.Card) bool {
 	if event.PermanentID != 0 {
 		if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
 			return permanentHasType(g, permanent, cardType)
@@ -446,7 +447,7 @@ func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType game.Car
 	return false
 }
 
-func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required []game.CardType, excluded []game.CardType) bool {
+func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required []types.Card, excluded []types.Card) bool {
 	for _, cardType := range required {
 		if !eventPermanentHasType(g, event, cardType) {
 			return false
@@ -460,7 +461,7 @@ func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required
 	return true
 }
 
-func eventCardTypeFiltersMatch(g *game.Game, event game.GameEvent, required []game.CardType, excluded []game.CardType) bool {
+func eventCardTypeFiltersMatch(g *game.Game, event game.GameEvent, required []types.Card, excluded []types.Card) bool {
 	types := event.CardTypes
 	if len(types) == 0 && event.CardID != 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {

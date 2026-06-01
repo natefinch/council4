@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -17,7 +18,7 @@ func TestLegalActionsIncludesPlayableLandBeforePass(t *testing.T) {
 	engine := NewEngine(nil)
 	landID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Forest",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 	})
 	addCardToHand(g, game.Player1, &game.CardDef{
 		Name: "Unsupported Card",
@@ -43,10 +44,10 @@ func TestLegalActionsIncludesCastSpellAfterPlayLandBeforePass(t *testing.T) {
 	engine := NewEngine(nil)
 	landID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Forest",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 	})
 	spellID := addCardToHand(g, game.Player1, greenCreature())
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -102,7 +103,7 @@ func TestLegalActionsDoesNotIncludePlayLandWhenUnavailable(t *testing.T) {
 			engine := NewEngine(nil)
 			addCardToHand(g, game.Player1, &game.CardDef{
 				Name:  "Forest",
-				Types: []game.CardType{game.TypeLand},
+				Types: []types.Card{types.Land},
 			})
 			tt.setup(g)
 
@@ -157,7 +158,7 @@ func TestCreatureAndSorceryLegalOnlyAtSorcerySpeed(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
 			spellID := addCardToHand(g, game.Player1, tt.card)
-			addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+			addBasicLandPermanent(g, game.Player1, types.Forest)
 			tt.setup(g)
 
 			if containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
@@ -171,7 +172,7 @@ func TestInstantLegalWhileStackNonEmpty(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	instantID := addCardToHand(g, game.Player2, greenInstant())
-	addBasicLandPermanent(g, game.Player2, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player2, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player2
@@ -188,10 +189,10 @@ func TestFlashCreatureLegalAtInstantSpeed(t *testing.T) {
 	flashID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:      "Ambush Viper",
 		ManaCost:  greenCost(),
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Abilities: []game.AbilityDef{{Keywords: []game.Keyword{game.Flash}}},
 	})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhaseBeginning
 	g.Turn.Step = game.StepUpkeep
 	g.Stack.Push(&game.StackObject{ID: g.IDGen.Next(), Kind: game.StackSpell})
@@ -205,7 +206,7 @@ func TestUnpayableSpellIsNotLegal(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, greenCreature())
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeMountain)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -221,11 +222,11 @@ func TestLegalActionsIncludesPayableXValues(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Gelatinous Genesis",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 	})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeMountain)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeIsland)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player1, types.Island)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -247,11 +248,11 @@ func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Gelatinous Genesis",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 	})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeMountain)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeIsland)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player1, types.Island)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -274,23 +275,23 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Village Rites",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
 				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 				},
 			},
 		},
 	})
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Goblin Token",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
 	})
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -323,19 +324,19 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Chosen Offering",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
 				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 				},
 			},
 		},
 	})
-	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
-	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []types.Card{types.Creature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []types.Card{types.Creature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
@@ -362,12 +363,12 @@ func TestPaymentChoiceCanPayPhyrexianManaWithLife(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Phyrexian Choice",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{Kind: game.SpellAbility},
 		},
 	})
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
@@ -395,12 +396,12 @@ func TestPaymentChoiceRejectsUnavailablePhyrexianLifeOption(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Phyrexian Choice",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{Kind: game.SpellAbility},
 		},
 	})
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
@@ -424,13 +425,13 @@ func TestPaymentChoiceDoesNotOvercommitPhyrexianLife(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Double Phyrexian Choice",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{Kind: game.SpellAbility},
 		},
 	})
-	firstSwamp := addBasicLandPermanent(g, game.Player1, game.LandSubtypeSwamp)
-	secondSwamp := addBasicLandPermanent(g, game.Player1, game.LandSubtypeSwamp)
+	firstSwamp := addBasicLandPermanent(g, game.Player1, types.Swamp)
+	secondSwamp := addBasicLandPermanent(g, game.Player1, types.Swamp)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}, {1}}}}
@@ -453,20 +454,20 @@ func TestPaymentChoiceFallbackSelectsMultipleAdditionalCostObjects(t *testing.T)
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Double Offering",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
 				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice two creatures", Amount: 2, MatchPermanentType: true, PermanentType: game.TypeCreature},
+					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice two creatures", Amount: 2, MatchPermanentType: true, PermanentType: types.Creature},
 				},
 			},
 		},
 	})
-	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
-	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
-	third := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Third", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "First", Types: []types.Card{types.Creature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Second", Types: []types.Card{types.Creature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	third := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Third", Types: []types.Card{types.Creature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -491,7 +492,7 @@ func TestAlternativeCostCanMakeSpellPayable(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Free Alternate",
 		ManaCost: optCost(normalCost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -523,7 +524,7 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Alternate Offering",
 		ManaCost: optCost(normalCost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -531,15 +532,15 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 					{
 						Label: "Sacrifice instead",
 						AdditionalCosts: []game.AdditionalCost{
-							{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+							{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 						},
 					},
 				},
 			},
 		},
 	})
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Offering", Types: []game.CardType{game.TypeCreature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Offering", Types: []types.Card{types.Creature}, Power: optPT(game.PT{Value: 1}), Toughness: optPT(game.PT{Value: 1})})
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
@@ -562,19 +563,19 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Costly Harvest",
 		ManaCost: optCost(cost),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
 				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 				},
 			},
 		},
 	})
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Llanowar Elves",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
 	}, mana.Green, 1)
@@ -605,7 +606,7 @@ func TestLegalActionsIncludesModalSpellModeChoices(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, modalCharm())
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Silvercoat Lion",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 2}),
 		Toughness: optPT(game.PT{Value: 2}),
 	})
@@ -628,7 +629,7 @@ func TestModalSpellSupportsChooseTwo(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, modalSpellWithModeRange(2, 2))
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -650,7 +651,7 @@ func TestModalSpellSupportsOneOrBothAndUpToOne(t *testing.T) {
 	engine := NewEngine(nil)
 	oneOrBothID := addCardToHand(g, game.Player1, modalSpellWithModeRange(1, 2))
 	upToOneID := addCardToHand(g, game.Player1, modalSpellWithModeRange(0, 1))
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -675,7 +676,7 @@ func TestModalSpellSupportsChooseThreeAndAllModes(t *testing.T) {
 	engine := NewEngine(nil)
 	chooseThreeID := addCardToHand(g, game.Player1, modalSpellWithModeRange(3, 3))
 	allModesID := addCardToHand(g, game.Player1, modalSpellWithModeRange(3, 3))
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -696,7 +697,7 @@ func TestModalSpellDuplicateModesAreCanonicalized(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, modalSpellWithDuplicateModes(2, 2))
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -718,7 +719,7 @@ func TestModalSpellResolvesChosenModeOnly(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, modalCharm())
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Silvercoat Lion",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 2}),
 		Toughness: optPT(game.PT{Value: 2}),
 	})
@@ -744,11 +745,11 @@ func TestEquipAbilityUsesStackAndAttachesOnResolution(t *testing.T) {
 	equipment := addCombatPermanent(g, game.Player1, equipEquipment())
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Runeclaw Bear",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 2}),
 		Toughness: optPT(game.PT{Value: 2}),
 	})
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -783,17 +784,17 @@ func TestEquipAbilityOnlyAsSorceryToCreatureYouControl(t *testing.T) {
 	equipment := addCombatPermanent(g, game.Player1, equipEquipment())
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Runeclaw Bear",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 2}),
 		Toughness: optPT(game.PT{Value: 2}),
 	})
 	opponentCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Silvercoat Lion",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 2}),
 		Toughness: optPT(game.PT{Value: 2}),
 	})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhaseBeginning
 	g.Turn.Step = game.StepUpkeep
 
@@ -816,7 +817,7 @@ func TestGeneralActivatedAbilityUsesStackAndResolves(t *testing.T) {
 		Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
 		Effects:  []game.Effect{{Type: game.EffectDamage, TargetIndex: 0, Amount: 2}},
 	}))
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.ActivePlayer = game.Player2
 	g.Turn.PriorityPlayer = game.Player1
 	g.Turn.Phase = game.PhaseBeginning
@@ -914,7 +915,7 @@ func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T
 	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
 		Kind: game.ActivatedAbility,
 		AdditionalCosts: []game.AdditionalCost{
-			{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: game.TypeCreature},
+			{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 		},
 		Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: -1, Amount: 1}},
 	}))
@@ -940,7 +941,7 @@ func TestTargetedSpellIsNotLegalBeforeTargetingSupport(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Giant Growth",
 		ManaCost: greenCost(),
-		Types:    []game.CardType{game.TypeInstant},
+		Types:    []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -950,7 +951,7 @@ func TestTargetedSpellIsNotLegalBeforeTargetingSupport(t *testing.T) {
 			},
 		},
 	})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -964,7 +965,7 @@ func TestApplyActionPlayLandMovesCardToBattlefield(t *testing.T) {
 	engine := NewEngine(nil)
 	landID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Forest",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -997,7 +998,7 @@ func TestApplyActionCastSpellPaysAndPushesStackObject(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, greenCreature())
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -1030,7 +1031,7 @@ func TestApplyActionInvalidPlayLandDoesNotMutate(t *testing.T) {
 	engine := NewEngine(nil)
 	landID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Forest",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 	})
 	g.Turn.Phase = game.PhaseBeginning
 	g.Turn.Step = game.StepDraw
@@ -1053,7 +1054,7 @@ func TestApplyActionInvalidCastDoesNotMutate(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, greenCreature())
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhaseBeginning
 	g.Turn.Step = game.StepDraw
 
@@ -1076,18 +1077,18 @@ func TestSplitSecondAllowsOnlyManaAbilitiesAndPass(t *testing.T) {
 	engine := NewEngine(nil)
 	manaRock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Mana Rock",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	}, mana.Colorless, 1)
 	instantID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Response",
-		Types: []game.CardType{game.TypeInstant},
+		Types: []types.Card{types.Instant},
 	})
 	splitSecondID := g.IDGen.Next()
 	g.CardInstances[splitSecondID] = &game.CardInstance{
 		ID: splitSecondID,
 		Def: &game.CardDef{
 			Name:  "Split Second Spell",
-			Types: []game.CardType{game.TypeInstant},
+			Types: []types.Card{types.Instant},
 			Abilities: []game.AbilityDef{{
 				Kind:     game.StaticAbility,
 				Keywords: []game.Keyword{game.SplitSecond},
@@ -1116,7 +1117,7 @@ func TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn(t *testing.T) {
 	engine := NewEngine(nil)
 	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:    "Test Walker",
-		Types:   []game.CardType{game.TypePlaneswalker},
+		Types:   []types.Card{types.Planeswalker},
 		Loyalty: optInt(3),
 		Abilities: []game.AbilityDef{{
 			Kind:             game.ActivatedAbility,
@@ -1157,7 +1158,7 @@ func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 	kickerCost := mana.Cost{mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Kicker Spell",
-		Types: []game.CardType{game.TypeSorcery},
+		Types: []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind:          game.SpellAbility,
 			Effects:       []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: -1}},
@@ -1165,7 +1166,7 @@ func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
 		}},
 	})
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -1195,7 +1196,7 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 	kickerCost := mana.Cost{mana.ColoredMana(mana.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Greedy Kicker Spell",
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		ManaCost: optCost(baseCost),
 		Abilities: []game.AbilityDef{{
 			Kind:          game.SpellAbility,
@@ -1203,7 +1204,7 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
 		}},
 	})
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
@@ -1225,7 +1226,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	flashbackCost := mana.Cost{mana.ColoredMana(mana.Green)}
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Flashback Spell",
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		ManaCost: optCost(mana.Cost{mana.GenericMana(5)}),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
@@ -1241,7 +1242,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	})
 	g.Players[game.Player1].Hand.Remove(cardID)
 	g.Players[game.Player1].Graveyard.Add(cardID)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -1271,7 +1272,7 @@ func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 	flashbackCost := mana.Cost{mana.ColoredMana(mana.Green)}
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Expensive Flashback Spell",
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		ManaCost: optCost(mana.Cost{mana.GenericMana(5)}),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
@@ -1284,7 +1285,7 @@ func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 			},
 		},
 	})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
@@ -1299,12 +1300,12 @@ func TestGraveyardAbilityExilesSourceCardAsCost(t *testing.T) {
 	engine := NewEngine(nil)
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:      "Fanatic Source",
-		Types:     []game.CardType{game.TypeCreature},
-		Subtypes:  []string{game.CreatureSubtypeSnake, game.CreatureSubtypeDruid},
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Snake, types.Druid},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 4}),
 		Abilities: []game.AbilityDef{
-			game.EternalizeAbility(mana.Cost{mana.GenericMana(0)}, game.CreatureSubtypeSnake, game.CreatureSubtypeDruid),
+			game.EternalizeAbility(mana.Cost{mana.GenericMana(0)}, types.Snake, types.Druid),
 		},
 	})
 	g.Players[game.Player1].Hand.Remove(cardID)
@@ -1338,7 +1339,7 @@ func TestGraveyardAbilityExilesSourceCardAsCost(t *testing.T) {
 	if token == nil || token.TokenDef == nil {
 		t.Fatal("source-card ability did not create a token")
 	}
-	if got := token.TokenDef.Subtypes; !slices.Equal(got, []string{game.CreatureSubtypeZombie, game.CreatureSubtypeSnake, game.CreatureSubtypeDruid}) {
+	if got := token.TokenDef.Subtypes; !slices.Equal(got, []types.Sub{types.Zombie, types.Snake, types.Druid}) {
 		t.Fatalf("token subtypes = %+v, want Zombie Snake Druid", got)
 	}
 	if got := token.TokenDef.Colors; !slices.Equal(got, []mana.Color{mana.Black}) {
@@ -1351,7 +1352,7 @@ func TestGraveyardOnlyAbilityIsNotActivatedFromBattlefield(t *testing.T) {
 	engine := NewEngine(nil)
 	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Wrong Zone Source",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
@@ -1377,10 +1378,10 @@ func TestRuleEffectAllowsCastingFromGraveyard(t *testing.T) {
 	cardID := addCardToHand(g, game.Player1, greenInstant())
 	g.Players[game.Player1].Hand.Remove(cardID)
 	g.Players[game.Player1].Graveyard.Add(cardID)
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Graveyard Permission",
-		Types: []game.CardType{game.TypeEnchantment},
+		Types: []types.Card{types.Enchantment},
 		Abilities: []game.AbilityDef{{
 			Kind: game.StaticAbility,
 			Effects: []game.Effect{{
@@ -1405,7 +1406,7 @@ func TestProwessTriggersOnNoncreatureSpellCast(t *testing.T) {
 	engine := NewEngine(nil)
 	prowess := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Prowess)
 	spellID := addCardToHand(g, game.Player1, greenInstant())
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
@@ -1476,7 +1477,7 @@ func TestPhasedOutPermanentsPhaseInAndCannotActivate(t *testing.T) {
 	engine := NewEngine(nil)
 	manaRock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Mana Rock",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	}, mana.Colorless, 1)
 	manaRock.PhasedOut = true
 	g.Turn.PriorityPlayer = game.Player1
@@ -1507,7 +1508,7 @@ func greenCreature() *game.CardDef {
 		Name:      "Runeclaw Bear",
 		ManaCost:  greenCost(),
 		ManaValue: 1,
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 	}
 }
 
@@ -1515,7 +1516,7 @@ func greenInstant() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Giant Growth",
 		ManaCost: greenCost(),
-		Types:    []game.CardType{game.TypeInstant},
+		Types:    []types.Card{types.Instant},
 	}
 }
 
@@ -1523,14 +1524,14 @@ func greenSorcery() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Explore",
 		ManaCost: greenCost(),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 	}
 }
 
 func modalCharm() *game.CardDef {
 	return &game.CardDef{
 		Name:  "Test Charm",
-		Types: []game.CardType{game.TypeInstant},
+		Types: []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -1562,7 +1563,7 @@ func modalSpellWithModeRangeAndDuplicates(minModes int, maxModes int, allowDupli
 	return &game.CardDef{
 		Name:     "Flexible Charm",
 		ManaCost: greenCost(),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind:                game.SpellAbility,
@@ -1583,8 +1584,8 @@ func equipEquipment() *game.CardDef {
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 	return &game.CardDef{
 		Name:     "Test Sword",
-		Types:    []game.CardType{game.TypeArtifact},
-		Subtypes: []string{game.ArtifactSubtypeEquipment},
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.ActivatedAbility,
@@ -1601,7 +1602,7 @@ func activatedAbilityPermanent(ability *game.AbilityDef) *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{
 		Name:      "Activated Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(pt),
 		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{*ability},

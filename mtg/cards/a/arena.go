@@ -3,6 +3,7 @@ package a
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -17,7 +18,7 @@ import (
 var Arena = &game.CardDef{
 	Name:       "Arena",
 	ManaValue:  0,
-	Types:      []game.CardType{game.TypeLand},
+	Types:      []types.Card{types.Land},
 	OracleText: "{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other. (Each deals damage equal to its power to the other.)",
 	Abilities: []game.AbilityDef{
 		{
@@ -36,7 +37,7 @@ var Arena = &game.CardDef{
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature},
+						PermanentTypes: []types.Card{types.Creature},
 						Controller:     game.ControllerYou,
 					},
 				},
@@ -46,7 +47,7 @@ var Arena = &game.CardDef{
 					Constraint: "creature of an opponent's choice they control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature},
+						PermanentTypes: []types.Card{types.Creature},
 						Controller:     game.ControllerYou,
 					},
 					Chooser: game.TargetChooserOpponent,

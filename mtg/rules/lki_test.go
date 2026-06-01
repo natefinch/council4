@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
@@ -14,11 +15,11 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
-		RequirePermanentTypes: []game.CardType{game.TypeCreature},
+		RequirePermanentTypes: []types.Card{types.Creature},
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 	land := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:  "Animated Land",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 	})
 	one := game.PT{Value: 1}
 	g.ContinuousEffects = append(g.ContinuousEffects,
@@ -26,7 +27,7 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 			ID:               1,
 			AffectedObjectID: land.ObjectID,
 			Layer:            game.LayerType,
-			AddTypes:         []game.CardType{game.TypeCreature},
+			AddTypes:         []types.Card{types.Creature},
 		},
 		game.ContinuousEffect{
 			ID:               2,
@@ -43,7 +44,7 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 	if !ok {
 		t.Fatal("missing last-known snapshot for destroyed animated land")
 	}
-	if !slices.Contains(snapshot.Types, game.TypeCreature) || !snapshot.Toughness.Exists || snapshot.Toughness.Val != 1 {
+	if !slices.Contains(snapshot.Types, types.Creature) || !snapshot.Toughness.Exists || snapshot.Toughness.Val != 1 {
 		t.Fatalf("snapshot = %+v, want effective creature with toughness 1", snapshot)
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {

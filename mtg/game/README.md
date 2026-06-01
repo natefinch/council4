@@ -217,4 +217,4 @@ This package is the **data model** used by the rules engine. Future layers will 
 
 ### Double-faced cards
 
-`CardDef.Layout` and `CardDef.Faces` model transform, modal DFC, and double-faced token layouts. Cards in zones other than the stack and battlefield use their front-face/default characteristics. Cast actions, stack objects, permanents, events, and LKI snapshots carry `FaceIndex` so modal DFC faces and transformed permanents use the correct face-specific costs, types, abilities, P/T, and ETB data while they are on the stack or battlefield.
+`CardDef.Layout` and `CardDef.Back` model transform, modal DFC, and double-faced token layouts. `CardDef` root fields are the front-face/default characteristics, and `Back` is present only when the card has a second printed face. Cast actions, stack objects, permanents, events, and LKI snapshots carry `FaceIndex` so modal DFC faces and transformed permanents use the correct face-specific costs, types, abilities, P/T, and ETB data while they are on the stack or battlefield.

@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/opt"
+import (
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
 
 // ObjectReferenceKind identifies a runtime object binding used by declarative
 // effects.
@@ -76,7 +79,7 @@ type CardCondition struct {
 	Card CardReference
 
 	RequirePermanentCard bool
-	Types                []CardType
-	Supertypes           []Supertype
-	SubtypesAny          []string
+	Types                []types.Card
+	Supertypes           []types.Super
+	SubtypesAny          []types.Sub
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestResolveTopOfStackAppendsResolveLog(t *testing.T) {
@@ -50,7 +51,7 @@ func TestResolveCreatureSpellMovesCardToBattlefield(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, greenCreature())
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
@@ -97,7 +98,7 @@ func TestResolveSorcerySpellMovesCardToGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, greenSorcery())
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {

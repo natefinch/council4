@@ -1,6 +1,10 @@
 package game
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game/types"
+)
 
 func TestEventsForTurnReturnsCopy(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
@@ -8,17 +12,17 @@ func TestEventsForTurnReturnsCopy(t *testing.T) {
 	g.EventTurnStarts = []int{0}
 	g.AppendEvent(GameEvent{
 		Kind:      EventSpellCast,
-		CardTypes: []CardType{TypeInstant},
+		CardTypes: []types.Card{types.Instant},
 	})
 
 	events := g.EventsForTurn(1)
 	events[0].Kind = EventDamageDealt
-	events[0].CardTypes[0] = TypeCreature
+	events[0].CardTypes[0] = types.Creature
 
 	if g.Events[0].Kind != EventSpellCast {
 		t.Fatalf("event kind mutated through EventsForTurn copy: %v", g.Events[0].Kind)
 	}
-	if g.Events[0].CardTypes[0] != TypeInstant {
+	if g.Events[0].CardTypes[0] != types.Instant {
 		t.Fatalf("event card types mutated through EventsForTurn copy: %v", g.Events[0].CardTypes)
 	}
 }
@@ -45,12 +49,12 @@ func TestEventsThisTurnAndPreviousTurnReturnCopies(t *testing.T) {
 
 func TestAppendEventCopiesEventSlices(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
-	cardTypes := []CardType{TypeSorcery}
+	cardTypes := []types.Card{types.Sorcery}
 
 	g.AppendEvent(GameEvent{Kind: EventSpellCast, CardTypes: cardTypes})
-	cardTypes[0] = TypeArtifact
+	cardTypes[0] = types.Artifact
 
-	if g.Events[0].CardTypes[0] != TypeSorcery {
+	if g.Events[0].CardTypes[0] != types.Sorcery {
 		t.Fatalf("AppendEvent aliased caller card types: %v", g.Events[0].CardTypes)
 	}
 }

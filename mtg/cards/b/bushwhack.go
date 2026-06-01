@@ -3,6 +3,7 @@ package b
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -24,7 +25,7 @@ var Bushwhack = &game.CardDef{
 	ManaValue:     1,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
-	Types:         []game.CardType{game.TypeSorcery},
+	Types:         []types.Card{types.Sorcery},
 	OracleText:    "Choose one —\n• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.\n• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
 	Abilities: []game.AbilityDef{
 		{
@@ -41,9 +42,9 @@ var Bushwhack = &game.CardDef{
 								SourceZone:     game.ZoneLibrary,
 								Destination:    game.ZoneHand,
 								MatchCardType:  true,
-								CardType:       game.TypeLand,
+								CardType:       types.Land,
 								MatchSupertype: true,
-								Supertype:      game.Basic,
+								Supertype:      types.Basic,
 								Reveal:         true,
 								Shuffle:        true,
 							}),
@@ -59,7 +60,7 @@ var Bushwhack = &game.CardDef{
 							Constraint: "creature you control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []game.CardType{game.TypeCreature},
+								PermanentTypes: []types.Card{types.Creature},
 								Controller:     game.ControllerYou,
 							},
 						},
@@ -69,7 +70,7 @@ var Bushwhack = &game.CardDef{
 							Constraint: "creature you don't control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []game.CardType{game.TypeCreature},
+								PermanentTypes: []types.Card{types.Creature},
 								Controller:     game.ControllerNotYou,
 							},
 						},

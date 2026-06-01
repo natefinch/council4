@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -77,7 +78,7 @@ type ResolutionChoice struct {
 
 	ColorSource    ResolutionChoiceColorSource
 	Colors         []mana.Color
-	CardTypes      []CardType
+	CardTypes      []types.Card
 	PlayerRelation PlayerRelation
 	Zone           ZoneType
 }
@@ -86,7 +87,7 @@ type ResolutionChoice struct {
 type ResolutionChoiceResult struct {
 	Kind     ResolutionChoiceKind
 	Color    mana.Color
-	CardType CardType
+	CardType types.Card
 	Player   PlayerID
 	CardID   id.ID
 }

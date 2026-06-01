@@ -1,8 +1,11 @@
 package game
 
-import "github.com/natefinch/council4/opt"
-
-import "github.com/natefinch/council4/mtg/game/mana"
+import (
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
 
 // TargetAllow identifies broad categories a target spec can choose from. The
 // targetability test starts with the word "target" and the target kind chosen as
@@ -56,31 +59,13 @@ const (
 	CombatStateAttackingOrBlocking
 )
 
-// ComparisonOp identifies an integer comparison operation.
-type ComparisonOp int
-
-const (
-	CompareAny ComparisonOp = iota
-	CompareEqual
-	CompareLessOrEqual
-	CompareGreaterOrEqual
-	CompareLessThan
-	CompareGreaterThan
-)
-
-// IntComparison is a simple comparison against a fixed integer value.
-type IntComparison struct {
-	Op    ComparisonOp
-	Value int
-}
-
 // TargetPredicate carries structured target legality predicates parsed from
 // common oracle text. Empty fields are wildcards. These predicates model target
 // restrictions that must be legal when chosen and again on resolution
 // (CR 115.1, CR 608.2b).
 type TargetPredicate struct {
-	PermanentTypes []CardType
-	ExcludedTypes  []CardType
+	PermanentTypes []types.Card
+	ExcludedTypes  []types.Card
 
 	Colors         []mana.Color
 	ExcludedColors []mana.Color
@@ -94,9 +79,9 @@ type TargetPredicate struct {
 	Keyword         Keyword
 	ExcludedKeyword Keyword
 
-	ManaValue opt.V[IntComparison]
-	Power     opt.V[IntComparison]
-	Toughness opt.V[IntComparison]
+	ManaValue opt.V[compare.Int]
+	Power     opt.V[compare.Int]
+	Toughness opt.V[compare.Int]
 
 	Another bool
 }

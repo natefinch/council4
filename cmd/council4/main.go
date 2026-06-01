@@ -13,6 +13,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/opt"
 )
@@ -99,8 +100,8 @@ func landOnlyConfigs(deckSize int) [game.NumPlayers]game.PlayerConfig {
 func forest() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Forest",
-		Types:    []game.CardType{game.TypeLand},
-		Subtypes: []string{game.LandSubtypeForest},
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Forest},
 	}
 }
 
@@ -151,8 +152,8 @@ func grizzlyBears() *game.CardDef {
 		Name:      "Grizzly Bears",
 		ManaCost:  greenCost(),
 		ManaValue: 1,
-		Types:     []game.CardType{game.TypeCreature},
-		Subtypes:  []string{game.CreatureSubtypeBear},
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Bear},
 		Power:     opt.Val(power),
 		Toughness: opt.Val(toughness),
 	}
@@ -181,7 +182,7 @@ func creatureCard(name string, power int, toughness int, keywords ...game.Keywor
 		Name:      name,
 		ManaCost:  greenCost(),
 		ManaValue: 1,
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(p),
 		Toughness: opt.Val(t),
 		Abilities: []game.AbilityDef{
@@ -198,7 +199,7 @@ func divinationLike() *game.CardDef {
 		Name:      "Simple Divination",
 		ManaCost:  greenCost(),
 		ManaValue: 1,
-		Types:     []game.CardType{game.TypeSorcery},
+		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -215,7 +216,7 @@ func healingSpell() *game.CardDef {
 		Name:      "Simple Healing",
 		ManaCost:  greenCost(),
 		ManaValue: 1,
-		Types:     []game.CardType{game.TypeSorcery},
+		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -232,7 +233,7 @@ func lavaSpikeLike() *game.CardDef {
 		Name:      "Simple Lava Spike",
 		ManaCost:  greenCost(),
 		ManaValue: 1,
-		Types:     []game.CardType{game.TypeSorcery},
+		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -535,7 +536,7 @@ func countLandsControlled(g *game.Game, playerID game.PlayerID) int {
 			continue
 		}
 		card, ok := g.GetCardInstance(permanent.CardInstanceID)
-		if ok && card.Def.HasType(game.TypeLand) {
+		if ok && card.Def.HasType(types.Land) {
 			count++
 		}
 	}

@@ -3,6 +3,7 @@ package b
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -25,8 +26,8 @@ var BlazingSunsteel = &game.CardDef{
 	ManaValue:     2,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
-	Types:         []game.CardType{game.TypeArtifact},
-	Subtypes:      []string{game.ArtifactSubtypeEquipment},
+	Types:         []types.Card{types.Artifact},
+	Subtypes:      []types.Sub{types.Equipment},
 	OracleText:    "Equipped creature gets +1/+0 for each opponent you have.\nWhenever equipped creature is dealt damage, it deals that much damage to any target.\nEquip {4}",
 	Abilities: []game.AbilityDef{
 		{
@@ -91,7 +92,7 @@ var BlazingSunsteel = &game.CardDef{
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature},
+						PermanentTypes: []types.Card{types.Creature},
 						Controller:     game.ControllerYou,
 					},
 				},

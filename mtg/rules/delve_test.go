@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestDelveMakesGenericSpellPayableAndExilesGraveyardCards(t *testing.T) {
@@ -33,7 +34,7 @@ func TestDelveDoesNotExileWhenManaCanPay(t *testing.T) {
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, delveSpell(mana.Cost{mana.GenericMana(1)}))
 	graveID := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Graveyard Card"})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	setMainPhasePriority(g, game.Player1)
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
@@ -50,7 +51,7 @@ func TestDelveExilesOnlyCardsNeededAfterAvailableMana(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, delveSpell(mana.Cost{mana.GenericMana(2)}))
 	first := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
 	second := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	setMainPhasePriority(g, game.Player1)
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
@@ -108,7 +109,7 @@ func TestDelvePaymentExcludesSourceCardFromGraveyard(t *testing.T) {
 func delveSpell(cost mana.Cost) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Delve Spell",
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		ManaCost: optCost(cost),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Delve}},

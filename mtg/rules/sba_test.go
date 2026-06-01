@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCheckStateBasedActionsEliminatesPlayers(t *testing.T) {
@@ -246,7 +247,7 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 	zero := game.PT{Value: 0}
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Indestructible Zero Toughness",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(zero),
 		Toughness: optPT(zero),
 		Abilities: []game.AbilityDef{
@@ -276,7 +277,7 @@ func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing
 	zero := game.PT{Value: 0}
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Zero Toughness",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(zero),
 		Toughness: optPT(zero),
 	})
@@ -345,7 +346,7 @@ func TestStateBasedActionsMoveThenRemoveLethalToken(t *testing.T) {
 		Token:        true,
 		TokenDef: &game.CardDef{
 			Name:      "Token",
-			Types:     []game.CardType{game.TypeCreature},
+			Types:     []types.Card{types.Creature},
 			Power:     optPT(pt),
 			Toughness: optPT(pt),
 		},
@@ -407,8 +408,8 @@ func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
 	duplicate := addLegendaryPermanent(g, game.Player1, "Godo")
 	aura := addPermanentForSBA(g, game.Player1, &game.CardDef{
 		Name:     "Test Aura",
-		Types:    []game.CardType{game.TypeEnchantment},
-		Subtypes: []string{game.EnchantmentSubtypeAura},
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
 	})
 	attachPermanent(g, aura, duplicate)
 
@@ -440,8 +441,8 @@ func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
 func addLegendaryPermanent(g *game.Game, controller game.PlayerID, name string) *game.Permanent {
 	return addPermanentForSBA(g, controller, &game.CardDef{
 		Name:       name,
-		Supertypes: []game.Supertype{game.Legendary},
-		Types:      []game.CardType{game.TypeCreature},
+		Supertypes: []types.Super{types.Legendary},
+		Types:      []types.Card{types.Creature},
 		Power:      optPT(game.PT{Value: 2}),
 		Toughness:  optPT(game.PT{Value: 2}),
 	})

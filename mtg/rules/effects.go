@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -463,7 +464,7 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 	case game.EffectProliferate:
 		res.succeeded = r.engine.resolveProliferate(r.game, r.obj, r.agents, r.log)
 	case game.EffectGoad:
-		if permanent, ok := r.permanent(effect); ok && permanentHasType(r.game, permanent, game.TypeCreature) {
+		if permanent, ok := r.permanent(effect); ok && permanentHasType(r.game, permanent, types.Creature) {
 			goadPermanent(r.game, permanent, r.obj.Controller)
 			res.succeeded = true
 		}
@@ -652,10 +653,10 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 		token.Colors = append([]mana.Color(nil), spec.SetColors...)
 	}
 	if len(spec.SetTypes) > 0 {
-		token.Types = append([]game.CardType(nil), spec.SetTypes...)
+		token.Types = append([]types.Card(nil), spec.SetTypes...)
 	}
 	if len(spec.SetSubtypes) > 0 {
-		token.Subtypes = append([]string(nil), spec.SetSubtypes...)
+		token.Subtypes = append([]types.Sub(nil), spec.SetSubtypes...)
 	}
 	if spec.SetPower.Exists {
 		token.Power = spec.SetPower
@@ -680,13 +681,26 @@ func copyCardDef(source *game.CardDef) *game.CardDef {
 	copied := *source
 	copied.Colors = append([]mana.Color(nil), source.Colors...)
 	copied.ColorIdentity = source.ColorIdentity
-	copied.Supertypes = append([]game.Supertype(nil), source.Supertypes...)
-	copied.Types = append([]game.CardType(nil), source.Types...)
-	copied.Subtypes = append([]string(nil), source.Subtypes...)
+	copied.Supertypes = append([]types.Super(nil), source.Supertypes...)
+	copied.Types = append([]types.Card(nil), source.Types...)
+	copied.Subtypes = append([]types.Sub(nil), source.Subtypes...)
 	copied.EntersWithCounters = append([]game.CounterPlacement(nil), source.EntersWithCounters...)
 	copied.Abilities = append([]game.AbilityDef(nil), source.Abilities...)
-	copied.Faces = append([]game.CardFace(nil), source.Faces...)
+	if source.Back.Exists {
+		copied.Back = opt.Val(copyCardFace(source.Back.Val))
+	}
 	return &copied
+}
+
+func copyCardFace(source game.CardFace) game.CardFace {
+	copied := source
+	copied.Colors = append([]mana.Color(nil), source.Colors...)
+	copied.Supertypes = append([]types.Super(nil), source.Supertypes...)
+	copied.Types = append([]types.Card(nil), source.Types...)
+	copied.Subtypes = append([]types.Sub(nil), source.Subtypes...)
+	copied.EntersWithCounters = append([]game.CounterPlacement(nil), source.EntersWithCounters...)
+	copied.Abilities = append([]game.AbilityDef(nil), source.Abilities...)
+	return copied
 }
 
 // IsEffectTypeExecuted reports whether the generic rules resolver currently
@@ -764,7 +778,7 @@ func stackObjectSourceIsSnow(g *game.Game, obj *game.StackObject) bool {
 }
 
 func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
-	return permanentHasSupertype(g, permanent, game.Snow)
+	return permanentHasSupertype(g, permanent, types.Snow)
 }
 
 func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect game.Effect, amount int) bool {
@@ -1238,7 +1252,7 @@ func selectedPermanentIDsForEffect(g *game.Game, obj *game.StackObject, effect g
 	excluded, _ := targetPermanentObjectID(obj, effect.TargetIndex)
 	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
 	for _, permanent := range g.Battlefield {
-		if permanent.ObjectID == excluded || !permanentHasType(g, permanent, game.TypeCreature) {
+		if permanent.ObjectID == excluded || !permanentHasType(g, permanent, types.Creature) {
 			continue
 		}
 		permanentIDs = append(permanentIDs, permanent.ObjectID)
@@ -1262,19 +1276,19 @@ func permanentMatchesSelector(g *game.Game, permanent *game.Permanent, selector 
 func permanentMatchesSelectorForSource(g *game.Game, source *game.Permanent, controller game.PlayerID, permanent *game.Permanent, selector game.EffectSelector) bool {
 	switch selector {
 	case game.EffectSelectorAllCreatures:
-		return permanentHasType(g, permanent, game.TypeCreature)
+		return permanentHasType(g, permanent, types.Creature)
 	case game.EffectSelectorAllArtifacts:
-		return permanentHasType(g, permanent, game.TypeArtifact)
+		return permanentHasType(g, permanent, types.Artifact)
 	case game.EffectSelectorAllEnchantments:
-		return permanentHasType(g, permanent, game.TypeEnchantment)
+		return permanentHasType(g, permanent, types.Enchantment)
 	case game.EffectSelectorAllNonlandPermanents:
-		return !permanentHasType(g, permanent, game.TypeLand)
+		return !permanentHasType(g, permanent, types.Land)
 	case game.EffectSelectorAllPermanents:
 		return true
 	case game.EffectSelectorCreaturesYouControl:
-		return effectiveController(g, permanent) == controller && permanentHasType(g, permanent, game.TypeCreature)
+		return effectiveController(g, permanent) == controller && permanentHasType(g, permanent, types.Creature)
 	case game.EffectSelectorOtherCreaturesYouControl:
-		return source != nil && permanent.ObjectID != source.ObjectID && effectiveController(g, permanent) == controller && permanentHasType(g, permanent, game.TypeCreature)
+		return source != nil && permanent.ObjectID != source.ObjectID && effectiveController(g, permanent) == controller && permanentHasType(g, permanent, types.Creature)
 	case game.EffectSelectorEquippedCreature:
 		return source != nil && source.AttachedTo.Exists && permanent.ObjectID == source.AttachedTo.Val
 	default:

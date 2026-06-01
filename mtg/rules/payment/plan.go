@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -523,7 +524,7 @@ func canTapForAbility(s State, p *game.Permanent) bool {
 	if p.Tapped {
 		return false
 	}
-	return !s.PermanentHasType(p, game.TypeCreature) || !p.SummoningSick
+	return !s.PermanentHasType(p, types.Creature) || !p.SummoningSick
 }
 
 // tapForAbility taps a permanent as an ability cost.
@@ -540,5 +541,5 @@ func canConvokeWith(s State, playerID game.PlayerID, p *game.Permanent, exclude 
 	if exclude[p.ObjectID] || p.Tapped || p.PhasedOut || s.EffectiveController(p) != playerID {
 		return false
 	}
-	return s.PermanentHasType(p, game.TypeCreature)
+	return s.PermanentHasType(p, types.Creature)
 }

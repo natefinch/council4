@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestWardCountersSpellWhenCostIsNotPaid(t *testing.T) {
@@ -36,7 +37,7 @@ func TestWardPaidLeavesSpellOnStack(t *testing.T) {
 	engine := NewEngine(nil)
 	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.ColoredMana(mana.Green)})
 	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(warded.ObjectID)}, 0, nil)) {
@@ -82,7 +83,7 @@ func TestWardCountersActivatedAbilityWhenCostIsNotPaid(t *testing.T) {
 	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.GenericMana(1)})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Targeting Permanent",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.ActivatedAbility,
 			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
@@ -107,7 +108,7 @@ func addWardPermanent(g *game.Game, controller game.PlayerID, cost mana.Cost) *g
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Ward Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(pt),
 		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{{

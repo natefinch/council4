@@ -3,6 +3,7 @@ package c
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -22,14 +23,14 @@ var CinderGlade = &game.CardDef{
 	Name:          "Cinder Glade",
 	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
-	Types:         []game.CardType{game.TypeLand},
-	Subtypes:      []string{game.LandSubtypeMountain, game.LandSubtypeForest},
+	Types:         []types.Card{types.Land},
+	Subtypes:      []types.Sub{types.Mountain, types.Forest},
 	OracleText:    "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",
 	EntersTappedCondition: opt.Val(game.Condition{
 		Negate: true,
 		ControllerControls: game.PermanentFilter{
-			Types:      []game.CardType{game.TypeLand},
-			Supertypes: []game.Supertype{game.Basic},
+			Types:      []types.Card{types.Land},
+			Supertypes: []types.Super{types.Basic},
 			MinCount:   2,
 		},
 	}),

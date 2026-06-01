@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -11,25 +12,20 @@ func TestCardDefDefaultFaceUsesFrontFace(t *testing.T) {
 	card := &CardDef{
 		Name:          "Front Name",
 		Layout:        LayoutModalDFC,
+		ManaCost:      opt.Val(mana.Cost{mana.ColoredMana(mana.Blue)}),
+		ManaValue:     1,
+		Colors:        []mana.Color{mana.Blue},
 		ColorIdentity: mana.NewColorIdentity(mana.Blue, mana.Green),
-		Faces: []CardFace{
-			{
-				Name:      "Front Name",
-				ManaCost:  opt.Val(mana.Cost{mana.ColoredMana(mana.Blue)}),
-				ManaValue: 1,
-				Colors:    []mana.Color{mana.Blue},
-				Types:     []CardType{TypeInstant},
-			},
-			{
-				Name:      "Back Name",
-				ManaValue: 0,
-				Types:     []CardType{TypeLand},
-				Subtypes:  []string{LandSubtypeForest},
-			},
-		},
+		Types:         []types.Card{types.Instant},
+		Back: opt.Val(CardFace{
+			Name:      "Back Name",
+			ManaValue: 0,
+			Types:     []types.Card{types.Land},
+			Subtypes:  []types.Sub{types.Forest},
+		}),
 	}
 
-	if !card.HasType(TypeInstant) || card.HasType(TypeLand) {
+	if !card.HasType(types.Instant) || card.HasType(types.Land) {
 		t.Fatalf("default face types = %v, want front instant only", card.DefaultFace().Types)
 	}
 	if !card.CanChooseCastFace(FaceFront) || card.CanChooseCastFace(FaceBack) {
@@ -44,10 +40,8 @@ func TestTransformFrontLandCanBePlayedAsLand(t *testing.T) {
 	card := &CardDef{
 		Name:   "Transforming Land",
 		Layout: LayoutTransform,
-		Faces: []CardFace{
-			{Name: "Transforming Land", Types: []CardType{TypeLand}},
-			{Name: "Large Creature", Types: []CardType{TypeCreature}},
-		},
+		Types:  []types.Card{types.Land},
+		Back:   opt.Val(CardFace{Name: "Large Creature", Types: []types.Card{types.Creature}}),
 	}
 
 	if !card.CanChooseLandFace(FaceFront) {

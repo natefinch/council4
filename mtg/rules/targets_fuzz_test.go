@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // FuzzTargetEnumerationIsStable verifies that targetChoicesForSpecs returns
@@ -38,7 +39,7 @@ func FuzzTargetEnumerationIsStable(f *testing.F) {
 		for range opponentCreatures {
 			addCombatPermanent(g, game.Player2, &game.CardDef{
 				Name:      "Opponent Creature",
-				Types:     []game.CardType{game.TypeCreature},
+				Types:     []types.Card{types.Creature},
 				Colors:    []mana.Color{mana.White},
 				Power:     optPT(game.PT{Value: 2}),
 				Toughness: optPT(game.PT{Value: 2}),
@@ -47,7 +48,7 @@ func FuzzTargetEnumerationIsStable(f *testing.F) {
 		for range ownCreatures {
 			addCombatPermanent(g, game.Player1, &game.CardDef{
 				Name:      "Own Creature",
-				Types:     []game.CardType{game.TypeCreature},
+				Types:     []types.Card{types.Creature},
 				Colors:    []mana.Color{mana.Green},
 				Power:     optPT(game.PT{Value: 1}),
 				Toughness: optPT(game.PT{Value: 1}),

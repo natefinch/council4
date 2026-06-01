@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -46,7 +47,7 @@ func canAttachPermanent(g *game.Game, attachment *game.Permanent, target *game.P
 		return auraCanAttachToPermanent(g, attachment, target)
 	}
 	if isEquipmentPermanent(g, attachment) {
-		return permanentHasType(g, target, game.TypeCreature)
+		return permanentHasType(g, target, types.Creature)
 	}
 	return false
 }
@@ -60,11 +61,11 @@ func auraCanAttachToPermanent(g *game.Game, aura *game.Permanent, target *game.P
 }
 
 func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {
-	return permanentHasType(g, permanent, game.TypeEnchantment) && (permanentHasSubtype(g, permanent, game.EnchantmentSubtypeAura) || hasKeyword(g, permanent, game.Enchant))
+	return permanentHasType(g, permanent, types.Enchantment) && (permanentHasSubtype(g, permanent, types.Aura) || hasKeyword(g, permanent, game.Enchant))
 }
 
 func isEquipmentPermanent(g *game.Game, permanent *game.Permanent) bool {
-	return permanentHasType(g, permanent, game.TypeArtifact) && (permanentHasSubtype(g, permanent, game.ArtifactSubtypeEquipment) || hasKeyword(g, permanent, game.Equip))
+	return permanentHasType(g, permanent, types.Artifact) && (permanentHasSubtype(g, permanent, types.Equipment) || hasKeyword(g, permanent, game.Equip))
 }
 
 func isAttachmentPermanent(g *game.Game, permanent *game.Permanent) bool {
@@ -72,7 +73,7 @@ func isAttachmentPermanent(g *game.Game, permanent *game.Permanent) bool {
 }
 
 func isAuraCard(card *game.CardDef) bool {
-	return card != nil && card.HasType(game.TypeEnchantment) && (card.HasSubtype(game.EnchantmentSubtypeAura) || card.HasKeyword(game.Enchant))
+	return card != nil && card.HasType(types.Enchantment) && (card.HasSubtype(types.Aura) || card.HasKeyword(game.Enchant))
 }
 
 func enchantTargetSpecForPermanent(g *game.Game, aura *game.Permanent) game.TargetSpec {
@@ -106,13 +107,13 @@ func defaultEnchantTargetSpec() game.TargetSpec {
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
 		Predicate: game.TargetPredicate{
-			PermanentTypes: []game.CardType{game.TypeCreature},
+			PermanentTypes: []types.Card{types.Creature},
 		},
 	}
 }
 
 func isEquipmentCard(card *game.CardDef) bool {
-	return card != nil && card.HasType(game.TypeArtifact) && (card.HasSubtype(game.ArtifactSubtypeEquipment) || card.HasKeyword(game.Equip))
+	return card != nil && card.HasType(types.Artifact) && (card.HasSubtype(types.Equipment) || card.HasKeyword(game.Equip))
 }
 
 func permanentIDsContain(ids []id.ID, want id.ID) bool {

@@ -3,6 +3,7 @@ package b
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -24,8 +25,8 @@ var BirdsOfParadise = &game.CardDef{
 	ManaValue:     1,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
-	Types:         []game.CardType{game.TypeCreature},
-	Subtypes:      []string{game.CreatureSubtypeBird},
+	Types:         []types.Card{types.Creature},
+	Subtypes:      []types.Sub{types.Bird},
 	Power:         opt.Val(game.PT{Value: 0}),
 	Toughness:     opt.Val(game.PT{Value: 1}),
 	OracleText:    "Flying\n{T}: Add one mana of any color.",

@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -27,89 +28,6 @@ const (
 	FaceFront FaceIndex = iota
 	FaceBack
 )
-
-// Supertype represents a card's supertype (CR 205.4).
-type Supertype int
-
-const (
-	SupertypeNone Supertype = iota
-	Legendary
-	Basic
-	Snow
-	World
-	Ongoing
-)
-
-// String returns the supertype name.
-func (s Supertype) String() string {
-	switch s {
-	case Legendary:
-		return "Legendary"
-	case Basic:
-		return "Basic"
-	case Snow:
-		return "Snow"
-	case World:
-		return "World"
-	case Ongoing:
-		return "Ongoing"
-	default:
-		return ""
-	}
-}
-
-// CardType represents a card's primary type (CR 300.1).
-type CardType int
-
-const (
-	TypeLand CardType = iota
-	TypeCreature
-	TypeArtifact
-	TypeEnchantment
-	TypeInstant
-	TypeSorcery
-	TypePlaneswalker
-	TypeBattle
-	TypeKindred
-)
-
-// String returns the card type name.
-func (t CardType) String() string {
-	switch t {
-	case TypeLand:
-		return "Land"
-	case TypeCreature:
-		return "Creature"
-	case TypeArtifact:
-		return "Artifact"
-	case TypeEnchantment:
-		return "Enchantment"
-	case TypeInstant:
-		return "Instant"
-	case TypeSorcery:
-		return "Sorcery"
-	case TypePlaneswalker:
-		return "Planeswalker"
-	case TypeBattle:
-		return "Battle"
-	case TypeKindred:
-		return "Kindred"
-	default:
-		return "Unknown"
-	}
-}
-
-// IsPermanentType reports whether this card type represents a permanent
-// (stays on the battlefield after resolving).
-func (t CardType) IsPermanentType() bool {
-	switch t {
-	case TypeLand, TypeCreature, TypeArtifact, TypeEnchantment,
-		TypePlaneswalker, TypeBattle:
-		return true
-	default:
-		return false
-	}
-}
 
 // PT represents a creature's power or toughness. It can be a numeric
 // value or a star (*) indicating a characteristic-defining ability (CR 208.2).
@@ -148,14 +66,14 @@ type CardDef struct {
 	// indicator, and mana symbols in rules text.
 	ColorIdentity mana.ColorIdentity
 
-	// Supertypes are the card's supertypes (Legendary, Basic, etc.).
-	Supertypes []Supertype
+	// Supertypes are the card's supertypes (types.Legendary, types.Basic, etc.).
+	Supertypes []types.Super
 
 	// Types are the card's primary types (Creature, Instant, etc.).
-	Types []CardType
+	Types []types.Card
 
 	// Subtypes are the card's subtypes (Goblin, Equipment, Aura, etc.).
-	Subtypes []string
+	Subtypes []types.Sub
 
 	// Power is the creature's base power. Absent for non-creatures.
 	Power opt.V[PT]
@@ -194,10 +112,9 @@ type CardDef struct {
 	// OracleText is the full oracle (rules) text of the card.
 	OracleText string
 
-	// Faces holds printed per-face characteristics for double-faced layouts.
-	// In non-stack and non-battlefield zones, cards use front-face/root
-	// characteristics. Stack objects and permanents carry the selected face.
-	Faces []CardFace
+	// Back holds the printed back-face characteristics for double-faced cards.
+	// The CardDef root fields are the printed front-face characteristics.
+	Back opt.V[CardFace]
 }
 
 // CardFace is one printed face of a card. It mirrors the printed
@@ -207,9 +124,9 @@ type CardFace struct {
 	ManaCost               opt.V[mana.Cost]
 	ManaValue              int
 	Colors                 []mana.Color
-	Supertypes             []Supertype
-	Types                  []CardType
-	Subtypes               []string
+	Supertypes             []types.Super
+	Types                  []types.Card
+	Subtypes               []types.Sub
 	Power                  opt.V[PT]
 	Toughness              opt.V[PT]
 	DynamicPower           opt.V[DynamicValue]
@@ -225,23 +142,23 @@ type CardFace struct {
 	OracleText             string
 }
 
-// IsLegendary reports whether this card has the Legendary supertype.
+// IsLegendary reports whether this card has the types.Legendary supertype.
 func (c *CardDef) IsLegendary() bool {
-	return c.HasSupertype(Legendary)
+	return c.HasSupertype(types.Legendary)
 }
 
 // HasSupertype reports whether this card has the given supertype.
-func (c *CardDef) HasSupertype(supertype Supertype) bool {
+func (c *CardDef) HasSupertype(supertype types.Super) bool {
 	return c.DefaultFace().HasSupertype(supertype)
 }
 
 // HasType reports whether this card has the given card type.
-func (c *CardDef) HasType(t CardType) bool {
+func (c *CardDef) HasType(t types.Card) bool {
 	return c.DefaultFace().HasType(t)
 }
 
 // HasSubtype reports whether this card has the given subtype.
-func (c *CardDef) HasSubtype(sub string) bool {
+func (c *CardDef) HasSubtype(sub types.Sub) bool {
 	return c.DefaultFace().HasSubtype(sub)
 }
 
@@ -260,25 +177,20 @@ func (c *CardDef) IsPermanent() bool {
 // DefaultFace returns the card characteristics used outside the stack and
 // battlefield. For double-faced cards, that is the front face.
 func (c *CardDef) DefaultFace() CardFace {
-	if face, ok := c.Face(FaceFront); ok {
-		return face
-	}
 	return c.rootFace()
 }
 
 // Face returns the requested printed face. For single-faced cards, FaceFront
 // maps to the root card characteristics.
 func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
-	if len(c.Faces) == 0 {
-		if index == FaceFront {
-			return c.rootFace(), true
-		}
+	switch index {
+	case FaceFront:
+		return c.rootFace(), true
+	case FaceBack:
+		return c.Back.Val, c.Back.Exists
+	default:
 		return CardFace{}, false
 	}
-	if index < 0 || int(index) >= len(c.Faces) {
-		return CardFace{}, false
-	}
-	return c.Faces[index], true
 }
 
 // FaceDef returns a CardDef-shaped copy of one face's characteristics. It is a
@@ -291,12 +203,20 @@ func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
 	return face.ToCardDef(c), true
 }
 
+// FaceIndexes returns the printed faces available on this card.
+func (c *CardDef) FaceIndexes() []FaceIndex {
+	if c.Back.Exists {
+		return []FaceIndex{FaceFront, FaceBack}
+	}
+	return []FaceIndex{FaceFront}
+}
+
 // CanChooseCastFace reports whether this face can be chosen while casting the
 // card as a spell. Modal DFCs may choose any non-land face; other layouts cast
 // only their front face.
 func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
 	face, ok := c.Face(index)
-	if !ok || face.HasType(TypeLand) {
+	if !ok || face.HasType(types.Land) {
 		return false
 	}
 	if c.IsModalDoubleFaced() {
@@ -308,10 +228,10 @@ func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
 // CanChooseLandFace reports whether this face can be played as a land.
 func (c *CardDef) CanChooseLandFace(index FaceIndex) bool {
 	face, ok := c.Face(index)
-	if !ok || !face.HasType(TypeLand) {
+	if !ok || !face.HasType(types.Land) {
 		return false
 	}
-	if len(c.Faces) == 0 {
+	if !c.Back.Exists {
 		return index == FaceFront
 	}
 	if c.IsModalDoubleFaced() {
@@ -322,13 +242,8 @@ func (c *CardDef) CanChooseLandFace(index FaceIndex) bool {
 
 // LegalCastFaces returns all faces that may be chosen while casting this card.
 func (c *CardDef) LegalCastFaces() []FaceIndex {
-	count := 1
-	if len(c.Faces) > 0 {
-		count = len(c.Faces)
-	}
 	var faces []FaceIndex
-	for i := 0; i < count; i++ {
-		face := FaceIndex(i)
+	for _, face := range c.FaceIndexes() {
 		if c.CanChooseCastFace(face) {
 			faces = append(faces, face)
 		}
@@ -353,9 +268,9 @@ func (c *CardDef) rootFace() CardFace {
 		ManaCost:               c.ManaCost,
 		ManaValue:              c.ManaValue,
 		Colors:                 append([]mana.Color(nil), c.Colors...),
-		Supertypes:             append([]Supertype(nil), c.Supertypes...),
-		Types:                  append([]CardType(nil), c.Types...),
-		Subtypes:               append([]string(nil), c.Subtypes...),
+		Supertypes:             append([]types.Super(nil), c.Supertypes...),
+		Types:                  append([]types.Card(nil), c.Types...),
+		Subtypes:               append([]types.Sub(nil), c.Subtypes...),
 		Power:                  c.Power,
 		Toughness:              c.Toughness,
 		DynamicPower:           c.DynamicPower,
@@ -373,7 +288,7 @@ func (c *CardDef) rootFace() CardFace {
 }
 
 // HasSupertype reports whether this face has the given supertype.
-func (f CardFace) HasSupertype(supertype Supertype) bool {
+func (f CardFace) HasSupertype(supertype types.Super) bool {
 	for _, st := range f.Supertypes {
 		if st == supertype {
 			return true
@@ -383,7 +298,7 @@ func (f CardFace) HasSupertype(supertype Supertype) bool {
 }
 
 // HasType reports whether this face has the given card type.
-func (f CardFace) HasType(t CardType) bool {
+func (f CardFace) HasType(t types.Card) bool {
 	for _, ct := range f.Types {
 		if ct == t {
 			return true
@@ -393,7 +308,7 @@ func (f CardFace) HasType(t CardType) bool {
 }
 
 // HasSubtype reports whether this face has the given subtype.
-func (f CardFace) HasSubtype(sub string) bool {
+func (f CardFace) HasSubtype(sub types.Sub) bool {
 	for _, s := range f.Subtypes {
 		if s == sub {
 			return true
@@ -417,7 +332,7 @@ func (f CardFace) HasKeyword(kw Keyword) bool {
 // IsPermanent reports whether this face becomes a permanent when it resolves.
 func (f CardFace) IsPermanent() bool {
 	for _, t := range f.Types {
-		if t.IsPermanentType() {
+		if t.IsPermanent() {
 			return true
 		}
 	}
@@ -433,9 +348,9 @@ func (f CardFace) ToCardDef(parent *CardDef) *CardDef {
 		ManaValue:              f.ManaValue,
 		Colors:                 append([]mana.Color(nil), f.Colors...),
 		ColorIdentity:          parent.ColorIdentity,
-		Supertypes:             append([]Supertype(nil), f.Supertypes...),
-		Types:                  append([]CardType(nil), f.Types...),
-		Subtypes:               append([]string(nil), f.Subtypes...),
+		Supertypes:             append([]types.Super(nil), f.Supertypes...),
+		Types:                  append([]types.Card(nil), f.Types...),
+		Subtypes:               append([]types.Sub(nil), f.Subtypes...),
 		Power:                  f.Power,
 		Toughness:              f.Toughness,
 		DynamicPower:           f.DynamicPower,

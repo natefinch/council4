@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -76,15 +77,9 @@ func (e *Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action
 		if !ok || !player.Hand.Contains(cardID) {
 			continue
 		}
-		for face := range card.Def.Faces {
-			faceIndex := game.FaceIndex(face)
-			if _, ok := landCardInstanceFace(g, player, cardID, faceIndex); ok {
-				actions = append(actions, actionBuild.playLand(cardID, faceIndex))
-			}
-		}
-		if len(card.Def.Faces) == 0 {
-			if _, ok := landCardInstanceFace(g, player, cardID, game.FaceFront); ok {
-				actions = append(actions, actionBuild.playLand(cardID, game.FaceFront))
+		for _, face := range card.Def.FaceIndexes() {
+			if _, ok := landCardInstanceFace(g, player, cardID, face); ok {
+				actions = append(actions, actionBuild.playLand(cardID, face))
 			}
 		}
 	}
@@ -539,7 +534,7 @@ func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
-	if xValue != 0 || ability.Kind != game.ActivatedAbility || !ability.IsLoyaltyAbility || !abilityFunctionsOnBattlefield(ability) || !permanentHasType(g, permanent, game.TypePlaneswalker) {
+	if xValue != 0 || ability.Kind != game.ActivatedAbility || !ability.IsLoyaltyAbility || !abilityFunctionsOnBattlefield(ability) || !permanentHasType(g, permanent, types.Planeswalker) {
 		return false
 	}
 	if !isSorcerySpeed(g, playerID) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) || g.ActivatedAbilitiesThisTurn[game.ActivatedAbilityUse{SourceID: permanent.ObjectID, AbilityIndex: -1}] {
@@ -722,7 +717,7 @@ func canPlayAnyLand(g *game.Game, playerID game.PlayerID) bool {
 }
 
 func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {
-	if card.HasType(game.TypeInstant) || card.HasKeyword(game.Flash) {
+	if card.HasType(types.Instant) || card.HasKeyword(game.Flash) {
 		return true
 	}
 	return isSorcerySpeed(g, playerID)
@@ -1019,7 +1014,7 @@ func canTapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
 	if permanent.Tapped {
 		return false
 	}
-	return !permanentHasType(g, permanent, game.TypeCreature) || !permanent.SummoningSick
+	return !permanentHasType(g, permanent, types.Creature) || !permanent.SummoningSick
 }
 
 func tapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
@@ -1099,8 +1094,8 @@ func entersSummoningSick(card *game.CardDef) bool {
 }
 
 func isSupportedSpell(card *game.CardDef) bool {
-	return !card.HasType(game.TypeLand) &&
+	return !card.HasType(types.Land) &&
 		(card.IsPermanent() ||
-			card.HasType(game.TypeInstant) ||
-			card.HasType(game.TypeSorcery))
+			card.HasType(types.Instant) ||
+			card.HasType(types.Sorcery))
 }

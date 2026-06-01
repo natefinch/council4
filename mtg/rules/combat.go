@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // runCombatPhase drives the combat phase. It delegates to combatEngine so all
@@ -181,9 +182,9 @@ func markPermanentDamage(g *game.Game, permanent *game.Permanent, damage int) {
 		return
 	}
 	switch {
-	case permanentHasType(g, permanent, game.TypePlaneswalker):
+	case permanentHasType(g, permanent, types.Planeswalker):
 		permanent.Counters.Remove(counter.Loyalty, damage)
-	case permanentHasType(g, permanent, game.TypeBattle):
+	case permanentHasType(g, permanent, types.Battle):
 		permanent.Counters.Remove(counter.Defense, damage)
 	default:
 		permanent.MarkedDamage += damage
@@ -559,7 +560,7 @@ func canBlockWith(g *game.Game, permanent *game.Permanent, playerID game.PlayerI
 	if ruleEffectProhibitsBlock(g, permanent) {
 		return false
 	}
-	return permanentHasType(g, permanent, game.TypeCreature)
+	return permanentHasType(g, permanent, types.Creature)
 }
 
 func canAttackTarget(g *game.Game, attacker *game.Permanent, target game.AttackTarget) bool {
@@ -642,7 +643,7 @@ func canAttackWith(g *game.Game, permanent *game.Permanent, playerID game.Player
 	if effectiveController(g, permanent) != playerID || permanent.Tapped || permanent.PhasedOut {
 		return false
 	}
-	if !permanentHasType(g, permanent, game.TypeCreature) || hasKeyword(g, permanent, game.Defender) {
+	if !permanentHasType(g, permanent, types.Creature) || hasKeyword(g, permanent, game.Defender) {
 		return false
 	}
 	if ruleEffectProhibitsAttack(g, permanent, nil) {
@@ -687,10 +688,10 @@ func isLegalAttackTarget(g *game.Game, attackerController game.PlayerID, target 
 		return false
 	}
 	if target.PlaneswalkerID != 0 {
-		return target.BattleID == 0 && permanentHasType(g, permanent, game.TypePlaneswalker)
+		return target.BattleID == 0 && permanentHasType(g, permanent, types.Planeswalker)
 	}
 	if target.BattleID != 0 {
-		return permanentHasType(g, permanent, game.TypeBattle)
+		return permanentHasType(g, permanent, types.Battle)
 	}
 	return false
 }
@@ -779,9 +780,9 @@ func legalAttackTargets(g *game.Game, attackerController game.PlayerID) []game.A
 			continue
 		}
 		switch {
-		case permanentHasType(g, permanent, game.TypePlaneswalker):
+		case permanentHasType(g, permanent, types.Planeswalker):
 			targets = append(targets, game.AttackTarget{Player: permanentController, PlaneswalkerID: permanent.ObjectID})
-		case permanentHasType(g, permanent, game.TypeBattle):
+		case permanentHasType(g, permanent, types.Battle):
 			targets = append(targets, game.AttackTarget{Player: permanentController, BattleID: permanent.ObjectID})
 		}
 	}

@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -33,9 +34,9 @@ type DynamicValue struct {
 type CopyableValues struct {
 	Name             string
 	Colors           []mana.Color
-	Supertypes       []Supertype
-	Types            []CardType
-	Subtypes         []string
+	Supertypes       []types.Super
+	Types            []types.Card
+	Subtypes         []types.Sub
 	Power            opt.V[PT]
 	Toughness        opt.V[PT]
 	DynamicPower     opt.V[DynamicValue]
@@ -86,17 +87,17 @@ type ContinuousEffect struct {
 	TextFrom string
 	TextTo   string
 
-	SetSupertypes    []Supertype
-	AddSupertypes    []Supertype
-	RemoveSupertypes []Supertype
+	SetSupertypes    []types.Super
+	AddSupertypes    []types.Super
+	RemoveSupertypes []types.Super
 
-	SetTypes    []CardType
-	AddTypes    []CardType
-	RemoveTypes []CardType
+	SetTypes    []types.Card
+	AddTypes    []types.Card
+	RemoveTypes []types.Card
 
-	SetSubtypes    []string
-	AddSubtypes    []string
-	RemoveSubtypes []string
+	SetSubtypes    []types.Sub
+	AddSubtypes    []types.Sub
+	RemoveSubtypes []types.Sub
 
 	SetColors    []mana.Color
 	AddColors    []mana.Color

@@ -3,6 +3,7 @@ package d
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -18,12 +19,12 @@ var DeathcapGlade = &game.CardDef{
 	Name:          "Deathcap Glade",
 	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Green),
-	Types:         []game.CardType{game.TypeLand},
+	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {G}.",
 	EntersTappedCondition: opt.Val(game.Condition{
 		Negate: true,
 		ControllerControls: game.PermanentFilter{
-			Types:    []game.CardType{game.TypeLand},
+			Types:    []types.Card{types.Land},
 			MinCount: 2,
 		},
 	}),

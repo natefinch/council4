@@ -3,6 +3,7 @@ package c
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -23,7 +24,7 @@ var ChaosWarp = &game.CardDef{
 	ManaValue:     3,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
-	Types:         []game.CardType{game.TypeInstant},
+	Types:         []types.Card{types.Instant},
 	OracleText:    "The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.",
 	Abilities: []game.AbilityDef{
 		{

@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	payment "github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
@@ -234,7 +235,7 @@ func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 	return true
 }
 
-func spellTypesMatch(card *game.CardDef, types []game.CardType) bool {
+func spellTypesMatch(card *game.CardDef, types []types.Card) bool {
 	for _, cardType := range types {
 		if !card.HasType(cardType) {
 			return false
@@ -273,7 +274,7 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 			return "battlefield"
 		}
 		permanent, ok := createCardPermanentFaceWithChoices(e, g, card, obj.Controller, game.ZoneStack, obj.Face, agents, log)
-		if ok && obj.Suspend && permanentHasType(g, permanent, game.TypeCreature) {
+		if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
 			permanent.SuspendHasteController = opt.Val(obj.Controller)
 		}
 		if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
@@ -285,7 +286,7 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 		}
 		return "battlefield"
 	}
-	if spellDef.HasType(game.TypeInstant) || spellDef.HasType(game.TypeSorcery) {
+	if spellDef.HasType(types.Instant) || spellDef.HasType(types.Sorcery) {
 		if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
 			if obj.Copy {
 				return "countered by rules"

@@ -5,32 +5,34 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
 func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:       "Snow Mountain",
-		Supertypes: []game.Supertype{game.Basic, game.Snow},
-		Types:      []game.CardType{game.TypeLand},
-		Subtypes:   []string{game.LandSubtypeMountain},
+		Name:       "types.Snow Mountain",
+		Supertypes: []types.Super{types.Basic, types.Snow},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Mountain},
 	})
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Large Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 7}),
 		Toughness: opt.Val(game.PT{Value: 7}),
 	})
 
 	condition := opt.Val(game.Condition{
 		ControllerControls: game.PermanentFilter{
-			Types:      []game.CardType{game.TypeLand},
-			Supertypes: []game.Supertype{game.Basic},
-			SubtypesAny: []string{
-				game.LandSubtypeSwamp,
-				game.LandSubtypeMountain,
+			Types:      []types.Card{types.Land},
+			Supertypes: []types.Super{types.Basic},
+			SubtypesAny: []types.Sub{
+				types.Swamp,
+				types.Mountain,
 			},
 			MinCount: 1,
 		},
@@ -44,9 +46,9 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 
 	powerCondition := opt.Val(game.Condition{
 		ControllerControls: game.PermanentFilter{
-			Types: []game.CardType{game.TypeCreature},
-			Power: opt.Val(game.IntComparison{
-				Op:    game.CompareGreaterOrEqual,
+			Types: []types.Card{types.Creature},
+			Power: opt.Val(compare.Int{
+				Op:    compare.GreaterOrEqual,
 				Value: 7,
 			}),
 		},
@@ -71,7 +73,7 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Red Spell",
 		ManaCost: opt.Val(mana.Cost{mana.ColoredMana(mana.Red)}),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind: game.SpellAbility,
 			Text: "Do nothing.",
@@ -87,8 +89,8 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:     "Mountain",
-		Types:    []game.CardType{game.TypeLand},
-		Subtypes: []string{game.LandSubtypeMountain},
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Mountain},
 	})
 	if !containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
 		t.Fatal("conditional red mana ability was not legal with Mountain")
@@ -113,7 +115,7 @@ func TestInterveningConditionChecksControllerPermanentPower(t *testing.T) {
 
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Large Creature",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 		Power: opt.Val(game.PT{Value: 7}),
 	})
 	addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Drawn Again"})
@@ -139,11 +141,11 @@ func TestStaticConditionGraveyardAbilityGrantsHaste(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Creature",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 	})
 	other := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:  "Other Creature",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 	})
 	angerID := addCardToGraveyard(g, game.Player1, angerLikeCard())
 	angerCard := g.CardInstances[angerID]
@@ -153,8 +155,8 @@ func TestStaticConditionGraveyardAbilityGrantsHaste(t *testing.T) {
 	}
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:     "Mountain",
-		Types:    []game.CardType{game.TypeLand},
-		Subtypes: []string{game.LandSubtypeMountain},
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Mountain},
 	})
 	if !hasKeyword(g, creature, game.Haste) {
 		t.Fatal("Anger-like graveyard ability did not grant haste with Mountain")
@@ -189,15 +191,15 @@ func TestConditionalEntersTappedCondition(t *testing.T) {
 	setSorcerySpeedTurn(g, game.Player1)
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:       "Forest",
-		Supertypes: []game.Supertype{game.Basic},
-		Types:      []game.CardType{game.TypeLand},
-		Subtypes:   []string{game.LandSubtypeForest},
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Forest},
 	})
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:       "Island",
-		Supertypes: []game.Supertype{game.Basic},
-		Types:      []game.CardType{game.TypeLand},
-		Subtypes:   []string{game.LandSubtypeIsland},
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Island},
 	})
 	cardID = addCardToHand(g, game.Player1, cinderLikeLand())
 	if !engine.applyPlayLand(g, game.Player1, cardID) {
@@ -218,14 +220,14 @@ func setSorcerySpeedTurn(g *game.Game, playerID game.PlayerID) {
 func conditionalRedManaLand() *game.CardDef {
 	return &game.CardDef{
 		Name:  "Conditional Red Land",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 		Abilities: []game.AbilityDef{{
 			Kind:          game.ActivatedAbility,
 			Text:          "{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
 			IsManaAbility: true,
 			ActivationCondition: opt.Val(game.Condition{
 				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []string{game.LandSubtypeSwamp, game.LandSubtypeMountain},
+					SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
 				},
 			}),
 			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
@@ -242,7 +244,7 @@ func conditionalRedManaLand() *game.CardDef {
 func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:  "Bugenhagen-like",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 		Abilities: []game.AbilityDef{{
 			Kind: game.TriggeredAbility,
 			Text: "At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.",
@@ -254,9 +256,9 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 				InterveningIf: "if you control a creature with power 7 or greater",
 				InterveningCondition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
-						Types: []game.CardType{game.TypeCreature},
-						Power: opt.Val(game.IntComparison{
-							Op:    game.CompareGreaterOrEqual,
+						Types: []types.Card{types.Creature},
+						Power: opt.Val(compare.Int{
+							Op:    compare.GreaterOrEqual,
 							Value: 7,
 						}),
 					},
@@ -270,7 +272,7 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 func angerLikeCard() *game.CardDef {
 	return &game.CardDef{
 		Name:  "Anger-like",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.StaticAbility,
@@ -283,7 +285,7 @@ func angerLikeCard() *game.CardDef {
 				ZoneOfFunction: game.ZoneGraveyard,
 				Condition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
-						SubtypesAny: []string{game.LandSubtypeMountain},
+						SubtypesAny: []types.Sub{types.Mountain},
 					},
 				}),
 				Effects: []game.Effect{{
@@ -302,12 +304,12 @@ func angerLikeCard() *game.CardDef {
 func cinderLikeLand() *game.CardDef {
 	return &game.CardDef{
 		Name:  "Cinder-like",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 		EntersTappedCondition: opt.Val(game.Condition{
 			Negate: true,
 			ControllerControls: game.PermanentFilter{
-				Types:      []game.CardType{game.TypeLand},
-				Supertypes: []game.Supertype{game.Basic},
+				Types:      []types.Card{types.Land},
+				Supertypes: []types.Super{types.Basic},
 				MinCount:   2,
 			},
 		}),

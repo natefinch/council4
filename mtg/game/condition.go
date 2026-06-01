@@ -1,6 +1,10 @@
 package game
 
-import "github.com/natefinch/council4/opt"
+import (
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
 
 // Condition is a reusable rules predicate evaluated by mtg/rules in an explicit
 // context such as a static ability, activation restriction, trigger, effect, or
@@ -20,22 +24,22 @@ type Condition struct {
 	// Object tests a referenced object in the current condition context, such as
 	// a triggering event permanent. It may use last-known information.
 	Object opt.V[ObjectReference]
-	Types  []CardType
+	Types  []types.Card
 }
 
 // PermanentFilter matches permanents for reusable condition predicates. Empty
 // fields are wildcards. Types and Supertypes are all required; SubtypesAny
 // matches when any listed subtype is present.
 type PermanentFilter struct {
-	Types       []CardType
-	Supertypes  []Supertype
-	SubtypesAny []string
+	Types       []types.Card
+	Supertypes  []types.Super
+	SubtypesAny []types.Sub
 
 	// MinCount defaults to 1 when any other filter field is set.
 	MinCount int
 
-	Power     opt.V[IntComparison]
-	Toughness opt.V[IntComparison]
+	Power     opt.V[compare.Int]
+	Toughness opt.V[compare.Int]
 }
 
 // Empty reports whether the filter contains no active predicate.

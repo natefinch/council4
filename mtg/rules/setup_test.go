@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestDrawCardMovesTopLibraryCardToHand(t *testing.T) {
@@ -162,7 +163,7 @@ func addCreaturePermanent(g *game.Game, controller game.PlayerID) *game.Permanen
 		ID: cardID,
 		Def: &game.CardDef{
 			Name:  "Test Creature",
-			Types: []game.CardType{game.TypeCreature},
+			Types: []types.Card{types.Creature},
 		},
 		Owner: controller,
 	}

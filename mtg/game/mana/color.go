@@ -4,12 +4,12 @@ package mana
 type Color int
 
 const (
-	White    Color = iota // {W}
-	Blue                  // {U}
-	Black                 // {B}
-	Red                   // {R}
-	Green                 // {G}
-	Colorless             // {C} — true colorless mana (e.g., from Wastes)
+	White     Color = iota // {W}
+	Blue                   // {U}
+	Black                  // {B}
+	Red                    // {R}
+	Green                  // {G}
+	Colorless              // {C} — true colorless mana (e.g., from Wastes)
 )
 
 // String returns the conventional single-letter abbreviation for the color.

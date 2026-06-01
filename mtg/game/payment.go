@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -36,12 +37,12 @@ type AdditionalCost struct {
 	// MatchPermanentType constrains battlefield costs such as "sacrifice a
 	// creature." When false, any permanent is allowed for permanent costs.
 	MatchPermanentType bool
-	PermanentType      CardType
+	PermanentType      types.Card
 
 	// MatchCardType constrains card costs such as "discard a creature card."
 	// When false, any card in the relevant zone is allowed for card costs.
 	MatchCardType bool
-	CardType      CardType
+	CardType      types.Card
 
 	// Zone is the zone cards are chosen from for card costs. Zero values are
 	// interpreted by rules for each cost kind, usually hand.

@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -36,7 +37,7 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 			continue
 		}
 		def := cardFaceOrDefault(card, game.FaceFront)
-		if !def.HasType(game.TypeLand) && def.ManaValue < spellDef.ManaValue {
+		if !def.HasType(types.Land) && def.ManaValue < spellDef.ManaValue {
 			found = cardID
 			break
 		}
@@ -99,7 +100,7 @@ func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.Play
 			continue
 		}
 		def := cardFaceOrDefault(card, game.FaceFront)
-		if !def.HasType(game.TypeLand) && def.ManaValue <= manaValue {
+		if !def.HasType(types.Land) && def.ManaValue <= manaValue {
 			found = cardID
 			break
 		}

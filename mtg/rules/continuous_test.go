@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestStaticPTEffectAffectsCombatDamage(t *testing.T) {
@@ -89,7 +90,7 @@ func TestContinuousEffectsApplyInLayerOrderBeforeTimestamp(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	animatedLand := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Animated Forest",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 	})
 	two := game.PT{Value: 2}
 	g.ContinuousEffects = append(g.ContinuousEffects,
@@ -153,7 +154,7 @@ func TestTypeAndPTContinuousEffectsAffectCombatAndSBAs(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	land := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Living Land",
-		Types: []game.CardType{game.TypeLand},
+		Types: []types.Card{types.Land},
 	})
 	two := game.PT{Value: 2}
 	g.ContinuousEffects = append(g.ContinuousEffects,
@@ -161,7 +162,7 @@ func TestTypeAndPTContinuousEffectsAffectCombatAndSBAs(t *testing.T) {
 			ID:               1,
 			AffectedObjectID: land.ObjectID,
 			Layer:            game.LayerType,
-			AddTypes:         []game.CardType{game.TypeCreature},
+			AddTypes:         []types.Card{types.Creature},
 		},
 		game.ContinuousEffect{
 			ID:               2,
@@ -192,7 +193,7 @@ func TestDynamicStarPowerAffectsCombatDamage(t *testing.T) {
 	dynamic := game.DynamicValue{Kind: game.DynamicValueControllerHandSize}
 	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:             "Hand Avatar",
-		Types:            []game.CardType{game.TypeCreature},
+		Types:            []types.Card{types.Creature},
 		Power:            optPT(star),
 		Toughness:        optPT(star),
 		DynamicPower:     optDynamicValue(dynamic),
@@ -224,7 +225,7 @@ func TestCopyEffectChangesEffectiveCombatKeywords(t *testing.T) {
 		Layer:            game.LayerCopy,
 		CopyValues: optCopyValues(game.CopyableValues{
 			Name:      "Copied Dragon",
-			Types:     []game.CardType{game.TypeCreature},
+			Types:     []types.Card{types.Creature},
 			Power:     optPT(copyPower),
 			Toughness: optPT(copyPower),
 			Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}},
@@ -304,7 +305,7 @@ func TestCopyEffectPreservesDynamicStarValues(t *testing.T) {
 		Layer:            game.LayerCopy,
 		CopyValues: optCopyValues(game.CopyableValues{
 			Name:             "Copied Star",
-			Types:            []game.CardType{game.TypeCreature},
+			Types:            []types.Card{types.Creature},
 			Power:            optPT(star),
 			Toughness:        optPT(star),
 			DynamicPower:     optDynamicValue(dynamic),
@@ -324,7 +325,7 @@ func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent 
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Anthem Captain",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(pt),
 		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{

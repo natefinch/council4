@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	payment "github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
@@ -83,13 +84,8 @@ func (e *Engine) legalFaceDownCastActions(g *game.Game, playerID game.PlayerID) 
 }
 
 func legalFaceDownFaces(card *game.CardDef) []game.FaceIndex {
-	count := 1
-	if len(card.Faces) > 0 {
-		count = len(card.Faces)
-	}
 	var faces []game.FaceIndex
-	for i := 0; i < count; i++ {
-		face := game.FaceIndex(i)
+	for _, face := range card.FaceIndexes() {
 		if def, ok := card.FaceDef(face); ok && len(faceDownKindsForCard(def)) > 0 {
 			faces = append(faces, face)
 		}
@@ -147,7 +143,7 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 		Controller:    playerID,
 		CardID:        cast.CardID,
 		Face:          cast.Face,
-		CardTypes:     []game.CardType{game.TypeCreature},
+		CardTypes:     []types.Card{types.Creature},
 		FromZone:      game.ZoneHand,
 		ToZone:        game.ZoneStack,
 	})

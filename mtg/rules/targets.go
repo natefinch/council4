@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // targetChoiceKind distinguishes the four outcomes of target enumeration so
@@ -653,20 +654,20 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 		return false
 	}
 	if normalizedTargetConstraint(spec) == "any target" {
-		return permanentHasType(g, permanent, game.TypeCreature) ||
-			permanentHasType(g, permanent, game.TypePlaneswalker) ||
-			permanentHasType(g, permanent, game.TypeBattle)
+		return permanentHasType(g, permanent, types.Creature) ||
+			permanentHasType(g, permanent, types.Planeswalker) ||
+			permanentHasType(g, permanent, types.Battle)
 	}
 	return permanentTypeMatchesSpec(g, spec, permanent)
 }
 
 func structuredPermanentPredicateMatches(g *game.Game, predicate game.TargetPredicate, permanent *game.Permanent) bool {
-	if len(predicate.PermanentTypes) > 0 && !slices.ContainsFunc(predicate.PermanentTypes, func(cardType game.CardType) bool {
+	if len(predicate.PermanentTypes) > 0 && !slices.ContainsFunc(predicate.PermanentTypes, func(cardType types.Card) bool {
 		return permanentHasType(g, permanent, cardType)
 	}) {
 		return false
 	}
-	if slices.ContainsFunc(predicate.ExcludedTypes, func(cardType game.CardType) bool {
+	if slices.ContainsFunc(predicate.ExcludedTypes, func(cardType types.Card) bool {
 		return permanentHasType(g, permanent, cardType)
 	}) {
 		return false
@@ -699,16 +700,16 @@ func structuredPermanentPredicateMatches(g *game.Game, predicate game.TargetPred
 	}
 	if predicate.ManaValue.Exists {
 		def, ok := permanentCardDef(g, permanent)
-		if !ok || !intComparisonMatches(def.ManaValue, predicate.ManaValue.Val) {
+		if !ok || !predicate.ManaValue.Val.Matches(def.ManaValue) {
 			return false
 		}
 	}
-	if predicate.Power.Exists && !intComparisonMatches(effectivePower(g, permanent), predicate.Power.Val) {
+	if predicate.Power.Exists && !predicate.Power.Val.Matches(effectivePower(g, permanent)) {
 		return false
 	}
 	if predicate.Toughness.Exists {
 		toughness, ok := effectiveToughness(g, permanent)
-		if !ok || !intComparisonMatches(toughness, predicate.Toughness.Val) {
+		if !ok || !predicate.Toughness.Val.Matches(toughness) {
 			return false
 		}
 	}
@@ -736,23 +737,6 @@ func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.Com
 		return blocking
 	case game.CombatStateAttackingOrBlocking:
 		return attacking || blocking
-	default:
-		return true
-	}
-}
-
-func intComparisonMatches(value int, comparison game.IntComparison) bool {
-	switch comparison.Op {
-	case game.CompareEqual:
-		return value == comparison.Value
-	case game.CompareLessOrEqual:
-		return value <= comparison.Value
-	case game.CompareGreaterOrEqual:
-		return value >= comparison.Value
-	case game.CompareLessThan:
-		return value < comparison.Value
-	case game.CompareGreaterThan:
-		return value > comparison.Value
 	default:
 		return true
 	}
@@ -801,14 +785,14 @@ func permanentTypeMatchesSpec(g *game.Game, spec game.TargetSpec, permanent *gam
 	normalized := normalizedTargetConstraint(spec)
 	if spec.Allow != game.TargetAllowUnspecified && normalized == "" {
 		if spec.Allow&game.TargetAllowPlayer != 0 {
-			return permanentHasType(g, permanent, game.TypeCreature) ||
-				permanentHasType(g, permanent, game.TypePlaneswalker) ||
-				permanentHasType(g, permanent, game.TypeBattle)
+			return permanentHasType(g, permanent, types.Creature) ||
+				permanentHasType(g, permanent, types.Planeswalker) ||
+				permanentHasType(g, permanent, types.Battle)
 		}
 		return len(effectivePermanentValues(g, permanent).types) > 0
 	}
 	if strings.Contains(normalized, "nonland permanent") {
-		return !permanentHasType(g, permanent, game.TypeLand)
+		return !permanentHasType(g, permanent, types.Land)
 	}
 	if strings.Contains(normalized, "permanent") && !containsAnyPermanentTypeConstraint(normalized) {
 		return len(effectivePermanentValues(g, permanent).types) > 0
@@ -817,7 +801,7 @@ func permanentTypeMatchesSpec(g *game.Game, spec game.TargetSpec, permanent *gam
 	if len(allowedTypes) == 0 {
 		return false
 	}
-	return slices.ContainsFunc(allowedTypes, func(cardType game.CardType) bool {
+	return slices.ContainsFunc(allowedTypes, func(cardType types.Card) bool {
 		return permanentHasType(g, permanent, cardType)
 	})
 }
@@ -831,27 +815,27 @@ func containsAnyPermanentTypeConstraint(normalized string) bool {
 		strings.Contains(normalized, "battle")
 }
 
-func permanentTypesForConstraint(normalized string) []game.CardType {
-	var types []game.CardType
+func permanentTypesForConstraint(normalized string) []types.Card {
+	var cardTypes []types.Card
 	if strings.Contains(normalized, "creature") {
-		types = append(types, game.TypeCreature)
+		cardTypes = append(cardTypes, types.Creature)
 	}
 	if strings.Contains(normalized, "artifact") {
-		types = append(types, game.TypeArtifact)
+		cardTypes = append(cardTypes, types.Artifact)
 	}
 	if strings.Contains(normalized, "enchantment") {
-		types = append(types, game.TypeEnchantment)
+		cardTypes = append(cardTypes, types.Enchantment)
 	}
 	if strings.Contains(normalized, "land") {
-		types = append(types, game.TypeLand)
+		cardTypes = append(cardTypes, types.Land)
 	}
 	if strings.Contains(normalized, "planeswalker") {
-		types = append(types, game.TypePlaneswalker)
+		cardTypes = append(cardTypes, types.Planeswalker)
 	}
 	if strings.Contains(normalized, "battle") {
-		types = append(types, game.TypeBattle)
+		cardTypes = append(cardTypes, types.Battle)
 	}
-	return types
+	return cardTypes
 }
 
 func normalizedTargetConstraint(spec game.TargetSpec) string {

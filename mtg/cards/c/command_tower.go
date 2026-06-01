@@ -2,6 +2,7 @@ package c
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -15,7 +16,7 @@ import (
 var CommandTower = &game.CardDef{
 	Name:       "Command Tower",
 	ManaValue:  0,
-	Types:      []game.CardType{game.TypeLand},
+	Types:      []types.Card{types.Land},
 	OracleText: "{T}: Add one mana of any color in your commander's color identity.",
 	Abilities: []game.AbilityDef{
 		{

@@ -3,12 +3,13 @@ package d
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
 // Domri, Anarch of Bolas
 //
-// Type: Legendary Planeswalker — Domri
+// Type: types.Legendary Planeswalker — Domri
 // Cost: {1}{R}{G}
 //
 // Oracle text:
@@ -26,9 +27,9 @@ var DomriAnarchOfBolas = &game.CardDef{
 	ManaValue:     3,
 	Colors:        []mana.Color{mana.Green, mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
-	Supertypes:    []game.Supertype{game.Legendary},
-	Types:         []game.CardType{game.TypePlaneswalker},
-	Subtypes:      []string{"Domri"},
+	Supertypes:    []types.Super{types.Legendary},
+	Types:         []types.Card{types.Planeswalker},
+	Subtypes:      []types.Sub{"Domri"},
 	Loyalty:       opt.Val(3),
 	OracleText:    "Creatures you control get +1/+0.\n+1: Add {R} or {G}. Creature spells you cast this turn can't be countered.\n−2: Target creature you control fights target creature you don't control.",
 	Abilities: []game.AbilityDef{
@@ -74,7 +75,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 						{
 							Kind:               game.RuleEffectCantBeCountered,
 							AffectedController: game.ControllerYou,
-							SpellTypes:         []game.CardType{game.TypeCreature},
+							SpellTypes:         []types.Card{types.Creature},
 						},
 					},
 				},
@@ -92,7 +93,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature},
+						PermanentTypes: []types.Card{types.Creature},
 						Controller:     game.ControllerYou,
 					},
 				},
@@ -102,7 +103,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 					Constraint: "creature you don't control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature},
+						PermanentTypes: []types.Card{types.Creature},
 						Controller:     game.ControllerNotYou,
 					},
 				},

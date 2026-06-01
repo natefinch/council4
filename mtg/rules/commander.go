@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 const commanderDeckCardCount = 99
@@ -41,7 +42,7 @@ func validateCommanderConfig(playerID game.PlayerID, config game.PlayerConfig) [
 	if len(config.Deck) != commanderDeckCardCount {
 		add(fmt.Sprintf("deck has %d cards, want %d", len(config.Deck), commanderDeckCardCount))
 	}
-	if !config.Commander.HasSupertype(game.Legendary) || !config.Commander.HasType(game.TypeCreature) {
+	if !config.Commander.HasSupertype(types.Legendary) || !config.Commander.HasType(types.Creature) {
 		add("commander must be a legendary creature")
 	}
 	seen := make(map[string]bool)
@@ -56,7 +57,7 @@ func validateCommanderConfig(playerID game.PlayerID, config game.PlayerConfig) [
 		if card.Name == config.Commander.Name {
 			add(fmt.Sprintf("commander %q is also present in deck", card.Name))
 		}
-		if card.HasSupertype(game.Basic) {
+		if card.HasSupertype(types.Basic) {
 			continue
 		}
 		if seen[card.Name] {

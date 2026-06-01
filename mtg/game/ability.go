@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -169,13 +170,13 @@ type TriggerPattern struct {
 	ExcludeSelf bool
 	Player      TriggerPlayerFilter
 
-	RequirePermanentTypes []CardType
-	ExcludePermanentTypes []CardType
+	RequirePermanentTypes []types.Card
+	ExcludePermanentTypes []types.Card
 
 	// RequireCardTypes and ExcludeCardTypes filter spell-cast events by the
 	// spell's types as chosen/cast on the stack (CR 601.2, CR 603.2).
-	RequireCardTypes []CardType
-	ExcludeCardTypes []CardType
+	RequireCardTypes []types.Card
+	ExcludeCardTypes []types.Card
 
 	MatchFromZone bool
 	FromZone      ZoneType
@@ -339,8 +340,8 @@ type TokenCopySpec struct {
 
 	SetName       string
 	SetColors     []mana.Color
-	SetTypes      []CardType
-	SetSubtypes   []string
+	SetTypes      []types.Card
+	SetSubtypes   []types.Sub
 	SetPower      opt.V[PT]
 	SetToughness  opt.V[PT]
 	NoManaCost    bool
@@ -350,9 +351,9 @@ type TokenCopySpec struct {
 // EternalizeAbility builds the keyword's full activated ability: a sorcery-speed
 // graveyard activation that exiles the source card and creates the standard
 // 4/4 black Zombie copy token with no mana cost.
-func EternalizeAbility(cost mana.Cost, creatureSubtypes ...string) AbilityDef {
-	tokenSubtypes := make([]string, 0, len(creatureSubtypes)+1)
-	tokenSubtypes = append(tokenSubtypes, CreatureSubtypeZombie)
+func EternalizeAbility(cost mana.Cost, creatureSubtypes ...types.Sub) AbilityDef {
+	tokenSubtypes := make([]types.Sub, 0, len(creatureSubtypes)+1)
+	tokenSubtypes = append(tokenSubtypes, types.Zombie)
 	tokenSubtypes = append(tokenSubtypes, creatureSubtypes...)
 	return AbilityDef{
 		Kind:           ActivatedAbility,
@@ -389,10 +390,10 @@ type SearchSpec struct {
 	Destination ZoneType
 
 	MatchCardType bool
-	CardType      CardType
+	CardType      types.Card
 
 	MatchSupertype bool
-	Supertype      Supertype
+	Supertype      types.Super
 
 	Reveal  bool
 	Shuffle bool
@@ -408,7 +409,7 @@ type EffectCondition struct {
 	TargetIndex int
 
 	MatchPermanentType bool
-	PermanentType      CardType
+	PermanentType      types.Card
 
 	// Negate inverts the permanent-type match, e.g. "it isn't a creature".
 	Negate bool

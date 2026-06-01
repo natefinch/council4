@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 type fakeDrawBurnImplementation struct{}
@@ -33,7 +34,7 @@ func TestCardImplementationHandlesSpellResolutionThroughContext(t *testing.T) {
 	secondDraw := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Second"})
 	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{
 		Name:             "Hand-Written Draw Burn",
-		Types:            []game.CardType{game.TypeSorcery},
+		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/draw-burn",
 		Abilities: []game.AbilityDef{
 			{
@@ -79,7 +80,7 @@ func TestCardImplementationUsesNormalDamagePreventionHelpers(t *testing.T) {
 	target.Counters.Add(counter.Shield, 1)
 	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{
 		Name:             "Hand-Written Permanent Burn",
-		Types:            []game.CardType{game.TypeSorcery},
+		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/permanent-damage",
 		Abilities: []game.AbilityDef{
 			{
@@ -114,7 +115,7 @@ func TestUnregisteredCardImplementationPanics(t *testing.T) {
 	engine := NewEngine(nil)
 	addImplementationSpellToStack(g, game.Player1, &game.CardDef{
 		Name:             "Missing Implementation",
-		Types:            []game.CardType{game.TypeSorcery},
+		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/missing",
 		Abilities:        []game.AbilityDef{{Kind: game.SpellAbility}},
 	}, nil)

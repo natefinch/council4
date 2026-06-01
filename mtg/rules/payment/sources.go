@@ -6,13 +6,14 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // permanentManaOutput derives the mana output of a permanent by checking
 // basic land types and simple tap mana abilities.
 func permanentManaOutput(s State, permanent *game.Permanent) (color mana.Color, amount int, snow bool, ok bool) {
 	if c, ok2 := basicLandManaColor(s, permanent); ok2 {
-		return c, 1, s.PermanentHasSupertype(permanent, game.Snow), true
+		return c, 1, s.PermanentHasSupertype(permanent, types.Snow), true
 	}
 	controller := s.EffectiveController(permanent)
 	_, ability, ok2 := simpleTapManaAbility(s, controller, permanent)
@@ -23,16 +24,16 @@ func permanentManaOutput(s State, permanent *game.Permanent) (color mana.Color, 
 	if a <= 0 {
 		a = 1
 	}
-	return ability.Effects[0].ManaColor, a, s.PermanentHasSupertype(permanent, game.Snow), true
+	return ability.Effects[0].ManaColor, a, s.PermanentHasSupertype(permanent, types.Snow), true
 }
 
 func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
 	card, ok := s.PermanentCardDef(permanent)
-	if !ok || !card.HasType(game.TypeLand) {
+	if !ok || !card.HasType(types.Land) {
 		return 0, false
 	}
 	for _, landType := range basicLandTypes {
-		if card.HasSubtype(landType.subtype) || strings.EqualFold(card.Name, landType.subtype) {
+		if card.HasSubtype(landType.subtype) || strings.EqualFold(card.Name, string(landType.subtype)) {
 			return landType.color, true
 		}
 	}
@@ -40,14 +41,14 @@ func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
 }
 
 var basicLandTypes = []struct {
-	subtype string
+	subtype types.Sub
 	color   mana.Color
 }{
-	{subtype: game.LandSubtypePlains, color: mana.White},
-	{subtype: game.LandSubtypeIsland, color: mana.Blue},
-	{subtype: game.LandSubtypeSwamp, color: mana.Black},
-	{subtype: game.LandSubtypeMountain, color: mana.Red},
-	{subtype: game.LandSubtypeForest, color: mana.Green},
+	{subtype: types.Plains, color: mana.White},
+	{subtype: types.Island, color: mana.Blue},
+	{subtype: types.Swamp, color: mana.Black},
+	{subtype: types.Mountain, color: mana.Red},
+	{subtype: types.Forest, color: mana.Green},
 }
 
 func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
@@ -64,7 +65,7 @@ func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Perma
 			len(ability.Targets) == 0 &&
 			len(ability.Effects) == 1 &&
 			ability.Effects[0].Type == game.EffectAddMana {
-			if s.PermanentHasType(permanent, game.TypeCreature) && permanent.SummoningSick {
+			if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick {
 				return 0, nil, false
 			}
 			if !s.ActivationConditionSatisfied(playerID, permanent, ability) {

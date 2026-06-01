@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestMadnessDiscardGoesToExile(t *testing.T) {
@@ -30,7 +31,7 @@ func TestMadnessTriggerCastsCardFromExile(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cardID := addCardToHand(g, game.Player1, madnessSorcery(mana.Cost{mana.ColoredMana(mana.Green)}))
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 
 	discardCardFromHand(g, game.Player1, cardID)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -77,7 +78,7 @@ func TestDeclinedMadnessTriggerMovesCardToGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cardID := addCardToHand(g, game.Player1, madnessSorcery(mana.Cost{mana.ColoredMana(mana.Green)}))
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
 
 	discardCardFromHand(g, game.Player1, cardID)
@@ -98,7 +99,7 @@ func TestDeclinedMadnessTriggerMovesCardToGraveyard(t *testing.T) {
 func madnessSorcery(cost mana.Cost) *game.CardDef {
 	return &game.CardDef{
 		Name:  "Madness Sorcery",
-		Types: []game.CardType{game.TypeSorcery},
+		Types: []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind:        game.StaticAbility,
 			Keywords:    []game.Keyword{game.Madness},

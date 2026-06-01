@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // ParsedTypeLine holds the parsed components of a Scryfall type line.
@@ -66,15 +66,15 @@ func ParseTypeLine(typeLine string) ParsedTypeLine {
 func SupertypeToLiteral(name string) string {
 	switch name {
 	case "Legendary":
-		return "game.Legendary"
+		return "types.Legendary"
 	case "Basic":
-		return "game.Basic"
+		return "types.Basic"
 	case "Snow":
-		return "game.Snow"
+		return "types.Snow"
 	case "World":
-		return "game.World"
+		return "types.World"
 	case "Ongoing":
-		return "game.Ongoing"
+		return "types.Ongoing"
 	default:
 		return "/* unknown supertype: " + name + " */"
 	}
@@ -84,53 +84,52 @@ func SupertypeToLiteral(name string) string {
 func CardTypeToLiteral(name string) string {
 	switch name {
 	case "Land":
-		return "game.TypeLand"
+		return "types.Land"
 	case "Creature":
-		return "game.TypeCreature"
+		return "types.Creature"
 	case "Artifact":
-		return "game.TypeArtifact"
+		return "types.Artifact"
 	case "Enchantment":
-		return "game.TypeEnchantment"
+		return "types.Enchantment"
 	case "Instant":
-		return "game.TypeInstant"
+		return "types.Instant"
 	case "Sorcery":
-		return "game.TypeSorcery"
+		return "types.Sorcery"
 	case "Planeswalker":
-		return "game.TypePlaneswalker"
+		return "types.Planeswalker"
 	case "Battle":
-		return "game.TypeBattle"
+		return "types.Battle"
 	case "Kindred":
-		return "game.TypeKindred"
+		return "types.Kindred"
 	default:
 		return "/* unknown type: " + name + " */"
 	}
 }
 
 var subtypeLiteralTypes = map[string]struct {
-	cardType game.CardType
-	prefix   string
+	cardType types.Card
 }{
-	"Artifact":    {cardType: game.TypeArtifact, prefix: "ArtifactSubtype"},
-	"Creature":    {cardType: game.TypeCreature, prefix: "CreatureSubtype"},
-	"Enchantment": {cardType: game.TypeEnchantment, prefix: "EnchantmentSubtype"},
-	"Kindred":     {cardType: game.TypeKindred, prefix: "CreatureSubtype"},
-	"Land":        {cardType: game.TypeLand, prefix: "LandSubtype"},
+	"Artifact":    {cardType: types.Artifact},
+	"Creature":    {cardType: types.Creature},
+	"Enchantment": {cardType: types.Enchantment},
+	"Kindred":     {cardType: types.Kindred},
+	"Land":        {cardType: types.Land},
 }
 
 // SubtypeToLiteral converts a subtype name to its Go constant for the card type
 // family where that subtype is used. Unknown subtypes fall back to a string
 // literal so generation can continue while the central subtype list is updated.
-func SubtypeToLiteral(name string, types []string) string {
-	for _, typ := range types {
+func SubtypeToLiteral(name string, cardTypes []string) string {
+	for _, typ := range cardTypes {
 		info, ok := subtypeLiteralTypes[typ]
 		if !ok {
 			continue
 		}
-		if game.KnownSubtypeForType(info.cardType, name) {
-			return "game." + info.prefix + goIdentifierSuffix(name)
+		if types.KnownSubtypeForType(info.cardType, types.Sub(name)) {
+			return "types." + goIdentifierSuffix(name)
 		}
 	}
-	return strconv.Quote(name)
+	return "types.Sub(" + strconv.Quote(name) + ")"
 }
 
 func goIdentifierSuffix(name string) string {

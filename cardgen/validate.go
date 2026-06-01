@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 )
 
@@ -80,17 +81,14 @@ func (v *cardValidator) validate() {
 	if strings.TrimSpace(v.card.Name) == "" {
 		v.add("", "", IssueMissingName, "card definition has no name")
 	}
-	if len(v.card.Faces) == 0 {
-		v.validateFace(v.card.Name, "", v.card.OracleText, v.card.ImplementationID, v.card.Abilities, true)
-		return
-	}
-	v.validateFace(v.card.Name, "", v.card.OracleText, v.card.ImplementationID, v.card.Abilities, false)
-	for i, face := range v.card.Faces {
+	v.validateFace(v.card.Name, "", v.card.OracleText, v.card.ImplementationID, v.card.Abilities, true)
+	if v.card.Back.Exists {
+		face := v.card.Back.Val
 		name := face.Name
 		if strings.TrimSpace(name) == "" {
-			name = fmt.Sprintf("face %d", i)
+			name = "back face"
 		}
-		v.validateFace(name, fmt.Sprintf("Faces[%d]", i), face.OracleText, face.ImplementationID, face.Abilities, true)
+		v.validateFace(name, "Back", face.OracleText, face.ImplementationID, face.Abilities, true)
 	}
 }
 
@@ -181,7 +179,7 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 			v.add(faceName, path, IssueMissingSearchSpec, "search effect has no SearchSpec")
 		} else if effect.Search.Val.SourceZone != game.ZoneLibrary || effect.Search.Val.Destination != game.ZoneHand {
 			v.add(faceName, path, IssueUnsupportedSearchSpec, "only library-to-hand SearchSpec is currently supported")
-		} else if effect.Search.Val.MatchSupertype && effect.Search.Val.Supertype == game.SupertypeNone {
+		} else if effect.Search.Val.MatchSupertype && effect.Search.Val.Supertype == types.Super("") {
 			v.add(faceName, appendPath(path, "Search"), IssueUnsupportedSearchSpec, "MatchSupertype requires a non-empty supertype")
 		}
 	}
@@ -268,13 +266,9 @@ func (v *cardValidator) validateNestedCard(faceName string, path string, card *g
 	if card == nil {
 		return
 	}
-	if len(card.Faces) == 0 {
-		v.validateFace(faceName, path, card.OracleText, card.ImplementationID, card.Abilities, true)
-		return
-	}
-	v.validateFace(faceName, path, card.OracleText, card.ImplementationID, card.Abilities, false)
-	for i, face := range card.Faces {
-		v.validateFace(faceName, appendPath(path, fmt.Sprintf("Faces[%d]", i)), face.OracleText, face.ImplementationID, face.Abilities, true)
+	v.validateFace(faceName, path, card.OracleText, card.ImplementationID, card.Abilities, true)
+	if card.Back.Exists {
+		v.validateFace(faceName, appendPath(path, "Back"), card.Back.Val.OracleText, card.Back.Val.ImplementationID, card.Back.Val.Abilities, true)
 	}
 }
 

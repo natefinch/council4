@@ -3,6 +3,7 @@ package d
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -18,12 +19,12 @@ var DragonskullSummit = &game.CardDef{
 	Name:          "Dragonskull Summit",
 	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Red),
-	Types:         []game.CardType{game.TypeLand},
+	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control a Swamp or a Mountain.\n{T}: Add {B} or {R}.",
 	EntersTappedCondition: opt.Val(game.Condition{
 		Negate: true,
 		ControllerControls: game.PermanentFilter{
-			SubtypesAny: []string{game.LandSubtypeSwamp, game.LandSubtypeMountain},
+			SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
 		},
 	}),
 	Abilities: []game.AbilityDef{

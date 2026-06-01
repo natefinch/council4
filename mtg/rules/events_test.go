@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
@@ -45,7 +46,7 @@ func TestCastAndResolvePermanentSpellEmitsEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, greenCreature())
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -208,7 +209,7 @@ func TestMassDamageEffectEmitsDamageEventForEachPermanent(t *testing.T) {
 	creature2 := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	addCombatPermanent(g, game.Player3, &game.CardDef{
 		Name:  "Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 	addEffectSpellToStack(g, game.Player1, game.Effect{
 		Type:     game.EffectDamage,
@@ -235,7 +236,7 @@ func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Pinger",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.ActivatedAbility,
@@ -295,7 +296,7 @@ func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	token := &game.CardDef{
 		Name:  "Soldier Token",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 	}
 
 	permanent, ok := createTokenPermanent(g, game.Player1, token)
@@ -444,7 +445,7 @@ func TestTapUntapAndTargetEvents(t *testing.T) {
 	})
 
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("creature"))
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(permanent.ObjectID)}, 0, nil)) {
@@ -463,7 +464,7 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 	engine := NewEngine(nil)
 	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:    "Pain Walker",
-		Types:   []game.CardType{game.TypePlaneswalker},
+		Types:   []types.Card{types.Planeswalker},
 		Loyalty: optInt(3),
 		Abilities: []game.AbilityDef{{
 			Kind:             game.ActivatedAbility,

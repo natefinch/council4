@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, effect game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -59,12 +60,12 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 			add(i, color.String(), game.ResolutionChoiceResult{Kind: choice.Kind, Color: color})
 		}
 	case game.ResolutionChoiceCardType:
-		types := choice.CardTypes
-		if len(types) == 0 {
-			types = []game.CardType{game.TypeArtifact, game.TypeCreature, game.TypeEnchantment, game.TypeInstant, game.TypeLand, game.TypePlaneswalker, game.TypeSorcery, game.TypeBattle, game.TypeKindred}
+		cardTypes := choice.CardTypes
+		if len(cardTypes) == 0 {
+			cardTypes = []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Instant, types.Land, types.Planeswalker, types.Sorcery, types.Battle, types.Kindred}
 		}
-		for i, cardType := range types {
-			add(i, cardType.String(), game.ResolutionChoiceResult{Kind: choice.Kind, CardType: cardType})
+		for i, cardType := range cardTypes {
+			add(i, string(cardType), game.ResolutionChoiceResult{Kind: choice.Kind, CardType: cardType})
 		}
 	case game.ResolutionChoicePlayer:
 		index := 0

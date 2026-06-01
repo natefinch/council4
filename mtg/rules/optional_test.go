@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/opt"
 )
@@ -42,7 +43,7 @@ func optEffectResultCondition(v game.EffectResultCondition) opt.V[game.EffectRes
 	return opt.Val(v)
 }
 
-func optIntComparison(v game.IntComparison) opt.V[game.IntComparison] {
+func optIntComparison(v compare.Int) opt.V[compare.Int] {
 	return opt.Val(v)
 }
 

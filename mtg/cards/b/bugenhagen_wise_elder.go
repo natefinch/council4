@@ -2,13 +2,15 @@ package b
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
 // Bugenhagen, Wise Elder
 //
-// Type: Legendary Creature — Human Shaman
+// Type: types.Legendary Creature — Human Shaman
 // Cost: {1}{G}
 //
 // Oracle text:
@@ -25,9 +27,9 @@ var BugenhagenWiseElder = &game.CardDef{
 	ManaValue:     2,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
-	Supertypes:    []game.Supertype{game.Legendary},
-	Types:         []game.CardType{game.TypeCreature},
-	Subtypes:      []string{game.CreatureSubtypeHuman, game.CreatureSubtypeShaman},
+	Supertypes:    []types.Super{types.Legendary},
+	Types:         []types.Card{types.Creature},
+	Subtypes:      []types.Sub{types.Human, types.Shaman},
 	Power:         opt.Val(game.PT{Value: 1}),
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "Reach\nAt the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.\n{T}: Add one mana of any color.",
@@ -50,9 +52,9 @@ var BugenhagenWiseElder = &game.CardDef{
 				InterveningIf: "if you control a creature with power 7 or greater",
 				InterveningCondition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
-						Types: []game.CardType{game.TypeCreature},
-						Power: opt.Val(game.IntComparison{
-							Op:    game.CompareGreaterOrEqual,
+						Types: []types.Card{types.Creature},
+						Power: opt.Val(compare.Int{
+							Op:    compare.GreaterOrEqual,
 							Value: 7,
 						}),
 					},

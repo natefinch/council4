@@ -3,6 +3,7 @@ package a
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -24,8 +25,8 @@ var Anger = &game.CardDef{
 	ManaValue:     4,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
-	Types:         []game.CardType{game.TypeCreature},
-	Subtypes:      []string{game.CreatureSubtypeIncarnation},
+	Types:         []types.Card{types.Creature},
+	Subtypes:      []types.Sub{types.Incarnation},
 	Power:         opt.Val(game.PT{Value: 2}),
 	Toughness:     opt.Val(game.PT{Value: 2}),
 	OracleText:    "Haste\nAs long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
@@ -41,7 +42,7 @@ var Anger = &game.CardDef{
 			ZoneOfFunction: game.ZoneGraveyard,
 			Condition: opt.Val(game.Condition{
 				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []string{game.LandSubtypeMountain},
+					SubtypesAny: []types.Sub{types.Mountain},
 				},
 			}),
 			Effects: []game.Effect{

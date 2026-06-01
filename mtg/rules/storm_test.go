@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestStormCreatesCopiesForPriorSpellsThisTurn(t *testing.T) {
@@ -105,7 +106,7 @@ func TestCounteringStormCopyDoesNotMoveSourceCard(t *testing.T) {
 func simpleGainLifeInstant(name string) *game.CardDef {
 	return &game.CardDef{
 		Name:  name,
-		Types: []game.CardType{game.TypeInstant},
+		Types: []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.SpellAbility,
 			Effects: []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: -1}},
@@ -122,7 +123,7 @@ func stormGainLifeInstant() *game.CardDef {
 func stormTargetCreatureInstant() *game.CardDef {
 	return &game.CardDef{
 		Name:  "Targeted Storm Spell",
-		Types: []game.CardType{game.TypeInstant},
+		Types: []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Storm}},
 			{

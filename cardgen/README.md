@@ -11,7 +11,7 @@ directory.
 Given a Magic: The Gathering card name, the library:
 
 1. Fetches the card's data from Scryfall's `/cards/named` API endpoint.
-2. Parses the mechanical fields: name, mana cost, mana value, colors, color identity, types, subtypes, supertypes, power/toughness, loyalty, defense, simple ETB tapped text, and double-faced card faces.
+2. Parses the mechanical fields: name, mana cost, mana value, colors, color identity, types, subtypes, supertypes, power/toughness, loyalty, defense, simple ETB tapped text, and double-faced card back faces.
 3. Generates a Go source file with a `game.CardDef` literal, leaving the `Abilities` slice empty for LLM completion.
 4. Validates generated card definitions against the currently executable rules
    model before batch workflows mark them supported, including newer structured
@@ -45,7 +45,7 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 
 ## Double-faced layouts
 
-`cardgen` accepts Scryfall `transform`, `modal_dfc`, `double_faced_token`, `meld`, and `reversible_card` layouts. Transform, modal DFC, and double-faced token cards emit `Layout` plus per-face `[]game.CardFace` data. Meld cards generate the front card with `LayoutMeld`; full melded-permanent behavior is rules/card-implementation work. Reversible cards generate separate `CardDef` variables for each playable side rather than a face-selectable card.
+`cardgen` accepts Scryfall `transform`, `modal_dfc`, `double_faced_token`, `meld`, and `reversible_card` layouts. Transform, modal DFC, and double-faced token cards emit front-face fields on `CardDef`, `Layout`, and an optional `Back` `game.CardFace`. Meld cards generate the front card with `LayoutMeld`; full melded-permanent behavior is rules/card-implementation work. Reversible cards generate separate `CardDef` variables for each playable side rather than a face-selectable card.
 
 ## Key functions
 

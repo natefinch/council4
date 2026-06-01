@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -17,7 +18,7 @@ func TestSelfETBTriggerGoesOnStackAndResolves(t *testing.T) {
 		Event:  game.EventPermanentEnteredBattlefield,
 		Source: game.TriggerSourceSelf,
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil))
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -45,7 +46,7 @@ func TestDeathTriggerGoesOnStack(t *testing.T) {
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
-		RequirePermanentTypes: []game.CardType{game.TypeCreature},
+		RequirePermanentTypes: []types.Card{types.Creature},
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 	creature := addCombatCreaturePermanent(g, game.Player2)
 
@@ -65,12 +66,12 @@ func TestTriggerMovesCountersFromEventPermanentLKI(t *testing.T) {
 	engine := NewEngine(nil)
 	destination := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Target Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 	addCounterTransferTriggerSource(g, game.Player1)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Dying Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 	source.Counters.Add(counter.PlusOnePlusOne, 2)
 	source.Counters.Add(counter.Charge, 3)
@@ -98,7 +99,7 @@ func TestTriggerEffectCanReferenceEventPermanentOnBattlefield(t *testing.T) {
 	engine := NewEngine(nil)
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:                 game.EventPermanentEnteredBattlefield,
-		RequirePermanentTypes: []game.CardType{game.TypeCreature},
+		RequirePermanentTypes: []types.Card{types.Creature},
 	}, []game.Effect{{
 		Type:           game.EffectApplyContinuous,
 		Object:         opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
@@ -116,7 +117,7 @@ func TestTriggerEffectCanReferenceEventPermanentOnBattlefield(t *testing.T) {
 	}}, nil)
 	cardID := addCardToHand(g, game.Player2, &game.CardDef{
 		Name:      "Entering Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
 	})
@@ -150,7 +151,7 @@ func TestDeathTriggerCanUseEventPermanentLKIAndReturnEventCardAsEnchantment(t *t
 		Card: opt.Val(game.CardReference{Kind: game.CardReferenceEvent}),
 		ContinuousEffects: []game.ContinuousEffect{{
 			Layer:    game.LayerType,
-			SetTypes: []game.CardType{game.TypeEnchantment},
+			SetTypes: []types.Card{types.Enchantment},
 		}},
 	}}, nil)
 	triggerCard, ok := g.GetCardInstance(triggerSource.CardInstanceID)
@@ -159,11 +160,11 @@ func TestDeathTriggerCanUseEventPermanentLKIAndReturnEventCardAsEnchantment(t *t
 	}
 	triggerCard.Def.Abilities[0].Trigger.Val.InterveningCondition = opt.Val(game.Condition{
 		Object: opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
-		Types:  []game.CardType{game.TypeCreature},
+		Types:  []types.Card{types.Creature},
 	})
 	source := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Enduring Creature",
-		Types:     []game.CardType{game.TypeCreature, game.TypeEnchantment},
+		Types:     []types.Card{types.Creature, types.Enchantment},
 		Power:     optPT(game.PT{Value: 3}),
 		Toughness: optPT(game.PT{Value: 3}),
 	})
@@ -182,10 +183,10 @@ func TestDeathTriggerCanUseEventPermanentLKIAndReturnEventCardAsEnchantment(t *t
 	if permanent.Controller != game.Player2 {
 		t.Fatalf("returned permanent controller = %v, want owner %v", permanent.Controller, game.Player2)
 	}
-	if !permanentHasType(g, permanent, game.TypeEnchantment) {
+	if !permanentHasType(g, permanent, types.Enchantment) {
 		t.Fatal("returned permanent is not an enchantment")
 	}
-	if permanentHasType(g, permanent, game.TypeCreature) {
+	if permanentHasType(g, permanent, types.Creature) {
 		t.Fatal("returned permanent is still a creature")
 	}
 }
@@ -195,12 +196,12 @@ func TestCounterTransferInterveningIfUsesLKI(t *testing.T) {
 	engine := NewEngine(nil)
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Target Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 	addCounterTransferTriggerSource(g, game.Player1)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Dying Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 
 	movePermanentToZone(g, source, game.ZoneGraveyard)
@@ -216,7 +217,7 @@ func TestCounterTransferUpToOneTargetMayHaveNoTarget(t *testing.T) {
 	addCounterTransferTriggerSource(g, game.Player1)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Dying Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 	source.Counters.Add(counter.PlusOnePlusOne, 1)
 
@@ -236,12 +237,12 @@ func TestCounterTransferUpToOneTargetCanBeDeclined(t *testing.T) {
 	engine := NewEngine(nil)
 	destination := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Target Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 	addCounterTransferTriggerSource(g, game.Player1)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Dying Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 	source.Counters.Add(counter.PlusOnePlusOne, 1)
 	agents := [game.NumPlayers]PlayerAgent{
@@ -360,7 +361,7 @@ func TestTriggerPatternExcludeSelfSkipsSourcePermanent(t *testing.T) {
 		Event:                 game.EventPermanentEnteredBattlefield,
 		Controller:            game.TriggerControllerYou,
 		ExcludeSelf:           true,
-		RequirePermanentTypes: []game.CardType{game.TypeCreature},
+		RequirePermanentTypes: []types.Card{types.Creature},
 	}, []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: -1}}, nil)
 
 	emitEvent(g, game.GameEvent{
@@ -576,7 +577,7 @@ func TestCastTriggerGoesOnStackAboveCastSpell(t *testing.T) {
 		Controller: game.TriggerControllerYou,
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 	spellID := addCardToHand(g, game.Player1, greenInstant())
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -717,11 +718,11 @@ func TestSpellCastTriggerFiltersCardTypesAndController(t *testing.T) {
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerOpponent,
-		RequireCardTypes: []game.CardType{game.TypeInstant},
-		ExcludeCardTypes: []game.CardType{game.TypeCreature},
+		RequireCardTypes: []types.Card{types.Instant},
+		ExcludeCardTypes: []types.Card{types.Creature},
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 	spellID := addCardToHand(g, game.Player2, greenInstant())
-	addBasicLandPermanent(g, game.Player2, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player2, types.Forest)
 	g.Turn.ActivePlayer = game.Player2
 	g.Turn.PriorityPlayer = game.Player2
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -746,10 +747,10 @@ func TestSpellCastTriggerExcludesCreatureSpells(t *testing.T) {
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerOpponent,
-		ExcludeCardTypes: []game.CardType{game.TypeCreature},
+		ExcludeCardTypes: []types.Card{types.Creature},
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 	spellID := addCardToHand(g, game.Player2, greenCreature())
-	addBasicLandPermanent(g, game.Player2, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player2, types.Forest)
 	g.Turn.ActivePlayer = game.Player2
 	g.Turn.PriorityPlayer = game.Player2
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -770,12 +771,12 @@ func TestPermanentTriggerRequireExcludeTypeFilters(t *testing.T) {
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		Controller:            game.TriggerControllerOpponent,
-		RequirePermanentTypes: []game.CardType{game.TypeArtifact},
-		ExcludePermanentTypes: []game.CardType{game.TypeCreature},
+		RequirePermanentTypes: []types.Card{types.Artifact},
+		ExcludePermanentTypes: []types.Card{types.Creature},
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 	artifact := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:  "Relic",
-		Types: []game.CardType{game.TypeArtifact},
+		Types: []types.Card{types.Artifact},
 	})
 
 	destroyPermanent(g, artifact.ObjectID)
@@ -940,7 +941,7 @@ func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, 
 func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *game.Permanent {
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:  "Counter Transfer Source",
-		Types: []game.CardType{game.TypeEnchantment},
+		Types: []types.Card{types.Enchantment},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.TriggeredAbility,
@@ -949,7 +950,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 					Pattern: game.TriggerPattern{
 						Event:                 game.EventZoneChanged,
 						Controller:            game.TriggerControllerYou,
-						RequirePermanentTypes: []game.CardType{game.TypeArtifact},
+						RequirePermanentTypes: []types.Card{types.Artifact},
 						MatchFromZone:         true,
 						FromZone:              game.ZoneBattlefield,
 						MatchToZone:           true,
@@ -979,7 +980,7 @@ func triggeredCreature(pattern game.TriggerPattern, effects []game.Effect, targe
 	pt := game.PT{Value: 1}
 	return &game.CardDef{
 		Name:      "Triggered Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		ManaCost:  greenCost(),
 		Power:     optPT(pt),
 		Toughness: optPT(pt),

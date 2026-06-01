@@ -3,6 +3,7 @@ package e
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -25,8 +26,8 @@ var EnduringCourage = &game.CardDef{
 	ManaValue:     4,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
-	Types:         []game.CardType{game.TypeEnchantment, game.TypeCreature},
-	Subtypes:      []string{"Dog", "Glimmer"},
+	Types:         []types.Card{types.Enchantment, types.Creature},
+	Subtypes:      []types.Sub{"Dog", "Glimmer"},
 	Power:         opt.Val(game.PT{Value: 3}),
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.\nWhen Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)",
@@ -40,7 +41,7 @@ var EnduringCourage = &game.CardDef{
 					Event:                 game.EventPermanentEnteredBattlefield,
 					Controller:            game.TriggerControllerYou,
 					ExcludeSelf:           true,
-					RequirePermanentTypes: []game.CardType{game.TypeCreature},
+					RequirePermanentTypes: []types.Card{types.Creature},
 				},
 			}),
 			Effects: []game.Effect{
@@ -75,7 +76,7 @@ var EnduringCourage = &game.CardDef{
 				InterveningIf: "if it was a creature",
 				InterveningCondition: opt.Val(game.Condition{
 					Text:   "if it was a creature",
-					Types:  []game.CardType{game.TypeCreature},
+					Types:  []types.Card{types.Creature},
 					Object: opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
 				}),
 			}),
@@ -87,7 +88,7 @@ var EnduringCourage = &game.CardDef{
 					ContinuousEffects: []game.ContinuousEffect{
 						{
 							Layer:       game.LayerType,
-							RemoveTypes: []game.CardType{game.TypeCreature},
+							RemoveTypes: []types.Card{types.Creature},
 						},
 					},
 				},

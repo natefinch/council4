@@ -3,6 +3,7 @@ package c
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -23,7 +24,7 @@ var CosmicHunger = &game.CardDef{
 	ManaValue:     2,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
-	Types:         []game.CardType{game.TypeInstant},
+	Types:         []types.Card{types.Instant},
 	OracleText:    "Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle.",
 	Abilities: []game.AbilityDef{
 		{
@@ -36,7 +37,7 @@ var CosmicHunger = &game.CardDef{
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature},
+						PermanentTypes: []types.Card{types.Creature},
 						Controller:     game.ControllerYou,
 					},
 				},
@@ -46,7 +47,7 @@ var CosmicHunger = &game.CardDef{
 					Constraint: "another creature, planeswalker, or battle",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature, game.TypePlaneswalker, game.TypeBattle},
+						PermanentTypes: []types.Card{types.Creature, types.Planeswalker, types.Battle},
 						Another:        true,
 					},
 				},

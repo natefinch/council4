@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -11,7 +12,7 @@ func TestEquippedCreatureSelectorGrantsKeywords(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Creature",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.Effect{{
 		Type:        game.EffectApplyContinuous,
@@ -39,7 +40,7 @@ func TestEquippedCreatureSelectorDynamicOpponentCountPT(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 	})
@@ -68,7 +69,7 @@ func TestAttachedPermanentTriggerFilterUsesLKI(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Creature",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
 	if !attachPermanent(g, equipment, creature) {
@@ -91,7 +92,7 @@ func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 	engine := NewEngine(nil)
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Creature",
-		Types: []game.CardType{game.TypeCreature},
+		Types: []types.Card{types.Creature},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
 	if !attachPermanent(g, equipment, creature) {
@@ -133,7 +134,7 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Igniter",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 3}),
 		Toughness: opt.Val(game.PT{Value: 3}),
 		Abilities: []game.AbilityDef{{
@@ -143,7 +144,7 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 	})
 	other := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Other Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 5}),
 		Toughness: opt.Val(game.PT{Value: 5}),
 	})
@@ -190,8 +191,8 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 func equipmentWithStaticEffect(effects []game.Effect) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Equipment",
-		Types:    []game.CardType{game.TypeArtifact},
-		Subtypes: []string{game.ArtifactSubtypeEquipment},
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.StaticAbility,
 			Effects: effects,

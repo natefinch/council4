@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 const maxStateBasedActionPasses = 1000
@@ -224,7 +225,7 @@ func checkLegendaryRuleStateBasedActions(g *game.Game) (bool, []PermanentDeathLo
 
 func permanentLegendaryKey(g *game.Game, permanent *game.Permanent) (legendaryKey, bool) {
 	name := permanentEffectiveName(g, permanent)
-	if !permanentHasSupertype(g, permanent, game.Legendary) || name == "" {
+	if !permanentHasSupertype(g, permanent, types.Legendary) || name == "" {
 		return legendaryKey{}, false
 	}
 	return legendaryKey{
@@ -275,13 +276,13 @@ func permanentTokenName(permanent *game.Permanent) string {
 }
 
 func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDeathReason, bool) {
-	if permanentHasType(g, permanent, game.TypePlaneswalker) && permanent.Counters.Get(counter.Loyalty) <= 0 {
+	if permanentHasType(g, permanent, types.Planeswalker) && permanent.Counters.Get(counter.Loyalty) <= 0 {
 		return PermanentDeathReasonZeroLoyalty, true
 	}
-	if permanentHasType(g, permanent, game.TypeBattle) && permanent.Counters.Get(counter.Defense) <= 0 {
+	if permanentHasType(g, permanent, types.Battle) && permanent.Counters.Get(counter.Defense) <= 0 {
 		return PermanentDeathReasonZeroDefense, true
 	}
-	if !permanentHasType(g, permanent, game.TypeCreature) {
+	if !permanentHasType(g, permanent, types.Creature) {
 		return "", false
 	}
 	toughness, ok := effectiveToughness(g, permanent)

@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -32,11 +33,11 @@ func (s *rulesPaymentState) PermanentCardDef(p *game.Permanent) (*game.CardDef, 
 	return permanentCardDef(s.g, p)
 }
 
-func (s *rulesPaymentState) PermanentHasType(p *game.Permanent, t game.CardType) bool {
+func (s *rulesPaymentState) PermanentHasType(p *game.Permanent, t types.Card) bool {
 	return permanentHasType(s.g, p, t)
 }
 
-func (s *rulesPaymentState) PermanentHasSupertype(p *game.Permanent, supertype game.Supertype) bool {
+func (s *rulesPaymentState) PermanentHasSupertype(p *game.Permanent, supertype types.Super) bool {
 	return permanentHasSupertype(s.g, p, supertype)
 }
 

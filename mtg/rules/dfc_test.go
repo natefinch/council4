@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -23,7 +24,7 @@ func TestModalDFCLandFaceCanBePlayed(t *testing.T) {
 		t.Fatal("applyAction PlayLandFace(back) = false, want true")
 	}
 	permanent, ok := g.PermanentByID(g.Battlefield[0].ObjectID)
-	if !ok || permanent.Face != game.FaceBack || !permanent.Tapped || !permanentHasType(g, permanent, game.TypeLand) {
+	if !ok || permanent.Face != game.FaceBack || !permanent.Tapped || !permanentHasType(g, permanent, types.Land) {
 		t.Fatalf("permanent = %+v, want tapped back-face land", permanent)
 	}
 }
@@ -47,7 +48,7 @@ func TestModalDFCBackPermanentFaceCanBeCastAndResolve(t *testing.T) {
 		t.Fatalf("stack object = %+v, want back face", obj)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
-	if len(g.Battlefield) != 1 || g.Battlefield[0].Face != game.FaceBack || !permanentHasType(g, g.Battlefield[0], game.TypeArtifact) {
+	if len(g.Battlefield) != 1 || g.Battlefield[0].Face != game.FaceBack || !permanentHasType(g, g.Battlefield[0], types.Artifact) {
 		t.Fatalf("battlefield = %+v, want one back-face artifact", g.Battlefield)
 	}
 }
@@ -113,7 +114,7 @@ func TestBackFaceTriggeredAbilityResolvesUsingCapturedFace(t *testing.T) {
 	g.Events = append(g.Events, game.GameEvent{
 		Kind:       game.EventSpellCast,
 		Controller: game.Player1,
-		CardTypes:  []game.CardType{game.TypeInstant},
+		CardTypes:  []types.Card{types.Instant},
 	})
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -139,39 +140,37 @@ func modalDFCSpellLand() *game.CardDef {
 	return &game.CardDef{
 		Name:   "Front Spell",
 		Layout: game.LayoutModalDFC,
-		Types:  []game.CardType{game.TypeSorcery},
-		Faces: []game.CardFace{
-			{Name: "Front Spell", Types: []game.CardType{game.TypeSorcery}},
-			{Name: "Back Land", Types: []game.CardType{game.TypeLand}, Subtypes: []string{game.LandSubtypeForest}, EntersTapped: true},
-		},
+		Types:  []types.Card{types.Sorcery},
+		Back:   opt.Val(game.CardFace{Name: "Back Land", Types: []types.Card{types.Land}, Subtypes: []types.Sub{types.Forest}, EntersTapped: true}),
 	}
 }
 
 func modalDFCArtifactBack() *game.CardDef {
 	return &game.CardDef{
-		Name:   "Creature Front",
-		Layout: game.LayoutModalDFC,
-		Faces: []game.CardFace{
-			{Name: "Creature Front", Types: []game.CardType{game.TypeCreature}, Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})},
-			{Name: "Artifact Back", Types: []game.CardType{game.TypeArtifact}},
-		},
+		Name:      "Creature Front",
+		Layout:    game.LayoutModalDFC,
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		Back:      opt.Val(game.CardFace{Name: "Artifact Back", Types: []types.Card{types.Artifact}}),
 	}
 }
 
 func transformCreature() *game.CardDef {
 	return &game.CardDef{
-		Name:   "Small Front",
-		Layout: game.LayoutTransform,
-		Faces: []game.CardFace{
-			{Name: "Small Front", Types: []game.CardType{game.TypeCreature}, Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})},
-			{Name: "Large Back", Types: []game.CardType{game.TypeCreature}, Power: opt.Val(game.PT{Value: 4}), Toughness: opt.Val(game.PT{Value: 4})},
-		},
+		Name:      "Small Front",
+		Layout:    game.LayoutTransform,
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		Back:      opt.Val(game.CardFace{Name: "Large Back", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 4}), Toughness: opt.Val(game.PT{Value: 4})}),
 	}
 }
 
 func transformCreatureWithBackTrigger() *game.CardDef {
 	card := transformCreature()
-	card.Faces[1].Abilities = []game.AbilityDef{
+	back := card.Back.Val
+	back.Abilities = []game.AbilityDef{
 		{
 			Kind: game.TriggeredAbility,
 			Trigger: opt.Val(game.TriggerCondition{
@@ -181,5 +180,6 @@ func transformCreatureWithBackTrigger() *game.CardDef {
 			Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
 		},
 	}
+	card.Back = opt.Val(back)
 	return card
 }

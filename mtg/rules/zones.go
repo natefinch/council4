@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType) (*game.Permanent, bool) {
@@ -101,7 +102,7 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 		CardID:      card.ID,
 		Face:        face,
 		PermanentID: objectID,
-		CardTypes:   []game.CardType{game.TypeCreature},
+		CardTypes:   []types.Card{types.Creature},
 		FromZone:    fromZone,
 		ToZone:      game.ZoneBattlefield,
 	}

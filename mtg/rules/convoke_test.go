@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestConvokeMakesGenericSpellPayableAndTapsCreatures(t *testing.T) {
@@ -45,7 +46,7 @@ func TestConvokeDoesNotTapCreaturesWhenManaCanPay(t *testing.T) {
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1)}))
 	creature := addCombatCreaturePermanent(g, game.Player1)
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	setMainPhasePriority(g, game.Player1)
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
@@ -132,7 +133,7 @@ func setMainPhasePriority(g *game.Game, playerID game.PlayerID) {
 func convokeSpell(cost mana.Cost) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Convoke Spell",
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		ManaCost: optCost(cost),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Convoke}},
@@ -145,7 +146,7 @@ func greenManaCreature() *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{
 		Name:      "Green Mana Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     optPT(pt),
 		Toughness: optPT(pt),
 		Abilities: []game.AbilityDef{{
@@ -164,7 +165,7 @@ func greenConvokeCreature() *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{
 		Name:      "Green Convoke Creature",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Colors:    []mana.Color{mana.Green},
 		Power:     optPT(pt),
 		Toughness: optPT(pt),

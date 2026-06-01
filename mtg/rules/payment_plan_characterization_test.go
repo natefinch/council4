@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -61,8 +62,8 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			name: "X payment uses colored source before generic source",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
-				addBasicLandPermanent(g, game.Player1, game.LandSubtypeIsland)
+				addBasicLandPermanent(g, game.Player1, types.Forest)
+				addBasicLandPermanent(g, game.Player1, types.Island)
 				return g, xSpell(), 0, 1
 			},
 			want: []string{
@@ -82,8 +83,8 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 					Kind:            game.CostModifierSpell,
 					GenericIncrease: 1,
 				})
-				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
-				addBasicLandPermanent(g, game.Player1, game.LandSubtypeIsland)
+				addBasicLandPermanent(g, game.Player1, types.Forest)
+				addBasicLandPermanent(g, game.Player1, types.Island)
 				return g, genericCostSpell(1), 0, 0
 			},
 			want: []string{
@@ -100,7 +101,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				addCombatPermanent(g, game.Player1, namedCreature("Offering Creature"))
-				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+				addBasicLandPermanent(g, game.Player1, types.Forest)
 				return g, sacrificeCostSpell(), 0, 0
 			},
 			want: []string{
@@ -116,8 +117,8 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			name: "kicker paid combines base and kicker mana in plan",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
-				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+				addBasicLandPermanent(g, game.Player1, types.Forest)
+				addBasicLandPermanent(g, game.Player1, types.Forest)
 				return g, kickerSpell(), 0, 0
 			},
 			kickerPaid: true,
@@ -134,7 +135,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			name: "flashback alternative cost replaces base cost when cast from graveyard",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+				addBasicLandPermanent(g, game.Player1, types.Forest)
 				return g, flashbackSpell(), 0, 0
 			},
 			sourceZone: game.ZoneGraveyard,
@@ -230,7 +231,7 @@ func namedCreature(name string, colors ...mana.Color) *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{
 		Name:      name,
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Colors:    colors,
 		Power:     optPT(pt),
 		Toughness: optPT(pt),
@@ -241,7 +242,7 @@ func genericCostSpell(generic int) *game.CardDef {
 	return &game.CardDef{
 		Name:      "Generic Cost Spell",
 		ManaCost:  optCost(mana.Cost{mana.GenericMana(generic)}),
-		Types:     []game.CardType{game.TypeSorcery},
+		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
 	}
 }
@@ -250,7 +251,7 @@ func sacrificeCostSpell() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Sacrifice Cost Spell",
 		ManaCost: greenCost(),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind: game.SpellAbility,
 			AdditionalCosts: []game.AdditionalCost{{
@@ -258,7 +259,7 @@ func sacrificeCostSpell() *game.CardDef {
 				Text:               "Sacrifice a creature",
 				Amount:             1,
 				MatchPermanentType: true,
-				PermanentType:      game.TypeCreature,
+				PermanentType:      types.Creature,
 			}},
 		}},
 	}
@@ -270,7 +271,7 @@ func kickerSpell() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Kicker Spell",
 		ManaCost: greenCost(),
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind:       game.SpellAbility,
 			KickerCost: greenCost(),

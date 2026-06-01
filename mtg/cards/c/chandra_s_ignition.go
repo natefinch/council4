@@ -3,6 +3,7 @@ package c
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -24,7 +25,7 @@ var ChandraSIgnition = &game.CardDef{
 	ManaValue:     5,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
-	Types:         []game.CardType{game.TypeSorcery},
+	Types:         []types.Card{types.Sorcery},
 	OracleText:    "Target creature you control deals damage equal to its power to each other creature and each opponent.",
 	Abilities: []game.AbilityDef{
 		{
@@ -37,7 +38,7 @@ var ChandraSIgnition = &game.CardDef{
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
 					Predicate: game.TargetPredicate{
-						PermanentTypes: []game.CardType{game.TypeCreature},
+						PermanentTypes: []types.Card{types.Creature},
 						Controller:     game.ControllerYou,
 					},
 				},

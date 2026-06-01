@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -14,7 +15,7 @@ func TestLegalActionsIncludeSuspendFromHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, mana.Cost{mana.ColoredMana(mana.Green)}))
-	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
@@ -30,7 +31,7 @@ func TestSuspendActionPaysCostAndExilesWithTimeCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, mana.Cost{mana.ColoredMana(mana.Green)}))
-	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
@@ -127,7 +128,7 @@ func TestSuspendedCreatureEntersWithSuspendHaste(t *testing.T) {
 func suspendSorcery(counters int, suspendCost mana.Cost) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Suspend Sorcery",
-		Types:    []game.CardType{game.TypeSorcery},
+		Types:    []types.Card{types.Sorcery},
 		ManaCost: optCost(mana.Cost{mana.GenericMana(9)}),
 		Abilities: []game.AbilityDef{{
 			Kind:                game.StaticAbility,
@@ -142,7 +143,7 @@ func suspendCreature(counters int, suspendCost mana.Cost) *game.CardDef {
 	pt := game.PT{Value: 2}
 	card := suspendSorcery(counters, suspendCost)
 	card.Name = "Suspend Creature"
-	card.Types = []game.CardType{game.TypeCreature}
+	card.Types = []types.Card{types.Creature}
 	card.Power = optPT(pt)
 	card.Toughness = optPT(pt)
 	return card

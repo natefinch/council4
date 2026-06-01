@@ -4,12 +4,13 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
 // Donatello, Mutant Mechanic
 //
-// Type: Legendary Creature — Mutant Ninja Turtle
+// Type: types.Legendary Creature — Mutant Ninja Turtle
 // Cost: {3}{U}
 //
 // Oracle text:
@@ -25,9 +26,9 @@ var DonatelloMutantMechanic = &game.CardDef{
 	ManaValue:     4,
 	Colors:        []mana.Color{mana.Blue},
 	ColorIdentity: mana.NewColorIdentity(mana.Blue),
-	Supertypes:    []game.Supertype{game.Legendary},
-	Types:         []game.CardType{game.TypeCreature},
-	Subtypes:      []string{game.CreatureSubtypeMutant, game.CreatureSubtypeNinja, game.CreatureSubtypeTurtle},
+	Supertypes:    []types.Super{types.Legendary},
+	Types:         []types.Card{types.Creature},
+	Subtypes:      []types.Sub{types.Mutant, types.Ninja, types.Turtle},
 	Power:         opt.Val(game.PT{Value: 3}),
 	Toughness:     opt.Val(game.PT{Value: 5}),
 	OracleText:    "{T}: Put three +1/+1 counters on target artifact you control. If it isn't a creature, it becomes a 0/0 Robot creature in addition to its other types. Activate only as a sorcery.\nWhenever an artifact you control is put into a graveyard from the battlefield, if it had counters on it, put those counters on up to one target artifact or creature you control.",
@@ -51,14 +52,14 @@ var DonatelloMutantMechanic = &game.CardDef{
 						Text:               "it isn't a creature",
 						TargetIndex:        0,
 						MatchPermanentType: true,
-						PermanentType:      game.TypeCreature,
+						PermanentType:      types.Creature,
 						Negate:             true,
 					}),
 					ContinuousEffects: []game.ContinuousEffect{
 						{
 							Layer:       game.LayerType,
-							AddTypes:    []game.CardType{game.TypeCreature},
-							AddSubtypes: []string{game.CreatureSubtypeRobot},
+							AddTypes:    []types.Card{types.Creature},
+							AddSubtypes: []types.Sub{types.Robot},
 						},
 						{
 							Layer:        game.LayerPowerToughnessSet,
@@ -77,7 +78,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 				Pattern: game.TriggerPattern{
 					Event:                 game.EventZoneChanged,
 					Controller:            game.TriggerControllerYou,
-					RequirePermanentTypes: []game.CardType{game.TypeArtifact},
+					RequirePermanentTypes: []types.Card{types.Artifact},
 					MatchFromZone:         true,
 					FromZone:              game.ZoneBattlefield,
 					MatchToZone:           true,

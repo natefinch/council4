@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -78,8 +79,8 @@ func TestCastFaceDownResolvesAsTwoTwoCreatureWithHiddenIdentity(t *testing.T) {
 	if !permanent.FaceDown || permanent.FaceDownKind != game.FaceDownMorph || permanent.CardInstanceID != cardID {
 		t.Fatalf("permanent face-down state = %+v", permanent)
 	}
-	if !permanentHasType(g, permanent, game.TypeCreature) || effectivePower(g, permanent) != 2 {
-		t.Fatalf("face-down effective characteristics typeCreature=%t power=%d", permanentHasType(g, permanent, game.TypeCreature), effectivePower(g, permanent))
+	if !permanentHasType(g, permanent, types.Creature) || effectivePower(g, permanent) != 2 {
+		t.Fatalf("face-down effective characteristics typeCreature=%t power=%d", permanentHasType(g, permanent, types.Creature), effectivePower(g, permanent))
 	}
 	if permanentEffectiveName(g, permanent) != "" || len(permanentEffectiveAbilities(g, permanent)) != 0 {
 		t.Fatalf("face-down visible name/abilities = %q/%d, want hidden/no abilities", permanentEffectiveName(g, permanent), len(permanentEffectiveAbilities(g, permanent)))
@@ -136,7 +137,7 @@ func morphCreature(cost mana.Cost) *game.CardDef {
 	pt := game.PT{Value: 3}
 	return &game.CardDef{
 		Name:      "Mystery Bear",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
@@ -151,7 +152,7 @@ func disguiseCreature(cost mana.Cost) *game.CardDef {
 	pt := game.PT{Value: 2}
 	return &game.CardDef{
 		Name:      "Veiled Guard",
-		Types:     []game.CardType{game.TypeCreature},
+		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
