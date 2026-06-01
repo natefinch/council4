@@ -316,9 +316,5 @@ func plan1MissingFunctionalityComments() map[string]string {
 	//     ImplementationID "arena" is set so a hand-written rules handler can prompt
 	//     the correct player to choose the opponent-controlled creature.
 	`,
-		"Bushwhack": `// Missing primitives:
-	//   - SearchSpec has no MatchSupertype field; "basic" cannot be enforced
-	//     declaratively -- the search allows any land card.
-	`,
 	}
 }

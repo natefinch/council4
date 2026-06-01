@@ -320,6 +320,9 @@ type SearchSpec struct {
 	MatchCardType bool
 	CardType      CardType
 
+	MatchSupertype bool
+	Supertype      Supertype
+
 	Reveal  bool
 	Shuffle bool
 }

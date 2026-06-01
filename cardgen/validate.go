@@ -160,6 +160,8 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 			v.add(faceName, path, IssueMissingSearchSpec, "search effect has no SearchSpec")
 		} else if effect.Search.Val.SourceZone != game.ZoneLibrary || effect.Search.Val.Destination != game.ZoneHand {
 			v.add(faceName, path, IssueUnsupportedSearchSpec, "only library-to-hand SearchSpec is currently supported")
+		} else if effect.Search.Val.MatchSupertype && effect.Search.Val.Supertype == game.SupertypeNone {
+			v.add(faceName, appendPath(path, "Search"), IssueUnsupportedSearchSpec, "MatchSupertype requires a non-empty supertype")
 		}
 	}
 	if effect.Selector != game.EffectSelectorNone && effect.PlayerSelector != game.PlayerSelectorNone {

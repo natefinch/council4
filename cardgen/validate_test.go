@@ -109,6 +109,19 @@ func TestValidateCardReportsSearchSpecProblems(t *testing.T) {
 			},
 			code: IssueUnsupportedSearchSpec,
 		},
+		{
+			name: "missing supertype",
+			effect: game.Effect{
+				Type:        game.EffectSearch,
+				TargetIndex: -1,
+				Search: opt.Val(game.SearchSpec{
+					SourceZone:     game.ZoneLibrary,
+					Destination:    game.ZoneHand,
+					MatchSupertype: true,
+				}),
+			},
+			code: IssueUnsupportedSearchSpec,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

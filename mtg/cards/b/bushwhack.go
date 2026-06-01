@@ -16,10 +16,6 @@ import (
 //	Choose one —
 //	• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.
 //	• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)
-//
-// Missing primitives:
-//   - SearchSpec has no MatchSupertype field; "basic" cannot be enforced
-//     declaratively — the search allows any land card.
 var Bushwhack = &game.CardDef{
 	Name: "Bushwhack",
 	ManaCost: opt.Val(mana.Cost{
@@ -39,16 +35,17 @@ var Bushwhack = &game.CardDef{
 					Text: "Search your library for a basic land card, reveal it, put it into your hand, then shuffle.",
 					Effects: []game.Effect{
 						{
-							// "basic" supertype not enforceable; searches any land.
 							Type:        game.EffectSearch,
 							TargetIndex: -1,
 							Search: opt.Val(game.SearchSpec{
-								SourceZone:    game.ZoneLibrary,
-								Destination:   game.ZoneHand,
-								MatchCardType: true,
-								CardType:      game.TypeLand,
-								Reveal:        true,
-								Shuffle:       true,
+								SourceZone:     game.ZoneLibrary,
+								Destination:    game.ZoneHand,
+								MatchCardType:  true,
+								CardType:       game.TypeLand,
+								MatchSupertype: true,
+								Supertype:      game.Basic,
+								Reveal:         true,
+								Shuffle:        true,
 							}),
 						},
 					},

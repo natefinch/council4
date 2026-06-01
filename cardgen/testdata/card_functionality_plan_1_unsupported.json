@@ -1,12 +1,12 @@
 {
   "summary": {
     "manifest_total": 15,
-    "unsupported_total": 2,
+    "unsupported_total": 1,
     "fetch_error": 0,
     "missing_generated_file": 0,
     "invalid": 1,
     "validation_pending": 0,
-    "functionality_blocked": 2
+    "functionality_blocked": 1
   },
   "cards": [
     {
@@ -17,21 +17,9 @@
       "functionality": [
         "target chooser"
       ]
-    },
-    {
-      "name": "Bushwhack",
-      "functionality": [
-        "SearchSpec"
-      ]
     }
   ],
   "functionality": [
-    {
-      "capability": "SearchSpec",
-      "cards": [
-        "Bushwhack"
-      ]
-    },
     {
       "capability": "target chooser",
       "cards": [

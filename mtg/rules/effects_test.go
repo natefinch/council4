@@ -792,6 +792,72 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		}
 	})
 
+	t.Run("search can require a basic land", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		basic := addCardToLibrary(g, game.Player1, &game.CardDef{
+			Name:       "Forest",
+			Supertypes: []game.Supertype{game.Basic},
+			Types:      []game.CardType{game.TypeLand},
+		})
+		nonbasic := addCardToLibrary(g, game.Player1, &game.CardDef{
+			Name:  "Nonbasic Land",
+			Types: []game.CardType{game.TypeLand},
+		})
+		addEffectSpellToStack(g, game.Player1, game.Effect{
+			Type:        game.EffectSearch,
+			Amount:      1,
+			TargetIndex: -1,
+			Search: opt.Val(game.SearchSpec{
+				SourceZone:     game.ZoneLibrary,
+				Destination:    game.ZoneHand,
+				MatchCardType:  true,
+				CardType:       game.TypeLand,
+				MatchSupertype: true,
+				Supertype:      game.Basic,
+				Reveal:         true,
+			}),
+		}, nil)
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if !g.Players[game.Player1].Hand.Contains(basic) || g.Players[game.Player1].Library.Contains(basic) {
+			t.Fatal("search effect did not move matching basic land library -> hand")
+		}
+		if !g.Players[game.Player1].Library.Contains(nonbasic) {
+			t.Fatal("search effect moved nonbasic land despite basic filter")
+		}
+		if !hasEvent(g, game.EventCardRevealed) {
+			t.Fatalf("events = %+v, want reveal event for searched basic land", g.Events)
+		}
+	})
+
+	t.Run("search without supertype filter still matches nonbasic lands", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		nonbasic := addCardToLibrary(g, game.Player1, &game.CardDef{
+			Name:  "Nonbasic Land",
+			Types: []game.CardType{game.TypeLand},
+		})
+		addEffectSpellToStack(g, game.Player1, game.Effect{
+			Type:        game.EffectSearch,
+			Amount:      1,
+			TargetIndex: -1,
+			Search: opt.Val(game.SearchSpec{
+				SourceZone:    game.ZoneLibrary,
+				Destination:   game.ZoneHand,
+				MatchCardType: true,
+				CardType:      game.TypeLand,
+			}),
+		}, nil)
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if !g.Players[game.Player1].Hand.Contains(nonbasic) || g.Players[game.Player1].Library.Contains(nonbasic) {
+			t.Fatal("search effect did not move nonbasic land without a supertype filter")
+		}
+	})
+
 	t.Run("reveal top library card", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)

@@ -112,6 +112,9 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	if spec.MatchCardType && !card.Def.HasType(spec.CardType) {
 		return false
 	}
+	if spec.MatchSupertype && !card.Def.HasSupertype(spec.Supertype) {
+		return false
+	}
 	return true
 }
 
