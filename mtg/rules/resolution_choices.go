@@ -29,10 +29,7 @@ func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, ef
 }
 
 func resolutionChoiceRequest(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) (game.ChoiceRequest, map[int]game.ResolutionChoiceResult) {
-	playerID := stackObjectController(obj)
-	if choice.UsePlayer && choice.Player >= 0 && choice.Player < game.NumPlayers {
-		playerID = choice.Player
-	}
+	playerID := resolutionChoicePlayer(stackObjectController(obj), choice)
 	options, values := resolutionChoiceOptions(g, playerID, choice)
 	prompt := choice.Prompt
 	if prompt == "" {
@@ -58,11 +55,7 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 	}
 	switch choice.Kind {
 	case game.ResolutionChoiceColor:
-		colors := choice.Colors
-		if len(colors) == 0 {
-			colors = append(mana.AllColors(), mana.Colorless)
-		}
-		for i, color := range colors {
+		for i, color := range resolutionChoiceColors(g, playerID, choice) {
 			add(i, color.String(), game.ResolutionChoiceResult{Kind: choice.Kind, Color: color})
 		}
 	case game.ResolutionChoiceCardType:
@@ -92,6 +85,41 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 		}
 	}
 	return options, values
+}
+
+func resolutionChoicePlayer(controller game.PlayerID, choice *game.ResolutionChoice) game.PlayerID {
+	if choice != nil && choice.UsePlayer && choice.Player >= 0 && choice.Player < game.NumPlayers {
+		return choice.Player
+	}
+	return controller
+}
+
+func resolutionChoiceColors(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
+	if choice == nil {
+		return nil
+	}
+	switch choice.ColorSource {
+	case game.ResolutionChoiceColorSourceCommanderIdentity:
+		return commanderColorIdentityColors(g, playerID)
+	default:
+		colors := choice.Colors
+		if len(colors) == 0 {
+			colors = append(mana.AllColors(), mana.Colorless)
+		}
+		return colors
+	}
+}
+
+func commanderColorIdentityColors(g *game.Game, playerID game.PlayerID) []mana.Color {
+	player, ok := playerByID(g, playerID)
+	if !ok || player.CommanderInstanceID == 0 {
+		return nil
+	}
+	card, ok := g.GetCardInstance(player.CommanderInstanceID)
+	if !ok || card.Def == nil {
+		return nil
+	}
+	return card.Def.ColorIdentity.Colors()
 }
 
 func choicePlayerMatches(controller, candidate game.PlayerID, relation game.PlayerRelation) bool {

@@ -153,7 +153,7 @@ Triggered abilities use `TriggerCondition.Pattern` to match typed `GameEvent` va
 
 ### Choices
 
-`ChoiceRequest` and `ChoiceDecision` (`choice.go`) describe engine-mediated decisions that are not priority actions. The current rules engine uses choices for triggered-ability target selection, ordering simultaneous triggers controlled by the same player, optional triggered ability resolution, payment choices, resolution-time value choices, and scry/surveil top-card decisions. Choice data lives in `mtg/game` so agents and rules code can share the request shape without moving behavior out of `mtg/rules`.
+`ChoiceRequest` and `ChoiceDecision` (`choice.go`) describe engine-mediated decisions that are not priority actions. The current rules engine uses choices for triggered-ability target selection, ordering simultaneous triggers controlled by the same player, optional triggered ability resolution, payment choices, resolution-time value choices, commander-color mana choices, and scry/surveil top-card decisions. Choice data lives in `mtg/game` so agents and rules code can share the request shape without moving behavior out of `mtg/rules`.
 
 ### Runtime rules data
 

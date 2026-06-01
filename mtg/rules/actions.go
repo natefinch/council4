@@ -404,7 +404,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			Controller:     playerID,
 		}
 		for _, effect := range ability.Effects {
-			e.resolveEffect(g, obj, effect, nil)
+			e.resolveEffectWithChoices(g, obj, effect, agents, log)
 		}
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, ability)
 		return true
@@ -786,7 +786,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	if ability.Kind != game.ActivatedAbility || !ability.IsManaAbility || ability.IsLoyaltyAbility {
 		return false
 	}
-	if len(ability.Targets) != 0 || !manaAbilityHasAddManaEffect(ability) {
+	if len(ability.Targets) != 0 || !manaAbilityHasAddManaEffect(ability) || !manaAbilityChoicesAvailable(g, playerID, ability) {
 		return false
 	}
 	if ability.Timing != game.NoTimingRestriction || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
@@ -809,8 +809,31 @@ func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
 	if ability == nil || len(ability.Effects) == 0 {
 		return false
 	}
+	hasAddMana := false
 	for _, effect := range ability.Effects {
-		if effect.Type != game.EffectAddMana {
+		switch effect.Type {
+		case game.EffectAddMana:
+			hasAddMana = true
+		case game.EffectChoose:
+			if !effect.Choice.Exists || effect.Choice.Val.Kind != game.ResolutionChoiceColor {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return hasAddMana
+}
+
+func manaAbilityChoicesAvailable(g *game.Game, playerID game.PlayerID, ability *game.AbilityDef) bool {
+	for _, effect := range ability.Effects {
+		if effect.Type != game.EffectChoose || !effect.Choice.Exists {
+			continue
+		}
+		choice := effect.Choice.Val
+		choicePlayer := resolutionChoicePlayer(playerID, &choice)
+		_, values := resolutionChoiceOptions(g, choicePlayer, &choice)
+		if len(values) == 0 {
 			return false
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -464,6 +465,119 @@ func TestResolutionChoiceCanChooseManaColor(t *testing.T) {
 	}
 	if !g.Players[game.Player1].ManaPool.Spend(mana.Red, 1) {
 		t.Fatal("chosen mana was not red")
+	}
+}
+
+func TestCommanderIdentityColorChoiceFeedsManaAbility(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{
+		game.Player1: {
+			Commander: &game.CardDef{
+				Name:          "Dimir Commander",
+				Types:         []game.CardType{game.TypeCreature},
+				ColorIdentity: mana.NewColorIdentity(mana.Blue, mana.Black),
+			},
+		},
+	})
+	setSorcerySpeedTurn(g, game.Player1)
+	tower := addCombatPermanent(g, game.Player1, commandTowerLikeLand())
+	engine := NewEngine(nil)
+	log := &TurnLog{}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.ActivateAbility(tower.ObjectID, 0, nil, 0), agents, log) {
+		t.Fatal("activate Command Tower-like ability failed")
+	}
+
+	if !tower.Tapped {
+		t.Fatal("Command Tower-like permanent was not tapped for its mana ability")
+	}
+	if len(log.Choices) != 1 {
+		t.Fatalf("choices = %+v, want one commander-color choice", log.Choices)
+	}
+	choice := log.Choices[0]
+	if choice.Request.Kind != game.ChoiceResolution || len(choice.Request.Options) != 2 || choice.Request.Options[0].Label != "U" || choice.Request.Options[1].Label != "B" {
+		t.Fatalf("choice request = %+v, want only U/B commander identity options", choice.Request)
+	}
+	if len(choice.Selected) != 1 || choice.Selected[0] != 1 {
+		t.Fatalf("selected = %+v, want black option", choice.Selected)
+	}
+	if got := g.Players[game.Player1].ManaPool.Total(); got != 1 {
+		t.Fatalf("mana pool total = %d, want one chosen mana", got)
+	}
+	if !g.Players[game.Player1].ManaPool.Spend(mana.Black, 1) {
+		t.Fatal("chosen mana was not black")
+	}
+}
+
+func TestCommanderIdentityColorChoiceUnavailableWithoutColors(t *testing.T) {
+	tests := []struct {
+		name    string
+		configs [game.NumPlayers]game.PlayerConfig
+	}{
+		{name: "no commander"},
+		{
+			name: "colorless commander",
+			configs: [game.NumPlayers]game.PlayerConfig{
+				game.Player1: {
+					Commander: &game.CardDef{
+						Name:          "Colorless Commander",
+						Types:         []game.CardType{game.TypeCreature},
+						ColorIdentity: mana.NewColorIdentity(),
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := game.NewGame(tt.configs)
+			setSorcerySpeedTurn(g, game.Player1)
+			tower := addCombatPermanent(g, game.Player1, commandTowerLikeLand())
+			card, ok := permanentCardDef(g, tower)
+			if !ok {
+				t.Fatal("permanent card definition not found")
+			}
+
+			if canActivateManaAbility(g, game.Player1, tower, &card.Abilities[0], 0) {
+				t.Fatal("canActivateManaAbility() = true, want false without commander color options")
+			}
+			if got := NewEngine(nil).legalActivateAbilityActions(g, game.Player1); len(got) != 0 {
+				t.Fatalf("legal activation actions = %+v, want none", got)
+			}
+		})
+	}
+}
+
+func commandTowerLikeLand() *game.CardDef {
+	return &game.CardDef{
+		Name:  "Command Tower-like Land",
+		Types: []game.CardType{game.TypeLand},
+		Abilities: []game.AbilityDef{{
+			Kind:          game.ActivatedAbility,
+			Text:          "{T}: Add one mana of any color in your commander's color identity.",
+			IsManaAbility: true,
+			AdditionalCosts: []game.AdditionalCost{
+				{Kind: game.AdditionalCostTap},
+			},
+			Effects: []game.Effect{
+				{
+					Type: game.EffectChoose,
+					Choice: opt.Val(game.ResolutionChoice{
+						Kind:        game.ResolutionChoiceColor,
+						Prompt:      "Choose a color in your commander's color identity",
+						ColorSource: game.ResolutionChoiceColorSourceCommanderIdentity,
+					}),
+					LinkID: "commander-color",
+				},
+				{
+					Type:         game.EffectAddMana,
+					Amount:       1,
+					ChoiceLinkID: "commander-color",
+				},
+			},
+		}},
 	}
 }
 

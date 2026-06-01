@@ -286,7 +286,7 @@ func cardFunctionalityPlan1Manifest() Manifest {
 		card("Chandra's Ignition", filepath.Join("mtg", "cards", "c", "chandra_s_ignition.go"), BatchValidationStatusValid),
 		card("Chaos Warp", filepath.Join("mtg", "cards", "c", "chaos_warp.go"), BatchValidationStatusValid),
 		card("Cinder Glade", filepath.Join("mtg", "cards", "c", "cinder_glade.go"), BatchValidationStatusValid),
-		card("Command Tower", filepath.Join("mtg", "cards", "c", "command_tower.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Command Tower", filepath.Join("mtg", "cards", "c", "command_tower.go"), BatchValidationStatusValid),
 	}}
 }
 
@@ -319,12 +319,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 		"Bushwhack": `// Missing primitives:
 	//   - SearchSpec has no MatchSupertype field; "basic" cannot be enforced
 	//     declaratively -- the search allows any land card.
-	`,
-		"Command Tower": `// Missing primitives:
-	//   - ResolutionChoice.Colors is a static slice; it cannot express "the colors in your
-	//     commander's color identity," which is a dynamic game-state query. The approximation
-	//     below offers all five colors; ImplementationID "command-tower" must restrict the
-	//     choice to the controller's commander's color identity at activation time.
 	`,
 	}
 }

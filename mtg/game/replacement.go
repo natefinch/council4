@@ -53,6 +53,15 @@ const (
 	ResolutionChoiceCard
 )
 
+// ResolutionChoiceColorSource identifies dynamic sources for color choice
+// options.
+type ResolutionChoiceColorSource int
+
+const (
+	ResolutionChoiceColorSourceStatic ResolutionChoiceColorSource = iota
+	ResolutionChoiceColorSourceCommanderIdentity
+)
+
 // ResolutionChoice describes a bounded value-producing choice made during
 // resolution.
 type ResolutionChoice struct {
@@ -66,6 +75,7 @@ type ResolutionChoice struct {
 	Player    PlayerID
 	UsePlayer bool
 
+	ColorSource    ResolutionChoiceColorSource
 	Colors         []mana.Color
 	CardTypes      []CardType
 	PlayerRelation PlayerRelation

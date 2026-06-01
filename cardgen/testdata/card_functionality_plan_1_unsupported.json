@@ -1,12 +1,12 @@
 {
   "summary": {
     "manifest_total": 15,
-    "unsupported_total": 3,
+    "unsupported_total": 2,
     "fetch_error": 0,
     "missing_generated_file": 0,
-    "invalid": 2,
+    "invalid": 1,
     "validation_pending": 0,
-    "functionality_blocked": 3
+    "functionality_blocked": 2
   },
   "cards": [
     {
@@ -23,24 +23,9 @@
       "functionality": [
         "SearchSpec"
       ]
-    },
-    {
-      "name": "Command Tower",
-      "issues": [
-        "implementation-required"
-      ],
-      "functionality": [
-        "ResolutionChoice.Colors"
-      ]
     }
   ],
   "functionality": [
-    {
-      "capability": "ResolutionChoice.Colors",
-      "cards": [
-        "Command Tower"
-      ]
-    },
     {
       "capability": "SearchSpec",
       "cards": [
