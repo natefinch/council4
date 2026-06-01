@@ -43,11 +43,11 @@ var basicLandTypes = []struct {
 	subtype string
 	color   mana.Color
 }{
-	{subtype: "Plains", color: mana.White},
-	{subtype: "Island", color: mana.Blue},
-	{subtype: "Swamp", color: mana.Black},
-	{subtype: "Mountain", color: mana.Red},
-	{subtype: "Forest", color: mana.Green},
+	{subtype: game.LandSubtypePlains, color: mana.White},
+	{subtype: game.LandSubtypeIsland, color: mana.Blue},
+	{subtype: game.LandSubtypeSwamp, color: mana.Black},
+	{subtype: game.LandSubtypeMountain, color: mana.Red},
+	{subtype: game.LandSubtypeForest, color: mana.Green},
 }
 
 func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.AbilityDef, bool) {

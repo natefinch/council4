@@ -45,7 +45,7 @@ func TestConvokeDoesNotTapCreaturesWhenManaCanPay(t *testing.T) {
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1)}))
 	creature := addCombatCreaturePermanent(g, game.Player1)
-	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	setMainPhasePriority(g, game.Player1)
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {

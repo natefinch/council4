@@ -415,6 +415,35 @@ func TestValidateCardChecksNestedTargetIndexes(t *testing.T) {
 	}
 }
 
+func TestValidateCardChecksStructuredConditionObjectReferences(t *testing.T) {
+	card := &game.CardDef{
+		Name:       "Bad Condition",
+		OracleText: "Whenever a creature dies, if it was targeted, draw a card.",
+		Abilities: []game.AbilityDef{{
+			Kind: game.TriggeredAbility,
+			Targets: []game.TargetSpec{
+				{MinTargets: 1, MaxTargets: 1},
+			},
+			Trigger: opt.Val(game.TriggerCondition{
+				Pattern: game.TriggerPattern{Event: game.EventPermanentDied},
+				InterveningCondition: opt.Val(game.Condition{
+					Object: opt.Val(game.ObjectReference{
+						Kind:        game.ObjectReferenceTargetPermanent,
+						TargetIndex: 1,
+					}),
+				}),
+			}),
+			Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: -1}},
+		}},
+	}
+
+	issues := ValidateCard(card, ValidationOptions{})
+
+	if !hasIssue(issues, IssueTargetIndexOutOfRange) {
+		t.Fatalf("issues = %+v, want target index issue from structured condition object", issues)
+	}
+}
+
 func TestValidateCardChecksEnchantTargetSpec(t *testing.T) {
 	card := &game.CardDef{
 		Name:       "Bad Aura",

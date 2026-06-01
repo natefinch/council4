@@ -25,7 +25,7 @@ var Anger = &game.CardDef{
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
 	Types:         []game.CardType{game.TypeCreature},
-	Subtypes:      []string{"Incarnation"},
+	Subtypes:      []string{game.CreatureSubtypeIncarnation},
 	Power:         opt.Val(game.PT{Value: 2}),
 	Toughness:     opt.Val(game.PT{Value: 2}),
 	OracleText:    "Haste\nAs long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
@@ -41,13 +41,12 @@ var Anger = &game.CardDef{
 			ZoneOfFunction: game.ZoneGraveyard,
 			Condition: opt.Val(game.Condition{
 				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []string{"Mountain"},
+					SubtypesAny: []string{game.LandSubtypeMountain},
 				},
 			}),
 			Effects: []game.Effect{
 				{
-					Type:        game.EffectApplyContinuous,
-					TargetIndex: -2,
+					Type: game.EffectApplyContinuous,
 					ContinuousEffects: []game.ContinuousEffect{
 						{
 							Layer:       game.LayerAbility,

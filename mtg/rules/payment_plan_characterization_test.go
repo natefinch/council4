@@ -61,8 +61,8 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			name: "X payment uses colored source before generic source",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addBasicLandPermanent(g, game.Player1, "Forest")
-				addBasicLandPermanent(g, game.Player1, "Island")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeIsland)
 				return g, xSpell(), 0, 1
 			},
 			want: []string{
@@ -82,8 +82,8 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 					Kind:            game.CostModifierSpell,
 					GenericIncrease: 1,
 				})
-				addBasicLandPermanent(g, game.Player1, "Forest")
-				addBasicLandPermanent(g, game.Player1, "Island")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeIsland)
 				return g, genericCostSpell(1), 0, 0
 			},
 			want: []string{
@@ -100,7 +100,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				addCombatPermanent(g, game.Player1, namedCreature("Offering Creature"))
-				addBasicLandPermanent(g, game.Player1, "Forest")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 				return g, sacrificeCostSpell(), 0, 0
 			},
 			want: []string{
@@ -116,8 +116,8 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			name: "kicker paid combines base and kicker mana in plan",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addBasicLandPermanent(g, game.Player1, "Forest")
-				addBasicLandPermanent(g, game.Player1, "Forest")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 				return g, kickerSpell(), 0, 0
 			},
 			kickerPaid: true,
@@ -134,7 +134,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			name: "flashback alternative cost replaces base cost when cast from graveyard",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addBasicLandPermanent(g, game.Player1, "Forest")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 				return g, flashbackSpell(), 0, 0
 			},
 			sourceZone: game.ZoneGraveyard,

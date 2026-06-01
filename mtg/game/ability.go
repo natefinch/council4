@@ -72,6 +72,7 @@ const (
 	Foretell
 	Craft
 	Discover
+	Eternalize
 	Affinity
 	Improvise
 	Emerge
@@ -163,12 +164,11 @@ const (
 type TriggerPattern struct {
 	Event EventKind
 
-	Controller TriggerControllerFilter
-	Source     TriggerSourceFilter
-	Player     TriggerPlayerFilter
+	Controller  TriggerControllerFilter
+	Source      TriggerSourceFilter
+	ExcludeSelf bool
+	Player      TriggerPlayerFilter
 
-	MatchPermanentType    bool
-	PermanentType         CardType
 	RequirePermanentTypes []CardType
 	ExcludePermanentTypes []CardType
 
@@ -263,6 +263,16 @@ const (
 	EffectReveal
 	EffectInvestigate
 	EffectShufflePermanentIntoLibrary
+	EffectDiscover
+)
+
+// EffectResultAmountKind identifies which numeric result an effect records for
+// later linked "that much" or X instructions.
+type EffectResultAmountKind int
+
+const (
+	EffectResultAmountDefault EffectResultAmountKind = iota
+	EffectResultAmountExcessDamage
 )
 
 // EffectSelector identifies a set of permanents affected by a mass effect.
@@ -310,6 +320,67 @@ type CounterSourceSpec struct {
 	TargetIndex int
 }
 
+// TokenCopySource identifies what object/card supplies copiable values for a
+// token-copy effect.
+type TokenCopySource int
+
+const (
+	TokenCopySourceNone TokenCopySource = iota
+	TokenCopySourceObject
+	TokenCopySourceSourceCard
+)
+
+// TokenCopySpec describes a token that starts as a copy of another object/card,
+// then applies explicit copy-modifying exceptions such as Eternalize's color,
+// type, power/toughness, and mana-cost overrides.
+type TokenCopySpec struct {
+	Source TokenCopySource
+	Object ObjectReference
+
+	SetName       string
+	SetColors     []mana.Color
+	SetTypes      []CardType
+	SetSubtypes   []string
+	SetPower      opt.V[PT]
+	SetToughness  opt.V[PT]
+	NoManaCost    bool
+	NoPrintedText bool
+}
+
+// EternalizeAbility builds the keyword's full activated ability: a sorcery-speed
+// graveyard activation that exiles the source card and creates the standard
+// 4/4 black Zombie copy token with no mana cost.
+func EternalizeAbility(cost mana.Cost, creatureSubtypes ...string) AbilityDef {
+	tokenSubtypes := make([]string, 0, len(creatureSubtypes)+1)
+	tokenSubtypes = append(tokenSubtypes, CreatureSubtypeZombie)
+	tokenSubtypes = append(tokenSubtypes, creatureSubtypes...)
+	return AbilityDef{
+		Kind:           ActivatedAbility,
+		Text:           "Eternalize " + cost.String(),
+		Keywords:       []Keyword{Eternalize},
+		ManaCost:       opt.Val(append(mana.Cost(nil), cost...)),
+		ZoneOfFunction: ZoneGraveyard,
+		Timing:         SorceryOnly,
+		AdditionalCosts: []AdditionalCost{{
+			Kind: AdditionalCostExileSource,
+			Text: "Exile this card from your graveyard",
+		}},
+		Effects: []Effect{{
+			Type:        EffectCreateToken,
+			Amount:      1,
+			TargetIndex: -1,
+			TokenCopy: opt.Val(TokenCopySpec{
+				Source:       TokenCopySourceSourceCard,
+				SetColors:    []mana.Color{mana.Black},
+				SetSubtypes:  tokenSubtypes,
+				SetPower:     opt.Val(PT{Value: 4}),
+				SetToughness: opt.Val(PT{Value: 4}),
+				NoManaCost:   true,
+			}),
+		}},
+	}
+}
+
 // SearchSpec describes the supported deterministic library-search slice. The
 // initial rules implementation supports only library -> hand. More complex
 // search templates should stay unsupported until explicitly modeled.
@@ -355,6 +426,7 @@ type Effect struct {
 	Amount        int
 	DynamicAmount opt.V[DynamicAmount]
 	TargetIndex   int
+	Object        opt.V[ObjectReference]
 	DamageSource  opt.V[ObjectReference]
 	Recipient     opt.V[PlayerReference]
 	Condition     opt.V[EffectCondition]
@@ -369,6 +441,7 @@ type Effect struct {
 
 	PowerDelta     int
 	ToughnessDelta int
+	ResultAmount   EffectResultAmountKind
 	CounterKind    counter.Kind
 	CounterSource  CounterSourceSpec
 	ManaColor      mana.Color
@@ -388,12 +461,14 @@ type Effect struct {
 	Selector          EffectSelector
 	PlayerSelector    PlayerSelector
 	Token             opt.V[*CardDef]
+	TokenCopy         opt.V[TokenCopySpec]
 	ContinuousEffects []ContinuousEffect
 	DelayedTrigger    opt.V[DelayedTriggerDef]
 	EmblemAbilities   []AbilityDef
 	Replacement       opt.V[ReplacementEffect]
 	RuleEffects       []RuleEffect
 	Search            opt.V[SearchSpec]
+	Card              opt.V[CardReference]
 	LinkID            string
 	Description       string
 }

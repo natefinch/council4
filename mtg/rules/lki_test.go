@@ -13,9 +13,8 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
-		Event:              game.EventPermanentDied,
-		MatchPermanentType: true,
-		PermanentType:      game.TypeCreature,
+		Event:                 game.EventPermanentDied,
+		RequirePermanentTypes: []game.CardType{game.TypeCreature},
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
 	land := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:  "Animated Land",

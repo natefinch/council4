@@ -24,10 +24,41 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if !cond.ControllerControls.Empty() {
 		matches = matches && controllerControlsMatchingPermanent(g, ctx, cond.ControllerControls)
 	}
+	if cond.Object.Exists || len(cond.Types) > 0 {
+		matches = matches && conditionObjectMatches(g, ctx, cond)
+	}
 	if cond.Negate {
 		return !matches
 	}
 	return matches
+}
+
+func conditionObjectMatches(g *game.Game, ctx conditionContext, cond game.Condition) bool {
+	obj := ctx.obj
+	if obj == nil && ctx.event != nil {
+		obj = &game.StackObject{HasTriggerEvent: true, TriggerEvent: *ctx.event, Controller: ctx.controller}
+	}
+	ref := game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}
+	if cond.Object.Exists {
+		ref = cond.Object.Val
+	}
+	resolved, ok := resolveObjectReference(g, obj, ref)
+	if !ok {
+		return false
+	}
+	for _, cardType := range cond.Types {
+		if !resolvedObjectHasType(g, resolved, cardType) {
+			return false
+		}
+	}
+	return true
+}
+
+func resolvedObjectHasType(g *game.Game, resolved resolvedObjectReference, cardType game.CardType) bool {
+	if resolved.permanent != nil {
+		return permanentHasType(g, resolved.permanent, cardType)
+	}
+	return slices.Contains(resolved.snapshot.Types, cardType)
 }
 
 func controllerControlsMatchingPermanent(g *game.Game, ctx conditionContext, filter game.PermanentFilter) bool {

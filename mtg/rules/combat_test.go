@@ -986,7 +986,7 @@ func TestAttackTaxFiltersAndChargesDeclareAttackers(t *testing.T) {
 	if declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player2}) {
 		t.Fatal("taxed attack was legal without mana")
 	}
-	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	actions = legalDeclareAttackersActions(g, game.Player1)
 	if !declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player2}) {
 		t.Fatal("taxed attack was not legal with mana available")

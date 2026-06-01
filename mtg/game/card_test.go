@@ -24,7 +24,7 @@ func TestCardDefDefaultFaceUsesFrontFace(t *testing.T) {
 				Name:      "Back Name",
 				ManaValue: 0,
 				Types:     []CardType{TypeLand},
-				Subtypes:  []string{"Forest"},
+				Subtypes:  []string{LandSubtypeForest},
 			},
 		},
 	}

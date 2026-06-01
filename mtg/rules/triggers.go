@@ -323,6 +323,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	if !triggerSourceMatches(g, source, pattern.Source, event) {
 		return false
 	}
+	if pattern.ExcludeSelf && triggerSourceMatches(g, source, game.TriggerSourceSelf, event) {
+		return false
+	}
 	if !triggerPlayerMatches(sourceController, pattern.Player, event.Player) {
 		return false
 	}
@@ -339,9 +342,6 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 		if pattern.Step == game.StepNone || pattern.Step != event.Step {
 			return false
 		}
-	}
-	if pattern.MatchPermanentType && !eventPermanentHasType(g, event, pattern.PermanentType) {
-		return false
 	}
 	if !eventPermanentTypeFiltersMatch(g, event, pattern.RequirePermanentTypes, pattern.ExcludePermanentTypes) {
 		return false

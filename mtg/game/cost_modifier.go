@@ -43,6 +43,7 @@ const (
 	RuleEffectCantBlock
 	RuleEffectCostModifier
 	RuleEffectCastFromZone
+	RuleEffectCantBeCountered
 )
 
 // RuleEffect models static or runtime effects that change game rules rather
@@ -59,6 +60,7 @@ type RuleEffect struct {
 	AffectedPlayer     PlayerRelation
 	AffectedController ControllerRelation
 	PermanentTypes     []CardType
+	SpellTypes         []CardType
 	DefendingPlayer    PlayerRelation
 
 	CostModifier CostModifier

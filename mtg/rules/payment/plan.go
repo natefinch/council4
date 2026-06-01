@@ -114,22 +114,28 @@ func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {
 
 func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	plan := abilityCostPlan{}
-	if req.Source == nil || req.Ability == nil {
+	if req.Source == nil && req.SourceCardID == 0 || req.Ability == nil {
 		return plan, false
 	}
 	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.Ability.ManaCost)) {
 		return plan, false
 	}
 	tapSource := hasTapCost(req.Ability)
-	if tapSource && !canTapForAbility(s, req.Source) {
+	if tapSource && (req.Source == nil || !canTapForAbility(s, req.Source)) {
 		return plan, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, abilityAdditionalCosts(req.Ability), req.Prefs, req.Source)
+	sourceCardID := req.SourceCardID
+	sourceZone := req.SourceZone
+	if req.Source != nil && sourceCardID == 0 {
+		sourceCardID = req.Source.CardInstanceID
+		sourceZone = game.ZoneBattlefield
+	}
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, abilityAdditionalCosts(req.Ability), req.Prefs, req.Source, sourceCardID, sourceZone)
 	if !ok {
 		return plan, false
 	}
 	excluded := make(map[id.ID]bool)
-	if tapSource {
+	if tapSource && req.Source != nil {
 		excluded[req.Source.ObjectID] = true
 	}
 	for _, sacrifice := range additional.sacrifices {
@@ -213,7 +219,7 @@ func payGenericCost(s State, req GenericRequest) bool {
 
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.Prefs, nil)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.Prefs, nil, 0, game.ZoneNone)
 	if !ok {
 		return plan, false
 	}
@@ -236,7 +242,7 @@ func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, option spellCostOption, xValue int, prefs *Preferences) (spellCostPlan, bool) {
 	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, option: option})
 	plan := spellCostPlan{option: option}
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, prefs, nil)
+	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, prefs, nil, 0, game.ZoneNone)
 	if !ok {
 		return plan, false
 	}
@@ -391,9 +397,6 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 }
 
 func abilityCostPlanStillValid(s State, player *game.Player, source *game.Permanent, plan abilityCostPlan) bool {
-	if source == nil {
-		return false
-	}
 	if plan.tapSource && !canTapForAbility(s, source) {
 		return false
 	}

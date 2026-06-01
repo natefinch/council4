@@ -14,7 +14,8 @@ Given a Magic: The Gathering card name, the library:
 2. Parses the mechanical fields: name, mana cost, mana value, colors, color identity, types, subtypes, supertypes, power/toughness, loyalty, defense, simple ETB tapped text, and double-faced card faces.
 3. Generates a Go source file with a `game.CardDef` literal, leaving the `Abilities` slice empty for LLM completion.
 4. Validates generated card definitions against the currently executable rules
-   model before batch workflows mark them supported.
+   model before batch workflows mark them supported, including newer structured
+   object/card references, token-copy specs, and rule-effect primitives.
 5. Reports cards that still rely on missing rules/parser functionality, including
    generated-source `Missing primitives` comments and `ImplementationID` escape
    hatches.
@@ -62,6 +63,7 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 - `ParseManaCostLiteral(cost)` — converts Scryfall mana cost strings to Go code.
 - `ManaValueFromCost(cost)` — computes a face's mana value from a mana-cost string.
 - `ParseTypeLine(typeLine)` — splits a type line into supertypes, types, subtypes.
+- `SubtypeToLiteral(subtype, types)` — emits central `game.*Subtype*` constants when known.
 - `CardNameToVarName(name)` — converts card names to Go exported variable names.
 - `CardNameToFileName(name)` — converts card names to snake_case file names.
 - `CardNameToPackageLetter(name)` — returns the first letter for sub-package routing.

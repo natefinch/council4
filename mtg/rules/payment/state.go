@@ -77,4 +77,7 @@ type State interface {
 	// DiscardFromHand discards a card from the player's hand, emitting the
 	// appropriate discard and zone-change events.
 	DiscardFromHand(playerID game.PlayerID, cardID id.ID) bool
+
+	// MoveCard moves a non-battlefield card between zones and emits a zone-change event.
+	MoveCard(playerID game.PlayerID, cardID id.ID, from game.ZoneType, to game.ZoneType) bool
 }

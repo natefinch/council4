@@ -23,7 +23,7 @@ var CinderGlade = &game.CardDef{
 	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
 	Types:         []game.CardType{game.TypeLand},
-	Subtypes:      []string{"Mountain", "Forest"},
+	Subtypes:      []string{game.LandSubtypeMountain, game.LandSubtypeForest},
 	OracleText:    "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",
 	EntersTappedCondition: opt.Val(game.Condition{
 		Negate: true,

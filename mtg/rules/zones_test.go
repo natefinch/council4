@@ -254,7 +254,7 @@ func addAuraPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:     "Test Aura",
 		Types:    []game.CardType{game.TypeEnchantment},
-		Subtypes: []string{"Aura"},
+		Subtypes: []string{game.EnchantmentSubtypeAura},
 	})
 }
 
@@ -262,7 +262,7 @@ func landAuraCard() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Land Aura",
 		Types:    []game.CardType{game.TypeEnchantment},
-		Subtypes: []string{"Aura"},
+		Subtypes: []string{game.EnchantmentSubtypeAura},
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Enchant},
@@ -289,6 +289,6 @@ func addEquipmentPermanent(g *game.Game, controller game.PlayerID) *game.Permane
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:     "Test Equipment",
 		Types:    []game.CardType{game.TypeArtifact},
-		Subtypes: []string{"Equipment"},
+		Subtypes: []string{game.ArtifactSubtypeEquipment},
 	})
 }

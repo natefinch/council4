@@ -142,7 +142,7 @@ func modalDFCSpellLand() *game.CardDef {
 		Types:  []game.CardType{game.TypeSorcery},
 		Faces: []game.CardFace{
 			{Name: "Front Spell", Types: []game.CardType{game.TypeSorcery}},
-			{Name: "Back Land", Types: []game.CardType{game.TypeLand}, Subtypes: []string{"Forest"}, EntersTapped: true},
+			{Name: "Back Land", Types: []game.CardType{game.TypeLand}, Subtypes: []string{game.LandSubtypeForest}, EntersTapped: true},
 		},
 	}
 }

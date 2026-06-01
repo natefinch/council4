@@ -19,6 +19,10 @@ func createCardPermanentFace(g *game.Game, card *game.CardInstance, controller g
 }
 
 func createCardPermanentFaceWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	return createCardPermanentFaceWithContinuous(e, g, card, controller, fromZone, face, nil, agents, log)
+}
+
+func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, continuous []game.ContinuousEffect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {
 		return nil, false
@@ -34,6 +38,7 @@ func createCardPermanentFaceWithChoices(e *Engine, g *game.Game, card *game.Card
 		Timestamp:      int64(objectID),
 	}
 	initializePermanentCounters(permanent, faceDef)
+	applyInitialContinuousEffects(g, permanent, continuous)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine: e,
 		agents: agents,
@@ -54,6 +59,21 @@ func createCardPermanentFaceWithChoices(e *Engine, g *game.Game, card *game.Card
 	event.Kind = game.EventPermanentEnteredBattlefield
 	emitEvent(g, event)
 	return permanent, true
+}
+
+func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, continuous []game.ContinuousEffect) {
+	for _, effect := range continuous {
+		effect.ID = g.IDGen.Next()
+		effect.SourceObjectID = permanent.ObjectID
+		effect.SourceCardID = permanent.CardInstanceID
+		effect.Controller = permanent.Controller
+		effect.Timestamp = permanent.Timestamp
+		effect.AffectedObjectID = permanent.ObjectID
+		if effect.Duration == game.DurationPermanent {
+			effect.Duration = game.DurationPermanent
+		}
+		g.ContinuousEffects = append(g.ContinuousEffects, effect)
+	}
 }
 
 func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, kind game.FaceDownKind) (*game.Permanent, bool) {
@@ -160,6 +180,31 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 	zone.Add(removed.CardInstanceID)
 	emitPermanentLeaveEvents(g, removed, actualDestination)
 	return true
+}
+
+func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone game.ZoneType, toZone game.ZoneType) bool {
+	from, ok := destinationZone(g, playerID, fromZone)
+	if !ok || !from.Remove(cardID) {
+		return false
+	}
+	to, ok := destinationZone(g, playerID, toZone)
+	if !ok {
+		from.Add(cardID)
+		return false
+	}
+	to.Add(cardID)
+	emitZoneChangeEvent(g, game.GameEvent{
+		Player:   playerID,
+		CardID:   cardID,
+		FromZone: fromZone,
+		ToZone:   toZone,
+	})
+	return true
+}
+
+func removeCardFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone game.ZoneType) bool {
+	from, ok := destinationZone(g, playerID, fromZone)
+	return ok && from.Remove(cardID)
 }
 
 func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {

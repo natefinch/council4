@@ -23,6 +23,7 @@ const (
 	DynamicAmountPreviousEffectResult
 	DynamicAmountOpponentCount
 	DynamicAmountEventDamage
+	DynamicAmountPreviousEffectExcessDamage
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

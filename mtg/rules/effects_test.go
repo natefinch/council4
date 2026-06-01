@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -584,7 +585,7 @@ func commandTowerLikeLand() *game.CardDef {
 func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 	cost := mana.Cost{mana.ColoredMana(mana.Green)}
 	addLinkedResultSpellToStack(g, []game.Effect{
@@ -745,6 +746,116 @@ func TestCounterEffectCountersTargetStackObject(t *testing.T) {
 	}
 }
 
+func TestCounterEffectCannotCounterProtectedCreatureSpell(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:  "Counter Shield",
+		Types: []game.CardType{game.TypeEnchantment},
+		Abilities: []game.AbilityDef{{
+			Kind: game.StaticAbility,
+			Effects: []game.Effect{{
+				Type: game.EffectApplyRule,
+				RuleEffects: []game.RuleEffect{{
+					Kind:               game.RuleEffectCantBeCountered,
+					AffectedController: game.ControllerYou,
+					SpellTypes:         []game.CardType{game.TypeCreature},
+				}},
+			}},
+		}},
+	})
+	targetID := addCardToHand(g, game.Player2, &game.CardDef{
+		Name:  "Protected Creature",
+		Types: []game.CardType{game.TypeCreature},
+	})
+	g.Players[game.Player2].Hand.Remove(targetID)
+	targetObj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   targetID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetObj)
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectCounter, TargetIndex: 0}, []game.Target{game.StackObjectTarget(targetObj.ID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := stackObjectByID(g, targetObj.ID); !ok {
+		t.Fatal("creature spell was countered despite can't-be-countered rule effect")
+	}
+	if g.Players[game.Player2].Graveyard.Contains(targetID) {
+		t.Fatal("protected spell moved to graveyard")
+	}
+}
+
+func TestExcessDamageCanFeedLaterEffectAmount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:      "Small Creature",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     optPT(game.PT{Value: 2}),
+		Toughness: optPT(game.PT{Value: 2}),
+	})
+	addLinkedResultSpellToStackForController(g, game.Player1, []game.Effect{
+		{
+			Type:        game.EffectDamage,
+			Amount:      5,
+			TargetIndex: 0,
+			LinkID:      "damage",
+		},
+		{
+			Type:        game.EffectDamage,
+			TargetIndex: 1,
+			DynamicAmount: opt.Val(game.DynamicAmount{
+				Kind:   game.DynamicAmountPreviousEffectExcessDamage,
+				LinkID: "damage",
+			}),
+		},
+	}, []game.Target{game.PermanentTarget(target.ObjectID), game.PlayerTarget(game.Player2)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player2].Life; got != 37 {
+		t.Fatalf("player 2 life = %d, want 37 from excess damage", got)
+	}
+}
+
+func TestZeroExcessDamageDoesNotSatisfySuccessCondition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:      "Large Creature",
+		Types:     []game.CardType{game.TypeCreature},
+		Power:     optPT(game.PT{Value: 3}),
+		Toughness: optPT(game.PT{Value: 3}),
+	})
+	addLinkedResultSpellToStackForController(g, game.Player1, []game.Effect{
+		{
+			Type:         game.EffectDamage,
+			Amount:       2,
+			TargetIndex:  0,
+			ResultAmount: game.EffectResultAmountExcessDamage,
+			LinkID:       "excess",
+		},
+		{
+			Type:        game.EffectGainLife,
+			TargetIndex: -1,
+			Amount:      5,
+			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
+				LinkID:    "excess",
+				Succeeded: game.TriTrue,
+			}),
+		},
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != 40 {
+		t.Fatalf("player 1 life = %d, want no gain from zero excess damage", got)
+	}
+}
+
 func TestDiscardEffectDiscardsDeterministicHandCards(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -886,7 +997,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			t.Fatalf("battlefield size = %d, want 2 clues", len(g.Battlefield))
 		}
 		clue := g.Battlefield[0]
-		if !clue.Token || clue.TokenDef == nil || clue.TokenDef.Name != "Clue Token" || !clue.TokenDef.HasSubtype("Clue") {
+		if !clue.Token || clue.TokenDef == nil || clue.TokenDef.Name != "Clue Token" || !clue.TokenDef.HasSubtype(game.ArtifactSubtypeClue) {
 			t.Fatalf("clue token = %+v def=%+v", clue, clue.TokenDef)
 		}
 		if len(clue.TokenDef.Abilities) != 1 {
@@ -1356,7 +1467,7 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 			{
 				Layer:       game.LayerType,
 				AddTypes:    []game.CardType{game.TypeCreature},
-				AddSubtypes: []string{"Robot"},
+				AddSubtypes: []string{game.CreatureSubtypeRobot},
 			},
 			{
 				Layer:        game.LayerPowerToughnessSet,
@@ -1371,7 +1482,7 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 	if !permanentHasType(g, artifact, game.TypeCreature) {
 		t.Fatal("noncreature artifact did not become a creature")
 	}
-	if !permanentHasSubtype(g, artifact, "Robot") {
+	if !permanentHasSubtype(g, artifact, game.CreatureSubtypeRobot) {
 		t.Fatal("noncreature artifact did not gain Robot subtype")
 	}
 	if got := effectivePower(g, artifact); got != 0 {
@@ -1389,7 +1500,7 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 	artifactCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Construct",
 		Types:     []game.CardType{game.TypeArtifact, game.TypeCreature},
-		Subtypes:  []string{"Construct"},
+		Subtypes:  []string{game.CreatureSubtypeConstruct},
 		Power:     optPT(two),
 		Toughness: optPT(two),
 	})
@@ -1408,7 +1519,7 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 			{
 				Layer:       game.LayerType,
 				AddTypes:    []game.CardType{game.TypeCreature},
-				AddSubtypes: []string{"Robot"},
+				AddSubtypes: []string{game.CreatureSubtypeRobot},
 			},
 			{
 				Layer:        game.LayerPowerToughnessSet,
@@ -1420,7 +1531,7 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	if permanentHasSubtype(g, artifactCreature, "Robot") {
+	if permanentHasSubtype(g, artifactCreature, game.CreatureSubtypeRobot) {
 		t.Fatal("creature artifact incorrectly gained Robot subtype")
 	}
 	if got := effectivePower(g, artifactCreature); got != 2 {
@@ -1480,6 +1591,64 @@ func TestCreateTokenEffectCreatesTokenPermanent(t *testing.T) {
 		if !permanent.SummoningSick {
 			t.Fatal("token did not enter summoning sick")
 		}
+	}
+}
+
+func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	sourceID := g.IDGen.Next()
+	g.CardInstances[sourceID] = &game.CardInstance{
+		ID: sourceID,
+		Def: &game.CardDef{
+			Name:      "Fanatic Source",
+			Types:     []game.CardType{game.TypeCreature},
+			Subtypes:  []string{game.CreatureSubtypeSnake, game.CreatureSubtypeDruid},
+			ManaCost:  optCost(mana.Cost{mana.ColoredMana(mana.Green)}),
+			ManaValue: 1,
+			Power:     optPT(game.PT{Value: 1}),
+			Toughness: optPT(game.PT{Value: 4}),
+		},
+		Owner: game.Player1,
+	}
+	g.Stack.Push(&game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceID:     sourceID,
+		SourceCardID: sourceID,
+		Controller:   game.Player1,
+		AbilityIndex: 0,
+	})
+	g.CardInstances[sourceID].Def.Abilities = []game.AbilityDef{
+		game.EternalizeAbility(mana.Cost{mana.GenericMana(0)}, game.CreatureSubtypeSnake, game.CreatureSubtypeDruid),
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	var token *game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.Token {
+			token = permanent
+			break
+		}
+	}
+	if token == nil || token.TokenDef == nil {
+		t.Fatal("copy token was not created")
+	}
+	if token.TokenDef.ManaCost.Exists || token.TokenDef.ManaValue != 0 {
+		t.Fatalf("token mana cost/value = %+v/%d, want no cost and mana value 0", token.TokenDef.ManaCost, token.TokenDef.ManaValue)
+	}
+	if got := token.TokenDef.Subtypes; !slices.Equal(got, []string{game.CreatureSubtypeZombie, game.CreatureSubtypeSnake, game.CreatureSubtypeDruid}) {
+		t.Fatalf("token subtypes = %+v, want Zombie Snake Druid", got)
+	}
+	if got := token.TokenDef.Colors; !slices.Equal(got, []mana.Color{mana.Black}) {
+		t.Fatalf("token colors = %+v, want black", got)
+	}
+	if got := effectivePower(g, token); got != 4 {
+		t.Fatalf("token power = %d, want 4", got)
+	}
+	if got, ok := effectiveToughness(g, token); !ok || got != 4 {
+		t.Fatalf("token toughness = %d ok=%v, want 4 true", got, ok)
 	}
 }
 

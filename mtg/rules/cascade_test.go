@@ -28,8 +28,8 @@ func TestCascadeExilesUntilLowerManaNonlandAndCastsIt(t *testing.T) {
 	if g.Players[game.Player1].Exile.Contains(hitID) {
 		t.Fatal("cascaded spell remained in exile")
 	}
-	if got := g.Players[game.Player1].Library.All(); len(got) != 2 || got[0] != skippedID || got[1] != landID {
-		t.Fatalf("library = %+v, want skipped cards on bottom in revealed order [%v %v]", got, skippedID, landID)
+	if got := g.Players[game.Player1].Library.All(); !sameCardIDs(got, []id.ID{skippedID, landID}) {
+		t.Fatalf("library = %+v, want skipped cards on bottom in random order containing [%v %v]", got, skippedID, landID)
 	}
 	if spellCastEventCount(g) != 2 {
 		t.Fatalf("spell cast events = %d, want cascade spell and cascaded spell", spellCastEventCount(g))
@@ -51,8 +51,8 @@ func TestCascadeBottomsCardsWhenNoEligibleCardExists(t *testing.T) {
 	if g.Stack.Size() != 1 {
 		t.Fatalf("stack size = %d, want only original cascade spell", g.Stack.Size())
 	}
-	if got := g.Players[game.Player1].Library.All(); len(got) != 2 || got[0] != skippedID || got[1] != landID {
-		t.Fatalf("library = %+v, want revealed cards returned in order [%v %v]", got, skippedID, landID)
+	if got := g.Players[game.Player1].Library.All(); !sameCardIDs(got, []id.ID{skippedID, landID}) {
+		t.Fatalf("library = %+v, want revealed cards returned in random order containing [%v %v]", got, skippedID, landID)
 	}
 	if spellCastEventCount(g) != 1 {
 		t.Fatalf("spell cast events = %d, want only cascade spell", spellCastEventCount(g))
@@ -83,6 +83,49 @@ func TestCascadeChainsFromCascadedSpell(t *testing.T) {
 	}
 }
 
+func TestDiscoverExilesUntilEligibleCardAndCastsIt(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDiscover, Amount: 3}, nil)
+	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Discover Hit", 3))
+	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []game.CardType{game.TypeLand}})
+	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 4))
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != hitID {
+		t.Fatalf("stack top = %+v, want discovered spell %v", obj, hitID)
+	}
+	if g.Players[game.Player1].Exile.Contains(hitID) {
+		t.Fatal("discovered spell remained in exile")
+	}
+	if got := g.Players[game.Player1].Library.All(); !sameCardIDs(got, []id.ID{skippedID, landID}) {
+		t.Fatalf("library = %+v, want skipped cards on bottom in random order containing [%v %v]", got, skippedID, landID)
+	}
+}
+
+func TestDiscoverDeclinePutsFoundCardIntoHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDiscover, Amount: 2}, nil)
+	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Declined Hit", 2))
+	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 5))
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if g.Stack.Size() != 0 {
+		t.Fatalf("stack size = %d, want no discovered spell cast", g.Stack.Size())
+	}
+	if !g.Players[game.Player1].Hand.Contains(hitID) {
+		t.Fatal("declined discovered card was not put into hand")
+	}
+	if got := g.Players[game.Player1].Library.All(); len(got) != 1 || got[0] != skippedID {
+		t.Fatalf("library = %+v, want skipped card on bottom [%v]", got, skippedID)
+	}
+}
+
 func cascadeSpell(manaValue int) *game.CardDef {
 	return &game.CardDef{
 		Name:      "Cascade Spell",
@@ -106,6 +149,24 @@ func stackContainsSource(g *game.Game, sourceID id.ID) bool {
 		if obj.SourceID == sourceID {
 			return true
 		}
+
 	}
 	return false
+}
+
+func sameCardIDs(got []id.ID, want []id.ID) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	counts := make(map[id.ID]int, len(want))
+	for _, cardID := range want {
+		counts[cardID]++
+	}
+	for _, cardID := range got {
+		if counts[cardID] == 0 {
+			return false
+		}
+		counts[cardID]--
+	}
+	return true
 }

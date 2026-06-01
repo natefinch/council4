@@ -238,6 +238,37 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 			}
 		}
 	}
+	actions = append(actions, e.legalGraveyardActivateAbilityActions(g, playerID)...)
+	return actions
+}
+
+func (e *Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	var actions []action.Action
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		def := cardFaceOrDefault(card, game.FaceFront)
+		for i := range def.Abilities {
+			ability := &def.Abilities[i]
+			for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(ability.ManaCost)) {
+				targetResult := targetChoicesForAbilityFromSourceObject(g, playerID, def, 0, ability)
+				if targetResult.kind == targetInvalidSpec {
+					continue
+				}
+				for _, targets := range targetResult.choices {
+					if canActivateGraveyardAbility(g, playerID, cardID, ability, i, targets, xValue) {
+						actions = append(actions, actionBuild.activateAbility(cardID, i, append([]game.Target(nil), targets...), xValue))
+					}
+				}
+			}
+		}
+	}
 	return actions
 }
 
@@ -386,10 +417,14 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if e.applyCyclingAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
+	if e.applyGraveyardAbilityWithChoices(g, playerID, activate, agents, log) {
+		return true
+	}
 	permanent, ability, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
 	if !ok {
 		return false
 	}
+
 	if canActivateManaAbility(g, playerID, permanent, ability, activate.AbilityIndex) {
 		if len(activate.Targets) != 0 || activate.XValue != 0 {
 			return false
@@ -463,11 +498,48 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	return true
 }
 
+func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	card, ability, ok := graveyardAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
+	if !ok || !canActivateGraveyardAbility(g, playerID, card.ID, ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
+		return false
+	}
+	def := cardFaceOrDefault(card, game.FaceFront)
+	completedTargets, ok := e.completeAbilityAnnouncementTargets(g, playerID, def, 0, ability, activate.Targets, agents, log)
+	if !ok || !canActivateGraveyardAbility(g, playerID, card.ID, ability, activate.AbilityIndex, completedTargets, activate.XValue) {
+		return false
+	}
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability), agents, log)
+	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+		PlayerID:     playerID,
+		SourceCardID: card.ID,
+		SourceZone:   game.ZoneGraveyard,
+		Ability:      ability,
+		XValue:       activate.XValue,
+		Prefs:        prefs,
+	}) {
+		return false
+	}
+	obj := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceID:     card.ID,
+		SourceCardID: card.ID,
+		SourceZone:   game.ZoneGraveyard,
+		AbilityIndex: activate.AbilityIndex,
+		Controller:   playerID,
+		Targets:      append([]game.Target(nil), completedTargets...),
+		XValue:       activate.XValue,
+	}
+	pushAbilityToStack(g, obj)
+	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability)
+	return true
+}
+
 func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
-	if xValue != 0 || ability.Kind != game.ActivatedAbility || !ability.IsLoyaltyAbility || !permanentHasType(g, permanent, game.TypePlaneswalker) {
+	if xValue != 0 || ability.Kind != game.ActivatedAbility || !ability.IsLoyaltyAbility || !abilityFunctionsOnBattlefield(ability) || !permanentHasType(g, permanent, game.TypePlaneswalker) {
 		return false
 	}
 	if !isSorcerySpeed(g, playerID) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) || g.ActivatedAbilitiesThisTurn[game.ActivatedAbilityUse{SourceID: permanent.ObjectID, AbilityIndex: -1}] {
@@ -701,8 +773,28 @@ func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, 
 	if abilityIndex < 0 {
 		return nil, nil, false
 	}
+
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Hand.Contains(sourceID) {
+		return nil, nil, false
+	}
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		return nil, nil, false
+	}
+	frontDef := cardFaceOrDefault(card, game.FaceFront)
+	if abilityIndex >= len(frontDef.Abilities) {
+		return nil, nil, false
+	}
+	return card, &frontDef.Abilities[abilityIndex], true
+}
+
+func graveyardAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, *game.AbilityDef, bool) {
+	if abilityIndex < 0 {
+		return nil, nil, false
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok || !player.Graveyard.Contains(sourceID) {
 		return nil, nil, false
 	}
 	card, ok := g.GetCardInstance(sourceID)
@@ -720,7 +812,7 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
-	if xValue != 0 || ability.Kind != game.ActivatedAbility || ability.IsManaAbility || !isEquipmentPermanent(g, permanent) {
+	if xValue != 0 || ability.Kind != game.ActivatedAbility || ability.IsManaAbility || !abilityFunctionsOnBattlefield(ability) || !isEquipmentPermanent(g, permanent) {
 		return false
 	}
 	if !abilityHasKeyword(ability, game.Equip) && ability.Timing != game.SorceryOnly {
@@ -750,7 +842,7 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
-	if ability.Kind != game.ActivatedAbility || ability.IsManaAbility || ability.IsLoyaltyAbility || abilityHasKeyword(ability, game.Equip) {
+	if ability.Kind != game.ActivatedAbility || ability.IsManaAbility || ability.IsLoyaltyAbility || abilityHasKeyword(ability, game.Equip) || !abilityFunctionsOnBattlefield(ability) {
 		return false
 	}
 	if !activatedAbilityTimingAllows(g, playerID, ability) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, ability) {
@@ -770,6 +862,7 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || ability == nil {
 		return false
 	}
+
 	if xValue != 0 || abilityIndex < 0 || ability.Kind != game.ActivatedAbility || ability.IsManaAbility || !abilityHasKeyword(ability, game.Cycling) {
 		return false
 	}
@@ -784,6 +877,33 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 		return false
 	}
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost)})
+}
+
+func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, ability *game.AbilityDef, abilityIndex int, targets []game.Target, xValue int) bool {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || ability == nil {
+		return false
+	}
+	if ability.Kind != game.ActivatedAbility || ability.IsManaAbility || ability.IsLoyaltyAbility || ability.ZoneOfFunction != game.ZoneGraveyard {
+		return false
+	}
+	if !activatedAbilityTimingAllows(g, playerID, ability) || activatedAbilityUsedThisTurn(g, cardID, abilityIndex, ability) {
+		return false
+	}
+	card, _, ok := graveyardAbilitySource(g, playerID, cardID, abilityIndex)
+	if !ok {
+		return false
+	}
+	def := cardFaceOrDefault(card, game.FaceFront)
+	if !targetsValidForAbilityFromSourceObject(g, playerID, def, 0, ability, targets) {
+		return false
+	}
+	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+		PlayerID:     playerID,
+		SourceCardID: cardID,
+		SourceZone:   game.ZoneGraveyard,
+		Ability:      ability,
+		XValue:       xValue,
+	})
 }
 
 func abilityHasKeyword(ability *game.AbilityDef, keyword game.Keyword) bool {
@@ -802,7 +922,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID || ability == nil {
 		return false
 	}
-	if ability.Kind != game.ActivatedAbility || !ability.IsManaAbility || ability.IsLoyaltyAbility {
+	if ability.Kind != game.ActivatedAbility || !ability.IsManaAbility || ability.IsLoyaltyAbility || !abilityFunctionsOnBattlefield(ability) {
 		return false
 	}
 	if len(ability.Targets) != 0 || !manaAbilityHasAddManaEffect(ability) || !manaAbilityChoicesAvailable(g, playerID, ability) {

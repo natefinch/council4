@@ -103,3 +103,7 @@ func (s *rulesPaymentState) MovePermanentToZone(p *game.Permanent, dest game.Zon
 func (s *rulesPaymentState) DiscardFromHand(playerID game.PlayerID, cardID id.ID) bool {
 	return discardCardFromHand(s.g, playerID, cardID)
 }
+
+func (s *rulesPaymentState) MoveCard(playerID game.PlayerID, cardID id.ID, from game.ZoneType, to game.ZoneType) bool {
+	return moveCardBetweenZones(s.g, playerID, cardID, from, to)
+}

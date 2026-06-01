@@ -26,7 +26,7 @@ var BlazingSunsteel = &game.CardDef{
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
 	Types:         []game.CardType{game.TypeArtifact},
-	Subtypes:      []string{"Equipment"},
+	Subtypes:      []string{game.ArtifactSubtypeEquipment},
 	OracleText:    "Equipped creature gets +1/+0 for each opponent you have.\nWhenever equipped creature is dealt damage, it deals that much damage to any target.\nEquip {4}",
 	Abilities: []game.AbilityDef{
 		{

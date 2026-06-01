@@ -118,6 +118,30 @@ func TestParseTypeLine(t *testing.T) {
 	}
 }
 
+func TestSubtypeToLiteralUsesGameConstants(t *testing.T) {
+	tests := []struct {
+		name    string
+		subtype string
+		types   []string
+		want    string
+	}{
+		{name: "creature", subtype: "Bird", types: []string{"Creature"}, want: "game.CreatureSubtypeBird"},
+		{name: "kindred", subtype: "Human", types: []string{"Kindred"}, want: "game.CreatureSubtypeHuman"},
+		{name: "land", subtype: "Mountain", types: []string{"Land"}, want: "game.LandSubtypeMountain"},
+		{name: "artifact", subtype: "Equipment", types: []string{"Artifact"}, want: "game.ArtifactSubtypeEquipment"},
+		{name: "enchantment", subtype: "Aura", types: []string{"Enchantment"}, want: "game.EnchantmentSubtypeAura"},
+		{name: "unknown", subtype: "Unlisted", types: []string{"Creature"}, want: `"Unlisted"`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SubtypeToLiteral(tt.subtype, tt.types); got != tt.want {
+				t.Fatalf("SubtypeToLiteral(%q, %+v) = %q, want %q", tt.subtype, tt.types, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCardNameToVarName(t *testing.T) {
 	tests := []struct {
 		name string
@@ -236,7 +260,7 @@ func TestGenerateCardSourceCreature(t *testing.T) {
 		"package s",
 		`Name: "Serra Angel"`,
 		"game.TypeCreature",
-		`"Angel"`,
+		"game.CreatureSubtypeAngel",
 		"Power: opt.Val(game.PT{Value: 4})",
 		"Toughness: opt.Val(game.PT{Value: 4})",
 	}
@@ -283,7 +307,7 @@ func TestGenerateCardSourceModalDFC(t *testing.T) {
 		"ManaValue: 3",
 		"game.TypeSorcery",
 		"game.TypeLand",
-		`"Forest"`,
+		"game.LandSubtypeForest",
 		"mana.NewColorIdentity(mana.Green)",
 		"EntersTapped: true",
 	}

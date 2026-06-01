@@ -365,9 +365,8 @@ type TriggerPattern struct {
     Event      EventKind
     Controller TriggerControllerFilter  // TriggerControllerAny/You/Opponent
     Source     TriggerSourceFilter      // TriggerSourceAny/Self
+    ExcludeSelf bool
     Player     TriggerPlayerFilter      // TriggerPlayerAny/You/Opponent
-    MatchPermanentType bool
-    PermanentType      CardType
     RequirePermanentTypes []CardType
     ExcludePermanentTypes []CardType
     RequireCardTypes []CardType
@@ -508,7 +507,7 @@ For keywords with parameters:
   - "Whenever ... becomes untapped" → `EventPermanentUntapped`
   - "Whenever ... becomes the target of..." → `EventObjectBecameTarget`
   - "Whenever ... is cast" → `EventSpellCast`
-- Set controller/source filters based on "you", "an opponent", "another creature", "this creature"
+- Set controller/source filters based on "you", "an opponent", "another creature", "this creature"; use `ExcludeSelf: true` for "another" trigger wording.
 - If "you may" appears → `Optional: true`
 - For "At the beginning of your upkeep/draw step/beginning of combat/end step",
   use `EventBeginningOfStep` with `Step: game.StepUpkeep`, `game.StepDraw`,
@@ -692,10 +691,10 @@ Abilities: []game.AbilityDef{
         Trigger: opt.Val(game.TriggerCondition{
             Type: game.TriggerWhenever,
             Pattern: game.TriggerPattern{
-                Event:              game.EventPermanentEnteredBattlefield,
-                Source:             game.TriggerSourceAny,
-                MatchPermanentType: true,
-                PermanentType:      game.TypeCreature,
+                Event:                 game.EventPermanentEnteredBattlefield,
+                Source:                game.TriggerSourceAny,
+                ExcludeSelf:           true,
+                RequirePermanentTypes: []game.CardType{game.TypeCreature},
             },
         }),
         Effects: []game.Effect{
@@ -705,7 +704,7 @@ Abilities: []game.AbilityDef{
 },
 ```
 
-Note: "another creature" means the trigger should not fire for Soul Warden itself entering. The current `TriggerPattern` does not have an explicit "not self" filter — the rules engine's trigger matching handles this by comparing the entering permanent's object ID against the trigger source. If this exclusion is not working correctly at runtime, use `ImplementationID` as a fallback.
+Note: "another creature" means the trigger should not fire for Soul Warden itself entering; `ExcludeSelf` handles that source/event comparison.
 
 ### Example 6: Glorious Anthem (static anthem effect)
 

@@ -408,7 +408,7 @@ func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
 	aura := addPermanentForSBA(g, game.Player1, &game.CardDef{
 		Name:     "Test Aura",
 		Types:    []game.CardType{game.TypeEnchantment},
-		Subtypes: []string{"Aura"},
+		Subtypes: []string{game.EnchantmentSubtypeAura},
 	})
 	attachPermanent(g, aura, duplicate)
 

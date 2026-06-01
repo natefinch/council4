@@ -144,6 +144,6 @@ func basicLand() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Forest",
 		Types:    []game.CardType{game.TypeLand},
-		Subtypes: []string{"Forest"},
+		Subtypes: []string{game.LandSubtypeForest},
 	}
 }

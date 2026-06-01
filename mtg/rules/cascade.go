@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"math/rand/v2"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 )
@@ -42,11 +44,81 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 	if found != 0 {
 		e.castFreeSpellFromExile(g, obj.Controller, found, agents, log)
 	}
-	for _, cardID := range revealed {
+	bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
+}
+
+func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if manaValue < 0 {
+		return false
+	}
+	player, ok := playerByID(g, obj.Controller)
+	if !ok {
+		return false
+	}
+	revealed, found := exileUntilDiscoverHit(g, player, obj.Controller, manaValue)
+	if found == 0 {
+		bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
+		return len(revealed) > 0
+	}
+	if e.chooseMay(g, agents, obj.Controller, "Cast discovered card without paying its mana cost?", log) && e.castFreeSpellFromExile(g, obj.Controller, found, agents, log) {
+		bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
+		return true
+	}
+	if player.Exile.Remove(found) {
+		player.Hand.Add(found)
+		emitZoneChangeEvent(g, game.GameEvent{
+			Player:   obj.Controller,
+			CardID:   found,
+			FromZone: game.ZoneExile,
+			ToZone:   game.ZoneHand,
+		})
+	}
+	bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
+	return true
+}
+
+func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.PlayerID, manaValue int) ([]id.ID, id.ID) {
+	var revealed []id.ID
+	var found id.ID
+	for {
+		cardID, ok := player.Library.Top()
+		if !ok {
+			break
+		}
+		player.Library.Remove(cardID)
+		player.Exile.Add(cardID)
+		revealed = append(revealed, cardID)
+		emitZoneChangeEvent(g, game.GameEvent{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: game.ZoneLibrary,
+			ToZone:   game.ZoneExile,
+		})
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		def := cardFaceOrDefault(card, game.FaceFront)
+		if !def.HasType(game.TypeLand) && def.ManaValue <= manaValue {
+			found = cardID
+			break
+		}
+	}
+	return revealed, found
+}
+
+func bottomExiledCards(g *game.Game, player *game.Player, playerID game.PlayerID, cardIDs []id.ID, rng *rand.Rand) {
+	cardIDs = append([]id.ID(nil), cardIDs...)
+	if rng != nil && len(cardIDs) > 1 {
+		rng.Shuffle(len(cardIDs), func(i, j int) {
+			cardIDs[i], cardIDs[j] = cardIDs[j], cardIDs[i]
+		})
+	}
+	for _, cardID := range cardIDs {
 		if player.Exile.Remove(cardID) {
 			player.Library.AddToBottom(cardID)
 			emitZoneChangeEvent(g, game.GameEvent{
-				Player:   obj.Controller,
+				Player:   playerID,
 				CardID:   cardID,
 				FromZone: game.ZoneExile,
 				ToZone:   game.ZoneLibrary,

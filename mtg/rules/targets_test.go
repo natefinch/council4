@@ -115,8 +115,8 @@ func TestPermanentTargetedSpellCreatesActionsForMatchingPermanents(t *testing.T)
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	creature := addCreaturePermanent(g, game.Player1)
-	addBasicLandPermanent(g, game.Player1, "Forest")
-	addBasicLandPermanent(g, game.Player2, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player2, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("creature"))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -142,7 +142,7 @@ func TestOptionalPermanentTargetAllowsTargetOrNoTarget(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	creature := addCreaturePermanent(g, game.Player1)
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, optionalPermanentTargetSpell("creature"))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -271,7 +271,7 @@ func TestMultiTargetSpellCreatesCombinations(t *testing.T) {
 	first := addCreaturePermanent(g, game.Player1)
 	second := addCreaturePermanent(g, game.Player1)
 	third := addCreaturePermanent(g, game.Player2)
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpellWithRange("creature", 2, 2))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -298,7 +298,7 @@ func TestUpToTwoTargetsIncludesZeroOneAndTwoTargets(t *testing.T) {
 	engine := NewEngine(nil)
 	first := addCreaturePermanent(g, game.Player1)
 	second := addCreaturePermanent(g, game.Player2)
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpellWithRange("creature", 0, 2))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -321,7 +321,7 @@ func TestMixedTargetSlotsCreateCartesianProduct(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	creature := addCreaturePermanent(g, game.Player1)
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpellWithSpecs([]game.TargetSpec{
 		{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
 		{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"},
@@ -360,7 +360,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 		Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}},
 	})
 	whiteCreature.Tapped = true
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpellWithSpecs([]game.TargetSpec{
 		{
 			MinTargets: 1,
@@ -397,7 +397,7 @@ func TestStructuredAllowPermanentWithoutTypePredicateAllowsAnyPermanent(t *testi
 		Name:  "Relic",
 		Types: []game.CardType{game.TypeArtifact},
 	})
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpellWithSpecs([]game.TargetSpec{
 		{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowPermanent},
 	}))
@@ -419,7 +419,7 @@ func TestStructuredAnyTargetAllowsOnlyDamageablePermanents(t *testing.T) {
 		Types: []game.CardType{game.TypeArtifact},
 	})
 	creature := addCreaturePermanent(g, game.Player1)
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpellWithSpecs([]game.TargetSpec{
 		{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowPermanent | game.TargetAllowPlayer},
 	}))
@@ -483,8 +483,8 @@ func TestPermanentTargetConstraintsCanRequireOpponentControlledNonland(t *testin
 	engine := NewEngine(nil)
 	ownCreature := addCreaturePermanent(g, game.Player1)
 	opponentCreature := addCreaturePermanent(g, game.Player2)
-	opponentLand := addBasicLandPermanent(g, game.Player2, "Forest")
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	opponentLand := addBasicLandPermanent(g, game.Player2, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("nonland permanent an opponent controls"))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -505,8 +505,8 @@ func TestPermanentTargetConstraintsCanRequireOpponentControlledNonland(t *testin
 func TestIllegalPermanentTargetIsRejectedDuringCast(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	land := addBasicLandPermanent(g, game.Player2, "Forest")
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	land := addBasicLandPermanent(g, game.Player2, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("creature"))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -598,7 +598,7 @@ func TestTargetChoiceKindsAtActionEnumerationLevel(t *testing.T) {
 			},
 			setupBoard: func(g *game.Game) {
 				addCreaturePermanent(g, game.Player2)
-				addBasicLandPermanent(g, game.Player1, "Forest")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 			},
 			wantCastActions: 1,
 		},

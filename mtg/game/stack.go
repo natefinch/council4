@@ -103,9 +103,17 @@ type StackObject struct {
 	// (e.g., "sacrificed a creature", "discarded a card").
 	AdditionalCostsPaid []string
 
+	// SourceZone is the zone a non-spell source card occupied before an
+	// activated ability was put on the stack.
+	SourceZone ZoneType
+
 	// ResolvedAmounts stores named numeric results from earlier effects on this
 	// stack object for "that much" style follow-up effects.
 	ResolvedAmounts map[string]int
+
+	// ResolvedExcessDamage stores named excess-damage results from earlier
+	// damage effects on this stack object.
+	ResolvedExcessDamage map[string]int
 
 	// ResolutionResults stores named success/choice results from earlier
 	// effects on this stack object for "if you do" / "if you don't" branches.

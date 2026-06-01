@@ -36,7 +36,7 @@ func TestWardPaidLeavesSpellOnStack(t *testing.T) {
 	engine := NewEngine(nil)
 	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.ColoredMana(mana.Green)})
 	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
-	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(warded.ObjectID)}, 0, nil)) {

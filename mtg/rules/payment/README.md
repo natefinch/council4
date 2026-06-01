@@ -26,8 +26,9 @@ the package-local `paymentOrch` adapter.
 - `SpellRequest` checks or pays a spell's selected cost option. It includes the
   casting player, card, source zone, X value, kicker flag, and optional payment
   preferences.
-- `AbilityRequest` checks or pays an activated ability. It includes the source
-  permanent, ability definition, X value, and optional payment preferences.
+- `AbilityRequest` checks or pays an activated ability. It includes either the
+  source permanent or a source card/zone for non-battlefield abilities, the
+  ability definition, X value, and optional payment preferences.
 - `GenericRequest` checks or pays standalone costs such as attack taxes, Ward,
   Cycling, Madness, Suspend, and resolution-payment effects.
 
@@ -48,7 +49,7 @@ Files are split by responsibility:
   alternative costs.
 - `modifiers.go` applies cost increases, reductions, set values, and minimums.
 - `additional.go` plans and applies sacrifice, source-only sacrifice, discard,
-  and life additional costs.
+  exile, source-card exile, tap, and life additional costs.
 - `plan.go` builds spell, ability, and generic payment plans.
 - `sources.go` discovers and orders mana sources, including Convoke and Delve.
 - `apply.go` mutates mana pools, permanents, graveyards, exile, and life totals

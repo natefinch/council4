@@ -60,7 +60,7 @@ var beastWithinToken = &game.CardDef{
 	Name:      "Beast",
 	Colors:    []mana.Color{mana.Green},
 	Types:     []game.CardType{game.TypeCreature},
-	Subtypes:  []string{"Beast"},
+	Subtypes:  []string{game.CreatureSubtypeBeast},
 	Power:     opt.Val(game.PT{Value: 3}),
 	Toughness: opt.Val(game.PT{Value: 3}),
 }

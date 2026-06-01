@@ -159,7 +159,7 @@ func clueTokenDef() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Clue Token",
 		Types:    []game.CardType{game.TypeArtifact},
-		Subtypes: []string{"Clue"},
+		Subtypes: []string{game.ArtifactSubtypeClue},
 		Abilities: []game.AbilityDef{{
 			Kind:     game.ActivatedAbility,
 			Text:     "{2}, Sacrifice this artifact: Draw a card.",

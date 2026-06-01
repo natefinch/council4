@@ -27,7 +27,7 @@ var BugenhagenWiseElder = &game.CardDef{
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Supertypes:    []game.Supertype{game.Legendary},
 	Types:         []game.CardType{game.TypeCreature},
-	Subtypes:      []string{"Human", "Shaman"},
+	Subtypes:      []string{game.CreatureSubtypeHuman, game.CreatureSubtypeShaman},
 	Power:         opt.Val(game.PT{Value: 1}),
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "Reach\nAt the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.\n{T}: Add one mana of any color.",

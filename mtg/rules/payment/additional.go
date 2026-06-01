@@ -10,10 +10,16 @@ type additionalCostPlan struct {
 	paid       []string
 	sacrifices []*game.Permanent
 	discards   []id.ID
+	exiles     []cardZoneSelection
 	lifePaid   int
 }
 
-func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []game.AdditionalCost, prefs *Preferences, source *game.Permanent) (additionalCostPlan, bool) {
+type cardZoneSelection struct {
+	cardID id.ID
+	zone   game.ZoneType
+}
+
+func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []game.AdditionalCost, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone game.ZoneType) (additionalCostPlan, bool) {
 	plan := additionalCostPlan{player: playerID}
 	for _, cost := range costs {
 		amount := AdditionalCostAmount(cost)
@@ -52,11 +58,89 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []ga
 			}
 			plan.lifePaid += amount
 			plan.paid = append(plan.paid, AdditionalCostText(cost))
+		case game.AdditionalCostExile:
+			chosen := preferredExileCards(s, playerID, cost, amount, plan.exiles, prefs)
+			if len(chosen) != amount {
+				return plan, false
+			}
+			plan.exiles = append(plan.exiles, chosen...)
+			plan.paid = append(plan.paid, AdditionalCostText(cost))
+		case game.AdditionalCostExileSource:
+			if amount != 1 || sourceCardID == 0 || sourceZone == game.ZoneNone || !zoneContainsCard(s, playerID, sourceZone, sourceCardID) {
+				return plan, false
+			}
+			card, ok := s.CardInstance(sourceCardID)
+			if !ok || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), cost) {
+				return plan, false
+			}
+			plan.exiles = append(plan.exiles, cardZoneSelection{cardID: sourceCardID, zone: sourceZone})
+			plan.paid = append(plan.paid, AdditionalCostText(cost))
 		default:
 			return plan, false
 		}
 	}
+
 	return plan, true
+}
+
+func chooseExileCards(s State, playerID game.PlayerID, cost game.AdditionalCost, amount int, alreadyChosen []cardZoneSelection) []cardZoneSelection {
+	player, ok := s.Player(playerID)
+	if !ok {
+		return nil
+	}
+	zone := cost.Zone
+	if zone == game.ZoneNone {
+		zone = game.ZoneGraveyard
+	}
+	chosenIDs := make(map[id.ID]bool)
+	for _, chosen := range alreadyChosen {
+		chosenIDs[chosen.cardID] = true
+	}
+	var chosen []cardZoneSelection
+	for _, cardID := range cardIDsInZone(player, zone) {
+		if chosenIDs[cardID] {
+			continue
+		}
+		card, ok := s.CardInstance(cardID)
+		if !ok || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), cost) {
+			continue
+		}
+		chosen = append(chosen, cardZoneSelection{cardID: cardID, zone: zone})
+		if len(chosen) == amount {
+			return chosen
+		}
+	}
+	return chosen
+}
+
+func preferredExileCards(s State, playerID game.PlayerID, cost game.AdditionalCost, amount int, alreadyChosen []cardZoneSelection, prefs *Preferences) []cardZoneSelection {
+	if prefs == nil || len(prefs.ExileChoices) == 0 {
+		return chooseExileCards(s, playerID, cost, amount, alreadyChosen)
+	}
+	zone := cost.Zone
+	if zone == game.ZoneNone {
+		zone = game.ZoneGraveyard
+	}
+	chosenIDs := make(map[id.ID]bool)
+	for _, chosen := range alreadyChosen {
+		chosenIDs[chosen.cardID] = true
+	}
+	var chosen []cardZoneSelection
+	var consumed int
+	for _, cardID := range prefs.ExileChoices {
+		card, ok := s.CardInstance(cardID)
+		if !ok || !zoneContainsCard(s, playerID, zone, cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), cost) {
+			return nil
+		}
+		chosen = append(chosen, cardZoneSelection{cardID: cardID, zone: zone})
+		chosenIDs[cardID] = true
+		consumed++
+		if len(chosen) == amount {
+			prefs.ExileChoices = prefs.ExileChoices[consumed:]
+			return chosen
+		}
+	}
+	return nil
 }
 
 func chooseSacrificePermanents(s State, playerID game.PlayerID, cost game.AdditionalCost, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
@@ -200,6 +284,8 @@ func AdditionalCostText(cost game.AdditionalCost) string {
 		return "Pay life"
 	case game.AdditionalCostExile:
 		return "Exile a card"
+	case game.AdditionalCostExileSource:
+		return "Exile this card"
 	case game.AdditionalCostReveal:
 		return "Reveal a card"
 	case game.AdditionalCostTap:
@@ -221,6 +307,11 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 			return false
 		}
 	}
+	for _, exile := range plan.exiles {
+		if !zoneContainsCard(s, player.ID, exile.zone, exile.cardID) {
+			return false
+		}
+	}
 	if plan.lifePaid > 0 && player.Life < plan.lifePaid {
 		return false
 	}
@@ -238,6 +329,11 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 			return false
 		}
 	}
+	for _, exile := range plan.exiles {
+		if !s.MoveCard(plan.player, exile.cardID, exile.zone, game.ZoneExile) {
+			return false
+		}
+	}
 	if plan.lifePaid > 0 {
 		player, ok := s.Player(plan.player)
 		if !ok || player.Life < plan.lifePaid {
@@ -246,4 +342,34 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 		s.LoseLife(plan.player, plan.lifePaid)
 	}
 	return true
+}
+
+func zoneContainsCard(s State, playerID game.PlayerID, zone game.ZoneType, cardID id.ID) bool {
+	player, ok := s.Player(playerID)
+	if !ok {
+		return false
+	}
+	for _, got := range cardIDsInZone(player, zone) {
+		if got == cardID {
+			return true
+		}
+	}
+	return false
+}
+
+func cardIDsInZone(player *game.Player, zone game.ZoneType) []id.ID {
+	switch zone {
+	case game.ZoneLibrary:
+		return player.Library.All()
+	case game.ZoneHand:
+		return player.Hand.All()
+	case game.ZoneGraveyard:
+		return player.Graveyard.All()
+	case game.ZoneExile:
+		return player.Exile.All()
+	case game.ZoneCommand:
+		return player.CommandZone.All()
+	default:
+		return nil
+	}
 }

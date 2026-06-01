@@ -25,7 +25,7 @@ var BirdsOfParadise = &game.CardDef{
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Types:         []game.CardType{game.TypeCreature},
-	Subtypes:      []string{"Bird"},
+	Subtypes:      []string{game.CreatureSubtypeBird},
 	Power:         opt.Val(game.PT{Value: 0}),
 	Toughness:     opt.Val(game.PT{Value: 1}),
 	OracleText:    "Flying\n{T}: Add one mana of any color.",

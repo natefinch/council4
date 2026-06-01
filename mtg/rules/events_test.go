@@ -45,7 +45,7 @@ func TestCastAndResolvePermanentSpellEmitsEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, greenCreature())
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
@@ -444,7 +444,7 @@ func TestTapUntapAndTargetEvents(t *testing.T) {
 	})
 
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpell("creature"))
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(permanent.ObjectID)}, 0, nil)) {

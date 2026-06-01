@@ -117,6 +117,15 @@ func (v *cardValidator) validateAbility(faceName string, path string, ability *g
 	if ability.EnchantTarget.Exists {
 		v.validateTargetSpec(faceName, appendPath(path, "EnchantTarget"), ability.EnchantTarget.Val)
 	}
+	if ability.Condition.Exists {
+		v.validateCondition(faceName, appendPath(path, "Condition"), ability.Condition.Val, ability.Targets)
+	}
+	if ability.Trigger.Exists && ability.Trigger.Val.InterveningCondition.Exists {
+		v.validateCondition(faceName, appendPath(path, "Trigger.InterveningCondition"), ability.Trigger.Val.InterveningCondition.Val, ability.Targets)
+	}
+	if ability.ActivationCondition.Exists {
+		v.validateCondition(faceName, appendPath(path, "ActivationCondition"), ability.ActivationCondition.Val, ability.Targets)
+	}
 	for i, target := range ability.Targets {
 		v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("Targets[%d]", i)), target)
 	}
@@ -182,12 +191,17 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	if effect.PlayerSelector != game.PlayerSelectorNone && effect.Type != game.EffectDamage {
 		v.add(faceName, appendPath(path, "PlayerSelector"), IssueInvalidReference, "PlayerSelector is only supported on damage effects")
 	}
-	v.validateTargetIndex(faceName, path, effect.TargetIndex, targets, "effect target")
+	if !effect.Object.Exists {
+		v.validateTargetIndex(faceName, path, effect.TargetIndex, targets, "effect target")
+	}
 	if effect.DamageSource.Exists {
 		if effect.Type != game.EffectDamage {
 			v.add(faceName, appendPath(path, "DamageSource"), IssueInvalidReference, "DamageSource is only supported on damage effects")
 		}
 		v.validateObjectReference(faceName, appendPath(path, "DamageSource"), effect.DamageSource.Val, targets)
+	}
+	if effect.Object.Exists {
+		v.validateObjectReference(faceName, appendPath(path, "Object"), effect.Object.Val, targets)
 	}
 	if effect.Recipient.Exists {
 		switch effect.Type {
@@ -204,7 +218,13 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 		v.add(faceName, path, IssueInvalidReference, "linked reveal effects must reveal exactly one card")
 	}
 	if effect.Condition.Exists {
-		v.validateTargetIndex(faceName, appendPath(path, "Condition"), effect.Condition.Val.TargetIndex, targets, "condition target")
+		conditionPath := appendPath(path, "Condition")
+		if effect.Condition.Val.MatchPermanentType || effect.Condition.Val.TargetIndex != 0 {
+			v.validateTargetIndex(faceName, conditionPath, effect.Condition.Val.TargetIndex, targets, "condition target")
+		}
+		if effect.Condition.Val.Condition.Exists {
+			v.validateCondition(faceName, appendPath(conditionPath, "Condition"), effect.Condition.Val.Condition.Val, targets)
+		}
 	}
 	if effect.DynamicAmount.Exists && dynamicAmountUsesTarget(effect.DynamicAmount.Val) {
 		v.validateTargetIndex(faceName, appendPath(path, "DynamicAmount"), effect.DynamicAmount.Val.TargetIndex, targets, "dynamic amount target")
@@ -223,6 +243,15 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	}
 	if effect.Token.Exists && effect.Token.Val != nil {
 		v.validateNestedCard(faceName, appendPath(path, "Token"), effect.Token.Val)
+	}
+	if effect.TokenCopy.Exists {
+		v.validateTokenCopySpec(faceName, appendPath(path, "TokenCopy"), effect.TokenCopy.Val, targets)
+	}
+	if effect.Card.Exists {
+		v.validateCardReference(faceName, appendPath(path, "Card"), effect.Card.Val)
+	}
+	if effect.Replacement.Exists && effect.Replacement.Val.Condition.Exists {
+		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), effect.Replacement.Val.Condition.Val, targets)
 	}
 	for i, continuous := range effect.ContinuousEffects {
 		continuousPath := appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i))
@@ -260,6 +289,12 @@ func (v *cardValidator) validateTargetIndex(faceName string, path string, target
 	}
 }
 
+func (v *cardValidator) validateCondition(faceName string, path string, condition game.Condition, targets []game.TargetSpec) {
+	if condition.Object.Exists {
+		v.validateObjectReference(faceName, appendPath(path, "Object"), condition.Object.Val, targets)
+	}
+}
+
 func (v *cardValidator) validateObjectReference(faceName string, path string, ref game.ObjectReference, targets []game.TargetSpec) {
 	switch ref.Kind {
 	case game.ObjectReferenceTargetPermanent:
@@ -275,6 +310,10 @@ func (v *cardValidator) validateObjectReference(faceName string, path string, re
 	case game.ObjectReferenceLinkedObject:
 		if ref.LinkID == "" {
 			v.add(faceName, path, IssueInvalidReference, "linked object reference requires LinkID")
+		}
+	case game.ObjectReferenceEventPermanent:
+		if ref.TargetIndex != 0 || ref.LinkID != "" {
+			v.add(faceName, path, IssueInvalidReference, "event permanent reference must not set TargetIndex or LinkID")
 		}
 	case game.ObjectReferenceNone:
 		v.add(faceName, path, IssueInvalidReference, "object reference has no kind")
@@ -305,11 +344,43 @@ func (v *cardValidator) validatePlayerReference(faceName string, path string, re
 }
 
 func (v *cardValidator) validateCardCondition(faceName string, path string, condition game.CardCondition) {
-	if condition.Card.Kind != game.CardReferenceLinked || condition.Card.LinkID == "" {
-		v.add(faceName, appendPath(path, "Card"), IssueInvalidReference, "card condition requires a linked card reference with LinkID")
-	}
+	v.validateCardReference(faceName, appendPath(path, "Card"), condition.Card)
 	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 {
 		v.add(faceName, path, IssueInvalidReference, "card condition has no filters")
+	}
+}
+
+func (v *cardValidator) validateCardReference(faceName string, path string, ref game.CardReference) bool {
+	switch ref.Kind {
+	case game.CardReferenceLinked:
+		if ref.LinkID == "" {
+			v.add(faceName, path, IssueInvalidReference, "linked card reference requires LinkID")
+			return false
+		}
+	case game.CardReferenceSource, game.CardReferenceEvent:
+		if ref.LinkID != "" {
+			v.add(faceName, path, IssueInvalidReference, "source/event card reference must not set LinkID")
+			return false
+		}
+	case game.CardReferenceNone:
+		v.add(faceName, path, IssueInvalidReference, "card reference has no kind")
+		return false
+	default:
+		v.add(faceName, path, IssueInvalidReference, fmt.Sprintf("unknown card reference kind %d", ref.Kind))
+		return false
+	}
+	return true
+}
+
+func (v *cardValidator) validateTokenCopySpec(faceName string, path string, spec game.TokenCopySpec, targets []game.TargetSpec) {
+	switch spec.Source {
+	case game.TokenCopySourceObject:
+		v.validateObjectReference(faceName, appendPath(path, "Object"), spec.Object, targets)
+	case game.TokenCopySourceSourceCard:
+	case game.TokenCopySourceNone:
+		v.add(faceName, appendPath(path, "Source"), IssueInvalidReference, "token copy source has no kind")
+	default:
+		v.add(faceName, appendPath(path, "Source"), IssueInvalidReference, fmt.Sprintf("unknown token copy source %d", spec.Source))
 	}
 }
 

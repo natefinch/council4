@@ -78,7 +78,11 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	}
 	ability := &def.Abilities[obj.AbilityIndex]
 	if permanentOK && isEquipmentPermanent(g, permanent) && abilityHasKeyword(ability, game.Equip) {
-		if !abilityHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, ability, obj.Controller, obj.Targets) {
+		sourceObjectID := obj.SourceID
+		if !permanentOK {
+			sourceObjectID = 0
+		}
+		if !abilityHasAnyLegalTargetsFromSourceObject(g, def, sourceObjectID, ability, obj.Controller, obj.Targets) {
 			return "countered by rules"
 		}
 		if len(obj.Targets) != 1 || obj.Targets[0].Kind != game.TargetPermanent {
@@ -190,6 +194,9 @@ func stackObjectByID(g *game.Game, objectID id.ID) (*game.StackObject, bool) {
 }
 
 func counterStackObject(g *game.Game, objectID id.ID) bool {
+	if obj, ok := stackObjectByID(g, objectID); ok && obj.Kind == game.StackSpell && !stackSpellCanBeCountered(g, obj) {
+		return false
+	}
 	obj, ok := g.Stack.RemoveByID(objectID)
 	if !ok {
 		return false
@@ -205,6 +212,35 @@ func counterStackObject(g *game.Game, objectID id.ID) bool {
 		return false
 	}
 	return moveStackCardToGraveyard(g, obj, card)
+}
+
+func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
+	_, spellDef, ok := cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	if !ok {
+		return true
+	}
+	for _, effect := range activeRuleEffects(g) {
+		if effect.Kind != game.RuleEffectCantBeCountered {
+			continue
+		}
+		if !controllerRelationMatches(effect.Controller, obj.Controller, effect.AffectedController) {
+			continue
+		}
+		if !spellTypesMatch(spellDef, effect.SpellTypes) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func spellTypesMatch(card *game.CardDef, types []game.CardType) bool {
+	for _, cardType := range types {
+		if !card.HasType(cardType) {
+			return false
+		}
+	}
+	return true
 }
 
 func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog) string {

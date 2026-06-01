@@ -15,7 +15,7 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 		Name:       "Snow Mountain",
 		Supertypes: []game.Supertype{game.Basic, game.Snow},
 		Types:      []game.CardType{game.TypeLand},
-		Subtypes:   []string{"Mountain"},
+		Subtypes:   []string{game.LandSubtypeMountain},
 	})
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Large Creature",
@@ -29,8 +29,8 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 			Types:      []game.CardType{game.TypeLand},
 			Supertypes: []game.Supertype{game.Basic},
 			SubtypesAny: []string{
-				"Swamp",
-				"Mountain",
+				game.LandSubtypeSwamp,
+				game.LandSubtypeMountain,
 			},
 			MinCount: 1,
 		},
@@ -88,7 +88,7 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:     "Mountain",
 		Types:    []game.CardType{game.TypeLand},
-		Subtypes: []string{"Mountain"},
+		Subtypes: []string{game.LandSubtypeMountain},
 	})
 	if !containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
 		t.Fatal("conditional red mana ability was not legal with Mountain")
@@ -154,7 +154,7 @@ func TestStaticConditionGraveyardAbilityGrantsHaste(t *testing.T) {
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:     "Mountain",
 		Types:    []game.CardType{game.TypeLand},
-		Subtypes: []string{"Mountain"},
+		Subtypes: []string{game.LandSubtypeMountain},
 	})
 	if !hasKeyword(g, creature, game.Haste) {
 		t.Fatal("Anger-like graveyard ability did not grant haste with Mountain")
@@ -191,13 +191,13 @@ func TestConditionalEntersTappedCondition(t *testing.T) {
 		Name:       "Forest",
 		Supertypes: []game.Supertype{game.Basic},
 		Types:      []game.CardType{game.TypeLand},
-		Subtypes:   []string{"Forest"},
+		Subtypes:   []string{game.LandSubtypeForest},
 	})
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:       "Island",
 		Supertypes: []game.Supertype{game.Basic},
 		Types:      []game.CardType{game.TypeLand},
-		Subtypes:   []string{"Island"},
+		Subtypes:   []string{game.LandSubtypeIsland},
 	})
 	cardID = addCardToHand(g, game.Player1, cinderLikeLand())
 	if !engine.applyPlayLand(g, game.Player1, cardID) {
@@ -225,7 +225,7 @@ func conditionalRedManaLand() *game.CardDef {
 			IsManaAbility: true,
 			ActivationCondition: opt.Val(game.Condition{
 				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []string{"Swamp", "Mountain"},
+					SubtypesAny: []string{game.LandSubtypeSwamp, game.LandSubtypeMountain},
 				},
 			}),
 			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
@@ -283,7 +283,7 @@ func angerLikeCard() *game.CardDef {
 				ZoneOfFunction: game.ZoneGraveyard,
 				Condition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
-						SubtypesAny: []string{"Mountain"},
+						SubtypesAny: []string{game.LandSubtypeMountain},
 					},
 				}),
 				Effects: []game.Effect{{

@@ -30,7 +30,7 @@ func TestMadnessTriggerCastsCardFromExile(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cardID := addCardToHand(g, game.Player1, madnessSorcery(mana.Cost{mana.ColoredMana(mana.Green)}))
-	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 
 	discardCardFromHand(g, game.Player1, cardID)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -77,7 +77,7 @@ func TestDeclinedMadnessTriggerMovesCardToGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cardID := addCardToHand(g, game.Player1, madnessSorcery(mana.Cost{mana.ColoredMana(mana.Green)}))
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
 
 	discardCardFromHand(g, game.Player1, cardID)

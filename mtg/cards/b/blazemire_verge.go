@@ -38,7 +38,7 @@ var BlazemireVerge = &game.CardDef{
 			IsManaAbility: true,
 			ActivationCondition: opt.Val(game.Condition{
 				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []string{"Swamp", "Mountain"},
+					SubtypesAny: []string{game.LandSubtypeSwamp, game.LandSubtypeMountain},
 				},
 			}),
 			AdditionalCosts: []game.AdditionalCost{

@@ -12,7 +12,7 @@ func TestLegalActionsIncludesCyclingFromHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cyclingID := addCardToHand(g, game.Player1, cyclingCard())
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepBeginningOfCombat
 	g.Turn.PriorityPlayer = game.Player1
@@ -29,7 +29,7 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 	engine := NewEngine(nil)
 	cyclingID := addCardToHand(g, game.Player1, cyclingCard())
 	drawnID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
-	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.ActivateAbility(cyclingID, 0, nil, 0)) {

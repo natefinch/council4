@@ -22,7 +22,7 @@ var BasiliskCollar = &game.CardDef{
 	}),
 	ManaValue:  1,
 	Types:      []game.CardType{game.TypeArtifact},
-	Subtypes:   []string{"Equipment"},
+	Subtypes:   []string{game.ArtifactSubtypeEquipment},
 	OracleText: "Equipped creature has deathtouch and lifelink. (Any amount of damage it deals to a creature is enough to destroy it. Damage dealt by this creature also causes you to gain that much life.)\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
 	Abilities: []game.AbilityDef{
 		{

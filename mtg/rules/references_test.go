@@ -44,13 +44,13 @@ func TestRecipientReferenceUsesDestroyedTargetControllerLKI(t *testing.T) {
 	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
 		t.Fatal("target permanent remained on battlefield")
 	}
-	if got := countControlledTokensNamed(g, game.Player3, "Beast"); got != 1 {
+	if got := countControlledTokensNamed(g, game.Player3, game.CreatureSubtypeBeast); got != 1 {
 		t.Fatalf("Player3 Beast tokens = %d, want 1", got)
 	}
-	if got := countControlledTokensNamed(g, game.Player1, "Beast"); got != 0 {
+	if got := countControlledTokensNamed(g, game.Player1, game.CreatureSubtypeBeast); got != 0 {
 		t.Fatalf("spell controller Beast tokens = %d, want 0", got)
 	}
-	if got := countControlledTokensNamed(g, game.Player2, "Beast"); got != 0 {
+	if got := countControlledTokensNamed(g, game.Player2, game.CreatureSubtypeBeast); got != 0 {
 		t.Fatalf("target owner Beast tokens = %d, want 0", got)
 	}
 }

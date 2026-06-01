@@ -191,7 +191,7 @@ func equipmentWithStaticEffect(effects []game.Effect) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Equipment",
 		Types:    []game.CardType{game.TypeArtifact},
-		Subtypes: []string{"Equipment"},
+		Subtypes: []string{game.ArtifactSubtypeEquipment},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.StaticAbility,
 			Effects: effects,

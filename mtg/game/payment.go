@@ -18,6 +18,7 @@ const (
 	AdditionalCostExile
 	AdditionalCostReveal
 	AdditionalCostTap
+	AdditionalCostExileSource
 )
 
 // AdditionalCost describes a typed non-mana cost printed on a spell, ability,

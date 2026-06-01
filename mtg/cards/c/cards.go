@@ -10,4 +10,6 @@ var Cards = []*game.CardDef{
 	ChaosWarp,
 	CinderGlade,
 	CommandTower,
+	ContestOfClaws,
+	CosmicHunger,
 }

@@ -1,6 +1,12 @@
 package cardgen
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+	"unicode"
+
+	"github.com/natefinch/council4/mtg/game"
+)
 
 // ParsedTypeLine holds the parsed components of a Scryfall type line.
 type ParsedTypeLine struct {
@@ -98,6 +104,50 @@ func CardTypeToLiteral(name string) string {
 	default:
 		return "/* unknown type: " + name + " */"
 	}
+}
+
+var subtypeLiteralTypes = map[string]struct {
+	cardType game.CardType
+	prefix   string
+}{
+	"Artifact":    {cardType: game.TypeArtifact, prefix: "ArtifactSubtype"},
+	"Creature":    {cardType: game.TypeCreature, prefix: "CreatureSubtype"},
+	"Enchantment": {cardType: game.TypeEnchantment, prefix: "EnchantmentSubtype"},
+	"Kindred":     {cardType: game.TypeKindred, prefix: "CreatureSubtype"},
+	"Land":        {cardType: game.TypeLand, prefix: "LandSubtype"},
+}
+
+// SubtypeToLiteral converts a subtype name to its Go constant for the card type
+// family where that subtype is used. Unknown subtypes fall back to a string
+// literal so generation can continue while the central subtype list is updated.
+func SubtypeToLiteral(name string, types []string) string {
+	for _, typ := range types {
+		info, ok := subtypeLiteralTypes[typ]
+		if !ok {
+			continue
+		}
+		if game.KnownSubtypeForType(info.cardType, name) {
+			return "game." + info.prefix + goIdentifierSuffix(name)
+		}
+	}
+	return strconv.Quote(name)
+}
+
+func goIdentifierSuffix(name string) string {
+	var b strings.Builder
+	capitalizeNext := true
+	for _, r := range name {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			capitalizeNext = true
+			continue
+		}
+		if capitalizeNext {
+			r = unicode.ToUpper(r)
+			capitalizeNext = false
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 // ColorToLiteral converts a Scryfall single-letter color to a Go mana.Color name.

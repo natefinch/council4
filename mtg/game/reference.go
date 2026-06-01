@@ -12,6 +12,7 @@ const (
 	ObjectReferenceSourcePermanent
 	ObjectReferenceAttachedPermanent
 	ObjectReferenceLinkedObject
+	ObjectReferenceEventPermanent
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -57,6 +58,8 @@ type CardReferenceKind int
 const (
 	CardReferenceNone CardReferenceKind = iota
 	CardReferenceLinked
+	CardReferenceSource
+	CardReferenceEvent
 )
 
 // CardReference describes how a rules effect finds a card at resolution.

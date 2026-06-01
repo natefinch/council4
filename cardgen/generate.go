@@ -295,7 +295,7 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 	if len(parsed.Subtypes) > 0 {
 		var literals []string
 		for _, s := range parsed.Subtypes {
-			literals = append(literals, fmt.Sprintf("%q", s))
+			literals = append(literals, SubtypeToLiteral(s, parsed.Types))
 		}
 		b.WriteString(fmt.Sprintf("%sSubtypes: []string{%s},\n", indent, strings.Join(literals, ", ")))
 	}

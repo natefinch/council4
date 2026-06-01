@@ -20,11 +20,13 @@ type SpellRequest struct {
 // AbilityRequest bundles all parameters needed to check or pay activated
 // ability costs.
 type AbilityRequest struct {
-	PlayerID game.PlayerID
-	Source   *game.Permanent
-	Ability  *game.AbilityDef
-	XValue   int
-	Prefs    *Preferences
+	PlayerID     game.PlayerID
+	Source       *game.Permanent
+	SourceCardID id.ID
+	SourceZone   game.ZoneType
+	Ability      *game.AbilityDef
+	XValue       int
+	Prefs        *Preferences
 }
 
 // GenericRequest bundles parameters for a generic mana payment — used by
@@ -48,6 +50,7 @@ type Preferences struct {
 	phyrexianIndex       int
 	SacrificeChoices     []id.ID
 	DiscardChoices       []id.ID
+	ExileChoices         []id.ID
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.

@@ -29,8 +29,8 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 					Power:     optPT(game.PT{Value: 2}),
 					Toughness: optPT(game.PT{Value: 2}),
 				})
-				addBasicLandPermanent(g, game.Player1, "Forest")
-				addBasicLandPermanent(g, game.Player1, "Forest")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 				addCardToHand(g, game.Player1, artifactTargetSpell())
 				addCardToHand(g, game.Player1, xSpell())
 				addCardToHand(g, game.Player1, characterizationKickerSpell())
@@ -58,7 +58,7 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 			name: "commander and graveyard casting",
 			setup: func() (*game.Game, game.PlayerID) {
 				g := newCommanderCastGame(greenCommanderWithCost())
-				addBasicLandPermanent(g, game.Player1, "Forest")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 				cardID := addCardToHand(g, game.Player1, flashbackSpell())
 				g.Players[game.Player1].Hand.Remove(cardID)
 				g.Players[game.Player1].Graveyard.Add(cardID)
@@ -98,7 +98,7 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 			name: "insufficient mana clamps X choices",
 			setup: func() (*game.Game, game.PlayerID) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addBasicLandPermanent(g, game.Player1, "Forest")
+				addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 				addCardToHand(g, game.Player1, xSpell())
 				setMainPhasePriority(g, game.Player1)
 				return g, game.Player1

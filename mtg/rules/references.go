@@ -56,6 +56,11 @@ func resolveObjectReference(g *game.Game, obj *game.StackObject, ref game.Object
 			}
 		}
 		return resolvedObjectReference{}, false
+	case game.ObjectReferenceEventPermanent:
+		if obj != nil && obj.HasTriggerEvent && obj.TriggerEvent.PermanentID != 0 {
+			return resolvePermanentOrLastKnown(g, obj.TriggerEvent.PermanentID)
+		}
+		return resolvedObjectReference{}, false
 	default:
 		return resolvedObjectReference{}, false
 	}

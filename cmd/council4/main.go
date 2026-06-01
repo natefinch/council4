@@ -100,7 +100,7 @@ func forest() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Forest",
 		Types:    []game.CardType{game.TypeLand},
-		Subtypes: []string{"Forest"},
+		Subtypes: []string{game.LandSubtypeForest},
 	}
 }
 
@@ -152,7 +152,7 @@ func grizzlyBears() *game.CardDef {
 		ManaCost:  greenCost(),
 		ManaValue: 1,
 		Types:     []game.CardType{game.TypeCreature},
-		Subtypes:  []string{"Bear"},
+		Subtypes:  []string{game.CreatureSubtypeBear},
 		Power:     opt.Val(power),
 		Toughness: opt.Val(toughness),
 	}

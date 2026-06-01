@@ -132,7 +132,7 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 func TestLegalActionsIncludeCommanderCastFromCommandZone(t *testing.T) {
 	g := newCommanderCastGame(greenCommanderWithCost())
 	engine := NewEngine(nil)
-	addBasicLandPermanent(g, game.Player1, "Forest")
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
@@ -148,9 +148,9 @@ func TestLegalActionsIncludeCommanderCastFromCommandZone(t *testing.T) {
 func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 	g := newCommanderCastGame(greenCommanderWithCost())
 	engine := NewEngine(nil)
-	forest := addBasicLandPermanent(g, game.Player1, "Forest")
-	addBasicLandPermanent(g, game.Player1, "Island")
-	addBasicLandPermanent(g, game.Player1, "Mountain")
+	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeIsland)
+	addBasicLandPermanent(g, game.Player1, game.LandSubtypeMountain)
 	player := g.Players[game.Player1]
 	player.CommanderCastCount = 1
 	commanderID := player.CommanderInstanceID
@@ -179,7 +179,7 @@ func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 func TestFailedCommanderTaxCastDoesNotMutate(t *testing.T) {
 	g := newCommanderCastGame(greenCommanderWithCost())
 	engine := NewEngine(nil)
-	forest := addBasicLandPermanent(g, game.Player1, "Forest")
+	forest := addBasicLandPermanent(g, game.Player1, game.LandSubtypeForest)
 	player := g.Players[game.Player1]
 	player.CommanderCastCount = 1
 	commanderID := player.CommanderInstanceID
@@ -233,13 +233,13 @@ func TestValidateCommanderConfigRejectsWrongDeckSize(t *testing.T) {
 func TestValidateCommanderConfigRejectsDuplicateNonbasicButAllowsBasic(t *testing.T) {
 	config := legalCommanderConfig()
 	config.Deck[1] = config.Deck[0]
-	config.Deck[2] = basicLandDef("Forest")
-	config.Deck[3] = basicLandDef("Forest")
+	config.Deck[2] = basicLandDef(game.LandSubtypeForest)
+	config.Deck[3] = basicLandDef(game.LandSubtypeForest)
 
 	errs := validateCommanderConfig(game.Player1, config)
 
 	assertCommanderLegalityError(t, errs, "duplicate nonbasic")
-	if countCommanderLegalityErrors(errs, "Forest") != 0 {
+	if countCommanderLegalityErrors(errs, game.LandSubtypeForest) != 0 {
 		t.Fatalf("basic duplicate produced errors: %+v", errs)
 	}
 }

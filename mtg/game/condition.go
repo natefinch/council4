@@ -16,6 +16,11 @@ type Condition struct {
 	// ControllerControls requires the context controller to control matching
 	// permanents. It is ignored when the filter is empty.
 	ControllerControls PermanentFilter
+
+	// Object tests a referenced object in the current condition context, such as
+	// a triggering event permanent. It may use last-known information.
+	Object opt.V[ObjectReference]
+	Types  []CardType
 }
 
 // PermanentFilter matches permanents for reusable condition predicates. Empty
@@ -45,5 +50,5 @@ func (f PermanentFilter) Empty() bool {
 
 // Empty reports whether the condition contains no active predicate.
 func (c Condition) Empty() bool {
-	return c.ControllerControls.Empty()
+	return c.ControllerControls.Empty() && !c.Object.Exists && len(c.Types) == 0
 }
