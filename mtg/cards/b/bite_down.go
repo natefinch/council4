@@ -15,12 +15,6 @@ import (
 //
 //	Target creature you control deals damage equal to its power to target creature
 //	or planeswalker you don't control.
-//
-// Note: EffectDamage attributes damage to the spell source (r.obj), not to
-// the dealing creature. Lifelink and deathtouch on target 0 will therefore
-// not trigger via this effect. A future "creature-sourced damage" primitive
-// (or ImplementationID) would be needed for full rules accuracy.
-
 var BiteDown = &game.CardDef{
 	Name: "Bite Down",
 	ManaCost: opt.Val(mana.Cost{
@@ -62,6 +56,10 @@ var BiteDown = &game.CardDef{
 				{
 					Type:        game.EffectDamage,
 					TargetIndex: 1,
+					DamageSource: opt.Val(game.ObjectReference{
+						Kind:        game.ObjectReferenceTargetPermanent,
+						TargetIndex: 0,
+					}),
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind:        game.DynamicAmountTargetPower,
 						TargetIndex: 0,

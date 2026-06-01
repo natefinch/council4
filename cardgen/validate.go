@@ -19,6 +19,7 @@ const (
 	IssueMissingSearchSpec          ValidationCode = "missing-search-spec"
 	IssueUnsupportedSearchSpec      ValidationCode = "unsupported-search-spec"
 	IssueTargetIndexOutOfRange      ValidationCode = "target-index-out-of-range"
+	IssueInvalidReference           ValidationCode = "invalid-reference"
 	IssueInvalidTargetSpec          ValidationCode = "invalid-target-spec"
 	IssueUnregisteredImplementation ValidationCode = "unregistered-implementation"
 	IssueImplementationRequired     ValidationCode = "implementation-required"
@@ -162,6 +163,20 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 		}
 	}
 	v.validateTargetIndex(faceName, path, effect.TargetIndex, targets, "effect target")
+	if effect.DamageSource.Exists {
+		if effect.Type != game.EffectDamage {
+			v.add(faceName, appendPath(path, "DamageSource"), IssueInvalidReference, "DamageSource is only supported on damage effects")
+		}
+		v.validateObjectReference(faceName, appendPath(path, "DamageSource"), effect.DamageSource.Val, targets)
+	}
+	if effect.Recipient.Exists {
+		switch effect.Type {
+		case game.EffectCreateToken, game.EffectInvestigate:
+		default:
+			v.add(faceName, appendPath(path, "Recipient"), IssueInvalidReference, "Recipient is only supported on token-creating effects")
+		}
+		v.validatePlayerReference(faceName, appendPath(path, "Recipient"), effect.Recipient.Val, targets)
+	}
 	if effect.Condition.Exists {
 		v.validateTargetIndex(faceName, appendPath(path, "Condition"), effect.Condition.Val.TargetIndex, targets, "condition target")
 	}
@@ -216,6 +231,50 @@ func (v *cardValidator) validateTargetIndex(faceName string, path string, target
 	}
 	if targetIndex >= len(targets) {
 		v.add(faceName, path, IssueTargetIndexOutOfRange, fmt.Sprintf("%s index %d has no matching TargetSpec", label, targetIndex))
+	}
+}
+
+func (v *cardValidator) validateObjectReference(faceName string, path string, ref game.ObjectReference, targets []game.TargetSpec) {
+	switch ref.Kind {
+	case game.ObjectReferenceTargetPermanent:
+		v.validateTargetIndex(faceName, path, ref.TargetIndex, targets, "object reference target")
+	case game.ObjectReferenceSourcePermanent:
+		if ref.TargetIndex != 0 || ref.LinkID != "" {
+			v.add(faceName, path, IssueInvalidReference, "source permanent reference must not set TargetIndex or LinkID")
+		}
+	case game.ObjectReferenceAttachedPermanent:
+		if ref.TargetIndex >= 0 {
+			v.validateTargetIndex(faceName, path, ref.TargetIndex, targets, "attached permanent reference target")
+		}
+	case game.ObjectReferenceLinkedObject:
+		if ref.LinkID == "" {
+			v.add(faceName, path, IssueInvalidReference, "linked object reference requires LinkID")
+		}
+	case game.ObjectReferenceNone:
+		v.add(faceName, path, IssueInvalidReference, "object reference has no kind")
+	default:
+		v.add(faceName, path, IssueInvalidReference, fmt.Sprintf("unknown object reference kind %d", ref.Kind))
+	}
+}
+
+func (v *cardValidator) validatePlayerReference(faceName string, path string, ref game.PlayerReference, targets []game.TargetSpec) {
+	switch ref.Kind {
+	case game.PlayerReferenceController:
+		if ref.TargetIndex != 0 || ref.Object.Exists {
+			v.add(faceName, path, IssueInvalidReference, "controller reference must not set TargetIndex or Object")
+		}
+	case game.PlayerReferenceTargetPlayer:
+		v.validateTargetIndex(faceName, path, ref.TargetIndex, targets, "player reference target")
+	case game.PlayerReferenceObjectController, game.PlayerReferenceObjectOwner:
+		if !ref.Object.Exists {
+			v.add(faceName, path, IssueInvalidReference, "object controller/owner reference requires Object")
+			return
+		}
+		v.validateObjectReference(faceName, appendPath(path, "Object"), ref.Object.Val, targets)
+	case game.PlayerReferenceNone:
+		v.add(faceName, path, IssueInvalidReference, "player reference has no kind")
+	default:
+		v.add(faceName, path, IssueInvalidReference, fmt.Sprintf("unknown player reference kind %d", ref.Kind))
 	}
 }
 

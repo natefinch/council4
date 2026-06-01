@@ -214,19 +214,25 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 		if res.amount <= 0 {
 			return
 		}
+		source, ok := resolveEffectDamageSource(r.game, r.obj, effect)
+		if !ok {
+			return
+		}
 		if playerID, ok := r.player(effect); ok {
-			sourceID, sourceObjectID := damageSourceIDs(r.game, r.obj)
-			dealPlayerDamage(r.game, sourceID, sourceObjectID, r.obj.Controller, playerID, res.amount, false)
-			res.succeeded = true
+			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
+			if source.permanent != nil {
+				applyLifelink(r.game, source.permanent, dealt)
+			}
+			res.succeeded = dealt > 0
 			return
 		}
 		permanent, ok := r.permanent(effect)
 		if !ok {
 			return
 		}
-		sourceID, sourceObjectID := damageSourceIDs(r.game, r.obj)
-		dealPermanentDamage(r.game, sourceID, sourceObjectID, r.obj.Controller, permanent, res.amount, false)
-		res.succeeded = true
+		dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
+		applyDamageSourceKeywordEffects(r.game, source.permanent, permanent, dealt)
+		res.succeeded = dealt > 0
 	case game.EffectDestroy:
 		permanent, ok := r.permanent(effect)
 		if !ok {
@@ -302,8 +308,16 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 		if !effect.Token.Exists {
 			return
 		}
+		recipient := r.obj.Controller
+		if effect.Recipient.Exists {
+			var ok bool
+			recipient, ok = resolvePlayerReference(r.game, r.obj, effect.Recipient.Val)
+			if !ok {
+				return
+			}
+		}
 		for range res.amount {
-			if _, ok := createTokenPermanent(r.game, r.obj.Controller, effect.Token.Val); !ok {
+			if _, ok := createTokenPermanent(r.game, recipient, effect.Token.Val); !ok {
 				return
 			}
 		}
@@ -312,8 +326,16 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 		if res.amount <= 0 {
 			res.amount = 1
 		}
+		recipient := r.obj.Controller
+		if effect.Recipient.Exists {
+			var ok bool
+			recipient, ok = resolvePlayerReference(r.game, r.obj, effect.Recipient.Val)
+			if !ok {
+				return
+			}
+		}
 		for range res.amount {
-			if _, ok := createTokenPermanent(r.game, r.obj.Controller, clueTokenDef()); !ok {
+			if _, ok := createTokenPermanent(r.game, recipient, clueTokenDef()); !ok {
 				return
 			}
 		}
@@ -763,6 +785,44 @@ func damageSourceIDs(g *game.Game, obj *game.StackObject) (id.ID, id.ID) {
 	default:
 		return obj.SourceID, 0
 	}
+}
+
+type effectDamageSource struct {
+	sourceID       id.ID
+	sourceObjectID id.ID
+	controller     game.PlayerID
+	permanent      *game.Permanent
+}
+
+func resolveEffectDamageSource(g *game.Game, obj *game.StackObject, effect game.Effect) (effectDamageSource, bool) {
+	if !effect.DamageSource.Exists {
+		sourceID, sourceObjectID := damageSourceIDs(g, obj)
+		return effectDamageSource{
+			sourceID:       sourceID,
+			sourceObjectID: sourceObjectID,
+			controller:     obj.Controller,
+		}, true
+	}
+	resolved, ok := resolveObjectReference(g, obj, effect.DamageSource.Val)
+	if !ok || resolved.permanent == nil {
+		return effectDamageSource{}, false
+	}
+	return effectDamageSource{
+		sourceID:       resolved.permanent.CardInstanceID,
+		sourceObjectID: resolved.permanent.ObjectID,
+		controller:     effectiveController(g, resolved.permanent),
+		permanent:      resolved.permanent,
+	}, true
+}
+
+func applyDamageSourceKeywordEffects(g *game.Game, source *game.Permanent, damaged *game.Permanent, damage int) {
+	if source == nil || damage <= 0 {
+		return
+	}
+	if hasKeyword(g, source, game.Deathtouch) {
+		damaged.MarkedDeathtouchDamage = true
+	}
+	applyLifelink(g, source, damage)
 }
 
 func selectedPermanentIDs(g *game.Game, controller game.PlayerID, source *game.Permanent, selector game.EffectSelector) []id.ID {

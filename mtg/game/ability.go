@@ -340,6 +340,8 @@ type Effect struct {
 	Amount        int
 	DynamicAmount opt.V[DynamicAmount]
 	TargetIndex   int
+	DamageSource  opt.V[ObjectReference]
+	Recipient     opt.V[PlayerReference]
 	Condition     opt.V[EffectCondition]
 
 	// Optional asks the effect's controller whether to apply this single

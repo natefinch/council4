@@ -275,7 +275,7 @@ func cardFunctionalityPlan1Manifest() Manifest {
 		card("Anger", filepath.Join("mtg", "cards", "a", "anger.go"), BatchValidationStatusValid),
 		card("Arena", filepath.Join("mtg", "cards", "a", "arena.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
 		card("Basilisk Collar", filepath.Join("mtg", "cards", "b", "basilisk_collar.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
-		card("Beast Within", filepath.Join("mtg", "cards", "b", "beast_within.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Beast Within", filepath.Join("mtg", "cards", "b", "beast_within.go"), BatchValidationStatusValid),
 		card("Birds of Paradise", filepath.Join("mtg", "cards", "b", "birds_of_paradise.go"), BatchValidationStatusValid),
 		card("Bite Down", filepath.Join("mtg", "cards", "b", "bite_down.go"), BatchValidationStatusValid),
 		card("Blazemire Verge", filepath.Join("mtg", "cards", "b", "blazemire_verge.go"), BatchValidationStatusValid),
@@ -322,19 +322,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 	//     "basilisk-collar" is set on the CardDef so the rules engine can
 	//     apply the deathtouch/lifelink continuous effect to whatever creature this
 	//     equipment is currently attached to.
-	`,
-		"Beast Within": `// Missing primitives:
-	//   - EffectCreateToken always creates the token for the spell's controller
-	//     (r.obj.Controller). There is no TargetIndex or "controlled-by-target"
-	//     recipient field on EffectCreateToken, so the token cannot be assigned to
-	//     the destroyed permanent's controller declaratively.
-	//     ImplementationID "beast-within" is set so a hand-written handler can
-	//     issue the token to the correct player.
-	`,
-		"Bite Down": `// Note: EffectDamage attributes damage to the spell source (r.obj), not to
-	// the dealing creature. Lifelink and deathtouch on target 0 will therefore
-	// not trigger via this effect. A future "creature-sourced damage" primitive
-	// (or ImplementationID) would be needed for full rules accuracy.
 	`,
 		"Blazing Sunsteel": `// Missing primitives:
 	//   - EffectSelectorEquippedCreature does not exist; the static P/T boost cannot

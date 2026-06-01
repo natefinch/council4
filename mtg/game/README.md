@@ -21,6 +21,7 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 ├── card.go                    # CardDef (static card template) & CardInstance (in-game card)
 ├── ability.go                 # AbilityDef, Keywords, TriggerConditions, Effects, Modes
 ├── condition.go               # Reusable Condition and PermanentFilter predicates
+├── reference.go               # ObjectReference and PlayerReference effect bindings
 ├── choice.go                  # ChoiceRequest/ChoiceDecision for non-action decisions
 ├── permanent.go               # Permanent — battlefield state for a card or token
 ├── player.go                  # Player — life, zones, commander tracking, designations
@@ -86,6 +87,7 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
 | `ChoiceRequest` | `choice.go` | A bounded non-action decision such as trigger target choice, trigger ordering, or optional-effect yes/no. |
 | `Condition` | `condition.go` | Reusable data-only predicates for static ability conditions, activation restrictions, intervening-if checks, effect conditions, and replacement effects. |
+| `ObjectReference`, `PlayerReference` | `reference.go` | Reusable resolution-time bindings for effects that need source objects, target-derived controllers/owners, linked objects, or non-default recipients. |
 
 ### Player
 
