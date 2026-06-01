@@ -66,7 +66,8 @@ const (
 )
 
 const (
-	Aura Sub = "Aura"
+	Aura  Sub = "Aura"
+	Class Sub = "Class"
 )
 
 const (
@@ -103,6 +104,7 @@ var subtypesByType = map[Card]map[Sub]struct{}{
 	),
 	Enchantment: subtypeSet(
 		Aura,
+		Class,
 	),
 	Land: subtypeSet(
 		Forest,

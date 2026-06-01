@@ -99,6 +99,8 @@ type Player struct {
 	// ExperienceCounters tracks the player's experience counter total
 	// (Commander 2015 mechanic).
 	ExperienceCounters int
+	Speed              int
+	SpeedIncreasedTurn int
 
 	// PowerBracket and PowerLevel are optional deck metadata carried from setup
 	// for later simulation/reporting. They do not affect rules behavior.

@@ -885,12 +885,11 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Amount:      1,
 			TargetIndex: -1,
 			Search: opt.Val(game.SearchSpec{
-				SourceZone:    game.ZoneLibrary,
-				Destination:   game.ZoneHand,
-				MatchCardType: true,
-				CardType:      types.Creature,
-				Reveal:        true,
-				Shuffle:       true,
+				SourceZone:  game.ZoneLibrary,
+				Destination: game.ZoneHand,
+				CardType:    opt.Val(types.Creature),
+				Reveal:      true,
+				Shuffle:     true,
 			}),
 		}, nil)
 
@@ -921,13 +920,11 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Amount:      1,
 			TargetIndex: -1,
 			Search: opt.Val(game.SearchSpec{
-				SourceZone:     game.ZoneLibrary,
-				Destination:    game.ZoneHand,
-				MatchCardType:  true,
-				CardType:       types.Land,
-				MatchSupertype: true,
-				Supertype:      types.Basic,
-				Reveal:         true,
+				SourceZone:  game.ZoneLibrary,
+				Destination: game.ZoneHand,
+				CardType:    opt.Val(types.Land),
+				Supertype:   opt.Val(types.Basic),
+				Reveal:      true,
 			}),
 		}, nil)
 
@@ -956,10 +953,9 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Amount:      1,
 			TargetIndex: -1,
 			Search: opt.Val(game.SearchSpec{
-				SourceZone:    game.ZoneLibrary,
-				Destination:   game.ZoneHand,
-				MatchCardType: true,
-				CardType:      types.Land,
+				SourceZone:  game.ZoneLibrary,
+				Destination: game.ZoneHand,
+				CardType:    opt.Val(types.Land),
 			}),
 		}, nil)
 
@@ -967,6 +963,47 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 
 		if !g.Players[game.Player1].Hand.Contains(nonbasic) || g.Players[game.Player1].Library.Contains(nonbasic) {
 			t.Fatal("search effect did not move nonbasic land without a supertype filter")
+		}
+	})
+
+	t.Run("search can put subtype-matching land onto battlefield tapped", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		forest := addCardToLibrary(g, game.Player1, &game.CardDef{
+			Name:     "Forest",
+			Types:    []types.Card{types.Land},
+			Subtypes: []types.Sub{types.Forest},
+		})
+		_ = addCardToLibrary(g, game.Player1, &game.CardDef{
+			Name:     "Wastes",
+			Types:    []types.Card{types.Land},
+			Subtypes: []types.Sub{types.Sub("Desert")},
+		})
+		addEffectSpellToStack(g, game.Player1, game.Effect{
+			Type:        game.EffectSearch,
+			Amount:      1,
+			TargetIndex: -1,
+			Search: opt.Val(game.SearchSpec{
+				SourceZone:   game.ZoneLibrary,
+				Destination:  game.ZoneBattlefield,
+				CardType:     opt.Val(types.Land),
+				SubtypesAny:  []types.Sub{types.Forest},
+				EntersTapped: true,
+				Shuffle:      true,
+			}),
+		}, nil)
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if g.Players[game.Player1].Library.Contains(forest) {
+			t.Fatal("search effect left matching land in library")
+		}
+		permanent := permanentByCardID(g, forest)
+		if permanent == nil {
+			t.Fatal("search effect did not put matching land onto battlefield")
+		}
+		if !permanent.Tapped {
+			t.Fatal("searched land entered untapped, want tapped")
 		}
 	})
 
@@ -1016,6 +1053,106 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			t.Fatal("clue activation did not draw a card")
 		}
 	})
+}
+
+func TestStartEnginesAndSpeedIncreasesOncePerTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.TurnNumber = 1
+
+	if !startEngines(g, game.Player1) {
+		t.Fatal("startEngines failed")
+	}
+	if got := g.Players[game.Player1].Speed; got != 1 {
+		t.Fatalf("speed = %d, want 1", got)
+	}
+	loseLife(g, game.Player2, 1)
+	loseLife(g, game.Player3, 1)
+	if got := g.Players[game.Player1].Speed; got != 2 {
+		t.Fatalf("speed = %d, want one increase to 2 this turn", got)
+	}
+	g.Turn.TurnNumber = 2
+	loseLife(g, game.Player2, 1)
+	if got := g.Players[game.Player1].Speed; got != 3 {
+		t.Fatalf("speed = %d, want 3 after next-turn opponent life loss", got)
+	}
+}
+
+func TestMonstrosityEffectAddsCountersOnlyOnce(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Monster",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	})
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+	effect := game.Effect{Type: game.EffectMonstrosity, Amount: 5, TargetIndex: -2}
+
+	engine.resolveEffect(g, obj, effect, &TurnLog{})
+	engine.resolveEffect(g, obj, effect, &TurnLog{})
+
+	if !source.Monstrous {
+		t.Fatal("source did not become monstrous")
+	}
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 5 {
+		t.Fatalf("+1/+1 counters = %d, want 5 after repeated monstrosity resolutions", got)
+	}
+}
+
+func TestSetClassLevelEffectAndClassInitialLevel(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToHand(g, game.Player1, &game.CardDef{
+		Name:     "Class",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Class},
+	})
+	card := g.CardInstances[cardID]
+	source, ok := createCardPermanent(g, card, game.Player1, game.ZoneHand)
+	if !ok {
+		t.Fatal("createCardPermanent failed")
+	}
+	if got := source.ClassLevel; got != 1 {
+		t.Fatalf("initial class level = %d, want 1", got)
+	}
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectSetClassLevel, Amount: 2, TargetIndex: -2}, &TurnLog{})
+	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectSetClassLevel, Amount: 1, TargetIndex: -2}, &TurnLog{})
+
+	if got := source.ClassLevel; got != 2 {
+		t.Fatalf("class level = %d, want upgraded and not downgraded level 2", got)
+	}
+}
+
+func TestRuleEffectCantBeBlockedBindsAffectedObject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	otherAttacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.RuleEffects = append(g.RuleEffects, game.RuleEffect{
+		Kind:             game.RuleEffectCantBeBlocked,
+		AffectedObjectID: attacker.ObjectID,
+	})
+
+	if canBlockAttacker(g, blocker, attacker) {
+		t.Fatal("blocker could block creature affected by can't-be-blocked rule effect")
+	}
+	if !canBlockAttacker(g, blocker, otherAttacker) {
+		t.Fatal("can't-be-blocked rule effect affected the wrong attacker")
+	}
 }
 
 func TestUnsupportedSearchSpecIsLogged(t *testing.T) {
@@ -1458,11 +1595,10 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
 		Condition: optEffectCondition(game.EffectCondition{
-			Text:               "it isn't a creature",
-			TargetIndex:        0,
-			MatchPermanentType: true,
-			PermanentType:      types.Creature,
-			Negate:             true,
+			Text:          "it isn't a creature",
+			TargetIndex:   0,
+			PermanentType: opt.Val(types.Creature),
+			Negate:        true,
 		}),
 		ContinuousEffects: []game.ContinuousEffect{
 			{
@@ -1510,11 +1646,10 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
 		Condition: optEffectCondition(game.EffectCondition{
-			Text:               "it isn't a creature",
-			TargetIndex:        0,
-			MatchPermanentType: true,
-			PermanentType:      types.Creature,
-			Negate:             true,
+			Text:          "it isn't a creature",
+			TargetIndex:   0,
+			PermanentType: opt.Val(types.Creature),
+			Negate:        true,
 		}),
 		ContinuousEffects: []game.ContinuousEffect{
 			{

@@ -177,10 +177,10 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	if effect.Type == game.EffectSearch {
 		if !effect.Search.Exists {
 			v.add(faceName, path, IssueMissingSearchSpec, "search effect has no SearchSpec")
-		} else if effect.Search.Val.SourceZone != game.ZoneLibrary || effect.Search.Val.Destination != game.ZoneHand {
-			v.add(faceName, path, IssueUnsupportedSearchSpec, "only library-to-hand SearchSpec is currently supported")
-		} else if effect.Search.Val.MatchSupertype && effect.Search.Val.Supertype == types.Super("") {
-			v.add(faceName, appendPath(path, "Search"), IssueUnsupportedSearchSpec, "MatchSupertype requires a non-empty supertype")
+		} else if effect.Search.Val.SourceZone != game.ZoneLibrary || (effect.Search.Val.Destination != game.ZoneHand && effect.Search.Val.Destination != game.ZoneBattlefield) {
+			v.add(faceName, path, IssueUnsupportedSearchSpec, "only library-to-hand and library-to-battlefield SearchSpec are currently supported")
+		} else if effect.Search.Val.Supertype.Exists && effect.Search.Val.Supertype.Val == types.Super("") {
+			v.add(faceName, appendPath(path, "Search"), IssueUnsupportedSearchSpec, "Supertype requires a non-empty value when present")
 		}
 	}
 	if effect.Selector != game.EffectSelectorNone && effect.PlayerSelector != game.PlayerSelectorNone {
@@ -217,7 +217,7 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	}
 	if effect.Condition.Exists {
 		conditionPath := appendPath(path, "Condition")
-		if effect.Condition.Val.MatchPermanentType || effect.Condition.Val.TargetIndex != 0 {
+		if effect.Condition.Val.PermanentType.Exists || effect.Condition.Val.TargetIndex != 0 {
 			v.validateTargetIndex(faceName, conditionPath, effect.Condition.Val.TargetIndex, targets, "condition target")
 		}
 		if effect.Condition.Val.Condition.Exists {
@@ -226,6 +226,9 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	}
 	if effect.DynamicAmount.Exists && dynamicAmountUsesTarget(effect.DynamicAmount.Val) {
 		v.validateTargetIndex(faceName, appendPath(path, "DynamicAmount"), effect.DynamicAmount.Val.TargetIndex, targets, "dynamic amount target")
+	}
+	if effect.DynamicAmount.Exists && effect.DynamicAmount.Val.Kind == game.DynamicAmountObjectPower {
+		v.validateObjectReference(faceName, appendPath(path, "DynamicAmount.Object"), effect.DynamicAmount.Val.Object, targets)
 	}
 	if effect.CounterSource.Kind == game.CounterSourceTarget {
 		v.validateTargetIndex(faceName, appendPath(path, "CounterSource"), effect.CounterSource.TargetIndex, targets, "counter source target")

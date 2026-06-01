@@ -134,7 +134,8 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 	if obj.HasTriggerEvent {
 		event = &obj.TriggerEvent
 	}
-	if ability.Trigger.Exists && !triggerInterveningIf(g, obj.Controller, &ability.Trigger.Val, event) {
+	sourcePermanent, _ := permanentByObjectID(g, obj.SourceID)
+	if ability.Trigger.Exists && !triggerInterveningIf(g, sourcePermanent, obj.Controller, &ability.Trigger.Val, event) {
 		return "intervening if false"
 	}
 	if !abilityHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, ability, obj.Controller, obj.Targets) {

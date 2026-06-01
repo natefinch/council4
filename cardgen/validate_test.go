@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -115,9 +116,9 @@ func TestValidateCardReportsSearchSpecProblems(t *testing.T) {
 				Type:        game.EffectSearch,
 				TargetIndex: -1,
 				Search: opt.Val(game.SearchSpec{
-					SourceZone:     game.ZoneLibrary,
-					Destination:    game.ZoneHand,
-					MatchSupertype: true,
+					SourceZone:  game.ZoneLibrary,
+					Destination: game.ZoneHand,
+					Supertype:   opt.Val(types.Super("")),
 				}),
 			},
 			code: IssueUnsupportedSearchSpec,

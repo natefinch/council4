@@ -23,8 +23,13 @@ type Condition struct {
 
 	// Object tests a referenced object in the current condition context, such as
 	// a triggering event permanent. It may use last-known information.
-	Object opt.V[ObjectReference]
-	Types  []types.Card
+	Object                                                       opt.V[ObjectReference]
+	Types                                                        []types.Card
+	EventPermanentNameUniqueAmongControlledAndGraveyardCreatures bool
+	SourceClassLevelAtLeast                                      int
+	SourceClassLevelLessThan                                     int
+	SourceNotMonstrous                                           bool
+	ControllerHasMaxSpeed                                        bool
 }
 
 // PermanentFilter matches permanents for reusable condition predicates. Empty
@@ -38,8 +43,9 @@ type PermanentFilter struct {
 	// MinCount defaults to 1 when any other filter field is set.
 	MinCount int
 
-	Power     opt.V[compare.Int]
-	Toughness opt.V[compare.Int]
+	Power      opt.V[compare.Int]
+	Toughness  opt.V[compare.Int]
+	TotalPower opt.V[compare.Int]
 }
 
 // Empty reports whether the filter contains no active predicate.
@@ -49,10 +55,18 @@ func (f PermanentFilter) Empty() bool {
 		len(f.SubtypesAny) == 0 &&
 		f.MinCount == 0 &&
 		!f.Power.Exists &&
-		!f.Toughness.Exists
+		!f.Toughness.Exists &&
+		!f.TotalPower.Exists
 }
 
 // Empty reports whether the condition contains no active predicate.
 func (c Condition) Empty() bool {
-	return c.ControllerControls.Empty() && !c.Object.Exists && len(c.Types) == 0
+	return c.ControllerControls.Empty() &&
+		!c.Object.Exists &&
+		len(c.Types) == 0 &&
+		!c.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures &&
+		c.SourceClassLevelAtLeast == 0 &&
+		c.SourceClassLevelLessThan == 0 &&
+		!c.SourceNotMonstrous &&
+		!c.ControllerHasMaxSpeed
 }

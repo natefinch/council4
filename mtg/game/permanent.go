@@ -99,6 +99,8 @@ type Permanent struct {
 
 	// RegenerationShields replace future destruction events for this permanent.
 	RegenerationShields int
+	Monstrous           bool
+	ClassLevel          int
 
 	// --- Attachments ---
 

@@ -24,6 +24,14 @@ func createCardPermanentFaceWithChoices(e *Engine, g *game.Game, card *game.Card
 }
 
 func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, continuous []game.ContinuousEffect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	return createCardPermanentFaceWithOptions(e, g, card, controller, fromZone, face, continuous, permanentCreationOptions{}, agents, log)
+}
+
+type permanentCreationOptions struct {
+	ForceTapped bool
+}
+
+func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {
 		return nil, false
@@ -45,6 +53,9 @@ func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.C
 		agents: agents,
 		log:    log,
 	}, g, permanent, fromZone)
+	if options.ForceTapped {
+		permanent.Tapped = true
+	}
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.GameEvent{
 		SourceID:    card.ID,
@@ -115,6 +126,9 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 func initializePermanentCounters(permanent *game.Permanent, def *game.CardDef) {
 	if def.EntersTapped {
 		permanent.Tapped = true
+	}
+	if def.HasSubtype(types.Class) {
+		permanent.ClassLevel = 1
 	}
 	if def.Loyalty.Exists {
 		permanent.Counters.Add(counter.Loyalty, def.Loyalty.Val)

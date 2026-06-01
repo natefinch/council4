@@ -568,6 +568,9 @@ func canAttackTarget(g *game.Game, attacker *game.Permanent, target game.AttackT
 }
 
 func canBlockAttacker(g *game.Game, blocker *game.Permanent, attacker *game.Permanent) bool {
+	if ruleEffectProhibitsBeingBlocked(g, attacker) {
+		return false
+	}
 	if hasKeyword(g, attacker, game.Flying) && !hasKeyword(g, blocker, game.Flying) && !hasKeyword(g, blocker, game.Reach) {
 		return false
 	}

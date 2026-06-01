@@ -129,6 +129,49 @@ func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 	}
 }
 
+func TestObjectPowerDynamicAmountUsesAttachedPermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	})
+	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
+	if !attachPermanent(g, equipment, creature) {
+		t.Fatal("attachPermanent failed")
+	}
+	obj := &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     equipment.ObjectID,
+		SourceCardID: equipment.CardInstanceID,
+		Controller:   game.Player1,
+		Targets:      []game.Target{game.PlayerTarget(game.Player2)},
+	}
+	log := TurnLog{}
+
+	engine.resolveEffect(g, obj, game.Effect{
+		Type:        game.EffectDamage,
+		TargetIndex: 0,
+		DamageSource: opt.Val(game.ObjectReference{
+			Kind:        game.ObjectReferenceAttachedPermanent,
+			TargetIndex: -1,
+		}),
+		DynamicAmount: opt.Val(game.DynamicAmount{
+			Kind: game.DynamicAmountObjectPower,
+			Object: game.ObjectReference{
+				Kind:        game.ObjectReferenceAttachedPermanent,
+				TargetIndex: -1,
+			},
+		}),
+	}, &log)
+
+	if got := g.Players[game.Player2].Life; got != 37 {
+		t.Fatalf("Player2 life = %d, want 37", got)
+	}
+}
+
 func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -468,6 +468,26 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 			goadPermanent(r.game, permanent, r.obj.Controller)
 			res.succeeded = true
 		}
+	case game.EffectStartEngines:
+		playerID, ok := r.player(effect)
+		if ok {
+			res.succeeded = startEngines(r.game, playerID)
+		}
+	case game.EffectSetClassLevel:
+		permanent, ok := r.permanent(effect)
+		if ok && res.amount > permanent.ClassLevel {
+			permanent.ClassLevel = res.amount
+			res.succeeded = true
+		}
+	case game.EffectMonstrosity:
+		permanent, ok := r.permanent(effect)
+		if ok && !permanent.Monstrous {
+			if res.amount > 0 {
+				permanent.Counters.Add(counter.PlusOnePlusOne, res.amount)
+			}
+			permanent.Monstrous = true
+			res.succeeded = true
+		}
 	case game.EffectShufflePermanentIntoLibrary:
 		permanent, ok := r.permanent(effect)
 		if !ok {
@@ -748,7 +768,10 @@ func IsEffectTypeExecuted(effectType game.EffectType) bool {
 		game.EffectGoad,
 		game.EffectInvestigate,
 		game.EffectShufflePermanentIntoLibrary,
-		game.EffectDiscover:
+		game.EffectDiscover,
+		game.EffectStartEngines,
+		game.EffectSetClassLevel,
+		game.EffectMonstrosity:
 		return true
 	default:
 		return false
@@ -935,12 +958,29 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		if obj != nil && obj.HasTriggerEvent {
 			amount = obj.TriggerEvent.Amount
 		}
+	case game.DynamicAmountObjectPower:
+		if obj == nil {
+			break
+		}
+		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
+			amount = resolvedObjectPower(g, resolved)
+		}
 	}
 	multiplier := dynamic.Multiplier
 	if multiplier == 0 {
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+func resolvedObjectPower(g *game.Game, resolved resolvedObjectReference) int {
+	if resolved.permanent != nil {
+		return effectivePower(g, resolved.permanent)
+	}
+	if resolved.snapshot.Power.Exists {
+		return resolved.snapshot.Power.Val
+	}
+	return 0
 }
 
 func rememberEffectAmount(obj *game.StackObject, effect game.Effect, amount int) {
@@ -1024,12 +1064,12 @@ func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt
 		return true
 	}
 	cond := condition.Val
-	if cond.MatchPermanentType {
+	if cond.PermanentType.Exists {
 		permanent, ok := effectPermanent(g, obj, game.Effect{TargetIndex: cond.TargetIndex})
 		if !ok {
 			return false
 		}
-		matches := permanentHasType(g, permanent, cond.PermanentType)
+		matches := permanentHasType(g, permanent, cond.PermanentType.Val)
 		if cond.Negate {
 			matches = !matches
 		}

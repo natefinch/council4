@@ -53,7 +53,10 @@ func canAttachPermanent(g *game.Game, attachment *game.Permanent, target *game.P
 }
 
 func auraCanAttachToPermanent(g *game.Game, aura *game.Permanent, target *game.Permanent) bool {
-	spec := enchantTargetSpecForPermanent(g, aura)
+	spec, ok := enchantTargetSpecForPermanent(g, aura)
+	if !ok {
+		return false
+	}
 	if spec.Allow != game.TargetAllowUnspecified && spec.Allow&game.TargetAllowPermanent == 0 {
 		return false
 	}
@@ -76,15 +79,15 @@ func isAuraCard(card *game.CardDef) bool {
 	return card != nil && card.HasType(types.Enchantment) && (card.HasSubtype(types.Aura) || card.HasKeyword(game.Enchant))
 }
 
-func enchantTargetSpecForPermanent(g *game.Game, aura *game.Permanent) game.TargetSpec {
+func enchantTargetSpecForPermanent(g *game.Game, aura *game.Permanent) (game.TargetSpec, bool) {
 	def, ok := permanentCardDef(g, aura)
 	if !ok {
-		return defaultEnchantTargetSpec()
+		return game.TargetSpec{}, false
 	}
 	return enchantTargetSpecForCard(def)
 }
 
-func enchantTargetSpecForCard(card *game.CardDef) game.TargetSpec {
+func enchantTargetSpecForCard(card *game.CardDef) (game.TargetSpec, bool) {
 	for _, ability := range card.Abilities {
 		if !abilityHasKeyword(&ability, game.Enchant) || !ability.EnchantTarget.Exists {
 			continue
@@ -96,20 +99,9 @@ func enchantTargetSpecForCard(card *game.CardDef) game.TargetSpec {
 		if spec.MaxTargets == 0 {
 			spec.MaxTargets = 1
 		}
-		return spec
+		return spec, true
 	}
-	return defaultEnchantTargetSpec()
-}
-
-func defaultEnchantTargetSpec() game.TargetSpec {
-	return game.TargetSpec{
-		MinTargets: 1,
-		MaxTargets: 1,
-		Allow:      game.TargetAllowPermanent,
-		Predicate: game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-		},
-	}
+	return game.TargetSpec{}, false
 }
 
 func isEquipmentCard(card *game.CardDef) bool {

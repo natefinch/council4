@@ -14,8 +14,9 @@ Given a Magic: The Gathering card name, the library:
 2. Parses the mechanical fields: name, mana cost, mana value, colors, color identity, types, subtypes, supertypes, power/toughness, loyalty, defense, simple ETB tapped text, and double-faced card back faces.
 3. Generates a Go source file with a `game.CardDef` literal, leaving the `Abilities` slice empty for LLM completion.
 4. Validates generated card definitions against the currently executable rules
-   model before batch workflows mark them supported, including newer structured
-   object/card references, token-copy specs, and rule-effect primitives.
+   model before batch workflows mark them supported, including structured
+   object/card references, token-copy specs, library-to-battlefield searches,
+   object-power dynamic amounts, and rule-effect primitives.
 5. Reports cards that still rely on missing rules/parser functionality, including
    generated-source `Missing primitives` comments and `ImplementationID` escape
    hatches.

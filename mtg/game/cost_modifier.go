@@ -45,18 +45,21 @@ const (
 	RuleEffectCostModifier
 	RuleEffectCastFromZone
 	RuleEffectCantBeCountered
+	RuleEffectCantBeBlocked
 )
 
 // RuleEffect models static or runtime effects that change game rules rather
 // than permanent characteristics. mtg/rules owns matching and application.
 type RuleEffect struct {
-	ID             id.ID
-	Kind           RuleEffectKind
-	Controller     PlayerID
-	SourceObjectID id.ID
-	SourceCardID   id.ID
-	Duration       EffectDuration
-	CreatedTurn    int
+	ID               id.ID
+	Kind             RuleEffectKind
+	Controller       PlayerID
+	SourceObjectID   id.ID
+	SourceCardID     id.ID
+	AffectedObjectID id.ID
+	AffectedSource   bool
+	Duration         EffectDuration
+	CreatedTurn      int
 
 	AffectedPlayer     PlayerRelation
 	AffectedController ControllerRelation

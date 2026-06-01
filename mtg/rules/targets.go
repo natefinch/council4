@@ -383,7 +383,11 @@ func (e *Engine) chooseTargetFromCandidates(g *game.Game, chooser game.PlayerID,
 
 func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 	if isAuraCard(card) {
-		return []game.TargetSpec{enchantTargetSpecForCard(card)}
+		spec, ok := enchantTargetSpecForCard(card)
+		if !ok {
+			return nil
+		}
+		return []game.TargetSpec{spec}
 	}
 	ability, ok := firstSpellAbility(card)
 	if !ok {

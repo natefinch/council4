@@ -17,6 +17,13 @@ func createRuleEffects(g *game.Game, obj *game.StackObject, effect game.Effect) 
 		ruleEffect.Controller = obj.Controller
 		ruleEffect.SourceCardID = sourceID
 		ruleEffect.SourceObjectID = sourceObjectID
+		if ruleEffect.AffectedSource {
+			ruleEffect.AffectedObjectID = sourceObjectID
+		} else if ruleEffect.AffectedObjectID == 0 {
+			if objectID, ok := targetPermanentObjectID(obj, effect.TargetIndex); ok {
+				ruleEffect.AffectedObjectID = objectID
+			}
+		}
 		ruleEffect.CreatedTurn = g.Turn.TurnNumber
 		if effect.Duration != game.DurationPermanent {
 			ruleEffect.Duration = effect.Duration
@@ -59,10 +66,19 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 				if effect.Type != game.EffectApplyRule {
 					continue
 				}
+				if !conditionSatisfied(g, conditionContext{
+					controller: effectiveController(g, source),
+					source:     source,
+				}, ability.Condition) {
+					continue
+				}
 				for _, ruleEffect := range effect.RuleEffects {
 					ruleEffect.Controller = effectiveController(g, source)
 					ruleEffect.SourceObjectID = source.ObjectID
 					ruleEffect.SourceCardID = source.CardInstanceID
+					if ruleEffect.AffectedSource {
+						ruleEffect.AffectedObjectID = source.ObjectID
+					}
 					effects = append(effects, ruleEffect)
 				}
 			}
@@ -134,12 +150,37 @@ func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
 		return 0
 	}
 	player.Life -= amount
+	increaseActivePlayerSpeedForOpponentLifeLoss(g, playerID)
 	emitEvent(g, game.GameEvent{
 		Kind:   game.EventLifeLost,
 		Player: playerID,
 		Amount: amount,
 	})
 	return amount
+}
+
+func startEngines(g *game.Game, playerID game.PlayerID) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok || player.Eliminated {
+		return false
+	}
+	if player.Speed == 0 {
+		player.Speed = 1
+	}
+	return true
+}
+
+func increaseActivePlayerSpeedForOpponentLifeLoss(g *game.Game, losingPlayer game.PlayerID) {
+	active := g.Turn.ActivePlayer
+	if active == losingPlayer || active < 0 || active >= game.NumPlayers {
+		return
+	}
+	player, ok := playerByID(g, active)
+	if !ok || player.Eliminated || player.Speed <= 0 || player.Speed >= 4 || player.SpeedIncreasedTurn == g.Turn.TurnNumber {
+		return
+	}
+	player.Speed++
+	player.SpeedIncreasedTurn = g.Turn.TurnNumber
 }
 
 func ruleEffectProhibitsAttack(g *game.Game, attacker *game.Permanent, target *game.AttackTarget) bool {
@@ -172,11 +213,23 @@ func ruleEffectProhibitsBlock(g *game.Game, blocker *game.Permanent) bool {
 	return false
 }
 
+func ruleEffectProhibitsBeingBlocked(g *game.Game, attacker *game.Permanent) bool {
+	for _, effect := range activeRuleEffects(g) {
+		if effect.Kind == game.RuleEffectCantBeBlocked && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectMatchesPermanent(g *game.Game, effect game.RuleEffect, permanent *game.Permanent) bool {
 	if permanent == nil {
 		return false
 	}
 	if !controllerRelationMatches(effect.Controller, effectiveController(g, permanent), effect.AffectedController) {
+		return false
+	}
+	if effect.AffectedObjectID != 0 && effect.AffectedObjectID != permanent.ObjectID {
 		return false
 	}
 	for _, cardType := range effect.PermanentTypes {

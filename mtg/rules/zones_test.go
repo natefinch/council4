@@ -118,6 +118,20 @@ func TestAttachPermanentAttachesAuraToLegalCreature(t *testing.T) {
 	}
 }
 
+func TestAuraWithoutEnchantTargetCannotAttach(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	aura := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:     "Targetless Aura",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+	})
+	creature := addCombatCreaturePermanent(g, game.Player2)
+
+	if canAttachPermanent(g, aura, creature) {
+		t.Fatal("Aura without explicit EnchantTarget attached via implicit default")
+	}
+}
+
 func TestEnchantTargetRestrictsAuraAttachment(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	aura := addCombatPermanent(g, game.Player1, landAuraCard())
@@ -256,6 +270,16 @@ func addAuraPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 		Name:     "Test Aura",
 		Types:    []types.Card{types.Enchantment},
 		Subtypes: []types.Sub{types.Aura},
+		Abilities: []game.AbilityDef{{
+			Kind:     game.StaticAbility,
+			Keywords: []game.Keyword{game.Enchant},
+			EnchantTarget: opt.Val(game.TargetSpec{
+				Allow: game.TargetAllowPermanent,
+				Predicate: game.TargetPredicate{
+					PermanentTypes: []types.Card{types.Creature},
+				},
+			}),
+		}},
 	})
 }
 

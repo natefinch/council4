@@ -1,0 +1,49 @@
+package f
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Farseek
+//
+// Type: Sorcery
+// Cost: {1}{G}
+//
+// Oracle text:
+//
+//	Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.
+var Farseek = &game.CardDef{
+	Name: "Farseek",
+	ManaCost: opt.Val(mana.Cost{
+		mana.GenericMana(1),
+		mana.ColoredMana(mana.Green),
+	}),
+	ManaValue:     2,
+	Colors:        []mana.Color{mana.Green},
+	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Types:         []types.Card{types.Sorcery},
+	OracleText:    "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.",
+	Abilities: []game.AbilityDef{
+		{
+			Kind: game.SpellAbility,
+			Text: "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.",
+			Effects: []game.Effect{
+				{
+					Type:        game.EffectSearch,
+					TargetIndex: -1,
+					Search: opt.Val(game.SearchSpec{
+						SourceZone:   game.ZoneLibrary,
+						Destination:  game.ZoneBattlefield,
+						CardType:     opt.Val(types.Land),
+						SubtypesAny:  []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain},
+						EntersTapped: true,
+						Shuffle:      true,
+					}),
+				},
+			},
+		},
+	},
+}

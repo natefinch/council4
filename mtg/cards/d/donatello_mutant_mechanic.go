@@ -49,11 +49,10 @@ var DonatelloMutantMechanic = &game.CardDef{
 					Type:        game.EffectApplyContinuous,
 					TargetIndex: 0,
 					Condition: opt.Val(game.EffectCondition{
-						Text:               "it isn't a creature",
-						TargetIndex:        0,
-						MatchPermanentType: true,
-						PermanentType:      types.Creature,
-						Negate:             true,
+						Text:          "it isn't a creature",
+						TargetIndex:   0,
+						PermanentType: opt.Val(types.Creature),
+						Negate:        true,
 					}),
 					ContinuousEffects: []game.ContinuousEffect{
 						{

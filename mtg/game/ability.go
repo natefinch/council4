@@ -172,6 +172,7 @@ type TriggerPattern struct {
 
 	RequirePermanentTypes []types.Card
 	ExcludePermanentTypes []types.Card
+	RequireNonToken       bool
 
 	// RequireCardTypes and ExcludeCardTypes filter spell-cast events by the
 	// spell's types as chosen/cast on the stack (CR 601.2, CR 603.2).
@@ -265,6 +266,9 @@ const (
 	EffectInvestigate
 	EffectShufflePermanentIntoLibrary
 	EffectDiscover
+	EffectStartEngines
+	EffectSetClassLevel
+	EffectMonstrosity
 )
 
 // EffectResultAmountKind identifies which numeric result an effect records for
@@ -382,21 +386,21 @@ func EternalizeAbility(cost mana.Cost, creatureSubtypes ...types.Sub) AbilityDef
 	}
 }
 
-// SearchSpec describes the supported deterministic library-search slice. The
-// initial rules implementation supports only library -> hand. More complex
-// search templates should stay unsupported until explicitly modeled.
+// SearchSpec describes a deterministic library-search slice. The rules
+// implementation supports library -> hand and library -> battlefield templates
+// with common type, supertype, and subtype filters.
 type SearchSpec struct {
 	SourceZone  ZoneType
 	Destination ZoneType
 
-	MatchCardType bool
-	CardType      types.Card
+	CardType  opt.V[types.Card]
+	Supertype opt.V[types.Super]
 
-	MatchSupertype bool
-	Supertype      types.Super
+	SubtypesAny []types.Sub
 
-	Reveal  bool
-	Shuffle bool
+	Reveal       bool
+	Shuffle      bool
+	EntersTapped bool
 }
 
 // EffectCondition describes a simple condition that must be true when an
@@ -408,8 +412,7 @@ type EffectCondition struct {
 	// TargetIndex identifies the target whose current characteristics are tested.
 	TargetIndex int
 
-	MatchPermanentType bool
-	PermanentType      types.Card
+	PermanentType opt.V[types.Card]
 
 	// Negate inverts the permanent-type match, e.g. "it isn't a creature".
 	Negate bool
@@ -540,8 +543,8 @@ type AbilityDef struct {
 	// A single ability line can grant multiple keywords.
 	Keywords []Keyword
 
-	// EnchantTarget parameterizes Enchant for Aura attachment legality. When
-	// absent, Aura attachment defaults to "enchant creature".
+	// EnchantTarget parameterizes Enchant for Aura attachment legality. Aura
+	// cards must set this explicitly; there is no default target.
 	EnchantTarget opt.V[TargetSpec]
 
 	// WardCost parameterizes Ward for mana-valued ward costs.

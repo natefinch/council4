@@ -62,6 +62,54 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 	}
 }
 
+func TestConditionControllerControlsTotalPower(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Small", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 3})})
+	addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Medium", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 5})})
+	addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Land", Types: []types.Card{types.Land}})
+
+	condition := opt.Val(game.Condition{
+		ControllerControls: game.PermanentFilter{
+			Types:      []types.Card{types.Creature},
+			TotalPower: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 8}),
+		},
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not match total creature power >= 8")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("condition matched another player's creatures")
+	}
+}
+
+func TestConditionEventPermanentNameUniqueAmongControlledAndGraveyardCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	unique := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Unique", Types: []types.Card{types.Creature}})
+	condition := opt.Val(game.Condition{EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true})
+	ctx := conditionContext{
+		controller: game.Player1,
+		event: &game.GameEvent{
+			PermanentID: unique.ObjectID,
+		},
+	}
+	if !conditionSatisfied(g, ctx, condition) {
+		t.Fatal("condition counted the event permanent as another matching creature")
+	}
+
+	addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Unique", Types: []types.Card{types.Creature}})
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("condition matched with another controlled creature of the same name")
+	}
+
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	unique = addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Unique", Types: []types.Card{types.Creature}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Unique", Types: []types.Card{types.Creature}})
+	ctx.event = &game.GameEvent{PermanentID: unique.ObjectID}
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("condition matched with a same-name creature card in graveyard")
+	}
+}
+
 func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

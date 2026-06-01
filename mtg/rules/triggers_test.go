@@ -976,6 +976,40 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 	})
 }
 
+func TestTriggerPatternRequireNonToken(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pattern := game.TriggerPattern{
+		Event:                 game.EventPermanentEnteredBattlefield,
+		Controller:            game.TriggerControllerYou,
+		RequirePermanentTypes: []types.Card{types.Creature},
+		RequireNonToken:       true,
+	}
+	source := addTriggeredPermanent(g, game.Player1, pattern, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+	token, ok := createTokenPermanent(g, game.Player1, &game.CardDef{Name: "Token", Types: []types.Card{types.Creature}})
+	if !ok {
+		t.Fatal("createTokenPermanent failed")
+	}
+	card := addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Nontoken", Types: []types.Card{types.Creature}})
+
+	if triggerMatchesEvent(g, source, pattern, game.GameEvent{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: token.ObjectID,
+		TokenName:   "Token",
+		TokenDef:    token.TokenDef,
+	}) {
+		t.Fatal("non-token trigger matched token event")
+	}
+	if !triggerMatchesEvent(g, source, pattern, game.GameEvent{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: card.ObjectID,
+		CardID:      card.CardInstanceID,
+	}) {
+		t.Fatal("non-token trigger did not match nontoken event")
+	}
+}
+
 func triggeredCreature(pattern game.TriggerPattern, effects []game.Effect, targets []game.TargetSpec) *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{

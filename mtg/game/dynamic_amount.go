@@ -24,6 +24,7 @@ const (
 	DynamicAmountOpponentCount
 	DynamicAmountEventDamage
 	DynamicAmountPreviousEffectExcessDamage
+	DynamicAmountObjectPower
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
@@ -37,5 +38,6 @@ type DynamicAmount struct {
 	TargetIndex int
 	CounterKind counter.Kind
 	Selector    EffectSelector
+	Object      ObjectReference
 	LinkID      string
 }

@@ -60,7 +60,7 @@ func discardCards(g *game.Game, playerID game.PlayerID, amount int) bool {
 }
 
 func searchSpecSupported(spec game.SearchSpec) bool {
-	return spec.SourceZone == game.ZoneLibrary && spec.Destination == game.ZoneHand
+	return spec.SourceZone == game.ZoneLibrary && (spec.Destination == game.ZoneHand || spec.Destination == game.ZoneBattlefield)
 }
 
 func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID game.PlayerID, spec game.SearchSpec, amount int) bool {
@@ -87,17 +87,28 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID gam
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, game.ZoneLibrary)
 		}
-		player.Hand.Add(cardID)
-		emitZoneChangeEvent(g, game.GameEvent{
-			SourceID:      stackObjectSourceID(obj),
-			StackObjectID: stackObjectID(obj),
-			Controller:    stackObjectController(obj),
-			Player:        playerID,
-			CardID:        cardID,
-			FromZone:      game.ZoneLibrary,
-			ToZone:        game.ZoneHand,
-			Amount:        1,
-		})
+		switch spec.Destination {
+		case game.ZoneHand:
+			player.Hand.Add(cardID)
+			emitZoneChangeEvent(g, game.GameEvent{
+				SourceID:      stackObjectSourceID(obj),
+				StackObjectID: stackObjectID(obj),
+				Controller:    stackObjectController(obj),
+				Player:        playerID,
+				CardID:        cardID,
+				FromZone:      game.ZoneLibrary,
+				ToZone:        game.ZoneHand,
+				Amount:        1,
+			})
+		case game.ZoneBattlefield:
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
+				return len(found) > 0
+			}
+			if _, ok := createCardPermanentFaceWithOptions(e, g, card, playerID, game.ZoneLibrary, game.FaceFront, nil, permanentCreationOptions{ForceTapped: spec.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil); !ok {
+				return len(found) > 0
+			}
+		}
 	}
 	if spec.Shuffle {
 		player.Library.Shuffle(e.rng)
@@ -110,10 +121,13 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	if !ok {
 		return false
 	}
-	if spec.MatchCardType && !card.Def.HasType(spec.CardType) {
+	if spec.CardType.Exists && !card.Def.HasType(spec.CardType.Val) {
 		return false
 	}
-	if spec.MatchSupertype && !card.Def.HasSupertype(spec.Supertype) {
+	if spec.Supertype.Exists && !card.Def.HasSupertype(spec.Supertype.Val) {
+		return false
+	}
+	if len(spec.SubtypesAny) > 0 && !card.Def.HasAnySubtype(spec.SubtypesAny...) {
 		return false
 	}
 	return true

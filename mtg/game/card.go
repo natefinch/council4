@@ -162,6 +162,11 @@ func (c *CardDef) HasSubtype(sub types.Sub) bool {
 	return c.DefaultFace().HasSubtype(sub)
 }
 
+// HasAnySubtype reports whether this card has any of the given subtypes.
+func (c *CardDef) HasAnySubtype(subtypes ...types.Sub) bool {
+	return c.DefaultFace().HasAnySubtype(subtypes...)
+}
+
 // HasKeyword reports whether any of this card's abilities grants the
 // given keyword.
 func (c *CardDef) HasKeyword(kw Keyword) bool {
@@ -311,6 +316,16 @@ func (f CardFace) HasType(t types.Card) bool {
 func (f CardFace) HasSubtype(sub types.Sub) bool {
 	for _, s := range f.Subtypes {
 		if s == sub {
+			return true
+		}
+	}
+	return false
+}
+
+// HasAnySubtype reports whether this face has any of the given subtypes.
+func (f CardFace) HasAnySubtype(subtypes ...types.Sub) bool {
+	for _, sub := range subtypes {
+		if f.HasSubtype(sub) {
 			return true
 		}
 	}

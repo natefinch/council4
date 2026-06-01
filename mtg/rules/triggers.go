@@ -130,7 +130,7 @@ func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *
 			continue
 		}
 		trigger := &ability.Trigger.Val
-		if !triggerMatchesEvent(g, permanent, trigger.Pattern, event) || !triggerInterveningIf(g, controller, trigger, &event) {
+		if !triggerMatchesEvent(g, permanent, trigger.Pattern, event) || !triggerInterveningIf(g, permanent, controller, trigger, &event) {
 			continue
 		}
 		pending = append(pending, pendingTriggeredAbility{
@@ -347,13 +347,28 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	if !eventPermanentTypeFiltersMatch(g, event, pattern.RequirePermanentTypes, pattern.ExcludePermanentTypes) {
 		return false
 	}
+	if pattern.RequireNonToken && eventPermanentIsToken(g, event) {
+		return false
+	}
 	if !eventCardTypeFiltersMatch(g, event, pattern.RequireCardTypes, pattern.ExcludeCardTypes) {
 		return false
 	}
 	return true
 }
 
-func triggerInterveningIf(g *game.Game, controller game.PlayerID, trigger *game.TriggerCondition, event *game.GameEvent) bool {
+func eventPermanentIsToken(g *game.Game, event game.GameEvent) bool {
+	if event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
+			return permanent.Token
+		}
+		if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
+			return snapshot.TokenDef != nil || snapshot.CardID == 0
+		}
+	}
+	return event.TokenDef != nil || (event.CardID == 0 && event.TokenName != "")
+}
+
+func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.PlayerID, trigger *game.TriggerCondition, event *game.GameEvent) bool {
 	if trigger == nil {
 		return true
 	}
@@ -370,6 +385,7 @@ func triggerInterveningIf(g *game.Game, controller game.PlayerID, trigger *game.
 	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
+		source:     source,
 		event:      event,
 	}, trigger.InterveningCondition) {
 		return false

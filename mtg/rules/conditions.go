@@ -28,6 +28,22 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.Object.Exists || len(cond.Types) > 0 {
 		matches = matches && conditionObjectMatches(g, ctx, cond)
 	}
+	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
+		matches = matches && eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g, ctx)
+	}
+	if cond.SourceClassLevelAtLeast > 0 {
+		matches = matches && ctx.source != nil && ctx.source.ClassLevel >= cond.SourceClassLevelAtLeast
+	}
+	if cond.SourceClassLevelLessThan > 0 {
+		matches = matches && ctx.source != nil && ctx.source.ClassLevel < cond.SourceClassLevelLessThan
+	}
+	if cond.SourceNotMonstrous {
+		matches = matches && ctx.source != nil && !ctx.source.Monstrous
+	}
+	if cond.ControllerHasMaxSpeed {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.Speed >= 4
+	}
 	if cond.Negate {
 		return !matches
 	}
@@ -68,6 +84,7 @@ func controllerControlsMatchingPermanent(g *game.Game, ctx conditionContext, fil
 		want = 1
 	}
 	count := 0
+	totalPower := 0
 	for _, permanent := range g.Battlefield {
 		if ctx.useBaseCharacteristics {
 			if permanent.Controller != ctx.controller {
@@ -80,11 +97,69 @@ func controllerControlsMatchingPermanent(g *game.Game, ctx conditionContext, fil
 			continue
 		}
 		count++
+		if filter.TotalPower.Exists {
+			values := effectivePermanentValues(g, permanent)
+			if values.powerOK {
+				totalPower += values.power
+			}
+		}
 		if count >= want {
-			return true
+			if !filter.TotalPower.Exists || filter.TotalPower.Val.Matches(totalPower) {
+				return true
+			}
 		}
 	}
+	if filter.TotalPower.Exists {
+		return count >= want && filter.TotalPower.Val.Matches(totalPower)
+	}
 	return false
+}
+
+func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, ctx conditionContext) bool {
+	if ctx.event == nil || ctx.event.PermanentID == 0 {
+		return false
+	}
+	resolved, ok := resolvePermanentOrLastKnown(g, ctx.event.PermanentID)
+	if !ok {
+		return false
+	}
+	name := resolvedObjectName(g, resolved)
+	if name == "" {
+		return false
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent.ObjectID == ctx.event.PermanentID || effectiveController(g, permanent) != ctx.controller || !permanentHasType(g, permanent, types.Creature) {
+			continue
+		}
+		if def, ok := permanentCardDef(g, permanent); ok && def.Name == name {
+			return false
+		}
+	}
+	player, ok := playerByID(g, ctx.controller)
+	if !ok {
+		return false
+	}
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		def := cardFaceOrDefault(card, game.FaceFront)
+		if def.Name == name && def.HasType(types.Creature) {
+			return false
+		}
+	}
+	return true
+}
+
+func resolvedObjectName(g *game.Game, resolved resolvedObjectReference) string {
+	if resolved.permanent != nil {
+		if resolved.permanent.Token {
+			return permanentTokenName(resolved.permanent)
+		}
+		return permanentEffectiveName(g, resolved.permanent)
+	}
+	return resolved.snapshot.Name
 }
 
 func permanentMatchesConditionFilter(g *game.Game, permanent *game.Permanent, filter game.PermanentFilter, useBase bool) bool {
