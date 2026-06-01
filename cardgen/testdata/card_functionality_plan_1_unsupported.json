@@ -1,0 +1,260 @@
+{
+  "summary": {
+    "manifest_total": 15,
+    "unsupported_total": 14,
+    "fetch_error": 0,
+    "missing_generated_file": 0,
+    "invalid": 11,
+    "validation_pending": 0,
+    "functionality_blocked": 14
+  },
+  "cards": [
+    {
+      "name": "Anger",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "AbilityDef"
+      ]
+    },
+    {
+      "name": "Arena",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "target chooser"
+      ]
+    },
+    {
+      "name": "Basilisk Collar",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "EffectSelectorEquippedCreature"
+      ]
+    },
+    {
+      "name": "Beast Within",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "EffectCreateToken"
+      ]
+    },
+    {
+      "name": "Bite Down",
+      "functionality": [
+        "creature-sourced damage"
+      ]
+    },
+    {
+      "name": "Blazemire Verge",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "TimingRestriction"
+      ]
+    },
+    {
+      "name": "Blazing Sunsteel",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "DynamicAmountCountOpponents",
+        "DynamicAmountEventDamage",
+        "EffectSelectorEquippedCreature",
+        "TriggerPattern"
+      ]
+    },
+    {
+      "name": "Bridgeworks Battle // Tanglespan Bridgeworks",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "pay-life ETB replacement"
+      ]
+    },
+    {
+      "name": "Bugenhagen, Wise Elder",
+      "functionality": [
+        "TriggerCondition.InterveningIf"
+      ]
+    },
+    {
+      "name": "Bushwhack",
+      "functionality": [
+        "SearchSpec"
+      ]
+    },
+    {
+      "name": "Chandra's Ignition",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "EffectSelectorAllCreaturesExceptTarget",
+        "EffectSelectorAllOpponents"
+      ]
+    },
+    {
+      "name": "Chaos Warp",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "EffectCondition",
+        "EffectReveal",
+        "shuffle permanent into owner's library"
+      ]
+    },
+    {
+      "name": "Cinder Glade",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "conditional ETB-tapped replacement",
+        "subtype mana ability derivation"
+      ]
+    },
+    {
+      "name": "Command Tower",
+      "issues": [
+        "implementation-required"
+      ],
+      "functionality": [
+        "ResolutionChoice.Colors"
+      ]
+    }
+  ],
+  "functionality": [
+    {
+      "capability": "AbilityDef",
+      "cards": [
+        "Anger"
+      ]
+    },
+    {
+      "capability": "DynamicAmountCountOpponents",
+      "cards": [
+        "Blazing Sunsteel"
+      ]
+    },
+    {
+      "capability": "DynamicAmountEventDamage",
+      "cards": [
+        "Blazing Sunsteel"
+      ]
+    },
+    {
+      "capability": "EffectCondition",
+      "cards": [
+        "Chaos Warp"
+      ]
+    },
+    {
+      "capability": "EffectCreateToken",
+      "cards": [
+        "Beast Within"
+      ]
+    },
+    {
+      "capability": "EffectReveal",
+      "cards": [
+        "Chaos Warp"
+      ]
+    },
+    {
+      "capability": "EffectSelectorAllCreaturesExceptTarget",
+      "cards": [
+        "Chandra's Ignition"
+      ]
+    },
+    {
+      "capability": "EffectSelectorAllOpponents",
+      "cards": [
+        "Chandra's Ignition"
+      ]
+    },
+    {
+      "capability": "EffectSelectorEquippedCreature",
+      "cards": [
+        "Basilisk Collar",
+        "Blazing Sunsteel"
+      ]
+    },
+    {
+      "capability": "ResolutionChoice.Colors",
+      "cards": [
+        "Command Tower"
+      ]
+    },
+    {
+      "capability": "SearchSpec",
+      "cards": [
+        "Bushwhack"
+      ]
+    },
+    {
+      "capability": "TimingRestriction",
+      "cards": [
+        "Blazemire Verge"
+      ]
+    },
+    {
+      "capability": "TriggerCondition.InterveningIf",
+      "cards": [
+        "Bugenhagen, Wise Elder"
+      ]
+    },
+    {
+      "capability": "TriggerPattern",
+      "cards": [
+        "Blazing Sunsteel"
+      ]
+    },
+    {
+      "capability": "conditional ETB-tapped replacement",
+      "cards": [
+        "Cinder Glade"
+      ]
+    },
+    {
+      "capability": "creature-sourced damage",
+      "cards": [
+        "Bite Down"
+      ]
+    },
+    {
+      "capability": "pay-life ETB replacement",
+      "cards": [
+        "Bridgeworks Battle // Tanglespan Bridgeworks"
+      ]
+    },
+    {
+      "capability": "shuffle permanent into owner's library",
+      "cards": [
+        "Chaos Warp"
+      ]
+    },
+    {
+      "capability": "subtype mana ability derivation",
+      "cards": [
+        "Cinder Glade"
+      ]
+    },
+    {
+      "capability": "target chooser",
+      "cards": [
+        "Arena"
+      ]
+    }
+  ]
+}

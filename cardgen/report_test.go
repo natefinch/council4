@@ -2,8 +2,10 @@ package cardgen
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -148,5 +150,259 @@ var BlockedCard = nil
 		if !strings.Contains(output, want) {
 			t.Fatalf("markdown missing %q:\n%s", want, output)
 		}
+	}
+}
+
+func TestCardFunctionalityPlan1UnsupportedBaseline(t *testing.T) {
+	repoRoot := t.TempDir()
+	manifest := cardFunctionalityPlan1Manifest()
+	writePlan1SourceStubs(t, repoRoot, manifest)
+
+	report := BuildUnsupportedReportWithSource(manifest, repoRoot)
+	got := snapshotUnsupportedReport(report)
+	gotJSON := marshalSnapshot(t, got)
+	want, err := os.ReadFile(filepath.Join("testdata", "card_functionality_plan_1_unsupported.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantJSON := normalizeSnapshotJSON(t, want)
+	if gotJSON != wantJSON {
+		t.Fatalf("unsupported baseline mismatch\nwant:\n%s\n\ngot:\n%s", wantJSON, gotJSON)
+	}
+}
+
+type unsupportedReportSnapshot struct {
+	Summary       UnsupportedReportSummary        `json:"summary"`
+	Cards         []unsupportedCardSnapshot       `json:"cards"`
+	Functionality []unsupportedFunctionalityEntry `json:"functionality"`
+}
+
+type unsupportedCardSnapshot struct {
+	Name          string   `json:"name"`
+	Issues        []string `json:"issues,omitempty"`
+	Functionality []string `json:"functionality,omitempty"`
+}
+
+type unsupportedFunctionalityEntry struct {
+	Capability string   `json:"capability"`
+	Cards      []string `json:"cards"`
+}
+
+func snapshotUnsupportedReport(report UnsupportedReport) unsupportedReportSnapshot {
+	snapshot := unsupportedReportSnapshot{
+		Summary: report.Summary,
+	}
+	for _, card := range report.Cards {
+		snapshot.Cards = append(snapshot.Cards, unsupportedCardSnapshot{
+			Name:          card.Name,
+			Issues:        issueCodes(card.Issues),
+			Functionality: functionalityCapabilities(card.Functionality),
+		})
+	}
+	for _, functionality := range report.Functionality {
+		snapshot.Functionality = append(snapshot.Functionality, unsupportedFunctionalityEntry{
+			Capability: functionality.Capability,
+			Cards:      functionality.Cards,
+		})
+	}
+	return snapshot
+}
+
+func issueCodes(issues []ValidationIssue) []string {
+	codes := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		codes = append(codes, string(issue.Code))
+	}
+	sort.Strings(codes)
+	return codes
+}
+
+func functionalityCapabilities(details []string) []string {
+	seen := map[string]bool{}
+	for _, detail := range details {
+		seen[functionalityCapability(detail)] = true
+	}
+	capabilities := make([]string, 0, len(seen))
+	for capability := range seen {
+		capabilities = append(capabilities, capability)
+	}
+	sort.Strings(capabilities)
+	return capabilities
+}
+
+func marshalSnapshot(t *testing.T, snapshot unsupportedReportSnapshot) string {
+	t.Helper()
+	data, err := json.MarshalIndent(snapshot, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data) + "\n"
+}
+
+func normalizeSnapshotJSON(t *testing.T, data []byte) string {
+	t.Helper()
+	var snapshot unsupportedReportSnapshot
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	return marshalSnapshot(t, snapshot)
+}
+
+func cardFunctionalityPlan1Manifest() Manifest {
+	card := func(name, path, validation string, issueCodes ...ValidationCode) ManifestCard {
+		issues := make([]ValidationIssue, 0, len(issueCodes))
+		for _, code := range issueCodes {
+			issues = append(issues, ValidationIssue{
+				CardName: name,
+				FaceName: name,
+				Code:     code,
+				Message:  string(code),
+			})
+		}
+		return ManifestCard{
+			InputName:     name,
+			CanonicalName: name,
+			Quantity:      1,
+			FirstLine:     len(issueCodes) + 1,
+			Status:        BatchStatusFetched,
+			FileStatus:    BatchFileStatusExisting,
+			FilePath:      path,
+			Validation:    validation,
+			Issues:        issues,
+		}
+	}
+	return Manifest{Version: ManifestVersion, Cards: []ManifestCard{
+		card("Anger", filepath.Join("mtg", "cards", "a", "anger.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Arena", filepath.Join("mtg", "cards", "a", "arena.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Basilisk Collar", filepath.Join("mtg", "cards", "b", "basilisk_collar.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Beast Within", filepath.Join("mtg", "cards", "b", "beast_within.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Birds of Paradise", filepath.Join("mtg", "cards", "b", "birds_of_paradise.go"), BatchValidationStatusValid),
+		card("Bite Down", filepath.Join("mtg", "cards", "b", "bite_down.go"), BatchValidationStatusValid),
+		card("Blazemire Verge", filepath.Join("mtg", "cards", "b", "blazemire_verge.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Blazing Sunsteel", filepath.Join("mtg", "cards", "b", "blazing_sunsteel.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Bridgeworks Battle // Tanglespan Bridgeworks", filepath.Join("mtg", "cards", "b", "bridgeworks_battle_tanglespan_bridgeworks.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Bugenhagen, Wise Elder", filepath.Join("mtg", "cards", "b", "bugenhagen_wise_elder.go"), BatchValidationStatusValid),
+		card("Bushwhack", filepath.Join("mtg", "cards", "b", "bushwhack.go"), BatchValidationStatusValid),
+		card("Chandra's Ignition", filepath.Join("mtg", "cards", "c", "chandra_s_ignition.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Chaos Warp", filepath.Join("mtg", "cards", "c", "chaos_warp.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Cinder Glade", filepath.Join("mtg", "cards", "c", "cinder_glade.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Command Tower", filepath.Join("mtg", "cards", "c", "command_tower.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+	}}
+}
+
+func writePlan1SourceStubs(t *testing.T, repoRoot string, manifest Manifest) {
+	t.Helper()
+	comments := plan1MissingFunctionalityComments()
+	for _, card := range manifest.Cards {
+		source := "package cardstub\n"
+		if comment := comments[card.CanonicalName]; comment != "" {
+			source += "\n" + comment
+		}
+		path := filepath.Join(repoRoot, card.FilePath)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func plan1MissingFunctionalityComments() map[string]string {
+	return map[string]string{
+		"Anger": `// Missing primitives:
+	//   - AbilityDef has no structured condition for "as long as you control a permanent
+	//     with subtype X" on a static ability. ImplementationID "anger" is set on the
+	//     CardDef so hand-written rules code can check for Mountain control before
+	//     applying the graveyard static effect.
+	`,
+		"Arena": `// Missing primitives:
+	//   - TargetSpec has no "chooser" field; there is no way to declare that the
+	//     second target is chosen by an opponent rather than the active player.
+	//     ImplementationID "arena" is set so a hand-written rules handler can prompt
+	//     the correct player to choose the opponent-controlled creature.
+	`,
+		"Basilisk Collar": `// Missing primitives:
+	//   - There is no EffectSelectorEquippedCreature (or equivalent) to declaratively
+	//     target the equipped creature in a static ability. ImplementationID
+	//     "basilisk-collar" is set on the CardDef so the rules engine can
+	//     apply the deathtouch/lifelink continuous effect to whatever creature this
+	//     equipment is currently attached to.
+	`,
+		"Beast Within": `// Missing primitives:
+	//   - EffectCreateToken always creates the token for the spell's controller
+	//     (r.obj.Controller). There is no TargetIndex or "controlled-by-target"
+	//     recipient field on EffectCreateToken, so the token cannot be assigned to
+	//     the destroyed permanent's controller declaratively.
+	//     ImplementationID "beast-within" is set so a hand-written handler can
+	//     issue the token to the correct player.
+	`,
+		"Bite Down": `// Note: EffectDamage attributes damage to the spell source (r.obj), not to
+	// the dealing creature. Lifelink and deathtouch on target 0 will therefore
+	// not trigger via this effect. A future "creature-sourced damage" primitive
+	// (or ImplementationID) would be needed for full rules accuracy.
+	`,
+		"Blazemire Verge": `// Missing primitives:
+	//   - TimingRestriction has no "activate only if you control [subtype]" condition.
+	//     ImplementationID "blazemire-verge" is set so the rules engine can enforce
+	//     the Swamp-or-Mountain prerequisite on the {R} mana ability.
+	`,
+		"Blazing Sunsteel": `// Missing primitives:
+	//   - EffectSelectorEquippedCreature does not exist; the static P/T boost cannot
+	//     select the equipped creature declaratively.
+	//   - DynamicAmountCountOpponents does not exist; "for each opponent you have"
+	//     cannot be expressed as a DynamicAmount.
+	//   - TriggerPattern has no TriggerSourceEquipped filter; the triggered ability
+	//     cannot be confined to damage dealt to the equipped creature only.
+	//   - DynamicAmountEventDamage does not exist; "that much" (the damage amount from
+	//     the triggering event) cannot be forwarded as a DynamicAmount.
+	//     ImplementationID "blazing-sunsteel" is set so a hand-written rules handler
+	//     can apply the continuous +N/+0 effect and wire the damage-redirection trigger.
+	`,
+		"Bridgeworks Battle // Tanglespan Bridgeworks": `// Missing primitives (back face):
+	//   - ReplacementEffect has no "pay life to suppress enters-tapped" pattern;
+	//     the conditional ETB cannot be expressed declaratively.
+	//     ImplementationID "tanglespan-bridgeworks" on the back face delegates to a
+	//     hand-written rules handler that prompts for the life payment on entry.
+	`,
+		"Bugenhagen, Wise Elder": `// Missing primitives:
+	//   - TriggerCondition.InterveningIf only stores text; there is no structured
+	//     "controller controls a creature with power >= N" check. The trigger will
+	//     fire on every upkeep unless the rules engine gains that primitive.
+	`,
+		"Bushwhack": `// Missing primitives:
+	//   - SearchSpec has no MatchSupertype field; "basic" cannot be enforced
+	//     declaratively -- the search allows any land card.
+	`,
+		"Chandra's Ignition": `// Missing primitives:
+	//   - No EffectSelectorAllCreaturesExceptTarget / "each other creature" selector;
+	//     EffectSelectorAllCreatures is used but incorrectly includes the targeting
+	//     creature itself. ImplementationID "chandras-ignition" must exclude it.
+	//   - No EffectSelectorAllOpponents selector for the "each opponent" clause.
+	//     ImplementationID "chandras-ignition" must add a separate pass damaging
+	//     each opponent for the same dynamic amount.
+	`,
+		"Chaos Warp": `// Missing primitives:
+	//   - No EffectType for "shuffle a permanent into its owner's library" (not Bounce/Exile/Destroy).
+	//   - No EffectReveal for "reveals the top card of their library."
+	//   - The conditional "if it's a permanent card, put it onto the battlefield" requires checking
+	//     the card type of the newly revealed top card, which EffectCondition/EffectResultCondition
+	//     cannot express declaratively. ImplementationID "chaos-warp" must handle all three steps.
+	`,
+		"Cinder Glade": `// Missing primitives:
+	//   - "Enters tapped unless you control two or more basic lands" is a conditional ETB-tapped
+	//     replacement effect. CardDef.EntersTapped is unconditional; EffectCondition has no
+	//     "count of basic lands you control >= N" predicate. ImplementationID "cinder-glade"
+	//     must evaluate the condition and apply EntersTapped accordingly.
+	//   - The parenthetical mana ability is reminder text for the Mountain and Forest subtypes.
+	//     It is modelled explicitly here because council4 does not auto-derive subtype mana
+	//     abilities at runtime; the choice between {R} and {G} follows the Birds of Paradise pattern.
+	`,
+		"Command Tower": `// Missing primitives:
+	//   - ResolutionChoice.Colors is a static slice; it cannot express "the colors in your
+	//     commander's color identity," which is a dynamic game-state query. The approximation
+	//     below offers all five colors; ImplementationID "command-tower" must restrict the
+	//     choice to the controller's commander's color identity at activation time.
+	`,
 	}
 }
