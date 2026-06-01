@@ -273,7 +273,7 @@ func cardFunctionalityPlan1Manifest() Manifest {
 	}
 	return Manifest{Version: ManifestVersion, Cards: []ManifestCard{
 		card("Anger", filepath.Join("mtg", "cards", "a", "anger.go"), BatchValidationStatusValid),
-		card("Arena", filepath.Join("mtg", "cards", "a", "arena.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Arena", filepath.Join("mtg", "cards", "a", "arena.go"), BatchValidationStatusValid),
 		card("Basilisk Collar", filepath.Join("mtg", "cards", "b", "basilisk_collar.go"), BatchValidationStatusValid),
 		card("Beast Within", filepath.Join("mtg", "cards", "b", "beast_within.go"), BatchValidationStatusValid),
 		card("Birds of Paradise", filepath.Join("mtg", "cards", "b", "birds_of_paradise.go"), BatchValidationStatusValid),
@@ -309,12 +309,5 @@ func writePlan1SourceStubs(t *testing.T, repoRoot string, manifest Manifest) {
 }
 
 func plan1MissingFunctionalityComments() map[string]string {
-	return map[string]string{
-		"Arena": `// Missing primitives:
-	//   - TargetSpec has no "chooser" field; there is no way to declare that the
-	//     second target is chosen by an opponent rather than the active player.
-	//     ImplementationID "arena" is set so a hand-written rules handler can prompt
-	//     the correct player to choose the opponent-controlled creature.
-	`,
-	}
+	return map[string]string{}
 }

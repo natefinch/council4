@@ -180,6 +180,50 @@ func TestValidateCardReportsInvalidTargetSpec(t *testing.T) {
 	}
 }
 
+func TestValidateCardReportsInvalidTargetChooserSpec(t *testing.T) {
+	tests := []struct {
+		name string
+		spec game.TargetSpec
+	}{
+		{
+			name: "opponent chooser with optional count",
+			spec: game.TargetSpec{MinTargets: 0, MaxTargets: 1, Chooser: game.TargetChooserOpponent},
+		},
+		{
+			name: "opponent chooser with opponent-relative controller predicate",
+			spec: game.TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Chooser:    game.TargetChooserOpponent,
+				Predicate:  game.TargetPredicate{Controller: game.ControllerOpponent},
+			},
+		},
+		{
+			name: "unknown chooser",
+			spec: game.TargetSpec{MinTargets: 1, MaxTargets: 1, Chooser: game.TargetChooser(99)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &game.CardDef{
+				Name:       "Bad Target Chooser",
+				OracleText: "Tap target creature.",
+				Abilities: []game.AbilityDef{{
+					Kind:    game.SpellAbility,
+					Targets: []game.TargetSpec{tt.spec},
+					Effects: []game.Effect{{Type: game.EffectTap, TargetIndex: 0}},
+				}},
+			}
+
+			issues := ValidateCard(card, ValidationOptions{})
+
+			if !hasIssue(issues, IssueInvalidTargetSpec) {
+				t.Fatalf("issues = %+v, want %s", issues, IssueInvalidTargetSpec)
+			}
+		})
+	}
+}
+
 func TestValidateCardChecksFaces(t *testing.T) {
 	card := &game.CardDef{
 		Name: "Double Faced",

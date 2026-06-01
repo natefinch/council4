@@ -70,7 +70,7 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.
 	}
 	for _, spec := range specs {
 		normalized := normalizeTargetSpec(spec)
-		if !targetSpecRangeValid(normalized) {
+		if !targetSpecValid(normalized) {
 			return targetChoiceResult{
 				kind: targetInvalidSpec,
 				err:  fmt.Errorf("target spec %q has invalid range: min=%d max=%d", spec.Constraint, normalized.MinTargets, normalized.MaxTargets),
@@ -91,7 +91,15 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 		return
 	}
 	spec := normalizeTargetSpec(specs[specIndex])
-	if !targetSpecRangeValid(spec) {
+	if !targetSpecValid(spec) {
+		return
+	}
+	if targetSpecUsesExternalChooser(spec) {
+		if len(choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec)) == 0 {
+			return
+		}
+		next := append(append([]game.Target(nil), prefix...), game.DeferredTarget())
+		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, result)
 		return
 	}
 	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, spec)
@@ -120,11 +128,15 @@ func targetCountsForChoices(minTargets int, maxTargets int) []int {
 }
 
 func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec) []game.Target {
+	return targetCandidatesForSpecChosenBy(g, controller, controller, source, sourceObjectID, spec)
+}
+
+func targetCandidatesForSpecChosenBy(g *game.Game, sourceController game.PlayerID, predicatePlayer game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec) []game.Target {
 	var candidates []game.Target
 	if targetSpecAllowsPlayers(spec) {
 		for playerID := game.Player1; playerID < game.NumPlayers; playerID++ {
 			target := game.PlayerTarget(playerID)
-			if targetMatchesSpec(g, controller, sourceObjectID, spec, target) && !targetProtectedFromSource(g, controller, source, target) {
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -132,7 +144,7 @@ func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *gam
 	if targetSpecAllowsPermanents(spec) {
 		for _, permanent := range g.Battlefield {
 			target := game.PermanentTarget(permanent.ObjectID)
-			if targetMatchesSpec(g, controller, sourceObjectID, spec, target) && !targetProtectedFromSource(g, controller, source, target) {
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -195,7 +207,7 @@ func targetsValidForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 		return targetIndex == len(targets)
 	}
 	spec := normalizeTargetSpec(specs[specIndex])
-	if !targetSpecRangeValid(spec) {
+	if !targetSpecValid(spec) {
 		return false
 	}
 	remaining := len(targets) - targetIndex
@@ -213,6 +225,15 @@ func targetsValidForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec, targets []game.Target) bool {
 	if len(targets) < spec.MinTargets || len(targets) > spec.MaxTargets {
 		return false
+	}
+	if targetSpecUsesExternalChooser(spec) {
+		if len(targets) != 1 {
+			return false
+		}
+		if targets[0].Kind == game.TargetDeferred {
+			return len(choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec)) > 0
+		}
+		return externalChooserCouldChooseTarget(g, controller, source, sourceObjectID, spec, targets[0])
 	}
 	seen := make(map[game.Target]bool, len(targets))
 	for _, target := range targets {
@@ -249,6 +270,114 @@ func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, source *g
 		return true
 	}
 	return targetsValidForSpecs(g, controller, source, sourceObjectID, specs, targets)
+}
+
+func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	return e.completeAnnouncementTargets(g, controller, card, 0, spellTargetSpecs(card, chosenModes), targets, agents, log)
+}
+
+func (e *Engine) completeAbilityAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	if ability == nil {
+		return targets, len(targets) == 0
+	}
+	return e.completeAnnouncementTargets(g, controller, source, sourceObjectID, ability.Targets, targets, agents, log)
+}
+
+func (e *Engine) completeAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	if !targetSpecsUseExternalChooser(specs) {
+		return append([]game.Target(nil), targets...), true
+	}
+	if !targetSpecsUseFixedSlots(specs) || len(targets) != len(specs) {
+		return nil, false
+	}
+	completed := append([]game.Target(nil), targets...)
+	for i, rawSpec := range specs {
+		spec := normalizeTargetSpec(rawSpec)
+		if !targetSpecUsesExternalChooser(spec) {
+			continue
+		}
+		target, ok := e.chooseExternalTarget(g, controller, source, sourceObjectID, spec, agents, log)
+		if !ok {
+			return nil, false
+		}
+		completed[i] = target
+	}
+	return completed, targetsValidForSpecs(g, controller, source, sourceObjectID, specs, completed)
+}
+
+func targetSpecsUseExternalChooser(specs []game.TargetSpec) bool {
+	return slices.ContainsFunc(specs, func(spec game.TargetSpec) bool {
+		return targetSpecUsesExternalChooser(normalizeTargetSpec(spec))
+	})
+}
+
+func targetSpecsUseFixedSlots(specs []game.TargetSpec) bool {
+	// External chooser completion maps each TargetSpec to one target slot. Keep
+	// variable regular target groups out of this path until a second consumer
+	// needs full segmentation support.
+	for _, spec := range specs {
+		normalized := normalizeTargetSpec(spec)
+		if normalized.MinTargets != 1 || normalized.MaxTargets != 1 {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *Engine) chooseExternalTarget(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.Target, bool) {
+	switch spec.Chooser {
+	case game.TargetChooserOpponent:
+		opponents := choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec)
+		if len(opponents) == 0 {
+			return game.Target{}, false
+		}
+		opponent, ok := e.chooseTargetingOpponent(g, controller, spec, opponents, agents, log)
+		if !ok {
+			return game.Target{}, false
+		}
+		targets := targetCandidatesForSpecChosenBy(g, controller, opponent, source, sourceObjectID, spec)
+		target, ok := e.chooseTargetFromCandidates(g, opponent, spec, targets, agents, log)
+		if !ok {
+			return game.Target{}, false
+		}
+		return target, true
+	default:
+		return game.Target{}, false
+	}
+}
+
+func (e *Engine) chooseTargetingOpponent(g *game.Game, controller game.PlayerID, spec game.TargetSpec, opponents []game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.PlayerID, bool) {
+	options := make([]game.ChoiceOption, 0, len(opponents))
+	for i, opponent := range opponents {
+		options = append(options, game.ChoiceOption{Index: i, Label: fmt.Sprintf("Player %d", opponent+1)})
+	}
+	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:       game.ChoicePlayer,
+		Player:     controller,
+		Prompt:     fmt.Sprintf("Choose an opponent to choose target: %s", spec.Constraint),
+		Options:    options,
+		MinChoices: 1,
+		MaxChoices: 1,
+	}, log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(opponents) {
+		return 0, false
+	}
+	return opponents[selected[0]], true
+}
+
+func (e *Engine) chooseTargetFromCandidates(g *game.Game, chooser game.PlayerID, spec game.TargetSpec, candidates []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.Target, bool) {
+	if len(candidates) == 0 {
+		return game.Target{}, false
+	}
+	choices := make([][]game.Target, 0, len(candidates))
+	for _, candidate := range candidates {
+		choices = append(choices, []game.Target{candidate})
+	}
+	selected := e.chooseChoice(g, agents, targetChoiceRequest(chooser, fmt.Sprintf("Choose target: %s", spec.Constraint), choices), log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(candidates) {
+		return game.Target{}, false
+	}
+	return candidates[selected[0]], true
 }
 
 func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
@@ -398,8 +527,52 @@ func normalizeTargetSpec(spec game.TargetSpec) game.TargetSpec {
 	return spec
 }
 
-func targetSpecRangeValid(spec game.TargetSpec) bool {
-	return spec.MinTargets >= 0 && spec.MaxTargets >= spec.MinTargets
+func targetSpecValid(spec game.TargetSpec) bool {
+	if spec.MinTargets < 0 || spec.MaxTargets < spec.MinTargets {
+		return false
+	}
+	switch spec.Chooser {
+	case game.TargetChooserController:
+		return true
+	case game.TargetChooserOpponent:
+		return spec.MinTargets == 1 && spec.MaxTargets == 1
+	default:
+		return false
+	}
+}
+
+func targetSpecUsesExternalChooser(spec game.TargetSpec) bool {
+	return spec.Chooser != game.TargetChooserController
+}
+
+func choosingOpponentsForTargetSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec) []game.PlayerID {
+	if spec.Chooser != game.TargetChooserOpponent {
+		return nil
+	}
+	var players []game.PlayerID
+	current := controller
+	for range game.NumPlayers - 1 {
+		current = g.TurnOrder.NextPriority(current)
+		if current == controller {
+			break
+		}
+		if !isPlayerAlive(g, current) {
+			continue
+		}
+		if len(targetCandidatesForSpecChosenBy(g, controller, current, source, sourceObjectID, spec)) > 0 {
+			players = append(players, current)
+		}
+	}
+	return players
+}
+
+func externalChooserCouldChooseTarget(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec, target game.Target) bool {
+	for _, chooser := range choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec) {
+		if slices.Contains(targetCandidatesForSpecChosenBy(g, controller, chooser, source, sourceObjectID, spec), target) {
+			return true
+		}
+	}
+	return false
 }
 
 func targetSpecAllowsPlayers(spec game.TargetSpec) bool {

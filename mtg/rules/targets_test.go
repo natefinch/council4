@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -674,6 +675,113 @@ func TestInvalidTargetSpecAbilityProducesNoActivateActions(t *testing.T) {
 	}
 }
 
+func TestOpponentChosenTargetSlotUsesDeferredLegalAction(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, opponentChosenTargetAbilitySource())
+	own := addCreaturePermanent(g, game.Player1)
+	addCreaturePermanent(g, game.Player2)
+	addCreaturePermanent(g, game.Player2)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	var matching []action.ActivateAbilityAction
+	for _, act := range legal {
+		activate, ok := act.ActivateAbilityPayload()
+		if ok && activate.SourceID == source.ObjectID {
+			matching = append(matching, activate)
+		}
+	}
+	if len(matching) != 1 {
+		t.Fatalf("activate actions = %d, want 1 canonical action", len(matching))
+	}
+	if got := matching[0].Targets; len(got) != 2 || got[0] != game.PermanentTarget(own.ObjectID) || got[1].Kind != game.TargetDeferred {
+		t.Fatalf("targets = %+v, want own creature plus deferred opponent-chosen slot", got)
+	}
+}
+
+func TestOpponentChosenTargetSlotIsChosenDuringAnnouncement(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, opponentChosenTargetAbilitySource())
+	own := addCreaturePermanent(g, game.Player1)
+	placeholder := addCreaturePermanent(g, game.Player2)
+	_ = addCreaturePermanent(g, game.Player3)
+	chosen := addCreaturePermanent(g, game.Player3)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+		game.Player3: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+	log := TurnLog{}
+
+	ok := engine.applyActionWithChoices(g, game.Player1, action.ActivateAbility(source.ObjectID, 0, []game.Target{
+		game.PermanentTarget(own.ObjectID),
+		game.PermanentTarget(placeholder.ObjectID),
+	}, 0), agents, &log)
+
+	if !ok {
+		t.Fatal("applyActionWithChoices() = false, want true")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("activated ability was not put on the stack")
+	}
+	if got := obj.Targets; len(got) != 2 || got[0] != game.PermanentTarget(own.ObjectID) || got[1] != game.PermanentTarget(chosen.ObjectID) {
+		t.Fatalf("stack targets = %+v, want opponent's chosen target %d", got, chosen.ObjectID)
+	}
+	if len(log.Choices) != 2 || log.Choices[0].Request.Player != game.Player1 || log.Choices[1].Request.Player != game.Player3 {
+		t.Fatalf("choice log = %+v, want controller opponent choice then opponent target choice", log.Choices)
+	}
+}
+
+func TestOpponentChosenTargetSlotFallsBackDeterministically(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, opponentChosenTargetAbilitySource())
+	own := addCreaturePermanent(g, game.Player1)
+	fallback := addCreaturePermanent(g, game.Player2)
+	addCreaturePermanent(g, game.Player3)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	ok := engine.applyActionWithChoices(g, game.Player1, action.ActivateAbility(source.ObjectID, 0, []game.Target{
+		game.PermanentTarget(own.ObjectID),
+		game.DeferredTarget(),
+	}, 0), [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if !ok {
+		t.Fatal("applyActionWithChoices() = false, want true")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("activated ability was not put on the stack")
+	}
+	if got := obj.Targets[1]; got != game.PermanentTarget(fallback.ObjectID) {
+		t.Fatalf("opponent-chosen target = %+v, want first Player2 creature %d", got, fallback.ObjectID)
+	}
+}
+
+func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	spec := opponentChosenTargetAbilitySource().Abilities[0].Targets[1]
+	source := opponentChosenTargetAbilitySource()
+	hexproof := addHexproofPermanent(g, game.Player2)
+	normal := addCreaturePermanent(g, game.Player2)
+
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player2, source, 0, spec)
+
+	if slices.Contains(candidates, game.PermanentTarget(hexproof.ObjectID)) {
+		t.Fatal("opponent chooser could choose hexproof creature against source controller")
+	}
+	if !slices.Contains(candidates, game.PermanentTarget(normal.ObjectID)) {
+		t.Fatal("opponent chooser could not choose non-hexproof creature they control")
+	}
+}
+
 func playerDamageSpell() *game.CardDef {
 	return &game.CardDef{
 		Types: []game.CardType{game.TypeSorcery},
@@ -714,6 +822,44 @@ func permanentTargetSpellWithSpecs(specs []game.TargetSpec) *game.CardDef {
 			{
 				Kind:    game.SpellAbility,
 				Targets: specs,
+			},
+		},
+	}
+}
+
+func opponentChosenTargetAbilitySource() *game.CardDef {
+	return &game.CardDef{
+		Name:  "Arena-like Land",
+		Types: []game.CardType{game.TypeLand},
+		Abilities: []game.AbilityDef{
+			{
+				Kind: game.ActivatedAbility,
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []game.CardType{game.TypeCreature},
+							Controller:     game.ControllerYou,
+						},
+					},
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []game.CardType{game.TypeCreature},
+							Controller:     game.ControllerYou,
+						},
+						Chooser: game.TargetChooserOpponent,
+					},
+				},
+				Effects: []game.Effect{
+					{Type: game.EffectTap, TargetIndex: 0},
+					{Type: game.EffectTap, TargetIndex: 1},
+					{Type: game.EffectFight},
+				},
 			},
 		},
 	}

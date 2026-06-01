@@ -333,6 +333,11 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, cast.Face)
+	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log)
+	if !ok || !e.canCastSpellFaceFromZoneWithKicker(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, cast.KickerPaid) {
+		return false
+	}
+	cast.Targets = completedTargets
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, cast.XValue, agents, log)
 	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: cast.XValue, KickerPaid: cast.KickerPaid, Prefs: prefs})
 	if !ok {
@@ -410,6 +415,20 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		return true
 	}
 
+	card, ok := permanentCardDef(g, permanent)
+	if !ok {
+		return false
+	}
+	if !canActivateEquipAbility(g, playerID, permanent, ability, activate.AbilityIndex, activate.Targets, activate.XValue) &&
+		!canActivateLoyaltyAbility(g, playerID, permanent, ability, activate.AbilityIndex, activate.Targets, activate.XValue) &&
+		!canActivateGeneralAbility(g, playerID, permanent, ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
+		return false
+	}
+	completedTargets, ok := e.completeAbilityAnnouncementTargets(g, playerID, card, permanent.ObjectID, ability, activate.Targets, agents, log)
+	if !ok {
+		return false
+	}
+	activate.Targets = completedTargets
 	if !canActivateEquipAbility(g, playerID, permanent, ability, activate.AbilityIndex, activate.Targets, activate.XValue) &&
 		!canActivateLoyaltyAbility(g, playerID, permanent, ability, activate.AbilityIndex, activate.Targets, activate.XValue) &&
 		!canActivateGeneralAbility(g, playerID, permanent, ability, activate.AbilityIndex, activate.Targets, activate.XValue) {

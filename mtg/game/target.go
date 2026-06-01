@@ -9,6 +9,7 @@ const (
 	TargetPermanent TargetKind = iota
 	TargetPlayer
 	TargetStackObject
+	TargetDeferred
 )
 
 // Target is a runtime targeting choice made while casting a spell or activating
@@ -33,4 +34,10 @@ func PlayerTarget(playerID PlayerID) Target {
 // StackObjectTarget creates a target pointing at an object on the stack.
 func StackObjectTarget(stackObjectID id.ID) Target {
 	return Target{Kind: TargetStackObject, StackObjectID: stackObjectID}
+}
+
+// DeferredTarget marks a target slot that will be chosen by a non-controller
+// player during spell or ability announcement.
+func DeferredTarget() Target {
+	return Target{Kind: TargetDeferred}
 }

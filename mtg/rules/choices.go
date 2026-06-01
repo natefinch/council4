@@ -75,7 +75,7 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 			return nil
 		}
 		return []int{request.Options[0].Index}
-	case game.ChoicePayment, game.ChoiceScry, game.ChoiceSurveil, game.ChoiceZoneSelection, game.ChoiceSearch, game.ChoiceModal, game.ChoiceResolution, game.ChoiceProliferate:
+	case game.ChoicePayment, game.ChoiceScry, game.ChoiceSurveil, game.ChoiceZoneSelection, game.ChoiceSearch, game.ChoiceModal, game.ChoiceResolution, game.ChoiceProliferate, game.ChoicePlayer:
 		if len(request.Options) == 0 || request.MaxChoices == 0 {
 			return nil
 		}

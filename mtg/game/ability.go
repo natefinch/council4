@@ -414,7 +414,23 @@ type TargetSpec struct {
 	// definitions. Constraint remains for display and as a legacy fallback.
 	Allow     TargetAllow
 	Predicate TargetPredicate
+
+	// Chooser identifies who chooses this target slot during announcement. The
+	// default controller chooser preserves normal targeting. For non-controller
+	// choosers, structured "you" predicates are evaluated relative to the
+	// choosing player.
+	Chooser TargetChooser
 }
+
+// TargetChooser identifies who chooses a target slot during announcement.
+type TargetChooser int
+
+const (
+	TargetChooserController TargetChooser = iota
+	// TargetChooserOpponent means the ability controller chooses an opponent,
+	// then that opponent chooses this target slot.
+	TargetChooserOpponent
+)
 
 // Mode represents one mode of a modal spell or ability ("Choose one —",
 // "Choose two —", etc.; CR 700.2).

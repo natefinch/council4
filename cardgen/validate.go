@@ -149,6 +149,18 @@ func (v *cardValidator) validateTargetSpec(faceName string, path string, target 
 	if target.MaxTargets < target.MinTargets {
 		v.add(faceName, path, IssueInvalidTargetSpec, "max targets is less than min targets")
 	}
+	switch target.Chooser {
+	case game.TargetChooserController:
+	case game.TargetChooserOpponent:
+		if target.MinTargets != 1 || target.MaxTargets != 1 {
+			v.add(faceName, path, IssueInvalidTargetSpec, "non-controller target chooser requires exactly one target")
+		}
+		if target.Predicate.Controller != game.ControllerAny && target.Predicate.Controller != game.ControllerYou {
+			v.add(faceName, appendPath(path, "Predicate.Controller"), IssueInvalidTargetSpec, "opponent target chooser only supports controller-any or controller-you predicates")
+		}
+	default:
+		v.add(faceName, appendPath(path, "Chooser"), IssueInvalidTargetSpec, "unknown target chooser")
+	}
 }
 
 func (v *cardValidator) validateEffect(faceName string, path string, effect game.Effect, targets []game.TargetSpec) {

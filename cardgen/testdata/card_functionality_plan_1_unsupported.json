@@ -1,30 +1,13 @@
 {
   "summary": {
     "manifest_total": 15,
-    "unsupported_total": 1,
+    "unsupported_total": 0,
     "fetch_error": 0,
     "missing_generated_file": 0,
-    "invalid": 1,
+    "invalid": 0,
     "validation_pending": 0,
-    "functionality_blocked": 1
+    "functionality_blocked": 0
   },
-  "cards": [
-    {
-      "name": "Arena",
-      "issues": [
-        "implementation-required"
-      ],
-      "functionality": [
-        "target chooser"
-      ]
-    }
-  ],
-  "functionality": [
-    {
-      "capability": "target chooser",
-      "cards": [
-        "Arena"
-      ]
-    }
-  ]
+  "cards": null,
+  "functionality": null
 }
