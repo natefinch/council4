@@ -144,9 +144,14 @@ For each card:
    go run .agents/skills/card-impl/main.go "<Card Name>"
 3. Read .agents/skills/card-impl/CARD-IMPLEMENTATION-GUIDE.md.
 4. Fill Abilities only using existing game/rules primitives.
-5. If the card cannot be represented, leave the safest generated state and
+5. Use current generated-card conventions: card/super/subtype vocabulary comes
+   from `mtg/game/types` (`types.Card`, `types.Super`, `types.Sub`), integer
+   comparisons use `mtg/game/compare`, and double-faced cards use front-face
+   `CardDef` fields plus optional `Back: opt.Val(game.CardFace{...})`, not a
+   `Faces` slice.
+6. If the card cannot be represented, leave the safest generated state and
    explain what rules support is missing. Do not invent enum values.
-6. Run gofmt on edited card files.
+7. Run gofmt on edited card files.
 
 Return changed files, implemented cards, skipped/blocking cards, and any missing
 rules primitives. For every missing primitive, use this format so the rollout

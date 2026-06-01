@@ -25,6 +25,9 @@ Given one or more Magic: The Gathering card names:
    - The full Go type definitions for `AbilityDef`, `Effect`, `Keyword`, etc.
    - Mapping rules from oracle text patterns to struct fields.
    - Worked examples of real cards.
+   - Current generated-card conventions: `mtg/game/types` for
+     supertypes/card types/subtypes, `mtg/game/compare` for integer
+     predicates, and optional `CardDef.Back` for double-faced back faces.
 
 4. **Parse the oracle text** (shown in the comment block at the top of the generated file) and fill in:
    - `Abilities` — the `[]game.AbilityDef` slice
@@ -43,6 +46,8 @@ Given one or more Magic: The Gathering card names:
 ## Important rules
 
 - Use only `EffectType`, `Keyword`, and other enum values that exist in the codebase. Do not invent new ones.
+- Use `types.Creature`/`types.Forest`/etc. from `mtg/game/types`; do not use old `game.Type*` or `game.*Subtype*` names.
+- For double-faced cards, edit front-face data on `CardDef` and back-face data on `Back: opt.Val(game.CardFace{...})`; do not add a `Faces` slice.
 - If a card has effects that cannot be expressed with the existing effect primitives, set `ImplementationID` to a descriptive name and leave a comment explaining what hand-written code would need to do.
 - Keep the oracle text comment block at the top of the file — it's useful for human review.
 - Run `gofmt` on the file after editing.

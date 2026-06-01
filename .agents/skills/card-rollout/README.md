@@ -55,6 +55,9 @@ The skill will:
 - **Small batch rollout** - Conservative subagent batches keep failures isolated.
 - **Attempt then validate** - Cards are not considered supported until
   `cardbatch validate` passes.
+- **Current card model** - Implementations use `mtg/game/types` for card,
+  supertype, and subtype values; `mtg/game/compare` for integer predicates; and
+  optional `CardDef.Back` for double-faced back-face data.
 - **Unsupported reports** - Reports fetch errors, missing files, pending
   validation, and static validation failures.
 - **Functionality rollup** - Groups missing rules/parser capabilities and lists

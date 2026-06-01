@@ -18,6 +18,23 @@ ManaCost: opt.Val(mana.Cost{mana.ColoredMana(mana.Red)})
 // Absent (default): just omit the field
 ```
 
+### Card type vocabulary
+
+Card supertypes, card types, and subtypes live in
+`"github.com/natefinch/council4/mtg/game/types"`. Use
+`types.Super`, `types.Card`, and `types.Sub` values such as `types.Legendary`,
+`types.Creature`, and `types.Forest`. Do not use old `game.Type*`,
+`game.*Subtype*`, or `game.CardType` names.
+
+Integer comparisons live in
+`"github.com/natefinch/council4/mtg/game/compare"`. Use `compare.Int` with
+`compare.Equal`, `compare.LessOrEqual`, `compare.GreaterOrEqual`,
+`compare.LessThan`, or `compare.GreaterThan`.
+
+Double-faced cards use `CardDef` root fields for the front face and
+`Back: opt.Val(game.CardFace{...})` for the optional back face. Do not add a
+`Faces` slice.
+
 ### AbilityDef
 
 ```go
@@ -119,8 +136,9 @@ type EffectCondition struct {
     Text               string
     TargetIndex        int
     MatchPermanentType bool
-    PermanentType      CardType
+    PermanentType      types.Card
     Negate             bool
+    Condition          opt.V[Condition]
 }
 ```
 
@@ -219,7 +237,7 @@ type ResolutionChoice struct {
     Player         PlayerID
     UsePlayer      bool
     Colors         []mana.Color
-    CardTypes      []CardType
+    CardTypes      []types.Card
     PlayerRelation PlayerRelation
     Zone           ZoneType
 }
@@ -286,7 +304,8 @@ type RuleEffect struct {
     Duration           EffectDuration
     AffectedPlayer     PlayerRelation
     AffectedController ControllerRelation
-    PermanentTypes     []CardType
+    PermanentTypes     []types.Card
+    SpellTypes         []types.Card
     DefendingPlayer    PlayerRelation
     CostModifier       CostModifier
     CastFromZone       ZoneType
@@ -317,6 +336,23 @@ const (
     TargetAllowPlayer      TargetAllow = 1 << 1
     TargetAllowStackObject TargetAllow = 1 << 2
 )
+
+type TargetPredicate struct {
+    PermanentTypes []types.Card
+    ExcludedTypes  []types.Card
+    Colors         []mana.Color
+    ExcludedColors []mana.Color
+    Controller     ControllerRelation
+    Player         PlayerRelation
+    Tapped         TriState
+    CombatState    CombatStateFilter
+    Keyword        Keyword
+    ExcludedKeyword Keyword
+    ManaValue      opt.V[compare.Int]
+    Power          opt.V[compare.Int]
+    Toughness      opt.V[compare.Int]
+    Another        bool
+}
 ```
 
 Use structured `Allow` and `Predicate` for common constraints such as nonblack,
@@ -367,10 +403,10 @@ type TriggerPattern struct {
     Source     TriggerSourceFilter      // TriggerSourceAny/Self
     ExcludeSelf bool
     Player     TriggerPlayerFilter      // TriggerPlayerAny/You/Opponent
-    RequirePermanentTypes []CardType
-    ExcludePermanentTypes []CardType
-    RequireCardTypes []CardType
-    ExcludeCardTypes []CardType
+    RequirePermanentTypes []types.Card
+    ExcludePermanentTypes []types.Card
+    RequireCardTypes []types.Card
+    ExcludeCardTypes []types.Card
     MatchFromZone bool
     FromZone      ZoneType
     MatchToZone   bool
@@ -514,7 +550,7 @@ For keywords with parameters:
   `game.StepBeginningOfCombat`, or `game.StepEnd`.
 - For cast triggers such as "Whenever an opponent casts a noncreature spell",
   use `EventSpellCast`, `Controller: game.TriggerControllerOpponent`, and
-  `ExcludeCardTypes: []game.CardType{game.TypeCreature}`.
+  `ExcludeCardTypes: []types.Card{types.Creature}`.
 - For state triggers, set `Trigger.Type: game.TriggerState` and fill
   `Trigger.State`; do not set an event pattern.
 
@@ -694,7 +730,7 @@ Abilities: []game.AbilityDef{
                 Event:                 game.EventPermanentEnteredBattlefield,
                 Source:                game.TriggerSourceAny,
                 ExcludeSelf:           true,
-                RequirePermanentTypes: []game.CardType{game.TypeCreature},
+                RequirePermanentTypes: []types.Card{types.Creature},
             },
         }),
         Effects: []game.Effect{
