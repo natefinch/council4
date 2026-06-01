@@ -8,7 +8,14 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	payment "github.com/natefinch/council4/mtg/rules/payment"
 )
+
+type enterBattlefieldContext struct {
+	engine *Engine
+	agents [game.NumPlayers]PlayerAgent
+	log    *TurnLog
+}
 
 type damageEvent struct {
 	sourceID       id.ID
@@ -143,7 +150,7 @@ func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) game.Z
 	}
 }
 
-func applyEnterBattlefieldReplacementEffects(g *game.Game, permanent *game.Permanent, fromZone game.ZoneType) {
+func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone game.ZoneType) {
 	event := game.GameEvent{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  effectiveController(g, permanent),
@@ -172,6 +179,9 @@ func applyEnterBattlefieldReplacementEffects(g *game.Game, permanent *game.Perma
 			setPermanentTapped(g, permanent, true)
 		}
 	}
+	if def, ok := permanentCardDef(g, permanent); ok && def.EntersTappedUnlessPaid.Exists && !enterBattlefieldPaymentPaid(ctx, g, event.Controller, def.EntersTappedUnlessPaid.Val) {
+		setPermanentTapped(g, permanent, true)
+	}
 	matches := matchingETBReplacementEffects(g, event)
 	if len(matches) > 1 {
 		recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
@@ -184,6 +194,31 @@ func applyEnterBattlefieldReplacementEffects(g *game.Game, permanent *game.Perma
 			permanent.Counters.Add(placement.Kind, placement.Amount)
 		}
 	}
+}
+
+func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, res game.ResolutionPayment) bool {
+	if !canPayResolutionPayment(g, playerID, &res) {
+		return false
+	}
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	prompt := res.Prompt
+	if prompt == "" {
+		prompt = "Pay enter-the-battlefield cost?"
+	}
+	if !engine.chooseMay(g, ctx.agents, playerID, prompt, ctx.log) {
+		return false
+	}
+	prefs := engine.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, ctx.agents, ctx.log)
+	return paymentOrch.payGenericCost(g, payment.GenericRequest{
+		PlayerID:        playerID,
+		Cost:            manaCostPtr(res.ManaCost),
+		XValue:          res.XValue,
+		AdditionalCosts: res.AdditionalCosts,
+		Prefs:           prefs,
+	})
 }
 
 func matchingZoneReplacementEffects(g *game.Game, event game.GameEvent, applied map[id.ID]bool) []game.ReplacementEffect {

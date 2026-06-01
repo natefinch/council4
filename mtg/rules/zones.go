@@ -10,7 +10,15 @@ func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.
 	return createCardPermanentFace(g, card, controller, fromZone, game.FaceFront)
 }
 
+func createCardPermanentWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	return createCardPermanentFaceWithChoices(e, g, card, controller, fromZone, game.FaceFront, agents, log)
+}
+
 func createCardPermanentFace(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex) (*game.Permanent, bool) {
+	return createCardPermanentFaceWithChoices(NewEngine(nil), g, card, controller, fromZone, face, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func createCardPermanentFaceWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {
 		return nil, false
@@ -26,7 +34,11 @@ func createCardPermanentFace(g *game.Game, card *game.CardInstance, controller g
 		Timestamp:      int64(objectID),
 	}
 	initializePermanentCounters(permanent, faceDef)
-	applyEnterBattlefieldReplacementEffects(g, permanent, fromZone)
+	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
+		engine: e,
+		agents: agents,
+		log:    log,
+	}, g, permanent, fromZone)
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.GameEvent{
 		SourceID:    card.ID,

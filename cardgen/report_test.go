@@ -280,7 +280,7 @@ func cardFunctionalityPlan1Manifest() Manifest {
 		card("Bite Down", filepath.Join("mtg", "cards", "b", "bite_down.go"), BatchValidationStatusValid),
 		card("Blazemire Verge", filepath.Join("mtg", "cards", "b", "blazemire_verge.go"), BatchValidationStatusValid),
 		card("Blazing Sunsteel", filepath.Join("mtg", "cards", "b", "blazing_sunsteel.go"), BatchValidationStatusValid),
-		card("Bridgeworks Battle // Tanglespan Bridgeworks", filepath.Join("mtg", "cards", "b", "bridgeworks_battle_tanglespan_bridgeworks.go"), BatchValidationStatusInvalid, IssueImplementationRequired),
+		card("Bridgeworks Battle // Tanglespan Bridgeworks", filepath.Join("mtg", "cards", "b", "bridgeworks_battle_tanglespan_bridgeworks.go"), BatchValidationStatusValid),
 		card("Bugenhagen, Wise Elder", filepath.Join("mtg", "cards", "b", "bugenhagen_wise_elder.go"), BatchValidationStatusValid),
 		card("Bushwhack", filepath.Join("mtg", "cards", "b", "bushwhack.go"), BatchValidationStatusValid),
 		card("Chandra's Ignition", filepath.Join("mtg", "cards", "c", "chandra_s_ignition.go"), BatchValidationStatusValid),
@@ -315,12 +315,6 @@ func plan1MissingFunctionalityComments() map[string]string {
 	//     second target is chosen by an opponent rather than the active player.
 	//     ImplementationID "arena" is set so a hand-written rules handler can prompt
 	//     the correct player to choose the opponent-controlled creature.
-	`,
-		"Bridgeworks Battle // Tanglespan Bridgeworks": `// Missing primitives (back face):
-	//   - ReplacementEffect has no "pay life to suppress enters-tapped" pattern;
-	//     the conditional ETB cannot be expressed declaratively.
-	//     ImplementationID "tanglespan-bridgeworks" on the back face delegates to a
-	//     hand-written rules handler that prompts for the life payment on entry.
 	`,
 		"Bushwhack": `// Missing primitives:
 	//   - SearchSpec has no MatchSupertype field; "basic" cannot be enforced

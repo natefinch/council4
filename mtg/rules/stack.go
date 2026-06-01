@@ -236,7 +236,7 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 			}
 			return "battlefield"
 		}
-		permanent, ok := createCardPermanentFace(g, card, obj.Controller, game.ZoneStack, obj.Face)
+		permanent, ok := createCardPermanentFaceWithChoices(e, g, card, obj.Controller, game.ZoneStack, obj.Face, agents, log)
 		if ok && obj.Suspend && permanentHasType(g, permanent, game.TypeCreature) {
 			permanent.SuspendHasteController = opt.Val(obj.Controller)
 		}

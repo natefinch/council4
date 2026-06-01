@@ -22,12 +22,6 @@ import (
 //
 //	As this land enters, you may pay 3 life. If you don't, it enters tapped.
 //	{T}: Add {G}.
-//
-// Missing primitives (back face):
-//   - ReplacementEffect has no "pay life to suppress enters-tapped" pattern;
-//     the conditional ETB cannot be expressed declaratively.
-//     ImplementationID "tanglespan-bridgeworks" on the back face delegates to a
-//     hand-written rules handler that prompts for the life payment on entry.
 var BridgeworksBattle = &game.CardDef{
 	Name: "Bridgeworks Battle // Tanglespan Bridgeworks",
 	ManaCost: opt.Val(mana.Cost{
@@ -97,15 +91,16 @@ var BridgeworksBattle = &game.CardDef{
 			},
 		},
 		{
-			// Missing primitive: "you may pay 3 life; if you don't, enters tapped"
-			// cannot be expressed declaratively. ImplementationID handles the
-			// conditional life-payment on entry.
-			Name:             "Tanglespan Bridgeworks",
-			ManaValue:        0,
-			Types:            []game.CardType{game.TypeLand},
-			EntersTapped:     true,
-			OracleText:       "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {G}.",
-			ImplementationID: "tanglespan-bridgeworks",
+			Name:      "Tanglespan Bridgeworks",
+			ManaValue: 0,
+			Types:     []game.CardType{game.TypeLand},
+			EntersTappedUnlessPaid: opt.Val(game.ResolutionPayment{
+				Prompt: "Pay 3 life?",
+				AdditionalCosts: []game.AdditionalCost{
+					{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
+				},
+			}),
+			OracleText: "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {G}.",
 			Abilities: []game.AbilityDef{
 				{
 					Kind:          game.ActivatedAbility,

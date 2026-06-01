@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestShieldCounterPreventsDamageBeforeMutationAndEvents(t *testing.T) {
@@ -356,6 +357,83 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	}
 }
 
+func TestEntersTappedUnlessPaidPaysLifeByDefault(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	cardID := addCardToHand(g, game.Player1, payLifeETBModalLand())
+	engine := NewEngine(nil)
+	log := &TurnLog{}
+
+	if !engine.applyPlayLandFaceWithChoices(g, game.Player1, cardID, game.FaceBack, [game.NumPlayers]PlayerAgent{}, log) {
+		t.Fatal("applyPlayLandFaceWithChoices() = false")
+	}
+
+	permanent := g.Battlefield[len(g.Battlefield)-1]
+	if permanent.Tapped {
+		t.Fatalf("permanent = %+v, want untapped after paying life", permanent)
+	}
+	if got := g.Players[game.Player1].Life; got != 37 {
+		t.Fatalf("life = %d, want 37", got)
+	}
+	if len(log.Choices) != 1 {
+		t.Fatalf("choices = %+v, want one ETB payment choice", log.Choices)
+	}
+	choice := log.Choices[0]
+	if choice.Request.Kind != game.ChoiceMay || choice.Request.Prompt != "Pay 3 life?" || len(choice.Selected) != 1 || choice.Selected[0] != 1 || !choice.UsedFallback {
+		t.Fatalf("choice = %+v, want fallback yes for ETB payment", choice)
+	}
+}
+
+func TestEntersTappedUnlessPaidDeclinedEntersTapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	cardID := addCardToHand(g, game.Player1, payLifeETBModalLand())
+	engine := NewEngine(nil)
+	log := &TurnLog{}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+	}
+
+	if !engine.applyPlayLandFaceWithChoices(g, game.Player1, cardID, game.FaceBack, agents, log) {
+		t.Fatal("applyPlayLandFaceWithChoices() = false")
+	}
+
+	permanent := g.Battlefield[len(g.Battlefield)-1]
+	if !permanent.Tapped {
+		t.Fatalf("permanent = %+v, want tapped after declining payment", permanent)
+	}
+	if got := g.Players[game.Player1].Life; got != 40 {
+		t.Fatalf("life = %d, want 40", got)
+	}
+	if len(log.Choices) != 1 || len(log.Choices[0].Selected) != 1 || log.Choices[0].Selected[0] != 0 || log.Choices[0].UsedFallback {
+		t.Fatalf("choices = %+v, want explicit no", log.Choices)
+	}
+}
+
+func TestEntersTappedUnlessPaidCannotPayEntersTapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].Life = 2
+	setSorcerySpeedTurn(g, game.Player1)
+	cardID := addCardToHand(g, game.Player1, payLifeETBModalLand())
+	engine := NewEngine(nil)
+	log := &TurnLog{}
+
+	if !engine.applyPlayLandFaceWithChoices(g, game.Player1, cardID, game.FaceBack, [game.NumPlayers]PlayerAgent{}, log) {
+		t.Fatal("applyPlayLandFaceWithChoices() = false")
+	}
+
+	permanent := g.Battlefield[len(g.Battlefield)-1]
+	if !permanent.Tapped {
+		t.Fatalf("permanent = %+v, want tapped when payment is not payable", permanent)
+	}
+	if got := g.Players[game.Player1].Life; got != 2 {
+		t.Fatalf("life = %d, want 2", got)
+	}
+	if len(log.Choices) != 0 {
+		t.Fatalf("choices = %+v, want no prompt for unpayable ETB payment", log.Choices)
+	}
+}
+
 func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -386,6 +464,30 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
 		return event.PermanentID == target.ObjectID && event.ToZone == game.ZoneExile
 	})
+}
+
+func payLifeETBModalLand() *game.CardDef {
+	return &game.CardDef{
+		Name:   "Front Spell // Pay Life Land",
+		Layout: game.LayoutModalDFC,
+		Types:  []game.CardType{game.TypeSorcery},
+		Faces: []game.CardFace{
+			{
+				Name:  "Front Spell",
+				Types: []game.CardType{game.TypeSorcery},
+			},
+			{
+				Name:  "Pay Life Land",
+				Types: []game.CardType{game.TypeLand},
+				EntersTappedUnlessPaid: opt.Val(game.ResolutionPayment{
+					Prompt: "Pay 3 life?",
+					AdditionalCosts: []game.AdditionalCost{
+						{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
+					},
+				}),
+			},
+		},
+	}
 }
 
 func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {

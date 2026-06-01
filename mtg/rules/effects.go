@@ -369,7 +369,7 @@ func (r *effectResolver) executeEffect(effect game.Effect) (res effectResolved) 
 		if effect.LinkID != "" {
 			res.succeeded = r.putLinkedCardOnBattlefield(effect)
 			if !res.succeeded {
-				res.succeeded = returnLinkedExiledObjects(r.game, r.obj, effect.LinkID)
+				res.succeeded = returnLinkedExiledObjects(r.engine, r.game, r.obj, effect.LinkID, r.agents, r.log)
 			}
 		}
 	case game.EffectPrevent:
@@ -491,7 +491,7 @@ func (r *effectResolver) putLinkedCardOnBattlefield(effect game.Effect) bool {
 		if !ok || !owner.Library.Remove(card.ID) {
 			continue
 		}
-		if _, ok := createCardPermanent(r.game, card, controller, game.ZoneLibrary); ok {
+		if _, ok := createCardPermanentWithChoices(r.engine, r.game, card, controller, game.ZoneLibrary, r.agents, r.log); ok {
 			clearLinkedObjects(r.game, key)
 			return true
 		}
@@ -1135,7 +1135,7 @@ func permanentLinkedObjectRef(permanent *game.Permanent) game.LinkedObjectRef {
 	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
 }
 
-func returnLinkedExiledObjects(g *game.Game, obj *game.StackObject, linkID string) bool {
+func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	key := linkedObjectSourceKey(g, obj, linkID)
 	returned := false
 	for _, ref := range linkedObjects(g, key) {
@@ -1150,7 +1150,7 @@ func returnLinkedExiledObjects(g *game.Game, obj *game.StackObject, linkID strin
 		if !ok || !owner.Exile.Remove(ref.CardID) {
 			continue
 		}
-		if _, ok := createCardPermanent(g, card, obj.Controller, game.ZoneExile); ok {
+		if _, ok := createCardPermanentWithChoices(e, g, card, obj.Controller, game.ZoneExile, agents, log); ok {
 			returned = true
 		}
 	}

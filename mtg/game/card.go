@@ -174,12 +174,15 @@ type CardDef struct {
 	// Defense is the battle's starting defense. Absent for non-battles.
 	Defense opt.V[int]
 
-	// EntersTapped, EntersTappedCondition, and EntersWithCounters model common
-	// ETB replacement effects. EntersTappedCondition means this permanent enters
-	// tapped when the condition is true.
-	EntersTapped          bool
-	EntersTappedCondition opt.V[Condition]
-	EntersWithCounters    []CounterPlacement
+	// EntersTapped, EntersTappedCondition, EntersTappedUnlessPaid, and
+	// EntersWithCounters model common ETB replacement effects.
+	// EntersTappedCondition means this permanent enters tapped when the condition
+	// is true. EntersTappedUnlessPaid means the controller may pay the cost as it
+	// enters; if they do not, it enters tapped.
+	EntersTapped           bool
+	EntersTappedCondition  opt.V[Condition]
+	EntersTappedUnlessPaid opt.V[ResolutionPayment]
+	EntersWithCounters     []CounterPlacement
 
 	// Abilities lists all abilities on this card, parsed from the text box.
 	Abilities []AbilityDef
@@ -200,25 +203,26 @@ type CardDef struct {
 // CardFace is one printed face of a card. It mirrors the printed
 // characteristics from CardDef that can differ between faces.
 type CardFace struct {
-	Name                  string
-	ManaCost              opt.V[mana.Cost]
-	ManaValue             int
-	Colors                []mana.Color
-	Supertypes            []Supertype
-	Types                 []CardType
-	Subtypes              []string
-	Power                 opt.V[PT]
-	Toughness             opt.V[PT]
-	DynamicPower          opt.V[DynamicValue]
-	DynamicToughness      opt.V[DynamicValue]
-	Loyalty               opt.V[int]
-	Defense               opt.V[int]
-	EntersTapped          bool
-	EntersTappedCondition opt.V[Condition]
-	EntersWithCounters    []CounterPlacement
-	Abilities             []AbilityDef
-	ImplementationID      string
-	OracleText            string
+	Name                   string
+	ManaCost               opt.V[mana.Cost]
+	ManaValue              int
+	Colors                 []mana.Color
+	Supertypes             []Supertype
+	Types                  []CardType
+	Subtypes               []string
+	Power                  opt.V[PT]
+	Toughness              opt.V[PT]
+	DynamicPower           opt.V[DynamicValue]
+	DynamicToughness       opt.V[DynamicValue]
+	Loyalty                opt.V[int]
+	Defense                opt.V[int]
+	EntersTapped           bool
+	EntersTappedCondition  opt.V[Condition]
+	EntersTappedUnlessPaid opt.V[ResolutionPayment]
+	EntersWithCounters     []CounterPlacement
+	Abilities              []AbilityDef
+	ImplementationID       string
+	OracleText             string
 }
 
 // IsLegendary reports whether this card has the Legendary supertype.
@@ -345,25 +349,26 @@ func (c *CardDef) IsTransformingDoubleFaced() bool {
 
 func (c *CardDef) rootFace() CardFace {
 	return CardFace{
-		Name:                  c.Name,
-		ManaCost:              c.ManaCost,
-		ManaValue:             c.ManaValue,
-		Colors:                append([]mana.Color(nil), c.Colors...),
-		Supertypes:            append([]Supertype(nil), c.Supertypes...),
-		Types:                 append([]CardType(nil), c.Types...),
-		Subtypes:              append([]string(nil), c.Subtypes...),
-		Power:                 c.Power,
-		Toughness:             c.Toughness,
-		DynamicPower:          c.DynamicPower,
-		DynamicToughness:      c.DynamicToughness,
-		Loyalty:               c.Loyalty,
-		Defense:               c.Defense,
-		EntersTapped:          c.EntersTapped,
-		EntersTappedCondition: c.EntersTappedCondition,
-		EntersWithCounters:    append([]CounterPlacement(nil), c.EntersWithCounters...),
-		Abilities:             append([]AbilityDef(nil), c.Abilities...),
-		ImplementationID:      c.ImplementationID,
-		OracleText:            c.OracleText,
+		Name:                   c.Name,
+		ManaCost:               c.ManaCost,
+		ManaValue:              c.ManaValue,
+		Colors:                 append([]mana.Color(nil), c.Colors...),
+		Supertypes:             append([]Supertype(nil), c.Supertypes...),
+		Types:                  append([]CardType(nil), c.Types...),
+		Subtypes:               append([]string(nil), c.Subtypes...),
+		Power:                  c.Power,
+		Toughness:              c.Toughness,
+		DynamicPower:           c.DynamicPower,
+		DynamicToughness:       c.DynamicToughness,
+		Loyalty:                c.Loyalty,
+		Defense:                c.Defense,
+		EntersTapped:           c.EntersTapped,
+		EntersTappedCondition:  c.EntersTappedCondition,
+		EntersTappedUnlessPaid: c.EntersTappedUnlessPaid,
+		EntersWithCounters:     append([]CounterPlacement(nil), c.EntersWithCounters...),
+		Abilities:              append([]AbilityDef(nil), c.Abilities...),
+		ImplementationID:       c.ImplementationID,
+		OracleText:             c.OracleText,
 	}
 }
 
@@ -423,26 +428,27 @@ func (f CardFace) IsPermanent() bool {
 // helpers. ColorIdentity stays on the physical card and is copied from parent.
 func (f CardFace) ToCardDef(parent *CardDef) *CardDef {
 	return &CardDef{
-		Name:                  f.Name,
-		ManaCost:              f.ManaCost,
-		ManaValue:             f.ManaValue,
-		Colors:                append([]mana.Color(nil), f.Colors...),
-		ColorIdentity:         parent.ColorIdentity,
-		Supertypes:            append([]Supertype(nil), f.Supertypes...),
-		Types:                 append([]CardType(nil), f.Types...),
-		Subtypes:              append([]string(nil), f.Subtypes...),
-		Power:                 f.Power,
-		Toughness:             f.Toughness,
-		DynamicPower:          f.DynamicPower,
-		DynamicToughness:      f.DynamicToughness,
-		Loyalty:               f.Loyalty,
-		Defense:               f.Defense,
-		EntersTapped:          f.EntersTapped,
-		EntersTappedCondition: f.EntersTappedCondition,
-		EntersWithCounters:    append([]CounterPlacement(nil), f.EntersWithCounters...),
-		Abilities:             append([]AbilityDef(nil), f.Abilities...),
-		ImplementationID:      f.ImplementationID,
-		OracleText:            f.OracleText,
+		Name:                   f.Name,
+		ManaCost:               f.ManaCost,
+		ManaValue:              f.ManaValue,
+		Colors:                 append([]mana.Color(nil), f.Colors...),
+		ColorIdentity:          parent.ColorIdentity,
+		Supertypes:             append([]Supertype(nil), f.Supertypes...),
+		Types:                  append([]CardType(nil), f.Types...),
+		Subtypes:               append([]string(nil), f.Subtypes...),
+		Power:                  f.Power,
+		Toughness:              f.Toughness,
+		DynamicPower:           f.DynamicPower,
+		DynamicToughness:       f.DynamicToughness,
+		Loyalty:                f.Loyalty,
+		Defense:                f.Defense,
+		EntersTapped:           f.EntersTapped,
+		EntersTappedCondition:  f.EntersTappedCondition,
+		EntersTappedUnlessPaid: f.EntersTappedUnlessPaid,
+		EntersWithCounters:     append([]CounterPlacement(nil), f.EntersWithCounters...),
+		Abilities:              append([]AbilityDef(nil), f.Abilities...),
+		ImplementationID:       f.ImplementationID,
+		OracleText:             f.OracleText,
 	}
 }
 

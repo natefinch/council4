@@ -176,7 +176,7 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 		return true
 	case action.ActionPlayLand:
 		playLand, ok := act.PlayLandPayload()
-		return ok && e.applyPlayLandFace(g, playerID, playLand.CardID, playLand.Face)
+		return ok && e.applyPlayLandFaceWithChoices(g, playerID, playLand.CardID, playLand.Face, agents, log)
 	case action.ActionCastSpell:
 		cast, ok := act.CastSpellPayload()
 		return ok && e.applyCastSpellWithChoices(g, playerID, cast, agents, log)
@@ -293,6 +293,10 @@ func (e *Engine) applyPlayLand(g *game.Game, playerID game.PlayerID, cardID id.I
 }
 
 func (e *Engine) applyPlayLandFace(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex) bool {
+	return e.applyPlayLandFaceWithChoices(g, playerID, cardID, face, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func (e *Engine) applyPlayLandFaceWithChoices(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if !canPlayAnyLand(g, playerID) {
 		return false
 	}
@@ -306,7 +310,7 @@ func (e *Engine) applyPlayLandFace(g *game.Game, playerID game.PlayerID, cardID 
 		return false
 	}
 
-	if _, ok := createCardPermanentFace(g, card, playerID, game.ZoneHand, face); !ok {
+	if _, ok := createCardPermanentFaceWithChoices(e, g, card, playerID, game.ZoneHand, face, agents, log); !ok {
 		return false
 	}
 	g.Turn.LandsPlayedThisTurn++
