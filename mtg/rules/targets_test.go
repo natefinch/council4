@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -347,7 +347,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 	engine := NewEngine(nil)
 	blackCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Black Creature",
-		ManaCost:  optCost(mana.Cost{mana.GenericMana(2)}),
+		ManaCost:  optCost(cost.Mana{cost.O(2)}),
 		Colors:    []color.Color{color.Black},
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 3}),
@@ -355,7 +355,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 	})
 	whiteCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "White Creature",
-		ManaCost:  optCost(mana.Cost{mana.GenericMana(4)}),
+		ManaCost:  optCost(cost.Mana{cost.O(4)}),
 		Colors:    []color.Color{color.White},
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 2}),

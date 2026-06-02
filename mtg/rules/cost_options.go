@@ -4,14 +4,14 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
 const flashbackAlternativeLabel = "Flashback"
 
-func manaCostPtr(cost opt.V[mana.Cost]) *mana.Cost {
+func manaCostPtr(cost opt.V[cost.Mana]) *cost.Mana {
 	if !cost.Exists {
 		return nil
 	}

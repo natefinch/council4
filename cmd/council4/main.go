@@ -13,8 +13,8 @@ import (
 	"github.com/natefinch/council4/mtg/agent"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/opt"
@@ -242,8 +242,8 @@ func lavaSpikeLike() *game.CardDef {
 	}
 }
 
-func greenCost() opt.V[mana.Cost] {
-	cost := mana.Cost{mana.G}
+func greenCost() opt.V[cost.Mana] {
+	cost := cost.Mana{cost.G}
 	return opt.Val(cost)
 }
 

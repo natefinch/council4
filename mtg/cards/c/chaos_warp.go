@@ -3,6 +3,7 @@ package c
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -18,9 +19,9 @@ import (
 //	The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.
 var ChaosWarp = &game.CardDef{
 	Name: "Chaos Warp",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(2),
-		mana.R,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(2),
+		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
 	ColorIdentity: mana.NewColorIdentity(color.Red),

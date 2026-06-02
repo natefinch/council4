@@ -3,6 +3,7 @@ package f
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -19,10 +20,10 @@ import (
 //	Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.
 var FiresOfYavimaya = &game.CardDef{
 	Name: "Fires of Yavimaya",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
-		mana.R,
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
+		cost.R,
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green, color.Red},
 	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),

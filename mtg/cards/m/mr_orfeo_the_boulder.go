@@ -3,6 +3,7 @@ package m
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -18,11 +19,11 @@ import (
 //	Whenever you attack, double target creature's power until end of turn.
 var MrOrfeoTheBoulder = &game.CardDef{
 	Name: "Mr. Orfeo, the Boulder",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
-		mana.B,
-		mana.R,
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
+		cost.B,
+		cost.R,
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Black, color.Green, color.Red},
 	ColorIdentity: mana.NewColorIdentity(color.Black, color.Green, color.Red),

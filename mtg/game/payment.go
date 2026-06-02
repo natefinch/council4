@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -65,7 +65,7 @@ type AdditionalCostSelection struct {
 // normal mana cost when selected.
 type AlternativeCost struct {
 	Label           string
-	ManaCost        opt.V[mana.Cost]
+	ManaCost        opt.V[cost.Mana]
 	AdditionalCosts []AdditionalCost
 }
 
@@ -90,10 +90,10 @@ const (
 // SymbolPayment records how a particular printed or expanded mana symbol was
 // satisfied by a payment plan.
 type SymbolPayment struct {
-	Symbol mana.Symbol
+	Symbol cost.Symbol
 	Method SymbolPaymentMethod
 
-	Color         color.Color
+	Color         mana.Color
 	GenericAmount int
 	LifePaid      int
 	Snow          bool
@@ -117,7 +117,7 @@ type PaymentChoice struct {
 	Player PlayerID
 	Prompt string
 
-	Symbol          mana.Symbol
+	Symbol          cost.Symbol
 	AdditionalCost  AdditionalCost
 	AlternativeCost AlternativeCost
 }

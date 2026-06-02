@@ -3,6 +3,7 @@ package c
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -18,9 +19,9 @@ import (
 //	Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle.
 var CosmicHunger = &game.CardDef{
 	Name: "Cosmic Hunger",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
 	ColorIdentity: mana.NewColorIdentity(color.Green),

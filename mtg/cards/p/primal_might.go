@@ -3,6 +3,7 @@ package p
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -18,9 +19,9 @@ import (
 //	Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
 var PrimalMight = &game.CardDef{
 	Name: "Primal Might",
-	ManaCost: opt.Val(mana.Cost{
-		mana.VariableMana(),
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.X,
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
 	ColorIdentity: mana.NewColorIdentity(color.Green),

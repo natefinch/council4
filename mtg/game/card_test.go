@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -13,7 +14,7 @@ func TestCardDefDefaultFaceUsesFrontFace(t *testing.T) {
 	card := &CardDef{
 		Name:          "Front Name",
 		Layout:        LayoutModalDFC,
-		ManaCost:      opt.Val(mana.Cost{mana.U}),
+		ManaCost:      opt.Val(cost.Mana{cost.U}),
 		Colors:        []color.Color{color.Blue},
 		ColorIdentity: mana.NewColorIdentity(color.Blue, color.Green),
 		Types:         []types.Card{types.Instant},

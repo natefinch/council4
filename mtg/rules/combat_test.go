@@ -6,9 +6,9 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -1092,7 +1092,7 @@ func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Haste},
 		}},
-	}, color.Green, 1)
+	}, mana.G, 1)
 	manaDork.SummoningSick = false
 	g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: game.Player2, Amount: 1})
 	g.Combat = &game.CombatState{}

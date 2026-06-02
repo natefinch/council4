@@ -13,15 +13,15 @@ func TestParseManaCostLiteral(t *testing.T) {
 		want string
 	}{
 		{"empty", "", ""},
-		{"single colored", "{R}", "mana.R"},
-		{"generic plus colors", "{2}{W}{U}", "mana.GenericMana(2)"},
-		{"variable", "{X}{R}{R}", "mana.VariableMana()"},
-		{"hybrid", "{W/U}", "mana.HybridMana(mana.White, mana.Blue)"},
-		{"phyrexian", "{W/P}", "mana.PhyrexianMana(mana.White)"},
-		{"mono hybrid", "{2/W}", "mana.MonoHybridMana(mana.White)"},
-		{"colorless", "{C}", "mana.ColorlessMana()"},
-		{"snow", "{S}", "mana.SnowMana()"},
-		{"generic only", "{1}", "mana.GenericMana(1)"},
+		{"single colored", "{R}", "cost.R"},
+		{"generic plus colors", "{2}{W}{U}", "cost.O(2),cost.W,cost.U"},
+		{"variable", "{X}{R}{R}", "cost.X,cost.R,cost.R"},
+		{"hybrid", "{W/U}", "cost.HybridMana(mana.W,mana.U)"},
+		{"phyrexian", "{W/P}", "cost.PhyrexianMana(mana.W)"},
+		{"mono hybrid", "{2/W}", "cost.Twobrid(mana.W)"},
+		{"colorless", "{C}", "cost.C"},
+		{"snow", "{S}", "cost.S"},
+		{"generic only", "{1}", "cost.O(1)"},
 	}
 
 	for _, tt := range tests {
@@ -30,6 +30,9 @@ func TestParseManaCostLiteral(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ParseManaCostLiteral(%q) error: %v", tt.cost, err)
 			}
+			got = strings.ReplaceAll(got, " ", "")
+			got = strings.ReplaceAll(got, "\t", "")
+			got = strings.ReplaceAll(got, "\n", "")
 			if tt.want == "" {
 				if got != "" {
 					t.Errorf("ParseManaCostLiteral(%q) = %q, want empty", tt.cost, got)
@@ -244,7 +247,7 @@ func TestGenerateCardSource(t *testing.T) {
 		`Name: "Lightning Bolt"`,
 		"mana.R",
 		"types.Instant",
-		"mana.Red",
+		"mana.R",
 		"Abilities: []game.AbilityDef{}",
 		"Oracle text:",
 		"Lightning Bolt deals 3 damage to any target.",
@@ -329,7 +332,7 @@ func TestGenerateCardSourceModalDFC(t *testing.T) {
 		"types.Sorcery",
 		"types.Land",
 		"types.Forest",
-		"mana.NewColorIdentity(mana.Green)",
+		"mana.NewColorIdentity(mana.G)",
 		"EntersTapped: true",
 	}
 	for _, check := range checks {
@@ -360,7 +363,7 @@ func TestGenerateCardSourceReversibleEmitsSeparateDefs(t *testing.T) {
 		"var SideA = &game.CardDef",
 		"var SideB = &game.CardDef",
 		"Layout: game.LayoutReversibleCard",
-		"mana.NewColorIdentity(mana.Red, mana.White)",
+		"mana.NewColorIdentity(mana.R, mana.W)",
 	}
 	for _, check := range checks {
 		if !strings.Contains(got, check) {

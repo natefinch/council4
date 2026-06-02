@@ -3,6 +3,7 @@ package d
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -20,10 +21,10 @@ import (
 //	−2: Target creature you control fights target creature you don't control.
 var DomriAnarchOfBolas = &game.CardDef{
 	Name: "Domri, Anarch of Bolas",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
-		mana.R,
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
+		cost.R,
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green, color.Red},
 	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
@@ -55,9 +56,9 @@ var DomriAnarchOfBolas = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceColor,
+						Kind:   game.ResolutionChoiceMana,
 						Prompt: "Choose {R} or {G}",
-						Colors: []color.Color{color.Red, color.Green},
+						Colors: []mana.Color{mana.R, mana.G},
 					}),
 					LinkID: "domri-color",
 				},

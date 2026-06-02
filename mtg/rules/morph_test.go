@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -14,8 +14,8 @@ import (
 func TestLegalActionsIncludeFaceDownCastAtSorcerySpeed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.G}))
-	g.Players[game.Player1].ManaPool.Add(color.Green, 3)
+	cardID := addCardToHand(g, game.Player1, morphCreature(cost.Mana{cost.G}))
+	g.Players[game.Player1].ManaPool.Add(mana.G, 3)
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.PriorityPlayer = game.Player1
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -34,8 +34,8 @@ func TestLegalActionsIncludeFaceDownCastAtSorcerySpeed(t *testing.T) {
 func TestLegalActionsExcludeFaceDownCastOutsideSorcerySpeed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.G}))
-	g.Players[game.Player1].ManaPool.Add(color.Green, 3)
+	cardID := addCardToHand(g, game.Player1, morphCreature(cost.Mana{cost.G}))
+	g.Players[game.Player1].ManaPool.Add(mana.G, 3)
 	g.Turn.ActivePlayer = game.Player2
 	g.Turn.PriorityPlayer = game.Player1
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -53,8 +53,8 @@ func TestLegalActionsExcludeFaceDownCastOutsideSorcerySpeed(t *testing.T) {
 func TestCastFaceDownResolvesAsTwoTwoCreatureWithHiddenIdentity(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.G}))
-	g.Players[game.Player1].ManaPool.Add(color.Green, 3)
+	cardID := addCardToHand(g, game.Player1, morphCreature(cost.Mana{cost.G}))
+	g.Players[game.Player1].ManaPool.Add(mana.G, 3)
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.PriorityPlayer = game.Player1
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -91,8 +91,8 @@ func TestCastFaceDownResolvesAsTwoTwoCreatureWithHiddenIdentity(t *testing.T) {
 func TestTurnFaceUpPaysMorphCostAndRevealsPrintedCharacteristics(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	permanent := addFaceDownPermanent(g, game.Player1, morphCreature(mana.Cost{mana.G}), game.FaceDownMorph)
-	g.Players[game.Player1].ManaPool.Add(color.Green, 1)
+	permanent := addFaceDownPermanent(g, game.Player1, morphCreature(cost.Mana{cost.G}), game.FaceDownMorph)
+	g.Players[game.Player1].ManaPool.Add(mana.G, 1)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, actionBuild.turnFaceUp(permanent.ObjectID)) {
@@ -113,8 +113,8 @@ func TestTurnFaceUpPaysMorphCostAndRevealsPrintedCharacteristics(t *testing.T) {
 func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	permanent := addFaceDownPermanent(g, game.Player1, disguiseCreature(mana.Cost{mana.W}), game.FaceDownDisguise)
-	g.Players[game.Player1].ManaPool.Add(color.White, 1)
+	permanent := addFaceDownPermanent(g, game.Player1, disguiseCreature(cost.Mana{cost.W}), game.FaceDownDisguise)
+	g.Players[game.Player1].ManaPool.Add(mana.W, 1)
 	g.Turn.PriorityPlayer = game.Player1
 
 	abilities := permanentEffectiveAbilities(g, permanent)
@@ -134,7 +134,7 @@ func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 	}
 }
 
-func morphCreature(cost mana.Cost) *game.CardDef {
+func morphCreature(cost cost.Mana) *game.CardDef {
 	pt := game.PT{Value: 3}
 	return &game.CardDef{
 		Name:      "Mystery Bear",
@@ -149,7 +149,7 @@ func morphCreature(cost mana.Cost) *game.CardDef {
 	}
 }
 
-func disguiseCreature(cost mana.Cost) *game.CardDef {
+func disguiseCreature(cost cost.Mana) *game.CardDef {
 	pt := game.PT{Value: 2}
 	return &game.CardDef{
 		Name:      "Veiled Guard",

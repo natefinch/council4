@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -20,9 +21,9 @@ import (
 //	Formidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.
 var GimliSRecklessMight = &game.CardDef{
 	Name: "Gimli's Reckless Might",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(3),
-		mana.R,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(3),
+		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
 	ColorIdentity: mana.NewColorIdentity(color.Red),

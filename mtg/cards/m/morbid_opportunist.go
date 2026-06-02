@@ -3,6 +3,7 @@ package m
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -18,9 +19,9 @@ import (
 //	Whenever one or more other creatures die, draw a card. This ability triggers only once each turn.
 var MorbidOpportunist = &game.CardDef{
 	Name: "Morbid Opportunist",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(2),
-		mana.B,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(2),
+		cost.B,
 	}),
 	Colors:        []color.Color{color.Black},
 	ColorIdentity: mana.NewColorIdentity(color.Black),

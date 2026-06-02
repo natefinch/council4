@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -57,7 +58,7 @@ type CardDef struct {
 
 	// ManaCost is the mana cost printed in the upper right (CR 202).
 	// Absent for lands and some special cards.
-	ManaCost opt.V[mana.Cost]
+	ManaCost opt.V[cost.Mana]
 
 	// Colors are the colors of this card, determined by its mana cost
 	// and color indicator (CR 105, 202.2).
@@ -123,7 +124,7 @@ type CardDef struct {
 // characteristics from CardDef that can differ between faces.
 type CardFace struct {
 	Name                   string
-	ManaCost               opt.V[mana.Cost]
+	ManaCost               opt.V[cost.Mana]
 	Colors                 []color.Color
 	Supertypes             []types.Super
 	Types                  []types.Card

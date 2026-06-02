@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -346,7 +347,7 @@ func newCommanderCastGame(commander *game.CardDef) *game.Game {
 
 func greenCommanderWithCost() *game.CardDef {
 	commander := commanderDef("Castable Commander", color.Green)
-	cost := mana.Cost{mana.G}
+	cost := cost.Mana{cost.G}
 	commander.ManaCost = optCost(cost)
 	return commander
 }

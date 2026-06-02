@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -488,15 +489,15 @@ type TokenCopySpec struct {
 // EternalizeAbility builds the keyword's full activated ability: a sorcery-speed
 // graveyard activation that exiles the source card and creates the standard
 // 4/4 black Zombie copy token with no mana cost.
-func EternalizeAbility(cost mana.Cost, creatureSubtypes ...types.Sub) AbilityDef {
+func EternalizeAbility(manaCost cost.Mana, creatureSubtypes ...types.Sub) AbilityDef {
 	tokenSubtypes := make([]types.Sub, 0, len(creatureSubtypes)+1)
 	tokenSubtypes = append(tokenSubtypes, types.Zombie)
 	tokenSubtypes = append(tokenSubtypes, creatureSubtypes...)
 	return AbilityDef{
 		Kind:           ActivatedAbility,
-		Text:           "Eternalize " + cost.String(),
+		Text:           "Eternalize " + manaCost.String(),
 		Keywords:       []Keyword{Eternalize},
-		ManaCost:       opt.Val(append(mana.Cost(nil), cost...)),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
 		ZoneOfFunction: ZoneGraveyard,
 		Timing:         SorceryOnly,
 		AdditionalCosts: []AdditionalCost{{
@@ -592,7 +593,7 @@ type Effect struct {
 	ResultAmount          EffectResultAmountKind
 	CounterKind           counter.Kind
 	CounterSource         CounterSourceSpec
-	ManaColor             color.Color
+	ManaColor             mana.Color
 	// Choice asks for a value while resolving this instruction and stores it
 	// under LinkID for later instructions to consume (CR 608.2c, CR 609.3).
 	Choice opt.V[ResolutionChoice]
@@ -693,20 +694,20 @@ type AbilityDef struct {
 	EnchantTarget opt.V[TargetSpec]
 
 	// WardCost parameterizes Ward for mana-valued ward costs.
-	WardCost opt.V[mana.Cost]
+	WardCost opt.V[cost.Mana]
 
 	// MadnessCost parameterizes Madness for mana-valued madness costs.
-	MadnessCost opt.V[mana.Cost]
+	MadnessCost opt.V[cost.Mana]
 
 	// SuspendCost and SuspendTimeCounters parameterize Suspend.
-	SuspendCost         opt.V[mana.Cost]
+	SuspendCost         opt.V[cost.Mana]
 	SuspendTimeCounters int
 
 	// MorphCost and DisguiseCost parameterize face-down cast keywords. A card
 	// with either keyword may be cast face-down for {3}; the recorded cost is
 	// paid to turn the resulting face-down permanent face up.
-	MorphCost    opt.V[mana.Cost]
-	DisguiseCost opt.V[mana.Cost]
+	MorphCost    opt.V[cost.Mana]
+	DisguiseCost opt.V[cost.Mana]
 
 	// ProtectionFromColors parameterizes Protection for the initial protection
 	// slice. Empty means this ability does not currently grant rules-relevant
@@ -715,7 +716,7 @@ type AbilityDef struct {
 
 	// ManaCost is the mana component of an activated ability's cost.
 	// Nil for non-activated abilities.
-	ManaCost opt.V[mana.Cost]
+	ManaCost opt.V[cost.Mana]
 
 	// AdditionalCosts describes typed non-mana costs. mtg/rules owns choosing
 	// and applying these costs.
@@ -726,7 +727,7 @@ type AbilityDef struct {
 	AlternativeCosts []AlternativeCost
 
 	// KickerCost is an optional additional mana cost for Kicker.
-	KickerCost opt.V[mana.Cost]
+	KickerCost opt.V[cost.Mana]
 
 	// KickerEffects are additional effects applied if the spell was kicked.
 	KickerEffects []Effect

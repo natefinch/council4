@@ -2,8 +2,8 @@ package payment
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 // costModificationContext carries the context needed to apply cost modifiers.
@@ -20,7 +20,7 @@ func applyCostModifiers(s State, ctx costModificationContext) spellCostOption {
 	return ctx.option
 }
 
-func applyGenericCostModifiers(cost *mana.Cost, modifiers []game.CostModifier) *mana.Cost {
+func applyGenericCostModifiers(cost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
 	if len(modifiers) == 0 {
 		return cost
 	}
@@ -49,27 +49,27 @@ func applyGenericCostModifiers(cost *mana.Cost, modifiers []game.CostModifier) *
 	return costWithGenericAmount(cost, generic)
 }
 
-func genericCostAmount(cost *mana.Cost) int {
-	if cost == nil {
+func genericCostAmount(manaCost *cost.Mana) int {
+	if manaCost == nil {
 		return 0
 	}
 	total := 0
-	for _, symbol := range *cost {
-		if symbol.Kind == mana.GenericSymbol {
+	for _, symbol := range *manaCost {
+		if symbol.Kind == cost.GenericSymbol {
 			total += symbol.Generic
 		}
 	}
 	return total
 }
 
-func costWithGenericAmount(cost *mana.Cost, generic int) *mana.Cost {
-	var modified mana.Cost
+func costWithGenericAmount(manaCost *cost.Mana, generic int) *cost.Mana {
+	var modified cost.Mana
 	if generic > 0 {
-		modified = append(modified, mana.GenericMana(generic))
+		modified = append(modified, cost.O(generic))
 	}
-	if cost != nil {
-		for _, symbol := range *cost {
-			if symbol.Kind != mana.GenericSymbol {
+	if manaCost != nil {
+		for _, symbol := range *manaCost {
+			if symbol.Kind != cost.GenericSymbol {
 				modified = append(modified, symbol)
 			}
 		}

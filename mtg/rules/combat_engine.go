@@ -3,8 +3,8 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -455,13 +455,13 @@ func (ce combatEngine) canPayAttackTax(g *game.Game, playerID game.PlayerID, dec
 }
 
 // payAttackTax pays the attack tax for the given attack declarations.
-func (ce combatEngine) payAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, cost *mana.Cost) bool {
+func (ce combatEngine) payAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, cost *cost.Mana) bool {
 	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, Exclude: ce.attackingPermanentExclusions(declarations)})
 }
 
 // attackTaxCost computes the total attack-tax cost for the given declarations.
 // It returns (nil, false) when no tax applies.
-func (combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclaration) (*mana.Cost, bool) {
+func (combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclaration) (*cost.Mana, bool) {
 	total := 0
 	for _, declaration := range declarations {
 		for _, tax := range g.AttackTaxes {
@@ -473,7 +473,7 @@ func (combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclar
 	if total <= 0 {
 		return nil, false
 	}
-	cost := mana.Cost{mana.GenericMana(total)}
+	cost := cost.Mana{cost.O(total)}
 	return &cost, true
 }
 

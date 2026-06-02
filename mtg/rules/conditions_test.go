@@ -5,8 +5,8 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -196,7 +196,7 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 	verge := addCombatPermanent(g, game.Player1, conditionalRedManaLand())
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Red Spell",
-		ManaCost: opt.Val(mana.Cost{mana.R}),
+		ManaCost: opt.Val(cost.Mana{cost.R}),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind: game.SpellAbility,
@@ -358,7 +358,7 @@ func conditionalRedManaLand() *game.CardDef {
 			Effects: []game.Effect{{
 				Type:        game.EffectAddMana,
 				Amount:      1,
-				ManaColor:   color.Red,
+				ManaColor:   mana.R,
 				TargetIndex: game.TargetIndexController,
 			}},
 		}},

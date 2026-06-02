@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -448,7 +449,7 @@ func TestResolutionChoiceCanChooseManaColor(t *testing.T) {
 			Type:   game.EffectChoose,
 			LinkID: "chosen-color",
 			Choice: optResolutionChoice(game.ResolutionChoice{
-				Kind: game.ResolutionChoiceColor,
+				Kind: game.ResolutionChoiceMana,
 			}),
 		},
 		{
@@ -466,7 +467,7 @@ func TestResolutionChoiceCanChooseManaColor(t *testing.T) {
 	if got := g.Players[game.Player1].ManaPool.Total(); got != 1 {
 		t.Fatalf("mana pool total = %d, want one chosen mana", got)
 	}
-	if !g.Players[game.Player1].ManaPool.Spend(color.Red, 1) {
+	if !g.Players[game.Player1].ManaPool.Spend(mana.R, 1) {
 		t.Fatal("chosen mana was not red")
 	}
 }
@@ -509,7 +510,7 @@ func TestCommanderIdentityColorChoiceFeedsManaAbility(t *testing.T) {
 	if got := g.Players[game.Player1].ManaPool.Total(); got != 1 {
 		t.Fatalf("mana pool total = %d, want one chosen mana", got)
 	}
-	if !g.Players[game.Player1].ManaPool.Spend(color.Black, 1) {
+	if !g.Players[game.Player1].ManaPool.Spend(mana.B, 1) {
 		t.Fatal("chosen mana was not black")
 	}
 }
@@ -568,7 +569,7 @@ func commandTowerLikeLand() *game.CardDef {
 				{
 					Type: game.EffectChoose,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:        game.ResolutionChoiceColor,
+						Kind:        game.ResolutionChoiceMana,
 						Prompt:      "Choose a color in your commander's color identity",
 						ColorSource: game.ResolutionChoiceColorSourceCommanderIdentity,
 					}),
@@ -589,7 +590,7 @@ func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
 	engine := NewEngine(nil)
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
-	cost := mana.Cost{mana.G}
+	cost := cost.Mana{cost.G}
 	addLinkedResultSpellToStack(g, []game.Effect{
 		{
 			Type:   game.EffectPay,
@@ -1042,7 +1043,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		if len(clue.TokenDef.Abilities) != 1 {
 			t.Fatalf("clue abilities = %d, want activated draw ability", len(clue.TokenDef.Abilities))
 		}
-		g.Players[game.Player1].ManaPool.Add(color.Colorless, 2)
+		g.Players[game.Player1].ManaPool.Add(mana.C, 2)
 		if !engine.applyAction(g, game.Player1, actionBuild.activateAbility(clue.ObjectID, 0, nil, 0)) {
 			t.Fatal("clue activation failed")
 		}
@@ -1777,7 +1778,7 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 			Name:      "Fanatic Source",
 			Types:     []types.Card{types.Creature},
 			Subtypes:  []types.Sub{types.Snake, types.Druid},
-			ManaCost:  optCost(mana.Cost{mana.G}),
+			ManaCost:  optCost(cost.Mana{cost.G}),
 			Power:     optPT(game.PT{Value: 1}),
 			Toughness: optPT(game.PT{Value: 4}),
 		},
@@ -1792,7 +1793,7 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 		AbilityIndex: 0,
 	})
 	g.CardInstances[sourceID].Def.Abilities = []game.AbilityDef{
-		game.EternalizeAbility(mana.Cost{mana.GenericMana(0)}, types.Snake, types.Druid),
+		game.EternalizeAbility(cost.Mana{cost.O(0)}, types.Snake, types.Druid),
 	}
 
 	engine.resolveTopOfStack(g, &TurnLog{})

@@ -3,11 +3,11 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/opt"
 )
 
-func optCost(cost mana.Cost) opt.V[mana.Cost] {
+func optCost(cost cost.Mana) opt.V[cost.Mana] {
 	return opt.Val(cost)
 }
 

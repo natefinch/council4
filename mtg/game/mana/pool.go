@@ -1,8 +1,10 @@
 package mana
 
-import "github.com/natefinch/council4/mtg/game/color"
+import (
+	"maps"
 
-import "maps"
+	"github.com/natefinch/council4/mtg/game/color"
+)
 
 // Pool represents a player's current mana pool. It tracks mana by spendable
 // units so rules can distinguish provenance such as snow mana while preserving
@@ -17,12 +19,12 @@ func NewPool() Pool {
 }
 
 // Add adds mana of the given color to the pool.
-func (p *Pool) Add(c color.Color, amount int) {
+func (p *Pool) Add(c Color, amount int) {
 	p.AddUnit(Unit{Color: c}, amount)
 }
 
 // AddSnow adds snow mana of the given color to the pool.
-func (p *Pool) AddSnow(c color.Color, amount int) {
+func (p *Pool) AddSnow(c Color, amount int) {
 	p.AddUnit(Unit{Color: c, Snow: true}, amount)
 }
 
@@ -38,7 +40,7 @@ func (p *Pool) AddUnit(unit Unit, amount int) {
 }
 
 // Amount returns the amount of mana of the given color in the pool.
-func (p *Pool) Amount(c color.Color) int {
+func (p *Pool) Amount(c Color) int {
 	if p.mana == nil {
 		return 0
 	}
@@ -74,7 +76,7 @@ func (p *Pool) Units() map[Unit]int {
 
 // Spend removes mana of the given color from the pool. It returns false
 // if there is insufficient mana of that color.
-func (p *Pool) Spend(c color.Color, amount int) bool {
+func (p *Pool) Spend(c Color, amount int) bool {
 	return p.SpendMatching(amount, func(unit Unit) bool {
 		return unit.Color == c
 	})
@@ -155,16 +157,20 @@ func (p *Pool) IsEmpty() bool {
 }
 
 func spendOrder() []Unit {
-	var units []Unit
-	for _, color := range AllColors() {
-		units = append(units, Unit{Color: color})
+	return []Unit{
+		Unit{Color: W},
+		Unit{Color: U},
+		Unit{Color: B},
+		Unit{Color: R},
+		Unit{Color: G},
+		Unit{Color: C},
+		Unit{Color: W, Snow: true},
+		Unit{Color: U, Snow: true},
+		Unit{Color: B, Snow: true},
+		Unit{Color: R, Snow: true},
+		Unit{Color: G, Snow: true},
+		Unit{Color: C, Snow: true},
 	}
-	units = append(units, Unit{Color: color.Colorless})
-	for _, color := range AllColors() {
-		units = append(units, Unit{Color: color, Snow: true})
-	}
-	units = append(units, Unit{Color: color.Colorless, Snow: true})
-	return units
 }
 
 // ColorIdentity represents a set of colors, used in Commander format
@@ -202,7 +208,7 @@ func (ci ColorIdentity) ContainsAll(other ColorIdentity) bool {
 // Colors returns the colors in this identity as a slice.
 func (ci ColorIdentity) Colors() []color.Color {
 	var result []color.Color
-	for _, c := range AllColors() {
+	for _, c := range color.AllColors() {
 		if ci.colors[c] {
 			result = append(result, c)
 		}

@@ -3,6 +3,7 @@ package e
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -19,10 +20,10 @@ import (
 //	When Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)
 var EnduringCourage = &game.CardDef{
 	Name: "Enduring Courage",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(2),
-		mana.R,
-		mana.R,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(2),
+		cost.R,
+		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
 	ColorIdentity: mana.NewColorIdentity(color.Red),

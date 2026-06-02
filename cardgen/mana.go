@@ -11,7 +11,7 @@ import (
 var manaSymbolRe = regexp.MustCompile(`\{([^}]+)\}`)
 
 // ParseManaCostLiteral converts a Scryfall mana cost string (e.g., "{2}{W}{U}")
-// into Go source code that constructs a mana.Cost value.
+// into Go source code that constructs a cost.Mana value.
 // Returns empty string and nil error if the input is empty (e.g., lands).
 // Returns an error if an unsupported mana symbol is encountered.
 func ParseManaCostLiteral(cost string) (string, error) {
@@ -34,77 +34,37 @@ func ParseManaCostLiteral(cost string) (string, error) {
 		symbols = append(symbols, literal)
 	}
 
-	return "mana.Cost{\n\t\t\t" + strings.Join(symbols, ",\n\t\t\t") + ",\n\t\t}", nil
+	return "cost.Mana{\n\t\t\t" + strings.Join(symbols, ",\n\t\t\t") + ",\n\t\t}", nil
 }
 
 func symbolToLiteral(sym string) (string, error) {
-	// Variable: X
-	if sym == "X" {
-		return "mana.VariableMana()", nil
+	switch sym {
+	case "X", "C", "S", "W", "U", "B", "R", "G":
+		return "cost." + sym, nil
+
+	default:
+		// continue
 	}
-	// Colorless: C
-	if sym == "C" {
-		return "mana.ColorlessMana()", nil
-	}
-	// Snow: S
-	if sym == "S" {
-		return "mana.SnowMana()", nil
-	}
+
 	// Phyrexian: W/P, U/P, etc.
 	if before, ok := strings.CutSuffix(sym, "/P"); ok {
 		color := before
-		goColor, err := colorLetter(color)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("mana.PhyrexianMana(mana.%s)", goColor), nil
+		return fmt.Sprintf("cost.PhyrexianMana(mana.%s)", color), nil
 	}
 	// Hybrid: W/U, B/R, etc.
 	if strings.Contains(sym, "/") {
 		parts := strings.SplitN(sym, "/", 2)
-		// Mono-hybrid: 2/W
+		// Twobrid: 2/W
 		if _, err := strconv.Atoi(parts[0]); err == nil {
-			goColor, err := colorLetter(parts[1])
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("mana.MonoHybridMana(mana.%s)", goColor), nil
+			color := parts[1]
+			return fmt.Sprintf("cost.Twobrid(mana.%s)", color), nil
 		}
-		goA, err := colorLetter(parts[0])
-		if err != nil {
-			return "", err
-		}
-		goB, err := colorLetter(parts[1])
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("mana.HybridMana(mana.%s, mana.%s)", goA, goB), nil
+		// Hybrid: W/U
+		return fmt.Sprintf("cost.HybridMana(mana.%s, mana.%s)", parts[0], parts[1]), nil
 	}
 	// Generic: a number
 	if n, err := strconv.Atoi(sym); err == nil {
-		return fmt.Sprintf("mana.GenericMana(%d)", n), nil
+		return fmt.Sprintf("cost.O(%d)", n), nil
 	}
-	// Colored: W, U, B, R, G
-	goColor, err := colorLetter(sym)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("mana.ColoredMana(mana.%s)", goColor), nil
-}
-
-func colorLetter(s string) (string, error) {
-	switch s {
-	case "W":
-		return "White", nil
-	case "U":
-		return "Blue", nil
-	case "B":
-		return "Black", nil
-	case "R":
-		return "Red", nil
-	case "G":
-		return "Green", nil
-	default:
-		return "", fmt.Errorf("unknown color: %s", s)
-	}
+	return "", fmt.Errorf("unsupported mana symbol: %s", sym)
 }

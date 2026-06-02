@@ -5,7 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -71,7 +71,7 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 }
 
 func cyclingCard() *game.CardDef {
-	cost := mana.Cost{mana.GenericMana(1)}
+	cost := cost.Mana{cost.O(1)}
 	return &game.CardDef{
 		Name: "Cycling Test Card",
 		Abilities: []game.AbilityDef{

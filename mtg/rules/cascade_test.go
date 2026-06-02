@@ -5,7 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -18,7 +18,7 @@ func TestCascadeExilesUntilLowerManaNonlandAndCastsIt(t *testing.T) {
 	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Cascade Hit", 2))
 	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []types.Card{types.Land}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 7))
-	g.Players[game.Player1].ManaPool.Add(color.Colorless, 5)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 5)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {
@@ -46,7 +46,7 @@ func TestCascadeBottomsCardsWhenNoEligibleCardExists(t *testing.T) {
 	cascadeID := addCardToHand(g, game.Player1, cascadeSpell(3))
 	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []types.Card{types.Land}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 7))
-	g.Players[game.Player1].ManaPool.Add(color.Colorless, 3)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 3)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {
@@ -70,7 +70,7 @@ func TestCascadeChainsFromCascadedSpell(t *testing.T) {
 	cascadeID := addCardToHand(g, game.Player1, cascadeSpell(6))
 	secondHitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Second Hit", 1))
 	firstHitID := addCardToLibrary(g, game.Player1, cascadeSpell(3))
-	g.Players[game.Player1].ManaPool.Add(color.Colorless, 6)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 6)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {
@@ -135,7 +135,7 @@ func TestDiscoverDeclinePutsFoundCardIntoHand(t *testing.T) {
 func cascadeSpell(manaValue int) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Cascade Spell",
-		ManaCost: optCost(mana.Cost{mana.GenericMana(manaValue)}),
+		ManaCost: optCost(cost.Mana{cost.O(manaValue)}),
 		Types:    []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Cascade}},
@@ -146,7 +146,7 @@ func cascadeSpell(manaValue int) *game.CardDef {
 
 func simpleGainLifeInstantWithManaValue(name string, manaValue int) *game.CardDef {
 	card := simpleGainLifeInstant(name)
-	card.ManaCost = optCost(mana.Cost{mana.GenericMana(manaValue)})
+	card.ManaCost = optCost(cost.Mana{cost.O(manaValue)})
 	return card
 }
 

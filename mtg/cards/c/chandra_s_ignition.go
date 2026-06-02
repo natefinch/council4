@@ -3,6 +3,7 @@ package c
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -18,10 +19,10 @@ import (
 //	Target creature you control deals damage equal to its power to each other creature and each opponent.
 var ChandraSIgnition = &game.CardDef{
 	Name: "Chandra's Ignition",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(3),
-		mana.R,
-		mana.R,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(3),
+		cost.R,
+		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
 	ColorIdentity: mana.NewColorIdentity(color.Red),

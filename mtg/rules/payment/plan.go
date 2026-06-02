@@ -4,7 +4,7 @@ import (
 	"maps"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -39,7 +39,7 @@ type abilityCostPlan struct {
 // manaTap records a planned tap of a mana-producing permanent.
 type manaTap struct {
 	permanent *game.Permanent
-	color     color.Color
+	color     mana.Color
 	amount    int
 	snow      bool
 }
@@ -47,23 +47,23 @@ type manaTap struct {
 // manaSource is a candidate mana-producing permanent used during plan building.
 type manaSource struct {
 	permanent *game.Permanent
-	color     color.Color
+	color     mana.Color
 	amount    int
 	snow      bool
 }
 
 // paymentColors is the deterministic ordering used when spending mana. Callers
 // must consume mana sources through this slice rather than ranging over maps.
-var paymentColors = []color.Color{
-	color.White,
-	color.Blue,
-	color.Black,
-	color.Red,
-	color.Green,
-	color.Colorless,
+var paymentColors = []mana.Color{
+	mana.W,
+	mana.U,
+	mana.B,
+	mana.R,
+	mana.G,
+	mana.C,
 }
 
-func canPayCostWithX(s State, playerID game.PlayerID, cost *mana.Cost, xValue int) bool {
+func canPayCostWithX(s State, playerID game.PlayerID, cost *cost.Mana, xValue int) bool {
 	_, ok := buildPaymentPlan(s, playerID, cost, xValue, nil)
 	return ok
 }
@@ -284,11 +284,11 @@ func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 	return plan, true
 }
 
-func buildPaymentPlan(s State, playerID game.PlayerID, cost *mana.Cost, xValue int, exclude map[id.ID]bool) (paymentPlan, bool) {
+func buildPaymentPlan(s State, playerID game.PlayerID, cost *cost.Mana, xValue int, exclude map[id.ID]bool) (paymentPlan, bool) {
 	return buildPaymentPlanWithPreferences(s, playerID, cost, xValue, exclude, nil)
 }
 
-func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, cost *mana.Cost, xValue int, exclude map[id.ID]bool, prefs *Preferences) (paymentPlan, bool) {
+func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool, prefs *Preferences) (paymentPlan, bool) {
 	plan := paymentPlan{poolSpend: make(map[mana.Unit]int)}
 	player, ok := s.Player(playerID)
 	if !ok {
@@ -299,64 +299,64 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, cost *mana
 	if xValue < 0 {
 		return plan, false
 	}
-	if cost == nil {
+	if manaCost == nil {
 		return plan, true
 	}
 
-	for _, symbol := range *cost {
+	for _, symbol := range *manaCost {
 		switch symbol.Kind {
-		case mana.ColoredSymbol:
+		case cost.ColoredSymbol:
 			if !payColoredSymbol(&plan, pool, manaSources, symbol, symbol.Color, game.SymbolPaymentMana) {
 				return plan, false
 			}
-		case mana.ColorlessSymbol:
-			if !payColoredSymbol(&plan, pool, manaSources, symbol, color.Colorless, game.SymbolPaymentMana) {
+		case cost.ColorlessSymbol:
+			if !payColoredSymbol(&plan, pool, manaSources, symbol, mana.C, game.SymbolPaymentMana) {
 				return plan, false
 			}
 		default:
 		}
 	}
-	for _, symbol := range *cost {
-		if symbol.Kind == mana.SnowSymbol {
+	for _, symbol := range *manaCost {
+		if symbol.Kind == cost.SnowSymbol {
 			if !paySnowSymbol(&plan, pool, manaSources, symbol) {
 				return plan, false
 			}
 		}
 	}
-	for _, symbol := range *cost {
+	for _, symbol := range *manaCost {
 		switch symbol.Kind {
-		case mana.HybridSymbol:
+		case cost.HybridSymbol:
 			if !payHybridSymbol(&plan, pool, manaSources, symbol) {
 				return plan, false
 			}
-		case mana.MonoHybridSymbol:
+		case cost.TwobridSymbol:
 			if !payMonoHybridSymbol(&plan, pool, manaSources, symbol) {
 				return plan, false
 			}
-		case mana.PhyrexianSymbol:
+		case cost.PhyrexianSymbol:
 			if !payPhyrexianSymbol(player, &plan, pool, manaSources, symbol, prefs) {
 				return plan, false
 			}
 		default:
 		}
 	}
-	for _, symbol := range *cost {
+	for _, symbol := range *manaCost {
 		switch symbol.Kind {
-		case mana.GenericSymbol:
+		case cost.GenericSymbol:
 			if !payGenericSymbol(&plan, pool, manaSources, symbol, symbol.Generic, game.SymbolPaymentGeneric) {
 				return plan, false
 			}
-		case mana.VariableSymbol:
+		case cost.VariableSymbol:
 			if !payGenericSymbol(&plan, pool, manaSources, symbol, xValue, game.SymbolPaymentX) {
 				return plan, false
 			}
 		default:
-			if symbol.Kind != mana.ColoredSymbol &&
-				symbol.Kind != mana.ColorlessSymbol &&
-				symbol.Kind != mana.SnowSymbol &&
-				symbol.Kind != mana.HybridSymbol &&
-				symbol.Kind != mana.MonoHybridSymbol &&
-				symbol.Kind != mana.PhyrexianSymbol {
+			if symbol.Kind != cost.ColoredSymbol &&
+				symbol.Kind != cost.ColorlessSymbol &&
+				symbol.Kind != cost.SnowSymbol &&
+				symbol.Kind != cost.HybridSymbol &&
+				symbol.Kind != cost.TwobridSymbol &&
+				symbol.Kind != cost.PhyrexianSymbol {
 				return plan, false
 			}
 		}
@@ -425,15 +425,15 @@ func replaceUnitCounts(dst, src map[mana.Unit]int) {
 	maps.Copy(dst, src)
 }
 
-func cloneManaSources(sources map[color.Color][]manaSource) map[color.Color][]manaSource {
-	clone := make(map[color.Color][]manaSource, len(sources))
+func cloneManaSources(sources map[mana.Color][]manaSource) map[mana.Color][]manaSource {
+	clone := make(map[mana.Color][]manaSource, len(sources))
 	for color, colorSources := range sources {
 		clone[color] = append([]manaSource(nil), colorSources...)
 	}
 	return clone
 }
 
-func replaceManaSources(dst, src map[color.Color][]manaSource) {
+func replaceManaSources(dst, src map[mana.Color][]manaSource) {
 	for color := range dst {
 		delete(dst, color)
 	}
@@ -442,25 +442,25 @@ func replaceManaSources(dst, src map[color.Color][]manaSource) {
 	}
 }
 
-func costRequirements(cost *mana.Cost, xValue int) (colored map[color.Color]int, generic int, ok bool) {
-	colored = make(map[color.Color]int)
+func costRequirements(manaCost *cost.Mana, xValue int) (colored map[mana.Color]int, generic int, ok bool) {
+	colored = make(map[mana.Color]int)
 	if xValue < 0 {
 		return nil, 0, false
 	}
-	if cost == nil {
+	if manaCost == nil {
 		return colored, 0, true
 	}
 
 	generic = 0
-	for _, symbol := range *cost {
+	for _, symbol := range *manaCost {
 		switch symbol.Kind {
-		case mana.ColoredSymbol:
+		case cost.ColoredSymbol:
 			colored[symbol.Color]++
-		case mana.ColorlessSymbol:
-			colored[color.Colorless]++
-		case mana.GenericSymbol:
+		case cost.ColorlessSymbol:
+			colored[mana.C]++
+		case cost.GenericSymbol:
 			generic += symbol.Generic
-		case mana.VariableSymbol:
+		case cost.VariableSymbol:
 			generic += xValue
 		default:
 			return nil, 0, false
@@ -487,12 +487,12 @@ func hasTapCost(ability *game.AbilityDef) bool {
 }
 
 // costHasVariableMana reports whether the cost contains an X (variable) symbol.
-func costHasVariableMana(cost *mana.Cost) bool {
-	if cost == nil {
+func costHasVariableMana(manaCost *cost.Mana) bool {
+	if manaCost == nil {
 		return false
 	}
-	for _, symbol := range *cost {
-		if symbol.Kind == mana.VariableSymbol {
+	for _, symbol := range *manaCost {
+		if symbol.Kind == cost.VariableSymbol {
 			return true
 		}
 	}
@@ -508,7 +508,7 @@ func abilityAdditionalCosts(ability *game.AbilityDef) []game.AdditionalCost {
 }
 
 // manaCostPtr returns a pointer to the mana cost value, or nil if it does not exist.
-func manaCostPtr(cost opt.V[mana.Cost]) *mana.Cost {
+func manaCostPtr(cost opt.V[cost.Mana]) *cost.Mana {
 	if !cost.Exists {
 		return nil
 	}

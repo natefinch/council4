@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
-func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, cost *mana.Cost, additionalCosts []game.AdditionalCost, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
+func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, cost *cost.Mana, additionalCosts []game.AdditionalCost, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
 	prefs := &payment.Preferences{}
 	prefs.PhyrexianLifeChoices = e.phyrexianPaymentChoices(g, playerID, cost, agents, log)
 	for _, additionalCost := range additionalCosts {
@@ -68,8 +68,8 @@ func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.Playe
 	return options[0]
 }
 
-func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, cost *mana.Cost, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []bool {
-	if cost == nil {
+func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []bool {
+	if manaCost == nil {
 		return nil
 	}
 	var choices []bool
@@ -77,8 +77,8 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, c
 	if player, ok := playerByID(g, playerID); ok {
 		availableLife = player.Life
 	}
-	for _, symbol := range *cost {
-		if symbol.Kind != mana.PhyrexianSymbol {
+	for _, symbol := range *manaCost {
+		if symbol.Kind != cost.PhyrexianSymbol {
 			continue
 		}
 		options := []game.ChoiceOption{{Index: 0, Label: fmt.Sprintf("Pay %s mana", symbol.Color)}}

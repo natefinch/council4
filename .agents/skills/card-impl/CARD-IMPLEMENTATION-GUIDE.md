@@ -14,7 +14,7 @@ Check presence with `.Exists`. Import path: `"github.com/natefinch/council4/opt"
 
 ```go
 // Set a value:
-ManaCost: opt.Val(mana.Cost{mana.R})
+ManaCost: opt.Val(cost.Mana{cost.R})
 // Absent (default): just omit the field
 ```
 
@@ -54,14 +54,14 @@ type AbilityDef struct {
     Keywords           []Keyword               // Keyword abilities this provides
     ProtectionFromColors []mana.Color           // For Protection keyword
     EnchantTarget      opt.V[TargetSpec]       // Parameterizes Enchant for Aura attachment legality
-    WardCost           opt.V[mana.Cost]        // Mana cost for Ward (CR 702.20)
-    MadnessCost        opt.V[mana.Cost]        // Mana cost for Madness (CR 702.35)
-    SuspendCost        opt.V[mana.Cost]        // Mana cost for Suspend (CR 702.62)
+    WardCost           opt.V[cost.Mana]        // Mana cost for Ward (CR 702.20)
+    MadnessCost        opt.V[cost.Mana]        // Mana cost for Madness (CR 702.35)
+    SuspendCost        opt.V[cost.Mana]        // Mana cost for Suspend (CR 702.62)
     SuspendTimeCounters int                    // Number of time counters for Suspend
-    ManaCost           opt.V[mana.Cost]        // Mana component of activated ability cost
+    ManaCost           opt.V[cost.Mana]        // Mana component of activated ability cost
     AdditionalCosts    []AdditionalCost        // Typed non-mana costs
     AlternativeCosts   []AlternativeCost       // Optional replacement costs
-    KickerCost         opt.V[mana.Cost]        // Optional Kicker mana cost
+    KickerCost         opt.V[cost.Mana]        // Optional Kicker mana cost
     KickerEffects      []Effect                // Additional effects if kicked
     Trigger            opt.V[TriggerCondition] // When triggered ability fires (absent for non-triggered)
     Optional           bool                    // True for "you may" abilities
@@ -254,7 +254,7 @@ type ResolutionChoice struct {
 
 type ResolutionPayment struct {
     Prompt          string
-    ManaCost        opt.V[mana.Cost]
+    ManaCost        opt.V[cost.Mana]
     AdditionalCosts []AdditionalCost
     XValue          int
 }
@@ -472,9 +472,9 @@ mana.G    // {G}
 mana.GenericMana(3)             // {3}
 mana.ColorlessMana()            // {C}
 mana.VariableMana()             // {X}
-mana.HybridMana(mana.White, mana.Blue)  // {W/U}
-mana.MonoHybridMana(mana.White)         // {2/W}
-mana.PhyrexianMana(mana.White)          // {W/P}
+cost.HybridMana(mana.W, mana.U)  // {W/U}
+mana.MonoHybridMana(mana.W)         // {2/W}
+mana.PhyrexianMana(mana.W)          // {W/P}
 mana.SnowMana()                         // {S}
 ```
 
@@ -517,10 +517,10 @@ Abilities: []game.AbilityDef{
 Do not smash multiple plain keywords into one `AbilityDef` with `Keywords: []game.Keyword{...}`. Use explicit `AbilityDef` values only for keyword abilities that need card-specific parameters or costs.
 
 For keywords with parameters:
-- **Protection from [color]**: `Keywords: []game.Keyword{game.Protection}`, `ProtectionFromColors: []mana.Color{mana.Red}`
-- **Ward {N}**: `Keywords: []game.Keyword{game.Ward}`, `WardCost: opt.Val(mana.Cost{mana.GenericMana(N)})`
-- **Equip {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Equip}`, `ManaCost: opt.Val(mana.Cost{mana.GenericMana(N)})`, `Timing: game.SorceryOnly`
-- **Cycling {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Cycling}`, `ManaCost: opt.Val(mana.Cost{...})`, `AdditionalCosts` with discard self
+- **Protection from [color]**: `Keywords: []game.Keyword{game.Protection}`, `ProtectionFromColors: []mana.Color{mana.R}`
+- **Ward {N}**: `Keywords: []game.Keyword{game.Ward}`, `WardCost: opt.Val(cost.Mana{cost.GenericMana(N)})`
+- **Equip {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Equip}`, `ManaCost: opt.Val(cost.Mana{cost.GenericMana(N)})`, `Timing: game.SorceryOnly`
+- **Cycling {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Cycling}`, `ManaCost: opt.Val(cost.Mana{...})`, `AdditionalCosts` with discard self
 - **Prowess**: `Keywords: []game.Keyword{game.Prowess}` on a static ability; the rules engine creates the implicit trigger (CR 702.108)
 - **Flashback {cost}**: `Keywords: []game.Keyword{game.Flashback}` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 

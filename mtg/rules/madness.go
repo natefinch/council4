@@ -2,12 +2,12 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
-func madnessCostForCard(card *game.CardDef) (mana.Cost, bool) {
+func madnessCostForCard(card *game.CardDef) (cost.Mana, bool) {
 	for i := range card.Abilities {
 		ability := &card.Abilities[i]
 		if abilityHasKeyword(ability, game.Madness) && ability.MadnessCost.Exists {
@@ -38,7 +38,7 @@ func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *ga
 	return "resolved"
 }
 
-func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerID, card *game.CardInstance, cost mana.Cost, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerID, card *game.CardInstance, cost cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Exile.Contains(card.ID) {
 		return false

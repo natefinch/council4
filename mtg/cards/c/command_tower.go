@@ -30,7 +30,7 @@ var CommandTower = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:        game.ResolutionChoiceColor,
+						Kind:        game.ResolutionChoiceMana,
 						Prompt:      "Choose a color in your commander's color identity",
 						ColorSource: game.ResolutionChoiceColorSourceCommanderIdentity,
 					}),

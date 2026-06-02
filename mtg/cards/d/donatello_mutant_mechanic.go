@@ -3,6 +3,7 @@ package d
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -20,9 +21,9 @@ import (
 //	Whenever an artifact you control is put into a graveyard from the battlefield, if it had counters on it, put those counters on up to one target artifact or creature you control.
 var DonatelloMutantMechanic = &game.CardDef{
 	Name: "Donatello, Mutant Mechanic",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(3),
-		mana.U,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(3),
+		cost.U,
 	}),
 	Colors:        []color.Color{color.Blue},
 	ColorIdentity: mana.NewColorIdentity(color.Blue),

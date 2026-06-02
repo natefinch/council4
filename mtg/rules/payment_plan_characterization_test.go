@@ -8,8 +8,8 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
@@ -31,7 +31,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				addCombatPermanent(g, game.Player1, namedCreature("Green Convoke Creature", color.Green))
 				addCombatPermanent(g, game.Player1, namedCreature("Plain Convoke Creature"))
-				return g, convokeSpell(mana.Cost{mana.G, mana.GenericMana(1)}), 0, 0
+				return g, convokeSpell(cost.Mana{cost.G, cost.O(1)}), 0, 0
 			},
 			want: []string{
 				"option=0:Normal cost",
@@ -48,7 +48,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
 				addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
-				return g, delveSpell(mana.Cost{mana.GenericMana(2)}), 0, 0
+				return g, delveSpell(cost.Mana{cost.O(2)}), 0, 0
 			},
 			want: []string{
 				"option=0:Normal cost",
@@ -242,7 +242,7 @@ func namedCreature(name string, colors ...color.Color) *game.CardDef {
 func genericCostSpell(generic int) *game.CardDef {
 	return &game.CardDef{
 		Name:      "Generic Cost Spell",
-		ManaCost:  optCost(mana.Cost{mana.GenericMana(generic)}),
+		ManaCost:  optCost(cost.Mana{cost.O(generic)}),
 		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
 	}

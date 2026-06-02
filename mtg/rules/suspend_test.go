@@ -5,8 +5,8 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -14,7 +14,7 @@ import (
 func TestLegalActionsIncludeSuspendFromHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, mana.Cost{mana.G}))
+	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, cost.Mana{cost.G}))
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -30,7 +30,7 @@ func TestLegalActionsIncludeSuspendFromHand(t *testing.T) {
 func TestSuspendActionPaysCostAndExilesWithTimeCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, mana.Cost{mana.G}))
+	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, cost.Mana{cost.G}))
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -55,7 +55,7 @@ func TestSuspendActionPaysCostAndExilesWithTimeCounters(t *testing.T) {
 func TestSuspendUpkeepRemovesTimeCounter(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(2, mana.Cost{mana.GenericMana(1)}), 2)
+	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(2, cost.Mana{cost.O(1)}), 2)
 
 	engine.processSuspendUpkeep(g, game.Player1)
 
@@ -70,7 +70,7 @@ func TestSuspendUpkeepRemovesTimeCounter(t *testing.T) {
 func TestSuspendCastsSpellWhenLastCounterRemoved(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(1, mana.Cost{mana.GenericMana(1)}), 1)
+	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
 
 	engine.processSuspendUpkeep(g, game.Player1)
 
@@ -92,8 +92,8 @@ func TestSuspendCastsSpellWhenLastCounterRemoved(t *testing.T) {
 func TestSuspendCastsMultipleReadyCardsInIDOrder(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	firstID := addSuspendedCard(g, game.Player1, suspendSorcery(1, mana.Cost{mana.GenericMana(1)}), 1)
-	secondID := addSuspendedCard(g, game.Player1, suspendSorcery(1, mana.Cost{mana.GenericMana(1)}), 1)
+	firstID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
+	secondID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
 
 	engine.processSuspendUpkeep(g, game.Player1)
 
@@ -111,7 +111,7 @@ func TestSuspendCastsMultipleReadyCardsInIDOrder(t *testing.T) {
 func TestSuspendedCreatureEntersWithSuspendHaste(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addSuspendedCard(g, game.Player1, suspendCreature(1, mana.Cost{mana.GenericMana(1)}), 1)
+	cardID := addSuspendedCard(g, game.Player1, suspendCreature(1, cost.Mana{cost.O(1)}), 1)
 
 	engine.processSuspendUpkeep(g, game.Player1)
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -125,11 +125,11 @@ func TestSuspendedCreatureEntersWithSuspendHaste(t *testing.T) {
 	}
 }
 
-func suspendSorcery(counters int, suspendCost mana.Cost) *game.CardDef {
+func suspendSorcery(counters int, suspendCost cost.Mana) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Suspend Sorcery",
 		Types:    []types.Card{types.Sorcery},
-		ManaCost: optCost(mana.Cost{mana.GenericMana(9)}),
+		ManaCost: optCost(cost.Mana{cost.O(9)}),
 		Abilities: []game.AbilityDef{{
 			Kind:                game.StaticAbility,
 			Keywords:            []game.Keyword{game.Suspend},
@@ -139,7 +139,7 @@ func suspendSorcery(counters int, suspendCost mana.Cost) *game.CardDef {
 	}
 }
 
-func suspendCreature(counters int, suspendCost mana.Cost) *game.CardDef {
+func suspendCreature(counters int, suspendCost cost.Mana) *game.CardDef {
 	pt := game.PT{Value: 2}
 	card := suspendSorcery(counters, suspendCost)
 	card.Name = "Suspend Creature"

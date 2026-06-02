@@ -3,16 +3,16 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
-var faceDownCastCost = mana.Cost{mana.GenericMana(3)}
-var faceDownDisguiseWardCost = mana.Cost{mana.GenericMana(2)}
+var faceDownCastCost = cost.Mana{cost.O(3)}
+var faceDownDisguiseWardCost = cost.Mana{cost.O(2)}
 
 func faceDownDisguiseWardAbility() game.AbilityDef {
 	return game.AbilityDef{
@@ -23,7 +23,7 @@ func faceDownDisguiseWardAbility() game.AbilityDef {
 	}
 }
 
-func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (mana.Cost, bool) {
+func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (cost.Mana, bool) {
 	keyword := game.Morph
 	if kind == game.FaceDownDisguise {
 		keyword = game.Disguise

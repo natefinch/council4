@@ -5,12 +5,12 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
-func suspendCostForCard(card *game.CardDef) (mana.Cost, int, bool) {
+func suspendCostForCard(card *game.CardDef) (cost.Mana, int, bool) {
 	for i := range card.Abilities {
 		ability := &card.Abilities[i]
 		if abilityHasKeyword(ability, game.Suspend) && ability.SuspendCost.Exists && ability.SuspendTimeCounters > 0 {

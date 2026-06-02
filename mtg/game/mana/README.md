@@ -21,7 +21,7 @@ Use `AllColors()` when deterministic color ordering matters.
 `Cost` is an ordered list of `Symbol` values:
 
 ```go
-cost := mana.Cost{
+cost := cost.Mana{
 	mana.GenericMana(2),
 	mana.W,
 	mana.U,
@@ -36,8 +36,8 @@ Use `ManaValue()` for mana value and `Colors()` for colors appearing in the prin
 
 ```go
 pool := mana.NewPool()
-pool.Add(mana.Green, 1)
-ok := pool.Spend(mana.Green, 1)
+pool.Add(mana.G, 1)
+ok := pool.Spend(mana.G, 1)
 ```
 
 Mana pools are emptied by the rules engine as steps and phases end.

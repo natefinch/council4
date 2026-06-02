@@ -3,6 +3,7 @@ package n
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -19,10 +20,10 @@ import (
 //	At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)
 var NeyithOfTheDireHunt = &game.CardDef{
 	Name: "Neyith of the Dire Hunt",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(2),
-		mana.G,
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(2),
+		cost.G,
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
 	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
@@ -95,9 +96,9 @@ var NeyithOfTheDireHunt = &game.CardDef{
 					Optional:    true,
 					Payment: opt.Val(game.ResolutionPayment{
 						Prompt: "Pay {2}{R/G}?",
-						ManaCost: opt.Val(mana.Cost{
-							mana.GenericMana(2),
-							mana.HybridMana(color.Red, color.Green),
+						ManaCost: opt.Val(cost.Mana{
+							cost.O(2),
+							cost.HybridMana(mana.R, mana.G),
 						}),
 					}),
 					LinkID: "neyith-combat-pay",

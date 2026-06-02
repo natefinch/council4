@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -22,9 +23,9 @@ import (
 //	Hazoret can't attack or block unless you have max speed.
 var HazoretGodseeker = &game.CardDef{
 	Name: "Hazoret, Godseeker",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
-		mana.R,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
+		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
 	ColorIdentity: mana.NewColorIdentity(color.Red),
@@ -54,8 +55,8 @@ var HazoretGodseeker = &game.CardDef{
 		{
 			Kind: game.ActivatedAbility,
 			Text: "{1}, {T}: Target creature with power 2 or less can't be blocked this turn.",
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(1),
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
 			}),
 			AdditionalCosts: []game.AdditionalCost{
 				{Kind: game.AdditionalCostTap},

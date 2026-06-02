@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 )
 
 // flashbackAlternativeLabel is the canonical label for flashback alternative costs.
@@ -15,7 +15,7 @@ type spellCostOption struct {
 	index           int
 	label           string
 	card            *game.CardDef
-	manaCost        *mana.Cost
+	manaCost        *cost.Mana
 	additionalCosts []game.AdditionalCost
 }
 
@@ -70,11 +70,11 @@ func isFlashbackAlternative(alternative game.AlternativeCost) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
 }
 
-func spellManaCostWithKicker(base *mana.Cost, ability *game.AbilityDef, kickerPaid bool) *mana.Cost {
+func spellManaCostWithKicker(base *cost.Mana, ability *game.AbilityDef, kickerPaid bool) *cost.Mana {
 	if !kickerPaid || ability == nil || !ability.KickerCost.Exists {
 		return base
 	}
-	combined := mana.Cost{}
+	combined := cost.Mana{}
 	if base != nil {
 		combined = append(combined, (*base)...)
 	}

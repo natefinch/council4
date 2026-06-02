@@ -6,20 +6,20 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 const maxLegalXValue = 20
 
-func canPayCost(g *game.Game, playerID game.PlayerID, cost *mana.Cost) bool {
+func canPayCost(g *game.Game, playerID game.PlayerID, cost *cost.Mana) bool {
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost})
 }
 
-func canPayCostWithX(g *game.Game, playerID game.PlayerID, cost *mana.Cost, xValue int) bool {
+func canPayCostWithX(g *game.Game, playerID game.PlayerID, cost *cost.Mana, xValue int) bool {
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, XValue: xValue})
 }
 
@@ -725,7 +725,7 @@ func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.Car
 	return isSorcerySpeed(g, playerID)
 }
 
-func legalXValuesForCost(g *game.Game, playerID game.PlayerID, cost *mana.Cost) []int {
+func legalXValuesForCost(g *game.Game, playerID game.PlayerID, cost *cost.Mana) []int {
 	if !costHasVariableMana(cost) {
 		return []int{0}
 	}
@@ -739,12 +739,12 @@ func legalXValuesForCost(g *game.Game, playerID game.PlayerID, cost *mana.Cost) 
 	return values
 }
 
-func costHasVariableMana(cost *mana.Cost) bool {
-	if cost == nil {
+func costHasVariableMana(manaCost *cost.Mana) bool {
+	if manaCost == nil {
 		return false
 	}
-	for _, symbol := range *cost {
-		if symbol.Kind == mana.VariableSymbol {
+	for _, symbol := range *manaCost {
+		if symbol.Kind == cost.VariableSymbol {
 			return true
 		}
 	}
@@ -947,7 +947,7 @@ func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
 		case game.EffectAddMana:
 			hasAddMana = true
 		case game.EffectChoose:
-			if !effect.Choice.Exists || effect.Choice.Val.Kind != game.ResolutionChoiceColor {
+			if !effect.Choice.Exists || effect.Choice.Val.Kind != game.ResolutionChoiceMana {
 				return false
 			}
 		default:

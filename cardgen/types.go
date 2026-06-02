@@ -208,15 +208,15 @@ func goIdentifierSuffix(name string) string {
 func ColorToLiteral(letter string) string {
 	switch letter {
 	case "W":
-		return "mana.White"
+		return "mana.W"
 	case "U":
-		return "mana.Blue"
+		return "mana.U"
 	case "B":
-		return "mana.Black"
+		return "mana.B"
 	case "R":
-		return "mana.Red"
+		return "mana.R"
 	case "G":
-		return "mana.Green"
+		return "mana.G"
 	default:
 		return "/* unknown color: " + letter + " */"
 	}
