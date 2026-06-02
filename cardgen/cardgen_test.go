@@ -13,15 +13,15 @@ func TestParseManaCostLiteral(t *testing.T) {
 		want string
 	}{
 		{"empty", "", ""},
-		{"single colored", "{R}", "mana.R"},
-		{"generic plus colors", "{2}{W}{U}", "mana.GenericMana(2)"},
-		{"variable", "{X}{R}{R}", "mana.VariableMana()"},
-		{"hybrid", "{W/U}", "mana.HybridMana(mana.White, mana.Blue)"},
-		{"phyrexian", "{W/P}", "mana.PhyrexianMana(mana.White)"},
-		{"mono hybrid", "{2/W}", "mana.MonoHybridMana(mana.White)"},
-		{"colorless", "{C}", "mana.ColorlessMana()"},
-		{"snow", "{S}", "mana.SnowMana()"},
-		{"generic only", "{1}", "mana.GenericMana(1)"},
+		{"single colored", "{R}", "cost.R"},
+		{"generic plus colors", "{2}{W}{U}", "cost.O(2),cost.W,cost.U"},
+		{"variable", "{X}{R}{R}", "cost.X,cost.R,cost.R"},
+		{"hybrid", "{W/U}", "cost.HybridMana(mana.W,mana.U)"},
+		{"phyrexian", "{W/P}", "cost.PhyrexianMana(mana.W)"},
+		{"mono hybrid", "{2/W}", "cost.Twobrid(mana.W)"},
+		{"colorless", "{C}", "cost.C"},
+		{"snow", "{S}", "cost.S"},
+		{"generic only", "{1}", "cost.O(1)"},
 	}
 
 	for _, tt := range tests {
@@ -30,6 +30,9 @@ func TestParseManaCostLiteral(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ParseManaCostLiteral(%q) error: %v", tt.cost, err)
 			}
+			got = strings.ReplaceAll(got, " ", "")
+			got = strings.ReplaceAll(got, "\t", "")
+			got = strings.ReplaceAll(got, "\n", "")
 			if tt.want == "" {
 				if got != "" {
 					t.Errorf("ParseManaCostLiteral(%q) = %q, want empty", tt.cost, got)
@@ -242,19 +245,16 @@ func TestGenerateCardSource(t *testing.T) {
 	checks := []string{
 		"package l",
 		`Name: "Lightning Bolt"`,
-		"mana.R",
+		"cost.R",
 		"types.Instant",
-		"mana.Red",
+		"Colors: []color.Color{color.Red}",
+		"ColorIdentity: color.NewIdentity(color.Red)",
 		"Abilities: []game.AbilityDef{}",
 		"Oracle text:",
 		"Lightning Bolt deals 3 damage to any target.",
 	}
 
-	for _, check := range checks {
-		if !strings.Contains(got, check) {
-			t.Errorf("output missing %q\nfull output:\n%s", check, got)
-		}
-	}
+	assertSourceContainsAll(t, got, checks)
 }
 
 func TestGenerateCardSourceCreature(t *testing.T) {
@@ -287,11 +287,7 @@ func TestGenerateCardSourceCreature(t *testing.T) {
 		"Toughness: opt.Val(game.PT{Value: 4})",
 	}
 
-	for _, check := range checks {
-		if !strings.Contains(got, check) {
-			t.Errorf("output missing %q\nfull output:\n%s", check, got)
-		}
-	}
+	assertSourceContainsAll(t, got, checks)
 }
 
 func TestGenerateCardSourceModalDFC(t *testing.T) {
@@ -329,14 +325,10 @@ func TestGenerateCardSourceModalDFC(t *testing.T) {
 		"types.Sorcery",
 		"types.Land",
 		"types.Forest",
-		"mana.NewColorIdentity(mana.Green)",
+		"color.NewIdentity(color.Green)",
 		"EntersTapped: true",
 	}
-	for _, check := range checks {
-		if !strings.Contains(got, check) {
-			t.Errorf("output missing %q\nfull output:\n%s", check, got)
-		}
-	}
+	assertSourceContainsAll(t, got, checks)
 }
 
 func TestGenerateCardSourceReversibleEmitsSeparateDefs(t *testing.T) {
@@ -360,13 +352,9 @@ func TestGenerateCardSourceReversibleEmitsSeparateDefs(t *testing.T) {
 		"var SideA = &game.CardDef",
 		"var SideB = &game.CardDef",
 		"Layout: game.LayoutReversibleCard",
-		"mana.NewColorIdentity(mana.Red, mana.White)",
+		"color.NewIdentity(color.Red, color.White)",
 	}
-	for _, check := range checks {
-		if !strings.Contains(got, check) {
-			t.Errorf("output missing %q\nfull output:\n%s", check, got)
-		}
-	}
+	assertSourceContainsAll(t, got, checks)
 	if strings.Contains(got, "Back: opt.Val(game.CardFace") {
 		t.Fatalf("reversible card generated face-selectable definition:\n%s", got)
 	}
@@ -392,4 +380,18 @@ func assertGoSourceFormats(t *testing.T, source string) {
 	if _, err := format.Source([]byte(source)); err != nil {
 		t.Fatalf("generated source is not valid Go: %v\n%s", err, source)
 	}
+}
+
+func assertSourceContainsAll(t *testing.T, source string, checks []string) {
+	t.Helper()
+	compactSource := compactWhitespace(source)
+	for _, check := range checks {
+		if !strings.Contains(compactSource, compactWhitespace(check)) {
+			t.Errorf("output missing %q\nfull output:\n%s", check, source)
+		}
+	}
+}
+
+func compactWhitespace(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }

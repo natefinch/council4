@@ -3,6 +3,7 @@ package g
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -21,7 +22,7 @@ import (
 // which covers the three legal outputs: {B}{B}, {B}{R}, and {R}{R}.
 var GravenCairns = &game.CardDef{
 	Name:          "Graven Cairns",
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Red),
+	ColorIdentity: color.NewIdentity(color.Black, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.",
 	Abilities: []game.AbilityDef{
@@ -33,15 +34,15 @@ var GravenCairns = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Colorless, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.C, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
 			Kind:          game.ActivatedAbility,
 			Text:          "{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.",
 			IsManaAbility: true,
-			ManaCost: opt.Val(mana.Cost{
-				mana.HybridMana(color.Black, color.Red),
+			ManaCost: opt.Val(cost.Mana{
+				cost.HybridMana(mana.B, mana.R),
 			}),
 			AdditionalCosts: []game.AdditionalCost{
 				{Kind: game.AdditionalCostTap},
@@ -51,9 +52,9 @@ var GravenCairns = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceColor,
+						Kind:   game.ResolutionChoiceMana,
 						Prompt: "Choose first mana color ({B} or {R})",
-						Colors: []color.Color{color.Black, color.Red},
+						Colors: []mana.Color{mana.B, mana.R},
 					}),
 					LinkID: "graven-cairns-color-1",
 				},
@@ -67,9 +68,9 @@ var GravenCairns = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceColor,
+						Kind:   game.ResolutionChoiceMana,
 						Prompt: "Choose second mana color ({B} or {R})",
-						Colors: []color.Color{color.Black, color.Red},
+						Colors: []mana.Color{mana.B, mana.R},
 					}),
 					LinkID: "graven-cairns-color-2",
 				},

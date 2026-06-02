@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -157,11 +158,9 @@ func TestDynamicAmountUsesControllerHandSize(t *testing.T) {
 	addCardToHand(g, game.Player1, &game.CardDef{Name: "First"})
 	addCardToHand(g, game.Player1, &game.CardDef{Name: "Second"})
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:        game.EffectGainLife,
-		TargetIndex: game.TargetIndexController,
-		DynamicAmount: optDynamicAmount(game.DynamicAmount{
-			Kind: game.DynamicAmountControllerHandSize,
-		}),
+		Type:          game.EffectGainLife,
+		TargetIndex:   game.TargetIndexController,
+		DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountControllerHandSize}),
 	}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -175,11 +174,9 @@ func TestDynamicAmountUsesXValue(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:        game.EffectDamage,
-		TargetIndex: 0,
-		DynamicAmount: optDynamicAmount(game.DynamicAmount{
-			Kind: game.DynamicAmountX,
-		}),
+		Type:          game.EffectDamage,
+		TargetIndex:   0,
+		DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountX}),
 	}, []game.Target{game.PlayerTarget(game.Player2)})
 	obj, ok := g.Stack.Peek()
 	if !ok {
@@ -199,12 +196,9 @@ func TestDynamicAmountUsesTargetPower(t *testing.T) {
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:        game.EffectDamage,
-		TargetIndex: 0,
-		DynamicAmount: optDynamicAmount(game.DynamicAmount{
-			Kind:        game.DynamicAmountTargetPower,
-			TargetIndex: 0,
-		}),
+		Type:          game.EffectDamage,
+		TargetIndex:   0,
+		DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountTargetPower, TargetIndex: 0}),
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -229,12 +223,9 @@ func TestDynamicAmountCanUsePreviousEffectResult(t *testing.T) {
 					Effects: []game.Effect{
 						{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 3, LinkID: "that-much"},
 						{
-							Type:        game.EffectLoseLife,
-							TargetIndex: 0,
-							DynamicAmount: optDynamicAmount(game.DynamicAmount{
-								Kind:   game.DynamicAmountPreviousEffectResult,
-								LinkID: "that-much",
-							}),
+							Type:          game.EffectLoseLife,
+							TargetIndex:   0,
+							DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountPreviousEffectResult, LinkID: "that-much"}),
 						},
 					},
 				},
@@ -315,23 +306,16 @@ func TestEffectResultConditionBranchesOnIfYouDoAndDont(t *testing.T) {
 	sourceID := addLinkedResultSpellToStack(g, []game.Effect{
 		{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1, Optional: true, LinkID: "choice"},
 		{
-			Type:        game.EffectGainLife,
-			TargetIndex: game.TargetIndexController,
-			Amount:      3,
-			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
-				LinkID:    "choice",
-				Accepted:  game.TriTrue,
-				Succeeded: game.TriTrue,
-			}),
+			Type:            game.EffectGainLife,
+			TargetIndex:     game.TargetIndexController,
+			Amount:          3,
+			ResultCondition: opt.Val(game.EffectResultCondition{LinkID: "choice", Accepted: game.TriTrue, Succeeded: game.TriTrue}),
 		},
 		{
-			Type:        game.EffectLoseLife,
-			TargetIndex: game.TargetIndexController,
-			Amount:      3,
-			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
-				LinkID:   "choice",
-				Accepted: game.TriFalse,
-			}),
+			Type:            game.EffectLoseLife,
+			TargetIndex:     game.TargetIndexController,
+			Amount:          3,
+			ResultCondition: opt.Val(game.EffectResultCondition{LinkID: "choice", Accepted: game.TriFalse}),
 		},
 	})
 	if sourceID == 0 {
@@ -351,22 +335,16 @@ func TestEffectResultConditionRequiresActualSuccess(t *testing.T) {
 	addLinkedResultSpellToStack(g, []game.Effect{
 		{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1, LinkID: "draw"},
 		{
-			Type:        game.EffectGainLife,
-			TargetIndex: game.TargetIndexController,
-			Amount:      3,
-			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
-				LinkID:    "draw",
-				Succeeded: game.TriTrue,
-			}),
+			Type:            game.EffectGainLife,
+			TargetIndex:     game.TargetIndexController,
+			Amount:          3,
+			ResultCondition: opt.Val(game.EffectResultCondition{LinkID: "draw", Succeeded: game.TriTrue}),
 		},
 		{
-			Type:        game.EffectLoseLife,
-			TargetIndex: game.TargetIndexController,
-			Amount:      2,
-			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
-				LinkID:    "draw",
-				Succeeded: game.TriFalse,
-			}),
+			Type:            game.EffectLoseLife,
+			TargetIndex:     game.TargetIndexController,
+			Amount:          2,
+			ResultCondition: opt.Val(game.EffectResultCondition{LinkID: "draw", Succeeded: game.TriFalse}),
 		},
 	})
 
@@ -389,12 +367,9 @@ func TestDeclinedOptionalEffectDoesNotPublishPreviousAmount(t *testing.T) {
 			LinkID:      "amount",
 		},
 		{
-			Type:        game.EffectLoseLife,
-			TargetIndex: game.TargetIndexController,
-			DynamicAmount: optDynamicAmount(game.DynamicAmount{
-				Kind:   game.DynamicAmountPreviousEffectResult,
-				LinkID: "amount",
-			}),
+			Type:          game.EffectLoseLife,
+			TargetIndex:   game.TargetIndexController,
+			DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountPreviousEffectResult, LinkID: "amount"}),
 		},
 	})
 	agents := [game.NumPlayers]PlayerAgent{
@@ -415,10 +390,7 @@ func TestResolutionChoiceCanFeedLaterEffect(t *testing.T) {
 		{
 			Type:   game.EffectChoose,
 			LinkID: "chosen-player",
-			Choice: optResolutionChoice(game.ResolutionChoice{
-				Kind:           game.ResolutionChoicePlayer,
-				PlayerRelation: game.PlayerOpponent,
-			}),
+			Choice: opt.Val(game.ResolutionChoice{Kind: game.ResolutionChoicePlayer, PlayerRelation: game.PlayerOpponent}),
 		},
 		{
 			Type:         game.EffectLoseLife,
@@ -447,9 +419,7 @@ func TestResolutionChoiceCanChooseManaColor(t *testing.T) {
 		{
 			Type:   game.EffectChoose,
 			LinkID: "chosen-color",
-			Choice: optResolutionChoice(game.ResolutionChoice{
-				Kind: game.ResolutionChoiceColor,
-			}),
+			Choice: opt.Val(game.ResolutionChoice{Kind: game.ResolutionChoiceMana}),
 		},
 		{
 			Type:         game.EffectAddMana,
@@ -466,7 +436,7 @@ func TestResolutionChoiceCanChooseManaColor(t *testing.T) {
 	if got := g.Players[game.Player1].ManaPool.Total(); got != 1 {
 		t.Fatalf("mana pool total = %d, want one chosen mana", got)
 	}
-	if !g.Players[game.Player1].ManaPool.Spend(color.Red, 1) {
+	if !g.Players[game.Player1].ManaPool.Spend(mana.R, 1) {
 		t.Fatal("chosen mana was not red")
 	}
 }
@@ -477,7 +447,7 @@ func TestCommanderIdentityColorChoiceFeedsManaAbility(t *testing.T) {
 			Commander: &game.CardDef{
 				Name:          "Dimir Commander",
 				Types:         []types.Card{types.Creature},
-				ColorIdentity: mana.NewColorIdentity(color.Blue, color.Black),
+				ColorIdentity: color.NewIdentity(color.Blue, color.Black),
 			},
 		},
 	})
@@ -509,7 +479,7 @@ func TestCommanderIdentityColorChoiceFeedsManaAbility(t *testing.T) {
 	if got := g.Players[game.Player1].ManaPool.Total(); got != 1 {
 		t.Fatalf("mana pool total = %d, want one chosen mana", got)
 	}
-	if !g.Players[game.Player1].ManaPool.Spend(color.Black, 1) {
+	if !g.Players[game.Player1].ManaPool.Spend(mana.B, 1) {
 		t.Fatal("chosen mana was not black")
 	}
 }
@@ -527,7 +497,7 @@ func TestCommanderIdentityColorChoiceUnavailableWithoutColors(t *testing.T) {
 					Commander: &game.CardDef{
 						Name:          "Colorless Commander",
 						Types:         []types.Card{types.Creature},
-						ColorIdentity: mana.NewColorIdentity(),
+						ColorIdentity: color.NewIdentity(),
 					},
 				},
 			},
@@ -568,7 +538,7 @@ func commandTowerLikeLand() *game.CardDef {
 				{
 					Type: game.EffectChoose,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:        game.ResolutionChoiceColor,
+						Kind:        game.ResolutionChoiceMana,
 						Prompt:      "Choose a color in your commander's color identity",
 						ColorSource: game.ResolutionChoiceColorSourceCommanderIdentity,
 					}),
@@ -589,25 +559,18 @@ func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
 	engine := NewEngine(nil)
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
-	cost := mana.Cost{mana.G}
+	manaCost := cost.Mana{cost.G}
 	addLinkedResultSpellToStack(g, []game.Effect{
 		{
-			Type:   game.EffectPay,
-			LinkID: "paid",
-			Payment: optResolutionPayment(game.ResolutionPayment{
-				Prompt:   "Pay {G}?",
-				ManaCost: optCost(cost),
-			}),
+			Type:    game.EffectPay,
+			LinkID:  "paid",
+			Payment: opt.Val(game.ResolutionPayment{Prompt: "Pay {G}?", ManaCost: opt.Val(manaCost)}),
 		},
 		{
-			Type:        game.EffectDraw,
-			Amount:      1,
-			TargetIndex: game.TargetIndexController,
-			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
-				LinkID:    "paid",
-				Accepted:  game.TriTrue,
-				Succeeded: game.TriTrue,
-			}),
+			Type:            game.EffectDraw,
+			Amount:          1,
+			TargetIndex:     game.TargetIndexController,
+			ResultCondition: opt.Val(game.EffectResultCondition{LinkID: "paid", Accepted: game.TriTrue, Succeeded: game.TriTrue}),
 		},
 	})
 	log := TurnLog{}
@@ -796,8 +759,8 @@ func TestExcessDamageCanFeedLaterEffectAmount(t *testing.T) {
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Small Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 2}),
-		Toughness: optPT(game.PT{Value: 2}),
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
 	})
 	addLinkedResultSpellToStackForController(g, game.Player1, []game.Effect{
 		{
@@ -829,8 +792,8 @@ func TestZeroExcessDamageDoesNotSatisfySuccessCondition(t *testing.T) {
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Large Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 3}),
-		Toughness: optPT(game.PT{Value: 3}),
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
 	})
 	addLinkedResultSpellToStackForController(g, game.Player1, []game.Effect{
 		{
@@ -841,13 +804,10 @@ func TestZeroExcessDamageDoesNotSatisfySuccessCondition(t *testing.T) {
 			LinkID:       "excess",
 		},
 		{
-			Type:        game.EffectGainLife,
-			TargetIndex: game.TargetIndexController,
-			Amount:      5,
-			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
-				LinkID:    "excess",
-				Succeeded: game.TriTrue,
-			}),
+			Type:            game.EffectGainLife,
+			TargetIndex:     game.TargetIndexController,
+			Amount:          5,
+			ResultCondition: opt.Val(game.EffectResultCondition{LinkID: "excess", Succeeded: game.TriTrue}),
 		},
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
@@ -1042,7 +1002,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		if len(clue.TokenDef.Abilities) != 1 {
 			t.Fatalf("clue abilities = %d, want activated draw ability", len(clue.TokenDef.Abilities))
 		}
-		g.Players[game.Player1].ManaPool.Add(color.Colorless, 2)
+		g.Players[game.Player1].ManaPool.Add(mana.C, 2)
 		if !engine.applyAction(g, game.Player1, actionBuild.activateAbility(clue.ObjectID, 0, nil, 0)) {
 			t.Fatal("clue activation failed")
 		}
@@ -1631,12 +1591,7 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
-		Condition: optEffectCondition(&game.EffectCondition{
-			Text:          "it isn't a creature",
-			TargetIndex:   0,
-			PermanentType: opt.Val(types.Creature),
-			Negate:        true,
-		}),
+		Condition:   opt.Val(*&game.EffectCondition{Text: "it isn't a creature", TargetIndex: 0, PermanentType: opt.Val(types.Creature), Negate: true}),
 		ContinuousEffects: []game.ContinuousEffect{
 			{
 				Layer:       game.LayerType,
@@ -1645,8 +1600,8 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 			},
 			{
 				Layer:        game.LayerPowerToughnessSet,
-				SetPower:     optPT(zero),
-				SetToughness: optPT(zero),
+				SetPower:     opt.Val(zero),
+				SetToughness: opt.Val(zero),
 			},
 		},
 	}, []game.Target{game.PermanentTarget(artifact.ObjectID)})
@@ -1675,19 +1630,14 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 		Name:      "Construct",
 		Types:     []types.Card{types.Artifact, types.Creature},
 		Subtypes:  []types.Sub{types.Construct},
-		Power:     optPT(two),
-		Toughness: optPT(two),
+		Power:     opt.Val(two),
+		Toughness: opt.Val(two),
 	})
 	zero := game.PT{Value: 0}
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
-		Condition: optEffectCondition(&game.EffectCondition{
-			Text:          "it isn't a creature",
-			TargetIndex:   0,
-			PermanentType: opt.Val(types.Creature),
-			Negate:        true,
-		}),
+		Condition:   opt.Val(*&game.EffectCondition{Text: "it isn't a creature", TargetIndex: 0, PermanentType: opt.Val(types.Creature), Negate: true}),
 		ContinuousEffects: []game.ContinuousEffect{
 			{
 				Layer:       game.LayerType,
@@ -1696,8 +1646,8 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 			},
 			{
 				Layer:        game.LayerPowerToughnessSet,
-				SetPower:     optPT(zero),
-				SetToughness: optPT(zero),
+				SetPower:     opt.Val(zero),
+				SetToughness: opt.Val(zero),
 			},
 		},
 	}, []game.Target{game.PermanentTarget(artifactCreature.ObjectID)})
@@ -1738,10 +1688,10 @@ func TestCreateTokenEffectCreatesTokenPermanent(t *testing.T) {
 	token := &game.CardDef{
 		Name:      "Soldier Token",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 1}),
-		Toughness: optPT(game.PT{Value: 1}),
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 	}
-	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectCreateToken, Amount: 2, TargetIndex: game.TargetIndexController, Token: optToken(token)}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectCreateToken, Amount: 2, TargetIndex: game.TargetIndexController, Token: opt.Val(token)}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1777,9 +1727,9 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 			Name:      "Fanatic Source",
 			Types:     []types.Card{types.Creature},
 			Subtypes:  []types.Sub{types.Snake, types.Druid},
-			ManaCost:  optCost(mana.Cost{mana.G}),
-			Power:     optPT(game.PT{Value: 1}),
-			Toughness: optPT(game.PT{Value: 4}),
+			ManaCost:  opt.Val(cost.Mana{cost.G}),
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 4}),
 		},
 		Owner: game.Player1,
 	}
@@ -1792,7 +1742,7 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 		AbilityIndex: 0,
 	})
 	g.CardInstances[sourceID].Def.Abilities = []game.AbilityDef{
-		game.EternalizeAbility(mana.Cost{mana.GenericMana(0)}, types.Snake, types.Druid),
+		game.EternalizeAbility(cost.Mana{cost.O(0)}, types.Snake, types.Druid),
 	}
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -1831,8 +1781,8 @@ func TestTokenCanBlockTakeCombatDamageAndDie(t *testing.T) {
 	token, ok := createTokenPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Bear Token",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 	})
 	if !ok {
 		t.Fatal("token was not created")

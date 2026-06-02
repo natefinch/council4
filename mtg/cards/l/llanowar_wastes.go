@@ -18,7 +18,7 @@ import (
 //	{T}: Add {B} or {G}. This land deals 1 damage to you.
 var LlanowarWastes = &game.CardDef{
 	Name:          "Llanowar Wastes",
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Green),
+	ColorIdentity: color.NewIdentity(color.Black, color.Green),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{T}: Add {B} or {G}. This land deals 1 damage to you.",
 	Abilities: []game.AbilityDef{
@@ -30,7 +30,7 @@ var LlanowarWastes = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Colorless, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.C, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -45,9 +45,9 @@ var LlanowarWastes = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceColor,
+						Kind:   game.ResolutionChoiceMana,
 						Prompt: "Choose {B} or {G}",
-						Colors: []color.Color{color.Black, color.Green},
+						Colors: []mana.Color{mana.B, mana.G},
 					}),
 					LinkID: "llanowar-wastes-color",
 				},

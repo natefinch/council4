@@ -4,7 +4,8 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -21,12 +22,12 @@ import (
 //	{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.
 var RhonasTheIndomitable = &game.CardDef{
 	Name: "Rhonas the Indomitable",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(2),
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(2),
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
-	ColorIdentity: mana.NewColorIdentity(color.Green),
+	ColorIdentity: color.NewIdentity(color.Green),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.God},
@@ -62,9 +63,9 @@ var RhonasTheIndomitable = &game.CardDef{
 		{
 			Kind: game.ActivatedAbility,
 			Text: "{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.",
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(2),
-				mana.G,
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.G,
 			}),
 			Targets: []game.TargetSpec{
 				{

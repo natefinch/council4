@@ -5,8 +5,9 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestLegalActionsIncludesCyclingFromHand(t *testing.T) {
@@ -71,14 +72,14 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 }
 
 func cyclingCard() *game.CardDef {
-	cost := mana.Cost{mana.GenericMana(1)}
+	manaCost := cost.Mana{cost.O(1)}
 	return &game.CardDef{
 		Name: "Cycling Test Card",
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.ActivatedAbility,
 				Keywords: []game.Keyword{game.Cycling},
-				ManaCost: optCost(cost),
+				ManaCost: opt.Val(manaCost),
 				AdditionalCosts: []game.AdditionalCost{
 					{Kind: game.AdditionalCostDiscard, Text: "Discard this card", Amount: 1, Zone: game.ZoneHand},
 				},

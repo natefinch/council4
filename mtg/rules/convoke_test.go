@@ -6,14 +6,16 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestConvokeMakesGenericSpellPayableAndTapsCreatures(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(2)}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(cost.Mana{cost.O(2)}))
 	first := addCombatCreaturePermanent(g, game.Player1)
 	second := addCombatCreaturePermanent(g, game.Player1)
 	setMainPhasePriority(g, game.Player1)
@@ -29,7 +31,7 @@ func TestConvokeMakesGenericSpellPayableAndTapsCreatures(t *testing.T) {
 func TestConvokeCanUseSummoningSickCreature(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1)}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(cost.Mana{cost.O(1)}))
 	creature := addCombatCreaturePermanent(g, game.Player1)
 	creature.SummoningSick = true
 	setMainPhasePriority(g, game.Player1)
@@ -45,7 +47,7 @@ func TestConvokeCanUseSummoningSickCreature(t *testing.T) {
 func TestConvokeDoesNotTapCreaturesWhenManaCanPay(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1)}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(cost.Mana{cost.O(1)}))
 	creature := addCombatCreaturePermanent(g, game.Player1)
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	setMainPhasePriority(g, game.Player1)
@@ -64,7 +66,7 @@ func TestConvokeDoesNotTapCreaturesWhenManaCanPay(t *testing.T) {
 func TestConvokeIgnoresTappedCreatures(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1)}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(cost.Mana{cost.O(1)}))
 	creature := addCombatCreaturePermanent(g, game.Player1)
 	creature.Tapped = true
 	setMainPhasePriority(g, game.Player1)
@@ -77,7 +79,7 @@ func TestConvokeIgnoresTappedCreatures(t *testing.T) {
 func TestConvokePaymentPlanValidityChecksConvokeTapsWithoutManaTaps(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1)}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(cost.Mana{cost.O(1)}))
 	creature := addCombatCreaturePermanent(g, game.Player1)
 	setMainPhasePriority(g, game.Player1)
 
@@ -92,7 +94,7 @@ func TestConvokePaymentPlanValidityChecksConvokeTapsWithoutManaTaps(t *testing.T
 func TestConvokePaysColoredSymbolsWithCreatureColor(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.G, mana.G}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(cost.Mana{cost.G, cost.G}))
 	first := addCombatPermanent(g, game.Player1, greenConvokeCreature())
 	second := addCombatPermanent(g, game.Player1, greenConvokeCreature())
 	setMainPhasePriority(g, game.Player1)
@@ -108,7 +110,7 @@ func TestConvokePaysColoredSymbolsWithCreatureColor(t *testing.T) {
 func TestConvokeDoesNotDoubleUseManaCreature(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1), mana.G}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(cost.Mana{cost.O(1), cost.G}))
 	manaCreature := addCombatPermanent(g, game.Player1, greenManaCreature())
 	otherCreature := addCombatCreaturePermanent(g, game.Player1)
 	setMainPhasePriority(g, game.Player1)
@@ -131,11 +133,11 @@ func setMainPhasePriority(g *game.Game, playerID game.PlayerID) {
 	g.Turn.PriorityPlayer = playerID
 }
 
-func convokeSpell(cost mana.Cost) *game.CardDef {
+func convokeSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Convoke Spell",
 		Types:    []types.Card{types.Sorcery},
-		ManaCost: optCost(cost),
+		ManaCost: opt.Val(manaCost),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Convoke}},
 			{Kind: game.SpellAbility},
@@ -148,8 +150,8 @@ func greenManaCreature() *game.CardDef {
 	return &game.CardDef{
 		Name:      "Green Mana Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
 			Kind:          game.ActivatedAbility,
 			IsManaAbility: true,
@@ -157,7 +159,7 @@ func greenManaCreature() *game.CardDef {
 				Kind: game.AdditionalCostTap,
 				Text: "{T}",
 			}},
-			Effects: []game.Effect{{Type: game.EffectAddMana, ManaColor: color.Green, Amount: 1}},
+			Effects: []game.Effect{{Type: game.EffectAddMana, ManaColor: mana.G, Amount: 1}},
 		}},
 	}
 }
@@ -168,7 +170,7 @@ func greenConvokeCreature() *game.CardDef {
 		Name:      "Green Convoke Creature",
 		Types:     []types.Card{types.Creature},
 		Colors:    []color.Color{color.Green},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 	}
 }

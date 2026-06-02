@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -136,8 +137,8 @@ func (r *effectResolver) effectRecipientOrController(effect *game.Effect) (game.
 
 // manaColor returns the mana color for an add-mana effect, respecting any
 // resolution choice that overrides the effect's declared color.
-func (r *effectResolver) manaColor(effect *game.Effect) color.Color {
-	return effectManaColor(r.obj, effect)
+func (r *effectResolver) manaColor(effect *game.Effect) mana.Color {
+	return r.effectManaColor(r.obj, effect)
 }
 
 // resolve checks conditions and then executes the effect, recording the result
@@ -693,7 +694,7 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 		token.DynamicToughness = opt.V[game.DynamicValue]{}
 	}
 	if spec.NoManaCost {
-		token.ManaCost = opt.V[mana.Cost]{}
+		token.ManaCost = opt.V[cost.Mana]{}
 	}
 	if spec.NoPrintedText {
 		token.OracleText = ""
@@ -1399,8 +1400,8 @@ func effectPlayer(g *game.Game, obj *game.StackObject, effect *game.Effect) (gam
 	return target.PlayerID, true
 }
 
-func effectManaColor(obj *game.StackObject, effect *game.Effect) color.Color {
-	if choice, ok := linkedResolutionChoice(obj, effect.ChoiceLinkID); ok && choice.Kind == game.ResolutionChoiceColor {
+func (*effectResolver) effectManaColor(obj *game.StackObject, effect *game.Effect) mana.Color {
+	if choice, ok := linkedResolutionChoice(obj, effect.ChoiceLinkID); ok && choice.Kind == game.ResolutionChoiceMana {
 		return choice.Color
 	}
 	return effect.ManaColor

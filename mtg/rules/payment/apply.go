@@ -2,7 +2,7 @@ package payment
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
@@ -53,7 +53,7 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 }
 
 // tapForMana taps a permanent to produce mana and adds it to the controller's pool.
-func tapForMana(s State, permanent *game.Permanent, color color.Color, amount int, snow bool) bool {
+func tapForMana(s State, permanent *game.Permanent, color mana.Color, amount int, snow bool) bool {
 	if permanent.Tapped {
 		return false
 	}
@@ -75,7 +75,7 @@ func tapForMana(s State, permanent *game.Permanent, color color.Color, amount in
 	return true
 }
 
-func payColoredSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, symbol mana.Symbol, color color.Color, method game.SymbolPaymentMethod) bool {
+func payColoredSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, color mana.Color, method game.SymbolPaymentMethod) bool {
 	if !paySpecificMana(plan, pool, sources, color) {
 		return false
 	}
@@ -87,7 +87,7 @@ func payColoredSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[col
 	return true
 }
 
-func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, color color.Color) bool {
+func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, color mana.Color) bool {
 	if spendUnitFromSnapshot(plan, pool, mana.Unit{Color: color}, 1) {
 		return true
 	}
@@ -108,7 +108,7 @@ func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[colo
 	return paySpecificMana(plan, pool, sources, color)
 }
 
-func payGenericSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, symbol mana.Symbol, amount int, method game.SymbolPaymentMethod) bool {
+func payGenericSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, amount int, method game.SymbolPaymentMethod) bool {
 	if amount < 0 {
 		return false
 	}
@@ -123,7 +123,7 @@ func payGenericSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[col
 	return true
 }
 
-func payGenericMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, amount int) bool {
+func payGenericMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, amount int) bool {
 	remaining := amount
 	for remaining > 0 {
 		if spendAnyUnitFromSnapshot(plan, pool) {
@@ -140,29 +140,29 @@ func payGenericMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[color
 	return true
 }
 
-func payHybridSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, symbol mana.Symbol) bool {
-	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[color.Color][]manaSource) bool {
+func payHybridSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol) bool {
+	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[mana.Color][]manaSource) bool {
 		return payColoredSymbol(trialPlan, trialPool, trialSources, symbol, symbol.Color, game.SymbolPaymentHybridFirst)
 	}) {
 		return true
 	}
-	return trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[color.Color][]manaSource) bool {
+	return trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[mana.Color][]manaSource) bool {
 		return payColoredSymbol(trialPlan, trialPool, trialSources, symbol, symbol.AltColor, game.SymbolPaymentHybridSecond)
 	})
 }
 
-func payMonoHybridSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, symbol mana.Symbol) bool {
-	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[color.Color][]manaSource) bool {
+func payMonoHybridSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol) bool {
+	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[mana.Color][]manaSource) bool {
 		return payColoredSymbol(trialPlan, trialPool, trialSources, symbol, symbol.Color, game.SymbolPaymentMonoHybridColor)
 	}) {
 		return true
 	}
-	return trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[color.Color][]manaSource) bool {
+	return trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[mana.Color][]manaSource) bool {
 		return payGenericSymbol(trialPlan, trialPool, trialSources, symbol, 2, game.SymbolPaymentMonoHybridGeneric)
 	})
 }
 
-func paySnowSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, symbol mana.Symbol) bool {
+func paySnowSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol) bool {
 	if !paySnowMana(plan, pool, sources) {
 		return false
 	}
@@ -174,7 +174,7 @@ func paySnowSymbol(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.
 	return true
 }
 
-func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource) bool {
+func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource) bool {
 	if spendAnySnowUnitFromSnapshot(plan, pool) {
 		return true
 	}
@@ -187,7 +187,7 @@ func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Co
 	return spendAnySnowUnitFromSnapshot(plan, pool)
 }
 
-func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, symbol mana.Symbol, prefs *Preferences) bool {
+func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, prefs *Preferences) bool {
 	if prefs != nil && prefs.NextPhyrexianLifeChoice() {
 		if player.Life-plan.lifePayment < 2 {
 			return false
@@ -200,7 +200,7 @@ func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Un
 		})
 		return true
 	}
-	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[color.Color][]manaSource) bool {
+	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[mana.Color][]manaSource) bool {
 		return payColoredSymbol(trialPlan, trialPool, trialSources, symbol, symbol.Color, game.SymbolPaymentPhyrexianMana)
 	}) {
 		return true
@@ -261,7 +261,7 @@ func paymentUnitOrder() []mana.Unit {
 	return units
 }
 
-func trySymbolPayment(plan *paymentPlan, pool map[mana.Unit]int, sources map[color.Color][]manaSource, pay func(*paymentPlan, map[mana.Unit]int, map[color.Color][]manaSource) bool) bool {
+func trySymbolPayment(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, pay func(*paymentPlan, map[mana.Unit]int, map[mana.Color][]manaSource) bool) bool {
 	trialPlan := clonePaymentPlan(*plan)
 	trialPool := cloneUnitCounts(pool)
 	trialSources := cloneManaSources(sources)
@@ -274,7 +274,7 @@ func trySymbolPayment(plan *paymentPlan, pool map[mana.Unit]int, sources map[col
 	return true
 }
 
-func takeManaSource(sources map[color.Color][]manaSource, color color.Color) (manaSource, bool) {
+func takeManaSource(sources map[mana.Color][]manaSource, color mana.Color) (manaSource, bool) {
 	if source, ok := takeNonSnowManaSource(sources, color); ok {
 		return source, true
 	}
@@ -286,7 +286,7 @@ func takeManaSource(sources map[color.Color][]manaSource, color color.Color) (ma
 	return manaSource{}, false
 }
 
-func takeNonSnowManaSource(sources map[color.Color][]manaSource, color color.Color) (manaSource, bool) {
+func takeNonSnowManaSource(sources map[mana.Color][]manaSource, color mana.Color) (manaSource, bool) {
 	for i, source := range sources[color] {
 		if source.snow {
 			continue
@@ -297,7 +297,7 @@ func takeNonSnowManaSource(sources map[color.Color][]manaSource, color color.Col
 	return manaSource{}, false
 }
 
-func takeAnyManaSource(sources map[color.Color][]manaSource) (manaSource, bool) {
+func takeAnyManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
 	for _, color := range paymentColors {
 		if source, ok := takeManaSource(sources, color); ok {
 			return source, true
@@ -306,7 +306,7 @@ func takeAnyManaSource(sources map[color.Color][]manaSource) (manaSource, bool) 
 	return manaSource{}, false
 }
 
-func takeAnySnowManaSource(sources map[color.Color][]manaSource) (manaSource, bool) {
+func takeAnySnowManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
 	for _, color := range paymentColors {
 		for i, source := range sources[color] {
 			if !source.snow {

@@ -14,7 +14,7 @@ Check presence with `.Exists`. Import path: `"github.com/natefinch/council4/opt"
 
 ```go
 // Set a value:
-ManaCost: opt.Val(mana.Cost{mana.R})
+ManaCost: opt.Val(cost.Mana{cost.R})
 // Absent (default): just omit the field
 ```
 
@@ -52,16 +52,16 @@ type AbilityDef struct {
     Kind               AbilityKind
     Text               string                  // Full oracle text of this ability paragraph
     Keywords           []Keyword               // Keyword abilities this provides
-    ProtectionFromColors []mana.Color           // For Protection keyword
+    ProtectionFromColors []color.Color          // For Protection keyword
     EnchantTarget      opt.V[TargetSpec]       // Parameterizes Enchant for Aura attachment legality
-    WardCost           opt.V[mana.Cost]        // Mana cost for Ward (CR 702.20)
-    MadnessCost        opt.V[mana.Cost]        // Mana cost for Madness (CR 702.35)
-    SuspendCost        opt.V[mana.Cost]        // Mana cost for Suspend (CR 702.62)
+    WardCost           opt.V[cost.Mana]        // Mana cost for Ward (CR 702.20)
+    MadnessCost        opt.V[cost.Mana]        // Mana cost for Madness (CR 702.35)
+    SuspendCost        opt.V[cost.Mana]        // Mana cost for Suspend (CR 702.62)
     SuspendTimeCounters int                    // Number of time counters for Suspend
-    ManaCost           opt.V[mana.Cost]        // Mana component of activated ability cost
+    ManaCost           opt.V[cost.Mana]        // Mana component of activated ability cost
     AdditionalCosts    []AdditionalCost        // Typed non-mana costs
     AlternativeCosts   []AlternativeCost       // Optional replacement costs
-    KickerCost         opt.V[mana.Cost]        // Optional Kicker mana cost
+    KickerCost         opt.V[cost.Mana]        // Optional Kicker mana cost
     KickerEffects      []Effect                // Additional effects if kicked
     Trigger            opt.V[TriggerCondition] // When triggered ability fires (absent for non-triggered)
     Optional           bool                    // True for "you may" abilities
@@ -78,6 +78,9 @@ type AbilityDef struct {
     IsManaAbility      bool                    // True for mana abilities (CR 605.1)
 }
 ```
+
+Card color identity lives in `mtg/game/color`, not `mtg/game/mana`. Use
+`color.NewIdentity(color.Green, color.Red)` for `CardDef.ColorIdentity`.
 
 ### AbilityKind
 
@@ -246,7 +249,7 @@ type ResolutionChoice struct {
     Prompt         string
     Player         PlayerID
     UsePlayer      bool
-    Colors         []mana.Color
+    Colors         []mana.Color                 // Mana colors for mana choices
     CardTypes      []types.Card
     PlayerRelation PlayerRelation
     Zone           ZoneType
@@ -254,7 +257,7 @@ type ResolutionChoice struct {
 
 type ResolutionPayment struct {
     Prompt          string
-    ManaCost        opt.V[mana.Cost]
+    ManaCost        opt.V[cost.Mana]
     AdditionalCosts []AdditionalCost
     XValue          int
 }
@@ -350,8 +353,8 @@ const (
 type TargetPredicate struct {
     PermanentTypes []types.Card
     ExcludedTypes  []types.Card
-    Colors         []mana.Color
-    ExcludedColors []mana.Color
+    Colors         []color.Color
+    ExcludedColors []color.Color
     Controller     ControllerRelation
     Player         PlayerRelation
     Tapped         TriState
@@ -461,21 +464,21 @@ and `EventPermanentUntapped` for tap/untap triggers. Use
 `Target` field identifies whether a permanent, player, or stack object became
 the target.
 
-### Mana construction helpers
+### Mana Cost construction helpers
 
 ```go
-mana.W    // {W}
-mana.U     // {U}
-mana.B    // {B}
-mana.R      // {R}
-mana.G    // {G}
-mana.GenericMana(3)             // {3}
-mana.ColorlessMana()            // {C}
-mana.VariableMana()             // {X}
-mana.HybridMana(mana.White, mana.Blue)  // {W/U}
-mana.MonoHybridMana(mana.White)         // {2/W}
-mana.PhyrexianMana(mana.White)          // {W/P}
-mana.SnowMana()                         // {S}
+cost.W    // {W}
+cost.U     // {U}
+cost.B    // {B}
+cost.R      // {R}
+cost.G    // {G}
+cost.O(3)             // {3}
+cost.C            // {C}
+cost.X             // {X}
+cost.HybridMana(mana.W, mana.U)  // {W/U}
+cost.Twobrid(mana.W)             // {2/W}
+cost.PhyrexianMana(mana.W)          // {W/P}
+cost.S                         // {S}
 ```
 
 ---
@@ -517,10 +520,10 @@ Abilities: []game.AbilityDef{
 Do not smash multiple plain keywords into one `AbilityDef` with `Keywords: []game.Keyword{...}`. Use explicit `AbilityDef` values only for keyword abilities that need card-specific parameters or costs.
 
 For keywords with parameters:
-- **Protection from [color]**: `Keywords: []game.Keyword{game.Protection}`, `ProtectionFromColors: []mana.Color{mana.Red}`
-- **Ward {N}**: `Keywords: []game.Keyword{game.Ward}`, `WardCost: opt.Val(mana.Cost{mana.GenericMana(N)})`
-- **Equip {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Equip}`, `ManaCost: opt.Val(mana.Cost{mana.GenericMana(N)})`, `Timing: game.SorceryOnly`
-- **Cycling {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Cycling}`, `ManaCost: opt.Val(mana.Cost{...})`, `AdditionalCosts` with discard self
+- **Protection from [color]**: `Keywords: []game.Keyword{game.Protection}`, `ProtectionFromColors: []color.Color{color.Red}`
+- **Ward {N}**: `Keywords: []game.Keyword{game.Ward}`, `WardCost: opt.Val(cost.Mana{cost.O(N)})`
+- **Equip {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Equip}`, `ManaCost: opt.Val(cost.Mana{cost.O(N)})`, `Timing: game.SorceryOnly`
+- **Cycling {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Cycling}`, `ManaCost: opt.Val(cost.Mana{...})`, `AdditionalCosts` with discard self
 - **Prowess**: `Keywords: []game.Keyword{game.Prowess}` on a static ability; the rules engine creates the implicit trigger (CR 702.108)
 - **Flashback {cost}**: `Keywords: []game.Keyword{game.Flashback}` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 

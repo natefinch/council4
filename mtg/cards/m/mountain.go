@@ -16,7 +16,7 @@ import (
 //	({T}: Add {R}.)
 var Mountain = &game.CardDef{
 	Name:          "Mountain",
-	ColorIdentity: mana.NewColorIdentity(color.Red),
+	ColorIdentity: color.NewIdentity(color.Red),
 	Supertypes:    []types.Super{types.Basic},
 	Types:         []types.Card{types.Land},
 	Subtypes:      []types.Sub{types.Mountain},
@@ -30,7 +30,7 @@ var Mountain = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Red, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
 			},
 		},
 	},

@@ -22,7 +22,7 @@ import (
 // subtype mana abilities at runtime.
 var CinderGlade = &game.CardDef{
 	Name:          "Cinder Glade",
-	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	Subtypes:      []types.Sub{types.Mountain, types.Forest},
 	OracleText:    "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",
@@ -47,9 +47,9 @@ var CinderGlade = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceColor,
+						Kind:   game.ResolutionChoiceMana,
 						Prompt: "Choose a color",
-						Colors: []color.Color{color.Red, color.Green},
+						Colors: []mana.Color{mana.R, mana.G},
 					}),
 					LinkID: "cinder-glade-color",
 				},

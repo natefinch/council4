@@ -3,7 +3,8 @@ package f
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -18,12 +19,12 @@ import (
 //	When this creature enters, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.
 var FarhavenElf = &game.CardDef{
 	Name: "Farhaven Elf",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(2),
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(2),
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
-	ColorIdentity: mana.NewColorIdentity(color.Green),
+	ColorIdentity: color.NewIdentity(color.Green),
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Elf, types.Druid},
 	Power:         opt.Val(game.PT{Value: 1}),

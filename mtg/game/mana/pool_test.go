@@ -1,15 +1,15 @@
 package mana
 
-import "github.com/natefinch/council4/mtg/game/color"
-
-import "testing"
+import (
+	"testing"
+)
 
 func TestPoolAmountIncludesSnowAndNonSnowMana(t *testing.T) {
 	pool := NewPool()
-	pool.Add(color.Green, 1)
-	pool.AddSnow(color.Green, 2)
+	pool.Add(G, 1)
+	pool.AddSnow(G, 2)
 
-	if got := pool.Amount(color.Green); got != 3 {
+	if got := pool.Amount(G); got != 3 {
 		t.Fatalf("green mana = %d, want 3", got)
 	}
 	if got := pool.SnowAmount(); got != 2 {
@@ -19,10 +19,10 @@ func TestPoolAmountIncludesSnowAndNonSnowMana(t *testing.T) {
 
 func TestPoolSpendPreservesSnowManaWhenPossible(t *testing.T) {
 	pool := NewPool()
-	pool.AddSnow(color.Green, 1)
-	pool.Add(color.Green, 1)
+	pool.AddSnow(G, 1)
+	pool.Add(G, 1)
 
-	if !pool.Spend(color.Green, 1) {
+	if !pool.Spend(G, 1) {
 		t.Fatal("Spend(Green, 1) = false, want true")
 	}
 	if got := pool.SnowAmount(); got != 1 {
@@ -32,12 +32,12 @@ func TestPoolSpendPreservesSnowManaWhenPossible(t *testing.T) {
 
 func TestPoolSpendSnowRequiresSnowMana(t *testing.T) {
 	pool := NewPool()
-	pool.Add(color.Green, 1)
+	pool.Add(G, 1)
 
 	if pool.SpendSnow(1) {
 		t.Fatal("SpendSnow(1) = true with non-snow mana, want false")
 	}
-	pool.AddSnow(color.Red, 1)
+	pool.AddSnow(R, 1)
 	if !pool.SpendSnow(1) {
 		t.Fatal("SpendSnow(1) = false with snow mana, want true")
 	}

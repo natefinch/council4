@@ -5,14 +5,15 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestWardCountersSpellWhenCostIsNotPaid(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.GenericMana(1)})
+	warded := addWardPermanent(g, game.Player2, cost.Mana{cost.O(1)})
 	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
 	g.Turn.PriorityPlayer = game.Player1
 
@@ -35,7 +36,7 @@ func TestWardCountersSpellWhenCostIsNotPaid(t *testing.T) {
 func TestWardPaidLeavesSpellOnStack(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.G})
+	warded := addWardPermanent(g, game.Player2, cost.Mana{cost.G})
 	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.PriorityPlayer = game.Player1
@@ -62,7 +63,7 @@ func TestWardPaidLeavesSpellOnStack(t *testing.T) {
 func TestWardDoesNotTriggerForControllerTargetingOwnPermanent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.GenericMana(1)})
+	warded := addWardPermanent(g, game.Player2, cost.Mana{cost.O(1)})
 	spellID := addCardToHand(g, game.Player2, targetCreatureInstant())
 	g.Turn.PriorityPlayer = game.Player2
 
@@ -80,7 +81,7 @@ func TestWardDoesNotTriggerForControllerTargetingOwnPermanent(t *testing.T) {
 func TestWardCountersActivatedAbilityWhenCostIsNotPaid(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.GenericMana(1)})
+	warded := addWardPermanent(g, game.Player2, cost.Mana{cost.O(1)})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Targeting Permanent",
 		Types: []types.Card{types.Artifact},
@@ -104,17 +105,17 @@ func TestWardCountersActivatedAbilityWhenCostIsNotPaid(t *testing.T) {
 	}
 }
 
-func addWardPermanent(g *game.Game, controller game.PlayerID, cost mana.Cost) *game.Permanent {
+func addWardPermanent(g *game.Game, controller game.PlayerID, manaCost cost.Mana) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Ward Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Ward},
-			WardCost: optCost(cost),
+			WardCost: opt.Val(manaCost),
 		}},
 	})
 }

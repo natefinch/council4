@@ -3,8 +3,9 @@ package m
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
-	"github.com/natefinch/council4/mtg/game/mana"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -19,11 +20,11 @@ import (
 //	Choose target creature you control and target creature you don't control. If the creature you control entered this turn, put a +1/+1 counter on it. Then those creatures fight each other.
 var MalametBattleGlyph = &game.CardDef{
 	Name: "Malamet Battle Glyph",
-	ManaCost: opt.Val(mana.Cost{
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
-	ColorIdentity: mana.NewColorIdentity(color.Green),
+	ColorIdentity: color.NewIdentity(color.Green),
 	Types:         []types.Card{types.Sorcery},
 	OracleText:    "Choose target creature you control and target creature you don't control. If the creature you control entered this turn, put a +1/+1 counter on it. Then those creatures fight each other.",
 	Abilities: []game.AbilityDef{

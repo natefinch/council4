@@ -3,8 +3,9 @@ package l
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
-	"github.com/natefinch/council4/mtg/game/mana"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -21,13 +22,13 @@ import (
 //	Whenever you cast a spell that targets a creature you don't control, Legolas deals damage equal to its power to up to one target creature.
 var LegolasMasterArcher = &game.CardDef{
 	Name: "Legolas, Master Archer",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
-		mana.G,
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
+		cost.G,
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
-	ColorIdentity: mana.NewColorIdentity(color.Green),
+	ColorIdentity: color.NewIdentity(color.Green),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Elf, types.Archer},

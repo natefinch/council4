@@ -1,7 +1,7 @@
 package game
 
 import (
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -50,7 +50,7 @@ type ResolutionChoiceKind int
 // Resolution choice kind values classify value-producing choices.
 const (
 	ResolutionChoiceNone ResolutionChoiceKind = iota
-	ResolutionChoiceColor
+	ResolutionChoiceMana
 	ResolutionChoiceCardType
 	ResolutionChoicePlayer
 	ResolutionChoiceCard
@@ -80,7 +80,7 @@ type ResolutionChoice struct {
 	UsePlayer bool
 
 	ColorSource    ResolutionChoiceColorSource
-	Colors         []color.Color
+	Colors         []mana.Color
 	CardTypes      []types.Card
 	PlayerRelation PlayerRelation
 	Zone           ZoneType
@@ -89,7 +89,7 @@ type ResolutionChoice struct {
 // ResolutionChoiceResult stores the selected value from a ResolutionChoice.
 type ResolutionChoiceResult struct {
 	Kind     ResolutionChoiceKind
-	Color    color.Color
+	Color    mana.Color
 	CardType types.Card
 	Player   PlayerID
 	CardID   id.ID
@@ -99,7 +99,7 @@ type ResolutionChoiceResult struct {
 // resolution (CR 608.2c, CR 117.12).
 type ResolutionPayment struct {
 	Prompt          string
-	ManaCost        opt.V[mana.Cost]
+	ManaCost        opt.V[cost.Mana]
 	AdditionalCosts []AdditionalCost
 	XValue          int
 }

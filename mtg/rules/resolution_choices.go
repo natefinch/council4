@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -55,9 +55,9 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 		values[index] = result
 	}
 	switch choice.Kind {
-	case game.ResolutionChoiceColor:
-		for i, color := range resolutionChoiceColors(g, playerID, choice) {
-			add(i, color.String(), game.ResolutionChoiceResult{Kind: choice.Kind, Color: color})
+	case game.ResolutionChoiceMana:
+		for i, color := range resolutionChoiceMana(g, playerID, choice) {
+			add(i, string(color), game.ResolutionChoiceResult{Kind: choice.Kind, Color: color})
 		}
 	case game.ResolutionChoiceCardType:
 		cardTypes := choice.CardTypes
@@ -96,23 +96,23 @@ func resolutionChoicePlayer(controller game.PlayerID, choice *game.ResolutionCho
 	return controller
 }
 
-func resolutionChoiceColors(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []color.Color {
+func resolutionChoiceMana(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
 	if choice == nil {
 		return nil
 	}
 	switch choice.ColorSource {
 	case game.ResolutionChoiceColorSourceCommanderIdentity:
-		return commanderColorIdentityColors(g, playerID)
+		return commanderColorIdentityMana(g, playerID)
 	default:
 		colors := choice.Colors
 		if len(colors) == 0 {
-			colors = append(mana.AllColors(), color.Colorless)
+			colors = []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G, mana.C}
 		}
 		return colors
 	}
 }
 
-func commanderColorIdentityColors(g *game.Game, playerID game.PlayerID) []color.Color {
+func commanderColorIdentityMana(g *game.Game, playerID game.PlayerID) []mana.Color {
 	player, ok := playerByID(g, playerID)
 	if !ok || player.CommanderInstanceID == 0 {
 		return nil
@@ -121,7 +121,15 @@ func commanderColorIdentityColors(g *game.Game, playerID game.PlayerID) []color.
 	if !ok || card.Def == nil {
 		return nil
 	}
-	return card.Def.ColorIdentity.Colors()
+	colors := card.Def.ColorIdentity.Colors()
+	if len(colors) == 0 {
+		return nil
+	}
+	manaColors := make([]mana.Color, 0, len(colors))
+	for _, c := range colors {
+		manaColors = append(manaColors, cost.ManaForColor(c))
+	}
+	return manaColors
 }
 
 func choicePlayerMatches(controller, candidate game.PlayerID, relation game.PlayerRelation) bool {
@@ -156,7 +164,7 @@ func resolutionChoiceCardIDs(g *game.Game, playerID game.PlayerID, zone game.Zon
 
 func defaultResolutionChoicePrompt(kind game.ResolutionChoiceKind) string {
 	switch kind {
-	case game.ResolutionChoiceColor:
+	case game.ResolutionChoiceMana:
 		return "Choose a color."
 	case game.ResolutionChoiceCardType:
 		return "Choose a card type."

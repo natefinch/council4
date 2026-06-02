@@ -2,7 +2,7 @@ package i
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -18,8 +18,8 @@ import (
 //	Equip {1}
 var InfiltrationLens = &game.CardDef{
 	Name: "Infiltration Lens",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
 	}),
 	Types:      []types.Card{types.Artifact},
 	Subtypes:   []types.Sub{types.Equipment},
@@ -46,8 +46,8 @@ var InfiltrationLens = &game.CardDef{
 			Kind:     game.ActivatedAbility,
 			Text:     "Equip {1}",
 			Keywords: []game.Keyword{game.Equip},
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(1),
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
 			}),
 			Timing: game.SorceryOnly,
 			Targets: []game.TargetSpec{

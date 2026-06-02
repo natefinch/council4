@@ -16,7 +16,7 @@ import (
 //	({T}: Add {G}.)
 var Forest = &game.CardDef{
 	Name:          "Forest",
-	ColorIdentity: mana.NewColorIdentity(color.Green),
+	ColorIdentity: color.NewIdentity(color.Green),
 	Supertypes:    []types.Super{types.Basic},
 	Types:         []types.Card{types.Land},
 	Subtypes:      []types.Sub{types.Forest},
@@ -30,7 +30,7 @@ var Forest = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
 			},
 		},
 	},

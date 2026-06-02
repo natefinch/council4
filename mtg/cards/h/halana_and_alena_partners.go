@@ -3,8 +3,9 @@ package h
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
-	"github.com/natefinch/council4/mtg/game/mana"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -21,13 +22,13 @@ import (
 //	At the beginning of combat on your turn, put X +1/+1 counters on another target creature you control, where X is Halana and Alena's power. That creature gains haste until end of turn.
 var HalanaAndAlenaPartners = &game.CardDef{
 	Name: "Halana and Alena, Partners",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(2),
-		mana.R,
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(2),
+		cost.R,
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green, color.Red},
-	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Human, types.Ranger},

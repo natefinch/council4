@@ -452,8 +452,8 @@ func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, so
 	if permanent == nil || source == nil {
 		return false
 	}
-	for _, color := range permanentProtectionColors(g, permanent) {
-		if slices.Contains(source.Colors, color) {
+	for _, clr := range permanentProtectionColors(g, permanent) {
+		if slices.Contains(source.Colors, clr) {
 			return true
 		}
 	}

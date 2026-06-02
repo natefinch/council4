@@ -2,7 +2,7 @@ package g
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -19,8 +19,8 @@ import (
 //	{5}: Monstrosity 5. (If this creature isn't monstrous, put five +1/+1 counters on it and it becomes monstrous.)
 var GigglingSkitterspike = &game.CardDef{
 	Name: "Giggling Skitterspike",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(4),
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(4),
 	}),
 	Types:      []types.Card{types.Artifact, types.Creature},
 	Subtypes:   []types.Sub{types.Toy},
@@ -100,8 +100,8 @@ var GigglingSkitterspike = &game.CardDef{
 		{
 			Kind: game.ActivatedAbility,
 			Text: "{5}: Monstrosity 5. (If this creature isn't monstrous, put five +1/+1 counters on it and it becomes monstrous.)",
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(5),
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(5),
 			}),
 			Timing: game.SorceryOnly,
 			Effects: []game.Effect{

@@ -2,8 +2,8 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -29,6 +29,10 @@ func canPayTestSpellCosts(g *game.Game, req testSpellPaymentRequest) bool {
 	})
 }
 
-func payTestGenericCost(g *game.Game, playerID game.PlayerID, cost *mana.Cost) bool {
-	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost})
+func payTestGenericCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana) bool {
+	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost})
+}
+
+func payTestGenericCostWithPreferences(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, prefs *payment.Preferences) bool {
+	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, Prefs: prefs})
 }

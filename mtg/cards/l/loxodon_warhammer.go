@@ -2,7 +2,7 @@ package l
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -18,8 +18,8 @@ import (
 //	Equip {3}
 var LoxodonWarhammer = &game.CardDef{
 	Name: "Loxodon Warhammer",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(3),
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(3),
 	}),
 	Types:      []types.Card{types.Artifact},
 	Subtypes:   []types.Sub{types.Equipment},
@@ -52,8 +52,8 @@ var LoxodonWarhammer = &game.CardDef{
 			Kind:     game.ActivatedAbility,
 			Text:     "Equip {3}",
 			Keywords: []game.Keyword{game.Equip},
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(3),
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
 			}),
 			Timing: game.SorceryOnly,
 			Targets: []game.TargetSpec{

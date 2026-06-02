@@ -2,8 +2,8 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -184,7 +184,7 @@ func emitCardRevealEvent(g *game.Game, obj *game.StackObject, playerID game.Play
 }
 
 func clueTokenDef() *game.CardDef {
-	two := mana.Cost{mana.GenericMana(2)}
+	two := cost.Mana{cost.O(2)}
 	return &game.CardDef{
 		Name:     "Clue Token",
 		Types:    []types.Card{types.Artifact},

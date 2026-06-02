@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -69,9 +69,9 @@ func TestSimpleKeywordAbilityTemplates(t *testing.T) {
 }
 
 func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
-	cost := mana.Cost{mana.GenericMana(2), mana.G}
-	ability := EternalizeAbility(cost, types.Snake, types.Druid)
-	cost[0] = mana.GenericMana(9)
+	manaCost := cost.Mana{cost.O(2), cost.G}
+	ability := EternalizeAbility(manaCost, types.Snake, types.Druid)
+	manaCost[0] = cost.O(9)
 
 	if ability.Kind != ActivatedAbility || !slices.Equal(ability.Keywords, []Keyword{Eternalize}) {
 		t.Fatalf("ability kind/keywords = %v/%+v, want Eternalize activated ability", ability.Kind, ability.Keywords)
@@ -79,7 +79,7 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	if ability.ZoneOfFunction != ZoneGraveyard || ability.Timing != SorceryOnly {
 		t.Fatalf("zone/timing = %v/%v, want graveyard sorcery", ability.ZoneOfFunction, ability.Timing)
 	}
-	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, []mana.Symbol{mana.GenericMana(2), mana.G}) {
+	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, []cost.Symbol{cost.O(2), cost.G}) {
 		t.Fatalf("mana cost = %+v, want copied eternalize cost", ability.ManaCost)
 	}
 	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0].Kind != AdditionalCostExileSource {

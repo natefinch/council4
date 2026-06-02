@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"go/format"
 	"slices"
 	"strconv"
 	"strings"
@@ -36,18 +37,26 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 	if card.Layout == "reversible_card" && len(card.CardFaces) > 0 {
 		faces = facesFromAllCardFaces(card)
 	}
+	needsCost := fieldsNeedCost(root) || anyFaceNeedsCost(faces)
+	needsColor := fieldsNeedColor(root) || anyFaceNeedsColor(faces)
 	needsMana := fieldsNeedMana(root) || anyFaceNeedsMana(faces)
 	needsOpt := fieldsNeedOpt(root) || anyFaceNeedsOpt(faces) || len(faces) > 0
 
 	_, _ = fmt.Fprintf(&b, "package %s\n\n", pkgName)
 	_, _ = b.WriteString("import (\n")
-	if needsOpt {
-		_, _ = b.WriteString("\t\"github.com/natefinch/council4/opt\"\n")
-	}
 	_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game\"\n")
+	if needsColor {
+		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/color\"\n")
+	}
+	if needsCost {
+		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/cost\"\n")
+	}
 	_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/types\"\n")
 	if needsMana {
 		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/mana\"\n")
+	}
+	if needsOpt {
+		_, _ = b.WriteString("\t\"github.com/natefinch/council4/opt\"\n")
 	}
 	_, _ = b.WriteString(")\n\n")
 
@@ -61,7 +70,7 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 				return "", err
 			}
 		}
-		return b.String(), nil
+		return formatGeneratedSource(b.String())
 	}
 
 	writeCardComment(&b, card, root, faces)
@@ -69,7 +78,15 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 		return "", err
 	}
 
-	return b.String(), nil
+	return formatGeneratedSource(b.String())
+}
+
+func formatGeneratedSource(source string) (string, error) {
+	formatted, err := format.Source([]byte(source))
+	if err != nil {
+		return "", fmt.Errorf("formatting generated source: %w", err)
+	}
+	return string(formatted), nil
 }
 
 func rootFields(card *ScryfallCard) generatedCardFields {
@@ -149,12 +166,37 @@ func layoutEmitsFaces(layout string) bool {
 	}
 }
 
+func fieldsNeedCost(fields generatedCardFields) bool {
+	return fields.ManaCost != ""
+}
+
+func fieldsNeedColor(fields generatedCardFields) bool {
+	return len(fields.Colors) > 0 || len(fields.ColorIdentity) > 0
+}
+
 func fieldsNeedMana(fields generatedCardFields) bool {
-	return fields.ManaCost != "" || len(fields.Colors) > 0 || len(fields.ColorIdentity) > 0
+	return costLiteralNeedsManaPackage(fields.ManaCost)
+}
+
+func costLiteralNeedsManaPackage(manaCost string) bool {
+	for _, match := range manaSymbolRe.FindAllStringSubmatch(manaCost, -1) {
+		if strings.Contains(match[1], "/") {
+			return true
+		}
+	}
+	return false
 }
 
 func fieldsNeedOpt(fields generatedCardFields) bool {
 	return fields.ManaCost != "" || fields.Power != nil || fields.Toughness != nil || fields.Loyalty != nil || fields.Defense != nil
+}
+
+func anyFaceNeedsCost(faces []generatedCardFields) bool {
+	return slices.ContainsFunc(faces, fieldsNeedCost)
+}
+
+func anyFaceNeedsColor(faces []generatedCardFields) bool {
+	return slices.ContainsFunc(faces, fieldsNeedColor)
 }
 
 func anyFaceNeedsMana(faces []generatedCardFields) bool {
@@ -259,10 +301,10 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 		}
 	}
 	if len(fields.Colors) > 0 {
-		_, _ = fmt.Fprintf(b, "%sColors: []mana.Color{%s},\n", indent, colorLiterals(fields.Colors))
+		_, _ = fmt.Fprintf(b, "%sColors: []color.Color{%s},\n", indent, colorLiterals(fields.Colors))
 	}
 	if includeColorIdentity && len(fields.ColorIdentity) > 0 {
-		_, _ = fmt.Fprintf(b, "%sColorIdentity: mana.NewColorIdentity(%s),\n", indent, colorLiterals(fields.ColorIdentity))
+		_, _ = fmt.Fprintf(b, "%sColorIdentity: color.NewIdentity(%s),\n", indent, colorLiterals(fields.ColorIdentity))
 	}
 	parsed := ParseTypeLine(fields.TypeLine)
 	if len(parsed.Supertypes) > 0 {

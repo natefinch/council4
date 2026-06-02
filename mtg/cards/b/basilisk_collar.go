@@ -2,7 +2,7 @@ package b
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -18,8 +18,8 @@ import (
 //	Equip {2}
 var BasiliskCollar = &game.CardDef{
 	Name: "Basilisk Collar",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
 	}),
 	Types:      []types.Card{types.Artifact},
 	Subtypes:   []types.Sub{types.Equipment},
@@ -49,8 +49,8 @@ var BasiliskCollar = &game.CardDef{
 			Kind:     game.ActivatedAbility,
 			Text:     "Equip {2}",
 			Keywords: []game.Keyword{game.Equip},
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(2),
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
 			}),
 			Timing: game.SorceryOnly,
 			Targets: []game.TargetSpec{

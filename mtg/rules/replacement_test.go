@@ -6,7 +6,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
-	color0 "github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -334,8 +333,8 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	def := &game.CardDef{
 		Name:         "Tapped Walker",
 		Types:        []types.Card{types.Creature},
-		Power:        optPT(game.PT{Value: 1}),
-		Toughness:    optPT(game.PT{Value: 1}),
+		Power:        opt.Val(game.PT{Value: 1}),
+		Toughness:    opt.Val(game.PT{Value: 1}),
 		EntersTapped: true,
 		EntersWithCounters: []game.CounterPlacement{
 			{Kind: counter.PlusOnePlusOne, Amount: 2},
@@ -441,16 +440,8 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
-		Type: game.EffectReplace,
-		Replacement: optReplacement(&game.ReplacementEffect{
-			Description:   "exile instead",
-			MatchEvent:    game.EventZoneChanged,
-			MatchFromZone: true,
-			FromZone:      game.ZoneBattlefield,
-			MatchToZone:   true,
-			ToZone:        game.ZoneGraveyard,
-			ReplaceToZone: game.ZoneExile,
-		}),
+		Type:        game.EffectReplace,
+		Replacement: opt.Val(*&game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard, ReplaceToZone: game.ZoneExile}),
 	}, nil)
 
 	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
@@ -490,23 +481,14 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
-		Type: game.EffectReplace,
-		Replacement: optReplacement(&game.ReplacementEffect{
-			Description:  "enter modified",
-			MatchEvent:   game.EventPermanentEnteredBattlefield,
-			MatchToZone:  true,
-			ToZone:       game.ZoneBattlefield,
-			EntersTapped: true,
-			EntersWithCounters: []game.CounterPlacement{
-				{Kind: counter.PlusOnePlusOne, Amount: 1},
-			},
-		}),
+		Type:        game.EffectReplace,
+		Replacement: opt.Val(*&game.ReplacementEffect{Description: "enter modified", MatchEvent: game.EventPermanentEnteredBattlefield, MatchToZone: true, ToZone: game.ZoneBattlefield, EntersTapped: true, EntersWithCounters: []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 1}}}),
 	}, nil)
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:      "Entering Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 1}),
-		Toughness: optPT(game.PT{Value: 1}),
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 	})
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
@@ -548,7 +530,7 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 	} {
 		engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 			Type:        game.EffectReplace,
-			Replacement: optReplacement(&replacement),
+			Replacement: opt.Val(*&replacement),
 		}, nil)
 	}
 
@@ -582,16 +564,8 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 		SourceID:     source.ObjectID,
 		SourceCardID: source.CardInstanceID,
 	}, &game.Effect{
-		Type: game.EffectReplace,
-		Replacement: optReplacement(&game.ReplacementEffect{
-			Description:   "exile instead",
-			MatchEvent:    game.EventZoneChanged,
-			MatchFromZone: true,
-			FromZone:      game.ZoneBattlefield,
-			MatchToZone:   true,
-			ToZone:        game.ZoneGraveyard,
-			ReplaceToZone: game.ZoneExile,
-		}),
+		Type:        game.EffectReplace,
+		Replacement: opt.Val(*&game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard, ReplaceToZone: game.ZoneExile}),
 	}, nil)
 
 	if !movePermanentToZone(g, source, game.ZoneGraveyard) {
@@ -626,32 +600,32 @@ func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	}
 }
 
-func addColoredSourceCard(g *game.Game, owner game.PlayerID, color color.Color) id.ID {
+func addColoredSourceCard(g *game.Game, owner game.PlayerID, sourceColor color.Color) id.ID {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{
 		ID: cardID,
 		Def: &game.CardDef{
 			Name:   "Colored Source",
 			Types:  []types.Card{types.Instant},
-			Colors: []color0.Color{color},
+			Colors: []color.Color{sourceColor},
 		},
 		Owner: owner,
 	}
 	return cardID
 }
 
-func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, color color.Color) *game.Permanent {
+func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, protectedColor color.Color) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Protected Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{
 			{
 				Kind:                 game.StaticAbility,
 				Keywords:             []game.Keyword{game.Protection},
-				ProtectionFromColors: []color0.Color{color},
+				ProtectionFromColors: []color.Color{protectedColor},
 			},
 		},
 	})
@@ -662,8 +636,8 @@ func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanen
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Hexproof Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Hexproof},

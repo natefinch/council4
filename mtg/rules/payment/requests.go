@@ -2,8 +2,8 @@ package payment
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.
@@ -34,7 +34,7 @@ type AbilityRequest struct {
 // that do not have a full card context.
 type GenericRequest struct {
 	PlayerID        game.PlayerID
-	Cost            *mana.Cost
+	Cost            *cost.Mana
 	XValue          int
 	Exclude         map[id.ID]bool
 	AdditionalCosts []game.AdditionalCost
@@ -57,7 +57,7 @@ type Preferences struct {
 type SpellOptionSummary struct {
 	Index           int
 	Label           string
-	ManaCost        *mana.Cost
+	ManaCost        *cost.Mana
 	AdditionalCosts []game.AdditionalCost
 }
 

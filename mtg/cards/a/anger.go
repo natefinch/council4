@@ -3,7 +3,8 @@ package a
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -19,12 +20,12 @@ import (
 //	As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
 var Anger = &game.CardDef{
 	Name: "Anger",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(3),
-		mana.R,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(3),
+		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
-	ColorIdentity: mana.NewColorIdentity(color.Red),
+	ColorIdentity: color.NewIdentity(color.Red),
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Incarnation},
 	Power:         opt.Val(game.PT{Value: 2}),

@@ -18,7 +18,7 @@ import (
 //	{T}: Add {B} or {R}.
 var HauntedRidge = &game.CardDef{
 	Name:          "Haunted Ridge",
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Red),
+	ColorIdentity: color.NewIdentity(color.Black, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {R}.",
 	EntersTappedCondition: opt.Val(game.Condition{
@@ -41,9 +41,9 @@ var HauntedRidge = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceColor,
+						Kind:   game.ResolutionChoiceMana,
 						Prompt: "Choose a color",
-						Colors: []color.Color{color.Black, color.Red},
+						Colors: []mana.Color{mana.B, mana.R},
 					}),
 					LinkID: "haunted-ridge-color",
 				},

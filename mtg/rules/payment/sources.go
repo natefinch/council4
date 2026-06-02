@@ -1,18 +1,17 @@
 package payment
 
 import (
-	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
 type permanentManaOutputResult struct {
-	color  color.Color
+	color  mana.Color
 	amount int
 	snow   bool
 }
@@ -35,28 +34,28 @@ func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutpu
 	return permanentManaOutputResult{color: ability.Effects[0].ManaColor, amount: amount, snow: s.PermanentHasSupertype(permanent, types.Snow)}, true
 }
 
-func basicLandManaColor(s State, permanent *game.Permanent) (color.Color, bool) {
+func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
 	card, ok := s.PermanentCardDef(permanent)
 	if !ok || !card.HasType(types.Land) {
-		return 0, false
+		return "", false
 	}
 	for _, landType := range basicLandTypes {
 		if card.HasSubtype(landType.subtype) || strings.EqualFold(card.Name, string(landType.subtype)) {
 			return landType.color, true
 		}
 	}
-	return 0, false
+	return "", false
 }
 
 var basicLandTypes = []struct {
 	subtype types.Sub
-	color   color.Color
+	color   mana.Color
 }{
-	{subtype: types.Plains, color: color.White},
-	{subtype: types.Island, color: color.Blue},
-	{subtype: types.Swamp, color: color.Black},
-	{subtype: types.Mountain, color: color.Red},
-	{subtype: types.Forest, color: color.Green},
+	{subtype: types.Plains, color: mana.W},
+	{subtype: types.Island, color: mana.U},
+	{subtype: types.Swamp, color: mana.B},
+	{subtype: types.Mountain, color: mana.R},
+	{subtype: types.Forest, color: mana.G},
 }
 
 func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
@@ -101,8 +100,8 @@ func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) 
 	return append(nonMana, manaCreatures...)
 }
 
-func delveCandidates(s State, playerID game.PlayerID, cost *mana.Cost, xValue int, sourceCardID id.ID, sourceZone game.ZoneType) ([]id.ID, int, bool) {
-	_, generic, ok := costRequirements(cost, xValue)
+func delveCandidates(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, sourceCardID id.ID, sourceZone game.ZoneType) ([]id.ID, int, bool) {
+	_, generic, ok := costRequirements(manaCost, xValue)
 	if !ok || generic <= 0 {
 		return nil, 0, false
 	}
@@ -126,27 +125,27 @@ func delveCandidates(s State, playerID game.PlayerID, cost *mana.Cost, xValue in
 	return exiles, generic, true
 }
 
-func convokePayment(s State, playerID game.PlayerID, cost *mana.Cost, xValue int, exclude map[id.ID]bool) ([]*game.Permanent, *mana.Cost, bool) {
-	_, generic, ok := costRequirements(cost, xValue)
+func convokePayment(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool) ([]*game.Permanent, *cost.Mana, bool) {
+	_, generic, ok := costRequirements(manaCost, xValue)
 	if !ok {
-		return nil, cost, false
+		return nil, manaCost, false
 	}
 	candidates := convokeCandidates(s, playerID, exclude)
 	paidColored := make(map[int]bool)
 	var taps []*game.Permanent
 	used := make(map[id.ID]bool)
-	if cost != nil {
-		for symbolIndex, symbol := range *cost {
-			if symbol.Kind != mana.ColoredSymbol {
-				continue
+	if manaCost != nil {
+		for symbolIndex, symbol := range *manaCost {
+			for _, color := range symbol.Colors() {
+				permanent, ok := chooseConvokeColoredCreature(s, candidates, used, color)
+				if !ok {
+					continue
+				}
+				taps = append(taps, permanent)
+				used[permanent.ObjectID] = true
+				paidColored[symbolIndex] = true
+				break
 			}
-			permanent, ok := chooseConvokeColoredCreature(s, candidates, used, symbol.Color)
-			if !ok {
-				continue
-			}
-			taps = append(taps, permanent)
-			used[permanent.ObjectID] = true
-			paidColored[symbolIndex] = true
 		}
 	}
 	genericReduction := 0
@@ -162,32 +161,38 @@ func convokePayment(s State, playerID game.PlayerID, cost *mana.Cost, xValue int
 		genericReduction++
 	}
 	if len(taps) == 0 {
-		return nil, cost, false
+		return nil, manaCost, false
 	}
-	return taps, costWithConvokePayments(cost, genericReduction, paidColored), true
+	return taps, costWithConvokePayments(manaCost, genericReduction, paidColored), true
 }
 
-func chooseConvokeColoredCreature(s State, candidates []*game.Permanent, used map[id.ID]bool, color color.Color) (*game.Permanent, bool) {
+func chooseConvokeColoredCreature(s State, candidates []*game.Permanent, used map[id.ID]bool, m mana.Color) (*game.Permanent, bool) {
+	if m == mana.C {
+		// can't pay for colorless pips via convoke.
+		return nil, false
+	}
 	for _, permanent := range candidates {
 		if used[permanent.ObjectID] {
 			continue
 		}
-		if slices.Contains(s.PermanentEffectiveColors(permanent), color) {
-			return permanent, true
+		for _, c := range s.PermanentEffectiveColors(permanent) {
+			if cost.ManaForColor(c) == m {
+				return permanent, true
+			}
 		}
 	}
 	return nil, false
 }
 
-func costWithConvokePayments(cost *mana.Cost, genericReduction int, paidColored map[int]bool) *mana.Cost {
-	generic := max(genericCostAmount(cost)-genericReduction, 0)
-	var modified mana.Cost
+func costWithConvokePayments(manaCost *cost.Mana, genericReduction int, paidColored map[int]bool) *cost.Mana {
+	generic := max(genericCostAmount(manaCost)-genericReduction, 0)
+	var modified cost.Mana
 	if generic > 0 {
-		modified = append(modified, mana.GenericMana(generic))
+		modified = append(modified, cost.O(generic))
 	}
-	if cost != nil {
-		for i, symbol := range *cost {
-			if symbol.Kind == mana.GenericSymbol || paidColored[i] {
+	if manaCost != nil {
+		for i, symbol := range *manaCost {
+			if symbol.Kind == cost.GenericSymbol || paidColored[i] {
 				continue
 			}
 			modified = append(modified, symbol)
@@ -196,17 +201,17 @@ func costWithConvokePayments(cost *mana.Cost, genericReduction int, paidColored 
 	return &modified
 }
 
-func costWithGenericRequirement(cost *mana.Cost, generic int) *mana.Cost {
+func costWithGenericRequirement(manaCost *cost.Mana, generic int) *cost.Mana {
 	if generic < 0 {
 		generic = 0
 	}
-	var modified mana.Cost
+	var modified cost.Mana
 	if generic > 0 {
-		modified = append(modified, mana.GenericMana(generic))
+		modified = append(modified, cost.O(generic))
 	}
-	if cost != nil {
-		for _, symbol := range *cost {
-			if symbol.Kind == mana.GenericSymbol || symbol.Kind == mana.VariableSymbol {
+	if manaCost != nil {
+		for _, symbol := range *manaCost {
+			if symbol.Kind == cost.GenericSymbol || symbol.Kind == cost.VariableSymbol {
 				continue
 			}
 			modified = append(modified, symbol)
@@ -218,8 +223,8 @@ func costWithGenericRequirement(cost *mana.Cost, generic int) *mana.Cost {
 // availableManaSources groups sources by color. Callers must consume it through
 // paymentColors or explicit symbol colors, never by ranging over the map, so
 // payment ordering remains deterministic.
-func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]bool) map[color.Color][]manaSource {
-	available := make(map[color.Color][]manaSource)
+func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]bool) map[mana.Color][]manaSource {
+	available := make(map[mana.Color][]manaSource)
 	for _, permanent := range s.Battlefield() {
 		if s.EffectiveController(permanent) != playerID || permanent.Tapped || exclude[permanent.ObjectID] {
 			continue

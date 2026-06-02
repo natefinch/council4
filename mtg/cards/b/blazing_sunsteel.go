@@ -3,7 +3,8 @@ package b
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -20,12 +21,12 @@ import (
 //	Equip {4}
 var BlazingSunsteel = &game.CardDef{
 	Name: "Blazing Sunsteel",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(1),
-		mana.R,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(1),
+		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
-	ColorIdentity: mana.NewColorIdentity(color.Red),
+	ColorIdentity: color.NewIdentity(color.Red),
 	Types:         []types.Card{types.Artifact},
 	Subtypes:      []types.Sub{types.Equipment},
 	OracleText:    "Equipped creature gets +1/+0 for each opponent you have.\nWhenever equipped creature is dealt damage, it deals that much damage to any target.\nEquip {4}",
@@ -81,8 +82,8 @@ var BlazingSunsteel = &game.CardDef{
 			Kind:     game.ActivatedAbility,
 			Text:     "Equip {4}",
 			Keywords: []game.Keyword{game.Equip},
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(4),
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(4),
 			}),
 			Timing: game.SorceryOnly,
 			Targets: []game.TargetSpec{

@@ -2,7 +2,7 @@ package a
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -23,8 +23,8 @@ var Arena = &game.CardDef{
 		{
 			Kind: game.ActivatedAbility,
 			Text: "{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other.",
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(3),
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
 			}),
 			AdditionalCosts: []game.AdditionalCost{
 				{Kind: game.AdditionalCostTap},

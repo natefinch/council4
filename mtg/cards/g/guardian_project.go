@@ -3,7 +3,8 @@ package g
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -18,12 +19,12 @@ import (
 //	Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.
 var GuardianProject = &game.CardDef{
 	Name: "Guardian Project",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(3),
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(3),
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
-	ColorIdentity: mana.NewColorIdentity(color.Green),
+	ColorIdentity: color.NewIdentity(color.Green),
 	Types:         []types.Card{types.Enchantment},
 	OracleText:    "Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.",
 	Abilities: []game.AbilityDef{

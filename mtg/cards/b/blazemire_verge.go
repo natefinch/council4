@@ -18,7 +18,7 @@ import (
 //	{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
 var BlazemireVerge = &game.CardDef{
 	Name:          "Blazemire Verge",
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Red),
+	ColorIdentity: color.NewIdentity(color.Black, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {B}.\n{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
 	Abilities: []game.AbilityDef{
@@ -30,7 +30,7 @@ var BlazemireVerge = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Black, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.B, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -46,7 +46,7 @@ var BlazemireVerge = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Red, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
 			},
 		},
 	},

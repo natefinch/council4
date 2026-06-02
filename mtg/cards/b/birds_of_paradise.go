@@ -3,6 +3,7 @@ package b
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -19,11 +20,11 @@ import (
 //	{T}: Add one mana of any color.
 var BirdsOfParadise = &game.CardDef{
 	Name: "Birds of Paradise",
-	ManaCost: opt.Val(mana.Cost{
-		mana.G,
+	ManaCost: opt.Val(cost.Mana{
+		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
-	ColorIdentity: mana.NewColorIdentity(color.Green),
+	ColorIdentity: color.NewIdentity(color.Green),
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Bird},
 	Power:         opt.Val(game.PT{Value: 0}),
@@ -43,10 +44,10 @@ var BirdsOfParadise = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceColor,
+						Kind:   game.ResolutionChoiceMana,
 						Prompt: "Choose a color",
-						Colors: []color.Color{
-							color.White, color.Blue, color.Black, color.Red, color.Green,
+						Colors: []mana.Color{
+							mana.W, mana.U, mana.B, mana.R, mana.G,
 						},
 					}),
 					LinkID: "birds-color",

@@ -118,8 +118,8 @@ func TestTriggerEffectCanReferenceEventPermanentOnBattlefield(t *testing.T) {
 	cardID := addCardToHand(g, game.Player2, &game.CardDef{
 		Name:      "Entering Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 1}),
-		Toughness: optPT(game.PT{Value: 1}),
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 	})
 	card := g.CardInstances[cardID]
 	g.Players[game.Player2].Hand.Remove(cardID)
@@ -199,8 +199,8 @@ func TestExaltedTriggersForCreatureAttackingAlone(t *testing.T) {
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Exalted Source",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 0}),
-		Toughness: optPT(game.PT{Value: 1}),
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Exalted},
@@ -232,8 +232,8 @@ func TestExaltedDoesNotTriggerForMultipleAttackers(t *testing.T) {
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Exalted Source",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 0}),
-		Toughness: optPT(game.PT{Value: 1}),
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Exalted},
@@ -282,8 +282,8 @@ func TestDeathTriggerCanUseEventPermanentLKIAndReturnEventCardAsEnchantment(t *t
 	source := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "Enduring Creature",
 		Types:     []types.Card{types.Creature, types.Enchantment},
-		Power:     optPT(game.PT{Value: 3}),
-		Toughness: optPT(game.PT{Value: 3}),
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
 	})
 	cardID := source.CardInstanceID
 
@@ -807,10 +807,7 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 		t.Fatal("source card instance not found")
 	}
 	card.Def.Abilities[0].Trigger.Val.Type = game.TriggerState
-	card.Def.Abilities[0].Trigger.Val.State = optStateTrigger(&game.StateTriggerCondition{
-		MatchControllerLifeLessOrEqual: true,
-		ControllerLifeLessOrEqual:      10,
-	})
+	card.Def.Abilities[0].Trigger.Val.State = opt.Val(*&game.StateTriggerCondition{MatchControllerLifeLessOrEqual: true, ControllerLifeLessOrEqual: 10})
 	g.Players[game.Player1].Life = 10
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -1178,7 +1175,7 @@ func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
 		ID:               1,
 		AffectedObjectID: triggerSource.ObjectID,
 		Layer:            game.LayerControl,
-		NewController:    optController(newController),
+		NewController:    opt.Val(newController),
 	})
 	addCardToLibrary(g, game.Player3, &game.CardDef{Name: "Event Drawn"})
 	addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Trigger Drawn"})
@@ -1285,21 +1282,8 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 		Types: []types.Card{types.Enchantment},
 		Abilities: []game.AbilityDef{
 			{
-				Kind: game.TriggeredAbility,
-				Trigger: optTrigger(&game.TriggerCondition{
-					Type: game.TriggerWhenever,
-					Pattern: game.TriggerPattern{
-						Event:                 game.EventZoneChanged,
-						Controller:            game.TriggerControllerYou,
-						RequirePermanentTypes: []types.Card{types.Artifact},
-						MatchFromZone:         true,
-						FromZone:              game.ZoneBattlefield,
-						MatchToZone:           true,
-						ToZone:                game.ZoneGraveyard,
-					},
-					InterveningIf:                          "it had counters on it",
-					InterveningIfEventPermanentHadCounters: true,
-				}),
+				Kind:    game.TriggeredAbility,
+				Trigger: opt.Val(*&game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{Event: game.EventZoneChanged, Controller: game.TriggerControllerYou, RequirePermanentTypes: []types.Card{types.Artifact}, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard}, InterveningIf: "it had counters on it", InterveningIfEventPermanentHadCounters: true}),
 				Targets: []game.TargetSpec{
 					{MinTargets: 0, MaxTargets: 1, Constraint: "artifact or creature you control"},
 				},
@@ -1358,15 +1342,12 @@ func triggeredCreature(pattern game.TriggerPattern, effects []game.Effect, targe
 		Name:      "Triggered Creature",
 		Types:     []types.Card{types.Creature},
 		ManaCost:  greenCost(),
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{
 			{
-				Kind: game.TriggeredAbility,
-				Trigger: optTrigger(&game.TriggerCondition{
-					Type:    game.TriggerWhenever,
-					Pattern: pattern,
-				}),
+				Kind:    game.TriggeredAbility,
+				Trigger: opt.Val(*&game.TriggerCondition{Type: game.TriggerWhenever, Pattern: pattern}),
 				Effects: effects,
 				Targets: targets,
 			},

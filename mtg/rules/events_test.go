@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
@@ -465,7 +466,7 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:    "Pain Walker",
 		Types:   []types.Card{types.Planeswalker},
-		Loyalty: optInt(3),
+		Loyalty: opt.Val(3),
 		Abilities: []game.AbilityDef{{
 			Kind:             game.ActivatedAbility,
 			IsLoyaltyAbility: true,

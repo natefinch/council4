@@ -18,7 +18,7 @@ import (
 //	{T}: Add {B} or {R}.
 var DragonskullSummit = &game.CardDef{
 	Name:          "Dragonskull Summit",
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Red),
+	ColorIdentity: color.NewIdentity(color.Black, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control a Swamp or a Mountain.\n{T}: Add {B} or {R}.",
 	EntersTappedCondition: opt.Val(game.Condition{
@@ -40,9 +40,9 @@ var DragonskullSummit = &game.CardDef{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceColor,
+						Kind:   game.ResolutionChoiceMana,
 						Prompt: "Choose a color",
-						Colors: []color.Color{color.Black, color.Red},
+						Colors: []mana.Color{mana.B, mana.R},
 					}),
 					LinkID: "dragonskull-summit-color",
 				},

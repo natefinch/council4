@@ -2,7 +2,7 @@ package k
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -19,8 +19,8 @@ import (
 //	Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
 var KusariGama = &game.CardDef{
 	Name: "Kusari-Gama",
-	ManaCost: opt.Val(mana.Cost{
-		mana.GenericMana(3),
+	ManaCost: opt.Val(cost.Mana{
+		cost.O(3),
 	}),
 	Types:      []types.Card{types.Artifact},
 	Subtypes:   []types.Sub{types.Equipment},
@@ -41,8 +41,8 @@ var KusariGama = &game.CardDef{
 								{
 									Kind: game.ActivatedAbility,
 									Text: "{2}: This creature gets +1/+0 until end of turn.",
-									ManaCost: opt.Val(mana.Cost{
-										mana.GenericMana(2),
+									ManaCost: opt.Val(cost.Mana{
+										cost.O(2),
 									}),
 									Effects: []game.Effect{
 										{
@@ -86,8 +86,8 @@ var KusariGama = &game.CardDef{
 			Kind:     game.ActivatedAbility,
 			Text:     "Equip {3}",
 			Keywords: []game.Keyword{game.Equip},
-			ManaCost: opt.Val(mana.Cost{
-				mana.GenericMana(3),
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
 			}),
 			Timing: game.SorceryOnly,
 			Targets: []game.TargetSpec{
