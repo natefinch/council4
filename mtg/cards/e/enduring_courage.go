@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Enduring Courage
+// EnduringCourage is the card definition for Enduring Courage.
 //
 // Type: Enchantment Creature — Dog Glimmer
 // Cost: {2}{R}{R}

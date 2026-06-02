@@ -1,3 +1,4 @@
+// Package magefiles defines repository automation targets.
 package magefiles
 
 import (

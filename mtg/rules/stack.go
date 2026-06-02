@@ -4,7 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -98,8 +98,8 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	if !abilityHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, ability, obj.Controller, obj.Targets) {
 		return "countered by rules"
 	}
-	for _, effect := range ability.Effects {
-		e.resolveEffectWithChoices(g, obj, effect, agents, log)
+	for i := range ability.Effects {
+		e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
 	}
 	return "resolved"
 }
@@ -144,8 +144,8 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 	if ability.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
 		return "declined"
 	}
-	for _, effect := range ability.Effects {
-		e.resolveEffectWithChoices(g, obj, effect, agents, log)
+	for i := range ability.Effects {
+		e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
 	}
 	return "resolved"
 }
@@ -236,8 +236,8 @@ func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 	return true
 }
 
-func spellTypesMatch(card *game.CardDef, types []types.Card) bool {
-	for _, cardType := range types {
+func spellTypesMatch(card *game.CardDef, cardTypes []types.Card) bool {
+	for _, cardType := range cardTypes {
 		if !card.HasType(cardType) {
 			return false
 		}
@@ -255,47 +255,11 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 		return "missing source"
 	}
 	if spellDef.IsPermanent() {
-		if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
-			if obj.Copy {
-				return "countered by rules"
-			}
-			if !moveStackCardToGraveyard(g, obj, card) {
-				return "invalid owner"
-			}
-			return "countered by rules"
-		}
-		if obj.Copy {
-			return "resolved"
-		}
-		if obj.FaceDown {
-			_, ok := createCardPermanentFaceDown(g, card, obj.Controller, game.ZoneStack, obj.FaceDownFace, obj.FaceDownKind)
-			if !ok {
-				return "invalid face-down"
-			}
-			return "battlefield"
-		}
-		permanent, ok := createCardPermanentFaceWithChoices(e, g, card, obj.Controller, game.ZoneStack, obj.Face, agents, log)
-		if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
-			permanent.SuspendHasteController = opt.Val(obj.Controller)
-		}
-		if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
-			target, targetOK := effectPermanent(g, obj, game.Effect{TargetIndex: 0})
-			if !targetOK || !attachPermanent(g, permanent, target) {
-				movePermanentToZone(g, permanent, game.ZoneGraveyard)
-				return "graveyard"
-			}
-		}
-		return "battlefield"
+		return e.resolvePermanentSpellWithChoices(g, obj, card, spellDef, agents, log)
 	}
 	if spellDef.HasType(types.Instant) || spellDef.HasType(types.Sorcery) {
 		if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
-			if obj.Copy {
-				return "countered by rules"
-			}
-			if !moveStackCardToGraveyard(g, obj, card) {
-				return "invalid owner"
-			}
-			return "countered by rules"
+			return counteredSpellResolution(g, obj, card)
 		}
 		e.resolveSpellEffectsWithChoices(g, obj, card, agents, log)
 		if obj.Copy {
@@ -307,6 +271,44 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 		return "graveyard"
 	}
 	return "resolved"
+}
+
+func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackObject, card *game.CardInstance, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
+		return counteredSpellResolution(g, obj, card)
+	}
+	if obj.Copy {
+		return "resolved"
+	}
+	if obj.FaceDown {
+		_, ok := createCardPermanentFaceDown(g, card, obj.Controller, game.ZoneStack, obj.FaceDownFace, obj.FaceDownKind)
+		if !ok {
+			return "invalid face-down"
+		}
+		return "battlefield"
+	}
+	permanent, ok := createCardPermanentFaceWithChoices(e, g, card, obj.Controller, game.ZoneStack, obj.Face, agents, log)
+	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
+		permanent.SuspendHasteController = opt.Val(obj.Controller)
+	}
+	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
+		target, targetOK := effectPermanent(g, obj, &game.Effect{TargetIndex: 0})
+		if !targetOK || !attachPermanent(g, permanent, target) {
+			movePermanentToZone(g, permanent, game.ZoneGraveyard)
+			return "graveyard"
+		}
+	}
+	return "battlefield"
+}
+
+func counteredSpellResolution(g *game.Game, obj *game.StackObject, card *game.CardInstance) string {
+	if obj.Copy {
+		return "countered by rules"
+	}
+	if !moveStackCardToGraveyard(g, obj, card) {
+		return "invalid owner"
+	}
+	return "countered by rules"
 }
 
 func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {

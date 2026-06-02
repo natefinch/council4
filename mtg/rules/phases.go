@@ -146,7 +146,7 @@ func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
 	}
 }
 
-func (e *Engine) advanceToNextTurn(g *game.Game) {
+func (*Engine) advanceToNextTurn(g *game.Game) {
 	next, ok := popExtraTurn(&g.Turn.ExtraTurns, &g.TurnOrder)
 	if !ok {
 		next = g.TurnOrder.NextActivePlayer(g.Turn.ActivePlayer)

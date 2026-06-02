@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Fires of Yavimaya
+// FiresOfYavimaya is the card definition for Fires of Yavimaya.
 //
 // Type: Enchantment
 // Cost: {1}{R}{G}

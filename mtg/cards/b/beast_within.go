@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Beast Within
+// BeastWithin is the card definition for Beast Within.
 //
 // Type: Instant
 // Cost: {2}{G}

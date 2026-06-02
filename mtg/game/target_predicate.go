@@ -12,6 +12,7 @@ import (
 // part of casting/activating/trigger placement (CR 115, CR 601.2c, CR 603.3d).
 type TargetAllow int
 
+// Target allow values identify broad categories a target can choose from.
 const (
 	TargetAllowUnspecified TargetAllow = 0
 	TargetAllowPermanent   TargetAllow = 1 << 0
@@ -23,6 +24,7 @@ const (
 // player choosing targets.
 type ControllerRelation int
 
+// Controller relation values compare controllers to the choosing player.
 const (
 	ControllerAny ControllerRelation = iota
 	ControllerYou
@@ -33,6 +35,7 @@ const (
 // PlayerRelation constrains a player target relative to the player choosing targets.
 type PlayerRelation int
 
+// Player relation values compare players to the choosing player.
 const (
 	PlayerAny PlayerRelation = iota
 	PlayerYou
@@ -43,6 +46,7 @@ const (
 // TriState represents an optional boolean predicate.
 type TriState int
 
+// Tri-state values express any, true, or false predicates.
 const (
 	TriAny TriState = iota
 	TriTrue
@@ -52,6 +56,7 @@ const (
 // CombatStateFilter constrains a permanent by current combat involvement.
 type CombatStateFilter int
 
+// Combat state filter values match current combat involvement.
 const (
 	CombatStateAny CombatStateFilter = iota
 	CombatStateAttacking

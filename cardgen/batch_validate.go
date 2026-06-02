@@ -2,12 +2,14 @@ package cardgen
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -21,7 +23,8 @@ type manifestValidationRunResult struct {
 // skips fetch errors, and respects limit when limit is positive.
 func MissingWorklist(manifest Manifest, limit int) []string {
 	var names []string
-	for _, card := range manifest.Cards {
+	for i := range manifest.Cards {
+		card := &manifest.Cards[i]
 		if card.Status == BatchStatusFetchError {
 			continue
 		}
@@ -52,7 +55,7 @@ func ValidateManifestGeneratedCards(manifest *Manifest, repoRoot string) error {
 		}
 		card.Issues = nil
 		card.Validation = BatchValidationStatusUnvalidated
-		name := manifestCardName(*card)
+		name := manifestCardName(card)
 		if name != "" {
 			wanted[name] = true
 		}
@@ -77,7 +80,7 @@ func ValidateManifestGeneratedCards(manifest *Manifest, repoRoot string) error {
 		if card.FileStatus != BatchFileStatusExisting {
 			continue
 		}
-		name := manifestCardName(*card)
+		name := manifestCardName(card)
 		card.Issues = append(card.Issues, issuesByCard[name]...)
 		if !found[name] {
 			card.Issues = append(card.Issues, ValidationIssue{
@@ -97,7 +100,7 @@ func ValidateManifestGeneratedCards(manifest *Manifest, repoRoot string) error {
 
 // RunGoGenerateCards runs the card registry go:generate directives.
 func RunGoGenerateCards(repoRoot string) error {
-	cmd := exec.Command("go", "generate", "./mtg/cards/...")
+	cmd := exec.CommandContext(context.Background(), "go", "generate", "./mtg/cards/...")
 	cmd.Dir = repoRoot
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -136,9 +139,9 @@ func runGeneratedCardValidation(repoRoot string, wanted map[string]bool) (manife
 	return combined, nil
 }
 
-func runValidationProgram(repoRoot string, program string) (manifestValidationRunResult, error) {
+func runValidationProgram(repoRoot, program string) (manifestValidationRunResult, error) {
 	tmpDir := filepath.Join(repoRoot, ".cardwork", "tmp")
-	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
+	if err := os.MkdirAll(tmpDir, 0o750); err != nil {
 		return manifestValidationRunResult{}, err
 	}
 	file, err := os.CreateTemp(tmpDir, "cardbatch-validate-*.go")
@@ -147,13 +150,13 @@ func runValidationProgram(repoRoot string, program string) (manifestValidationRu
 	}
 	defer os.Remove(file.Name())
 	if _, err := file.WriteString(program); err != nil {
-		file.Close()
+		_ = file.Close()
 		return manifestValidationRunResult{}, err
 	}
 	if err := file.Close(); err != nil {
 		return manifestValidationRunResult{}, err
 	}
-	cmd := exec.Command("go", "run", file.Name())
+	cmd := exec.CommandContext(context.Background(), "go", "run", file.Name())
 	cmd.Dir = repoRoot
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -170,32 +173,32 @@ func runValidationProgram(repoRoot string, program string) (manifestValidationRu
 func validationProgram(wanted map[string]bool) string {
 	letters := validationLetters(wanted)
 	var b strings.Builder
-	b.WriteString("package main\n\n")
-	b.WriteString("import (\n")
-	b.WriteString("\t\"encoding/json\"\n")
-	b.WriteString("\t\"os\"\n\n")
-	b.WriteString("\t\"github.com/natefinch/council4/cardgen\"\n")
-	b.WriteString("\t\"github.com/natefinch/council4/mtg/game\"\n")
+	_, _ = b.WriteString("package main\n\n")
+	_, _ = b.WriteString("import (\n")
+	_, _ = b.WriteString("\t\"encoding/json\"\n")
+	_, _ = b.WriteString("\t\"os\"\n\n")
+	_, _ = b.WriteString("\t\"github.com/natefinch/council4/cardgen\"\n")
+	_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game\"\n")
 	for i, letter := range letters {
-		b.WriteString(fmt.Sprintf("\tp%d \"github.com/natefinch/council4/mtg/cards/%s\"\n", i, letter))
+		_, _ = fmt.Fprintf(&b, "\tp%d \"github.com/natefinch/council4/mtg/cards/%s\"\n", i, letter)
 	}
-	b.WriteString(")\n\n")
-	b.WriteString("type result struct { Found []string `json:\"found\"`; Issues []cardgen.ValidationIssue `json:\"issues\"` }\n\n")
-	b.WriteString("func main() {\n")
-	b.WriteString("\twanted := map[string]bool{\n")
+	_, _ = b.WriteString(")\n\n")
+	_, _ = b.WriteString("type result struct { Found []string `json:\"found\"`; Issues []cardgen.ValidationIssue `json:\"issues\"` }\n\n")
+	_, _ = b.WriteString("func main() {\n")
+	_, _ = b.WriteString("\twanted := map[string]bool{\n")
 	for _, name := range sortedWantedNames(wanted) {
-		encoded, _ := json.Marshal(name)
-		b.WriteString(fmt.Sprintf("\t\t%s: true,\n", encoded))
+		encoded := strconv.Quote(name)
+		_, _ = fmt.Fprintf(&b, "\t\t%s: true,\n", encoded)
 	}
-	b.WriteString("\t}\n")
-	b.WriteString("\tvar cards []*game.CardDef\n")
+	_, _ = b.WriteString("\t}\n")
+	_, _ = b.WriteString("\tvar cards []*game.CardDef\n")
 	for i := range letters {
-		b.WriteString(fmt.Sprintf("\tfor _, card := range p%d.Cards { if wanted[card.Name] { cards = append(cards, card) } }\n", i))
+		_, _ = fmt.Fprintf(&b, "\tfor _, card := range p%d.Cards { if wanted[card.Name] { cards = append(cards, card) } }\n", i)
 	}
-	b.WriteString("\tres := result{Issues: cardgen.ValidateCards(cards, cardgen.ValidationOptions{ReportImplementationIDs: true})}\n")
-	b.WriteString("\tfor _, card := range cards { res.Found = append(res.Found, card.Name) }\n")
-	b.WriteString("\tif err := json.NewEncoder(os.Stdout).Encode(res); err != nil { panic(err) }\n")
-	b.WriteString("}\n")
+	_, _ = b.WriteString("\tres := result{Issues: cardgen.ValidateCards(cards, cardgen.ValidationOptions{ReportImplementationIDs: true})}\n")
+	_, _ = b.WriteString("\tfor _, card := range cards { res.Found = append(res.Found, card.Name) }\n")
+	_, _ = b.WriteString("\tif err := json.NewEncoder(os.Stdout).Encode(res); err != nil { panic(err) }\n")
+	_, _ = b.WriteString("}\n")
 	return b.String()
 }
 
@@ -211,7 +214,7 @@ func validationLetters(wanted map[string]bool) []string {
 	for letter := range seen {
 		letters = append(letters, letter)
 	}
-	sort.Strings(letters)
+	slices.Sort(letters)
 	return letters
 }
 
@@ -220,11 +223,11 @@ func sortedWantedNames(wanted map[string]bool) []string {
 	for name := range wanted {
 		names = append(names, name)
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	return names
 }
 
-func manifestCardName(card ManifestCard) string {
+func manifestCardName(card *ManifestCard) string {
 	if card.CanonicalName != "" {
 		return card.CanonicalName
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Ignoble Hierarch
+// IgnobleHierarch is the card definition for Ignoble Hierarch.
 //
 // Type: Creature — Goblin Shaman
 // Cost: {G}
@@ -16,7 +16,6 @@ import (
 //
 //	Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)
 //	{T}: Add {B}, {R}, or {G}.
-
 var IgnobleHierarch = &game.CardDef{
 	Name: "Ignoble Hierarch",
 	ManaCost: opt.Val(mana.Cost{

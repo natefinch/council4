@@ -27,16 +27,16 @@ func optDynamicAmount(v game.DynamicAmount) opt.V[game.DynamicAmount] {
 	return opt.Val(v)
 }
 
-func optTrigger(v game.TriggerCondition) opt.V[game.TriggerCondition] {
-	return opt.Val(v)
+func optTrigger(v *game.TriggerCondition) opt.V[game.TriggerCondition] {
+	return opt.Val(*v)
 }
 
-func optStateTrigger(v game.StateTriggerCondition) opt.V[game.StateTriggerCondition] {
-	return opt.Val(v)
+func optStateTrigger(v *game.StateTriggerCondition) opt.V[game.StateTriggerCondition] {
+	return opt.Val(*v)
 }
 
-func optEffectCondition(v game.EffectCondition) opt.V[game.EffectCondition] {
-	return opt.Val(v)
+func optEffectCondition(v *game.EffectCondition) opt.V[game.EffectCondition] {
+	return opt.Val(*v)
 }
 
 func optEffectResultCondition(v game.EffectResultCondition) opt.V[game.EffectResultCondition] {
@@ -63,8 +63,8 @@ func optDelayedTrigger(v game.DelayedTriggerDef) opt.V[game.DelayedTriggerDef] {
 	return opt.Val(v)
 }
 
-func optReplacement(v game.ReplacementEffect) opt.V[game.ReplacementEffect] {
-	return opt.Val(v)
+func optReplacement(v *game.ReplacementEffect) opt.V[game.ReplacementEffect] {
+	return opt.Val(*v)
 }
 
 func optCopyValues(v game.CopyableValues) opt.V[game.CopyableValues] {

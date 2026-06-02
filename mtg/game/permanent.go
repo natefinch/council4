@@ -11,6 +11,7 @@ import (
 // such as Disguise's Ward {2} and shield counter when turned face up.
 type FaceDownKind int
 
+// Face-down kind values identify how a card became face-down.
 const (
 	FaceDownNone FaceDownKind = iota
 	FaceDownMorph

@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Halana and Alena, Partners
+// HalanaAndAlenaPartners is the card definition for Halana and Alena, Partners.
 //
 // Type: Legendary Creature — Human Ranger
 // Cost: {2}{R}{G}

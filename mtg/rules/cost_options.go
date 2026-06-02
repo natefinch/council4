@@ -26,9 +26,10 @@ func spellAdditionalCosts(card *game.CardDef) []game.AdditionalCost {
 	if card == nil {
 		return nil
 	}
-	for _, ability := range card.Abilities {
+	for i := range card.Abilities {
+		ability := &card.Abilities[i]
 		if ability.Kind == game.SpellAbility {
-			return abilityAdditionalCosts(&ability)
+			return abilityAdditionalCosts(ability)
 		}
 	}
 	return nil

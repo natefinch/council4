@@ -15,7 +15,7 @@ type omitEmptyStruct struct {
 	Other string `json:"other"`
 }
 
-// test unmarshaling of missing value
+// test unmarshaling of missing value.
 func TestUnmarshalJSONMissing(t *testing.T) {
 	var ts testStruct
 	err := json.Unmarshal([]byte(`{"other": "test"}`), &ts)
@@ -23,11 +23,11 @@ func TestUnmarshalJSONMissing(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if ts.Value.Exists {
-		t.Errorf("expected Ok to be false, got true")
+		t.Error("expected Ok to be false, got true")
 	}
 }
 
-// test unmarshaling of null value
+// test unmarshaling of null value.
 func TestUnmarshalJSONNull(t *testing.T) {
 	var ts testStruct
 	err := json.Unmarshal([]byte(`{"other": "test", "value": null}`), &ts)
@@ -35,11 +35,11 @@ func TestUnmarshalJSONNull(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if ts.Value.Exists {
-		t.Errorf("expected Ok to be false, got true")
+		t.Error("expected Ok to be false, got true")
 	}
 }
 
-// test marshaling of empty value
+// test marshaling of empty value.
 func TestMarshalJSONEmpty(t *testing.T) {
 	ts := testStruct{
 		Other: "test",
@@ -54,7 +54,7 @@ func TestMarshalJSONEmpty(t *testing.T) {
 	}
 }
 
-// test marshaling of empty value
+// test marshaling of empty value.
 func TestMarshalJSONExisting(t *testing.T) {
 	ts := testStruct{
 		Value: Val(42),
@@ -70,7 +70,7 @@ func TestMarshalJSONExisting(t *testing.T) {
 	}
 }
 
-// test marshaling of a null value
+// test marshaling of a null value.
 func TestMarshalJSONOmitZeroExisting(t *testing.T) {
 	ts := omitEmptyStruct{
 		Value: Val(42),
@@ -86,7 +86,7 @@ func TestMarshalJSONOmitZeroExisting(t *testing.T) {
 	}
 }
 
-// test marshaling of a null value
+// test marshaling of a null value.
 func TestMarshalJSONOmitZeroMissing(t *testing.T) {
 	ts := omitEmptyStruct{
 		Other: "test",

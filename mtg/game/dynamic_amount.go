@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game/counter"
 // (CR 107.3, CR 608.2c).
 type DynamicAmountKind int
 
+// Dynamic amount kind values identify supported effect-resolution quantities.
 const (
 	DynamicAmountNone DynamicAmountKind = iota
 	DynamicAmountConstant

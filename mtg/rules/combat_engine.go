@@ -5,7 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 // combatEngine concentrates combat-phase behaviour for Engine. It is created
@@ -118,7 +118,8 @@ func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]Pl
 		chosen = legal[len(legal)-1]
 	}
 
-	log.addAction(combatActionLog(g, playerID, chosen))
+	actionLog := combatActionLog(g, playerID, chosen)
+	log.addAction(&actionLog)
 
 	attackers, ok := chosen.DeclareAttackersPayload()
 	if !ok || !ce.applyAttackers(g, playerID, attackers) {
@@ -143,7 +144,8 @@ func (ce combatEngine) declareBlockers(g *game.Game, agents [game.NumPlayers]Pla
 			chosen = legal[len(legal)-1]
 		}
 
-		log.addAction(combatActionLog(g, playerID, chosen))
+		actionLog := combatActionLog(g, playerID, chosen)
+		log.addAction(&actionLog)
 
 		blockers, ok := chosen.DeclareBlockersPayload()
 		if !ok || !ce.applyBlockers(g, playerID, blockers) {
@@ -205,7 +207,7 @@ func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []ac
 
 // legalBlockers returns the legal declare-blockers actions for playerID.
 // The last element is always the no-block action.
-func (ce combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action.Action {
+func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canDeclareBlockers(g, playerID) {
 		return nil
 	}
@@ -301,7 +303,7 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 
 // applyBlockers validates and applies the declare-blockers action for
 // playerID. It emits blocker-declared events.
-func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare action.DeclareBlockersAction) bool {
+func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare action.DeclareBlockersAction) bool {
 	if !canDeclareBlockers(g, playerID) {
 		return false
 	}
@@ -370,7 +372,7 @@ func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, decla
 
 // resolveDamagePass assigns and marks combat damage for all attackers in the
 // given damage pass (first-strike or normal).
-func (ce combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *TurnLog) {
+func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *TurnLog) {
 	if g.Combat == nil {
 		return
 	}
@@ -409,7 +411,7 @@ func (ce combatEngine) payAttackTax(g *game.Game, playerID game.PlayerID, declar
 
 // attackTaxCost computes the total attack-tax cost for the given declarations.
 // It returns (nil, false) when no tax applies.
-func (ce combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclaration) (*mana.Cost, bool) {
+func (combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclaration) (*mana.Cost, bool) {
 	total := 0
 	for _, declaration := range declarations {
 		for _, tax := range g.AttackTaxes {
@@ -427,7 +429,7 @@ func (ce combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDec
 
 // attackingPermanentExclusions returns a set of permanent object IDs that are
 // excluded from mana-payment plans because they are declared attackers.
-func (ce combatEngine) attackingPermanentExclusions(declarations []game.AttackDeclaration) map[id.ID]bool {
+func (combatEngine) attackingPermanentExclusions(declarations []game.AttackDeclaration) map[id.ID]bool {
 	excluded := make(map[id.ID]bool, len(declarations))
 	for _, declaration := range declarations {
 		excluded[declaration.Attacker] = true

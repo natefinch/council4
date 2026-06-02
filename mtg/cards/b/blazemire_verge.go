@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Blazemire Verge
+// BlazemireVerge is the card definition for Blazemire Verge.
 //
 // Type: Land
 //

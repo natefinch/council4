@@ -78,9 +78,7 @@ func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue 
 	return true
 }
 
-func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.PlayerID, manaValue int) ([]id.ID, id.ID) {
-	var revealed []id.ID
-	var found id.ID
+func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.PlayerID, manaValue int) (revealed []id.ID, found id.ID) {
 	for {
 		cardID, ok := player.Library.Top()
 		if !ok {

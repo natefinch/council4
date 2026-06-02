@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Basilisk Collar
+// BasiliskCollar is the card definition for Basilisk Collar.
 //
 // Type: Artifact — Equipment
 // Cost: {1}

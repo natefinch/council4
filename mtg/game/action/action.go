@@ -3,6 +3,7 @@
 package action
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -10,8 +11,11 @@ import (
 )
 
 // ActionKind identifies which kind of game action an Action represents.
+//
+//nolint:revive // ActionKind is the established exported API name.
 type ActionKind int
 
+// Action kind values identify the payload carried by an Action.
 const (
 	ActionPass ActionKind = iota
 	ActionPlayLand
@@ -318,53 +322,53 @@ func (a Action) Validate() error {
 		return nil
 	case ActionPlayLand:
 		if a.playLand.CardID == 0 {
-			return fmt.Errorf("play land action missing card ID")
+			return errors.New("play land action missing card ID")
 		}
 	case ActionCastSpell:
 		if a.castSpell.CardID == 0 {
-			return fmt.Errorf("cast spell action missing card ID")
+			return errors.New("cast spell action missing card ID")
 		}
 		if a.castSpell.SourceZone == game.ZoneNone {
-			return fmt.Errorf("cast spell action missing source zone")
+			return errors.New("cast spell action missing source zone")
 		}
 		if a.castSpell.XValue < 0 {
-			return fmt.Errorf("cast spell action has negative X value")
+			return errors.New("cast spell action has negative X value")
 		}
 	case ActionActivateAbility:
 		if a.activateAbility.SourceID == 0 {
-			return fmt.Errorf("activate ability action missing source ID")
+			return errors.New("activate ability action missing source ID")
 		}
 		if a.activateAbility.AbilityIndex < 0 {
-			return fmt.Errorf("activate ability action has negative ability index")
+			return errors.New("activate ability action has negative ability index")
 		}
 		if a.activateAbility.XValue < 0 {
-			return fmt.Errorf("activate ability action has negative X value")
+			return errors.New("activate ability action has negative X value")
 		}
 	case ActionSuspendCard:
 		if a.suspendCard.CardID == 0 {
-			return fmt.Errorf("suspend card action missing card ID")
+			return errors.New("suspend card action missing card ID")
 		}
 	case ActionCastFaceDown:
 		if a.castFaceDown.CardID == 0 {
-			return fmt.Errorf("cast face-down action missing card ID")
+			return errors.New("cast face-down action missing card ID")
 		}
 		if a.castFaceDown.FaceDownKind == game.FaceDownNone {
-			return fmt.Errorf("cast face-down action missing face-down kind")
+			return errors.New("cast face-down action missing face-down kind")
 		}
 	case ActionTurnFaceUp:
 		if a.turnFaceUp.PermanentID == 0 {
-			return fmt.Errorf("turn face-up action missing permanent ID")
+			return errors.New("turn face-up action missing permanent ID")
 		}
 	case ActionDeclareAttackers:
 		for _, attacker := range a.declareAttackers.Attackers {
 			if attacker.Attacker == 0 {
-				return fmt.Errorf("declare attackers action has attacker with zero object ID")
+				return errors.New("declare attackers action has attacker with zero object ID")
 			}
 		}
 	case ActionDeclareBlockers:
 		for _, blocker := range a.declareBlockers.Blockers {
 			if blocker.Blocker == 0 || blocker.Blocking == 0 {
-				return fmt.Errorf("declare blockers action has blocker or blocking object with zero ID")
+				return errors.New("declare blockers action has blocker or blocking object with zero ID")
 			}
 		}
 	default:

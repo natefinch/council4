@@ -9,7 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, effect game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, effect *game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if !effect.Choice.Exists {
 		return true
 	}
@@ -29,7 +29,7 @@ func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, ef
 	return true
 }
 
-func resolutionChoiceRequest(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) (game.ChoiceRequest, map[int]game.ResolutionChoiceResult) {
+func resolutionChoiceRequest(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) (request game.ChoiceRequest, values map[int]game.ResolutionChoiceResult) {
 	playerID := resolutionChoicePlayer(stackObjectController(obj), choice)
 	options, values := resolutionChoiceOptions(g, playerID, choice)
 	prompt := choice.Prompt
@@ -47,9 +47,8 @@ func resolutionChoiceRequest(g *game.Game, obj *game.StackObject, choice *game.R
 	}, values
 }
 
-func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) ([]game.ChoiceOption, map[int]game.ResolutionChoiceResult) {
-	values := make(map[int]game.ResolutionChoiceResult)
-	var options []game.ChoiceOption
+func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) (options []game.ChoiceOption, values map[int]game.ResolutionChoiceResult) {
+	values = make(map[int]game.ResolutionChoiceResult)
 	add := func(index int, label string, result game.ResolutionChoiceResult) {
 		options = append(options, game.ChoiceOption{Index: index, Label: label})
 		values[index] = result
@@ -69,7 +68,7 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 		}
 	case game.ResolutionChoicePlayer:
 		index := 0
-		for player := game.PlayerID(0); player < game.NumPlayers; player++ {
+		for player := range game.PlayerID(game.NumPlayers) {
 			if !isPlayerAlive(g, player) || !choicePlayerMatches(playerID, player, choice.PlayerRelation) {
 				continue
 			}
@@ -84,6 +83,7 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 		for i, cardID := range resolutionChoiceCardIDs(g, playerID, zone) {
 			add(i, cardChoiceLabel(g, cardID), game.ResolutionChoiceResult{Kind: choice.Kind, CardID: cardID})
 		}
+	default:
 	}
 	return options, values
 }
@@ -127,9 +127,7 @@ func choicePlayerMatches(controller, candidate game.PlayerID, relation game.Play
 	switch relation {
 	case game.PlayerYou:
 		return candidate == controller
-	case game.PlayerOpponent:
-		return candidate != controller
-	case game.PlayerNotYou:
+	case game.PlayerOpponent, game.PlayerNotYou:
 		return candidate != controller
 	default:
 		return true

@@ -1,9 +1,10 @@
 // Package types defines Magic card supertypes, card types, and subtypes.
-package types
+package types //nolint:revive // The package name matches the established domain import path.
 
 // Super represents a card's supertype (CR 205.4).
 type Super string
 
+// Super values identify supported card supertypes.
 const (
 	Legendary Super = "Legendary"
 	Basic     Super = "Basic"
@@ -15,6 +16,7 @@ const (
 // Card represents a card's primary type (CR 300.1).
 type Card string
 
+// Card values identify supported primary card types.
 const (
 	Land         Card = "Land"
 	Creature     Card = "Creature"
@@ -40,11 +42,13 @@ func (c Card) IsPermanent() bool {
 // Sub represents a card's subtype.
 type Sub string
 
+// Artifact subtype values identify supported artifact subtypes.
 const (
 	Clue      Sub = "Clue"
 	Equipment Sub = "Equipment"
 )
 
+// Creature subtype values identify supported creature subtypes.
 const (
 	Angel       Sub = "Angel"
 	Bear        Sub = "Bear"
@@ -65,11 +69,13 @@ const (
 	Zombie      Sub = "Zombie"
 )
 
+// Enchantment subtype values identify supported enchantment subtypes.
 const (
 	Aura  Sub = "Aura"
 	Class Sub = "Class"
 )
 
+// Land subtype values identify supported basic land subtypes.
 const (
 	Forest   Sub = "Forest"
 	Island   Sub = "Island"

@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Farseek
+// Farseek is the card definition for Farseek.
 //
 // Type: Sorcery
 // Cost: {1}{G}

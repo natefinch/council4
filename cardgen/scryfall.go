@@ -3,6 +3,7 @@
 package cardgen
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,7 +71,7 @@ var scryfallClient = &http.Client{Timeout: 15 * time.Second}
 // FetchCard fetches a card by exact name from the Scryfall API.
 func FetchCard(name string) (*ScryfallCard, error) {
 	u := "https://api.scryfall.com/cards/named?exact=" + url.QueryEscape(name)
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, u, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("creating scryfall request: %w", err)
 	}

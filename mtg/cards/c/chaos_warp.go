@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Chaos Warp
+// ChaosWarp is the card definition for Chaos Warp.
 //
 // Type: Instant
 // Cost: {2}{R}

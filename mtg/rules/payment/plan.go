@@ -1,6 +1,8 @@
 package payment
 
 import (
+	"maps"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -225,9 +227,7 @@ func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 		return plan, false
 	}
 	excluded := make(map[id.ID]bool)
-	for k, v := range req.Exclude {
-		excluded[k] = v
-	}
+	maps.Copy(excluded, req.Exclude)
 	for _, sacrifice := range additional.sacrifices {
 		excluded[sacrifice.ObjectID] = true
 	}
@@ -312,6 +312,7 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, cost *mana
 			if !payColoredSymbol(&plan, pool, manaSources, symbol, mana.Colorless, game.SymbolPaymentMana) {
 				return plan, false
 			}
+		default:
 		}
 	}
 	for _, symbol := range *cost {
@@ -335,6 +336,7 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, cost *mana
 			if !payPhyrexianSymbol(player, &plan, pool, manaSources, symbol, prefs) {
 				return plan, false
 			}
+		default:
 		}
 	}
 	for _, symbol := range *cost {
@@ -367,8 +369,8 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 		if tap.permanent.Tapped || s.EffectiveController(tap.permanent) != player.ID {
 			return false
 		}
-		color, amount, snow, ok := permanentManaOutput(s, tap.permanent)
-		if !ok || color != tap.color || amount != tap.amount || snow != tap.snow {
+		output, ok := permanentManaOutput(s, tap.permanent)
+		if !ok || output.color != tap.color || output.amount != tap.amount || output.snow != tap.snow {
 			return false
 		}
 		tappedMana[mana.Unit{Color: tap.color, Snow: tap.snow}] += tap.amount
@@ -391,10 +393,7 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 			}
 		}
 	}
-	if player.Life < plan.lifePayment {
-		return false
-	}
-	return true
+	return player.Life >= plan.lifePayment
 }
 
 func abilityCostPlanStillValid(s State, player *game.Player, source *game.Permanent, plan abilityCostPlan) bool {
@@ -414,9 +413,7 @@ func clonePaymentPlan(plan paymentPlan) paymentPlan {
 
 func cloneUnitCounts(units map[mana.Unit]int) map[mana.Unit]int {
 	clone := make(map[mana.Unit]int, len(units))
-	for unit, amount := range units {
-		clone[unit] = amount
-	}
+	maps.Copy(clone, units)
 	return clone
 }
 
@@ -424,9 +421,7 @@ func replaceUnitCounts(dst, src map[mana.Unit]int) {
 	for unit := range dst {
 		delete(dst, unit)
 	}
-	for unit, amount := range src {
-		dst[unit] = amount
-	}
+	maps.Copy(dst, src)
 }
 
 func cloneManaSources(sources map[mana.Color][]manaSource) map[mana.Color][]manaSource {
@@ -446,8 +441,8 @@ func replaceManaSources(dst, src map[mana.Color][]manaSource) {
 	}
 }
 
-func costRequirements(cost *mana.Cost, xValue int) (map[mana.Color]int, int, bool) {
-	colored := make(map[mana.Color]int)
+func costRequirements(cost *mana.Cost, xValue int) (colored map[mana.Color]int, generic int, ok bool) {
+	colored = make(map[mana.Color]int)
 	if xValue < 0 {
 		return nil, 0, false
 	}
@@ -455,7 +450,7 @@ func costRequirements(cost *mana.Cost, xValue int) (map[mana.Color]int, int, boo
 		return colored, 0, true
 	}
 
-	generic := 0
+	generic = 0
 	for _, symbol := range *cost {
 		switch symbol.Kind {
 		case mana.ColoredSymbol:

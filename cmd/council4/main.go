@@ -1,6 +1,8 @@
+// Command council4 runs deterministic test games.
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -34,13 +36,13 @@ func main() {
 	})
 
 	if *deckSize < 0 {
-		fmt.Fprintln(os.Stderr, "-deck-size must be non-negative")
+		_, _ = fmt.Fprintln(os.Stderr, "-deck-size must be non-negative")
 		os.Exit(2)
 	}
 
 	configs, agents, err := gameModeConfig(*mode, *deckSize, deckSizeSet)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
 
@@ -64,16 +66,16 @@ func gameModeConfig(mode string, deckSize int, deckSizeSet bool) ([game.NumPlaye
 		return landOnlyConfigs(deckSize), agents(agent.FirstLegal{}), nil
 	case "spells":
 		if deckSizeSet {
-			return [game.NumPlayers]game.PlayerConfig{}, [game.NumPlayers]rules.PlayerAgent{}, fmt.Errorf("-deck-size is only valid with -mode land")
+			return [game.NumPlayers]game.PlayerConfig{}, [game.NumPlayers]rules.PlayerAgent{}, errors.New("-deck-size is only valid with -mode land")
 		}
 		return spellConfigs(), agents(agent.SimpleCaster{}), nil
 	case "combat":
 		if deckSizeSet {
-			return [game.NumPlayers]game.PlayerConfig{}, [game.NumPlayers]rules.PlayerAgent{}, fmt.Errorf("-deck-size is only valid with -mode land")
+			return [game.NumPlayers]game.PlayerConfig{}, [game.NumPlayers]rules.PlayerAgent{}, errors.New("-deck-size is only valid with -mode land")
 		}
 		return combatConfigs(), agents(agent.FirstLegal{}), nil
 	default:
-		return [game.NumPlayers]game.PlayerConfig{}, [game.NumPlayers]rules.PlayerAgent{}, fmt.Errorf("-mode must be land, spells, or combat")
+		return [game.NumPlayers]game.PlayerConfig{}, [game.NumPlayers]rules.PlayerAgent{}, errors.New("-mode must be land, spells, or combat")
 	}
 }
 
@@ -116,9 +118,7 @@ func spellConfigs() [game.NumPlayers]game.PlayerConfig {
 			configs[player].Deck = append(configs[player].Deck, grizzlyBears())
 		}
 		for range 2 {
-			configs[player].Deck = append(configs[player].Deck, divinationLike())
-			configs[player].Deck = append(configs[player].Deck, healingSpell())
-			configs[player].Deck = append(configs[player].Deck, lavaSpikeLike())
+			configs[player].Deck = append(configs[player].Deck, divinationLike(), healingSpell(), lavaSpikeLike())
 		}
 	}
 	return configs
@@ -135,8 +135,7 @@ func combatConfigs() [game.NumPlayers]game.PlayerConfig {
 			configs[player].Deck = append(configs[player].Deck, trainedArmodon())
 		}
 		for range 3 {
-			configs[player].Deck = append(configs[player].Deck, hastyWolf())
-			configs[player].Deck = append(configs[player].Deck, vigilantGuard())
+			configs[player].Deck = append(configs[player].Deck, hastyWolf(), vigilantGuard())
 		}
 		for range 2 {
 			configs[player].Deck = append(configs[player].Deck, wallOfVines())
@@ -175,7 +174,7 @@ func wallOfVines() *game.CardDef {
 	return creatureCard("Wall of Vines", 0, 4, game.Defender)
 }
 
-func creatureCard(name string, power int, toughness int, keywords ...game.Keyword) *game.CardDef {
+func creatureCard(name string, power, toughness int, keywords ...game.Keyword) *game.CardDef {
 	p := game.PT{Value: power}
 	t := game.PT{Value: toughness}
 	return &game.CardDef{
@@ -257,11 +256,12 @@ func printSummary(g *game.Game, result *rules.GameResult, seed uint64, mode stri
 	fmt.Println("Council4 test game")
 	fmt.Printf("Seed: %d\n", seed)
 	fmt.Printf("Mode: %s\n", mode)
-	if mode == "land" {
+	switch mode {
+	case "land":
 		fmt.Printf("Deck size: %d Forests per player\n", deckSize)
-	} else if mode == "combat" {
+	case "combat":
 		fmt.Println("Deck: Forests and simple combat creatures")
-	} else {
+	default:
 		fmt.Println("Deck: Forests, simple creatures, and simple spells")
 	}
 	fmt.Printf("Turns: %d\n", result.TurnCount)
@@ -292,61 +292,65 @@ func printSummary(g *game.Game, result *rules.GameResult, seed uint64, mode stri
 }
 
 func printTurnLog(w io.Writer, g *game.Game, result *rules.GameResult, opts logOptions) {
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Turn log:")
-	for _, turn := range result.Turns {
-		fmt.Fprintf(w, "Turn %d (%s)\n", turn.TurnNumber, playerName(turn.ActivePlayer))
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, "Turn log:")
+	for i := range result.Turns {
+		turn := &result.Turns[i]
+		_, _ = fmt.Fprintf(w, "Turn %d (%s)\n", turn.TurnNumber, playerName(turn.ActivePlayer))
 		if len(turn.Entries) > 0 {
 			printTurnLogEntries(w, g, turn, opts)
 			continue
 		}
 		for _, logged := range turn.Draws {
-			fmt.Fprintf(w, "  %s: %s\n", playerName(logged.Player), formatDraw(g, logged))
+			_, _ = fmt.Fprintf(w, "  %s: %s\n", playerName(logged.Player), formatDraw(g, logged))
 		}
-		for _, logged := range turn.Actions {
+		for i := range turn.Actions {
+			logged := &turn.Actions[i]
 			if opts.OmitPasses && logged.Action.Kind == action.ActionPass {
 				continue
 			}
-			fmt.Fprintf(w, "  %s: %s\n", playerName(logged.Player), formatActionLog(g, logged))
+			_, _ = fmt.Fprintf(w, "  %s: %s\n", playerName(logged.Player), formatActionLog(g, logged))
 		}
 		for _, logged := range turn.Resolves {
-			fmt.Fprintf(w, "  %s\n", formatResolve(g, logged))
+			_, _ = fmt.Fprintf(w, "  %s\n", formatResolve(g, logged))
 		}
 		for _, logged := range turn.CombatDamage {
-			fmt.Fprintf(w, "  %s\n", formatCombatDamage(g, logged))
+			_, _ = fmt.Fprintf(w, "  %s\n", formatCombatDamage(g, logged))
 		}
 		for _, logged := range turn.CreatureDamage {
-			fmt.Fprintf(w, "  %s\n", formatCreatureDamage(g, logged))
+			_, _ = fmt.Fprintf(w, "  %s\n", formatCreatureDamage(g, logged))
 		}
 		for _, logged := range turn.Deaths {
-			fmt.Fprintf(w, "  %s\n", formatPermanentDeath(g, logged))
+			_, _ = fmt.Fprintf(w, "  %s\n", formatPermanentDeath(g, logged))
 		}
 		for _, logged := range turn.Losses {
-			fmt.Fprintf(w, "  %s: loses (%s)\n", playerName(logged.Player), logged.Reason)
+			_, _ = fmt.Fprintf(w, "  %s: loses (%s)\n", playerName(logged.Player), logged.Reason)
 		}
 	}
 }
 
-func printTurnLogEntries(w io.Writer, g *game.Game, turn rules.TurnLog, opts logOptions) {
-	for _, entry := range turn.Entries {
+func printTurnLogEntries(w io.Writer, g *game.Game, turn *rules.TurnLog, opts logOptions) {
+	for i := range turn.Entries {
+		entry := &turn.Entries[i]
 		switch entry.Kind {
 		case rules.TurnLogEntryDraw:
-			fmt.Fprintf(w, "  %s: %s\n", playerName(entry.Draw.Player), formatDraw(g, entry.Draw))
+			_, _ = fmt.Fprintf(w, "  %s: %s\n", playerName(entry.Draw.Player), formatDraw(g, entry.Draw))
 		case rules.TurnLogEntryLoss:
-			fmt.Fprintf(w, "  %s: loses (%s)\n", playerName(entry.Loss.Player), entry.Loss.Reason)
+			_, _ = fmt.Fprintf(w, "  %s: loses (%s)\n", playerName(entry.Loss.Player), entry.Loss.Reason)
 		case rules.TurnLogEntryAction:
 			if opts.OmitPasses && entry.Action.Action.Kind == action.ActionPass {
 				continue
 			}
-			fmt.Fprintf(w, "  %s: %s\n", playerName(entry.Action.Player), formatActionLog(g, entry.Action))
+			_, _ = fmt.Fprintf(w, "  %s: %s\n", playerName(entry.Action.Player), formatActionLog(g, &entry.Action))
 		case rules.TurnLogEntryResolve:
-			fmt.Fprintf(w, "  %s\n", formatResolve(g, entry.Resolve))
+			_, _ = fmt.Fprintf(w, "  %s\n", formatResolve(g, entry.Resolve))
 		case rules.TurnLogEntryCombatDamage:
-			fmt.Fprintf(w, "  %s\n", formatCombatDamage(g, entry.CombatDamage))
+			_, _ = fmt.Fprintf(w, "  %s\n", formatCombatDamage(g, entry.CombatDamage))
 		case rules.TurnLogEntryCreatureDamage:
-			fmt.Fprintf(w, "  %s\n", formatCreatureDamage(g, entry.CreatureDamage))
+			_, _ = fmt.Fprintf(w, "  %s\n", formatCreatureDamage(g, entry.CreatureDamage))
 		case rules.TurnLogEntryDeath:
-			fmt.Fprintf(w, "  %s\n", formatPermanentDeath(g, entry.Death))
+			_, _ = fmt.Fprintf(w, "  %s\n", formatPermanentDeath(g, entry.Death))
+		default:
 		}
 	}
 }
@@ -363,10 +367,10 @@ func formatDraw(g *game.Game, draw rules.DrawLog) string {
 }
 
 func formatAction(g *game.Game, act action.Action) string {
-	return formatActionLog(g, rules.ActionLog{Action: act})
+	return formatActionLog(g, &rules.ActionLog{Action: act})
 }
 
-func formatActionLog(g *game.Game, logged rules.ActionLog) string {
+func formatActionLog(g *game.Game, logged *rules.ActionLog) string {
 	act := logged.Action
 	switch act.Kind {
 	case action.ActionPass:
@@ -408,7 +412,7 @@ func formatActionLog(g *game.Game, logged rules.ActionLog) string {
 	}
 }
 
-func formatDeclareAttackers(g *game.Game, logged rules.ActionLog, declare action.DeclareAttackersAction) string {
+func formatDeclareAttackers(g *game.Game, logged *rules.ActionLog, declare action.DeclareAttackersAction) string {
 	if len(declare.Attackers) == 0 {
 		return "declare no attackers"
 	}
@@ -419,11 +423,11 @@ func formatDeclareAttackers(g *game.Game, logged rules.ActionLog, declare action
 	return "declare attackers: " + strings.Join(parts, ", ")
 }
 
-func formatAttacker(g *game.Game, logged rules.ActionLog, declaration game.AttackDeclaration) string {
+func formatAttacker(g *game.Game, logged *rules.ActionLog, declaration game.AttackDeclaration) string {
 	return formatPermanentForAction(g, logged, declaration.Attacker)
 }
 
-func formatDeclareBlockers(g *game.Game, logged rules.ActionLog, declare action.DeclareBlockersAction) string {
+func formatDeclareBlockers(g *game.Game, logged *rules.ActionLog, declare action.DeclareBlockersAction) string {
 	if len(declare.Blockers) == 0 {
 		return "declare no blockers"
 	}
@@ -437,7 +441,7 @@ func formatDeclareBlockers(g *game.Game, logged rules.ActionLog, declare action.
 	return "declare blockers: " + strings.Join(parts, ", ")
 }
 
-func formatPermanentForAction(g *game.Game, logged rules.ActionLog, objectID id.ID) string {
+func formatPermanentForAction(g *game.Game, logged *rules.ActionLog, objectID id.ID) string {
 	if cardID, ok := logged.PermanentSources[objectID]; ok {
 		card, ok := g.GetCardInstance(cardID)
 		if ok {
@@ -505,7 +509,7 @@ func formatPermanentDeath(g *game.Game, death rules.PermanentDeathLog) string {
 	return fmt.Sprintf("%s dies (%s)", formatPermanentOrCard(g, death.Permanent, death.SourceID), death.Reason)
 }
 
-func formatPermanentOrCard(g *game.Game, objectID id.ID, cardID id.ID) string {
+func formatPermanentOrCard(g *game.Game, objectID, cardID id.ID) string {
 	if formatted := formatPermanent(g, objectID); !strings.HasPrefix(formatted, "permanent #") {
 		return formatted
 	}

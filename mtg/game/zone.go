@@ -2,6 +2,7 @@ package game
 
 import (
 	"math/rand/v2"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game/id"
 )
@@ -67,10 +68,8 @@ func (z ZoneType) String() string {
 // IsPublic reports whether cards in this zone are visible to all players.
 func (z ZoneType) IsPublic() bool {
 	switch z {
-	case ZoneBattlefield, ZoneGraveyard, ZoneStack, ZoneCommand:
+	case ZoneBattlefield, ZoneGraveyard, ZoneStack, ZoneExile, ZoneCommand:
 		return true
-	case ZoneExile:
-		return true // mostly — face-down exile is handled per-card
 	default:
 		return false
 	}
@@ -157,12 +156,7 @@ func (z *Zone) Size() int {
 
 // Contains reports whether the zone contains the given card.
 func (z *Zone) Contains(cardID id.ID) bool {
-	for _, c := range z.cards {
-		if c == cardID {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(z.cards, cardID)
 }
 
 // All returns a copy of all card IDs in the zone, in order.

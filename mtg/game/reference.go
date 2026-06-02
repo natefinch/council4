@@ -9,6 +9,7 @@ import (
 // effects.
 type ObjectReferenceKind int
 
+// Object reference kind values identify supported object bindings.
 const (
 	ObjectReferenceNone ObjectReferenceKind = iota
 	ObjectReferenceTargetPermanent
@@ -34,6 +35,7 @@ type ObjectReference struct {
 // effects.
 type PlayerReferenceKind int
 
+// Player reference kind values identify supported player bindings.
 const (
 	PlayerReferenceNone PlayerReferenceKind = iota
 	PlayerReferenceController
@@ -58,6 +60,7 @@ type PlayerReference struct {
 // effects.
 type CardReferenceKind int
 
+// Card reference kind values identify supported card bindings.
 const (
 	CardReferenceNone CardReferenceKind = iota
 	CardReferenceLinked

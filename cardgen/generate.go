@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -39,22 +40,22 @@ func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 	needsMana := fieldsNeedMana(root) || anyFaceNeedsMana(faces)
 	needsOpt := fieldsNeedOpt(root) || anyFaceNeedsOpt(faces) || len(faces) > 0
 
-	b.WriteString(fmt.Sprintf("package %s\n\n", pkgName))
-	b.WriteString("import (\n")
+	_, _ = fmt.Fprintf(&b, "package %s\n\n", pkgName)
+	_, _ = b.WriteString("import (\n")
 	if needsOpt {
-		b.WriteString("\t\"github.com/natefinch/council4/opt\"\n")
+		_, _ = b.WriteString("\t\"github.com/natefinch/council4/opt\"\n")
 	}
-	b.WriteString("\t\"github.com/natefinch/council4/mtg/game\"\n")
-	b.WriteString("\t\"github.com/natefinch/council4/mtg/game/types\"\n")
+	_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game\"\n")
+	_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/types\"\n")
 	if needsMana {
-		b.WriteString("\t\"github.com/natefinch/council4/mtg/game/mana\"\n")
+		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/mana\"\n")
 	}
-	b.WriteString(")\n\n")
+	_, _ = b.WriteString(")\n\n")
 
 	if card.Layout == "reversible_card" && len(card.CardFaces) > 0 {
 		for i, face := range facesFromAllCardFaces(card) {
 			if i > 0 {
-				b.WriteString("\n")
+				_, _ = b.WriteString("\n")
 			}
 			writeSingleFaceComment(&b, face)
 			if err := writeCardDef(&b, face, card.Layout, nil); err != nil {
@@ -160,106 +161,96 @@ func fieldsNeedOpt(fields generatedCardFields) bool {
 }
 
 func anyFaceNeedsMana(faces []generatedCardFields) bool {
-	for _, face := range faces {
-		if fieldsNeedMana(face) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(faces, fieldsNeedMana)
 }
 
 func anyFaceNeedsOpt(faces []generatedCardFields) bool {
-	for _, face := range faces {
-		if fieldsNeedOpt(face) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(faces, fieldsNeedOpt)
 }
 
 func writeCardComment(b *strings.Builder, card *ScryfallCard, root generatedCardFields, faces []generatedCardFields) {
-	b.WriteString(fmt.Sprintf("// %s\n", card.Name))
-	b.WriteString("//\n")
-	b.WriteString(fmt.Sprintf("// Type: %s\n", card.TypeLine))
+	_, _ = fmt.Fprintf(b, "// %s\n", card.Name)
+	_, _ = b.WriteString("//\n")
+	_, _ = fmt.Fprintf(b, "// Type: %s\n", card.TypeLine)
 	if card.ManaCost != "" {
-		b.WriteString(fmt.Sprintf("// Cost: %s\n", card.ManaCost))
+		_, _ = fmt.Fprintf(b, "// Cost: %s\n", card.ManaCost)
 	}
 	if len(faces) > 0 {
 		for _, face := range faces {
-			b.WriteString(fmt.Sprintf("// Face: %s — %s", face.Name, face.TypeLine))
+			_, _ = fmt.Fprintf(b, "// Face: %s — %s", face.Name, face.TypeLine)
 			if face.ManaCost != "" {
-				b.WriteString(fmt.Sprintf(" (%s)", face.ManaCost))
+				_, _ = fmt.Fprintf(b, " (%s)", face.ManaCost)
 			}
-			b.WriteString("\n")
+			_, _ = b.WriteString("\n")
 		}
 	}
-	b.WriteString("//\n")
-	b.WriteString("// Oracle text:\n")
+	_, _ = b.WriteString("//\n")
+	_, _ = b.WriteString("// Oracle text:\n")
 	oracle := card.OracleText
 	if oracle == "" {
 		oracle = root.OracleText
 	}
 	if oracle != "" {
-		for _, line := range strings.Split(oracle, "\n") {
-			b.WriteString(fmt.Sprintf("//   %s\n", line))
+		for line := range strings.SplitSeq(oracle, "\n") {
+			_, _ = fmt.Fprintf(b, "//   %s\n", line)
 		}
 	} else {
 		for i, face := range faces {
 			if i > 0 {
-				b.WriteString("//   ---\n")
+				_, _ = b.WriteString("//   ---\n")
 			}
-			b.WriteString(fmt.Sprintf("//   %s\n", face.Name))
-			for _, line := range strings.Split(face.OracleText, "\n") {
-				b.WriteString(fmt.Sprintf("//   %s\n", line))
+			_, _ = fmt.Fprintf(b, "//   %s\n", face.Name)
+			for line := range strings.SplitSeq(face.OracleText, "\n") {
+				_, _ = fmt.Fprintf(b, "//   %s\n", line)
 			}
 		}
 	}
-	b.WriteString("//\n")
-	b.WriteString("// TODO: Fill in Abilities from oracle text.\n")
+	_, _ = b.WriteString("//\n")
+	_, _ = b.WriteString("// TODO: Fill in Abilities from oracle text.\n")
 }
 
 func writeSingleFaceComment(b *strings.Builder, fields generatedCardFields) {
-	b.WriteString(fmt.Sprintf("// %s\n", fields.Name))
-	b.WriteString("//\n")
-	b.WriteString(fmt.Sprintf("// Type: %s\n", fields.TypeLine))
+	_, _ = fmt.Fprintf(b, "// %s\n", fields.Name)
+	_, _ = b.WriteString("//\n")
+	_, _ = fmt.Fprintf(b, "// Type: %s\n", fields.TypeLine)
 	if fields.ManaCost != "" {
-		b.WriteString(fmt.Sprintf("// Cost: %s\n", fields.ManaCost))
+		_, _ = fmt.Fprintf(b, "// Cost: %s\n", fields.ManaCost)
 	}
-	b.WriteString("//\n")
-	b.WriteString("// Oracle text:\n")
-	for _, line := range strings.Split(fields.OracleText, "\n") {
-		b.WriteString(fmt.Sprintf("//   %s\n", line))
+	_, _ = b.WriteString("//\n")
+	_, _ = b.WriteString("// Oracle text:\n")
+	for line := range strings.SplitSeq(fields.OracleText, "\n") {
+		_, _ = fmt.Fprintf(b, "//   %s\n", line)
 	}
-	b.WriteString("//\n")
-	b.WriteString("// TODO: Fill in Abilities from oracle text.\n")
+	_, _ = b.WriteString("//\n")
+	_, _ = b.WriteString("// TODO: Fill in Abilities from oracle text.\n")
 }
 
 func writeCardDef(b *strings.Builder, root generatedCardFields, layout string, faces []generatedCardFields) error {
 	varName := CardNameToVarName(root.Name)
-	b.WriteString(fmt.Sprintf("\nvar %s = &game.CardDef{\n", varName))
+	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
 	if err := writeFields(b, root, "\t", true, true); err != nil {
 		return err
 	}
 	if layoutLiteral := layoutToLiteral(layout); layoutLiteral != "" {
-		b.WriteString(fmt.Sprintf("\tLayout: %s,\n", layoutLiteral))
+		_, _ = fmt.Fprintf(b, "\tLayout: %s,\n", layoutLiteral)
 	}
 	if len(faces) > 0 {
 		if len(faces) > 1 {
 			return fmt.Errorf("%s has %d non-front faces; CardDef supports one optional Back face", root.Name, len(faces))
 		}
-		b.WriteString("\tBack: opt.Val(game.CardFace{\n")
+		_, _ = b.WriteString("\tBack: opt.Val(game.CardFace{\n")
 		if err := writeFields(b, faces[0], "\t\t", true, false); err != nil {
 			return err
 		}
-		b.WriteString("\t}),\n")
+		_, _ = b.WriteString("\t}),\n")
 	}
-	b.WriteString("}\n")
+	_, _ = b.WriteString("}\n")
 	return nil
 }
 
-func writeFields(b *strings.Builder, fields generatedCardFields, indent string, includeName bool, includeColorIdentity bool) error {
+func writeFields(b *strings.Builder, fields generatedCardFields, indent string, includeName, includeColorIdentity bool) error {
 	if includeName {
-		b.WriteString(fmt.Sprintf("%sName: %q,\n", indent, fields.Name))
+		_, _ = fmt.Fprintf(b, "%sName: %q,\n", indent, fields.Name)
 	}
 	if fields.ManaCost != "" {
 		costLiteral, err := ParseManaCostLiteral(fields.ManaCost)
@@ -267,15 +258,15 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 			return fmt.Errorf("parsing mana cost for %s: %w", fields.Name, err)
 		}
 		if costLiteral != "" {
-			b.WriteString(fmt.Sprintf("%sManaCost: opt.Val(%s),\n", indent, indentContinuation(costLiteral, indent)))
+			_, _ = fmt.Fprintf(b, "%sManaCost: opt.Val(%s),\n", indent, indentContinuation(costLiteral, indent))
 		}
 	}
-	b.WriteString(fmt.Sprintf("%sManaValue: %d,\n", indent, fields.ManaValue))
+	_, _ = fmt.Fprintf(b, "%sManaValue: %d,\n", indent, fields.ManaValue)
 	if len(fields.Colors) > 0 {
-		b.WriteString(fmt.Sprintf("%sColors: []mana.Color{%s},\n", indent, colorLiterals(fields.Colors)))
+		_, _ = fmt.Fprintf(b, "%sColors: []mana.Color{%s},\n", indent, colorLiterals(fields.Colors))
 	}
 	if includeColorIdentity && len(fields.ColorIdentity) > 0 {
-		b.WriteString(fmt.Sprintf("%sColorIdentity: mana.NewColorIdentity(%s),\n", indent, colorLiterals(fields.ColorIdentity)))
+		_, _ = fmt.Fprintf(b, "%sColorIdentity: mana.NewColorIdentity(%s),\n", indent, colorLiterals(fields.ColorIdentity))
 	}
 	parsed := ParseTypeLine(fields.TypeLine)
 	if len(parsed.Supertypes) > 0 {
@@ -283,50 +274,50 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 		for _, st := range parsed.Supertypes {
 			literals = append(literals, SupertypeToLiteral(st))
 		}
-		b.WriteString(fmt.Sprintf("%sSupertypes: []types.Super{%s},\n", indent, strings.Join(literals, ", ")))
+		_, _ = fmt.Fprintf(b, "%sSupertypes: []types.Super{%s},\n", indent, strings.Join(literals, ", "))
 	}
 	if len(parsed.Types) > 0 {
 		var literals []string
 		for _, t := range parsed.Types {
 			literals = append(literals, CardTypeToLiteral(t))
 		}
-		b.WriteString(fmt.Sprintf("%sTypes: []types.Card{%s},\n", indent, strings.Join(literals, ", ")))
+		_, _ = fmt.Fprintf(b, "%sTypes: []types.Card{%s},\n", indent, strings.Join(literals, ", "))
 	}
 	if len(parsed.Subtypes) > 0 {
 		var literals []string
 		for _, s := range parsed.Subtypes {
 			literals = append(literals, SubtypeToLiteral(s, parsed.Types))
 		}
-		b.WriteString(fmt.Sprintf("%sSubtypes: []types.Sub{%s},\n", indent, strings.Join(literals, ", ")))
+		_, _ = fmt.Fprintf(b, "%sSubtypes: []types.Sub{%s},\n", indent, strings.Join(literals, ", "))
 	}
 	if fields.Power != nil {
-		b.WriteString(fmt.Sprintf("%sPower: opt.Val(%s),\n", indent, ptLiteral(*fields.Power)))
+		_, _ = fmt.Fprintf(b, "%sPower: opt.Val(%s),\n", indent, ptLiteral(*fields.Power))
 	}
 	if fields.Toughness != nil {
-		b.WriteString(fmt.Sprintf("%sToughness: opt.Val(%s),\n", indent, ptLiteral(*fields.Toughness)))
+		_, _ = fmt.Fprintf(b, "%sToughness: opt.Val(%s),\n", indent, ptLiteral(*fields.Toughness))
 	}
 	if fields.Loyalty != nil {
 		if n, err := strconv.Atoi(*fields.Loyalty); err == nil {
-			b.WriteString(fmt.Sprintf("%sLoyalty: opt.Val(%d),\n", indent, n))
+			_, _ = fmt.Fprintf(b, "%sLoyalty: opt.Val(%d),\n", indent, n)
 		}
 	}
 	if fields.Defense != nil {
 		if n, err := strconv.Atoi(*fields.Defense); err == nil {
-			b.WriteString(fmt.Sprintf("%sDefense: opt.Val(%d),\n", indent, n))
+			_, _ = fmt.Fprintf(b, "%sDefense: opt.Val(%d),\n", indent, n)
 		}
 	}
 	if fields.EntersTapped {
-		b.WriteString(fmt.Sprintf("%sEntersTapped: true,\n", indent))
+		_, _ = fmt.Fprintf(b, "%sEntersTapped: true,\n", indent)
 	}
 	if fields.OracleText != "" {
-		b.WriteString(fmt.Sprintf("%sOracleText: %q,\n", indent, fields.OracleText))
+		_, _ = fmt.Fprintf(b, "%sOracleText: %q,\n", indent, fields.OracleText)
 	}
-	b.WriteString(fmt.Sprintf("%s// Abilities: filled in by LLM from oracle text.\n", indent))
-	b.WriteString(fmt.Sprintf("%sAbilities: []game.AbilityDef{},\n", indent))
+	_, _ = fmt.Fprintf(b, "%s// Abilities: filled in by LLM from oracle text.\n", indent)
+	_, _ = fmt.Fprintf(b, "%sAbilities: []game.AbilityDef{},\n", indent)
 	return nil
 }
 
-func indentContinuation(literal string, indent string) string {
+func indentContinuation(literal, indent string) string {
 	return strings.ReplaceAll(literal, "\n", "\n"+indent)
 }
 
@@ -397,7 +388,7 @@ func ptLiteral(val string) string {
 }
 
 // CardNameToVarName converts a card name to a Go exported variable name.
-// e.g., "Lightning Bolt" -> "LightningBolt", "Sol Ring" -> "SolRing"
+// e.g., "Lightning Bolt" -> "LightningBolt", "Sol Ring" -> "SolRing".
 func CardNameToVarName(name string) string {
 	var b strings.Builder
 	capitalize := true
@@ -407,29 +398,29 @@ func CardNameToVarName(name string) string {
 			continue
 		}
 		if capitalize {
-			b.WriteRune(unicode.ToUpper(r))
+			_, _ = b.WriteRune(unicode.ToUpper(r))
 			capitalize = false
 		} else {
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 		}
 	}
 	return b.String()
 }
 
 // CardNameToFileName converts a card name to a snake_case file name.
-// e.g., "Lightning Bolt" -> "lightning_bolt", "Sol Ring" -> "sol_ring"
+// e.g., "Lightning Bolt" -> "lightning_bolt", "Sol Ring" -> "sol_ring".
 func CardNameToFileName(name string) string {
 	var b strings.Builder
 	prevWasUnderscore := false
 	for _, r := range name {
 		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
 			if !prevWasUnderscore && b.Len() > 0 {
-				b.WriteRune('_')
+				_, _ = b.WriteRune('_')
 				prevWasUnderscore = true
 			}
 			continue
 		}
-		b.WriteRune(unicode.ToLower(r))
+		_, _ = b.WriteRune(unicode.ToLower(r))
 		prevWasUnderscore = false
 	}
 	result := b.String()

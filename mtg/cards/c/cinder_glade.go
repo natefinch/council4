@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Cinder Glade
+// CinderGlade is the card definition for Cinder Glade.
 //
 // Type: Land — Mountain Forest
 //

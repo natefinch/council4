@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Hunter's Talent
+// HunterSTalent is the card definition for Hunter's Talent.
 //
 // Type: Enchantment — Class
 // Cost: {1}{G}

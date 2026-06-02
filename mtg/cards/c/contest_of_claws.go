@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Contest of Claws
+// ContestOfClaws is the card definition for Contest of Claws.
 //
 // Type: Sorcery
 // Cost: {1}{G}

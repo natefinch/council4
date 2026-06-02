@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func resolveFight(g *game.Game, obj *game.StackObject, effect game.Effect) {
+func resolveFight(g *game.Game, obj *game.StackObject, effect *game.Effect) {
 	if obj == nil || len(obj.Targets) < 2 {
 		return
 	}
@@ -21,12 +21,12 @@ func resolveFight(g *game.Game, obj *game.StackObject, effect game.Effect) {
 	dealPermanentDamage(g, second.CardInstanceID, second.ObjectID, effectiveController(g, second), first, effectivePower(g, second), false)
 }
 
-func counterTargetStackObject(g *game.Game, obj *game.StackObject, effect game.Effect) bool {
+func counterTargetStackObject(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
 	stackObjectID, ok := effectStackObjectID(obj, effect)
 	return ok && counterStackObject(g, stackObjectID)
 }
 
-func effectStackObjectID(obj *game.StackObject, effect game.Effect) (id.ID, bool) {
+func effectStackObjectID(obj *game.StackObject, effect *game.Effect) (id.ID, bool) {
 	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {
 		return 0, false
 	}
@@ -108,6 +108,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID gam
 			if _, ok := createCardPermanentFaceWithOptions(e, g, card, playerID, game.ZoneLibrary, game.FaceFront, nil, permanentCreationOptions{ForceTapped: spec.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil); !ok {
 				return len(found) > 0
 			}
+		default:
 		}
 	}
 	if spec.Shuffle {

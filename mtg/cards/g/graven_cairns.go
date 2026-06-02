@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Graven Cairns
+// GravenCairns is the card definition for Graven Cairns.
 //
 // Type: Land
 //

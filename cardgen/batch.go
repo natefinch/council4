@@ -13,20 +13,24 @@ import (
 	"unicode"
 )
 
+// ManifestVersion is the current on-disk manifest schema version.
 const ManifestVersion = 1
 
+// Batch fetch status values.
 const (
 	BatchStatusPending    = "pending"
 	BatchStatusFetched    = "fetched"
 	BatchStatusFetchError = "fetch-error"
 )
 
+// Batch generated-file status values.
 const (
 	BatchFileStatusUnknown  = ""
 	BatchFileStatusMissing  = "missing"
 	BatchFileStatusExisting = "existing"
 )
 
+// Batch validation status values.
 const (
 	BatchValidationStatusUnvalidated = ""
 	BatchValidationStatusValid       = "valid"
@@ -90,8 +94,8 @@ func ParseCardList(r io.Reader) ([]CardListItem, error) {
 		if strings.HasPrefix(raw, "#") {
 			continue
 		}
-		if strings.HasPrefix(raw, "//") {
-			header := strings.TrimSpace(strings.TrimPrefix(raw, "//"))
+		if after, ok := strings.CutPrefix(raw, "//"); ok {
+			header := strings.TrimSpace(after)
 			if header != "" {
 				section = header
 			}
@@ -174,7 +178,7 @@ func FetchManifest(manifest *Manifest, cacheDir string) {
 
 // FetchCardCached fetches one card by exact name and stores/loads Scryfall JSON
 // in cacheDir when cacheDir is non-empty.
-func FetchCardCached(name string, cacheDir string) (*ScryfallCard, error) {
+func FetchCardCached(name, cacheDir string) (*ScryfallCard, error) {
 	if cacheDir == "" {
 		return FetchCard(name)
 	}
@@ -191,14 +195,16 @@ func FetchCardCached(name string, cacheDir string) (*ScryfallCard, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o750); err != nil {
 		return nil, fmt.Errorf("creating cache directory: %w", err)
 	}
 	file, err := os.Create(path)
 	if err != nil {
 		return nil, fmt.Errorf("creating cached Scryfall card %s: %w", path, err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(card); err != nil {
@@ -226,7 +232,7 @@ func LoadManifest(path string) (Manifest, error) {
 
 // SaveManifest writes manifest to path with stable indentation.
 func SaveManifest(path string, manifest Manifest) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	tmpPath := path + ".tmp"
@@ -237,7 +243,7 @@ func SaveManifest(path string, manifest Manifest) error {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(manifest); err != nil {
-		file.Close()
+		_ = file.Close()
 		return err
 	}
 	if err := file.Close(); err != nil {
@@ -285,7 +291,7 @@ func manifestFaces(card *ScryfallCard) []ManifestFace {
 	return faces
 }
 
-func parseQuantity(line string) (int, string) {
+func parseQuantity(line string) (quantity int, name string) {
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
 		return 0, ""

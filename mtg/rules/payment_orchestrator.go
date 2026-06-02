@@ -2,7 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 // paymentOrchestratorType is the single point in the rules package for all

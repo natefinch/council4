@@ -46,6 +46,7 @@ type StateTriggerKey struct {
 // resolution (CR 608.2c, CR 609.3).
 type ResolutionChoiceKind int
 
+// Resolution choice kind values classify value-producing choices.
 const (
 	ResolutionChoiceNone ResolutionChoiceKind = iota
 	ResolutionChoiceColor
@@ -58,6 +59,7 @@ const (
 // options.
 type ResolutionChoiceColorSource int
 
+// Resolution choice color source values identify dynamic color-choice sources.
 const (
 	ResolutionChoiceColorSourceStatic ResolutionChoiceColorSource = iota
 	ResolutionChoiceColorSourceCommanderIdentity

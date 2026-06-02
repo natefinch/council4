@@ -148,7 +148,8 @@ func permanentForCard(g *game.Game, cardID id.ID) *game.Permanent {
 }
 
 func sawAction(actions []ActionLog, kind action.ActionKind) bool {
-	for _, logged := range actions {
+	for i := range actions {
+		logged := &actions[i]
 		if logged.Action.Kind == kind {
 			return true
 		}
@@ -157,7 +158,8 @@ func sawAction(actions []ActionLog, kind action.ActionKind) bool {
 }
 
 func sawAttackWith(actions []ActionLog, attacker id.ID) bool {
-	for _, logged := range actions {
+	for i := range actions {
+		logged := &actions[i]
 		if logged.Action.Kind != action.ActionDeclareAttackers {
 			continue
 		}

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -35,7 +36,7 @@ func main() {
 		os.Exit(2)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+		_, _ = fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
 }
@@ -48,7 +49,7 @@ func runParse(args []string) error {
 		return err
 	}
 	if *inPath == "" {
-		return fmt.Errorf("parse requires -in")
+		return errors.New("parse requires -in")
 	}
 	file, err := os.Open(*inPath)
 	if err != nil {
@@ -63,7 +64,7 @@ func runParse(args []string) error {
 	if err := cardgen.SaveManifest(*outPath, manifest); err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "wrote %s with %d unique cards\n", *outPath, len(manifest.Cards))
+	_, _ = fmt.Fprintf(os.Stderr, "wrote %s with %d unique cards\n", *outPath, len(manifest.Cards))
 	return nil
 }
 
@@ -86,7 +87,7 @@ func runFetch(args []string) error {
 	if err := cardgen.SaveManifest(*outPath, manifest); err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "updated %s\n", *outPath)
+	_, _ = fmt.Fprintf(os.Stderr, "updated %s\n", *outPath)
 	return nil
 }
 
@@ -106,7 +107,8 @@ func runMissing(args []string) error {
 		return err
 	}
 	cardgen.MarkExistingFiles(&manifest, *repoRoot)
-	for _, card := range manifest.Cards {
+	for i := range manifest.Cards {
+		card := &manifest.Cards[i]
 		if card.FileStatus == cardgen.BatchFileStatusMissing {
 			name := card.CanonicalName
 			if name == "" {
@@ -197,12 +199,9 @@ func runReport(args []string) error {
 	}); err != nil {
 		return err
 	}
-	if err := writeReport(*jsonPath, func(w *os.File) error {
+	return writeReport(*jsonPath, func(w *os.File) error {
 		return cardgen.WriteUnsupportedReportJSON(w, report)
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
 }
 
 func writeReport(path string, write func(*os.File) error) error {
@@ -212,7 +211,7 @@ func writeReport(path string, write func(*os.File) error) error {
 	if path == "-" {
 		return write(os.Stdout)
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	file, err := os.Create(path)
@@ -220,12 +219,12 @@ func writeReport(path string, write func(*os.File) error) error {
 		return err
 	}
 	if err := write(file); err != nil {
-		file.Close()
+		_ = file.Close()
 		return err
 	}
 	return file.Close()
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: cardbatch <parse|fetch|missing|worklist|validate|report> [flags]")
+	_, _ = fmt.Fprintln(os.Stderr, "usage: cardbatch <parse|fetch|missing|worklist|validate|report> [flags]")
 }

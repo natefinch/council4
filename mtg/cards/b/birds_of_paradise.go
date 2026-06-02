@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Birds of Paradise
+// BirdsOfParadise is the card definition for Birds of Paradise.
 //
 // Type: Creature — Bird
 // Cost: {G}
@@ -16,7 +16,6 @@ import (
 //
 //	Flying
 //	{T}: Add one mana of any color.
-
 var BirdsOfParadise = &game.CardDef{
 	Name: "Birds of Paradise",
 	ManaCost: opt.Val(mana.Cost{

@@ -9,6 +9,7 @@ import (
 // CostModifierKind identifies which costs a modifier applies to.
 type CostModifierKind int
 
+// Cost modifier kind values identify affected cost categories.
 const (
 	CostModifierSpell CostModifierKind = iota
 	CostModifierAbility
@@ -37,6 +38,7 @@ type AttackTax struct {
 // prohibitions, permissions, and cost changes.
 type RuleEffectKind int
 
+// Rule effect kind values identify supported non-layer rules effects.
 const (
 	RuleEffectNone RuleEffectKind = iota
 	RuleEffectCantGainLife

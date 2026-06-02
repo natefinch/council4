@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -9,22 +10,28 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
+type permanentManaOutputResult struct {
+	color  mana.Color
+	amount int
+	snow   bool
+}
+
 // permanentManaOutput derives the mana output of a permanent by checking
 // basic land types and simple tap mana abilities.
-func permanentManaOutput(s State, permanent *game.Permanent) (color mana.Color, amount int, snow bool, ok bool) {
-	if c, ok2 := basicLandManaColor(s, permanent); ok2 {
-		return c, 1, s.PermanentHasSupertype(permanent, types.Snow), true
+func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutputResult, bool) {
+	if c, ok := basicLandManaColor(s, permanent); ok {
+		return permanentManaOutputResult{color: c, amount: 1, snow: s.PermanentHasSupertype(permanent, types.Snow)}, true
 	}
 	controller := s.EffectiveController(permanent)
-	_, ability, ok2 := simpleTapManaAbility(s, controller, permanent)
-	if !ok2 {
-		return 0, 0, false, false
+	_, ability, ok := simpleTapManaAbility(s, controller, permanent)
+	if !ok {
+		return permanentManaOutputResult{}, false
 	}
-	a := ability.Effects[0].Amount
-	if a <= 0 {
-		a = 1
+	amount := ability.Effects[0].Amount
+	if amount <= 0 {
+		amount = 1
 	}
-	return ability.Effects[0].ManaColor, a, s.PermanentHasSupertype(permanent, types.Snow), true
+	return permanentManaOutputResult{color: ability.Effects[0].ManaColor, amount: amount, snow: s.PermanentHasSupertype(permanent, types.Snow)}, true
 }
 
 func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
@@ -84,7 +91,7 @@ func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) 
 		if !canConvokeWith(s, playerID, permanent, exclude) {
 			continue
 		}
-		if _, _, _, ok := permanentManaOutput(s, permanent); ok {
+		if _, ok := permanentManaOutput(s, permanent); ok {
 			manaCreatures = append(manaCreatures, permanent)
 			continue
 		}
@@ -164,20 +171,15 @@ func chooseConvokeColoredCreature(s State, candidates []*game.Permanent, used ma
 		if used[permanent.ObjectID] {
 			continue
 		}
-		for _, permanentColor := range s.PermanentEffectiveColors(permanent) {
-			if permanentColor == color {
-				return permanent, true
-			}
+		if slices.Contains(s.PermanentEffectiveColors(permanent), color) {
+			return permanent, true
 		}
 	}
 	return nil, false
 }
 
 func costWithConvokePayments(cost *mana.Cost, genericReduction int, paidColored map[int]bool) *mana.Cost {
-	generic := genericCostAmount(cost) - genericReduction
-	if generic < 0 {
-		generic = 0
-	}
+	generic := max(genericCostAmount(cost)-genericReduction, 0)
 	var modified mana.Cost
 	if generic > 0 {
 		modified = append(modified, mana.GenericMana(generic))
@@ -221,15 +223,15 @@ func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]boo
 		if s.EffectiveController(permanent) != playerID || permanent.Tapped || exclude[permanent.ObjectID] {
 			continue
 		}
-		color, amount, snow, ok := permanentManaOutput(s, permanent)
+		output, ok := permanentManaOutput(s, permanent)
 		if !ok {
 			continue
 		}
-		available[color] = append(available[color], manaSource{
+		available[output.color] = append(available[output.color], manaSource{
 			permanent: permanent,
-			color:     color,
-			amount:    amount,
-			snow:      snow,
+			color:     output.color,
+			amount:    output.amount,
+			snow:      output.snow,
 		})
 	}
 	return available

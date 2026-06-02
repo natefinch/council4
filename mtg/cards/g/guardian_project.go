@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Guardian Project
+// GuardianProject is the card definition for Guardian Project.
 //
 // Type: Enchantment
 // Cost: {3}{G}

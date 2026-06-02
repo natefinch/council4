@@ -10,6 +10,7 @@ import (
 // AdditionalCostKind classifies a non-mana cost component.
 type AdditionalCostKind int
 
+// Additional cost kind values identify supported non-mana costs.
 const (
 	AdditionalCostUnknown AdditionalCostKind = iota
 	AdditionalCostSacrifice
@@ -70,6 +71,7 @@ type AlternativeCost struct {
 // SymbolPaymentMethod classifies how one mana symbol was paid.
 type SymbolPaymentMethod int
 
+// Symbol payment method values identify how a mana symbol was paid.
 const (
 	SymbolPaymentUnknown SymbolPaymentMethod = iota
 	SymbolPaymentMana
@@ -99,6 +101,7 @@ type SymbolPayment struct {
 // PaymentChoiceKind classifies a non-action choice needed to pay a legal cost.
 type PaymentChoiceKind int
 
+// Payment choice kind values classify bounded payment decisions.
 const (
 	PaymentChoiceUnknown PaymentChoiceKind = iota
 	PaymentChoiceSymbol

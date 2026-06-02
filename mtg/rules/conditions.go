@@ -26,7 +26,7 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		matches = matches && controllerControlsMatchingPermanent(g, ctx, cond.ControllerControls)
 	}
 	if cond.Object.Exists || len(cond.Types) > 0 {
-		matches = matches && conditionObjectMatches(g, ctx, cond)
+		matches = matches && conditionObjectMatches(g, ctx, &cond)
 	}
 	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
 		matches = matches && eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g, ctx)
@@ -50,7 +50,7 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	return matches
 }
 
-func conditionObjectMatches(g *game.Game, ctx conditionContext, cond game.Condition) bool {
+func conditionObjectMatches(g *game.Game, ctx conditionContext, cond *game.Condition) bool {
 	obj := ctx.obj
 	if obj == nil && ctx.event != nil {
 		obj = &game.StackObject{HasTriggerEvent: true, TriggerEvent: *ctx.event, Controller: ctx.controller}
@@ -64,14 +64,14 @@ func conditionObjectMatches(g *game.Game, ctx conditionContext, cond game.Condit
 		return false
 	}
 	for _, cardType := range cond.Types {
-		if !resolvedObjectHasType(g, resolved, cardType) {
+		if !resolvedObjectHasType(g, &resolved, cardType) {
 			return false
 		}
 	}
 	return true
 }
 
-func resolvedObjectHasType(g *game.Game, resolved resolvedObjectReference, cardType types.Card) bool {
+func resolvedObjectHasType(g *game.Game, resolved *resolvedObjectReference, cardType types.Card) bool {
 	if resolved.permanent != nil {
 		return permanentHasType(g, resolved.permanent, cardType)
 	}
@@ -123,7 +123,7 @@ func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, 
 	if !ok {
 		return false
 	}
-	name := resolvedObjectName(g, resolved)
+	name := resolvedObjectName(g, &resolved)
 	if name == "" {
 		return false
 	}
@@ -152,7 +152,7 @@ func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, 
 	return true
 }
 
-func resolvedObjectName(g *game.Game, resolved resolvedObjectReference) string {
+func resolvedObjectName(g *game.Game, resolved *resolvedObjectReference) string {
 	if resolved.permanent != nil {
 		if resolved.permanent.Token {
 			return permanentTokenName(resolved.permanent)

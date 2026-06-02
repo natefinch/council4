@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Fire-Lit Thicket
+// FireLitThicket is the card definition for Fire-Lit Thicket.
 //
 // Type: Land
 //

@@ -41,7 +41,9 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	if len(pending) == 0 {
 		return false
 	}
-	for _, trigger := range e.orderTriggeredAbilitiesAPNAP(g, pending, agents, log) {
+	orderedTriggers := e.orderTriggeredAbilitiesAPNAP(g, pending, agents, log)
+	for i := range orderedTriggers {
+		trigger := &orderedTriggers[i]
 		obj := &game.StackObject{
 			ID:                      g.IDGen.Next(),
 			Kind:                    game.StackTriggeredAbility,
@@ -62,7 +64,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	return true
 }
 
-func (e *Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.GameEvent) []pendingTriggeredAbility {
+func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.GameEvent) []pendingTriggeredAbility {
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
 		if event.Kind != game.EventCardDiscarded || event.ToZone != game.ZoneExile || event.CardID == 0 {
@@ -107,7 +109,7 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.GameEvent)
 	return pending
 }
 
-func (e *Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.GameEvent) []pendingTriggeredAbility {
+func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.GameEvent) []pendingTriggeredAbility {
 	abilities := permanentEffectiveAbilities(g, permanent)
 	var pending []pendingTriggeredAbility
 	controller := effectiveController(g, permanent)
@@ -196,7 +198,7 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	}, true
 }
 
-func (e *Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbility {
+func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbility {
 	if g.StateTriggerLatches == nil {
 		g.StateTriggerLatches = make(map[game.StateTriggerKey]bool)
 	}
@@ -463,7 +465,7 @@ func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType types.Ca
 	return false
 }
 
-func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required []types.Card, excluded []types.Card) bool {
+func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required, excluded []types.Card) bool {
 	for _, cardType := range required {
 		if !eventPermanentHasType(g, event, cardType) {
 			return false
@@ -477,20 +479,20 @@ func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required
 	return true
 }
 
-func eventCardTypeFiltersMatch(g *game.Game, event game.GameEvent, required []types.Card, excluded []types.Card) bool {
-	types := event.CardTypes
-	if len(types) == 0 && event.CardID != 0 {
+func eventCardTypeFiltersMatch(g *game.Game, event game.GameEvent, required, excluded []types.Card) bool {
+	cardTypes := event.CardTypes
+	if len(cardTypes) == 0 && event.CardID != 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
-			types = cardFaceOrDefault(card, game.FaceFront).Types
+			cardTypes = cardFaceOrDefault(card, game.FaceFront).Types
 		}
 	}
 	for _, cardType := range required {
-		if !slices.Contains(types, cardType) {
+		if !slices.Contains(cardTypes, cardType) {
 			return false
 		}
 	}
 	for _, cardType := range excluded {
-		if slices.Contains(types, cardType) {
+		if slices.Contains(cardTypes, cardType) {
 			return false
 		}
 	}
@@ -518,17 +520,18 @@ func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTr
 	used := make([]bool, len(triggers))
 	for _, playerID := range triggerAPNAPPlayers(g) {
 		var playerTriggers []pendingTriggeredAbility
-		for i, trigger := range triggers {
+		for i := range triggers {
+			trigger := &triggers[i]
 			if trigger.controller == playerID {
-				playerTriggers = append(playerTriggers, trigger)
+				playerTriggers = append(playerTriggers, *trigger)
 				used[i] = true
 			}
 		}
 		ordered = append(ordered, e.preparePlayerTriggers(g, playerID, playerTriggers, agents, log)...)
 	}
-	for i, trigger := range triggers {
+	for i := range triggers {
 		if !used[i] {
-			ordered = append(ordered, trigger)
+			ordered = append(ordered, triggers[i])
 		}
 	}
 	return ordered
@@ -537,7 +540,8 @@ func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTr
 func (e *Engine) preparePlayerTriggers(g *game.Game, playerID game.PlayerID, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
 	ordered := e.chooseTriggerOrder(g, playerID, triggers, agents, log)
 	prepared := make([]pendingTriggeredAbility, 0, len(ordered))
-	for _, trigger := range ordered {
+	for i := range ordered {
+		trigger := &ordered[i]
 		source, _ := pendingTriggerSourceDef(g, trigger)
 		ability, ok := pendingTriggerAbilityFromDef(source, trigger)
 		if !ok {
@@ -548,17 +552,17 @@ func (e *Engine) preparePlayerTriggers(g *game.Game, playerID game.PlayerID, tri
 			continue
 		}
 		trigger.targets = targets
-		prepared = append(prepared, trigger)
+		prepared = append(prepared, *trigger)
 	}
 	return prepared
 }
 
-func pendingTriggerAbility(g *game.Game, trigger pendingTriggeredAbility) (*game.AbilityDef, bool) {
+func pendingTriggerAbility(g *game.Game, trigger *pendingTriggeredAbility) (*game.AbilityDef, bool) {
 	source, _ := pendingTriggerSourceDef(g, trigger)
 	return pendingTriggerAbilityFromDef(source, trigger)
 }
 
-func pendingTriggerSourceDef(g *game.Game, trigger pendingTriggeredAbility) (*game.CardDef, bool) {
+func pendingTriggerSourceDef(g *game.Game, trigger *pendingTriggeredAbility) (*game.CardDef, bool) {
 	if trigger.sourceCardID != 0 {
 		if card, ok := g.GetCardInstance(trigger.sourceCardID); ok {
 			return card.Def.FaceDef(trigger.face)
@@ -571,7 +575,7 @@ func pendingTriggerSourceDef(g *game.Game, trigger pendingTriggeredAbility) (*ga
 	return trigger.sourceToken.FaceDef(trigger.face)
 }
 
-func pendingTriggerAbilityFromDef(def *game.CardDef, trigger pendingTriggeredAbility) (*game.AbilityDef, bool) {
+func pendingTriggerAbilityFromDef(def *game.CardDef, trigger *pendingTriggeredAbility) (*game.AbilityDef, bool) {
 	if trigger.inline != nil {
 		return trigger.inline, true
 	}
@@ -586,7 +590,8 @@ func (e *Engine) chooseTriggerOrder(g *game.Game, playerID game.PlayerID, trigge
 		return triggers
 	}
 	options := make([]game.ChoiceOption, 0, len(triggers))
-	for i, trigger := range triggers {
+	for i := range triggers {
+		trigger := &triggers[i]
 		options = append(options, game.ChoiceOption{
 			Index: i,
 			Label: fmt.Sprintf("source=%v ability=%d", trigger.sourceID, trigger.abilityIndex),
@@ -602,9 +607,9 @@ func (e *Engine) chooseTriggerOrder(g *game.Game, playerID game.PlayerID, trigge
 		ordered = append(ordered, triggers[index])
 		used[index] = true
 	}
-	for i, trigger := range triggers {
+	for i := range triggers {
 		if !used[i] {
-			ordered = append(ordered, trigger)
+			ordered = append(ordered, triggers[i])
 		}
 	}
 	return ordered

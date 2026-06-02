@@ -13,16 +13,14 @@ func (c Cost) ManaValue() int {
 	total := 0
 	for _, s := range c {
 		switch s.Kind {
-		case ColoredSymbol, ColorlessSymbol, PhyrexianSymbol, SnowSymbol:
+		case ColoredSymbol, ColorlessSymbol, PhyrexianSymbol, SnowSymbol, HybridSymbol:
 			total++
 		case GenericSymbol:
 			total += s.Generic
-		case HybridSymbol:
-			total++
 		case MonoHybridSymbol:
 			total += 2
-		case VariableSymbol:
-			// X = 0 except on the stack
+		default:
+			// X = 0 except on the stack, and unknown symbols add no mana value.
 		}
 	}
 	return total
@@ -49,6 +47,7 @@ func (c Cost) Colors() []Color {
 				seen[s.AltColor] = true
 				colors = append(colors, s.AltColor)
 			}
+		default:
 		}
 	}
 	return colors
@@ -58,7 +57,7 @@ func (c Cost) Colors() []Color {
 func (c Cost) String() string {
 	var b strings.Builder
 	for _, s := range c {
-		b.WriteString(s.String())
+		_, _ = b.WriteString(s.String())
 	}
 	return b.String()
 }

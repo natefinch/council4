@@ -1,5 +1,7 @@
 package mana
 
+import "maps"
+
 // Pool represents a player's current mana pool. It tracks mana by spendable
 // units so rules can distinguish provenance such as snow mana while preserving
 // simple color-count APIs.
@@ -64,9 +66,7 @@ func (p *Pool) SnowAmount() int {
 // Units returns a copy of the pool's mana unit counts.
 func (p *Pool) Units() map[Unit]int {
 	units := make(map[Unit]int)
-	for unit, amount := range p.mana {
-		units[unit] = amount
-	}
+	maps.Copy(units, p.mana)
 	return units
 }
 

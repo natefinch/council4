@@ -10,7 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func TestSpellPaymentPlanCharacterization(t *testing.T) {

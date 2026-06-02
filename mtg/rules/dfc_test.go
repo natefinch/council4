@@ -67,7 +67,7 @@ func TestTransformChangesEffectiveFaceCharacteristics(t *testing.T) {
 	g.Battlefield = append(g.Battlefield, permanent)
 	obj := &game.StackObject{Controller: game.Player1, Targets: []game.Target{game.PermanentTarget(permanent.ObjectID)}}
 
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectTransform, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectTransform, TargetIndex: 0}, nil)
 
 	if permanent.Face != game.FaceBack || !permanent.Transformed {
 		t.Fatalf("permanent face/transformed = %v/%v, want back/true", permanent.Face, permanent.Transformed)
@@ -91,7 +91,7 @@ func TestTransformDoesNothingToModalDFC(t *testing.T) {
 	g.Battlefield = append(g.Battlefield, permanent)
 	obj := &game.StackObject{Controller: game.Player1, Targets: []game.Target{game.PermanentTarget(permanent.ObjectID)}}
 
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectTransform, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectTransform, TargetIndex: 0}, nil)
 
 	if permanent.Face != game.FaceBack || permanent.Transformed {
 		t.Fatalf("modal DFC face/transformed = %v/%v, want back/false", permanent.Face, permanent.Transformed)

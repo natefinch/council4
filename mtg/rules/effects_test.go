@@ -16,7 +16,7 @@ import (
 func TestDrawEffectDrawsRequestedCards(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDraw,
 		Amount:      2,
 		TargetIndex: -1,
@@ -51,7 +51,7 @@ func TestUnsupportedEffectsAreLogged(t *testing.T) {
 		t.Run(effectTypeName(effectType), func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
-			sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+			sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
 				Type:        effectType,
 				Description: "unsupported test effect",
 			}, nil)
@@ -100,7 +100,7 @@ func effectTypeName(effectType game.EffectType) string {
 func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectGainLife,
 		Amount:      3,
 		TargetIndex: 0,
@@ -130,7 +130,7 @@ func TestCantGainLifeRuleEffectStopsLifeGainAndLifelink(t *testing.T) {
 			}},
 		}},
 	})
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectGainLife,
 		Amount:      3,
 		TargetIndex: -1,
@@ -155,7 +155,7 @@ func TestDynamicAmountUsesControllerHandSize(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToHand(g, game.Player1, &game.CardDef{Name: "First"})
 	addCardToHand(g, game.Player1, &game.CardDef{Name: "Second"})
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectGainLife,
 		TargetIndex: -1,
 		DynamicAmount: optDynamicAmount(game.DynamicAmount{
@@ -173,7 +173,7 @@ func TestDynamicAmountUsesControllerHandSize(t *testing.T) {
 func TestDynamicAmountUsesXValue(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		TargetIndex: 0,
 		DynamicAmount: optDynamicAmount(game.DynamicAmount{
@@ -197,7 +197,7 @@ func TestDynamicAmountUsesTargetPower(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		TargetIndex: 0,
 		DynamicAmount: optDynamicAmount(game.DynamicAmount{
@@ -264,7 +264,7 @@ func TestOptionalEffectCanBeAcceptedOrDeclined(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
-		addEffectSpellToStack(g, game.Player1, game.Effect{
+		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectDraw,
 			TargetIndex: -1,
 			Amount:      1,
@@ -285,7 +285,7 @@ func TestOptionalEffectCanBeAcceptedOrDeclined(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
-		addEffectSpellToStack(g, game.Player1, game.Effect{
+		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectDraw,
 			TargetIndex: -1,
 			Amount:      1,
@@ -635,7 +635,7 @@ func TestDamageAndLoseLifeEffectsCanEliminatePlayers(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
 			g.Players[game.Player2].Life = 3
-			addEffectSpellToStack(g, game.Player1, game.Effect{
+			addEffectSpellToStack(g, game.Player1, &game.Effect{
 				Type:        tt.effectType,
 				Amount:      3,
 				TargetIndex: 0,
@@ -660,7 +660,7 @@ func TestDamageAndLoseLifeEffectsCanEliminatePlayers(t *testing.T) {
 func TestFailedDrawEffectLogsAndEliminatesPlayer(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDraw,
 		Amount:      1,
 		TargetIndex: -1,
@@ -694,19 +694,19 @@ func TestMillScryAndSurveilLibraryEffectsUseDeterministicFallback(t *testing.T) 
 	top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
 	second := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Second"})
 	third := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Third"})
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectScry, Amount: 2, TargetIndex: -1}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectScry, Amount: 2, TargetIndex: -1}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if got := g.Players[game.Player1].Library.All(); len(got) < 3 || got[0] != third || got[1] != second || got[2] != top {
 		t.Fatalf("library after scry = %+v, want deterministic keep-top order", got)
 	}
 
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectSurveil, Amount: 2, TargetIndex: -1}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectSurveil, Amount: 2, TargetIndex: -1}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if got := g.Players[game.Player1].Library.All(); len(got) < 3 || got[0] != third || got[1] != second || got[2] != top {
 		t.Fatalf("library after surveil = %+v, want deterministic keep-top order", got)
 	}
 
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectMill, Amount: 2, TargetIndex: -1}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectMill, Amount: 2, TargetIndex: -1}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if !g.Players[game.Player1].Graveyard.Contains(third) || !g.Players[game.Player1].Graveyard.Contains(second) {
 		t.Fatal("mill did not move top two cards to graveyard")
@@ -735,7 +735,7 @@ func TestCounterEffectCountersTargetStackObject(t *testing.T) {
 		Controller: game.Player2,
 	}
 	g.Stack.Push(targetObj)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectCounter, TargetIndex: 0}, []game.Target{game.StackObjectTarget(targetObj.ID)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectCounter, TargetIndex: 0}, []game.Target{game.StackObjectTarget(targetObj.ID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -777,7 +777,7 @@ func TestCounterEffectCannotCounterProtectedCreatureSpell(t *testing.T) {
 		Controller: game.Player2,
 	}
 	g.Stack.Push(targetObj)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectCounter, TargetIndex: 0}, []game.Target{game.StackObjectTarget(targetObj.ID)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectCounter, TargetIndex: 0}, []game.Target{game.StackObjectTarget(targetObj.ID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -862,7 +862,7 @@ func TestDiscardEffectDiscardsDeterministicHandCards(t *testing.T) {
 	engine := NewEngine(nil)
 	bottom := addCardToHand(g, game.Player2, &game.CardDef{Name: "Bottom"})
 	top := addCardToHand(g, game.Player2, &game.CardDef{Name: "Top"})
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDiscard, Amount: 1, TargetIndex: 0}, []game.Target{game.PlayerTarget(game.Player2)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectDiscard, Amount: 1, TargetIndex: 0}, []game.Target{game.PlayerTarget(game.Player2)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -880,7 +880,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		engine := NewEngine(nil)
 		creature := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Creature", Types: []types.Card{types.Creature}})
 		_ = addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Instant", Types: []types.Card{types.Instant}})
-		addEffectSpellToStack(g, game.Player1, game.Effect{
+		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectSearch,
 			Amount:      1,
 			TargetIndex: -1,
@@ -915,7 +915,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Name:  "Nonbasic Land",
 			Types: []types.Card{types.Land},
 		})
-		addEffectSpellToStack(g, game.Player1, game.Effect{
+		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectSearch,
 			Amount:      1,
 			TargetIndex: -1,
@@ -948,7 +948,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Name:  "Nonbasic Land",
 			Types: []types.Card{types.Land},
 		})
-		addEffectSpellToStack(g, game.Player1, game.Effect{
+		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectSearch,
 			Amount:      1,
 			TargetIndex: -1,
@@ -979,7 +979,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Types:    []types.Card{types.Land},
 			Subtypes: []types.Sub{types.Sub("Desert")},
 		})
-		addEffectSpellToStack(g, game.Player1, game.Effect{
+		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectSearch,
 			Amount:      1,
 			TargetIndex: -1,
@@ -1011,7 +1011,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
-		addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectReveal, Amount: 1, TargetIndex: -1}, nil)
+		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectReveal, Amount: 1, TargetIndex: -1}, nil)
 
 		engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1027,7 +1027,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		drawn := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
-		addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectInvestigate, Amount: 2, TargetIndex: -1}, nil)
+		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectInvestigate, Amount: 2, TargetIndex: -1}, nil)
 
 		engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1095,8 +1095,8 @@ func TestMonstrosityEffectAddsCountersOnlyOnce(t *testing.T) {
 	}
 	effect := game.Effect{Type: game.EffectMonstrosity, Amount: 5, TargetIndex: -2}
 
-	engine.resolveEffect(g, obj, effect, &TurnLog{})
-	engine.resolveEffect(g, obj, effect, &TurnLog{})
+	engine.resolveEffect(g, obj, &effect, &TurnLog{})
+	engine.resolveEffect(g, obj, &effect, &TurnLog{})
 
 	if !source.Monstrous {
 		t.Fatal("source did not become monstrous")
@@ -1129,8 +1129,8 @@ func TestSetClassLevelEffectAndClassInitialLevel(t *testing.T) {
 		Controller:   game.Player1,
 	}
 
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectSetClassLevel, Amount: 2, TargetIndex: -2}, &TurnLog{})
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectSetClassLevel, Amount: 1, TargetIndex: -2}, &TurnLog{})
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectSetClassLevel, Amount: 2, TargetIndex: -2}, &TurnLog{})
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectSetClassLevel, Amount: 1, TargetIndex: -2}, &TurnLog{})
 
 	if got := source.ClassLevel; got != 2 {
 		t.Fatalf("class level = %d, want upgraded and not downgraded level 2", got)
@@ -1158,7 +1158,7 @@ func TestRuleEffectCantBeBlockedBindsAffectedObject(t *testing.T) {
 func TestUnsupportedSearchSpecIsLogged(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectSearch,
 		TargetIndex: -1,
 		Search: opt.Val(game.SearchSpec{
@@ -1183,7 +1183,7 @@ func TestProliferateAddsOneChosenCounterKind(t *testing.T) {
 	permanent.Counters.Add(counter.PlusOnePlusOne, 1)
 	permanent.Counters.Add(counter.Charge, 1)
 	g.Players[game.Player2].PoisonCounters = 1
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectProliferate}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectProliferate}, nil)
 	agents := [game.NumPlayers]PlayerAgent{
 		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {0}}},
 	}
@@ -1209,7 +1209,7 @@ func TestGoadEffectExpiresOnGoadingPlayersNextTurn(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectGoad, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectGoad, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1230,7 +1230,7 @@ func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
 		engine := NewEngine(nil)
 		bottom := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Bottom"})
 		top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
-		addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectScry, Amount: 1, TargetIndex: -1}, nil)
+		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectScry, Amount: 1, TargetIndex: -1}, nil)
 		log := TurnLog{}
 		agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
 
@@ -1247,7 +1247,7 @@ func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
-		addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectSurveil, Amount: 1, TargetIndex: -1}, nil)
+		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectSurveil, Amount: 1, TargetIndex: -1}, nil)
 		log := TurnLog{}
 		agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
 
@@ -1266,7 +1266,7 @@ func TestDestroyEffectMovesPermanentToGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCreaturePermanent(g, game.Player2)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDestroy, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectDestroy, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1292,7 +1292,7 @@ func TestExileAndBounceEffectsMovePermanentsToOwnerZones(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
 			target := addCreaturePermanent(g, game.Player2)
-			addEffectSpellToStack(g, game.Player1, game.Effect{Type: tt.effectType, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
+			addEffectSpellToStack(g, game.Player1, &game.Effect{Type: tt.effectType, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 			engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1305,6 +1305,7 @@ func TestExileAndBounceEffectsMovePermanentsToOwnerZones(t *testing.T) {
 				zone = &g.Players[game.Player2].Exile
 			case game.EffectBounce:
 				zone = &g.Players[game.Player2].Hand
+			default:
 			}
 			if zone == nil || !zone.Contains(target.CardInstanceID) {
 				t.Fatalf("card was not moved to expected zone for %s", tt.name)
@@ -1317,7 +1318,7 @@ func TestSacrificeEffectMovesControllerPermanentThroughGraveyardIgnoringIndestru
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanent(g, game.Player1, game.Indestructible)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectSacrifice, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectSacrifice, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1333,13 +1334,13 @@ func TestTapAndUntapEffectsChangeTappedState(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCreaturePermanent(g, game.Player2)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectTap, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectTap, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if !target.Tapped {
 		t.Fatal("tap effect did not tap permanent")
 	}
 
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectUntap, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectUntap, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if target.Tapped {
 		t.Fatal("untap effect did not untap permanent")
@@ -1350,7 +1351,7 @@ func TestDamageToPermanentEffectCanCauseLethalSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDamage, Amount: 3, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectDamage, Amount: 3, TargetIndex: 0}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	engine.resolveTopOfStack(g, &TurnLog{})
 
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
@@ -1373,7 +1374,7 @@ func TestMassDestroyCreaturesUsesSnapshotAndRespectsIndestructible(t *testing.T)
 		Name:  "Relic",
 		Types: []types.Card{types.Artifact},
 	})
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDestroy,
 		TargetIndex: -1,
 		Selector:    game.EffectSelectorAllCreatures,
@@ -1410,7 +1411,7 @@ func TestMassDestroyNonlandPermanentsLeavesLands(t *testing.T) {
 		Name:  "Aura",
 		Types: []types.Card{types.Enchantment},
 	})
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDestroy,
 		TargetIndex: -1,
 		Selector:    game.EffectSelectorAllNonlandPermanents,
@@ -1438,7 +1439,7 @@ func TestMassDamageDeathsAreLoggedTogetherBySBA(t *testing.T) {
 		Name:  "Relic",
 		Types: []types.Card{types.Artifact},
 	})
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		Amount:      3,
 		TargetIndex: -1,
@@ -1467,7 +1468,7 @@ func TestTemporaryPTModifierChangesCombatDamageAndLethalThreshold(t *testing.T) 
 	engine := NewEngine(nil)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 4)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:           game.EffectModifyPT,
 		TargetIndex:    0,
 		PowerDelta:     3,
@@ -1509,7 +1510,7 @@ func TestTemporaryPTModifiersStackDeterministically(t *testing.T) {
 		{Type: game.EffectModifyPT, TargetIndex: 0, PowerDelta: 1, ToughnessDelta: 2, UntilEndOfTurn: true},
 		{Type: game.EffectModifyPT, TargetIndex: 0, PowerDelta: -2, ToughnessDelta: -1, UntilEndOfTurn: true},
 	} {
-		addEffectSpellToStack(g, game.Player1, effect, []game.Target{game.PermanentTarget(creature.ObjectID)})
+		addEffectSpellToStack(g, game.Player1, &effect, []game.Target{game.PermanentTarget(creature.ObjectID)})
 		engine.resolveTopOfStack(g, &TurnLog{})
 	}
 
@@ -1528,7 +1529,7 @@ func TestAddCounterEffectAddsCountersToTargetPermanent(t *testing.T) {
 		Name:  "Relic",
 		Types: []types.Card{types.Artifact},
 	})
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectAddCounter,
 		TargetIndex: 0,
 		Amount:      3,
@@ -1555,7 +1556,7 @@ func TestMoveCountersEffectMovesCountersBetweenTargets(t *testing.T) {
 	})
 	source.Counters.Add(counter.PlusOnePlusOne, 2)
 	source.Counters.Add(counter.Charge, 1)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectMoveCounters,
 		TargetIndex: 1,
 		CounterSource: game.CounterSourceSpec{
@@ -1591,10 +1592,10 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 		Types: []types.Card{types.Artifact},
 	})
 	zero := game.PT{Value: 0}
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
-		Condition: optEffectCondition(game.EffectCondition{
+		Condition: optEffectCondition(&game.EffectCondition{
 			Text:          "it isn't a creature",
 			TargetIndex:   0,
 			PermanentType: opt.Val(types.Creature),
@@ -1642,10 +1643,10 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 		Toughness: optPT(two),
 	})
 	zero := game.PT{Value: 0}
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
-		Condition: optEffectCondition(game.EffectCondition{
+		Condition: optEffectCondition(&game.EffectCondition{
 			Text:          "it isn't a creature",
 			TargetIndex:   0,
 			PermanentType: opt.Val(types.Creature),
@@ -1704,7 +1705,7 @@ func TestCreateTokenEffectCreatesTokenPermanent(t *testing.T) {
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
 	}
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectCreateToken, Amount: 2, TargetIndex: -1, Token: optToken(token)}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectCreateToken, Amount: 2, TargetIndex: -1, Token: optToken(token)}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1825,8 +1826,8 @@ func TestTokenCanBlockTakeCombatDamageAndDie(t *testing.T) {
 	}
 }
 
-func addEffectSpellToStack(g *game.Game, controller game.PlayerID, effect game.Effect, targets []game.Target) id.ID {
-	return addLinkedResultSpellToStackForController(g, controller, []game.Effect{effect}, targets)
+func addEffectSpellToStack(g *game.Game, controller game.PlayerID, effect *game.Effect, targets []game.Target) id.ID {
+	return addLinkedResultSpellToStackForController(g, controller, []game.Effect{*effect}, targets)
 }
 
 func addLinkedResultSpellToStack(g *game.Game, effects []game.Effect) id.ID {

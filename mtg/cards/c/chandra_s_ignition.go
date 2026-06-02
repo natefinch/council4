@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Chandra's Ignition
+// ChandraSIgnition is the card definition for Chandra's Ignition.
 //
 // Type: Sorcery
 // Cost: {3}{R}{R}

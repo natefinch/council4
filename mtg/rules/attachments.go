@@ -1,13 +1,15 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
-func attachPermanent(g *game.Game, attachment *game.Permanent, target *game.Permanent) bool {
+func attachPermanent(g *game.Game, attachment, target *game.Permanent) bool {
 	if !canAttachPermanent(g, attachment, target) {
 		return false
 	}
@@ -39,7 +41,7 @@ func detachAttachmentsFromPermanent(g *game.Game, target *game.Permanent) {
 	target.Attachments = nil
 }
 
-func canAttachPermanent(g *game.Game, attachment *game.Permanent, target *game.Permanent) bool {
+func canAttachPermanent(g *game.Game, attachment, target *game.Permanent) bool {
 	if attachment.ObjectID == target.ObjectID {
 		return false
 	}
@@ -52,7 +54,7 @@ func canAttachPermanent(g *game.Game, attachment *game.Permanent, target *game.P
 	return false
 }
 
-func auraCanAttachToPermanent(g *game.Game, aura *game.Permanent, target *game.Permanent) bool {
+func auraCanAttachToPermanent(g *game.Game, aura, target *game.Permanent) bool {
 	spec, ok := enchantTargetSpecForPermanent(g, aura)
 	if !ok {
 		return false
@@ -60,7 +62,7 @@ func auraCanAttachToPermanent(g *game.Game, aura *game.Permanent, target *game.P
 	if spec.Allow != game.TargetAllowUnspecified && spec.Allow&game.TargetAllowPermanent == 0 {
 		return false
 	}
-	return permanentTargetMatchesSpec(g, effectiveController(g, aura), aura.ObjectID, spec, target.ObjectID)
+	return permanentTargetMatchesSpec(g, effectiveController(g, aura), aura.ObjectID, &spec, target.ObjectID)
 }
 
 func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {
@@ -88,8 +90,9 @@ func enchantTargetSpecForPermanent(g *game.Game, aura *game.Permanent) (game.Tar
 }
 
 func enchantTargetSpecForCard(card *game.CardDef) (game.TargetSpec, bool) {
-	for _, ability := range card.Abilities {
-		if !abilityHasKeyword(&ability, game.Enchant) || !ability.EnchantTarget.Exists {
+	for i := range card.Abilities {
+		ability := &card.Abilities[i]
+		if !abilityHasKeyword(ability, game.Enchant) || !ability.EnchantTarget.Exists {
 			continue
 		}
 		spec := ability.EnchantTarget.Val
@@ -109,12 +112,7 @@ func isEquipmentCard(card *game.CardDef) bool {
 }
 
 func permanentIDsContain(ids []id.ID, want id.ID) bool {
-	for _, got := range ids {
-		if got == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ids, want)
 }
 
 func removePermanentID(ids []id.ID, remove id.ID) []id.ID {

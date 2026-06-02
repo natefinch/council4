@@ -35,7 +35,9 @@ type TurnLog struct {
 // TurnLogEntryKind identifies the kind of chronological turn log entry.
 type TurnLogEntryKind int
 
+// TurnLogEntry constants identify chronological turn log entry kinds.
 const (
+	// TurnLogEntryUnknown is the zero value for an unspecified turn log entry.
 	TurnLogEntryUnknown TurnLogEntryKind = iota
 	TurnLogEntryDraw
 	TurnLogEntryLoss
@@ -72,7 +74,9 @@ type DrawLog struct {
 // LossReason describes why a player lost the game.
 type LossReason string
 
+// LossReason constants describe supported loss causes.
 const (
+	// LossReasonEmptyLibraryDraw means a player tried to draw from an empty library.
 	LossReasonEmptyLibraryDraw    LossReason = "draw from empty library"
 	LossReasonZeroLife            LossReason = "0 life"
 	LossReasonPoisonCounters      LossReason = "10 poison counters"
@@ -136,7 +140,9 @@ type CreatureDamageLog struct {
 // PermanentDeathReason describes why a permanent died or left the battlefield.
 type PermanentDeathReason string
 
+// PermanentDeathReason constants describe state-based permanent deaths.
 const (
+	// PermanentDeathReasonLethalDamage means marked damage was lethal.
 	PermanentDeathReasonLethalDamage  PermanentDeathReason = "lethal damage"
 	PermanentDeathReasonZeroToughness PermanentDeathReason = "0 toughness"
 	PermanentDeathReasonZeroLoyalty   PermanentDeathReason = "0 loyalty"
@@ -171,12 +177,12 @@ func (log *TurnLog) addLoss(loss LossLog) {
 	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryLoss, Loss: loss})
 }
 
-func (log *TurnLog) addAction(action ActionLog) {
+func (log *TurnLog) addAction(actionLog *ActionLog) {
 	if log == nil {
 		return
 	}
-	log.Actions = append(log.Actions, action)
-	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryAction, Action: action})
+	log.Actions = append(log.Actions, *actionLog)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryAction, Action: *actionLog})
 }
 
 func (log *TurnLog) addChoice(choice game.ChoiceDecision) {

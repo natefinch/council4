@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Bite Down
+// BiteDown is the card definition for Bite Down.
 //
 // Type: Instant
 // Cost: {1}{G}

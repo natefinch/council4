@@ -42,17 +42,16 @@ func (p Phase) String() string {
 // Step represents a step within a phase (CR 500–514).
 type Step int
 
+// Step values identify turn steps in phase order.
 const (
 	// StepNone indicates no specific step (used during main phases which
 	// have no sub-steps).
 	StepNone Step = iota
 
-	// Beginning phase steps
 	StepUntap  // No player gets priority (CR 502)
 	StepUpkeep // "At the beginning of upkeep" triggers
 	StepDraw   // Active player draws one card
 
-	// Combat phase steps
 	StepBeginningOfCombat // "Beginning of combat" triggers
 	StepDeclareAttackers  // Active player declares attackers
 	StepDeclareBlockers   // Defending players declare blockers
@@ -60,7 +59,6 @@ const (
 	StepCombatDamage      // All combat damage is dealt
 	StepEndOfCombat       // "End of combat" triggers
 
-	// Ending phase steps
 	StepEnd     // "At the beginning of the end step" triggers
 	StepCleanup // Discard to hand size, remove damage, "until end of turn" expires
 )

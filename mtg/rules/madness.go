@@ -4,12 +4,13 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func madnessCostForCard(card *game.CardDef) (mana.Cost, bool) {
-	for _, ability := range card.Abilities {
-		if abilityHasKeyword(&ability, game.Madness) && ability.MadnessCost.Exists {
+	for i := range card.Abilities {
+		ability := &card.Abilities[i]
+		if abilityHasKeyword(ability, game.Madness) && ability.MadnessCost.Exists {
 			return ability.MadnessCost.Val, true
 		}
 	}

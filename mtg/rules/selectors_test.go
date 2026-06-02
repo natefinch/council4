@@ -75,7 +75,8 @@ func TestAttachedPermanentTriggerFilterUsesLKI(t *testing.T) {
 	if !attachPermanent(g, equipment, creature) {
 		t.Fatal("attachPermanent failed")
 	}
-	rememberLastKnown(g, snapshotPermanent(g, creature, game.ZoneBattlefield))
+	snapshot := snapshotPermanent(g, creature, game.ZoneBattlefield)
+	rememberLastKnown(g, &snapshot)
 	detachPermanent(g, equipment)
 
 	if !triggerSourceAttachedPermanentMatches(g, equipment, game.GameEvent{
@@ -114,7 +115,7 @@ func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, game.Effect{
+	engine.resolveEffect(g, obj, &game.Effect{
 		Type:        game.EffectDamage,
 		TargetIndex: 0,
 		DamageSource: opt.Val(game.ObjectReference{
@@ -151,7 +152,7 @@ func TestObjectPowerDynamicAmountUsesAttachedPermanent(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, game.Effect{
+	engine.resolveEffect(g, obj, &game.Effect{
 		Type:        game.EffectDamage,
 		TargetIndex: 0,
 		DamageSource: opt.Val(game.ObjectReference{
@@ -210,7 +211,7 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 	log := TurnLog{}
 
 	effect.Selector = game.EffectSelectorAllCreaturesExceptTarget
-	engine.resolveEffect(g, obj, effect, &log)
+	engine.resolveEffect(g, obj, &effect, &log)
 	if source.MarkedDamage != 0 {
 		t.Fatal("source creature was damaged by all-creatures-except-target selector")
 	}
@@ -220,7 +221,7 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 
 	effect.Selector = game.EffectSelectorNone
 	effect.PlayerSelector = game.PlayerSelectorOpponents
-	engine.resolveEffect(g, obj, effect, &log)
+	engine.resolveEffect(g, obj, &effect, &log)
 	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
 		if got := g.Players[playerID].Life; got != 37 {
 			t.Fatalf("Player%d life = %d, want 37", playerID+1, got)

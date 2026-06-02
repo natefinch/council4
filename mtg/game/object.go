@@ -10,6 +10,7 @@ type ObjectID = id.ID
 // PlayerID identifies a player by their seat position (0–3).
 type PlayerID int
 
+// Player ID values identify the four Commander seats.
 const (
 	Player1 PlayerID = 0
 	Player2 PlayerID = 1

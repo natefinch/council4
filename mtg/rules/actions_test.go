@@ -1437,7 +1437,7 @@ func TestFightEffectDealsMutualCreatureDamage(t *testing.T) {
 		},
 	}
 
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectFight}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectFight}, nil)
 
 	if first.MarkedDamage != 2 || second.MarkedDamage != 3 {
 		t.Fatalf("fight damage = %d/%d, want 2/3", first.MarkedDamage, second.MarkedDamage)
@@ -1456,10 +1456,10 @@ func TestTransformPhaseOutAndEmblemEffects(t *testing.T) {
 		Targets:    []game.Target{game.PermanentTarget(permanent.ObjectID)},
 	}
 
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectTransform, TargetIndex: 0}, nil)
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPhaseOut, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectTransform, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPhaseOut, TargetIndex: 0}, nil)
 	emblemAbility := game.AbilityDef{Kind: game.StaticAbility, Text: "Test emblem ability"}
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectCreateEmblem, EmblemAbilities: []game.AbilityDef{emblemAbility}}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectCreateEmblem, EmblemAbilities: []game.AbilityDef{emblemAbility}}, nil)
 
 	if permanent.Transformed || !permanent.PhasedOut {
 		t.Fatalf("permanent transformed/phased = %v/%v, want false/true", permanent.Transformed, permanent.PhasedOut)
@@ -1551,15 +1551,15 @@ func modalCharm() *game.CardDef {
 	}
 }
 
-func modalSpellWithModeRange(minModes int, maxModes int) *game.CardDef {
+func modalSpellWithModeRange(minModes, maxModes int) *game.CardDef {
 	return modalSpellWithModeRangeAndDuplicates(minModes, maxModes, false)
 }
 
-func modalSpellWithDuplicateModes(minModes int, maxModes int) *game.CardDef {
+func modalSpellWithDuplicateModes(minModes, maxModes int) *game.CardDef {
 	return modalSpellWithModeRangeAndDuplicates(minModes, maxModes, true)
 }
 
-func modalSpellWithModeRangeAndDuplicates(minModes int, maxModes int, allowDuplicates bool) *game.CardDef {
+func modalSpellWithModeRangeAndDuplicates(minModes, maxModes int, allowDuplicates bool) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Flexible Charm",
 		ManaCost: greenCost(),

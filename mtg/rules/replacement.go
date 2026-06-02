@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 type enterBattlefieldContext struct {
@@ -110,7 +110,7 @@ func recordReplacementDecision(g *game.Game, player game.PlayerID, options []str
 	})
 }
 
-func createReplacementEffect(g *game.Game, obj *game.StackObject, effect game.Effect) bool {
+func createReplacementEffect(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
 	if !effect.Replacement.Exists {
 		return false
 	}
@@ -175,7 +175,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			Duration:     game.DurationPermanent,
 			CreatedTurn:  g.Turn.TurnNumber,
 		}
-		if replacementEffectMatchesEvent(g, replacement, event) {
+		if replacementEffectMatchesEvent(g, &replacement, event) {
 			setPermanentTapped(g, permanent, true)
 		}
 	}
@@ -186,7 +186,8 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 	if len(matches) > 1 {
 		recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
 	}
-	for _, replacement := range matches {
+	for i := range matches {
+		replacement := &matches[i]
 		if replacement.EntersTapped {
 			setPermanentTapped(g, permanent, true)
 		}
@@ -223,30 +224,32 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 
 func matchingZoneReplacementEffects(g *game.Game, event game.GameEvent, applied map[id.ID]bool) []game.ReplacementEffect {
 	var matches []game.ReplacementEffect
-	for _, replacement := range g.ReplacementEffects {
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
 		if applied[replacement.ID] || replacement.ReplaceToZone == game.ZoneNone || !replacementEffectMatchesEvent(g, replacement, event) {
 			continue
 		}
-		matches = append(matches, replacement)
+		matches = append(matches, *replacement)
 	}
 	return matches
 }
 
 func matchingETBReplacementEffects(g *game.Game, event game.GameEvent) []game.ReplacementEffect {
 	var matches []game.ReplacementEffect
-	for _, replacement := range g.ReplacementEffects {
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
 		if !replacement.EntersTapped && len(replacement.EntersWithCounters) == 0 {
 			continue
 		}
 		if !replacementEffectMatchesEvent(g, replacement, event) {
 			continue
 		}
-		matches = append(matches, replacement)
+		matches = append(matches, *replacement)
 	}
 	return matches
 }
 
-func replacementEffectMatchesEvent(g *game.Game, replacement game.ReplacementEffect, event game.GameEvent) bool {
+func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.GameEvent) bool {
 	if !replacementSourceStillApplies(g, replacement) {
 		return false
 	}
@@ -271,7 +274,7 @@ func replacementEffectMatchesEvent(g *game.Game, replacement game.ReplacementEff
 	return true
 }
 
-func replacementSourceStillApplies(g *game.Game, replacement game.ReplacementEffect) bool {
+func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEffect) bool {
 	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
 		return true
 	}
@@ -288,7 +291,8 @@ func replacementEventPlayer(event game.GameEvent) game.PlayerID {
 
 func replacementEffectLabels(replacements []game.ReplacementEffect) []string {
 	labels := make([]string, 0, len(replacements))
-	for _, replacement := range replacements {
+	for i := range replacements {
+		replacement := &replacements[i]
 		if replacement.Description != "" {
 			labels = append(labels, replacement.Description)
 			continue
@@ -298,7 +302,7 @@ func replacementEffectLabels(replacements []game.ReplacementEffect) []string {
 	return labels
 }
 
-func createPreventionShield(g *game.Game, obj *game.StackObject, effect game.Effect) bool {
+func createPreventionShield(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
 	if effect.Amount <= 0 {
 		return false
 	}
@@ -381,14 +385,15 @@ func expireReplacementEffects(g *game.Game) {
 		return
 	}
 	kept := g.ReplacementEffects[:0]
-	for _, replacement := range g.ReplacementEffects {
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
 		if replacement.Duration == game.DurationUntilEndOfTurn || replacement.Duration == game.DurationThisTurn {
 			continue
 		}
 		if !replacementSourceStillApplies(g, replacement) {
 			continue
 		}
-		kept = append(kept, replacement)
+		kept = append(kept, *replacement)
 	}
 	g.ReplacementEffects = kept
 }
@@ -457,8 +462,10 @@ func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, so
 
 func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []mana.Color {
 	var colors []mana.Color
-	for _, ability := range permanentEffectiveAbilities(g, permanent) {
-		if !abilityHasKeyword(&ability, game.Protection) {
+	abilities := permanentEffectiveAbilities(g, permanent)
+	for i := range abilities {
+		ability := &abilities[i]
+		if !abilityHasKeyword(ability, game.Protection) {
 			continue
 		}
 		colors = append(colors, ability.ProtectionFromColors...)

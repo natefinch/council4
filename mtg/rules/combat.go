@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -42,6 +44,7 @@ func combatActionLog(g *game.Game, playerID game.PlayerID, act action.Action) Ac
 			logged.addPermanentSnapshot(g, declaration.Blocker)
 			logged.addPermanentSnapshot(g, declaration.Blocking)
 		}
+	default:
 	}
 	return logged
 }
@@ -130,7 +133,7 @@ func markAttackTargetCombatDamage(g *game.Game, source *game.Permanent, target g
 	})
 }
 
-func markCreatureCombatDamage(g *game.Game, source *game.Permanent, damaged *game.Permanent, damage int, log *TurnLog) {
+func markCreatureCombatDamage(g *game.Game, source, damaged *game.Permanent, damage int, log *TurnLog) {
 	if damage <= 0 {
 		return
 	}
@@ -392,7 +395,7 @@ type creatureDamageAssignment struct {
 	damage    int
 }
 
-func assignAttackerCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent) ([]creatureDamageAssignment, int) {
+func assignAttackerCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent) (assignments []creatureDamageAssignment, tramplingDamage int) {
 	damageRemaining := effectivePower(g, attacker)
 	if damageRemaining <= 0 {
 		return nil, 0
@@ -400,7 +403,7 @@ func assignAttackerCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 	if assignments, tramplingDamage, ok := attackerChosenDamageAssignments(g, attacker, blockers, damageRemaining); ok {
 		return assignments, tramplingDamage
 	}
-	assignments := make([]creatureDamageAssignment, 0, len(blockers))
+	assignments = make([]creatureDamageAssignment, 0, len(blockers))
 	hasTrample := hasKeyword(g, attacker, game.Trample)
 	for i, blocker := range blockers {
 		if blocker == nil || damageRemaining <= 0 {
@@ -484,7 +487,7 @@ func damageAssignmentFollowsBlockerOrder(g *game.Game, attacker *game.Permanent,
 	return true
 }
 
-func lethalDamageRemainingFromSource(g *game.Game, source *game.Permanent, permanent *game.Permanent) int {
+func lethalDamageRemainingFromSource(g *game.Game, source, permanent *game.Permanent) int {
 	if hasKeyword(g, source, game.Deathtouch) {
 		if permanent.MarkedDeathtouchDamage {
 			return 0
@@ -567,7 +570,7 @@ func canAttackTarget(g *game.Game, attacker *game.Permanent, target game.AttackT
 	return !ruleEffectProhibitsAttack(g, attacker, &target)
 }
 
-func canBlockAttacker(g *game.Game, blocker *game.Permanent, attacker *game.Permanent) bool {
+func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if ruleEffectProhibitsBeingBlocked(g, attacker) {
 		return false
 	}
@@ -720,12 +723,7 @@ func declareAttackersSatisfiesGoad(g *game.Game, playerID game.PlayerID, declara
 }
 
 func hasGoadedEligibleAttacker(attackers []*game.Permanent) bool {
-	for _, attacker := range attackers {
-		if isGoaded(attacker) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(attackers, isGoaded)
 }
 
 func preferredGoadAttackDeclarations(g *game.Game, playerID game.PlayerID, attackers []*game.Permanent) []game.AttackDeclaration {
@@ -787,6 +785,7 @@ func legalAttackTargets(g *game.Game, attackerController game.PlayerID) []game.A
 			targets = append(targets, game.AttackTarget{Player: permanentController, PlaneswalkerID: permanent.ObjectID})
 		case permanentHasType(g, permanent, types.Battle):
 			targets = append(targets, game.AttackTarget{Player: permanentController, BattleID: permanent.ObjectID})
+		default:
 		}
 	}
 	return targets
@@ -856,7 +855,7 @@ func permanentMapByObjectID(permanents []*game.Permanent) map[id.ID]*game.Perman
 
 func aliveOpponents(g *game.Game, playerID game.PlayerID) []game.PlayerID {
 	var opponents []game.PlayerID
-	for opponent := game.Player1; opponent < game.NumPlayers; opponent++ {
+	for opponent := range game.PlayerID(game.NumPlayers) {
 		if opponent != playerID && isPlayerAlive(g, opponent) {
 			opponents = append(opponents, opponent)
 		}

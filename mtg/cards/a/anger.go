@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Anger
+// Anger is the card definition for Anger.
 //
 // Type: Creature — Incarnation
 // Cost: {3}{R}

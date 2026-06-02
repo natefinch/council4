@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, cost *mana.Cost, additionalCosts []game.AdditionalCost, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
@@ -19,6 +19,7 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case game.AdditionalCostDiscard:
 			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
+		default:
 		}
 	}
 	return prefs
@@ -149,7 +150,7 @@ func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID,
 
 func firstChoiceIndices(amount int) []int {
 	selected := make([]int, 0, amount)
-	for i := 0; i < amount; i++ {
+	for i := range amount {
 		selected = append(selected, i)
 	}
 	return selected

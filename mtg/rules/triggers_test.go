@@ -690,7 +690,7 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 		t.Fatal("source card instance not found")
 	}
 	card.Def.Abilities[0].Trigger.Val.Type = game.TriggerState
-	card.Def.Abilities[0].Trigger.Val.State = optStateTrigger(game.StateTriggerCondition{
+	card.Def.Abilities[0].Trigger.Val.State = optStateTrigger(&game.StateTriggerCondition{
 		MatchControllerLifeLessOrEqual: true,
 		ControllerLifeLessOrEqual:      10,
 	})
@@ -945,7 +945,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.TriggeredAbility,
-				Trigger: optTrigger(game.TriggerCondition{
+				Trigger: optTrigger(&game.TriggerCondition{
 					Type: game.TriggerWhenever,
 					Pattern: game.TriggerPattern{
 						Event:                 game.EventZoneChanged,
@@ -1021,7 +1021,7 @@ func triggeredCreature(pattern game.TriggerPattern, effects []game.Effect, targe
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.TriggeredAbility,
-				Trigger: optTrigger(game.TriggerCondition{
+				Trigger: optTrigger(&game.TriggerCondition{
 					Type:    game.TriggerWhenever,
 					Pattern: pattern,
 				}),
@@ -1037,7 +1037,7 @@ type choiceOnlyAgent struct {
 	next    int
 }
 
-func (a *choiceOnlyAgent) ChooseAction(obs PlayerObservation, legal []action.Action) action.Action {
+func (*choiceOnlyAgent) ChooseAction(obs PlayerObservation, legal []action.Action) action.Action {
 	return action.Pass()
 }
 

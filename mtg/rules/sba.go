@@ -28,7 +28,7 @@ func (e *Engine) applyStateBasedActionsWithLog(g *game.Game, log *TurnLog) []Los
 func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []PermanentDeathLog) {
 	var losses []LossLog
 	var deaths []PermanentDeathLog
-	for i := 0; i < maxStateBasedActionPasses; i++ {
+	for range maxStateBasedActionPasses {
 		changed, passLosses := e.checkStateBasedActions(g)
 		permanentsChanged, passDeaths := e.checkPermanentStateBasedActions(g)
 		attachmentsChanged, attachmentDeaths := checkAttachmentStateBasedActions(g)
@@ -72,7 +72,7 @@ func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 	return changed, losses
 }
 
-func (e *Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) {
+func (*Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) {
 	type pendingDeath struct {
 		objectID id.ID
 		reason   PermanentDeathReason
@@ -317,7 +317,7 @@ func permanentDeathBypassesDestroy(reason PermanentDeathReason) bool {
 	}
 }
 
-func (e *Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
+func (*Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 	if playerID < 0 || int(playerID) >= len(g.Players) {
 		return false
 	}

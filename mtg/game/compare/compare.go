@@ -4,6 +4,7 @@ package compare
 // Op identifies an integer comparison operation.
 type Op int
 
+// Op values identify supported integer comparison operations.
 const (
 	Any Op = iota
 	Equal

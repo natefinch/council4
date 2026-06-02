@@ -2,7 +2,7 @@ package rules
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -74,8 +74,14 @@ func sortedCounterKinds(counts map[counter.Kind]int) []counter.Kind {
 			kinds = append(kinds, kind)
 		}
 	}
-	sort.Slice(kinds, func(i, j int) bool {
-		return kinds[i].String() < kinds[j].String()
+	slices.SortFunc(kinds, func(a, b counter.Kind) int {
+		if a.String() < b.String() {
+			return -1
+		}
+		if a.String() > b.String() {
+			return 1
+		}
+		return 0
 	})
 	return kinds
 }
@@ -85,7 +91,7 @@ func proliferateChoiceRequest(player game.PlayerID, target proliferateTarget) ga
 	for i, kind := range target.counters {
 		options = append(options, game.ChoiceOption{Index: i, Label: kind.String()})
 	}
-	prompt := "Proliferate: choose counter kind."
+	var prompt string
 	if target.permanentID != 0 {
 		prompt = fmt.Sprintf("Proliferate permanent %d: choose counter kind.", target.permanentID)
 	} else {

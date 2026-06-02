@@ -45,7 +45,7 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			chosen = actionBuild.pass()
 		}
 
-		log.addAction(ActionLog{
+		log.addAction(&ActionLog{
 			Player: playerID,
 			Action: chosen,
 		})

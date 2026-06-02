@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -9,7 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 const maxLegalXValue = 20
@@ -65,7 +66,7 @@ func splitSecondOnStack(g *game.Game) bool {
 	return false
 }
 
-func (e *Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (*Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canPlayAnyLand(g, playerID) {
 		return nil
 	}
@@ -237,7 +238,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 	return actions
 }
 
-func (e *Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
@@ -267,7 +268,7 @@ func (e *Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID gam
 	return actions
 }
 
-func (e *Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (*Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return nil
 	}
@@ -289,7 +290,7 @@ func (e *Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) [
 	return actions
 }
 
-func (e *Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (*Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return nil
 	}
@@ -438,8 +439,8 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			AbilityIndex:   activate.AbilityIndex,
 			Controller:     playerID,
 		}
-		for _, effect := range ability.Effects {
-			e.resolveEffectWithChoices(g, obj, effect, agents, log)
+		for i := range ability.Effects {
+			e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
 		}
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, ability)
 		return true
@@ -607,7 +608,7 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 	return e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, game.FaceFront, targets, xValue, chosenModes, kickerPaid)
 }
 
-func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
+func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -905,12 +906,7 @@ func abilityHasKeyword(ability *game.AbilityDef, keyword game.Keyword) bool {
 	if ability == nil {
 		return false
 	}
-	for _, got := range ability.Keywords {
-		if got == keyword {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ability.Keywords, keyword)
 }
 
 func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef, abilityIndex int) bool {
@@ -944,7 +940,8 @@ func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
 		return false
 	}
 	hasAddMana := false
-	for _, effect := range ability.Effects {
+	for i := range ability.Effects {
+		effect := &ability.Effects[i]
 		switch effect.Type {
 		case game.EffectAddMana:
 			hasAddMana = true
@@ -960,7 +957,8 @@ func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
 }
 
 func manaAbilityChoicesAvailable(g *game.Game, playerID game.PlayerID, ability *game.AbilityDef) bool {
-	for _, effect := range ability.Effects {
+	for i := range ability.Effects {
+		effect := &ability.Effects[i]
 		if effect.Type != game.EffectChoose || !effect.Choice.Exists {
 			continue
 		}

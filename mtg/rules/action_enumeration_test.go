@@ -141,7 +141,7 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 				t.Fatalf("legal actions:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(tt.want, "\n"))
 			}
 
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				actions = engine.legalActions(g, playerID)
 				assertActionsValidate(t, actions)
 				again := summarizeLegalActions(g, actions)

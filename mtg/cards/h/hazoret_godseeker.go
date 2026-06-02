@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Hazoret, Godseeker
+// HazoretGodseeker is the card definition for Hazoret, Godseeker.
 //
 // Type: Legendary Creature — God
 // Cost: {1}{R}

@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Donatello, Mutant Mechanic
+// DonatelloMutantMechanic is the card definition for Donatello, Mutant Mechanic.
 //
 // Type: types.Legendary Creature — Mutant Ninja Turtle
 // Cost: {3}{U}

@@ -28,8 +28,8 @@ func TestRecipientReferenceUsesDestroyedTargetControllerLKI(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectDestroy, TargetIndex: 0}, &log)
-	engine.resolveEffect(g, obj, game.Effect{
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectDestroy, TargetIndex: 0}, &log)
+	engine.resolveEffect(g, obj, &game.Effect{
 		Type:   game.EffectCreateToken,
 		Amount: 1,
 		Token:  opt.Val(token),
@@ -84,7 +84,7 @@ func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, game.Effect{
+	engine.resolveEffect(g, obj, &game.Effect{
 		Type:        game.EffectDamage,
 		TargetIndex: 1,
 		DamageSource: opt.Val(game.ObjectReference{
@@ -115,7 +115,7 @@ func TestLegacyTokenCreationStillUsesSpellController(t *testing.T) {
 	obj := &game.StackObject{Controller: game.Player1}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, game.Effect{
+	engine.resolveEffect(g, obj, &game.Effect{
 		Type:   game.EffectCreateToken,
 		Amount: 1,
 		Token:  opt.Val(token),

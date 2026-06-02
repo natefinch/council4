@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Giggling Skitterspike
+// GigglingSkitterspike is the card definition for Giggling Skitterspike.
 //
 // Type: Artifact Creature — Toy
 // Cost: {4}

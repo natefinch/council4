@@ -4,7 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
-func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, effect game.Effect) game.ContinuousEffect {
+func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, effect *game.Effect) game.ContinuousEffect {
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	effectID := g.IDGen.Next()
 	return game.ContinuousEffect{
@@ -22,7 +22,7 @@ func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permane
 	}
 }
 
-func effectDurationOrDefault(duration game.EffectDuration, fallback game.EffectDuration) game.EffectDuration {
+func effectDurationOrDefault(duration, fallback game.EffectDuration) game.EffectDuration {
 	if duration == game.DurationPermanent {
 		return fallback
 	}
@@ -30,7 +30,7 @@ func effectDurationOrDefault(duration game.EffectDuration, fallback game.EffectD
 }
 
 func expireTurnStartDurations(g *game.Game) {
-	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect game.ContinuousEffect) bool {
+	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect *game.ContinuousEffect) bool {
 		return effect.Duration == game.DurationUntilYourNextTurn &&
 			effect.ExpiresFor == g.Turn.ActivePlayer &&
 			effect.CreatedTurn < g.Turn.TurnNumber
@@ -38,21 +38,21 @@ func expireTurnStartDurations(g *game.Game) {
 }
 
 func expireCleanupDurations(g *game.Game) {
-	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect game.ContinuousEffect) bool {
+	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect *game.ContinuousEffect) bool {
 		return effect.Duration == game.DurationUntilEndOfTurn || effect.Duration == game.DurationThisTurn
 	})
 }
 
-func filterContinuousEffects(effects []game.ContinuousEffect, expired func(game.ContinuousEffect) bool) []game.ContinuousEffect {
+func filterContinuousEffects(effects []game.ContinuousEffect, expired func(*game.ContinuousEffect) bool) []game.ContinuousEffect {
 	if len(effects) == 0 {
 		return effects
 	}
 	kept := effects[:0]
-	for _, effect := range effects {
-		if expired(effect) {
+	for i := range effects {
+		if expired(&effects[i]) {
 			continue
 		}
-		kept = append(kept, effect)
+		kept = append(kept, effects[i])
 	}
 	return kept
 }
@@ -87,14 +87,17 @@ func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {
 	}
 	remaining := g.DelayedTriggers[:0]
 	var ready []game.DelayedTrigger
-	for _, trigger := range g.DelayedTriggers {
+	for i := range g.DelayedTriggers {
+		trigger := &g.DelayedTriggers[i]
 		if trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
-			remaining = append(remaining, trigger)
+			remaining = append(remaining, *trigger)
 			continue
 		}
-		ready = append(ready, trigger)
+		ready = append(ready, *trigger)
 	}
-	for _, trigger := range orderDelayedTriggersAPNAP(g, ready) {
+	ordered := orderDelayedTriggersAPNAP(g, ready)
+	for i := range ordered {
+		trigger := &ordered[i]
 		ability := trigger.Ability
 		g.Stack.Push(&game.StackObject{
 			ID:             g.IDGen.Next(),
@@ -116,17 +119,18 @@ func orderDelayedTriggersAPNAP(g *game.Game, triggers []game.DelayedTrigger) []g
 	ordered := make([]game.DelayedTrigger, 0, len(triggers))
 	used := make([]bool, len(triggers))
 	for _, playerID := range triggerAPNAPPlayers(g) {
-		for i, trigger := range triggers {
+		for i := range triggers {
+			trigger := &triggers[i]
 			if trigger.Controller != playerID {
 				continue
 			}
-			ordered = append(ordered, trigger)
+			ordered = append(ordered, *trigger)
 			used[i] = true
 		}
 	}
-	for i, trigger := range triggers {
+	for i := range triggers {
 		if !used[i] {
-			ordered = append(ordered, trigger)
+			ordered = append(ordered, triggers[i])
 		}
 	}
 	return ordered

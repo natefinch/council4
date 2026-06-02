@@ -12,6 +12,7 @@ import (
 // ValidationCode identifies a class of card-definition validation issue.
 type ValidationCode string
 
+// Validation issue codes identify generated-card validation failures.
 const (
 	IssueNilCard                    ValidationCode = "nil-card"
 	IssueMissingName                ValidationCode = "missing-name"
@@ -92,7 +93,7 @@ func (v *cardValidator) validate() {
 	}
 }
 
-func (v *cardValidator) validateFace(faceName string, path string, oracleText string, implementationID string, abilities []game.AbilityDef, walkAbilities bool) {
+func (v *cardValidator) validateFace(faceName, path, oracleText, implementationID string, abilities []game.AbilityDef, walkAbilities bool) {
 	if strings.TrimSpace(oracleText) != "" && len(abilities) == 0 && implementationID == "" {
 		v.add(faceName, path, IssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
@@ -111,44 +112,45 @@ func (v *cardValidator) validateFace(faceName string, path string, oracleText st
 	}
 }
 
-func (v *cardValidator) validateAbility(faceName string, path string, ability *game.AbilityDef) {
+func (v *cardValidator) validateAbility(faceName, path string, ability *game.AbilityDef) {
 	if ability.EnchantTarget.Exists {
-		v.validateTargetSpec(faceName, appendPath(path, "EnchantTarget"), ability.EnchantTarget.Val)
+		v.validateTargetSpec(faceName, appendPath(path, "EnchantTarget"), &ability.EnchantTarget.Val)
 	}
 	if ability.Condition.Exists {
-		v.validateCondition(faceName, appendPath(path, "Condition"), ability.Condition.Val, ability.Targets)
+		v.validateCondition(faceName, appendPath(path, "Condition"), &ability.Condition.Val, ability.Targets)
 	}
 	if ability.Trigger.Exists && ability.Trigger.Val.InterveningCondition.Exists {
-		v.validateCondition(faceName, appendPath(path, "Trigger.InterveningCondition"), ability.Trigger.Val.InterveningCondition.Val, ability.Targets)
+		v.validateCondition(faceName, appendPath(path, "Trigger.InterveningCondition"), &ability.Trigger.Val.InterveningCondition.Val, ability.Targets)
 	}
 	if ability.ActivationCondition.Exists {
-		v.validateCondition(faceName, appendPath(path, "ActivationCondition"), ability.ActivationCondition.Val, ability.Targets)
+		v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &ability.ActivationCondition.Val, ability.Targets)
 	}
-	for i, target := range ability.Targets {
-		v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("Targets[%d]", i)), target)
+	for i := range ability.Targets {
+		v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("Targets[%d]", i)), &ability.Targets[i])
 	}
-	for i, effect := range ability.Effects {
-		v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Effects[%d]", i)), effect, ability.Targets)
+	for i := range ability.Effects {
+		v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Effects[%d]", i)), &ability.Effects[i], ability.Targets)
 	}
-	for i, effect := range ability.KickerEffects {
-		v.validateEffect(faceName, appendPath(path, fmt.Sprintf("KickerEffects[%d]", i)), effect, ability.Targets)
+	for i := range ability.KickerEffects {
+		v.validateEffect(faceName, appendPath(path, fmt.Sprintf("KickerEffects[%d]", i)), &ability.KickerEffects[i], ability.Targets)
 	}
-	for i, mode := range ability.Modes {
+	for i := range ability.Modes {
+		mode := &ability.Modes[i]
 		modePath := appendPath(path, fmt.Sprintf("Modes[%d]", i))
-		for j, target := range mode.Targets {
-			v.validateTargetSpec(faceName, appendPath(modePath, fmt.Sprintf("Targets[%d]", j)), target)
+		for j := range mode.Targets {
+			v.validateTargetSpec(faceName, appendPath(modePath, fmt.Sprintf("Targets[%d]", j)), &mode.Targets[j])
 		}
 		targets := mode.Targets
 		if len(targets) == 0 {
 			targets = ability.Targets
 		}
-		for j, effect := range mode.Effects {
-			v.validateEffect(faceName, appendPath(modePath, fmt.Sprintf("Effects[%d]", j)), effect, targets)
+		for j := range mode.Effects {
+			v.validateEffect(faceName, appendPath(modePath, fmt.Sprintf("Effects[%d]", j)), &mode.Effects[j], targets)
 		}
 	}
 }
 
-func (v *cardValidator) validateTargetSpec(faceName string, path string, target game.TargetSpec) {
+func (v *cardValidator) validateTargetSpec(faceName, path string, target *game.TargetSpec) {
 	if target.MinTargets < 0 || target.MaxTargets < 0 {
 		v.add(faceName, path, IssueInvalidTargetSpec, "target counts must be non-negative")
 		return
@@ -170,17 +172,20 @@ func (v *cardValidator) validateTargetSpec(faceName string, path string, target 
 	}
 }
 
-func (v *cardValidator) validateEffect(faceName string, path string, effect game.Effect, targets []game.TargetSpec) {
+func (v *cardValidator) validateEffect(faceName, path string, effect *game.Effect, targets []game.TargetSpec) {
 	if !rules.IsEffectTypeExecuted(effect.Type) {
 		v.add(faceName, path, IssueUnexecutedEffect, fmt.Sprintf("effect type %d is not executed by rules", effect.Type))
 	}
 	if effect.Type == game.EffectSearch {
-		if !effect.Search.Exists {
+		switch {
+		case !effect.Search.Exists:
 			v.add(faceName, path, IssueMissingSearchSpec, "search effect has no SearchSpec")
-		} else if effect.Search.Val.SourceZone != game.ZoneLibrary || (effect.Search.Val.Destination != game.ZoneHand && effect.Search.Val.Destination != game.ZoneBattlefield) {
+		case effect.Search.Val.SourceZone != game.ZoneLibrary ||
+			(effect.Search.Val.Destination != game.ZoneHand && effect.Search.Val.Destination != game.ZoneBattlefield):
 			v.add(faceName, path, IssueUnsupportedSearchSpec, "only library-to-hand and library-to-battlefield SearchSpec are currently supported")
-		} else if effect.Search.Val.Supertype.Exists && effect.Search.Val.Supertype.Val == types.Super("") {
+		case effect.Search.Val.Supertype.Exists && effect.Search.Val.Supertype.Val == types.Super(""):
 			v.add(faceName, appendPath(path, "Search"), IssueUnsupportedSearchSpec, "Supertype requires a non-empty value when present")
+		default:
 		}
 	}
 	if effect.Selector != game.EffectSelectorNone && effect.PlayerSelector != game.PlayerSelectorNone {
@@ -217,11 +222,12 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	}
 	if effect.Condition.Exists {
 		conditionPath := appendPath(path, "Condition")
-		if effect.Condition.Val.PermanentType.Exists || effect.Condition.Val.TargetIndex != 0 {
-			v.validateTargetIndex(faceName, conditionPath, effect.Condition.Val.TargetIndex, targets, "condition target")
+		condition := &effect.Condition.Val
+		if condition.PermanentType.Exists || condition.TargetIndex != 0 {
+			v.validateTargetIndex(faceName, conditionPath, condition.TargetIndex, targets, "condition target")
 		}
-		if effect.Condition.Val.Condition.Exists {
-			v.validateCondition(faceName, appendPath(conditionPath, "Condition"), effect.Condition.Val.Condition.Val, targets)
+		if condition.Condition.Exists {
+			v.validateCondition(faceName, appendPath(conditionPath, "Condition"), &condition.Condition.Val, targets)
 		}
 	}
 	if effect.DynamicAmount.Exists && dynamicAmountUsesTarget(effect.DynamicAmount.Val) {
@@ -235,11 +241,12 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	}
 	if effect.DelayedTrigger.Exists {
 		delayedPath := appendPath(path, "DelayedTrigger")
-		for i, target := range effect.DelayedTrigger.Val.Targets {
-			v.validateTargetSpec(faceName, appendPath(delayedPath, fmt.Sprintf("Targets[%d]", i)), target)
+		delayed := &effect.DelayedTrigger.Val
+		for i := range delayed.Targets {
+			v.validateTargetSpec(faceName, appendPath(delayedPath, fmt.Sprintf("Targets[%d]", i)), &delayed.Targets[i])
 		}
-		for i, delayedEffect := range effect.DelayedTrigger.Val.Effects {
-			v.validateEffect(faceName, appendPath(delayedPath, fmt.Sprintf("Effects[%d]", i)), delayedEffect, effect.DelayedTrigger.Val.Targets)
+		for i := range delayed.Effects {
+			v.validateEffect(faceName, appendPath(delayedPath, fmt.Sprintf("Effects[%d]", i)), &delayed.Effects[i], delayed.Targets)
 		}
 	}
 	if effect.Token.Exists && effect.Token.Val != nil {
@@ -252,9 +259,10 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 		v.validateCardReference(faceName, appendPath(path, "Card"), effect.Card.Val)
 	}
 	if effect.Replacement.Exists && effect.Replacement.Val.Condition.Exists {
-		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), effect.Replacement.Val.Condition.Val, targets)
+		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), &effect.Replacement.Val.Condition.Val, targets)
 	}
-	for i, continuous := range effect.ContinuousEffects {
+	for i := range effect.ContinuousEffects {
+		continuous := &effect.ContinuousEffects[i]
 		continuousPath := appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i))
 		for j := range continuous.AddAbilities {
 			v.validateAbility(faceName, appendPath(continuousPath, fmt.Sprintf("AddAbilities[%d]", j)), &continuous.AddAbilities[j])
@@ -265,7 +273,7 @@ func (v *cardValidator) validateEffect(faceName string, path string, effect game
 	}
 }
 
-func (v *cardValidator) validateNestedCard(faceName string, path string, card *game.CardDef) {
+func (v *cardValidator) validateNestedCard(faceName, path string, card *game.CardDef) {
 	if card == nil {
 		return
 	}
@@ -275,7 +283,7 @@ func (v *cardValidator) validateNestedCard(faceName string, path string, card *g
 	}
 }
 
-func (v *cardValidator) validateTargetIndex(faceName string, path string, targetIndex int, targets []game.TargetSpec, label string) {
+func (v *cardValidator) validateTargetIndex(faceName, path string, targetIndex int, targets []game.TargetSpec, label string) {
 	// Negative target indexes are rules-owned sentinels such as -1 for the
 	// controller and -2 for the source/event object.
 	if targetIndex < 0 {
@@ -286,13 +294,13 @@ func (v *cardValidator) validateTargetIndex(faceName string, path string, target
 	}
 }
 
-func (v *cardValidator) validateCondition(faceName string, path string, condition game.Condition, targets []game.TargetSpec) {
+func (v *cardValidator) validateCondition(faceName, path string, condition *game.Condition, targets []game.TargetSpec) {
 	if condition.Object.Exists {
 		v.validateObjectReference(faceName, appendPath(path, "Object"), condition.Object.Val, targets)
 	}
 }
 
-func (v *cardValidator) validateObjectReference(faceName string, path string, ref game.ObjectReference, targets []game.TargetSpec) {
+func (v *cardValidator) validateObjectReference(faceName, path string, ref game.ObjectReference, targets []game.TargetSpec) {
 	switch ref.Kind {
 	case game.ObjectReferenceTargetPermanent:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex, targets, "object reference target")
@@ -319,7 +327,7 @@ func (v *cardValidator) validateObjectReference(faceName string, path string, re
 	}
 }
 
-func (v *cardValidator) validatePlayerReference(faceName string, path string, ref game.PlayerReference, targets []game.TargetSpec) {
+func (v *cardValidator) validatePlayerReference(faceName, path string, ref game.PlayerReference, targets []game.TargetSpec) {
 	switch ref.Kind {
 	case game.PlayerReferenceController:
 		if ref.TargetIndex != 0 || ref.Object.Exists {
@@ -340,14 +348,14 @@ func (v *cardValidator) validatePlayerReference(faceName string, path string, re
 	}
 }
 
-func (v *cardValidator) validateCardCondition(faceName string, path string, condition game.CardCondition) {
+func (v *cardValidator) validateCardCondition(faceName, path string, condition game.CardCondition) {
 	v.validateCardReference(faceName, appendPath(path, "Card"), condition.Card)
 	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 {
 		v.add(faceName, path, IssueInvalidReference, "card condition has no filters")
 	}
 }
 
-func (v *cardValidator) validateCardReference(faceName string, path string, ref game.CardReference) bool {
+func (v *cardValidator) validateCardReference(faceName, path string, ref game.CardReference) bool {
 	switch ref.Kind {
 	case game.CardReferenceLinked:
 		if ref.LinkID == "" {
@@ -369,7 +377,7 @@ func (v *cardValidator) validateCardReference(faceName string, path string, ref 
 	return true
 }
 
-func (v *cardValidator) validateTokenCopySpec(faceName string, path string, spec game.TokenCopySpec, targets []game.TargetSpec) {
+func (v *cardValidator) validateTokenCopySpec(faceName, path string, spec game.TokenCopySpec, targets []game.TargetSpec) {
 	switch spec.Source {
 	case game.TokenCopySourceObject:
 		v.validateObjectReference(faceName, appendPath(path, "Object"), spec.Object, targets)
@@ -393,7 +401,7 @@ func dynamicAmountUsesTarget(dynamic game.DynamicAmount) bool {
 	}
 }
 
-func (v *cardValidator) add(faceName string, path string, code ValidationCode, message string) {
+func (v *cardValidator) add(faceName, path string, code ValidationCode, message string) {
 	cardName := ""
 	if v.card != nil {
 		cardName = v.card.Name
@@ -407,7 +415,7 @@ func (v *cardValidator) add(faceName string, path string, code ValidationCode, m
 	})
 }
 
-func appendPath(parent string, child string) string {
+func appendPath(parent, child string) string {
 	if parent == "" {
 		return child
 	}

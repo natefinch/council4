@@ -27,7 +27,7 @@ func TestChaosWarpLikeEffectsUseTargetOwnerAndLinkedReveal(t *testing.T) {
 	log := TurnLog{}
 
 	for _, effect := range chaosWarpLikeEffects() {
-		engine.resolveEffect(g, obj, effect, &log)
+		engine.resolveEffect(g, obj, &effect, &log)
 	}
 
 	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
@@ -66,13 +66,13 @@ func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, game.Effect{
+	engine.resolveEffect(g, obj, &game.Effect{
 		Type:        game.EffectReveal,
 		Amount:      1,
 		TargetIndex: 0,
 		LinkID:      "revealed",
 	}, &log)
-	engine.resolveEffect(g, obj, game.Effect{
+	engine.resolveEffect(g, obj, &game.Effect{
 		Type:   game.EffectPutOnBattlefield,
 		LinkID: "revealed",
 		CardCondition: opt.Val(game.CardCondition{
@@ -135,7 +135,7 @@ func countCardPermanentsControlledBy(g *game.Game, controller game.PlayerID, car
 	return count
 }
 
-func eventRevealedCard(g *game.Game, cardID id.ID, stackObjectID id.ID) bool {
+func eventRevealedCard(g *game.Game, cardID, stackObjectID id.ID) bool {
 	for _, event := range g.Events {
 		if event.Kind == game.EventCardRevealed && event.CardID == cardID && event.StackObjectID == stackObjectID {
 			return true

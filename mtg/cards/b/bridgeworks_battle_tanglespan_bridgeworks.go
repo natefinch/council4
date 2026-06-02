@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Bridgeworks Battle // Tanglespan Bridgeworks
+// BridgeworksBattle is the card definition for Bridgeworks Battle // Tanglespan Bridgeworks.
 //
 // Type: Sorcery // Land
 // Face: Bridgeworks Battle — Sorcery ({2}{G})

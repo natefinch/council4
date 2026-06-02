@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Dragonskull Summit
+// DragonskullSummit is the card definition for Dragonskull Summit.
 //
 // Type: Land
 //

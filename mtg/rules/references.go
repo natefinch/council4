@@ -10,7 +10,7 @@ type resolvedObjectReference struct {
 	snapshot  game.ObjectSnapshot
 }
 
-func (r resolvedObjectReference) controller(g *game.Game) (game.PlayerID, bool) {
+func (r *resolvedObjectReference) controller(g *game.Game) (game.PlayerID, bool) {
 	if r.permanent != nil {
 		return effectiveController(g, r.permanent), true
 	}
@@ -20,7 +20,7 @@ func (r resolvedObjectReference) controller(g *game.Game) (game.PlayerID, bool) 
 	return 0, false
 }
 
-func (r resolvedObjectReference) owner() (game.PlayerID, bool) {
+func (r *resolvedObjectReference) owner() (game.PlayerID, bool) {
 	if r.permanent != nil {
 		return r.permanent.Owner, true
 	}

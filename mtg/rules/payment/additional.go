@@ -1,6 +1,8 @@
 package payment
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 )
@@ -262,6 +264,7 @@ func additionalCostMatchesCard(card *game.CardDef, cost game.AdditionalCost) boo
 	return true
 }
 
+// AdditionalCostAmount returns the effective amount for an additional cost.
 func AdditionalCostAmount(cost game.AdditionalCost) int {
 	if cost.Amount > 0 {
 		return cost.Amount
@@ -269,6 +272,7 @@ func AdditionalCostAmount(cost game.AdditionalCost) int {
 	return 1
 }
 
+// AdditionalCostText returns display text for an additional cost.
 func AdditionalCostText(cost game.AdditionalCost) string {
 	if cost.Text != "" {
 		return cost.Text
@@ -349,12 +353,7 @@ func zoneContainsCard(s State, playerID game.PlayerID, zone game.ZoneType, cardI
 	if !ok {
 		return false
 	}
-	for _, got := range cardIDsInZone(player, zone) {
-		if got == cardID {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(cardIDsInZone(player, zone), cardID)
 }
 
 func cardIDsInZone(player *game.Player, zone game.ZoneType) []id.ID {

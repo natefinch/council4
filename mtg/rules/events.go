@@ -70,6 +70,7 @@ func emitTargetEvents(g *game.Game, obj *game.StackObject) {
 			event.PermanentID = target.PermanentID
 		case game.TargetPlayer:
 			event.Player = target.PlayerID
+		default:
 		}
 		emitEvent(g, event)
 	}

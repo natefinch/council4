@@ -67,7 +67,7 @@ func TestNewGameCopiesCommanderMetadata(t *testing.T) {
 func deterministicConfigs() [NumPlayers]PlayerConfig {
 	var configs [NumPlayers]PlayerConfig
 	for player := range configs {
-		for card := 0; card < 10; card++ {
+		for range 10 {
 			configs[player].Deck = append(configs[player].Deck, &CardDef{Name: "Card"})
 		}
 	}

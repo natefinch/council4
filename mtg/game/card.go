@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -11,6 +13,7 @@ import (
 // represented.
 type CardLayout string
 
+// Card layout values model the printed layout metadata from card databases.
 const (
 	LayoutNormal           CardLayout = ""
 	LayoutTransform        CardLayout = "transform"
@@ -24,6 +27,7 @@ const (
 // face so existing single-face cards and actions keep their historical meaning.
 type FaceIndex int
 
+// Face index values identify the front and back faces of a card.
 const (
 	FaceFront FaceIndex = iota
 	FaceBack
@@ -149,34 +153,40 @@ func (c *CardDef) IsLegendary() bool {
 
 // HasSupertype reports whether this card has the given supertype.
 func (c *CardDef) HasSupertype(supertype types.Super) bool {
-	return c.DefaultFace().HasSupertype(supertype)
+	face := c.DefaultFace()
+	return face.HasSupertype(supertype)
 }
 
 // HasType reports whether this card has the given card type.
 func (c *CardDef) HasType(t types.Card) bool {
-	return c.DefaultFace().HasType(t)
+	face := c.DefaultFace()
+	return face.HasType(t)
 }
 
 // HasSubtype reports whether this card has the given subtype.
 func (c *CardDef) HasSubtype(sub types.Sub) bool {
-	return c.DefaultFace().HasSubtype(sub)
+	face := c.DefaultFace()
+	return face.HasSubtype(sub)
 }
 
 // HasAnySubtype reports whether this card has any of the given subtypes.
 func (c *CardDef) HasAnySubtype(subtypes ...types.Sub) bool {
-	return c.DefaultFace().HasAnySubtype(subtypes...)
+	face := c.DefaultFace()
+	return face.HasAnySubtype(subtypes...)
 }
 
 // HasKeyword reports whether any of this card's abilities grants the
 // given keyword.
 func (c *CardDef) HasKeyword(kw Keyword) bool {
-	return c.DefaultFace().HasKeyword(kw)
+	face := c.DefaultFace()
+	return face.HasKeyword(kw)
 }
 
 // IsPermanent reports whether this card becomes a permanent when it resolves
 // (i.e., it has at least one permanent card type).
 func (c *CardDef) IsPermanent() bool {
-	return c.DefaultFace().IsPermanent()
+	face := c.DefaultFace()
+	return face.IsPermanent()
 }
 
 // DefaultFace returns the card characteristics used outside the stack and
@@ -293,59 +303,37 @@ func (c *CardDef) rootFace() CardFace {
 }
 
 // HasSupertype reports whether this face has the given supertype.
-func (f CardFace) HasSupertype(supertype types.Super) bool {
-	for _, st := range f.Supertypes {
-		if st == supertype {
-			return true
-		}
-	}
-	return false
+func (f *CardFace) HasSupertype(supertype types.Super) bool {
+	return slices.Contains(f.Supertypes, supertype)
 }
 
 // HasType reports whether this face has the given card type.
-func (f CardFace) HasType(t types.Card) bool {
-	for _, ct := range f.Types {
-		if ct == t {
-			return true
-		}
-	}
-	return false
+func (f *CardFace) HasType(t types.Card) bool {
+	return slices.Contains(f.Types, t)
 }
 
 // HasSubtype reports whether this face has the given subtype.
-func (f CardFace) HasSubtype(sub types.Sub) bool {
-	for _, s := range f.Subtypes {
-		if s == sub {
-			return true
-		}
-	}
-	return false
+func (f *CardFace) HasSubtype(sub types.Sub) bool {
+	return slices.Contains(f.Subtypes, sub)
 }
 
 // HasAnySubtype reports whether this face has any of the given subtypes.
-func (f CardFace) HasAnySubtype(subtypes ...types.Sub) bool {
-	for _, sub := range subtypes {
-		if f.HasSubtype(sub) {
-			return true
-		}
-	}
-	return false
+func (f *CardFace) HasAnySubtype(subtypes ...types.Sub) bool {
+	return slices.ContainsFunc(subtypes, f.HasSubtype)
 }
 
 // HasKeyword reports whether any ability on this face grants the given keyword.
-func (f CardFace) HasKeyword(kw Keyword) bool {
-	for _, a := range f.Abilities {
-		for _, k := range a.Keywords {
-			if k == kw {
-				return true
-			}
+func (f *CardFace) HasKeyword(kw Keyword) bool {
+	for i := range f.Abilities {
+		if slices.Contains(f.Abilities[i].Keywords, kw) {
+			return true
 		}
 	}
 	return false
 }
 
 // IsPermanent reports whether this face becomes a permanent when it resolves.
-func (f CardFace) IsPermanent() bool {
+func (f *CardFace) IsPermanent() bool {
 	for _, t := range f.Types {
 		if t.IsPermanent() {
 			return true
@@ -356,7 +344,7 @@ func (f CardFace) IsPermanent() bool {
 
 // ToCardDef converts a face into a CardDef-shaped value for existing rules
 // helpers. ColorIdentity stays on the physical card and is copied from parent.
-func (f CardFace) ToCardDef(parent *CardDef) *CardDef {
+func (f *CardFace) ToCardDef(parent *CardDef) *CardDef {
 	return &CardDef{
 		Name:                   f.Name,
 		ManaCost:               f.ManaCost,

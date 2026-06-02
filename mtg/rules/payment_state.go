@@ -5,7 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 // rulesPaymentState implements payment.State by delegating to the rules-engine
@@ -57,7 +57,7 @@ func (s *rulesPaymentState) CardInstance(cardID id.ID) (*game.CardInstance, bool
 	return s.g.GetCardInstance(cardID)
 }
 
-func (s *rulesPaymentState) CardFace(card *game.CardInstance, face game.FaceIndex) *game.CardDef {
+func (*rulesPaymentState) CardFace(card *game.CardInstance, face game.FaceIndex) *game.CardDef {
 	return cardFaceOrDefault(card, face)
 }
 
@@ -105,6 +105,6 @@ func (s *rulesPaymentState) DiscardFromHand(playerID game.PlayerID, cardID id.ID
 	return discardCardFromHand(s.g, playerID, cardID)
 }
 
-func (s *rulesPaymentState) MoveCard(playerID game.PlayerID, cardID id.ID, from game.ZoneType, to game.ZoneType) bool {
+func (s *rulesPaymentState) MoveCard(playerID game.PlayerID, cardID id.ID, from, to game.ZoneType) bool {
 	return moveCardBetweenZones(s.g, playerID, cardID, from, to)
 }

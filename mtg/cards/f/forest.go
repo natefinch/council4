@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-// Forest
+// Forest is the card definition for Forest.
 //
 // Type: Basic Land — Forest
 //

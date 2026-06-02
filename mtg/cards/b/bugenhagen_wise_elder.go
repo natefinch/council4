@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Bugenhagen, Wise Elder
+// BugenhagenWiseElder is the card definition for Bugenhagen, Wise Elder.
 //
 // Type: types.Legendary Creature — Human Shaman
 // Cost: {1}{G}

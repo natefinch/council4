@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Bushwhack
+// Bushwhack is the card definition for Bushwhack.
 //
 // Type: Sorcery
 // Cost: {G}

@@ -11,7 +11,7 @@ func TestUntilEndOfTurnPTModifierUsesRuntimeContinuousEffect(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:           game.EffectModifyPT,
 		TargetIndex:    0,
 		PowerDelta:     3,
@@ -38,7 +38,7 @@ func TestCleanupExpiresTemporaryContinuousEffectsButKeepsCountersAndStaticEffect
 	addAnthemPermanent(g, game.Player1)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	creature.Counters.Add(counter.PlusOnePlusOne, 1)
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:           game.EffectModifyPT,
 		TargetIndex:    0,
 		PowerDelta:     3,
@@ -137,7 +137,7 @@ func TestDelayedNextEndStepTriggerFiresOnce(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type: game.EffectCreateDelayedTrigger,
 		DelayedTrigger: optDelayedTrigger(game.DelayedTriggerDef{
 			Timing: game.DelayedAtBeginningOfNextEndStep,

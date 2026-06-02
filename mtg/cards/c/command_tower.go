@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Command Tower
+// CommandTower is the card definition for Command Tower.
 //
 // Type: Land
 //

@@ -41,6 +41,7 @@ Given one or more Magic: The Gathering card names:
    - Run `gofmt` on the file: `gofmt -w <file>`
    - Run `go generate ./mtg/cards/...` to update the card list
    - Run `go build ./mtg/cards/...` to verify compilation
+   - Run `mage lint` and fix every reported issue before considering the code complete
    - If the card is in a new letter directory, verify the `doc.go` was created automatically
 
 ## Important rules
@@ -51,6 +52,7 @@ Given one or more Magic: The Gathering card names:
 - If a card has effects that cannot be expressed with the existing effect primitives, set `ImplementationID` to a descriptive name and leave a comment explaining what hand-written code would need to do.
 - Keep the oracle text comment block at the top of the file — it's useful for human review.
 - Run `gofmt` on the file after editing.
+- Do not call implementation work complete until `mage lint` passes.
 - Use the CARD-IMPLEMENTATION-GUIDE.md as your primary reference, not general MTG knowledge.
 
 </what-to-do>

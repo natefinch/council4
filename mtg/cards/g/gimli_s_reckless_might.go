@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Gimli's Reckless Might
+// GimliSRecklessMight is the card definition for Gimli's Reckless Might.
 //
 // Type: Enchantment
 // Cost: {3}{R}

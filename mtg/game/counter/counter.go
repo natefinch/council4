@@ -7,9 +7,12 @@
 // poison counters on players.
 package counter
 
+import "maps"
+
 // Kind identifies a specific type of counter.
 type Kind int
 
+// Kind values identify supported Magic counter names.
 const (
 	PlusOnePlusOne   Kind = iota // +1/+1 counter (CR 122.1)
 	MinusOneMinusOne             // -1/-1 counter (CR 122.1)
@@ -177,9 +180,7 @@ func (s *Set) CancelOpposites() int {
 // All returns a copy of all counter kinds and their counts.
 func (s *Set) All() map[Kind]int {
 	result := make(map[Kind]int, len(s.counts))
-	for k, v := range s.counts {
-		result[k] = v
-	}
+	maps.Copy(result, s.counts)
 	return result
 }
 

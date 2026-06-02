@@ -45,12 +45,10 @@ func ParseTypeLine(typeLine string) ParsedTypeLine {
 	mainPart := strings.TrimSpace(parts[0])
 	if len(parts) == 2 {
 		subtypePart := strings.TrimSpace(parts[1])
-		for _, st := range strings.Fields(subtypePart) {
-			result.Subtypes = append(result.Subtypes, st)
-		}
+		result.Subtypes = append(result.Subtypes, strings.Fields(subtypePart)...)
 	}
 
-	for _, word := range strings.Fields(mainPart) {
+	for word := range strings.FieldsSeq(mainPart) {
 		if knownSupertypes[word] {
 			result.Supertypes = append(result.Supertypes, word)
 		} else if knownTypes[word] {
@@ -144,7 +142,7 @@ func goIdentifierSuffix(name string) string {
 			r = unicode.ToUpper(r)
 			capitalizeNext = false
 		}
-		b.WriteRune(r)
+		_, _ = b.WriteRune(r)
 	}
 	return b.String()
 }

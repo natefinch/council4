@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
-func createRuleEffects(g *game.Game, obj *game.StackObject, effect game.Effect) bool {
+func createRuleEffects(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
 	if len(effect.RuleEffects) == 0 {
 		return false
 	}
@@ -62,7 +62,8 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 			if ability.Kind != game.StaticAbility || !abilityFunctionsOnBattlefield(ability) {
 				continue
 			}
-			for _, effect := range ability.Effects {
+			for i := range ability.Effects {
+				effect := &ability.Effects[i]
 				if effect.Type != game.EffectApplyRule {
 					continue
 				}
@@ -319,10 +320,5 @@ func cardHasFlashbackAlternative(card *game.CardInstance) bool {
 	if !ok {
 		return false
 	}
-	for _, alternative := range ability.AlternativeCosts {
-		if isFlashbackAlternative(alternative) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(ability.AlternativeCosts, isFlashbackAlternative)
 }

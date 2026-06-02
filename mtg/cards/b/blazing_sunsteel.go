@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Blazing Sunsteel
+// BlazingSunsteel is the card definition for Blazing Sunsteel.
 //
 // Type: Artifact — Equipment
 // Cost: {1}{R}

@@ -3,6 +3,7 @@ package mana
 // Color represents one of the five colors of Magic mana, plus colorless.
 type Color int
 
+// Color values identify Magic's mana colors and true colorless mana.
 const (
 	White     Color = iota // {W}
 	Blue                   // {U}

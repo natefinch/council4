@@ -68,7 +68,7 @@ func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 		Controller:   game.Player1,
 	}
 
-	engine.resolveEffect(g, obj, game.Effect{
+	engine.resolveEffect(g, obj, &game.Effect{
 		Type: game.EffectCreateDelayedTrigger,
 		DelayedTrigger: optDelayedTrigger(game.DelayedTriggerDef{
 			Timing:  game.DelayedAtBeginningOfNextEndStep,
@@ -94,20 +94,20 @@ func TestLinkedExileReturnOnlyUsesSameSourceLink(t *testing.T) {
 
 	objA := linkedSourceObject(sourceA)
 	objA.Targets = []game.Target{game.PermanentTarget(first.ObjectID)}
-	engine.resolveEffect(g, objA, game.Effect{
+	engine.resolveEffect(g, objA, &game.Effect{
 		Type:        game.EffectExile,
 		TargetIndex: 0,
 		LinkID:      linkID,
 	}, nil)
 	objB := linkedSourceObject(sourceB)
 	objB.Targets = []game.Target{game.PermanentTarget(second.ObjectID)}
-	engine.resolveEffect(g, objB, game.Effect{
+	engine.resolveEffect(g, objB, &game.Effect{
 		Type:        game.EffectExile,
 		TargetIndex: 0,
 		LinkID:      linkID,
 	}, nil)
 
-	engine.resolveEffect(g, linkedSourceObject(sourceA), game.Effect{
+	engine.resolveEffect(g, linkedSourceObject(sourceA), &game.Effect{
 		Type:   game.EffectPutOnBattlefield,
 		LinkID: linkID,
 	}, nil)

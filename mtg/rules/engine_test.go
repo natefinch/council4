@@ -115,7 +115,7 @@ func TestRunGameDeterministicWithSameSeed(t *testing.T) {
 func engineTestConfigs() [game.NumPlayers]game.PlayerConfig {
 	var configs [game.NumPlayers]game.PlayerConfig
 	for player := range configs {
-		for card := 0; card < 10; card++ {
+		for range 10 {
 			configs[player].Deck = append(configs[player].Deck, &game.CardDef{Name: "Card"})
 		}
 	}
@@ -134,7 +134,7 @@ func (firstLegalAgent) ChooseAction(obs PlayerObservation, legal []action.Action
 func landOnlyConfigs(cardsPerPlayer int) [game.NumPlayers]game.PlayerConfig {
 	var configs [game.NumPlayers]game.PlayerConfig
 	for player := range configs {
-		for card := 0; card < cardsPerPlayer; card++ {
+		for range cardsPerPlayer {
 			configs[player].Deck = append(configs[player].Deck, basicLand())
 		}
 	}

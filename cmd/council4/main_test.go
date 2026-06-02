@@ -94,18 +94,20 @@ func TestPrintTurnLogNoPassKeepsCombatEvents(t *testing.T) {
 	blockerCardID := addTestCard(g, game.Player2, &game.CardDef{Name: "Test Blocker"})
 	attackerID := g.IDGen.Next()
 	blockerID := g.IDGen.Next()
-	g.Battlefield = append(g.Battlefield, &game.Permanent{
-		ObjectID:       attackerID,
-		CardInstanceID: cardID,
-		Owner:          game.Player1,
-		Controller:     game.Player1,
-	})
-	g.Battlefield = append(g.Battlefield, &game.Permanent{
-		ObjectID:       blockerID,
-		CardInstanceID: blockerCardID,
-		Owner:          game.Player2,
-		Controller:     game.Player2,
-	})
+	g.Battlefield = append(g.Battlefield,
+		&game.Permanent{
+			ObjectID:       attackerID,
+			CardInstanceID: cardID,
+			Owner:          game.Player1,
+			Controller:     game.Player1,
+		},
+		&game.Permanent{
+			ObjectID:       blockerID,
+			CardInstanceID: blockerCardID,
+			Owner:          game.Player2,
+			Controller:     game.Player2,
+		},
+	)
 	result := &rules.GameResult{
 		Turns: []rules.TurnLog{
 			{
@@ -263,11 +265,11 @@ func runCombatMode(seed uint64) *rules.GameResult {
 	return engine.RunGame(engine.NewGame(configs), agents)
 }
 
-func countCastsAndResolves(result *rules.GameResult) (int, int) {
-	casts := 0
-	resolves := 0
-	for _, turn := range result.Turns {
-		for _, logged := range turn.Actions {
+func countCastsAndResolves(result *rules.GameResult) (casts, resolves int) {
+	for i := range result.Turns {
+		turn := &result.Turns[i]
+		for j := range turn.Actions {
+			logged := &turn.Actions[j]
 			if logged.Action.Kind == action.ActionCastSpell {
 				casts++
 			}
@@ -277,11 +279,11 @@ func countCastsAndResolves(result *rules.GameResult) (int, int) {
 	return casts, resolves
 }
 
-func countAttacksAndDamage(result *rules.GameResult) (int, int) {
-	attacks := 0
-	damage := 0
-	for _, turn := range result.Turns {
-		for _, logged := range turn.Actions {
+func countAttacksAndDamage(result *rules.GameResult) (attacks, damage int) {
+	for i := range result.Turns {
+		turn := &result.Turns[i]
+		for j := range turn.Actions {
+			logged := &turn.Actions[j]
 			attackers, ok := logged.Action.DeclareAttackersPayload()
 			if ok && len(attackers.Attackers) > 0 {
 				attacks++

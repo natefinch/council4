@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Farhaven Elf
+// FarhavenElf is the card definition for Farhaven Elf.
 //
 // Type: Creature — Elf Druid
 // Cost: {2}{G}

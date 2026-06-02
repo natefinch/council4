@@ -5,9 +5,7 @@ import "testing"
 func TestStackObjectCarriesPlayerTarget(t *testing.T) {
 	target := PlayerTarget(Player3)
 	obj := &StackObject{
-		Kind:       StackSpell,
-		Controller: Player1,
-		Targets:    []Target{target},
+		Targets: []Target{target},
 	}
 
 	if len(obj.Targets) != 1 {

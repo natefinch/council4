@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -26,7 +26,8 @@ func TestBuildUnsupportedReportIncludesProblemRows(t *testing.T) {
 	if len(report.Cards) != 3 {
 		t.Fatalf("len(report.Cards) = %d, want 3", len(report.Cards))
 	}
-	for _, card := range report.Cards {
+	for i := range report.Cards {
+		card := &report.Cards[i]
 		if card.Name == "Good Card" {
 			t.Fatalf("valid card included in report: %+v", card)
 		}
@@ -100,7 +101,7 @@ func TestBuildUnsupportedReportIncludesValidationPending(t *testing.T) {
 func TestBuildUnsupportedReportWithSourceIncludesMissingFunctionality(t *testing.T) {
 	repoRoot := t.TempDir()
 	cardPath := filepath.Join("mtg", "cards", "b", "blocked_card.go")
-	if err := os.MkdirAll(filepath.Join(repoRoot, filepath.Dir(cardPath)), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repoRoot, filepath.Dir(cardPath)), 0o750); err != nil {
 		t.Fatal(err)
 	}
 	source := `package b
@@ -113,7 +114,7 @@ func TestBuildUnsupportedReportWithSourceIncludesMissingFunctionality(t *testing
 //   - DynamicAmountCountOpponents does not exist.
 var BlockedCard = nil
 `
-	if err := os.WriteFile(filepath.Join(repoRoot, cardPath), []byte(source), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repoRoot, cardPath), []byte(source), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	manifest := Manifest{Version: ManifestVersion, Cards: []ManifestCard{{
@@ -192,7 +193,8 @@ func snapshotUnsupportedReport(report UnsupportedReport) unsupportedReportSnapsh
 	snapshot := unsupportedReportSnapshot{
 		Summary: report.Summary,
 	}
-	for _, card := range report.Cards {
+	for i := range report.Cards {
+		card := &report.Cards[i]
 		snapshot.Cards = append(snapshot.Cards, unsupportedCardSnapshot{
 			Name:          card.Name,
 			Issues:        issueCodes(card.Issues),
@@ -213,7 +215,7 @@ func issueCodes(issues []ValidationIssue) []string {
 	for _, issue := range issues {
 		codes = append(codes, string(issue.Code))
 	}
-	sort.Strings(codes)
+	slices.Sort(codes)
 	return codes
 }
 
@@ -226,7 +228,7 @@ func functionalityCapabilities(details []string) []string {
 	for capability := range seen {
 		capabilities = append(capabilities, capability)
 	}
-	sort.Strings(capabilities)
+	slices.Sort(capabilities)
 	return capabilities
 }
 
@@ -299,10 +301,10 @@ func writePlan1SourceStubs(t *testing.T, repoRoot string, manifest Manifest) {
 			source += "\n" + comment
 		}
 		path := filepath.Join(repoRoot, card.FilePath)
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}

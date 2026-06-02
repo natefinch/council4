@@ -12,6 +12,7 @@ import (
 // hand." More cases can be added as card implementations need them.
 type DynamicValueKind int
 
+// Dynamic value kind values identify supported derived integers.
 const (
 	DynamicValueNone DynamicValueKind = iota
 	DynamicValueConstant
@@ -30,7 +31,7 @@ type DynamicValue struct {
 }
 
 // CopyableValues records the copiable printed/effective values copied in layer
-// 1 (CR 707, CR 613). Optional fields mean "leave that value absent."
+// 1 (CR 707, CR 613). Optional fields mean "leave that value absent.".
 type CopyableValues struct {
 	Name             string
 	Colors           []mana.Color
@@ -49,6 +50,7 @@ type CopyableValues struct {
 // applies. The numeric values intentionally follow CR 613 layer order.
 type ContinuousLayer int
 
+// Continuous layer values follow CR 613 layer order.
 const (
 	LayerCopy ContinuousLayer = iota + 1
 	LayerControl

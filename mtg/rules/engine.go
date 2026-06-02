@@ -30,6 +30,8 @@ func NewEngine(rng *rand.Rand) *Engine {
 }
 
 // NewGame creates a game using the engine's RNG for deterministic setup.
+//
+//nolint:gocritic // Keep the public API accepting fixed-size player configs by value.
 func (e *Engine) NewGame(configs [game.NumPlayers]game.PlayerConfig) *game.Game {
 	return game.NewGameWithRand(configs, e.rng)
 }

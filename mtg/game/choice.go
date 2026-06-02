@@ -4,6 +4,7 @@ package game
 // priority action.
 type ChoiceKind int
 
+// Choice kind values classify engine-mediated decisions.
 const (
 	ChoiceMay ChoiceKind = iota
 	ChoiceTarget

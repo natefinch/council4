@@ -31,6 +31,7 @@ const (
 // Keyword represents an evergreen or commonly-used keyword ability (CR 702).
 type Keyword int
 
+// Keyword values enumerate supported keyword abilities.
 const (
 	KeywordNone Keyword = iota
 	Deathtouch
@@ -51,7 +52,6 @@ const (
 	Vigilance
 	Ward
 	SplitSecond
-	// Non-combat keywords
 	Equip
 	Enchant
 	Cycling
@@ -89,6 +89,7 @@ const (
 // TriggerType classifies what kind of event triggers a triggered ability.
 type TriggerType int
 
+// Trigger type values identify supported trigger wordings.
 const (
 	TriggerWhen     TriggerType = iota // "When [event]" — fires once
 	TriggerWhenever                    // "Whenever [event]" — fires each time
@@ -136,6 +137,7 @@ type StateTriggerCondition struct {
 // TriggerControllerFilter constrains a trigger by the controller recorded on an event.
 type TriggerControllerFilter int
 
+// Trigger controller filters match events by controller.
 const (
 	TriggerControllerAny TriggerControllerFilter = iota
 	TriggerControllerYou
@@ -145,6 +147,7 @@ const (
 // TriggerSourceFilter constrains a trigger by the source of the event.
 type TriggerSourceFilter int
 
+// Trigger source filters match events by source.
 const (
 	TriggerSourceAny TriggerSourceFilter = iota
 	TriggerSourceSelf
@@ -154,6 +157,7 @@ const (
 // TriggerPlayerFilter constrains a trigger by the affected player recorded on an event.
 type TriggerPlayerFilter int
 
+// Trigger player filters match events by affected player.
 const (
 	TriggerPlayerAny TriggerPlayerFilter = iota
 	TriggerPlayerYou
@@ -201,16 +205,16 @@ const (
 	// SorceryOnly means "activate only as a sorcery" (CR 113.6e).
 	SorceryOnly
 
-	// OncePerTurn means "activate only once each turn."
+	// OncePerTurn means "activate only once each turn.".
 	OncePerTurn
 
 	// SorceryOncePerTurn combines both restrictions.
 	SorceryOncePerTurn
 
-	// DuringCombat means "activate only during combat."
+	// DuringCombat means "activate only during combat.".
 	DuringCombat
 
-	// DuringUpkeep means "activate only during your upkeep."
+	// DuringUpkeep means "activate only during your upkeep.".
 	DuringUpkeep
 )
 
@@ -219,6 +223,7 @@ const (
 // richer effect representations.
 type EffectType int
 
+// Effect type values enumerate supported effect categories.
 const (
 	EffectUnknown EffectType = iota
 	EffectDamage
@@ -275,6 +280,7 @@ const (
 // later linked "that much" or X instructions.
 type EffectResultAmountKind int
 
+// Effect result amount values select stored numeric results.
 const (
 	EffectResultAmountDefault EffectResultAmountKind = iota
 	EffectResultAmountExcessDamage
@@ -283,6 +289,7 @@ const (
 // EffectSelector identifies a set of permanents affected by a mass effect.
 type EffectSelector string
 
+// Effect selector values identify mass-effect recipient groups.
 const (
 	EffectSelectorNone                     EffectSelector = ""
 	EffectSelectorAllCreatures             EffectSelector = "all creatures"
@@ -299,6 +306,7 @@ const (
 // PlayerSelector identifies a set of players affected by a mass effect.
 type PlayerSelector string
 
+// Player selector values identify groups of affected players.
 const (
 	PlayerSelectorNone      PlayerSelector = ""
 	PlayerSelectorOpponents PlayerSelector = "opponents"
@@ -307,6 +315,7 @@ const (
 // CounterSourceKind identifies where an effect reads counters from.
 type CounterSourceKind int
 
+// Counter source values identify where counter-moving effects read counters.
 const (
 	CounterSourceNone CounterSourceKind = iota
 
@@ -329,6 +338,7 @@ type CounterSourceSpec struct {
 // token-copy effect.
 type TokenCopySource int
 
+// Token copy source values identify what supplies copiable values.
 const (
 	TokenCopySourceNone TokenCopySource = iota
 	TokenCopySourceObject
@@ -504,6 +514,7 @@ type TargetSpec struct {
 // TargetChooser identifies who chooses a target slot during announcement.
 type TargetChooser int
 
+// Target chooser values identify who chooses a target slot.
 const (
 	TargetChooserController TargetChooser = iota
 	// TargetChooserOpponent means the ability controller chooses an opponent,

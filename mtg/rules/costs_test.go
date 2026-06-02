@@ -5,7 +5,6 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -570,7 +569,7 @@ func addBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype types
 		Owner: controller,
 	}
 	permanent := &game.Permanent{
-		ObjectID:       id.ID(g.IDGen.Next()),
+		ObjectID:       g.IDGen.Next(),
 		CardInstanceID: cardID,
 		Owner:          controller,
 		Controller:     controller,

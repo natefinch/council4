@@ -5,6 +5,7 @@ import "github.com/natefinch/council4/mtg/game/id"
 // EffectDuration describes when a runtime continuous effect expires.
 type EffectDuration int
 
+// Effect duration values identify when runtime effects expire.
 const (
 	DurationPermanent EffectDuration = iota
 	DurationUntilEndOfTurn
@@ -16,6 +17,7 @@ const (
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.
 type DelayedTriggerTiming int
 
+// Delayed trigger timing values identify supported delayed trigger windows.
 const (
 	DelayedAtBeginningOfNextEndStep DelayedTriggerTiming = iota + 1
 )

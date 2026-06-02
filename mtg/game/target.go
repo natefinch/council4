@@ -5,6 +5,7 @@ import "github.com/natefinch/council4/mtg/game/id"
 // TargetKind identifies what kind of game object a runtime target points at.
 type TargetKind int
 
+// Target kind values identify what a runtime target points at.
 const (
 	TargetPermanent TargetKind = iota
 	TargetPlayer

@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Domri, Anarch of Bolas
+// DomriAnarchOfBolas is the card definition for Domri, Anarch of Bolas.
 //
 // Type: types.Legendary Planeswalker — Domri
 // Cost: {1}{R}{G}

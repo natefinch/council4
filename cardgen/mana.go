@@ -51,8 +51,8 @@ func symbolToLiteral(sym string) (string, error) {
 		return "mana.SnowMana()", nil
 	}
 	// Phyrexian: W/P, U/P, etc.
-	if strings.HasSuffix(sym, "/P") {
-		color := strings.TrimSuffix(sym, "/P")
+	if before, ok := strings.CutSuffix(sym, "/P"); ok {
+		color := before
 		goColor, err := colorLetter(color)
 		if err != nil {
 			return "", err

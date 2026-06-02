@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Cosmic Hunger
+// CosmicHunger is the card definition for Cosmic Hunger.
 //
 // Type: Instant
 // Cost: {1}{G}

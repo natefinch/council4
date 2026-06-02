@@ -188,10 +188,11 @@ Then run the smallest relevant tests first:
 go test ./cardgen/... ./mtg/cards/...
 ```
 
-Escalate to full validation before final completion:
+Escalate to full validation before final completion. Do not consider code
+complete until `mage lint` passes with zero issues:
 
 ```bash
-go test ./... && go vet ./...
+mage lint && go test ./... && go vet ./...
 ```
 
 ### Step 6: Report unsupported or pending cards

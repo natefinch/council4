@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -28,8 +28,9 @@ func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (mana.Cost,
 	if kind == game.FaceDownDisguise {
 		keyword = game.Disguise
 	}
-	for _, ability := range card.Abilities {
-		if !abilityHasKeyword(&ability, keyword) {
+	for i := range card.Abilities {
+		ability := &card.Abilities[i]
+		if !abilityHasKeyword(ability, keyword) {
 			continue
 		}
 		switch kind {
@@ -41,6 +42,7 @@ func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (mana.Cost,
 			if ability.DisguiseCost.Exists {
 				return ability.DisguiseCost.Val, true
 			}
+		default:
 		}
 	}
 	return nil, false
@@ -93,7 +95,7 @@ func legalFaceDownFaces(card *game.CardDef) []game.FaceIndex {
 	return faces
 }
 
-func (e *Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) bool {
+func (*Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || !isSorcerySpeed(g, playerID) || splitSecondOnStack(g) || kind == game.FaceDownNone {
 		return false
 	}
@@ -163,7 +165,7 @@ func (e *Engine) legalTurnFaceUpActions(g *game.Game, playerID game.PlayerID) []
 	return actions
 }
 
-func (e *Engine) canTurnFaceUp(g *game.Game, playerID game.PlayerID, permanentID id.ID) bool {
+func (*Engine) canTurnFaceUp(g *game.Game, playerID game.PlayerID, permanentID id.ID) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}

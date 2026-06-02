@@ -71,7 +71,7 @@ func TestTargetedEffectUsesSelectedTarget(t *testing.T) {
 func TestDeadPlayerTargetDoesNotApplyEffect(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		Amount:      3,
 		TargetIndex: 0,
@@ -522,7 +522,7 @@ func TestPermanentTargetThatLeavesBeforeResolutionCountersSpellByRules(t *testin
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCreaturePermanent(g, game.Player2)
-	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		Amount:      3,
 		TargetIndex: 0,
@@ -551,7 +551,7 @@ func TestPermanentTargetedDamageMarksDamageOnResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCreaturePermanent(g, game.Player2)
-	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		Amount:      3,
 		TargetIndex: 0,
@@ -774,7 +774,7 @@ func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 	hexproof := addHexproofPermanent(g, game.Player2)
 	normal := addCreaturePermanent(g, game.Player2)
 
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player2, source, 0, spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player2, source, 0, &spec)
 
 	if slices.Contains(candidates, game.PermanentTarget(hexproof.ObjectID)) {
 		t.Fatal("opponent chooser could choose hexproof creature against source controller")
@@ -809,7 +809,7 @@ func optionalPermanentTargetSpell(constraint string) *game.CardDef {
 	return permanentTargetSpellWithRange(constraint, 0, 1)
 }
 
-func permanentTargetSpellWithRange(constraint string, minTargets int, maxTargets int) *game.CardDef {
+func permanentTargetSpellWithRange(constraint string, minTargets, maxTargets int) *game.CardDef {
 	return permanentTargetSpellWithSpecs([]game.TargetSpec{
 		{MinTargets: minTargets, MaxTargets: maxTargets, Constraint: constraint},
 	})

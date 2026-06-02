@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Fiendlash
+// Fiendlash is the card definition for Fiendlash.
 //
 // Type: Artifact — Equipment
 // Cost: {1}{R}

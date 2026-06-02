@@ -79,13 +79,13 @@ func TestMarkExistingFiles(t *testing.T) {
 	}
 }
 
-func writeTestFile(t *testing.T, root string, relPath string) {
+func writeTestFile(t *testing.T, root, relPath string) {
 	t.Helper()
 	path := filepath.Join(root, relPath)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte("package test\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("package test\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 }

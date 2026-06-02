@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Fanatic of Rhonas
+// FanaticOfRhonas is the card definition for Fanatic of Rhonas.
 //
 // Type: Creature — Snake Druid
 // Cost: {1}{G}

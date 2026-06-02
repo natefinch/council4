@@ -45,8 +45,9 @@ The skill will:
 3. Spawn subagents to implement card batches through the `card-impl` workflow.
 4. Regenerate card registries.
 5. Validate generated card definitions.
-6. Produce Markdown and JSON unsupported-card reports.
-7. Add a missing-functionality rollup that groups reusable rules/parser gaps and
+6. Run `mage lint` and fix every reported issue before considering code complete.
+7. Produce Markdown and JSON unsupported-card reports.
+8. Add a missing-functionality rollup that groups reusable rules/parser gaps and
    lists which cards need each gap filled.
 
 ## Features

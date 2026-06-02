@@ -69,9 +69,10 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.
 	if len(specs) == 0 {
 		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}}
 	}
-	for _, spec := range specs {
+	for i := range specs {
+		spec := &specs[i]
 		normalized := normalizeTargetSpec(spec)
-		if !targetSpecValid(normalized) {
+		if !targetSpecValid(&normalized) {
 			return targetChoiceResult{
 				kind: targetInvalidSpec,
 				err:  fmt.Errorf("target spec %q has invalid range: min=%d max=%d", spec.Constraint, normalized.MinTargets, normalized.MaxTargets),
@@ -91,19 +92,19 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 		*result = append(*result, append([]game.Target(nil), prefix...))
 		return
 	}
-	spec := normalizeTargetSpec(specs[specIndex])
-	if !targetSpecValid(spec) {
+	spec := normalizeTargetSpec(&specs[specIndex])
+	if !targetSpecValid(&spec) {
 		return
 	}
-	if targetSpecUsesExternalChooser(spec) {
-		if len(choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec)) == 0 {
+	if targetSpecUsesExternalChooser(&spec) {
+		if len(choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, &spec)) == 0 {
 			return
 		}
 		next := append(append([]game.Target(nil), prefix...), game.DeferredTarget())
 		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, result)
 		return
 	}
-	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, spec)
+	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, &spec)
 	maxTargets := min(spec.MaxTargets, len(candidates))
 	for _, count := range targetCountsForChoices(spec.MinTargets, maxTargets) {
 		for _, combination := range targetCombinations(candidates, count) {
@@ -113,7 +114,7 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 	}
 }
 
-func targetCountsForChoices(minTargets int, maxTargets int) []int {
+func targetCountsForChoices(minTargets, maxTargets int) []int {
 	var counts []int
 	start := minTargets
 	if minTargets == 0 && maxTargets > 0 {
@@ -128,14 +129,14 @@ func targetCountsForChoices(minTargets int, maxTargets int) []int {
 	return counts
 }
 
-func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec) []game.Target {
+func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec) []game.Target {
 	return targetCandidatesForSpecChosenBy(g, controller, controller, source, sourceObjectID, spec)
 }
 
-func targetCandidatesForSpecChosenBy(g *game.Game, sourceController game.PlayerID, predicatePlayer game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec) []game.Target {
+func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePlayer game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec) []game.Target {
 	var candidates []game.Target
 	if targetSpecAllowsPlayers(spec) {
-		for playerID := game.Player1; playerID < game.NumPlayers; playerID++ {
+		for playerID := range game.PlayerID(game.NumPlayers) {
 			target := game.PlayerTarget(playerID)
 			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, target) {
 				candidates = append(candidates, target)
@@ -203,19 +204,19 @@ func targetsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.C
 	return targetsValidForSpecFrom(g, controller, source, sourceObjectID, specs, targets, 0, 0)
 }
 
-func targetsValidForSpecFrom(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, specIndex int, targetIndex int) bool {
+func targetsValidForSpecFrom(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, specIndex, targetIndex int) bool {
 	if specIndex == len(specs) {
 		return targetIndex == len(targets)
 	}
-	spec := normalizeTargetSpec(specs[specIndex])
-	if !targetSpecValid(spec) {
+	spec := normalizeTargetSpec(&specs[specIndex])
+	if !targetSpecValid(&spec) {
 		return false
 	}
 	remaining := len(targets) - targetIndex
 	maxTargets := min(spec.MaxTargets, remaining)
 	for count := spec.MinTargets; count <= maxTargets; count++ {
 		slice := targets[targetIndex : targetIndex+count]
-		if targetsMatchSpecSlice(g, controller, source, sourceObjectID, spec, slice) &&
+		if targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, slice) &&
 			targetsValidForSpecFrom(g, controller, source, sourceObjectID, specs, targets, specIndex+1, targetIndex+count) {
 			return true
 		}
@@ -223,7 +224,7 @@ func targetsValidForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 	return false
 }
 
-func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec, targets []game.Target) bool {
+func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, targets []game.Target) bool {
 	if len(targets) < spec.MinTargets || len(targets) > spec.MaxTargets {
 		return false
 	}
@@ -292,12 +293,12 @@ func (e *Engine) completeAnnouncementTargets(g *game.Game, controller game.Playe
 		return nil, false
 	}
 	completed := append([]game.Target(nil), targets...)
-	for i, rawSpec := range specs {
-		spec := normalizeTargetSpec(rawSpec)
-		if !targetSpecUsesExternalChooser(spec) {
+	for i := range specs {
+		spec := normalizeTargetSpec(&specs[i])
+		if !targetSpecUsesExternalChooser(&spec) {
 			continue
 		}
-		target, ok := e.chooseExternalTarget(g, controller, source, sourceObjectID, spec, agents, log)
+		target, ok := e.chooseExternalTarget(g, controller, source, sourceObjectID, &spec, agents, log)
 		if !ok {
 			return nil, false
 		}
@@ -307,17 +308,21 @@ func (e *Engine) completeAnnouncementTargets(g *game.Game, controller game.Playe
 }
 
 func targetSpecsUseExternalChooser(specs []game.TargetSpec) bool {
-	return slices.ContainsFunc(specs, func(spec game.TargetSpec) bool {
-		return targetSpecUsesExternalChooser(normalizeTargetSpec(spec))
-	})
+	for i := range specs {
+		normalized := normalizeTargetSpec(&specs[i])
+		if targetSpecUsesExternalChooser(&normalized) {
+			return true
+		}
+	}
+	return false
 }
 
 func targetSpecsUseFixedSlots(specs []game.TargetSpec) bool {
 	// External chooser completion maps each TargetSpec to one target slot. Keep
 	// variable regular target groups out of this path until a second consumer
 	// needs full segmentation support.
-	for _, spec := range specs {
-		normalized := normalizeTargetSpec(spec)
+	for i := range specs {
+		normalized := normalizeTargetSpec(&specs[i])
 		if normalized.MinTargets != 1 || normalized.MaxTargets != 1 {
 			return false
 		}
@@ -325,7 +330,7 @@ func targetSpecsUseFixedSlots(specs []game.TargetSpec) bool {
 	return true
 }
 
-func (e *Engine) chooseExternalTarget(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.Target, bool) {
+func (e *Engine) chooseExternalTarget(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.Target, bool) {
 	switch spec.Chooser {
 	case game.TargetChooserOpponent:
 		opponents := choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec)
@@ -347,7 +352,7 @@ func (e *Engine) chooseExternalTarget(g *game.Game, controller game.PlayerID, so
 	}
 }
 
-func (e *Engine) chooseTargetingOpponent(g *game.Game, controller game.PlayerID, spec game.TargetSpec, opponents []game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.PlayerID, bool) {
+func (e *Engine) chooseTargetingOpponent(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, opponents []game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.PlayerID, bool) {
 	options := make([]game.ChoiceOption, 0, len(opponents))
 	for i, opponent := range opponents {
 		options = append(options, game.ChoiceOption{Index: i, Label: fmt.Sprintf("Player %d", opponent+1)})
@@ -366,7 +371,7 @@ func (e *Engine) chooseTargetingOpponent(g *game.Game, controller game.PlayerID,
 	return opponents[selected[0]], true
 }
 
-func (e *Engine) chooseTargetFromCandidates(g *game.Game, chooser game.PlayerID, spec game.TargetSpec, candidates []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.Target, bool) {
+func (e *Engine) chooseTargetFromCandidates(g *game.Game, chooser game.PlayerID, spec *game.TargetSpec, candidates []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.Target, bool) {
 	if len(candidates) == 0 {
 		return game.Target{}, false
 	}
@@ -471,19 +476,19 @@ func modesValidForAbility(ability *game.AbilityDef, chosenModes []int) bool {
 	return true
 }
 
-func modeChoiceRange(ability *game.AbilityDef) (int, int) {
+func modeChoiceRange(ability *game.AbilityDef) (minModes, maxModes int) {
 	if ability == nil || len(ability.Modes) == 0 {
 		return 0, 0
 	}
-	minModes := ability.MinModes
-	maxModes := ability.MaxModes
+	minModes = ability.MinModes
+	maxModes = ability.MaxModes
 	if minModes == 0 && maxModes == 0 {
 		return 1, 1
 	}
 	return minModes, maxModes
 }
 
-func modeCombinations(modeCount int, chooseCount int) [][]int {
+func modeCombinations(modeCount, chooseCount int) [][]int {
 	if chooseCount == 0 {
 		return [][]int{nil}
 	}
@@ -506,7 +511,7 @@ func modeCombinations(modeCount int, chooseCount int) [][]int {
 	return result
 }
 
-func duplicateModeChoices(modeCount int, minModes int, maxModes int) [][]int {
+func duplicateModeChoices(modeCount, minModes, maxModes int) [][]int {
 	var result [][]int
 	var walk func(start int, chosen []int)
 	walk = func(start int, chosen []int) {
@@ -524,15 +529,16 @@ func duplicateModeChoices(modeCount int, minModes int, maxModes int) [][]int {
 	return result
 }
 
-func normalizeTargetSpec(spec game.TargetSpec) game.TargetSpec {
-	if spec.MinTargets == 0 && spec.MaxTargets == 0 && spec.Constraint != "" {
-		spec.MinTargets = 1
-		spec.MaxTargets = 1
+func normalizeTargetSpec(spec *game.TargetSpec) game.TargetSpec {
+	normalized := *spec
+	if normalized.MinTargets == 0 && normalized.MaxTargets == 0 && normalized.Constraint != "" {
+		normalized.MinTargets = 1
+		normalized.MaxTargets = 1
 	}
-	return spec
+	return normalized
 }
 
-func targetSpecValid(spec game.TargetSpec) bool {
+func targetSpecValid(spec *game.TargetSpec) bool {
 	if spec.MinTargets < 0 || spec.MaxTargets < spec.MinTargets {
 		return false
 	}
@@ -546,11 +552,11 @@ func targetSpecValid(spec game.TargetSpec) bool {
 	}
 }
 
-func targetSpecUsesExternalChooser(spec game.TargetSpec) bool {
+func targetSpecUsesExternalChooser(spec *game.TargetSpec) bool {
 	return spec.Chooser != game.TargetChooserController
 }
 
-func choosingOpponentsForTargetSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec) []game.PlayerID {
+func choosingOpponentsForTargetSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec) []game.PlayerID {
 	if spec.Chooser != game.TargetChooserOpponent {
 		return nil
 	}
@@ -571,7 +577,7 @@ func choosingOpponentsForTargetSpec(g *game.Game, controller game.PlayerID, sour
 	return players
 }
 
-func externalChooserCouldChooseTarget(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec game.TargetSpec, target game.Target) bool {
+func externalChooserCouldChooseTarget(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
 	for _, chooser := range choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec) {
 		if slices.Contains(targetCandidatesForSpecChosenBy(g, controller, chooser, source, sourceObjectID, spec), target) {
 			return true
@@ -580,7 +586,7 @@ func externalChooserCouldChooseTarget(g *game.Game, controller game.PlayerID, so
 	return false
 }
 
-func targetSpecAllowsPlayers(spec game.TargetSpec) bool {
+func targetSpecAllowsPlayers(spec *game.TargetSpec) bool {
 	if spec.Allow != game.TargetAllowUnspecified {
 		return spec.Allow&game.TargetAllowPlayer != 0
 	}
@@ -592,7 +598,7 @@ func targetSpecAllowsPlayers(spec game.TargetSpec) bool {
 		normalized == "any target"
 }
 
-func targetSpecAllowsPermanents(spec game.TargetSpec) bool {
+func targetSpecAllowsPermanents(spec *game.TargetSpec) bool {
 	if spec.Allow != game.TargetAllowUnspecified {
 		return spec.Allow&game.TargetAllowPermanent != 0
 	}
@@ -612,7 +618,7 @@ func targetSpecAllowsPermanents(spec game.TargetSpec) bool {
 	return false
 }
 
-func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec game.TargetSpec, target game.Target) bool {
+func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
 	switch target.Kind {
 	case game.TargetPlayer:
 		return playerTargetMatchesSpec(g, controller, spec, target.PlayerID)
@@ -623,7 +629,7 @@ func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id
 	}
 }
 
-func playerTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec game.TargetSpec, playerID game.PlayerID) bool {
+func playerTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, playerID game.PlayerID) bool {
 	if !isPlayerAlive(g, playerID) || !targetSpecAllowsPlayers(spec) {
 		return false
 	}
@@ -640,7 +646,7 @@ func playerTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec game.T
 	return true
 }
 
-func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec game.TargetSpec, permanentID id.ID) bool {
+func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec *game.TargetSpec, permanentID id.ID) bool {
 	if !targetSpecAllowsPermanents(spec) {
 		return false
 	}
@@ -760,7 +766,7 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 	return source != nil && permanentProtectedFromSourceDef(g, permanent, source)
 }
 
-func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec game.TargetSpec, permanent *game.Permanent) bool {
+func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, permanent *game.Permanent) bool {
 	permanentController := effectiveController(g, permanent)
 	switch spec.Predicate.Controller {
 	case game.ControllerYou:
@@ -782,7 +788,7 @@ func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec
 	}
 }
 
-func permanentTypeMatchesSpec(g *game.Game, spec game.TargetSpec, permanent *game.Permanent) bool {
+func permanentTypeMatchesSpec(g *game.Game, spec *game.TargetSpec, permanent *game.Permanent) bool {
 	if len(spec.Predicate.PermanentTypes) > 0 || len(spec.Predicate.ExcludedTypes) > 0 {
 		return true
 	}
@@ -842,7 +848,7 @@ func permanentTypesForConstraint(normalized string) []types.Card {
 	return cardTypes
 }
 
-func normalizedTargetConstraint(spec game.TargetSpec) string {
+func normalizedTargetConstraint(spec *game.TargetSpec) string {
 	normalized := strings.ToLower(strings.TrimSpace(spec.Constraint))
 	normalized = strings.TrimPrefix(normalized, "target ")
 	return strings.Join(strings.Fields(normalized), " ")

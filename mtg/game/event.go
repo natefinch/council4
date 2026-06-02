@@ -8,6 +8,7 @@ import (
 // EventKind identifies a rules-relevant fact that occurred during a game.
 type EventKind int
 
+// Event kind values enumerate rules-relevant game facts.
 const (
 	EventUnknown EventKind = iota
 	EventSpellCast
@@ -35,6 +36,7 @@ const (
 // DamageRecipientKind identifies what received damage.
 type DamageRecipientKind int
 
+// Damage recipient values identify what received damage.
 const (
 	DamageRecipientNone DamageRecipientKind = iota
 	DamageRecipientPlayer
@@ -44,6 +46,8 @@ const (
 // GameEvent records a rules-relevant fact emitted by rules helpers as state
 // changes happen. Events are data, not behavior: card definitions and reports
 // may refer to this vocabulary, while mtg/rules owns emission and consumers.
+//
+//nolint:revive // GameEvent is the established exported API name.
 type GameEvent struct {
 	Kind EventKind
 

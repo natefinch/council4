@@ -15,7 +15,7 @@ func (e *Engine) drawOpeningHands(g *game.Game) {
 	}
 }
 
-func (e *Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
+func (*Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
 	if playerID < 0 || int(playerID) >= len(g.Players) {
 		return 0, false
 	}

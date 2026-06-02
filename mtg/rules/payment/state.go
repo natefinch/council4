@@ -17,6 +17,12 @@ import (
 // rules-specific logic (continuous effects, event emission, zone transitions).
 // Implementations in mtg/rules wrap *game.Game and the relevant rules helpers.
 type State interface {
+	stateQueries
+	stateAbilityQueries
+	stateMutations
+}
+
+type stateQueries interface {
 	// Player returns the payment-eligible player, or false if the player is
 	// invalid or eliminated.
 	Player(playerID game.PlayerID) (*game.Player, bool)
@@ -41,10 +47,6 @@ type State interface {
 	// PermanentEffectiveColors returns the effective colors of the permanent.
 	PermanentEffectiveColors(p *game.Permanent) []mana.Color
 
-	// ActivationConditionSatisfied reports whether an activated ability's
-	// non-timing activation restriction is satisfied.
-	ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef) bool
-
 	// PermanentByObjectID looks up a permanent by its object ID.
 	PermanentByObjectID(objectID id.ID) (*game.Permanent, bool)
 
@@ -54,12 +56,20 @@ type State interface {
 	// CardFace returns the requested face of a card instance, falling back to
 	// the base definition when the face does not exist.
 	CardFace(card *game.CardInstance, face game.FaceIndex) *game.CardDef
+}
+
+type stateAbilityQueries interface {
+	// ActivationConditionSatisfied reports whether an activated ability's
+	// non-timing activation restriction is satisfied.
+	ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef) bool
 
 	// CostModifiersForSpell returns all applicable cost modifiers for a spell
 	// being cast by the given player from the given zone. This includes global
 	// game modifiers, commander tax, and static rule-effect modifiers.
 	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone game.ZoneType) []game.CostModifier
+}
 
+type stateMutations interface {
 	// SetTapped sets the tapped state of a permanent and emits the appropriate
 	// tapped/untapped event.
 	SetTapped(p *game.Permanent, tapped bool)

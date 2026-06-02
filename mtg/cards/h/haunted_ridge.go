@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Haunted Ridge
+// HauntedRidge is the card definition for Haunted Ridge.
 //
 // Type: Land
 //

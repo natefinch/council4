@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Lightning Bolt
+// LightningBolt is the card definition for Lightning Bolt.
 //
 // Type: Instant
 // Cost: {R}

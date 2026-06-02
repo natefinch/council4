@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -67,7 +67,8 @@ func BuildUnsupportedReport(manifest Manifest) UnsupportedReport {
 // reads generated card source comments to include missing functionality notes.
 func BuildUnsupportedReportWithSource(manifest Manifest, repoRoot string) UnsupportedReport {
 	report := UnsupportedReport{}
-	for _, card := range manifest.Cards {
+	for i := range manifest.Cards {
+		card := &manifest.Cards[i]
 		report.Summary.ManifestTotal++
 		functionality := missingFunctionalityForCard(repoRoot, card.FilePath)
 		row, ok := unsupportedReportCard(card, functionality)
@@ -88,10 +89,11 @@ func BuildUnsupportedReportWithSource(manifest Manifest, repoRoot string) Unsupp
 			report.Summary.MissingGeneratedFile++
 		case card.FileStatus == BatchFileStatusExisting && card.Validation == BatchValidationStatusUnvalidated:
 			report.Summary.ValidationPending++
+		default:
 		}
 	}
-	sort.SliceStable(report.Cards, func(i, j int) bool {
-		return report.Cards[i].Name < report.Cards[j].Name
+	slices.SortStableFunc(report.Cards, func(a, b UnsupportedReportCard) int {
+		return strings.Compare(a.Name, b.Name)
 	})
 	report.Functionality = rollupFunctionality(report.Cards)
 	return report
@@ -115,7 +117,8 @@ func WriteUnsupportedReportMarkdown(w io.Writer, report UnsupportedReport) error
 	if _, err := fmt.Fprintf(w, "Manifest cards: %d; unsupported or pending: %d; fetch errors: %d; missing generated files: %d; invalid generated cards: %d; validation pending: %d; functionality-blocked cards: %d.\n", report.Summary.ManifestTotal, report.Summary.UnsupportedTotal, report.Summary.FetchError, report.Summary.MissingGeneratedFile, report.Summary.Invalid, report.Summary.ValidationPending, report.Summary.FunctionalityBlocked); err != nil {
 		return err
 	}
-	for _, card := range report.Cards {
+	for i := range report.Cards {
+		card := &report.Cards[i]
 		if _, err := fmt.Fprintln(w); err != nil {
 			return err
 		}
@@ -217,8 +220,8 @@ func WriteUnsupportedReportMarkdown(w io.Writer, report UnsupportedReport) error
 	return nil
 }
 
-func unsupportedReportCard(card ManifestCard, functionality []string) (UnsupportedReportCard, bool) {
-	if card.Status != BatchStatusFetchError && card.FileStatus != BatchFileStatusMissing && card.Validation != BatchValidationStatusInvalid && !(card.FileStatus == BatchFileStatusExisting && card.Validation == BatchValidationStatusUnvalidated) && len(functionality) == 0 {
+func unsupportedReportCard(card *ManifestCard, functionality []string) (UnsupportedReportCard, bool) {
+	if card.Status != BatchStatusFetchError && card.FileStatus != BatchFileStatusMissing && card.Validation != BatchValidationStatusInvalid && (card.FileStatus != BatchFileStatusExisting || card.Validation != BatchValidationStatusUnvalidated) && len(functionality) == 0 {
 		return UnsupportedReportCard{}, false
 	}
 	name := manifestCardName(card)
@@ -238,11 +241,11 @@ func unsupportedReportCard(card ManifestCard, functionality []string) (Unsupport
 		Issues:        append([]ValidationIssue(nil), card.Issues...),
 		Functionality: append([]string(nil), functionality...),
 	}
-	row.NextWork = nextWorkForCard(row)
+	row.NextWork = nextWorkForCard(&row)
 	return row, true
 }
 
-func nextWorkForCard(card UnsupportedReportCard) []string {
+func nextWorkForCard(card *UnsupportedReportCard) []string {
 	seen := map[string]bool{}
 	add := func(text string) {
 		if text != "" && !seen[text] {
@@ -311,7 +314,7 @@ func inlineCode(text string) string {
 	return "`" + text + "`"
 }
 
-func missingFunctionalityForCard(repoRoot string, filePath string) []string {
+func missingFunctionalityForCard(repoRoot, filePath string) []string {
 	if repoRoot == "" || filePath == "" {
 		return nil
 	}
@@ -343,13 +346,13 @@ func parseMissingFunctionalityComments(source string) []string {
 				items = append(items, strings.TrimSpace(strings.TrimPrefix(note, "Note:")))
 			}
 			i = next
+		default:
 		}
 	}
 	return dedupeStrings(items)
 }
 
-func collectBulletCommentBlock(lines []string, start int) ([]string, int) {
-	var items []string
+func collectBulletCommentBlock(lines []string, start int) (items []string, next int) {
 	current := ""
 	i := start
 	for ; i < len(lines); i++ {
@@ -379,7 +382,7 @@ func collectBulletCommentBlock(lines []string, start int) ([]string, int) {
 	return items, i
 }
 
-func collectPlainCommentBlock(lines []string, start int) (string, int) {
+func collectPlainCommentBlock(lines []string, start int) (text string, next int) {
 	var parts []string
 	i := start
 	for ; i < len(lines); i++ {
@@ -418,7 +421,8 @@ func rollupFunctionality(cards []UnsupportedReportCard) []UnsupportedFunctionali
 		details map[string]bool
 	}
 	grouped := map[string]*entry{}
-	for _, card := range cards {
+	for i := range cards {
+		card := &cards[i]
 		for _, detail := range card.Functionality {
 			capability := functionalityCapability(detail)
 			if grouped[capability] == nil {
@@ -432,7 +436,7 @@ func rollupFunctionality(cards []UnsupportedReportCard) []UnsupportedFunctionali
 	for capability := range grouped {
 		capabilities = append(capabilities, capability)
 	}
-	sort.Strings(capabilities)
+	slices.Sort(capabilities)
 	rollup := make([]UnsupportedFunctionality, 0, len(capabilities))
 	for _, capability := range capabilities {
 		entry := grouped[capability]
@@ -496,16 +500,16 @@ func ignoredFunctionalityIdentifier(identifier string) bool {
 }
 
 func firstQuotedPhrase(detail string) (string, bool) {
-	start := strings.Index(detail, "\"")
-	if start < 0 {
+	_, after, ok := strings.Cut(detail, "\"")
+	if !ok {
 		return "", false
 	}
-	rest := detail[start+1:]
-	end := strings.Index(rest, "\"")
-	if end < 0 {
+	rest := after
+	before, _, ok := strings.Cut(rest, "\"")
+	if !ok {
 		return "", false
 	}
-	return rest[:end], true
+	return before, true
 }
 
 func sortedKeys(values map[string]bool) []string {
@@ -513,7 +517,7 @@ func sortedKeys(values map[string]bool) []string {
 	for value := range values {
 		keys = append(keys, value)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	return keys
 }
 

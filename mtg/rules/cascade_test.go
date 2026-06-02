@@ -87,7 +87,7 @@ func TestCascadeChainsFromCascadedSpell(t *testing.T) {
 func TestDiscoverExilesUntilEligibleCardAndCastsIt(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDiscover, Amount: 3}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectDiscover, Amount: 3}, nil)
 	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Discover Hit", 3))
 	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []types.Card{types.Land}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 4))
@@ -109,7 +109,7 @@ func TestDiscoverExilesUntilEligibleCardAndCastsIt(t *testing.T) {
 func TestDiscoverDeclinePutsFoundCardIntoHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.Effect{Type: game.EffectDiscover, Amount: 2}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectDiscover, Amount: 2}, nil)
 	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Declined Hit", 2))
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 5))
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
@@ -155,7 +155,7 @@ func stackContainsSource(g *game.Game, sourceID id.ID) bool {
 	return false
 }
 
-func sameCardIDs(got []id.ID, want []id.ID) bool {
+func sameCardIDs(got, want []id.ID) bool {
 	if len(got) != len(want) {
 		return false
 	}

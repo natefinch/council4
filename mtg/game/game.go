@@ -9,6 +9,7 @@ import (
 // DayNightState represents the day/night cycle (CR 728).
 type DayNightState int
 
+// Day/night values identify the current daybound or nightbound state.
 const (
 	Day   DayNightState = iota // It is day.
 	Night                      // It is night.
@@ -174,12 +175,16 @@ type ActivatedAbilityUse struct {
 //   - Adds deck cards to libraries
 //   - Shuffles libraries
 //   - Sets turn 1 with Player1 as the active player
+//
+//nolint:gocritic // The fixed-size player array is the public setup API.
 func NewGame(configs [NumPlayers]PlayerConfig) *Game {
 	return NewGameWithRand(configs, rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())))
 }
 
 // NewGameWithRand creates a game using rng for all setup randomness. The same
 // rng is consumed sequentially across players' library shuffles.
+//
+//nolint:gocritic // The fixed-size player array is the public setup API.
 func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 	if rng == nil {
 		panic("nil rng")
@@ -250,7 +255,7 @@ func (g *Game) ActivePlayer() *Player {
 	return g.Players[g.Turn.ActivePlayer]
 }
 
-// PriorityPlayer returns the player who currently has priority.
+// PriorityHolder returns the player who currently has priority.
 func (g *Game) PriorityHolder() *Player {
 	return g.Players[g.Turn.PriorityPlayer]
 }

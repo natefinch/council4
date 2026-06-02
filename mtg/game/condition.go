@@ -60,7 +60,7 @@ func (f PermanentFilter) Empty() bool {
 }
 
 // Empty reports whether the condition contains no active predicate.
-func (c Condition) Empty() bool {
+func (c *Condition) Empty() bool {
 	return c.ControllerControls.Empty() &&
 		!c.Object.Exists &&
 		len(c.Types) == 0 &&

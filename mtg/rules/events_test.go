@@ -147,7 +147,7 @@ func TestDestroyPermanentEmitsZoneChangeAndDeathEvents(t *testing.T) {
 func TestDamageEffectEmitsDamageEvent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		Amount:      3,
 		TargetIndex: 0,
@@ -176,7 +176,7 @@ func TestCounteredSpellEmitsStackToGraveyardZoneChangeButNoResolveEvent(t *testi
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanent(g, game.Player2)
-	sourceID := addEffectSpellToStack(g, game.Player1, game.Effect{
+	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		Amount:      3,
 		TargetIndex: 0,
@@ -211,7 +211,7 @@ func TestMassDamageEffectEmitsDamageEventForEachPermanent(t *testing.T) {
 		Name:  "Relic",
 		Types: []types.Card{types.Artifact},
 	})
-	addEffectSpellToStack(g, game.Player1, game.Effect{
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:     game.EffectDamage,
 		Amount:   2,
 		Selector: game.EffectSelectorAllCreatures,
@@ -323,7 +323,7 @@ func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
 
 func TestDiscardToMaximumHandSizeEmitsDiscardAndZoneChangeEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	for i := 0; i < maximumHandSize+1; i++ {
+	for range maximumHandSize + 1 {
 		addCardToHand(g, game.Player1, &game.CardDef{Name: "Card"})
 	}
 

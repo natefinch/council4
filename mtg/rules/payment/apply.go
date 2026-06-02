@@ -61,12 +61,12 @@ func tapForMana(s State, permanent *game.Permanent, color mana.Color, amount int
 	if !ok {
 		return false
 	}
-	c, a, sn, ok := permanentManaOutput(s, permanent)
-	if !ok || c != color || a != amount || sn != snow {
+	output, ok := permanentManaOutput(s, permanent)
+	if !ok || output.color != color || output.amount != amount || output.snow != snow {
 		return false
 	}
 	s.SetTapped(permanent, true)
-	if sn {
+	if output.snow {
 		player.ManaPool.AddSnow(color, amount)
 	} else {
 		player.ManaPool.Add(color, amount)

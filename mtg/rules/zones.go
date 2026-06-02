@@ -73,7 +73,8 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 }
 
 func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, continuous []game.ContinuousEffect) {
-	for _, effect := range continuous {
+	for i := range continuous {
+		effect := &continuous[i]
 		effect.ID = g.IDGen.Next()
 		effect.SourceObjectID = permanent.ObjectID
 		effect.SourceCardID = permanent.CardInstanceID
@@ -83,7 +84,7 @@ func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, cont
 		if effect.Duration == game.DurationPermanent {
 			effect.Duration = game.DurationPermanent
 		}
-		g.ContinuousEffects = append(g.ContinuousEffects, effect)
+		g.ContinuousEffects = append(g.ContinuousEffects, *effect)
 	}
 }
 
@@ -154,7 +155,8 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 	if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
 		return false
 	}
-	rememberLastKnown(g, snapshotPermanent(g, permanent, game.ZoneBattlefield))
+	snapshot := snapshotPermanent(g, permanent, game.ZoneBattlefield)
+	rememberLastKnown(g, &snapshot)
 	event := game.GameEvent{
 		Kind:        game.EventZoneChanged,
 		Controller:  effectiveController(g, permanent),
@@ -195,7 +197,7 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 	return true
 }
 
-func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone game.ZoneType, toZone game.ZoneType) bool {
+func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone game.ZoneType) bool {
 	from, ok := destinationZone(g, playerID, fromZone)
 	if !ok || !from.Remove(cardID) {
 		return false

@@ -196,7 +196,7 @@ func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
 
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPrevent, Amount: 2, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPrevent, Amount: 2, TargetIndex: 0}, nil)
 	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, target, 5, false)
 
 	if dealt != 3 {
@@ -212,7 +212,7 @@ func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 		return event.PermanentID == target.ObjectID && event.Amount == 2
 	})
 
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 	if len(g.PreventionShields) != 0 {
 		t.Fatalf("prevention shields after cleanup = %+v, want expired", g.PreventionShields)
@@ -228,8 +228,8 @@ func TestMultiplePreventionShieldsRecordDeterministicReplacementOrder(t *testing
 		Controller: game.Player2,
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
-	engine.resolveEffect(g, obj, game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
 
 	dealPermanentDamage(g, sourceID, 0, game.Player1, target, 3, false)
 
@@ -259,7 +259,7 @@ func TestRegenerationReplacesDestroyAndRemovesFromCombat(t *testing.T) {
 	engine.resolveEffect(g, &game.StackObject{
 		Controller: game.Player2,
 		Targets:    []game.Target{game.PermanentTarget(blocker.ObjectID)},
-	}, game.Effect{Type: game.EffectRegenerate, TargetIndex: 0}, nil)
+	}, &game.Effect{Type: game.EffectRegenerate, TargetIndex: 0}, nil)
 	removed, ok := destroyPermanent(g, blocker.ObjectID)
 
 	if ok || removed != nil {
@@ -439,9 +439,9 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
+	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type: game.EffectReplace,
-		Replacement: optReplacement(game.ReplacementEffect{
+		Replacement: optReplacement(&game.ReplacementEffect{
 			Description:   "exile instead",
 			MatchEvent:    game.EventZoneChanged,
 			MatchFromZone: true,
@@ -488,9 +488,9 @@ func payLifeETBModalLand() *game.CardDef {
 func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
+	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type: game.EffectReplace,
-		Replacement: optReplacement(game.ReplacementEffect{
+		Replacement: optReplacement(&game.ReplacementEffect{
 			Description:  "enter modified",
 			MatchEvent:   game.EventPermanentEnteredBattlefield,
 			MatchToZone:  true,
@@ -545,9 +545,9 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 			ReplaceToZone: game.ZoneHand,
 		},
 	} {
-		engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
+		engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 			Type:        game.EffectReplace,
-			Replacement: optReplacement(replacement),
+			Replacement: optReplacement(&replacement),
 		}, nil)
 	}
 
@@ -580,9 +580,9 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 		Controller:   game.Player1,
 		SourceID:     source.ObjectID,
 		SourceCardID: source.CardInstanceID,
-	}, game.Effect{
+	}, &game.Effect{
 		Type: game.EffectReplace,
-		Replacement: optReplacement(game.ReplacementEffect{
+		Replacement: optReplacement(&game.ReplacementEffect{
 			Description:   "exile instead",
 			MatchEvent:    game.EventZoneChanged,
 			MatchFromZone: true,
@@ -609,7 +609,7 @@ func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Would Draw"})
-	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, game.Effect{
+	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type:        game.EffectSkipStep,
 		TargetIndex: -1,
 		Step:        game.StepDraw,

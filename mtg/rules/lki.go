@@ -51,14 +51,14 @@ func cloneCounters(counters counter.Set) counter.Set {
 	return cloned
 }
 
-func rememberLastKnown(g *game.Game, snapshot game.ObjectSnapshot) {
+func rememberLastKnown(g *game.Game, snapshot *game.ObjectSnapshot) {
 	if snapshot.ObjectID == 0 {
 		return
 	}
 	if g.LastKnownInformation == nil {
 		g.LastKnownInformation = make(map[id.ID]game.ObjectSnapshot)
 	}
-	g.LastKnownInformation[snapshot.ObjectID] = snapshot
+	g.LastKnownInformation[snapshot.ObjectID] = *snapshot
 }
 
 func lastKnownObject(g *game.Game, objectID id.ID) (game.ObjectSnapshot, bool) {

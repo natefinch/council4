@@ -1,25 +1,26 @@
 package rules
 
 import (
-	"sort"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
-	payment "github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func suspendCostForCard(card *game.CardDef) (mana.Cost, int, bool) {
-	for _, ability := range card.Abilities {
-		if abilityHasKeyword(&ability, game.Suspend) && ability.SuspendCost.Exists && ability.SuspendTimeCounters > 0 {
+	for i := range card.Abilities {
+		ability := &card.Abilities[i]
+		if abilityHasKeyword(ability, game.Suspend) && ability.SuspendCost.Exists && ability.SuspendTimeCounters > 0 {
 			return ability.SuspendCost.Val, ability.SuspendTimeCounters, true
 		}
 	}
 	return nil, 0, false
 }
 
-func (e *Engine) canSuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+func (*Engine) canSuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -111,13 +112,11 @@ func suspendedCardIDsInOrder(g *game.Game) []id.ID {
 	for cardID := range g.SuspendedCards {
 		ids = append(ids, cardID)
 	}
-	sort.Slice(ids, func(i, j int) bool {
-		return ids[i] < ids[j]
-	})
+	slices.Sort(ids)
 	return ids
 }
 
-func (e *Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Exile.Contains(cardID) {
 		return false

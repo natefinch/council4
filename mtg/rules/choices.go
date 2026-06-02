@@ -34,7 +34,7 @@ func (e *Engine) chooseChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	return selected
 }
 
-func (e *Engine) agentChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest) ([]int, bool) {
+func (*Engine) agentChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest) ([]int, bool) {
 	agent := agentFor(agents, request.Player)
 	if agent == nil {
 		return fallbackChoice(request), true
@@ -81,7 +81,7 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 		}
 		count := min(request.MaxChoices, len(request.Options))
 		selected := make([]int, 0, count)
-		for i := 0; i < count; i++ {
+		for i := range count {
 			selected = append(selected, request.Options[i].Index)
 		}
 		return selected
