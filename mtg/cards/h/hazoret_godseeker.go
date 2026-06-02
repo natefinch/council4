@@ -35,11 +35,8 @@ var HazoretGodseeker = &game.CardDef{
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "Indestructible, haste\nStart your engines! (If you have no speed, it starts at 1. It increases once on each of your turns when an opponent loses life. Max speed is 4.)\n{1}, {T}: Target creature with power 2 or less can't be blocked this turn.\nHazoret can't attack or block unless you have max speed.",
 	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.StaticAbility,
-			Text:     "Indestructible, haste",
-			Keywords: []game.Keyword{game.Indestructible, game.Haste},
-		},
+		game.IndestructibleAbility,
+		game.HasteAbility,
 		{
 			Kind: game.TriggeredAbility,
 			Text: "Start your engines!",

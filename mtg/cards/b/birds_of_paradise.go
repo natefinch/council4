@@ -30,11 +30,7 @@ var BirdsOfParadise = &game.CardDef{
 	Toughness:     opt.Val(game.PT{Value: 1}),
 	OracleText:    "Flying\n{T}: Add one mana of any color.",
 	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.StaticAbility,
-			Text:     "Flying",
-			Keywords: []game.Keyword{game.Flying},
-		},
+		game.FlyingAbility,
 		{
 			Kind:          game.ActivatedAbility,
 			Text:          "{T}: Add one mana of any color.",

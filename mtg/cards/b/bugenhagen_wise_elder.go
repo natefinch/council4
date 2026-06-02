@@ -34,11 +34,7 @@ var BugenhagenWiseElder = &game.CardDef{
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "Reach\nAt the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.\n{T}: Add one mana of any color.",
 	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.StaticAbility,
-			Text:     "Reach",
-			Keywords: []game.Keyword{game.Reach},
-		},
+		game.ReachAbility,
 		{
 			Kind: game.TriggeredAbility,
 			Text: "At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.",

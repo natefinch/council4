@@ -29,11 +29,7 @@ var GigglingSkitterspike = &game.CardDef{
 	Toughness:  opt.Val(game.PT{Value: 1}),
 	OracleText: "Indestructible\nWhenever this creature attacks, blocks, or becomes the target of a spell, it deals damage equal to its power to each opponent.\n{5}: Monstrosity 5. (If this creature isn't monstrous, put five +1/+1 counters on it and it becomes monstrous.)",
 	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.StaticAbility,
-			Text:     "Indestructible",
-			Keywords: []game.Keyword{game.Indestructible},
-		},
+		game.IndestructibleAbility,
 		{
 			Kind: game.TriggeredAbility,
 			Text: "Whenever this creature attacks, blocks, or becomes the target of a spell, it deals damage equal to its power to each opponent.",

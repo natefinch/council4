@@ -86,6 +86,100 @@ const (
 	Exalted
 )
 
+// Reusable AbilityDef templates for non-parameterized keyword abilities.
+// Treat these values as immutable; copy them into CardDef.Abilities rather than
+// mutating their fields.
+var (
+	// DeathtouchAbility is the reusable AbilityDef template for deathtouch.
+	DeathtouchAbility = simpleKeywordAbility("Deathtouch", Deathtouch)
+
+	// DefenderAbility is the reusable AbilityDef template for defender.
+	DefenderAbility = simpleKeywordAbility("Defender", Defender)
+
+	// DoubleStrikeAbility is the reusable AbilityDef template for double strike.
+	DoubleStrikeAbility = simpleKeywordAbility("Double strike", DoubleStrike)
+
+	// FirstStrikeAbility is the reusable AbilityDef template for first strike.
+	FirstStrikeAbility = simpleKeywordAbility("First strike", FirstStrike)
+
+	// FlashAbility is the reusable AbilityDef template for flash.
+	FlashAbility = simpleKeywordAbility("Flash", Flash)
+
+	// FlyingAbility is the reusable AbilityDef template for flying.
+	FlyingAbility = simpleKeywordAbility("Flying", Flying)
+
+	// HasteAbility is the reusable AbilityDef template for haste.
+	HasteAbility = simpleKeywordAbility("Haste", Haste)
+
+	// HexproofAbility is the reusable AbilityDef template for hexproof.
+	HexproofAbility = simpleKeywordAbility("Hexproof", Hexproof)
+
+	// IndestructibleAbility is the reusable AbilityDef template for indestructible.
+	IndestructibleAbility = simpleKeywordAbility("Indestructible", Indestructible)
+
+	// LifelinkAbility is the reusable AbilityDef template for lifelink.
+	LifelinkAbility = simpleKeywordAbility("Lifelink", Lifelink)
+
+	// MenaceAbility is the reusable AbilityDef template for menace.
+	MenaceAbility = simpleKeywordAbility("Menace", Menace)
+
+	// ReachAbility is the reusable AbilityDef template for reach.
+	ReachAbility = simpleKeywordAbility("Reach", Reach)
+
+	// ShroudAbility is the reusable AbilityDef template for shroud.
+	ShroudAbility = simpleKeywordAbility("Shroud", Shroud)
+
+	// TrampleAbility is the reusable AbilityDef template for trample.
+	TrampleAbility = simpleKeywordAbility("Trample", Trample)
+
+	// VigilanceAbility is the reusable AbilityDef template for vigilance.
+	VigilanceAbility = simpleKeywordAbility("Vigilance", Vigilance)
+
+	// SplitSecondAbility is the reusable AbilityDef template for split second.
+	SplitSecondAbility = simpleKeywordAbility("Split second", SplitSecond)
+
+	// ConvokeAbility is the reusable AbilityDef template for convoke.
+	ConvokeAbility = simpleKeywordAbility("Convoke", Convoke)
+
+	// DelveAbility is the reusable AbilityDef template for delve.
+	DelveAbility = simpleKeywordAbility("Delve", Delve)
+
+	// StormAbility is the reusable AbilityDef template for storm.
+	StormAbility = simpleKeywordAbility("Storm", Storm)
+
+	// CascadeAbility is the reusable AbilityDef template for cascade.
+	CascadeAbility = simpleKeywordAbility("Cascade", Cascade)
+
+	// ProwessAbility is the reusable AbilityDef template for prowess.
+	ProwessAbility = simpleKeywordAbility("Prowess", Prowess)
+
+	// ImproviseAbility is the reusable AbilityDef template for improvise.
+	ImproviseAbility = simpleKeywordAbility("Improvise", Improvise)
+
+	// UndyingAbility is the reusable AbilityDef template for undying.
+	UndyingAbility = simpleKeywordAbility("Undying", Undying)
+
+	// PersistAbility is the reusable AbilityDef template for persist.
+	PersistAbility = simpleKeywordAbility("Persist", Persist)
+
+	// WitherAbility is the reusable AbilityDef template for wither.
+	WitherAbility = simpleKeywordAbility("Wither", Wither)
+
+	// InfectAbility is the reusable AbilityDef template for infect.
+	InfectAbility = simpleKeywordAbility("Infect", Infect)
+
+	// ExaltedAbility is the reusable AbilityDef template for exalted.
+	ExaltedAbility = simpleKeywordAbility("Exalted", Exalted)
+)
+
+func simpleKeywordAbility(text string, keyword Keyword) AbilityDef {
+	return AbilityDef{
+		Kind:     StaticAbility,
+		Text:     text,
+		Keywords: []Keyword{keyword},
+	}
+}
+
 // TriggerType classifies what kind of event triggers a triggered ability.
 type TriggerType int
 

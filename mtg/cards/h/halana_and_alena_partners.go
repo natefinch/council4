@@ -35,11 +35,8 @@ var HalanaAndAlenaPartners = &game.CardDef{
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "First strike (This creature deals combat damage before creatures without first strike.)\nReach (This creature can block creatures with flying.)\nAt the beginning of combat on your turn, put X +1/+1 counters on another target creature you control, where X is Halana and Alena's power. That creature gains haste until end of turn.",
 	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.StaticAbility,
-			Text:     "First strike\nReach",
-			Keywords: []game.Keyword{game.FirstStrike, game.Reach},
-		},
+		game.FirstStrikeAbility,
+		game.ReachAbility,
 		{
 			Kind: game.TriggeredAbility,
 			Text: "At the beginning of combat on your turn, put X +1/+1 counters on another target creature you control, where X is Halana and Alena's power. That creature gains haste until end of turn.",

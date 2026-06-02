@@ -30,11 +30,7 @@ var IgnobleHierarch = &game.CardDef{
 	Toughness:     opt.Val(game.PT{Value: 1}),
 	OracleText:    "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)\n{T}: Add {B}, {R}, or {G}.",
 	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.StaticAbility,
-			Text:     "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)",
-			Keywords: []game.Keyword{game.Exalted},
-		},
+		game.ExaltedAbility,
 		{
 			Kind:          game.ActivatedAbility,
 			Text:          "{T}: Add {B}, {R}, or {G}.",

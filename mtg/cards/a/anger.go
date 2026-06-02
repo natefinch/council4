@@ -31,11 +31,7 @@ var Anger = &game.CardDef{
 	Toughness:     opt.Val(game.PT{Value: 2}),
 	OracleText:    "Haste\nAs long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
 	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.StaticAbility,
-			Text:     "Haste",
-			Keywords: []game.Keyword{game.Haste},
-		},
+		game.HasteAbility,
 		{
 			Kind:           game.StaticAbility,
 			Text:           "As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
