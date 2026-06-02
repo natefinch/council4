@@ -129,7 +129,7 @@ func suspendSorcery(counters int, suspendCost cost.Mana) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Suspend Sorcery",
 		Types:    []types.Card{types.Sorcery},
-		ManaCost: optCost(cost.Mana{cost.O(9)}),
+		ManaCost: opt.Val(cost.Mana{cost.O(9)}),
 		Abilities: []game.AbilityDef{{
 			Kind:                game.StaticAbility,
 			Keywords:            []game.Keyword{game.Suspend},
@@ -144,8 +144,8 @@ func suspendCreature(counters int, suspendCost cost.Mana) *game.CardDef {
 	card := suspendSorcery(counters, suspendCost)
 	card.Name = "Suspend Creature"
 	card.Types = []types.Card{types.Creature}
-	card.Power = optPT(pt)
-	card.Toughness = optPT(pt)
+	card.Power = opt.Val(pt)
+	card.Toughness = opt.Val(pt)
 	return card
 }
 

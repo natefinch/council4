@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestValidateCommanderConfigsAcceptsLegalDeck(t *testing.T) {
@@ -211,8 +212,8 @@ func TestCommanderZeroToughnessReplacementDoesNotLogDeath(t *testing.T) {
 	if !ok {
 		t.Fatal("commander card instance not found")
 	}
-	card.Def.Power = optPT(zero)
-	card.Def.Toughness = optPT(zero)
+	card.Def.Power = opt.Val(zero)
+	card.Def.Toughness = opt.Val(zero)
 
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
@@ -348,7 +349,7 @@ func newCommanderCastGame(commander *game.CardDef) *game.Game {
 func greenCommanderWithCost() *game.CardDef {
 	commander := commanderDef("Castable Commander", color.Green)
 	manaCost := cost.Mana{cost.G}
-	commander.ManaCost = optCost(manaCost)
+	commander.ManaCost = opt.Val(manaCost)
 	return commander
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestSpellPaymentPlanCharacterization(t *testing.T) {
@@ -234,15 +235,15 @@ func namedCreature(name string, colors ...color.Color) *game.CardDef {
 		Name:      name,
 		Types:     []types.Card{types.Creature},
 		Colors:    colors,
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 	}
 }
 
 func genericCostSpell(generic int) *game.CardDef {
 	return &game.CardDef{
 		Name:      "Generic Cost Spell",
-		ManaCost:  optCost(cost.Mana{cost.O(generic)}),
+		ManaCost:  opt.Val(cost.Mana{cost.O(generic)}),
 		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
 	}

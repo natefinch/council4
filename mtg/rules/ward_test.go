@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestWardCountersSpellWhenCostIsNotPaid(t *testing.T) {
@@ -109,12 +110,12 @@ func addWardPermanent(g *game.Game, controller game.PlayerID, manaCost cost.Mana
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Ward Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Ward},
-			WardCost: optCost(manaCost),
+			WardCost: opt.Val(manaCost),
 		}},
 	})
 }

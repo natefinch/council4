@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestDelveMakesGenericSpellPayableAndExilesGraveyardCards(t *testing.T) {
@@ -110,7 +111,7 @@ func delveSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Delve Spell",
 		Types:    []types.Card{types.Sorcery},
-		ManaCost: optCost(manaCost),
+		ManaCost: opt.Val(manaCost),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Delve}},
 			{Kind: game.SpellAbility},

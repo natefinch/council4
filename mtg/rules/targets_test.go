@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestPlayerTargetedSpellCreatesOneLegalActionPerAlivePlayer(t *testing.T) {
@@ -347,19 +348,19 @@ func TestStructuredTargetPredicates(t *testing.T) {
 	engine := NewEngine(nil)
 	blackCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Black Creature",
-		ManaCost:  optCost(cost.Mana{cost.O(2)}),
+		ManaCost:  opt.Val(cost.Mana{cost.O(2)}),
 		Colors:    []color.Color{color.Black},
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 3}),
-		Toughness: optPT(game.PT{Value: 3}),
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
 	})
 	whiteCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "White Creature",
-		ManaCost:  optCost(cost.Mana{cost.O(4)}),
+		ManaCost:  opt.Val(cost.Mana{cost.O(4)}),
 		Colors:    []color.Color{color.White},
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 2}),
-		Toughness: optPT(game.PT{Value: 2}),
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
 		Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}},
 	})
 	whiteCreature.Tapped = true
@@ -376,7 +377,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 				Controller:     game.ControllerOpponent,
 				Tapped:         game.TriTrue,
 				Keyword:        game.Flying,
-				ManaValue:      optIntComparison(compare.Int{Op: compare.LessOrEqual, Value: 4}),
+				ManaValue:      opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 4}),
 			},
 		},
 	}))

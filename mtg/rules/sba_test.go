@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestCheckStateBasedActionsEliminatesPlayers(t *testing.T) {
@@ -248,8 +249,8 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Indestructible Zero Toughness",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(zero),
-		Toughness: optPT(zero),
+		Power:     opt.Val(zero),
+		Toughness: opt.Val(zero),
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.StaticAbility,
@@ -278,8 +279,8 @@ func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Zero Toughness",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(zero),
-		Toughness: optPT(zero),
+		Power:     opt.Val(zero),
+		Toughness: opt.Val(zero),
 	})
 
 	changed, deaths := engine.checkPermanentStateBasedActions(g)
@@ -347,8 +348,8 @@ func TestStateBasedActionsMoveThenRemoveLethalToken(t *testing.T) {
 		TokenDef: &game.CardDef{
 			Name:      "Token",
 			Types:     []types.Card{types.Creature},
-			Power:     optPT(pt),
-			Toughness: optPT(pt),
+			Power:     opt.Val(pt),
+			Toughness: opt.Val(pt),
 		},
 	}
 	g.Battlefield = append(g.Battlefield, token)
@@ -443,8 +444,8 @@ func addLegendaryPermanent(g *game.Game, controller game.PlayerID, name string) 
 		Name:       name,
 		Supertypes: []types.Super{types.Legendary},
 		Types:      []types.Card{types.Creature},
-		Power:      optPT(game.PT{Value: 2}),
-		Toughness:  optPT(game.PT{Value: 2}),
+		Power:      opt.Val(game.PT{Value: 2}),
+		Toughness:  opt.Val(game.PT{Value: 2}),
 	})
 }
 

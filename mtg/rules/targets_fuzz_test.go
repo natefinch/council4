@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // FuzzTargetEnumerationIsStable verifies that targetChoicesForSpecs returns
@@ -41,8 +42,8 @@ func FuzzTargetEnumerationIsStable(f *testing.F) {
 				Name:      "Opponent Creature",
 				Types:     []types.Card{types.Creature},
 				Colors:    []color.Color{color.White},
-				Power:     optPT(game.PT{Value: 2}),
-				Toughness: optPT(game.PT{Value: 2}),
+				Power:     opt.Val(game.PT{Value: 2}),
+				Toughness: opt.Val(game.PT{Value: 2}),
 			})
 		}
 		for range ownCreatures {
@@ -50,8 +51,8 @@ func FuzzTargetEnumerationIsStable(f *testing.F) {
 				Name:      "Own Creature",
 				Types:     []types.Card{types.Creature},
 				Colors:    []color.Color{color.Green},
-				Power:     optPT(game.PT{Value: 1}),
-				Toughness: optPT(game.PT{Value: 1}),
+				Power:     opt.Val(game.PT{Value: 1}),
+				Toughness: opt.Val(game.PT{Value: 1}),
 			})
 		}
 

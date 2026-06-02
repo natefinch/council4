@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestLegalActionEnumerationCharacterization(t *testing.T) {
@@ -27,8 +28,8 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 				addCombatPermanent(g, game.Player2, &game.CardDef{
 					Name:      "Silvercoat Lion",
 					Types:     []types.Card{types.Creature},
-					Power:     optPT(game.PT{Value: 2}),
-					Toughness: optPT(game.PT{Value: 2}),
+					Power:     opt.Val(game.PT{Value: 2}),
+					Toughness: opt.Val(game.PT{Value: 2}),
 				})
 				addBasicLandPermanent(g, game.Player1, types.Forest)
 				addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -288,7 +289,7 @@ func noCostSpell() *game.CardDef {
 func zeroCostSpell() *game.CardDef {
 	return &game.CardDef{
 		Name:      "Zero Cost Spell",
-		ManaCost:  optCost(cost.Mana{cost.O(0)}),
+		ManaCost:  opt.Val(cost.Mana{cost.O(0)}),
 		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
 	}
@@ -297,7 +298,7 @@ func zeroCostSpell() *game.CardDef {
 func xSpell() *game.CardDef {
 	return &game.CardDef{
 		Name:      "Characterization X Spell",
-		ManaCost:  optCost(cost.Mana{cost.X, cost.G}),
+		ManaCost:  opt.Val(cost.Mana{cost.X, cost.G}),
 		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
 	}
@@ -326,7 +327,7 @@ func flashbackSpell() *game.CardDef {
 	return &game.CardDef{
 		Name:     "Characterization Flashback",
 		Types:    []types.Card{types.Sorcery},
-		ManaCost: optCost(cost.Mana{cost.O(5)}),
+		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
 			{

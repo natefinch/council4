@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
@@ -33,8 +34,8 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 			ID:               2,
 			AffectedObjectID: land.ObjectID,
 			Layer:            game.LayerPowerToughnessSet,
-			SetPower:         optPT(one),
-			SetToughness:     optPT(one),
+			SetPower:         opt.Val(one),
+			SetToughness:     opt.Val(one),
 		},
 	)
 
@@ -69,11 +70,8 @@ func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 	}
 
 	engine.resolveEffect(g, obj, &game.Effect{
-		Type: game.EffectCreateDelayedTrigger,
-		DelayedTrigger: optDelayedTrigger(game.DelayedTriggerDef{
-			Timing:  game.DelayedAtBeginningOfNextEndStep,
-			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
-		}),
+		Type:           game.EffectCreateDelayedTrigger,
+		DelayedTrigger: opt.Val(game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}}),
 	}, nil)
 	movePermanentToZone(g, source, game.ZoneGraveyard)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})

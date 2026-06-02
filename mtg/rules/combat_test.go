@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestCombatPhaseVisitsPriorityStepsInOrder(t *testing.T) {
@@ -373,12 +374,12 @@ func TestDeclareAttackersCanTargetPlaneswalkersAndBattles(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:    "Test Planeswalker",
 		Types:   []types.Card{types.Planeswalker},
-		Loyalty: optInt(3),
+		Loyalty: opt.Val(3),
 	})
 	battle := addCombatPermanent(g, game.Player3, &game.CardDef{
 		Name:    "Test Battle",
 		Types:   []types.Card{types.Battle},
-		Defense: optInt(4),
+		Defense: opt.Val(4),
 	})
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
@@ -929,7 +930,7 @@ func TestPhasedOutCreatureCannotAttackBlockOrBeAttacked(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:    "Phased Walker",
 		Types:   []types.Card{types.Planeswalker},
-		Loyalty: optInt(3),
+		Loyalty: opt.Val(3),
 	})
 	attacker.PhasedOut = true
 	blocker.PhasedOut = true
@@ -1086,8 +1087,8 @@ func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 	manaDork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Mana Dork",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 1}),
-		Toughness: optPT(game.PT{Value: 1}),
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Haste},
@@ -1162,7 +1163,7 @@ func TestCombatDamageToPlaneswalkerRemovesLoyaltyAndSBA(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:    "Test Planeswalker",
 		Types:   []types.Card{types.Planeswalker},
-		Loyalty: optInt(3),
+		Loyalty: opt.Val(3),
 	})
 	planeswalker.Counters.Add(counter.Loyalty, 3)
 	g.Combat = &game.CombatState{
@@ -1199,7 +1200,7 @@ func TestCombatDamageToBattleRemovesDefenseAndSBA(t *testing.T) {
 	battle := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:    "Test Battle",
 		Types:   []types.Card{types.Battle},
-		Defense: optInt(4),
+		Defense: opt.Val(4),
 	})
 	battle.Counters.Add(counter.Defense, 4)
 	g.Combat = &game.CombatState{
@@ -1778,7 +1779,7 @@ func TestResolveCombatDamageNilAndStarPowerDealZero(t *testing.T) {
 	starPower := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Star Creature",
 		Types: []types.Card{types.Creature},
-		Power: optPT(game.PT{IsStar: true}),
+		Power: opt.Val(game.PT{IsStar: true}),
 	})
 	g.Combat = &game.CombatState{
 		Attackers: []game.AttackDeclaration{
@@ -1872,8 +1873,8 @@ func addCombatCreaturePermanentWithPower(g *game.Game, controller game.PlayerID,
 		Types: []types.Card{
 			types.Creature,
 		},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.StaticAbility,

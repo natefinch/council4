@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestCanPayCostWithUntappedForest(t *testing.T) {
@@ -209,7 +210,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 		addBasicLandPermanent(g, game.Player1, types.Forest)
 		addBasicLandPermanent(g, game.Player1, types.Mountain)
 		manaCost := cost.Mana{cost.O(3), cost.G}
-		card := &game.CardDef{Name: "Reduced Creature", Types: []types.Card{types.Creature}, ManaCost: optCost(manaCost)}
+		card := &game.CardDef{Name: "Reduced Creature", Types: []types.Card{types.Creature}, ManaCost: opt.Val(manaCost)}
 		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 			Kind:             game.CostModifierSpell,
 			GenericReduction: 2,
@@ -223,7 +224,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		addBasicLandPermanent(g, game.Player1, types.Forest)
 		manaCost := cost.Mana{cost.G}
-		card := &game.CardDef{Name: "Taxed Creature", Types: []types.Card{types.Creature}, ManaCost: optCost(manaCost)}
+		card := &game.CardDef{Name: "Taxed Creature", Types: []types.Card{types.Creature}, ManaCost: opt.Val(manaCost)}
 		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 			Kind:            game.CostModifierSpell,
 			GenericIncrease: 1,
@@ -236,7 +237,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 	t.Run("minimum", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		manaCost := cost.Mana{cost.O(3)}
-		card := &game.CardDef{Name: "Minimum Creature", Types: []types.Card{types.Creature}, ManaCost: optCost(manaCost)}
+		card := &game.CardDef{Name: "Minimum Creature", Types: []types.Card{types.Creature}, ManaCost: opt.Val(manaCost)}
 		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 			Kind:             game.CostModifierSpell,
 			GenericReduction: 5,
@@ -256,7 +257,7 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	manaCost := cost.Mana{cost.G}
-	card := &game.CardDef{Name: "Taxed Creature", Types: []types.Card{types.Creature}, ManaCost: optCost(manaCost)}
+	card := &game.CardDef{Name: "Taxed Creature", Types: []types.Card{types.Creature}, ManaCost: opt.Val(manaCost)}
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Spell Tax",
 		Types: []types.Card{types.Enchantment},
@@ -445,8 +446,8 @@ func TestCreatureTapManaAbilityRespectsSummoningSickness(t *testing.T) {
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Elvish Mystic",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 1}),
-		Toughness: optPT(game.PT{Value: 1}),
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 	}, mana.G, 1)
 	want := action.ActivateAbility(dork.ObjectID, 0, nil, 0)
 
@@ -503,8 +504,8 @@ func TestPayCostAutoActivatesMultiOutputSourceForRequiredColor(t *testing.T) {
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Llanowar Tribe",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 3}),
-		Toughness: optPT(game.PT{Value: 3}),
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
 	}, mana.G, 3)
 	dork.SummoningSick = false
 	manaCost := cost.Mana{cost.G, cost.G}
@@ -544,8 +545,8 @@ func TestPayCostAutoActivatesNonSummoningSickManaDork(t *testing.T) {
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Elvish Mystic",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(game.PT{Value: 1}),
-		Toughness: optPT(game.PT{Value: 1}),
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 	}, mana.G, 1)
 	manaCost := cost.Mana{cost.G}
 

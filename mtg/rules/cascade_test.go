@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestCascadeExilesUntilLowerManaNonlandAndCastsIt(t *testing.T) {
@@ -135,7 +136,7 @@ func TestDiscoverDeclinePutsFoundCardIntoHand(t *testing.T) {
 func cascadeSpell(manaValue int) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Cascade Spell",
-		ManaCost: optCost(cost.Mana{cost.O(manaValue)}),
+		ManaCost: opt.Val(cost.Mana{cost.O(manaValue)}),
 		Types:    []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Cascade}},
@@ -146,7 +147,7 @@ func cascadeSpell(manaValue int) *game.CardDef {
 
 func simpleGainLifeInstantWithManaValue(name string, manaValue int) *game.CardDef {
 	card := simpleGainLifeInstant(name)
-	card.ManaCost = optCost(cost.Mana{cost.O(manaValue)})
+	card.ManaCost = opt.Val(cost.Mana{cost.O(manaValue)})
 	return card
 }
 

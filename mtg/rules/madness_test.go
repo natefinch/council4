@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestMadnessDiscardGoesToExile(t *testing.T) {
@@ -103,7 +104,7 @@ func madnessSorcery(manaCost cost.Mana) *game.CardDef {
 		Abilities: []game.AbilityDef{{
 			Kind:        game.StaticAbility,
 			Keywords:    []game.Keyword{game.Madness},
-			MadnessCost: optCost(manaCost),
+			MadnessCost: opt.Val(manaCost),
 		}},
 	}
 }

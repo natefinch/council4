@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestConvokeMakesGenericSpellPayableAndTapsCreatures(t *testing.T) {
@@ -136,7 +137,7 @@ func convokeSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Convoke Spell",
 		Types:    []types.Card{types.Sorcery},
-		ManaCost: optCost(manaCost),
+		ManaCost: opt.Val(manaCost),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Convoke}},
 			{Kind: game.SpellAbility},
@@ -149,8 +150,8 @@ func greenManaCreature() *game.CardDef {
 	return &game.CardDef{
 		Name:      "Green Mana Creature",
 		Types:     []types.Card{types.Creature},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
 			Kind:          game.ActivatedAbility,
 			IsManaAbility: true,
@@ -169,7 +170,7 @@ func greenConvokeCreature() *game.CardDef {
 		Name:      "Green Convoke Creature",
 		Types:     []types.Card{types.Creature},
 		Colors:    []color.Color{color.Green},
-		Power:     optPT(pt),
-		Toughness: optPT(pt),
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
 	}
 }
