@@ -1,6 +1,5 @@
 .playwright-mcp/
 .claude/settings.local.json
 .cardwork/
-docs/research/Magic Comprehensive Rules*.txt
 .bin/
 deck.txt

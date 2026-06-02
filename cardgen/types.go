@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -33,6 +34,12 @@ var knownTypes = map[string]bool{
 	"Planeswalker": true,
 	"Battle":       true,
 	"Kindred":      true,
+	"Plane":        true,
+	"Dungeon":      true,
+	"Phenomenon":   true,
+	"Scheme":       true,
+	"Vanguard":     true,
+	"Conspiracy":   true,
 }
 
 // ParseTypeLine splits a Scryfall type line (e.g., "Legendary Creature — Angel")
@@ -43,11 +50,6 @@ func ParseTypeLine(typeLine string) ParsedTypeLine {
 	// Split on em-dash (—) to separate main types from subtypes.
 	parts := strings.SplitN(typeLine, "—", 2)
 	mainPart := strings.TrimSpace(parts[0])
-	if len(parts) == 2 {
-		subtypePart := strings.TrimSpace(parts[1])
-		result.Subtypes = append(result.Subtypes, strings.Fields(subtypePart)...)
-	}
-
 	for word := range strings.FieldsSeq(mainPart) {
 		if knownSupertypes[word] {
 			result.Supertypes = append(result.Supertypes, word)
@@ -56,8 +58,28 @@ func ParseTypeLine(typeLine string) ParsedTypeLine {
 		}
 		// Skip "//" for double-faced card type lines if encountered.
 	}
+	if len(parts) == 2 {
+		result.Subtypes = parseSubtypePart(strings.TrimSpace(parts[1]), result.Types)
+	}
 
 	return result
+}
+
+func parseSubtypePart(subtypePart string, cardTypes []string) []string {
+	if slices.Contains(cardTypes, "Plane") {
+		return []string{subtypePart}
+	}
+	words := strings.Fields(subtypePart)
+	subtypes := make([]string, 0, len(words))
+	for i := 0; i < len(words); i++ {
+		if words[i] == "Time" && i+1 < len(words) && words[i+1] == "Lord" {
+			subtypes = append(subtypes, "Time Lord")
+			i++
+			continue
+		}
+		subtypes = append(subtypes, words[i])
+	}
+	return subtypes
 }
 
 // SupertypeToLiteral converts a supertype name to its Go constant name.
@@ -99,6 +121,18 @@ func CardTypeToLiteral(name string) string {
 		return "types.Battle"
 	case "Kindred":
 		return "types.Kindred"
+	case "Plane":
+		return "types.Plane"
+	case "Dungeon":
+		return "types.Dungeon"
+	case "Phenomenon":
+		return "types.Phenomenon"
+	case "Scheme":
+		return "types.Scheme"
+	case "Vanguard":
+		return "types.Vanguard"
+	case "Conspiracy":
+		return "types.Conspiracy"
 	default:
 		return "/* unknown type: " + name + " */"
 	}
@@ -107,11 +141,17 @@ func CardTypeToLiteral(name string) string {
 var subtypeLiteralTypes = map[string]struct {
 	cardType types.Card
 }{
-	"Artifact":    {cardType: types.Artifact},
-	"Creature":    {cardType: types.Creature},
-	"Enchantment": {cardType: types.Enchantment},
-	"Kindred":     {cardType: types.Kindred},
-	"Land":        {cardType: types.Land},
+	"Artifact":     {cardType: types.Artifact},
+	"Creature":     {cardType: types.Creature},
+	"Enchantment":  {cardType: types.Enchantment},
+	"Instant":      {cardType: types.Instant},
+	"Kindred":      {cardType: types.Kindred},
+	"Land":         {cardType: types.Land},
+	"Planeswalker": {cardType: types.Planeswalker},
+	"Sorcery":      {cardType: types.Sorcery},
+	"Plane":        {cardType: types.Plane},
+	"Dungeon":      {cardType: types.Dungeon},
+	"Battle":       {cardType: types.Battle},
 }
 
 // SubtypeToLiteral converts a subtype name to its Go constant for the card type
@@ -124,16 +164,33 @@ func SubtypeToLiteral(name string, cardTypes []string) string {
 			continue
 		}
 		if types.KnownSubtypeForType(info.cardType, types.Sub(name)) {
-			return "types." + goIdentifierSuffix(name)
+			return "types." + subtypeGoIdentifier(info.cardType, name)
 		}
 	}
 	return "types.Sub(" + strconv.Quote(name) + ")"
+}
+
+func subtypeGoIdentifier(cardType types.Card, name string) string {
+	if cardType == types.Kindred {
+		cardType = types.Creature
+	}
+	switch {
+	case cardType == types.Artifact && name == "Spacecraft":
+		return "ArtifactSpacecraft"
+	case cardType == types.Plane && name == "Spacecraft":
+		return "PlanarSpacecraft"
+	default:
+		return goIdentifierSuffix(name)
+	}
 }
 
 func goIdentifierSuffix(name string) string {
 	var b strings.Builder
 	capitalizeNext := true
 	for _, r := range name {
+		if r == '\'' || r == '\u2019' {
+			continue
+		}
 		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
 			capitalizeNext = true
 			continue

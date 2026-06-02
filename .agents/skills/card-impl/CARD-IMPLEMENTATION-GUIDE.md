@@ -26,6 +26,16 @@ Card supertypes, card types, and subtypes live in
 `types.Creature`, and `types.Forest`. Do not use old `game.Type*`,
 `game.*Subtype*`, or `game.CardType` names.
 
+`mtg/game/types` has named constants for every Comprehensive Rules 205.3
+subtype. Prefer those constants in card definitions instead of
+`types.Sub("...")`. Examples: use `types.Warrior`, `types.Rogue`,
+`types.TimeLord`, `types.Omen`, `types.Siege`, and
+`types.BolassMeditationRealm`. The only duplicated printed subtype currently has
+family-qualified identifiers: `types.ArtifactSpacecraft` and
+`types.PlanarSpacecraft`, both with the string value `"Spacecraft"`. The subtype
+lists are organized by card-type family in files under `mtg/game/types`, and
+card definitions should import that parent package.
+
 Integer comparisons live in
 `"github.com/natefinch/council4/mtg/game/compare"`. Use `compare.Int` with
 `compare.Equal`, `compare.LessOrEqual`, `compare.GreaterOrEqual`,

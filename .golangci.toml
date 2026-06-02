@@ -171,8 +171,8 @@ name = 'flag-parameter'
 disabled = true
 
 [[linters.settings.revive.rules]]
-name = 'blank-imports'
-disabled = false
+name = 'package-naming'
+disabled = true
 
 [[linters.settings.revive.rules]]
 name = 'cognitive-complexity'

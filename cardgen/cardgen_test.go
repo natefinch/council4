@@ -94,6 +94,20 @@ func TestParseTypeLine(t *testing.T) {
 			[]string{"Golem"},
 		},
 		{
+			"time lord creature subtype",
+			"Legendary Creature — Time Lord Doctor",
+			[]string{"Legendary"},
+			[]string{"Creature"},
+			[]string{"Time Lord", "Doctor"},
+		},
+		{
+			"multi-word plane subtype",
+			"Plane — Bolas’s Meditation Realm",
+			nil,
+			[]string{"Plane"},
+			[]string{"Bolas’s Meditation Realm"},
+		},
+		{
 			"enchantment",
 			"Enchantment",
 			nil,
@@ -130,6 +144,15 @@ func TestSubtypeToLiteralUsesGameConstants(t *testing.T) {
 		{name: "land", subtype: "Mountain", types: []string{"Land"}, want: "types.Mountain"},
 		{name: "artifact", subtype: "Equipment", types: []string{"Artifact"}, want: "types.Equipment"},
 		{name: "enchantment", subtype: "Aura", types: []string{"Enchantment"}, want: "types.Aura"},
+		{name: "planeswalker", subtype: "Chandra", types: []string{"Planeswalker"}, want: "types.Chandra"},
+		{name: "instant spell", subtype: "Omen", types: []string{"Instant"}, want: "types.Omen"},
+		{name: "sorcery spell", subtype: "Lesson", types: []string{"Sorcery"}, want: "types.Lesson"},
+		{name: "two-word creature", subtype: "Time Lord", types: []string{"Creature"}, want: "types.TimeLord"},
+		{name: "artifact spacecraft collision", subtype: "Spacecraft", types: []string{"Artifact"}, want: "types.ArtifactSpacecraft"},
+		{name: "planar spacecraft collision", subtype: "Spacecraft", types: []string{"Plane"}, want: "types.PlanarSpacecraft"},
+		{name: "multi-word plane", subtype: "Bolas’s Meditation Realm", types: []string{"Plane"}, want: "types.BolassMeditationRealm"},
+		{name: "dungeon", subtype: "Undercity", types: []string{"Dungeon"}, want: "types.Undercity"},
+		{name: "battle", subtype: "Siege", types: []string{"Battle"}, want: "types.Siege"},
 		{name: "unknown", subtype: "Unlisted", types: []string{"Creature"}, want: `types.Sub("Unlisted")`},
 	}
 
