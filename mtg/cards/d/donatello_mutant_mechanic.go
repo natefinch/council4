@@ -23,7 +23,6 @@ var DonatelloMutantMechanic = &game.CardDef{
 		mana.GenericMana(3),
 		mana.ColoredMana(mana.Blue),
 	}),
-	ManaValue:     4,
 	Colors:        []mana.Color{mana.Blue},
 	ColorIdentity: mana.NewColorIdentity(mana.Blue),
 	Supertypes:    []types.Super{types.Legendary},

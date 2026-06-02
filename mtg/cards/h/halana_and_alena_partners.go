@@ -25,7 +25,6 @@ var HalanaAndAlenaPartners = &game.CardDef{
 		mana.ColoredMana(mana.Red),
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     4,
 	Colors:        []mana.Color{mana.Green, mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
 	Supertypes:    []types.Super{types.Legendary},

@@ -21,7 +21,6 @@ var GuardianProject = &game.CardDef{
 		mana.GenericMana(3),
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     4,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Types:         []types.Card{types.Enchantment},

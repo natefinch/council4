@@ -1742,7 +1742,6 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 			Types:     []types.Card{types.Creature},
 			Subtypes:  []types.Sub{types.Snake, types.Druid},
 			ManaCost:  optCost(mana.Cost{mana.ColoredMana(mana.Green)}),
-			ManaValue: 1,
 			Power:     optPT(game.PT{Value: 1}),
 			Toughness: optPT(game.PT{Value: 4}),
 		},
@@ -1772,8 +1771,8 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 	if token == nil || token.TokenDef == nil {
 		t.Fatal("copy token was not created")
 	}
-	if token.TokenDef.ManaCost.Exists || token.TokenDef.ManaValue != 0 {
-		t.Fatalf("token mana cost/value = %+v/%d, want no cost and mana value 0", token.TokenDef.ManaCost, token.TokenDef.ManaValue)
+	if token.TokenDef.ManaCost.Exists || token.TokenDef.ManaValue() != 0 {
+		t.Fatalf("token mana cost/value = %+v/%d, want no cost and mana value 0", token.TokenDef.ManaCost, token.TokenDef.ManaValue())
 	}
 	if got := token.TokenDef.Subtypes; !slices.Equal(got, []types.Sub{types.Zombie, types.Snake, types.Druid}) {
 		t.Fatalf("token subtypes = %+v, want Zombie Snake Druid", got)

@@ -23,7 +23,6 @@ var BlazingSunsteel = &game.CardDef{
 		mana.GenericMana(1),
 		mana.ColoredMana(mana.Red),
 	}),
-	ManaValue:     2,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
 	Types:         []types.Card{types.Artifact},

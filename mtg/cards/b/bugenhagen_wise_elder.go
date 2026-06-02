@@ -24,7 +24,6 @@ var BugenhagenWiseElder = &game.CardDef{
 		mana.GenericMana(1),
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     2,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Supertypes:    []types.Super{types.Legendary},

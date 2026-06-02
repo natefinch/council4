@@ -346,7 +346,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 	engine := NewEngine(nil)
 	blackCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Black Creature",
-		ManaValue: 2,
+		ManaCost:  optCost(mana.Cost{mana.GenericMana(2)}),
 		Colors:    []mana.Color{mana.Black},
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 3}),
@@ -354,7 +354,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 	})
 	whiteCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "White Creature",
-		ManaValue: 4,
+		ManaCost:  optCost(mana.Cost{mana.GenericMana(4)}),
 		Colors:    []mana.Color{mana.White},
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 2}),

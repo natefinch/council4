@@ -29,7 +29,6 @@ var BridgeworksBattle = &game.CardDef{
 		mana.GenericMana(2),
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     3,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Types:         []types.Card{types.Sorcery},
@@ -79,9 +78,8 @@ var BridgeworksBattle = &game.CardDef{
 		},
 	},
 	Back: opt.Val(game.CardFace{
-		Name:      "Tanglespan Bridgeworks",
-		ManaValue: 0,
-		Types:     []types.Card{types.Land},
+		Name:  "Tanglespan Bridgeworks",
+		Types: []types.Card{types.Land},
 		EntersTappedUnlessPaid: opt.Val(game.ResolutionPayment{
 			Prompt: "Pay 3 life?",
 			AdditionalCosts: []game.AdditionalCost{

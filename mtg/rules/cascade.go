@@ -37,7 +37,7 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 			continue
 		}
 		def := cardFaceOrDefault(card, game.FaceFront)
-		if !def.HasType(types.Land) && def.ManaValue < spellDef.ManaValue {
+		if !def.HasType(types.Land) && def.ManaValue() < spellDef.ManaValue() {
 			found = cardID
 			break
 		}
@@ -98,7 +98,7 @@ func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.Play
 			continue
 		}
 		def := cardFaceOrDefault(card, game.FaceFront)
-		if !def.HasType(types.Land) && def.ManaValue <= manaValue {
+		if !def.HasType(types.Land) && def.ManaValue() <= manaValue {
 			found = cardID
 			break
 		}

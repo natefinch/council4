@@ -17,7 +17,6 @@ import (
 //	{T}: Add {B} or {R}.
 var DragonskullSummit = &game.CardDef{
 	Name:          "Dragonskull Summit",
-	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control a Swamp or a Mountain.\n{T}: Add {B} or {R}.",

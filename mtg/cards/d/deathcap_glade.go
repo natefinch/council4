@@ -17,7 +17,6 @@ import (
 //	{T}: Add {B} or {G}.
 var DeathcapGlade = &game.CardDef{
 	Name:          "Deathcap Glade",
-	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Green),
 	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {G}.",

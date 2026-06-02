@@ -22,7 +22,6 @@ var GigglingSkitterspike = &game.CardDef{
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(4),
 	}),
-	ManaValue:  4,
 	Types:      []types.Card{types.Artifact, types.Creature},
 	Subtypes:   []types.Sub{types.Sub("Toy")},
 	Power:      opt.Val(game.PT{Value: 1}),

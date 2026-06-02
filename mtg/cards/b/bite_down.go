@@ -22,7 +22,6 @@ var BiteDown = &game.CardDef{
 		mana.GenericMana(1),
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     2,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Types:         []types.Card{types.Instant},

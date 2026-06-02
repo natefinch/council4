@@ -1505,10 +1505,9 @@ func addCardToHand(g *game.Game, playerID game.PlayerID, def *game.CardDef) id.I
 
 func greenCreature() *game.CardDef {
 	return &game.CardDef{
-		Name:      "Runeclaw Bear",
-		ManaCost:  greenCost(),
-		ManaValue: 1,
-		Types:     []types.Card{types.Creature},
+		Name:     "Runeclaw Bear",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Creature},
 	}
 }
 

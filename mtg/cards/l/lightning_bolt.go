@@ -20,7 +20,6 @@ var LightningBolt = &game.CardDef{
 	ManaCost: opt.Val(mana.Cost{
 		mana.ColoredMana(mana.Red),
 	}),
-	ManaValue:     1,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
 	Types:         []types.Card{types.Instant},

@@ -21,7 +21,6 @@ import (
 // subtype mana abilities at runtime.
 var CinderGlade = &game.CardDef{
 	Name:          "Cinder Glade",
-	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
 	Types:         []types.Card{types.Land},
 	Subtypes:      []types.Sub{types.Mountain, types.Forest},

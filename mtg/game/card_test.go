@@ -13,15 +13,13 @@ func TestCardDefDefaultFaceUsesFrontFace(t *testing.T) {
 		Name:          "Front Name",
 		Layout:        LayoutModalDFC,
 		ManaCost:      opt.Val(mana.Cost{mana.ColoredMana(mana.Blue)}),
-		ManaValue:     1,
 		Colors:        []mana.Color{mana.Blue},
 		ColorIdentity: mana.NewColorIdentity(mana.Blue, mana.Green),
 		Types:         []types.Card{types.Instant},
 		Back: opt.Val(CardFace{
-			Name:      "Back Name",
-			ManaValue: 0,
-			Types:     []types.Card{types.Land},
-			Subtypes:  []types.Sub{types.Forest},
+			Name:     "Back Name",
+			Types:    []types.Card{types.Land},
+			Subtypes: []types.Sub{types.Forest},
 		}),
 	}
 

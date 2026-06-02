@@ -17,7 +17,6 @@ import (
 //	choice they control. Those creatures fight each other.
 var Arena = &game.CardDef{
 	Name:       "Arena",
-	ManaValue:  0,
 	Types:      []types.Card{types.Land},
 	OracleText: "{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other. (Each deals damage equal to its power to the other.)",
 	Abilities: []game.AbilityDef{

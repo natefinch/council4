@@ -15,7 +15,6 @@ import (
 //	({T}: Add {G}.)
 var Forest = &game.CardDef{
 	Name:          "Forest",
-	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Supertypes:    []types.Super{types.Basic},
 	Types:         []types.Card{types.Land},

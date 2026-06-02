@@ -21,7 +21,6 @@ var ChaosWarp = &game.CardDef{
 		mana.GenericMana(2),
 		mana.ColoredMana(mana.Red),
 	}),
-	ManaValue:     3,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
 	Types:         []types.Card{types.Instant},

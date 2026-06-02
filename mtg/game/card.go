@@ -58,9 +58,6 @@ type CardDef struct {
 	// Absent for lands and some special cards.
 	ManaCost opt.V[mana.Cost]
 
-	// ManaValue is the card's mana value / converted mana cost (CR 202.3).
-	ManaValue int
-
 	// Colors are the colors of this card, determined by its mana cost
 	// and color indicator (CR 105, 202.2).
 	Colors []mana.Color
@@ -126,7 +123,6 @@ type CardDef struct {
 type CardFace struct {
 	Name                   string
 	ManaCost               opt.V[mana.Cost]
-	ManaValue              int
 	Colors                 []mana.Color
 	Supertypes             []types.Super
 	Types                  []types.Card
@@ -180,6 +176,14 @@ func (c *CardDef) HasAnySubtype(subtypes ...types.Sub) bool {
 func (c *CardDef) HasKeyword(kw Keyword) bool {
 	face := c.DefaultFace()
 	return face.HasKeyword(kw)
+}
+
+// ManaValue returns the card's mana value from its printed mana cost (CR 202.3).
+// Cards with no mana cost, such as lands and source-card-derived no-cost tokens,
+// have mana value 0.
+func (c *CardDef) ManaValue() int {
+	face := c.DefaultFace()
+	return face.ManaValue()
 }
 
 // IsPermanent reports whether this card becomes a permanent when it resolves
@@ -281,7 +285,6 @@ func (c *CardDef) rootFace() CardFace {
 	return CardFace{
 		Name:                   c.Name,
 		ManaCost:               c.ManaCost,
-		ManaValue:              c.ManaValue,
 		Colors:                 append([]mana.Color(nil), c.Colors...),
 		Supertypes:             append([]types.Super(nil), c.Supertypes...),
 		Types:                  append([]types.Card(nil), c.Types...),
@@ -332,6 +335,15 @@ func (f *CardFace) HasKeyword(kw Keyword) bool {
 	return false
 }
 
+// ManaValue returns this face's mana value from its printed mana cost (CR 202.3).
+// Faces with no mana cost have mana value 0.
+func (f *CardFace) ManaValue() int {
+	if !f.ManaCost.Exists {
+		return 0
+	}
+	return f.ManaCost.Val.ManaValue()
+}
+
 // IsPermanent reports whether this face becomes a permanent when it resolves.
 func (f *CardFace) IsPermanent() bool {
 	for _, t := range f.Types {
@@ -348,7 +360,6 @@ func (f *CardFace) ToCardDef(parent *CardDef) *CardDef {
 	return &CardDef{
 		Name:                   f.Name,
 		ManaCost:               f.ManaCost,
-		ManaValue:              f.ManaValue,
 		Colors:                 append([]mana.Color(nil), f.Colors...),
 		ColorIdentity:          parent.ColorIdentity,
 		Supertypes:             append([]types.Super(nil), f.Supertypes...),

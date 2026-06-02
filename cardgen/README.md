@@ -11,7 +11,7 @@ directory.
 Given a Magic: The Gathering card name, the library:
 
 1. Fetches the card's data from Scryfall's `/cards/named` API endpoint.
-2. Parses the mechanical fields: name, mana cost, mana value, colors, color identity, types, subtypes, supertypes, power/toughness, loyalty, defense, simple ETB tapped text, and double-faced card back faces.
+2. Parses the mechanical fields: name, mana cost, colors, color identity, types, subtypes, supertypes, power/toughness, loyalty, defense, simple ETB tapped text, and double-faced card back faces. `game.CardDef` derives mana value from the generated mana cost.
 3. Generates a Go source file with a `game.CardDef` literal, leaving the `Abilities` slice empty for LLM completion.
 4. Validates generated card definitions against the currently executable rules
    model before batch workflows mark them supported, including structured
@@ -62,7 +62,6 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
   `WriteUnsupportedReportJSON` — turn manifest failures and generated-source
   missing-functionality notes into human- and machine-readable reports.
 - `ParseManaCostLiteral(cost)` — converts Scryfall mana cost strings to Go code.
-- `ManaValueFromCost(cost)` — computes a face's mana value from a mana-cost string.
 - `ParseTypeLine(typeLine)` — splits a type line into supertypes, types, subtypes.
 - `SubtypeToLiteral(subtype, types)` — emits central `game.*Subtype*` constants when known.
 - `CardNameToVarName(name)` — converts card names to Go exported variable names.

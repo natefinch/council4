@@ -710,7 +710,7 @@ func structuredPermanentPredicateMatches(g *game.Game, predicate game.TargetPred
 	}
 	if predicate.ManaValue.Exists {
 		def, ok := permanentCardDef(g, permanent)
-		if !ok || !predicate.ManaValue.Val.Matches(def.ManaValue) {
+		if !ok || !predicate.ManaValue.Val.Matches(def.ManaValue()) {
 			return false
 		}
 	}

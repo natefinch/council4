@@ -21,7 +21,6 @@ var BeastWithin = &game.CardDef{
 		mana.GenericMana(2),
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     3,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Types:         []types.Card{types.Instant},

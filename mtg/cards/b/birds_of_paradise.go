@@ -21,7 +21,6 @@ var BirdsOfParadise = &game.CardDef{
 	ManaCost: opt.Val(mana.Cost{
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     1,
 	Colors:        []mana.Color{mana.Green},
 	ColorIdentity: mana.NewColorIdentity(mana.Green),
 	Types:         []types.Card{types.Creature},

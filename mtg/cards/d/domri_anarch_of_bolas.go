@@ -24,7 +24,6 @@ var DomriAnarchOfBolas = &game.CardDef{
 		mana.ColoredMana(mana.Red),
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     3,
 	Colors:        []mana.Color{mana.Green, mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
 	Supertypes:    []types.Super{types.Legendary},

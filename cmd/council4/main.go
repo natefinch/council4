@@ -150,7 +150,6 @@ func grizzlyBears() *game.CardDef {
 	return &game.CardDef{
 		Name:      "Grizzly Bears",
 		ManaCost:  greenCost(),
-		ManaValue: 1,
 		Types:     []types.Card{types.Creature},
 		Subtypes:  []types.Sub{types.Bear},
 		Power:     opt.Val(power),
@@ -180,7 +179,6 @@ func creatureCard(name string, power, toughness int, keywords ...game.Keyword) *
 	return &game.CardDef{
 		Name:      name,
 		ManaCost:  greenCost(),
-		ManaValue: 1,
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(p),
 		Toughness: opt.Val(t),
@@ -195,10 +193,9 @@ func creatureCard(name string, power, toughness int, keywords ...game.Keyword) *
 
 func divinationLike() *game.CardDef {
 	return &game.CardDef{
-		Name:      "Simple Divination",
-		ManaCost:  greenCost(),
-		ManaValue: 1,
-		Types:     []types.Card{types.Sorcery},
+		Name:     "Simple Divination",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -212,10 +209,9 @@ func divinationLike() *game.CardDef {
 
 func healingSpell() *game.CardDef {
 	return &game.CardDef{
-		Name:      "Simple Healing",
-		ManaCost:  greenCost(),
-		ManaValue: 1,
-		Types:     []types.Card{types.Sorcery},
+		Name:     "Simple Healing",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -229,10 +225,9 @@ func healingSpell() *game.CardDef {
 
 func lavaSpikeLike() *game.CardDef {
 	return &game.CardDef{
-		Name:      "Simple Lava Spike",
-		ManaCost:  greenCost(),
-		ManaValue: 1,
-		Types:     []types.Card{types.Sorcery},
+		Name:     "Simple Lava Spike",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,

@@ -22,7 +22,6 @@ var Anger = &game.CardDef{
 		mana.GenericMana(3),
 		mana.ColoredMana(mana.Red),
 	}),
-	ManaValue:     4,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
 	Types:         []types.Card{types.Creature},

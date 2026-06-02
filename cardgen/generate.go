@@ -12,7 +12,6 @@ type generatedCardFields struct {
 	Name       string
 	Layout     string
 	ManaCost   string
-	ManaValue  int
 	TypeLine   string
 	OracleText string
 	Colors     []string
@@ -84,7 +83,6 @@ func rootFields(card *ScryfallCard) generatedCardFields {
 		Name:          card.Name,
 		Layout:        card.Layout,
 		ManaCost:      card.ManaCost,
-		ManaValue:     int(card.CMC),
 		TypeLine:      card.TypeLine,
 		OracleText:    card.OracleText,
 		Colors:        append([]string(nil), card.Colors...),
@@ -100,7 +98,6 @@ func fieldsFromFace(face ScryfallCardFace) generatedCardFields {
 	return generatedCardFields{
 		Name:         face.Name,
 		ManaCost:     face.ManaCost,
-		ManaValue:    ManaValueFromCost(face.ManaCost),
 		TypeLine:     face.TypeLine,
 		OracleText:   face.OracleText,
 		Colors:       append([]string(nil), face.Colors...),
@@ -261,7 +258,6 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 			_, _ = fmt.Fprintf(b, "%sManaCost: opt.Val(%s),\n", indent, indentContinuation(costLiteral, indent))
 		}
 	}
-	_, _ = fmt.Fprintf(b, "%sManaValue: %d,\n", indent, fields.ManaValue)
 	if len(fields.Colors) > 0 {
 		_, _ = fmt.Fprintf(b, "%sColors: []mana.Color{%s},\n", indent, colorLiterals(fields.Colors))
 	}
@@ -344,30 +340,6 @@ func layoutToLiteral(layout string) string {
 	default:
 		return ""
 	}
-}
-
-// ManaValueFromCost returns the mana value of a mana-cost string.
-func ManaValueFromCost(cost string) int {
-	matches := manaSymbolRe.FindAllStringSubmatch(cost, -1)
-	total := 0
-	for _, match := range matches {
-		symbol := match[1]
-		total += manaSymbolValue(symbol)
-	}
-	return total
-}
-
-func manaSymbolValue(symbol string) int {
-	if n, err := strconv.Atoi(symbol); err == nil {
-		return n
-	}
-	if strings.HasPrefix(symbol, "X") {
-		return 0
-	}
-	if strings.HasPrefix(symbol, "2/") {
-		return 2
-	}
-	return 1
 }
 
 func oracleMeansEntersTapped(oracle string) bool {

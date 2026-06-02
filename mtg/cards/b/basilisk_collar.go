@@ -21,7 +21,6 @@ var BasiliskCollar = &game.CardDef{
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
 	}),
-	ManaValue:  1,
 	Types:      []types.Card{types.Artifact},
 	Subtypes:   []types.Sub{types.Equipment},
 	OracleText: "Equipped creature has deathtouch and lifelink. (Any amount of damage it deals to a creature is enough to destroy it. Damage dealt by this creature also causes you to gain that much life.)\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",

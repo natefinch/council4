@@ -15,7 +15,6 @@ import (
 //	{T}: Add one mana of any color in your commander's color identity.
 var CommandTower = &game.CardDef{
 	Name:       "Command Tower",
-	ManaValue:  0,
 	Types:      []types.Card{types.Land},
 	OracleText: "{T}: Add one mana of any color in your commander's color identity.",
 	Abilities: []game.AbilityDef{

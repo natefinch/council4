@@ -23,7 +23,6 @@ var FiresOfYavimaya = &game.CardDef{
 		mana.ColoredMana(mana.Red),
 		mana.ColoredMana(mana.Green),
 	}),
-	ManaValue:     3,
 	Colors:        []mana.Color{mana.Green, mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
 	Types:         []types.Card{types.Enchantment},

@@ -22,7 +22,6 @@ var ChandraSIgnition = &game.CardDef{
 		mana.ColoredMana(mana.Red),
 		mana.ColoredMana(mana.Red),
 	}),
-	ManaValue:     5,
 	Colors:        []mana.Color{mana.Red},
 	ColorIdentity: mana.NewColorIdentity(mana.Red),
 	Types:         []types.Card{types.Sorcery},

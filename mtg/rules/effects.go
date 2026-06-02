@@ -693,7 +693,6 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 	}
 	if spec.NoManaCost {
 		token.ManaCost = opt.V[mana.Cost]{}
-		token.ManaValue = 0
 	}
 	if spec.NoPrintedText {
 		token.OracleText = ""
@@ -926,7 +925,7 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		}
 		if permanent, ok := effectPermanent(g, obj, &game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
 			if def, ok := permanentCardDef(g, permanent); ok {
-				amount = def.ManaValue
+				amount = def.ManaValue()
 			}
 		}
 	case game.DynamicAmountTargetCounters:

@@ -179,6 +179,6 @@ func sawAttackWith(actions []ActionLog, attacker id.ID) bool {
 func greenPlayerDamageSpell() *game.CardDef {
 	spell := playerDamageSpell()
 	spell.ManaCost = greenCost()
-	spell.ManaValue = 1
+	spell.ManaCost = greenCost()
 	return spell
 }

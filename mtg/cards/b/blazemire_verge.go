@@ -17,7 +17,6 @@ import (
 //	{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
 var BlazemireVerge = &game.CardDef{
 	Name:          "Blazemire Verge",
-	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {B}.\n{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",

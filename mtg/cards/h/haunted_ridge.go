@@ -17,7 +17,6 @@ import (
 //	{T}: Add {B} or {R}.
 var HauntedRidge = &game.CardDef{
 	Name:          "Haunted Ridge",
-	ManaValue:     0,
 	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {R}.",
