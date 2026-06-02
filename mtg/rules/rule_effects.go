@@ -223,6 +223,15 @@ func ruleEffectProhibitsBeingBlocked(g *game.Game, attacker *game.Permanent) boo
 	return false
 }
 
+func ruleEffectRequiresBeingBlocked(g *game.Game, attacker *game.Permanent) bool {
+	for _, effect := range activeRuleEffects(g) {
+		if effect.Kind == game.RuleEffectMustBeBlocked && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectMatchesPermanent(g *game.Game, effect game.RuleEffect, permanent *game.Permanent) bool {
 	if permanent == nil {
 		return false

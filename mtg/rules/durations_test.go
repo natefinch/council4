@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestUntilEndOfTurnPTModifierUsesRuntimeContinuousEffect(t *testing.T) {
@@ -29,6 +30,76 @@ func TestUntilEndOfTurnPTModifierUsesRuntimeContinuousEffect(t *testing.T) {
 	}
 	if got := effectivePower(g, creature); got != 5 {
 		t.Fatalf("effective power = %d, want 5", got)
+	}
+}
+
+func TestUntilEndOfTurnPTModifierSnapshotsDynamicX(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
+		Type:           game.EffectModifyPT,
+		TargetIndex:    0,
+		UntilEndOfTurn: true,
+		PowerDeltaDynamic: opt.Val(game.DynamicAmount{
+			Kind: game.DynamicAmountX,
+		}),
+		ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{
+			Kind: game.DynamicAmountX,
+		}),
+	}, []game.Target{game.PermanentTarget(creature.ObjectID)})
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("stack is empty")
+	}
+	obj.XValue = 3
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if len(g.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %d, want 1", len(g.ContinuousEffects))
+	}
+	effect := g.ContinuousEffects[0]
+	if effect.PowerDelta != 3 || effect.ToughnessDelta != 3 {
+		t.Fatalf("continuous effect deltas = +%d/+%d, want +3/+3", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	if got := effectivePower(g, creature); got != 5 {
+		t.Fatalf("effective power = %d, want 5", got)
+	}
+	if got, ok := effectiveToughness(g, creature); !ok || got != 5 {
+		t.Fatalf("effective toughness = %d ok=%v, want 5 true", got, ok)
+	}
+}
+
+func TestUntilEndOfTurnPTModifierSnapshotsDynamicTargetPower(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	creature.Counters.Add(counter.PlusOnePlusOne, 1)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{
+		Type:           game.EffectModifyPT,
+		TargetIndex:    0,
+		UntilEndOfTurn: true,
+		PowerDeltaDynamic: opt.Val(game.DynamicAmount{
+			Kind:        game.DynamicAmountTargetPower,
+			TargetIndex: 0,
+		}),
+	}, []game.Target{game.PermanentTarget(creature.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if len(g.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %d, want 1", len(g.ContinuousEffects))
+	}
+	if got := g.ContinuousEffects[0].PowerDelta; got != 4 {
+		t.Fatalf("snapshotted power delta = %d, want current power 4", got)
+	}
+	if got := effectivePower(g, creature); got != 8 {
+		t.Fatalf("effective power = %d, want doubled current power 8", got)
+	}
+	creature.Counters.Add(counter.PlusOnePlusOne, 1)
+	if got := effectivePower(g, creature); got != 9 {
+		t.Fatalf("effective power after later counter = %d, want snapshotted delta plus new counter = 9", got)
 	}
 }
 

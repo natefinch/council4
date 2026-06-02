@@ -670,6 +670,85 @@ func TestMenaceRequiresAtLeastTwoBlockers(t *testing.T) {
 	}
 }
 
+func TestMustBeBlockedRequirementRejectsNoBlocksWhenAble(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Must Block Effect",
+		Types: []types.Card{types.Enchantment},
+		Abilities: []game.AbilityDef{{
+			Kind: game.StaticAbility,
+			Effects: []game.Effect{{
+				Type: game.EffectApplyRule,
+				RuleEffects: []game.RuleEffect{{
+					Kind:             game.RuleEffectMustBeBlocked,
+					AffectedObjectID: attacker.ObjectID,
+				}},
+			}},
+		}},
+	})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+	}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareBlockersActions(g, game.Player2)
+	if len(legal) != 1 {
+		t.Fatalf("legal block actions = %d, want only required block", len(legal))
+	}
+	wantBlock := action.DeclareBlockers([]game.BlockDeclaration{{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID}})
+	if !actionsEqual(legal[0], wantBlock) {
+		t.Fatalf("legal action = %+v, want required block %+v", legal[0], wantBlock)
+	}
+	if engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers(nil))) {
+		t.Fatal("applyDeclareBlockers accepted no blocks despite satisfiable must-block requirement")
+	}
+	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, wantBlock)) {
+		t.Fatal("applyDeclareBlockers rejected required block")
+	}
+}
+
+func TestMustBeBlockedRequirementAllowsNoBlocksWhenUnable(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Flying)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "Must Block Effect",
+		Types: []types.Card{types.Enchantment},
+		Abilities: []game.AbilityDef{{
+			Kind: game.StaticAbility,
+			Effects: []game.Effect{{
+				Type: game.EffectApplyRule,
+				RuleEffects: []game.RuleEffect{{
+					Kind:             game.RuleEffectMustBeBlocked,
+					AffectedObjectID: attacker.ObjectID,
+				}},
+			}},
+		}},
+	})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+	}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareBlockersActions(g, game.Player2)
+	if len(legal) != 1 {
+		t.Fatalf("legal block actions = %d, want only no-block action", len(legal))
+	}
+	noBlocks := mustDeclareBlockersPayload(t, legal[0])
+	if len(noBlocks.Blockers) != 0 {
+		t.Fatalf("legal blockers = %+v, want no blocks because %v cannot block flying", noBlocks.Blockers, blocker.ObjectID)
+	}
+	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers(nil))) {
+		t.Fatal("applyDeclareBlockers rejected no blocks for unsatisfiable must-block requirement")
+	}
+}
+
 func TestResolveCombatDamageReducesDefendingPlayerLife(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)

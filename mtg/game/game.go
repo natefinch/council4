@@ -154,12 +154,22 @@ type Game struct {
 	// during the current turn.
 	ActivatedAbilitiesThisTurn map[ActivatedAbilityUse]bool
 
+	// TriggeredAbilitiesThisTurn records triggered ability trigger counts during
+	// the current turn for abilities with MaxTriggersPerTurn.
+	TriggeredAbilitiesThisTurn map[TriggeredAbilityUse]int
+
 	// IDGen generates unique IDs for game objects.
 	IDGen id.Generator
 }
 
 // ActivatedAbilityUse identifies one activated ability on one source object.
 type ActivatedAbilityUse struct {
+	SourceID     id.ID
+	AbilityIndex int
+}
+
+// TriggeredAbilityUse identifies one triggered ability on one source object.
+type TriggeredAbilityUse struct {
 	SourceID     id.ID
 	AbilityIndex int
 }
@@ -200,6 +210,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		FailedDraws:                make(map[PlayerID]bool),
 		StateTriggerLatches:        make(map[StateTriggerKey]bool),
 		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),
+		TriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),
 		EventTurnStarts:            []int{0},
 		Turn: TurnState{
 			TurnNumber:           1,

@@ -31,6 +31,7 @@ const (
 	EventObjectBecameTarget
 	EventCardRevealed
 	EventPermanentTurnedFaceUp
+	EventFight
 )
 
 // DamageRecipientKind identifies what received damage.
@@ -85,6 +86,10 @@ type GameEvent struct {
 
 	// PermanentID identifies the permanent that entered, left, was damaged, attacked, or blocked.
 	PermanentID id.ID
+
+	// RelatedPermanentID identifies a secondary permanent for paired events such
+	// as fights.
+	RelatedPermanentID id.ID
 
 	// TokenName gives token events a stable human-readable identity when CardID is zero.
 	TokenName string

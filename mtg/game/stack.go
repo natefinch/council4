@@ -103,8 +103,8 @@ type StackObject struct {
 	// (e.g., "sacrificed a creature", "discarded a card").
 	AdditionalCostsPaid []string
 
-	// SourceZone is the zone a non-spell source card occupied before an
-	// activated ability was put on the stack.
+	// SourceZone is the zone the source card occupied before this spell or
+	// ability was put on the stack.
 	SourceZone ZoneType
 
 	// ResolvedAmounts stores named numeric results from earlier effects on this

@@ -44,6 +44,12 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.Speed >= 4
 	}
+	if cond.TargetEnteredThisTurn.Exists {
+		matches = matches && conditionTargetEnteredThisTurn(g, ctx, cond.TargetEnteredThisTurn.Val)
+	}
+	if cond.CastFromZone.Exists {
+		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.SourceZone == cond.CastFromZone.Val
+	}
 	if cond.Negate {
 		return !matches
 	}
@@ -86,6 +92,9 @@ func controllerControlsMatchingPermanent(g *game.Game, ctx conditionContext, fil
 	count := 0
 	totalPower := 0
 	for _, permanent := range g.Battlefield {
+		if filter.ExcludeSource && ctx.source != nil && permanent.ObjectID == ctx.source.ObjectID {
+			continue
+		}
 		if ctx.useBaseCharacteristics {
 			if permanent.Controller != ctx.controller {
 				continue
@@ -111,6 +120,22 @@ func controllerControlsMatchingPermanent(g *game.Game, ctx conditionContext, fil
 	}
 	if filter.TotalPower.Exists {
 		return count >= want && filter.TotalPower.Val.Matches(totalPower)
+	}
+	return false
+}
+
+func conditionTargetEnteredThisTurn(g *game.Game, ctx conditionContext, targetIndex int) bool {
+	if ctx.obj == nil {
+		return false
+	}
+	permanent, ok := effectPermanent(g, ctx.obj, &game.Effect{TargetIndex: targetIndex})
+	if !ok {
+		return false
+	}
+	for _, event := range g.EventsThisTurn() {
+		if event.Kind == game.EventPermanentEnteredBattlefield && event.PermanentID == permanent.ObjectID {
+			return true
+		}
 	}
 	return false
 }

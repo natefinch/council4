@@ -388,6 +388,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		KickerPaid:          cast.KickerPaid,
 		Flashback:           sourceZone == game.ZoneGraveyard && spellDef.HasKeyword(game.Flashback),
 		AdditionalCostsPaid: additionalCostsPaid,
+		SourceZone:          sourceZone,
 	}
 	stormCopies := stormCopyCount(g, spellDef)
 	pushSpellToStack(g, obj, game.GameEvent{

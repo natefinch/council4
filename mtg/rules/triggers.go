@@ -106,7 +106,53 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.GameEvent)
 			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 	}
-	return pending
+	return filterPendingTriggeredAbilities(g, pending)
+}
+
+func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
+	if len(pending) == 0 {
+		return pending
+	}
+	filtered := make([]pendingTriggeredAbility, 0, len(pending))
+	seenOneOrMore := make(map[triggerBatchKey]bool)
+	for i := range pending {
+		trigger := &pending[i]
+		ability, ok := pendingTriggerAbility(g, trigger)
+		if !ok {
+			continue
+		}
+		if ability.Trigger.Exists && ability.Trigger.Val.Pattern.OneOrMore {
+			key := triggerBatchKey{
+				sourceID:     trigger.sourceID,
+				abilityIndex: trigger.abilityIndex,
+				event:        trigger.event.Kind,
+				controller:   trigger.controller,
+			}
+			if seenOneOrMore[key] {
+				continue
+			}
+			seenOneOrMore[key] = true
+		}
+		if ability.MaxTriggersPerTurn > 0 {
+			key := game.TriggeredAbilityUse{SourceID: trigger.sourceID, AbilityIndex: trigger.abilityIndex}
+			if g.TriggeredAbilitiesThisTurn == nil {
+				g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
+			}
+			if g.TriggeredAbilitiesThisTurn[key] >= ability.MaxTriggersPerTurn {
+				continue
+			}
+			g.TriggeredAbilitiesThisTurn[key]++
+		}
+		filtered = append(filtered, *trigger)
+	}
+	return filtered
+}
+
+type triggerBatchKey struct {
+	sourceID     id.ID
+	abilityIndex int
+	event        game.EventKind
+	controller   game.PlayerID
 }
 
 func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.GameEvent) []pendingTriggeredAbility {
@@ -132,7 +178,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 			continue
 		}
 		trigger := &ability.Trigger.Val
-		if !triggerMatchesEvent(g, permanent, trigger.Pattern, event) || !triggerInterveningIf(g, permanent, controller, trigger, &event) {
+		if !triggerMatchesEvent(g, permanent, &trigger.Pattern, event) || !triggerInterveningIf(g, permanent, controller, trigger, &event) {
 			continue
 		}
 		pending = append(pending, pendingTriggeredAbility{
@@ -346,7 +392,7 @@ func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *
 	return append([]game.Target(nil), choices[selected[0]]...), true
 }
 
-func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.TriggerPattern, event game.GameEvent) bool {
+func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.TriggerPattern, event game.GameEvent) bool {
 	if pattern.Event == game.EventUnknown || pattern.Event != event.Kind {
 		return false
 	}
@@ -355,13 +401,17 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	// LTB/dies checks may need last-known information for the moved permanent
 	// (CR 603.2, CR 603.6c, CR 603.10).
 	sourceController := effectiveController(g, source)
-	if !triggerControllerMatches(sourceController, pattern.Controller, event.Controller) {
+	subjectController := event.Controller
+	if subject, ok := triggerSubjectPermanent(g, pattern.Subject, event); ok {
+		subjectController = effectiveController(g, subject)
+	}
+	if !triggerControllerMatches(sourceController, pattern.Controller, subjectController) {
 		return false
 	}
-	if !triggerSourceMatches(g, source, pattern.Source, event) {
+	if !triggerSourceMatches(g, source, pattern.Source, pattern.Subject, event) {
 		return false
 	}
-	if pattern.ExcludeSelf && triggerSourceMatches(g, source, game.TriggerSourceSelf, event) {
+	if pattern.ExcludeSelf && triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event) {
 		return false
 	}
 	if !triggerPlayerMatches(sourceController, pattern.Player, event.Player) {
@@ -375,6 +425,15 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	}
 	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient != event.DamageRecipient {
 		return false
+	}
+	if pattern.DamageRecipientCombatState != game.CombatStateAny {
+		if event.DamageRecipient != game.DamageRecipientPermanent {
+			return false
+		}
+		permanent, ok := permanentByObjectID(g, event.PermanentID)
+		if !ok || !combatStateMatches(g, permanent, pattern.DamageRecipientCombatState) {
+			return false
+		}
 	}
 	if pattern.Event == game.EventBeginningOfStep {
 		if pattern.Step == game.StepNone || pattern.Step != event.Step {
@@ -391,6 +450,12 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 		return false
 	}
 	if pattern.MatchStackObjectKind && !eventStackObjectKindMatches(g, event, pattern.StackObjectKind) {
+		return false
+	}
+	if pattern.SpellTargetsSource && !spellTargetsSource(g, source, event) {
+		return false
+	}
+	if pattern.SpellTargetPattern.Exists && !spellTargetsPattern(g, sourceController, pattern.SpellTargetAllow, pattern.SpellTargetPattern.Val, event) {
 		return false
 	}
 	return true
@@ -452,28 +517,94 @@ func triggerControllerMatches(sourceController game.PlayerID, filter game.Trigge
 	}
 }
 
-func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.TriggerSourceFilter, event game.GameEvent) bool {
+func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.TriggerSourceFilter, subject game.TriggerSubjectObject, event game.GameEvent) bool {
 	if filter == game.TriggerSourceAttachedPermanent {
-		return triggerSourceAttachedPermanentMatches(g, source, event)
+		return triggerSourceAttachedPermanentMatchesSubject(g, source, event, subject)
 	}
 	if filter != game.TriggerSourceSelf {
 		return true
 	}
+	subjectID := triggerSubjectObjectID(event, subject)
 	return (source.ObjectID != 0 && event.SourceObjectID == source.ObjectID) ||
-		(source.ObjectID != 0 && event.PermanentID == source.ObjectID) ||
+		(source.ObjectID != 0 && subjectID == source.ObjectID) ||
 		(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID) ||
 		(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
 }
 
 func triggerSourceAttachedPermanentMatches(g *game.Game, source *game.Permanent, event game.GameEvent) bool {
-	if source.ObjectID == 0 || event.PermanentID == 0 {
+	return triggerSourceAttachedPermanentMatchesSubject(g, source, event, game.TriggerSubjectDefault)
+}
+
+func triggerSourceAttachedPermanentMatchesSubject(g *game.Game, source *game.Permanent, event game.GameEvent, subject game.TriggerSubjectObject) bool {
+	subjectID := triggerSubjectObjectID(event, subject)
+	if source.ObjectID == 0 || subjectID == 0 {
 		return false
 	}
-	if source.AttachedTo.Exists && source.AttachedTo.Val == event.PermanentID {
+	if source.AttachedTo.Exists && source.AttachedTo.Val == subjectID {
 		return true
 	}
-	if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
+	if snapshot, ok := lastKnownObject(g, subjectID); ok {
 		return slices.Contains(snapshot.Attachments, source.ObjectID)
+	}
+	return false
+}
+
+func triggerSubjectObjectID(event game.GameEvent, subject game.TriggerSubjectObject) id.ID {
+	switch subject {
+	case game.TriggerSubjectBlockedAttacker:
+		return event.BlockedAttackerID
+	default:
+		return event.PermanentID
+	}
+}
+
+func triggerSubjectPermanent(g *game.Game, subject game.TriggerSubjectObject, event game.GameEvent) (*game.Permanent, bool) {
+	objectID := triggerSubjectObjectID(event, subject)
+	if objectID == 0 {
+		return nil, false
+	}
+	if permanent, ok := permanentByObjectID(g, objectID); ok {
+		return permanent, true
+	}
+	resolved, ok := resolvePermanentOrLastKnown(g, objectID)
+	if !ok {
+		return nil, false
+	}
+	return resolved.permanent, resolved.permanent != nil
+}
+
+func spellTargetsSource(g *game.Game, source *game.Permanent, event game.GameEvent) bool {
+	if event.Kind != game.EventSpellCast || source.ObjectID == 0 {
+		return false
+	}
+	obj, ok := stackObjectByID(g, event.StackObjectID)
+	if !ok {
+		return false
+	}
+	for _, target := range obj.Targets {
+		if target.Kind == game.TargetPermanent && target.PermanentID == source.ObjectID {
+			return true
+		}
+	}
+	return false
+}
+
+func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.TargetAllow, predicate game.TargetPredicate, event game.GameEvent) bool {
+	if event.Kind != game.EventSpellCast {
+		return false
+	}
+	obj, ok := stackObjectByID(g, event.StackObjectID)
+	if !ok {
+		return false
+	}
+	spec := game.TargetSpec{
+		Allow:     allow,
+		Predicate: predicate,
+	}
+	for _, target := range obj.Targets {
+		if targetMatchesSpec(g, controller, 0, &spec, target) {
+			return true
+		}
 	}
 	return false
 }

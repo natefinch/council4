@@ -62,6 +62,81 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 	}
 }
 
+func TestConditionControllerControlsPermanentFilterCanExcludeSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Source",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 5}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+	})
+	condition := opt.Val(game.Condition{
+		ControllerControls: game.PermanentFilter{
+			Types:         []types.Card{types.Creature},
+			ExcludeSource: true,
+			Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+		},
+	})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1, source: source}, condition) {
+		t.Fatal("condition matched source as another creature")
+	}
+	addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:      "Other",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 4}),
+		Toughness: opt.Val(game.PT{Value: 4}),
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1, source: source}, condition) {
+		t.Fatal("condition did not match another large creature")
+	}
+}
+
+func TestConditionTargetEnteredThisTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		Name:  "New Creature",
+		Types: []types.Card{types.Creature},
+	})
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PermanentTarget(creature.ObjectID)},
+	}
+	condition := opt.Val(game.Condition{TargetEnteredThisTurn: opt.Val(0)})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1, obj: obj}, condition) {
+		t.Fatal("condition matched before enter event")
+	}
+	emitEvent(g, game.GameEvent{Kind: game.EventPermanentEnteredBattlefield, PermanentID: creature.ObjectID})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1, obj: obj}, condition) {
+		t.Fatal("condition did not match target that entered this turn")
+	}
+	g.Turn.TurnNumber++
+	g.EventTurnStarts = append(g.EventTurnStarts, len(g.Events))
+	if conditionSatisfied(g, conditionContext{controller: game.Player1, obj: obj}, condition) {
+		t.Fatal("condition matched target that entered on a previous turn")
+	}
+}
+
+func TestConditionCastFromZoneRequiresNonCopyStackObject(t *testing.T) {
+	condition := opt.Val(game.Condition{CastFromZone: opt.Val(game.ZoneGraveyard)})
+	obj := &game.StackObject{
+		Kind:       game.StackSpell,
+		Controller: game.Player1,
+		SourceZone: game.ZoneGraveyard,
+	}
+	if !conditionSatisfied(game.NewGame([game.NumPlayers]game.PlayerConfig{}), conditionContext{controller: game.Player1, obj: obj}, condition) {
+		t.Fatal("condition did not match spell cast from graveyard")
+	}
+	obj.Copy = true
+	if conditionSatisfied(game.NewGame([game.NumPlayers]game.PlayerConfig{}), conditionContext{controller: game.Player1, obj: obj}, condition) {
+		t.Fatal("condition matched copied stack object")
+	}
+	obj.Copy = false
+	obj.SourceZone = game.ZoneHand
+	if conditionSatisfied(game.NewGame([game.NumPlayers]game.PlayerConfig{}), conditionContext{controller: game.Player1, obj: obj}, condition) {
+		t.Fatal("condition matched spell cast from hand")
+	}
+}
+
 func TestConditionControllerControlsTotalPower(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCombatPermanent(g, game.Player1, &game.CardDef{Name: "Small", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 3})})

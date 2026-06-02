@@ -7,6 +7,14 @@ import (
 func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, effect *game.Effect) game.ContinuousEffect {
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	effectID := g.IDGen.Next()
+	powerDelta := effect.PowerDelta
+	if effect.PowerDeltaDynamic.Exists {
+		powerDelta += dynamicAmountValue(g, obj, stackObjectController(obj), effect.PowerDeltaDynamic.Val)
+	}
+	toughnessDelta := effect.ToughnessDelta
+	if effect.ToughnessDeltaDynamic.Exists {
+		toughnessDelta += dynamicAmountValue(g, obj, stackObjectController(obj), effect.ToughnessDeltaDynamic.Val)
+	}
 	return game.ContinuousEffect{
 		ID:               effectID,
 		SourceCardID:     sourceID,
@@ -17,8 +25,8 @@ func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permane
 		CreatedTurn:      g.Turn.TurnNumber,
 		AffectedObjectID: permanent.ObjectID,
 		Layer:            game.LayerPowerToughnessModify,
-		PowerDelta:       effect.PowerDelta,
-		ToughnessDelta:   effect.ToughnessDelta,
+		PowerDelta:       powerDelta,
+		ToughnessDelta:   toughnessDelta,
 	}
 }
 

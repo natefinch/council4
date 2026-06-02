@@ -17,8 +17,21 @@ func resolveFight(g *game.Game, obj *game.StackObject, effect *game.Effect) {
 	if !firstOK || !secondOK || first.ObjectID == second.ObjectID || !permanentHasType(g, first, types.Creature) || !permanentHasType(g, second, types.Creature) {
 		return
 	}
+	emitFightEvent(g, first, second)
+	emitFightEvent(g, second, first)
 	dealPermanentDamage(g, first.CardInstanceID, first.ObjectID, effectiveController(g, first), second, effectivePower(g, first), false)
 	dealPermanentDamage(g, second.CardInstanceID, second.ObjectID, effectiveController(g, second), first, effectivePower(g, second), false)
+}
+
+func emitFightEvent(g *game.Game, permanent, related *game.Permanent) {
+	emitEvent(g, game.GameEvent{
+		Kind:               game.EventFight,
+		SourceID:           permanent.CardInstanceID,
+		SourceObjectID:     permanent.ObjectID,
+		Controller:         effectiveController(g, permanent),
+		PermanentID:        permanent.ObjectID,
+		RelatedPermanentID: related.ObjectID,
+	})
 }
 
 func counterTargetStackObject(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {

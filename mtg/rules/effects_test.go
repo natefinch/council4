@@ -1430,6 +1430,41 @@ func TestMassDestroyNonlandPermanentsLeavesLands(t *testing.T) {
 	}
 }
 
+func TestSelectorOtherCreaturesDefendingPlayerControlsUsesTriggerRecipientController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	damagedBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	otherDefenderCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	defenderArtifact := addCombatPermanent(g, game.Player2, &game.CardDef{
+		Name:  "Defender Relic",
+		Types: []types.Card{types.Artifact},
+	})
+	attackerCreature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	obj := &game.StackObject{
+		ID:              g.IDGen.Next(),
+		Controller:      game.Player1,
+		HasTriggerEvent: true,
+		TriggerEvent: game.GameEvent{
+			Kind:        game.EventDamageDealt,
+			PermanentID: damagedBlocker.ObjectID,
+		},
+	}
+
+	engine.resolveEffect(g, obj, &game.Effect{
+		Type:     game.EffectDestroy,
+		Selector: game.EffectSelectorOtherCreaturesDefendingPlayerControls,
+	}, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, otherDefenderCreature.ObjectID); ok {
+		t.Fatal("other defender creature survived selector destroy")
+	}
+	for _, permanent := range []*game.Permanent{damagedBlocker, defenderArtifact, attackerCreature} {
+		if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
+			t.Fatalf("selector destroyed permanent %v unexpectedly", permanent.ObjectID)
+		}
+	}
+}
+
 func TestMassDamageDeathsAreLoggedTogetherBySBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

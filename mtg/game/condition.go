@@ -30,6 +30,8 @@ type Condition struct {
 	SourceClassLevelLessThan                                     int
 	SourceNotMonstrous                                           bool
 	ControllerHasMaxSpeed                                        bool
+	TargetEnteredThisTurn                                        opt.V[int]
+	CastFromZone                                                 opt.V[ZoneType]
 }
 
 // PermanentFilter matches permanents for reusable condition predicates. Empty
@@ -46,6 +48,10 @@ type PermanentFilter struct {
 	Power      opt.V[compare.Int]
 	Toughness  opt.V[compare.Int]
 	TotalPower opt.V[compare.Int]
+
+	// ExcludeSource ignores the condition source permanent when counting
+	// matches, for conditions that ask for "another" permanent.
+	ExcludeSource bool
 }
 
 // Empty reports whether the filter contains no active predicate.
@@ -56,7 +62,8 @@ func (f PermanentFilter) Empty() bool {
 		f.MinCount == 0 &&
 		!f.Power.Exists &&
 		!f.Toughness.Exists &&
-		!f.TotalPower.Exists
+		!f.TotalPower.Exists &&
+		!f.ExcludeSource
 }
 
 // Empty reports whether the condition contains no active predicate.
@@ -68,5 +75,7 @@ func (c *Condition) Empty() bool {
 		c.SourceClassLevelAtLeast == 0 &&
 		c.SourceClassLevelLessThan == 0 &&
 		!c.SourceNotMonstrous &&
-		!c.ControllerHasMaxSpeed
+		!c.ControllerHasMaxSpeed &&
+		!c.TargetEnteredThisTurn.Exists &&
+		!c.CastFromZone.Exists
 }

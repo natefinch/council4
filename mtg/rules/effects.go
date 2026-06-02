@@ -1294,6 +1294,9 @@ func selectedPermanentIDs(g *game.Game, controller game.PlayerID, source *game.P
 }
 
 func selectedPermanentIDsForEffect(g *game.Game, obj *game.StackObject, effect *game.Effect, controller game.PlayerID, source *game.Permanent) []id.ID {
+	if effect.Selector == game.EffectSelectorOtherCreaturesDefendingPlayerControls {
+		return selectedOtherCreaturesDefendingPlayerControls(g, obj)
+	}
 	if effect.Selector != game.EffectSelectorAllCreaturesExceptTarget {
 		return selectedPermanentIDs(g, controller, source, effect.Selector)
 	}
@@ -1301,6 +1304,31 @@ func selectedPermanentIDsForEffect(g *game.Game, obj *game.StackObject, effect *
 	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
 	for _, permanent := range g.Battlefield {
 		if permanent.ObjectID == excluded || !permanentHasType(g, permanent, types.Creature) {
+			continue
+		}
+		permanentIDs = append(permanentIDs, permanent.ObjectID)
+	}
+	return permanentIDs
+}
+
+func selectedOtherCreaturesDefendingPlayerControls(g *game.Game, obj *game.StackObject) []id.ID {
+	if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.PermanentID == 0 {
+		return []id.ID{}
+	}
+	resolved, ok := resolvePermanentOrLastKnown(g, obj.TriggerEvent.PermanentID)
+	if !ok {
+		return []id.ID{}
+	}
+	defendingPlayer, ok := resolved.controller(g)
+	if !ok {
+		return []id.ID{}
+	}
+	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
+	for _, permanent := range g.Battlefield {
+		if permanent.ObjectID == obj.TriggerEvent.PermanentID {
+			continue
+		}
+		if effectiveController(g, permanent) != defendingPlayer || !permanentHasType(g, permanent, types.Creature) {
 			continue
 		}
 		permanentIDs = append(permanentIDs, permanent.ObjectID)

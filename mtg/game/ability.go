@@ -248,6 +248,19 @@ const (
 	TriggerSourceAttachedPermanent
 )
 
+// TriggerSubjectObject identifies which permanent on an event is the trigger
+// subject for source/controller matching. Event-specific object fields that are
+// not the subject, such as EventBlockerDeclared.PermanentID for the blocker,
+// continue to feed general permanent filters.
+type TriggerSubjectObject int
+
+// Trigger subject object values identify event permanent roles.
+const (
+	TriggerSubjectDefault TriggerSubjectObject = iota
+	TriggerSubjectPermanent
+	TriggerSubjectBlockedAttacker
+)
+
 // TriggerPlayerFilter constrains a trigger by the affected player recorded on an event.
 type TriggerPlayerFilter int
 
@@ -268,6 +281,8 @@ type TriggerPattern struct {
 	ExcludeSelf bool
 	Player      TriggerPlayerFilter
 
+	Subject TriggerSubjectObject
+
 	RequirePermanentTypes []types.Card
 	ExcludePermanentTypes []types.Card
 	RequireNonToken       bool
@@ -285,7 +300,16 @@ type TriggerPattern struct {
 	MatchStackObjectKind bool
 	StackObjectKind      StackObjectKind
 
-	DamageRecipient DamageRecipientKind
+	DamageRecipient            DamageRecipientKind
+	DamageRecipientCombatState CombatStateFilter
+
+	SpellTargetsSource bool
+	SpellTargetAllow   TargetAllow
+	SpellTargetPattern opt.V[TargetPredicate]
+
+	// OneOrMore coalesces matching events consumed in the same trigger detection
+	// pass into one trigger. The first matching event is retained as TriggerEvent.
+	OneOrMore bool
 
 	// Step filters EventBeginningOfStep triggers such as "At the beginning of
 	// your upkeep" (CR 603.6c).
@@ -388,16 +412,17 @@ type EffectSelector string
 
 // Effect selector values identify mass-effect recipient groups.
 const (
-	EffectSelectorNone                     EffectSelector = ""
-	EffectSelectorAllCreatures             EffectSelector = "all creatures"
-	EffectSelectorAllCreaturesExceptTarget EffectSelector = "all creatures except target"
-	EffectSelectorAllArtifacts             EffectSelector = "all artifacts"
-	EffectSelectorAllEnchantments          EffectSelector = "all enchantments"
-	EffectSelectorAllNonlandPermanents     EffectSelector = "all nonland permanents"
-	EffectSelectorAllPermanents            EffectSelector = "all permanents"
-	EffectSelectorCreaturesYouControl      EffectSelector = "creatures you control"
-	EffectSelectorOtherCreaturesYouControl EffectSelector = "other creatures you control"
-	EffectSelectorEquippedCreature         EffectSelector = "equipped creature"
+	EffectSelectorNone                                  EffectSelector = ""
+	EffectSelectorAllCreatures                          EffectSelector = "all creatures"
+	EffectSelectorAllCreaturesExceptTarget              EffectSelector = "all creatures except target"
+	EffectSelectorAllArtifacts                          EffectSelector = "all artifacts"
+	EffectSelectorAllEnchantments                       EffectSelector = "all enchantments"
+	EffectSelectorAllNonlandPermanents                  EffectSelector = "all nonland permanents"
+	EffectSelectorAllPermanents                         EffectSelector = "all permanents"
+	EffectSelectorCreaturesYouControl                   EffectSelector = "creatures you control"
+	EffectSelectorOtherCreaturesYouControl              EffectSelector = "other creatures you control"
+	EffectSelectorEquippedCreature                      EffectSelector = "equipped creature"
+	EffectSelectorOtherCreaturesDefendingPlayerControls EffectSelector = "other creatures defending player controls"
 )
 
 // PlayerSelector identifies a set of players affected by a mass effect.
@@ -559,12 +584,14 @@ type Effect struct {
 	Optional        bool
 	ResultCondition opt.V[EffectResultCondition]
 
-	PowerDelta     int
-	ToughnessDelta int
-	ResultAmount   EffectResultAmountKind
-	CounterKind    counter.Kind
-	CounterSource  CounterSourceSpec
-	ManaColor      mana.Color
+	PowerDelta            int
+	ToughnessDelta        int
+	PowerDeltaDynamic     opt.V[DynamicAmount]
+	ToughnessDeltaDynamic opt.V[DynamicAmount]
+	ResultAmount          EffectResultAmountKind
+	CounterKind           counter.Kind
+	CounterSource         CounterSourceSpec
+	ManaColor             mana.Color
 	// Choice asks for a value while resolving this instruction and stores it
 	// under LinkID for later instructions to consume (CR 608.2c, CR 609.3).
 	Choice opt.V[ResolutionChoice]
@@ -705,6 +732,10 @@ type AbilityDef struct {
 
 	// Trigger defines when a triggered ability fires. Nil for non-triggered.
 	Trigger opt.V[TriggerCondition]
+
+	// MaxTriggersPerTurn limits how many times this ability can trigger each
+	// turn. Zero means no limit.
+	MaxTriggersPerTurn int
 
 	// Optional is true for "you may" abilities. Triggered abilities still go on
 	// the stack; the controller chooses whether to apply their effects on

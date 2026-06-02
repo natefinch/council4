@@ -1256,6 +1256,9 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	if !ok || !obj.Flashback {
 		t.Fatalf("stack object = %+v, want flashback marker", obj)
 	}
+	if obj.SourceZone != game.ZoneGraveyard {
+		t.Fatalf("stack object source zone = %v, want graveyard", obj.SourceZone)
+	}
 	engine.resolveTopOfStack(g, &TurnLog{})
 
 	if g.Players[game.Player1].Graveyard.Contains(cardID) {

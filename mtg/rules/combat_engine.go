@@ -214,6 +214,7 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 
 	attackers := attacksAgainstPlayer(g, playerID)
 	blockers := eligibleBlockers(g, playerID)
+	required := satisfiableMustBlockAttackers(g, playerID, attackers, blockers)
 	actions := make([]action.Action, 0, len(attackers)*len(blockers)+1)
 	for _, attacker := range attackers {
 		var allBlockers []game.BlockDeclaration
@@ -231,17 +232,61 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 			}
 			allBlockers = append(allBlockers, block)
 			if !attackerRequiresMultipleBlockers(g, attackingPermanent) {
-				actions = append(actions, actionBuild.declareBlockers([]game.BlockDeclaration{
-					block,
-				}))
+				declaration := []game.BlockDeclaration{block}
+				if blockDeclarationsSatisfyMustBlockRequirements(required, declaration) {
+					actions = append(actions, actionBuild.declareBlockers(declaration))
+				}
 			}
 		}
 		if len(allBlockers) > 1 {
-			actions = append(actions, actionBuild.declareBlockers(allBlockers))
+			if blockDeclarationsSatisfyMustBlockRequirements(required, allBlockers) {
+				actions = append(actions, actionBuild.declareBlockers(allBlockers))
+			}
 		}
 	}
-	actions = append(actions, actionBuild.declareBlockers(nil))
+	if len(required) == 0 {
+		actions = append(actions, actionBuild.declareBlockers(nil))
+	}
 	return actions
+}
+
+func satisfiableMustBlockAttackers(g *game.Game, playerID game.PlayerID, attackers []game.AttackDeclaration, blockers []*game.Permanent) map[id.ID]bool {
+	required := make(map[id.ID]bool)
+	for _, attack := range attackers {
+		attacker, ok := permanentByObjectID(g, attack.Attacker)
+		if !ok || !ruleEffectRequiresBeingBlocked(g, attacker) {
+			continue
+		}
+		legalBlockerCount := 0
+		for _, blocker := range blockers {
+			if canBlockAttacker(g, blocker, attacker) {
+				legalBlockerCount++
+			}
+		}
+		if legalBlockerCount == 0 {
+			continue
+		}
+		if attackerRequiresMultipleBlockers(g, attacker) && legalBlockerCount < 2 {
+			continue
+		}
+		required[attack.Attacker] = true
+	}
+	return required
+}
+
+func blockDeclarationsSatisfyMustBlockRequirements(required map[id.ID]bool, declarations []game.BlockDeclaration) bool {
+	if len(required) == 0 {
+		return true
+	}
+	// The current blocker enumerator models one attacker at a time. Satisfying at
+	// least one satisfiable requirement is exact for single-requirement effects
+	// like Neyith; multiple simultaneous requirements need broader enumeration.
+	for _, declaration := range declarations {
+		if required[declaration.Blocking] {
+			return true
+		}
+	}
+	return false
 }
 
 // applyAttackers validates and applies the declare-attackers action for
@@ -346,6 +391,11 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 		if ok && count > 0 && count < 2 && attackerRequiresMultipleBlockers(g, attacker) {
 			return false
 		}
+	}
+	allBlockers := append([]game.BlockDeclaration(nil), g.Combat.Blockers...)
+	allBlockers = append(allBlockers, declare.Blockers...)
+	if !blockDeclarationsSatisfyMustBlockRequirements(satisfiableMustBlockAttackers(g, playerID, attacksAgainstPlayer(g, playerID), eligibleBlockers(g, playerID)), allBlockers) {
+		return false
 	}
 
 	g.Combat.Blockers = append(g.Combat.Blockers, declare.Blockers...)

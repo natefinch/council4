@@ -48,6 +48,7 @@ const (
 	RuleEffectCastFromZone
 	RuleEffectCantBeCountered
 	RuleEffectCantBeBlocked
+	RuleEffectMustBeBlocked
 )
 
 // RuleEffect models static or runtime effects that change game rules rather
