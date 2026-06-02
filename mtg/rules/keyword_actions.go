@@ -9,11 +9,13 @@ import (
 )
 
 func resolveFight(g *game.Game, obj *game.StackObject, effect *game.Effect) {
-	if obj == nil || len(obj.Targets) < 2 {
-		return
+	firstIndex := effect.TargetIndex
+	secondIndex := 1
+	if effect.RelatedTargetIndex.Exists {
+		secondIndex = effect.RelatedTargetIndex.Val
 	}
-	first, firstOK := permanentByObjectID(g, obj.Targets[0].PermanentID)
-	second, secondOK := permanentByObjectID(g, obj.Targets[1].PermanentID)
+	first, firstOK := effectPermanentTarget(g, obj, firstIndex)
+	second, secondOK := effectPermanentTarget(g, obj, secondIndex)
 	if !firstOK || !secondOK || first.ObjectID == second.ObjectID || !permanentHasType(g, first, types.Creature) || !permanentHasType(g, second, types.Creature) {
 		return
 	}
@@ -21,6 +23,17 @@ func resolveFight(g *game.Game, obj *game.StackObject, effect *game.Effect) {
 	emitFightEvent(g, second, first)
 	dealPermanentDamage(g, first.CardInstanceID, first.ObjectID, effectiveController(g, first), second, effectivePower(g, first), false)
 	dealPermanentDamage(g, second.CardInstanceID, second.ObjectID, effectiveController(g, second), first, effectivePower(g, second), false)
+}
+
+func effectPermanentTarget(g *game.Game, obj *game.StackObject, targetIndex int) (*game.Permanent, bool) {
+	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
+		return nil, false
+	}
+	target := obj.Targets[targetIndex]
+	if target.Kind != game.TargetPermanent || target.PermanentID == 0 {
+		return nil, false
+	}
+	return permanentByObjectID(g, target.PermanentID)
 }
 
 func emitFightEvent(g *game.Game, permanent, related *game.Permanent) {

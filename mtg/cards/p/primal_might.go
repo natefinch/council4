@@ -66,9 +66,10 @@ var PrimalMight = &game.CardDef{
 					}),
 				},
 				{
-					Type:        game.EffectFight,
-					TargetIndex: 0,
-					Description: "target creature you control fights up to one target creature you don't control",
+					Type:               game.EffectFight,
+					TargetIndex:        0,
+					RelatedTargetIndex: opt.Val(1),
+					Description:        "target creature you control fights up to one target creature you don't control",
 				},
 			},
 		},

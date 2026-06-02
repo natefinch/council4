@@ -89,7 +89,12 @@ var GimliSRecklessMight = &game.CardDef{
 				},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectFight},
+				{
+					Type:               game.EffectFight,
+					TargetIndex:        0,
+					RelatedTargetIndex: opt.Val(1),
+					Description:        "target attacking creature you control fights up to one target creature you don't control",
+				},
 			},
 		},
 	},

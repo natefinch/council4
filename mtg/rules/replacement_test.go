@@ -441,7 +441,7 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type:        game.EffectReplace,
-		Replacement: opt.Val(*&game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard, ReplaceToZone: game.ZoneExile}),
+		Replacement: opt.Val(game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard, ReplaceToZone: game.ZoneExile}),
 	}, nil)
 
 	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
@@ -482,7 +482,7 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	engine := NewEngine(nil)
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type:        game.EffectReplace,
-		Replacement: opt.Val(*&game.ReplacementEffect{Description: "enter modified", MatchEvent: game.EventPermanentEnteredBattlefield, MatchToZone: true, ToZone: game.ZoneBattlefield, EntersTapped: true, EntersWithCounters: []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 1}}}),
+		Replacement: opt.Val(game.ReplacementEffect{Description: "enter modified", MatchEvent: game.EventPermanentEnteredBattlefield, MatchToZone: true, ToZone: game.ZoneBattlefield, EntersTapped: true, EntersWithCounters: []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 1}}}),
 	}, nil)
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:      "Entering Creature",
@@ -530,7 +530,7 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 	} {
 		engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 			Type:        game.EffectReplace,
-			Replacement: opt.Val(*&replacement),
+			Replacement: opt.Val(replacement),
 		}, nil)
 	}
 
@@ -565,7 +565,7 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 		SourceCardID: source.CardInstanceID,
 	}, &game.Effect{
 		Type:        game.EffectReplace,
-		Replacement: opt.Val(*&game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard, ReplaceToZone: game.ZoneExile}),
+		Replacement: opt.Val(game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard, ReplaceToZone: game.ZoneExile}),
 	}, nil)
 
 	if !movePermanentToZone(g, source, game.ZoneGraveyard) {

@@ -573,11 +573,15 @@ type Effect struct {
 	Amount        int
 	DynamicAmount opt.V[DynamicAmount]
 	TargetIndex   int
-	Object        opt.V[ObjectReference]
-	DamageSource  opt.V[ObjectReference]
-	Recipient     opt.V[PlayerReference]
-	Condition     opt.V[EffectCondition]
-	CardCondition opt.V[CardCondition]
+	// RelatedTargetIndex identifies a second chosen target used with the
+	// primary TargetIndex by paired-object effects such as fight. If unset,
+	// those effects use their historical default target ordering.
+	RelatedTargetIndex opt.V[int]
+	Object             opt.V[ObjectReference]
+	DamageSource       opt.V[ObjectReference]
+	Recipient          opt.V[PlayerReference]
+	Condition          opt.V[EffectCondition]
+	CardCondition      opt.V[CardCondition]
 
 	// Optional asks the effect's controller whether to apply this single
 	// resolution instruction. LinkID can be used with ResultCondition on later

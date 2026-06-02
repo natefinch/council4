@@ -1449,6 +1449,57 @@ func TestFightEffectDealsMutualCreatureDamage(t *testing.T) {
 	}
 }
 
+func TestFightEffectUsesExplicitRelatedTargetIndex(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	ignored := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets: []game.Target{
+			game.PermanentTarget(ignored.ObjectID),
+			game.PermanentTarget(first.ObjectID),
+			game.PermanentTarget(second.ObjectID),
+		},
+	}
+
+	engine.resolveEffect(g, obj, &game.Effect{
+		Type:               game.EffectFight,
+		TargetIndex:        1,
+		RelatedTargetIndex: opt.Val(2),
+	}, nil)
+
+	if ignored.MarkedDamage != 0 {
+		t.Fatalf("ignored target marked damage = %d, want 0", ignored.MarkedDamage)
+	}
+	if first.MarkedDamage != 2 || second.MarkedDamage != 3 {
+		t.Fatalf("fight damage = %d/%d, want 2/3", first.MarkedDamage, second.MarkedDamage)
+	}
+}
+
+func TestFightEffectWithMissingRelatedTargetDoesNothing(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets: []game.Target{
+			game.PermanentTarget(first.ObjectID),
+		},
+	}
+
+	engine.resolveEffect(g, obj, &game.Effect{
+		Type:               game.EffectFight,
+		TargetIndex:        0,
+		RelatedTargetIndex: opt.Val(1),
+	}, nil)
+
+	if first.MarkedDamage != 0 {
+		t.Fatalf("target marked damage = %d, want 0", first.MarkedDamage)
+	}
+}
+
 func TestTransformPhaseOutAndEmblemEffects(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

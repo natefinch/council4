@@ -1591,7 +1591,7 @@ func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
-		Condition:   opt.Val(*&game.EffectCondition{Text: "it isn't a creature", TargetIndex: 0, PermanentType: opt.Val(types.Creature), Negate: true}),
+		Condition:   opt.Val(game.EffectCondition{Text: "it isn't a creature", TargetIndex: 0, PermanentType: opt.Val(types.Creature), Negate: true}),
 		ContinuousEffects: []game.ContinuousEffect{
 			{
 				Layer:       game.LayerType,
@@ -1637,7 +1637,7 @@ func TestConditionalContinuousEffectSkipsCreatureArtifact(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectApplyContinuous,
 		TargetIndex: 0,
-		Condition:   opt.Val(*&game.EffectCondition{Text: "it isn't a creature", TargetIndex: 0, PermanentType: opt.Val(types.Creature), Negate: true}),
+		Condition:   opt.Val(game.EffectCondition{Text: "it isn't a creature", TargetIndex: 0, PermanentType: opt.Val(types.Creature), Negate: true}),
 		ContinuousEffects: []game.ContinuousEffect{
 			{
 				Layer:       game.LayerType,

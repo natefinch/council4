@@ -624,7 +624,7 @@ For keywords with parameters:
 | "scry N" | `EffectScry` | `Amount: N` |
 | "surveil N" | `EffectSurveil` | `Amount: N` |
 | "mill N" | `EffectMill` | `Amount: N` |
-| "fight" | `EffectFight` | |
+| "fight" | `EffectFight` | Uses `TargetIndex` and `RelatedTargetIndex`; bare fight effects default to targets 0 and 1 |
 | "if [zone change] would happen, instead..." | `EffectReplace` | Set `Replacement` with match zones and `ReplaceToZone` |
 | "enters tapped / with counters" as a runtime effect | `EffectReplace` | Set `Replacement.EntersTapped` / `EntersWithCounters` |
 | "players can't gain life" | `EffectApplyRule` | Add `RuleEffectCantGainLife` |

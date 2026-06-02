@@ -807,7 +807,7 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 		t.Fatal("source card instance not found")
 	}
 	card.Def.Abilities[0].Trigger.Val.Type = game.TriggerState
-	card.Def.Abilities[0].Trigger.Val.State = opt.Val(*&game.StateTriggerCondition{MatchControllerLifeLessOrEqual: true, ControllerLifeLessOrEqual: 10})
+	card.Def.Abilities[0].Trigger.Val.State = opt.Val(game.StateTriggerCondition{MatchControllerLifeLessOrEqual: true, ControllerLifeLessOrEqual: 10})
 	g.Players[game.Player1].Life = 10
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -1283,7 +1283,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 		Abilities: []game.AbilityDef{
 			{
 				Kind:    game.TriggeredAbility,
-				Trigger: opt.Val(*&game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{Event: game.EventZoneChanged, Controller: game.TriggerControllerYou, RequirePermanentTypes: []types.Card{types.Artifact}, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard}, InterveningIf: "it had counters on it", InterveningIfEventPermanentHadCounters: true}),
+				Trigger: opt.Val(game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{Event: game.EventZoneChanged, Controller: game.TriggerControllerYou, RequirePermanentTypes: []types.Card{types.Artifact}, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard}, InterveningIf: "it had counters on it", InterveningIfEventPermanentHadCounters: true}),
 				Targets: []game.TargetSpec{
 					{MinTargets: 0, MaxTargets: 1, Constraint: "artifact or creature you control"},
 				},
@@ -1347,7 +1347,7 @@ func triggeredCreature(pattern game.TriggerPattern, effects []game.Effect, targe
 		Abilities: []game.AbilityDef{
 			{
 				Kind:    game.TriggeredAbility,
-				Trigger: opt.Val(*&game.TriggerCondition{Type: game.TriggerWhenever, Pattern: pattern}),
+				Trigger: opt.Val(game.TriggerCondition{Type: game.TriggerWhenever, Pattern: pattern}),
 				Effects: effects,
 				Targets: targets,
 			},
