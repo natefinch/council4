@@ -16,7 +16,7 @@ import (
 //	({T}: Add {R}.)
 var Mountain = &game.CardDef{
 	Name:          "Mountain",
-	ColorIdentity: mana.NewColorIdentity(color.Red),
+	ColorIdentity: color.NewIdentity(color.Red),
 	Supertypes:    []types.Super{types.Basic},
 	Types:         []types.Card{types.Land},
 	Subtypes:      []types.Sub{types.Mountain},

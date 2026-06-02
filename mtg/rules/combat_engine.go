@@ -447,16 +447,16 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 // canPayAttackTax reports whether playerID can currently pay the attack tax
 // for the given attack declarations.
 func (ce combatEngine) canPayAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration) bool {
-	cost, ok := ce.attackTaxCost(g, declarations)
+	manaCost, ok := ce.attackTaxCost(g, declarations)
 	if !ok {
 		return true
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, Exclude: ce.attackingPermanentExclusions(declarations)})
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, Exclude: ce.attackingPermanentExclusions(declarations)})
 }
 
 // payAttackTax pays the attack tax for the given attack declarations.
-func (ce combatEngine) payAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, cost *cost.Mana) bool {
-	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, Exclude: ce.attackingPermanentExclusions(declarations)})
+func (ce combatEngine) payAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, manaCost *cost.Mana) bool {
+	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, Exclude: ce.attackingPermanentExclusions(declarations)})
 }
 
 // attackTaxCost computes the total attack-tax cost for the given declarations.
@@ -473,8 +473,8 @@ func (combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclar
 	if total <= 0 {
 		return nil, false
 	}
-	cost := cost.Mana{cost.O(total)}
-	return &cost, true
+	manaCost := cost.Mana{cost.O(total)}
+	return &manaCost, true
 }
 
 // attackingPermanentExclusions returns a set of permanent object IDs that are

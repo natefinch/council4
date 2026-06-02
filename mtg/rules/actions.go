@@ -15,12 +15,12 @@ import (
 
 const maxLegalXValue = 20
 
-func canPayCost(g *game.Game, playerID game.PlayerID, cost *cost.Mana) bool {
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost})
+func canPayCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana) bool {
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost})
 }
 
-func canPayCostWithX(g *game.Game, playerID game.PlayerID, cost *cost.Mana, xValue int) bool {
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, XValue: xValue})
+func canPayCostWithX(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, xValue int) bool {
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: xValue})
 }
 
 func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Action {
@@ -555,12 +555,12 @@ func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{PlayerID: playerID, Source: permanent, Ability: ability, XValue: xValue})
 }
 
-func applyLoyaltyCost(permanent *game.Permanent, cost int) {
-	if cost >= 0 {
-		permanent.Counters.Add(counter.Loyalty, cost)
+func applyLoyaltyCost(permanent *game.Permanent, loyalty int) {
+	if loyalty >= 0 {
+		permanent.Counters.Add(counter.Loyalty, loyalty)
 		return
 	}
-	permanent.Counters.Remove(counter.Loyalty, -cost)
+	permanent.Counters.Remove(counter.Loyalty, -loyalty)
 }
 
 func (e *Engine) applyCyclingAbility(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) bool {
@@ -725,13 +725,13 @@ func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.Car
 	return isSorcerySpeed(g, playerID)
 }
 
-func legalXValuesForCost(g *game.Game, playerID game.PlayerID, cost *cost.Mana) []int {
-	if !costHasVariableMana(cost) {
+func legalXValuesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana) []int {
+	if !costHasVariableMana(manaCost) {
 		return []int{0}
 	}
 	var values []int
 	for x := 0; x <= maxLegalXValue; x++ {
-		if !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost, XValue: x}) {
+		if !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: x}) {
 			break
 		}
 		values = append(values, x)
@@ -977,8 +977,8 @@ func hasTapCost(ability *game.AbilityDef) bool {
 	if ability == nil {
 		return false
 	}
-	for _, cost := range ability.AdditionalCosts {
-		if cost.Kind == game.AdditionalCostTap {
+	for _, addCost := range ability.AdditionalCosts {
+		if addCost.Kind == game.AdditionalCostTap {
 			return true
 		}
 	}
@@ -986,8 +986,8 @@ func hasTapCost(ability *game.AbilityDef) bool {
 }
 
 func abilityHasNonTapAdditionalCosts(ability *game.AbilityDef) bool {
-	for _, cost := range abilityAdditionalCosts(ability) {
-		if cost.Kind != game.AdditionalCostTap {
+	for _, addCost := range abilityAdditionalCosts(ability) {
+		if addCost.Kind != game.AdditionalCostTap {
 			return true
 		}
 	}
@@ -999,14 +999,14 @@ func abilityHasDiscardThisCardCost(ability *game.AbilityDef) bool {
 	if len(costs) != 1 {
 		return false
 	}
-	cost := costs[0]
-	if cost.Kind != game.AdditionalCostDiscard || payment.AdditionalCostAmount(cost) != 1 {
+	addCost := costs[0]
+	if addCost.Kind != game.AdditionalCostDiscard || payment.AdditionalCostAmount(addCost) != 1 {
 		return false
 	}
-	if cost.Text != "" {
-		return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(cost.Text)), ".") == "discard this card"
+	if addCost.Text != "" {
+		return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(addCost.Text)), ".") == "discard this card"
 	}
-	return cost.Zone == game.ZoneHand
+	return addCost.Zone == game.ZoneHand
 }
 
 func canTapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {

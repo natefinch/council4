@@ -24,7 +24,7 @@ var IgnobleHierarch = &game.CardDef{
 		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Goblin, types.Shaman},
 	Power:         opt.Val(game.PT{Value: 0}),

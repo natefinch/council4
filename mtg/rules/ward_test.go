@@ -104,7 +104,7 @@ func TestWardCountersActivatedAbilityWhenCostIsNotPaid(t *testing.T) {
 	}
 }
 
-func addWardPermanent(g *game.Game, controller game.PlayerID, cost cost.Mana) *game.Permanent {
+func addWardPermanent(g *game.Game, controller game.PlayerID, manaCost cost.Mana) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Ward Creature",
@@ -114,7 +114,7 @@ func addWardPermanent(g *game.Game, controller game.PlayerID, cost cost.Mana) *g
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Ward},
-			WardCost: optCost(cost),
+			WardCost: optCost(manaCost),
 		}},
 	})
 }

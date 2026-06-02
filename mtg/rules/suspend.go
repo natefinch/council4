@@ -33,11 +33,11 @@ func (*Engine) canSuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	cost, _, ok := suspendCostForCard(spellDef)
+	manaCost, _, ok := suspendCostForCard(spellDef)
 	if !ok || !canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &cost})
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost})
 }
 
 func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -47,9 +47,9 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 	player := g.Players[playerID]
 	card, _ := g.GetCardInstance(cardID)
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	cost, counters, _ := suspendCostForCard(spellDef)
-	prefs := e.paymentPreferencesForCost(g, playerID, &cost, nil, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &cost, Prefs: prefs}) {
+	manaCost, counters, _ := suspendCostForCard(spellDef)
+	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, agents, log)
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
 	}
 	if !player.Hand.Remove(cardID) {

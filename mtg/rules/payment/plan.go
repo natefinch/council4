@@ -63,8 +63,8 @@ var paymentColors = []mana.Color{
 	mana.C,
 }
 
-func canPayCostWithX(s State, playerID game.PlayerID, cost *cost.Mana, xValue int) bool {
-	_, ok := buildPaymentPlan(s, playerID, cost, xValue, nil)
+func canPayCostWithX(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int) bool {
+	_, ok := buildPaymentPlan(s, playerID, manaCost, xValue, nil)
 	return ok
 }
 
@@ -284,8 +284,8 @@ func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 	return plan, true
 }
 
-func buildPaymentPlan(s State, playerID game.PlayerID, cost *cost.Mana, xValue int, exclude map[id.ID]bool) (paymentPlan, bool) {
-	return buildPaymentPlanWithPreferences(s, playerID, cost, xValue, exclude, nil)
+func buildPaymentPlan(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool) (paymentPlan, bool) {
+	return buildPaymentPlanWithPreferences(s, playerID, manaCost, xValue, exclude, nil)
 }
 
 func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool, prefs *Preferences) (paymentPlan, bool) {
@@ -478,8 +478,8 @@ func hasTapCost(ability *game.AbilityDef) bool {
 	if ability == nil {
 		return false
 	}
-	for _, cost := range ability.AdditionalCosts {
-		if cost.Kind == game.AdditionalCostTap {
+	for _, addCost := range ability.AdditionalCosts {
+		if addCost.Kind == game.AdditionalCostTap {
 			return true
 		}
 	}
@@ -508,11 +508,11 @@ func abilityAdditionalCosts(ability *game.AbilityDef) []game.AdditionalCost {
 }
 
 // manaCostPtr returns a pointer to the mana cost value, or nil if it does not exist.
-func manaCostPtr(cost opt.V[cost.Mana]) *cost.Mana {
-	if !cost.Exists {
+func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
+	if !manaCost.Exists {
 		return nil
 	}
-	return &cost.Val
+	return &manaCost.Val
 }
 
 // canTapForAbility reports whether the permanent can be tapped as an ability cost.

@@ -9,9 +9,9 @@ import (
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
-func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, cost *cost.Mana, additionalCosts []game.AdditionalCost, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
+func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []game.AdditionalCost, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
 	prefs := &payment.Preferences{}
-	prefs.PhyrexianLifeChoices = e.phyrexianPaymentChoices(g, playerID, cost, agents, log)
+	prefs.PhyrexianLifeChoices = e.phyrexianPaymentChoices(g, playerID, manaCost, agents, log)
 	for _, additionalCost := range additionalCosts {
 		amount := payment.AdditionalCostAmount(additionalCost)
 		switch additionalCost.Kind {
@@ -104,8 +104,8 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, m
 	return choices
 }
 
-func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, cost game.AdditionalCost, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
-	candidates := candidateSacrificePermanents(g, playerID, cost)
+func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, addCost game.AdditionalCost, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+	candidates := candidateSacrificePermanents(g, playerID, addCost)
 	if len(candidates) <= amount {
 		return paymentPermanentIDs(candidates)
 	}
@@ -116,7 +116,7 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 	request := game.ChoiceRequest{
 		Kind:             game.ChoicePayment,
 		Player:           playerID,
-		Prompt:           payment.AdditionalCostText(cost),
+		Prompt:           payment.AdditionalCostText(addCost),
 		Options:          options,
 		MinChoices:       amount,
 		MaxChoices:       amount,
@@ -126,8 +126,8 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 	return selectedPaymentPermanentIDs(candidates, selected)
 }
 
-func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, cost game.AdditionalCost, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
-	candidates := candidateDiscardCards(g, playerID, cost)
+func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost game.AdditionalCost, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+	candidates := candidateDiscardCards(g, playerID, addCost)
 	if len(candidates) <= amount {
 		return candidates
 	}
@@ -138,7 +138,7 @@ func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID,
 	request := game.ChoiceRequest{
 		Kind:             game.ChoicePayment,
 		Player:           playerID,
-		Prompt:           payment.AdditionalCostText(cost),
+		Prompt:           payment.AdditionalCostText(addCost),
 		Options:          options,
 		MinChoices:       amount,
 		MaxChoices:       amount,
@@ -156,24 +156,24 @@ func firstChoiceIndices(amount int) []int {
 	return selected
 }
 
-func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, cost game.AdditionalCost) []*game.Permanent {
+func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost game.AdditionalCost) []*game.Permanent {
 	var candidates []*game.Permanent
 	for _, permanent := range g.Battlefield {
-		if permanent.Controller == playerID && localAdditionalCostMatchesPermanent(g, permanent, cost) {
+		if permanent.Controller == playerID && localAdditionalCostMatchesPermanent(g, permanent, addCost) {
 			candidates = append(candidates, permanent)
 		}
 	}
 	return candidates
 }
 
-func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, cost game.AdditionalCost) bool {
-	if cost.MatchPermanentType && !permanentHasType(g, permanent, cost.PermanentType) {
+func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, addCost game.AdditionalCost) bool {
+	if addCost.MatchPermanentType && !permanentHasType(g, permanent, addCost.PermanentType) {
 		return false
 	}
 	return true
 }
 
-func candidateDiscardCards(g *game.Game, playerID game.PlayerID, cost game.AdditionalCost) []id.ID {
+func candidateDiscardCards(g *game.Game, playerID game.PlayerID, addCost game.AdditionalCost) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
@@ -181,18 +181,18 @@ func candidateDiscardCards(g *game.Game, playerID game.PlayerID, cost game.Addit
 	var candidates []id.ID
 	for _, cardID := range player.Hand.All() {
 		card, ok := g.GetCardInstance(cardID)
-		if ok && localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), cost) {
+		if ok && localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), addCost) {
 			candidates = append(candidates, cardID)
 		}
 	}
 	return candidates
 }
 
-func localAdditionalCostMatchesCard(face *game.CardDef, cost game.AdditionalCost) bool {
+func localAdditionalCostMatchesCard(face *game.CardDef, addCost game.AdditionalCost) bool {
 	if face == nil {
 		return false
 	}
-	if cost.MatchCardType && !face.HasType(cost.CardType) {
+	if addCost.MatchCardType && !face.HasType(addCost.CardType) {
 		return false
 	}
 	return true

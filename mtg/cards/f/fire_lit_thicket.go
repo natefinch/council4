@@ -19,7 +19,7 @@ import (
 //	{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.
 var FireLitThicket = &game.CardDef{
 	Name:          "Fire-Lit Thicket",
-	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.",
 	Abilities: []game.AbilityDef{

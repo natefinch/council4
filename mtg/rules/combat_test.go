@@ -1933,7 +1933,6 @@ func mustDeclareBlockersPayload(t *testing.T, act action.Action) action.DeclareB
 	return payload
 }
 
-//go:fix inline
 func intPtr(value int) *int {
 	return new(value)
 }

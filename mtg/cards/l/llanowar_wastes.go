@@ -18,7 +18,7 @@ import (
 //	{T}: Add {B} or {G}. This land deals 1 damage to you.
 var LlanowarWastes = &game.CardDef{
 	Name:          "Llanowar Wastes",
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Green),
+	ColorIdentity: color.NewIdentity(color.Black, color.Green),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{T}: Add {B} or {G}. This land deals 1 damage to you.",
 	Abilities: []game.AbilityDef{

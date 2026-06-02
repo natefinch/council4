@@ -2,8 +2,6 @@ package mana
 
 import (
 	"maps"
-
-	"github.com/natefinch/council4/mtg/game/color"
 )
 
 // Pool represents a player's current mana pool. It tracks mana by spendable
@@ -158,65 +156,17 @@ func (p *Pool) IsEmpty() bool {
 
 func spendOrder() []Unit {
 	return []Unit{
-		Unit{Color: W},
-		Unit{Color: U},
-		Unit{Color: B},
-		Unit{Color: R},
-		Unit{Color: G},
-		Unit{Color: C},
-		Unit{Color: W, Snow: true},
-		Unit{Color: U, Snow: true},
-		Unit{Color: B, Snow: true},
-		Unit{Color: R, Snow: true},
-		Unit{Color: G, Snow: true},
-		Unit{Color: C, Snow: true},
+		{Color: W},
+		{Color: U},
+		{Color: B},
+		{Color: R},
+		{Color: G},
+		{Color: C},
+		{Color: W, Snow: true},
+		{Color: U, Snow: true},
+		{Color: B, Snow: true},
+		{Color: R, Snow: true},
+		{Color: G, Snow: true},
+		{Color: C, Snow: true},
 	}
-}
-
-// ColorIdentity represents a set of colors, used in Commander format
-// to define which colors a deck may contain based on the commander's
-// color identity (CR 903.4).
-type ColorIdentity struct {
-	colors map[color.Color]bool
-}
-
-// NewColorIdentity creates a ColorIdentity from the given colors.
-func NewColorIdentity(colors ...color.Color) ColorIdentity {
-	ci := ColorIdentity{colors: make(map[color.Color]bool)}
-	for _, c := range colors {
-		ci.colors[c] = true
-	}
-	return ci
-}
-
-// Contains reports whether the identity includes the given color.
-func (ci ColorIdentity) Contains(c color.Color) bool {
-	return ci.colors[c]
-}
-
-// ContainsAll reports whether this identity is a superset of the other.
-// Used to check if a card's color identity fits within a commander's.
-func (ci ColorIdentity) ContainsAll(other ColorIdentity) bool {
-	for c := range other.colors {
-		if !ci.colors[c] {
-			return false
-		}
-	}
-	return true
-}
-
-// Colors returns the colors in this identity as a slice.
-func (ci ColorIdentity) Colors() []color.Color {
-	var result []color.Color
-	for _, c := range color.AllColors() {
-		if ci.colors[c] {
-			result = append(result, c)
-		}
-	}
-	return result
-}
-
-// NumColors returns the number of colors in this identity.
-func (ci ColorIdentity) NumColors() int {
-	return len(ci.colors)
 }

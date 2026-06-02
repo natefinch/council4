@@ -478,7 +478,7 @@ func TestCommanderIdentityColorChoiceFeedsManaAbility(t *testing.T) {
 			Commander: &game.CardDef{
 				Name:          "Dimir Commander",
 				Types:         []types.Card{types.Creature},
-				ColorIdentity: mana.NewColorIdentity(color.Blue, color.Black),
+				ColorIdentity: color.NewIdentity(color.Blue, color.Black),
 			},
 		},
 	})
@@ -528,7 +528,7 @@ func TestCommanderIdentityColorChoiceUnavailableWithoutColors(t *testing.T) {
 					Commander: &game.CardDef{
 						Name:          "Colorless Commander",
 						Types:         []types.Card{types.Creature},
-						ColorIdentity: mana.NewColorIdentity(),
+						ColorIdentity: color.NewIdentity(),
 					},
 				},
 			},
@@ -590,14 +590,14 @@ func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
 	engine := NewEngine(nil)
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
-	cost := cost.Mana{cost.G}
+	manaCost := cost.Mana{cost.G}
 	addLinkedResultSpellToStack(g, []game.Effect{
 		{
 			Type:   game.EffectPay,
 			LinkID: "paid",
 			Payment: optResolutionPayment(game.ResolutionPayment{
 				Prompt:   "Pay {G}?",
-				ManaCost: optCost(cost),
+				ManaCost: optCost(manaCost),
 			}),
 		},
 		{

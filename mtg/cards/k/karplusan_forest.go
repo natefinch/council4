@@ -18,7 +18,7 @@ import (
 //	{T}: Add {R} or {G}. This land deals 1 damage to you.
 var KarplusanForest = &game.CardDef{
 	Name:          "Karplusan Forest",
-	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{T}: Add {R} or {G}. This land deals 1 damage to you.",
 	Abilities: []game.AbilityDef{

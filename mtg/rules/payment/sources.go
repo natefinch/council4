@@ -100,8 +100,8 @@ func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) 
 	return append(nonMana, manaCreatures...)
 }
 
-func delveCandidates(s State, playerID game.PlayerID, cost *cost.Mana, xValue int, sourceCardID id.ID, sourceZone game.ZoneType) ([]id.ID, int, bool) {
-	_, generic, ok := costRequirements(cost, xValue)
+func delveCandidates(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, sourceCardID id.ID, sourceZone game.ZoneType) ([]id.ID, int, bool) {
+	_, generic, ok := costRequirements(manaCost, xValue)
 	if !ok || generic <= 0 {
 		return nil, 0, false
 	}

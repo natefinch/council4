@@ -4,7 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/mana"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -25,7 +25,7 @@ var ChandraSIgnition = &game.CardDef{
 		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
-	ColorIdentity: mana.NewColorIdentity(color.Red),
+	ColorIdentity: color.NewIdentity(color.Red),
 	Types:         []types.Card{types.Sorcery},
 	OracleText:    "Target creature you control deals damage equal to its power to each other creature and each opponent.",
 	Abilities: []game.AbilityDef{

@@ -181,11 +181,11 @@ func (*Engine) canTurnFaceUp(g *game.Game, playerID game.PlayerID, permanentID i
 	if !ok {
 		return false
 	}
-	cost, ok := faceDownCostForCard(face, permanent.FaceDownKind)
+	manaCost, ok := faceDownCostForCard(face, permanent.FaceDownKind)
 	if !ok {
 		return false
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &cost})
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost})
 }
 
 func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID, permanentID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -195,9 +195,9 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 	permanent, _ := permanentByObjectID(g, permanentID)
 	card, _ := physicalPermanentDef(g, permanent)
 	face, _ := card.FaceDef(permanent.FaceDownFace)
-	cost, _ := faceDownCostForCard(face, permanent.FaceDownKind)
-	prefs := e.paymentPreferencesForCost(g, playerID, &cost, nil, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &cost, Prefs: prefs}) {
+	manaCost, _ := faceDownCostForCard(face, permanent.FaceDownKind)
+	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, agents, log)
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
 	}
 	kind := permanent.FaceDownKind

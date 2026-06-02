@@ -1400,7 +1400,7 @@ func effectPlayer(g *game.Game, obj *game.StackObject, effect *game.Effect) (gam
 	return target.PlayerID, true
 }
 
-func (r *effectResolver) effectManaColor(obj *game.StackObject, effect *game.Effect) mana.Color {
+func (*effectResolver) effectManaColor(obj *game.StackObject, effect *game.Effect) mana.Color {
 	if choice, ok := linkedResolutionChoice(obj, effect.ChoiceLinkID); ok && choice.Kind == game.ResolutionChoiceMana {
 		return choice.Color
 	}

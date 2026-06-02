@@ -245,19 +245,16 @@ func TestGenerateCardSource(t *testing.T) {
 	checks := []string{
 		"package l",
 		`Name: "Lightning Bolt"`,
-		"mana.R",
+		"cost.R",
 		"types.Instant",
-		"mana.R",
+		"Colors: []color.Color{color.Red}",
+		"ColorIdentity: color.NewIdentity(color.Red)",
 		"Abilities: []game.AbilityDef{}",
 		"Oracle text:",
 		"Lightning Bolt deals 3 damage to any target.",
 	}
 
-	for _, check := range checks {
-		if !strings.Contains(got, check) {
-			t.Errorf("output missing %q\nfull output:\n%s", check, got)
-		}
-	}
+	assertSourceContainsAll(t, got, checks)
 }
 
 func TestGenerateCardSourceCreature(t *testing.T) {
@@ -290,11 +287,7 @@ func TestGenerateCardSourceCreature(t *testing.T) {
 		"Toughness: opt.Val(game.PT{Value: 4})",
 	}
 
-	for _, check := range checks {
-		if !strings.Contains(got, check) {
-			t.Errorf("output missing %q\nfull output:\n%s", check, got)
-		}
-	}
+	assertSourceContainsAll(t, got, checks)
 }
 
 func TestGenerateCardSourceModalDFC(t *testing.T) {
@@ -332,14 +325,10 @@ func TestGenerateCardSourceModalDFC(t *testing.T) {
 		"types.Sorcery",
 		"types.Land",
 		"types.Forest",
-		"mana.NewColorIdentity(mana.G)",
+		"color.NewIdentity(color.Green)",
 		"EntersTapped: true",
 	}
-	for _, check := range checks {
-		if !strings.Contains(got, check) {
-			t.Errorf("output missing %q\nfull output:\n%s", check, got)
-		}
-	}
+	assertSourceContainsAll(t, got, checks)
 }
 
 func TestGenerateCardSourceReversibleEmitsSeparateDefs(t *testing.T) {
@@ -363,13 +352,9 @@ func TestGenerateCardSourceReversibleEmitsSeparateDefs(t *testing.T) {
 		"var SideA = &game.CardDef",
 		"var SideB = &game.CardDef",
 		"Layout: game.LayoutReversibleCard",
-		"mana.NewColorIdentity(mana.R, mana.W)",
+		"color.NewIdentity(color.Red, color.White)",
 	}
-	for _, check := range checks {
-		if !strings.Contains(got, check) {
-			t.Errorf("output missing %q\nfull output:\n%s", check, got)
-		}
-	}
+	assertSourceContainsAll(t, got, checks)
 	if strings.Contains(got, "Back: opt.Val(game.CardFace") {
 		t.Fatalf("reversible card generated face-selectable definition:\n%s", got)
 	}
@@ -395,4 +380,18 @@ func assertGoSourceFormats(t *testing.T, source string) {
 	if _, err := format.Source([]byte(source)); err != nil {
 		t.Fatalf("generated source is not valid Go: %v\n%s", err, source)
 	}
+}
+
+func assertSourceContainsAll(t *testing.T, source string, checks []string) {
+	t.Helper()
+	compactSource := compactWhitespace(source)
+	for _, check := range checks {
+		if !strings.Contains(compactSource, compactWhitespace(check)) {
+			t.Errorf("output missing %q\nfull output:\n%s", check, source)
+		}
+	}
+}
+
+func compactWhitespace(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }

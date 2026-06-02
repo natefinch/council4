@@ -7,8 +7,8 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func optCost(cost cost.Mana) opt.V[cost.Mana] {
-	return opt.Val(cost)
+func optCost(manaCost cost.Mana) opt.V[cost.Mana] {
+	return opt.Val(manaCost)
 }
 
 func optPT(pt game.PT) opt.V[game.PT] {

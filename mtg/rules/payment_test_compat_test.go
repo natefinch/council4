@@ -29,8 +29,8 @@ func canPayTestSpellCosts(g *game.Game, req testSpellPaymentRequest) bool {
 	})
 }
 
-func payTestGenericCost(g *game.Game, playerID game.PlayerID, cost *cost.Mana) bool {
-	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: cost})
+func payTestGenericCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana) bool {
+	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost})
 }
 
 func payTestGenericCostWithPreferences(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, prefs *payment.Preferences) bool {

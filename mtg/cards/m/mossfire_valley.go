@@ -18,7 +18,7 @@ import (
 //	{1}, {T}: Add {R}{G}.
 var MossfireValley = &game.CardDef{
 	Name:          "Mossfire Valley",
-	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{1}, {T}: Add {R}{G}.",
 	Abilities: []game.AbilityDef{

@@ -27,7 +27,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 		cost.G,
 	}),
 	Colors:        []color.Color{color.Green, color.Red},
-	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Planeswalker},
 	Subtypes:      []types.Sub{"Domri"},

@@ -4,7 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/mana"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -26,7 +26,7 @@ var MrOrfeoTheBoulder = &game.CardDef{
 		cost.G,
 	}),
 	Colors:        []color.Color{color.Black, color.Green, color.Red},
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Rhino, types.Warrior},

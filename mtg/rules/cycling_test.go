@@ -71,14 +71,14 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 }
 
 func cyclingCard() *game.CardDef {
-	cost := cost.Mana{cost.O(1)}
+	manaCost := cost.Mana{cost.O(1)}
 	return &game.CardDef{
 		Name: "Cycling Test Card",
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.ActivatedAbility,
 				Keywords: []game.Keyword{game.Cycling},
-				ManaCost: optCost(cost),
+				ManaCost: optCost(manaCost),
 				AdditionalCosts: []game.AdditionalCost{
 					{Kind: game.AdditionalCostDiscard, Text: "Discard this card", Amount: 1, Zone: game.ZoneHand},
 				},

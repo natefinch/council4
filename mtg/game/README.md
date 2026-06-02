@@ -48,13 +48,12 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 │   ├── README.md              #   Package guide
 │   └── id.go                  #   ID type (uint64) + atomic Generator
 │
-├── mana/                      # Leaf package: mana system
+├── mana/                      # Leaf package: produced mana and mana pools
 │   ├── README.md              #   Package guide
 │   ├── doc.go                 #   Package documentation
 │   ├── color.go               #   Color enum (W, U, B, R, G, C)
-│   ├── symbol.go              #   Symbol — colored, colorless, generic, hybrid, phyrexian, snow, X
-│   ├── cost.go                #   Cost — ordered list of symbols, ManaValue(), Colors()
-│   └── pool.go                #   Pool — runtime mana tracking; ColorIdentity for Commander
+│   ├── unit.go                #   Unit — spendable mana with provenance such as snow
+│   └── pool.go                #   Pool — runtime mana tracking
 │
 └── counter/                   # Leaf package: counter types
     ├── README.md              #   Package guide
@@ -176,13 +175,12 @@ Use `PlayerTarget`, `PermanentTarget`, and `StackObjectTarget` to construct targ
 
 ### Mana
 
-The `mana` package models the full MTG mana system:
+The mana-related leaf packages split printed card information from produced
+mana:
 
-- **Colors**: W, U, B, R, G, C (colorless)
-- **Symbols**: colored, colorless (`{C}`), generic (`{3}`), variable (`{X}`), hybrid (`{W/U}`), mono-hybrid (`{2/W}`), phyrexian (`{W/P}`), snow (`{S}`)
-- **Cost**: ordered symbol list with `ManaValue()` and `Colors()`
-- **Pool**: runtime mana tracking with `Add`/`Spend`/`Empty`
-- **ColorIdentity**: set of colors for Commander deck legality
+- **color**: card colors and `Identity` for Commander deck legality
+- **cost**: printed mana costs and symbols such as `{3}`, `{W/U}`, `{C}`, and `{S}`
+- **mana**: produced mana colors, spendable units, and runtime pools with `Add`/`Spend`/`Empty`
 
 ### Deterministic shuffling
 

@@ -132,11 +132,11 @@ func setMainPhasePriority(g *game.Game, playerID game.PlayerID) {
 	g.Turn.PriorityPlayer = playerID
 }
 
-func convokeSpell(cost cost.Mana) *game.CardDef {
+func convokeSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{
 		Name:     "Convoke Spell",
 		Types:    []types.Card{types.Sorcery},
-		ManaCost: optCost(cost),
+		ManaCost: optCost(manaCost),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Convoke}},
 			{Kind: game.SpellAbility},

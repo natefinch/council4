@@ -20,11 +20,11 @@ func applyCostModifiers(s State, ctx costModificationContext) spellCostOption {
 	return ctx.option
 }
 
-func applyGenericCostModifiers(cost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
+func applyGenericCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
 	if len(modifiers) == 0 {
-		return cost
+		return manaCost
 	}
-	generic := genericCostAmount(cost)
+	generic := genericCostAmount(manaCost)
 	minimum := 0
 	set := (*int)(nil)
 	for _, modifier := range modifiers {
@@ -46,7 +46,7 @@ func applyGenericCostModifiers(cost *cost.Mana, modifiers []game.CostModifier) *
 	if generic < 0 {
 		generic = 0
 	}
-	return costWithGenericAmount(cost, generic)
+	return costWithGenericAmount(manaCost, generic)
 }
 
 func genericCostAmount(manaCost *cost.Mana) int {

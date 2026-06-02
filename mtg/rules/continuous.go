@@ -724,9 +724,9 @@ func removeColors(colors, remove []color.Color) []color.Color {
 }
 
 func appendUniqueColors(colors []color.Color, add ...color.Color) []color.Color {
-	for _, color := range add {
-		if !slices.Contains(colors, color) {
-			colors = append(colors, color)
+	for _, clr := range add {
+		if !slices.Contains(colors, clr) {
+			colors = append(colors, clr)
 		}
 	}
 	return colors

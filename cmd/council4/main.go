@@ -243,8 +243,8 @@ func lavaSpikeLike() *game.CardDef {
 }
 
 func greenCost() opt.V[cost.Mana] {
-	cost := cost.Mana{cost.G}
-	return opt.Val(cost)
+	manaCost := cost.Mana{cost.G}
+	return opt.Val(manaCost)
 }
 
 func printSummary(g *game.Game, result *rules.GameResult, seed uint64, mode string, deckSize int) {

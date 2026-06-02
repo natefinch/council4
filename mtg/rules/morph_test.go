@@ -134,7 +134,7 @@ func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 	}
 }
 
-func morphCreature(cost cost.Mana) *game.CardDef {
+func morphCreature(manaCost cost.Mana) *game.CardDef {
 	pt := game.PT{Value: 3}
 	return &game.CardDef{
 		Name:      "Mystery Bear",
@@ -144,12 +144,12 @@ func morphCreature(cost cost.Mana) *game.CardDef {
 		Abilities: []game.AbilityDef{{
 			Kind:      game.StaticAbility,
 			Keywords:  []game.Keyword{game.Morph},
-			MorphCost: opt.Val(cost),
+			MorphCost: opt.Val(manaCost),
 		}},
 	}
 }
 
-func disguiseCreature(cost cost.Mana) *game.CardDef {
+func disguiseCreature(manaCost cost.Mana) *game.CardDef {
 	pt := game.PT{Value: 2}
 	return &game.CardDef{
 		Name:      "Veiled Guard",
@@ -159,7 +159,7 @@ func disguiseCreature(cost cost.Mana) *game.CardDef {
 		Abilities: []game.AbilityDef{{
 			Kind:         game.StaticAbility,
 			Keywords:     []game.Keyword{game.Disguise},
-			DisguiseCost: opt.Val(cost),
+			DisguiseCost: opt.Val(manaCost),
 		}},
 	}
 }

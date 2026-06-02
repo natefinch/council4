@@ -1,6 +1,6 @@
-// Package mana models the Magic: The Gathering mana system.
+// Package mana models produced mana and mana pools.
 //
-// It provides types for mana colors, mana symbols (including hybrid,
-// phyrexian, snow, and generic), mana costs, mana pools, and color identity
-// (used in Commander format for deck legality).
+// It provides types for mana colors, spendable mana units, and runtime mana
+// pools. Use mtg/game/cost for printed mana costs and mtg/game/color for card
+// colors and Commander color identity.
 package mana

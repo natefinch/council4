@@ -4,7 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/mana"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -24,7 +24,7 @@ var MorbidOpportunist = &game.CardDef{
 		cost.B,
 	}),
 	Colors:        []color.Color{color.Black},
-	ColorIdentity: mana.NewColorIdentity(color.Black),
+	ColorIdentity: color.NewIdentity(color.Black),
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Human, types.Rogue},
 	Power:         opt.Val(game.PT{Value: 1}),

@@ -19,7 +19,7 @@ import (
 //	{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
 var KessigWolfRun = &game.CardDef{
 	Name:          "Kessig Wolf Run",
-	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.",
 	Abilities: []game.AbilityDef{

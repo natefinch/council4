@@ -6,7 +6,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -67,7 +66,7 @@ type CardDef struct {
 	// ColorIdentity is the card's color identity for Commander deck
 	// construction (CR 903.4). Includes colors from mana cost, color
 	// indicator, and mana symbols in rules text.
-	ColorIdentity mana.ColorIdentity
+	ColorIdentity color.Identity
 
 	// Supertypes are the card's supertypes (types.Legendary, types.Basic, etc.).
 	Supertypes []types.Super

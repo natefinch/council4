@@ -22,7 +22,7 @@ import (
 // which covers the three legal outputs: {B}{B}, {B}{R}, and {R}{R}.
 var GravenCairns = &game.CardDef{
 	Name:          "Graven Cairns",
-	ColorIdentity: mana.NewColorIdentity(color.Black, color.Red),
+	ColorIdentity: color.NewIdentity(color.Black, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.",
 	Abilities: []game.AbilityDef{

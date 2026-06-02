@@ -6,7 +6,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
-	color0 "github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -626,21 +625,21 @@ func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	}
 }
 
-func addColoredSourceCard(g *game.Game, owner game.PlayerID, color color.Color) id.ID {
+func addColoredSourceCard(g *game.Game, owner game.PlayerID, sourceColor color.Color) id.ID {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{
 		ID: cardID,
 		Def: &game.CardDef{
 			Name:   "Colored Source",
 			Types:  []types.Card{types.Instant},
-			Colors: []color0.Color{color},
+			Colors: []color.Color{sourceColor},
 		},
 		Owner: owner,
 	}
 	return cardID
 }
 
-func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, color color.Color) *game.Permanent {
+func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, protectedColor color.Color) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Protected Creature",
@@ -651,7 +650,7 @@ func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, col
 			{
 				Kind:                 game.StaticAbility,
 				Keywords:             []game.Keyword{game.Protection},
-				ProtectionFromColors: []color0.Color{color},
+				ProtectionFromColors: []color.Color{protectedColor},
 			},
 		},
 	})

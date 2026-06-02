@@ -4,7 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/mana"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -23,7 +23,7 @@ var LightningBolt = &game.CardDef{
 		cost.R,
 	}),
 	Colors:        []color.Color{color.Red},
-	ColorIdentity: mana.NewColorIdentity(color.Red),
+	ColorIdentity: color.NewIdentity(color.Red),
 	Types:         []types.Card{types.Instant},
 	OracleText:    "Lightning Bolt deals 3 damage to any target.",
 	Abilities: []game.AbilityDef{

@@ -32,7 +32,7 @@ var BridgeworksBattle = &game.CardDef{
 		cost.G,
 	}),
 	Colors:        []color.Color{color.Green},
-	ColorIdentity: mana.NewColorIdentity(color.Green),
+	ColorIdentity: color.NewIdentity(color.Green),
 	Types:         []types.Card{types.Sorcery},
 	OracleText:    "Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)",
 	Layout:        game.LayoutModalDFC,

@@ -22,7 +22,7 @@ import (
 // subtype mana abilities at runtime.
 var CinderGlade = &game.CardDef{
 	Name:          "Cinder Glade",
-	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	Subtypes:      []types.Sub{types.Mountain, types.Forest},
 	OracleText:    "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",

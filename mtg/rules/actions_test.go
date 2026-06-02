@@ -220,10 +220,10 @@ func TestUnpayableSpellIsNotLegal(t *testing.T) {
 func TestLegalActionsIncludesPayableXValues(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := cost.Mana{cost.X, cost.G}
+	manaCost := cost.Mana{cost.X, cost.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Gelatinous Genesis",
-		ManaCost: optCost(cost),
+		ManaCost: optCost(manaCost),
 		Types:    []types.Card{types.Sorcery},
 	})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -246,10 +246,10 @@ func TestLegalActionsIncludesPayableXValues(t *testing.T) {
 func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := cost.Mana{cost.X, cost.G}
+	manaCost := cost.Mana{cost.X, cost.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Gelatinous Genesis",
-		ManaCost: optCost(cost),
+		ManaCost: optCost(manaCost),
 		Types:    []types.Card{types.Sorcery},
 	})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -273,10 +273,10 @@ func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
 func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := cost.Mana{cost.G}
+	manaCost := cost.Mana{cost.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Village Rites",
-		ManaCost: optCost(cost),
+		ManaCost: optCost(manaCost),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
@@ -1585,7 +1585,7 @@ func modalSpellWithModeRangeAndDuplicates(minModes, maxModes int, allowDuplicate
 }
 
 func equipEquipment() *game.CardDef {
-	cost := cost.Mana{cost.G}
+	manaCost := cost.Mana{cost.G}
 	return &game.CardDef{
 		Name:     "Test Sword",
 		Types:    []types.Card{types.Artifact},
@@ -1594,7 +1594,7 @@ func equipEquipment() *game.CardDef {
 			{
 				Kind:     game.ActivatedAbility,
 				Keywords: []game.Keyword{game.Equip},
-				ManaCost: optCost(cost),
+				ManaCost: optCost(manaCost),
 				Timing:   game.SorceryOnly,
 				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature you control"}},
 			},
