@@ -61,7 +61,7 @@ var BugenhagenWiseElder = &game.CardDef{
 				}),
 			}),
 			Effects: []game.Effect{
-				{Type: game.EffectDraw, Amount: 1, TargetIndex: -1},
+				{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -74,7 +74,7 @@ var BugenhagenWiseElder = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectChoose,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose a color",
@@ -87,7 +87,7 @@ var BugenhagenWiseElder = &game.CardDef{
 				{
 					Type:         game.EffectAddMana,
 					Amount:       1,
-					TargetIndex:  -1,
+					TargetIndex:  game.TargetIndexController,
 					ChoiceLinkID: "bugenhagen-color",
 				},
 			},

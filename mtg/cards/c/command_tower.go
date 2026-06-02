@@ -29,7 +29,7 @@ var CommandTower = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectChoose,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:        game.ResolutionChoiceColor,
 						Prompt:      "Choose a color in your commander's color identity",
@@ -40,7 +40,7 @@ var CommandTower = &game.CardDef{
 				{
 					Type:         game.EffectAddMana,
 					Amount:       1,
-					TargetIndex:  -1,
+					TargetIndex:  game.TargetIndexController,
 					ChoiceLinkID: "command-tower-color",
 				},
 			},

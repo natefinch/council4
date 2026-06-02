@@ -177,7 +177,7 @@ func transformCreatureWithBackTrigger() *game.CardDef {
 				Type:    game.TriggerWhenever,
 				Pattern: game.TriggerPattern{Event: game.EventSpellCast, Controller: game.TriggerControllerYou},
 			}),
-			Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
+			Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}},
 		},
 	}
 	card.Back = opt.Val(back)

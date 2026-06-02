@@ -611,7 +611,7 @@ func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Would Draw"})
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type:        game.EffectSkipStep,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 		Step:        game.StepDraw,
 	}, nil)
 

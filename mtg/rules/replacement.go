@@ -313,7 +313,7 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, effect *game.Ef
 		Duration:    effectDurationOrDefault(effect.Duration, game.DurationUntilEndOfTurn),
 		CreatedTurn: g.Turn.TurnNumber,
 	}
-	if effect.TargetIndex == -1 {
+	if effect.TargetIndex == game.TargetIndexController {
 		shield.Player = obj.Controller
 		g.PreventionShields = append(g.PreventionShields, shield)
 		return true

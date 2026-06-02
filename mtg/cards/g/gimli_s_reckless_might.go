@@ -35,7 +35,7 @@ var GimliSRecklessMight = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectApplyContinuous,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					ContinuousEffects: []game.ContinuousEffect{
 						{
 							Layer:       game.LayerAbility,

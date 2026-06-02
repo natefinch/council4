@@ -1352,7 +1352,7 @@ func effectPlayer(g *game.Game, obj *game.StackObject, effect *game.Effect) (gam
 		}
 		return choice.Player, true
 	}
-	if effect.TargetIndex == -1 {
+	if effect.TargetIndex == game.TargetIndexController {
 		if !isPlayerAlive(g, obj.Controller) {
 			return 0, false
 		}
@@ -1383,7 +1383,7 @@ func effectPermanent(g *game.Game, obj *game.StackObject, effect *game.Effect) (
 		resolved, ok := resolveObjectReference(g, obj, effect.Object.Val)
 		return resolved.permanent, ok && resolved.permanent != nil
 	}
-	if effect.TargetIndex == -2 {
+	if effect.TargetIndex == game.TargetIndexSourcePermanent {
 		return sourcePermanent(g, obj)
 	}
 	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {

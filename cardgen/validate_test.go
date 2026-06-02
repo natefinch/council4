@@ -95,14 +95,14 @@ func TestValidateCardReportsSearchSpecProblems(t *testing.T) {
 	}{
 		{
 			name:   "missing spec",
-			effect: game.Effect{Type: game.EffectSearch, TargetIndex: -1},
+			effect: game.Effect{Type: game.EffectSearch, TargetIndex: game.TargetIndexController},
 			code:   IssueMissingSearchSpec,
 		},
 		{
 			name: "unsupported destination",
 			effect: game.Effect{
 				Type:        game.EffectSearch,
-				TargetIndex: -1,
+				TargetIndex: game.TargetIndexController,
 				Search: opt.Val(game.SearchSpec{
 					SourceZone:  game.ZoneLibrary,
 					Destination: game.ZoneExile,
@@ -114,7 +114,7 @@ func TestValidateCardReportsSearchSpecProblems(t *testing.T) {
 			name: "missing supertype",
 			effect: game.Effect{
 				Type:        game.EffectSearch,
-				TargetIndex: -1,
+				TargetIndex: game.TargetIndexController,
 				Search: opt.Val(game.SearchSpec{
 					SourceZone:  game.ZoneLibrary,
 					Destination: game.ZoneHand,
@@ -254,7 +254,7 @@ func TestValidateCardChecksDoubleFacedRootFieldsAndBack(t *testing.T) {
 			OracleText: "Draw a card.",
 			Abilities: []game.AbilityDef{{
 				Kind:    game.SpellAbility,
-				Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: -1}},
+				Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: game.TargetIndexController}},
 			}},
 		}),
 	}
@@ -428,7 +428,7 @@ func TestValidateCardChecksStructuredConditionObjectReferences(t *testing.T) {
 					}),
 				}),
 			}),
-			Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: -1}},
+			Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: game.TargetIndexController}},
 		}},
 	}
 

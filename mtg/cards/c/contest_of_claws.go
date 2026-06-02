@@ -69,7 +69,7 @@ var ContestOfClaws = &game.CardDef{
 				},
 				{
 					Type:        game.EffectDiscover,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind:   game.DynamicAmountPreviousEffectExcessDamage,
 						LinkID: "excess",

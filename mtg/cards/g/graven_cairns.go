@@ -33,7 +33,7 @@ var GravenCairns = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Colorless, TargetIndex: -1},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Colorless, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -49,7 +49,7 @@ var GravenCairns = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectChoose,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose first mana color ({B} or {R})",
@@ -60,12 +60,12 @@ var GravenCairns = &game.CardDef{
 				{
 					Type:         game.EffectAddMana,
 					Amount:       1,
-					TargetIndex:  -1,
+					TargetIndex:  game.TargetIndexController,
 					ChoiceLinkID: "graven-cairns-color-1",
 				},
 				{
 					Type:        game.EffectChoose,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose second mana color ({B} or {R})",
@@ -76,7 +76,7 @@ var GravenCairns = &game.CardDef{
 				{
 					Type:         game.EffectAddMana,
 					Amount:       1,
-					TargetIndex:  -1,
+					TargetIndex:  game.TargetIndexController,
 					ChoiceLinkID: "graven-cairns-color-2",
 				},
 			},

@@ -188,6 +188,9 @@ type TriggerPattern struct {
 	MatchToZone   bool
 	ToZone        ZoneType
 
+	MatchStackObjectKind bool
+	StackObjectKind      StackObjectKind
+
 	DamageRecipient DamageRecipientKind
 
 	// Step filters EventBeginningOfStep triggers such as "At the beginning of
@@ -383,7 +386,7 @@ func EternalizeAbility(cost mana.Cost, creatureSubtypes ...types.Sub) AbilityDef
 		Effects: []Effect{{
 			Type:        EffectCreateToken,
 			Amount:      1,
-			TargetIndex: -1,
+			TargetIndex: TargetIndexController,
 			TokenCopy: opt.Val(TokenCopySpec{
 				Source:       TokenCopySourceSourceCard,
 				SetColors:    []mana.Color{mana.Black},
@@ -432,9 +435,18 @@ type EffectCondition struct {
 	Condition opt.V[Condition]
 }
 
+// TargetIndex sentinel values identify objects or players that are not chosen
+// targets. Non-negative TargetIndex values index into the runtime targets chosen
+// for the spell or ability.
+const (
+	// TargetIndexController means the effect applies to that spell or ability's controller.
+	TargetIndexController = -1
+
+	// TargetIndexSourcePermanent means the effect refers to the source permanent.
+	TargetIndexSourcePermanent = -2
+)
+
 // Effect describes a single game effect produced by an ability.
-// TargetIndex indexes into the runtime targets chosen for the spell or ability;
-// -1 means the effect applies to that spell or ability's controller.
 type Effect struct {
 	Type          EffectType
 	Amount        int

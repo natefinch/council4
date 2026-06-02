@@ -30,7 +30,7 @@ var FireLitThicket = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Colorless, TargetIndex: -1},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Colorless, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -47,22 +47,22 @@ var FireLitThicket = &game.CardDef{
 				{
 					Text: "Add {R}{R}.",
 					Effects: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: -1},
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: -1},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: game.TargetIndexController},
 					},
 				},
 				{
 					Text: "Add {R}{G}.",
 					Effects: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: -1},
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
 					},
 				},
 				{
 					Text: "Add {G}{G}.",
 					Effects: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
 					},
 				},
 			},

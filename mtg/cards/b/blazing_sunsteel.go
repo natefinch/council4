@@ -36,7 +36,7 @@ var BlazingSunsteel = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectModifyPT,
-					TargetIndex: -2,
+					TargetIndex: game.TargetIndexSourcePermanent,
 					Selector:    game.EffectSelectorEquippedCreature,
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind: game.DynamicAmountOpponentCount,
@@ -69,7 +69,7 @@ var BlazingSunsteel = &game.CardDef{
 					TargetIndex: 0,
 					DamageSource: opt.Val(game.ObjectReference{
 						Kind:        game.ObjectReferenceAttachedPermanent,
-						TargetIndex: -1,
+						TargetIndex: game.TargetIndexSourcePermanent,
 					}),
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind: game.DynamicAmountEventDamage,

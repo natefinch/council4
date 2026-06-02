@@ -283,7 +283,7 @@ func conditionalRedManaLand() *game.CardDef {
 				Type:        game.EffectAddMana,
 				Amount:      1,
 				ManaColor:   mana.Red,
-				TargetIndex: -1,
+				TargetIndex: game.TargetIndexController,
 			}},
 		}},
 	}
@@ -312,7 +312,7 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 					},
 				}),
 			}),
-			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
 		}},
 	})
 }

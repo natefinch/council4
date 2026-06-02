@@ -83,7 +83,7 @@ var EnduringCourage = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectPutOnBattlefield,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Card:        opt.Val(game.CardReference{Kind: game.CardReferenceSource}),
 					ContinuousEffects: []game.ContinuousEffect{
 						{

@@ -30,7 +30,7 @@ var BlazemireVerge = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Black, TargetIndex: -1},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Black, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -46,7 +46,7 @@ var BlazemireVerge = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: -1},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: game.TargetIndexController},
 			},
 		},
 	},

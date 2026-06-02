@@ -203,7 +203,7 @@ func divinationLike() *game.CardDef {
 			{
 				Kind: game.SpellAbility,
 				Effects: []game.Effect{
-					{Type: game.EffectDraw, Amount: 1, TargetIndex: -1},
+					{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 				},
 			},
 		},
@@ -220,7 +220,7 @@ func healingSpell() *game.CardDef {
 			{
 				Kind: game.SpellAbility,
 				Effects: []game.Effect{
-					{Type: game.EffectGainLife, Amount: 3, TargetIndex: -1},
+					{Type: game.EffectGainLife, Amount: 3, TargetIndex: game.TargetIndexController},
 				},
 			},
 		},

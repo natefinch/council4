@@ -51,7 +51,7 @@ var HazoretGodseeker = &game.CardDef{
 				},
 			}),
 			Effects: []game.Effect{
-				{Type: game.EffectStartEngines, TargetIndex: -1},
+				{Type: game.EffectStartEngines, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -97,7 +97,7 @@ var HazoretGodseeker = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectApplyRule,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					RuleEffects: []game.RuleEffect{
 						{Kind: game.RuleEffectCantAttack, AffectedSource: true},
 						{Kind: game.RuleEffectCantBlock, AffectedSource: true},

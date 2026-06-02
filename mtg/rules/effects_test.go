@@ -19,7 +19,7 @@ func TestDrawEffectDrawsRequestedCards(t *testing.T) {
 	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDraw,
 		Amount:      2,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 	}, nil)
 	firstDraw := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "First"})
 	secondDraw := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Second"})
@@ -133,7 +133,7 @@ func TestCantGainLifeRuleEffectStopsLifeGainAndLifelink(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectGainLife,
 		Amount:      3,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 	}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -157,7 +157,7 @@ func TestDynamicAmountUsesControllerHandSize(t *testing.T) {
 	addCardToHand(g, game.Player1, &game.CardDef{Name: "Second"})
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectGainLife,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 		DynamicAmount: optDynamicAmount(game.DynamicAmount{
 			Kind: game.DynamicAmountControllerHandSize,
 		}),
@@ -226,7 +226,7 @@ func TestDynamicAmountCanUsePreviousEffectResult(t *testing.T) {
 				{
 					Kind: game.SpellAbility,
 					Effects: []game.Effect{
-						{Type: game.EffectGainLife, TargetIndex: -1, Amount: 3, LinkID: "that-much"},
+						{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 3, LinkID: "that-much"},
 						{
 							Type:        game.EffectLoseLife,
 							TargetIndex: 0,
@@ -266,7 +266,7 @@ func TestOptionalEffectCanBeAcceptedOrDeclined(t *testing.T) {
 		addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectDraw,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Amount:      1,
 			Optional:    true,
 		}, nil)
@@ -287,7 +287,7 @@ func TestOptionalEffectCanBeAcceptedOrDeclined(t *testing.T) {
 		addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectDraw,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Amount:      1,
 			Optional:    true,
 		}, nil)
@@ -312,10 +312,10 @@ func TestEffectResultConditionBranchesOnIfYouDoAndDont(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
 	sourceID := addLinkedResultSpellToStack(g, []game.Effect{
-		{Type: game.EffectDraw, TargetIndex: -1, Amount: 1, Optional: true, LinkID: "choice"},
+		{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1, Optional: true, LinkID: "choice"},
 		{
 			Type:        game.EffectGainLife,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Amount:      3,
 			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "choice",
@@ -325,7 +325,7 @@ func TestEffectResultConditionBranchesOnIfYouDoAndDont(t *testing.T) {
 		},
 		{
 			Type:        game.EffectLoseLife,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Amount:      3,
 			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:   "choice",
@@ -348,10 +348,10 @@ func TestEffectResultConditionRequiresActualSuccess(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addLinkedResultSpellToStack(g, []game.Effect{
-		{Type: game.EffectDraw, TargetIndex: -1, Amount: 1, LinkID: "draw"},
+		{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1, LinkID: "draw"},
 		{
 			Type:        game.EffectGainLife,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Amount:      3,
 			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "draw",
@@ -360,7 +360,7 @@ func TestEffectResultConditionRequiresActualSuccess(t *testing.T) {
 		},
 		{
 			Type:        game.EffectLoseLife,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Amount:      2,
 			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "draw",
@@ -382,14 +382,14 @@ func TestDeclinedOptionalEffectDoesNotPublishPreviousAmount(t *testing.T) {
 	addLinkedResultSpellToStack(g, []game.Effect{
 		{
 			Type:        game.EffectGainLife,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Amount:      5,
 			Optional:    true,
 			LinkID:      "amount",
 		},
 		{
 			Type:        game.EffectLoseLife,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			DynamicAmount: optDynamicAmount(game.DynamicAmount{
 				Kind:   game.DynamicAmountPreviousEffectResult,
 				LinkID: "amount",
@@ -601,7 +601,7 @@ func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
 		{
 			Type:        game.EffectDraw,
 			Amount:      1,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "paid",
 				Accepted:  game.TriTrue,
@@ -663,7 +663,7 @@ func TestFailedDrawEffectLogsAndEliminatesPlayer(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDraw,
 		Amount:      1,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 	}, nil)
 	log := TurnLog{}
 
@@ -694,19 +694,19 @@ func TestMillScryAndSurveilLibraryEffectsUseDeterministicFallback(t *testing.T) 
 	top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
 	second := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Second"})
 	third := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Third"})
-	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectScry, Amount: 2, TargetIndex: -1}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectScry, Amount: 2, TargetIndex: game.TargetIndexController}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if got := g.Players[game.Player1].Library.All(); len(got) < 3 || got[0] != third || got[1] != second || got[2] != top {
 		t.Fatalf("library after scry = %+v, want deterministic keep-top order", got)
 	}
 
-	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectSurveil, Amount: 2, TargetIndex: -1}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectSurveil, Amount: 2, TargetIndex: game.TargetIndexController}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if got := g.Players[game.Player1].Library.All(); len(got) < 3 || got[0] != third || got[1] != second || got[2] != top {
 		t.Fatalf("library after surveil = %+v, want deterministic keep-top order", got)
 	}
 
-	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectMill, Amount: 2, TargetIndex: -1}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectMill, Amount: 2, TargetIndex: game.TargetIndexController}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if !g.Players[game.Player1].Graveyard.Contains(third) || !g.Players[game.Player1].Graveyard.Contains(second) {
 		t.Fatal("mill did not move top two cards to graveyard")
@@ -841,7 +841,7 @@ func TestZeroExcessDamageDoesNotSatisfySuccessCondition(t *testing.T) {
 		},
 		{
 			Type:        game.EffectGainLife,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Amount:      5,
 			ResultCondition: optEffectResultCondition(game.EffectResultCondition{
 				LinkID:    "excess",
@@ -883,7 +883,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectSearch,
 			Amount:      1,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
 				SourceZone:  game.ZoneLibrary,
 				Destination: game.ZoneHand,
@@ -918,7 +918,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectSearch,
 			Amount:      1,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
 				SourceZone:  game.ZoneLibrary,
 				Destination: game.ZoneHand,
@@ -951,7 +951,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectSearch,
 			Amount:      1,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
 				SourceZone:  game.ZoneLibrary,
 				Destination: game.ZoneHand,
@@ -982,7 +982,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		addEffectSpellToStack(g, game.Player1, &game.Effect{
 			Type:        game.EffectSearch,
 			Amount:      1,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
 				SourceZone:   game.ZoneLibrary,
 				Destination:  game.ZoneBattlefield,
@@ -1011,7 +1011,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
-		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectReveal, Amount: 1, TargetIndex: -1}, nil)
+		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectReveal, Amount: 1, TargetIndex: game.TargetIndexController}, nil)
 
 		engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1027,7 +1027,7 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		drawn := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
-		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectInvestigate, Amount: 2, TargetIndex: -1}, nil)
+		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectInvestigate, Amount: 2, TargetIndex: game.TargetIndexController}, nil)
 
 		engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -1093,7 +1093,7 @@ func TestMonstrosityEffectAddsCountersOnlyOnce(t *testing.T) {
 		SourceCardID: source.CardInstanceID,
 		Controller:   game.Player1,
 	}
-	effect := game.Effect{Type: game.EffectMonstrosity, Amount: 5, TargetIndex: -2}
+	effect := game.Effect{Type: game.EffectMonstrosity, Amount: 5, TargetIndex: game.TargetIndexSourcePermanent}
 
 	engine.resolveEffect(g, obj, &effect, &TurnLog{})
 	engine.resolveEffect(g, obj, &effect, &TurnLog{})
@@ -1129,8 +1129,8 @@ func TestSetClassLevelEffectAndClassInitialLevel(t *testing.T) {
 		Controller:   game.Player1,
 	}
 
-	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectSetClassLevel, Amount: 2, TargetIndex: -2}, &TurnLog{})
-	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectSetClassLevel, Amount: 1, TargetIndex: -2}, &TurnLog{})
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectSetClassLevel, Amount: 2, TargetIndex: game.TargetIndexSourcePermanent}, &TurnLog{})
+	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectSetClassLevel, Amount: 1, TargetIndex: game.TargetIndexSourcePermanent}, &TurnLog{})
 
 	if got := source.ClassLevel; got != 2 {
 		t.Fatalf("class level = %d, want upgraded and not downgraded level 2", got)
@@ -1160,7 +1160,7 @@ func TestUnsupportedSearchSpecIsLogged(t *testing.T) {
 	engine := NewEngine(nil)
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectSearch,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 		Search: opt.Val(game.SearchSpec{
 			SourceZone:  game.ZoneLibrary,
 			Destination: game.ZoneExile,
@@ -1230,7 +1230,7 @@ func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
 		engine := NewEngine(nil)
 		bottom := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Bottom"})
 		top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
-		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectScry, Amount: 1, TargetIndex: -1}, nil)
+		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectScry, Amount: 1, TargetIndex: game.TargetIndexController}, nil)
 		log := TurnLog{}
 		agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
 
@@ -1247,7 +1247,7 @@ func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		top := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top"})
-		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectSurveil, Amount: 1, TargetIndex: -1}, nil)
+		addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectSurveil, Amount: 1, TargetIndex: game.TargetIndexController}, nil)
 		log := TurnLog{}
 		agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
 
@@ -1376,7 +1376,7 @@ func TestMassDestroyCreaturesUsesSnapshotAndRespectsIndestructible(t *testing.T)
 	})
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDestroy,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 		Selector:    game.EffectSelectorAllCreatures,
 	}, nil)
 
@@ -1413,7 +1413,7 @@ func TestMassDestroyNonlandPermanentsLeavesLands(t *testing.T) {
 	})
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDestroy,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 		Selector:    game.EffectSelectorAllNonlandPermanents,
 	}, nil)
 
@@ -1442,7 +1442,7 @@ func TestMassDamageDeathsAreLoggedTogetherBySBA(t *testing.T) {
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:        game.EffectDamage,
 		Amount:      3,
-		TargetIndex: -1,
+		TargetIndex: game.TargetIndexController,
 		Selector:    game.EffectSelectorAllCreatures,
 	}, nil)
 
@@ -1705,7 +1705,7 @@ func TestCreateTokenEffectCreatesTokenPermanent(t *testing.T) {
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
 	}
-	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectCreateToken, Amount: 2, TargetIndex: -1, Token: optToken(token)}, nil)
+	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectCreateToken, Amount: 2, TargetIndex: game.TargetIndexController, Token: optToken(token)}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 

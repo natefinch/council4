@@ -187,7 +187,7 @@ func clueTokenDef() *game.CardDef {
 				MatchPermanentType: true,
 				PermanentType:      types.Artifact,
 			}},
-			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
 		}},
 	}
 }

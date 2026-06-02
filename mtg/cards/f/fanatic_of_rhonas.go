@@ -41,7 +41,7 @@ var FanaticOfRhonas = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -62,10 +62,10 @@ var FanaticOfRhonas = &game.CardDef{
 				},
 			}),
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
 			},
 		},
 		game.EternalizeAbility(

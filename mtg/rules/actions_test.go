@@ -853,7 +853,7 @@ func TestGeneralActivatedAbilityTapCostRespectsSummoningSickness(t *testing.T) {
 		AdditionalCosts: []game.AdditionalCost{
 			{Kind: game.AdditionalCostTap},
 		},
-		Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
+		Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}},
 	}))
 	source.SummoningSick = true
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -885,7 +885,7 @@ func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
 		Kind:    game.ActivatedAbility,
 		Timing:  game.OncePerTurn,
-		Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
+		Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}},
 	}))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -917,7 +917,7 @@ func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T
 		AdditionalCosts: []game.AdditionalCost{
 			{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 		},
-		Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: -1, Amount: 1}},
+		Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1}},
 	}))
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -1123,7 +1123,7 @@ func TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn(t *testing.T) {
 			Kind:             game.ActivatedAbility,
 			IsLoyaltyAbility: true,
 			LoyaltyCost:      -2,
-			Effects:          []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+			Effects:          []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
 		}},
 	})
 	planeswalker.Counters.Add(counter.Loyalty, 3)
@@ -1161,9 +1161,9 @@ func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 		Types: []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind:          game.SpellAbility,
-			Effects:       []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: -1}},
+			Effects:       []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: game.TargetIndexController}},
 			KickerCost:    optCost(kickerCost),
-			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
 		}},
 	})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -1201,7 +1201,7 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 		Abilities: []game.AbilityDef{{
 			Kind:          game.SpellAbility,
 			KickerCost:    optCost(kickerCost),
-			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
 		}},
 	})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -1236,7 +1236,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 					Label:    flashbackAlternativeLabel,
 					ManaCost: optCost(flashbackCost),
 				}},
-				Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+				Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
 			},
 		},
 	})
@@ -1358,7 +1358,7 @@ func TestGraveyardOnlyAbilityIsNotActivatedFromBattlefield(t *testing.T) {
 		Abilities: []game.AbilityDef{{
 			Kind:           game.ActivatedAbility,
 			ZoneOfFunction: game.ZoneGraveyard,
-			Effects:        []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}},
+			Effects:        []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}},
 		}},
 	})
 	g.Turn.PriorityPlayer = game.Player1
@@ -1538,7 +1538,7 @@ func modalCharm() *game.CardDef {
 				Modes: []game.Mode{
 					{
 						Text:    "You gain 3 life.",
-						Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 3}},
+						Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 3}},
 					},
 					{
 						Text:    "Deal 2 damage to target creature.",
@@ -1571,9 +1571,9 @@ func modalSpellWithModeRangeAndDuplicates(minModes, maxModes int, allowDuplicate
 				MaxModes:            maxModes,
 				AllowDuplicateModes: allowDuplicates,
 				Modes: []game.Mode{
-					{Text: "You gain 1 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 1}}},
-					{Text: "You gain 2 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 2}}},
-					{Text: "You gain 3 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: -1, Amount: 3}}},
+					{Text: "You gain 1 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}}},
+					{Text: "You gain 2 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 2}}},
+					{Text: "You gain 3 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 3}}},
 				},
 			},
 		},

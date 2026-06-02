@@ -109,7 +109,7 @@ func simpleGainLifeInstant(name string) *game.CardDef {
 		Types: []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.SpellAbility,
-			Effects: []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: -1}},
+			Effects: []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: game.TargetIndexController}},
 		}},
 	}
 }

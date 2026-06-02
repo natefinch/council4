@@ -473,7 +473,7 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 			AdditionalCosts: []game.AdditionalCost{
 				{Kind: game.AdditionalCostPayLife, Amount: 2},
 			},
-			Effects: []game.Effect{{Type: game.EffectLoseLife, TargetIndex: -1, Amount: 3}},
+			Effects: []game.Effect{{Type: game.EffectLoseLife, TargetIndex: game.TargetIndexController, Amount: 3}},
 		}},
 	})
 	planeswalker.Counters.Add(counter.Loyalty, 3)

@@ -38,7 +38,7 @@ var DragonskullSummit = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectChoose,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose a color",
@@ -49,7 +49,7 @@ var DragonskullSummit = &game.CardDef{
 				{
 					Type:         game.EffectAddMana,
 					Amount:       1,
-					TargetIndex:  -1,
+					TargetIndex:  game.TargetIndexController,
 					ChoiceLinkID: "dragonskull-summit-color",
 				},
 			},

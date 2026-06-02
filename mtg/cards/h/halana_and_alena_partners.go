@@ -46,8 +46,9 @@ var HalanaAndAlenaPartners = &game.CardDef{
 			Trigger: opt.Val(game.TriggerCondition{
 				Type: game.TriggerAt,
 				Pattern: game.TriggerPattern{
-					Event: game.EventBeginningOfStep,
-					Step:  game.StepBeginningOfCombat,
+					Event:      game.EventBeginningOfStep,
+					Controller: game.TriggerControllerYou,
+					Step:       game.StepBeginningOfCombat,
 				},
 			}),
 			Targets: []game.TargetSpec{
@@ -70,7 +71,7 @@ var HalanaAndAlenaPartners = &game.CardDef{
 					CounterKind: counter.PlusOnePlusOne,
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind:        game.DynamicAmountTargetPower,
-						TargetIndex: -2,
+						TargetIndex: game.TargetIndexSourcePermanent,
 					}),
 				},
 				{

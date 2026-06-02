@@ -47,7 +47,7 @@ var GigglingSkitterspike = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:           game.EffectDamage,
-					TargetIndex:    -1,
+					TargetIndex:    game.TargetIndexController,
 					PlayerSelector: game.PlayerSelectorOpponents,
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind:   game.DynamicAmountObjectPower,
@@ -69,7 +69,7 @@ var GigglingSkitterspike = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:           game.EffectDamage,
-					TargetIndex:    -1,
+					TargetIndex:    game.TargetIndexController,
 					PlayerSelector: game.PlayerSelectorOpponents,
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind:   game.DynamicAmountObjectPower,
@@ -84,14 +84,16 @@ var GigglingSkitterspike = &game.CardDef{
 			Trigger: opt.Val(game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
-					Event:  game.EventObjectBecameTarget,
-					Source: game.TriggerSourceSelf,
+					Event:                game.EventObjectBecameTarget,
+					Source:               game.TriggerSourceSelf,
+					MatchStackObjectKind: true,
+					StackObjectKind:      game.StackSpell,
 				},
 			}),
 			Effects: []game.Effect{
 				{
 					Type:           game.EffectDamage,
-					TargetIndex:    -1,
+					TargetIndex:    game.TargetIndexController,
 					PlayerSelector: game.PlayerSelectorOpponents,
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind:   game.DynamicAmountObjectPower,
@@ -111,7 +113,7 @@ var GigglingSkitterspike = &game.CardDef{
 				{
 					Type:        game.EffectMonstrosity,
 					Amount:      5,
-					TargetIndex: -2,
+					TargetIndex: game.TargetIndexSourcePermanent,
 				},
 			},
 		},

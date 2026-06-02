@@ -32,7 +32,7 @@ var BasiliskCollar = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectApplyContinuous,
-					TargetIndex: -2,
+					TargetIndex: game.TargetIndexSourcePermanent,
 					ContinuousEffects: []game.ContinuousEffect{
 						{
 							Layer:       game.LayerAbility,

@@ -142,7 +142,7 @@ func TestDelayedNextEndStepTriggerFiresOnce(t *testing.T) {
 		DelayedTrigger: optDelayedTrigger(game.DelayedTriggerDef{
 			Timing: game.DelayedAtBeginningOfNextEndStep,
 			Effects: []game.Effect{
-				{Type: game.EffectDraw, Amount: 1, TargetIndex: -1},
+				{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 			},
 		}),
 	}, nil)

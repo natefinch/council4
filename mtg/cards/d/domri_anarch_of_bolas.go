@@ -40,7 +40,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 				{
 					Type:        game.EffectModifyPT,
 					PowerDelta:  1,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Selector:    game.EffectSelectorCreaturesYouControl,
 				},
 			},
@@ -53,7 +53,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectChoose,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose {R} or {G}",
@@ -64,12 +64,12 @@ var DomriAnarchOfBolas = &game.CardDef{
 				{
 					Type:         game.EffectAddMana,
 					Amount:       1,
-					TargetIndex:  -1,
+					TargetIndex:  game.TargetIndexController,
 					ChoiceLinkID: "domri-color",
 				},
 				{
 					Type:        game.EffectApplyRule,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Duration:    game.DurationThisTurn,
 					RuleEffects: []game.RuleEffect{
 						{

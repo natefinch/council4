@@ -83,7 +83,7 @@ func cyclingCard() *game.CardDef {
 					{Kind: game.AdditionalCostDiscard, Text: "Discard this card", Amount: 1, Zone: game.ZoneHand},
 				},
 				Effects: []game.Effect{
-					{Type: game.EffectDraw, TargetIndex: -1, Amount: 1},
+					{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1},
 				},
 			},
 		},

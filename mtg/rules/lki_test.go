@@ -16,7 +16,7 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		RequirePermanentTypes: []types.Card{types.Creature},
-	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}}, nil)
+	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}, nil)
 	land := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:  "Animated Land",
 		Types: []types.Card{types.Land},
@@ -72,7 +72,7 @@ func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 		Type: game.EffectCreateDelayedTrigger,
 		DelayedTrigger: optDelayedTrigger(game.DelayedTriggerDef{
 			Timing:  game.DelayedAtBeginningOfNextEndStep,
-			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: -1}},
+			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
 		}),
 	}, nil)
 	movePermanentToZone(g, source, game.ZoneGraveyard)

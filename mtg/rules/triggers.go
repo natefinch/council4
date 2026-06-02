@@ -158,6 +158,18 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 			hasEvent:     true,
 		})
 	}
+	if exalted, ok := exaltedTriggerForEvent(g, permanent, controller, event); ok {
+		pending = append(pending, pendingTriggeredAbility{
+			controller:   controller,
+			sourceID:     permanent.ObjectID,
+			sourceCardID: permanent.CardInstanceID,
+			sourceToken:  permanent.TokenDef,
+			face:         permanent.Face,
+			inline:       exalted,
+			event:        event,
+			hasEvent:     true,
+		})
+	}
 	return pending
 }
 
@@ -189,7 +201,30 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		Effects: []game.Effect{
 			{
 				Type:           game.EffectModifyPT,
-				TargetIndex:    -2,
+				TargetIndex:    game.TargetIndexSourcePermanent,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+				UntilEndOfTurn: true,
+			},
+		},
+	}, true
+}
+
+func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) (*game.AbilityDef, bool) {
+	if event.Kind != game.EventAttackerDeclared || event.Controller != controller || !hasKeyword(g, permanent, game.Exalted) {
+		return nil, false
+	}
+	if g.Combat == nil || len(g.Combat.Attackers) != 1 {
+		return nil, false
+	}
+	return &game.AbilityDef{
+		Kind:     game.TriggeredAbility,
+		Text:     "Exalted",
+		Keywords: []game.Keyword{game.Exalted},
+		Effects: []game.Effect{
+			{
+				Type:           game.EffectModifyPT,
+				Object:         opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
 				PowerDelta:     1,
 				ToughnessDelta: 1,
 				UntilEndOfTurn: true,
@@ -355,7 +390,18 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern game.Trig
 	if !eventCardTypeFiltersMatch(g, event, pattern.RequireCardTypes, pattern.ExcludeCardTypes) {
 		return false
 	}
+	if pattern.MatchStackObjectKind && !eventStackObjectKindMatches(g, event, pattern.StackObjectKind) {
+		return false
+	}
 	return true
+}
+
+func eventStackObjectKindMatches(g *game.Game, event game.GameEvent, kind game.StackObjectKind) bool {
+	if event.StackObjectID == 0 {
+		return false
+	}
+	obj, ok := stackObjectByID(g, event.StackObjectID)
+	return ok && obj.Kind == kind
 }
 
 func eventPermanentIsToken(g *game.Game, event game.GameEvent) bool {

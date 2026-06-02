@@ -33,7 +33,7 @@ var Farseek = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectSearch,
-					TargetIndex: -1,
+					TargetIndex: game.TargetIndexController,
 					Search: opt.Val(game.SearchSpec{
 						SourceZone:   game.ZoneLibrary,
 						Destination:  game.ZoneBattlefield,

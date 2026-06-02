@@ -21,10 +21,6 @@ import (
 //	Whenever you attack, target attacking creature gets +1/+0 and gains trample until end of turn.
 //	{3}{G}: Level 3
 //	At the beginning of your end step, if you control a creature with power 4 or greater, draw a card.
-//
-// ImplementationID is set because:
-//   - Class level activation (sorcery-speed leveling, gating abilities to levels) has no rules primitive.
-//   - Level 2 and Level 3 abilities are only active after the respective leveling cost is paid.
 var HunterSTalent = &game.CardDef{
 	Name: "Hunter's Talent",
 	ManaCost: opt.Val(mana.Cost{
@@ -97,7 +93,7 @@ var HunterSTalent = &game.CardDef{
 				SourceClassLevelLessThan: 2,
 			}),
 			Effects: []game.Effect{
-				{Type: game.EffectSetClassLevel, Amount: 2, TargetIndex: -2},
+				{Type: game.EffectSetClassLevel, Amount: 2, TargetIndex: game.TargetIndexSourcePermanent},
 			},
 		},
 		{
@@ -160,7 +156,7 @@ var HunterSTalent = &game.CardDef{
 				SourceClassLevelLessThan: 3,
 			}),
 			Effects: []game.Effect{
-				{Type: game.EffectSetClassLevel, Amount: 3, TargetIndex: -2},
+				{Type: game.EffectSetClassLevel, Amount: 3, TargetIndex: game.TargetIndexSourcePermanent},
 			},
 		},
 		{
@@ -169,8 +165,9 @@ var HunterSTalent = &game.CardDef{
 			Trigger: opt.Val(game.TriggerCondition{
 				Type: game.TriggerAt,
 				Pattern: game.TriggerPattern{
-					Event: game.EventBeginningOfStep,
-					Step:  game.StepEnd,
+					Event:      game.EventBeginningOfStep,
+					Controller: game.TriggerControllerYou,
+					Step:       game.StepEnd,
 				},
 				InterveningIf: "if you control a creature with power 4 or greater",
 				InterveningCondition: opt.Val(game.Condition{
@@ -183,7 +180,7 @@ var HunterSTalent = &game.CardDef{
 				}),
 			}),
 			Effects: []game.Effect{
-				{Type: game.EffectDraw, Amount: 1, TargetIndex: -1},
+				{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 			},
 		},
 	},

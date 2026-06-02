@@ -36,7 +36,7 @@ var Fiendlash = &game.CardDef{
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectApplyContinuous,
-					TargetIndex: -2,
+					TargetIndex: game.TargetIndexSourcePermanent,
 					ContinuousEffects: []game.ContinuousEffect{
 						{
 							Layer:          game.LayerPowerToughnessModify,
@@ -81,13 +81,13 @@ var Fiendlash = &game.CardDef{
 					TargetIndex: 0,
 					DamageSource: opt.Val(game.ObjectReference{
 						Kind:        game.ObjectReferenceAttachedPermanent,
-						TargetIndex: -1,
+						TargetIndex: game.TargetIndexSourcePermanent,
 					}),
 					DynamicAmount: opt.Val(game.DynamicAmount{
 						Kind: game.DynamicAmountObjectPower,
 						Object: game.ObjectReference{
 							Kind:        game.ObjectReferenceAttachedPermanent,
-							TargetIndex: -1,
+							TargetIndex: game.TargetIndexSourcePermanent,
 						},
 					}),
 				},

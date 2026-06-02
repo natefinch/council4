@@ -16,7 +16,7 @@ func TestEquippedCreatureSelectorGrantsKeywords(t *testing.T) {
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.Effect{{
 		Type:        game.EffectApplyContinuous,
-		TargetIndex: -2,
+		TargetIndex: game.TargetIndexSourcePermanent,
 		ContinuousEffects: []game.ContinuousEffect{{
 			Layer:       game.LayerAbility,
 			Selector:    game.EffectSelectorEquippedCreature,
@@ -46,7 +46,7 @@ func TestEquippedCreatureSelectorDynamicOpponentCountPT(t *testing.T) {
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.Effect{{
 		Type:        game.EffectModifyPT,
-		TargetIndex: -2,
+		TargetIndex: game.TargetIndexSourcePermanent,
 		Selector:    game.EffectSelectorEquippedCreature,
 		DynamicAmount: opt.Val(game.DynamicAmount{
 			Kind: game.DynamicAmountOpponentCount,
@@ -120,7 +120,7 @@ func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 		TargetIndex: 0,
 		DamageSource: opt.Val(game.ObjectReference{
 			Kind:        game.ObjectReferenceAttachedPermanent,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexSourcePermanent,
 		}),
 		DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountEventDamage}),
 	}, &log)
@@ -157,13 +157,13 @@ func TestObjectPowerDynamicAmountUsesAttachedPermanent(t *testing.T) {
 		TargetIndex: 0,
 		DamageSource: opt.Val(game.ObjectReference{
 			Kind:        game.ObjectReferenceAttachedPermanent,
-			TargetIndex: -1,
+			TargetIndex: game.TargetIndexSourcePermanent,
 		}),
 		DynamicAmount: opt.Val(game.DynamicAmount{
 			Kind: game.DynamicAmountObjectPower,
 			Object: game.ObjectReference{
 				Kind:        game.ObjectReferenceAttachedPermanent,
-				TargetIndex: -1,
+				TargetIndex: game.TargetIndexSourcePermanent,
 			},
 		}),
 	}, &log)

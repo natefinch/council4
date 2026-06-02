@@ -98,7 +98,7 @@ var BridgeworksBattle = &game.CardDef{
 					{Kind: game.AdditionalCostTap},
 				},
 				Effects: []game.Effect{
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: -1},
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
 				},
 			},
 		},
