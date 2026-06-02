@@ -7,8 +7,8 @@ package payment
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -45,7 +45,7 @@ type stateQueries interface {
 	PermanentHasSupertype(p *game.Permanent, s types.Super) bool
 
 	// PermanentEffectiveColors returns the effective colors of the permanent.
-	PermanentEffectiveColors(p *game.Permanent) []mana.Color
+	PermanentEffectiveColors(p *game.Permanent) []color.Color
 
 	// PermanentByObjectID looks up a permanent by its object ID.
 	PermanentByObjectID(objectID id.ID) (*game.Permanent, bool)

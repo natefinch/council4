@@ -2,6 +2,7 @@ package k
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -19,10 +20,10 @@ var KhalniAmbush = &game.CardDef{
 	Name: "Khalni Ambush // Khalni Territory",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(2),
-		mana.ColoredMana(mana.Green),
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green),
 	Types:         []types.Card{types.Instant},
 	OracleText:    "Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
 	Abilities: []game.AbilityDef{
@@ -71,7 +72,7 @@ var KhalniAmbush = &game.CardDef{
 					{Kind: game.AdditionalCostTap},
 				},
 				Effects: []game.Effect{
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
 				},
 			},
 		},

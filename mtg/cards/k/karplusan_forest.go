@@ -2,6 +2,7 @@ package k
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -17,7 +18,7 @@ import (
 //	{T}: Add {R} or {G}. This land deals 1 damage to you.
 var KarplusanForest = &game.CardDef{
 	Name:          "Karplusan Forest",
-	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{T}: Add {R} or {G}. This land deals 1 damage to you.",
 	Abilities: []game.AbilityDef{
@@ -29,7 +30,7 @@ var KarplusanForest = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Colorless, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Colorless, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -46,7 +47,7 @@ var KarplusanForest = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose {R} or {G}",
-						Colors: []mana.Color{mana.Red, mana.Green},
+						Colors: []color.Color{color.Red, color.Green},
 					}),
 					LinkID: "karplusan-forest-color",
 				},

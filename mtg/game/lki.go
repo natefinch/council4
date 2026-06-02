@@ -1,9 +1,9 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -19,7 +19,7 @@ type ObjectSnapshot struct {
 	Owner          PlayerID
 	Controller     PlayerID
 	FromZone       ZoneType
-	Colors         []mana.Color
+	Colors         []color.Color
 	Supertypes     []types.Super
 	Types          []types.Card
 	Subtypes       []types.Sub

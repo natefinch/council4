@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -60,7 +61,7 @@ type CardDef struct {
 
 	// Colors are the colors of this card, determined by its mana cost
 	// and color indicator (CR 105, 202.2).
-	Colors []mana.Color
+	Colors []color.Color
 
 	// ColorIdentity is the card's color identity for Commander deck
 	// construction (CR 903.4). Includes colors from mana cost, color
@@ -123,7 +124,7 @@ type CardDef struct {
 type CardFace struct {
 	Name                   string
 	ManaCost               opt.V[mana.Cost]
-	Colors                 []mana.Color
+	Colors                 []color.Color
 	Supertypes             []types.Super
 	Types                  []types.Card
 	Subtypes               []types.Sub
@@ -285,7 +286,7 @@ func (c *CardDef) rootFace() CardFace {
 	return CardFace{
 		Name:                   c.Name,
 		ManaCost:               c.ManaCost,
-		Colors:                 append([]mana.Color(nil), c.Colors...),
+		Colors:                 append([]color.Color(nil), c.Colors...),
 		Supertypes:             append([]types.Super(nil), c.Supertypes...),
 		Types:                  append([]types.Card(nil), c.Types...),
 		Subtypes:               append([]types.Sub(nil), c.Subtypes...),
@@ -360,7 +361,7 @@ func (f *CardFace) ToCardDef(parent *CardDef) *CardDef {
 	return &CardDef{
 		Name:                   f.Name,
 		ManaCost:               f.ManaCost,
-		Colors:                 append([]mana.Color(nil), f.Colors...),
+		Colors:                 append([]color.Color(nil), f.Colors...),
 		ColorIdentity:          parent.ColorIdentity,
 		Supertypes:             append([]types.Super(nil), f.Supertypes...),
 		Types:                  append([]types.Card(nil), f.Types...),

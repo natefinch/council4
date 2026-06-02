@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -68,7 +69,7 @@ func TestSimpleKeywordAbilityTemplates(t *testing.T) {
 }
 
 func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
-	cost := mana.Cost{mana.GenericMana(2), mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.GenericMana(2), mana.G}
 	ability := EternalizeAbility(cost, types.Snake, types.Druid)
 	cost[0] = mana.GenericMana(9)
 
@@ -78,7 +79,7 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	if ability.ZoneOfFunction != ZoneGraveyard || ability.Timing != SorceryOnly {
 		t.Fatalf("zone/timing = %v/%v, want graveyard sorcery", ability.ZoneOfFunction, ability.Timing)
 	}
-	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, []mana.Symbol{mana.GenericMana(2), mana.ColoredMana(mana.Green)}) {
+	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, []mana.Symbol{mana.GenericMana(2), mana.G}) {
 		t.Fatalf("mana cost = %+v, want copied eternalize cost", ability.ManaCost)
 	}
 	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0].Kind != AdditionalCostExileSource {
@@ -91,7 +92,7 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	if spec.Source != TokenCopySourceSourceCard || !spec.NoManaCost {
 		t.Fatalf("token copy source/no-cost = %v/%v, want source card with no mana cost", spec.Source, spec.NoManaCost)
 	}
-	if !slices.Equal(spec.SetColors, []mana.Color{mana.Black}) || !slices.Equal(spec.SetSubtypes, []types.Sub{types.Zombie, types.Snake, types.Druid}) {
+	if !slices.Equal(spec.SetColors, []color.Color{color.Black}) || !slices.Equal(spec.SetSubtypes, []types.Sub{types.Zombie, types.Snake, types.Druid}) {
 		t.Fatalf("token colors/subtypes = %+v/%+v, want black Zombie Snake Druid", spec.SetColors, spec.SetSubtypes)
 	}
 	if !spec.SetPower.Exists || spec.SetPower.Val.Value != 4 || !spec.SetToughness.Exists || spec.SetToughness.Val.Value != 4 {

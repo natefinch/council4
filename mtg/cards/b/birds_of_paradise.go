@@ -2,6 +2,7 @@ package b
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -19,10 +20,10 @@ import (
 var BirdsOfParadise = &game.CardDef{
 	Name: "Birds of Paradise",
 	ManaCost: opt.Val(mana.Cost{
-		mana.ColoredMana(mana.Green),
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green),
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Bird},
 	Power:         opt.Val(game.PT{Value: 0}),
@@ -44,8 +45,8 @@ var BirdsOfParadise = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose a color",
-						Colors: []mana.Color{
-							mana.White, mana.Blue, mana.Black, mana.Red, mana.Green,
+						Colors: []color.Color{
+							color.White, color.Blue, color.Black, color.Red, color.Green,
 						},
 					}),
 					LinkID: "birds-color",

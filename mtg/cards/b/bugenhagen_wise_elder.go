@@ -2,6 +2,7 @@ package b
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -22,10 +23,10 @@ var BugenhagenWiseElder = &game.CardDef{
 	Name: "Bugenhagen, Wise Elder",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Green),
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Human, types.Shaman},
@@ -73,8 +74,8 @@ var BugenhagenWiseElder = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose a color",
-						Colors: []mana.Color{
-							mana.White, mana.Blue, mana.Black, mana.Red, mana.Green,
+						Colors: []color.Color{
+							color.White, color.Blue, color.Black, color.Red, color.Green,
 						},
 					}),
 					LinkID: "bugenhagen-color",

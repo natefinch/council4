@@ -2,6 +2,7 @@ package f
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -22,10 +23,10 @@ var FanaticOfRhonas = &game.CardDef{
 	Name: "Fanatic of Rhonas",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Green),
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green),
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Snake, types.Druid},
 	Power:         opt.Val(game.PT{Value: 1}),
@@ -40,7 +41,7 @@ var FanaticOfRhonas = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -61,14 +62,14 @@ var FanaticOfRhonas = &game.CardDef{
 				},
 			}),
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
 			},
 		},
 		game.EternalizeAbility(
-			mana.Cost{mana.GenericMana(2), mana.ColoredMana(mana.Green), mana.ColoredMana(mana.Green)},
+			mana.Cost{mana.GenericMana(2), mana.G, mana.G},
 			types.Snake, types.Druid,
 		),
 	},

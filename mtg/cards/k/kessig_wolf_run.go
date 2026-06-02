@@ -2,6 +2,7 @@ package k
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -17,7 +18,7 @@ import (
 //	{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
 var KessigWolfRun = &game.CardDef{
 	Name:          "Kessig Wolf Run",
-	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.",
 	Abilities: []game.AbilityDef{
@@ -29,7 +30,7 @@ var KessigWolfRun = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Colorless, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Colorless, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -37,8 +38,8 @@ var KessigWolfRun = &game.CardDef{
 			Text: "{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.",
 			ManaCost: opt.Val(mana.Cost{
 				mana.VariableMana(),
-				mana.ColoredMana(mana.Red),
-				mana.ColoredMana(mana.Green),
+				mana.R,
+				mana.G,
 			}),
 			AdditionalCosts: []game.AdditionalCost{
 				{Kind: game.AdditionalCostTap},

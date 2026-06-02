@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -28,9 +29,9 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			name: "convoke pays colored symbols before generic symbols",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addCombatPermanent(g, game.Player1, namedCreature("Green Convoke Creature", mana.Green))
+				addCombatPermanent(g, game.Player1, namedCreature("Green Convoke Creature", color.Green))
 				addCombatPermanent(g, game.Player1, namedCreature("Plain Convoke Creature"))
-				return g, convokeSpell(mana.Cost{mana.ColoredMana(mana.Green), mana.GenericMana(1)}), 0, 0
+				return g, convokeSpell(mana.Cost{mana.G, mana.GenericMana(1)}), 0, 0
 			},
 			want: []string{
 				"option=0:Normal cost",
@@ -227,7 +228,7 @@ func stringList(values []string) string {
 	return "[" + strings.Join(values, ", ") + "]"
 }
 
-func namedCreature(name string, colors ...mana.Color) *game.CardDef {
+func namedCreature(name string, colors ...color.Color) *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{
 		Name:      name,

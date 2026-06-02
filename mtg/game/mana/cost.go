@@ -1,5 +1,7 @@
 package mana
 
+import "github.com/natefinch/council4/mtg/game/color"
+
 import "strings"
 
 // Cost represents the mana cost of a spell or ability as an ordered
@@ -28,9 +30,9 @@ func (c Cost) ManaValue() int {
 
 // Colors returns the set of colors present in this cost.
 // Generic and colorless symbols do not contribute colors.
-func (c Cost) Colors() []Color {
-	seen := make(map[Color]bool)
-	var colors []Color
+func (c Cost) Colors() []color.Color {
+	seen := make(map[color.Color]bool)
+	var colors []color.Color
 	for _, s := range c {
 		switch s.Kind {
 		case ColoredSymbol, PhyrexianSymbol, MonoHybridSymbol:

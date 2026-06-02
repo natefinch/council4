@@ -2,6 +2,7 @@ package h
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -17,7 +18,7 @@ import (
 //	{T}: Add {B} or {R}.
 var HauntedRidge = &game.CardDef{
 	Name:          "Haunted Ridge",
-	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Red),
+	ColorIdentity: mana.NewColorIdentity(color.Black, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {R}.",
 	EntersTappedCondition: opt.Val(game.Condition{
@@ -42,7 +43,7 @@ var HauntedRidge = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose a color",
-						Colors: []mana.Color{mana.Black, mana.Red},
+						Colors: []color.Color{color.Black, color.Red},
 					}),
 					LinkID: "haunted-ridge-color",
 				},

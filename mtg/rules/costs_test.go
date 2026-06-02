@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -12,7 +13,7 @@ import (
 func TestCanPayCostWithUntappedForest(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 
 	if !canPayCost(g, game.Player1, &cost) {
 		t.Fatal("canPayCost() = false, want true")
@@ -22,7 +23,7 @@ func TestCanPayCostWithUntappedForest(t *testing.T) {
 func TestCanPayCostRejectsWrongBasicLandColor(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, types.Mountain)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 
 	if canPayCost(g, game.Player1, &cost) {
 		t.Fatal("canPayCost() = true with wrong basic land color, want false")
@@ -42,9 +43,9 @@ func TestCanPayGenericCostWithAnyBasicLand(t *testing.T) {
 func TestGenericSymbolsDoNotConsumeManaNeededByColoredSymbols(t *testing.T) {
 	t.Run("pool", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-		g.Players[game.Player1].ManaPool.Add(mana.White, 1)
-		g.Players[game.Player1].ManaPool.Add(mana.Green, 1)
-		cost := mana.Cost{mana.GenericMana(1), mana.ColoredMana(mana.White)}
+		g.Players[game.Player1].ManaPool.Add(color.White, 1)
+		g.Players[game.Player1].ManaPool.Add(color.Green, 1)
+		cost := mana.Cost{mana.GenericMana(1), mana.W}
 
 		if !canPayCost(g, game.Player1, &cost) {
 			t.Fatal("canPayCost() = false for pool {W,G} paying {1}{W}, want true")
@@ -54,7 +55,7 @@ func TestGenericSymbolsDoNotConsumeManaNeededByColoredSymbols(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		addBasicLandPermanent(g, game.Player1, types.Plains)
 		addBasicLandPermanent(g, game.Player1, types.Forest)
-		cost := mana.Cost{mana.GenericMana(1), mana.ColoredMana(mana.White)}
+		cost := mana.Cost{mana.GenericMana(1), mana.W}
 
 		if !canPayCost(g, game.Player1, &cost) {
 			t.Fatal("canPayCost() = false for Plains+Forest paying {1}{W}, want true")
@@ -74,7 +75,7 @@ func TestCanPayColorlessCostOnlyWithColorlessMana(t *testing.T) {
 				addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 					Name:  "Wastes",
 					Types: []types.Card{types.Land},
-				}, mana.Colorless, 1)
+				}, color.Colorless, 1)
 			},
 			want: true,
 		},
@@ -102,7 +103,7 @@ func TestCanPayColorlessCostOnlyWithColorlessMana(t *testing.T) {
 func TestPayCostTapsLandUsed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 
 	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false, want true")
@@ -118,7 +119,7 @@ func TestPayCostTapsLandUsed(t *testing.T) {
 func TestTappedLandCannotPayAgain(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 
 	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("first payCost() = false, want true")
@@ -131,7 +132,7 @@ func TestTappedLandCannotPayAgain(t *testing.T) {
 func TestPayCostFailureDoesNotMutate(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
-	cost := mana.Cost{mana.ColoredMana(mana.Green), mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G, mana.G}
 
 	if payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = true with insufficient mana, want false")
@@ -147,8 +148,8 @@ func TestPayCostFailureDoesNotMutate(t *testing.T) {
 func TestPayCostUsesPoolBeforeTappingLands(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
-	g.Players[game.Player1].ManaPool.Add(mana.Green, 1)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	g.Players[game.Player1].ManaPool.Add(color.Green, 1)
+	cost := mana.Cost{mana.G}
 
 	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false, want true")
@@ -160,7 +161,7 @@ func TestPayCostUsesPoolBeforeTappingLands(t *testing.T) {
 
 func TestManaPoolsEmptyAfterMainPhase(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	g.Players[game.Player1].ManaPool.Add(mana.Green, 1)
+	g.Players[game.Player1].ManaPool.Add(color.Green, 1)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	engine := NewEngine(nil)
@@ -194,7 +195,7 @@ func TestVariableCostCanIncludeFixedColoredSymbols(t *testing.T) {
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	addBasicLandPermanent(g, game.Player1, types.Mountain)
 	addBasicLandPermanent(g, game.Player1, types.Island)
-	cost := mana.Cost{mana.VariableMana(), mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.VariableMana(), mana.G}
 
 	if !canPayCostWithX(g, game.Player1, &cost, 2) {
 		t.Fatal("canPayCostWithX(X=2) = false for {X}{G} with three lands, want true")
@@ -206,7 +207,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		addBasicLandPermanent(g, game.Player1, types.Forest)
 		addBasicLandPermanent(g, game.Player1, types.Mountain)
-		cost := mana.Cost{mana.GenericMana(3), mana.ColoredMana(mana.Green)}
+		cost := mana.Cost{mana.GenericMana(3), mana.G}
 		card := &game.CardDef{Name: "Reduced Creature", Types: []types.Card{types.Creature}, ManaCost: optCost(cost)}
 		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 			Kind:             game.CostModifierSpell,
@@ -220,7 +221,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 	t.Run("increase", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		addBasicLandPermanent(g, game.Player1, types.Forest)
-		cost := mana.Cost{mana.ColoredMana(mana.Green)}
+		cost := mana.Cost{mana.G}
 		card := &game.CardDef{Name: "Taxed Creature", Types: []types.Card{types.Creature}, ManaCost: optCost(cost)}
 		g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 			Kind:            game.CostModifierSpell,
@@ -253,7 +254,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 	card := &game.CardDef{Name: "Taxed Creature", Types: []types.Card{types.Creature}, ManaCost: optCost(cost)}
 	addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Spell Tax",
@@ -281,7 +282,7 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 func TestHybridCostCanBePaidByEitherColor(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addBasicLandPermanent(g, game.Player1, types.Plains)
-	cost := mana.Cost{mana.HybridMana(mana.Green, mana.White)}
+	cost := mana.Cost{mana.HybridMana(color.Green, color.White)}
 
 	if !canPayCost(g, game.Player1, &cost) {
 		t.Fatal("canPayCost() = false for {G/W} with Plains, want true")
@@ -309,7 +310,7 @@ func TestMonoHybridCostCanBePaidByColorOrGeneric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			tt.add(g)
-			cost := mana.Cost{mana.MonoHybridMana(mana.Green)}
+			cost := mana.Cost{mana.MonoHybridMana(color.Green)}
 
 			if !canPayCost(g, game.Player1, &cost) {
 				t.Fatal("canPayCost() = false for mono-hybrid cost, want true")
@@ -322,7 +323,7 @@ func TestPhyrexianCostCanBePaidWithManaOrLife(t *testing.T) {
 	t.Run("mana", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		addBasicLandPermanent(g, game.Player1, types.Forest)
-		cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
+		cost := mana.Cost{mana.PhyrexianMana(color.Green)}
 
 		if !payTestGenericCost(g, game.Player1, &cost) {
 			t.Fatal("payCost() = false for phyrexian mana with Forest, want true")
@@ -333,7 +334,7 @@ func TestPhyrexianCostCanBePaidWithManaOrLife(t *testing.T) {
 	})
 	t.Run("life", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-		cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
+		cost := mana.Cost{mana.PhyrexianMana(color.Green)}
 
 		if !payTestGenericCost(g, game.Player1, &cost) {
 			t.Fatal("payCost() = false for phyrexian mana with life, want true")
@@ -369,7 +370,7 @@ func TestColoredSymbolDoesNotUseSnowSourceNeededLater(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addSnowBasicLandPermanent(g, game.Player1, types.Plains)
 	addBasicLandPermanent(g, game.Player1, types.Plains)
-	cost := mana.Cost{mana.ColoredMana(mana.White), mana.SnowMana()}
+	cost := mana.Cost{mana.W, mana.SnowMana()}
 
 	if !canPayCost(g, game.Player1, &cost) {
 		t.Fatal("canPayCost() = false for {W}{S} with snow and non-snow Plains, want true")
@@ -378,9 +379,9 @@ func TestColoredSymbolDoesNotUseSnowSourceNeededLater(t *testing.T) {
 
 func TestColoredSymbolDoesNotSpendFloatingSnowNeededLater(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	g.Players[game.Player1].ManaPool.AddSnow(mana.White, 1)
+	g.Players[game.Player1].ManaPool.AddSnow(color.White, 1)
 	addBasicLandPermanent(g, game.Player1, types.Plains)
-	cost := mana.Cost{mana.ColoredMana(mana.White), mana.SnowMana()}
+	cost := mana.Cost{mana.W, mana.SnowMana()}
 
 	if !canPayCost(g, game.Player1, &cost) {
 		t.Fatal("canPayCost() = false for {W}{S} with floating snow and non-snow Plains, want true")
@@ -393,7 +394,7 @@ func TestManaAbilityActionResolvesImmediatelyWithoutStack(t *testing.T) {
 	rock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Sol Ring",
 		Types: []types.Card{types.Artifact},
-	}, mana.Colorless, 2)
+	}, color.Colorless, 2)
 
 	legal := engine.legalActions(g, game.Player1)
 	want := action.ActivateAbility(rock.ObjectID, 0, nil, 0)
@@ -406,7 +407,7 @@ func TestManaAbilityActionResolvesImmediatelyWithoutStack(t *testing.T) {
 	if !rock.Tapped {
 		t.Fatal("mana rock was not tapped")
 	}
-	if got := g.Players[game.Player1].ManaPool.Amount(mana.Colorless); got != 2 {
+	if got := g.Players[game.Player1].ManaPool.Amount(color.Colorless); got != 2 {
 		t.Fatalf("colorless mana = %d, want 2", got)
 	}
 	if got := g.Stack.Size(); got != 0 {
@@ -421,13 +422,13 @@ func TestSnowManaAbilityAddsSnowMana(t *testing.T) {
 		Name:       "types.Snow Manalith",
 		Supertypes: []types.Super{types.Snow},
 		Types:      []types.Card{types.Artifact},
-	}, mana.Green, 1)
+	}, color.Green, 1)
 	want := action.ActivateAbility(snowRock.ObjectID, 0, nil, 0)
 
 	if !engine.applyAction(g, game.Player1, want) {
 		t.Fatal("applyAction(snow mana ability) = false, want true")
 	}
-	if got := g.Players[game.Player1].ManaPool.Amount(mana.Green); got != 1 {
+	if got := g.Players[game.Player1].ManaPool.Amount(color.Green); got != 1 {
 		t.Fatalf("green mana = %d, want 1", got)
 	}
 	if got := g.Players[game.Player1].ManaPool.SnowAmount(); got != 1 {
@@ -443,7 +444,7 @@ func TestCreatureTapManaAbilityRespectsSummoningSickness(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
-	}, mana.Green, 1)
+	}, color.Green, 1)
 	want := action.ActivateAbility(dork.ObjectID, 0, nil, 0)
 
 	if containsAction(engine.legalActions(g, game.Player1), want) {
@@ -461,7 +462,7 @@ func TestApplyManaAbilityRequiresPriority(t *testing.T) {
 	rock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Sol Ring",
 		Types: []types.Card{types.Artifact},
-	}, mana.Colorless, 2)
+	}, color.Colorless, 2)
 	g.Turn.PriorityPlayer = game.Player2
 
 	if engine.applyAction(g, game.Player1, action.ActivateAbility(rock.ObjectID, 0, nil, 0)) {
@@ -480,7 +481,7 @@ func TestPayCostAutoActivatesManaRock(t *testing.T) {
 	rock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Sol Ring",
 		Types: []types.Card{types.Artifact},
-	}, mana.Colorless, 2)
+	}, color.Colorless, 2)
 	cost := mana.Cost{mana.GenericMana(2)}
 
 	if !payTestGenericCost(g, game.Player1, &cost) {
@@ -501,9 +502,9 @@ func TestPayCostAutoActivatesMultiOutputSourceForRequiredColor(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 3}),
 		Toughness: optPT(game.PT{Value: 3}),
-	}, mana.Green, 3)
+	}, color.Green, 3)
 	dork.SummoningSick = false
-	cost := mana.Cost{mana.ColoredMana(mana.Green), mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G, mana.G}
 
 	if !payTestGenericCost(g, game.Player1, &cost) {
 		t.Fatal("payCost() = false, want true")
@@ -511,7 +512,7 @@ func TestPayCostAutoActivatesMultiOutputSourceForRequiredColor(t *testing.T) {
 	if !dork.Tapped {
 		t.Fatal("multi-output mana dork was not tapped for payment")
 	}
-	if got := g.Players[game.Player1].ManaPool.Amount(mana.Green); got != 1 {
+	if got := g.Players[game.Player1].ManaPool.Amount(color.Green); got != 1 {
 		t.Fatalf("floating green mana = %d, want 1", got)
 	}
 }
@@ -521,7 +522,7 @@ func TestPayCostAutoActivatesMultiOutputSourceForColorlessSymbols(t *testing.T) 
 	rock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Sol Ring",
 		Types: []types.Card{types.Artifact},
-	}, mana.Colorless, 2)
+	}, color.Colorless, 2)
 	cost := mana.Cost{mana.ColorlessMana(), mana.ColorlessMana()}
 
 	if !payTestGenericCost(g, game.Player1, &cost) {
@@ -542,8 +543,8 @@ func TestPayCostAutoActivatesNonSummoningSickManaDork(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
-	}, mana.Green, 1)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	}, color.Green, 1)
+	cost := mana.Cost{mana.G}
 
 	if canPayCost(g, game.Player1, &cost) {
 		t.Fatal("canPayCost() = true with summoning-sick mana dork, want false")
@@ -588,7 +589,7 @@ func addSnowBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype t
 	return permanent
 }
 
-func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef, color mana.Color, amount int) *game.Permanent {
+func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef, color color.Color, amount int) *game.Permanent {
 	def.Abilities = append(def.Abilities, game.AbilityDef{
 		Kind: game.ActivatedAbility,
 		AdditionalCosts: []game.AdditionalCost{

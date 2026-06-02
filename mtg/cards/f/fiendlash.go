@@ -2,6 +2,7 @@ package f
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -21,10 +22,10 @@ var Fiendlash = &game.CardDef{
 	Name: "Fiendlash",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Red),
+		mana.R,
 	}),
-	Colors:        []mana.Color{mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	Colors:        []color.Color{color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Red),
 	Types:         []types.Card{types.Artifact},
 	Subtypes:      []types.Sub{types.Equipment},
 	OracleText:    "Equipped creature gets +2/+0 and has reach.\nWhenever equipped creature is dealt damage, it deals damage equal to its power to target player or planeswalker.\nEquip {2}{R}",
@@ -98,7 +99,7 @@ var Fiendlash = &game.CardDef{
 			Keywords: []game.Keyword{game.Equip},
 			ManaCost: opt.Val(mana.Cost{
 				mana.GenericMana(2),
-				mana.ColoredMana(mana.Red),
+				mana.R,
 			}),
 			Timing: game.SorceryOnly,
 			Targets: []game.TargetSpec{

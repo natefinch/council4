@@ -2,6 +2,7 @@ package i
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -19,12 +20,12 @@ import (
 var IgnobleHierarch = &game.CardDef{
 	Name: "Ignoble Hierarch",
 	ManaCost: opt.Val(mana.Cost{
-		mana.ColoredMana(mana.Green),
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Green, mana.Red),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Black, color.Green, color.Red),
 	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Sub("Goblin"), types.Shaman},
+	Subtypes:      []types.Sub{types.Goblin, types.Shaman},
 	Power:         opt.Val(game.PT{Value: 0}),
 	Toughness:     opt.Val(game.PT{Value: 1}),
 	OracleText:    "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)\n{T}: Add {B}, {R}, or {G}.",
@@ -44,7 +45,7 @@ var IgnobleHierarch = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose a color",
-						Colors: []mana.Color{mana.Black, mana.Red, mana.Green},
+						Colors: []color.Color{color.Black, color.Red, color.Green},
 					}),
 					LinkID: "ignoble-hierarch-color",
 				},

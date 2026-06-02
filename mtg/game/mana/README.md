@@ -23,8 +23,8 @@ Use `AllColors()` when deterministic color ordering matters.
 ```go
 cost := mana.Cost{
 	mana.GenericMana(2),
-	mana.ColoredMana(mana.White),
-	mana.ColoredMana(mana.Blue),
+	mana.W,
+	mana.U,
 }
 ```
 

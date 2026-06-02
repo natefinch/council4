@@ -2,6 +2,7 @@ package l
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -18,10 +19,10 @@ import (
 var LightningBolt = &game.CardDef{
 	Name: "Lightning Bolt",
 	ManaCost: opt.Val(mana.Cost{
-		mana.ColoredMana(mana.Red),
+		mana.R,
 	}),
-	Colors:        []mana.Color{mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	Colors:        []color.Color{color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Red),
 	Types:         []types.Card{types.Instant},
 	OracleText:    "Lightning Bolt deals 3 damage to any target.",
 	Abilities: []game.AbilityDef{

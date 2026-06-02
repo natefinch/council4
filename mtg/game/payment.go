@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -92,7 +93,7 @@ type SymbolPayment struct {
 	Symbol mana.Symbol
 	Method SymbolPaymentMethod
 
-	Color         mana.Color
+	Color         color.Color
 	GenericAmount int
 	LifePaid      int
 	Snow          bool

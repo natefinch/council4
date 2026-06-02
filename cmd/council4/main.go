@@ -243,7 +243,7 @@ func lavaSpikeLike() *game.CardDef {
 }
 
 func greenCost() opt.V[mana.Cost] {
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 	return opt.Val(cost)
 }
 

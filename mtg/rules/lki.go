@@ -2,9 +2,9 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -28,7 +28,7 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zone game.ZoneTy
 		Owner:          permanent.Owner,
 		Controller:     values.controller,
 		FromZone:       zone,
-		Colors:         append([]mana.Color(nil), values.colors...),
+		Colors:         append([]color.Color(nil), values.colors...),
 		Supertypes:     append([]types.Super(nil), values.supertypes...),
 		Types:          append([]types.Card(nil), values.types...),
 		Subtypes:       append([]types.Sub(nil), values.subtypes...),

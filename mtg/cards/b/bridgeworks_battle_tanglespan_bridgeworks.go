@@ -2,6 +2,7 @@ package b
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -27,10 +28,10 @@ var BridgeworksBattle = &game.CardDef{
 	Name: "Bridgeworks Battle",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(2),
-		mana.ColoredMana(mana.Green),
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green),
 	Types:         []types.Card{types.Sorcery},
 	OracleText:    "Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)",
 	Layout:        game.LayoutModalDFC,
@@ -96,7 +97,7 @@ var BridgeworksBattle = &game.CardDef{
 					{Kind: game.AdditionalCostTap},
 				},
 				Effects: []game.Effect{
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
 				},
 			},
 		},

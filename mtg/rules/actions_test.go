@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -218,7 +219,7 @@ func TestUnpayableSpellIsNotLegal(t *testing.T) {
 func TestLegalActionsIncludesPayableXValues(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := mana.Cost{mana.VariableMana(), mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.VariableMana(), mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Gelatinous Genesis",
 		ManaCost: optCost(cost),
@@ -244,7 +245,7 @@ func TestLegalActionsIncludesPayableXValues(t *testing.T) {
 func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := mana.Cost{mana.VariableMana(), mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.VariableMana(), mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Gelatinous Genesis",
 		ManaCost: optCost(cost),
@@ -271,7 +272,7 @@ func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
 func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Village Rites",
 		ManaCost: optCost(cost),
@@ -320,7 +321,7 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Chosen Offering",
 		ManaCost: optCost(cost),
@@ -359,7 +360,7 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 func TestPaymentChoiceCanPayPhyrexianManaWithLife(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
+	cost := mana.Cost{mana.PhyrexianMana(color.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Phyrexian Choice",
 		ManaCost: optCost(cost),
@@ -392,7 +393,7 @@ func TestPaymentChoiceRejectsUnavailablePhyrexianLifeOption(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	g.Players[game.Player1].Life = 1
-	cost := mana.Cost{mana.PhyrexianMana(mana.Green)}
+	cost := mana.Cost{mana.PhyrexianMana(color.Green)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Phyrexian Choice",
 		ManaCost: optCost(cost),
@@ -421,7 +422,7 @@ func TestPaymentChoiceDoesNotOvercommitPhyrexianLife(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	g.Players[game.Player1].Life = 3
-	cost := mana.Cost{mana.PhyrexianMana(mana.Black), mana.PhyrexianMana(mana.Black)}
+	cost := mana.Cost{mana.PhyrexianMana(color.Black), mana.PhyrexianMana(color.Black)}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Double Phyrexian Choice",
 		ManaCost: optCost(cost),
@@ -450,7 +451,7 @@ func TestPaymentChoiceDoesNotOvercommitPhyrexianLife(t *testing.T) {
 func TestPaymentChoiceFallbackSelectsMultipleAdditionalCostObjects(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Double Offering",
 		ManaCost: optCost(cost),
@@ -520,7 +521,7 @@ func TestAlternativeCostCanMakeSpellPayable(t *testing.T) {
 func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	normalCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	normalCost := mana.Cost{mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Alternate Offering",
 		ManaCost: optCost(normalCost),
@@ -559,7 +560,7 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Costly Harvest",
 		ManaCost: optCost(cost),
@@ -578,7 +579,7 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 1}),
 		Toughness: optPT(game.PT{Value: 1}),
-	}, mana.Green, 1)
+	}, color.Green, 1)
 	dork.SummoningSick = false
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -1078,7 +1079,7 @@ func TestSplitSecondAllowsOnlyManaAbilitiesAndPass(t *testing.T) {
 	manaRock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Mana Rock",
 		Types: []types.Card{types.Artifact},
-	}, mana.Colorless, 1)
+	}, color.Colorless, 1)
 	instantID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Response",
 		Types: []types.Card{types.Instant},
@@ -1155,7 +1156,7 @@ func TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn(t *testing.T) {
 func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	kickerCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	kickerCost := mana.Cost{mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:  "Kicker Spell",
 		Types: []types.Card{types.Sorcery},
@@ -1193,7 +1194,7 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	baseCost := mana.Cost{mana.GenericMana(1)}
-	kickerCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	kickerCost := mana.Cost{mana.G}
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Greedy Kicker Spell",
 		Types:    []types.Card{types.Sorcery},
@@ -1223,7 +1224,7 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	flashbackCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	flashbackCost := mana.Cost{mana.G}
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Flashback Spell",
 		Types:    []types.Card{types.Sorcery},
@@ -1272,7 +1273,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	flashbackCost := mana.Cost{mana.ColoredMana(mana.Green)}
+	flashbackCost := mana.Cost{mana.G}
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:     "Expensive Flashback Spell",
 		Types:    []types.Card{types.Sorcery},
@@ -1345,7 +1346,7 @@ func TestGraveyardAbilityExilesSourceCardAsCost(t *testing.T) {
 	if got := token.TokenDef.Subtypes; !slices.Equal(got, []types.Sub{types.Zombie, types.Snake, types.Druid}) {
 		t.Fatalf("token subtypes = %+v, want Zombie Snake Druid", got)
 	}
-	if got := token.TokenDef.Colors; !slices.Equal(got, []mana.Color{mana.Black}) {
+	if got := token.TokenDef.Colors; !slices.Equal(got, []color.Color{color.Black}) {
 		t.Fatalf("token colors = %+v, want black", got)
 	}
 }
@@ -1481,7 +1482,7 @@ func TestPhasedOutPermanentsPhaseInAndCannotActivate(t *testing.T) {
 	manaRock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
 		Name:  "Mana Rock",
 		Types: []types.Card{types.Artifact},
-	}, mana.Colorless, 1)
+	}, color.Colorless, 1)
 	manaRock.PhasedOut = true
 	g.Turn.PriorityPlayer = game.Player1
 
@@ -1583,7 +1584,7 @@ func modalSpellWithModeRangeAndDuplicates(minModes, maxModes int, allowDuplicate
 }
 
 func equipEquipment() *game.CardDef {
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 	return &game.CardDef{
 		Name:     "Test Sword",
 		Types:    []types.Card{types.Artifact},
@@ -1612,6 +1613,6 @@ func activatedAbilityPermanent(ability *game.AbilityDef) *game.CardDef {
 }
 
 func greenCost() opt.V[mana.Cost] {
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	cost := mana.Cost{mana.G}
 	return optCost(cost)
 }

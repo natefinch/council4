@@ -14,7 +14,7 @@ Check presence with `.Exists`. Import path: `"github.com/natefinch/council4/opt"
 
 ```go
 // Set a value:
-ManaCost: opt.Val(mana.Cost{mana.ColoredMana(mana.Red)})
+ManaCost: opt.Val(mana.Cost{mana.R})
 // Absent (default): just omit the field
 ```
 
@@ -464,11 +464,11 @@ the target.
 ### Mana construction helpers
 
 ```go
-mana.ColoredMana(mana.White)    // {W}
-mana.ColoredMana(mana.Blue)     // {U}
-mana.ColoredMana(mana.Black)    // {B}
-mana.ColoredMana(mana.Red)      // {R}
-mana.ColoredMana(mana.Green)    // {G}
+mana.W    // {W}
+mana.U     // {U}
+mana.B    // {B}
+mana.R      // {R}
+mana.G    // {G}
 mana.GenericMana(3)             // {3}
 mana.ColorlessMana()            // {C}
 mana.VariableMana()             // {X}
@@ -484,7 +484,7 @@ mana.SnowMana()                         // {S}
 
 ### Step 1: Split oracle text into paragraphs
 
-Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated list of keywords on a single line counts as multiple keyword abilities grouped into one `AbilityDef`.
+Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated list of plain keywords on a single line counts as multiple keyword abilities, one `AbilityDef` per keyword.
 
 ### Step 2: Classify each paragraph
 
@@ -499,10 +499,22 @@ Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated 
 
 #### Keywords (any ability kind)
 
-If a paragraph is just a keyword name (or comma-separated keywords), create one `AbilityDef` with:
-- `Kind: StaticAbility`
-- `Keywords: []game.Keyword{game.Flying, game.Vigilance, ...}`
-- `Text:` the full oracle text line
+If a paragraph is just one or more plain non-parameterized keywords, use the reusable helper ability for each keyword:
+- `game.FlyingAbility`
+- `game.DeathtouchAbility`
+- `game.IndestructibleAbility`
+- etc.
+
+For comma-separated keyword lines such as `Deathtouch, indestructible`, add each helper separately:
+
+```go
+Abilities: []game.AbilityDef{
+    game.DeathtouchAbility,
+    game.IndestructibleAbility,
+}
+```
+
+Do not smash multiple plain keywords into one `AbilityDef` with `Keywords: []game.Keyword{...}`. Use explicit `AbilityDef` values only for keyword abilities that need card-specific parameters or costs.
 
 For keywords with parameters:
 - **Protection from [color]**: `Keywords: []game.Keyword{game.Protection}`, `ProtectionFromColors: []mana.Color{mana.Red}`
@@ -692,11 +704,8 @@ Vigilance (Attacking doesn't cause this creature to tap.)
 
 ```go
 Abilities: []game.AbilityDef{
-    {
-        Kind:     game.StaticAbility,
-        Text:     "Flying\nVigilance",
-        Keywords: []game.Keyword{game.Flying, game.Vigilance},
-    },
+    game.FlyingAbility,
+    game.VigilanceAbility,
 },
 ```
 

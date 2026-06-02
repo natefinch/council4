@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -135,7 +136,7 @@ func (r *effectResolver) effectRecipientOrController(effect *game.Effect) (game.
 
 // manaColor returns the mana color for an add-mana effect, respecting any
 // resolution choice that overrides the effect's declared color.
-func (r *effectResolver) manaColor(effect *game.Effect) mana.Color {
+func (r *effectResolver) manaColor(effect *game.Effect) color.Color {
 	return effectManaColor(r.obj, effect)
 }
 
@@ -675,7 +676,7 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 		token.Name = spec.SetName
 	}
 	if len(spec.SetColors) > 0 {
-		token.Colors = append([]mana.Color(nil), spec.SetColors...)
+		token.Colors = append([]color.Color(nil), spec.SetColors...)
 	}
 	if len(spec.SetTypes) > 0 {
 		token.Types = append([]types.Card(nil), spec.SetTypes...)
@@ -703,7 +704,7 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 
 func copyCardDef(source *game.CardDef) *game.CardDef {
 	copied := *source
-	copied.Colors = append([]mana.Color(nil), source.Colors...)
+	copied.Colors = append([]color.Color(nil), source.Colors...)
 	copied.ColorIdentity = source.ColorIdentity
 	copied.Supertypes = append([]types.Super(nil), source.Supertypes...)
 	copied.Types = append([]types.Card(nil), source.Types...)
@@ -718,7 +719,7 @@ func copyCardDef(source *game.CardDef) *game.CardDef {
 
 func copyCardFace(source *game.CardFace) game.CardFace {
 	copied := *source
-	copied.Colors = append([]mana.Color(nil), source.Colors...)
+	copied.Colors = append([]color.Color(nil), source.Colors...)
 	copied.Supertypes = append([]types.Super(nil), source.Supertypes...)
 	copied.Types = append([]types.Card(nil), source.Types...)
 	copied.Subtypes = append([]types.Sub(nil), source.Subtypes...)
@@ -1398,7 +1399,7 @@ func effectPlayer(g *game.Game, obj *game.StackObject, effect *game.Effect) (gam
 	return target.PlayerID, true
 }
 
-func effectManaColor(obj *game.StackObject, effect *game.Effect) mana.Color {
+func effectManaColor(obj *game.StackObject, effect *game.Effect) color.Color {
 	if choice, ok := linkedResolutionChoice(obj, effect.ChoiceLinkID); ok && choice.Kind == game.ResolutionChoiceColor {
 		return choice.Color
 	}

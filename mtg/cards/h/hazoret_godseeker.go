@@ -2,6 +2,7 @@ package h
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -23,13 +24,13 @@ var HazoretGodseeker = &game.CardDef{
 	Name: "Hazoret, Godseeker",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Red),
+		mana.R,
 	}),
-	Colors:        []mana.Color{mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	Colors:        []color.Color{color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Red),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Sub("God")},
+	Subtypes:      []types.Sub{types.God},
 	Power:         opt.Val(game.PT{Value: 5}),
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "Indestructible, haste\nStart your engines! (If you have no speed, it starts at 1. It increases once on each of your turns when an opponent loses life. Max speed is 4.)\n{1}, {T}: Target creature with power 2 or less can't be blocked this turn.\nHazoret can't attack or block unless you have max speed.",

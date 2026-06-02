@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -17,7 +18,7 @@ func TestCascadeExilesUntilLowerManaNonlandAndCastsIt(t *testing.T) {
 	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Cascade Hit", 2))
 	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []types.Card{types.Land}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 7))
-	g.Players[game.Player1].ManaPool.Add(mana.Colorless, 5)
+	g.Players[game.Player1].ManaPool.Add(color.Colorless, 5)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {
@@ -45,7 +46,7 @@ func TestCascadeBottomsCardsWhenNoEligibleCardExists(t *testing.T) {
 	cascadeID := addCardToHand(g, game.Player1, cascadeSpell(3))
 	landID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Island", Types: []types.Card{types.Land}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 7))
-	g.Players[game.Player1].ManaPool.Add(mana.Colorless, 3)
+	g.Players[game.Player1].ManaPool.Add(color.Colorless, 3)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {
@@ -69,7 +70,7 @@ func TestCascadeChainsFromCascadedSpell(t *testing.T) {
 	cascadeID := addCardToHand(g, game.Player1, cascadeSpell(6))
 	secondHitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Second Hit", 1))
 	firstHitID := addCardToLibrary(g, game.Player1, cascadeSpell(3))
-	g.Players[game.Player1].ManaPool.Add(mana.Colorless, 6)
+	g.Players[game.Player1].ManaPool.Add(color.Colorless, 6)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {

@@ -1,8 +1,8 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -72,8 +72,8 @@ type TargetPredicate struct {
 	PermanentTypes []types.Card
 	ExcludedTypes  []types.Card
 
-	Colors         []mana.Color
-	ExcludedColors []mana.Color
+	Colors         []color.Color
+	ExcludedColors []color.Color
 
 	Controller ControllerRelation
 	Player     PlayerRelation

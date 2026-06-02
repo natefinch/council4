@@ -2,6 +2,7 @@ package g
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -21,10 +22,10 @@ var GimliSRecklessMight = &game.CardDef{
 	Name: "Gimli's Reckless Might",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(3),
-		mana.ColoredMana(mana.Red),
+		mana.R,
 	}),
-	Colors:        []mana.Color{mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	Colors:        []color.Color{color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Red),
 	Types:         []types.Card{types.Enchantment},
 	OracleText:    "Creatures you control have haste.\nFormidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.",
 	Abilities: []game.AbilityDef{

@@ -2,6 +2,7 @@ package d
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -21,11 +22,11 @@ var DomriAnarchOfBolas = &game.CardDef{
 	Name: "Domri, Anarch of Bolas",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Red),
-		mana.ColoredMana(mana.Green),
+		mana.R,
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green, mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	Colors:        []color.Color{color.Green, color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Planeswalker},
 	Subtypes:      []types.Sub{"Domri"},
@@ -56,7 +57,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose {R} or {G}",
-						Colors: []mana.Color{mana.Red, mana.Green},
+						Colors: []color.Color{color.Red, color.Green},
 					}),
 					LinkID: "domri-color",
 				},

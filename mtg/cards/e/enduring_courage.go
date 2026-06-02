@@ -2,6 +2,7 @@ package e
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -20,11 +21,11 @@ var EnduringCourage = &game.CardDef{
 	Name: "Enduring Courage",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(2),
-		mana.ColoredMana(mana.Red),
-		mana.ColoredMana(mana.Red),
+		mana.R,
+		mana.R,
 	}),
-	Colors:        []mana.Color{mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	Colors:        []color.Color{color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Red),
 	Types:         []types.Card{types.Enchantment, types.Creature},
 	Subtypes:      []types.Sub{"Dog", "Glimmer"},
 	Power:         opt.Val(game.PT{Value: 3}),

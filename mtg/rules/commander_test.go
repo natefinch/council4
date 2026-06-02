@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -23,7 +24,7 @@ func TestValidateCommanderConfigsAcceptsLegalDeck(t *testing.T) {
 }
 
 func TestNewGameTracksCommanderIDs(t *testing.T) {
-	commander := commanderDef("Tracked Commander", mana.Green)
+	commander := commanderDef("Tracked Commander", color.Green)
 	configs := [game.NumPlayers]game.PlayerConfig{
 		game.Player1: {Commander: commander},
 	}
@@ -250,7 +251,7 @@ func TestValidateCommanderConfigRejectsInvalidCommander(t *testing.T) {
 		name      string
 		commander *game.CardDef
 	}{
-		{name: "nonlegendary", commander: creatureDef("Bear", mana.Green)},
+		{name: "nonlegendary", commander: creatureDef("Bear", color.Green)},
 		{name: "noncreature", commander: &game.CardDef{Name: "types.Legendary Artifact", Supertypes: []types.Super{types.Legendary}, Types: []types.Card{types.Artifact}}},
 	}
 	for _, tt := range tests {
@@ -267,7 +268,7 @@ func TestValidateCommanderConfigRejectsInvalidCommander(t *testing.T) {
 
 func TestValidateCommanderConfigRejectsColorIdentityViolation(t *testing.T) {
 	config := legalCommanderConfig()
-	config.Deck[0] = creatureDef("Off Color Card", mana.Blue)
+	config.Deck[0] = creatureDef("Off Color Card", color.Blue)
 
 	errs := validateCommanderConfig(game.Player1, config)
 
@@ -286,22 +287,22 @@ func TestValidateCommanderConfigRejectsCommanderInDeck(t *testing.T) {
 func legalCommanderConfig() game.PlayerConfig {
 	deck := make([]*game.CardDef, commanderDeckCardCount)
 	for i := range deck {
-		deck[i] = creatureDef("Green Card "+strconv.Itoa(i), mana.Green)
+		deck[i] = creatureDef("Green Card "+strconv.Itoa(i), color.Green)
 	}
 	return game.PlayerConfig{
 		Name:      "Player",
-		Commander: commanderDef("Green Commander", mana.Green),
+		Commander: commanderDef("Green Commander", color.Green),
 		Deck:      deck,
 	}
 }
 
-func commanderDef(name string, colors ...mana.Color) *game.CardDef {
+func commanderDef(name string, colors ...color.Color) *game.CardDef {
 	card := creatureDef(name, colors...)
 	card.Supertypes = append(card.Supertypes, types.Legendary)
 	return card
 }
 
-func creatureDef(name string, colors ...mana.Color) *game.CardDef {
+func creatureDef(name string, colors ...color.Color) *game.CardDef {
 	return &game.CardDef{
 		Name:          name,
 		Types:         []types.Card{types.Creature},
@@ -319,19 +320,19 @@ func basicLandDef(name types.Sub) *game.CardDef {
 }
 
 func addCommanderPermanent(g *game.Game, owner game.PlayerID) *game.Permanent {
-	permanent := addCombatPermanent(g, owner, commanderDef("Battlefield Commander", mana.Green))
+	permanent := addCombatPermanent(g, owner, commanderDef("Battlefield Commander", color.Green))
 	trackCommanderID(g, owner, permanent.CardInstanceID)
 	return permanent
 }
 
 func addCommanderCardToHand(g *game.Game, owner game.PlayerID) id.ID {
-	cardID := addCardToHand(g, owner, commanderDef("Zone Commander", mana.Green))
+	cardID := addCardToHand(g, owner, commanderDef("Zone Commander", color.Green))
 	trackCommanderID(g, owner, cardID)
 	return cardID
 }
 
 func addCommanderCardToLibrary(g *game.Game, owner game.PlayerID) id.ID {
-	cardID := addCardToLibrary(g, owner, commanderDef("Library Commander", mana.Green))
+	cardID := addCardToLibrary(g, owner, commanderDef("Library Commander", color.Green))
 	trackCommanderID(g, owner, cardID)
 	return cardID
 }
@@ -344,8 +345,8 @@ func newCommanderCastGame(commander *game.CardDef) *game.Game {
 }
 
 func greenCommanderWithCost() *game.CardDef {
-	commander := commanderDef("Castable Commander", mana.Green)
-	cost := mana.Cost{mana.ColoredMana(mana.Green)}
+	commander := commanderDef("Castable Commander", color.Green)
+	cost := mana.Cost{mana.G}
 	commander.ManaCost = optCost(cost)
 	return commander
 }

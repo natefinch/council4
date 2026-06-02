@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -13,8 +14,8 @@ import (
 func TestLegalActionsIncludeFaceDownCastAtSorcerySpeed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.ColoredMana(mana.Green)}))
-	g.Players[game.Player1].ManaPool.Add(mana.Green, 3)
+	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.G}))
+	g.Players[game.Player1].ManaPool.Add(color.Green, 3)
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.PriorityPlayer = game.Player1
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -33,8 +34,8 @@ func TestLegalActionsIncludeFaceDownCastAtSorcerySpeed(t *testing.T) {
 func TestLegalActionsExcludeFaceDownCastOutsideSorcerySpeed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.ColoredMana(mana.Green)}))
-	g.Players[game.Player1].ManaPool.Add(mana.Green, 3)
+	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.G}))
+	g.Players[game.Player1].ManaPool.Add(color.Green, 3)
 	g.Turn.ActivePlayer = game.Player2
 	g.Turn.PriorityPlayer = game.Player1
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -52,8 +53,8 @@ func TestLegalActionsExcludeFaceDownCastOutsideSorcerySpeed(t *testing.T) {
 func TestCastFaceDownResolvesAsTwoTwoCreatureWithHiddenIdentity(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.ColoredMana(mana.Green)}))
-	g.Players[game.Player1].ManaPool.Add(mana.Green, 3)
+	cardID := addCardToHand(g, game.Player1, morphCreature(mana.Cost{mana.G}))
+	g.Players[game.Player1].ManaPool.Add(color.Green, 3)
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.PriorityPlayer = game.Player1
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -90,8 +91,8 @@ func TestCastFaceDownResolvesAsTwoTwoCreatureWithHiddenIdentity(t *testing.T) {
 func TestTurnFaceUpPaysMorphCostAndRevealsPrintedCharacteristics(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	permanent := addFaceDownPermanent(g, game.Player1, morphCreature(mana.Cost{mana.ColoredMana(mana.Green)}), game.FaceDownMorph)
-	g.Players[game.Player1].ManaPool.Add(mana.Green, 1)
+	permanent := addFaceDownPermanent(g, game.Player1, morphCreature(mana.Cost{mana.G}), game.FaceDownMorph)
+	g.Players[game.Player1].ManaPool.Add(color.Green, 1)
 	g.Turn.PriorityPlayer = game.Player1
 
 	if !engine.applyAction(g, game.Player1, actionBuild.turnFaceUp(permanent.ObjectID)) {
@@ -112,8 +113,8 @@ func TestTurnFaceUpPaysMorphCostAndRevealsPrintedCharacteristics(t *testing.T) {
 func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	permanent := addFaceDownPermanent(g, game.Player1, disguiseCreature(mana.Cost{mana.ColoredMana(mana.White)}), game.FaceDownDisguise)
-	g.Players[game.Player1].ManaPool.Add(mana.White, 1)
+	permanent := addFaceDownPermanent(g, game.Player1, disguiseCreature(mana.Cost{mana.W}), game.FaceDownDisguise)
+	g.Players[game.Player1].ManaPool.Add(color.White, 1)
 	g.Turn.PriorityPlayer = game.Player1
 
 	abilities := permanentEffectiveAbilities(g, permanent)

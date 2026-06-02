@@ -13,7 +13,7 @@ func TestParseManaCostLiteral(t *testing.T) {
 		want string
 	}{
 		{"empty", "", ""},
-		{"single colored", "{R}", "mana.ColoredMana(mana.Red)"},
+		{"single colored", "{R}", "mana.R"},
 		{"generic plus colors", "{2}{W}{U}", "mana.GenericMana(2)"},
 		{"variable", "{X}{R}{R}", "mana.VariableMana()"},
 		{"hybrid", "{W/U}", "mana.HybridMana(mana.White, mana.Blue)"},
@@ -242,7 +242,7 @@ func TestGenerateCardSource(t *testing.T) {
 	checks := []string{
 		"package l",
 		`Name: "Lightning Bolt"`,
-		"mana.ColoredMana(mana.Red)",
+		"mana.R",
 		"types.Instant",
 		"mana.Red",
 		"Abilities: []game.AbilityDef{}",

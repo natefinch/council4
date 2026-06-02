@@ -2,6 +2,7 @@ package g
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -20,7 +21,7 @@ import (
 // which covers the three legal outputs: {B}{B}, {B}{R}, and {R}{R}.
 var GravenCairns = &game.CardDef{
 	Name:          "Graven Cairns",
-	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Red),
+	ColorIdentity: mana.NewColorIdentity(color.Black, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.",
 	Abilities: []game.AbilityDef{
@@ -32,7 +33,7 @@ var GravenCairns = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Colorless, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Colorless, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -40,7 +41,7 @@ var GravenCairns = &game.CardDef{
 			Text:          "{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.",
 			IsManaAbility: true,
 			ManaCost: opt.Val(mana.Cost{
-				mana.HybridMana(mana.Black, mana.Red),
+				mana.HybridMana(color.Black, color.Red),
 			}),
 			AdditionalCosts: []game.AdditionalCost{
 				{Kind: game.AdditionalCostTap},
@@ -52,7 +53,7 @@ var GravenCairns = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose first mana color ({B} or {R})",
-						Colors: []mana.Color{mana.Black, mana.Red},
+						Colors: []color.Color{color.Black, color.Red},
 					}),
 					LinkID: "graven-cairns-color-1",
 				},
@@ -68,7 +69,7 @@ var GravenCairns = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose second mana color ({B} or {R})",
-						Colors: []mana.Color{mana.Black, mana.Red},
+						Colors: []color.Color{color.Black, color.Red},
 					}),
 					LinkID: "graven-cairns-color-2",
 				},

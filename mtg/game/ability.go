@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -475,7 +476,7 @@ type TokenCopySpec struct {
 	Object ObjectReference
 
 	SetName       string
-	SetColors     []mana.Color
+	SetColors     []color.Color
 	SetTypes      []types.Card
 	SetSubtypes   []types.Sub
 	SetPower      opt.V[PT]
@@ -508,7 +509,7 @@ func EternalizeAbility(cost mana.Cost, creatureSubtypes ...types.Sub) AbilityDef
 			TargetIndex: TargetIndexController,
 			TokenCopy: opt.Val(TokenCopySpec{
 				Source:       TokenCopySourceSourceCard,
-				SetColors:    []mana.Color{mana.Black},
+				SetColors:    []color.Color{color.Black},
 				SetSubtypes:  tokenSubtypes,
 				SetPower:     opt.Val(PT{Value: 4}),
 				SetToughness: opt.Val(PT{Value: 4}),
@@ -591,7 +592,7 @@ type Effect struct {
 	ResultAmount          EffectResultAmountKind
 	CounterKind           counter.Kind
 	CounterSource         CounterSourceSpec
-	ManaColor             mana.Color
+	ManaColor             color.Color
 	// Choice asks for a value while resolving this instruction and stores it
 	// under LinkID for later instructions to consume (CR 608.2c, CR 609.3).
 	Choice opt.V[ResolutionChoice]
@@ -710,7 +711,7 @@ type AbilityDef struct {
 	// ProtectionFromColors parameterizes Protection for the initial protection
 	// slice. Empty means this ability does not currently grant rules-relevant
 	// protection, even if Keywords includes Protection.
-	ProtectionFromColors []mana.Color
+	ProtectionFromColors []color.Color
 
 	// ManaCost is the mana component of an activated ability's cost.
 	// Nil for non-activated abilities.

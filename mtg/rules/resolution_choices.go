@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -95,7 +96,7 @@ func resolutionChoicePlayer(controller game.PlayerID, choice *game.ResolutionCho
 	return controller
 }
 
-func resolutionChoiceColors(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
+func resolutionChoiceColors(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []color.Color {
 	if choice == nil {
 		return nil
 	}
@@ -105,13 +106,13 @@ func resolutionChoiceColors(g *game.Game, playerID game.PlayerID, choice *game.R
 	default:
 		colors := choice.Colors
 		if len(colors) == 0 {
-			colors = append(mana.AllColors(), mana.Colorless)
+			colors = append(mana.AllColors(), color.Colorless)
 		}
 		return colors
 	}
 }
 
-func commanderColorIdentityColors(g *game.Game, playerID game.PlayerID) []mana.Color {
+func commanderColorIdentityColors(g *game.Game, playerID game.PlayerID) []color.Color {
 	player, ok := playerByID(g, playerID)
 	if !ok || player.CommanderInstanceID == 0 {
 		return nil

@@ -297,7 +297,7 @@ func zeroCostSpell() *game.CardDef {
 func xSpell() *game.CardDef {
 	return &game.CardDef{
 		Name:      "Characterization X Spell",
-		ManaCost:  optCost(mana.Cost{mana.VariableMana(), mana.ColoredMana(mana.Green)}),
+		ManaCost:  optCost(mana.Cost{mana.VariableMana(), mana.G}),
 		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
 	}

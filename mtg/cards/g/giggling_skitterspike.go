@@ -23,7 +23,7 @@ var GigglingSkitterspike = &game.CardDef{
 		mana.GenericMana(4),
 	}),
 	Types:      []types.Card{types.Artifact, types.Creature},
-	Subtypes:   []types.Sub{types.Sub("Toy")},
+	Subtypes:   []types.Sub{types.Toy},
 	Power:      opt.Val(game.PT{Value: 1}),
 	Toughness:  opt.Val(game.PT{Value: 1}),
 	OracleText: "Indestructible\nWhenever this creature attacks, blocks, or becomes the target of a spell, it deals damage equal to its power to each opponent.\n{5}: Monstrosity 5. (If this creature isn't monstrous, put five +1/+1 counters on it and it becomes monstrous.)",

@@ -1,8 +1,8 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -34,7 +34,7 @@ type DynamicValue struct {
 // 1 (CR 707, CR 613). Optional fields mean "leave that value absent.".
 type CopyableValues struct {
 	Name             string
-	Colors           []mana.Color
+	Colors           []color.Color
 	Supertypes       []types.Super
 	Types            []types.Card
 	Subtypes         []types.Sub
@@ -104,9 +104,9 @@ type ContinuousEffect struct {
 	AddSubtypes    []types.Sub
 	RemoveSubtypes []types.Sub
 
-	SetColors    []mana.Color
-	AddColors    []mana.Color
-	RemoveColors []mana.Color
+	SetColors    []color.Color
+	AddColors    []color.Color
+	RemoveColors []color.Color
 
 	AddKeywords    []Keyword
 	RemoveKeywords []Keyword

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -79,7 +80,7 @@ type ResolutionChoice struct {
 	UsePlayer bool
 
 	ColorSource    ResolutionChoiceColorSource
-	Colors         []mana.Color
+	Colors         []color.Color
 	CardTypes      []types.Card
 	PlayerRelation PlayerRelation
 	Zone           ZoneType
@@ -88,7 +89,7 @@ type ResolutionChoice struct {
 // ResolutionChoiceResult stores the selected value from a ResolutionChoice.
 type ResolutionChoiceResult struct {
 	Kind     ResolutionChoiceKind
-	Color    mana.Color
+	Color    color.Color
 	CardType types.Card
 	Player   PlayerID
 	CardID   id.ID

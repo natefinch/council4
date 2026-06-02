@@ -2,8 +2,8 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
@@ -41,7 +41,7 @@ func (s *rulesPaymentState) PermanentHasSupertype(p *game.Permanent, supertype t
 	return permanentHasSupertype(s.g, p, supertype)
 }
 
-func (s *rulesPaymentState) PermanentEffectiveColors(p *game.Permanent) []mana.Color {
+func (s *rulesPaymentState) PermanentEffectiveColors(p *game.Permanent) []color.Color {
 	return permanentEffectiveColors(s.g, p)
 }
 

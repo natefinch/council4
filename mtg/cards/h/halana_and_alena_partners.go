@@ -2,6 +2,7 @@ package h
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -22,14 +23,14 @@ var HalanaAndAlenaPartners = &game.CardDef{
 	Name: "Halana and Alena, Partners",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(2),
-		mana.ColoredMana(mana.Red),
-		mana.ColoredMana(mana.Green),
+		mana.R,
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green, mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	Colors:        []color.Color{color.Green, color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Human, types.Sub("Ranger")},
+	Subtypes:      []types.Sub{types.Human, types.Ranger},
 	Power:         opt.Val(game.PT{Value: 2}),
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "First strike (This creature deals combat damage before creatures without first strike.)\nReach (This creature can block creatures with flying.)\nAt the beginning of combat on your turn, put X +1/+1 counters on another target creature you control, where X is Halana and Alena's power. That creature gains haste until end of turn.",

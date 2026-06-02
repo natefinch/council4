@@ -1,6 +1,10 @@
 package mana
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/natefinch/council4/mtg/game/color"
+)
 
 // SymbolKind classifies a mana symbol by how it can be paid.
 type SymbolKind int
@@ -30,24 +34,33 @@ type Symbol struct {
 
 	// Color is the primary color for ColoredSymbol, PhyrexianSymbol,
 	// MonoHybridSymbol, and HybridSymbol.
-	Color Color
+	Color color.Color
 
 	// AltColor is the second color for HybridSymbol (e.g., {W/U} has
 	// Color=White, AltColor=Blue).
-	AltColor Color
+	AltColor color.Color
 
 	// Generic is the numeric value for GenericSymbol (e.g., 3 for {3}).
 	Generic int
 }
 
+// Mana Symbols for costs.
+var (
+	R = Symbol{Kind: ColoredSymbol, Color: color.Red}
+	U = Symbol{Kind: ColoredSymbol, Color: color.Blue}
+	B = Symbol{Kind: ColoredSymbol, Color: color.Black}
+	W = Symbol{Kind: ColoredSymbol, Color: color.White}
+	G = Symbol{Kind: ColoredSymbol, Color: color.Green}
+)
+
 // ColoredMana creates a colored mana symbol.
-func ColoredMana(c Color) Symbol {
+func ColoredMana(c color.Color) Symbol {
 	return Symbol{Kind: ColoredSymbol, Color: c}
 }
 
 // ColorlessMana creates a colorless mana symbol ({C}).
 func ColorlessMana() Symbol {
-	return Symbol{Kind: ColorlessSymbol, Color: Colorless}
+	return Symbol{Kind: ColorlessSymbol, Color: color.Colorless}
 }
 
 // GenericMana creates a generic mana symbol with the given value.
@@ -61,17 +74,17 @@ func VariableMana() Symbol {
 }
 
 // HybridMana creates a hybrid mana symbol (e.g., {W/U}).
-func HybridMana(a, b Color) Symbol {
+func HybridMana(a, b color.Color) Symbol {
 	return Symbol{Kind: HybridSymbol, Color: a, AltColor: b}
 }
 
 // MonoHybridMana creates a mono-hybrid mana symbol (e.g., {2/W}).
-func MonoHybridMana(c Color) Symbol {
+func MonoHybridMana(c color.Color) Symbol {
 	return Symbol{Kind: MonoHybridSymbol, Color: c}
 }
 
 // PhyrexianMana creates a Phyrexian mana symbol (e.g., {W/P}).
-func PhyrexianMana(c Color) Symbol {
+func PhyrexianMana(c color.Color) Symbol {
 	return Symbol{Kind: PhyrexianSymbol, Color: c}
 }
 

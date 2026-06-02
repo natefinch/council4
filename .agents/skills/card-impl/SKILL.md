@@ -49,6 +49,7 @@ Given one or more Magic: The Gathering card names:
 - Use only `EffectType`, `Keyword`, and other enum values that exist in the codebase. Do not invent new ones.
 - Use `types.Creature`/`types.Forest`/etc. from `mtg/game/types`; do not use old `game.Type*` or `game.*Subtype*` names.
 - `mtg/game/types` includes named constants for every Comprehensive Rules 205.3 subtype. Prefer those constants for new card definitions instead of `types.Sub("...")`; fall back to `types.Sub` only if the subtype truly is not present.
+- For multiple plain non-parameterized keywords in one oracle line, add one reusable helper ability per keyword (for example `game.DeathtouchAbility, game.IndestructibleAbility`) instead of combining them into one `AbilityDef`.
 - For double-faced cards, edit front-face data on `CardDef` and back-face data on `Back: opt.Val(game.CardFace{...})`; do not add a `Faces` slice.
 - If a card has effects that cannot be expressed with the existing effect primitives, set `ImplementationID` to a descriptive name and leave a comment explaining what hand-written code would need to do.
 - Keep the oracle text comment block at the top of the file — it's useful for human review.

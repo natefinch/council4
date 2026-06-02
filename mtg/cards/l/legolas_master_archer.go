@@ -2,6 +2,7 @@ package l
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -22,14 +23,14 @@ var LegolasMasterArcher = &game.CardDef{
 	Name: "Legolas, Master Archer",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Green),
-		mana.ColoredMana(mana.Green),
+		mana.G,
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Sub("Elf"), types.Sub("Archer")},
+	Subtypes:      []types.Sub{types.Elf, types.Archer},
 	Power:         opt.Val(game.PT{Value: 1}),
 	Toughness:     opt.Val(game.PT{Value: 4}),
 	OracleText:    "Reach\nWhenever you cast a spell that targets Legolas, put a +1/+1 counter on Legolas.\nWhenever you cast a spell that targets a creature you don't control, Legolas deals damage equal to its power to up to one target creature.",

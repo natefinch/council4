@@ -2,6 +2,7 @@ package f
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -20,11 +21,11 @@ var FiresOfYavimaya = &game.CardDef{
 	Name: "Fires of Yavimaya",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Red),
-		mana.ColoredMana(mana.Green),
+		mana.R,
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green, mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	Colors:        []color.Color{color.Green, color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Enchantment},
 	OracleText:    "Creatures you control have haste.\nSacrifice this enchantment: Target creature gets +2/+2 until end of turn.",
 	Abilities: []game.AbilityDef{

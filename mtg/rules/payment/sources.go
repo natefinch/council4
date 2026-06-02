@@ -5,13 +5,14 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
 type permanentManaOutputResult struct {
-	color  mana.Color
+	color  color.Color
 	amount int
 	snow   bool
 }
@@ -34,7 +35,7 @@ func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutpu
 	return permanentManaOutputResult{color: ability.Effects[0].ManaColor, amount: amount, snow: s.PermanentHasSupertype(permanent, types.Snow)}, true
 }
 
-func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
+func basicLandManaColor(s State, permanent *game.Permanent) (color.Color, bool) {
 	card, ok := s.PermanentCardDef(permanent)
 	if !ok || !card.HasType(types.Land) {
 		return 0, false
@@ -49,13 +50,13 @@ func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
 
 var basicLandTypes = []struct {
 	subtype types.Sub
-	color   mana.Color
+	color   color.Color
 }{
-	{subtype: types.Plains, color: mana.White},
-	{subtype: types.Island, color: mana.Blue},
-	{subtype: types.Swamp, color: mana.Black},
-	{subtype: types.Mountain, color: mana.Red},
-	{subtype: types.Forest, color: mana.Green},
+	{subtype: types.Plains, color: color.White},
+	{subtype: types.Island, color: color.Blue},
+	{subtype: types.Swamp, color: color.Black},
+	{subtype: types.Mountain, color: color.Red},
+	{subtype: types.Forest, color: color.Green},
 }
 
 func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
@@ -166,7 +167,7 @@ func convokePayment(s State, playerID game.PlayerID, cost *mana.Cost, xValue int
 	return taps, costWithConvokePayments(cost, genericReduction, paidColored), true
 }
 
-func chooseConvokeColoredCreature(s State, candidates []*game.Permanent, used map[id.ID]bool, color mana.Color) (*game.Permanent, bool) {
+func chooseConvokeColoredCreature(s State, candidates []*game.Permanent, used map[id.ID]bool, color color.Color) (*game.Permanent, bool) {
 	for _, permanent := range candidates {
 		if used[permanent.ObjectID] {
 			continue
@@ -217,8 +218,8 @@ func costWithGenericRequirement(cost *mana.Cost, generic int) *mana.Cost {
 // availableManaSources groups sources by color. Callers must consume it through
 // paymentColors or explicit symbol colors, never by ranging over the map, so
 // payment ordering remains deterministic.
-func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]bool) map[mana.Color][]manaSource {
-	available := make(map[mana.Color][]manaSource)
+func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]bool) map[color.Color][]manaSource {
+	available := make(map[color.Color][]manaSource)
 	for _, permanent := range s.Battlefield() {
 		if s.EffectiveController(permanent) != playerID || permanent.Tapped || exclude[permanent.ObjectID] {
 			continue

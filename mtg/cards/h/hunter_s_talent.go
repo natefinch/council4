@@ -2,6 +2,7 @@ package h
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -25,10 +26,10 @@ var HunterSTalent = &game.CardDef{
 	Name: "Hunter's Talent",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Green),
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green),
 	Types:         []types.Card{types.Enchantment},
 	Subtypes:      []types.Sub{types.Class},
 	OracleText:    "(Gain the next level as a sorcery to add its ability.)\nWhen this Class enters, target creature you control deals damage equal to its power to target creature you don't control.\n{1}{G}: Level 2\nWhenever you attack, target attacking creature gets +1/+0 and gains trample until end of turn.\n{3}{G}: Level 3\nAt the beginning of your end step, if you control a creature with power 4 or greater, draw a card.",
@@ -85,7 +86,7 @@ var HunterSTalent = &game.CardDef{
 			Text: "{1}{G}: Level 2",
 			ManaCost: opt.Val(mana.Cost{
 				mana.GenericMana(1),
-				mana.ColoredMana(mana.Green),
+				mana.G,
 			}),
 			Timing: game.SorceryOnly,
 			ActivationCondition: opt.Val(game.Condition{
@@ -147,7 +148,7 @@ var HunterSTalent = &game.CardDef{
 			Text: "{3}{G}: Level 3",
 			ManaCost: opt.Val(mana.Cost{
 				mana.GenericMana(3),
-				mana.ColoredMana(mana.Green),
+				mana.G,
 			}),
 			Timing: game.SorceryOnly,
 			ActivationCondition: opt.Val(game.Condition{

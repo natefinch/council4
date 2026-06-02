@@ -4,6 +4,7 @@ import (
 	"maps"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -38,7 +39,7 @@ type abilityCostPlan struct {
 // manaTap records a planned tap of a mana-producing permanent.
 type manaTap struct {
 	permanent *game.Permanent
-	color     mana.Color
+	color     color.Color
 	amount    int
 	snow      bool
 }
@@ -46,20 +47,20 @@ type manaTap struct {
 // manaSource is a candidate mana-producing permanent used during plan building.
 type manaSource struct {
 	permanent *game.Permanent
-	color     mana.Color
+	color     color.Color
 	amount    int
 	snow      bool
 }
 
 // paymentColors is the deterministic ordering used when spending mana. Callers
 // must consume mana sources through this slice rather than ranging over maps.
-var paymentColors = []mana.Color{
-	mana.White,
-	mana.Blue,
-	mana.Black,
-	mana.Red,
-	mana.Green,
-	mana.Colorless,
+var paymentColors = []color.Color{
+	color.White,
+	color.Blue,
+	color.Black,
+	color.Red,
+	color.Green,
+	color.Colorless,
 }
 
 func canPayCostWithX(s State, playerID game.PlayerID, cost *mana.Cost, xValue int) bool {
@@ -309,7 +310,7 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, cost *mana
 				return plan, false
 			}
 		case mana.ColorlessSymbol:
-			if !payColoredSymbol(&plan, pool, manaSources, symbol, mana.Colorless, game.SymbolPaymentMana) {
+			if !payColoredSymbol(&plan, pool, manaSources, symbol, color.Colorless, game.SymbolPaymentMana) {
 				return plan, false
 			}
 		default:
@@ -424,15 +425,15 @@ func replaceUnitCounts(dst, src map[mana.Unit]int) {
 	maps.Copy(dst, src)
 }
 
-func cloneManaSources(sources map[mana.Color][]manaSource) map[mana.Color][]manaSource {
-	clone := make(map[mana.Color][]manaSource, len(sources))
+func cloneManaSources(sources map[color.Color][]manaSource) map[color.Color][]manaSource {
+	clone := make(map[color.Color][]manaSource, len(sources))
 	for color, colorSources := range sources {
 		clone[color] = append([]manaSource(nil), colorSources...)
 	}
 	return clone
 }
 
-func replaceManaSources(dst, src map[mana.Color][]manaSource) {
+func replaceManaSources(dst, src map[color.Color][]manaSource) {
 	for color := range dst {
 		delete(dst, color)
 	}
@@ -441,8 +442,8 @@ func replaceManaSources(dst, src map[mana.Color][]manaSource) {
 	}
 }
 
-func costRequirements(cost *mana.Cost, xValue int) (colored map[mana.Color]int, generic int, ok bool) {
-	colored = make(map[mana.Color]int)
+func costRequirements(cost *mana.Cost, xValue int) (colored map[color.Color]int, generic int, ok bool) {
+	colored = make(map[color.Color]int)
 	if xValue < 0 {
 		return nil, 0, false
 	}
@@ -456,7 +457,7 @@ func costRequirements(cost *mana.Cost, xValue int) (colored map[mana.Color]int, 
 		case mana.ColoredSymbol:
 			colored[symbol.Color]++
 		case mana.ColorlessSymbol:
-			colored[mana.Colorless]++
+			colored[color.Colorless]++
 		case mana.GenericSymbol:
 			generic += symbol.Generic
 		case mana.VariableSymbol:

@@ -2,6 +2,7 @@ package n
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -20,14 +21,14 @@ var NeyithOfTheDireHunt = &game.CardDef{
 	Name: "Neyith of the Dire Hunt",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(2),
-		mana.ColoredMana(mana.Green),
-		mana.ColoredMana(mana.Green),
+		mana.G,
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Human, types.Sub("Warrior")},
+	Subtypes:      []types.Sub{types.Human, types.Warrior},
 	Power:         opt.Val(game.PT{Value: 3}),
 	Toughness:     opt.Val(game.PT{Value: 3}),
 	OracleText:    "Whenever one or more creatures you control fight or become blocked, draw a card.\nAt the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)",
@@ -96,7 +97,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 						Prompt: "Pay {2}{R/G}?",
 						ManaCost: opt.Val(mana.Cost{
 							mana.GenericMana(2),
-							mana.HybridMana(mana.Red, mana.Green),
+							mana.HybridMana(color.Red, color.Green),
 						}),
 					}),
 					LinkID: "neyith-combat-pay",

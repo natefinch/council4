@@ -2,6 +2,7 @@ package f
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -17,7 +18,7 @@ import (
 //	{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.
 var FireLitThicket = &game.CardDef{
 	Name:          "Fire-Lit Thicket",
-	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	OracleText:    "{T}: Add {C}.\n{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.",
 	Abilities: []game.AbilityDef{
@@ -29,7 +30,7 @@ var FireLitThicket = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Colorless, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Colorless, TargetIndex: game.TargetIndexController},
 			},
 		},
 		{
@@ -37,7 +38,7 @@ var FireLitThicket = &game.CardDef{
 			Text:          "{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.",
 			IsManaAbility: true,
 			ManaCost: opt.Val(mana.Cost{
-				mana.HybridMana(mana.Red, mana.Green),
+				mana.HybridMana(color.Red, color.Green),
 			}),
 			AdditionalCosts: []game.AdditionalCost{
 				{Kind: game.AdditionalCostTap},
@@ -46,22 +47,22 @@ var FireLitThicket = &game.CardDef{
 				{
 					Text: "Add {R}{R}.",
 					Effects: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: game.TargetIndexController},
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Red, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Red, TargetIndex: game.TargetIndexController},
 					},
 				},
 				{
 					Text: "Add {R}{G}.",
 					Effects: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: game.TargetIndexController},
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Red, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
 					},
 				},
 				{
 					Text: "Add {G}{G}.",
 					Effects: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Green, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Green, TargetIndex: game.TargetIndexController},
 					},
 				},
 			},

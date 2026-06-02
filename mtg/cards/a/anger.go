@@ -2,6 +2,7 @@ package a
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -20,10 +21,10 @@ var Anger = &game.CardDef{
 	Name: "Anger",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(3),
-		mana.ColoredMana(mana.Red),
+		mana.R,
 	}),
-	Colors:        []mana.Color{mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	Colors:        []color.Color{color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Red),
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Incarnation},
 	Power:         opt.Val(game.PT{Value: 2}),

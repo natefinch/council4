@@ -14,7 +14,7 @@ import (
 func TestLegalActionsIncludeSuspendFromHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, mana.Cost{mana.ColoredMana(mana.Green)}))
+	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, mana.Cost{mana.G}))
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -30,7 +30,7 @@ func TestLegalActionsIncludeSuspendFromHand(t *testing.T) {
 func TestSuspendActionPaysCostAndExilesWithTimeCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, mana.Cost{mana.ColoredMana(mana.Green)}))
+	cardID := addCardToHand(g, game.Player1, suspendSorcery(3, mana.Cost{mana.G}))
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone

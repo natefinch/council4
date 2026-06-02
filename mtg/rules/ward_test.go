@@ -35,7 +35,7 @@ func TestWardCountersSpellWhenCostIsNotPaid(t *testing.T) {
 func TestWardPaidLeavesSpellOnStack(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.ColoredMana(mana.Green)})
+	warded := addWardPermanent(g, game.Player2, mana.Cost{mana.G})
 	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.PriorityPlayer = game.Player1

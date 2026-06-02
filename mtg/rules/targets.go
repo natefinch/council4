@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -683,12 +683,12 @@ func structuredPermanentPredicateMatches(g *game.Game, predicate game.TargetPred
 		return false
 	}
 	colors := permanentEffectiveColors(g, permanent)
-	if len(predicate.Colors) > 0 && !slices.ContainsFunc(predicate.Colors, func(color mana.Color) bool {
+	if len(predicate.Colors) > 0 && !slices.ContainsFunc(predicate.Colors, func(color color.Color) bool {
 		return slices.Contains(colors, color)
 	}) {
 		return false
 	}
-	if slices.ContainsFunc(predicate.ExcludedColors, func(color mana.Color) bool {
+	if slices.ContainsFunc(predicate.ExcludedColors, func(color color.Color) bool {
 		return slices.Contains(colors, color)
 	}) {
 		return false

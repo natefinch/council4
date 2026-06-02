@@ -5,9 +5,9 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -460,8 +460,8 @@ func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, so
 	return false
 }
 
-func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []mana.Color {
-	var colors []mana.Color
+func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []color.Color {
+	var colors []color.Color
 	abilities := permanentEffectiveAbilities(g, permanent)
 	for i := range abilities {
 		ability := &abilities[i]

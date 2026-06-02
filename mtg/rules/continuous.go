@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -29,7 +29,7 @@ func dynamicValuePtr(v opt.V[game.DynamicValue]) *game.DynamicValue {
 type permanentEffectiveValues struct {
 	name       string
 	oracleText string
-	colors     []mana.Color
+	colors     []color.Color
 	supertypes []types.Super
 	types      []types.Card
 	subtypes   []types.Sub
@@ -76,9 +76,9 @@ func permanentHasSupertype(g *game.Game, permanent *game.Permanent, supertype ty
 	return slices.Contains(effectivePermanentValues(g, permanent).supertypes, supertype)
 }
 
-func permanentEffectiveColors(g *game.Game, permanent *game.Permanent) []mana.Color {
+func permanentEffectiveColors(g *game.Game, permanent *game.Permanent) []color.Color {
 	values := effectivePermanentValues(g, permanent)
-	return append([]mana.Color(nil), values.colors...)
+	return append([]color.Color(nil), values.colors...)
 }
 
 func permanentEffectiveAbilities(g *game.Game, permanent *game.Permanent) []game.AbilityDef {
@@ -131,7 +131,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	}
 	values.name = card.Name
 	values.oracleText = card.OracleText
-	values.colors = append([]mana.Color(nil), card.Colors...)
+	values.colors = append([]color.Color(nil), card.Colors...)
 	values.supertypes = append([]types.Super(nil), card.Supertypes...)
 	values.types = append([]types.Card(nil), card.Types...)
 	values.subtypes = append([]types.Sub(nil), card.Subtypes...)
@@ -572,7 +572,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		applyTypeLayer(values, effect)
 	case game.LayerColor:
 		if effect.SetColors != nil {
-			values.colors = append([]mana.Color(nil), effect.SetColors...)
+			values.colors = append([]color.Color(nil), effect.SetColors...)
 		}
 		values.colors = removeColors(values.colors, effect.RemoveColors)
 		values.colors = appendUniqueColors(values.colors, effect.AddColors...)
@@ -621,7 +621,7 @@ func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentE
 	}
 	values.name = copyValues.Name
 	values.oracleText = copyValues.OracleText
-	values.colors = append([]mana.Color(nil), copyValues.Colors...)
+	values.colors = append([]color.Color(nil), copyValues.Colors...)
 	values.supertypes = append([]types.Super(nil), copyValues.Supertypes...)
 	values.types = append([]types.Card(nil), copyValues.Types...)
 	values.subtypes = append([]types.Sub(nil), copyValues.Subtypes...)
@@ -717,13 +717,13 @@ func keywordCounters(permanent *game.Permanent) []game.Keyword {
 	return keywords
 }
 
-func removeColors(colors, remove []mana.Color) []mana.Color {
-	return slices.DeleteFunc(colors, func(color mana.Color) bool {
+func removeColors(colors, remove []color.Color) []color.Color {
+	return slices.DeleteFunc(colors, func(color color.Color) bool {
 		return slices.Contains(remove, color)
 	})
 }
 
-func appendUniqueColors(colors []mana.Color, add ...mana.Color) []mana.Color {
+func appendUniqueColors(colors []color.Color, add ...color.Color) []color.Color {
 	for _, color := range add {
 		if !slices.Contains(colors, color) {
 			colors = append(colors, color)

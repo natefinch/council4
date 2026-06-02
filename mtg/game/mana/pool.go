@@ -1,5 +1,7 @@
 package mana
 
+import "github.com/natefinch/council4/mtg/game/color"
+
 import "maps"
 
 // Pool represents a player's current mana pool. It tracks mana by spendable
@@ -15,12 +17,12 @@ func NewPool() Pool {
 }
 
 // Add adds mana of the given color to the pool.
-func (p *Pool) Add(c Color, amount int) {
+func (p *Pool) Add(c color.Color, amount int) {
 	p.AddUnit(Unit{Color: c}, amount)
 }
 
 // AddSnow adds snow mana of the given color to the pool.
-func (p *Pool) AddSnow(c Color, amount int) {
+func (p *Pool) AddSnow(c color.Color, amount int) {
 	p.AddUnit(Unit{Color: c, Snow: true}, amount)
 }
 
@@ -36,7 +38,7 @@ func (p *Pool) AddUnit(unit Unit, amount int) {
 }
 
 // Amount returns the amount of mana of the given color in the pool.
-func (p *Pool) Amount(c Color) int {
+func (p *Pool) Amount(c color.Color) int {
 	if p.mana == nil {
 		return 0
 	}
@@ -72,7 +74,7 @@ func (p *Pool) Units() map[Unit]int {
 
 // Spend removes mana of the given color from the pool. It returns false
 // if there is insufficient mana of that color.
-func (p *Pool) Spend(c Color, amount int) bool {
+func (p *Pool) Spend(c color.Color, amount int) bool {
 	return p.SpendMatching(amount, func(unit Unit) bool {
 		return unit.Color == c
 	})
@@ -157,11 +159,11 @@ func spendOrder() []Unit {
 	for _, color := range AllColors() {
 		units = append(units, Unit{Color: color})
 	}
-	units = append(units, Unit{Color: Colorless})
+	units = append(units, Unit{Color: color.Colorless})
 	for _, color := range AllColors() {
 		units = append(units, Unit{Color: color, Snow: true})
 	}
-	units = append(units, Unit{Color: Colorless, Snow: true})
+	units = append(units, Unit{Color: color.Colorless, Snow: true})
 	return units
 }
 
@@ -169,12 +171,12 @@ func spendOrder() []Unit {
 // to define which colors a deck may contain based on the commander's
 // color identity (CR 903.4).
 type ColorIdentity struct {
-	colors map[Color]bool
+	colors map[color.Color]bool
 }
 
 // NewColorIdentity creates a ColorIdentity from the given colors.
-func NewColorIdentity(colors ...Color) ColorIdentity {
-	ci := ColorIdentity{colors: make(map[Color]bool)}
+func NewColorIdentity(colors ...color.Color) ColorIdentity {
+	ci := ColorIdentity{colors: make(map[color.Color]bool)}
 	for _, c := range colors {
 		ci.colors[c] = true
 	}
@@ -182,7 +184,7 @@ func NewColorIdentity(colors ...Color) ColorIdentity {
 }
 
 // Contains reports whether the identity includes the given color.
-func (ci ColorIdentity) Contains(c Color) bool {
+func (ci ColorIdentity) Contains(c color.Color) bool {
 	return ci.colors[c]
 }
 
@@ -198,8 +200,8 @@ func (ci ColorIdentity) ContainsAll(other ColorIdentity) bool {
 }
 
 // Colors returns the colors in this identity as a slice.
-func (ci ColorIdentity) Colors() []Color {
-	var result []Color
+func (ci ColorIdentity) Colors() []color.Color {
+	var result []color.Color
 	for _, c := range AllColors() {
 		if ci.colors[c] {
 			result = append(result, c)

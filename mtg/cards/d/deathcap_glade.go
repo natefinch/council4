@@ -2,6 +2,7 @@ package d
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -17,7 +18,7 @@ import (
 //	{T}: Add {B} or {G}.
 var DeathcapGlade = &game.CardDef{
 	Name:          "Deathcap Glade",
-	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Green),
+	ColorIdentity: mana.NewColorIdentity(color.Black, color.Green),
 	Types:         []types.Card{types.Land},
 	OracleText:    "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {G}.",
 	EntersTappedCondition: opt.Val(game.Condition{
@@ -42,7 +43,7 @@ var DeathcapGlade = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose a color",
-						Colors: []mana.Color{mana.Black, mana.Green},
+						Colors: []color.Color{color.Black, color.Green},
 					}),
 					LinkID: "deathcap-glade-color",
 				},

@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -347,7 +348,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 	blackCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
 		Name:      "Black Creature",
 		ManaCost:  optCost(mana.Cost{mana.GenericMana(2)}),
-		Colors:    []mana.Color{mana.Black},
+		Colors:    []color.Color{color.Black},
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 3}),
 		Toughness: optPT(game.PT{Value: 3}),
@@ -355,7 +356,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 	whiteCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
 		Name:      "White Creature",
 		ManaCost:  optCost(mana.Cost{mana.GenericMana(4)}),
-		Colors:    []mana.Color{mana.White},
+		Colors:    []color.Color{color.White},
 		Types:     []types.Card{types.Creature},
 		Power:     optPT(game.PT{Value: 2}),
 		Toughness: optPT(game.PT{Value: 2}),
@@ -371,7 +372,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 			Allow:      game.TargetAllowPermanent,
 			Predicate: game.TargetPredicate{
 				PermanentTypes: []types.Card{types.Creature},
-				ExcludedColors: []mana.Color{mana.Black},
+				ExcludedColors: []color.Color{color.Black},
 				Controller:     game.ControllerOpponent,
 				Tapped:         game.TriTrue,
 				Keyword:        game.Flying,

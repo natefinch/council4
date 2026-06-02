@@ -5,16 +5,17 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
+	color0 "github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
 func TestShieldCounterPreventsDamageBeforeMutationAndEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	sourceID := addColoredSourceCard(g, game.Player1, mana.Red)
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
 	target := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	target.Counters.Add(counter.Shield, 1)
 
@@ -97,8 +98,8 @@ func TestPreventedCombatDamageDoesNotGrantLifelinkOrMarkDeathtouch(t *testing.T)
 func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addColoredSourceCard(g, game.Player1, mana.Red)
-	protected := addProtectionFromColorPermanent(g, game.Player2, mana.Red)
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+	protected := addProtectionFromColorPermanent(g, game.Player2, color.Red)
 
 	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, protected, 2, false)
 
@@ -117,7 +118,7 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{
 		Name:   "Red Strike",
 		Types:  []types.Card{types.Instant},
-		Colors: []mana.Color{mana.Red},
+		Colors: []color.Color{color.Red},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -189,7 +190,7 @@ func TestHexproofCounterPreventsOpponentTargets(t *testing.T) {
 func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addColoredSourceCard(g, game.Player1, mana.Red)
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
 	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
 	obj := &game.StackObject{
 		Controller: game.Player2,
@@ -222,7 +223,7 @@ func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 func TestMultiplePreventionShieldsRecordDeterministicReplacementOrder(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addColoredSourceCard(g, game.Player1, mana.Red)
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
 	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
 	obj := &game.StackObject{
 		Controller: game.Player2,
@@ -625,21 +626,21 @@ func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	}
 }
 
-func addColoredSourceCard(g *game.Game, owner game.PlayerID, color mana.Color) id.ID {
+func addColoredSourceCard(g *game.Game, owner game.PlayerID, color color.Color) id.ID {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{
 		ID: cardID,
 		Def: &game.CardDef{
 			Name:   "Colored Source",
 			Types:  []types.Card{types.Instant},
-			Colors: []mana.Color{color},
+			Colors: []color0.Color{color},
 		},
 		Owner: owner,
 	}
 	return cardID
 }
 
-func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, color mana.Color) *game.Permanent {
+func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, color color.Color) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{
 		Name:      "Protected Creature",
@@ -650,7 +651,7 @@ func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, col
 			{
 				Kind:                 game.StaticAbility,
 				Keywords:             []game.Keyword{game.Protection},
-				ProtectionFromColors: []mana.Color{color},
+				ProtectionFromColors: []color0.Color{color},
 			},
 		},
 	})

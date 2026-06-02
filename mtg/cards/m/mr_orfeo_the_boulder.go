@@ -2,6 +2,7 @@ package m
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -19,15 +20,15 @@ var MrOrfeoTheBoulder = &game.CardDef{
 	Name: "Mr. Orfeo, the Boulder",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(1),
-		mana.ColoredMana(mana.Black),
-		mana.ColoredMana(mana.Red),
-		mana.ColoredMana(mana.Green),
+		mana.B,
+		mana.R,
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Black, mana.Green, mana.Red},
-	ColorIdentity: mana.NewColorIdentity(mana.Black, mana.Green, mana.Red),
+	Colors:        []color.Color{color.Black, color.Green, color.Red},
+	ColorIdentity: mana.NewColorIdentity(color.Black, color.Green, color.Red),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Sub("Rhino"), types.Sub("Warrior")},
+	Subtypes:      []types.Sub{types.Rhino, types.Warrior},
 	Power:         opt.Val(game.PT{Value: 2}),
 	Toughness:     opt.Val(game.PT{Value: 4}),
 	OracleText:    "Whenever you attack, double target creature's power until end of turn.",

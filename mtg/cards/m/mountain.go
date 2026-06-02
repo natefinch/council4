@@ -2,6 +2,7 @@ package m
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -15,7 +16,7 @@ import (
 //	({T}: Add {R}.)
 var Mountain = &game.CardDef{
 	Name:          "Mountain",
-	ColorIdentity: mana.NewColorIdentity(mana.Red),
+	ColorIdentity: mana.NewColorIdentity(color.Red),
 	Supertypes:    []types.Super{types.Basic},
 	Types:         []types.Card{types.Land},
 	Subtypes:      []types.Sub{types.Mountain},
@@ -29,7 +30,7 @@ var Mountain = &game.CardDef{
 				{Kind: game.AdditionalCostTap},
 			},
 			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.Red, TargetIndex: game.TargetIndexController},
+				{Type: game.EffectAddMana, Amount: 1, ManaColor: color.Red, TargetIndex: game.TargetIndexController},
 			},
 		},
 	},

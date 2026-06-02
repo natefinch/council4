@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -91,7 +92,7 @@ func TestConvokePaymentPlanValidityChecksConvokeTapsWithoutManaTaps(t *testing.T
 func TestConvokePaysColoredSymbolsWithCreatureColor(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.ColoredMana(mana.Green), mana.ColoredMana(mana.Green)}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.G, mana.G}))
 	first := addCombatPermanent(g, game.Player1, greenConvokeCreature())
 	second := addCombatPermanent(g, game.Player1, greenConvokeCreature())
 	setMainPhasePriority(g, game.Player1)
@@ -107,7 +108,7 @@ func TestConvokePaysColoredSymbolsWithCreatureColor(t *testing.T) {
 func TestConvokeDoesNotDoubleUseManaCreature(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1), mana.ColoredMana(mana.Green)}))
+	spellID := addCardToHand(g, game.Player1, convokeSpell(mana.Cost{mana.GenericMana(1), mana.G}))
 	manaCreature := addCombatPermanent(g, game.Player1, greenManaCreature())
 	otherCreature := addCombatCreaturePermanent(g, game.Player1)
 	setMainPhasePriority(g, game.Player1)
@@ -156,7 +157,7 @@ func greenManaCreature() *game.CardDef {
 				Kind: game.AdditionalCostTap,
 				Text: "{T}",
 			}},
-			Effects: []game.Effect{{Type: game.EffectAddMana, ManaColor: mana.Green, Amount: 1}},
+			Effects: []game.Effect{{Type: game.EffectAddMana, ManaColor: color.Green, Amount: 1}},
 		}},
 	}
 }
@@ -166,7 +167,7 @@ func greenConvokeCreature() *game.CardDef {
 	return &game.CardDef{
 		Name:      "Green Convoke Creature",
 		Types:     []types.Card{types.Creature},
-		Colors:    []mana.Color{mana.Green},
+		Colors:    []color.Color{color.Green},
 		Power:     optPT(pt),
 		Toughness: optPT(pt),
 	}

@@ -2,6 +2,7 @@ package c
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -21,7 +22,7 @@ import (
 // subtype mana abilities at runtime.
 var CinderGlade = &game.CardDef{
 	Name:          "Cinder Glade",
-	ColorIdentity: mana.NewColorIdentity(mana.Green, mana.Red),
+	ColorIdentity: mana.NewColorIdentity(color.Green, color.Red),
 	Types:         []types.Card{types.Land},
 	Subtypes:      []types.Sub{types.Mountain, types.Forest},
 	OracleText:    "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",
@@ -48,7 +49,7 @@ var CinderGlade = &game.CardDef{
 					Choice: opt.Val(game.ResolutionChoice{
 						Kind:   game.ResolutionChoiceColor,
 						Prompt: "Choose a color",
-						Colors: []mana.Color{mana.Red, mana.Green},
+						Colors: []color.Color{color.Red, color.Green},
 					}),
 					LinkID: "cinder-glade-color",
 				},

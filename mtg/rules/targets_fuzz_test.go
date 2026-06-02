@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -40,7 +40,7 @@ func FuzzTargetEnumerationIsStable(f *testing.F) {
 			addCombatPermanent(g, game.Player2, &game.CardDef{
 				Name:      "Opponent Creature",
 				Types:     []types.Card{types.Creature},
-				Colors:    []mana.Color{mana.White},
+				Colors:    []color.Color{color.White},
 				Power:     optPT(game.PT{Value: 2}),
 				Toughness: optPT(game.PT{Value: 2}),
 			})
@@ -49,7 +49,7 @@ func FuzzTargetEnumerationIsStable(f *testing.F) {
 			addCombatPermanent(g, game.Player1, &game.CardDef{
 				Name:      "Own Creature",
 				Types:     []types.Card{types.Creature},
-				Colors:    []mana.Color{mana.Green},
+				Colors:    []color.Color{color.Green},
 				Power:     optPT(game.PT{Value: 1}),
 				Toughness: optPT(game.PT{Value: 1}),
 			})

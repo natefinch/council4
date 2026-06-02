@@ -2,6 +2,7 @@ package r
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -22,22 +23,19 @@ var RhonasTheIndomitable = &game.CardDef{
 	Name: "Rhonas the Indomitable",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(2),
-		mana.ColoredMana(mana.Green),
+		mana.G,
 	}),
-	Colors:        []mana.Color{mana.Green},
-	ColorIdentity: mana.NewColorIdentity(mana.Green),
+	Colors:        []color.Color{color.Green},
+	ColorIdentity: mana.NewColorIdentity(color.Green),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Sub("God")},
+	Subtypes:      []types.Sub{types.God},
 	Power:         opt.Val(game.PT{Value: 5}),
 	Toughness:     opt.Val(game.PT{Value: 5}),
 	OracleText:    "Deathtouch, indestructible\nRhonas can't attack or block unless you control another creature with power 4 or greater.\n{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.",
 	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.StaticAbility,
-			Text:     "Deathtouch, indestructible",
-			Keywords: []game.Keyword{game.Deathtouch, game.Indestructible},
-		},
+		game.DeathtouchAbility,
+		game.IndestructibleAbility,
 		{
 			Kind: game.StaticAbility,
 			Text: "Rhonas can't attack or block unless you control another creature with power 4 or greater.",
@@ -66,7 +64,7 @@ var RhonasTheIndomitable = &game.CardDef{
 			Text: "{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.",
 			ManaCost: opt.Val(mana.Cost{
 				mana.GenericMana(2),
-				mana.ColoredMana(mana.Green),
+				mana.G,
 			}),
 			Targets: []game.TargetSpec{
 				{

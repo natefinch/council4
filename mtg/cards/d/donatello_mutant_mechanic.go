@@ -2,6 +2,7 @@ package d
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -21,10 +22,10 @@ var DonatelloMutantMechanic = &game.CardDef{
 	Name: "Donatello, Mutant Mechanic",
 	ManaCost: opt.Val(mana.Cost{
 		mana.GenericMana(3),
-		mana.ColoredMana(mana.Blue),
+		mana.U,
 	}),
-	Colors:        []mana.Color{mana.Blue},
-	ColorIdentity: mana.NewColorIdentity(mana.Blue),
+	Colors:        []color.Color{color.Blue},
+	ColorIdentity: mana.NewColorIdentity(color.Blue),
 	Supertypes:    []types.Super{types.Legendary},
 	Types:         []types.Card{types.Creature},
 	Subtypes:      []types.Sub{types.Mutant, types.Ninja, types.Turtle},
