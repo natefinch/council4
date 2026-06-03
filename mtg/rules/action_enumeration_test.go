@@ -126,6 +126,21 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 				"pass",
 			},
 		},
+		{
+			name: "additional cost requires legal sacrifice choice",
+			setup: func() (*game.Game, game.PlayerID) {
+				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+				addCombatCreaturePermanent(g, game.Player1)
+				addCardToHand(g, game.Player1, sacrificeCreatureSpell())
+				addCardToHand(g, game.Player1, sacrificeArtifactSpell())
+				setMainPhasePriority(g, game.Player1)
+				return g, game.Player1
+			},
+			want: []string{
+				"cast Sacrifice Creature Spell from Hand face=0 x=0 modes=[] kicked=false targets=[]",
+				"pass",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -303,6 +318,36 @@ func characterizationKickerSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Kicker",
 		Types:     []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{Kind: game.SpellAbility, KickerCost: greenCost()}}},
+	}
+}
+
+func sacrificeCreatureSpell() *game.CardDef {
+	return additionalCostSpell("Sacrifice Creature Spell", game.AdditionalCost{
+		Kind:               game.AdditionalCostSacrifice,
+		Text:               "Sacrifice a creature",
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Creature,
+	})
+}
+
+func sacrificeArtifactSpell() *game.CardDef {
+	return additionalCostSpell("Sacrifice Artifact Spell", game.AdditionalCost{
+		Kind:               game.AdditionalCostSacrifice,
+		Text:               "Sacrifice an artifact",
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Artifact,
+	})
+}
+
+func additionalCostSpell(name string, additionalCost game.AdditionalCost) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: name,
+		Types: []types.Card{types.Sorcery},
+		Abilities: []game.AbilityDef{{
+			Kind:            game.SpellAbility,
+			AdditionalCosts: []game.AdditionalCost{additionalCost},
+		}}},
 	}
 }
 
