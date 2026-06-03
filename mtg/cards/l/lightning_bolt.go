@@ -17,15 +17,14 @@ import (
 // Oracle text:
 //
 //	Lightning Bolt deals 3 damage to any target.
-var LightningBolt = &game.CardDef{
-	Name: "Lightning Bolt",
+var LightningBolt = &game.CardDef{CardFace: game.CardFace{Name: "Lightning Bolt",
 	ManaCost: opt.Val(cost.Mana{
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Instant},
-	OracleText:    "Lightning Bolt deals 3 damage to any target.",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Instant},
+	OracleText: "Lightning Bolt deals 3 damage to any target.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -37,5 +36,5 @@ var LightningBolt = &game.CardDef{
 				{Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

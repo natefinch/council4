@@ -18,20 +18,19 @@ import (
 //
 //	Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.
 //	When Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)
-var EnduringCourage = &game.CardDef{
-	Name: "Enduring Courage",
+var EnduringCourage = &game.CardDef{CardFace: game.CardFace{Name: "Enduring Courage",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.R,
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Enchantment, types.Creature},
-	Subtypes:      []types.Sub{"Dog", "Glimmer"},
-	Power:         opt.Val(game.PT{Value: 3}),
-	Toughness:     opt.Val(game.PT{Value: 3}),
-	OracleText:    "Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.\nWhen Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Enchantment, types.Creature},
+	Subtypes:   []types.Sub{"Dog", "Glimmer"},
+	Power:      opt.Val(game.PT{Value: 3}),
+	Toughness:  opt.Val(game.PT{Value: 3}),
+	OracleText: "Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.\nWhen Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.TriggeredAbility,
@@ -95,5 +94,5 @@ var EnduringCourage = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

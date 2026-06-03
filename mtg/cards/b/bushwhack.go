@@ -19,15 +19,14 @@ import (
 //	Choose one —
 //	• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.
 //	• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)
-var Bushwhack = &game.CardDef{
-	Name: "Bushwhack",
+var Bushwhack = &game.CardDef{CardFace: game.CardFace{Name: "Bushwhack",
 	ManaCost: opt.Val(cost.Mana{
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Choose one —\n• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.\n• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Choose one —\n• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.\n• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -80,5 +79,5 @@ var Bushwhack = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

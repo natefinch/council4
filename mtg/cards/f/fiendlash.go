@@ -19,17 +19,16 @@ import (
 //	Equipped creature gets +2/+0 and has reach.
 //	Whenever equipped creature is dealt damage, it deals damage equal to its power to target player or planeswalker.
 //	Equip {2}{R}
-var Fiendlash = &game.CardDef{
-	Name: "Fiendlash",
+var Fiendlash = &game.CardDef{CardFace: game.CardFace{Name: "Fiendlash",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Artifact},
-	Subtypes:      []types.Sub{types.Equipment},
-	OracleText:    "Equipped creature gets +2/+0 and has reach.\nWhenever equipped creature is dealt damage, it deals damage equal to its power to target player or planeswalker.\nEquip {2}{R}",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Artifact},
+	Subtypes:   []types.Sub{types.Equipment},
+	OracleText: "Equipped creature gets +2/+0 and has reach.\nWhenever equipped creature is dealt damage, it deals damage equal to its power to target player or planeswalker.\nEquip {2}{R}",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.StaticAbility,
@@ -116,5 +115,5 @@ var Fiendlash = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

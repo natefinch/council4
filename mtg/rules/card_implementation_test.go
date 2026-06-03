@@ -30,10 +30,9 @@ func TestCardImplementationHandlesSpellResolutionThroughContext(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	engine.RegisterCardImplementation("test/draw-burn", fakeDrawBurnImplementation{})
-	firstDraw := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "First"})
-	secondDraw := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Second"})
-	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{
-		Name:             "Hand-Written Draw Burn",
+	firstDraw := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First"}})
+	secondDraw := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second"}})
+	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Hand-Written Draw Burn",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/draw-burn",
 		Abilities: []game.AbilityDef{
@@ -43,7 +42,7 @@ func TestCardImplementationHandlesSpellResolutionThroughContext(t *testing.T) {
 					{MinTargets: 1, MaxTargets: 1, Constraint: "target player"},
 				},
 			},
-		},
+		}},
 	}, []game.Target{game.PlayerTarget(game.Player2)})
 	log := TurnLog{}
 
@@ -78,8 +77,7 @@ func TestCardImplementationUsesNormalDamagePreventionHelpers(t *testing.T) {
 	engine.RegisterCardImplementation("test/permanent-damage", fakePermanentDamageImplementation{})
 	target := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	target.Counters.Add(counter.Shield, 1)
-	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{
-		Name:             "Hand-Written Permanent Burn",
+	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Hand-Written Permanent Burn",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/permanent-damage",
 		Abilities: []game.AbilityDef{
@@ -89,7 +87,7 @@ func TestCardImplementationUsesNormalDamagePreventionHelpers(t *testing.T) {
 					{MinTargets: 1, MaxTargets: 1, Constraint: "target creature"},
 				},
 			},
-		},
+		}},
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -113,11 +111,10 @@ func TestCardImplementationUsesNormalDamagePreventionHelpers(t *testing.T) {
 func TestUnregisteredCardImplementationPanics(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addImplementationSpellToStack(g, game.Player1, &game.CardDef{
-		Name:             "Missing Implementation",
+	addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Missing Implementation",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/missing",
-		Abilities:        []game.AbilityDef{{Kind: game.SpellAbility}},
+		Abilities:        []game.AbilityDef{{Kind: game.SpellAbility}}},
 	}, nil)
 
 	defer func() {

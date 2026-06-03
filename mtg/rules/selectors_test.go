@@ -10,9 +10,8 @@ import (
 
 func TestEquippedCreatureSelectorGrantsKeywords(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Creature",
-		Types: []types.Card{types.Creature},
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Creature",
+		Types: []types.Card{types.Creature}},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.Effect{{
 		Type:        game.EffectApplyContinuous,
@@ -38,11 +37,10 @@ func TestEquippedCreatureSelectorGrantsKeywords(t *testing.T) {
 
 func TestEquippedCreatureSelectorDynamicOpponentCountPT(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:      "Creature",
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
-		Toughness: opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1})},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.Effect{{
 		Type:        game.EffectModifyPT,
@@ -67,9 +65,8 @@ func TestEquippedCreatureSelectorDynamicOpponentCountPT(t *testing.T) {
 
 func TestAttachedPermanentTriggerFilterUsesLKI(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Creature",
-		Types: []types.Card{types.Creature},
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Creature",
+		Types: []types.Card{types.Creature}},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
 	if !attachPermanent(g, equipment, creature) {
@@ -91,9 +88,8 @@ func TestAttachedPermanentTriggerFilterUsesLKI(t *testing.T) {
 func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Creature",
-		Types: []types.Card{types.Creature},
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Creature",
+		Types: []types.Card{types.Creature}},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
 	if !attachPermanent(g, equipment, creature) {
@@ -133,11 +129,10 @@ func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 func TestObjectPowerDynamicAmountUsesAttachedPermanent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:      "Creature",
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 3}),
-		Toughness: opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3})},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
 	if !attachPermanent(g, equipment, creature) {
@@ -176,21 +171,19 @@ func TestObjectPowerDynamicAmountUsesAttachedPermanent(t *testing.T) {
 func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:      "Igniter",
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Igniter",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 3}),
 		Toughness: opt.Val(game.PT{Value: 3}),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Deathtouch},
-		}},
+		}}},
 	})
-	other := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:      "Other Creature",
+	other := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Other Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 5}),
-		Toughness: opt.Val(game.PT{Value: 5}),
+		Toughness: opt.Val(game.PT{Value: 5})},
 	})
 	obj := &game.StackObject{
 		Controller: game.Player1,
@@ -233,13 +226,12 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 }
 
 func equipmentWithStaticEffect(effects []game.Effect) *game.CardDef {
-	return &game.CardDef{
-		Name:     "Equipment",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Equipment",
 		Types:    []types.Card{types.Artifact},
 		Subtypes: []types.Sub{types.Equipment},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.StaticAbility,
 			Effects: effects,
-		}},
+		}}},
 	}
 }

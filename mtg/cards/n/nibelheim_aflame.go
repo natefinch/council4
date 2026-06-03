@@ -18,17 +18,16 @@ import (
 //
 //	Choose target creature you control. It deals damage equal to its power to each other creature. If this spell was cast from a graveyard, discard your hand and draw four cards.
 //	Flashback {5}{R}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var NibelheimAflame = &game.CardDef{
-	Name: "Nibelheim Aflame",
+var NibelheimAflame = &game.CardDef{CardFace: game.CardFace{Name: "Nibelheim Aflame",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.R,
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Choose target creature you control. It deals damage equal to its power to each other creature. If this spell was cast from a graveyard, discard your hand and draw four cards.\nFlashback {5}{R}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Choose target creature you control. It deals damage equal to its power to each other creature. If this spell was cast from a graveyard, discard your hand and draw four cards.\nFlashback {5}{R}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -95,5 +94,5 @@ var NibelheimAflame = &game.CardDef{
 			Text:     "Flashback {5}{R}{R}",
 			Keywords: []game.Keyword{game.Flashback},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

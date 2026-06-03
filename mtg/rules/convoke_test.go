@@ -134,21 +134,19 @@ func setMainPhasePriority(g *game.Game, playerID game.PlayerID) {
 }
 
 func convokeSpell(manaCost cost.Mana) *game.CardDef {
-	return &game.CardDef{
-		Name:     "Convoke Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Convoke Spell",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(manaCost),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Convoke}},
 			{Kind: game.SpellAbility},
-		},
+		}},
 	}
 }
 
 func greenManaCreature() *game.CardDef {
 	pt := game.PT{Value: 1}
-	return &game.CardDef{
-		Name:      "Green Mana Creature",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Green Mana Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
@@ -160,17 +158,16 @@ func greenManaCreature() *game.CardDef {
 				Text: "{T}",
 			}},
 			Effects: []game.Effect{{Type: game.EffectAddMana, ManaColor: mana.G, Amount: 1}},
-		}},
+		}}},
 	}
 }
 
 func greenConvokeCreature() *game.CardDef {
 	pt := game.PT{Value: 1}
-	return &game.CardDef{
-		Name:      "Green Convoke Creature",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Green Convoke Creature",
 		Types:     []types.Card{types.Creature},
 		Colors:    []color.Color{color.Green},
 		Power:     opt.Val(pt),
-		Toughness: opt.Val(pt),
+		Toughness: opt.Val(pt)},
 	}
 }

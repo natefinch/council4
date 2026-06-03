@@ -17,8 +17,7 @@ import (
 //	Equipped creature has "{2}: This creature gets +1/+0 until end of turn."
 //	Whenever equipped creature deals damage to a blocking creature, this Equipment deals that much damage to each other creature defending player controls.
 //	Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
-var KusariGama = &game.CardDef{
-	Name: "Kusari-Gama",
+var KusariGama = &game.CardDef{CardFace: game.CardFace{Name: "Kusari-Gama",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(3),
 	}),
@@ -103,5 +102,5 @@ var KusariGama = &game.CardDef{
 				},
 			},
 		},
-	},
+	}},
 }

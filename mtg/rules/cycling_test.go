@@ -30,7 +30,7 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cyclingID := addCardToHand(g, game.Player1, cyclingCard())
-	drawnID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
+	drawnID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.PriorityPlayer = game.Player1
 
@@ -73,8 +73,7 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 
 func cyclingCard() *game.CardDef {
 	manaCost := cost.Mana{cost.O(1)}
-	return &game.CardDef{
-		Name: "Cycling Test Card",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Cycling Test Card",
 		Abilities: []game.AbilityDef{
 			{
 				Kind:     game.ActivatedAbility,
@@ -87,7 +86,7 @@ func cyclingCard() *game.CardDef {
 					{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1},
 				},
 			},
-		},
+		}},
 	}
 }
 

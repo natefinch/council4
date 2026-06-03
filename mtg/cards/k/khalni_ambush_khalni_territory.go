@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)
-var KhalniAmbush = &game.CardDef{
-	Name: "Khalni Ambush // Khalni Territory",
+var KhalniAmbush = &game.CardDef{CardFace: game.CardFace{Name: "Khalni Ambush // Khalni Territory",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Instant},
-	OracleText:    "Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Instant},
+	OracleText: "Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -57,13 +56,16 @@ var KhalniAmbush = &game.CardDef{
 				{Type: game.EffectFight},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
+
 	Layout: game.LayoutModalDFC,
 	Back: opt.Val(game.CardFace{
-		Name:         "Khalni Territory",
-		Types:        []types.Card{types.Land},
-		EntersTapped: true,
-		OracleText:   "This land enters tapped.\n{T}: Add {G}.",
+		Name:       "Khalni Territory",
+		Types:      []types.Card{types.Land},
+		OracleText: "This land enters tapped.\n{T}: Add {G}.",
+		ReplacementAbilities: []game.ReplacementAbilityDef{
+			game.EntersTappedReplacement("This land enters tapped."),
+		},
 		Abilities: []game.AbilityDef{
 			{
 				Kind:          game.ActivatedAbility,

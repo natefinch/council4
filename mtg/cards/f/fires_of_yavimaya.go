@@ -18,17 +18,16 @@ import (
 //
 //	Creatures you control have haste.
 //	Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.
-var FiresOfYavimaya = &game.CardDef{
-	Name: "Fires of Yavimaya",
+var FiresOfYavimaya = &game.CardDef{CardFace: game.CardFace{Name: "Fires of Yavimaya",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.R,
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green, color.Red},
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Types:         []types.Card{types.Enchantment},
-	OracleText:    "Creatures you control have haste.\nSacrifice this enchantment: Target creature gets +2/+2 until end of turn.",
+	Colors: []color.Color{color.Green, color.Red},
+
+	Types:      []types.Card{types.Enchantment},
+	OracleText: "Creatures you control have haste.\nSacrifice this enchantment: Target creature gets +2/+2 until end of turn.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.StaticAbility,
@@ -74,5 +73,5 @@ var FiresOfYavimaya = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

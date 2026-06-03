@@ -63,10 +63,10 @@ func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Perma
 	if !ok {
 		return 0, nil, false
 	}
-	for i := range card.Abilities {
-		ability := &card.Abilities[i]
-		if ability.Kind == game.ActivatedAbility &&
-			ability.IsManaAbility &&
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.IsMana() &&
 			hasTapCost(ability) &&
 			!ability.ManaCost.Exists &&
 			len(ability.Targets) == 0 &&

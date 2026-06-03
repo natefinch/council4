@@ -16,11 +16,10 @@ import (
 //
 //	{T}: Add {C}.
 //	{T}: Add {R} or {G}. This land deals 1 damage to you.
-var KarplusanForest = &game.CardDef{
-	Name:          "Karplusan Forest",
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Types:         []types.Card{types.Land},
-	OracleText:    "{T}: Add {C}.\n{T}: Add {R} or {G}. This land deals 1 damage to you.",
+var KarplusanForest = &game.CardDef{CardFace: game.CardFace{Name: "Karplusan Forest",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "{T}: Add {C}.\n{T}: Add {R} or {G}. This land deals 1 damage to you.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -64,5 +63,5 @@ var KarplusanForest = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

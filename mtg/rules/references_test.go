@@ -11,20 +11,18 @@ import (
 func TestRecipientReferenceUsesDestroyedTargetControllerLKI(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	target := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:  "Borrowed Permanent",
-		Types: []types.Card{types.Artifact},
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Borrowed Permanent",
+		Types: []types.Card{types.Artifact}},
 	})
 	target.Controller = game.Player3
 	obj := &game.StackObject{
 		Controller: game.Player1,
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
-	token := &game.CardDef{
-		Name:      "Beast",
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Beast",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 3}),
-		Toughness: opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3})},
 	}
 	log := TurnLog{}
 
@@ -59,21 +57,19 @@ func TestRecipientReferenceUsesDestroyedTargetControllerLKI(t *testing.T) {
 func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:      "Venomous Healer",
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Venomous Healer",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 2}),
 		Toughness: opt.Val(game.PT{Value: 2}),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Deathtouch, game.Lifelink},
-		}},
+		}}},
 	})
-	target := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:      "Large Creature",
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Large Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 5}),
-		Toughness: opt.Val(game.PT{Value: 5}),
+		Toughness: opt.Val(game.PT{Value: 5})},
 	})
 	obj := &game.StackObject{
 		Controller: game.Player1,
@@ -111,7 +107,7 @@ func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 func TestLegacyTokenCreationStillUsesSpellController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	token := &game.CardDef{Name: "Legacy Token", Types: []types.Card{types.Creature}}
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Legacy Token", Types: []types.Card{types.Creature}}}
 	obj := &game.StackObject{Controller: game.Player1}
 	log := TurnLog{}
 

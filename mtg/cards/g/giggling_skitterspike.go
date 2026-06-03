@@ -17,8 +17,7 @@ import (
 //	Indestructible
 //	Whenever this creature attacks, blocks, or becomes the target of a spell, it deals damage equal to its power to each opponent.
 //	{5}: Monstrosity 5. (If this creature isn't monstrous, put five +1/+1 counters on it and it becomes monstrous.)
-var GigglingSkitterspike = &game.CardDef{
-	Name: "Giggling Skitterspike",
+var GigglingSkitterspike = &game.CardDef{CardFace: game.CardFace{Name: "Giggling Skitterspike",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(4),
 	}),
@@ -112,5 +111,5 @@ var GigglingSkitterspike = &game.CardDef{
 				},
 			},
 		},
-	},
+	}},
 }

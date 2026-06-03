@@ -84,9 +84,10 @@ func spellManaCostWithKicker(base *cost.Mana, ability *game.AbilityDef, kickerPa
 
 // firstSpellAbility returns the first spell ability from a card, if any.
 func firstSpellAbility(card *game.CardDef) (*game.AbilityDef, bool) {
-	for i := range card.Abilities {
-		if card.Abilities[i].Kind == game.SpellAbility {
-			return &card.Abilities[i], true
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		if abilities[i].IsSpell() {
+			return &abilities[i], true
 		}
 	}
 	return nil, false

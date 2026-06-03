@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestSimpleKeywordAbilityTemplates(t *testing.T) {
@@ -53,14 +54,15 @@ func TestSimpleKeywordAbilityTemplates(t *testing.T) {
 			if tt.ability.Text == "" {
 				t.Fatal("text is empty")
 			}
-			if !slices.Equal(tt.ability.Keywords, []Keyword{tt.keyword}) {
-				t.Fatalf("keywords = %+v, want [%v]", tt.ability.Keywords, tt.keyword)
+			if !slices.Equal(tt.ability.KeywordKinds(), []Keyword{tt.keyword}) {
+				t.Fatalf("keywords = %+v, want [%v]", tt.ability.KeywordKinds(), tt.keyword)
 			}
 
 			withoutTemplateFields := tt.ability
 			withoutTemplateFields.Kind = 0
 			withoutTemplateFields.Text = ""
-			withoutTemplateFields.Keywords = nil
+			withoutTemplateFields.Body = nil
+			withoutTemplateFields.KeywordAbilities = nil
 			if !reflect.DeepEqual(withoutTemplateFields, AbilityDef{}) {
 				t.Fatalf("ability has extra fields: %+v", withoutTemplateFields)
 			}
@@ -73,8 +75,11 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	ability := EternalizeAbility(manaCost, types.Snake, types.Druid)
 	manaCost[0] = cost.O(9)
 
-	if ability.Kind != ActivatedAbility || !slices.Equal(ability.Keywords, []Keyword{Eternalize}) {
-		t.Fatalf("ability kind/keywords = %v/%+v, want Eternalize activated ability", ability.Kind, ability.Keywords)
+	if ability.Kind != ActivatedAbility || !slices.Equal(ability.KeywordKinds(), []Keyword{Eternalize}) {
+		t.Fatalf("ability kind/keywords = %v/%+v, want Eternalize activated ability", ability.Kind, ability.KeywordKinds())
+	}
+	if !ability.IsActivated() {
+		t.Fatal("eternalize body is not an activated body")
 	}
 	if ability.ZoneOfFunction != ZoneGraveyard || ability.Timing != SorceryOnly {
 		t.Fatalf("zone/timing = %v/%v, want graveyard sorcery", ability.ZoneOfFunction, ability.Timing)
@@ -97,5 +102,82 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	}
 	if !spec.SetPower.Exists || spec.SetPower.Val.Value != 4 || !spec.SetToughness.Exists || spec.SetToughness.Val.Value != 4 {
 		t.Fatalf("token P/T = %+v/%+v, want 4/4", spec.SetPower, spec.SetToughness)
+	}
+}
+
+func TestAbilityBodyAccessorsPreferBody(t *testing.T) {
+	ability := AbilityDef{
+		Kind: SpellAbility,
+		Body: TriggeredAbilityBody{
+			Trigger: TriggerCondition{
+				Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield},
+			},
+			Content: PlainAbilityContent{Sequence: []Effect{{Type: EffectDraw}}},
+		},
+	}
+
+	triggered, ok := ability.TriggeredBody()
+	if !ok {
+		t.Fatal("TriggeredBody returned false")
+	}
+	if triggered.Trigger.Pattern.Event != EventPermanentEnteredBattlefield {
+		t.Fatalf("trigger event = %v, want permanent entered", triggered.Trigger.Pattern.Event)
+	}
+	if !ability.IsTriggered() || ability.IsSpell() {
+		t.Fatalf("body classification mismatch: triggered=%v spell=%v", ability.IsTriggered(), ability.IsSpell())
+	}
+	if ability.EffectiveKind() != TriggeredAbility {
+		t.Fatalf("effective kind = %v, want TriggeredAbility", ability.EffectiveKind())
+	}
+}
+
+func TestLegacyAbilityBodyViews(t *testing.T) {
+	ability := AbilityDef{
+		Kind: ActivatedAbility,
+		Targets: []TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+		}},
+		Effects: []Effect{{Type: EffectDamage, TargetIndex: 0}},
+	}
+
+	body, ok := ability.ActivatedBody()
+	if !ok {
+		t.Fatal("ActivatedBody returned false")
+	}
+	content, ok := body.Content.(PlainAbilityContent)
+	if !ok {
+		t.Fatalf("content = %T, want PlainAbilityContent", body.Content)
+	}
+	if len(content.Targets) != 1 || len(content.Sequence) != 1 {
+		t.Fatalf("content = %+v, want one target and one effect", content)
+	}
+}
+
+func TestAbilityFieldAccessorsPreferBody(t *testing.T) {
+	activationCondition := opt.Val(Condition{ControllerHasMaxSpeed: true})
+	ability := AbilityDef{
+		Kind:                ActivatedAbility,
+		ZoneOfFunction:      ZoneBattlefield,
+		Timing:              NoTimingRestriction,
+		ActivationCondition: opt.Val(Condition{SourceNotMonstrous: true}),
+		LoyaltyCost:         1,
+		Body: LoyaltyAbilityBody{
+			LoyaltyCost:         -2,
+			ActivationCondition: activationCondition,
+		},
+	}
+
+	if ability.FunctionZone() != ZoneBattlefield {
+		t.Fatalf("function zone = %v, want legacy battlefield fallback", ability.FunctionZone())
+	}
+	if ability.TimingRestriction() != NoTimingRestriction {
+		t.Fatalf("timing = %v, want legacy no restriction fallback", ability.TimingRestriction())
+	}
+	if ability.LoyaltyCostValue() != -2 {
+		t.Fatalf("loyalty cost = %v, want body value", ability.LoyaltyCostValue())
+	}
+	if got := ability.ActivationConditionValue(); !got.Exists || !got.Val.ControllerHasMaxSpeed {
+		t.Fatalf("activation condition = %+v, want body condition", got)
 	}
 }

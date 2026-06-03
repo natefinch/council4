@@ -19,17 +19,16 @@ import (
 //	Equipped creature gets +1/+0 for each opponent you have.
 //	Whenever equipped creature is dealt damage, it deals that much damage to any target.
 //	Equip {4}
-var BlazingSunsteel = &game.CardDef{
-	Name: "Blazing Sunsteel",
+var BlazingSunsteel = &game.CardDef{CardFace: game.CardFace{Name: "Blazing Sunsteel",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Artifact},
-	Subtypes:      []types.Sub{types.Equipment},
-	OracleText:    "Equipped creature gets +1/+0 for each opponent you have.\nWhenever equipped creature is dealt damage, it deals that much damage to any target.\nEquip {4}",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Artifact},
+	Subtypes:   []types.Sub{types.Equipment},
+	OracleText: "Equipped creature gets +1/+0 for each opponent you have.\nWhenever equipped creature is dealt damage, it deals that much damage to any target.\nEquip {4}",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.StaticAbility,
@@ -99,5 +98,5 @@ var BlazingSunsteel = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

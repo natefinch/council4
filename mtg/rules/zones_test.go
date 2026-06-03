@@ -47,9 +47,8 @@ func TestMovePermanentToZoneMovesTokenObjectIDToDestination(t *testing.T) {
 		Owner:      game.Player1,
 		Controller: game.Player1,
 		Token:      true,
-		TokenDef: &game.CardDef{
-			Name:  "Token",
-			Types: []types.Card{types.Creature},
+		TokenDef: &game.CardDef{CardFace: game.CardFace{Name: "Token",
+			Types: []types.Card{types.Creature}},
 		},
 	}
 	g.Battlefield = append(g.Battlefield, token)
@@ -120,10 +119,9 @@ func TestAttachPermanentAttachesAuraToLegalCreature(t *testing.T) {
 
 func TestAuraWithoutEnchantTargetCannotAttach(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	aura := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:     "Targetless Aura",
+	aura := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Targetless Aura",
 		Types:    []types.Card{types.Enchantment},
-		Subtypes: []types.Sub{types.Aura},
+		Subtypes: []types.Sub{types.Aura}},
 	})
 	creature := addCombatCreaturePermanent(g, game.Player2)
 
@@ -135,7 +133,7 @@ func TestAuraWithoutEnchantTargetCannotAttach(t *testing.T) {
 func TestEnchantTargetRestrictsAuraAttachment(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	aura := addCombatPermanent(g, game.Player1, landAuraCard())
-	land := addCombatPermanent(g, game.Player2, &game.CardDef{Name: "Forest", Types: []types.Card{types.Land}})
+	land := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Forest", Types: []types.Card{types.Land}}})
 	creature := addCombatCreaturePermanent(g, game.Player2)
 
 	if !canAttachPermanent(g, aura, land) {
@@ -150,7 +148,7 @@ func TestAuraSpellUsesEnchantTargetForCastLegality(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	auraID := addCardToHand(g, game.Player1, landAuraCard())
-	land := addCombatPermanent(g, game.Player2, &game.CardDef{Name: "Forest", Types: []types.Card{types.Land}})
+	land := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Forest", Types: []types.Card{types.Land}}})
 	creature := addCombatCreaturePermanent(g, game.Player2)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -168,7 +166,7 @@ func TestAuraSpellAttachesToEnchantTargetOnResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	auraID := addCardToHand(g, game.Player1, landAuraCard())
-	land := addCombatPermanent(g, game.Player2, &game.CardDef{Name: "Forest", Types: []types.Card{types.Land}})
+	land := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Forest", Types: []types.Card{types.Land}}})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
@@ -266,8 +264,7 @@ func TestRemovePermanentFromBattlefieldMissingPermanentReturnsNil(t *testing.T) 
 }
 
 func addAuraPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
-	return addCombatPermanent(g, controller, &game.CardDef{
-		Name:     "Test Aura",
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Test Aura",
 		Types:    []types.Card{types.Enchantment},
 		Subtypes: []types.Sub{types.Aura},
 		Abilities: []game.AbilityDef{{
@@ -279,13 +276,12 @@ func addAuraPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 					PermanentTypes: []types.Card{types.Creature},
 				},
 			}),
-		}},
+		}}},
 	})
 }
 
 func landAuraCard() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Land Aura",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Land Aura",
 		Types:    []types.Card{types.Enchantment},
 		Subtypes: []types.Sub{types.Aura},
 		Abilities: []game.AbilityDef{{
@@ -297,7 +293,7 @@ func landAuraCard() *game.CardDef {
 					PermanentTypes: []types.Card{types.Land},
 				},
 			}),
-		}},
+		}}},
 	}
 }
 
@@ -311,9 +307,8 @@ func findPermanentByCardID(g *game.Game, cardID id.ID) (*game.Permanent, bool) {
 }
 
 func addEquipmentPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
-	return addCombatPermanent(g, controller, &game.CardDef{
-		Name:     "Test Equipment",
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Test Equipment",
 		Types:    []types.Card{types.Artifact},
-		Subtypes: []types.Sub{types.Equipment},
+		Subtypes: []types.Sub{types.Equipment}},
 	})
 }

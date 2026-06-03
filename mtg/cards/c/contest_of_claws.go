@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Target creature you control deals damage equal to its power to another target creature. If excess damage was dealt this way, discover X, where X is that excess damage.
-var ContestOfClaws = &game.CardDef{
-	Name: "Contest of Claws",
+var ContestOfClaws = &game.CardDef{CardFace: game.CardFace{Name: "Contest of Claws",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Target creature you control deals damage equal to its power to another target creature. If excess damage was dealt this way, discover X, where X is that excess damage. (Exile cards from the top of your library until you exile a nonland card with that mana value or less. Cast it without paying its mana cost or put it into your hand. Put the rest on the bottom in a random order.)",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Target creature you control deals damage equal to its power to another target creature. If excess damage was dealt this way, discover X, where X is that excess damage. (Exile cards from the top of your library until you exile a nonland card with that mana value or less. Cast it without paying its mana cost or put it into your hand. Put the rest on the bottom in a random order.)",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -82,5 +81,5 @@ var ContestOfClaws = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

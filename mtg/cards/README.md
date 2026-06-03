@@ -33,7 +33,7 @@ Each card is an exported `*game.CardDef` variable in its letter sub-package (e.g
    go run .agents/skills/card-impl/main.go "Card Name"
    ```
 
-2. Fill in the `Abilities` slice (use the `card-impl` Copilot skill or do it manually). For double-faced cards, front-face data lives on `CardDef` and generated `Back` holds back-face mechanical data; fill back-face abilities on the `game.CardFace`.
+2. Fill in the categorized ability fields on `game.CardFace` (use the `card-impl` Copilot skill or do it manually): `SpellAbility`, `ActivatedAbilities`, `TriggeredAbilities`, `ReplacementAbilities`, and `StaticAbilities` as appropriate. Legacy `Abilities` remains a migration bridge for older cards. For keyword abilities, prefer sealed variants such as `game.SimpleKeyword`, `game.WardKeyword`, or `game.EnchantKeyword`. Front-face data lives in the embedded `game.CardFace` on `CardDef`; for double-faced cards, generated `Back` holds back-face mechanical data.
 
 3. Regenerate the card list:
    ```bash

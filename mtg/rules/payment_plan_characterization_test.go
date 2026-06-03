@@ -47,8 +47,8 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			name: "delve exiles from graveyard top first",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
-				addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
+				addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Graveyard Card"}})
+				addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Graveyard Card"}})
 				return g, delveSpell(cost.Mana{cost.O(2)}), 0, 0
 			},
 			want: []string{
@@ -231,27 +231,24 @@ func stringList(values []string) string {
 
 func namedCreature(name string, colors ...color.Color) *game.CardDef {
 	pt := game.PT{Value: 1}
-	return &game.CardDef{
-		Name:      name,
+	return &game.CardDef{CardFace: game.CardFace{Name: name,
 		Types:     []types.Card{types.Creature},
 		Colors:    colors,
 		Power:     opt.Val(pt),
-		Toughness: opt.Val(pt),
+		Toughness: opt.Val(pt)},
 	}
 }
 
 func genericCostSpell(generic int) *game.CardDef {
-	return &game.CardDef{
-		Name:      "Generic Cost Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Generic Cost Spell",
 		ManaCost:  opt.Val(cost.Mana{cost.O(generic)}),
 		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
+		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}}},
 	}
 }
 
 func sacrificeCostSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Sacrifice Cost Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Sacrifice Cost Spell",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
@@ -263,20 +260,19 @@ func sacrificeCostSpell() *game.CardDef {
 				MatchPermanentType: true,
 				PermanentType:      types.Creature,
 			}},
-		}},
+		}}},
 	}
 }
 
 // kickerSpell returns a sorcery with a {G} base cost and a {G} kicker cost.
 // When kicked (kickerPaid=true) the combined cost is {G}{G}.
 func kickerSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Kicker Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Kicker Spell",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind:       game.SpellAbility,
 			KickerCost: greenCost(),
-		}},
+		}}},
 	}
 }

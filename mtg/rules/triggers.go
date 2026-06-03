@@ -121,7 +121,8 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 		if !ok {
 			continue
 		}
-		if ability.Trigger.Exists && ability.Trigger.Val.Pattern.OneOrMore {
+		triggeredBody, hasTriggeredBody := ability.TriggeredBody()
+		if hasTriggeredBody && triggeredBody.Trigger.Pattern.OneOrMore {
 			key := triggerBatchKey{
 				sourceID:     trigger.sourceID,
 				abilityIndex: trigger.abilityIndex,
@@ -133,12 +134,12 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 			}
 			seenOneOrMore[key] = true
 		}
-		if ability.MaxTriggersPerTurn > 0 {
+		if hasTriggeredBody && triggeredBody.MaxTriggersPerTurn > 0 {
 			key := game.TriggeredAbilityUse{SourceID: trigger.sourceID, AbilityIndex: trigger.abilityIndex}
 			if g.TriggeredAbilitiesThisTurn == nil {
 				g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 			}
-			if g.TriggeredAbilitiesThisTurn[key] >= ability.MaxTriggersPerTurn {
+			if g.TriggeredAbilitiesThisTurn[key] >= triggeredBody.MaxTriggersPerTurn {
 				continue
 			}
 			g.TriggeredAbilitiesThisTurn[key]++
@@ -161,7 +162,8 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 	controller := effectiveController(g, permanent)
 	for i := range abilities {
 		ability := &abilities[i]
-		if ability.Kind != game.TriggeredAbility || !ability.Trigger.Exists {
+		triggeredBody, ok := ability.TriggeredBody()
+		if !ok || (ability.Body == nil && !ability.Trigger.Exists) {
 			if ward, ok := wardTriggerForEvent(g, permanent, controller, ability, event); ok {
 				pending = append(pending, pendingTriggeredAbility{
 					controller:   controller,
@@ -177,7 +179,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 			}
 			continue
 		}
-		trigger := &ability.Trigger.Val
+		trigger := &triggeredBody.Trigger
 		if !triggerMatchesEvent(g, permanent, &trigger.Pattern, event) || !triggerInterveningIf(g, permanent, controller, trigger, &event) {
 			continue
 		}
@@ -291,9 +293,11 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 			continue
 		}
 		controller := effectiveController(g, permanent)
-		for i := range def.Abilities {
-			ability := &def.Abilities[i]
-			if ability.Kind != game.TriggeredAbility || !ability.Trigger.Exists || !ability.Trigger.Val.State.Exists {
+		abilities := def.AbilityDefs()
+		for i := range abilities {
+			ability := &abilities[i]
+			triggeredBody, ok := ability.TriggeredBody()
+			if !ok || (ability.Body == nil && !ability.Trigger.Exists) || !triggeredBody.Trigger.State.Exists {
 				continue
 			}
 			key := game.StateTriggerKey{
@@ -302,7 +306,7 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 				AbilityIndex:   i,
 			}
 			seen[key] = true
-			if !stateTriggerConditionSatisfied(g, controller, &ability.Trigger.Val.State.Val) {
+			if !stateTriggerConditionSatisfied(g, controller, &triggeredBody.Trigger.State.Val) {
 				delete(g.StateTriggerLatches, key)
 				continue
 			}
@@ -756,10 +760,14 @@ func pendingTriggerAbilityFromDef(def *game.CardDef, trigger *pendingTriggeredAb
 	if trigger.inline != nil {
 		return trigger.inline, true
 	}
-	if def == nil || trigger.abilityIndex < 0 || trigger.abilityIndex >= len(def.Abilities) {
+	if def == nil {
 		return nil, false
 	}
-	return &def.Abilities[trigger.abilityIndex], true
+	abilities := def.AbilityDefs()
+	if trigger.abilityIndex < 0 || trigger.abilityIndex >= len(abilities) {
+		return nil, false
+	}
+	return &abilities[trigger.abilityIndex], true
 }
 
 func (e *Engine) chooseTriggerOrder(g *game.Game, playerID game.PlayerID, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {

@@ -21,20 +21,19 @@ import (
 //	Start your engines! (If you have no speed, it starts at 1. It increases once on each of your turns when an opponent loses life. Max speed is 4.)
 //	{1}, {T}: Target creature with power 2 or less can't be blocked this turn.
 //	Hazoret can't attack or block unless you have max speed.
-var HazoretGodseeker = &game.CardDef{
-	Name: "Hazoret, Godseeker",
+var HazoretGodseeker = &game.CardDef{CardFace: game.CardFace{Name: "Hazoret, Godseeker",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Supertypes:    []types.Super{types.Legendary},
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.God},
-	Power:         opt.Val(game.PT{Value: 5}),
-	Toughness:     opt.Val(game.PT{Value: 3}),
-	OracleText:    "Indestructible, haste\nStart your engines! (If you have no speed, it starts at 1. It increases once on each of your turns when an opponent loses life. Max speed is 4.)\n{1}, {T}: Target creature with power 2 or less can't be blocked this turn.\nHazoret can't attack or block unless you have max speed.",
+	Colors: []color.Color{color.Red},
+
+	Supertypes: []types.Super{types.Legendary},
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.God},
+	Power:      opt.Val(game.PT{Value: 5}),
+	Toughness:  opt.Val(game.PT{Value: 3}),
+	OracleText: "Indestructible, haste\nStart your engines! (If you have no speed, it starts at 1. It increases once on each of your turns when an opponent loses life. Max speed is 4.)\n{1}, {T}: Target creature with power 2 or less can't be blocked this turn.\nHazoret can't attack or block unless you have max speed.",
 	Abilities: []game.AbilityDef{
 		game.IndestructibleAbility,
 		game.HasteAbility,
@@ -103,5 +102,5 @@ var HazoretGodseeker = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

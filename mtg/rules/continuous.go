@@ -135,7 +135,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values.supertypes = append([]types.Super(nil), card.Supertypes...)
 	values.types = append([]types.Card(nil), card.Types...)
 	values.subtypes = append([]types.Sub(nil), card.Subtypes...)
-	values.abilities = append([]game.AbilityDef(nil), card.Abilities...)
+	values.abilities = append([]game.AbilityDef(nil), card.AbilityDefs()...)
 	if card.Power.Exists {
 		values.powerPT = ptPtr(card.Power)
 		values.dynamicPower = dynamicValuePtr(card.DynamicPower)
@@ -309,8 +309,9 @@ func staticAbilitySources(g *game.Game, layer game.ContinuousLayer) []staticAbil
 
 func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer) []game.ContinuousEffect {
 	var effects []game.ContinuousEffect
-	for i := range source.card.Abilities {
-		ability := &source.card.Abilities[i]
+	abilities := source.card.AbilityDefs()
+	for i := range abilities {
+		ability := &abilities[i]
 		if !staticAbilityFunctionsFromSource(ability, source) {
 			continue
 		}
@@ -398,8 +399,9 @@ func staticAbilityCardHasLayer(card *game.CardDef, onBattlefield bool, layer gam
 	if card == nil {
 		return false
 	}
-	for i := range card.Abilities {
-		ability := &card.Abilities[i]
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		ability := &abilities[i]
 		if !staticAbilityFunctionsInZone(ability, onBattlefield) {
 			continue
 		}
@@ -434,13 +436,13 @@ func staticAbilityFunctionsFromSource(ability *game.AbilityDef, source staticAbi
 }
 
 func staticAbilityFunctionsInZone(ability *game.AbilityDef, onBattlefield bool) bool {
-	if ability == nil || ability.Kind != game.StaticAbility {
+	if ability == nil || !ability.IsStatic() {
 		return false
 	}
 	if onBattlefield {
 		return abilityFunctionsOnBattlefield(ability)
 	}
-	return ability.ZoneOfFunction == game.ZoneGraveyard
+	return ability.FunctionZone() == game.ZoneGraveyard
 }
 
 func sourceObjectID(source staticAbilitySource) id.ID {
@@ -579,10 +581,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	case game.LayerAbility:
 		values.abilities = append(values.abilities, effect.AddAbilities...)
 		for i := range effect.AddAbilities {
-			ability := &effect.AddAbilities[i]
-			for _, keyword := range ability.Keywords {
-				values.keywords[keyword] = true
-			}
+			effect.AddAbilities[i].AddKeywordKindsTo(values.keywords)
 		}
 		for _, keyword := range effect.RemoveKeywords {
 			values.keywords[keyword] = false
@@ -681,14 +680,13 @@ func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanent
 func rebuildKeywords(values *permanentEffectiveValues) {
 	values.keywords = make(map[game.Keyword]bool)
 	for i := range values.abilities {
-		for _, keyword := range values.abilities[i].Keywords {
-			values.keywords[keyword] = true
-		}
+		values.abilities[i].AddKeywordKindsTo(values.keywords)
 	}
 }
 
 func abilityFunctionsOnBattlefield(ability *game.AbilityDef) bool {
-	return ability != nil && (ability.ZoneOfFunction == game.ZoneNone || ability.ZoneOfFunction == game.ZoneBattlefield)
+	zone := ability.FunctionZone()
+	return zone == game.ZoneNone || zone == game.ZoneBattlefield
 }
 
 func powerToughnessCounterDelta(permanent *game.Permanent) int {

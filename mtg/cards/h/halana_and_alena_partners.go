@@ -20,21 +20,20 @@ import (
 //	First strike (This creature deals combat damage before creatures without first strike.)
 //	Reach (This creature can block creatures with flying.)
 //	At the beginning of combat on your turn, put X +1/+1 counters on another target creature you control, where X is Halana and Alena's power. That creature gains haste until end of turn.
-var HalanaAndAlenaPartners = &game.CardDef{
-	Name: "Halana and Alena, Partners",
+var HalanaAndAlenaPartners = &game.CardDef{CardFace: game.CardFace{Name: "Halana and Alena, Partners",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.R,
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green, color.Red},
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Supertypes:    []types.Super{types.Legendary},
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Human, types.Ranger},
-	Power:         opt.Val(game.PT{Value: 2}),
-	Toughness:     opt.Val(game.PT{Value: 3}),
-	OracleText:    "First strike (This creature deals combat damage before creatures without first strike.)\nReach (This creature can block creatures with flying.)\nAt the beginning of combat on your turn, put X +1/+1 counters on another target creature you control, where X is Halana and Alena's power. That creature gains haste until end of turn.",
+	Colors: []color.Color{color.Green, color.Red},
+
+	Supertypes: []types.Super{types.Legendary},
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Human, types.Ranger},
+	Power:      opt.Val(game.PT{Value: 2}),
+	Toughness:  opt.Val(game.PT{Value: 3}),
+	OracleText: "First strike (This creature deals combat damage before creatures without first strike.)\nReach (This creature can block creatures with flying.)\nAt the beginning of combat on your turn, put X +1/+1 counters on another target creature you control, where X is Halana and Alena's power. That creature gains haste until end of turn.",
 	Abilities: []game.AbilityDef{
 		game.FirstStrikeAbility,
 		game.ReachAbility,
@@ -85,5 +84,5 @@ var HalanaAndAlenaPartners = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

@@ -17,19 +17,18 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.
-var FarhavenElf = &game.CardDef{
-	Name: "Farhaven Elf",
+var FarhavenElf = &game.CardDef{CardFace: game.CardFace{Name: "Farhaven Elf",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Elf, types.Druid},
-	Power:         opt.Val(game.PT{Value: 1}),
-	Toughness:     opt.Val(game.PT{Value: 1}),
-	OracleText:    "When this creature enters, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Elf, types.Druid},
+	Power:      opt.Val(game.PT{Value: 1}),
+	Toughness:  opt.Val(game.PT{Value: 1}),
+	OracleText: "When this creature enters, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.TriggeredAbility,
@@ -57,5 +56,5 @@ var FarhavenElf = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

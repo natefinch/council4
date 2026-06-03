@@ -18,18 +18,17 @@ import (
 //
 //	Flying
 //	{T}: Add one mana of any color.
-var BirdsOfParadise = &game.CardDef{
-	Name: "Birds of Paradise",
+var BirdsOfParadise = &game.CardDef{CardFace: game.CardFace{Name: "Birds of Paradise",
 	ManaCost: opt.Val(cost.Mana{
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Bird},
-	Power:         opt.Val(game.PT{Value: 0}),
-	Toughness:     opt.Val(game.PT{Value: 1}),
-	OracleText:    "Flying\n{T}: Add one mana of any color.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Bird},
+	Power:      opt.Val(game.PT{Value: 0}),
+	Toughness:  opt.Val(game.PT{Value: 1}),
+	OracleText: "Flying\n{T}: Add one mana of any color.",
 	Abilities: []game.AbilityDef{
 		game.FlyingAbility,
 		{
@@ -60,5 +59,5 @@ var BirdsOfParadise = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

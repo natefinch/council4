@@ -74,10 +74,14 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 			def, defOK = physicalDef.FaceDef(obj.Face)
 		}
 	}
-	if !defOK || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(def.Abilities) {
+	if !defOK {
 		return "missing source"
 	}
-	ability := &def.Abilities[obj.AbilityIndex]
+	abilities := def.AbilityDefs()
+	if obj.AbilityIndex < 0 || obj.AbilityIndex >= len(abilities) {
+		return "missing source"
+	}
+	ability := &abilities[obj.AbilityIndex]
 	if permanentOK && isEquipmentPermanent(g, permanent) && abilityHasKeyword(ability, game.Equip) {
 		sourceObjectID := obj.SourceID
 		if !permanentOK {
@@ -113,15 +117,20 @@ func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.Stac
 		return e.resolveTriggeredAbilityDefWithChoices(g, obj, nil, obj.InlineAbility, agents, log)
 	}
 	def, ok := stackObjectSourceDef(g, obj)
-	if !ok || obj.AbilityIndex < 0 || obj.AbilityIndex >= len(def.Abilities) {
+	if !ok {
 		return "missing source"
 	}
-	ability := &def.Abilities[obj.AbilityIndex]
+	abilities := def.AbilityDefs()
+	if obj.AbilityIndex < 0 || obj.AbilityIndex >= len(abilities) {
+		return "missing source"
+	}
+	ability := &abilities[obj.AbilityIndex]
 	return e.resolveTriggeredAbilityDefWithChoices(g, obj, def, ability, agents, log)
 }
 
 func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.StackObject, source *game.CardDef, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
-	if ability.Kind != game.TriggeredAbility {
+	triggeredBody, ok := ability.TriggeredBody()
+	if !ok {
 		return "missing source"
 	}
 	if abilityHasKeyword(ability, game.Ward) && ability.WardCost.Exists {
@@ -135,13 +144,13 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 		event = &obj.TriggerEvent
 	}
 	sourcePermanent, _ := permanentByObjectID(g, obj.SourceID)
-	if ability.Trigger.Exists && !triggerInterveningIf(g, sourcePermanent, obj.Controller, &ability.Trigger.Val, event) {
+	if !triggerInterveningIf(g, sourcePermanent, obj.Controller, &triggeredBody.Trigger, event) {
 		return "intervening if false"
 	}
 	if !abilityHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, ability, obj.Controller, obj.Targets) {
 		return "countered by rules"
 	}
-	if ability.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
+	if triggeredBody.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
 		return "declined"
 	}
 	for i := range ability.Effects {

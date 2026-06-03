@@ -137,33 +137,40 @@ func addCardInstance(g *game.Game, owner game.PlayerID, def *game.CardDef) game.
 }
 
 func modalDFCSpellLand() *game.CardDef {
-	return &game.CardDef{
-		Name:   "Front Spell",
-		Layout: game.LayoutModalDFC,
-		Types:  []types.Card{types.Sorcery},
-		Back:   opt.Val(game.CardFace{Name: "Back Land", Types: []types.Card{types.Land}, Subtypes: []types.Sub{types.Forest}, EntersTapped: true}),
+	return &game.CardDef{CardFace: game.CardFace{Name: "Front Spell",
+
+		Types: []types.Card{types.Sorcery}}, Layout: game.LayoutModalDFC,
+
+		Back: opt.Val(game.CardFace{
+			Name:     "Back Land",
+			Types:    []types.Card{types.Land},
+			Subtypes: []types.Sub{types.Forest},
+			ReplacementAbilities: []game.ReplacementAbilityDef{
+				game.EntersTappedReplacement("This land enters tapped."),
+			},
+		}),
 	}
 }
 
 func modalDFCArtifactBack() *game.CardDef {
-	return &game.CardDef{
-		Name:      "Creature Front",
-		Layout:    game.LayoutModalDFC,
+	return &game.CardDef{CardFace: game.CardFace{Name: "Creature Front",
+
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
-		Toughness: opt.Val(game.PT{Value: 1}),
-		Back:      opt.Val(game.CardFace{Name: "Artifact Back", Types: []types.Card{types.Artifact}}),
+		Toughness: opt.Val(game.PT{Value: 1})}, Layout: game.LayoutModalDFC,
+
+		Back: opt.Val(game.CardFace{Name: "Artifact Back", Types: []types.Card{types.Artifact}}),
 	}
 }
 
 func transformCreature() *game.CardDef {
-	return &game.CardDef{
-		Name:      "Small Front",
-		Layout:    game.LayoutTransform,
+	return &game.CardDef{CardFace: game.CardFace{Name: "Small Front",
+
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
-		Toughness: opt.Val(game.PT{Value: 1}),
-		Back:      opt.Val(game.CardFace{Name: "Large Back", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 4}), Toughness: opt.Val(game.PT{Value: 4})}),
+		Toughness: opt.Val(game.PT{Value: 1})}, Layout: game.LayoutTransform,
+
+		Back: opt.Val(game.CardFace{Name: "Large Back", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 4}), Toughness: opt.Val(game.PT{Value: 4})}),
 	}
 }
 

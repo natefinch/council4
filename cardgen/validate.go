@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 )
@@ -23,6 +24,8 @@ const (
 	IssueTargetIndexOutOfRange      ValidationCode = "target-index-out-of-range"
 	IssueInvalidReference           ValidationCode = "invalid-reference"
 	IssueInvalidTargetSpec          ValidationCode = "invalid-target-spec"
+	IssueInvalidKeywordAbility      ValidationCode = "invalid-keyword-ability"
+	IssueInvalidAbilityBody         ValidationCode = "invalid-ability-body"
 	IssueUnregisteredImplementation ValidationCode = "unregistered-implementation"
 	IssueImplementationRequired     ValidationCode = "implementation-required"
 	IssueGeneratedCardNotFound      ValidationCode = "generated-card-not-found"
@@ -82,26 +85,27 @@ func (v *cardValidator) validate() {
 	if strings.TrimSpace(v.card.Name) == "" {
 		v.add("", "", IssueMissingName, "card definition has no name")
 	}
-	v.validateFace(v.card.Name, "", v.card.OracleText, v.card.ImplementationID, v.card.Abilities, true)
+	v.validateFace(v.card.Name, "", &v.card.CardFace, true)
 	if v.card.Back.Exists {
 		face := v.card.Back.Val
 		name := face.Name
 		if strings.TrimSpace(name) == "" {
 			name = "back face"
 		}
-		v.validateFace(name, "Back", face.OracleText, face.ImplementationID, face.Abilities, true)
+		v.validateFace(name, "Back", &face, true)
 	}
 }
 
-func (v *cardValidator) validateFace(faceName, path, oracleText, implementationID string, abilities []game.AbilityDef, walkAbilities bool) {
-	if strings.TrimSpace(oracleText) != "" && len(abilities) == 0 && implementationID == "" {
+func (v *cardValidator) validateFace(faceName, path string, face *game.CardFace, walkAbilities bool) {
+	abilities := face.AbilityDefs()
+	if strings.TrimSpace(face.OracleText) != "" && len(abilities) == 0 && face.ImplementationID == "" {
 		v.add(faceName, path, IssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
-	if implementationID != "" && len(v.opts.KnownImplementationIDs) > 0 && !v.opts.KnownImplementationIDs[implementationID] {
-		v.add(faceName, path, IssueUnregisteredImplementation, fmt.Sprintf("implementation ID %q is not registered", implementationID))
+	if face.ImplementationID != "" && len(v.opts.KnownImplementationIDs) > 0 && !v.opts.KnownImplementationIDs[face.ImplementationID] {
+		v.add(faceName, path, IssueUnregisteredImplementation, fmt.Sprintf("implementation ID %q is not registered", face.ImplementationID))
 	}
-	if implementationID != "" && v.opts.ReportImplementationIDs {
-		v.add(faceName, path, IssueImplementationRequired, fmt.Sprintf("implementation ID %q requires hand-written rules support", implementationID))
+	if face.ImplementationID != "" && v.opts.ReportImplementationIDs {
+		v.add(faceName, path, IssueImplementationRequired, fmt.Sprintf("implementation ID %q requires hand-written rules support", face.ImplementationID))
 	}
 	if !walkAbilities {
 		return
@@ -113,6 +117,9 @@ func (v *cardValidator) validateFace(faceName, path, oracleText, implementationI
 }
 
 func (v *cardValidator) validateAbility(faceName, path string, ability *game.AbilityDef) {
+	if ability.Body != nil {
+		v.validateAbilityBody(faceName, appendPath(path, "Body"), ability.Body, ability.Targets)
+	}
 	if ability.EnchantTarget.Exists {
 		v.validateTargetSpec(faceName, appendPath(path, "EnchantTarget"), &ability.EnchantTarget.Val)
 	}
@@ -124,6 +131,9 @@ func (v *cardValidator) validateAbility(faceName, path string, ability *game.Abi
 	}
 	if ability.ActivationCondition.Exists {
 		v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &ability.ActivationCondition.Val, ability.Targets)
+	}
+	for i := range ability.KeywordAbilities {
+		v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), ability.KeywordAbilities[i], ability.Targets)
 	}
 	for i := range ability.Targets {
 		v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("Targets[%d]", i)), &ability.Targets[i])
@@ -147,6 +157,137 @@ func (v *cardValidator) validateAbility(faceName, path string, ability *game.Abi
 		for j := range mode.Effects {
 			v.validateEffect(faceName, appendPath(modePath, fmt.Sprintf("Effects[%d]", j)), &mode.Effects[j], targets)
 		}
+	}
+}
+
+func (v *cardValidator) validateAbilityBody(faceName, path string, body game.AbilityBody, targets []game.TargetSpec) {
+	switch abilityBody := body.(type) {
+	case game.SpellAbilityBody:
+		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
+		for i := range abilityBody.KickerEffects {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("KickerEffects[%d]", i)), &abilityBody.KickerEffects[i], targets)
+		}
+	case game.ActivatedAbilityBody:
+		if abilityBody.ActivationCondition.Exists {
+			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
+		}
+		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
+	case game.ManaAbilityBody:
+		if abilityBody.ActivationCondition.Exists {
+			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
+		}
+		for i := range abilityBody.Sequence {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Sequence[%d]", i)), &abilityBody.Sequence[i], nil)
+		}
+	case game.LoyaltyAbilityBody:
+		if abilityBody.ActivationCondition.Exists {
+			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
+		}
+		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
+	case game.TriggeredAbilityBody:
+		if abilityBody.Trigger.InterveningCondition.Exists {
+			v.validateCondition(faceName, appendPath(path, "Trigger.InterveningCondition"), &abilityBody.Trigger.InterveningCondition.Val, targets)
+		}
+		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
+	case game.StaticAbilityBody:
+		if abilityBody.Condition.Exists {
+			v.validateCondition(faceName, appendPath(path, "Condition"), &abilityBody.Condition.Val, targets)
+		}
+		for i := range abilityBody.KeywordAbilities {
+			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
+		}
+		for i := range abilityBody.Effects {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Effects[%d]", i)), &abilityBody.Effects[i], targets)
+		}
+	case nil:
+		v.add(faceName, path, IssueInvalidAbilityBody, "ability body is nil")
+	default:
+		v.add(faceName, path, IssueInvalidAbilityBody, fmt.Sprintf("unknown ability body %T", body))
+	}
+}
+
+func (v *cardValidator) validateAbilityContent(faceName, path string, content game.AbilityContent, fallbackTargets []game.TargetSpec) {
+	switch abilityContent := content.(type) {
+	case game.PlainAbilityContent:
+		for i := range abilityContent.Targets {
+			v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("Targets[%d]", i)), &abilityContent.Targets[i])
+		}
+		targets := abilityContent.Targets
+		if len(targets) == 0 {
+			targets = fallbackTargets
+		}
+		for i := range abilityContent.Sequence {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Sequence[%d]", i)), &abilityContent.Sequence[i], targets)
+		}
+	case game.ModalAbilityContent:
+		for i := range abilityContent.SharedTargets {
+			v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("SharedTargets[%d]", i)), &abilityContent.SharedTargets[i])
+		}
+		for i := range abilityContent.Modes {
+			mode := &abilityContent.Modes[i]
+			modePath := appendPath(path, fmt.Sprintf("Modes[%d]", i))
+			for j := range mode.Targets {
+				v.validateTargetSpec(faceName, appendPath(modePath, fmt.Sprintf("Targets[%d]", j)), &mode.Targets[j])
+			}
+			targets := mode.Targets
+			if len(targets) == 0 {
+				targets = abilityContent.SharedTargets
+			}
+			for j := range mode.Effects {
+				v.validateEffect(faceName, appendPath(modePath, fmt.Sprintf("Effects[%d]", j)), &mode.Effects[j], targets)
+			}
+		}
+	case nil:
+		v.add(faceName, path, IssueInvalidAbilityBody, "ability content is nil")
+	default:
+		v.add(faceName, path, IssueInvalidAbilityBody, fmt.Sprintf("unknown ability content %T", content))
+	}
+}
+
+func (v *cardValidator) validateKeywordAbility(faceName, path string, ability game.KeywordAbility, targets []game.TargetSpec) {
+	switch keyword := ability.(type) {
+	case game.SimpleKeyword:
+		if keyword.Kind == game.KeywordNone {
+			v.add(faceName, path, IssueInvalidKeywordAbility, "simple keyword must set Kind")
+		}
+	case game.WardKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case game.EquipKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case game.EnchantKeyword:
+		v.validateTargetSpec(faceName, appendPath(path, "Target"), &keyword.Target)
+	case game.CyclingKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case game.KickerKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+		for i := range keyword.Bonus {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Bonus[%d]", i)), &keyword.Bonus[i], targets)
+		}
+	case game.MadnessKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case game.MorphKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case game.DisguiseKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case game.SuspendKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+		if keyword.TimeCounters <= 0 {
+			v.add(faceName, appendPath(path, "TimeCounters"), IssueInvalidKeywordAbility, "suspend time counters must be positive")
+		}
+	case game.ProtectionKeyword:
+		if len(keyword.FromColors) == 0 {
+			v.add(faceName, appendPath(path, "FromColors"), IssueInvalidKeywordAbility, "protection needs at least one protected color")
+		}
+	case nil:
+		v.add(faceName, path, IssueInvalidKeywordAbility, "keyword ability is nil")
+	default:
+		v.add(faceName, path, IssueInvalidKeywordAbility, fmt.Sprintf("unknown keyword ability %T", ability))
+	}
+}
+
+func (v *cardValidator) validateManaKeywordCost(faceName, path string, manaCost cost.Mana) {
+	if len(manaCost) == 0 {
+		v.add(faceName, appendPath(path, "Cost"), IssueInvalidKeywordAbility, "mana-valued keyword cost must be explicit")
 	}
 }
 
@@ -194,7 +335,7 @@ func (v *cardValidator) validateEffect(faceName, path string, effect *game.Effec
 	if effect.PlayerSelector != game.PlayerSelectorNone && effect.Type != game.EffectDamage {
 		v.add(faceName, appendPath(path, "PlayerSelector"), IssueInvalidReference, "PlayerSelector is only supported on damage effects")
 	}
-	if !effect.Object.Exists {
+	if !effect.Object.Exists && effectUsesDefaultTargetIndex(effect) {
 		v.validateTargetIndex(faceName, path, effect.TargetIndex, targets, "effect target")
 	}
 	if effect.DamageSource.Exists {
@@ -277,9 +418,10 @@ func (v *cardValidator) validateNestedCard(faceName, path string, card *game.Car
 	if card == nil {
 		return
 	}
-	v.validateFace(faceName, path, card.OracleText, card.ImplementationID, card.Abilities, true)
+	v.validateFace(faceName, path, &card.CardFace, true)
 	if card.Back.Exists {
-		v.validateFace(faceName, appendPath(path, "Back"), card.Back.Val.OracleText, card.Back.Val.ImplementationID, card.Back.Val.Abilities, true)
+		face := card.Back.Val
+		v.validateFace(faceName, appendPath(path, "Back"), &face, true)
 	}
 }
 
@@ -399,6 +541,19 @@ func dynamicAmountUsesTarget(dynamic game.DynamicAmount) bool {
 	default:
 		return false
 	}
+}
+
+func effectUsesDefaultTargetIndex(effect *game.Effect) bool {
+	if effect.Type != game.EffectApplyContinuous {
+		return true
+	}
+	for i := range effect.ContinuousEffects {
+		template := &effect.ContinuousEffects[i]
+		if template.AffectedObjectID == 0 && template.Selector == game.EffectSelectorNone {
+			return true
+		}
+	}
+	return false
 }
 
 func (v *cardValidator) add(faceName, path string, code ValidationCode, message string) {

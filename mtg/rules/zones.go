@@ -123,9 +123,6 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 }
 
 func initializePermanentCounters(permanent *game.Permanent, def *game.CardDef) {
-	if def.EntersTapped {
-		permanent.Tapped = true
-	}
 	if def.HasSubtype(types.Class) {
 		permanent.ClassLevel = 1
 	}
@@ -134,9 +131,6 @@ func initializePermanentCounters(permanent *game.Permanent, def *game.CardDef) {
 	}
 	if def.Defense.Exists {
 		permanent.Counters.Add(counter.Defense, def.Defense.Val)
-	}
-	for _, placement := range def.EntersWithCounters {
-		permanent.Counters.Add(placement.Kind, placement.Amount)
 	}
 }
 

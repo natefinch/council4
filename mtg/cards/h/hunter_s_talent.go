@@ -23,17 +23,16 @@ import (
 //	Whenever you attack, target attacking creature gets +1/+0 and gains trample until end of turn.
 //	{3}{G}: Level 3
 //	At the beginning of your end step, if you control a creature with power 4 or greater, draw a card.
-var HunterSTalent = &game.CardDef{
-	Name: "Hunter's Talent",
+var HunterSTalent = &game.CardDef{CardFace: game.CardFace{Name: "Hunter's Talent",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Enchantment},
-	Subtypes:      []types.Sub{types.Class},
-	OracleText:    "(Gain the next level as a sorcery to add its ability.)\nWhen this Class enters, target creature you control deals damage equal to its power to target creature you don't control.\n{1}{G}: Level 2\nWhenever you attack, target attacking creature gets +1/+0 and gains trample until end of turn.\n{3}{G}: Level 3\nAt the beginning of your end step, if you control a creature with power 4 or greater, draw a card.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Enchantment},
+	Subtypes:   []types.Sub{types.Class},
+	OracleText: "(Gain the next level as a sorcery to add its ability.)\nWhen this Class enters, target creature you control deals damage equal to its power to target creature you don't control.\n{1}{G}: Level 2\nWhenever you attack, target attacking creature gets +1/+0 and gains trample until end of turn.\n{3}{G}: Level 3\nAt the beginning of your end step, if you control a creature with power 4 or greater, draw a card.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.TriggeredAbility,
@@ -184,5 +183,5 @@ var HunterSTalent = &game.CardDef{
 				{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

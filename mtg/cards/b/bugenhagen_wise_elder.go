@@ -20,20 +20,19 @@ import (
 //	Reach
 //	At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.
 //	{T}: Add one mana of any color.
-var BugenhagenWiseElder = &game.CardDef{
-	Name: "Bugenhagen, Wise Elder",
+var BugenhagenWiseElder = &game.CardDef{CardFace: game.CardFace{Name: "Bugenhagen, Wise Elder",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Supertypes:    []types.Super{types.Legendary},
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Human, types.Shaman},
-	Power:         opt.Val(game.PT{Value: 1}),
-	Toughness:     opt.Val(game.PT{Value: 3}),
-	OracleText:    "Reach\nAt the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.\n{T}: Add one mana of any color.",
+	Colors: []color.Color{color.Green},
+
+	Supertypes: []types.Super{types.Legendary},
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Human, types.Shaman},
+	Power:      opt.Val(game.PT{Value: 1}),
+	Toughness:  opt.Val(game.PT{Value: 3}),
+	OracleText: "Reach\nAt the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.\n{T}: Add one mana of any color.",
 	Abilities: []game.AbilityDef{
 		game.ReachAbility,
 		{
@@ -89,5 +88,5 @@ var BugenhagenWiseElder = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

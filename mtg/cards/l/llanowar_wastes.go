@@ -16,11 +16,10 @@ import (
 //
 //	{T}: Add {C}.
 //	{T}: Add {B} or {G}. This land deals 1 damage to you.
-var LlanowarWastes = &game.CardDef{
-	Name:          "Llanowar Wastes",
-	ColorIdentity: color.NewIdentity(color.Black, color.Green),
-	Types:         []types.Card{types.Land},
-	OracleText:    "{T}: Add {C}.\n{T}: Add {B} or {G}. This land deals 1 damage to you.",
+var LlanowarWastes = &game.CardDef{CardFace: game.CardFace{Name: "Llanowar Wastes",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "{T}: Add {C}.\n{T}: Add {B} or {G}. This land deals 1 damage to you.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -64,5 +63,5 @@ var LlanowarWastes = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Black, color.Green),
 }

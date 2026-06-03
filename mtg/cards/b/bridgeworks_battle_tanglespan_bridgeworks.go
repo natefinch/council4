@@ -25,17 +25,16 @@ import (
 //
 //	As this land enters, you may pay 3 life. If you don't, it enters tapped.
 //	{T}: Add {G}.
-var BridgeworksBattle = &game.CardDef{
-	Name: "Bridgeworks Battle",
+var BridgeworksBattle = &game.CardDef{CardFace: game.CardFace{Name: "Bridgeworks Battle",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)",
-	Layout:        game.LayoutModalDFC,
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)",
+
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -79,17 +78,22 @@ var BridgeworksBattle = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
+
+	Layout: game.LayoutModalDFC,
+
 	Back: opt.Val(game.CardFace{
-		Name:  "Tanglespan Bridgeworks",
-		Types: []types.Card{types.Land},
-		EntersTappedUnlessPaid: opt.Val(game.ResolutionPayment{
-			Prompt: "Pay 3 life?",
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
-			},
-		}),
+		Name:       "Tanglespan Bridgeworks",
+		Types:      []types.Card{types.Land},
 		OracleText: "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {G}.",
+		ReplacementAbilities: []game.ReplacementAbilityDef{
+			game.EntersTappedUnlessPaidReplacement("As this land enters, you may pay 3 life. If you don't, it enters tapped.", game.ResolutionPayment{
+				Prompt: "Pay 3 life?",
+				AdditionalCosts: []game.AdditionalCost{
+					{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
+				},
+			}),
+		},
 		Abilities: []game.AbilityDef{
 			{
 				Kind:          game.ActivatedAbility,

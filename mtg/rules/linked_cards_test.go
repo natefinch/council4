@@ -12,15 +12,14 @@ import (
 func TestChaosWarpLikeEffectsUseTargetOwnerAndLinkedReveal(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	target := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:  "Warped Creature",
-		Types: []types.Card{types.Creature},
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Warped Creature",
+		Types: []types.Card{types.Creature}},
 	})
 	target.Controller = game.Player3
 	obj := &game.StackObject{
 		ID:         g.IDGen.Next(),
 		Kind:       game.StackSpell,
-		SourceID:   addCardInstance(g, game.Player1, &game.CardDef{Name: "Chaos-Like Spell"}),
+		SourceID:   addCardInstance(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Chaos-Like Spell"}}),
 		Controller: game.Player1,
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
@@ -53,14 +52,13 @@ func TestChaosWarpLikeEffectsUseTargetOwnerAndLinkedReveal(t *testing.T) {
 func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	instantID := addCardToLibrary(g, game.Player2, &game.CardDef{
-		Name:  "Not Permanent",
-		Types: []types.Card{types.Instant},
+	instantID := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Not Permanent",
+		Types: []types.Card{types.Instant}},
 	})
 	obj := &game.StackObject{
 		ID:         g.IDGen.Next(),
 		Kind:       game.StackSpell,
-		SourceID:   addCardInstance(g, game.Player1, &game.CardDef{Name: "Reveal-Like Spell"}),
+		SourceID:   addCardInstance(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Reveal-Like Spell"}}),
 		Controller: game.Player1,
 		Targets:    []game.Target{game.PlayerTarget(game.Player2)},
 	}

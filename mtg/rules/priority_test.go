@@ -82,9 +82,8 @@ func TestRunPriorityLoopAllPassWithNonEmptyStackResolvesAndContinues(t *testing.
 func TestRunPriorityLoopNonPassActionKeepsPriorityWithActor(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	landID := addCardToHand(g, game.Player1, &game.CardDef{
-		Name:  "Forest",
-		Types: []types.Card{types.Land},
+	landID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forest",
+		Types: []types.Card{types.Land}},
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone

@@ -162,27 +162,12 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		FromZone:    fromZone,
 		ToZone:      game.ZoneBattlefield,
 	}
-	if def, ok := permanentCardDef(g, permanent); ok && def.EntersTappedCondition.Exists {
-		replacement := game.ReplacementEffect{
-			Controller:   event.Controller,
-			SourceCardID: permanent.CardInstanceID,
-			Description:  "enters tapped condition",
-			MatchEvent:   game.EventPermanentEnteredBattlefield,
-			MatchToZone:  true,
-			ToZone:       game.ZoneBattlefield,
-			Condition:    def.EntersTappedCondition,
-			EntersTapped: true,
-			Duration:     game.DurationPermanent,
-			CreatedTurn:  g.Turn.TurnNumber,
-		}
-		if replacementEffectMatchesEvent(g, &replacement, event) {
-			setPermanentTapped(g, permanent, true)
-		}
-	}
-	if def, ok := permanentCardDef(g, permanent); ok && def.EntersTappedUnlessPaid.Exists && !enterBattlefieldPaymentPaid(ctx, g, event.Controller, def.EntersTappedUnlessPaid.Val) {
-		setPermanentTapped(g, permanent, true)
+	var staticMatches []game.ReplacementEffect
+	if def, ok := permanentCardDef(g, permanent); ok {
+		staticMatches = staticETBReplacementEffects(ctx, g, permanent, def, event)
 	}
 	matches := matchingETBReplacementEffects(g, event)
+	matches = append(matches, staticMatches...)
 	if len(matches) > 1 {
 		recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
 	}
@@ -195,6 +180,28 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			permanent.Counters.Add(placement.Kind, placement.Amount)
 		}
 	}
+}
+
+func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, def *game.CardDef, event game.GameEvent) []game.ReplacementEffect {
+	var replacements []game.ReplacementEffect
+	for i := range def.ReplacementAbilities {
+		ability := &def.ReplacementAbilities[i]
+		replacement := ability.Replacement
+		replacement.Controller = event.Controller
+		replacement.SourceCardID = permanent.CardInstanceID
+		replacement.SourceObjectID = 0
+		replacement.CreatedTurn = g.Turn.TurnNumber
+		if replacement.Description == "" {
+			replacement.Description = ability.Text
+		}
+		if ability.UnlessPaid.Exists && enterBattlefieldPaymentPaid(ctx, g, event.Controller, ability.UnlessPaid.Val) {
+			continue
+		}
+		if replacementEffectMatchesEvent(g, &replacement, event) {
+			replacements = append(replacements, replacement)
+		}
+	}
+	return replacements
 }
 
 func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, res game.ResolutionPayment) bool {

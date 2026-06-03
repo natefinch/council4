@@ -38,21 +38,19 @@ func FuzzTargetEnumerationIsStable(f *testing.F) {
 
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		for range opponentCreatures {
-			addCombatPermanent(g, game.Player2, &game.CardDef{
-				Name:      "Opponent Creature",
+			addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Opponent Creature",
 				Types:     []types.Card{types.Creature},
 				Colors:    []color.Color{color.White},
 				Power:     opt.Val(game.PT{Value: 2}),
-				Toughness: opt.Val(game.PT{Value: 2}),
+				Toughness: opt.Val(game.PT{Value: 2})},
 			})
 		}
 		for range ownCreatures {
-			addCombatPermanent(g, game.Player1, &game.CardDef{
-				Name:      "Own Creature",
+			addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Own Creature",
 				Types:     []types.Card{types.Creature},
 				Colors:    []color.Color{color.Green},
 				Power:     opt.Val(game.PT{Value: 1}),
-				Toughness: opt.Val(game.PT{Value: 1}),
+				Toughness: opt.Val(game.PT{Value: 1})},
 			})
 		}
 

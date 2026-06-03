@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Target creature you control deals damage equal to its power to target creature or planeswalker you don't control.
-var MasterSRebuke = &game.CardDef{
-	Name: "Master's Rebuke",
+var MasterSRebuke = &game.CardDef{CardFace: game.CardFace{Name: "Master's Rebuke",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Instant},
-	OracleText:    "Target creature you control deals damage equal to its power to target creature or planeswalker you don't control.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Instant},
+	OracleText: "Target creature you control deals damage equal to its power to target creature or planeswalker you don't control.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -64,5 +63,5 @@ var MasterSRebuke = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

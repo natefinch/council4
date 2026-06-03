@@ -8,8 +8,9 @@ import (
 )
 
 func madnessCostForCard(card *game.CardDef) (cost.Mana, bool) {
-	for i := range card.Abilities {
-		ability := &card.Abilities[i]
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		ability := &abilities[i]
 		if abilityHasKeyword(ability, game.Madness) && ability.MadnessCost.Exists {
 			return ability.MadnessCost.Val, true
 		}

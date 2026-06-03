@@ -17,22 +17,21 @@ import (
 // Oracle text:
 //
 //	Whenever you attack, double target creature's power until end of turn.
-var MrOrfeoTheBoulder = &game.CardDef{
-	Name: "Mr. Orfeo, the Boulder",
+var MrOrfeoTheBoulder = &game.CardDef{CardFace: game.CardFace{Name: "Mr. Orfeo, the Boulder",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.B,
 		cost.R,
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Black, color.Green, color.Red},
-	ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
-	Supertypes:    []types.Super{types.Legendary},
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Rhino, types.Warrior},
-	Power:         opt.Val(game.PT{Value: 2}),
-	Toughness:     opt.Val(game.PT{Value: 4}),
-	OracleText:    "Whenever you attack, double target creature's power until end of turn.",
+	Colors: []color.Color{color.Black, color.Green, color.Red},
+
+	Supertypes: []types.Super{types.Legendary},
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Rhino, types.Warrior},
+	Power:      opt.Val(game.PT{Value: 2}),
+	Toughness:  opt.Val(game.PT{Value: 4}),
+	OracleText: "Whenever you attack, double target creature's power until end of turn.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.TriggeredAbility,
@@ -68,5 +67,5 @@ var MrOrfeoTheBoulder = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
 }

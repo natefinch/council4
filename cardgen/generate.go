@@ -267,11 +267,16 @@ func writeSingleFaceComment(b *strings.Builder, fields generatedCardFields) {
 func writeCardDef(b *strings.Builder, root generatedCardFields, layout string, faces []generatedCardFields) error {
 	varName := CardNameToVarName(root.Name)
 	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
-	if err := writeFields(b, root, "\t", true, true); err != nil {
+	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
+	if err := writeFields(b, root, "\t\t", true, false); err != nil {
 		return err
 	}
+	_, _ = b.WriteString("\t},\n")
 	if layoutLiteral := layoutToLiteral(layout); layoutLiteral != "" {
 		_, _ = fmt.Fprintf(b, "\tLayout: %s,\n", layoutLiteral)
+	}
+	if len(root.ColorIdentity) > 0 {
+		_, _ = fmt.Fprintf(b, "\tColorIdentity: color.NewIdentity(%s),\n", colorLiterals(root.ColorIdentity))
 	}
 	if len(faces) > 0 {
 		if len(faces) > 1 {
@@ -345,7 +350,9 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 		}
 	}
 	if fields.EntersTapped {
-		_, _ = fmt.Fprintf(b, "%sEntersTapped: true,\n", indent)
+		_, _ = fmt.Fprintf(b, "%sReplacementAbilities: []game.ReplacementAbilityDef{\n", indent)
+		_, _ = fmt.Fprintf(b, "%s\tgame.EntersTappedReplacement(%q),\n", indent, "This permanent enters tapped.")
+		_, _ = fmt.Fprintf(b, "%s},\n", indent)
 	}
 	if fields.OracleText != "" {
 		_, _ = fmt.Fprintf(b, "%sOracleText: %q,\n", indent, fields.OracleText)

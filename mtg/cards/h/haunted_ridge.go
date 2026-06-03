@@ -16,18 +16,19 @@ import (
 //
 //	This land enters tapped unless you control two or more other lands.
 //	{T}: Add {B} or {R}.
-var HauntedRidge = &game.CardDef{
-	Name:          "Haunted Ridge",
-	ColorIdentity: color.NewIdentity(color.Black, color.Red),
-	Types:         []types.Card{types.Land},
-	OracleText:    "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {R}.",
-	EntersTappedCondition: opt.Val(game.Condition{
-		Negate: true,
-		ControllerControls: game.PermanentFilter{
-			Types:    []types.Card{types.Land},
-			MinCount: 2,
-		},
-	}),
+var HauntedRidge = &game.CardDef{CardFace: game.CardFace{Name: "Haunted Ridge",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {R}.",
+	ReplacementAbilities: []game.ReplacementAbilityDef{
+		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more other lands.", &game.Condition{
+			Negate: true,
+			ControllerControls: game.PermanentFilter{
+				Types:    []types.Card{types.Land},
+				MinCount: 2,
+			},
+		}),
+	},
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -55,5 +56,5 @@ var HauntedRidge = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Black, color.Red),
 }

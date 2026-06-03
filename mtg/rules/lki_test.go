@@ -13,14 +13,13 @@ import (
 func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		RequirePermanentTypes: []types.Card{types.Creature},
 	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}, nil)
-	land := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:  "Animated Land",
-		Types: []types.Card{types.Land},
+	land := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Animated Land",
+		Types: []types.Card{types.Land}},
 	})
 	one := game.PT{Value: 1}
 	g.ContinuousEffects = append(g.ContinuousEffects,
@@ -60,7 +59,7 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 	source := addCombatCreaturePermanent(g, game.Player1)
 	obj := &game.StackObject{
 		Kind:         game.StackActivatedAbility,

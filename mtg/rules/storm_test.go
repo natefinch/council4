@@ -104,13 +104,12 @@ func TestCounteringStormCopyDoesNotMoveSourceCard(t *testing.T) {
 }
 
 func simpleGainLifeInstant(name string) *game.CardDef {
-	return &game.CardDef{
-		Name:  name,
+	return &game.CardDef{CardFace: game.CardFace{Name: name,
 		Types: []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.SpellAbility,
 			Effects: []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: game.TargetIndexController}},
-		}},
+		}}},
 	}
 }
 
@@ -121,8 +120,7 @@ func stormGainLifeInstant() *game.CardDef {
 }
 
 func stormTargetCreatureInstant() *game.CardDef {
-	return &game.CardDef{
-		Name:  "Targeted Storm Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Targeted Storm Spell",
 		Types: []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Storm}},
@@ -131,7 +129,7 @@ func stormTargetCreatureInstant() *game.CardDef {
 				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
 				Effects: []game.Effect{{Type: game.EffectDamage, Amount: 1, TargetIndex: 0}},
 			},
-		},
+		}},
 	}
 }
 

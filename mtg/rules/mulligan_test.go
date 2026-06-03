@@ -49,6 +49,6 @@ func TestCommanderSecondMulliganBottomsOneCard(t *testing.T) {
 
 func fillLibrary(g *game.Game, playerID game.PlayerID, count int) {
 	for i := range count {
-		addCardToLibrary(g, playerID, &game.CardDef{Name: "Mulligan Card " + string(rune('A'+i))})
+		addCardToLibrary(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "Mulligan Card " + string(rune('A'+i))}})
 	}
 }

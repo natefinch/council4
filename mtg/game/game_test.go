@@ -68,7 +68,7 @@ func deterministicConfigs() [NumPlayers]PlayerConfig {
 	var configs [NumPlayers]PlayerConfig
 	for player := range configs {
 		for range 10 {
-			configs[player].Deck = append(configs[player].Deck, &CardDef{Name: "Card"})
+			configs[player].Deck = append(configs[player].Deck, &CardDef{CardFace: CardFace{Name: "Card"}})
 		}
 	}
 	return configs

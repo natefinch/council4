@@ -254,7 +254,7 @@ func TestValidateCommanderConfigRejectsInvalidCommander(t *testing.T) {
 		commander *game.CardDef
 	}{
 		{name: "nonlegendary", commander: creatureDef("Bear", color.Green)},
-		{name: "noncreature", commander: &game.CardDef{Name: "types.Legendary Artifact", Supertypes: []types.Super{types.Legendary}, Types: []types.Card{types.Artifact}}},
+		{name: "noncreature", commander: &game.CardDef{CardFace: game.CardFace{Name: "types.Legendary Artifact", Supertypes: []types.Super{types.Legendary}, Types: []types.Card{types.Artifact}}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -305,19 +305,16 @@ func commanderDef(name string, colors ...color.Color) *game.CardDef {
 }
 
 func creatureDef(name string, colors ...color.Color) *game.CardDef {
-	return &game.CardDef{
-		Name:          name,
-		Types:         []types.Card{types.Creature},
-		ColorIdentity: color.NewIdentity(colors...),
+	return &game.CardDef{CardFace: game.CardFace{Name: name,
+		Types: []types.Card{types.Creature}}, ColorIdentity: color.NewIdentity(colors...),
 	}
 }
 
 func basicLandDef(name types.Sub) *game.CardDef {
-	return &game.CardDef{
-		Name:       string(name),
+	return &game.CardDef{CardFace: game.CardFace{Name: string(name),
 		Supertypes: []types.Super{types.Basic},
 		Types:      []types.Card{types.Land},
-		Subtypes:   []types.Sub{name},
+		Subtypes:   []types.Sub{name}},
 	}
 }
 

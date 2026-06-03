@@ -48,71 +48,17 @@ type PT struct {
 // data from the card database. Multiple CardInstances in a game may reference
 // the same CardDef.
 type CardDef struct {
-	// Name is the card's name (CR 201).
-	Name string
+	// CardFace is the printed front-face characteristics.
+	CardFace
 
 	// Layout records the card layout when it changes face behavior.
 	// Empty means a normal single-faced card.
 	Layout CardLayout
 
-	// ManaCost is the mana cost printed in the upper right (CR 202).
-	// Absent for lands and some special cards.
-	ManaCost opt.V[cost.Mana]
-
-	// Colors are the colors of this card, determined by its mana cost
-	// and color indicator (CR 105, 202.2).
-	Colors []color.Color
-
 	// ColorIdentity is the card's color identity for Commander deck
 	// construction (CR 903.4). Includes colors from mana cost, color
 	// indicator, and mana symbols in rules text.
 	ColorIdentity color.Identity
-
-	// Supertypes are the card's supertypes (types.Legendary, types.Basic, etc.).
-	Supertypes []types.Super
-
-	// Types are the card's primary types (Creature, Instant, etc.).
-	Types []types.Card
-
-	// Subtypes are the card's subtypes (Goblin, Equipment, Aura, etc.).
-	Subtypes []types.Sub
-
-	// Power is the creature's base power. Absent for non-creatures.
-	Power opt.V[PT]
-
-	// Toughness is the creature's base toughness. Absent for non-creatures.
-	Toughness opt.V[PT]
-
-	// DynamicPower and DynamicToughness describe characteristic-defining
-	// abilities for star P/T values.
-	DynamicPower     opt.V[DynamicValue]
-	DynamicToughness opt.V[DynamicValue]
-
-	// Loyalty is the planeswalker's starting loyalty. Absent for non-planeswalkers.
-	Loyalty opt.V[int]
-
-	// Defense is the battle's starting defense. Absent for non-battles.
-	Defense opt.V[int]
-
-	// EntersTapped, EntersTappedCondition, EntersTappedUnlessPaid, and
-	// EntersWithCounters model common ETB replacement effects.
-	// EntersTappedCondition means this permanent enters tapped when the condition
-	// is true. EntersTappedUnlessPaid means the controller may pay the cost as it
-	// enters; if they do not, it enters tapped.
-	EntersTapped           bool
-	EntersTappedCondition  opt.V[Condition]
-	EntersTappedUnlessPaid opt.V[ResolutionPayment]
-	EntersWithCounters     []CounterPlacement
-
-	// Abilities lists all abilities on this card, parsed from the text box.
-	Abilities []AbilityDef
-
-	// ImplementationID names an optional rules-side hand-written card
-	// implementation for behavior too complex to express declaratively.
-	ImplementationID string
-
-	// OracleText is the full oracle (rules) text of the card.
-	OracleText string
 
 	// Back holds the printed back-face characteristics for double-faced cards.
 	// The CardDef root fields are the printed front-face characteristics.
@@ -122,25 +68,30 @@ type CardDef struct {
 // CardFace is one printed face of a card. It mirrors the printed
 // characteristics from CardDef that can differ between faces.
 type CardFace struct {
-	Name                   string
-	ManaCost               opt.V[cost.Mana]
-	Colors                 []color.Color
-	Supertypes             []types.Super
-	Types                  []types.Card
-	Subtypes               []types.Sub
-	Power                  opt.V[PT]
-	Toughness              opt.V[PT]
-	DynamicPower           opt.V[DynamicValue]
-	DynamicToughness       opt.V[DynamicValue]
-	Loyalty                opt.V[int]
-	Defense                opt.V[int]
-	EntersTapped           bool
-	EntersTappedCondition  opt.V[Condition]
-	EntersTappedUnlessPaid opt.V[ResolutionPayment]
-	EntersWithCounters     []CounterPlacement
-	Abilities              []AbilityDef
-	ImplementationID       string
-	OracleText             string
+	Name             string
+	ManaCost         opt.V[cost.Mana]
+	Colors           []color.Color
+	Supertypes       []types.Super
+	Types            []types.Card
+	Subtypes         []types.Sub
+	Power            opt.V[PT]
+	Toughness        opt.V[PT]
+	DynamicPower     opt.V[DynamicValue]
+	DynamicToughness opt.V[DynamicValue]
+	Loyalty          opt.V[int]
+	Defense          opt.V[int]
+
+	SpellAbility         opt.V[SpellAbilityBody]
+	ActivatedAbilities   []ActivatedAbilityBody
+	ManaAbilities        []ManaAbilityBody
+	LoyaltyAbilities     []LoyaltyAbilityBody
+	TriggeredAbilities   []TriggeredAbilityBody
+	ReplacementAbilities []ReplacementAbilityDef
+	StaticAbilities      []StaticAbilityBody
+
+	Abilities        []AbilityDef
+	ImplementationID string
+	OracleText       string
 }
 
 // IsLegendary reports whether this card has the types.Legendary supertype.
@@ -197,7 +148,7 @@ func (c *CardDef) IsPermanent() bool {
 // DefaultFace returns the card characteristics used outside the stack and
 // battlefield. For double-faced cards, that is the front face.
 func (c *CardDef) DefaultFace() CardFace {
-	return c.rootFace()
+	return c.clone()
 }
 
 // Face returns the requested printed face. For single-faced cards, FaceFront
@@ -205,7 +156,7 @@ func (c *CardDef) DefaultFace() CardFace {
 func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
 	switch index {
 	case FaceFront:
-		return c.rootFace(), true
+		return c.clone(), true
 	case FaceBack:
 		return c.Back.Val, c.Back.Exists
 	default:
@@ -282,30 +233,6 @@ func (c *CardDef) IsTransformingDoubleFaced() bool {
 	return c.Layout == LayoutTransform || c.Layout == LayoutDoubleFacedToken
 }
 
-func (c *CardDef) rootFace() CardFace {
-	return CardFace{
-		Name:                   c.Name,
-		ManaCost:               c.ManaCost,
-		Colors:                 append([]color.Color(nil), c.Colors...),
-		Supertypes:             append([]types.Super(nil), c.Supertypes...),
-		Types:                  append([]types.Card(nil), c.Types...),
-		Subtypes:               append([]types.Sub(nil), c.Subtypes...),
-		Power:                  c.Power,
-		Toughness:              c.Toughness,
-		DynamicPower:           c.DynamicPower,
-		DynamicToughness:       c.DynamicToughness,
-		Loyalty:                c.Loyalty,
-		Defense:                c.Defense,
-		EntersTapped:           c.EntersTapped,
-		EntersTappedCondition:  c.EntersTappedCondition,
-		EntersTappedUnlessPaid: c.EntersTappedUnlessPaid,
-		EntersWithCounters:     append([]CounterPlacement(nil), c.EntersWithCounters...),
-		Abilities:              append([]AbilityDef(nil), c.Abilities...),
-		ImplementationID:       c.ImplementationID,
-		OracleText:             c.OracleText,
-	}
-}
-
 // HasSupertype reports whether this face has the given supertype.
 func (f *CardFace) HasSupertype(supertype types.Super) bool {
 	return slices.Contains(f.Supertypes, supertype)
@@ -328,12 +255,43 @@ func (f *CardFace) HasAnySubtype(subtypes ...types.Sub) bool {
 
 // HasKeyword reports whether any ability on this face grants the given keyword.
 func (f *CardFace) HasKeyword(kw Keyword) bool {
-	for i := range f.Abilities {
-		if slices.Contains(f.Abilities[i].Keywords, kw) {
+	abilities := f.AbilityDefs()
+	for i := range abilities {
+		if abilities[i].HasKeyword(kw) {
 			return true
 		}
 	}
 	return false
+}
+
+// AbilityDefs returns all abilities on this face in the legacy AbilityDef view.
+func (f *CardFace) AbilityDefs() []AbilityDef {
+	if !f.hasCategorizedAbilities() {
+		return f.Abilities
+	}
+	abilities := append([]AbilityDef(nil), f.Abilities...)
+	if f.SpellAbility.Exists {
+		abilities = append(abilities, spellAbilityDef(&f.SpellAbility.Val))
+	}
+	for i := range f.ActivatedAbilities {
+		abilities = append(abilities, activatedAbilityDef(&f.ActivatedAbilities[i]))
+	}
+	for i := range f.ManaAbilities {
+		abilities = append(abilities, manaAbilityDef(&f.ManaAbilities[i]))
+	}
+	for i := range f.LoyaltyAbilities {
+		abilities = append(abilities, loyaltyAbilityDef(&f.LoyaltyAbilities[i]))
+	}
+	for i := range f.TriggeredAbilities {
+		abilities = append(abilities, triggeredAbilityDef(&f.TriggeredAbilities[i]))
+	}
+	for i := range f.ReplacementAbilities {
+		abilities = append(abilities, replacementAbilityDef(&f.ReplacementAbilities[i]))
+	}
+	for i := range f.StaticAbilities {
+		abilities = append(abilities, staticAbilityDef(&f.StaticAbilities[i]))
+	}
+	return abilities
 }
 
 // ManaValue returns this face's mana value from its printed mana cost (CR 202.3).
@@ -359,26 +317,164 @@ func (f *CardFace) IsPermanent() bool {
 // helpers. ColorIdentity stays on the physical card and is copied from parent.
 func (f *CardFace) ToCardDef(parent *CardDef) *CardDef {
 	return &CardDef{
-		Name:                   f.Name,
-		ManaCost:               f.ManaCost,
-		Colors:                 append([]color.Color(nil), f.Colors...),
-		ColorIdentity:          parent.ColorIdentity,
-		Supertypes:             append([]types.Super(nil), f.Supertypes...),
-		Types:                  append([]types.Card(nil), f.Types...),
-		Subtypes:               append([]types.Sub(nil), f.Subtypes...),
-		Power:                  f.Power,
-		Toughness:              f.Toughness,
-		DynamicPower:           f.DynamicPower,
-		DynamicToughness:       f.DynamicToughness,
-		Loyalty:                f.Loyalty,
-		Defense:                f.Defense,
-		EntersTapped:           f.EntersTapped,
-		EntersTappedCondition:  f.EntersTappedCondition,
-		EntersTappedUnlessPaid: f.EntersTappedUnlessPaid,
-		EntersWithCounters:     append([]CounterPlacement(nil), f.EntersWithCounters...),
-		Abilities:              append([]AbilityDef(nil), f.Abilities...),
-		ImplementationID:       f.ImplementationID,
-		OracleText:             f.OracleText,
+		CardFace:      f.clone(),
+		ColorIdentity: parent.ColorIdentity,
+	}
+}
+
+func (f *CardFace) hasCategorizedAbilities() bool {
+	return f.SpellAbility.Exists ||
+		len(f.ActivatedAbilities) != 0 ||
+		len(f.ManaAbilities) != 0 ||
+		len(f.LoyaltyAbilities) != 0 ||
+		len(f.TriggeredAbilities) != 0 ||
+		len(f.ReplacementAbilities) != 0 ||
+		len(f.StaticAbilities) != 0
+}
+
+func (f *CardFace) clone() CardFace {
+	return CardFace{
+		Name:                 f.Name,
+		ManaCost:             f.ManaCost,
+		Colors:               append([]color.Color(nil), f.Colors...),
+		Supertypes:           append([]types.Super(nil), f.Supertypes...),
+		Types:                append([]types.Card(nil), f.Types...),
+		Subtypes:             append([]types.Sub(nil), f.Subtypes...),
+		Power:                f.Power,
+		Toughness:            f.Toughness,
+		DynamicPower:         f.DynamicPower,
+		DynamicToughness:     f.DynamicToughness,
+		Loyalty:              f.Loyalty,
+		Defense:              f.Defense,
+		SpellAbility:         f.SpellAbility,
+		ActivatedAbilities:   append([]ActivatedAbilityBody(nil), f.ActivatedAbilities...),
+		ManaAbilities:        append([]ManaAbilityBody(nil), f.ManaAbilities...),
+		LoyaltyAbilities:     append([]LoyaltyAbilityBody(nil), f.LoyaltyAbilities...),
+		TriggeredAbilities:   append([]TriggeredAbilityBody(nil), f.TriggeredAbilities...),
+		ReplacementAbilities: append([]ReplacementAbilityDef(nil), f.ReplacementAbilities...),
+		StaticAbilities:      append([]StaticAbilityBody(nil), f.StaticAbilities...),
+		Abilities:            append([]AbilityDef(nil), f.Abilities...),
+		ImplementationID:     f.ImplementationID,
+		OracleText:           f.OracleText,
+	}
+}
+
+func spellAbilityDef(body *SpellAbilityBody) AbilityDef {
+	ability := AbilityDef{
+		Kind:             SpellAbility,
+		Text:             body.Text,
+		Body:             *body,
+		AdditionalCosts:  append([]AdditionalCost(nil), body.AdditionalCosts...),
+		AlternativeCosts: append([]AlternativeCost(nil), body.AlternativeCosts...),
+		KickerCost:       body.KickerCost,
+		KickerEffects:    append([]Effect(nil), body.KickerEffects...),
+	}
+	applyAbilityContent(&ability, body.Content)
+	return ability
+}
+
+func activatedAbilityDef(body *ActivatedAbilityBody) AbilityDef {
+	ability := AbilityDef{
+		Kind:                ActivatedAbility,
+		Text:                body.Text,
+		Body:                *body,
+		ManaCost:            body.ManaCost,
+		AdditionalCosts:     append([]AdditionalCost(nil), body.AdditionalCosts...),
+		AlternativeCosts:    append([]AlternativeCost(nil), body.AlternativeCosts...),
+		ZoneOfFunction:      body.ZoneOfFunction,
+		Timing:              body.Timing,
+		ActivationCondition: body.ActivationCondition,
+	}
+	applyAbilityContent(&ability, body.Content)
+	return ability
+}
+
+func manaAbilityDef(body *ManaAbilityBody) AbilityDef {
+	return AbilityDef{
+		Kind:                ActivatedAbility,
+		Text:                body.Text,
+		Body:                *body,
+		ManaCost:            body.ManaCost,
+		AdditionalCosts:     append([]AdditionalCost(nil), body.AdditionalCosts...),
+		ZoneOfFunction:      body.ZoneOfFunction,
+		Timing:              body.Timing,
+		ActivationCondition: body.ActivationCondition,
+		IsManaAbility:       true,
+		Effects:             append([]Effect(nil), body.Sequence...),
+	}
+}
+
+func loyaltyAbilityDef(body *LoyaltyAbilityBody) AbilityDef {
+	ability := AbilityDef{
+		Kind:                ActivatedAbility,
+		Text:                body.Text,
+		Body:                *body,
+		ActivationCondition: body.ActivationCondition,
+		IsLoyaltyAbility:    true,
+		LoyaltyCost:         body.LoyaltyCost,
+	}
+	applyAbilityContent(&ability, body.Content)
+	return ability
+}
+
+func triggeredAbilityDef(body *TriggeredAbilityBody) AbilityDef {
+	ability := AbilityDef{
+		Kind:               TriggeredAbility,
+		Text:               body.Text,
+		Body:               *body,
+		Trigger:            opt.Val(body.Trigger),
+		Optional:           body.Optional,
+		MaxTriggersPerTurn: body.MaxTriggersPerTurn,
+	}
+	applyAbilityContent(&ability, body.Content)
+	return ability
+}
+
+func replacementAbilityDef(body *ReplacementAbilityDef) AbilityDef {
+	effects := append([]Effect(nil), body.Effects...)
+	if body.Replacement.MatchEvent != EventUnknown ||
+		body.Replacement.EntersTapped ||
+		len(body.Replacement.EntersWithCounters) != 0 ||
+		body.Replacement.ReplaceToZone != ZoneNone {
+		effects = append(effects, Effect{
+			Type:        EffectReplace,
+			TargetIndex: TargetIndexController,
+			Replacement: opt.Val(body.Replacement),
+		})
+	}
+	return AbilityDef{
+		Kind:    StaticAbility,
+		Text:    body.Text,
+		Effects: effects,
+	}
+}
+
+func staticAbilityDef(body *StaticAbilityBody) AbilityDef {
+	return AbilityDef{
+		Kind:             StaticAbility,
+		Text:             body.Text,
+		Body:             *body,
+		Condition:        body.Condition,
+		ZoneOfFunction:   body.ZoneOfFunction,
+		KeywordAbilities: append([]KeywordAbility(nil), body.KeywordAbilities...),
+		Effects:          append([]Effect(nil), body.Effects...),
+	}
+}
+
+func applyAbilityContent(ability *AbilityDef, content AbilityContent) {
+	switch c := content.(type) {
+	case PlainAbilityContent:
+		ability.Targets = append([]TargetSpec(nil), c.Targets...)
+		ability.Effects = append([]Effect(nil), c.Sequence...)
+	case ModalAbilityContent:
+		ability.Targets = append([]TargetSpec(nil), c.SharedTargets...)
+		ability.Modes = append([]Mode(nil), c.Modes...)
+		ability.MinModes = c.MinModes
+		ability.MaxModes = c.MaxModes
+		ability.AllowDuplicateModes = c.AllowDuplicateModes
+	case nil:
+	default:
+		panic("game: unsupported AbilityContent")
 	}
 }
 

@@ -17,17 +17,16 @@ import (
 // Oracle text:
 //
 //	Target creature you control deals damage equal to its power to each other creature and each opponent.
-var ChandraSIgnition = &game.CardDef{
-	Name: "Chandra's Ignition",
+var ChandraSIgnition = &game.CardDef{CardFace: game.CardFace{Name: "Chandra's Ignition",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(3),
 		cost.R,
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Target creature you control deals damage equal to its power to each other creature and each opponent.",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Target creature you control deals damage equal to its power to each other creature and each opponent.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -74,5 +73,5 @@ var ChandraSIgnition = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

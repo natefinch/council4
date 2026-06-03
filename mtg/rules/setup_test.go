@@ -11,7 +11,7 @@ import (
 func TestDrawCardMovesTopLibraryCardToHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Top Card"})
+	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Top Card"}})
 
 	got, ok := engine.drawCard(g, game.Player1)
 	if !ok {
@@ -48,7 +48,7 @@ func TestDrawOpeningHandsDrawsSevenCardsPerPlayer(t *testing.T) {
 	for i := range configs {
 		configs[i].Deck = make([]*game.CardDef, openingHandSize)
 		for j := range configs[i].Deck {
-			configs[i].Deck[j] = &game.CardDef{Name: "Card"}
+			configs[i].Deck[j] = &game.CardDef{CardFace: game.CardFace{Name: "Card"}}
 		}
 	}
 	g := game.NewGame(configs)
@@ -69,7 +69,7 @@ func TestDrawOpeningHandsDrawsSevenCardsPerPlayer(t *testing.T) {
 func TestBeginningPhaseDrawsOnFirstTurnInCommander(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
+	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 
 	log := TurnLog{}
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &log)
@@ -103,7 +103,7 @@ func TestBeginningPhaseUntapsAndClearsSummoningSickForActivePlayer(t *testing.T)
 	opponentPermanent := addCreaturePermanent(g, game.Player2)
 	opponentPermanent.Tapped = true
 	opponentPermanent.SummoningSick = true
-	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -126,7 +126,7 @@ func TestSummoningSickPermanentClearsOnlyOnControllersUntap(t *testing.T) {
 	engine := NewEngine(nil)
 	permanent := addCreaturePermanent(g, game.Player1)
 	permanent.SummoningSick = true
-	addCardToLibrary(g, game.Player2, &game.CardDef{Name: "Player 2 Draw"})
+	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Player 2 Draw"}})
 	g.Turn.ActivePlayer = game.Player2
 	g.Turn.PriorityPlayer = game.Player2
 
@@ -135,7 +135,7 @@ func TestSummoningSickPermanentClearsOnlyOnControllersUntap(t *testing.T) {
 	if !permanent.SummoningSick {
 		t.Fatal("summoning sickness cleared during another player's untap")
 	}
-	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Player 1 Draw"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Player 1 Draw"}})
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.PriorityPlayer = game.Player1
 
@@ -161,9 +161,8 @@ func addCreaturePermanent(g *game.Game, controller game.PlayerID) *game.Permanen
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{
 		ID: cardID,
-		Def: &game.CardDef{
-			Name:  "Test Creature",
-			Types: []types.Card{types.Creature},
+		Def: &game.CardDef{CardFace: game.CardFace{Name: "Test Creature",
+			Types: []types.Card{types.Creature}},
 		},
 		Owner: controller,
 	}

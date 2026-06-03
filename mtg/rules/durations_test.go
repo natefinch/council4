@@ -207,7 +207,7 @@ func TestCleanupChecksSBAsAfterDurationExpiry(t *testing.T) {
 func TestDelayedNextEndStepTriggerFiresOnce(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:           game.EffectCreateDelayedTrigger,
 		DelayedTrigger: opt.Val(game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}}),

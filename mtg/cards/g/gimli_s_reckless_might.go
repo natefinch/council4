@@ -19,16 +19,15 @@ import (
 //
 //	Creatures you control have haste.
 //	Formidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.
-var GimliSRecklessMight = &game.CardDef{
-	Name: "Gimli's Reckless Might",
+var GimliSRecklessMight = &game.CardDef{CardFace: game.CardFace{Name: "Gimli's Reckless Might",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(3),
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Enchantment},
-	OracleText:    "Creatures you control have haste.\nFormidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Enchantment},
+	OracleText: "Creatures you control have haste.\nFormidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.StaticAbility,
@@ -97,5 +96,5 @@ var GimliSRecklessMight = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

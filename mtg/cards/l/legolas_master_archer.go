@@ -20,21 +20,20 @@ import (
 //	Reach
 //	Whenever you cast a spell that targets Legolas, put a +1/+1 counter on Legolas.
 //	Whenever you cast a spell that targets a creature you don't control, Legolas deals damage equal to its power to up to one target creature.
-var LegolasMasterArcher = &game.CardDef{
-	Name: "Legolas, Master Archer",
+var LegolasMasterArcher = &game.CardDef{CardFace: game.CardFace{Name: "Legolas, Master Archer",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.G,
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Supertypes:    []types.Super{types.Legendary},
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Elf, types.Archer},
-	Power:         opt.Val(game.PT{Value: 1}),
-	Toughness:     opt.Val(game.PT{Value: 4}),
-	OracleText:    "Reach\nWhenever you cast a spell that targets Legolas, put a +1/+1 counter on Legolas.\nWhenever you cast a spell that targets a creature you don't control, Legolas deals damage equal to its power to up to one target creature.",
+	Colors: []color.Color{color.Green},
+
+	Supertypes: []types.Super{types.Legendary},
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Elf, types.Archer},
+	Power:      opt.Val(game.PT{Value: 1}),
+	Toughness:  opt.Val(game.PT{Value: 4}),
+	OracleText: "Reach\nWhenever you cast a spell that targets Legolas, put a +1/+1 counter on Legolas.\nWhenever you cast a spell that targets a creature you don't control, Legolas deals damage equal to its power to up to one target creature.",
 	Abilities: []game.AbilityDef{
 		game.ReachAbility,
 		{
@@ -95,5 +94,5 @@ var LegolasMasterArcher = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

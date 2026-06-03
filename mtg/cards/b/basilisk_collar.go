@@ -16,8 +16,7 @@ import (
 //
 //	Equipped creature has deathtouch and lifelink.
 //	Equip {2}
-var BasiliskCollar = &game.CardDef{
-	Name: "Basilisk Collar",
+var BasiliskCollar = &game.CardDef{CardFace: game.CardFace{Name: "Basilisk Collar",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 	}),
@@ -66,5 +65,5 @@ var BasiliskCollar = &game.CardDef{
 				},
 			},
 		},
-	},
+	}},
 }

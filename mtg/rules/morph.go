@@ -28,8 +28,9 @@ func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (cost.Mana,
 	if kind == game.FaceDownDisguise {
 		keyword = game.Disguise
 	}
-	for i := range card.Abilities {
-		ability := &card.Abilities[i]
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		ability := &abilities[i]
 		if !abilityHasKeyword(ability, keyword) {
 			continue
 		}

@@ -18,18 +18,17 @@ import (
 //
 //	Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)
 //	{T}: Add {B}, {R}, or {G}.
-var IgnobleHierarch = &game.CardDef{
-	Name: "Ignoble Hierarch",
+var IgnobleHierarch = &game.CardDef{CardFace: game.CardFace{Name: "Ignoble Hierarch",
 	ManaCost: opt.Val(cost.Mana{
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Goblin, types.Shaman},
-	Power:         opt.Val(game.PT{Value: 0}),
-	Toughness:     opt.Val(game.PT{Value: 1}),
-	OracleText:    "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)\n{T}: Add {B}, {R}, or {G}.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Goblin, types.Shaman},
+	Power:      opt.Val(game.PT{Value: 0}),
+	Toughness:  opt.Val(game.PT{Value: 1}),
+	OracleText: "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)\n{T}: Add {B}, {R}, or {G}.",
 	Abilities: []game.AbilityDef{
 		game.ExaltedAbility,
 		{
@@ -58,5 +57,5 @@ var IgnobleHierarch = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
 }

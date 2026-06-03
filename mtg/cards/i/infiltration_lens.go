@@ -16,8 +16,7 @@ import (
 //
 //	Whenever equipped creature becomes blocked by a creature, you may draw two cards.
 //	Equip {1}
-var InfiltrationLens = &game.CardDef{
-	Name: "Infiltration Lens",
+var InfiltrationLens = &game.CardDef{CardFace: game.CardFace{Name: "Infiltration Lens",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 	}),
@@ -63,5 +62,5 @@ var InfiltrationLens = &game.CardDef{
 				},
 			},
 		},
-	},
+	}},
 }

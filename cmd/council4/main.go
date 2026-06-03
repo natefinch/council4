@@ -100,10 +100,9 @@ func landOnlyConfigs(deckSize int) [game.NumPlayers]game.PlayerConfig {
 }
 
 func forest() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Forest",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Forest",
 		Types:    []types.Card{types.Land},
-		Subtypes: []types.Sub{types.Forest},
+		Subtypes: []types.Sub{types.Forest}},
 	}
 }
 
@@ -147,13 +146,12 @@ func combatConfigs() [game.NumPlayers]game.PlayerConfig {
 func grizzlyBears() *game.CardDef {
 	power := game.PT{Value: 2}
 	toughness := game.PT{Value: 2}
-	return &game.CardDef{
-		Name:      "Grizzly Bears",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Grizzly Bears",
 		ManaCost:  greenCost(),
 		Types:     []types.Card{types.Creature},
 		Subtypes:  []types.Sub{types.Bear},
 		Power:     opt.Val(power),
-		Toughness: opt.Val(toughness),
+		Toughness: opt.Val(toughness)},
 	}
 }
 
@@ -176,8 +174,7 @@ func wallOfVines() *game.CardDef {
 func creatureCard(name string, power, toughness int, keywords ...game.Keyword) *game.CardDef {
 	p := game.PT{Value: power}
 	t := game.PT{Value: toughness}
-	return &game.CardDef{
-		Name:      name,
+	return &game.CardDef{CardFace: game.CardFace{Name: name,
 		ManaCost:  greenCost(),
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(p),
@@ -187,13 +184,12 @@ func creatureCard(name string, power, toughness int, keywords ...game.Keyword) *
 				Kind:     game.StaticAbility,
 				Keywords: keywords,
 			},
-		},
+		}},
 	}
 }
 
 func divinationLike() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Simple Divination",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Divination",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
@@ -203,13 +199,12 @@ func divinationLike() *game.CardDef {
 					{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 				},
 			},
-		},
+		}},
 	}
 }
 
 func healingSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Simple Healing",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Healing",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
@@ -219,13 +214,12 @@ func healingSpell() *game.CardDef {
 					{Type: game.EffectGainLife, Amount: 3, TargetIndex: game.TargetIndexController},
 				},
 			},
-		},
+		}},
 	}
 }
 
 func lavaSpikeLike() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Simple Lava Spike",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Lava Spike",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
@@ -238,7 +232,7 @@ func lavaSpikeLike() *game.CardDef {
 					{Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
 				},
 			},
-		},
+		}},
 	}
 }
 

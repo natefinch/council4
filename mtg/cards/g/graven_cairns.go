@@ -20,11 +20,10 @@ import (
 //
 // The second ability is modeled as two independent color choices from {B, R},
 // which covers the three legal outputs: {B}{B}, {B}{R}, and {R}{R}.
-var GravenCairns = &game.CardDef{
-	Name:          "Graven Cairns",
-	ColorIdentity: color.NewIdentity(color.Black, color.Red),
-	Types:         []types.Card{types.Land},
-	OracleText:    "{T}: Add {C}.\n{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.",
+var GravenCairns = &game.CardDef{CardFace: game.CardFace{Name: "Graven Cairns",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "{T}: Add {C}.\n{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -82,5 +81,5 @@ var GravenCairns = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Black, color.Red),
 }

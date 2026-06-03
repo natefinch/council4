@@ -61,7 +61,7 @@ func TestCombatModeRunsDeterministicallyWithAttacksAndCombatDamage(t *testing.T)
 
 func TestPrintTurnLogIncludesCastAndResolve(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	cardID := addTestCard(g, game.Player1, &game.CardDef{Name: "Test Spell"})
+	cardID := addTestCard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Test Spell"}})
 	result := &rules.GameResult{
 		Turns: []rules.TurnLog{
 			{
@@ -90,8 +90,8 @@ func TestPrintTurnLogIncludesCastAndResolve(t *testing.T) {
 
 func TestPrintTurnLogNoPassKeepsCombatEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	cardID := addTestCard(g, game.Player1, &game.CardDef{Name: "Test Attacker"})
-	blockerCardID := addTestCard(g, game.Player2, &game.CardDef{Name: "Test Blocker"})
+	cardID := addTestCard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Test Attacker"}})
+	blockerCardID := addTestCard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Test Blocker"}})
 	attackerID := g.IDGen.Next()
 	blockerID := g.IDGen.Next()
 	g.Battlefield = append(g.Battlefield,
@@ -165,8 +165,8 @@ func TestPrintTurnLogNoPassKeepsCombatEvents(t *testing.T) {
 
 func TestPrintTurnLogNoPassKeepsOtherEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	cardID := addTestCard(g, game.Player1, &game.CardDef{Name: "Test Spell"})
-	drawID := addTestCard(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
+	cardID := addTestCard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Test Spell"}})
+	drawID := addTestCard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 	result := &rules.GameResult{
 		Turns: []rules.TurnLog{
 			{

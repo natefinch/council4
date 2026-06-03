@@ -20,20 +20,19 @@ import (
 //	Deathtouch, indestructible
 //	Rhonas can't attack or block unless you control another creature with power 4 or greater.
 //	{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.
-var RhonasTheIndomitable = &game.CardDef{
-	Name: "Rhonas the Indomitable",
+var RhonasTheIndomitable = &game.CardDef{CardFace: game.CardFace{Name: "Rhonas the Indomitable",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Supertypes:    []types.Super{types.Legendary},
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.God},
-	Power:         opt.Val(game.PT{Value: 5}),
-	Toughness:     opt.Val(game.PT{Value: 5}),
-	OracleText:    "Deathtouch, indestructible\nRhonas can't attack or block unless you control another creature with power 4 or greater.\n{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.",
+	Colors: []color.Color{color.Green},
+
+	Supertypes: []types.Super{types.Legendary},
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.God},
+	Power:      opt.Val(game.PT{Value: 5}),
+	Toughness:  opt.Val(game.PT{Value: 5}),
+	OracleText: "Deathtouch, indestructible\nRhonas can't attack or block unless you control another creature with power 4 or greater.\n{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.",
 	Abilities: []game.AbilityDef{
 		game.DeathtouchAbility,
 		game.IndestructibleAbility,
@@ -100,5 +99,5 @@ var RhonasTheIndomitable = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

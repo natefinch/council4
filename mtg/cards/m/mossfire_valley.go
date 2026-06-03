@@ -16,11 +16,10 @@ import (
 // Oracle text:
 //
 //	{1}, {T}: Add {R}{G}.
-var MossfireValley = &game.CardDef{
-	Name:          "Mossfire Valley",
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Types:         []types.Card{types.Land},
-	OracleText:    "{1}, {T}: Add {R}{G}.",
+var MossfireValley = &game.CardDef{CardFace: game.CardFace{Name: "Mossfire Valley",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "{1}, {T}: Add {R}{G}.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -37,5 +36,5 @@ var MossfireValley = &game.CardDef{
 				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

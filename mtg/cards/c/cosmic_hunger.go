@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle.
-var CosmicHunger = &game.CardDef{
-	Name: "Cosmic Hunger",
+var CosmicHunger = &game.CardDef{CardFace: game.CardFace{Name: "Cosmic Hunger",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Instant},
-	OracleText:    "Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Instant},
+	OracleText: "Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -68,5 +67,5 @@ var CosmicHunger = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

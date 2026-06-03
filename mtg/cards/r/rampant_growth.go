@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.
-var RampantGrowth = &game.CardDef{
-	Name: "Rampant Growth",
+var RampantGrowth = &game.CardDef{CardFace: game.CardFace{Name: "Rampant Growth",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -46,5 +45,5 @@ var RampantGrowth = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

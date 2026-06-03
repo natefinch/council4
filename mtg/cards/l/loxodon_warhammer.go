@@ -16,8 +16,7 @@ import (
 //
 //	Equipped creature gets +3/+0 and has trample and lifelink.
 //	Equip {3}
-var LoxodonWarhammer = &game.CardDef{
-	Name: "Loxodon Warhammer",
+var LoxodonWarhammer = &game.CardDef{CardFace: game.CardFace{Name: "Loxodon Warhammer",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(3),
 	}),
@@ -69,5 +68,5 @@ var LoxodonWarhammer = &game.CardDef{
 				},
 			},
 		},
-	},
+	}},
 }

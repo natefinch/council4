@@ -17,11 +17,10 @@ import (
 //
 //	{T}: Add {C}.
 //	{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.
-var FireLitThicket = &game.CardDef{
-	Name:          "Fire-Lit Thicket",
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Types:         []types.Card{types.Land},
-	OracleText:    "{T}: Add {C}.\n{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.",
+var FireLitThicket = &game.CardDef{CardFace: game.CardFace{Name: "Fire-Lit Thicket",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "{T}: Add {C}.\n{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -68,5 +67,5 @@ var FireLitThicket = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

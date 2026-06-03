@@ -18,15 +18,14 @@ import (
 // Oracle text:
 //
 //	Choose target creature you control and target creature you don't control. If the creature you control entered this turn, put a +1/+1 counter on it. Then those creatures fight each other.
-var MalametBattleGlyph = &game.CardDef{
-	Name: "Malamet Battle Glyph",
+var MalametBattleGlyph = &game.CardDef{CardFace: game.CardFace{Name: "Malamet Battle Glyph",
 	ManaCost: opt.Val(cost.Mana{
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Choose target creature you control and target creature you don't control. If the creature you control entered this turn, put a +1/+1 counter on it. Then those creatures fight each other.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Choose target creature you control and target creature you don't control. If the creature you control entered this turn, put a +1/+1 counter on it. Then those creatures fight each other.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -67,5 +66,5 @@ var MalametBattleGlyph = &game.CardDef{
 				{Type: game.EffectFight},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

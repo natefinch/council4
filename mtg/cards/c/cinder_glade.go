@@ -20,20 +20,21 @@ import (
 // The parenthetical mana ability is reminder text for the Mountain and Forest
 // subtypes. It is modelled explicitly because council4 does not auto-derive
 // subtype mana abilities at runtime.
-var CinderGlade = &game.CardDef{
-	Name:          "Cinder Glade",
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Types:         []types.Card{types.Land},
-	Subtypes:      []types.Sub{types.Mountain, types.Forest},
-	OracleText:    "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",
-	EntersTappedCondition: opt.Val(game.Condition{
-		Negate: true,
-		ControllerControls: game.PermanentFilter{
-			Types:      []types.Card{types.Land},
-			Supertypes: []types.Super{types.Basic},
-			MinCount:   2,
-		},
-	}),
+var CinderGlade = &game.CardDef{CardFace: game.CardFace{Name: "Cinder Glade",
+
+	Types:      []types.Card{types.Land},
+	Subtypes:   []types.Sub{types.Mountain, types.Forest},
+	OracleText: "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",
+	ReplacementAbilities: []game.ReplacementAbilityDef{
+		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
+			Negate: true,
+			ControllerControls: game.PermanentFilter{
+				Types:      []types.Card{types.Land},
+				Supertypes: []types.Super{types.Basic},
+				MinCount:   2,
+			},
+		}),
+	},
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -61,5 +62,5 @@ var CinderGlade = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
-var PrimalMight = &game.CardDef{
-	Name: "Primal Might",
+var PrimalMight = &game.CardDef{CardFace: game.CardFace{Name: "Primal Might",
 	ManaCost: opt.Val(cost.Mana{
 		cost.X,
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -73,5 +72,5 @@ var PrimalMight = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

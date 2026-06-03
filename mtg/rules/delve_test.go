@@ -15,8 +15,8 @@ func TestDelveMakesGenericSpellPayableAndExilesGraveyardCards(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, delveSpell(cost.Mana{cost.O(2)}))
-	first := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
-	second := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
+	first := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Graveyard Card"}})
+	second := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Graveyard Card"}})
 	setMainPhasePriority(g, game.Player1)
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
@@ -34,7 +34,7 @@ func TestDelveDoesNotExileWhenManaCanPay(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, delveSpell(cost.Mana{cost.O(1)}))
-	graveID := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Graveyard Card"})
+	graveID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Graveyard Card"}})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	setMainPhasePriority(g, game.Player1)
 
@@ -50,8 +50,8 @@ func TestDelveExilesOnlyCardsNeededAfterAvailableMana(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, delveSpell(cost.Mana{cost.O(2)}))
-	first := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
-	second := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
+	first := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Graveyard Card"}})
+	second := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Graveyard Card"}})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	setMainPhasePriority(g, game.Player1)
 
@@ -70,7 +70,7 @@ func TestDelveIgnoresCardsOutsideGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, delveSpell(cost.Mana{cost.O(1)}))
-	exileID := addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Exiled Card"})
+	exileID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Exiled Card"}})
 	g.Players[game.Player1].Graveyard.Remove(exileID)
 	g.Players[game.Player1].Exile.Add(exileID)
 	setMainPhasePriority(g, game.Player1)
@@ -84,8 +84,8 @@ func TestDelveCanPayXGenericCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, delveSpell(cost.Mana{cost.X}))
-	addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
-	addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Graveyard Card"}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Graveyard Card"}})
 	setMainPhasePriority(g, game.Player1)
 
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 2, nil)) {
@@ -108,14 +108,13 @@ func TestDelvePaymentExcludesSourceCardFromGraveyard(t *testing.T) {
 }
 
 func delveSpell(manaCost cost.Mana) *game.CardDef {
-	return &game.CardDef{
-		Name:     "Delve Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Delve Spell",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(manaCost),
 		Abilities: []game.AbilityDef{
 			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Delve}},
 			{Kind: game.SpellAbility},
-		},
+		}},
 	}
 }
 

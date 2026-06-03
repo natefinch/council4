@@ -17,11 +17,10 @@ import (
 //
 //	{T}: Add {C}.
 //	{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
-var KessigWolfRun = &game.CardDef{
-	Name:          "Kessig Wolf Run",
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Types:         []types.Card{types.Land},
-	OracleText:    "{T}: Add {C}.\n{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.",
+var KessigWolfRun = &game.CardDef{CardFace: game.CardFace{Name: "Kessig Wolf Run",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "{T}: Add {C}.\n{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -78,5 +77,5 @@ var KessigWolfRun = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

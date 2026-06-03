@@ -346,22 +346,20 @@ func TestMixedTargetSlotsCreateCartesianProduct(t *testing.T) {
 func TestStructuredTargetPredicates(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	blackCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:      "Black Creature",
+	blackCreature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Black Creature",
 		ManaCost:  opt.Val(cost.Mana{cost.O(2)}),
 		Colors:    []color.Color{color.Black},
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 3}),
-		Toughness: opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3})},
 	})
-	whiteCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:      "White Creature",
+	whiteCreature := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "White Creature",
 		ManaCost:  opt.Val(cost.Mana{cost.O(4)}),
 		Colors:    []color.Color{color.White},
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 2}),
 		Toughness: opt.Val(game.PT{Value: 2}),
-		Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}},
+		Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}}},
 	})
 	whiteCreature.Tapped = true
 	addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -397,9 +395,8 @@ func TestStructuredTargetPredicates(t *testing.T) {
 func TestStructuredAllowPermanentWithoutTypePredicateAllowsAnyPermanent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Relic",
-		Types: []types.Card{types.Artifact},
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Relic",
+		Types: []types.Card{types.Artifact}},
 	})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	spellID := addCardToHand(g, game.Player1, permanentTargetSpellWithSpecs([]game.TargetSpec{
@@ -418,9 +415,8 @@ func TestStructuredAllowPermanentWithoutTypePredicateAllowsAnyPermanent(t *testi
 func TestStructuredAnyTargetAllowsOnlyDamageablePermanents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Relic",
-		Types: []types.Card{types.Artifact},
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Relic",
+		Types: []types.Card{types.Artifact}},
 	})
 	creature := addCreaturePermanent(g, game.Player1)
 	addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -446,8 +442,7 @@ func TestStructuredAnyTargetAllowsOnlyDamageablePermanents(t *testing.T) {
 func TestAnotherTargetPredicateExcludesSourcePermanent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Source Creature",
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Source Creature",
 		Types: []types.Card{types.Creature},
 		Abilities: []game.AbilityDef{
 			{
@@ -466,7 +461,7 @@ func TestAnotherTargetPredicateExcludesSourcePermanent(t *testing.T) {
 				},
 				Effects: []game.Effect{{Type: game.EffectTap, TargetIndex: 0}},
 			},
-		},
+		}},
 	})
 	other := addCreaturePermanent(g, game.Player1)
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -584,12 +579,11 @@ func TestTargetChoiceKindsAtActionEnumerationLevel(t *testing.T) {
 		{
 			name: "no targets required produces one cast action",
 			setupSpell: func() *game.CardDef {
-				return &game.CardDef{
-					Name:  "Shock No Target",
+				return &game.CardDef{CardFace: game.CardFace{Name: "Shock No Target",
 					Types: []types.Card{types.Sorcery},
 					Abilities: []game.AbilityDef{
 						{Kind: game.SpellAbility},
-					},
+					}},
 				}
 			},
 			setupBoard:      func(g *game.Game) {},
@@ -653,8 +647,7 @@ func TestTargetChoiceKindsAtActionEnumerationLevel(t *testing.T) {
 func TestInvalidTargetSpecAbilityProducesNoActivateActions(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Broken Ability Source",
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Broken Ability Source",
 		Types: []types.Card{types.Creature},
 		Abilities: []game.AbilityDef{
 			{
@@ -664,7 +657,7 @@ func TestInvalidTargetSpecAbilityProducesNoActivateActions(t *testing.T) {
 				},
 				Effects: []game.Effect{{Type: game.EffectTap, TargetIndex: 0}},
 			},
-		},
+		}},
 	})
 	addCreaturePermanent(g, game.Player2)
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -787,8 +780,7 @@ func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 }
 
 func playerDamageSpell() *game.CardDef {
-	return &game.CardDef{
-		Types: []types.Card{types.Sorcery},
+	return &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
@@ -799,7 +791,7 @@ func playerDamageSpell() *game.CardDef {
 					{Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
 				},
 			},
-		},
+		}},
 	}
 }
 
@@ -818,8 +810,7 @@ func permanentTargetSpellWithRange(constraint string, minTargets, maxTargets int
 }
 
 func permanentTargetSpellWithSpecs(specs []game.TargetSpec) *game.CardDef {
-	return &game.CardDef{
-		Name:     "Permanent Target Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Permanent Target Spell",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{
@@ -827,13 +818,12 @@ func permanentTargetSpellWithSpecs(specs []game.TargetSpec) *game.CardDef {
 				Kind:    game.SpellAbility,
 				Targets: specs,
 			},
-		},
+		}},
 	}
 }
 
 func opponentChosenTargetAbilitySource() *game.CardDef {
-	return &game.CardDef{
-		Name:  "Arena-like Land",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Arena-like Land",
 		Types: []types.Card{types.Land},
 		Abilities: []game.AbilityDef{
 			{
@@ -865,6 +855,6 @@ func opponentChosenTargetAbilitySource() *game.CardDef {
 					{Type: game.EffectFight},
 				},
 			},
-		},
+		}},
 	}
 }

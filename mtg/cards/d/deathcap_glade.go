@@ -16,18 +16,19 @@ import (
 //
 //	This land enters tapped unless you control two or more other lands.
 //	{T}: Add {B} or {G}.
-var DeathcapGlade = &game.CardDef{
-	Name:          "Deathcap Glade",
-	ColorIdentity: color.NewIdentity(color.Black, color.Green),
-	Types:         []types.Card{types.Land},
-	OracleText:    "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {G}.",
-	EntersTappedCondition: opt.Val(game.Condition{
-		Negate: true,
-		ControllerControls: game.PermanentFilter{
-			Types:    []types.Card{types.Land},
-			MinCount: 2,
-		},
-	}),
+var DeathcapGlade = &game.CardDef{CardFace: game.CardFace{Name: "Deathcap Glade",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {G}.",
+	ReplacementAbilities: []game.ReplacementAbilityDef{
+		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more other lands.", &game.Condition{
+			Negate: true,
+			ControllerControls: game.PermanentFilter{
+				Types:    []types.Card{types.Land},
+				MinCount: 2,
+			},
+		}),
+	},
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -55,5 +56,5 @@ var DeathcapGlade = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Black, color.Green),
 }

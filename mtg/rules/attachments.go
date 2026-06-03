@@ -90,8 +90,9 @@ func enchantTargetSpecForPermanent(g *game.Game, aura *game.Permanent) (game.Tar
 }
 
 func enchantTargetSpecForCard(card *game.CardDef) (game.TargetSpec, bool) {
-	for i := range card.Abilities {
-		ability := &card.Abilities[i]
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		ability := &abilities[i]
 		if !abilityHasKeyword(ability, game.Enchant) || !ability.EnchantTarget.Exists {
 			continue
 		}

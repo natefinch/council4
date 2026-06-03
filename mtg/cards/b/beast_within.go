@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Destroy target permanent. Its controller creates a 3/3 green Beast creature token.
-var BeastWithin = &game.CardDef{
-	Name: "Beast Within",
+var BeastWithin = &game.CardDef{CardFace: game.CardFace{Name: "Beast Within",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Instant},
-	OracleText:    "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Instant},
+	OracleText: "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -55,14 +54,13 @@ var BeastWithin = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }
 
-var beastWithinToken = &game.CardDef{
-	Name:      "Beast",
+var beastWithinToken = &game.CardDef{CardFace: game.CardFace{Name: "Beast",
 	Colors:    []color.Color{color.Green},
 	Types:     []types.Card{types.Creature},
 	Subtypes:  []types.Sub{types.Beast},
 	Power:     opt.Val(game.PT{Value: 3}),
-	Toughness: opt.Val(game.PT{Value: 3}),
+	Toughness: opt.Val(game.PT{Value: 3})},
 }

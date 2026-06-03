@@ -25,11 +25,10 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 			name: "spell costs modes targets and X values",
 			setup: func() (*game.Game, game.PlayerID) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addCombatPermanent(g, game.Player2, &game.CardDef{
-					Name:      "Silvercoat Lion",
+				addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Silvercoat Lion",
 					Types:     []types.Card{types.Creature},
 					Power:     opt.Val(game.PT{Value: 2}),
-					Toughness: opt.Val(game.PT{Value: 2}),
+					Toughness: opt.Val(game.PT{Value: 2})},
 				})
 				addBasicLandPermanent(g, game.Player1, types.Forest)
 				addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -39,7 +38,7 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 				addCardToHand(g, game.Player1, modalCharm())
 				addCardToHand(g, game.Player1, zeroCostSpell())
 				addCardToHand(g, game.Player1, noCostSpell())
-				addCardToHand(g, game.Player1, &game.CardDef{Name: "Forest", Types: []types.Card{types.Land}})
+				addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forest", Types: []types.Card{types.Land}}})
 				setMainPhasePriority(g, game.Player1)
 				return g, game.Player1
 			},
@@ -77,14 +76,13 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 			name: "activated ability target enumeration",
 			setup: func() (*game.Game, game.PlayerID) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				addCombatPermanent(g, game.Player1, &game.CardDef{
-					Name:  "Targeting Rod",
+				addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Targeting Rod",
 					Types: []types.Card{types.Artifact},
 					Abilities: []game.AbilityDef{{
 						Kind:    game.ActivatedAbility,
 						Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
 						Effects: []game.Effect{{Type: game.EffectDamage, TargetIndex: 0, Amount: 1}},
-					}},
+					}}},
 				})
 				setMainPhasePriority(g, game.Player1)
 				return g, game.Player1
@@ -115,8 +113,8 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 			setup: func() (*game.Game, game.PlayerID) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				addCombatCreaturePermanent(g, game.Player1)
-				addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "First Graveyard Card"})
-				addCardToGraveyard(g, game.Player1, &game.CardDef{Name: "Second Graveyard Card"})
+				addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Graveyard Card"}})
+				addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Graveyard Card"}})
 				addCardToHand(g, game.Player1, delveSpell(cost.Mana{cost.O(2)}))
 				addCardToHand(g, game.Player1, convokeSpell(cost.Mana{cost.O(1)}))
 				setMainPhasePriority(g, game.Player1)
@@ -279,53 +277,47 @@ func intList(values []int) string {
 }
 
 func noCostSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:      "No Cost Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "No Cost Spell",
 		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
+		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}}},
 	}
 }
 
 func zeroCostSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:      "Zero Cost Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Zero Cost Spell",
 		ManaCost:  opt.Val(cost.Mana{cost.O(0)}),
 		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
+		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}}},
 	}
 }
 
 func xSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:      "Characterization X Spell",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization X Spell",
 		ManaCost:  opt.Val(cost.Mana{cost.X, cost.G}),
 		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}},
+		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}}},
 	}
 }
 
 func characterizationKickerSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:      "Characterization Kicker",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Kicker",
 		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility, KickerCost: greenCost()}},
+		Abilities: []game.AbilityDef{{Kind: game.SpellAbility, KickerCost: greenCost()}}},
 	}
 }
 
 func artifactTargetSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:  "No Legal Artifact Target",
+	return &game.CardDef{CardFace: game.CardFace{Name: "No Legal Artifact Target",
 		Types: []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.SpellAbility,
 			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "artifact"}},
-		}},
+		}}},
 	}
 }
 
 func flashbackSpell() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Characterization Flashback",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Flashback",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
 		Abilities: []game.AbilityDef{
@@ -337,6 +329,6 @@ func flashbackSpell() *game.CardDef {
 					ManaCost: greenCost(),
 				}},
 			},
-		},
+		}},
 	}
 }

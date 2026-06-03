@@ -89,9 +89,8 @@ func TestStaticPTEffectDisappearingChangesLethalDamageThreshold(t *testing.T) {
 
 func TestContinuousEffectsApplyInLayerOrderBeforeTimestamp(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	animatedLand := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Animated Forest",
-		Types: []types.Card{types.Land},
+	animatedLand := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Animated Forest",
+		Types: []types.Card{types.Land}},
 	})
 	two := game.PT{Value: 2}
 	g.ContinuousEffects = append(g.ContinuousEffects,
@@ -153,9 +152,8 @@ func TestContinuousEffectDependenciesOverrideTimestampWithinLayer(t *testing.T) 
 
 func TestTypeAndPTContinuousEffectsAffectCombatAndSBAs(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	land := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Living Land",
-		Types: []types.Card{types.Land},
+	land := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Living Land",
+		Types: []types.Card{types.Land}},
 	})
 	two := game.PT{Value: 2}
 	g.ContinuousEffects = append(g.ContinuousEffects,
@@ -192,16 +190,15 @@ func TestDynamicStarPowerAffectsCombatDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	star := game.PT{IsStar: true}
 	dynamic := game.DynamicValue{Kind: game.DynamicValueControllerHandSize}
-	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:             "Hand Avatar",
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Hand Avatar",
 		Types:            []types.Card{types.Creature},
 		Power:            opt.Val(star),
 		Toughness:        opt.Val(star),
 		DynamicPower:     opt.Val(dynamic),
-		DynamicToughness: opt.Val(dynamic),
+		DynamicToughness: opt.Val(dynamic)},
 	})
 	for range 3 {
-		addCardToHand(g, game.Player1, &game.CardDef{Name: "Card in Hand"})
+		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Card in Hand"}})
 	}
 	g.Combat = &game.CombatState{
 		Attackers: []game.AttackDeclaration{
@@ -292,7 +289,7 @@ func TestCopyEffectPreservesDynamicStarValues(t *testing.T) {
 	star := game.PT{IsStar: true}
 	dynamic := game.DynamicValue{Kind: game.DynamicValueControllerHandSize}
 	for range 4 {
-		addCardToHand(g, game.Player1, &game.CardDef{Name: "Card in Hand"})
+		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Card in Hand"}})
 	}
 	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
 		ID:               1,
@@ -311,8 +308,7 @@ func TestCopyEffectPreservesDynamicStarValues(t *testing.T) {
 
 func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	pt := game.PT{Value: 2}
-	return addCombatPermanent(g, controller, &game.CardDef{
-		Name:      "Anthem Captain",
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Anthem Captain",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
@@ -328,6 +324,6 @@ func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent 
 					},
 				},
 			},
-		},
+		}},
 	})
 }

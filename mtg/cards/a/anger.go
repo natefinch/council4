@@ -18,19 +18,18 @@ import (
 //
 //	Haste
 //	As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
-var Anger = &game.CardDef{
-	Name: "Anger",
+var Anger = &game.CardDef{CardFace: game.CardFace{Name: "Anger",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(3),
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Incarnation},
-	Power:         opt.Val(game.PT{Value: 2}),
-	Toughness:     opt.Val(game.PT{Value: 2}),
-	OracleText:    "Haste\nAs long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Incarnation},
+	Power:      opt.Val(game.PT{Value: 2}),
+	Toughness:  opt.Val(game.PT{Value: 2}),
+	OracleText: "Haste\nAs long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
 	Abilities: []game.AbilityDef{
 		game.HasteAbility,
 		{
@@ -55,5 +54,5 @@ var Anger = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

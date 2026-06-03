@@ -19,20 +19,19 @@ import (
 //	Creatures you control get +1/+0.
 //	+1: Add {R} or {G}. Creature spells you cast this turn can't be countered.
 //	−2: Target creature you control fights target creature you don't control.
-var DomriAnarchOfBolas = &game.CardDef{
-	Name: "Domri, Anarch of Bolas",
+var DomriAnarchOfBolas = &game.CardDef{CardFace: game.CardFace{Name: "Domri, Anarch of Bolas",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.R,
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green, color.Red},
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Supertypes:    []types.Super{types.Legendary},
-	Types:         []types.Card{types.Planeswalker},
-	Subtypes:      []types.Sub{"Domri"},
-	Loyalty:       opt.Val(3),
-	OracleText:    "Creatures you control get +1/+0.\n+1: Add {R} or {G}. Creature spells you cast this turn can't be countered.\n−2: Target creature you control fights target creature you don't control.",
+	Colors: []color.Color{color.Green, color.Red},
+
+	Supertypes: []types.Super{types.Legendary},
+	Types:      []types.Card{types.Planeswalker},
+	Subtypes:   []types.Sub{"Domri"},
+	Loyalty:    opt.Val(3),
+	OracleText: "Creatures you control get +1/+0.\n+1: Add {R} or {G}. Creature spells you cast this turn can't be countered.\n−2: Target creature you control fights target creature you don't control.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.StaticAbility,
@@ -113,5 +112,5 @@ var DomriAnarchOfBolas = &game.CardDef{
 				{Type: game.EffectFight},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

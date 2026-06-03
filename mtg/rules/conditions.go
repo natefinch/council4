@@ -235,5 +235,5 @@ func activationConditionSatisfied(g *game.Game, playerID game.PlayerID, permanen
 	return conditionSatisfied(g, conditionContext{
 		controller: playerID,
 		source:     permanent,
-	}, ability.ActivationCondition)
+	}, ability.ActivationConditionValue())
 }

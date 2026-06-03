@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.
-var GuardianProject = &game.CardDef{
-	Name: "Guardian Project",
+var GuardianProject = &game.CardDef{CardFace: game.CardFace{Name: "Guardian Project",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(3),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Enchantment},
-	OracleText:    "Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Enchantment},
+	OracleText: "Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.TriggeredAbility,
@@ -49,5 +48,5 @@ var GuardianProject = &game.CardDef{
 				{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

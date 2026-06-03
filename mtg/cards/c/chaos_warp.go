@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.
-var ChaosWarp = &game.CardDef{
-	Name: "Chaos Warp",
+var ChaosWarp = &game.CardDef{CardFace: game.CardFace{Name: "Chaos Warp",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.R,
 	}),
-	Colors:        []color.Color{color.Red},
-	ColorIdentity: color.NewIdentity(color.Red),
-	Types:         []types.Card{types.Instant},
-	OracleText:    "The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.",
+	Colors: []color.Color{color.Red},
+
+	Types:      []types.Card{types.Instant},
+	OracleText: "The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -78,5 +77,5 @@ var ChaosWarp = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

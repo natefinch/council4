@@ -17,16 +17,15 @@ import (
 // Oracle text:
 //
 //	Search your library for a Forest card, put that card onto the battlefield, then shuffle.
-var NatureSLore = &game.CardDef{
-	Name: "Nature's Lore",
+var NatureSLore = &game.CardDef{CardFace: game.CardFace{Name: "Nature's Lore",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(1),
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green),
-	Types:         []types.Card{types.Sorcery},
-	OracleText:    "Search your library for a Forest card, put that card onto the battlefield, then shuffle.",
+	Colors: []color.Color{color.Green},
+
+	Types:      []types.Card{types.Sorcery},
+	OracleText: "Search your library for a Forest card, put that card onto the battlefield, then shuffle.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.SpellAbility,
@@ -45,5 +44,5 @@ var NatureSLore = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

@@ -53,9 +53,10 @@ func spellHasKicker(card *game.CardDef) bool {
 }
 
 func firstSpellAbility(card *game.CardDef) (*game.AbilityDef, bool) {
-	for i := range card.Abilities {
-		if card.Abilities[i].Kind == game.SpellAbility {
-			return &card.Abilities[i], true
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		if abilities[i].IsSpell() {
+			return &abilities[i], true
 		}
 	}
 	return nil, false
@@ -698,7 +699,7 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 	}
 	if spec.NoPrintedText {
 		token.OracleText = ""
-		token.Abilities = nil
+		clearCardFaceAbilities(&token.CardFace)
 	}
 	return token, true
 }
@@ -710,8 +711,7 @@ func copyCardDef(source *game.CardDef) *game.CardDef {
 	copied.Supertypes = append([]types.Super(nil), source.Supertypes...)
 	copied.Types = append([]types.Card(nil), source.Types...)
 	copied.Subtypes = append([]types.Sub(nil), source.Subtypes...)
-	copied.EntersWithCounters = append([]game.CounterPlacement(nil), source.EntersWithCounters...)
-	copied.Abilities = append([]game.AbilityDef(nil), source.Abilities...)
+	copyCardFaceAbilityFields(&copied.CardFace, &source.CardFace)
 	if source.Back.Exists {
 		copied.Back = opt.Val(copyCardFace(&source.Back.Val))
 	}
@@ -724,9 +724,30 @@ func copyCardFace(source *game.CardFace) game.CardFace {
 	copied.Supertypes = append([]types.Super(nil), source.Supertypes...)
 	copied.Types = append([]types.Card(nil), source.Types...)
 	copied.Subtypes = append([]types.Sub(nil), source.Subtypes...)
-	copied.EntersWithCounters = append([]game.CounterPlacement(nil), source.EntersWithCounters...)
-	copied.Abilities = append([]game.AbilityDef(nil), source.Abilities...)
+	copyCardFaceAbilityFields(&copied, source)
 	return copied
+}
+
+func copyCardFaceAbilityFields(dst, src *game.CardFace) {
+	dst.SpellAbility = src.SpellAbility
+	dst.ActivatedAbilities = append([]game.ActivatedAbilityBody(nil), src.ActivatedAbilities...)
+	dst.ManaAbilities = append([]game.ManaAbilityBody(nil), src.ManaAbilities...)
+	dst.LoyaltyAbilities = append([]game.LoyaltyAbilityBody(nil), src.LoyaltyAbilities...)
+	dst.TriggeredAbilities = append([]game.TriggeredAbilityBody(nil), src.TriggeredAbilities...)
+	dst.ReplacementAbilities = append([]game.ReplacementAbilityDef(nil), src.ReplacementAbilities...)
+	dst.StaticAbilities = append([]game.StaticAbilityBody(nil), src.StaticAbilities...)
+	dst.Abilities = append([]game.AbilityDef(nil), src.Abilities...)
+}
+
+func clearCardFaceAbilities(face *game.CardFace) {
+	face.SpellAbility = opt.V[game.SpellAbilityBody]{}
+	face.ActivatedAbilities = nil
+	face.ManaAbilities = nil
+	face.LoyaltyAbilities = nil
+	face.TriggeredAbilities = nil
+	face.ReplacementAbilities = nil
+	face.StaticAbilities = nil
+	face.Abilities = nil
 }
 
 // IsEffectTypeExecuted reports whether the generic rules resolver currently
@@ -1482,6 +1503,7 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 		TokenDef:      token,
 	}
 	initializePermanentCounters(permanent, token)
+	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{}, g, permanent, game.ZoneNone)
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.GameEvent{
 		Controller:  controller,

@@ -14,13 +14,12 @@ import (
 // Oracle text:
 //
 //	({T}: Add {G}.)
-var Forest = &game.CardDef{
-	Name:          "Forest",
-	ColorIdentity: color.NewIdentity(color.Green),
-	Supertypes:    []types.Super{types.Basic},
-	Types:         []types.Card{types.Land},
-	Subtypes:      []types.Sub{types.Forest},
-	OracleText:    "({T}: Add {G}.)",
+var Forest = &game.CardDef{CardFace: game.CardFace{Name: "Forest",
+
+	Supertypes: []types.Super{types.Basic},
+	Types:      []types.Card{types.Land},
+	Subtypes:   []types.Sub{types.Forest},
+	OracleText: "({T}: Add {G}.)",
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -33,5 +32,5 @@ var Forest = &game.CardDef{
 				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green),
 }

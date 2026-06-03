@@ -116,7 +116,7 @@ func engineTestConfigs() [game.NumPlayers]game.PlayerConfig {
 	var configs [game.NumPlayers]game.PlayerConfig
 	for player := range configs {
 		for range 10 {
-			configs[player].Deck = append(configs[player].Deck, &game.CardDef{Name: "Card"})
+			configs[player].Deck = append(configs[player].Deck, &game.CardDef{CardFace: game.CardFace{Name: "Card"}})
 		}
 	}
 	return configs
@@ -142,9 +142,8 @@ func landOnlyConfigs(cardsPerPlayer int) [game.NumPlayers]game.PlayerConfig {
 }
 
 func basicLand() *game.CardDef {
-	return &game.CardDef{
-		Name:     "Forest",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Forest",
 		Types:    []types.Card{types.Land},
-		Subtypes: []types.Sub{types.Forest},
+		Subtypes: []types.Sub{types.Forest}},
 	}
 }

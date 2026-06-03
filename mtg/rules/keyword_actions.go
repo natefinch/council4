@@ -198,8 +198,7 @@ func emitCardRevealEvent(g *game.Game, obj *game.StackObject, playerID game.Play
 
 func clueTokenDef() *game.CardDef {
 	two := cost.Mana{cost.O(2)}
-	return &game.CardDef{
-		Name:     "Clue Token",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Clue Token",
 		Types:    []types.Card{types.Artifact},
 		Subtypes: []types.Sub{types.Clue},
 		Abilities: []game.AbilityDef{{
@@ -214,6 +213,6 @@ func clueTokenDef() *game.CardDef {
 				PermanentType:      types.Artifact,
 			}},
 			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
-		}},
+		}}},
 	}
 }

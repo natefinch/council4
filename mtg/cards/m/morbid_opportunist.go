@@ -17,19 +17,18 @@ import (
 // Oracle text:
 //
 //	Whenever one or more other creatures die, draw a card. This ability triggers only once each turn.
-var MorbidOpportunist = &game.CardDef{
-	Name: "Morbid Opportunist",
+var MorbidOpportunist = &game.CardDef{CardFace: game.CardFace{Name: "Morbid Opportunist",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.B,
 	}),
-	Colors:        []color.Color{color.Black},
-	ColorIdentity: color.NewIdentity(color.Black),
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Human, types.Rogue},
-	Power:         opt.Val(game.PT{Value: 1}),
-	Toughness:     opt.Val(game.PT{Value: 3}),
-	OracleText:    "Whenever one or more other creatures die, draw a card. This ability triggers only once each turn.",
+	Colors: []color.Color{color.Black},
+
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Human, types.Rogue},
+	Power:      opt.Val(game.PT{Value: 1}),
+	Toughness:  opt.Val(game.PT{Value: 3}),
+	OracleText: "Whenever one or more other creatures die, draw a card. This ability triggers only once each turn.",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.TriggeredAbility,
@@ -48,5 +47,5 @@ var MorbidOpportunist = &game.CardDef{
 				{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Black),
 }

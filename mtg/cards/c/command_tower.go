@@ -13,8 +13,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add one mana of any color in your commander's color identity.
-var CommandTower = &game.CardDef{
-	Name:       "Command Tower",
+var CommandTower = &game.CardDef{CardFace: game.CardFace{Name: "Command Tower",
 	Types:      []types.Card{types.Land},
 	OracleText: "{T}: Add one mana of any color in your commander's color identity.",
 	Abilities: []game.AbilityDef{
@@ -44,5 +43,5 @@ var CommandTower = &game.CardDef{
 				},
 			},
 		},
-	},
+	}},
 }

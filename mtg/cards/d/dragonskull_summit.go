@@ -16,17 +16,18 @@ import (
 //
 //	This land enters tapped unless you control a Swamp or a Mountain.
 //	{T}: Add {B} or {R}.
-var DragonskullSummit = &game.CardDef{
-	Name:          "Dragonskull Summit",
-	ColorIdentity: color.NewIdentity(color.Black, color.Red),
-	Types:         []types.Card{types.Land},
-	OracleText:    "This land enters tapped unless you control a Swamp or a Mountain.\n{T}: Add {B} or {R}.",
-	EntersTappedCondition: opt.Val(game.Condition{
-		Negate: true,
-		ControllerControls: game.PermanentFilter{
-			SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
-		},
-	}),
+var DragonskullSummit = &game.CardDef{CardFace: game.CardFace{Name: "Dragonskull Summit",
+
+	Types:      []types.Card{types.Land},
+	OracleText: "This land enters tapped unless you control a Swamp or a Mountain.\n{T}: Add {B} or {R}.",
+	ReplacementAbilities: []game.ReplacementAbilityDef{
+		game.EntersTappedIfReplacement("This land enters tapped unless you control a Swamp or a Mountain.", &game.Condition{
+			Negate: true,
+			ControllerControls: game.PermanentFilter{
+				SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
+			},
+		}),
+	},
 	Abilities: []game.AbilityDef{
 		{
 			Kind:          game.ActivatedAbility,
@@ -54,5 +55,5 @@ var DragonskullSummit = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Black, color.Red),
 }

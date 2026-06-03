@@ -106,9 +106,8 @@ func TestEligibleAttackersFiltersIllegalCreatures(t *testing.T) {
 	hasty.SummoningSick = true
 	defender := addCombatCreaturePermanent(g, game.Player1, game.Defender)
 	opponent := addCombatCreaturePermanent(g, game.Player2)
-	nonCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Relic",
-		Types: []types.Card{types.Artifact},
+	nonCreature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Relic",
+		Types: []types.Card{types.Artifact}},
 	})
 
 	got := eligibleAttackers(g, game.Player1)
@@ -371,15 +370,13 @@ func TestApplyDeclareAttackersInvalidDoesNotMutate(t *testing.T) {
 func TestDeclareAttackersCanTargetPlaneswalkersAndBattles(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanent(g, game.Player1)
-	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:    "Test Planeswalker",
+	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Test Planeswalker",
 		Types:   []types.Card{types.Planeswalker},
-		Loyalty: opt.Val(3),
+		Loyalty: opt.Val(3)},
 	})
-	battle := addCombatPermanent(g, game.Player3, &game.CardDef{
-		Name:    "Test Battle",
+	battle := addCombatPermanent(g, game.Player3, &game.CardDef{CardFace: game.CardFace{Name: "Test Battle",
 		Types:   []types.Card{types.Battle},
-		Defense: opt.Val(4),
+		Defense: opt.Val(4)},
 	})
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
@@ -675,8 +672,7 @@ func TestMustBeBlockedRequirementRejectsNoBlocksWhenAble(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
-	addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Must Block Effect",
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Must Block Effect",
 		Types: []types.Card{types.Enchantment},
 		Abilities: []game.AbilityDef{{
 			Kind: game.StaticAbility,
@@ -687,7 +683,7 @@ func TestMustBeBlockedRequirementRejectsNoBlocksWhenAble(t *testing.T) {
 					AffectedObjectID: attacker.ObjectID,
 				}},
 			}},
-		}},
+		}}},
 	})
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareBlockers
@@ -716,8 +712,7 @@ func TestMustBeBlockedRequirementAllowsNoBlocksWhenUnable(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Flying)
 	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
-	addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Must Block Effect",
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Must Block Effect",
 		Types: []types.Card{types.Enchantment},
 		Abilities: []game.AbilityDef{{
 			Kind: game.StaticAbility,
@@ -728,7 +723,7 @@ func TestMustBeBlockedRequirementAllowsNoBlocksWhenUnable(t *testing.T) {
 					AffectedObjectID: attacker.ObjectID,
 				}},
 			}},
-		}},
+		}}},
 	})
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareBlockers
@@ -927,10 +922,9 @@ func TestPhasedOutCreatureCannotAttackBlockOrBeAttacked(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
-	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:    "Phased Walker",
+	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Phased Walker",
 		Types:   []types.Card{types.Planeswalker},
-		Loyalty: opt.Val(3),
+		Loyalty: opt.Val(3)},
 	})
 	attacker.PhasedOut = true
 	blocker.PhasedOut = true
@@ -957,8 +951,7 @@ func TestStaticRuleEffectsCanProhibitAttackingAndBlocking(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
-	addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Pacifying Law",
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pacifying Law",
 		Types: []types.Card{types.Enchantment},
 		Abilities: []game.AbilityDef{{
 			Kind: game.StaticAbility,
@@ -977,7 +970,7 @@ func TestStaticRuleEffectsCanProhibitAttackingAndBlocking(t *testing.T) {
 					},
 				},
 			}},
-		}},
+		}}},
 	})
 	g.Combat = &game.CombatState{}
 	g.Turn.Phase = game.PhaseCombat
@@ -995,8 +988,7 @@ func TestStaticRuleEffectsCanProhibitAttackingAndBlocking(t *testing.T) {
 func TestCantAttackRuleCanApplyOnlyToSpecificDefender(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
-	addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "No Attacks Here",
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "No Attacks Here",
 		Types: []types.Card{types.Enchantment},
 		Abilities: []game.AbilityDef{{
 			Kind: game.StaticAbility,
@@ -1009,7 +1001,7 @@ func TestCantAttackRuleCanApplyOnlyToSpecificDefender(t *testing.T) {
 					DefendingPlayer:    game.PlayerYou,
 				}},
 			}},
-		}},
+		}}},
 	})
 
 	if !canAttackWith(g, attacker, game.Player2) {
@@ -1084,15 +1076,14 @@ func TestAttackTaxFiltersAndChargesDeclareAttackers(t *testing.T) {
 
 func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	manaDork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{
-		Name:      "Mana Dork",
+	manaDork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mana Dork",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Haste},
-		}},
+		}}},
 	}, mana.G, 1)
 	manaDork.SummoningSick = false
 	g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: game.Player2, Amount: 1})
@@ -1160,10 +1151,9 @@ func TestLifelinkGainsLifeFromCombatDamageToCreatures(t *testing.T) {
 func TestCombatDamageToPlaneswalkerRemovesLoyaltyAndSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
-	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:    "Test Planeswalker",
+	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Test Planeswalker",
 		Types:   []types.Card{types.Planeswalker},
-		Loyalty: opt.Val(3),
+		Loyalty: opt.Val(3)},
 	})
 	planeswalker.Counters.Add(counter.Loyalty, 3)
 	g.Combat = &game.CombatState{
@@ -1197,10 +1187,9 @@ func TestCombatDamageToPlaneswalkerRemovesLoyaltyAndSBA(t *testing.T) {
 func TestCombatDamageToBattleRemovesDefenseAndSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 4)
-	battle := addCombatPermanent(g, game.Player2, &game.CardDef{
-		Name:    "Test Battle",
+	battle := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Test Battle",
 		Types:   []types.Card{types.Battle},
-		Defense: opt.Val(4),
+		Defense: opt.Val(4)},
 	})
 	battle.Counters.Add(counter.Defense, 4)
 	g.Combat = &game.CombatState{
@@ -1736,7 +1725,7 @@ func TestCleanupStepDiscardsActivePlayerToMaximumHandSize(t *testing.T) {
 	engine := NewEngine(nil)
 	var cards []id.ID
 	for i := range 10 {
-		cards = append(cards, addCardToHand(g, game.Player1, &game.CardDef{Name: string(rune('A' + i))}))
+		cards = append(cards, addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: string(rune('A' + i))}}))
 	}
 
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
@@ -1760,7 +1749,7 @@ func TestCleanupStepDoesNotDiscardAtOrBelowMaximumHandSize(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	for i := range maximumHandSize {
-		addCardToHand(g, game.Player1, &game.CardDef{Name: string(rune('A' + i))})
+		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: string(rune('A' + i))}})
 	}
 
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
@@ -1776,10 +1765,9 @@ func TestCleanupStepDoesNotDiscardAtOrBelowMaximumHandSize(t *testing.T) {
 func TestResolveCombatDamageNilAndStarPowerDealZero(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	nilPower := addCombatCreaturePermanent(g, game.Player1)
-	starPower := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Star Creature",
+	starPower := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Star Creature",
 		Types: []types.Card{types.Creature},
-		Power: opt.Val(game.PT{IsStar: true}),
+		Power: opt.Val(game.PT{IsStar: true})},
 	})
 	g.Combat = &game.CombatState{
 		Attackers: []game.AttackDeclaration{
@@ -1852,8 +1840,7 @@ func (r *combatStateRecorder) ChooseAction(obs PlayerObservation, legal []action
 }
 
 func addCombatCreaturePermanent(g *game.Game, controller game.PlayerID, keywords ...game.Keyword) *game.Permanent {
-	return addCombatPermanent(g, controller, &game.CardDef{
-		Name: "Combat Creature",
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Combat Creature",
 		Types: []types.Card{
 			types.Creature,
 		},
@@ -1862,14 +1849,13 @@ func addCombatCreaturePermanent(g *game.Game, controller game.PlayerID, keywords
 				Kind:     game.StaticAbility,
 				Keywords: keywords,
 			},
-		},
+		}},
 	})
 }
 
 func addCombatCreaturePermanentWithPower(g *game.Game, controller game.PlayerID, power int, keywords ...game.Keyword) *game.Permanent {
 	pt := game.PT{Value: power}
-	return addCombatPermanent(g, controller, &game.CardDef{
-		Name: "Powered Combat Creature",
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Powered Combat Creature",
 		Types: []types.Card{
 			types.Creature,
 		},
@@ -1880,7 +1866,7 @@ func addCombatCreaturePermanentWithPower(g *game.Game, controller game.PlayerID,
 				Kind:     game.StaticAbility,
 				Keywords: keywords,
 			},
-		},
+		}},
 	})
 }
 

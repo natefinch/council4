@@ -246,8 +246,7 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	zero := game.PT{Value: 0}
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:      "Indestructible Zero Toughness",
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Indestructible Zero Toughness",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(zero),
 		Toughness: opt.Val(zero),
@@ -256,7 +255,7 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 				Kind:     game.StaticAbility,
 				Keywords: []game.Keyword{game.Indestructible},
 			},
-		},
+		}},
 	})
 
 	changed, deaths := engine.checkPermanentStateBasedActions(g)
@@ -276,11 +275,10 @@ func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	zero := game.PT{Value: 0}
-	creature := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:      "Zero Toughness",
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Zero Toughness",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(zero),
-		Toughness: opt.Val(zero),
+		Toughness: opt.Val(zero)},
 	})
 
 	changed, deaths := engine.checkPermanentStateBasedActions(g)
@@ -345,11 +343,10 @@ func TestStateBasedActionsMoveThenRemoveLethalToken(t *testing.T) {
 		Controller:   game.Player1,
 		MarkedDamage: 1,
 		Token:        true,
-		TokenDef: &game.CardDef{
-			Name:      "Token",
+		TokenDef: &game.CardDef{CardFace: game.CardFace{Name: "Token",
 			Types:     []types.Card{types.Creature},
 			Power:     opt.Val(pt),
-			Toughness: opt.Val(pt),
+			Toughness: opt.Val(pt)},
 		},
 	}
 	g.Battlefield = append(g.Battlefield, token)
@@ -407,10 +404,9 @@ func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
 	engine := NewEngine(nil)
 	keep := addLegendaryPermanent(g, game.Player1, "Godo")
 	duplicate := addLegendaryPermanent(g, game.Player1, "Godo")
-	aura := addPermanentForSBA(g, game.Player1, &game.CardDef{
-		Name:     "Test Aura",
+	aura := addPermanentForSBA(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Test Aura",
 		Types:    []types.Card{types.Enchantment},
-		Subtypes: []types.Sub{types.Aura},
+		Subtypes: []types.Sub{types.Aura}},
 	})
 	attachPermanent(g, aura, duplicate)
 
@@ -440,12 +436,11 @@ func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
 }
 
 func addLegendaryPermanent(g *game.Game, controller game.PlayerID, name string) *game.Permanent {
-	return addPermanentForSBA(g, controller, &game.CardDef{
-		Name:       name,
+	return addPermanentForSBA(g, controller, &game.CardDef{CardFace: game.CardFace{Name: name,
 		Supertypes: []types.Super{types.Legendary},
 		Types:      []types.Card{types.Creature},
 		Power:      opt.Val(game.PT{Value: 2}),
-		Toughness:  opt.Val(game.PT{Value: 2}),
+		Toughness:  opt.Val(game.PT{Value: 2})},
 	})
 }
 

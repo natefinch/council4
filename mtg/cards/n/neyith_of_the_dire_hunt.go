@@ -18,21 +18,20 @@ import (
 //
 //	Whenever one or more creatures you control fight or become blocked, draw a card.
 //	At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)
-var NeyithOfTheDireHunt = &game.CardDef{
-	Name: "Neyith of the Dire Hunt",
+var NeyithOfTheDireHunt = &game.CardDef{CardFace: game.CardFace{Name: "Neyith of the Dire Hunt",
 	ManaCost: opt.Val(cost.Mana{
 		cost.O(2),
 		cost.G,
 		cost.G,
 	}),
-	Colors:        []color.Color{color.Green},
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	Supertypes:    []types.Super{types.Legendary},
-	Types:         []types.Card{types.Creature},
-	Subtypes:      []types.Sub{types.Human, types.Warrior},
-	Power:         opt.Val(game.PT{Value: 3}),
-	Toughness:     opt.Val(game.PT{Value: 3}),
-	OracleText:    "Whenever one or more creatures you control fight or become blocked, draw a card.\nAt the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)",
+	Colors: []color.Color{color.Green},
+
+	Supertypes: []types.Super{types.Legendary},
+	Types:      []types.Card{types.Creature},
+	Subtypes:   []types.Sub{types.Human, types.Warrior},
+	Power:      opt.Val(game.PT{Value: 3}),
+	Toughness:  opt.Val(game.PT{Value: 3}),
+	OracleText: "Whenever one or more creatures you control fight or become blocked, draw a card.\nAt the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)",
 	Abilities: []game.AbilityDef{
 		{
 			Kind: game.TriggeredAbility,
@@ -133,5 +132,5 @@ var NeyithOfTheDireHunt = &game.CardDef{
 				},
 			},
 		},
-	},
+	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
 }

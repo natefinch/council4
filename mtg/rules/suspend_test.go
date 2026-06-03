@@ -126,8 +126,7 @@ func TestSuspendedCreatureEntersWithSuspendHaste(t *testing.T) {
 }
 
 func suspendSorcery(counters int, suspendCost cost.Mana) *game.CardDef {
-	return &game.CardDef{
-		Name:     "Suspend Sorcery",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Suspend Sorcery",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(9)}),
 		Abilities: []game.AbilityDef{{
@@ -135,7 +134,7 @@ func suspendSorcery(counters int, suspendCost cost.Mana) *game.CardDef {
 			Keywords:            []game.Keyword{game.Suspend},
 			SuspendCost:         opt.Val(suspendCost),
 			SuspendTimeCounters: counters,
-		}},
+		}}},
 	}
 }
 

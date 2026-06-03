@@ -10,7 +10,7 @@ import (
 
 func TestResolveTopOfStackAppendsResolveLog(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	sourceID := addCardToHand(g, game.Player1, &game.CardDef{Name: "Test Spell"})
+	sourceID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Test Spell"}})
 	stackObjectID := g.IDGen.Next()
 	g.Stack.Push(&game.StackObject{
 		ID:         stackObjectID,

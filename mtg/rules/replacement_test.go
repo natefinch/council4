@@ -114,8 +114,7 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 			event.Amount == 2
 	})
 
-	spellID := addCardToHand(g, game.Player1, &game.CardDef{
-		Name:   "Red Strike",
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Red Strike",
 		Types:  []types.Card{types.Instant},
 		Colors: []color.Color{color.Red},
 		Abilities: []game.AbilityDef{
@@ -126,7 +125,7 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 				},
 				Effects: []game.Effect{{Type: game.EffectDamage, Amount: 1, TargetIndex: 0}},
 			},
-		},
+		}},
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -330,15 +329,14 @@ func TestRegenerationReplacesLethalDamageSBA(t *testing.T) {
 
 func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	def := &game.CardDef{
-		Name:         "Tapped Walker",
-		Types:        []types.Card{types.Creature},
-		Power:        opt.Val(game.PT{Value: 1}),
-		Toughness:    opt.Val(game.PT{Value: 1}),
-		EntersTapped: true,
-		EntersWithCounters: []game.CounterPlacement{
-			{Kind: counter.PlusOnePlusOne, Amount: 2},
-		},
+	def := &game.CardDef{CardFace: game.CardFace{Name: "Tapped Walker",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		ReplacementAbilities: []game.ReplacementAbilityDef{
+			game.EntersTappedReplacement("Tapped Walker enters tapped."),
+			game.EntersWithCountersReplacement("Tapped Walker enters with two +1/+1 counters.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 2}),
+		}},
 	}
 
 	cardID := addCardToHand(g, game.Player1, def)
@@ -460,19 +458,21 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 }
 
 func payLifeETBModalLand() *game.CardDef {
-	return &game.CardDef{
-		Name:   "Front Spell // Pay Life Land",
-		Layout: game.LayoutModalDFC,
-		Types:  []types.Card{types.Sorcery},
+	return &game.CardDef{CardFace: game.CardFace{Name: "Front Spell // Pay Life Land",
+
+		Types: []types.Card{types.Sorcery}}, Layout: game.LayoutModalDFC,
+
 		Back: opt.Val(game.CardFace{
 			Name:  "Pay Life Land",
 			Types: []types.Card{types.Land},
-			EntersTappedUnlessPaid: opt.Val(game.ResolutionPayment{
-				Prompt: "Pay 3 life?",
-				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
-				},
-			}),
+			ReplacementAbilities: []game.ReplacementAbilityDef{
+				game.EntersTappedUnlessPaidReplacement("As this land enters, you may pay 3 life. If you don't, it enters tapped.", game.ResolutionPayment{
+					Prompt: "Pay 3 life?",
+					AdditionalCosts: []game.AdditionalCost{
+						{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
+					},
+				}),
+			},
 		}),
 	}
 }
@@ -484,11 +484,10 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 		Type:        game.EffectReplace,
 		Replacement: opt.Val(game.ReplacementEffect{Description: "enter modified", MatchEvent: game.EventPermanentEnteredBattlefield, MatchToZone: true, ToZone: game.ZoneBattlefield, EntersTapped: true, EntersWithCounters: []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 1}}}),
 	}, nil)
-	cardID := addCardToHand(g, game.Player1, &game.CardDef{
-		Name:      "Entering Creature",
+	cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Entering Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
-		Toughness: opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1})},
 	})
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
@@ -553,9 +552,8 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Replacement Source",
-		Types: []types.Card{types.Enchantment},
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Replacement Source",
+		Types: []types.Card{types.Enchantment}},
 	})
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	engine.resolveEffect(g, &game.StackObject{
@@ -583,7 +581,7 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Would Draw"})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Would Draw"}})
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type:        game.EffectSkipStep,
 		TargetIndex: game.TargetIndexController,
@@ -604,10 +602,9 @@ func addColoredSourceCard(g *game.Game, owner game.PlayerID, sourceColor color.C
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{
 		ID: cardID,
-		Def: &game.CardDef{
-			Name:   "Colored Source",
+		Def: &game.CardDef{CardFace: game.CardFace{Name: "Colored Source",
 			Types:  []types.Card{types.Instant},
-			Colors: []color.Color{sourceColor},
+			Colors: []color.Color{sourceColor}},
 		},
 		Owner: owner,
 	}
@@ -616,8 +613,7 @@ func addColoredSourceCard(g *game.Game, owner game.PlayerID, sourceColor color.C
 
 func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, protectedColor color.Color) *game.Permanent {
 	pt := game.PT{Value: 2}
-	return addCombatPermanent(g, controller, &game.CardDef{
-		Name:      "Protected Creature",
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Protected Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
@@ -627,31 +623,29 @@ func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, pro
 				Keywords:             []game.Keyword{game.Protection},
 				ProtectionFromColors: []color.Color{protectedColor},
 			},
-		},
+		}},
 	})
 }
 
 func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	pt := game.PT{Value: 2}
-	return addCombatPermanent(g, controller, &game.CardDef{
-		Name:      "Hexproof Creature",
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Hexproof Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
 			Kind:     game.StaticAbility,
 			Keywords: []game.Keyword{game.Hexproof},
-		}},
+		}}},
 	})
 }
 
 func targetCreatureInstant() *game.CardDef {
-	return &game.CardDef{
-		Name:  "Target Creature Instant",
+	return &game.CardDef{CardFace: game.CardFace{Name: "Target Creature Instant",
 		Types: []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{{
 			Kind:    game.SpellAbility,
 			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-		}},
+		}}},
 	}
 }

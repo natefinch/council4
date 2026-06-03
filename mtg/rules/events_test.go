@@ -13,7 +13,7 @@ import (
 func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{Name: "Drawn Card"})
+	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 
 	drawn, ok := engine.drawCard(g, game.Player1)
 
@@ -208,9 +208,8 @@ func TestMassDamageEffectEmitsDamageEventForEachPermanent(t *testing.T) {
 	engine := NewEngine(nil)
 	creature1 := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	creature2 := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
-	addCombatPermanent(g, game.Player3, &game.CardDef{
-		Name:  "Relic",
-		Types: []types.Card{types.Artifact},
+	addCombatPermanent(g, game.Player3, &game.CardDef{CardFace: game.CardFace{Name: "Relic",
+		Types: []types.Card{types.Artifact}},
 	})
 	addEffectSpellToStack(g, game.Player1, &game.Effect{
 		Type:     game.EffectDamage,
@@ -235,8 +234,7 @@ func TestMassDamageEffectEmitsDamageEventForEachPermanent(t *testing.T) {
 func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:  "Pinger",
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pinger",
 		Types: []types.Card{types.Creature},
 		Abilities: []game.AbilityDef{
 			{
@@ -246,7 +244,7 @@ func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
 				},
 				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "target player"}},
 			},
-		},
+		}},
 	})
 	g.Stack.Push(&game.StackObject{
 		ID:           g.IDGen.Next(),
@@ -295,9 +293,8 @@ func TestCombatDamageToPermanentEmitsCombatDamageEvent(t *testing.T) {
 
 func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	token := &game.CardDef{
-		Name:  "Soldier Token",
-		Types: []types.Card{types.Creature},
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token",
+		Types: []types.Card{types.Creature}},
 	}
 
 	permanent, ok := createTokenPermanent(g, game.Player1, token)
@@ -325,7 +322,7 @@ func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
 func TestDiscardToMaximumHandSizeEmitsDiscardAndZoneChangeEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	for range maximumHandSize + 1 {
-		addCardToHand(g, game.Player1, &game.CardDef{Name: "Card"})
+		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Card"}})
 	}
 
 	discardToMaximumHandSize(g, game.Player1)
@@ -463,8 +460,7 @@ func TestTapUntapAndTargetEvents(t *testing.T) {
 func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{
-		Name:    "Pain Walker",
+	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pain Walker",
 		Types:   []types.Card{types.Planeswalker},
 		Loyalty: opt.Val(3),
 		Abilities: []game.AbilityDef{{
@@ -475,7 +471,7 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 				{Kind: game.AdditionalCostPayLife, Amount: 2},
 			},
 			Effects: []game.Effect{{Type: game.EffectLoseLife, TargetIndex: game.TargetIndexController, Amount: 3}},
-		}},
+		}}},
 	})
 	planeswalker.Counters.Add(counter.Loyalty, 3)
 	g.Turn.Phase = game.PhasePrecombatMain

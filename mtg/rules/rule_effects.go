@@ -57,9 +57,10 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 		if !ok {
 			continue
 		}
-		for i := range sourceDef.Abilities {
-			ability := &sourceDef.Abilities[i]
-			if ability.Kind != game.StaticAbility || !abilityFunctionsOnBattlefield(ability) {
+		abilities := sourceDef.AbilityDefs()
+		for i := range abilities {
+			ability := &abilities[i]
+			if !ability.IsStatic() || !abilityFunctionsOnBattlefield(ability) {
 				continue
 			}
 			for i := range ability.Effects {

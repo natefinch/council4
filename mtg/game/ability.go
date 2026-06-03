@@ -175,10 +175,12 @@ var (
 )
 
 func simpleKeywordAbility(text string, keyword Keyword) AbilityDef {
+	keywordAbility := SimpleKeyword{Kind: keyword}
 	return AbilityDef{
-		Kind:     StaticAbility,
-		Text:     text,
-		Keywords: []Keyword{keyword},
+		Kind:             StaticAbility,
+		Text:             text,
+		Body:             StaticAbilityBody{Text: text, KeywordAbilities: []KeywordAbility{keywordAbility}},
+		KeywordAbilities: []KeywordAbility{keywordAbility},
 	}
 }
 
@@ -493,30 +495,42 @@ func EternalizeAbility(manaCost cost.Mana, creatureSubtypes ...types.Sub) Abilit
 	tokenSubtypes := make([]types.Sub, 0, len(creatureSubtypes)+1)
 	tokenSubtypes = append(tokenSubtypes, types.Zombie)
 	tokenSubtypes = append(tokenSubtypes, creatureSubtypes...)
+	tokenCopyEffect := Effect{
+		Type:        EffectCreateToken,
+		Amount:      1,
+		TargetIndex: TargetIndexController,
+		TokenCopy: opt.Val(TokenCopySpec{
+			Source:       TokenCopySourceSourceCard,
+			SetColors:    []color.Color{color.Black},
+			SetSubtypes:  tokenSubtypes,
+			SetPower:     opt.Val(PT{Value: 4}),
+			SetToughness: opt.Val(PT{Value: 4}),
+			NoManaCost:   true,
+		}),
+	}
 	return AbilityDef{
-		Kind:           ActivatedAbility,
-		Text:           "Eternalize " + manaCost.String(),
-		Keywords:       []Keyword{Eternalize},
-		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
-		ZoneOfFunction: ZoneGraveyard,
-		Timing:         SorceryOnly,
+		Kind: ActivatedAbility,
+		Text: "Eternalize " + manaCost.String(),
+		Body: ActivatedAbilityBody{
+			Text:           "Eternalize " + manaCost.String(),
+			ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+			ZoneOfFunction: ZoneGraveyard,
+			Timing:         SorceryOnly,
+			AdditionalCosts: []AdditionalCost{{
+				Kind: AdditionalCostExileSource,
+				Text: "Exile this card from your graveyard",
+			}},
+			Content: PlainAbilityContent{Sequence: []Effect{tokenCopyEffect}},
+		},
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Eternalize}},
+		ManaCost:         opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction:   ZoneGraveyard,
+		Timing:           SorceryOnly,
 		AdditionalCosts: []AdditionalCost{{
 			Kind: AdditionalCostExileSource,
 			Text: "Exile this card from your graveyard",
 		}},
-		Effects: []Effect{{
-			Type:        EffectCreateToken,
-			Amount:      1,
-			TargetIndex: TargetIndexController,
-			TokenCopy: opt.Val(TokenCopySpec{
-				Source:       TokenCopySourceSourceCard,
-				SetColors:    []color.Color{color.Black},
-				SetSubtypes:  tokenSubtypes,
-				SetPower:     opt.Val(PT{Value: 4}),
-				SetToughness: opt.Val(PT{Value: 4}),
-				NoManaCost:   true,
-			}),
-		}},
+		Effects: []Effect{tokenCopyEffect},
 	}
 }
 
@@ -679,10 +693,16 @@ type Mode struct {
 // effects during gameplay.
 type AbilityDef struct {
 	// Kind classifies this ability (spell, activated, triggered, or static).
+	//
+	// Deprecated: use Body for new card definitions.
 	Kind AbilityKind
 
 	// Text is the full oracle text of this ability paragraph.
 	Text string
+
+	// Body is the sealed ability-body variant for new card definitions. Legacy
+	// fields remain populated while the rules engine migrates incrementally.
+	Body AbilityBody
 
 	// Condition restricts when a static ability functions. It is currently used
 	// only for static abilities; activation restrictions belong in
@@ -691,7 +711,12 @@ type AbilityDef struct {
 
 	// Keywords lists keyword abilities this provides (e.g., Flying, Haste).
 	// A single ability line can grant multiple keywords.
+	//
+	// Deprecated: use KeywordAbilities for new card definitions.
 	Keywords []Keyword
+
+	// KeywordAbilities lists sealed keyword variants this ability provides.
+	KeywordAbilities []KeywordAbility
 
 	// EnchantTarget parameterizes Enchant for Aura attachment legality. Aura
 	// cards must set this explicitly; there is no default target.
