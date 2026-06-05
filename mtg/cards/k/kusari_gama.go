@@ -82,9 +82,11 @@ var KusariGama = &game.CardDef{CardFace: game.CardFace{Name: "Kusari-Gama",
 			},
 		},
 		{
-			Kind:     game.ActivatedAbility,
-			Text:     "Equip {3}",
-			Keywords: []game.Keyword{game.Equip},
+			Kind: game.ActivatedAbility,
+			Text: "Equip {3}",
+			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
+				cost.O(3),
+			}}},
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(3),
 			}),

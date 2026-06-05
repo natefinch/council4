@@ -221,7 +221,7 @@ func TestCopyEffectChangesEffectiveCombatKeywords(t *testing.T) {
 		ID:               1,
 		AffectedObjectID: copier.ObjectID,
 		Layer:            game.LayerCopy,
-		CopyValues:       opt.Val(game.CopyableValues{Name: "Copied Dragon", Types: []types.Card{types.Creature}, Power: opt.Val(copyPower), Toughness: opt.Val(copyPower), Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}}}),
+		CopyValues:       opt.Val(game.CopyableValues{Name: "Copied Dragon", Types: []types.Card{types.Creature}, Power: opt.Val(copyPower), Toughness: opt.Val(copyPower), Abilities: []game.AbilityDef{{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flying)}}}),
 	})
 
 	if got := permanentEffectiveName(g, copier); got != "Copied Dragon" {

@@ -1081,8 +1081,8 @@ func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Haste},
+			Kind:             game.StaticAbility,
+			KeywordAbilities: game.SimpleKeywords(game.Haste),
 		}}},
 	}, mana.G, 1)
 	manaDork.SummoningSick = false
@@ -1846,8 +1846,8 @@ func addCombatCreaturePermanent(g *game.Game, controller game.PlayerID, keywords
 		},
 		Abilities: []game.AbilityDef{
 			{
-				Kind:     game.StaticAbility,
-				Keywords: keywords,
+				Kind:             game.StaticAbility,
+				KeywordAbilities: game.SimpleKeywords(keywords...),
 			},
 		}},
 	})
@@ -1863,8 +1863,8 @@ func addCombatCreaturePermanentWithPower(g *game.Game, controller game.PlayerID,
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{
 			{
-				Kind:     game.StaticAbility,
-				Keywords: keywords,
+				Kind:             game.StaticAbility,
+				KeywordAbilities: game.SimpleKeywords(keywords...),
 			},
 		}},
 	})

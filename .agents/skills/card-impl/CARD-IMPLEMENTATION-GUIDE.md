@@ -49,35 +49,23 @@ Double-faced cards use `CardDef` root fields for the front face and
 
 ```go
 type AbilityDef struct {
-    Kind               AbilityKind
-    Text               string                  // Full oracle text of this ability paragraph
-    Keywords           []Keyword               // Keyword abilities this provides
-    ProtectionFromColors []color.Color          // For Protection keyword
-    EnchantTarget      opt.V[TargetSpec]       // Parameterizes Enchant for Aura attachment legality
-    WardCost           opt.V[cost.Mana]        // Mana cost for Ward (CR 702.20)
-    MadnessCost        opt.V[cost.Mana]        // Mana cost for Madness (CR 702.35)
-    SuspendCost        opt.V[cost.Mana]        // Mana cost for Suspend (CR 702.62)
-    SuspendTimeCounters int                    // Number of time counters for Suspend
-    ManaCost           opt.V[cost.Mana]        // Mana component of activated ability cost
-    AdditionalCosts    []AdditionalCost        // Typed non-mana costs
-    AlternativeCosts   []AlternativeCost       // Optional replacement costs
-    KickerCost         opt.V[cost.Mana]        // Optional Kicker mana cost
-    KickerEffects      []Effect                // Additional effects if kicked
-    Trigger            opt.V[TriggerCondition] // When triggered ability fires (absent for non-triggered)
-    Optional           bool                    // True for "you may" abilities
-    Effects            []Effect                // Effects this ability produces
-    Targets            []TargetSpec            // Targeting requirements
-    Modes              []Mode                  // Modal spell/ability modes
-    MinModes           int                     // Modal choice minimum (CR 601.2d, CR 700.2)
-    MaxModes           int                     // Modal choice maximum; 0/0 with Modes = choose one
-    AllowDuplicateModes bool                   // True for "choose the same mode more than once" (CR 700.2d)
-    ZoneOfFunction     ZoneType                // Zone where ability functions (default: Battlefield)
-    Timing             TimingRestriction       // When activated ability can be used
-    IsLoyaltyAbility   bool                    // True for planeswalker loyalty abilities
-    LoyaltyCost        int                     // Loyalty cost for loyalty abilities
-    IsManaAbility      bool                    // True for mana abilities (CR 605.1)
+    Text             string
+    KeywordAbilities []KeywordAbility // Sealed keyword variants this provides.
+    Body             AbilityBody       // Spell, activated, mana, loyalty, triggered, replacement, or static body.
+
+    // Legacy flat fields remain for compatibility while rules consumers migrate.
+    Kind    AbilityKind
+    Effects []Effect
+    Targets []TargetSpec
+    Modes   []Mode
 }
 ```
+
+Prefer the categorized `CardFace` fields (`SpellAbility`, `ActivatedAbilities`,
+`ManaAbilities`, `LoyaltyAbilities`, `TriggeredAbilities`,
+`ReplacementAbilities`, and `StaticAbilities`) with explicit body structs. Legacy
+`Abilities` literals are still accepted; `CardFace.AbilityDefs()` normalizes them
+to body-backed `AbilityDef` values for rules code.
 
 Card color identity lives in `mtg/game/color`, not `mtg/game/mana`. Use
 `color.NewIdentity(color.Green, color.Red)` for `CardDef.ColorIdentity`.
@@ -517,15 +505,15 @@ Abilities: []game.AbilityDef{
 }
 ```
 
-Do not smash multiple plain keywords into one `AbilityDef` with `Keywords: []game.Keyword{...}`. Use explicit `AbilityDef` values only for keyword abilities that need card-specific parameters or costs.
+Do not smash multiple plain keywords into one ad-hoc `AbilityDef`; use `game.SimpleKeywords(...)` only when a helper template is not suitable. Use explicit `AbilityDef` values for keyword abilities that need card-specific parameters or costs.
 
 For keywords with parameters:
-- **Protection from [color]**: `Keywords: []game.Keyword{game.Protection}`, `ProtectionFromColors: []color.Color{color.Red}`
-- **Ward {N}**: `Keywords: []game.Keyword{game.Ward}`, `WardCost: opt.Val(cost.Mana{cost.O(N)})`
-- **Equip {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Equip}`, `ManaCost: opt.Val(cost.Mana{cost.O(N)})`, `Timing: game.SorceryOnly`
-- **Cycling {N}**: `Kind: ActivatedAbility`, `Keywords: []game.Keyword{game.Cycling}`, `ManaCost: opt.Val(cost.Mana{...})`, `AdditionalCosts` with discard self
-- **Prowess**: `Keywords: []game.Keyword{game.Prowess}` on a static ability; the rules engine creates the implicit trigger (CR 702.108)
-- **Flashback {cost}**: `Keywords: []game.Keyword{game.Flashback}` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
+- **Protection from [color]**: `KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{color.Red}}}`
+- **Ward {N}**: `KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(N)}}}`
+- **Equip {N}**: `Kind: ActivatedAbility`, `KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}`, `ManaCost: opt.Val(cost.Mana{cost.O(N)})`, `Timing: game.SorceryOnly`
+- **Cycling {N}**: `Kind: ActivatedAbility`, `KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}`, `ManaCost: opt.Val(cost.Mana{...})`, `AdditionalCosts` with discard self
+- **Prowess**: `KeywordAbilities: game.SimpleKeywords(game.Prowess)` on a static ability; the rules engine creates the implicit trigger (CR 702.108)
+- **Flashback {cost}**: `KeywordAbilities: game.SimpleKeywords(game.Flashback)` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 
 #### Spell abilities (instants/sorceries)
 

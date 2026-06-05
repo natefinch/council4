@@ -8,7 +8,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
-	"github.com/natefinch/council4/opt"
 )
 
 var faceDownCastCost = cost.Mana{cost.O(3)}
@@ -16,32 +15,25 @@ var faceDownDisguiseWardCost = cost.Mana{cost.O(2)}
 
 func faceDownDisguiseWardAbility() game.AbilityDef {
 	return game.AbilityDef{
-		Kind:     game.StaticAbility,
-		Text:     "Ward {2}",
-		Keywords: []game.Keyword{game.Ward},
-		WardCost: opt.Val(faceDownDisguiseWardCost),
+		Kind:             game.StaticAbility,
+		Text:             "Ward {2}",
+		Body:             game.StaticAbilityBody{Text: "Ward {2}", KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: faceDownDisguiseWardCost}}},
+		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: faceDownDisguiseWardCost}},
 	}
 }
 
 func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (cost.Mana, bool) {
-	keyword := game.Morph
-	if kind == game.FaceDownDisguise {
-		keyword = game.Disguise
-	}
 	abilities := card.AbilityDefs()
 	for i := range abilities {
 		ability := &abilities[i]
-		if !abilityHasKeyword(ability, keyword) {
-			continue
-		}
 		switch kind {
 		case game.FaceDownMorph:
-			if ability.MorphCost.Exists {
-				return ability.MorphCost.Val, true
+			if manaCost, ok := ability.MorphCost(); ok {
+				return manaCost, true
 			}
 		case game.FaceDownDisguise:
-			if ability.DisguiseCost.Exists {
-				return ability.DisguiseCost.Val, true
+			if manaCost, ok := ability.DisguiseCost(); ok {
+				return manaCost, true
 			}
 		default:
 		}

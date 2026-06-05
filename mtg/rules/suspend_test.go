@@ -130,10 +130,8 @@ func suspendSorcery(counters int, suspendCost cost.Mana) *game.CardDef {
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(9)}),
 		Abilities: []game.AbilityDef{{
-			Kind:                game.StaticAbility,
-			Keywords:            []game.Keyword{game.Suspend},
-			SuspendCost:         opt.Val(suspendCost),
-			SuspendTimeCounters: counters,
+			Kind:             game.StaticAbility,
+			KeywordAbilities: []game.KeywordAbility{game.SuspendKeyword{Cost: suspendCost, TimeCounters: counters}},
 		}}},
 	}
 }

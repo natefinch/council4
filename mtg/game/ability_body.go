@@ -38,8 +38,6 @@ type SpellAbilityBody struct {
 	Content          AbilityContent
 	AdditionalCosts  []AdditionalCost
 	AlternativeCosts []AlternativeCost
-	KickerCost       opt.V[cost.Mana]
-	KickerEffects    []Effect
 }
 
 // ActivatedAbilityBody is a non-mana, non-loyalty activated ability.
@@ -282,6 +280,48 @@ func (ability *AbilityDef) LoyaltyCostValue() int {
 	return ability.LoyaltyCost
 }
 
+// WithBody returns a copy of this ability with Body populated from legacy fields
+// when needed. The flat fields remain populated as the compatibility view while
+// the rules layer migrates to consume AbilityBody directly.
+func (ability *AbilityDef) WithBody() AbilityDef {
+	normalized := *ability
+	if normalized.Body != nil {
+		return normalized
+	}
+	switch normalized.Kind {
+	case SpellAbility:
+		if body, ok := normalized.SpellBody(); ok {
+			normalized.Body = body
+		}
+	case ActivatedAbility:
+		if normalized.IsManaAbility {
+			if body, ok := normalized.ManaBody(); ok {
+				normalized.Body = body
+			}
+			return normalized
+		}
+		if normalized.IsLoyaltyAbility {
+			if body, ok := normalized.LoyaltyBody(); ok {
+				normalized.Body = body
+			}
+			return normalized
+		}
+		if body, ok := normalized.ActivatedBody(); ok {
+			normalized.Body = body
+		}
+	case TriggeredAbility:
+		if body, ok := normalized.TriggeredBody(); ok {
+			normalized.Body = body
+		}
+	case StaticAbility:
+		if body, ok := normalized.StaticBody(); ok {
+			normalized.Body = body
+		}
+	default:
+	}
+	return normalized
+}
+
 // SpellBody returns this ability's spell body, including a legacy view.
 func (ability *AbilityDef) SpellBody() (SpellAbilityBody, bool) {
 	if body, ok := ability.Body.(SpellAbilityBody); ok {
@@ -294,11 +334,10 @@ func (ability *AbilityDef) SpellBody() (SpellAbilityBody, bool) {
 		return SpellAbilityBody{}, false
 	}
 	return SpellAbilityBody{
+		Text:             ability.Text,
 		Content:          ability.legacyContent(),
 		AdditionalCosts:  append([]AdditionalCost(nil), ability.AdditionalCosts...),
 		AlternativeCosts: append([]AlternativeCost(nil), ability.AlternativeCosts...),
-		KickerCost:       ability.KickerCost,
-		KickerEffects:    append([]Effect(nil), ability.KickerEffects...),
 	}, true
 }
 
@@ -314,6 +353,7 @@ func (ability *AbilityDef) ActivatedBody() (ActivatedAbilityBody, bool) {
 		return ActivatedAbilityBody{}, false
 	}
 	return ActivatedAbilityBody{
+		Text:                ability.Text,
 		ManaCost:            ability.ManaCost,
 		AdditionalCosts:     append([]AdditionalCost(nil), ability.AdditionalCosts...),
 		AlternativeCosts:    append([]AlternativeCost(nil), ability.AlternativeCosts...),
@@ -336,6 +376,7 @@ func (ability *AbilityDef) ManaBody() (ManaAbilityBody, bool) {
 		return ManaAbilityBody{}, false
 	}
 	return ManaAbilityBody{
+		Text:                ability.Text,
 		ManaCost:            ability.ManaCost,
 		AdditionalCosts:     append([]AdditionalCost(nil), ability.AdditionalCosts...),
 		ZoneOfFunction:      ability.ZoneOfFunction,
@@ -357,6 +398,7 @@ func (ability *AbilityDef) LoyaltyBody() (LoyaltyAbilityBody, bool) {
 		return LoyaltyAbilityBody{}, false
 	}
 	return LoyaltyAbilityBody{
+		Text:                ability.Text,
 		LoyaltyCost:         ability.LoyaltyCost,
 		ActivationCondition: ability.ActivationCondition,
 		Content:             ability.legacyContent(),
@@ -379,6 +421,7 @@ func (ability *AbilityDef) TriggeredBody() (TriggeredAbilityBody, bool) {
 		trigger = ability.Trigger.Val
 	}
 	return TriggeredAbilityBody{
+		Text:               ability.Text,
 		Trigger:            trigger,
 		Optional:           ability.Optional,
 		MaxTriggersPerTurn: ability.MaxTriggersPerTurn,
@@ -398,6 +441,7 @@ func (ability *AbilityDef) StaticBody() (StaticAbilityBody, bool) {
 		return StaticAbilityBody{}, false
 	}
 	return StaticAbilityBody{
+		Text:             ability.Text,
 		Condition:        ability.Condition,
 		ZoneOfFunction:   ability.ZoneOfFunction,
 		KeywordAbilities: append([]KeywordAbility(nil), ability.KeywordAbilities...),

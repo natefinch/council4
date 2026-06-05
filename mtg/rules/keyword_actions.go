@@ -198,21 +198,24 @@ func emitCardRevealEvent(g *game.Game, obj *game.StackObject, playerID game.Play
 
 func clueTokenDef() *game.CardDef {
 	two := cost.Mana{cost.O(2)}
+	additionalCosts := []game.AdditionalCost{{
+		Kind:               game.AdditionalCostSacrificeSource,
+		Text:               "Sacrifice this artifact",
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Artifact,
+	}}
+	effects := []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}
 	return &game.CardDef{CardFace: game.CardFace{Name: "Clue Token",
 		Types:    []types.Card{types.Artifact},
 		Subtypes: []types.Sub{types.Clue},
 		Abilities: []game.AbilityDef{{
-			Kind:     game.ActivatedAbility,
-			Text:     "{2}, Sacrifice this artifact: Draw a card.",
-			ManaCost: opt.Val(two),
-			AdditionalCosts: []game.AdditionalCost{{
-				Kind:               game.AdditionalCostSacrificeSource,
-				Text:               "Sacrifice this artifact",
-				Amount:             1,
-				MatchPermanentType: true,
-				PermanentType:      types.Artifact,
-			}},
-			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
+			Kind:            game.ActivatedAbility,
+			Text:            "{2}, Sacrifice this artifact: Draw a card.",
+			Body:            game.ActivatedAbilityBody{Text: "{2}, Sacrifice this artifact: Draw a card.", ManaCost: opt.Val(two), AdditionalCosts: append([]game.AdditionalCost(nil), additionalCosts...), Content: game.PlainAbilityContent{Sequence: append([]game.Effect(nil), effects...)}},
+			ManaCost:        opt.Val(two),
+			AdditionalCosts: additionalCosts,
+			Effects:         effects,
 		}}},
 	}
 }

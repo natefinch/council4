@@ -112,7 +112,7 @@ func delveSpell(manaCost cost.Mana) *game.CardDef {
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(manaCost),
 		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Delve}},
+			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Delve)},
 			{Kind: game.SpellAbility},
 		}},
 	}

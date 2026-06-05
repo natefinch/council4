@@ -26,30 +26,47 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	if !ok {
 		return
 	}
-	if len(ability.Modes) > 0 {
-		for _, modeIndex := range obj.ChosenModes {
-			if modeIndex < 0 || modeIndex >= len(ability.Modes) {
-				continue
-			}
-			for i := range ability.Modes[modeIndex].Effects {
-				e.resolveEffectWithChoices(g, obj, &ability.Modes[modeIndex].Effects[i], agents, log)
-			}
-		}
+	spellBody, ok := ability.SpellBody()
+	if !ok {
 		return
 	}
-	for i := range ability.Effects {
-		e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
-	}
+	e.resolveAbilityContentWithChoices(g, obj, spellBody.Content, agents, log)
 	if obj.KickerPaid {
-		for i := range ability.KickerEffects {
-			e.resolveEffectWithChoices(g, obj, &ability.KickerEffects[i], agents, log)
+		bonus := ability.KickerBonusEffects()
+		for i := range bonus {
+			e.resolveEffectWithChoices(g, obj, &bonus[i], agents, log)
 		}
+	}
+}
+
+func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackObject, content game.AbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	switch abilityContent := content.(type) {
+	case game.PlainAbilityContent:
+		for i := range abilityContent.Sequence {
+			e.resolveEffectWithChoices(g, obj, &abilityContent.Sequence[i], agents, log)
+		}
+	case game.ModalAbilityContent:
+		for _, modeIndex := range obj.ChosenModes {
+			if modeIndex < 0 || modeIndex >= len(abilityContent.Modes) {
+				continue
+			}
+			for i := range abilityContent.Modes[modeIndex].Effects {
+				e.resolveEffectWithChoices(g, obj, &abilityContent.Modes[modeIndex].Effects[i], agents, log)
+			}
+		}
+	case nil:
+	default:
+		panic("rules: unsupported ability content")
 	}
 }
 
 func spellHasKicker(card *game.CardDef) bool {
 	ability, ok := firstSpellAbility(card)
-	return ok && ability.KickerCost.Exists
+	if !ok {
+		return false
+	}
+	_, ok = ability.KickerCost()
+	return ok
 }
 
 func firstSpellAbility(card *game.CardDef) (*game.AbilityDef, bool) {

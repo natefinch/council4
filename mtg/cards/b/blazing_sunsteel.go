@@ -78,9 +78,11 @@ var BlazingSunsteel = &game.CardDef{CardFace: game.CardFace{Name: "Blazing Sunst
 			},
 		},
 		{
-			Kind:     game.ActivatedAbility,
-			Text:     "Equip {4}",
-			Keywords: []game.Keyword{game.Equip},
+			Kind: game.ActivatedAbility,
+			Text: "Equip {4}",
+			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
+				cost.O(4),
+			}}},
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(4),
 			}),

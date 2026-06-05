@@ -11,9 +11,7 @@ import (
 )
 
 // ActionKind identifies which kind of game action an Action represents.
-//
-//nolint:revive // ActionKind is the established exported API name.
-type ActionKind int
+type ActionKind int //nolint:revive // ActionKind is the established exported API name.
 
 // Action kind values identify the payload carried by an Action.
 const (

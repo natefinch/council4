@@ -475,7 +475,7 @@ func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []color.
 		if !abilityHasKeyword(ability, game.Protection) {
 			continue
 		}
-		colors = append(colors, ability.ProtectionFromColors...)
+		colors = append(colors, ability.ProtectionColors()...)
 	}
 	return colors
 }

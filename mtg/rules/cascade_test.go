@@ -138,7 +138,7 @@ func cascadeSpell(manaValue int) *game.CardDef {
 		ManaCost: opt.Val(cost.Mana{cost.O(manaValue)}),
 		Types:    []types.Card{types.Instant},
 		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Cascade}},
+			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Cascade)},
 			{Kind: game.SpellAbility},
 		}},
 	}

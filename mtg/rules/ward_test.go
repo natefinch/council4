@@ -111,9 +111,8 @@ func addWardPermanent(g *game.Game, controller game.PlayerID, manaCost cost.Mana
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Ward},
-			WardCost: opt.Val(manaCost),
+			Kind:             game.StaticAbility,
+			KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: manaCost}},
 		}}},
 	})
 }

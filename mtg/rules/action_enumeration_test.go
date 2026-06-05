@@ -317,7 +317,7 @@ func xSpell() *game.CardDef {
 func characterizationKickerSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Kicker",
 		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility, KickerCost: greenCost()}}},
+		Abilities: []game.AbilityDef{{Kind: game.SpellAbility, KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: greenCost().Val}}}}},
 	}
 }
 
@@ -366,7 +366,7 @@ func flashbackSpell() *game.CardDef {
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
 		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
+			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flashback)},
 			{
 				Kind: game.SpellAbility,
 				AlternativeCosts: []game.AlternativeCost{{

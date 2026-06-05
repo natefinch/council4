@@ -70,11 +70,17 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
+	effects := append([]game.Effect(nil), def.Effects...)
+	targets := append([]game.TargetSpec(nil), def.Targets...)
 	ability := game.AbilityDef{
 		Kind:     game.TriggeredAbility,
 		Optional: def.Optional,
-		Effects:  append([]game.Effect(nil), def.Effects...),
-		Targets:  append([]game.TargetSpec(nil), def.Targets...),
+		Body: game.TriggeredAbilityBody{
+			Optional: def.Optional,
+			Content:  game.PlainAbilityContent{Targets: append([]game.TargetSpec(nil), targets...), Sequence: append([]game.Effect(nil), effects...)},
+		},
+		Effects: effects,
+		Targets: targets,
 	}
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
 		ID:             g.IDGen.Next(),

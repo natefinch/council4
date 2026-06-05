@@ -42,9 +42,11 @@ var InfiltrationLens = &game.CardDef{CardFace: game.CardFace{Name: "Infiltration
 			},
 		},
 		{
-			Kind:     game.ActivatedAbility,
-			Text:     "Equip {1}",
-			Keywords: []game.Keyword{game.Equip},
+			Kind: game.ActivatedAbility,
+			Text: "Equip {1}",
+			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
+				cost.O(1),
+			}}},
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(1),
 			}),

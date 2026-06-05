@@ -268,14 +268,13 @@ func addAuraPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 		Types:    []types.Card{types.Enchantment},
 		Subtypes: []types.Sub{types.Aura},
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Enchant},
-			EnchantTarget: opt.Val(game.TargetSpec{
+			Kind: game.StaticAbility,
+			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 				Allow: game.TargetAllowPermanent,
 				Predicate: game.TargetPredicate{
 					PermanentTypes: []types.Card{types.Creature},
 				},
-			}),
+			}}},
 		}}},
 	})
 }
@@ -285,14 +284,13 @@ func landAuraCard() *game.CardDef {
 		Types:    []types.Card{types.Enchantment},
 		Subtypes: []types.Sub{types.Aura},
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Enchant},
-			EnchantTarget: opt.Val(game.TargetSpec{
+			Kind: game.StaticAbility,
+			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 				Allow: game.TargetAllowPermanent,
 				Predicate: game.TargetPredicate{
 					PermanentTypes: []types.Card{types.Land},
 				},
-			}),
+			}}},
 		}}},
 	}
 }

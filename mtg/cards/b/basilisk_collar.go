@@ -45,9 +45,11 @@ var BasiliskCollar = &game.CardDef{CardFace: game.CardFace{Name: "Basilisk Colla
 			// EffectAttach (type 27) is not executed by the rules engine; the Equip
 			// keyword together with ManaCost, Timing, and Targets is sufficient for
 			// the rules layer to perform attachment.
-			Kind:     game.ActivatedAbility,
-			Text:     "Equip {2}",
-			Keywords: []game.Keyword{game.Equip},
+			Kind: game.ActivatedAbility,
+			Text: "Equip {2}",
+			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
+				cost.O(2),
+			}}},
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(2),
 			}),

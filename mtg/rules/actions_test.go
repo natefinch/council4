@@ -186,7 +186,7 @@ func TestFlashCreatureLegalAtInstantSpeed(t *testing.T) {
 	flashID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Ambush Viper",
 		ManaCost:  greenCost(),
 		Types:     []types.Card{types.Creature},
-		Abilities: []game.AbilityDef{{Keywords: []game.Keyword{game.Flash}}}},
+		Abilities: []game.AbilityDef{{KeywordAbilities: game.SimpleKeywords(game.Flash)}}},
 	})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhaseBeginning
@@ -1062,8 +1062,8 @@ func TestSplitSecondAllowsOnlyManaAbilitiesAndPass(t *testing.T) {
 		Def: &game.CardDef{CardFace: game.CardFace{Name: "Split Second Spell",
 			Types: []types.Card{types.Instant},
 			Abilities: []game.AbilityDef{{
-				Kind:     game.StaticAbility,
-				Keywords: []game.Keyword{game.SplitSecond},
+				Kind:             game.StaticAbility,
+				KeywordAbilities: game.SimpleKeywords(game.SplitSecond),
 			}}},
 		},
 		Owner: game.Player2,
@@ -1130,10 +1130,12 @@ func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Kicker Spell",
 		Types: []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
-			Kind:          game.SpellAbility,
-			Effects:       []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: game.TargetIndexController}},
-			KickerCost:    opt.Val(kickerCost),
-			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
+			Kind:    game.SpellAbility,
+			Effects: []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: game.TargetIndexController}},
+			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{
+				Cost:  kickerCost,
+				Bonus: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
+			}},
 		}}},
 	})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -1168,9 +1170,11 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(baseCost),
 		Abilities: []game.AbilityDef{{
-			Kind:          game.SpellAbility,
-			KickerCost:    opt.Val(kickerCost),
-			KickerEffects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
+			Kind: game.SpellAbility,
+			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{
+				Cost:  kickerCost,
+				Bonus: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
+			}},
 		}}},
 	})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -1197,7 +1201,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
 		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
+			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flashback)},
 			{
 				Kind: game.SpellAbility,
 				AlternativeCosts: []game.AlternativeCost{{
@@ -1245,7 +1249,7 @@ func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
 		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flashback}},
+			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flashback)},
 			{
 				Kind: game.SpellAbility,
 				AlternativeCosts: []game.AlternativeCost{{
@@ -1598,11 +1602,11 @@ func equipEquipment() *game.CardDef {
 		Subtypes: []types.Sub{types.Equipment},
 		Abilities: []game.AbilityDef{
 			{
-				Kind:     game.ActivatedAbility,
-				Keywords: []game.Keyword{game.Equip},
-				ManaCost: opt.Val(manaCost),
-				Timing:   game.SorceryOnly,
-				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature you control"}},
+				Kind:             game.ActivatedAbility,
+				KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: manaCost}},
+				ManaCost:         opt.Val(manaCost),
+				Timing:           game.SorceryOnly,
+				Targets:          []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature you control"}},
 			},
 		}},
 	}

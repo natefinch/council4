@@ -94,9 +94,12 @@ var Fiendlash = &game.CardDef{CardFace: game.CardFace{Name: "Fiendlash",
 			},
 		},
 		{
-			Kind:     game.ActivatedAbility,
-			Text:     "Equip {2}{R}",
-			Keywords: []game.Keyword{game.Equip},
+			Kind: game.ActivatedAbility,
+			Text: "Equip {2}{R}",
+			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
+				cost.O(2),
+				cost.R,
+			}}},
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(2),
 				cost.R,

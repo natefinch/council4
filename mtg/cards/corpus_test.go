@@ -41,6 +41,27 @@ func TestRegisteredCardsValidate(t *testing.T) {
 	}
 }
 
+func TestRegisteredCardAbilitiesHaveBodies(t *testing.T) {
+	for _, card := range registeredCards() {
+		t.Run(card.Name, func(t *testing.T) {
+			assertFaceAbilitiesHaveBodies(t, card.Name, &card.CardFace)
+			if card.Back.Exists {
+				assertFaceAbilitiesHaveBodies(t, card.Name+" back", &card.Back.Val)
+			}
+		})
+	}
+}
+
+func assertFaceAbilitiesHaveBodies(t *testing.T, faceName string, face *game.CardFace) {
+	t.Helper()
+	abilities := face.AbilityDefs()
+	for abilityIndex := range abilities {
+		if abilities[abilityIndex].Body == nil {
+			t.Fatalf("%s ability %d has nil Body: %+v", faceName, abilityIndex, abilities[abilityIndex])
+		}
+	}
+}
+
 func registeredCards() []*game.CardDef {
 	var all []*game.CardDef
 	for _, set := range registeredCardSets() {

@@ -62,8 +62,8 @@ func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 2}),
 		Toughness: opt.Val(game.PT{Value: 2}),
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Deathtouch, game.Lifelink},
+			Kind:             game.StaticAbility,
+			KeywordAbilities: game.SimpleKeywords(game.Deathtouch, game.Lifelink),
 		}}},
 	})
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Large Creature",

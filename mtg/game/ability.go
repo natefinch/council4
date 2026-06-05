@@ -709,39 +709,8 @@ type AbilityDef struct {
 	// ActivationCondition.
 	Condition opt.V[Condition]
 
-	// Keywords lists keyword abilities this provides (e.g., Flying, Haste).
-	// A single ability line can grant multiple keywords.
-	//
-	// Deprecated: use KeywordAbilities for new card definitions.
-	Keywords []Keyword
-
 	// KeywordAbilities lists sealed keyword variants this ability provides.
 	KeywordAbilities []KeywordAbility
-
-	// EnchantTarget parameterizes Enchant for Aura attachment legality. Aura
-	// cards must set this explicitly; there is no default target.
-	EnchantTarget opt.V[TargetSpec]
-
-	// WardCost parameterizes Ward for mana-valued ward costs.
-	WardCost opt.V[cost.Mana]
-
-	// MadnessCost parameterizes Madness for mana-valued madness costs.
-	MadnessCost opt.V[cost.Mana]
-
-	// SuspendCost and SuspendTimeCounters parameterize Suspend.
-	SuspendCost         opt.V[cost.Mana]
-	SuspendTimeCounters int
-
-	// MorphCost and DisguiseCost parameterize face-down cast keywords. A card
-	// with either keyword may be cast face-down for {3}; the recorded cost is
-	// paid to turn the resulting face-down permanent face up.
-	MorphCost    opt.V[cost.Mana]
-	DisguiseCost opt.V[cost.Mana]
-
-	// ProtectionFromColors parameterizes Protection for the initial protection
-	// slice. Empty means this ability does not currently grant rules-relevant
-	// protection, even if Keywords includes Protection.
-	ProtectionFromColors []color.Color
 
 	// ManaCost is the mana component of an activated ability's cost.
 	// Nil for non-activated abilities.
@@ -754,12 +723,6 @@ type AbilityDef struct {
 	// AlternativeCosts are optional costs that replace the normal mana cost
 	// when selected. Required additional costs still apply.
 	AlternativeCosts []AlternativeCost
-
-	// KickerCost is an optional additional mana cost for Kicker.
-	KickerCost opt.V[cost.Mana]
-
-	// KickerEffects are additional effects applied if the spell was kicked.
-	KickerEffects []Effect
 
 	// Trigger defines when a triggered ability fires. Nil for non-triggered.
 	Trigger opt.V[TriggerCondition]

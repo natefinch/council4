@@ -271,8 +271,8 @@ func kickerSpell() *game.CardDef {
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
-			Kind:       game.SpellAbility,
-			KickerCost: greenCost(),
+			Kind:             game.SpellAbility,
+			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: greenCost().Val}},
 		}}},
 	}
 }

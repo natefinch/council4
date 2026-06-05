@@ -383,9 +383,9 @@ func angerLikeCard() *game.CardDef {
 		Types: []types.Card{types.Creature},
 		Abilities: []game.AbilityDef{
 			{
-				Kind:     game.StaticAbility,
-				Text:     "Haste",
-				Keywords: []game.Keyword{game.Haste},
+				Kind:             game.StaticAbility,
+				Text:             "Haste",
+				KeywordAbilities: game.SimpleKeywords(game.Haste),
 			},
 			{
 				Kind:           game.StaticAbility,

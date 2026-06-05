@@ -89,7 +89,39 @@ func TestCardFaceAbilityDefsIncludesCategorizedAbilities(t *testing.T) {
 	if !abilities[0].IsSpell() || !abilities[1].IsMana() || !abilities[2].IsTriggered() || !abilities[3].IsStatic() || !abilities[4].IsStatic() {
 		t.Fatalf("ability kinds = %+v, want spell/mana/triggered/replacement-static/static", abilities)
 	}
+	for i := range abilities {
+		if abilities[i].Body == nil {
+			t.Fatalf("ability %d has nil Body: %+v", i, abilities[i])
+		}
+	}
 	if !face.HasKeyword(Flying) {
 		t.Fatal("categorized static keyword was not visible through HasKeyword")
+	}
+}
+
+func TestCardFaceAbilityDefsPopulatesBodyForLegacyAbilities(t *testing.T) {
+	face := CardFace{
+		Abilities: []AbilityDef{
+			{Kind: SpellAbility, Effects: []Effect{{Type: EffectDraw}}},
+			{Kind: ActivatedAbility, ManaCost: opt.Val(cost.Mana{cost.G}), Effects: []Effect{{Type: EffectGainLife}}},
+			{Kind: ActivatedAbility, IsManaAbility: true, Effects: []Effect{{Type: EffectAddMana}}},
+			{Kind: ActivatedAbility, IsLoyaltyAbility: true, LoyaltyCost: 1, Effects: []Effect{{Type: EffectDraw}}},
+			{Kind: TriggeredAbility, Trigger: opt.Val(TriggerCondition{Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield}}), Effects: []Effect{{Type: EffectDraw}}},
+			{Kind: StaticAbility, KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Flying}}},
+		},
+	}
+
+	abilities := face.AbilityDefs()
+
+	if len(abilities) != len(face.Abilities) {
+		t.Fatalf("abilities = %d, want %d", len(abilities), len(face.Abilities))
+	}
+	for i := range abilities {
+		if abilities[i].Body == nil {
+			t.Fatalf("ability %d has nil Body: %+v", i, abilities[i])
+		}
+	}
+	if !abilities[0].IsSpell() || !abilities[1].IsActivated() || !abilities[2].IsMana() || !abilities[3].IsLoyalty() || !abilities[4].IsTriggered() || !abilities[5].IsStatic() {
+		t.Fatalf("legacy abilities did not normalize to expected bodies: %+v", abilities)
 	}
 }

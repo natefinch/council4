@@ -90,9 +90,9 @@ var NibelheimAflame = &game.CardDef{CardFace: game.CardFace{Name: "Nibelheim Afl
 			},
 		},
 		{
-			Kind:     game.StaticAbility,
-			Text:     "Flashback {5}{R}{R}",
-			Keywords: []game.Keyword{game.Flashback},
+			Kind:             game.StaticAbility,
+			Text:             "Flashback {5}{R}{R}",
+			KeywordAbilities: game.SimpleKeywords(game.Flashback),
 		},
 	}}, ColorIdentity: color.NewIdentity(color.Red),
 }

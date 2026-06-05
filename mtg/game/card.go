@@ -174,6 +174,19 @@ func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
 	return face.ToCardDef(c), true
 }
 
+// WithAbilityBodies returns a card definition whose legacy AbilityDef entries
+// have Body populated. It preserves the legacy flat fields while rules code
+// migrates to AbilityBody consumers.
+func (c *CardDef) WithAbilityBodies() *CardDef {
+	card := *c
+	card.CardFace = c.withAbilityBodies()
+	if c.Back.Exists {
+		back := c.Back.Val
+		card.Back = opt.Val(back.withAbilityBodies())
+	}
+	return &card
+}
+
 // FaceIndexes returns the printed faces available on this card.
 func (c *CardDef) FaceIndexes() []FaceIndex {
 	if c.Back.Exists {
@@ -264,12 +277,17 @@ func (f *CardFace) HasKeyword(kw Keyword) bool {
 	return false
 }
 
-// AbilityDefs returns all abilities on this face in the legacy AbilityDef view.
+// AbilityDefs returns all abilities on this face in the AbilityDef compatibility view.
+// Every returned ability has Body populated, while the legacy flat fields remain
+// mirrored during rules migration.
 func (f *CardFace) AbilityDefs() []AbilityDef {
-	if !f.hasCategorizedAbilities() {
+	if !f.hasCategorizedAbilities() && abilitiesHaveBodies(f.Abilities) {
 		return f.Abilities
 	}
-	abilities := append([]AbilityDef(nil), f.Abilities...)
+	abilities := make([]AbilityDef, 0, len(f.Abilities)+len(f.ActivatedAbilities)+len(f.ManaAbilities)+len(f.LoyaltyAbilities)+len(f.TriggeredAbilities)+len(f.ReplacementAbilities)+len(f.StaticAbilities)+1)
+	for i := range f.Abilities {
+		abilities = append(abilities, f.Abilities[i].WithBody())
+	}
 	if f.SpellAbility.Exists {
 		abilities = append(abilities, spellAbilityDef(&f.SpellAbility.Val))
 	}
@@ -292,6 +310,15 @@ func (f *CardFace) AbilityDefs() []AbilityDef {
 		abilities = append(abilities, staticAbilityDef(&f.StaticAbilities[i]))
 	}
 	return abilities
+}
+
+func abilitiesHaveBodies(abilities []AbilityDef) bool {
+	for i := range abilities {
+		if abilities[i].Body == nil {
+			return false
+		}
+	}
+	return true
 }
 
 // ManaValue returns this face's mana value from its printed mana cost (CR 202.3).
@@ -359,6 +386,14 @@ func (f *CardFace) clone() CardFace {
 	}
 }
 
+func (f *CardFace) withAbilityBodies() CardFace {
+	face := f.clone()
+	for i := range face.Abilities {
+		face.Abilities[i] = face.Abilities[i].WithBody()
+	}
+	return face
+}
+
 func spellAbilityDef(body *SpellAbilityBody) AbilityDef {
 	ability := AbilityDef{
 		Kind:             SpellAbility,
@@ -366,8 +401,6 @@ func spellAbilityDef(body *SpellAbilityBody) AbilityDef {
 		Body:             *body,
 		AdditionalCosts:  append([]AdditionalCost(nil), body.AdditionalCosts...),
 		AlternativeCosts: append([]AlternativeCost(nil), body.AlternativeCosts...),
-		KickerCost:       body.KickerCost,
-		KickerEffects:    append([]Effect(nil), body.KickerEffects...),
 	}
 	applyAbilityContent(&ability, body.Content)
 	return ability
@@ -442,11 +475,16 @@ func replacementAbilityDef(body *ReplacementAbilityDef) AbilityDef {
 			Replacement: opt.Val(body.Replacement),
 		})
 	}
-	return AbilityDef{
-		Kind:    StaticAbility,
-		Text:    body.Text,
+	ability := AbilityDef{
+		Kind: StaticAbility,
+		Text: body.Text,
+		Body: StaticAbilityBody{
+			Text:    body.Text,
+			Effects: append([]Effect(nil), effects...),
+		},
 		Effects: effects,
 	}
+	return ability.WithBody()
 }
 
 func staticAbilityDef(body *StaticAbilityBody) AbilityDef {

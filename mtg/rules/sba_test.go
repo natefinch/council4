@@ -252,8 +252,8 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 		Toughness: opt.Val(zero),
 		Abilities: []game.AbilityDef{
 			{
-				Kind:     game.StaticAbility,
-				Keywords: []game.Keyword{game.Indestructible},
+				Kind:             game.StaticAbility,
+				KeywordAbilities: game.SimpleKeywords(game.Indestructible),
 			},
 		}},
 	})

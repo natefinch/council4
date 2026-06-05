@@ -14,8 +14,8 @@ func suspendCostForCard(card *game.CardDef) (cost.Mana, int, bool) {
 	abilities := card.AbilityDefs()
 	for i := range abilities {
 		ability := &abilities[i]
-		if abilityHasKeyword(ability, game.Suspend) && ability.SuspendCost.Exists && ability.SuspendTimeCounters > 0 {
-			return ability.SuspendCost.Val, ability.SuspendTimeCounters, true
+		if manaCost, counters, ok := ability.SuspendInfo(); ok {
+			return manaCost, counters, true
 		}
 	}
 	return nil, 0, false

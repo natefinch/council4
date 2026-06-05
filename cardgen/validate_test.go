@@ -262,8 +262,8 @@ func TestValidateCardWalksNestedEffects(t *testing.T) {
 		{
 			name: "kicker effects",
 			ability: game.AbilityDef{
-				Kind:          game.SpellAbility,
-				KickerEffects: []game.Effect{{Type: game.EffectCopy}},
+				Kind:             game.SpellAbility,
+				KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: cost.Mana{cost.G}, Bonus: []game.Effect{{Type: game.EffectCopy}}}},
 			},
 		},
 		{
@@ -428,10 +428,10 @@ func TestValidateCardChecksEnchantTargetSpec(t *testing.T) {
 		OracleText: "Enchant creature",
 		Abilities: []game.AbilityDef{{
 			Kind: game.StaticAbility,
-			EnchantTarget: opt.Val(game.TargetSpec{
+			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 				MinTargets: 2,
 				MaxTargets: 1,
-			}),
+			}}},
 		}}},
 	}
 

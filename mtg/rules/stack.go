@@ -133,10 +133,10 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 	if !ok {
 		return "missing source"
 	}
-	if abilityHasKeyword(ability, game.Ward) && ability.WardCost.Exists {
+	if _, ok := ability.WardCost(); ok {
 		return e.resolveWardTriggeredAbilityWithChoices(g, obj, ability, agents, log)
 	}
-	if abilityHasKeyword(ability, game.Madness) && ability.MadnessCost.Exists {
+	if _, ok := ability.MadnessCost(); ok {
 		return e.resolveMadnessTriggeredAbilityWithChoices(g, obj, ability, agents, log)
 	}
 	var event *game.GameEvent
@@ -153,9 +153,7 @@ func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.S
 	if triggeredBody.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
 		return "declined"
 	}
-	for i := range ability.Effects {
-		e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
-	}
+	e.resolveAbilityContentWithChoices(g, obj, triggeredBody.Content, agents, log)
 	return "resolved"
 }
 
@@ -165,7 +163,11 @@ func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.
 		return "resolved"
 	}
 	payer := targetObj.Controller
-	cost := manaCostPtr(ability.WardCost)
+	wardCost, ok := ability.WardCost()
+	if !ok {
+		return "resolved"
+	}
+	cost := &wardCost
 	if paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost}) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
 		prefs := e.paymentPreferencesForCost(g, payer, cost, nil, agents, log)
 		if paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost, Prefs: prefs}) {

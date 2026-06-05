@@ -118,7 +118,10 @@ func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 	g.Turn.PriorityPlayer = game.Player1
 
 	abilities := permanentEffectiveAbilities(g, permanent)
-	if len(abilities) != 1 || !abilityHasKeyword(&abilities[0], game.Ward) || !abilities[0].WardCost.Exists {
+	if len(abilities) != 1 {
+		t.Fatalf("face-down disguise abilities = %+v, want ward ability", abilities)
+	}
+	if _, ok := abilities[0].WardCost(); !ok {
 		t.Fatalf("face-down disguise abilities = %+v, want ward ability", abilities)
 	}
 
@@ -141,9 +144,8 @@ func morphCreature(manaCost cost.Mana) *game.CardDef {
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
-			Kind:      game.StaticAbility,
-			Keywords:  []game.Keyword{game.Morph},
-			MorphCost: opt.Val(manaCost),
+			Kind:             game.StaticAbility,
+			KeywordAbilities: []game.KeywordAbility{game.MorphKeyword{Cost: manaCost}},
 		}}},
 	}
 }
@@ -155,9 +157,8 @@ func disguiseCreature(manaCost cost.Mana) *game.CardDef {
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
-			Kind:         game.StaticAbility,
-			Keywords:     []game.Keyword{game.Disguise},
-			DisguiseCost: opt.Val(manaCost),
+			Kind:             game.StaticAbility,
+			KeywordAbilities: []game.KeywordAbility{game.DisguiseKeyword{Cost: manaCost}},
 		}}},
 	}
 }

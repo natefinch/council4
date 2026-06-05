@@ -76,9 +76,9 @@ func cyclingCard() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cycling Test Card",
 		Abilities: []game.AbilityDef{
 			{
-				Kind:     game.ActivatedAbility,
-				Keywords: []game.Keyword{game.Cycling},
-				ManaCost: opt.Val(manaCost),
+				Kind:             game.ActivatedAbility,
+				KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: manaCost}},
+				ManaCost:         opt.Val(manaCost),
 				AdditionalCosts: []game.AdditionalCost{
 					{Kind: game.AdditionalCostDiscard, Text: "Discard this card", Amount: 1, Zone: game.ZoneHand},
 				},

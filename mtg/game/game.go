@@ -232,7 +232,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		if cfg.Commander != nil {
 			ci := &CardInstance{
 				ID:    g.IDGen.Next(),
-				Def:   cfg.Commander,
+				Def:   cfg.Commander.WithAbilityBodies(),
 				Owner: pid,
 			}
 			g.CardInstances[ci.ID] = ci
@@ -245,7 +245,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		for _, def := range cfg.Deck {
 			ci := &CardInstance{
 				ID:    g.IDGen.Next(),
-				Def:   def,
+				Def:   def.WithAbilityBodies(),
 				Owner: pid,
 			}
 			g.CardInstances[ci.ID] = ci

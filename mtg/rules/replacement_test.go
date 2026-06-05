@@ -619,9 +619,8 @@ func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, pro
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{
 			{
-				Kind:                 game.StaticAbility,
-				Keywords:             []game.Keyword{game.Protection},
-				ProtectionFromColors: []color.Color{protectedColor},
+				Kind:             game.StaticAbility,
+				KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{protectedColor}}},
 			},
 		}},
 	})
@@ -634,8 +633,8 @@ func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanen
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Hexproof},
+			Kind:             game.StaticAbility,
+			KeywordAbilities: game.SimpleKeywords(game.Hexproof),
 		}}},
 	})
 }

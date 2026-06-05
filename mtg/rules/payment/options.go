@@ -71,14 +71,18 @@ func isFlashbackAlternative(alternative game.AlternativeCost) bool {
 }
 
 func spellManaCostWithKicker(base *cost.Mana, ability *game.AbilityDef, kickerPaid bool) *cost.Mana {
-	if !kickerPaid || ability == nil || !ability.KickerCost.Exists {
+	if !kickerPaid || ability == nil {
+		return base
+	}
+	kickerCost, ok := ability.KickerCost()
+	if !ok {
 		return base
 	}
 	combined := cost.Mana{}
 	if base != nil {
 		combined = append(combined, (*base)...)
 	}
-	combined = append(combined, ability.KickerCost.Val...)
+	combined = append(combined, kickerCost...)
 	return &combined
 }
 

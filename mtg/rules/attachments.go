@@ -93,10 +93,10 @@ func enchantTargetSpecForCard(card *game.CardDef) (game.TargetSpec, bool) {
 	abilities := card.AbilityDefs()
 	for i := range abilities {
 		ability := &abilities[i]
-		if !abilityHasKeyword(ability, game.Enchant) || !ability.EnchantTarget.Exists {
+		spec, ok := ability.EnchantTarget()
+		if !ok {
 			continue
 		}
-		spec := ability.EnchantTarget.Val
 		if spec.MinTargets == 0 {
 			spec.MinTargets = 1
 		}

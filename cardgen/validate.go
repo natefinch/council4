@@ -120,9 +120,6 @@ func (v *cardValidator) validateAbility(faceName, path string, ability *game.Abi
 	if ability.Body != nil {
 		v.validateAbilityBody(faceName, appendPath(path, "Body"), ability.Body, ability.Targets)
 	}
-	if ability.EnchantTarget.Exists {
-		v.validateTargetSpec(faceName, appendPath(path, "EnchantTarget"), &ability.EnchantTarget.Val)
-	}
 	if ability.Condition.Exists {
 		v.validateCondition(faceName, appendPath(path, "Condition"), &ability.Condition.Val, ability.Targets)
 	}
@@ -140,9 +137,6 @@ func (v *cardValidator) validateAbility(faceName, path string, ability *game.Abi
 	}
 	for i := range ability.Effects {
 		v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Effects[%d]", i)), &ability.Effects[i], ability.Targets)
-	}
-	for i := range ability.KickerEffects {
-		v.validateEffect(faceName, appendPath(path, fmt.Sprintf("KickerEffects[%d]", i)), &ability.KickerEffects[i], ability.Targets)
 	}
 	for i := range ability.Modes {
 		mode := &ability.Modes[i]
@@ -164,9 +158,6 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 	switch abilityBody := body.(type) {
 	case game.SpellAbilityBody:
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
-		for i := range abilityBody.KickerEffects {
-			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("KickerEffects[%d]", i)), &abilityBody.KickerEffects[i], targets)
-		}
 	case game.ActivatedAbilityBody:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)

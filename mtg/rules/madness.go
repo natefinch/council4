@@ -11,8 +11,8 @@ func madnessCostForCard(card *game.CardDef) (cost.Mana, bool) {
 	abilities := card.AbilityDefs()
 	for i := range abilities {
 		ability := &abilities[i]
-		if abilityHasKeyword(ability, game.Madness) && ability.MadnessCost.Exists {
-			return ability.MadnessCost.Val, true
+		if manaCost, ok := ability.MadnessCost(); ok {
+			return manaCost, true
 		}
 	}
 	return nil, false
@@ -32,7 +32,8 @@ func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *ga
 		moveExiledCardToGraveyard(g, obj.Controller, cardID)
 		return "declined"
 	}
-	if !e.castMadnessSpellWithChoices(g, obj.Controller, card, ability.MadnessCost.Val, agents, log) {
+	manaCost, ok := ability.MadnessCost()
+	if !ok || !e.castMadnessSpellWithChoices(g, obj.Controller, card, manaCost, agents, log) {
 		moveExiledCardToGraveyard(g, obj.Controller, cardID)
 		return "resolved"
 	}

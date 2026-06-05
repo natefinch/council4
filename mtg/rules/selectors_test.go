@@ -176,8 +176,8 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 3}),
 		Toughness: opt.Val(game.PT{Value: 3}),
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Deathtouch},
+			Kind:             game.StaticAbility,
+			KeywordAbilities: game.SimpleKeywords(game.Deathtouch),
 		}}},
 	})
 	other := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Other Creature",

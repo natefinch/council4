@@ -198,8 +198,8 @@ func TestExaltedTriggersForCreatureAttackingAlone(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 0}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Exalted},
+			Kind:             game.StaticAbility,
+			KeywordAbilities: game.SimpleKeywords(game.Exalted),
 		}}},
 	})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
@@ -230,8 +230,8 @@ func TestExaltedDoesNotTriggerForMultipleAttackers(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 0}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
-			Kind:     game.StaticAbility,
-			Keywords: []game.Keyword{game.Exalted},
+			Kind:             game.StaticAbility,
+			KeywordAbilities: game.SimpleKeywords(game.Exalted),
 		}}},
 	})
 	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)

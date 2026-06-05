@@ -84,10 +84,10 @@ func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.GameE
 			sourceCardID: event.CardID,
 			face:         game.FaceFront,
 			inline: &game.AbilityDef{
-				Kind:        game.TriggeredAbility,
-				Text:        "Madness",
-				Keywords:    []game.Keyword{game.Madness},
-				MadnessCost: opt.Val(cost),
+				Kind:             game.TriggeredAbility,
+				Text:             "Madness",
+				Body:             game.TriggeredAbilityBody{Text: "Madness"},
+				KeywordAbilities: []game.KeywordAbility{game.MadnessKeyword{Cost: cost}},
 			},
 			event:    event,
 			hasEvent: true,
@@ -225,14 +225,15 @@ func wardTriggerForEvent(g *game.Game, permanent *game.Permanent, controller gam
 	if event.Kind != game.EventObjectBecameTarget || event.PermanentID != permanent.ObjectID || event.StackObjectID == 0 {
 		return nil, false
 	}
-	if event.Controller == controller || !abilityHasKeyword(ability, game.Ward) || !ability.WardCost.Exists {
+	wardCost, ok := ability.WardCost()
+	if event.Controller == controller || !ok {
 		return nil, false
 	}
 	return &game.AbilityDef{
-		Kind:     game.TriggeredAbility,
-		Text:     "Ward",
-		Keywords: []game.Keyword{game.Ward},
-		WardCost: ability.WardCost,
+		Kind:             game.TriggeredAbility,
+		Text:             "Ward",
+		Body:             game.TriggeredAbilityBody{Text: "Ward"},
+		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: wardCost}},
 	}, true
 }
 
@@ -243,18 +244,23 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	if slices.Contains(event.CardTypes, types.Creature) {
 		return nil, false
 	}
+	effects := []game.Effect{
+		{
+			Type:           game.EffectModifyPT,
+			TargetIndex:    game.TargetIndexSourcePermanent,
+			PowerDelta:     1,
+			ToughnessDelta: 1,
+			UntilEndOfTurn: true,
+		},
+	}
 	return &game.AbilityDef{
 		Kind: game.TriggeredAbility,
 		Text: "Prowess",
-		Effects: []game.Effect{
-			{
-				Type:           game.EffectModifyPT,
-				TargetIndex:    game.TargetIndexSourcePermanent,
-				PowerDelta:     1,
-				ToughnessDelta: 1,
-				UntilEndOfTurn: true,
-			},
+		Body: game.TriggeredAbilityBody{
+			Text:    "Prowess",
+			Content: game.PlainAbilityContent{Sequence: append([]game.Effect(nil), effects...)},
 		},
+		Effects: effects,
 	}, true
 }
 
@@ -265,19 +271,21 @@ func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	if g.Combat == nil || len(g.Combat.Attackers) != 1 {
 		return nil, false
 	}
-	return &game.AbilityDef{
-		Kind:     game.TriggeredAbility,
-		Text:     "Exalted",
-		Keywords: []game.Keyword{game.Exalted},
-		Effects: []game.Effect{
-			{
-				Type:           game.EffectModifyPT,
-				Object:         opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
-				PowerDelta:     1,
-				ToughnessDelta: 1,
-				UntilEndOfTurn: true,
-			},
+	effects := []game.Effect{
+		{
+			Type:           game.EffectModifyPT,
+			Object:         opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
+			PowerDelta:     1,
+			ToughnessDelta: 1,
+			UntilEndOfTurn: true,
 		},
+	}
+	return &game.AbilityDef{
+		Kind:             game.TriggeredAbility,
+		Text:             "Exalted",
+		Body:             game.TriggeredAbilityBody{Text: "Exalted", Content: game.PlainAbilityContent{Sequence: append([]game.Effect(nil), effects...)}},
+		KeywordAbilities: game.SimpleKeywords(game.Exalted),
+		Effects:          effects,
 	}, true
 }
 

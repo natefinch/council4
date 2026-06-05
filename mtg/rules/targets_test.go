@@ -359,7 +359,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 2}),
 		Toughness: opt.Val(game.PT{Value: 2}),
-		Abilities: []game.AbilityDef{{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Flying}}}},
+		Abilities: []game.AbilityDef{{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flying)}}},
 	})
 	whiteCreature.Tapped = true
 	addBasicLandPermanent(g, game.Player1, types.Forest)

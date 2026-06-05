@@ -138,7 +138,7 @@ func convokeSpell(manaCost cost.Mana) *game.CardDef {
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(manaCost),
 		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, Keywords: []game.Keyword{game.Convoke}},
+			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Convoke)},
 			{Kind: game.SpellAbility},
 		}},
 	}
