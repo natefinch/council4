@@ -39,22 +39,20 @@ var BlazingSunsteel = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Equipped creature gets +1/+0 for each opponent you have.
 			`,
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectModifyPT,
-					TargetIndex: game.TargetIndexSourcePermanent,
-					Selector:    game.EffectSelectorEquippedCreature,
-					DynamicAmount: opt.Val(game.DynamicAmount{
-						Kind: game.DynamicAmountOpponentCount,
-					}),
-				},
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:    game.LayerPowerToughnessModify,
+				Selector: game.EffectSelectorEquippedCreature,
+				PowerDeltaDynamic: opt.Val(game.DynamicAmount{
+					Kind: game.DynamicAmountOpponentCount,
+				}),
 			},
 		},
+	},
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
@@ -79,17 +77,18 @@ var BlazingSunsteel = func() *game.CardDef {
 						Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectDamage,
-						TargetIndex: 0,
-						DamageSource: opt.Val(game.ObjectReference{
-							Kind:        game.ObjectReferenceAttachedPermanent,
-							TargetIndex: game.TargetIndexSourcePermanent,
-						}),
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind: game.DynamicAmountEventDamage,
-						}),
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountEventDamage,
+							}),
+							Recipient: game.TargetRecipient(0),
+							DamageSource: opt.Val(game.ObjectReference{
+								Kind:        game.ObjectReferenceAttachedPermanent,
+								TargetIndex: game.TargetIndexSourcePermanent,
+							}),
+						},
 					},
 				},
 			},
@@ -113,16 +112,20 @@ var BlazingSunsteel = func() *game.CardDef {
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 				},
 			},
 			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{Cost: cost.Mana{
-					cost.O(4),
-				}},
+				game.EquipKeyword{
+					Cost: cost.Mana{
+						cost.O(4),
+					},
+				},
 			},
 		},
 	)

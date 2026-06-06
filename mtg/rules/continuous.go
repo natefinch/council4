@@ -322,6 +322,22 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 		}, ability.Condition) {
 			continue
 		}
+		if body, ok := ability.StaticBody(); ok {
+			for i := range body.ContinuousEffects {
+				template := &body.ContinuousEffects[i]
+				if template.Layer != layer {
+					continue
+				}
+				staticEffect := *template
+				staticEffect.SourceObjectID = sourceObjectID(source)
+				staticEffect.SourceCardID = source.cardID
+				staticEffect.Controller = source.controller
+				staticEffect.Timestamp = source.timestamp
+				if continuousEffectApplies(g, permanent, values, &staticEffect) {
+					effects = append(effects, staticEffect)
+				}
+			}
+		}
 		for i := range ability.Effects {
 			effect := &ability.Effects[i]
 			if layer == game.LayerPowerToughnessModify && effect.Type == game.EffectModifyPT && permanentValuesMatchSelectorForSource(source.permanent, source.controller, permanent, values, effect.Selector) {
@@ -413,6 +429,13 @@ func staticAbilityCardHasLayer(card *game.CardDef, onBattlefield bool, layer gam
 }
 
 func staticAbilityHasEffectForLayer(ability *game.AbilityDef, layer game.ContinuousLayer) bool {
+	if body, ok := ability.StaticBody(); ok {
+		for i := range body.ContinuousEffects {
+			if body.ContinuousEffects[i].Layer == layer {
+				return true
+			}
+		}
+	}
 	for i := range ability.Effects {
 		effect := &ability.Effects[i]
 		if effect.Type == game.EffectModifyPT && layer == game.LayerPowerToughnessModify {
@@ -601,11 +624,19 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
 		}
 	case game.LayerPowerToughnessModify:
+		powerDelta := effect.PowerDelta
+		if effect.PowerDeltaDynamic.Exists {
+			powerDelta = dynamicAmountValue(g, nil, effect.Controller, effect.PowerDeltaDynamic.Val)
+		}
+		toughnessDelta := effect.ToughnessDelta
+		if effect.ToughnessDeltaDynamic.Exists {
+			toughnessDelta = dynamicAmountValue(g, nil, effect.Controller, effect.ToughnessDeltaDynamic.Val)
+		}
 		if values.powerOK {
-			values.power += effect.PowerDelta
+			values.power += powerDelta
 		}
 		if values.toughnessOK {
-			values.toughness += effect.ToughnessDelta
+			values.toughness += toughnessDelta
 		}
 	case game.LayerPowerToughnessSwitch:
 		values.power, values.toughness = values.toughness, values.power

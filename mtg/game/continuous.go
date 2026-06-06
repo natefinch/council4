@@ -112,8 +112,10 @@ type ContinuousEffect struct {
 	RemoveKeywords []Keyword
 	AddAbilities   []AbilityDef
 
-	SetPower       opt.V[PT]
-	SetToughness   opt.V[PT]
-	PowerDelta     int
-	ToughnessDelta int
+	SetPower              opt.V[PT]
+	SetToughness          opt.V[PT]
+	PowerDelta            int
+	ToughnessDelta        int
+	PowerDeltaDynamic     opt.V[DynamicAmount]
+	ToughnessDeltaDynamic opt.V[DynamicAmount]
 }

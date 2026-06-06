@@ -43,30 +43,40 @@ var EnduringCourage = &game.CardDef{
 				Trigger: game.TriggerCondition{
 					Type: game.TriggerWhenever,
 					Pattern: game.TriggerPattern{
-						Event:                 game.EventPermanentEnteredBattlefield,
-						Controller:            game.TriggerControllerYou,
-						ExcludeSelf:           true,
-						RequirePermanentTypes: []types.Card{types.Creature},
+						Event:       game.EventPermanentEnteredBattlefield,
+						Controller:  game.TriggerControllerYou,
+						ExcludeSelf: true,
+						RequirePermanentTypes: []types.Card{
+							types.Creature,
+						},
 					},
 				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:           game.EffectModifyPT,
-							PowerDelta:     2,
-							Object:         opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
-							UntilEndOfTurn: true,
+							Primitive: game.ModifyPT{
+								Object: opt.Val(game.ObjectReference{
+									Kind: game.ObjectReferenceEventPermanent,
+								}),
+								PowerDelta: game.Fixed(2),
+								Duration:   game.DurationUntilEndOfTurn,
+							},
 						},
 						{
-							Type:   game.EffectApplyContinuous,
-							Object: opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
-							ContinuousEffects: []game.ContinuousEffect{
-								{
-									Layer:       game.LayerAbility,
-									AddKeywords: []game.Keyword{game.Haste},
+							Primitive: game.ApplyContinuous{
+								Object: opt.Val(game.ObjectReference{
+									Kind: game.ObjectReferenceEventPermanent,
+								}),
+								ContinuousEffects: []game.ContinuousEffect{
+									{
+										Layer: game.LayerAbility,
+										AddKeywords: []game.Keyword{
+											game.Haste,
+										},
+									},
 								},
+								Duration: game.DurationUntilEndOfTurn,
 							},
-							UntilEndOfTurn: true,
 						},
 					},
 				},
@@ -83,21 +93,30 @@ var EnduringCourage = &game.CardDef{
 					},
 					InterveningIf: "if it was a creature",
 					InterveningCondition: opt.Val(game.Condition{
-						Text:   "if it was a creature",
-						Types:  []types.Card{types.Creature},
-						Object: opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
+						Text: "if it was a creature",
+						Types: []types.Card{
+							types.Creature,
+						},
+						Object: opt.Val(game.ObjectReference{
+							Kind: game.ObjectReferenceEventPermanent,
+						}),
 					}),
 				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectPutOnBattlefield,
-							TargetIndex: game.TargetIndexController,
-							Card:        opt.Val(game.CardReference{Kind: game.CardReferenceSource}),
-							ContinuousEffects: []game.ContinuousEffect{
-								{
-									Layer:       game.LayerType,
-									RemoveTypes: []types.Card{types.Creature},
+							Primitive: game.PutOnBattlefield{
+								TargetIndex: game.TargetIndexController,
+								Source: game.CardBattlefieldSource(game.CardReference{
+									Kind: game.CardReferenceSource,
+								}),
+								ContinuousEffects: []game.ContinuousEffect{
+									{
+										Layer: game.LayerType,
+										RemoveTypes: []types.Card{
+											types.Creature,
+										},
+									},
 								},
 							},
 						},

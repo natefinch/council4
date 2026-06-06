@@ -43,12 +43,11 @@ var DomriAnarchOfBolas = &game.CardDef{
 				Text: `
 					Creatures you control get +1/+0.
 				`,
-				Effects: []game.Effect{
+				ContinuousEffects: []game.ContinuousEffect{
 					{
-						Type:        game.EffectModifyPT,
-						PowerDelta:  1,
-						TargetIndex: game.TargetIndexController,
-						Selector:    game.EffectSelectorCreaturesYouControl,
+						Layer:      game.LayerPowerToughnessModify,
+						Selector:   game.EffectSelectorCreaturesYouControl,
+						PowerDelta: 1,
 					},
 				},
 			},
@@ -60,33 +59,39 @@ var DomriAnarchOfBolas = &game.CardDef{
 				`,
 				LoyaltyCost: 1,
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectChoose,
-							TargetIndex: game.TargetIndexController,
-							Choice: opt.Val(game.ResolutionChoice{
-								Kind:   game.ResolutionChoiceMana,
-								Prompt: "Choose {R} or {G}",
-								Colors: []mana.Color{mana.R, mana.G},
-							}),
-							LinkID: "domri-color",
-						},
-						{
-							Type:         game.EffectAddMana,
-							Amount:       1,
-							TargetIndex:  game.TargetIndexController,
-							ChoiceLinkID: "domri-color",
-						},
-						{
-							Type:        game.EffectApplyRule,
-							TargetIndex: game.TargetIndexController,
-							Duration:    game.DurationThisTurn,
-							RuleEffects: []game.RuleEffect{
-								{
-									Kind:               game.RuleEffectCantBeCountered,
-									AffectedController: game.ControllerYou,
-									SpellTypes:         []types.Card{types.Creature},
+							Primitive: game.Choose{
+								Choice: game.ResolutionChoice{
+									Kind:   game.ResolutionChoiceMana,
+									Prompt: "Choose {R} or {G}",
+									Colors: []mana.Color{
+										mana.R,
+										mana.G,
+									},
 								},
+								PublishChoice: game.ChoiceKey("domri-color"),
+							},
+						},
+						{
+							Primitive: game.AddMana{
+								Amount:     game.Fixed(1),
+								ChoiceFrom: game.ChoiceKey("domri-color"),
+							},
+						},
+						{
+							Primitive: game.ApplyRule{
+								TargetIndex: game.TargetIndexController,
+								RuleEffects: []game.RuleEffect{
+									{
+										Kind:               game.RuleEffectCantBeCountered,
+										AffectedController: game.ControllerYou,
+										SpellTypes: []types.Card{
+											types.Creature,
+										},
+									},
+								},
+								Duration: game.DurationThisTurn,
 							},
 						},
 					},
@@ -105,8 +110,10 @@ var DomriAnarchOfBolas = &game.CardDef{
 							Constraint: "creature you control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerYou,
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
+								Controller: game.ControllerYou,
 							},
 						},
 						{
@@ -115,13 +122,17 @@ var DomriAnarchOfBolas = &game.CardDef{
 							Constraint: "creature you don't control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerNotYou,
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
+								Controller: game.ControllerNotYou,
 							},
 						},
 					},
-					Sequence: []game.Effect{
-						{Type: game.EffectFight},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Fight{},
+						},
 					},
 				},
 			},

@@ -38,10 +38,12 @@ var GuardianProject = &game.CardDef{
 				Trigger: game.TriggerCondition{
 					Type: game.TriggerWhenever,
 					Pattern: game.TriggerPattern{
-						Event:                 game.EventPermanentEnteredBattlefield,
-						Controller:            game.TriggerControllerYou,
-						RequirePermanentTypes: []types.Card{types.Creature},
-						RequireNonToken:       true,
+						Event:      game.EventPermanentEnteredBattlefield,
+						Controller: game.TriggerControllerYou,
+						RequirePermanentTypes: []types.Card{
+							types.Creature,
+						},
+						RequireNonToken: true,
 					},
 					InterveningIf: "it doesn't have the same name as another creature you control or a creature card in your graveyard",
 					InterveningCondition: opt.Val(game.Condition{
@@ -50,8 +52,13 @@ var GuardianProject = &game.CardDef{
 					}),
 				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Draw{
+								Amount:      game.Fixed(1),
+								TargetIndex: game.TargetIndexController,
+							},
+						},
 					},
 				},
 			},

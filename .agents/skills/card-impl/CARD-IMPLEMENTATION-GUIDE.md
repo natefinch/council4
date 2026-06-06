@@ -163,23 +163,48 @@ const (
 )
 ```
 
-### EffectType (all valid values)
+### Instructions and Effect Primitives
+
+Resolving abilities use `[]game.Instruction`. Each instruction contains exactly
+one sealed `game.Primitive`:
 
 ```go
-const (
-    EffectUnknown EffectType = iota
-    EffectDamage; EffectDestroy; EffectExile; EffectBounce; EffectCounter
-    EffectDraw; EffectDiscard; EffectMill; EffectSearch; EffectCreateToken
-    EffectGainLife; EffectLoseLife; EffectAddMana; EffectModifyPT
-    EffectAddCounter; EffectRemoveCounter; EffectPutOnBattlefield
-    EffectSacrifice; EffectTap; EffectUntap; EffectGainControl; EffectCopy
-    EffectScry; EffectSurveil; EffectFight; EffectTransform; EffectAttach
-    EffectReplace; EffectPrevent; EffectCreateDelayedTrigger
-    EffectRegenerate; EffectSkipStep; EffectPhaseOut; EffectCreateEmblem
-    EffectApplyContinuous; EffectMoveCounters; EffectChoose; EffectPay
-    EffectApplyRule; EffectProliferate; EffectGoad
-)
+type Instruction struct {
+    Primitive     Primitive
+    Condition     opt.V[EffectCondition]
+    CardCondition opt.V[CardCondition]
+    ResultGate    opt.V[InstructionResultGate]
+    Optional      bool
+    PublishResult ResultKey
+    Description   string
+}
 ```
+
+The supported Card Implementation primitives are:
+
+```text
+Damage, Draw, Discard, Destroy, AddMana, AddCounter, MoveCounters,
+ApplyContinuous, ApplyRule, ModifyPT, Fight, Tap, Search, Reveal,
+PutOnBattlefield, CreateToken, ShufflePermanentIntoLibrary,
+StartEngines, SetClassLevel, Monstrosity, DiscoverCards, Pay, Choose
+```
+
+Do not author the legacy wide `game.Effect` struct. If no typed primitive
+expresses the oracle text, use `ImplementationID` and document the required
+hand-written behavior.
+
+Use `game.Fixed(N)` or `game.Dynamic(game.DynamicAmount{...})` for numeric
+primitive fields. Use `game.TargetRecipient`, `game.SelectorRecipient`, or
+`game.PlayerSelectorRecipient` to construct `Damage.Recipient`. Use
+`game.TokenDef` / `game.TokenCopyOf` for `CreateToken.Source`, and
+`game.CardBattlefieldSource` / `game.LinkedBattlefieldSource` for
+`PutOnBattlefield.Source`.
+
+Sequencing keys have distinct types:
+
+- `ResultKey` — instruction outcomes and result gates
+- `ChoiceKey` — values published by `Choose`
+- `LinkedKey` — cards or objects published by reveal-like primitives
 
 ### CounterSourceSpec
 
@@ -234,58 +259,15 @@ type DynamicAmount struct {
     TargetIndex int
     CounterKind counter.Kind
     Selector    EffectSelector
-    LinkID      string
+    ResultKey   ResultKey
 }
 ```
 
-### Effect
-
-```go
-type Effect struct {
-    Type            EffectType
-    Amount          int                        // Numeric amount (damage, cards drawn, etc.)
-    DynamicAmount   opt.V[DynamicAmount]       // Amount determined on resolution (CR 107.3, CR 608.2c)
-    TargetIndex     int                        // Index into runtime targets; -1 = controller
-    Optional        bool                       // Ask whether to apply this single instruction (CR 608.2c)
-    ResultCondition opt.V[EffectResultCondition] // Gate on prior linked effect result
-    Condition       opt.V[EffectCondition]
-    PowerDelta      int                        // For EffectModifyPT
-    ToughnessDelta  int                        // For EffectModifyPT
-    CounterKind     counter.Kind               // For EffectAddCounter/EffectRemoveCounter
-    CounterSource   CounterSourceSpec          // For EffectMoveCounters
-    ManaColor       mana.Color                 // For EffectAddMana
-    Choice          opt.V[ResolutionChoice]    // Value chosen during resolution (CR 608.2c, CR 609.3)
-    ChoiceLinkID    string                     // Consume a prior choice value
-    Payment         opt.V[ResolutionPayment]   // Optional "you may pay..." during resolution (CR 608.2c, CR 117.12)
-    UntilEndOfTurn  bool                       // Duration flag
-    Duration        EffectDuration
-    Step            Step                       // For step-related effects
-    Selector        EffectSelector             // For mass effects
-    Token           opt.V[*CardDef]            // For EffectCreateToken
-    ContinuousEffects []ContinuousEffect       // For EffectApplyContinuous
-    DelayedTrigger  opt.V[DelayedTriggerDef]
-    EmblemAbilities []AbilityDef
-    Replacement     opt.V[ReplacementEffect]   // For EffectReplace
-    RuleEffects     []RuleEffect               // For EffectApplyRule
-    LinkID          string
-    Description     string                     // Human-readable description
-}
-```
-
-### EffectResultCondition
-
-```go
-type EffectResultCondition struct {
-    LinkID    string
-    Accepted  TriState
-    Succeeded TriState
-}
-```
-
-Use `LinkID` on an earlier effect and `ResultCondition` on later effects for
+Set `Instruction.PublishResult` on the producing instruction and use an
+`InstructionResultGate` with the same `ResultKey` on later instructions for
 "if you do" / "if you don't" branches. `Succeeded` checks whether the previous
-effect actually did anything, so a failed draw from an empty library does not
-count as "if you do" (CR 608.2c, CR 101.3).
+primitive actually did anything, so a failed draw from an empty library does
+not count as "if you do" (CR 608.2c, CR 101.3).
 
 ### ResolutionChoice and ResolutionPayment
 
@@ -317,11 +299,10 @@ type ResolutionPayment struct {
 }
 ```
 
-Use `EffectChoose` with `Choice` and `LinkID` for "choose a color/card
-type/player/card" instructions. Later effects can consume a chosen color for
-`EffectAddMana` or a chosen player for player effects by setting
-`ChoiceLinkID`. Use `EffectPay` with `Payment` and `LinkID` for "you may pay..."
-during resolution; follow-up "if you do" effects should use `ResultCondition`
+Use a `Choose` primitive with `PublishChoice` for supported resolution choices.
+An `AddMana` primitive consumes a mana choice through `ChoiceFrom`. Use a `Pay`
+primitive plus `Instruction.PublishResult` for "you may pay..." during
+resolution; follow-up "if you do" instructions use `InstructionResultGate`
 with `Accepted: game.TriTrue` and `Succeeded: game.TriTrue`.
 
 ### ReplacementEffect
@@ -346,12 +327,11 @@ type ReplacementEffect struct {
 }
 ```
 
-Use `EffectReplace` with `Replacement` to create runtime replacement effects
-for zone-change destination replacement and simple enters-the-battlefield
-modifiers (CR 614). The generic replacement slice applies each matching effect
-at most once to the event and records deterministic fallback ordering when
-multiple generic replacements apply (CR 614.5, CR 616). ETB-as-copy,
-ETB-as-choice, and full APNAP replacement ordering are still follow-ups.
+Use `ReplacementAbilityDef` and the constructors
+`EntersTappedReplacement`, `EntersTappedIfReplacement`,
+`EntersTappedUnlessPaidReplacement`, and `EntersWithCountersReplacement` for
+supported enters-the-battlefield replacement text (CR 614). Other replacement
+effects require an `ImplementationID`.
 
 ### RuleEffect
 
@@ -379,12 +359,11 @@ type RuleEffect struct {
 }
 ```
 
-Use `EffectApplyRule` with `RuleEffects` for static rule-changing text such as
-"players can't gain life" (CR 119.6), "creatures can't attack/block" (CR 506.2,
-CR 509.1b), "spells cost N more/less", and "you may cast [cards] from your
-graveyard" permissions (CR 601.3). Rule effects in static abilities are derived
-while their source is on the battlefield; rule effects created by resolving an
-effect can use normal duration fields.
+Put `RuleEffects` directly on `StaticAbilityBody` for static rule-changing text
+such as "players can't gain life" (CR 119.6), "creatures can't attack/block"
+(CR 506.2, CR 509.1b), "spells cost N more/less", and graveyard-cast
+permissions (CR 601.3). Use an `ApplyRule` primitive only when a resolving
+ability creates a temporary rule effect.
 
 ### TargetSpec
 
@@ -602,7 +581,7 @@ Set `SpellAbility: opt.Val(game.SpellAbilityBody{...})`:
 - `Text:` full oracle text
 - `Content`: `PlainAbilityContent{Targets: [...], Sequence: [...]}` or `ModalAbilityContent{Modes: [...]}`
 - Extract `Targets` from "target [constraint]" phrases
-- Extract `Sequence` effects from the action verbs (see Effect Mapping below)
+- Extract typed `Instruction` primitives from the action verbs (see Primitive Mapping below)
 - For modal text (`Choose one —`, `Choose two —`, `Choose one or both —`,
   `Choose up to one —`), fill `Modes` and set `MinModes` / `MaxModes` from the
   choice count. Leave `MinModes` and `MaxModes` at zero only for legacy
@@ -654,57 +633,49 @@ Use `game.TriggeredAbilityBody{...}` in `TriggeredAbilities`:
 
 Use `game.StaticAbilityBody{...}` in `StaticAbilities`:
 - Common patterns:
-  - "Creatures you control get +N/+M" → `Effects` with `EffectModifyPT`, `Selector: game.EffectSelectorCreaturesYouControl`
+  - "Creatures you control get +N/+M" → `ContinuousEffects` with `LayerPowerToughnessModify` and `EffectSelectorCreaturesYouControl`
   - "Other creatures you control get +N/+M" → same with `EffectSelectorOtherCreaturesYouControl`
-  - "Players can't gain life" → `EffectApplyRule` with `RuleEffectCantGainLife`
-  - "Creatures can't attack/block" → `EffectApplyRule` with `RuleEffectCantAttack` / `RuleEffectCantBlock`
-  - "Spells cost N more/less" → `EffectApplyRule` with `RuleEffectCostModifier`
-  - "You may cast ... from your graveyard" → `EffectApplyRule` with `RuleEffectCastFromZone`
+  - "Players can't gain life" → `RuleEffects` with `RuleEffectCantGainLife`
+  - "Creatures can't attack/block" → `RuleEffects` with `RuleEffectCantAttack` / `RuleEffectCantBlock`
+  - "Spells cost N more/less" → `RuleEffects` with `RuleEffectCostModifier`
+  - "You may cast ... from your graveyard" → `RuleEffects` with `RuleEffectCastFromZone`
+
+Static abilities do not use `Sequence`: continuous and rule effects are
+declarations that apply while the ability functions, not resolving
+instructions.
 
 ---
 
-## Effect Mapping
+## Primitive Mapping
 
-| Oracle text pattern | EffectType | Notes |
-|---------------------|------------|-------|
-| "deals N damage to" | `EffectDamage` | `Amount: N`, set `TargetIndex` |
-| "deals X damage to" | `EffectDamage` | `DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountX})` |
-| "deals damage equal to [target]'s power" | `EffectDamage` | `DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountTargetPower, TargetIndex: N})` |
-| "that much" | any amount effect | Use `LinkID` on the producing effect and `DynamicAmountPreviousEffectResult` on the consuming effect |
-| "you may [do X]. If you do, [Y]" | any effect(s) | Put `Optional: true` and `LinkID` on X; put `ResultCondition` with `Accepted: game.TriTrue`, `Succeeded: game.TriTrue` on Y |
-| "if you don't" | any effect | Put `ResultCondition` with `Accepted: game.TriFalse` on the branch effect |
-| "choose a color/player/card type/card" | `EffectChoose` | Set `Choice` and `LinkID`; later effects consume with `ChoiceLinkID` where supported |
-| "you may pay [cost]. If you do..." | `EffectPay` | Set `Payment` and `LinkID`; gate the branch with `ResultCondition` |
-| "destroy target" | `EffectDestroy` | `TargetIndex` from target order |
-| "exile target" | `EffectExile` | |
-| "return target ... to its owner's hand" | `EffectBounce` | |
-| "draw N card(s)" | `EffectDraw` | `Amount: N` |
-| "discard N card(s)" | `EffectDiscard` | `Amount: N` |
-| "gain(s) N life" | `EffectGainLife` | `Amount: N` |
-| "lose(s) N life" | `EffectLoseLife` | `Amount: N` |
-| "add {C}{C}" / "add {G}" | `EffectAddMana` | `Amount: N`, `ManaColor` |
-| "gets +N/+M" | `EffectModifyPT` | `PowerDelta: N`, `ToughnessDelta: M` |
-| "put N +1/+1 counter(s)" | `EffectAddCounter` | `Amount: N`, `CounterKind: counter.PlusOnePlusOne` |
-| "move counters from target ... onto target ..." | `EffectMoveCounters` | `CounterSource: CounterSourceSpec{Kind: CounterSourceTarget, TargetIndex: sourceIndex}`, `TargetIndex: destinationIndex` |
-| "put those counters on ..." from a triggered zone-change object | `EffectMoveCounters` | `CounterSource: CounterSourceSpec{Kind: CounterSourceEventPermanent}` reads current/LKI counters from the event permanent |
-| "becomes a N/M [subtype] creature in addition to its other types" | `EffectApplyContinuous` | Add `ContinuousEffects` entries for `LayerType` and `LayerPowerToughnessSet` |
-| "create a N/M token" | `EffectCreateToken` | Set `Token` field |
-| "sacrifice" (as effect) | `EffectSacrifice` | |
-| "tap target" | `EffectTap` | |
-| "untap target" | `EffectUntap` | |
-| "scry N" | `EffectScry` | `Amount: N` |
-| "surveil N" | `EffectSurveil` | `Amount: N` |
-| "mill N" | `EffectMill` | `Amount: N` |
-| "fight" | `EffectFight` | Uses `TargetIndex` and `RelatedTargetIndex`; bare fight effects default to targets 0 and 1 |
-| "if [zone change] would happen, instead..." | `EffectReplace` | Set `Replacement` with match zones and `ReplaceToZone` |
-| "enters tapped / with counters" as a runtime effect | `EffectReplace` | Set `Replacement.EntersTapped` / `EntersWithCounters` |
-| "players can't gain life" | `EffectApplyRule` | Add `RuleEffectCantGainLife` |
-| "creatures can't attack/block" | `EffectApplyRule` | Add `RuleEffectCantAttack` / `RuleEffectCantBlock` with controller/type filters |
-| "spells cost N more/less" | `EffectApplyRule` | Add `RuleEffectCostModifier` with `CostModifier` |
-| "you may cast ... from your graveyard" | `EffectApplyRule` | Add `RuleEffectCastFromZone` with `CastFromZone: game.ZoneGraveyard` |
-| "proliferate" | `EffectProliferate` | Chooses one existing counter kind per eligible permanent/player (CR 701.27) |
-| "goad target creature" | `EffectGoad` | `TargetIndex` points at the target creature; expires on goading player's next turn (CR 701.38) |
-| "counter target spell" | `EffectCounter` | |
+| Oracle text pattern | Primitive | Notes |
+|---------------------|-----------|-------|
+| "deals N damage to" | `Damage` | `Amount: game.Fixed(N)`, `Recipient: game.TargetRecipient(index)` |
+| "deals X damage to" | `Damage` | `Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})` |
+| "deals damage equal to [target]'s power" | `Damage` | Use `DynamicAmountTargetPower` with the target index |
+| "that much" | quantity-bearing primitive | Publish a `ResultKey`; consume it with `DynamicAmount.ResultKey` |
+| "you may [do X]. If you do, [Y]" | any primitives | Set `Optional` and `PublishResult` on X; set Y's `ResultGate` to accepted and succeeded |
+| "if you don't" | any primitive | Gate on the producer's `ResultKey` with `Accepted: game.TriFalse` |
+| "choose a color" | `Choose` | Publish a `ChoiceKey`; `AddMana.ChoiceFrom` consumes it |
+| "you may pay [cost]. If you do..." | `Pay` | Publish a `ResultKey`; gate the following instruction |
+| "destroy target" | `Destroy` | `TargetIndex` follows target order |
+| "draw N card(s)" | `Draw` | `Amount: game.Fixed(N)` |
+| "discard N card(s)" | `Discard` | `Amount: game.Fixed(N)` |
+| "add {C}{C}" / "add {G}" | `AddMana` | Set `Amount` and `ManaColor` |
+| "gets +N/+M" | `ModifyPT` | Use fixed or dynamic `PowerDelta` and `ToughnessDelta` quantities |
+| "put N +1/+1 counter(s)" | `AddCounter` | Set `Amount` and `CounterKind` |
+| "move counters from ... onto ..." | `MoveCounters` | Set a typed `CounterSourceSpec` and destination `TargetIndex` |
+| "becomes a N/M [subtype] creature" | `ApplyContinuous` | Add layer-specific `ContinuousEffects` and a duration |
+| "create a N/M token" | `CreateToken` | `Source: game.TokenDef(tokenDef)` |
+| "tap target" | `Tap` | Set `TargetIndex` |
+| "fight" | `Fight` | Set `TargetIndex` and optional `RelatedTargetIndex` |
+| "search your library" | `Search` | Set `SearchSpec`, amount, and player target |
+| "reveal the top card" | `Reveal` | Publish a `LinkedKey` when a later instruction consumes the card |
+| "put [that card] onto the battlefield" | `PutOnBattlefield` | Use `CardBattlefieldSource` or `LinkedBattlefieldSource` |
+| "discover N" | `DiscoverCards` | `Amount: game.Fixed(N)` |
+
+Oracle patterns not represented by the listed primitives require an
+`ImplementationID`; do not fall back to `game.Effect`.
 
 ### TargetIndex convention
 
@@ -742,8 +713,13 @@ SpellAbility: opt.Val(game.SpellAbilityBody{
         Targets: []game.TargetSpec{
             {MinTargets: 1, MaxTargets: 1, Constraint: "any target"},
         },
-        Sequence: []game.Effect{
-            {Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
+        Sequence: []game.Instruction{
+            {
+                Primitive: game.Damage{
+                    Amount:    game.Fixed(3),
+                    Recipient: game.TargetRecipient(0),
+                },
+            },
         },
     },
 }),
@@ -761,8 +737,13 @@ ManaAbilities: []game.ManaAbilityBody{
         `,
         AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
         Content: game.PlainAbilityContent{
-            Sequence: []game.Effect{
-                {Type: game.EffectAddMana, Amount: 2, ManaColor: mana.Colorless},
+            Sequence: []game.Instruction{
+                {
+                    Primitive: game.AddMana{
+                        Amount:    game.Fixed(2),
+                        ManaColor: mana.Colorless,
+                    },
+                },
             },
         },
     },
@@ -788,57 +769,17 @@ StaticAbilities: []game.StaticAbilityBody{
 
 Oracle text: `Exile target creature. Its controller gains life equal to its power.`
 
-```go
-SpellAbility: opt.Val(game.SpellAbilityBody{
-    Text: `
-        Exile target creature. Its controller gains life equal to its power.
-    `,
-    Content: game.PlainAbilityContent{
-        Targets: []game.TargetSpec{
-            {MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
-        },
-        Sequence: []game.Effect{
-            {Type: game.EffectExile, TargetIndex: 0},
-            {Type: game.EffectGainLife, TargetIndex: 0, Description: "controller gains life equal to creature's power"},
-        },
-    },
-}),
-```
-
-Note: Swords to Plowshares needs both a dynamic amount
-(`DynamicAmountTargetPower`) and "that permanent's controller" as the life-gain
-recipient. The dynamic amount is supported, but target-controller-as-recipient
-still needs either a future recipient primitive or `ImplementationID`.
+This card cannot currently be expressed by the typed primitive set because
+there is no exile primitive or life-gain primitive. Set a descriptive
+`ImplementationID` and document both operations for the hand-written resolver.
 
 ### Example 5: Soul Warden (triggered ability)
 
 Oracle text: `Whenever another creature enters, you gain 1 life.`
 
-```go
-TriggeredAbilities: []game.TriggeredAbilityBody{
-    {
-        Text: `
-            Whenever another creature enters, you gain 1 life.
-        `,
-        Trigger: game.TriggerCondition{
-            Type: game.TriggerWhenever,
-            Pattern: game.TriggerPattern{
-                Event:                 game.EventPermanentEnteredBattlefield,
-                Source:                game.TriggerSourceAny,
-                ExcludeSelf:           true,
-                RequirePermanentTypes: []types.Card{types.Creature},
-            },
-        },
-        Content: game.PlainAbilityContent{
-            Sequence: []game.Effect{
-                {Type: game.EffectGainLife, Amount: 1, TargetIndex: -1},
-            },
-        },
-    },
-},
-```
-
-Note: "another creature" means the trigger should not fire for Soul Warden itself entering; `ExcludeSelf` handles that source/event comparison.
+The trigger pattern is expressible, but life gain is not yet a typed primitive.
+Set `ImplementationID` rather than authoring a legacy `game.Effect`. When a
+typed life-gain primitive is added, use `ExcludeSelf: true` for "another."
 
 ### Example 6: Glorious Anthem (static anthem effect)
 
@@ -850,12 +791,12 @@ StaticAbilities: []game.StaticAbilityBody{
         Text: `
             Creatures you control get +1/+1.
         `,
-        Effects: []game.Effect{
+        ContinuousEffects: []game.ContinuousEffect{
             {
-                Type:           game.EffectModifyPT,
+                Layer:          game.LayerPowerToughnessModify,
+                Selector:       game.EffectSelectorCreaturesYouControl,
                 PowerDelta:     1,
                 ToughnessDelta: 1,
-                Selector:       game.EffectSelectorCreaturesYouControl,
             },
         },
     },

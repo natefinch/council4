@@ -42,8 +42,10 @@ var CosmicHunger = &game.CardDef{
 							Constraint: "creature you control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerYou,
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
+								Controller: game.ControllerYou,
 							},
 						},
 						{
@@ -52,23 +54,28 @@ var CosmicHunger = &game.CardDef{
 							Constraint: "another creature, planeswalker, or battle",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature, types.Planeswalker, types.Battle},
-								Another:        true,
+								PermanentTypes: []types.Card{
+									types.Creature,
+									types.Planeswalker,
+									types.Battle,
+								},
+								Another: true,
 							},
 						},
 					},
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectDamage,
-							TargetIndex: 1,
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
-							DynamicAmount: opt.Val(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
-							}),
+							Primitive: game.Damage{
+								Amount: game.Dynamic(game.DynamicAmount{
+									Kind:        game.DynamicAmountTargetPower,
+									TargetIndex: 0,
+								}),
+								Recipient: game.TargetRecipient(1),
+								DamageSource: opt.Val(game.ObjectReference{
+									Kind:        game.ObjectReferenceTargetPermanent,
+									TargetIndex: 0,
+								}),
+							},
 						},
 					},
 				},

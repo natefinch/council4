@@ -40,8 +40,13 @@ var LightningBolt = &game.CardDef{
 						Constraint: "any target",
 					},
 				},
-				Sequence: []game.Effect{
-					{Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Damage{
+							Amount:    game.Fixed(3),
+							Recipient: game.TargetRecipient(0),
+						},
+					},
 				},
 			},
 		}),

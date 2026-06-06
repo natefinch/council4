@@ -102,6 +102,10 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	if !abilityHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, ability, obj.Controller, obj.Targets) {
 		return "countered by rules"
 	}
+	if body, ok := ability.ActivatedBody(); ok && body.Content != nil {
+		e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
+		return "resolved"
+	}
 	for i := range ability.Effects {
 		e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
 	}

@@ -41,8 +41,10 @@ var MasterSRebuke = &game.CardDef{
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 					{
@@ -51,19 +53,23 @@ var MasterSRebuke = &game.CardDef{
 						Constraint: "creature or planeswalker you don't control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature, types.Planeswalker},
-							Controller:     game.ControllerOpponent,
+							PermanentTypes: []types.Card{
+								types.Creature,
+								types.Planeswalker,
+							},
+							Controller: game.ControllerOpponent,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type: game.EffectDamage,
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind:        game.DynamicAmountTargetPower,
-							TargetIndex: 0,
-						}),
-						TargetIndex: 1,
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind:        game.DynamicAmountTargetPower,
+								TargetIndex: 0,
+							}),
+							Recipient: game.TargetRecipient(1),
+						},
 					},
 				},
 			},

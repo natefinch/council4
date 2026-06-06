@@ -408,8 +408,8 @@ func normalizeNestedAbilityEffects(ability *AbilityDef) {
 		normalizeEffectNestedAbilities(&ability.Effects[i])
 	}
 	for i := range ability.Modes {
-		for j := range ability.Modes[i].Effects {
-			normalizeEffectNestedAbilities(&ability.Modes[i].Effects[j])
+		for j := range ability.Modes[i].LegacyEffects {
+			normalizeEffectNestedAbilities(&ability.Modes[i].LegacyEffects[j])
 		}
 	}
 }
@@ -472,7 +472,7 @@ func lowerBodyToFlat(ability *AbilityDef) {
 		if body.Content != nil {
 			applyAbilityContent(ability, body.Content)
 		} else {
-			ability.Effects = append([]Effect(nil), body.Sequence...)
+			ability.Effects = append([]Effect(nil), body.LegacyEffects...)
 		}
 	case LoyaltyAbilityBody:
 		ability.Kind = ActivatedAbility
@@ -494,7 +494,7 @@ func lowerBodyToFlat(ability *AbilityDef) {
 		ability.Condition = body.Condition
 		ability.ZoneOfFunction = body.ZoneOfFunction
 		ability.KeywordAbilities = append([]KeywordAbility(nil), body.KeywordAbilities...)
-		ability.Effects = append([]Effect(nil), body.Effects...)
+		ability.Effects = append([]Effect(nil), body.LegacyEffects...)
 	default:
 	}
 }
@@ -543,7 +543,7 @@ func manaAbilityDef(body *ManaAbilityBody) AbilityDef {
 	if body.Content != nil {
 		applyAbilityContent(&ability, body.Content)
 	} else {
-		ability.Effects = append([]Effect(nil), body.Sequence...)
+		ability.Effects = append([]Effect(nil), body.LegacyEffects...)
 	}
 	return ability
 }
@@ -590,8 +590,8 @@ func replacementAbilityDef(body *ReplacementAbilityDef) AbilityDef {
 		Kind: StaticAbility,
 		Text: body.Text,
 		Body: StaticAbilityBody{
-			Text:    body.Text,
-			Effects: append([]Effect(nil), effects...),
+			Text:          body.Text,
+			LegacyEffects: append([]Effect(nil), effects...),
 		},
 		Effects: effects,
 	}
@@ -599,6 +599,7 @@ func replacementAbilityDef(body *ReplacementAbilityDef) AbilityDef {
 }
 
 func staticAbilityDef(body *StaticAbilityBody) AbilityDef {
+	effects := append([]Effect(nil), body.LegacyEffects...)
 	return AbilityDef{
 		Kind:             StaticAbility,
 		Text:             body.Text,
@@ -606,7 +607,7 @@ func staticAbilityDef(body *StaticAbilityBody) AbilityDef {
 		Condition:        body.Condition,
 		ZoneOfFunction:   body.ZoneOfFunction,
 		KeywordAbilities: append([]KeywordAbility(nil), body.KeywordAbilities...),
-		Effects:          append([]Effect(nil), body.Effects...),
+		Effects:          effects,
 	}
 }
 
@@ -614,14 +615,14 @@ func applyAbilityContent(ability *AbilityDef, content AbilityContent) {
 	switch c := content.(type) {
 	case PlainAbilityContent:
 		ability.Targets = append([]TargetSpec(nil), c.Targets...)
-		ability.Effects = append([]Effect(nil), c.Sequence...)
+		ability.Effects = append([]Effect(nil), c.LegacyEffects...)
 	case ModalAbilityContent:
 		ability.Targets = append([]TargetSpec(nil), c.SharedTargets...)
 		ability.Modes = make([]Mode, len(c.Modes))
 		for i := range c.Modes {
 			ability.Modes[i] = c.Modes[i]
 			ability.Modes[i].Targets = append([]TargetSpec(nil), c.Modes[i].Targets...)
-			ability.Modes[i].Effects = append([]Effect(nil), c.Modes[i].Effects...)
+			ability.Modes[i].LegacyEffects = append([]Effect(nil), c.Modes[i].LegacyEffects...)
 		}
 		ability.MinModes = c.MinModes
 		ability.MaxModes = c.MaxModes

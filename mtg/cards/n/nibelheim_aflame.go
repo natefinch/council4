@@ -44,46 +44,55 @@ var NibelheimAflame = &game.CardDef{
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectDamage,
-						TargetIndex: 0,
-						Selector:    game.EffectSelectorAllCreaturesExceptTarget,
-						DamageSource: opt.Val(game.ObjectReference{
-							Kind:        game.ObjectReferenceTargetPermanent,
-							TargetIndex: 0,
-						}),
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind:        game.DynamicAmountTargetPower,
-							TargetIndex: 0,
-						}),
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind:        game.DynamicAmountTargetPower,
+								TargetIndex: 0,
+							}),
+							Recipient: game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
+							DamageSource: opt.Val(game.ObjectReference{
+								Kind:        game.ObjectReferenceTargetPermanent,
+								TargetIndex: 0,
+							}),
+						},
 						Description: "target creature deals damage equal to its power to each other creature",
 					},
 					{
-						Type:        game.EffectDiscard,
-						TargetIndex: game.TargetIndexController,
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind: game.DynamicAmountControllerHandSize,
-						}),
+						Primitive: game.Discard{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountControllerHandSize,
+							}),
+							TargetIndex: game.TargetIndexController,
+						},
 						Condition: opt.Val(game.EffectCondition{
-							Condition: opt.Val(game.Condition{CastFromZone: opt.Val(game.ZoneGraveyard)}),
+							Condition: opt.Val(game.Condition{
+								CastFromZone: opt.Val(game.ZoneGraveyard),
+							}),
 						}),
 					},
 					{
-						Type:        game.EffectDraw,
-						Amount:      4,
-						TargetIndex: game.TargetIndexController,
+						Primitive: game.Draw{
+							Amount:      game.Fixed(4),
+							TargetIndex: game.TargetIndexController,
+						},
 						Condition: opt.Val(game.EffectCondition{
-							Condition: opt.Val(game.Condition{CastFromZone: opt.Val(game.ZoneGraveyard)}),
+							Condition: opt.Val(game.Condition{
+								CastFromZone: opt.Val(game.ZoneGraveyard),
+							}),
 						}),
 					},
 				},
 			},
+
 			AlternativeCosts: []game.AlternativeCost{
 				{
 					Label: "Flashback",

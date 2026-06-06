@@ -37,25 +37,20 @@ var FiresOfYavimaya = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Creatures you control have haste.
 			`,
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectApplyContinuous,
-					TargetIndex: game.TargetIndexController,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:       game.LayerAbility,
-							Selector:    game.EffectSelectorCreaturesYouControl,
-							AddKeywords: []game.Keyword{game.Haste},
-						},
-					},
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:    game.LayerAbility,
+				Selector: game.EffectSelectorCreaturesYouControl,
+				AddKeywords: []game.Keyword{
+					game.Haste,
 				},
 			},
 		},
+	},
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
@@ -63,7 +58,11 @@ var FiresOfYavimaya = func() *game.CardDef {
 			Text: `
 				Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostSacrificeSource}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostSacrificeSource,
+				},
+			},
 			Content: game.PlainAbilityContent{
 				Targets: []game.TargetSpec{
 					{
@@ -72,17 +71,20 @@ var FiresOfYavimaya = func() *game.CardDef {
 						Constraint: "creature",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectModifyPT,
-						TargetIndex:    0,
-						PowerDelta:     2,
-						ToughnessDelta: 2,
-						UntilEndOfTurn: true,
+						Primitive: game.ModifyPT{
+							TargetIndex:    0,
+							PowerDelta:     game.Fixed(2),
+							ToughnessDelta: game.Fixed(2),
+							Duration:       game.DurationUntilEndOfTurn,
+						},
 					},
 				},
 			},

@@ -53,15 +53,17 @@ var GigglingSkitterspike = func() *game.CardDef {
 				},
 			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectDamage,
-						TargetIndex:    game.TargetIndexController,
-						PlayerSelector: game.PlayerSelectorOpponents,
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind:   game.DynamicAmountObjectPower,
-							Object: game.ObjectReference{Kind: game.ObjectReferenceSourcePermanent},
-						}),
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountObjectPower,
+								Object: game.ObjectReference{
+									Kind: game.ObjectReferenceSourcePermanent,
+								},
+							}),
+							Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+						},
 					},
 				},
 			},
@@ -81,15 +83,17 @@ var GigglingSkitterspike = func() *game.CardDef {
 				},
 			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectDamage,
-						TargetIndex:    game.TargetIndexController,
-						PlayerSelector: game.PlayerSelectorOpponents,
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind:   game.DynamicAmountObjectPower,
-							Object: game.ObjectReference{Kind: game.ObjectReferenceSourcePermanent},
-						}),
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountObjectPower,
+								Object: game.ObjectReference{
+									Kind: game.ObjectReferenceSourcePermanent,
+								},
+							}),
+							Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+						},
 					},
 				},
 			},
@@ -111,15 +115,17 @@ var GigglingSkitterspike = func() *game.CardDef {
 				},
 			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectDamage,
-						TargetIndex:    game.TargetIndexController,
-						PlayerSelector: game.PlayerSelectorOpponents,
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind:   game.DynamicAmountObjectPower,
-							Object: game.ObjectReference{Kind: game.ObjectReferenceSourcePermanent},
-						}),
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountObjectPower,
+								Object: game.ObjectReference{
+									Kind: game.ObjectReferenceSourcePermanent,
+								},
+							}),
+							Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+						},
 					},
 				},
 			},
@@ -136,11 +142,12 @@ var GigglingSkitterspike = func() *game.CardDef {
 			}),
 			Timing: game.SorceryOnly,
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectMonstrosity,
-						Amount:      5,
-						TargetIndex: game.TargetIndexSourcePermanent,
+						Primitive: game.Monstrosity{
+							TargetIndex: game.TargetIndexSourcePermanent,
+							Amount:      game.Fixed(5),
+						},
 					},
 				},
 			},

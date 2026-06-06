@@ -43,8 +43,10 @@ var KhalniAmbush = func() *game.CardDef {
 							Constraint: "creature you control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerYou,
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
+								Controller: game.ControllerYou,
 							},
 						},
 						{
@@ -53,13 +55,17 @@ var KhalniAmbush = func() *game.CardDef {
 							Constraint: "creature you don't control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerNotYou,
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
+								Controller: game.ControllerNotYou,
 							},
 						},
 					},
-					Sequence: []game.Effect{
-						{Type: game.EffectFight},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Fight{},
+						},
 					},
 				},
 			}),
@@ -84,10 +90,19 @@ var KhalniAmbush = func() *game.CardDef {
 			Text: `
 				{T}: Add {G}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.AddMana{
+							Amount:    game.Fixed(1),
+							ManaColor: mana.G,
+						},
+					},
 				},
 			},
 		},

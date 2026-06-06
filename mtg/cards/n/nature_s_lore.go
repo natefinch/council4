@@ -34,17 +34,20 @@ var NatureSLore = &game.CardDef{
 				Search your library for a Forest card, put that card onto the battlefield, then shuffle.
 			`,
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectSearch,
-						TargetIndex: game.TargetIndexController,
-						Search: opt.Val(game.SearchSpec{
-							SourceZone:  game.ZoneLibrary,
-							Destination: game.ZoneBattlefield,
-							CardType:    opt.Val(types.Land),
-							SubtypesAny: []types.Sub{types.Forest},
-							Shuffle:     true,
-						}),
+						Primitive: game.Search{
+							TargetIndex: game.TargetIndexController,
+							Spec: game.SearchSpec{
+								SourceZone:  game.ZoneLibrary,
+								Destination: game.ZoneBattlefield,
+								CardType:    opt.Val(types.Land),
+								SubtypesAny: []types.Sub{
+									types.Forest,
+								},
+								Shuffle: true,
+							},
+						},
 					},
 				},
 			},

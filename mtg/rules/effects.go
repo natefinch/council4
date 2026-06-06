@@ -43,15 +43,21 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 	switch abilityContent := content.(type) {
 	case game.PlainAbilityContent:
 		for i := range abilityContent.Sequence {
-			e.resolveEffectWithChoices(g, obj, &abilityContent.Sequence[i], agents, log)
+			e.resolveInstructionWithChoices(g, obj, &abilityContent.Sequence[i], agents, log)
+		}
+		for i := range abilityContent.LegacyEffects {
+			e.resolveEffectWithChoices(g, obj, &abilityContent.LegacyEffects[i], agents, log)
 		}
 	case game.ModalAbilityContent:
 		for _, modeIndex := range obj.ChosenModes {
 			if modeIndex < 0 || modeIndex >= len(abilityContent.Modes) {
 				continue
 			}
-			for i := range abilityContent.Modes[modeIndex].Effects {
-				e.resolveEffectWithChoices(g, obj, &abilityContent.Modes[modeIndex].Effects[i], agents, log)
+			for i := range abilityContent.Modes[modeIndex].Sequence {
+				e.resolveInstructionWithChoices(g, obj, &abilityContent.Modes[modeIndex].Sequence[i], agents, log)
+			}
+			for i := range abilityContent.Modes[modeIndex].LegacyEffects {
+				e.resolveEffectWithChoices(g, obj, &abilityContent.Modes[modeIndex].LegacyEffects[i], agents, log)
 			}
 		}
 	case nil:
@@ -87,14 +93,19 @@ func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, e
 	newEffectResolver(e, g, obj, agents, log).resolve(effect)
 }
 
+func (e *Engine) resolveInstructionWithChoices(g *game.Game, obj *game.StackObject, instr *game.Instruction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	newEffectResolver(e, g, obj, agents, log).resolveInstruction(instr)
+}
+
 // effectResolver bundles the per-resolution context so the resolution body
 // can be a method rather than a free function with five repeated parameters.
 type effectResolver struct {
-	engine *Engine
-	game   *game.Game
-	obj    *game.StackObject
-	agents [game.NumPlayers]PlayerAgent
-	log    *TurnLog
+	engine             *Engine
+	game               *game.Game
+	obj                *game.StackObject
+	agents             [game.NumPlayers]PlayerAgent
+	log                *TurnLog
+	currentInstruction *game.Instruction
 }
 
 func newEffectResolver(e *Engine, g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *effectResolver {
@@ -121,6 +132,24 @@ func (res effectResolved) record(obj *game.StackObject, effect *game.Effect) {
 		rememberEffectExcessDamage(obj, effect, res.excessDamage)
 	}
 	rememberEffectResolutionResult(obj, effect, res.accepted, res.succeeded, res.amount)
+}
+
+func effectResultGateFromInstruction(gate game.InstructionResultGate) opt.V[game.EffectResultCondition] {
+	if gate.Key == "" {
+		return opt.V[game.EffectResultCondition]{}
+	}
+	return opt.Val(game.EffectResultCondition{
+		LinkID:    string(gate.Key),
+		Accepted:  gate.Accepted,
+		Succeeded: gate.Succeeded,
+	})
+}
+
+func recordResultKey(obj *game.StackObject, key game.ResultKey, res effectResolved) {
+	if key == "" {
+		return
+	}
+	res.record(obj, &game.Effect{LinkID: string(key)})
 }
 
 // amount returns the computed effect amount, resolving any dynamic formula.
@@ -173,6 +202,50 @@ func (r *effectResolver) resolve(effect *game.Effect) {
 	}
 	res := r.executeEffect(effect)
 	res.record(r.obj, effect)
+}
+
+func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
+	if instr == nil {
+		return
+	}
+	// Envelope: evaluate conditions first.
+	if !effectConditionSatisfied(r.game, r.obj, instr.Condition) {
+		return
+	}
+	if !cardConditionSatisfied(r.game, r.obj, instr.CardCondition) {
+		return
+	}
+	if instr.ResultGate.Exists {
+		gate := effectResultGateFromInstruction(instr.ResultGate.Val)
+		if !effectResultConditionSatisfied(r.obj, gate) {
+			return
+		}
+	}
+	if instr.Primitive == nil {
+		panic("rules: nil instruction primitive")
+	}
+	// Optional: ask the controller before executing.
+	accepted := true
+	if instr.Optional {
+		accepted = r.engine.chooseMay(r.game, r.agents, stackObjectController(r.obj), "Apply optional effect?", r.log)
+	}
+	if !accepted {
+		if instr.PublishResult != "" {
+			recordResultKey(r.obj, instr.PublishResult, effectResolved{accepted: false})
+		}
+		return
+	}
+	kind := instr.Primitive.Kind()
+	handler := globalPrimitiveRegistry.dispatch(kind)
+	prev := r.currentInstruction
+	r.currentInstruction = instr
+	defer func() {
+		r.currentInstruction = prev
+	}()
+	res := handler(r, instr.Primitive)
+	if instr.PublishResult != "" {
+		recordResultKey(r.obj, instr.PublishResult, res)
+	}
 }
 
 // executeEffect runs the effect instruction and returns the outcome. It does
@@ -990,12 +1063,14 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 	case game.DynamicAmountCountSelector:
 		amount = len(selectedPermanentIDs(g, controller, nil, dynamic.Selector))
 	case game.DynamicAmountPreviousEffectResult:
-		if obj != nil && dynamic.LinkID != "" {
-			amount = obj.ResolvedAmounts[dynamic.LinkID]
+		key := dynamicResultKey(dynamic)
+		if obj != nil && key != "" {
+			amount = obj.ResolvedAmounts[key]
 		}
 	case game.DynamicAmountPreviousEffectExcessDamage:
-		if obj != nil && dynamic.LinkID != "" {
-			amount = obj.ResolvedExcessDamage[dynamic.LinkID]
+		key := dynamicResultKey(dynamic)
+		if obj != nil && key != "" {
+			amount = obj.ResolvedExcessDamage[key]
 		}
 	case game.DynamicAmountOpponentCount:
 		amount = len(aliveOpponents(g, controller))
@@ -1017,6 +1092,13 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+func dynamicResultKey(dynamic game.DynamicAmount) string {
+	if dynamic.ResultKey != "" {
+		return string(dynamic.ResultKey)
+	}
+	return dynamic.LinkID
 }
 
 func resolvedObjectPower(g *game.Game, resolved *resolvedObjectReference) int {

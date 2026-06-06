@@ -73,31 +73,37 @@ var HalanaAndAlenaPartners = func() *game.CardDef {
 						Constraint: "another creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
-							Another:        true,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
+							Another:    true,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectAddCounter,
-						TargetIndex: 0,
-						CounterKind: counter.PlusOnePlusOne,
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind:        game.DynamicAmountTargetPower,
-							TargetIndex: game.TargetIndexSourcePermanent,
-						}),
+						Primitive: game.AddCounter{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind:        game.DynamicAmountTargetPower,
+								TargetIndex: game.TargetIndexSourcePermanent,
+							}),
+							TargetIndex: 0,
+							CounterKind: counter.PlusOnePlusOne,
+						},
 					},
 					{
-						Type:           game.EffectApplyContinuous,
-						TargetIndex:    0,
-						UntilEndOfTurn: true,
-						ContinuousEffects: []game.ContinuousEffect{
-							{
-								Layer:       game.LayerAbility,
-								AddKeywords: []game.Keyword{game.Haste},
+						Primitive: game.ApplyContinuous{
+							TargetIndex: 0,
+							ContinuousEffects: []game.ContinuousEffect{
+								{
+									Layer: game.LayerAbility,
+									AddKeywords: []game.Keyword{
+										game.Haste,
+									},
+								},
 							},
+							Duration: game.DurationUntilEndOfTurn,
 						},
 					},
 				},

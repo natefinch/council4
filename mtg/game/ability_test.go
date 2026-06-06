@@ -95,10 +95,17 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	if !ok {
 		t.Fatalf("body content = %T, want PlainAbilityContent", body.Content)
 	}
-	if len(content.Sequence) != 1 || content.Sequence[0].Type != EffectCreateToken || !content.Sequence[0].TokenCopy.Exists {
-		t.Fatalf("effects = %+v, want create token-copy effect", content.Sequence)
+	if len(content.Sequence) != 1 {
+		t.Fatalf("sequence = %+v, want one create-token instruction", content.Sequence)
 	}
-	spec := content.Sequence[0].TokenCopy.Val
+	prim, ok := content.Sequence[0].Primitive.(CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want CreateToken", content.Sequence[0].Primitive)
+	}
+	spec, ok := prim.Source.TokenCopy()
+	if !ok {
+		t.Fatalf("token source = %+v, want token-copy source", prim.Source)
+	}
 	if spec.Source != TokenCopySourceSourceCard || !spec.NoManaCost {
 		t.Fatalf("token copy source/no-cost = %v/%v, want source card with no mana cost", spec.Source, spec.NoManaCost)
 	}
@@ -117,7 +124,7 @@ func TestAbilityBodyAccessorsPreferBody(t *testing.T) {
 			Trigger: TriggerCondition{
 				Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield},
 			},
-			Content: PlainAbilityContent{Sequence: []Effect{{Type: EffectDraw}}},
+			Content: PlainAbilityContent{LegacyEffects: []Effect{{Type: EffectDraw}}},
 		},
 	}
 
@@ -154,7 +161,7 @@ func TestLegacyAbilityBodyViews(t *testing.T) {
 	if !ok {
 		t.Fatalf("content = %T, want PlainAbilityContent", body.Content)
 	}
-	if len(content.Targets) != 1 || len(content.Sequence) != 1 {
+	if len(content.Targets) != 1 || len(content.LegacyEffects) != 1 {
 		t.Fatalf("content = %+v, want one target and one effect", content)
 	}
 }
@@ -191,7 +198,7 @@ func TestAbilityFieldAccessorsPreferBody(t *testing.T) {
 func TestBodyOnlySpellAbilityBodyLowers(t *testing.T) {
 	src := AbilityDef{Body: SpellAbilityBody{
 		Text:    "Draw two cards.",
-		Content: PlainAbilityContent{Sequence: []Effect{{Type: EffectDraw, Amount: 2}}},
+		Content: PlainAbilityContent{LegacyEffects: []Effect{{Type: EffectDraw, Amount: 2}}},
 		AdditionalCosts: []AdditionalCost{
 			{Kind: AdditionalCostTap, Text: "Tap"},
 		},
@@ -253,7 +260,7 @@ func TestBodyOnlyManaAbilityBodyPlainLowers(t *testing.T) {
 	src := AbilityDef{Body: ManaAbilityBody{
 		Text:            "{T}: Add {G}.",
 		AdditionalCosts: []AdditionalCost{{Kind: AdditionalCostTap}},
-		Content: PlainAbilityContent{Sequence: []Effect{
+		Content: PlainAbilityContent{LegacyEffects: []Effect{
 			{Type: EffectAddMana, Amount: 1},
 		}},
 	}}
@@ -278,8 +285,8 @@ func TestBodyOnlyManaAbilityBodyModalLowers(t *testing.T) {
 		Text: "{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.",
 		Content: ModalAbilityContent{
 			Modes: []Mode{
-				{Text: "Add {R}{R}.", Effects: []Effect{{Type: EffectAddMana}, {Type: EffectAddMana}}},
-				{Text: "Add {G}{G}.", Effects: []Effect{{Type: EffectAddMana}, {Type: EffectAddMana}}},
+				{Text: "Add {R}{R}.", LegacyEffects: []Effect{{Type: EffectAddMana}, {Type: EffectAddMana}}},
+				{Text: "Add {G}{G}.", LegacyEffects: []Effect{{Type: EffectAddMana}, {Type: EffectAddMana}}},
 			},
 		},
 	}}
@@ -298,8 +305,8 @@ func TestBodyOnlyLoyaltyAbilityBodyLowers(t *testing.T) {
 		Text:        "-2: Fight.",
 		LoyaltyCost: -2,
 		Content: PlainAbilityContent{
-			Targets:  []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
-			Sequence: []Effect{{Type: EffectFight}},
+			Targets:       []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
+			LegacyEffects: []Effect{{Type: EffectFight}},
 		},
 	}}
 	got := src.WithBody()
@@ -333,7 +340,7 @@ func TestBodyOnlyTriggeredAbilityBodyLowers(t *testing.T) {
 		},
 		Optional:           true,
 		MaxTriggersPerTurn: 1,
-		Content: PlainAbilityContent{Sequence: []Effect{
+		Content: PlainAbilityContent{LegacyEffects: []Effect{
 			{Type: EffectDraw, Amount: 1},
 		}},
 	}}
@@ -367,7 +374,7 @@ func TestBodyOnlyStaticAbilityBodyLowers(t *testing.T) {
 		KeywordAbilities: []KeywordAbility{
 			SimpleKeyword{Kind: Flying},
 		},
-		Effects: []Effect{{Type: EffectApplyContinuous}},
+		LegacyEffects: []Effect{{Type: EffectApplyContinuous}},
 	}}
 	got := src.WithBody()
 	if got.Kind != StaticAbility {

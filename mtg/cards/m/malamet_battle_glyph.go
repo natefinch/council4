@@ -41,8 +41,10 @@ var MalametBattleGlyph = &game.CardDef{
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 					{
@@ -51,23 +53,30 @@ var MalametBattleGlyph = &game.CardDef{
 						Constraint: "creature you don't control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerOpponent,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerOpponent,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectAddCounter,
-						Amount:      1,
-						CounterKind: counter.PlusOnePlusOne,
-						TargetIndex: 0,
+						Primitive: game.AddCounter{
+							Amount:      game.Fixed(1),
+							TargetIndex: 0,
+							CounterKind: counter.PlusOnePlusOne,
+						},
 						Condition: opt.Val(game.EffectCondition{
-							Condition: opt.Val(game.Condition{TargetEnteredThisTurn: opt.Val(0)}),
+							Condition: opt.Val(game.Condition{
+								TargetEnteredThisTurn: opt.Val(0),
+							}),
 						}),
 						Description: "if the creature you control entered this turn, put a +1/+1 counter on it",
 					},
-					{Type: game.EffectFight},
+					{
+						Primitive: game.Fight{},
+					},
 				},
 			},
 		}),

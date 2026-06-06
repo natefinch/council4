@@ -30,10 +30,19 @@ var BlazemireVerge = &game.CardDef{
 				Text: `
 					{T}: Add {B}.
 				`,
-				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				AdditionalCosts: []game.AdditionalCost{
+					{
+						Kind: game.AdditionalCostTap,
+					},
+				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.B, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.AddMana{
+								Amount:    game.Fixed(1),
+								ManaColor: mana.B,
+							},
+						},
 					},
 				},
 			},
@@ -41,15 +50,27 @@ var BlazemireVerge = &game.CardDef{
 				Text: `
 					{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
 				`,
-				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				AdditionalCosts: []game.AdditionalCost{
+					{
+						Kind: game.AdditionalCostTap,
+					},
+				},
 				ActivationCondition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
-						SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
+						SubtypesAny: []types.Sub{
+							types.Swamp,
+							types.Mountain,
+						},
 					},
 				}),
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.AddMana{
+								Amount:    game.Fixed(1),
+								ManaColor: mana.R,
+							},
+						},
 					},
 				},
 			},

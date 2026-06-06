@@ -155,6 +155,49 @@ func TestValidateCardReportsTargetIndexOutOfRange(t *testing.T) {
 	}
 }
 
+func TestValidateCardReportsTypedInstructionTargetIndexOutOfRange(t *testing.T) {
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:       "Bad Typed Target",
+		OracleText: "Destroy target creature.",
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1}},
+				Sequence: []game.Instruction{{
+					Primitive: game.Destroy{TargetIndex: 1},
+				}},
+			},
+		}),
+	}}
+
+	issues := ValidateCard(card, ValidationOptions{})
+
+	if !hasIssue(issues, IssueInvalidAbilityBody) {
+		t.Fatalf("issues = %+v, want %s", issues, IssueInvalidAbilityBody)
+	}
+}
+
+func TestValidateCardRejectsLegacyEffectsInCategorizedBody(t *testing.T) {
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:       "Legacy Body",
+		OracleText: "Draw a card.",
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				LegacyEffects: []game.Effect{{
+					Type:        game.EffectDraw,
+					Amount:      1,
+					TargetIndex: game.TargetIndexController,
+				}},
+			},
+		}),
+	}}
+
+	issues := ValidateCard(card, ValidationOptions{})
+
+	if !hasIssue(issues, IssueLegacyEffectConfiguration) {
+		t.Fatalf("issues = %+v, want %s", issues, IssueLegacyEffectConfiguration)
+	}
+}
+
 func TestValidateCardReportsInvalidTargetSpec(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Bad Target Spec",
 		OracleText: "Destroy up to negative one target creature.",
@@ -536,7 +579,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 			name: "plain content target index",
 			body: game.SpellAbilityBody{
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{{Type: game.EffectDestroy, TargetIndex: 0}},
+					LegacyEffects: []game.Effect{{Type: game.EffectDestroy, TargetIndex: 0}},
 				},
 			},
 			code: IssueTargetIndexOutOfRange,
@@ -546,7 +589,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 			body: game.SpellAbilityBody{
 				Content: game.ModalAbilityContent{
 					Modes: []game.Mode{{
-						Effects: []game.Effect{{Type: game.EffectCopy}},
+						LegacyEffects: []game.Effect{{Type: game.EffectCopy}},
 					}},
 				},
 			},

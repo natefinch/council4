@@ -37,25 +37,20 @@ var GimliSRecklessMight = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Creatures you control have haste.
 			`,
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectApplyContinuous,
-					TargetIndex: game.TargetIndexController,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:       game.LayerAbility,
-							Selector:    game.EffectSelectorCreaturesYouControl,
-							AddKeywords: []game.Keyword{game.Haste},
-						},
-					},
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:    game.LayerAbility,
+				Selector: game.EffectSelectorCreaturesYouControl,
+				AddKeywords: []game.Keyword{
+					game.Haste,
 				},
 			},
 		},
+	},
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
@@ -73,8 +68,13 @@ var GimliSRecklessMight = func() *game.CardDef {
 				InterveningCondition: opt.Val(game.Condition{
 					Text: "creatures you control have total power 8 or greater",
 					ControllerControls: game.PermanentFilter{
-						Types:      []types.Card{types.Creature},
-						TotalPower: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 8}),
+						Types: []types.Card{
+							types.Creature,
+						},
+						TotalPower: opt.Val(compare.Int{
+							Op:    compare.GreaterOrEqual,
+							Value: 8,
+						}),
 					},
 				}),
 			},
@@ -86,9 +86,11 @@ var GimliSRecklessMight = func() *game.CardDef {
 						Constraint: "attacking creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
-							CombatState:    game.CombatStateAttacking,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller:  game.ControllerYou,
+							CombatState: game.CombatStateAttacking,
 						},
 					},
 					{
@@ -97,17 +99,20 @@ var GimliSRecklessMight = func() *game.CardDef {
 						Constraint: "creature you don't control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerOpponent,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerOpponent,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:               game.EffectFight,
-						TargetIndex:        0,
-						RelatedTargetIndex: opt.Val(1),
-						Description:        "target attacking creature you control fights up to one target creature you don't control",
+						Primitive: game.Fight{
+							TargetIndex:        0,
+							RelatedTargetIndex: opt.Val(1),
+						},
+						Description: "target attacking creature you control fights up to one target creature you don't control",
 					},
 				},
 			},

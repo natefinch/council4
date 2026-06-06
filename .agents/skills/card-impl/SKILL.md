@@ -47,7 +47,7 @@ Given one or more Magic: The Gathering card names:
 
 ## Important rules
 
-- Use only `EffectType`, `Keyword`, and other enum values that exist in the codebase. Do not invent new ones.
+- Use only existing typed `game.Primitive` variants, `Keyword` values, and other enums. Do not author `game.Effect` or invent new primitives in a card file.
 - Use `types.Creature`/`types.Forest`/etc. from `mtg/game/types`; do not use old `game.Type*` or `game.*Subtype*` names.
 - `mtg/game/types` includes named constants for every Comprehensive Rules 205.3 subtype. Prefer those constants for new card definitions instead of `types.Sub("...")`; fall back to `types.Sub` only if the subtype truly is not present.
 - For multiple plain non-parameterized keywords, append one reusable `StaticAbilityBody` template per keyword to `StaticAbilities` (for example `game.DeathtouchStaticBody, game.IndestructibleStaticBody`). Do not use old `game.DeathtouchAbility`-style `AbilityDef` constructors in new card source.

@@ -27,11 +27,15 @@ func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutpu
 	if !ok {
 		return permanentManaOutputResult{}, false
 	}
-	amount := ability.Effects[0].Amount
+	addMana, ok := simpleAddMana(ability)
+	if !ok {
+		return permanentManaOutputResult{}, false
+	}
+	amount := addMana.Amount.Value()
 	if amount <= 0 {
 		amount = 1
 	}
-	return permanentManaOutputResult{color: ability.Effects[0].ManaColor, amount: amount, snow: s.PermanentHasSupertype(permanent, types.Snow)}, true
+	return permanentManaOutputResult{color: addMana.ManaColor, amount: amount, snow: s.PermanentHasSupertype(permanent, types.Snow)}, true
 }
 
 func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
@@ -70,11 +74,11 @@ func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Perma
 			hasTapCost(ability) &&
 			!ability.ManaCost.Exists &&
 			len(ability.Targets) == 0 &&
-			len(ability.Effects) == 1 &&
-			ability.Effects[0].Type == game.EffectAddMana {
+			isSimpleAddMana(ability) {
 			if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick {
 				return 0, nil, false
 			}
+
 			if !s.ActivationConditionSatisfied(playerID, permanent, ability) {
 				continue
 			}
@@ -82,6 +86,31 @@ func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Perma
 		}
 	}
 	return 0, nil, false
+}
+
+func isSimpleAddMana(ability *game.AbilityDef) bool {
+	_, ok := simpleAddMana(ability)
+	return ok
+}
+
+func simpleAddMana(ability *game.AbilityDef) (game.AddMana, bool) {
+	if body, ok := ability.ManaBody(); ok && body.Content != nil {
+		content, ok := body.Content.(game.PlainAbilityContent)
+		if !ok || len(content.Sequence) != 1 || content.Sequence[0].Primitive == nil ||
+			content.Sequence[0].Primitive.Kind() != game.PrimitiveAddMana {
+			return game.AddMana{}, false
+		}
+		addMana, ok := content.Sequence[0].Primitive.(game.AddMana)
+		return addMana, ok && !addMana.Amount.IsDynamic() && addMana.ChoiceFrom == ""
+	}
+	if len(ability.Effects) != 1 || ability.Effects[0].Type != game.EffectAddMana {
+		return game.AddMana{}, false
+	}
+	effect := &ability.Effects[0]
+	return game.AddMana{
+		Amount:    game.Fixed(effect.Amount),
+		ManaColor: effect.ManaColor,
+	}, true
 }
 
 func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) []*game.Permanent {

@@ -9,11 +9,14 @@ import (
 )
 
 func resolveFight(g *game.Game, obj *game.StackObject, effect *game.Effect) {
-	firstIndex := effect.TargetIndex
 	secondIndex := 1
 	if effect.RelatedTargetIndex.Exists {
 		secondIndex = effect.RelatedTargetIndex.Val
 	}
+	resolveFightTargets(g, obj, effect.TargetIndex, secondIndex)
+}
+
+func resolveFightTargets(g *game.Game, obj *game.StackObject, firstIndex, secondIndex int) {
 	first, firstOK := effectPermanentTarget(g, obj, firstIndex)
 	second, secondOK := effectPermanentTarget(g, obj, secondIndex)
 	if !firstOK || !secondOK || first.ObjectID == second.ObjectID || !permanentHasType(g, first, types.Creature) || !permanentHasType(g, second, types.Creature) {
@@ -212,7 +215,7 @@ func clueTokenDef() *game.CardDef {
 		Abilities: []game.AbilityDef{{
 			Kind:            game.ActivatedAbility,
 			Text:            "{2}, Sacrifice this artifact: Draw a card.",
-			Body:            game.ActivatedAbilityBody{Text: "{2}, Sacrifice this artifact: Draw a card.", ManaCost: opt.Val(two), AdditionalCosts: append([]game.AdditionalCost(nil), additionalCosts...), Content: game.PlainAbilityContent{Sequence: append([]game.Effect(nil), effects...)}},
+			Body:            game.ActivatedAbilityBody{Text: "{2}, Sacrifice this artifact: Draw a card.", ManaCost: opt.Val(two), AdditionalCosts: append([]game.AdditionalCost(nil), additionalCosts...), Content: game.PlainAbilityContent{LegacyEffects: append([]game.Effect(nil), effects...)}},
 			ManaCost:        opt.Val(two),
 			AdditionalCosts: additionalCosts,
 			Effects:         effects,

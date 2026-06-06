@@ -46,26 +46,34 @@ var BirdsOfParadise = func() *game.CardDef {
 			Text: `
 				{T}: Add one mana of any color.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectChoose,
-						TargetIndex: game.TargetIndexController,
-						Choice: opt.Val(game.ResolutionChoice{
-							Kind:   game.ResolutionChoiceMana,
-							Prompt: "Choose a color",
-							Colors: []mana.Color{
-								mana.W, mana.U, mana.B, mana.R, mana.G,
+						Primitive: game.Choose{
+							Choice: game.ResolutionChoice{
+								Kind:   game.ResolutionChoiceMana,
+								Prompt: "Choose a color",
+								Colors: []mana.Color{
+									mana.W,
+									mana.U,
+									mana.B,
+									mana.R,
+									mana.G,
+								},
 							},
-						}),
-						LinkID: "birds-color",
+							PublishChoice: game.ChoiceKey("birds-color"),
+						},
 					},
 					{
-						Type:         game.EffectAddMana,
-						Amount:       1,
-						TargetIndex:  game.TargetIndexController,
-						ChoiceLinkID: "birds-color",
+						Primitive: game.AddMana{
+							Amount:     game.Fixed(1),
+							ChoiceFrom: game.ChoiceKey("birds-color"),
+						},
 					},
 				},
 			},

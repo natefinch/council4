@@ -5,7 +5,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/opt"
 )
 
 // HauntedRidge is the card definition for Haunted Ridge.
@@ -43,24 +42,31 @@ var HauntedRidge = func() *game.CardDef {
 			Text: `
 				{T}: Add {B} or {R}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectChoose,
-						TargetIndex: game.TargetIndexController,
-						Choice: opt.Val(game.ResolutionChoice{
-							Kind:   game.ResolutionChoiceMana,
-							Prompt: "Choose a color",
-							Colors: []mana.Color{mana.B, mana.R},
-						}),
-						LinkID: "haunted-ridge-color",
+						Primitive: game.Choose{
+							Choice: game.ResolutionChoice{
+								Kind:   game.ResolutionChoiceMana,
+								Prompt: "Choose a color",
+								Colors: []mana.Color{
+									mana.B,
+									mana.R,
+								},
+							},
+							PublishChoice: game.ChoiceKey("haunted-ridge-color"),
+						},
 					},
 					{
-						Type:         game.EffectAddMana,
-						Amount:       1,
-						TargetIndex:  game.TargetIndexController,
-						ChoiceLinkID: "haunted-ridge-color",
+						Primitive: game.AddMana{
+							Amount:     game.Fixed(1),
+							ChoiceFrom: game.ChoiceKey("haunted-ridge-color"),
+						},
 					},
 				},
 			},

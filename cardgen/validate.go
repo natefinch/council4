@@ -26,6 +26,7 @@ const (
 	IssueInvalidTargetSpec          ValidationCode = "invalid-target-spec"
 	IssueInvalidKeywordAbility      ValidationCode = "invalid-keyword-ability"
 	IssueInvalidAbilityBody         ValidationCode = "invalid-ability-body"
+	IssueLegacyEffectConfiguration  ValidationCode = "legacy-effect-configuration"
 	IssueUnregisteredImplementation ValidationCode = "unregistered-implementation"
 	IssueImplementationRequired     ValidationCode = "implementation-required"
 	IssueGeneratedCardNotFound      ValidationCode = "generated-card-not-found"
@@ -110,6 +111,13 @@ func (v *cardValidator) validateFace(faceName, path string, face *game.CardFace,
 	if !walkAbilities {
 		return
 	}
+	for i := range face.StaticAbilities {
+		body := &face.StaticAbilities[i]
+		if len(body.LegacyEffects) != 0 || len(body.Sequence) != 0 {
+			bodyPath := appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i))
+			v.add(faceName, bodyPath, IssueLegacyEffectConfiguration, "static abilities must use direct declarations")
+		}
+	}
 	for i := range abilities {
 		abilityPath := appendPath(path, fmt.Sprintf("Abilities[%d]", i))
 		v.validateAbility(faceName, abilityPath, &abilities[i])
@@ -132,24 +140,27 @@ func (v *cardValidator) validateAbility(faceName, path string, ability *game.Abi
 	for i := range ability.KeywordAbilities {
 		v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), ability.KeywordAbilities[i], ability.Targets)
 	}
-	for i := range ability.Targets {
-		v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("Targets[%d]", i)), &ability.Targets[i])
-	}
-	for i := range ability.Effects {
-		v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Effects[%d]", i)), &ability.Effects[i], ability.Targets)
-	}
-	for i := range ability.Modes {
-		mode := &ability.Modes[i]
-		modePath := appendPath(path, fmt.Sprintf("Modes[%d]", i))
-		for j := range mode.Targets {
-			v.validateTargetSpec(faceName, appendPath(modePath, fmt.Sprintf("Targets[%d]", j)), &mode.Targets[j])
+	if ability.Body == nil {
+		for i := range ability.Targets {
+			v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("Targets[%d]", i)), &ability.Targets[i])
 		}
-		targets := mode.Targets
-		if len(targets) == 0 {
-			targets = ability.Targets
+		for i := range ability.Effects {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Effects[%d]", i)), &ability.Effects[i], ability.Targets)
 		}
-		for j := range mode.Effects {
-			v.validateEffect(faceName, appendPath(modePath, fmt.Sprintf("Effects[%d]", j)), &mode.Effects[j], targets)
+		for i := range ability.Modes {
+			mode := &ability.Modes[i]
+			modePath := appendPath(path, fmt.Sprintf("Modes[%d]", i))
+			for j := range mode.Targets {
+				v.validateTargetSpec(faceName, appendPath(modePath, fmt.Sprintf("Targets[%d]", j)), &mode.Targets[j])
+			}
+			targets := mode.Targets
+			if len(targets) == 0 {
+				targets = ability.Targets
+			}
+			for j := range mode.LegacyEffects {
+				v.validateEffect(faceName, appendPath(modePath, fmt.Sprintf("LegacyEffects[%d]", j)), &mode.LegacyEffects[j], targets)
+			}
+			v.validateInstructionSequence(faceName, appendPath(modePath, "Sequence"), mode.Sequence, targets)
 		}
 	}
 }
@@ -167,8 +178,14 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
-		for i := range abilityBody.Sequence {
-			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Sequence[%d]", i)), &abilityBody.Sequence[i], nil)
+		for i := range abilityBody.LegacyEffects {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("LegacyEffects[%d]", i)), &abilityBody.LegacyEffects[i], nil)
+		}
+		if len(abilityBody.LegacyEffects) != 0 {
+			v.add(faceName, appendPath(path, "LegacyEffects"), IssueLegacyEffectConfiguration, "categorized ability bodies must use typed Instructions")
+		}
+		if abilityBody.Content != nil {
+			v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 		}
 	case game.LoyaltyAbilityBody:
 		if abilityBody.ActivationCondition.Exists {
@@ -187,9 +204,13 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 		for i := range abilityBody.KeywordAbilities {
 			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
 		}
-		for i := range abilityBody.Effects {
-			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Effects[%d]", i)), &abilityBody.Effects[i], targets)
+		for i := range abilityBody.LegacyEffects {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("LegacyEffects[%d]", i)), &abilityBody.LegacyEffects[i], targets)
 		}
+		for i := range abilityBody.ContinuousEffects {
+			v.validateContinuousEffect(faceName, appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i)), &abilityBody.ContinuousEffects[i])
+		}
+		v.validateInstructionSequence(faceName, appendPath(path, "Sequence"), abilityBody.Sequence, targets)
 	case nil:
 		v.add(faceName, path, IssueInvalidAbilityBody, "ability body is nil")
 	default:
@@ -207,9 +228,13 @@ func (v *cardValidator) validateAbilityContent(faceName, path string, content ga
 		if len(targets) == 0 {
 			targets = fallbackTargets
 		}
-		for i := range abilityContent.Sequence {
-			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("Sequence[%d]", i)), &abilityContent.Sequence[i], targets)
+		for i := range abilityContent.LegacyEffects {
+			v.validateEffect(faceName, appendPath(path, fmt.Sprintf("LegacyEffects[%d]", i)), &abilityContent.LegacyEffects[i], targets)
 		}
+		if len(abilityContent.LegacyEffects) != 0 {
+			v.add(faceName, appendPath(path, "LegacyEffects"), IssueLegacyEffectConfiguration, "ability content must use typed Instructions")
+		}
+		v.validateInstructionSequence(faceName, appendPath(path, "Sequence"), abilityContent.Sequence, targets)
 	case game.ModalAbilityContent:
 		for i := range abilityContent.SharedTargets {
 			v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("SharedTargets[%d]", i)), &abilityContent.SharedTargets[i])
@@ -224,9 +249,13 @@ func (v *cardValidator) validateAbilityContent(faceName, path string, content ga
 			if len(targets) == 0 {
 				targets = abilityContent.SharedTargets
 			}
-			for j := range mode.Effects {
-				v.validateEffect(faceName, appendPath(modePath, fmt.Sprintf("Effects[%d]", j)), &mode.Effects[j], targets)
+			for j := range mode.LegacyEffects {
+				v.validateEffect(faceName, appendPath(modePath, fmt.Sprintf("LegacyEffects[%d]", j)), &mode.LegacyEffects[j], targets)
 			}
+			if len(mode.LegacyEffects) != 0 {
+				v.add(faceName, appendPath(modePath, "LegacyEffects"), IssueLegacyEffectConfiguration, "ability modes must use typed Instructions")
+			}
+			v.validateInstructionSequence(faceName, appendPath(modePath, "Sequence"), mode.Sequence, targets)
 		}
 	case nil:
 		v.add(faceName, path, IssueInvalidAbilityBody, "ability content is nil")
@@ -273,6 +302,12 @@ func (v *cardValidator) validateKeywordAbility(faceName, path string, ability ga
 		v.add(faceName, path, IssueInvalidKeywordAbility, "keyword ability is nil")
 	default:
 		v.add(faceName, path, IssueInvalidKeywordAbility, fmt.Sprintf("unknown keyword ability %T", ability))
+	}
+}
+
+func (v *cardValidator) validateInstructionSequence(faceName, path string, seq []game.Instruction, targets ...[]game.TargetSpec) {
+	if err := game.ValidateInstructionSequence(seq, targets...); err != nil {
+		v.add(faceName, path, IssueInvalidAbilityBody, err.Error())
 	}
 }
 
@@ -394,14 +429,16 @@ func (v *cardValidator) validateEffect(faceName, path string, effect *game.Effec
 		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), &effect.Replacement.Val.Condition.Val, targets)
 	}
 	for i := range effect.ContinuousEffects {
-		continuous := &effect.ContinuousEffects[i]
-		continuousPath := appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i))
-		for j := range continuous.AddAbilities {
-			v.validateAbility(faceName, appendPath(continuousPath, fmt.Sprintf("AddAbilities[%d]", j)), &continuous.AddAbilities[j])
-		}
+		v.validateContinuousEffect(faceName, appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i)), &effect.ContinuousEffects[i])
 	}
 	for i := range effect.EmblemAbilities {
 		v.validateAbility(faceName, appendPath(path, fmt.Sprintf("EmblemAbilities[%d]", i)), &effect.EmblemAbilities[i])
+	}
+}
+
+func (v *cardValidator) validateContinuousEffect(faceName, path string, continuous *game.ContinuousEffect) {
+	for i := range continuous.AddAbilities {
+		v.validateAbility(faceName, appendPath(path, fmt.Sprintf("AddAbilities[%d]", i)), &continuous.AddAbilities[i])
 	}
 }
 

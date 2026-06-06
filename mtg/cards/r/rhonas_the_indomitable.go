@@ -50,31 +50,35 @@ var RhonasTheIndomitable = func() *game.CardDef {
 		game.IndestructibleStaticBody,
 	)
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Rhonas can't attack or block unless you control another creature with power 4 or greater.
 			`,
-			Condition: opt.Val(game.Condition{
-				Text:   "unless you control another creature with power 4 or greater",
-				Negate: true,
-				ControllerControls: game.PermanentFilter{
-					Types:         []types.Card{types.Creature},
-					Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
-					ExcludeSource: true,
+		Condition: opt.Val(game.Condition{
+			Text:   "unless you control another creature with power 4 or greater",
+			Negate: true,
+			ControllerControls: game.PermanentFilter{
+				Types: []types.Card{
+					types.Creature,
 				},
-			}),
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectApplyRule,
-					TargetIndex: game.TargetIndexController,
-					RuleEffects: []game.RuleEffect{
-						{Kind: game.RuleEffectCantAttack, AffectedSource: true},
-						{Kind: game.RuleEffectCantBlock, AffectedSource: true},
-					},
-				},
+				Power: opt.Val(compare.Int{
+					Op:    compare.GreaterOrEqual,
+					Value: 4,
+				}),
+				ExcludeSource: true,
+			},
+		}),
+		RuleEffects: []game.RuleEffect{
+			{
+				Kind:           game.RuleEffectCantAttack,
+				AffectedSource: true,
+			},
+			{
+				Kind:           game.RuleEffectCantBlock,
+				AffectedSource: true,
 			},
 		},
+	},
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
@@ -94,28 +98,33 @@ var RhonasTheIndomitable = func() *game.CardDef {
 						Constraint: "another target creature",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Another:        true,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Another: true,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectModifyPT,
-						TargetIndex:    0,
-						PowerDelta:     2,
-						ToughnessDelta: 0,
-						UntilEndOfTurn: true,
+						Primitive: game.ModifyPT{
+							TargetIndex: 0,
+							PowerDelta:  game.Fixed(2),
+							Duration:    game.DurationUntilEndOfTurn,
+						},
 					},
 					{
-						Type:           game.EffectApplyContinuous,
-						TargetIndex:    0,
-						UntilEndOfTurn: true,
-						ContinuousEffects: []game.ContinuousEffect{
-							{
-								Layer:       game.LayerAbility,
-								AddKeywords: []game.Keyword{game.Trample},
+						Primitive: game.ApplyContinuous{
+							TargetIndex: 0,
+							ContinuousEffects: []game.ContinuousEffect{
+								{
+									Layer: game.LayerAbility,
+									AddKeywords: []game.Keyword{
+										game.Trample,
+									},
+								},
 							},
+							Duration: game.DurationUntilEndOfTurn,
 						},
 					},
 				},

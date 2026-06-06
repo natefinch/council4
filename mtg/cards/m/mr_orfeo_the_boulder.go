@@ -56,22 +56,25 @@ var MrOrfeoTheBoulder = &game.CardDef{
 							Constraint: "creature",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
 							},
 						},
 					},
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:           game.EffectModifyPT,
-							TargetIndex:    0,
-							UntilEndOfTurn: true,
-							PowerDeltaDynamic: opt.Val(game.DynamicAmount{
-								Kind: game.DynamicAmountObjectPower,
-								Object: game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
-								},
-							}),
+							Primitive: game.ModifyPT{
+								TargetIndex: 0,
+								PowerDelta: game.Dynamic(game.DynamicAmount{
+									Kind: game.DynamicAmountObjectPower,
+									Object: game.ObjectReference{
+										Kind:        game.ObjectReferenceTargetPermanent,
+										TargetIndex: 0,
+									},
+								}),
+								Duration: game.DurationUntilEndOfTurn,
+							},
 						},
 					},
 				},

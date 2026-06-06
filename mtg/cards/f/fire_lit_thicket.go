@@ -31,10 +31,19 @@ var FireLitThicket = &game.CardDef{
 				Text: `
 					{T}: Add {C}.
 				`,
-				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				AdditionalCosts: []game.AdditionalCost{
+					{
+						Kind: game.AdditionalCostTap,
+					},
+				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.C, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.AddMana{
+								Amount:    game.Fixed(1),
+								ManaColor: mana.C,
+							},
+						},
 					},
 				},
 			},
@@ -45,28 +54,62 @@ var FireLitThicket = &game.CardDef{
 				ManaCost: opt.Val(cost.Mana{
 					cost.HybridMana(mana.R, mana.G),
 				}),
-				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				AdditionalCosts: []game.AdditionalCost{
+					{
+						Kind: game.AdditionalCostTap,
+					},
+				},
 				Content: game.ModalAbilityContent{
 					Modes: []game.Mode{
-						{
+						game.Mode{
 							Text: "Add {R}{R}.",
-							Effects: []game.Effect{
-								{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
-								{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
+							Sequence: []game.Instruction{
+								{
+									Primitive: game.AddMana{
+										Amount:    game.Fixed(1),
+										ManaColor: mana.R,
+									},
+								},
+								{
+									Primitive: game.AddMana{
+										Amount:    game.Fixed(1),
+										ManaColor: mana.R,
+									},
+								},
 							},
 						},
-						{
+						game.Mode{
 							Text: "Add {R}{G}.",
-							Effects: []game.Effect{
-								{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
-								{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+							Sequence: []game.Instruction{
+								{
+									Primitive: game.AddMana{
+										Amount:    game.Fixed(1),
+										ManaColor: mana.R,
+									},
+								},
+								{
+									Primitive: game.AddMana{
+										Amount:    game.Fixed(1),
+										ManaColor: mana.G,
+									},
+								},
 							},
 						},
-						{
+						game.Mode{
 							Text: "Add {G}{G}.",
-							Effects: []game.Effect{
-								{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
-								{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+							Sequence: []game.Instruction{
+								{
+									Primitive: game.AddMana{
+										Amount:    game.Fixed(1),
+										ManaColor: mana.G,
+									},
+								},
+								{
+									Primitive: game.AddMana{
+										Amount:    game.Fixed(1),
+										ManaColor: mana.G,
+									},
+								},
 							},
 						},
 					},

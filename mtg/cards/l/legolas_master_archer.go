@@ -61,12 +61,13 @@ var LegolasMasterArcher = func() *game.CardDef {
 				},
 			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectAddCounter,
-						Amount:      1,
-						CounterKind: counter.PlusOnePlusOne,
-						TargetIndex: game.TargetIndexSourcePermanent,
+						Primitive: game.AddCounter{
+							Amount:      game.Fixed(1),
+							TargetIndex: game.TargetIndexSourcePermanent,
+							CounterKind: counter.PlusOnePlusOne,
+						},
 					},
 				},
 			},
@@ -85,8 +86,10 @@ var LegolasMasterArcher = func() *game.CardDef {
 					Controller:       game.TriggerControllerYou,
 					SpellTargetAllow: game.TargetAllowPermanent,
 					SpellTargetPattern: opt.Val(game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerNotYou,
+						PermanentTypes: []types.Card{
+							types.Creature,
+						},
+						Controller: game.ControllerNotYou,
 					}),
 				},
 			},
@@ -99,18 +102,23 @@ var LegolasMasterArcher = func() *game.CardDef {
 						Constraint: "creature",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectDamage,
-						TargetIndex: 0,
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind:   game.DynamicAmountObjectPower,
-							Object: game.ObjectReference{Kind: game.ObjectReferenceSourcePermanent},
-						}),
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountObjectPower,
+								Object: game.ObjectReference{
+									Kind: game.ObjectReferenceSourcePermanent,
+								},
+							}),
+							Recipient: game.TargetRecipient(0),
+						},
 					},
 				},
 			},

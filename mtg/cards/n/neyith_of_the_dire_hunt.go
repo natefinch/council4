@@ -45,15 +45,22 @@ var NeyithOfTheDireHunt = &game.CardDef{
 				Trigger: game.TriggerCondition{
 					Type: game.TriggerWhenever,
 					Pattern: game.TriggerPattern{
-						Event:                 game.EventFight,
-						Controller:            game.TriggerControllerYou,
-						RequirePermanentTypes: []types.Card{types.Creature},
-						OneOrMore:             true,
+						Event:      game.EventFight,
+						Controller: game.TriggerControllerYou,
+						RequirePermanentTypes: []types.Card{
+							types.Creature,
+						},
+						OneOrMore: true,
 					},
 				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Draw{
+								Amount:      game.Fixed(1),
+								TargetIndex: game.TargetIndexController,
+							},
+						},
 					},
 				},
 			},
@@ -64,16 +71,23 @@ var NeyithOfTheDireHunt = &game.CardDef{
 				Trigger: game.TriggerCondition{
 					Type: game.TriggerWhenever,
 					Pattern: game.TriggerPattern{
-						Event:                 game.EventBlockerDeclared,
-						Subject:               game.TriggerSubjectBlockedAttacker,
-						Controller:            game.TriggerControllerYou,
-						RequirePermanentTypes: []types.Card{types.Creature},
-						OneOrMore:             true,
+						Event:      game.EventBlockerDeclared,
+						Subject:    game.TriggerSubjectBlockedAttacker,
+						Controller: game.TriggerControllerYou,
+						RequirePermanentTypes: []types.Card{
+							types.Creature,
+						},
+						OneOrMore: true,
 					},
 				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Draw{
+								Amount:      game.Fixed(1),
+								TargetIndex: game.TargetIndexController,
+							},
+						},
 					},
 				},
 			},
@@ -97,51 +111,59 @@ var NeyithOfTheDireHunt = &game.CardDef{
 							Constraint: "creature",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
 							},
 						},
 					},
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectPay,
-							TargetIndex: game.TargetIndexController,
-							Optional:    true,
-							Payment: opt.Val(game.ResolutionPayment{
-								Prompt: "Pay {2}{R/G}?",
-								ManaCost: opt.Val(cost.Mana{
-									cost.O(2),
-									cost.HybridMana(mana.R, mana.G),
-								}),
-							}),
-							LinkID: "neyith-combat-pay",
-						},
-						{
-							Type:           game.EffectModifyPT,
-							TargetIndex:    0,
-							UntilEndOfTurn: true,
-							ResultCondition: opt.Val(game.EffectResultCondition{
-								LinkID:    "neyith-combat-pay",
-								Accepted:  game.TriTrue,
-								Succeeded: game.TriTrue,
-							}),
-							PowerDeltaDynamic: opt.Val(game.DynamicAmount{
-								Kind: game.DynamicAmountObjectPower,
-								Object: game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
+							Primitive: game.Pay{
+								Payment: game.ResolutionPayment{
+									Prompt: "Pay {2}{R/G}?",
+									ManaCost: opt.Val(cost.Mana{
+										cost.O(2),
+										cost.HybridMana(mana.R, mana.G),
+									}),
 								},
-							}),
+							},
+							Optional:      true,
+							PublishResult: game.ResultKey("neyith-combat-pay"),
 						},
 						{
-							Type:           game.EffectApplyRule,
-							TargetIndex:    0,
-							UntilEndOfTurn: true,
-							ResultCondition: opt.Val(game.EffectResultCondition{
-								LinkID:    "neyith-combat-pay",
+							Primitive: game.ModifyPT{
+								TargetIndex: 0,
+								PowerDelta: game.Dynamic(game.DynamicAmount{
+									Kind: game.DynamicAmountObjectPower,
+									Object: game.ObjectReference{
+										Kind:        game.ObjectReferenceTargetPermanent,
+										TargetIndex: 0,
+									},
+								}),
+								Duration: game.DurationUntilEndOfTurn,
+							},
+							ResultGate: opt.Val(game.InstructionResultGate{
+								Key:       game.ResultKey("neyith-combat-pay"),
 								Accepted:  game.TriTrue,
 								Succeeded: game.TriTrue,
 							}),
-							RuleEffects: []game.RuleEffect{{Kind: game.RuleEffectMustBeBlocked}},
+						},
+						{
+							Primitive: game.ApplyRule{
+								TargetIndex: 0,
+								RuleEffects: []game.RuleEffect{
+									{
+										Kind: game.RuleEffectMustBeBlocked,
+									},
+								},
+								Duration: game.DurationUntilEndOfTurn,
+							},
+							ResultGate: opt.Val(game.InstructionResultGate{
+								Key:       game.ResultKey("neyith-combat-pay"),
+								Accepted:  game.TriTrue,
+								Succeeded: game.TriTrue,
+							}),
 						},
 					},
 				},

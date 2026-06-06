@@ -42,8 +42,10 @@ var ContestOfClaws = &game.CardDef{
 							Constraint: "creature you control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerYou,
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
+								Controller: game.ControllerYou,
 							},
 						},
 						{
@@ -52,35 +54,38 @@ var ContestOfClaws = &game.CardDef{
 							Constraint: "another target creature",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Another:        true,
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
+								Another: true,
 							},
 						},
 					},
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectDamage,
-							TargetIndex: 1,
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
-							DynamicAmount: opt.Val(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
-							}),
-							ResultAmount: game.EffectResultAmountExcessDamage,
-							LinkID:       "excess",
+							Primitive: game.Damage{
+								Amount: game.Dynamic(game.DynamicAmount{
+									Kind:        game.DynamicAmountTargetPower,
+									TargetIndex: 0,
+								}),
+								Recipient: game.TargetRecipient(1),
+								DamageSource: opt.Val(game.ObjectReference{
+									Kind:        game.ObjectReferenceTargetPermanent,
+									TargetIndex: 0,
+								}),
+								ResultAmountKind: game.EffectResultAmountExcessDamage,
+							},
+							PublishResult: game.ResultKey("excess"),
 						},
 						{
-							Type:        game.EffectDiscover,
-							TargetIndex: game.TargetIndexController,
-							DynamicAmount: opt.Val(game.DynamicAmount{
-								Kind:   game.DynamicAmountPreviousEffectExcessDamage,
-								LinkID: "excess",
-							}),
-							ResultCondition: opt.Val(game.EffectResultCondition{
-								LinkID:    "excess",
+							Primitive: game.DiscoverCards{
+								Amount: game.Dynamic(game.DynamicAmount{
+									Kind:      game.DynamicAmountPreviousEffectExcessDamage,
+									ResultKey: game.ResultKey("excess"),
+								}),
+							},
+							ResultGate: opt.Val(game.InstructionResultGate{
+								Key:       game.ResultKey("excess"),
 								Succeeded: game.TriTrue,
 							}),
 						},

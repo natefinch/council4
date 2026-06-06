@@ -35,18 +35,24 @@ var Farseek = &game.CardDef{
 					Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.
 				`,
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectSearch,
-							TargetIndex: game.TargetIndexController,
-							Search: opt.Val(game.SearchSpec{
-								SourceZone:   game.ZoneLibrary,
-								Destination:  game.ZoneBattlefield,
-								CardType:     opt.Val(types.Land),
-								SubtypesAny:  []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain},
-								EntersTapped: true,
-								Shuffle:      true,
-							}),
+							Primitive: game.Search{
+								TargetIndex: game.TargetIndexController,
+								Spec: game.SearchSpec{
+									SourceZone:  game.ZoneLibrary,
+									Destination: game.ZoneBattlefield,
+									CardType:    opt.Val(types.Land),
+									SubtypesAny: []types.Sub{
+										types.Plains,
+										types.Island,
+										types.Swamp,
+										types.Mountain,
+									},
+									EntersTapped: true,
+									Shuffle:      true,
+								},
+							},
 						},
 					},
 				},

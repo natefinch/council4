@@ -5,7 +5,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/opt"
 )
 
 // CinderGlade is the card definition for Cinder Glade.
@@ -38,25 +37,30 @@ var CinderGlade = func() *game.CardDef {
 			{T}: Add {R} or {G}.
 		`,
 		AdditionalCosts: []game.AdditionalCost{
-			{Kind: game.AdditionalCostTap},
+			{
+				Kind: game.AdditionalCostTap,
+			},
 		},
 		Content: game.PlainAbilityContent{
-			Sequence: []game.Effect{
+			Sequence: []game.Instruction{
 				{
-					Type:        game.EffectChoose,
-					TargetIndex: game.TargetIndexController,
-					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceMana,
-						Prompt: "Choose a color",
-						Colors: []mana.Color{mana.R, mana.G},
-					}),
-					LinkID: "cinder-glade-color",
+					Primitive: game.Choose{
+						Choice: game.ResolutionChoice{
+							Kind:   game.ResolutionChoiceMana,
+							Prompt: "Choose a color",
+							Colors: []mana.Color{
+								mana.R,
+								mana.G,
+							},
+						},
+						PublishChoice: game.ChoiceKey("cinder-glade-color"),
+					},
 				},
 				{
-					Type:         game.EffectAddMana,
-					Amount:       1,
-					TargetIndex:  game.TargetIndexController,
-					ChoiceLinkID: "cinder-glade-color",
+					Primitive: game.AddMana{
+						Amount:     game.Fixed(1),
+						ChoiceFrom: game.ChoiceKey("cinder-glade-color"),
+					},
 				},
 			},
 		},

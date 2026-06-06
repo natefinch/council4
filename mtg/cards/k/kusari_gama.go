@@ -34,35 +34,30 @@ var KusariGama = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Equipped creature has "{2}: This creature gets +1/+0 until end of turn."
 			`,
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectApplyContinuous,
-					TargetIndex: game.TargetIndexSourcePermanent,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:    game.LayerAbility,
-							Selector: game.EffectSelectorEquippedCreature,
-							AddAbilities: []game.AbilityDef{
-								{
-									Body: game.ActivatedAbilityBody{
-										Text: `
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:    game.LayerAbility,
+				Selector: game.EffectSelectorEquippedCreature,
+				AddAbilities: []game.AbilityDef{
+					{
+						Body: game.ActivatedAbilityBody{
+							Text: `
 											{2}: This creature gets +1/+0 until end of turn.
 										`,
-										ManaCost: opt.Val(cost.Mana{cost.O(2)}),
-										Content: game.PlainAbilityContent{
-											Sequence: []game.Effect{
-												{
-													Type:           game.EffectModifyPT,
-													PowerDelta:     1,
-													UntilEndOfTurn: true,
-													TargetIndex:    game.TargetIndexSourcePermanent,
-												},
-											},
+							ManaCost: opt.Val(cost.Mana{
+								cost.O(2),
+							}),
+							Content: game.PlainAbilityContent{
+								Sequence: []game.Instruction{
+									{
+										Primitive: game.ModifyPT{
+											TargetIndex: game.TargetIndexSourcePermanent,
+											PowerDelta:  game.Fixed(1),
+											Duration:    game.DurationUntilEndOfTurn,
 										},
 									},
 								},
@@ -72,6 +67,7 @@ var KusariGama = func() *game.CardDef {
 				},
 			},
 		},
+	},
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
@@ -89,14 +85,14 @@ var KusariGama = func() *game.CardDef {
 				},
 			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectDamage,
-						TargetIndex: game.TargetIndexSourcePermanent,
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind: game.DynamicAmountEventDamage,
-						}),
-						Selector: game.EffectSelectorOtherCreaturesDefendingPlayerControls,
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountEventDamage,
+							}),
+							Recipient: game.SelectorRecipient(game.EffectSelectorOtherCreaturesDefendingPlayerControls),
+						},
 					},
 				},
 			},
@@ -120,16 +116,20 @@ var KusariGama = func() *game.CardDef {
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 				},
 			},
 			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{Cost: cost.Mana{
-					cost.O(3),
-				}},
+				game.EquipKeyword{
+					Cost: cost.Mana{
+						cost.O(3),
+					},
+				},
 			},
 		},
 	)

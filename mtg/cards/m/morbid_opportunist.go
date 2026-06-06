@@ -40,16 +40,23 @@ var MorbidOpportunist = &game.CardDef{
 				Trigger: game.TriggerCondition{
 					Type: game.TriggerWhenever,
 					Pattern: game.TriggerPattern{
-						Event:                 game.EventPermanentDied,
-						ExcludeSelf:           true,
-						RequirePermanentTypes: []types.Card{types.Creature},
-						OneOrMore:             true,
+						Event:       game.EventPermanentDied,
+						ExcludeSelf: true,
+						RequirePermanentTypes: []types.Card{
+							types.Creature,
+						},
+						OneOrMore: true,
 					},
 				},
 				MaxTriggersPerTurn: 1,
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Draw{
+								Amount:      game.Fixed(1),
+								TargetIndex: game.TargetIndexController,
+							},
+						},
 					},
 				},
 			},

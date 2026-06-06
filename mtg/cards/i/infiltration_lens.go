@@ -40,16 +40,23 @@ var InfiltrationLens = func() *game.CardDef {
 			Trigger: game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
-					Event:                 game.EventBlockerDeclared,
-					Source:                game.TriggerSourceAttachedPermanent,
-					Subject:               game.TriggerSubjectBlockedAttacker,
-					RequirePermanentTypes: []types.Card{types.Creature},
+					Event:   game.EventBlockerDeclared,
+					Source:  game.TriggerSourceAttachedPermanent,
+					Subject: game.TriggerSubjectBlockedAttacker,
+					RequirePermanentTypes: []types.Card{
+						types.Creature,
+					},
 				},
 			},
 			Optional: true,
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectDraw, Amount: 2, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Draw{
+							Amount:      game.Fixed(2),
+							TargetIndex: game.TargetIndexController,
+						},
+					},
 				},
 			},
 		},
@@ -72,16 +79,20 @@ var InfiltrationLens = func() *game.CardDef {
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 				},
 			},
 			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{Cost: cost.Mana{
-					cost.O(1),
-				}},
+				game.EquipKeyword{
+					Cost: cost.Mana{
+						cost.O(1),
+					},
+				},
 			},
 		},
 	)

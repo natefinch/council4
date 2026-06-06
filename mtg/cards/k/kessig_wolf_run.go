@@ -35,10 +35,19 @@ var KessigWolfRun = func() *game.CardDef {
 			Text: `
 				{T}: Add {C}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.C, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.AddMana{
+							Amount:    game.Fixed(1),
+							ManaColor: mana.C,
+						},
+					},
 				},
 			},
 		},
@@ -54,7 +63,11 @@ var KessigWolfRun = func() *game.CardDef {
 				cost.R,
 				cost.G,
 			}),
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
 				Targets: []game.TargetSpec{
 					{
@@ -63,28 +76,34 @@ var KessigWolfRun = func() *game.CardDef {
 						Constraint: "creature",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectModifyPT,
-						TargetIndex:    0,
-						UntilEndOfTurn: true,
-						PowerDeltaDynamic: opt.Val(game.DynamicAmount{
-							Kind: game.DynamicAmountX,
-						}),
+						Primitive: game.ModifyPT{
+							TargetIndex: 0,
+							PowerDelta: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountX,
+							}),
+							Duration: game.DurationUntilEndOfTurn,
+						},
 					},
 					{
-						Type:           game.EffectApplyContinuous,
-						TargetIndex:    0,
-						UntilEndOfTurn: true,
-						ContinuousEffects: []game.ContinuousEffect{
-							{
-								Layer:       game.LayerAbility,
-								AddKeywords: []game.Keyword{game.Trample},
+						Primitive: game.ApplyContinuous{
+							TargetIndex: 0,
+							ContinuousEffects: []game.ContinuousEffect{
+								{
+									Layer: game.LayerAbility,
+									AddKeywords: []game.Keyword{
+										game.Trample,
+									},
+								},
 							},
+							Duration: game.DurationUntilEndOfTurn,
 						},
 					},
 				},

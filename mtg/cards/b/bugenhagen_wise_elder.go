@@ -62,7 +62,9 @@ var BugenhagenWiseElder = func() *game.CardDef {
 				InterveningIf: "if you control a creature with power 7 or greater",
 				InterveningCondition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
-						Types: []types.Card{types.Creature},
+						Types: []types.Card{
+							types.Creature,
+						},
 						Power: opt.Val(compare.Int{
 							Op:    compare.GreaterOrEqual,
 							Value: 7,
@@ -71,8 +73,13 @@ var BugenhagenWiseElder = func() *game.CardDef {
 				}),
 			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Draw{
+							Amount:      game.Fixed(1),
+							TargetIndex: game.TargetIndexController,
+						},
+					},
 				},
 			},
 		},
@@ -83,26 +90,34 @@ var BugenhagenWiseElder = func() *game.CardDef {
 			Text: `
 				{T}: Add one mana of any color.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectChoose,
-						TargetIndex: game.TargetIndexController,
-						Choice: opt.Val(game.ResolutionChoice{
-							Kind:   game.ResolutionChoiceMana,
-							Prompt: "Choose a color",
-							Colors: []mana.Color{
-								mana.W, mana.U, mana.B, mana.R, mana.G,
+						Primitive: game.Choose{
+							Choice: game.ResolutionChoice{
+								Kind:   game.ResolutionChoiceMana,
+								Prompt: "Choose a color",
+								Colors: []mana.Color{
+									mana.W,
+									mana.U,
+									mana.B,
+									mana.R,
+									mana.G,
+								},
 							},
-						}),
-						LinkID: "bugenhagen-color",
+							PublishChoice: game.ChoiceKey("bugenhagen-color"),
+						},
 					},
 					{
-						Type:         game.EffectAddMana,
-						Amount:       1,
-						TargetIndex:  game.TargetIndexController,
-						ChoiceLinkID: "bugenhagen-color",
+						Primitive: game.AddMana{
+							Amount:     game.Fixed(1),
+							ChoiceFrom: game.ChoiceKey("bugenhagen-color"),
+						},
 					},
 				},
 			},

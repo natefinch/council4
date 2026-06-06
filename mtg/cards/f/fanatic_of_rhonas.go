@@ -47,10 +47,19 @@ var FanaticOfRhonas = func() *game.CardDef {
 			Text: `
 				{T}: Add {G}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.AddMana{
+							Amount:    game.Fixed(1),
+							ManaColor: mana.G,
+						},
+					},
 				},
 			},
 		},
@@ -61,11 +70,17 @@ var FanaticOfRhonas = func() *game.CardDef {
 			Text: `
 				Ferocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			ActivationCondition: opt.Val(game.Condition{
 				Text: "you control a creature with power 4 or greater",
 				ControllerControls: game.PermanentFilter{
-					Types: []types.Card{types.Creature},
+					Types: []types.Card{
+						types.Creature,
+					},
 					Power: opt.Val(compare.Int{
 						Op:    compare.GreaterOrEqual,
 						Value: 4,
@@ -73,11 +88,31 @@ var FanaticOfRhonas = func() *game.CardDef {
 				},
 			}),
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.AddMana{
+							Amount:    game.Fixed(1),
+							ManaColor: mana.G,
+						},
+					},
+					{
+						Primitive: game.AddMana{
+							Amount:    game.Fixed(1),
+							ManaColor: mana.G,
+						},
+					},
+					{
+						Primitive: game.AddMana{
+							Amount:    game.Fixed(1),
+							ManaColor: mana.G,
+						},
+					},
+					{
+						Primitive: game.AddMana{
+							Amount:    game.Fixed(1),
+							ManaColor: mana.G,
+						},
+					},
 				},
 			},
 		},

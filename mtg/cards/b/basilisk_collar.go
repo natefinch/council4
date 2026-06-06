@@ -32,25 +32,21 @@ var BasiliskCollar = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Equipped creature has deathtouch and lifelink.
 			`,
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectApplyContinuous,
-					TargetIndex: game.TargetIndexSourcePermanent,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:       game.LayerAbility,
-							Selector:    game.EffectSelectorEquippedCreature,
-							AddKeywords: []game.Keyword{game.Deathtouch, game.Lifelink},
-						},
-					},
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:    game.LayerAbility,
+				Selector: game.EffectSelectorEquippedCreature,
+				AddKeywords: []game.Keyword{
+					game.Deathtouch,
+					game.Lifelink,
 				},
 			},
 		},
+	},
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
@@ -73,16 +69,20 @@ var BasiliskCollar = func() *game.CardDef {
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 				},
 			},
 			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{Cost: cost.Mana{
-					cost.O(2),
-				}},
+				game.EquipKeyword{
+					Cost: cost.Mana{
+						cost.O(2),
+					},
+				},
 			},
 		},
 	)

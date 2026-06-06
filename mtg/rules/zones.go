@@ -74,17 +74,17 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 
 func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, continuous []game.ContinuousEffect) {
 	for i := range continuous {
-		effect := &continuous[i]
-		effect.ID = g.IDGen.Next()
-		effect.SourceObjectID = permanent.ObjectID
-		effect.SourceCardID = permanent.CardInstanceID
-		effect.Controller = permanent.Controller
-		effect.Timestamp = permanent.Timestamp()
-		effect.AffectedObjectID = permanent.ObjectID
-		if effect.Duration == game.DurationPermanent {
-			effect.Duration = game.DurationPermanent
+		template := continuous[i]
+		template.ID = g.IDGen.Next()
+		template.SourceObjectID = permanent.ObjectID
+		template.SourceCardID = permanent.CardInstanceID
+		template.Controller = permanent.Controller
+		template.Timestamp = permanent.Timestamp()
+		template.AffectedObjectID = permanent.ObjectID
+		if template.Duration == game.DurationPermanent {
+			template.Duration = game.DurationPermanent
 		}
-		g.ContinuousEffects = append(g.ContinuousEffects, *effect)
+		g.ContinuousEffects = append(g.ContinuousEffects, template)
 	}
 }
 

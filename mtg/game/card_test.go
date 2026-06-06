@@ -58,18 +58,18 @@ func TestCardFaceAbilityDefsIncludesCategorizedAbilities(t *testing.T) {
 	face := CardFace{
 		SpellAbility: opt.Val(SpellAbilityBody{
 			Text:    "Draw a card.",
-			Content: PlainAbilityContent{Sequence: []Effect{{Type: EffectDraw}}},
+			Content: PlainAbilityContent{LegacyEffects: []Effect{{Type: EffectDraw}}},
 		}),
 		ManaAbilities: []ManaAbilityBody{{
-			Text:     "Add one mana.",
-			Sequence: []Effect{{Type: EffectAddMana}},
+			Text:          "Add one mana.",
+			LegacyEffects: []Effect{{Type: EffectAddMana}},
 		}},
 		TriggeredAbilities: []TriggeredAbilityBody{{
 			Text: "When this enters, draw a card.",
 			Trigger: TriggerCondition{
 				Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield},
 			},
-			Content: PlainAbilityContent{Sequence: []Effect{{Type: EffectDraw}}},
+			Content: PlainAbilityContent{LegacyEffects: []Effect{{Type: EffectDraw}}},
 		}},
 		ReplacementAbilities: []ReplacementAbilityDef{{
 			Text:    "If this would die, exile it instead.",
@@ -134,7 +134,7 @@ func TestWithAbilityBodiesNormalizesGrantedAbilities(t *testing.T) {
 	grantedActivated := AbilityDef{Body: ActivatedAbilityBody{
 		Text:     "{2}: This creature gets +1/+0 until end of turn.",
 		ManaCost: opt.Val(cost.Mana{cost.O(2)}),
-		Content: PlainAbilityContent{Sequence: []Effect{
+		Content: PlainAbilityContent{LegacyEffects: []Effect{
 			{Type: EffectModifyPT, PowerDelta: 1, UntilEndOfTurn: true, TargetIndex: TargetIndexSourcePermanent},
 		}},
 	}}
@@ -147,7 +147,7 @@ func TestWithAbilityBodiesNormalizesGrantedAbilities(t *testing.T) {
 		StaticAbilities: []StaticAbilityBody{
 			{
 				Text: "Equipped creature has an ability.",
-				Effects: []Effect{{
+				LegacyEffects: []Effect{{
 					Type: EffectApplyContinuous,
 					ContinuousEffects: []ContinuousEffect{{
 						Layer:        LayerAbility,
@@ -162,7 +162,7 @@ func TestWithAbilityBodiesNormalizesGrantedAbilities(t *testing.T) {
 			Text: "Choose one.",
 			Content: ModalAbilityContent{Modes: []Mode{{
 				Text: "Create an emblem.",
-				Effects: []Effect{{
+				LegacyEffects: []Effect{{
 					Type:            EffectCreateEmblem,
 					EmblemAbilities: []AbilityDef{emblemAbility},
 				}},
@@ -175,7 +175,7 @@ func TestWithAbilityBodiesNormalizesGrantedAbilities(t *testing.T) {
 	if sourceGranted.Kind != ActivatedAbility || len(sourceGranted.Effects) != 1 {
 		t.Fatalf("slow-path granted ability was not normalized: %+v", sourceGranted)
 	}
-	sourceEmblem := sourceAbilities[0].Modes[0].Effects[0].EmblemAbilities[0]
+	sourceEmblem := sourceAbilities[0].Modes[0].LegacyEffects[0].EmblemAbilities[0]
 	if sourceEmblem.Kind != StaticAbility || !sourceEmblem.HasKeyword(Flying) {
 		t.Fatalf("slow-path emblem ability was not normalized: %+v", sourceEmblem)
 	}
@@ -236,14 +236,14 @@ func TestWithAbilityBodiesNormalizesGrantedAbilities(t *testing.T) {
 		t.Fatal("emblem ability HasKeyword(Flying) = false after normalization")
 	}
 
-	modalEmblem := &abilities[0].Modes[0].Effects[0].EmblemAbilities[0]
+	modalEmblem := &abilities[0].Modes[0].LegacyEffects[0].EmblemAbilities[0]
 	if modalEmblem.Kind != StaticAbility || !modalEmblem.HasKeyword(Flying) {
 		t.Fatalf("modal emblem ability was not normalized: %+v", modalEmblem)
 	}
 
 	// Verify source card is not mutated (body-only form preserved).
 	srcBody := card.StaticAbilities[0]
-	if srcBody.Effects[0].ContinuousEffects[0].AddAbilities[0].Kind != 0 {
+	if srcBody.LegacyEffects[0].ContinuousEffects[0].AddAbilities[0].Kind != 0 {
 		t.Fatal("source card AddAbility was mutated; original body should be unchanged")
 	}
 	srcModalBody := card.SpellAbility.Val
@@ -251,7 +251,7 @@ func TestWithAbilityBodiesNormalizesGrantedAbilities(t *testing.T) {
 	if !ok {
 		t.Fatal("source card modal ability content is not ModalAbilityContent")
 	}
-	if srcModal.Modes[0].Effects[0].EmblemAbilities[0].Kind != 0 {
+	if srcModal.Modes[0].LegacyEffects[0].EmblemAbilities[0].Kind != 0 {
 		t.Fatal("source card modal EmblemAbility was mutated; original body should be unchanged")
 	}
 }

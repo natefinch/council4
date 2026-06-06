@@ -66,8 +66,12 @@ var HazoretGodseeker = func() *game.CardDef {
 				},
 			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectStartEngines, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.StartEngines{
+							TargetIndex: game.TargetIndexController,
+						},
+					},
 				},
 			},
 		},
@@ -81,7 +85,11 @@ var HazoretGodseeker = func() *game.CardDef {
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(1),
 			}),
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
 				Targets: []game.TargetSpec{
 					{
@@ -90,18 +98,26 @@ var HazoretGodseeker = func() *game.CardDef {
 						Constraint: "creature with power 2 or less",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Power:          opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2}),
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Power: opt.Val(compare.Int{
+								Op:    compare.LessOrEqual,
+								Value: 2,
+							}),
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectApplyRule,
-						TargetIndex:    0,
-						UntilEndOfTurn: true,
-						RuleEffects: []game.RuleEffect{
-							{Kind: game.RuleEffectCantBeBlocked},
+						Primitive: game.ApplyRule{
+							TargetIndex: 0,
+							RuleEffects: []game.RuleEffect{
+								{
+									Kind: game.RuleEffectCantBeBlocked,
+								},
+							},
+							Duration: game.DurationUntilEndOfTurn,
 						},
 					},
 				},
@@ -109,27 +125,26 @@ var HazoretGodseeker = func() *game.CardDef {
 		},
 	)
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Hazoret can't attack or block unless you have max speed.
 			`,
-			Condition: opt.Val(game.Condition{
-				Text:                  "unless you have max speed",
-				Negate:                true,
-				ControllerHasMaxSpeed: true,
-			}),
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectApplyRule,
-					TargetIndex: game.TargetIndexController,
-					RuleEffects: []game.RuleEffect{
-						{Kind: game.RuleEffectCantAttack, AffectedSource: true},
-						{Kind: game.RuleEffectCantBlock, AffectedSource: true},
-					},
-				},
+		Condition: opt.Val(game.Condition{
+			Text:                  "unless you have max speed",
+			Negate:                true,
+			ControllerHasMaxSpeed: true,
+		}),
+		RuleEffects: []game.RuleEffect{
+			{
+				Kind:           game.RuleEffectCantAttack,
+				AffectedSource: true,
+			},
+			{
+				Kind:           game.RuleEffectCantBlock,
+				AffectedSource: true,
 			},
 		},
+	},
 	)
 	return card
 }()

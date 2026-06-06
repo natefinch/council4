@@ -5,8 +5,6 @@ import (
 )
 
 func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, effect *game.Effect) game.ContinuousEffect {
-	sourceID, sourceObjectID := damageSourceIDs(g, obj)
-	effectID := g.IDGen.Next()
 	powerDelta := effect.PowerDelta
 	if effect.PowerDeltaDynamic.Exists {
 		powerDelta += dynamicAmountValue(g, obj, stackObjectController(obj), effect.PowerDeltaDynamic.Val)
@@ -15,6 +13,12 @@ func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permane
 	if effect.ToughnessDeltaDynamic.Exists {
 		toughnessDelta += dynamicAmountValue(g, obj, stackObjectController(obj), effect.ToughnessDeltaDynamic.Val)
 	}
+	return untilEndOfTurnPTContinuousEffect(g, obj, permanent, powerDelta, toughnessDelta)
+}
+
+func untilEndOfTurnPTContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, powerDelta, toughnessDelta int) game.ContinuousEffect {
+	sourceID, sourceObjectID := damageSourceIDs(g, obj)
+	effectID := g.IDGen.Next()
 	return game.ContinuousEffect{
 		ID:               effectID,
 		SourceCardID:     sourceID,
@@ -77,7 +81,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		Optional: def.Optional,
 		Body: game.TriggeredAbilityBody{
 			Optional: def.Optional,
-			Content:  game.PlainAbilityContent{Targets: append([]game.TargetSpec(nil), targets...), Sequence: append([]game.Effect(nil), effects...)},
+			Content:  game.PlainAbilityContent{Targets: append([]game.TargetSpec(nil), targets...), LegacyEffects: append([]game.Effect(nil), effects...)},
 		},
 		Effects: effects,
 		Targets: targets,

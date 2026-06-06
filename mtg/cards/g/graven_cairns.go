@@ -34,10 +34,19 @@ var GravenCairns = &game.CardDef{
 				Text: `
 					{T}: Add {C}.
 				`,
-				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				AdditionalCosts: []game.AdditionalCost{
+					{
+						Kind: game.AdditionalCostTap,
+					},
+				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.C, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.AddMana{
+								Amount:    game.Fixed(1),
+								ManaColor: mana.C,
+							},
+						},
 					},
 				},
 			},
@@ -48,40 +57,50 @@ var GravenCairns = &game.CardDef{
 				ManaCost: opt.Val(cost.Mana{
 					cost.HybridMana(mana.B, mana.R),
 				}),
-				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				AdditionalCosts: []game.AdditionalCost{
+					{
+						Kind: game.AdditionalCostTap,
+					},
+				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectChoose,
-							TargetIndex: game.TargetIndexController,
-							Choice: opt.Val(game.ResolutionChoice{
-								Kind:   game.ResolutionChoiceMana,
-								Prompt: "Choose first mana color ({B} or {R})",
-								Colors: []mana.Color{mana.B, mana.R},
-							}),
-							LinkID: "graven-cairns-color-1",
+							Primitive: game.Choose{
+								Choice: game.ResolutionChoice{
+									Kind:   game.ResolutionChoiceMana,
+									Prompt: "Choose first mana color ({B} or {R})",
+									Colors: []mana.Color{
+										mana.B,
+										mana.R,
+									},
+								},
+								PublishChoice: game.ChoiceKey("graven-cairns-color-1"),
+							},
 						},
 						{
-							Type:         game.EffectAddMana,
-							Amount:       1,
-							TargetIndex:  game.TargetIndexController,
-							ChoiceLinkID: "graven-cairns-color-1",
+							Primitive: game.AddMana{
+								Amount:     game.Fixed(1),
+								ChoiceFrom: game.ChoiceKey("graven-cairns-color-1"),
+							},
 						},
 						{
-							Type:        game.EffectChoose,
-							TargetIndex: game.TargetIndexController,
-							Choice: opt.Val(game.ResolutionChoice{
-								Kind:   game.ResolutionChoiceMana,
-								Prompt: "Choose second mana color ({B} or {R})",
-								Colors: []mana.Color{mana.B, mana.R},
-							}),
-							LinkID: "graven-cairns-color-2",
+							Primitive: game.Choose{
+								Choice: game.ResolutionChoice{
+									Kind:   game.ResolutionChoiceMana,
+									Prompt: "Choose second mana color ({B} or {R})",
+									Colors: []mana.Color{
+										mana.B,
+										mana.R,
+									},
+								},
+								PublishChoice: game.ChoiceKey("graven-cairns-color-2"),
+							},
 						},
 						{
-							Type:         game.EffectAddMana,
-							Amount:       1,
-							TargetIndex:  game.TargetIndexController,
-							ChoiceLinkID: "graven-cairns-color-2",
+							Primitive: game.AddMana{
+								Amount:     game.Fixed(1),
+								ChoiceFrom: game.ChoiceKey("graven-cairns-color-2"),
+							},
 						},
 					},
 				},

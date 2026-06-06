@@ -8,11 +8,19 @@ import (
 )
 
 func createRuleEffects(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
-	if len(effect.RuleEffects) == 0 {
+	duration := effect.Duration
+	if duration == game.DurationPermanent && effect.UntilEndOfTurn {
+		duration = game.DurationUntilEndOfTurn
+	}
+	return createRuleEffectTemplates(g, obj, effect.TargetIndex, effect.RuleEffects, duration)
+}
+
+func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, targetIndex int, templates []game.RuleEffect, duration game.EffectDuration) bool {
+	if len(templates) == 0 {
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
-	for _, ruleEffect := range effect.RuleEffects {
+	for _, ruleEffect := range templates {
 		ruleEffect.ID = g.IDGen.Next()
 		ruleEffect.Controller = obj.Controller
 		ruleEffect.SourceCardID = sourceID
@@ -20,16 +28,13 @@ func createRuleEffects(g *game.Game, obj *game.StackObject, effect *game.Effect)
 		if ruleEffect.AffectedSource {
 			ruleEffect.AffectedObjectID = sourceObjectID
 		} else if ruleEffect.AffectedObjectID == 0 {
-			if objectID, ok := targetPermanentObjectID(obj, effect.TargetIndex); ok {
+			if objectID, ok := targetPermanentObjectID(obj, targetIndex); ok {
 				ruleEffect.AffectedObjectID = objectID
 			}
 		}
 		ruleEffect.CreatedTurn = g.Turn.TurnNumber
-		if effect.Duration != game.DurationPermanent {
-			ruleEffect.Duration = effect.Duration
-		}
-		if ruleEffect.Duration == game.DurationPermanent && effect.UntilEndOfTurn {
-			ruleEffect.Duration = game.DurationUntilEndOfTurn
+		if duration != game.DurationPermanent {
+			ruleEffect.Duration = duration
 		}
 		g.RuleEffects = append(g.RuleEffects, ruleEffect)
 	}
@@ -62,6 +67,23 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 			ability := &abilities[i]
 			if !ability.IsStatic() || !abilityFunctionsOnBattlefield(ability) {
 				continue
+			}
+			if body, ok := ability.StaticBody(); ok {
+				if !conditionSatisfied(g, conditionContext{
+					controller: effectiveController(g, source),
+					source:     source,
+				}, body.Condition) {
+					continue
+				}
+				for _, ruleEffect := range body.RuleEffects {
+					ruleEffect.Controller = effectiveController(g, source)
+					ruleEffect.SourceObjectID = source.ObjectID
+					ruleEffect.SourceCardID = source.CardInstanceID
+					if ruleEffect.AffectedSource {
+						ruleEffect.AffectedObjectID = source.ObjectID
+					}
+					effects = append(effects, ruleEffect)
+				}
 			}
 			for i := range ability.Effects {
 				effect := &ability.Effects[i]

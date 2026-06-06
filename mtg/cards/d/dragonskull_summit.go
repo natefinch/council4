@@ -5,7 +5,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/opt"
 )
 
 // DragonskullSummit is the card definition for Dragonskull Summit.
@@ -41,25 +40,30 @@ var DragonskullSummit = func() *game.CardDef {
 			{T}: Add {B} or {R}.
 		`,
 		AdditionalCosts: []game.AdditionalCost{
-			{Kind: game.AdditionalCostTap},
+			{
+				Kind: game.AdditionalCostTap,
+			},
 		},
 		Content: game.PlainAbilityContent{
-			Sequence: []game.Effect{
+			Sequence: []game.Instruction{
 				{
-					Type:        game.EffectChoose,
-					TargetIndex: game.TargetIndexController,
-					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceMana,
-						Prompt: "Choose a color",
-						Colors: []mana.Color{mana.B, mana.R},
-					}),
-					LinkID: "dragonskull-summit-color",
+					Primitive: game.Choose{
+						Choice: game.ResolutionChoice{
+							Kind:   game.ResolutionChoiceMana,
+							Prompt: "Choose a color",
+							Colors: []mana.Color{
+								mana.B,
+								mana.R,
+							},
+						},
+						PublishChoice: game.ChoiceKey("dragonskull-summit-color"),
+					},
 				},
 				{
-					Type:         game.EffectAddMana,
-					Amount:       1,
-					TargetIndex:  game.TargetIndexController,
-					ChoiceLinkID: "dragonskull-summit-color",
+					Primitive: game.AddMana{
+						Amount:     game.Fixed(1),
+						ChoiceFrom: game.ChoiceKey("dragonskull-summit-color"),
+					},
 				},
 			},
 		},

@@ -1553,13 +1553,13 @@ func modalCharm() *game.CardDef {
 				Kind: game.SpellAbility,
 				Modes: []game.Mode{
 					{
-						Text:    "You gain 3 life.",
-						Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 3}},
+						Text:          "You gain 3 life.",
+						LegacyEffects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 3}},
 					},
 					{
-						Text:    "Deal 2 damage to target creature.",
-						Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-						Effects: []game.Effect{{Type: game.EffectDamage, TargetIndex: 0, Amount: 2}},
+						Text:          "Deal 2 damage to target creature.",
+						Targets:       []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+						LegacyEffects: []game.Effect{{Type: game.EffectDamage, TargetIndex: 0, Amount: 2}},
 					},
 				},
 			},
@@ -1586,9 +1586,9 @@ func modalSpellWithModeRangeAndDuplicates(minModes, maxModes int, allowDuplicate
 				MaxModes:            maxModes,
 				AllowDuplicateModes: allowDuplicates,
 				Modes: []game.Mode{
-					{Text: "You gain 1 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}}},
-					{Text: "You gain 2 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 2}}},
-					{Text: "You gain 3 life.", Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 3}}},
+					{Text: "You gain 1 life.", LegacyEffects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}}},
+					{Text: "You gain 2 life.", LegacyEffects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 2}}},
+					{Text: "You gain 3 life.", LegacyEffects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 3}}},
 				},
 			},
 		}},

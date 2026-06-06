@@ -14,7 +14,11 @@ func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, ef
 	if !effect.Choice.Exists {
 		return true
 	}
-	request, values := resolutionChoiceRequest(g, obj, &effect.Choice.Val)
+	return e.resolveResolutionChoiceValue(g, obj, &effect.Choice.Val, effect.LinkID, agents, log)
+}
+
+func (e *Engine) resolveResolutionChoiceValue(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice, key string, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	request, values := resolutionChoiceRequest(g, obj, choice)
 	if len(values) == 0 {
 		return false
 	}
@@ -26,7 +30,7 @@ func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, ef
 	if !ok {
 		return false
 	}
-	rememberResolutionChoice(obj, effect.LinkID, result)
+	rememberResolutionChoice(obj, key, result)
 	return true
 }
 

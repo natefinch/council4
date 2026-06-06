@@ -40,5 +40,7 @@ type DynamicAmount struct {
 	CounterKind counter.Kind
 	Selector    EffectSelector
 	Object      ObjectReference
-	LinkID      string
+	ResultKey   ResultKey
+	// LinkID is retained for legacy Effect compatibility.
+	LinkID string
 }

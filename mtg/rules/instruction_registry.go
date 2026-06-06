@@ -1,0 +1,79 @@
+package rules
+
+import (
+	"fmt"
+
+	"github.com/natefinch/council4/mtg/game"
+)
+
+// primitiveHandler is a type-erased handler function for a Primitive kind.
+type primitiveHandler func(r *effectResolver, prim game.Primitive) effectResolved
+
+// primitiveRegistry is an immutable handler table keyed by PrimitiveKind.
+type primitiveRegistry struct {
+	handlers [game.PrimitiveKindCount]primitiveHandler
+}
+
+// registerPrimitiveHandler registers a typed handler for primitive kind T.
+// The one type assertion is localized here; it is safe because we only register
+// this handler for the PrimitiveKind returned by T's zero value.
+func registerPrimitiveHandler[T game.Primitive](reg *primitiveRegistry, handler func(*effectResolver, T) effectResolved) {
+	var zero T
+	kind := zero.Kind()
+	if int(kind) < 0 || int(kind) >= len(reg.handlers) {
+		panic(fmt.Sprintf("rules: unregistered primitive kind %d", kind))
+	}
+	if reg.handlers[kind] != nil {
+		panic(fmt.Sprintf("rules: duplicate primitive handler %d", kind))
+	}
+	reg.handlers[kind] = func(r *effectResolver, prim game.Primitive) effectResolved {
+		typed, ok := prim.(T)
+		if !ok {
+			panic(fmt.Sprintf("rules: primitive handler %d received %T", kind, prim))
+		}
+		return handler(r, typed)
+	}
+}
+
+func (reg *primitiveRegistry) dispatch(kind game.PrimitiveKind) primitiveHandler {
+	if int(kind) >= len(reg.handlers) || int(kind) < 0 {
+		panic(fmt.Sprintf("rules: unregistered primitive kind %d", kind))
+	}
+	h := reg.handlers[kind]
+	if h == nil {
+		panic(fmt.Sprintf("rules: unregistered primitive kind %d", kind))
+	}
+	return h
+}
+
+// newPrimitiveRegistry builds and returns the global handler table.
+func newPrimitiveRegistry() *primitiveRegistry {
+	reg := &primitiveRegistry{}
+	registerPrimitiveHandler(reg, handleDamage)
+	registerPrimitiveHandler(reg, handleDraw)
+	registerPrimitiveHandler(reg, handleDiscard)
+	registerPrimitiveHandler(reg, handleDestroy)
+	registerPrimitiveHandler(reg, handleAddMana)
+	registerPrimitiveHandler(reg, handleAddCounter)
+	registerPrimitiveHandler(reg, handleMoveCounters)
+	registerPrimitiveHandler(reg, handleApplyContinuous)
+	registerPrimitiveHandler(reg, handleApplyRule)
+	registerPrimitiveHandler(reg, handleModifyPT)
+	registerPrimitiveHandler(reg, handleFight)
+	registerPrimitiveHandler(reg, handleTap)
+	registerPrimitiveHandler(reg, handleSearch)
+	registerPrimitiveHandler(reg, handleReveal)
+	registerPrimitiveHandler(reg, handlePutOnBattlefield)
+	registerPrimitiveHandler(reg, handleCreateToken)
+	registerPrimitiveHandler(reg, handleShufflePermanentIntoLibrary)
+	registerPrimitiveHandler(reg, handleStartEngines)
+	registerPrimitiveHandler(reg, handleSetClassLevel)
+	registerPrimitiveHandler(reg, handleMonstrosity)
+	registerPrimitiveHandler(reg, handleDiscoverCards)
+	registerPrimitiveHandler(reg, handlePay)
+	registerPrimitiveHandler(reg, handleChoose)
+	return reg
+}
+
+// globalPrimitiveRegistry is the singleton handler table.
+var globalPrimitiveRegistry = newPrimitiveRegistry()

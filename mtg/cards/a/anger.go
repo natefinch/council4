@@ -43,19 +43,18 @@ var Anger = &game.CardDef{
 				`,
 				Condition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
-						SubtypesAny: []types.Sub{types.Mountain},
+						SubtypesAny: []types.Sub{
+							types.Mountain,
+						},
 					},
 				}),
 				ZoneOfFunction: game.ZoneGraveyard,
-				Effects: []game.Effect{
+				ContinuousEffects: []game.ContinuousEffect{
 					{
-						Type: game.EffectApplyContinuous,
-						ContinuousEffects: []game.ContinuousEffect{
-							{
-								Layer:       game.LayerAbility,
-								Selector:    game.EffectSelectorCreaturesYouControl,
-								AddKeywords: []game.Keyword{game.Haste},
-							},
+						Layer:    game.LayerAbility,
+						Selector: game.EffectSelectorCreaturesYouControl,
+						AddKeywords: []game.Keyword{
+							game.Haste,
 						},
 					},
 				},

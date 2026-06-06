@@ -258,7 +258,7 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		Text: "Prowess",
 		Body: game.TriggeredAbilityBody{
 			Text:    "Prowess",
-			Content: game.PlainAbilityContent{Sequence: append([]game.Effect(nil), effects...)},
+			Content: game.PlainAbilityContent{LegacyEffects: append([]game.Effect(nil), effects...)},
 		},
 		Effects: effects,
 	}, true
@@ -283,7 +283,7 @@ func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	return &game.AbilityDef{
 		Kind:             game.TriggeredAbility,
 		Text:             "Exalted",
-		Body:             game.TriggeredAbilityBody{Text: "Exalted", Content: game.PlainAbilityContent{Sequence: append([]game.Effect(nil), effects...)}},
+		Body:             game.TriggeredAbilityBody{Text: "Exalted", Content: game.PlainAbilityContent{LegacyEffects: append([]game.Effect(nil), effects...)}},
 		KeywordAbilities: game.SimpleKeywords(game.Exalted),
 		Effects:          effects,
 	}, true

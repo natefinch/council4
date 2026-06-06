@@ -47,24 +47,32 @@ var IgnobleHierarch = func() *game.CardDef {
 			Text: `
 				{T}: Add {B}, {R}, or {G}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectChoose,
-						TargetIndex: game.TargetIndexController,
-						Choice: opt.Val(game.ResolutionChoice{
-							Kind:   game.ResolutionChoiceMana,
-							Prompt: "Choose a color",
-							Colors: []mana.Color{mana.B, mana.R, mana.G},
-						}),
-						LinkID: "ignoble-hierarch-color",
+						Primitive: game.Choose{
+							Choice: game.ResolutionChoice{
+								Kind:   game.ResolutionChoiceMana,
+								Prompt: "Choose a color",
+								Colors: []mana.Color{
+									mana.B,
+									mana.R,
+									mana.G,
+								},
+							},
+							PublishChoice: game.ChoiceKey("ignoble-hierarch-color"),
+						},
 					},
 					{
-						Type:         game.EffectAddMana,
-						Amount:       1,
-						TargetIndex:  game.TargetIndexController,
-						ChoiceLinkID: "ignoble-hierarch-color",
+						Primitive: game.AddMana{
+							Amount:     game.Fixed(1),
+							ChoiceFrom: game.ChoiceKey("ignoble-hierarch-color"),
+						},
 					},
 				},
 			},

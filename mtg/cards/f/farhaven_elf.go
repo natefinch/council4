@@ -46,18 +46,19 @@ var FarhavenElf = &game.CardDef{
 				},
 				Optional: true,
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectSearch,
-							TargetIndex: game.TargetIndexController,
-							Search: opt.Val(game.SearchSpec{
-								SourceZone:   game.ZoneLibrary,
-								Destination:  game.ZoneBattlefield,
-								CardType:     opt.Val(types.Land),
-								Supertype:    opt.Val(types.Basic),
-								EntersTapped: true,
-								Shuffle:      true,
-							}),
+							Primitive: game.Search{
+								TargetIndex: game.TargetIndexController,
+								Spec: game.SearchSpec{
+									SourceZone:   game.ZoneLibrary,
+									Destination:  game.ZoneBattlefield,
+									CardType:     opt.Val(types.Land),
+									Supertype:    opt.Val(types.Basic),
+									EntersTapped: true,
+									Shuffle:      true,
+								},
+							},
 						},
 					},
 				},

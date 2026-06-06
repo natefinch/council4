@@ -29,10 +29,19 @@ var Mountain = &game.CardDef{
 				Text: `
 					{T}: Add {R}.
 				`,
-				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				AdditionalCosts: []game.AdditionalCost{
+					{
+						Kind: game.AdditionalCostTap,
+					},
+				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.AddMana{
+								Amount:    game.Fixed(1),
+								ManaColor: mana.R,
+							},
+						},
 					},
 				},
 			},

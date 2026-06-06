@@ -39,31 +39,25 @@ var Fiendlash = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Equipped creature gets +2/+0 and has reach.
 			`,
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectApplyContinuous,
-					TargetIndex: game.TargetIndexSourcePermanent,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:          game.LayerPowerToughnessModify,
-							Selector:       game.EffectSelectorEquippedCreature,
-							PowerDelta:     2,
-							ToughnessDelta: 0,
-						},
-						{
-							Layer:       game.LayerAbility,
-							Selector:    game.EffectSelectorEquippedCreature,
-							AddKeywords: []game.Keyword{game.Reach},
-						},
-					},
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:      game.LayerPowerToughnessModify,
+				Selector:   game.EffectSelectorEquippedCreature,
+				PowerDelta: 2,
+			},
+			{
+				Layer:    game.LayerAbility,
+				Selector: game.EffectSelectorEquippedCreature,
+				AddKeywords: []game.Keyword{
+					game.Reach,
 				},
 			},
 		},
+	},
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
@@ -87,25 +81,28 @@ var Fiendlash = func() *game.CardDef {
 						Constraint: "player or planeswalker",
 						Allow:      game.TargetAllowPlayer | game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Planeswalker},
+							PermanentTypes: []types.Card{
+								types.Planeswalker,
+							},
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectDamage,
-						TargetIndex: 0,
-						DamageSource: opt.Val(game.ObjectReference{
-							Kind:        game.ObjectReferenceAttachedPermanent,
-							TargetIndex: game.TargetIndexSourcePermanent,
-						}),
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind: game.DynamicAmountObjectPower,
-							Object: game.ObjectReference{
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountObjectPower,
+								Object: game.ObjectReference{
+									Kind:        game.ObjectReferenceAttachedPermanent,
+									TargetIndex: game.TargetIndexSourcePermanent,
+								},
+							}),
+							Recipient: game.TargetRecipient(0),
+							DamageSource: opt.Val(game.ObjectReference{
 								Kind:        game.ObjectReferenceAttachedPermanent,
 								TargetIndex: game.TargetIndexSourcePermanent,
-							},
-						}),
+							}),
+						},
 					},
 				},
 			},
@@ -130,17 +127,21 @@ var Fiendlash = func() *game.CardDef {
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 				},
 			},
 			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{Cost: cost.Mana{
-					cost.O(2),
-					cost.R,
-				}},
+				game.EquipKeyword{
+					Cost: cost.Mana{
+						cost.O(2),
+						cost.R,
+					},
+				},
 			},
 		},
 	)

@@ -41,8 +41,10 @@ var PrimalMight = &game.CardDef{
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 					{
@@ -51,28 +53,32 @@ var PrimalMight = &game.CardDef{
 						Constraint: "creature you don't control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerNotYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerNotYou,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectModifyPT,
-						TargetIndex:    0,
-						UntilEndOfTurn: true,
-						PowerDeltaDynamic: opt.Val(game.DynamicAmount{
-							Kind: game.DynamicAmountX,
-						}),
-						ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{
-							Kind: game.DynamicAmountX,
-						}),
+						Primitive: game.ModifyPT{
+							TargetIndex: 0,
+							PowerDelta: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountX,
+							}),
+							ToughnessDelta: game.Dynamic(game.DynamicAmount{
+								Kind: game.DynamicAmountX,
+							}),
+							Duration: game.DurationUntilEndOfTurn,
+						},
 					},
 					{
-						Type:               game.EffectFight,
-						TargetIndex:        0,
-						RelatedTargetIndex: opt.Val(1),
-						Description:        "target creature you control fights up to one target creature you don't control",
+						Primitive: game.Fight{
+							TargetIndex:        0,
+							RelatedTargetIndex: opt.Val(1),
+						},
+						Description: "target creature you control fights up to one target creature you don't control",
 					},
 				},
 			},

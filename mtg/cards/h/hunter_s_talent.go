@@ -66,8 +66,10 @@ var HunterSTalent = func() *game.CardDef {
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 					{
@@ -76,23 +78,26 @@ var HunterSTalent = func() *game.CardDef {
 						Constraint: "creature you don't control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerOpponent,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerOpponent,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:        game.EffectDamage,
-						TargetIndex: 1,
-						DamageSource: opt.Val(game.ObjectReference{
-							Kind:        game.ObjectReferenceTargetPermanent,
-							TargetIndex: 0,
-						}),
-						DynamicAmount: opt.Val(game.DynamicAmount{
-							Kind:        game.DynamicAmountTargetPower,
-							TargetIndex: 0,
-						}),
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind:        game.DynamicAmountTargetPower,
+								TargetIndex: 0,
+							}),
+							Recipient: game.TargetRecipient(1),
+							DamageSource: opt.Val(game.ObjectReference{
+								Kind:        game.ObjectReferenceTargetPermanent,
+								TargetIndex: 0,
+							}),
+						},
 					},
 				},
 			},
@@ -113,8 +118,13 @@ var HunterSTalent = func() *game.CardDef {
 				SourceClassLevelLessThan: 2,
 			}),
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectSetClassLevel, Amount: 2, TargetIndex: game.TargetIndexSourcePermanent},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.SetClassLevel{
+							TargetIndex: game.TargetIndexSourcePermanent,
+							Amount:      game.Fixed(2),
+						},
+					},
 				},
 			},
 		},
@@ -143,29 +153,34 @@ var HunterSTalent = func() *game.CardDef {
 						Constraint: "attacking creature",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
-							CombatState:    game.CombatStateAttacking,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller:  game.ControllerYou,
+							CombatState: game.CombatStateAttacking,
 						},
 					},
 				},
-				Sequence: []game.Effect{
+				Sequence: []game.Instruction{
 					{
-						Type:           game.EffectModifyPT,
-						TargetIndex:    0,
-						PowerDelta:     1,
-						ToughnessDelta: 0,
-						UntilEndOfTurn: true,
+						Primitive: game.ModifyPT{
+							TargetIndex: 0,
+							PowerDelta:  game.Fixed(1),
+							Duration:    game.DurationUntilEndOfTurn,
+						},
 					},
 					{
-						Type:           game.EffectApplyContinuous,
-						TargetIndex:    0,
-						UntilEndOfTurn: true,
-						ContinuousEffects: []game.ContinuousEffect{
-							{
-								Layer:       game.LayerAbility,
-								AddKeywords: []game.Keyword{game.Trample},
+						Primitive: game.ApplyContinuous{
+							TargetIndex: 0,
+							ContinuousEffects: []game.ContinuousEffect{
+								{
+									Layer: game.LayerAbility,
+									AddKeywords: []game.Keyword{
+										game.Trample,
+									},
+								},
 							},
+							Duration: game.DurationUntilEndOfTurn,
 						},
 					},
 				},
@@ -188,8 +203,13 @@ var HunterSTalent = func() *game.CardDef {
 				SourceClassLevelLessThan: 3,
 			}),
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectSetClassLevel, Amount: 3, TargetIndex: game.TargetIndexSourcePermanent},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.SetClassLevel{
+							TargetIndex: game.TargetIndexSourcePermanent,
+							Amount:      game.Fixed(3),
+						},
+					},
 				},
 			},
 		},
@@ -211,15 +231,25 @@ var HunterSTalent = func() *game.CardDef {
 				InterveningCondition: opt.Val(game.Condition{
 					Text: "if you control a creature with power 4 or greater",
 					ControllerControls: game.PermanentFilter{
-						Types: []types.Card{types.Creature},
-						Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+						Types: []types.Card{
+							types.Creature,
+						},
+						Power: opt.Val(compare.Int{
+							Op:    compare.GreaterOrEqual,
+							Value: 4,
+						}),
 					},
 					SourceClassLevelAtLeast: 3,
 				}),
 			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Draw{
+							Amount:      game.Fixed(1),
+							TargetIndex: game.TargetIndexController,
+						},
+					},
 				},
 			},
 		},

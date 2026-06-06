@@ -443,8 +443,12 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			AbilityIndex:   activate.AbilityIndex,
 			Controller:     playerID,
 		}
-		for i := range ability.Effects {
-			e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
+		if body, ok := ability.ManaBody(); ok && body.Content != nil {
+			e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
+		} else {
+			for i := range ability.Effects {
+				e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
+			}
 		}
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, ability)
 		return true
@@ -944,7 +948,30 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 }
 
 func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
-	if ability == nil || len(ability.Effects) == 0 {
+	if ability == nil {
+		return false
+	}
+	if sequence, ok := manaInstructionSequence(ability); ok {
+		hasAddMana := false
+		for i := range sequence {
+			if sequence[i].Primitive == nil {
+				return false
+			}
+			switch sequence[i].Primitive.Kind() {
+			case game.PrimitiveAddMana:
+				hasAddMana = true
+			case game.PrimitiveChoose:
+				choice, ok := sequence[i].Primitive.(game.Choose)
+				if !ok || choice.Choice.Kind != game.ResolutionChoiceMana {
+					return false
+				}
+			default:
+				return false
+			}
+		}
+		return hasAddMana
+	}
+	if len(ability.Effects) == 0 {
 		return false
 	}
 	hasAddMana := false
@@ -965,6 +992,26 @@ func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
 }
 
 func manaAbilityChoicesAvailable(g *game.Game, playerID game.PlayerID, ability *game.AbilityDef) bool {
+	if sequence, ok := manaInstructionSequence(ability); ok {
+		for i := range sequence {
+			if sequence[i].Primitive == nil {
+				return false
+			}
+			if sequence[i].Primitive.Kind() != game.PrimitiveChoose {
+				continue
+			}
+			primitive, ok := sequence[i].Primitive.(game.Choose)
+			if !ok {
+				return false
+			}
+			choicePlayer := resolutionChoicePlayer(playerID, &primitive.Choice)
+			_, values := resolutionChoiceOptions(g, choicePlayer, &primitive.Choice)
+			if len(values) == 0 {
+				return false
+			}
+		}
+		return true
+	}
 	for i := range ability.Effects {
 		effect := &ability.Effects[i]
 		if effect.Type != game.EffectChoose || !effect.Choice.Exists {
@@ -978,6 +1025,18 @@ func manaAbilityChoicesAvailable(g *game.Game, playerID game.PlayerID, ability *
 		}
 	}
 	return true
+}
+
+func manaInstructionSequence(ability *game.AbilityDef) ([]game.Instruction, bool) {
+	body, ok := ability.ManaBody()
+	if !ok || body.Content == nil {
+		return nil, false
+	}
+	content, ok := body.Content.(game.PlainAbilityContent)
+	if !ok {
+		return nil, false
+	}
+	return content.Sequence, true
 }
 
 func hasTapCost(ability *game.AbilityDef) bool {

@@ -43,35 +43,38 @@ var ChaosWarp = &game.CardDef{
 							Allow:      game.TargetAllowPermanent,
 						},
 					},
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectShufflePermanentIntoLibrary,
-							TargetIndex: 0,
+							Primitive: game.ShufflePermanentIntoLibrary{
+								TargetIndex: 0,
+							},
 						},
 						{
-							Type:        game.EffectReveal,
-							Amount:      1,
-							TargetIndex: 0,
-							LinkID:      "chaos-warp-revealed",
-							Recipient: opt.Val(game.PlayerReference{
-								Kind: game.PlayerReferenceObjectOwner,
-								Object: opt.Val(game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
+							Primitive: game.Reveal{
+								Amount:      game.Fixed(1),
+								TargetIndex: 0,
+								Recipient: opt.Val(game.PlayerReference{
+									Kind: game.PlayerReferenceObjectOwner,
+									Object: opt.Val(game.ObjectReference{
+										Kind:        game.ObjectReferenceTargetPermanent,
+										TargetIndex: 0,
+									}),
 								}),
-							}),
+								PublishLinked: game.LinkedKey("chaos-warp-revealed"),
+							},
 						},
 						{
-							Type:        game.EffectPutOnBattlefield,
-							TargetIndex: 0,
-							LinkID:      "chaos-warp-revealed",
-							Recipient: opt.Val(game.PlayerReference{
-								Kind: game.PlayerReferenceObjectOwner,
-								Object: opt.Val(game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
+							Primitive: game.PutOnBattlefield{
+								TargetIndex: 0,
+								Source:      game.LinkedBattlefieldSource(game.LinkedKey("chaos-warp-revealed")),
+								Recipient: opt.Val(game.PlayerReference{
+									Kind: game.PlayerReferenceObjectOwner,
+									Object: opt.Val(game.ObjectReference{
+										Kind:        game.ObjectReferenceTargetPermanent,
+										TargetIndex: 0,
+									}),
 								}),
-							}),
+							},
 							CardCondition: opt.Val(game.CardCondition{
 								Card: game.CardReference{
 									Kind:   game.CardReferenceLinked,

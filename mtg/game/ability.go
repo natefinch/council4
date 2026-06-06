@@ -427,9 +427,8 @@ const (
 	DuringUpkeep
 )
 
-// EffectType classifies the broad category of an effect for future rules
-// engine processing. This is a placeholder — the rules engine will define
-// richer effect representations.
+// EffectType classifies a legacy Effect. Card Implementations use typed
+// Primitive variants instead.
 type EffectType int
 
 // Effect type values enumerate supported effect categories.
@@ -586,19 +585,6 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 	tokenSubtypes := make([]types.Sub, 0, len(creatureSubtypes)+1)
 	tokenSubtypes = append(tokenSubtypes, types.Zombie)
 	tokenSubtypes = append(tokenSubtypes, creatureSubtypes...)
-	tokenCopyEffect := Effect{
-		Type:        EffectCreateToken,
-		Amount:      1,
-		TargetIndex: TargetIndexController,
-		TokenCopy: opt.Val(TokenCopySpec{
-			Source:       TokenCopySourceSourceCard,
-			SetColors:    []color.Color{color.Black},
-			SetSubtypes:  tokenSubtypes,
-			SetPower:     opt.Val(PT{Value: 4}),
-			SetToughness: opt.Val(PT{Value: 4}),
-			NoManaCost:   true,
-		}),
-	}
 	return ActivatedAbilityBody{
 		Text:           "Eternalize " + manaCost.String(),
 		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
@@ -608,7 +594,19 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 			Kind: AdditionalCostExileSource,
 			Text: "Exile this card from your graveyard",
 		}},
-		Content:          PlainAbilityContent{Sequence: []Effect{tokenCopyEffect}},
+		Content: PlainAbilityContent{Sequence: []Instruction{{
+			Primitive: CreateToken{
+				Amount: Fixed(1),
+				Source: TokenCopyOf(TokenCopySpec{
+					Source:       TokenCopySourceSourceCard,
+					SetColors:    []color.Color{color.Black},
+					SetSubtypes:  tokenSubtypes,
+					SetPower:     opt.Val(PT{Value: 4}),
+					SetToughness: opt.Val(PT{Value: 4}),
+					NoManaCost:   true,
+				}),
+			},
+		}}},
 		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Eternalize}},
 	}
 }
@@ -660,7 +658,8 @@ const (
 	TargetIndexSourcePermanent = -2
 )
 
-// Effect describes a single game effect produced by an ability.
+// Effect describes a legacy game effect produced by an ability. Card
+// Implementations use Instruction and typed Primitive variants instead.
 type Effect struct {
 	Type          EffectType
 	Amount        int
@@ -760,8 +759,12 @@ type Mode struct {
 	// Text is the oracle text of this mode.
 	Text string
 
-	// Effects are the effects this mode produces.
-	Effects []Effect
+	// LegacyEffects are the legacy effects this mode produces.
+	// New Card Implementations use Sequence.
+	LegacyEffects []Effect
+
+	// Sequence is the typed instruction sequence this mode produces.
+	Sequence []Instruction
 
 	// Targets are the targeting requirements of this mode.
 	Targets []TargetSpec

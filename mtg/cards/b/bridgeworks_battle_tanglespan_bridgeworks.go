@@ -52,8 +52,10 @@ var BridgeworksBattle = func() *game.CardDef {
 								Constraint: "creature you control",
 								Allow:      game.TargetAllowPermanent,
 								Predicate: game.TargetPredicate{
-									PermanentTypes: []types.Card{types.Creature},
-									Controller:     game.ControllerYou,
+									PermanentTypes: []types.Card{
+										types.Creature,
+									},
+									Controller: game.ControllerYou,
 								},
 							},
 							{
@@ -63,24 +65,28 @@ var BridgeworksBattle = func() *game.CardDef {
 								Constraint: "creature you don't control",
 								Allow:      game.TargetAllowPermanent,
 								Predicate: game.TargetPredicate{
-									PermanentTypes: []types.Card{types.Creature},
-									Controller:     game.ControllerNotYou,
+									PermanentTypes: []types.Card{
+										types.Creature,
+									},
+									Controller: game.ControllerNotYou,
 								},
 							},
 						},
-						Sequence: []game.Effect{
+						Sequence: []game.Instruction{
 							{
-								Type:           game.EffectModifyPT,
-								PowerDelta:     2,
-								ToughnessDelta: 2,
-								TargetIndex:    0,
-								UntilEndOfTurn: true,
+								Primitive: game.ModifyPT{
+									TargetIndex:    0,
+									PowerDelta:     game.Fixed(2),
+									ToughnessDelta: game.Fixed(2),
+									Duration:       game.DurationUntilEndOfTurn,
+								},
 							},
 							{
-								Type:               game.EffectFight,
-								TargetIndex:        0,
-								RelatedTargetIndex: opt.Val(1),
-								Description:        "target creature you control fights up to one target creature you don't control",
+								Primitive: game.Fight{
+									TargetIndex:        0,
+									RelatedTargetIndex: opt.Val(1),
+								},
+								Description: "target creature you control fights up to one target creature you don't control",
 							},
 						},
 					},
@@ -112,10 +118,19 @@ var BridgeworksBattle = func() *game.CardDef {
 			Text: `
 				{T}: Add {G}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []game.AdditionalCost{
+				{
+					Kind: game.AdditionalCostTap,
+				},
+			},
 			Content: game.PlainAbilityContent{
-				Sequence: []game.Effect{
-					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.AddMana{
+							Amount:    game.Fixed(1),
+							ManaColor: mana.G,
+						},
+					},
 				},
 			},
 		},

@@ -32,11 +32,25 @@ var MossfireValley = &game.CardDef{
 				ManaCost: opt.Val(cost.Mana{
 					cost.O(1),
 				}),
-				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				AdditionalCosts: []game.AdditionalCost{
+					{
+						Kind: game.AdditionalCostTap,
+					},
+				},
 				Content: game.PlainAbilityContent{
-					Sequence: []game.Effect{
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
-						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.AddMana{
+								Amount:    game.Fixed(1),
+								ManaColor: mana.R,
+							},
+						},
+						{
+							Primitive: game.AddMana{
+								Amount:    game.Fixed(1),
+								ManaColor: mana.G,
+							},
+						},
 					},
 				},
 			},

@@ -32,31 +32,26 @@ var LoxodonWarhammer = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities,
-		game.StaticAbilityBody{
-			Text: `
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+		Text: `
 				Equipped creature gets +3/+0 and has trample and lifelink.
 			`,
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectApplyContinuous,
-					TargetIndex: game.TargetIndexSourcePermanent,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:          game.LayerPowerToughnessModify,
-							Selector:       game.EffectSelectorEquippedCreature,
-							PowerDelta:     3,
-							ToughnessDelta: 0,
-						},
-						{
-							Layer:       game.LayerAbility,
-							Selector:    game.EffectSelectorEquippedCreature,
-							AddKeywords: []game.Keyword{game.Trample, game.Lifelink},
-						},
-					},
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer:      game.LayerPowerToughnessModify,
+				Selector:   game.EffectSelectorEquippedCreature,
+				PowerDelta: 3,
+			},
+			{
+				Layer:    game.LayerAbility,
+				Selector: game.EffectSelectorEquippedCreature,
+				AddKeywords: []game.Keyword{
+					game.Trample,
+					game.Lifelink,
 				},
 			},
 		},
+	},
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
@@ -76,16 +71,20 @@ var LoxodonWarhammer = func() *game.CardDef {
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
 						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerYou,
 						},
 					},
 				},
 			},
 			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{Cost: cost.Mana{
-					cost.O(3),
-				}},
+				game.EquipKeyword{
+					Cost: cost.Mana{
+						cost.O(3),
+					},
+				},
 			},
 		},
 	)

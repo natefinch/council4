@@ -44,37 +44,40 @@ var ChandraSIgnition = &game.CardDef{
 							Constraint: "creature you control",
 							Allow:      game.TargetAllowPermanent,
 							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerYou,
+								PermanentTypes: []types.Card{
+									types.Creature,
+								},
+								Controller: game.ControllerYou,
 							},
 						},
 					},
-					Sequence: []game.Effect{
+					Sequence: []game.Instruction{
 						{
-							Type:        game.EffectDamage,
-							TargetIndex: 0,
-							Selector:    game.EffectSelectorAllCreaturesExceptTarget,
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
-							DynamicAmount: opt.Val(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
-							}),
+							Primitive: game.Damage{
+								Amount: game.Dynamic(game.DynamicAmount{
+									Kind:        game.DynamicAmountTargetPower,
+									TargetIndex: 0,
+								}),
+								Recipient: game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
+								DamageSource: opt.Val(game.ObjectReference{
+									Kind:        game.ObjectReferenceTargetPermanent,
+									TargetIndex: 0,
+								}),
+							},
 							Description: "deals damage equal to its power to each other creature",
 						},
 						{
-							Type:           game.EffectDamage,
-							PlayerSelector: game.PlayerSelectorOpponents,
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
-							DynamicAmount: opt.Val(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
-							}),
+							Primitive: game.Damage{
+								Amount: game.Dynamic(game.DynamicAmount{
+									Kind:        game.DynamicAmountTargetPower,
+									TargetIndex: 0,
+								}),
+								Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+								DamageSource: opt.Val(game.ObjectReference{
+									Kind:        game.ObjectReferenceTargetPermanent,
+									TargetIndex: 0,
+								}),
+							},
 							Description: "deals damage equal to its power to each opponent",
 						},
 					},
