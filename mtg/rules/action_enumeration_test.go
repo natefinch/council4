@@ -322,8 +322,8 @@ func characterizationKickerSpell() *game.CardDef {
 }
 
 func sacrificeCreatureSpell() *game.CardDef {
-	return additionalCostSpell("Sacrifice Creature Spell", game.AdditionalCost{
-		Kind:               game.AdditionalCostSacrifice,
+	return additionalCostSpell("Sacrifice Creature Spell", cost.Additional{
+		Kind:               cost.AdditionalSacrifice,
 		Text:               "Sacrifice a creature",
 		Amount:             1,
 		MatchPermanentType: true,
@@ -332,8 +332,8 @@ func sacrificeCreatureSpell() *game.CardDef {
 }
 
 func sacrificeArtifactSpell() *game.CardDef {
-	return additionalCostSpell("Sacrifice Artifact Spell", game.AdditionalCost{
-		Kind:               game.AdditionalCostSacrifice,
+	return additionalCostSpell("Sacrifice Artifact Spell", cost.Additional{
+		Kind:               cost.AdditionalSacrifice,
 		Text:               "Sacrifice an artifact",
 		Amount:             1,
 		MatchPermanentType: true,
@@ -341,12 +341,12 @@ func sacrificeArtifactSpell() *game.CardDef {
 	})
 }
 
-func additionalCostSpell(name string, additionalCost game.AdditionalCost) *game.CardDef {
+func additionalCostSpell(name string, additionalCost cost.Additional) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: name,
 		Types: []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind:            game.SpellAbility,
-			AdditionalCosts: []game.AdditionalCost{additionalCost},
+			AdditionalCosts: []cost.Additional{additionalCost},
 		}}},
 	}
 }
@@ -369,7 +369,7 @@ func flashbackSpell() *game.CardDef {
 			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flashback)},
 			{
 				Kind: game.SpellAbility,
-				AlternativeCosts: []game.AlternativeCost{{
+				AlternativeCosts: []cost.Alternative{{
 					Label:    flashbackAlternativeLabel,
 					ManaCost: greenCost(),
 				}},

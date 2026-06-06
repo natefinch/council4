@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -102,7 +104,7 @@ func TestDelvePaymentExcludesSourceCardFromGraveyard(t *testing.T) {
 	card := delveSpell(cost.Mana{cost.O(1)})
 	sourceID := addCardToGraveyard(g, game.Player1, card)
 
-	if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, cardID: sourceID, sourceZone: game.ZoneGraveyard, card: card}) {
+	if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, cardID: sourceID, sourceZone: zone.Graveyard, card: card}) {
 		t.Fatal("canPaySpellCosts() = true using source card for delve, want false")
 	}
 }

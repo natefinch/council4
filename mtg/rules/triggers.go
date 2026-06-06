@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -67,7 +69,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.GameEvent) []pendingTriggeredAbility {
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
-		if event.Kind != game.EventCardDiscarded || event.ToZone != game.ZoneExile || event.CardID == 0 {
+		if event.Kind != game.EventCardDiscarded || event.ToZone != zone.Exile || event.CardID == 0 {
 			continue
 		}
 		card, ok := g.GetCardInstance(event.CardID)
@@ -356,7 +358,7 @@ func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, cond
 }
 
 func leftBattlefieldTriggerSource(g *game.Game, event game.GameEvent) (*game.Permanent, bool) {
-	if event.FromZone != game.ZoneBattlefield || event.PermanentID == 0 {
+	if event.FromZone != zone.Battlefield || event.PermanentID == 0 {
 		return nil, false
 	}
 	if _, ok := permanentByObjectID(g, event.PermanentID); ok {

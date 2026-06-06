@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -41,9 +42,9 @@ var DonatelloMutantMechanic = &game.CardDef{
 				Text: `
 					{T}: Put three +1/+1 counters on target artifact you control. If it isn't a creature, it becomes a 0/0 Robot creature in addition to its other types. Activate only as a sorcery.
 				`,
-				AdditionalCosts: []game.AdditionalCost{
+				AdditionalCosts: []cost.Additional{
 					{
-						Kind: game.AdditionalCostTap,
+						Kind: cost.AdditionalTap,
 					},
 				},
 				Timing: game.SorceryOnly,
@@ -113,9 +114,9 @@ var DonatelloMutantMechanic = &game.CardDef{
 							types.Artifact,
 						},
 						MatchFromZone: true,
-						FromZone:      game.ZoneBattlefield,
+						FromZone:      zone.Battlefield,
 						MatchToZone:   true,
-						ToZone:        game.ZoneGraveyard,
+						ToZone:        zone.Graveyard,
 					},
 					InterveningIf:                          "it had counters on it",
 					InterveningIfEventPermanentHadCounters: true,

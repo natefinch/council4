@@ -15,7 +15,7 @@ reference for how new card source must be formatted. Key rules:
 5. Every ability body's `Text` field uses the same indented raw multiline string style.
 6. Categorized ability slices and bodies are vertically expanded: one brace level per line. Do not
    use compact `{{` forms for card ability bodies.
-7. Small truly atomic leaf values may stay one-line, e.g. `[]game.AdditionalCost{{Kind: ...}}` and
+7. Small truly atomic leaf values may stay one-line, e.g. `[]cost.Additional{{Kind: ...}}` and
    simple single-field `Effect` literals. Complex `Effect` values are vertically expanded.
 8. Use categorized `CardFace` fields (`ManaAbilities`, `ActivatedAbilities`, etc.), not the legacy
    `CardFace.Abilities` slice.
@@ -288,13 +288,13 @@ type ResolutionChoice struct {
     Colors         []mana.Color                 // Mana colors for mana choices
     CardTypes      []types.Card
     PlayerRelation PlayerRelation
-    Zone           ZoneType
+    Zone           zone.Type
 }
 
 type ResolutionPayment struct {
     Prompt          string
     ManaCost        opt.V[cost.Mana]
-    AdditionalCosts []AdditionalCost
+    AdditionalCosts []cost.Additional
     XValue          int
 }
 ```
@@ -318,10 +318,10 @@ type ReplacementEffect struct {
     MatchEvent       EventKind
     ControllerFilter TriggerControllerFilter
     MatchFromZone    bool
-    FromZone         ZoneType
+    FromZone         zone.Type
     MatchToZone      bool
-    ToZone           ZoneType
-    ReplaceToZone    ZoneType
+    ToZone           zone.Type
+    ReplaceToZone    zone.Type
     EntersTapped     bool
     EntersWithCounters []CounterPlacement
 }
@@ -355,7 +355,7 @@ type RuleEffect struct {
     SpellTypes         []types.Card
     DefendingPlayer    PlayerRelation
     CostModifier       CostModifier
-    CastFromZone       ZoneType
+    CastFromZone       zone.Type
 }
 ```
 
@@ -454,9 +454,9 @@ type TriggerPattern struct {
     RequireCardTypes []types.Card
     ExcludeCardTypes []types.Card
     MatchFromZone bool
-    FromZone      ZoneType
+    FromZone      zone.Type
     MatchToZone   bool
-    ToZone        ZoneType
+    ToZone        zone.Type
     DamageRecipient DamageRecipientKind
     Step Step
 }
@@ -571,9 +571,9 @@ For keywords with parameters, use the typed field on a `StaticAbilityBody` (or t
 - **Protection from [color]**: `StaticAbilityBody{KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{color.Red}}}}`
 - **Ward {N}**: `StaticAbilityBody{KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(N)}}}}`
 - **Equip {N}**: `ActivatedAbilityBody{Text: "Equip {N}", ManaCost: opt.Val(cost.Mana{cost.O(N)}), Timing: game.SorceryOnly, KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}, Content: game.PlainAbilityContent{Targets: []game.TargetSpec{{...}}}}`
-- **Cycling {N}**: `ActivatedAbilityBody{Text: "Cycling {N}", ManaCost: opt.Val(cost.Mana{...}), AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostDiscardSelf}}, KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}}`
+- **Cycling {N}**: `ActivatedAbilityBody{Text: "Cycling {N}", ManaCost: opt.Val(cost.Mana{...}), AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalDiscard, Text: "Discard this card", Source: zone.Hand}}, KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}}`
 - **Prowess**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Prowess)}`; the rules engine creates the implicit trigger (CR 702.108)
-- **Flashback {cost}**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Flashback)}` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
+- **Flashback {cost}**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Flashback)}` plus a spell `cost.Alternative{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 
 #### Spell abilities (instants/sorceries)
 
@@ -593,7 +593,7 @@ Use `game.ActivatedAbilityBody{...}` in `ActivatedAbilities`, or
 `game.ManaAbilityBody{...}` in `ManaAbilities` when the effect adds mana with no targets:
 - Split on `:` — left side is costs, right side is effects
 - Parse mana symbols in cost → `ManaCost`
-- Parse non-mana costs → `AdditionalCosts` (e.g., `{T}` = `AdditionalCostTap`, "Sacrifice a creature", "Pay 2 life")
+- Parse non-mana costs into `[]cost.Additional` (e.g., `{T}` = `cost.AdditionalTap`, "Sacrifice a creature", "Pay 2 life")
 - Use `ManaAbilityBody` / `ManaAbilities` if the effect adds mana, has no targets, and is not a loyalty ability
 - `Timing`: set if "Activate only as a sorcery" or "Activate only once each turn"
 
@@ -605,7 +605,7 @@ Use `game.TriggeredAbilityBody{...}` in `TriggeredAbilities`:
 - Common patterns:
   - "enters" / "enters the battlefield" → `EventPermanentEnteredBattlefield`
   - "dies" → `EventPermanentDied`
-  - "leaves the battlefield" → `EventZoneChanged` with `FromZone: game.ZoneBattlefield`
+  - "leaves the battlefield" → `EventZoneChanged` with `FromZone: zone.Battlefield`
   - "leaves your graveyard/hand/library/exile/command zone" → `EventZoneChanged` with the matching `FromZone`
   - "is put into [zone] from [zone]" → `EventZoneChanged` with both `FromZone` and `ToZone`
   - "At the beginning of your upkeep/draw step/beginning of combat/end step" → `EventBeginningOfStep` with explicit `Step`
@@ -735,7 +735,7 @@ ManaAbilities: []game.ManaAbilityBody{
         Text: `
             {T}: Add {C}{C}.
         `,
-        AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+        AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
         Content: game.PlainAbilityContent{
             Sequence: []game.Instruction{
                 {
@@ -832,7 +832,7 @@ var KessigWolfRun = func() *game.CardDef {
         Text: `
             {T}: Add {R} or {G}.
         `,
-        AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+        AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
         // ...
     })
     card.ActivatedAbilities = append(card.ActivatedAbilities, game.ActivatedAbilityBody{
@@ -857,7 +857,7 @@ var KessigWolfRun = func() *game.CardDef {
 
 4. **"You" as target vs. controller**: When the text says "you gain 1 life", "you" is the controller, not a target. Use `TargetIndex: -1`. Only use `TargetIndex: 0+` when there's an explicit "target" word.
 
-5. **Tap symbol in costs**: `{T}` in an activated ability cost means the permanent taps itself. This goes in `AdditionalCosts` as `{Kind: game.CostTap}`, not in `ManaCost`.
+5. **Tap symbol in costs**: `{T}` in an activated ability cost means the permanent taps itself. This goes in `AdditionalCosts` as `{Kind: cost.AdditionalTap}`, not in `ManaCost`.
 
 6. **Multiple paragraphs = multiple abilities**: Each `\n`-separated paragraph is a separate ability and gets its own body in the appropriate field, unless it's a comma-separated keyword list.
 

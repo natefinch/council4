@@ -18,11 +18,11 @@ func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
 	return &manaCost.Val
 }
 
-func isFlashbackAlternative(alternative game.AlternativeCost) bool {
+func isFlashbackAlternative(alternative cost.Alternative) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
 }
 
-func spellAdditionalCosts(card *game.CardDef) []game.AdditionalCost {
+func spellAdditionalCosts(card *game.CardDef) []cost.Additional {
 	if card == nil {
 		return nil
 	}
@@ -36,11 +36,11 @@ func spellAdditionalCosts(card *game.CardDef) []game.AdditionalCost {
 	return nil
 }
 
-func abilityAdditionalCosts(ability *game.AbilityDef) []game.AdditionalCost {
+func abilityAdditionalCosts(ability *game.AbilityDef) []cost.Additional {
 	if ability == nil {
 		return nil
 	}
-	return append([]game.AdditionalCost(nil), ability.AdditionalCosts...)
+	return append([]cost.Additional(nil), ability.AdditionalCosts...)
 }
 
 func sacrificeCostMatcher(sacCost string) (func(*game.CardDef) bool, bool) {
@@ -49,27 +49,27 @@ func sacrificeCostMatcher(sacCost string) (func(*game.CardDef) bool, bool) {
 		return nil, false
 	}
 	return func(card *game.CardDef) bool {
-		return localAdditionalCostMatchesCard(card, game.AdditionalCost{
+		return localAdditionalCostMatchesCard(card, cost.Additional{
 			MatchCardType: typed.MatchPermanentType,
 			CardType:      typed.PermanentType,
 		})
 	}, true
 }
 
-func sacrificeAdditionalCost(sacCost string) (game.AdditionalCost, bool) {
+func sacrificeAdditionalCost(sacCost string) (cost.Additional, bool) {
 	normalized := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(sacCost)), ".")
 	switch normalized {
 	case "sacrifice a creature":
-		return game.AdditionalCost{Kind: game.AdditionalCostSacrifice, Text: sacCost, Amount: 1, MatchPermanentType: true, PermanentType: types.Creature}, true
+		return cost.Additional{Kind: cost.AdditionalSacrifice, Text: sacCost, Amount: 1, MatchPermanentType: true, PermanentType: types.Creature}, true
 	case "sacrifice an artifact":
-		return game.AdditionalCost{Kind: game.AdditionalCostSacrifice, Text: sacCost, Amount: 1, MatchPermanentType: true, PermanentType: types.Artifact}, true
+		return cost.Additional{Kind: cost.AdditionalSacrifice, Text: sacCost, Amount: 1, MatchPermanentType: true, PermanentType: types.Artifact}, true
 	case "sacrifice an enchantment":
-		return game.AdditionalCost{Kind: game.AdditionalCostSacrifice, Text: sacCost, Amount: 1, MatchPermanentType: true, PermanentType: types.Enchantment}, true
+		return cost.Additional{Kind: cost.AdditionalSacrifice, Text: sacCost, Amount: 1, MatchPermanentType: true, PermanentType: types.Enchantment}, true
 	case "sacrifice a land":
-		return game.AdditionalCost{Kind: game.AdditionalCostSacrifice, Text: sacCost, Amount: 1, MatchPermanentType: true, PermanentType: types.Land}, true
+		return cost.Additional{Kind: cost.AdditionalSacrifice, Text: sacCost, Amount: 1, MatchPermanentType: true, PermanentType: types.Land}, true
 	case "sacrifice a permanent":
-		return game.AdditionalCost{Kind: game.AdditionalCostSacrifice, Text: sacCost, Amount: 1}, true
+		return cost.Additional{Kind: cost.AdditionalSacrifice, Text: sacCost, Amount: 1}, true
 	default:
-		return game.AdditionalCost{}, false
+		return cost.Additional{}, false
 	}
 }

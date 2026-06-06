@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // State is the adapter interface that the payment planner requires from the
@@ -66,7 +67,7 @@ type stateAbilityQueries interface {
 	// CostModifiersForSpell returns all applicable cost modifiers for a spell
 	// being cast by the given player from the given zone. This includes global
 	// game modifiers, commander tax, and static rule-effect modifiers.
-	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone game.ZoneType) []game.CostModifier
+	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type) []game.CostModifier
 }
 
 type stateMutations interface {
@@ -83,12 +84,12 @@ type stateMutations interface {
 
 	// MovePermanentToZone moves a permanent to the destination zone,
 	// handling detach, zone-change events, and token cleanup.
-	MovePermanentToZone(p *game.Permanent, dest game.ZoneType) bool
+	MovePermanentToZone(p *game.Permanent, dest zone.Type) bool
 
 	// DiscardFromHand discards a card from the player's hand, emitting the
 	// appropriate discard and zone-change events.
 	DiscardFromHand(playerID game.PlayerID, cardID id.ID) bool
 
 	// MoveCard moves a non-battlefield card between zones and emits a zone-change event.
-	MoveCard(playerID game.PlayerID, cardID id.ID, from game.ZoneType, to game.ZoneType) bool
+	MoveCard(playerID game.PlayerID, cardID id.ID, from zone.Type, to zone.Type) bool
 }

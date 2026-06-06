@@ -3,6 +3,8 @@ package payment
 import (
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -129,7 +131,7 @@ func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) 
 	return append(nonMana, manaCreatures...)
 }
 
-func delveCandidates(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, sourceCardID id.ID, sourceZone game.ZoneType) ([]id.ID, int, bool) {
+func delveCandidates(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, sourceCardID id.ID, sourceZone zone.Type) ([]id.ID, int, bool) {
 	_, generic, ok := costRequirements(manaCost, xValue)
 	if !ok || generic <= 0 {
 		return nil, 0, false
@@ -143,7 +145,7 @@ func delveCandidates(s State, playerID game.PlayerID, manaCost *cost.Mana, xValu
 		if len(exiles) == generic {
 			break
 		}
-		if sourceZone == game.ZoneGraveyard && cardID == sourceCardID {
+		if sourceZone == zone.Graveyard && cardID == sourceCardID {
 			continue
 		}
 		exiles = append(exiles, cardID)

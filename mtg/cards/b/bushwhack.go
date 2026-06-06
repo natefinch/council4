@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -49,8 +50,8 @@ var Bushwhack = &game.CardDef{
 									Primitive: game.Search{
 										TargetIndex: game.TargetIndexController,
 										Spec: game.SearchSpec{
-											SourceZone:  game.ZoneLibrary,
-											Destination: game.ZoneHand,
+											SourceZone:  zone.Library,
+											Destination: zone.Hand,
 											CardType:    opt.Val(types.Land),
 											Supertype:   opt.Val(types.Basic),
 											Reveal:      true,

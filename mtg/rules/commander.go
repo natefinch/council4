@@ -3,6 +3,8 @@ package rules
 import (
 	"fmt"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -87,13 +89,13 @@ func isCommanderCardID(g *game.Game, cardID id.ID) bool {
 	return false
 }
 
-func commanderReplacementDestination(g *game.Game, cardID id.ID, destination game.ZoneType) game.ZoneType {
+func commanderReplacementDestination(g *game.Game, cardID id.ID, destination zone.Type) zone.Type {
 	if !isCommanderCardID(g, cardID) {
 		return destination
 	}
 	switch destination {
-	case game.ZoneGraveyard, game.ZoneExile, game.ZoneHand, game.ZoneLibrary:
-		return game.ZoneCommand
+	case zone.Graveyard, zone.Exile, zone.Hand, zone.Library:
+		return zone.Command
 	default:
 		return destination
 	}

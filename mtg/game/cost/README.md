@@ -1,10 +1,11 @@
 # cost package
 
-`mtg/game/cost` models printed mana costs for spells and abilities. It is
-separate from `mtg/game/mana`, which models produced mana and mana pools.
+`mtg/game/cost` models declarative costs printed on spells and abilities. It
+is separate from `mtg/game/mana`, which models produced mana and mana pools.
 
-Use this package anywhere a card or ability stores a cost such as `{2}{W}`,
-`{X}{R}`, `{W/U}`, `{2/G}`, `{W/P}`, `{C}`, or `{S}`.
+Use this package for mana costs such as `{2}{W}`, `{X}{R}`, `{W/U}`, `{2/G}`,
+`{W/P}`, `{C}`, or `{S}`, and for non-mana costs such as tapping, sacrificing,
+discarding, paying life, or exiling cards.
 
 ## Main types
 
@@ -26,6 +27,58 @@ printed cost symbols.
 
 An absent mana cost is represented by an absent `opt.V[cost.Mana]` on the card
 or ability field. An explicit zero cost is `cost.Mana{cost.O(0)}`.
+
+### Additional
+
+`Additional` describes one non-mana cost. Set `Kind` to the operation and use
+the other fields only when that operation needs them:
+
+```go
+AdditionalCosts: []cost.Additional{
+	{Kind: cost.AdditionalTap},
+	{
+		Kind:               cost.AdditionalSacrifice,
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Creature,
+	},
+}
+```
+
+`Amount` defaults to one for costs involving objects or cards. `Text` supplies
+card-specific display text when the generic text for the kind is insufficient.
+`MatchPermanentType` and `PermanentType` constrain battlefield objects;
+`MatchCardType` and `CardType` constrain cards in other zones.
+
+`Source` identifies the zone that supplies cards for costs that choose cards
+outside the battlefield. `zone.None` leaves the default to the rules module.
+The current default for `AdditionalExile` is the graveyard. Use an explicit
+source when another zone is required:
+
+```go
+cost.Additional{
+	Kind:   cost.AdditionalDiscard,
+	Text:   "Discard this card",
+	Source: zone.Hand,
+}
+```
+
+`Source` uses the shared `zone.Type` vocabulary directly.
+
+### Alternative
+
+`Alternative` replaces the normal mana cost when selected. It may contain a
+mana cost, additional costs, or both:
+
+```go
+cost.Alternative{
+	Label:    "Flashback",
+	ManaCost: opt.Val(cost.Mana{cost.O(2), cost.R}),
+}
+```
+
+Required costs on the spell or ability still apply in addition to the selected
+alternative's `AdditionalCosts`.
 
 ### Symbol
 
@@ -54,6 +107,7 @@ cost.PhyrexianMana(mana.W)        // {W/P}
 
 ## Package boundaries
 
-This package is a leaf package except for depending on `mtg/game/mana` for mana
-color vocabulary in cost symbols. It should not depend on `mtg/game` or
-`mtg/rules`.
+This package is a leaf package except for depending on other leaf vocabulary
+packages such as `mtg/game/mana`, `mtg/game/types`, and `mtg/game/zone`. It must
+not depend on `mtg/game` or `mtg/rules`; runtime payment selections and
+mutations belong in those higher-level packages.

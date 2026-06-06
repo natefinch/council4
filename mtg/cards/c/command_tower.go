@@ -2,6 +2,7 @@ package c
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -24,9 +25,9 @@ var CommandTower = &game.CardDef{
 				Text: `
 					{T}: Add one mana of any color in your commander's color identity.
 				`,
-				AdditionalCosts: []game.AdditionalCost{
+				AdditionalCosts: []cost.Additional{
 					{
-						Kind: game.AdditionalCostTap,
+						Kind: cost.AdditionalTap,
 					},
 				},
 				Content: game.PlainAbilityContent{

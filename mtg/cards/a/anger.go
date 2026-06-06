@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -48,7 +49,7 @@ var Anger = &game.CardDef{
 						},
 					},
 				}),
-				ZoneOfFunction: game.ZoneGraveyard,
+				ZoneOfFunction: zone.Graveyard,
 				ContinuousEffects: []game.ContinuousEffect{
 					{
 						Layer:    game.LayerAbility,

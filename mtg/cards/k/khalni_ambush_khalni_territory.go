@@ -90,9 +90,9 @@ var KhalniAmbush = func() *game.CardDef {
 			Text: `
 				{T}: Add {G}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{
+			AdditionalCosts: []cost.Additional{
 				{
-					Kind: game.AdditionalCostTap,
+					Kind: cost.AdditionalTap,
 				},
 			},
 			Content: game.PlainAbilityContent{

@@ -3,6 +3,7 @@ package k
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -29,9 +30,9 @@ var KarplusanForest = &game.CardDef{
 				Text: `
 					{T}: Add {C}.
 				`,
-				AdditionalCosts: []game.AdditionalCost{
+				AdditionalCosts: []cost.Additional{
 					{
-						Kind: game.AdditionalCostTap,
+						Kind: cost.AdditionalTap,
 					},
 				},
 				Content: game.PlainAbilityContent{
@@ -49,9 +50,9 @@ var KarplusanForest = &game.CardDef{
 				Text: `
 					{T}: Add {R} or {G}. This land deals 1 damage to you.
 				`,
-				AdditionalCosts: []game.AdditionalCost{
+				AdditionalCosts: []cost.Additional{
 					{
-						Kind: game.AdditionalCostTap,
+						Kind: cost.AdditionalTap,
 					},
 				},
 				Content: game.PlainAbilityContent{

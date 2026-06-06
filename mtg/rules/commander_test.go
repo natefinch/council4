@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -45,8 +47,8 @@ func TestCommanderPermanentZoneChangesUseCommandZoneReplacement(t *testing.T) {
 		move func(*game.Game, *game.Permanent)
 	}{
 		{name: "destroy", move: func(g *game.Game, permanent *game.Permanent) { destroyPermanent(g, permanent.ObjectID) }},
-		{name: "exile", move: func(g *game.Game, permanent *game.Permanent) { movePermanentToZone(g, permanent, game.ZoneExile) }},
-		{name: "bounce", move: func(g *game.Game, permanent *game.Permanent) { movePermanentToZone(g, permanent, game.ZoneHand) }},
+		{name: "exile", move: func(g *game.Game, permanent *game.Permanent) { movePermanentToZone(g, permanent, zone.Exile) }},
+		{name: "bounce", move: func(g *game.Game, permanent *game.Permanent) { movePermanentToZone(g, permanent, zone.Hand) }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,7 +66,7 @@ func TestCommanderPermanentZoneChangesUseCommandZoneReplacement(t *testing.T) {
 				t.Fatal("commander also appeared in a replaced destination zone")
 			}
 			assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
-				return event.CardID == commander.CardInstanceID && event.FromZone == game.ZoneBattlefield && event.ToZone == game.ZoneCommand
+				return event.CardID == commander.CardInstanceID && event.FromZone == zone.Battlefield && event.ToZone == zone.Command
 			})
 			assertNoEvent(t, g.Events, game.EventPermanentDied, func(event game.GameEvent) bool {
 				return event.CardID == commander.CardInstanceID
@@ -85,7 +87,7 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 			t.Fatal("discarded commander did not use command-zone replacement")
 		}
 		assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
-			return event.CardID == commanderID && event.ToZone == game.ZoneCommand
+			return event.CardID == commanderID && event.ToZone == zone.Command
 		})
 	})
 	t.Run("mill", func(t *testing.T) {
@@ -176,7 +178,7 @@ func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 		t.Fatal("commander cast did not pay colored mana")
 	}
 	assertEvent(t, g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
-		return event.CardID == commanderID && event.FromZone == game.ZoneCommand && event.ToZone == game.ZoneStack
+		return event.CardID == commanderID && event.FromZone == zone.Command && event.ToZone == zone.Stack
 	})
 }
 
@@ -192,7 +194,7 @@ func TestFailedCommanderTaxCastDoesNotMutate(t *testing.T) {
 	g.Turn.PriorityPlayer = game.Player1
 	act := action.CastCommanderSpell(commanderID, nil, 0, nil)
 
-	if engine.canCastSpellFromZoneWithKicker(g, game.Player1, commanderID, game.ZoneCommand, nil, 0, nil, false) {
+	if engine.canCastSpellFromZoneWithKicker(g, game.Player1, commanderID, zone.Command, nil, 0, nil, false) {
 		t.Fatal("canCast commander with tax = true with insufficient mana, want false")
 	}
 	if engine.applyAction(g, game.Player1, act) {

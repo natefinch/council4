@@ -4,6 +4,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -272,8 +274,8 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
-				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 				},
 			},
 		}},
@@ -319,8 +321,8 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
-				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 				},
 			},
 		}},
@@ -445,8 +447,8 @@ func TestPaymentChoiceFallbackSelectsMultipleAdditionalCostObjects(t *testing.T)
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
-				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice two creatures", Amount: 2, MatchPermanentType: true, PermanentType: types.Creature},
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalSacrifice, Text: "Sacrifice two creatures", Amount: 2, MatchPermanentType: true, PermanentType: types.Creature},
 				},
 			},
 		}},
@@ -482,7 +484,7 @@ func TestAlternativeCostCanMakeSpellPayable(t *testing.T) {
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
-				AlternativeCosts: []game.AlternativeCost{
+				AlternativeCosts: []cost.Alternative{
 					{Label: "Cast for free"},
 				},
 			},
@@ -513,11 +515,11 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
-				AlternativeCosts: []game.AlternativeCost{
+				AlternativeCosts: []cost.Alternative{
 					{
 						Label: "Sacrifice instead",
-						AdditionalCosts: []game.AdditionalCost{
-							{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+						AdditionalCosts: []cost.Additional{
+							{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 						},
 					},
 				},
@@ -551,8 +553,8 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 		Abilities: []game.AbilityDef{
 			{
 				Kind: game.SpellAbility,
-				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 				},
 			},
 		}},
@@ -828,8 +830,8 @@ func TestGeneralActivatedAbilityTapCostRespectsSummoningSickness(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
 		Kind: game.ActivatedAbility,
-		AdditionalCosts: []game.AdditionalCost{
-			{Kind: game.AdditionalCostTap},
+		AdditionalCosts: []cost.Additional{
+			{Kind: cost.AdditionalTap},
 		},
 		Effects: []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}},
 	}))
@@ -892,8 +894,8 @@ func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.AbilityDef{
 		Kind: game.ActivatedAbility,
-		AdditionalCosts: []game.AdditionalCost{
-			{Kind: game.AdditionalCostSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+		AdditionalCosts: []cost.Additional{
+			{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 		},
 		Effects: []game.Effect{{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1}},
 	}))
@@ -1204,7 +1206,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flashback)},
 			{
 				Kind: game.SpellAbility,
-				AlternativeCosts: []game.AlternativeCost{{
+				AlternativeCosts: []cost.Alternative{{
 					Label:    flashbackAlternativeLabel,
 					ManaCost: opt.Val(flashbackCost),
 				}},
@@ -1220,7 +1222,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
 
-	act := action.CastSpellFromZone(cardID, game.ZoneGraveyard, nil, 0, nil)
+	act := action.CastSpellFromZone(cardID, zone.Graveyard, nil, 0, nil)
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("flashback cast from graveyard failed")
 	}
@@ -1228,7 +1230,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	if !ok || !obj.Flashback {
 		t.Fatalf("stack object = %+v, want flashback marker", obj)
 	}
-	if obj.SourceZone != game.ZoneGraveyard {
+	if obj.SourceZone != zone.Graveyard {
 		t.Fatalf("stack object source zone = %v, want graveyard", obj.SourceZone)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -1252,7 +1254,7 @@ func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flashback)},
 			{
 				Kind: game.SpellAbility,
-				AlternativeCosts: []game.AlternativeCost{{
+				AlternativeCosts: []cost.Alternative{{
 					Label:    flashbackAlternativeLabel,
 					ManaCost: opt.Val(flashbackCost),
 				}},
@@ -1329,7 +1331,7 @@ func TestGraveyardOnlyAbilityIsNotActivatedFromBattlefield(t *testing.T) {
 		Toughness: opt.Val(game.PT{Value: 1}),
 		Abilities: []game.AbilityDef{{
 			Kind:           game.ActivatedAbility,
-			ZoneOfFunction: game.ZoneGraveyard,
+			ZoneOfFunction: zone.Graveyard,
 			Effects:        []game.Effect{{Type: game.EffectGainLife, TargetIndex: game.TargetIndexController, Amount: 1}},
 		}}},
 	})
@@ -1360,14 +1362,14 @@ func TestRuleEffectAllowsCastingFromGraveyard(t *testing.T) {
 				RuleEffects: []game.RuleEffect{{
 					Kind:           game.RuleEffectCastFromZone,
 					AffectedPlayer: game.PlayerYou,
-					CastFromZone:   game.ZoneGraveyard,
+					CastFromZone:   zone.Graveyard,
 				}},
 			}},
 		}}},
 	})
 	g.Turn.PriorityPlayer = game.Player1
 
-	if !engine.applyAction(g, game.Player1, action.CastSpellFromZone(cardID, game.ZoneGraveyard, nil, 0, nil)) {
+	if !engine.applyAction(g, game.Player1, action.CastSpellFromZone(cardID, zone.Graveyard, nil, 0, nil)) {
 		t.Fatal("rule effect did not allow graveyard cast")
 	}
 }

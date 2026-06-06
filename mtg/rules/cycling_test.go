@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -57,8 +59,8 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
 		return event.Player == game.Player1 &&
 			event.CardID == cyclingID &&
-			event.FromZone == game.ZoneHand &&
-			event.ToZone == game.ZoneGraveyard
+			event.FromZone == zone.Hand &&
+			event.ToZone == zone.Graveyard
 	})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -79,8 +81,8 @@ func cyclingCard() *game.CardDef {
 				Kind:             game.ActivatedAbility,
 				KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: manaCost}},
 				ManaCost:         opt.Val(manaCost),
-				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostDiscard, Text: "Discard this card", Amount: 1, Zone: game.ZoneHand},
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalDiscard, Text: "Discard this card", Amount: 1, Source: zone.Hand},
 				},
 				Effects: []game.Effect{
 					{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1},

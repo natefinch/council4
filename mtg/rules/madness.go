@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -72,8 +73,8 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		Controller:    playerID,
 		CardID:        card.ID,
 		CardTypes:     cardTypes(spellDef),
-		FromZone:      game.ZoneExile,
-		ToZone:        game.ZoneStack,
+		FromZone:      zone.Exile,
+		ToZone:        zone.Stack,
 	})
 	return true
 }
@@ -105,8 +106,8 @@ func moveExiledCardToGraveyard(g *game.Game, playerID game.PlayerID, cardID id.I
 	emitZoneChangeEvent(g, game.GameEvent{
 		Player:   playerID,
 		CardID:   cardID,
-		FromZone: game.ZoneExile,
-		ToZone:   game.ZoneGraveyard,
+		FromZone: zone.Exile,
+		ToZone:   zone.Graveyard,
 	})
 	return true
 }

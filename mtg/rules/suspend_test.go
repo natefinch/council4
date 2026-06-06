@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -85,7 +87,7 @@ func TestSuspendCastsSpellWhenLastCounterRemoved(t *testing.T) {
 		t.Fatalf("stack top = %+v, want suspended spell", obj)
 	}
 	assertEvent(t, g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
-		return event.CardID == cardID && event.FromZone == game.ZoneExile && event.ToZone == game.ZoneStack
+		return event.CardID == cardID && event.FromZone == zone.Exile && event.ToZone == zone.Stack
 	})
 }
 

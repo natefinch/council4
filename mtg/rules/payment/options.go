@@ -3,6 +3,8 @@ package payment
 import (
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 )
@@ -16,12 +18,12 @@ type spellCostOption struct {
 	label           string
 	card            *game.CardDef
 	manaCost        *cost.Mana
-	additionalCosts []game.AdditionalCost
+	additionalCosts []cost.Additional
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
 // casting a spell from the given zone with the kicker flag.
-func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone game.ZoneType, kickerPaid bool) []spellCostOption {
+func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, kickerPaid bool) []spellCostOption {
 	if card == nil {
 		return nil
 	}
@@ -36,17 +38,17 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone game.ZoneTy
 			label:           "Normal cost",
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), ability, kickerPaid),
-			additionalCosts: append([]game.AdditionalCost(nil), requiredAdditional...),
+			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
 		},
 	}
 	for i, alternative := range ability.AlternativeCosts {
-		if isFlashbackAlternative(alternative) && sourceZone != game.ZoneGraveyard {
+		if isFlashbackAlternative(alternative) && sourceZone != zone.Graveyard {
 			continue
 		}
-		if sourceZone == game.ZoneGraveyard && !isFlashbackAlternative(alternative) {
+		if sourceZone == zone.Graveyard && !isFlashbackAlternative(alternative) {
 			continue
 		}
-		additional := append([]game.AdditionalCost(nil), requiredAdditional...)
+		additional := append([]cost.Additional(nil), requiredAdditional...)
 		additional = append(additional, alternative.AdditionalCosts...)
 		label := alternative.Label
 		if label == "" {
@@ -60,13 +62,13 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone game.ZoneTy
 			additionalCosts: additional,
 		})
 	}
-	if sourceZone == game.ZoneGraveyard {
+	if sourceZone == zone.Graveyard {
 		return options[1:]
 	}
 	return options
 }
 
-func isFlashbackAlternative(alternative game.AlternativeCost) bool {
+func isFlashbackAlternative(alternative cost.Alternative) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
 }
 

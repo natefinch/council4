@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -75,7 +76,7 @@ var NibelheimAflame = &game.CardDef{
 						},
 						Condition: opt.Val(game.EffectCondition{
 							Condition: opt.Val(game.Condition{
-								CastFromZone: opt.Val(game.ZoneGraveyard),
+								CastFromZone: opt.Val(zone.Graveyard),
 							}),
 						}),
 					},
@@ -86,14 +87,14 @@ var NibelheimAflame = &game.CardDef{
 						},
 						Condition: opt.Val(game.EffectCondition{
 							Condition: opt.Val(game.Condition{
-								CastFromZone: opt.Val(game.ZoneGraveyard),
+								CastFromZone: opt.Val(zone.Graveyard),
 							}),
 						}),
 					},
 				},
 			},
 
-			AlternativeCosts: []game.AlternativeCost{
+			AlternativeCosts: []cost.Alternative{
 				{
 					Label: "Flashback",
 					ManaCost: opt.Val(cost.Mana{

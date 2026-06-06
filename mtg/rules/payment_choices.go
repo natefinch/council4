@@ -3,21 +3,23 @@ package rules
 import (
 	"fmt"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
-func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []game.AdditionalCost, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
+func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
 	prefs := &payment.Preferences{}
 	prefs.PhyrexianLifeChoices = e.phyrexianPaymentChoices(g, playerID, manaCost, agents, log)
 	for _, additionalCost := range additionalCosts {
 		amount := payment.AdditionalCostAmount(additionalCost)
 		switch additionalCost.Kind {
-		case game.AdditionalCostSacrifice:
+		case cost.AdditionalSacrifice:
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
-		case game.AdditionalCostDiscard:
+		case cost.AdditionalDiscard:
 			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
 		default:
 		}
@@ -26,17 +28,17 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 }
 
 func (e *Engine) paymentPreferencesForSpell(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
-	return e.paymentPreferencesForSpellFromZone(g, playerID, 0, game.ZoneHand, card, xValue, agents, log)
+	return e.paymentPreferencesForSpellFromZone(g, playerID, 0, zone.Hand, card, xValue, agents, log)
 }
 
-func (e *Engine) paymentPreferencesForSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
+func (e *Engine) paymentPreferencesForSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
 	option := e.chooseSpellCostOptionFromZone(g, playerID, cardID, sourceZone, card, xValue, agents, log)
 	prefs := e.paymentPreferencesForCost(g, playerID, option.ManaCost, option.AdditionalCosts, agents, log)
 	prefs.AlternativeIndex = option.Index
 	return prefs
 }
 
-func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) payment.SpellOptionSummary {
+func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) payment.SpellOptionSummary {
 	options := paymentOrch.planner(g).PayableSpellOptions(payment.SpellRequest{PlayerID: playerID, CardID: cardID, SourceZone: sourceZone, Card: card, XValue: xValue})
 	if len(options) == 0 {
 		return payment.SpellOptionSummary{}
@@ -104,7 +106,7 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, m
 	return choices
 }
 
-func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, addCost game.AdditionalCost, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
 	candidates := candidateSacrificePermanents(g, playerID, addCost)
 	if len(candidates) <= amount {
 		return paymentPermanentIDs(candidates)
@@ -126,7 +128,7 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 	return selectedPaymentPermanentIDs(candidates, selected)
 }
 
-func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost game.AdditionalCost, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
 	candidates := candidateDiscardCards(g, playerID, addCost)
 	if len(candidates) <= amount {
 		return candidates
@@ -156,7 +158,7 @@ func firstChoiceIndices(amount int) []int {
 	return selected
 }
 
-func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost game.AdditionalCost) []*game.Permanent {
+func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost cost.Additional) []*game.Permanent {
 	var candidates []*game.Permanent
 	for _, permanent := range g.Battlefield {
 		if permanent.Controller == playerID && localAdditionalCostMatchesPermanent(g, permanent, addCost) {
@@ -166,14 +168,14 @@ func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost 
 	return candidates
 }
 
-func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, addCost game.AdditionalCost) bool {
+func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, addCost cost.Additional) bool {
 	if addCost.MatchPermanentType && !permanentHasType(g, permanent, addCost.PermanentType) {
 		return false
 	}
 	return true
 }
 
-func candidateDiscardCards(g *game.Game, playerID game.PlayerID, addCost game.AdditionalCost) []id.ID {
+func candidateDiscardCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
@@ -188,7 +190,7 @@ func candidateDiscardCards(g *game.Game, playerID game.PlayerID, addCost game.Ad
 	return candidates
 }
 
-func localAdditionalCostMatchesCard(face *game.CardDef, addCost game.AdditionalCost) bool {
+func localAdditionalCostMatchesCard(face *game.CardDef, addCost cost.Additional) bool {
 	if face == nil {
 		return false
 	}

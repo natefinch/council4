@@ -4,6 +4,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -465,7 +467,7 @@ func staticAbilityFunctionsInZone(ability *game.AbilityDef, onBattlefield bool) 
 	if onBattlefield {
 		return abilityFunctionsOnBattlefield(ability)
 	}
-	return ability.FunctionZone() == game.ZoneGraveyard
+	return ability.FunctionZone() == zone.Graveyard
 }
 
 func sourceObjectID(source staticAbilitySource) id.ID {
@@ -716,8 +718,8 @@ func rebuildKeywords(values *permanentEffectiveValues) {
 }
 
 func abilityFunctionsOnBattlefield(ability *game.AbilityDef) bool {
-	zone := ability.FunctionZone()
-	return zone == game.ZoneNone || zone == game.ZoneBattlefield
+	functionZone := ability.FunctionZone()
+	return functionZone == zone.None || functionZone == zone.Battlefield
 }
 
 func powerToughnessCounterDelta(permanent *game.Permanent) int {

@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 const openingHandSize = 7
@@ -32,8 +33,8 @@ func (*Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
 	event := game.GameEvent{
 		Player:   playerID,
 		CardID:   cardID,
-		FromZone: game.ZoneLibrary,
-		ToZone:   game.ZoneHand,
+		FromZone: zone.Library,
+		ToZone:   zone.Hand,
 		Amount:   1,
 	}
 	emitZoneChangeEvent(g, event)

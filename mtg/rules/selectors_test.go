@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -72,7 +74,7 @@ func TestAttachedPermanentTriggerFilterUsesLKI(t *testing.T) {
 	if !attachPermanent(g, equipment, creature) {
 		t.Fatal("attachPermanent failed")
 	}
-	snapshot := snapshotPermanent(g, creature, game.ZoneBattlefield)
+	snapshot := snapshotPermanent(g, creature, zone.Battlefield)
 	rememberLastKnown(g, &snapshot)
 	detachPermanent(g, equipment)
 

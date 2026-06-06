@@ -3,9 +3,12 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -61,8 +64,8 @@ func TestShieldCounterReplacesDestroyBeforeZoneChange(t *testing.T) {
 	}
 	assertEvent(t, g.Events, game.EventDestroyReplaced, func(event game.GameEvent) bool {
 		return event.PermanentID == target.ObjectID &&
-			event.FromZone == game.ZoneBattlefield &&
-			event.ToZone == game.ZoneGraveyard
+			event.FromZone == zone.Battlefield &&
+			event.ToZone == zone.Graveyard
 	})
 	assertNoEvent(t, g.Events, game.EventPermanentDied, func(event game.GameEvent) bool {
 		return event.PermanentID == target.ObjectID
@@ -346,7 +349,7 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	}
 	g.Players[game.Player1].Hand.Remove(cardID)
 
-	permanent, ok := createCardPermanent(g, card, game.Player1, game.ZoneHand)
+	permanent, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
 
 	if !ok || !permanent.Tapped {
 		t.Fatalf("permanent = %+v, want enters tapped", permanent)
@@ -439,10 +442,10 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type:        game.EffectReplace,
-		Replacement: opt.Val(game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard, ReplaceToZone: game.ZoneExile}),
+		Replacement: opt.Val(game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: zone.Battlefield, MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Exile}),
 	}, nil)
 
-	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
 
@@ -453,7 +456,7 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 		t.Fatal("replacement did not move card to exile")
 	}
 	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
-		return event.PermanentID == target.ObjectID && event.ToZone == game.ZoneExile
+		return event.PermanentID == target.ObjectID && event.ToZone == zone.Exile
 	})
 }
 
@@ -468,8 +471,8 @@ func payLifeETBModalLand() *game.CardDef {
 			ReplacementAbilities: []game.ReplacementAbilityDef{
 				game.EntersTappedUnlessPaidReplacement("As this land enters, you may pay 3 life. If you don't, it enters tapped.", game.ResolutionPayment{
 					Prompt: "Pay 3 life?",
-					AdditionalCosts: []game.AdditionalCost{
-						{Kind: game.AdditionalCostPayLife, Amount: 3, Text: "Pay 3 life"},
+					AdditionalCosts: []cost.Additional{
+						{Kind: cost.AdditionalPayLife, Amount: 3, Text: "Pay 3 life"},
 					},
 				}),
 			},
@@ -482,7 +485,7 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	engine := NewEngine(nil)
 	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
 		Type:        game.EffectReplace,
-		Replacement: opt.Val(game.ReplacementEffect{Description: "enter modified", MatchEvent: game.EventPermanentEnteredBattlefield, MatchToZone: true, ToZone: game.ZoneBattlefield, EntersTapped: true, EntersWithCounters: []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 1}}}),
+		Replacement: opt.Val(game.ReplacementEffect{Description: "enter modified", MatchEvent: game.EventPermanentEnteredBattlefield, MatchToZone: true, ToZone: zone.Battlefield, EntersTapped: true, EntersWithCounters: []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 1}}}),
 	}, nil)
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Entering Creature",
 		Types:     []types.Card{types.Creature},
@@ -495,7 +498,7 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	}
 	g.Players[game.Player1].Hand.Remove(cardID)
 
-	permanent, ok := createCardPermanent(g, card, game.Player1, game.ZoneHand)
+	permanent, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
 
 	if !ok || !permanent.Tapped {
 		t.Fatalf("permanent = %+v, want tapped by replacement", permanent)
@@ -514,17 +517,17 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 			Description:   "exile instead",
 			MatchEvent:    game.EventZoneChanged,
 			MatchFromZone: true,
-			FromZone:      game.ZoneBattlefield,
+			FromZone:      zone.Battlefield,
 			MatchToZone:   true,
-			ToZone:        game.ZoneGraveyard,
-			ReplaceToZone: game.ZoneExile,
+			ToZone:        zone.Graveyard,
+			ReplaceToZone: zone.Exile,
 		},
 		{
 			Description:   "hand instead",
 			MatchEvent:    game.EventZoneChanged,
 			MatchFromZone: true,
-			FromZone:      game.ZoneBattlefield,
-			ReplaceToZone: game.ZoneHand,
+			FromZone:      zone.Battlefield,
+			ReplaceToZone: zone.Hand,
 		},
 	} {
 		engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
@@ -533,7 +536,7 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 		}, nil)
 	}
 
-	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
 
@@ -563,13 +566,13 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 		SourceCardID: source.CardInstanceID,
 	}, &game.Effect{
 		Type:        game.EffectReplace,
-		Replacement: opt.Val(game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard, ReplaceToZone: game.ZoneExile}),
+		Replacement: opt.Val(game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: zone.Battlefield, MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Exile}),
 	}, nil)
 
-	if !movePermanentToZone(g, source, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, source, zone.Graveyard) {
 		t.Fatal("source should leave battlefield")
 	}
-	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("target should move to graveyard")
 	}
 

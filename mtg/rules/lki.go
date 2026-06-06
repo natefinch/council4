@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -16,7 +17,7 @@ func optionalInt(value int, ok bool) opt.V[int] {
 	return opt.Val(value)
 }
 
-func snapshotPermanent(g *game.Game, permanent *game.Permanent, zone game.ZoneType) game.ObjectSnapshot {
+func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Type) game.ObjectSnapshot {
 	values := effectivePermanentValues(g, permanent)
 	snapshot := game.ObjectSnapshot{
 		ObjectID:       permanent.ObjectID,
@@ -27,7 +28,7 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zone game.ZoneTy
 		Name:           values.name,
 		Owner:          permanent.Owner,
 		Controller:     values.controller,
-		FromZone:       zone,
+		FromZone:       zoneType,
 		Colors:         append([]color.Color(nil), values.colors...),
 		Supertypes:     append([]types.Super(nil), values.supertypes...),
 		Types:          append([]types.Card(nil), values.types...),

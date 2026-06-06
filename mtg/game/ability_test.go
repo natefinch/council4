@@ -5,6 +5,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -82,13 +84,13 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	if !ok {
 		t.Fatal("ActivatedBody returned false for eternalize ability")
 	}
-	if body.ZoneOfFunction != ZoneGraveyard || body.Timing != SorceryOnly {
+	if body.ZoneOfFunction != zone.Graveyard || body.Timing != SorceryOnly {
 		t.Fatalf("zone/timing = %v/%v, want graveyard sorcery", body.ZoneOfFunction, body.Timing)
 	}
 	if !body.ManaCost.Exists || !slices.Equal(body.ManaCost.Val, []cost.Symbol{cost.O(2), cost.G}) {
 		t.Fatalf("mana cost = %+v, want copied eternalize cost", body.ManaCost)
 	}
-	if len(body.AdditionalCosts) != 1 || body.AdditionalCosts[0].Kind != AdditionalCostExileSource {
+	if len(body.AdditionalCosts) != 1 || body.AdditionalCosts[0].Kind != cost.AdditionalExileSource {
 		t.Fatalf("additional costs = %+v, want source exile", body.AdditionalCosts)
 	}
 	content, ok := body.Content.(PlainAbilityContent)
@@ -170,7 +172,7 @@ func TestAbilityFieldAccessorsPreferBody(t *testing.T) {
 	activationCondition := opt.Val(Condition{ControllerHasMaxSpeed: true})
 	ability := AbilityDef{
 		Kind:                ActivatedAbility,
-		ZoneOfFunction:      ZoneBattlefield,
+		ZoneOfFunction:      zone.Battlefield,
 		Timing:              NoTimingRestriction,
 		ActivationCondition: opt.Val(Condition{SourceNotMonstrous: true}),
 		LoyaltyCost:         1,
@@ -180,7 +182,7 @@ func TestAbilityFieldAccessorsPreferBody(t *testing.T) {
 		},
 	}
 
-	if ability.FunctionZone() != ZoneBattlefield {
+	if ability.FunctionZone() != zone.Battlefield {
 		t.Fatalf("function zone = %v, want legacy battlefield fallback", ability.FunctionZone())
 	}
 	if ability.TimingRestriction() != NoTimingRestriction {
@@ -199,10 +201,10 @@ func TestBodyOnlySpellAbilityBodyLowers(t *testing.T) {
 	src := AbilityDef{Body: SpellAbilityBody{
 		Text:    "Draw two cards.",
 		Content: PlainAbilityContent{LegacyEffects: []Effect{{Type: EffectDraw, Amount: 2}}},
-		AdditionalCosts: []AdditionalCost{
-			{Kind: AdditionalCostTap, Text: "Tap"},
+		AdditionalCosts: []cost.Additional{
+			{Kind: cost.AdditionalTap, Text: "Tap"},
 		},
-		AlternativeCosts: []AlternativeCost{{Label: "Overload"}},
+		AlternativeCosts: []cost.Alternative{{Label: "Overload"}},
 	}}
 	got := src.WithBody()
 	if got.Kind != SpellAbility {
@@ -211,7 +213,7 @@ func TestBodyOnlySpellAbilityBodyLowers(t *testing.T) {
 	if got.Text != "Draw two cards." {
 		t.Fatalf("Text = %q, want spell text", got.Text)
 	}
-	if len(got.AdditionalCosts) != 1 || got.AdditionalCosts[0].Kind != AdditionalCostTap {
+	if len(got.AdditionalCosts) != 1 || got.AdditionalCosts[0].Kind != cost.AdditionalTap {
 		t.Fatalf("AdditionalCosts = %+v, want tap", got.AdditionalCosts)
 	}
 	if len(got.AlternativeCosts) != 1 {
@@ -259,7 +261,7 @@ func TestBodyOnlyActivatedEquipAbilityLowers(t *testing.T) {
 func TestBodyOnlyManaAbilityBodyPlainLowers(t *testing.T) {
 	src := AbilityDef{Body: ManaAbilityBody{
 		Text:            "{T}: Add {G}.",
-		AdditionalCosts: []AdditionalCost{{Kind: AdditionalCostTap}},
+		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
 		Content: PlainAbilityContent{LegacyEffects: []Effect{
 			{Type: EffectAddMana, Amount: 1},
 		}},

@@ -4,6 +4,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	cardc "github.com/natefinch/council4/mtg/cards/c"
 	carde "github.com/natefinch/council4/mtg/cards/e"
 	cardl "github.com/natefinch/council4/mtg/cards/l"
@@ -162,7 +164,7 @@ func TestEnduringCourageInstructionReturnsAsEnchantment(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	courage := addCombatPermanent(g, game.Player1, carde.EnduringCourage)
-	if !movePermanentToZone(g, courage, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, courage, zone.Graveyard) {
 		t.Fatal("could not move Enduring Courage to graveyard")
 	}
 	g.Stack.Push(&game.StackObject{

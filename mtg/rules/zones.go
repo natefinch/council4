@@ -5,25 +5,26 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType) (*game.Permanent, bool) {
+func createCardPermanent(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type) (*game.Permanent, bool) {
 	return createCardPermanentFace(g, card, controller, fromZone, game.FaceFront)
 }
 
-func createCardPermanentWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+func createCardPermanentWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	return createCardPermanentFaceWithChoices(e, g, card, controller, fromZone, game.FaceFront, agents, log)
 }
 
-func createCardPermanentFace(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex) (*game.Permanent, bool) {
+func createCardPermanentFace(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex) (*game.Permanent, bool) {
 	return createCardPermanentFaceWithChoices(NewEngine(nil), g, card, controller, fromZone, face, [game.NumPlayers]PlayerAgent{}, nil)
 }
 
-func createCardPermanentFaceWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+func createCardPermanentFaceWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	return createCardPermanentFaceWithContinuous(e, g, card, controller, fromZone, face, nil, agents, log)
 }
 
-func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, continuous []game.ContinuousEffect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	return createCardPermanentFaceWithOptions(e, g, card, controller, fromZone, face, continuous, permanentCreationOptions{}, agents, log)
 }
 
@@ -31,7 +32,7 @@ type permanentCreationOptions struct {
 	ForceTapped bool
 }
 
-func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {
 		return nil, false
@@ -64,7 +65,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		Face:        face,
 		PermanentID: objectID,
 		FromZone:    fromZone,
-		ToZone:      game.ZoneBattlefield,
+		ToZone:      zone.Battlefield,
 	}
 	emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
@@ -88,7 +89,7 @@ func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, cont
 	}
 }
 
-func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone game.ZoneType, face game.FaceIndex, kind game.FaceDownKind) (*game.Permanent, bool) {
+func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, kind game.FaceDownKind) (*game.Permanent, bool) {
 	if _, ok := cardFaceDef(card, face); !ok || kind == game.FaceDownNone {
 		return nil, false
 	}
@@ -114,7 +115,7 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 		PermanentID: objectID,
 		CardTypes:   []types.Card{types.Creature},
 		FromZone:    fromZone,
-		ToZone:      game.ZoneBattlefield,
+		ToZone:      zone.Battlefield,
 	}
 	emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
@@ -145,11 +146,11 @@ func removePermanentFromBattlefield(g *game.Game, objectID id.ID) (*game.Permane
 	return nil, false
 }
 
-func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination game.ZoneType) bool {
+func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zone.Type) bool {
 	if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
 		return false
 	}
-	snapshot := snapshotPermanent(g, permanent, game.ZoneBattlefield)
+	snapshot := snapshotPermanent(g, permanent, zone.Battlefield)
 	rememberLastKnown(g, &snapshot)
 	event := game.GameEvent{
 		Kind:        game.EventZoneChanged,
@@ -160,7 +161,7 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 		PermanentID: permanent.ObjectID,
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,
-		FromZone:    game.ZoneBattlefield,
+		FromZone:    zone.Battlefield,
 		ToZone:      destination,
 	}
 	actualDestination := replacementZoneChangeDestination(g, event)
@@ -176,22 +177,22 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination ga
 	if !ok {
 		return false
 	}
-	zone, ok := destinationZone(g, removed.Owner, actualDestination)
+	destinationCards, ok := destinationZone(g, removed.Owner, actualDestination)
 	if !ok {
 		return false
 	}
 	if removed.Token {
-		zone.Add(removed.ObjectID)
+		destinationCards.Add(removed.ObjectID)
 		emitPermanentLeaveEvents(g, removed, actualDestination)
 		return true
 	}
 
-	zone.Add(removed.CardInstanceID)
+	destinationCards.Add(removed.CardInstanceID)
 	emitPermanentLeaveEvents(g, removed, actualDestination)
 	return true
 }
 
-func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone game.ZoneType) bool {
+func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type) bool {
 	from, ok := destinationZone(g, playerID, fromZone)
 	if !ok || !from.Remove(cardID) {
 		return false
@@ -211,7 +212,7 @@ func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fr
 	return true
 }
 
-func removeCardFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone game.ZoneType) bool {
+func removeCardFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone zone.Type) bool {
 	from, ok := destinationZone(g, playerID, fromZone)
 	return ok && from.Remove(cardID)
 }
@@ -222,34 +223,34 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 		return false
 	}
 	card, cardOK := g.GetCardInstance(cardID)
-	destination := game.ZoneGraveyard
+	destination := zone.Graveyard
 	if cardOK {
 		if _, ok := madnessCostForCard(cardFaceOrDefault(card, game.FaceFront)); ok {
-			destination = game.ZoneExile
+			destination = zone.Exile
 		}
 		destination = replacementZoneChangeDestination(g, game.GameEvent{
 			Kind:       game.EventZoneChanged,
 			Controller: playerID,
 			Player:     playerID,
 			CardID:     cardID,
-			FromZone:   game.ZoneHand,
+			FromZone:   zone.Hand,
 			ToZone:     destination,
 		})
 		destination = commanderReplacementDestination(g, card.ID, destination)
 	}
 	zoneOwner := playerID
-	if destination == game.ZoneCommand && cardOK {
+	if destination == zone.Command && cardOK {
 		zoneOwner = card.Owner
 	}
-	zone, ok := destinationZone(g, zoneOwner, destination)
+	destinationCards, ok := destinationZone(g, zoneOwner, destination)
 	if !ok {
 		return false
 	}
-	zone.Add(cardID)
+	destinationCards.Add(cardID)
 	event := game.GameEvent{
 		Player:   playerID,
 		CardID:   cardID,
-		FromZone: game.ZoneHand,
+		FromZone: zone.Hand,
 		ToZone:   destination,
 		Amount:   1,
 	}
@@ -260,7 +261,7 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	return true
 }
 
-func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destination game.ZoneType) {
+func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destination zone.Type) {
 	event := game.GameEvent{
 		Controller:  permanent.Controller,
 		Player:      permanent.Owner,
@@ -269,11 +270,11 @@ func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destinati
 		PermanentID: permanent.ObjectID,
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,
-		FromZone:    game.ZoneBattlefield,
+		FromZone:    zone.Battlefield,
 		ToZone:      destination,
 	}
 	emitZoneChangeEvent(g, event)
-	if destination == game.ZoneGraveyard {
+	if destination == zone.Graveyard {
 		event.Kind = game.EventPermanentDied
 		emitEvent(g, event)
 	}
@@ -290,31 +291,31 @@ func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
 	if replaceDestroyPermanent(g, permanent) {
 		return nil, false
 	}
-	if commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand {
-		movePermanentToZone(g, permanent, game.ZoneGraveyard)
+	if commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command {
+		movePermanentToZone(g, permanent, zone.Graveyard)
 		return nil, false
 	}
-	if !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, permanent, zone.Graveyard) {
 		return nil, false
 	}
 	return permanent, true
 }
 
-func destinationZone(g *game.Game, owner game.PlayerID, destination game.ZoneType) (*game.Zone, bool) {
+func destinationZone(g *game.Game, owner game.PlayerID, destination zone.Type) (*zone.Zone, bool) {
 	if owner < 0 || int(owner) >= len(g.Players) {
 		return nil, false
 	}
 	player := g.Players[owner]
 	switch destination {
-	case game.ZoneLibrary:
+	case zone.Library:
 		return &player.Library, true
-	case game.ZoneHand:
+	case zone.Hand:
 		return &player.Hand, true
-	case game.ZoneGraveyard:
+	case zone.Graveyard:
 		return &player.Graveyard, true
-	case game.ZoneExile:
+	case zone.Exile:
 		return &player.Exile, true
-	case game.ZoneCommand:
+	case zone.Command:
 		return &player.CommandZone, true
 	default:
 		return nil, false

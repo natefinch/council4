@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
@@ -296,20 +297,20 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		return "resolved"
 	}
 	if obj.FaceDown {
-		_, ok := createCardPermanentFaceDown(g, card, obj.Controller, game.ZoneStack, obj.FaceDownFace, obj.FaceDownKind)
+		_, ok := createCardPermanentFaceDown(g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind)
 		if !ok {
 			return "invalid face-down"
 		}
 		return "battlefield"
 	}
-	permanent, ok := createCardPermanentFaceWithChoices(e, g, card, obj.Controller, game.ZoneStack, obj.Face, agents, log)
+	permanent, ok := createCardPermanentFaceWithChoices(e, g, card, obj.Controller, zone.Stack, obj.Face, agents, log)
 	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
 	}
 	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
 		target, targetOK := effectPermanent(g, obj, &game.Effect{TargetIndex: 0})
 		if !targetOK || !attachPermanent(g, permanent, target) {
-			movePermanentToZone(g, permanent, game.ZoneGraveyard)
+			movePermanentToZone(g, permanent, zone.Graveyard)
 			return "graveyard"
 		}
 	}
@@ -330,11 +331,11 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 	if _, ok := playerByID(g, card.Owner); !ok {
 		return false
 	}
-	intendedDestination := game.ZoneGraveyard
+	intendedDestination := zone.Graveyard
 	if obj != nil && obj.Flashback {
 		// Flashback replaces any move from the stack to anywhere else with exile
 		// after the spell was cast from a graveyard (CR 702.34a, CR 702.34c).
-		intendedDestination = game.ZoneExile
+		intendedDestination = zone.Exile
 	}
 	destination := replacementZoneChangeDestination(g, game.GameEvent{
 		Kind:          game.EventZoneChanged,
@@ -344,15 +345,15 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		Player:        card.Owner,
 		CardID:        card.ID,
 		Face:          stackObjectFace(obj),
-		FromZone:      game.ZoneStack,
+		FromZone:      zone.Stack,
 		ToZone:        intendedDestination,
 	})
 	destination = commanderReplacementDestination(g, card.ID, destination)
-	zone, ok := destinationZone(g, card.Owner, destination)
+	destinationCards, ok := destinationZone(g, card.Owner, destination)
 	if !ok {
 		return false
 	}
-	zone.Add(card.ID)
+	destinationCards.Add(card.ID)
 	event := game.GameEvent{
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
@@ -360,7 +361,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		Player:        card.Owner,
 		CardID:        card.ID,
 		Face:          stackObjectFace(obj),
-		FromZone:      game.ZoneStack,
+		FromZone:      zone.Stack,
 		ToZone:        destination,
 	}
 	emitZoneChangeEvent(g, event)

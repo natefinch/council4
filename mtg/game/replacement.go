@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -83,7 +84,7 @@ type ResolutionChoice struct {
 	Colors         []mana.Color
 	CardTypes      []types.Card
 	PlayerRelation PlayerRelation
-	Zone           ZoneType
+	Zone           zone.Type
 }
 
 // ResolutionChoiceResult stores the selected value from a ResolutionChoice.
@@ -100,7 +101,7 @@ type ResolutionChoiceResult struct {
 type ResolutionPayment struct {
 	Prompt          string
 	ManaCost        opt.V[cost.Mana]
-	AdditionalCosts []AdditionalCost
+	AdditionalCosts []cost.Additional
 	XValue          int
 }
 
@@ -123,14 +124,14 @@ type ReplacementEffect struct {
 	ControllerFilter TriggerControllerFilter
 
 	MatchFromZone bool
-	FromZone      ZoneType
+	FromZone      zone.Type
 	MatchToZone   bool
-	ToZone        ZoneType
+	ToZone        zone.Type
 
 	// Condition gates this replacement against the in-flight event.
 	Condition opt.V[Condition]
 
-	ReplaceToZone      ZoneType
+	ReplaceToZone      zone.Type
 	EntersTapped       bool
 	EntersWithCounters []CounterPlacement
 }

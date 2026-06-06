@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -72,5 +73,5 @@ type RuleEffect struct {
 
 	CostModifier CostModifier
 
-	CastFromZone ZoneType
+	CastFromZone zone.Type
 }

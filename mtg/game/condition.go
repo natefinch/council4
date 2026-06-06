@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -31,7 +32,7 @@ type Condition struct {
 	SourceNotMonstrous                                           bool
 	ControllerHasMaxSpeed                                        bool
 	TargetEnteredThisTurn                                        opt.V[int]
-	CastFromZone                                                 opt.V[ZoneType]
+	CastFromZone                                                 opt.V[zone.Type]
 }
 
 // PermanentFilter matches permanents for reusable condition predicates. Empty

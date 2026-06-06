@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 const maxStateBasedActionPasses = 1000
@@ -97,8 +98,8 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentD
 		if permanentDeathBypassesDestroy(death.reason) {
 			var ok bool
 			permanent, ok = permanentByObjectID(g, death.objectID)
-			replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
-			if !ok || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+			replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command
+			if !ok || !movePermanentToZone(g, permanent, zone.Graveyard) {
 				continue
 			}
 			if replacedToCommand {
@@ -150,8 +151,8 @@ func checkAttachmentStateBasedActions(g *game.Game) (bool, []PermanentDeathLog) 
 	var deaths []PermanentDeathLog
 	for _, auraID := range illegalAuras {
 		aura, ok := permanentByObjectID(g, auraID)
-		replacedToCommand := ok && commanderReplacementDestination(g, aura.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
-		if !ok || !movePermanentToZone(g, aura, game.ZoneGraveyard) {
+		replacedToCommand := ok && commanderReplacementDestination(g, aura.CardInstanceID, zone.Graveyard) == zone.Command
+		if !ok || !movePermanentToZone(g, aura, zone.Graveyard) {
 			continue
 		}
 		changed = true
@@ -204,8 +205,8 @@ func checkLegendaryRuleStateBasedActions(g *game.Game) (bool, []PermanentDeathLo
 	var deaths []PermanentDeathLog
 	for _, objectID := range pending {
 		permanent, ok := permanentByObjectID(g, objectID)
-		replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, game.ZoneGraveyard) == game.ZoneCommand
-		if !ok || !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+		replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command
+		if !ok || !movePermanentToZone(g, permanent, zone.Graveyard) {
 			continue
 		}
 		if replacedToCommand {
@@ -256,12 +257,12 @@ func checkCounterStateBasedActions(g *game.Game) bool {
 func removeTokensFromNonBattlefieldZones(g *game.Game) bool {
 	changed := false
 	for _, player := range g.Players {
-		for _, zone := range []*game.Zone{&player.Library, &player.Hand, &player.Graveyard, &player.Exile, &player.CommandZone} {
-			for _, cardID := range zone.All() {
+		for _, cards := range []*zone.Zone{&player.Library, &player.Hand, &player.Graveyard, &player.Exile, &player.CommandZone} {
+			for _, cardID := range cards.All() {
 				if g.CardInstances[cardID] != nil {
 					continue
 				}
-				if zone.Remove(cardID) {
+				if cards.Remove(cardID) {
 					changed = true
 				}
 			}
@@ -373,7 +374,7 @@ func cleanupEliminatedPlayerPermanents(g *game.Game, playerID game.PlayerID) {
 		if owned == nil {
 			return
 		}
-		movePermanentToZone(g, owned, game.ZoneExile)
+		movePermanentToZone(g, owned, zone.Exile)
 	}
 }
 

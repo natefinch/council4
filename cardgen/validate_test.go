@@ -3,6 +3,8 @@ package cardgen
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -100,8 +102,8 @@ func TestValidateCardReportsSearchSpecProblems(t *testing.T) {
 				Type:        game.EffectSearch,
 				TargetIndex: game.TargetIndexController,
 				Search: opt.Val(game.SearchSpec{
-					SourceZone:  game.ZoneLibrary,
-					Destination: game.ZoneExile,
+					SourceZone:  zone.Library,
+					Destination: zone.Exile,
 				}),
 			},
 			code: IssueUnsupportedSearchSpec,
@@ -112,8 +114,8 @@ func TestValidateCardReportsSearchSpecProblems(t *testing.T) {
 				Type:        game.EffectSearch,
 				TargetIndex: game.TargetIndexController,
 				Search: opt.Val(game.SearchSpec{
-					SourceZone:  game.ZoneLibrary,
-					Destination: game.ZoneHand,
+					SourceZone:  zone.Library,
+					Destination: zone.Hand,
 					Supertype:   opt.Val(types.Super("")),
 				}),
 			},

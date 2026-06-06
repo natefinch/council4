@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -82,8 +84,8 @@ func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent) bool {
 			PermanentID: permanent.ObjectID,
 			TokenName:   permanentTokenName(permanent),
 			TokenDef:    permanent.TokenDef,
-			FromZone:    game.ZoneBattlefield,
-			ToZone:      game.ZoneGraveyard,
+			FromZone:    zone.Battlefield,
+			ToZone:      zone.Graveyard,
 		})
 		return true
 	}
@@ -129,7 +131,7 @@ func createReplacementEffect(g *game.Game, obj *game.StackObject, effect *game.E
 	return true
 }
 
-func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) game.ZoneType {
+func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) zone.Type {
 	destination := event.ToZone
 	applied := make(map[id.ID]bool)
 	for {
@@ -150,7 +152,7 @@ func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) game.Z
 	}
 }
 
-func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone game.ZoneType) {
+func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone zone.Type) {
 	event := game.GameEvent{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  effectiveController(g, permanent),
@@ -160,7 +162,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,
 		FromZone:    fromZone,
-		ToZone:      game.ZoneBattlefield,
+		ToZone:      zone.Battlefield,
 	}
 	var staticMatches []game.ReplacementEffect
 	if def, ok := permanentCardDef(g, permanent); ok {
@@ -233,7 +235,7 @@ func matchingZoneReplacementEffects(g *game.Game, event game.GameEvent, applied 
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if applied[replacement.ID] || replacement.ReplaceToZone == game.ZoneNone || !replacementEffectMatchesEvent(g, replacement, event) {
+		if applied[replacement.ID] || replacement.ReplaceToZone == zone.None || !replacementEffectMatchesEvent(g, replacement, event) {
 			continue
 		}
 		matches = append(matches, *replacement)
@@ -422,8 +424,8 @@ func replaceDestroyWithRegeneration(g *game.Game, permanent *game.Permanent) boo
 		PermanentID: permanent.ObjectID,
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,
-		FromZone:    game.ZoneBattlefield,
-		ToZone:      game.ZoneGraveyard,
+		FromZone:    zone.Battlefield,
+		ToZone:      zone.Graveyard,
 	})
 	return true
 }

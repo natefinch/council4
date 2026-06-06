@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -38,8 +40,8 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 			Amount:      1,
 			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
-				SourceZone:  game.ZoneLibrary,
-				Destination: game.ZoneHand,
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
 				CardType:    opt.Val(types.Creature),
 				Reveal:      true,
 			}),

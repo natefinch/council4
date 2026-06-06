@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -71,7 +73,7 @@ func TestStormCopyCounteredByRulesDoesNotMoveSourceCard(t *testing.T) {
 	engine.applyAction(g, game.Player1, action.CastSpell(firstID, nil, 0, nil))
 	engine.resolveTopOfStack(g, &TurnLog{})
 	engine.applyAction(g, game.Player1, action.CastSpell(stormID, []game.Target{game.PermanentTarget(target.ObjectID)}, 0, nil))
-	movePermanentToZone(g, target, game.ZoneGraveyard)
+	movePermanentToZone(g, target, zone.Graveyard)
 	engine.resolveTopOfStack(g, &TurnLog{})
 
 	if g.Players[game.Player1].Graveyard.Contains(stormID) {

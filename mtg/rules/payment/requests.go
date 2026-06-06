@@ -4,13 +4,14 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.
 type SpellRequest struct {
 	PlayerID   game.PlayerID
 	CardID     id.ID
-	SourceZone game.ZoneType
+	SourceZone zone.Type
 	Card       *game.CardDef
 	XValue     int
 	KickerPaid bool
@@ -23,7 +24,7 @@ type AbilityRequest struct {
 	PlayerID     game.PlayerID
 	Source       *game.Permanent
 	SourceCardID id.ID
-	SourceZone   game.ZoneType
+	SourceZone   zone.Type
 	Ability      *game.AbilityDef
 	XValue       int
 	Prefs        *Preferences
@@ -37,7 +38,7 @@ type GenericRequest struct {
 	Cost            *cost.Mana
 	XValue          int
 	Exclude         map[id.ID]bool
-	AdditionalCosts []game.AdditionalCost
+	AdditionalCosts []cost.Additional
 	Prefs           *Preferences
 }
 
@@ -58,7 +59,7 @@ type SpellOptionSummary struct {
 	Index           int
 	Label           string
 	ManaCost        *cost.Mana
-	AdditionalCosts []game.AdditionalCost
+	AdditionalCosts []cost.Additional
 }
 
 // NextPhyrexianLifeChoice returns the next phyrexian payment preference,

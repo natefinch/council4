@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // EventKind identifies a rules-relevant fact that occurred during a game.
@@ -99,10 +100,10 @@ type GameEvent struct {
 	// mutate data reachable through this pointer.
 	TokenDef *CardDef
 
-	// FromZone and ToZone describe a zone transition. ZoneBattlefield is the
+	// FromZone and ToZone describe a zone transition. zone.Battlefield is the
 	// battlefield side of permanent enter/leave events.
-	FromZone ZoneType
-	ToZone   ZoneType
+	FromZone zone.Type
+	ToZone   zone.Type
 
 	// Amount is the number of damage dealt, cards drawn, or cards discarded.
 	Amount int

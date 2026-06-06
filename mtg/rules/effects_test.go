@@ -4,6 +4,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -524,8 +526,8 @@ func commandTowerLikeLand() *game.CardDef {
 			Kind:          game.ActivatedAbility,
 			Text:          "{T}: Add one mana of any color in your commander's color identity.",
 			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
+			AdditionalCosts: []cost.Additional{
+				{Kind: cost.AdditionalTap},
 			},
 			Effects: []game.Effect{
 				{
@@ -834,8 +836,8 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Amount:      1,
 			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
-				SourceZone:  game.ZoneLibrary,
-				Destination: game.ZoneHand,
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
 				CardType:    opt.Val(types.Creature),
 				Reveal:      true,
 				Shuffle:     true,
@@ -867,8 +869,8 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Amount:      1,
 			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
-				SourceZone:  game.ZoneLibrary,
-				Destination: game.ZoneHand,
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
 				CardType:    opt.Val(types.Land),
 				Supertype:   opt.Val(types.Basic),
 				Reveal:      true,
@@ -899,8 +901,8 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Amount:      1,
 			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
-				SourceZone:  game.ZoneLibrary,
-				Destination: game.ZoneHand,
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
 				CardType:    opt.Val(types.Land),
 			}),
 		}, nil)
@@ -928,8 +930,8 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Amount:      1,
 			TargetIndex: game.TargetIndexController,
 			Search: opt.Val(game.SearchSpec{
-				SourceZone:   game.ZoneLibrary,
-				Destination:  game.ZoneBattlefield,
+				SourceZone:   zone.Library,
+				Destination:  zone.Battlefield,
 				CardType:     opt.Val(types.Land),
 				SubtypesAny:  []types.Sub{types.Forest},
 				EntersTapped: true,
@@ -1057,7 +1059,7 @@ func TestSetClassLevelEffectAndClassInitialLevel(t *testing.T) {
 		Subtypes: []types.Sub{types.Class}},
 	})
 	card := g.CardInstances[cardID]
-	source, ok := createCardPermanent(g, card, game.Player1, game.ZoneHand)
+	source, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
 	if !ok {
 		t.Fatal("createCardPermanent failed")
 	}
@@ -1104,8 +1106,8 @@ func TestUnsupportedSearchSpecIsLogged(t *testing.T) {
 		Type:        game.EffectSearch,
 		TargetIndex: game.TargetIndexController,
 		Search: opt.Val(game.SearchSpec{
-			SourceZone:  game.ZoneLibrary,
-			Destination: game.ZoneExile,
+			SourceZone:  zone.Library,
+			Destination: zone.Exile,
 		}),
 		Description: "unsupported search destination",
 	}, nil)
@@ -1224,7 +1226,7 @@ func TestExileAndBounceEffectsMovePermanentsToOwnerZones(t *testing.T) {
 	tests := []struct {
 		name        string
 		effectType  game.EffectType
-		destination *game.Zone
+		destination *zone.Zone
 	}{
 		{name: "exile", effectType: game.EffectExile, destination: nil},
 		{name: "bounce", effectType: game.EffectBounce, destination: nil},
@@ -1241,7 +1243,7 @@ func TestExileAndBounceEffectsMovePermanentsToOwnerZones(t *testing.T) {
 			if _, ok := permanentByObjectID(g, target.ObjectID); ok {
 				t.Fatal("moved permanent remained on battlefield")
 			}
-			var zone *game.Zone
+			var zone *zone.Zone
 			switch tt.effectType {
 			case game.EffectExile:
 				zone = &g.Players[game.Player2].Exile

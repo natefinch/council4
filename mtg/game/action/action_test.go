@@ -4,6 +4,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 )
@@ -148,7 +150,7 @@ func TestConstructedActionsValidate(t *testing.T) {
 
 func TestValidateRejectsKindPayloadMismatch(t *testing.T) {
 	act := Pass()
-	act.castSpell = CastSpellAction{CardID: id.ID(42), SourceZone: game.ZoneHand}
+	act.castSpell = CastSpellAction{CardID: id.ID(42), SourceZone: zone.Hand}
 
 	if err := act.Validate(); err == nil {
 		t.Fatal("Validate() = nil for action with unrelated payload, want error")

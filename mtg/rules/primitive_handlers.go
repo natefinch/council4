@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func (r *effectResolver) quantity(q game.Quantity) int {
@@ -343,7 +344,7 @@ func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 	if !ok {
 		return res
 	}
-	revealed := revealCardIDs(r.game, r.obj, playerID, game.ZoneLibrary, res.amount)
+	revealed := revealCardIDs(r.game, r.obj, playerID, zone.Library, res.amount)
 	if prim.PublishLinked != "" {
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		for _, cardID := range revealed {
@@ -407,7 +408,7 @@ func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePerma
 		return res
 	}
 	owner := permanent.Owner
-	if !movePermanentToZone(r.game, permanent, game.ZoneLibrary) {
+	if !movePermanentToZone(r.game, permanent, zone.Library) {
 		return res
 	}
 	if player, ok := playerByID(r.game, owner); ok {
@@ -525,7 +526,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 		if !ok || !owner.Library.Remove(card.ID) {
 			continue
 		}
-		if _, ok := createCardPermanentWithChoices(r.engine, r.game, card, controller, game.ZoneLibrary, r.agents, r.log); ok {
+		if _, ok := createCardPermanentWithChoices(r.engine, r.game, card, controller, zone.Library, r.agents, r.log); ok {
 			clearLinkedObjects(r.game, key)
 			return true
 		}
@@ -536,7 +537,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 
 func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardReference, recipientRef game.PlayerReference, continuousEffects []game.ContinuousEffect) bool {
 	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, ref)
-	if !ok || fromZone == game.ZoneNone {
+	if !ok || fromZone == zone.None {
 		return false
 	}
 	card, ok := r.game.GetCardInstance(cardID)
@@ -567,9 +568,9 @@ func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardRefere
 		r.log,
 	)
 	if !ok {
-		zone, zoneOK := destinationZone(r.game, card.Owner, fromZone)
+		destinationCards, zoneOK := destinationZone(r.game, card.Owner, fromZone)
 		if zoneOK {
-			zone.Add(cardID)
+			destinationCards.Add(cardID)
 		}
 		return false
 	}

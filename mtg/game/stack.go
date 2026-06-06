@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/mtg/game/id"
+import (
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
 
 // StackObjectKind classifies what kind of object is on the stack.
 type StackObjectKind int
@@ -105,7 +108,7 @@ type StackObject struct {
 
 	// SourceZone is the zone the source card occupied before this spell or
 	// ability was put on the stack.
-	SourceZone ZoneType
+	SourceZone zone.Type
 
 	// ResolvedAmounts stores named numeric results from earlier effects on this
 	// stack object for "that much" style follow-up effects.

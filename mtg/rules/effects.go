@@ -3,6 +3,8 @@ package rules
 import (
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -375,7 +377,7 @@ func (r *effectResolver) executeEffect(effect *game.Effect) (res effectResolved)
 			return res
 		}
 		linkedObjectRef := permanentLinkedObjectRef(permanent)
-		res.succeeded = movePermanentToZone(r.game, permanent, game.ZoneExile)
+		res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile)
 		if effect.LinkID != "" {
 			rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, effect.LinkID), linkedObjectRef)
 		}
@@ -384,7 +386,7 @@ func (r *effectResolver) executeEffect(effect *game.Effect) (res effectResolved)
 		if !ok {
 			return res
 		}
-		res.succeeded = movePermanentToZone(r.game, permanent, game.ZoneHand)
+		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
 	case game.EffectSacrifice:
 		permanent, ok := r.permanent(effect)
 		if !ok {
@@ -393,7 +395,7 @@ func (r *effectResolver) executeEffect(effect *game.Effect) (res effectResolved)
 		if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
 			return res
 		}
-		res.succeeded = movePermanentToZone(r.game, permanent, game.ZoneGraveyard)
+		res.succeeded = movePermanentToZone(r.game, permanent, zone.Graveyard)
 	case game.EffectDiscard:
 		playerID, ok := r.player(effect)
 		if ok {
@@ -527,7 +529,7 @@ func (r *effectResolver) executeEffect(effect *game.Effect) (res effectResolved)
 	case game.EffectReveal:
 		playerID, ok := r.effectRecipientOrPlayer(effect)
 		if ok {
-			revealed := revealCardIDs(r.game, r.obj, playerID, game.ZoneLibrary, res.amount)
+			revealed := revealCardIDs(r.game, r.obj, playerID, zone.Library, res.amount)
 			if effect.LinkID != "" {
 				for _, cardID := range revealed {
 					rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, effect.LinkID), game.LinkedObjectRef{CardID: cardID})
@@ -590,7 +592,7 @@ func (r *effectResolver) executeEffect(effect *game.Effect) (res effectResolved)
 		}
 
 		owner := permanent.Owner
-		if !movePermanentToZone(r.game, permanent, game.ZoneLibrary) {
+		if !movePermanentToZone(r.game, permanent, zone.Library) {
 			return res
 		}
 		if player, ok := playerByID(r.game, owner); ok {
@@ -626,7 +628,7 @@ func (r *effectResolver) putLinkedCardOnBattlefield(effect *game.Effect) bool {
 		if !ok || !owner.Library.Remove(card.ID) {
 			continue
 		}
-		if _, ok := createCardPermanentWithChoices(r.engine, r.game, card, controller, game.ZoneLibrary, r.agents, r.log); ok {
+		if _, ok := createCardPermanentWithChoices(r.engine, r.game, card, controller, zone.Library, r.agents, r.log); ok {
 			clearLinkedObjects(r.game, key)
 			return true
 		}
@@ -638,7 +640,7 @@ func (r *effectResolver) putLinkedCardOnBattlefield(effect *game.Effect) bool {
 func (r *effectResolver) putReferencedCardOnBattlefield(effect *game.Effect) bool {
 	ref := effect.Card.Val
 	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, ref)
-	if !ok || fromZone == game.ZoneNone {
+	if !ok || fromZone == zone.None {
 		return false
 	}
 	card, ok := r.game.GetCardInstance(cardID)
@@ -659,9 +661,9 @@ func (r *effectResolver) putReferencedCardOnBattlefield(effect *game.Effect) boo
 	}
 	permanent, ok := createCardPermanentFaceWithContinuous(r.engine, r.game, card, controller, fromZone, game.FaceFront, effect.ContinuousEffects, r.agents, r.log)
 	if !ok {
-		zone, zoneOK := destinationZone(r.game, card.Owner, fromZone)
+		destinationCards, zoneOK := destinationZone(r.game, card.Owner, fromZone)
 		if zoneOK {
-			zone.Add(cardID)
+			destinationCards.Add(cardID)
 		}
 		return false
 	}
@@ -678,54 +680,54 @@ func (r *effectResolver) tokenDefinition(effect *game.Effect) (*game.CardDef, bo
 	return nil, false
 }
 
-func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardReference) (id.ID, game.ZoneType, bool) {
+func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardReference) (id.ID, zone.Type, bool) {
 	switch ref.Kind {
 	case game.CardReferenceSource:
 		if obj == nil || obj.SourceCardID == 0 {
-			return 0, game.ZoneNone, false
+			return 0, zone.None, false
 		}
-		zone, ok := cardZone(g, obj.SourceCardID)
-		return obj.SourceCardID, zone, ok
+		sourceZone, ok := cardZone(g, obj.SourceCardID)
+		return obj.SourceCardID, sourceZone, ok
 	case game.CardReferenceEvent:
 		if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.CardID == 0 {
-			return 0, game.ZoneNone, false
+			return 0, zone.None, false
 		}
-		zone, ok := cardZone(g, obj.TriggerEvent.CardID)
-		return obj.TriggerEvent.CardID, zone, ok
+		eventZone, ok := cardZone(g, obj.TriggerEvent.CardID)
+		return obj.TriggerEvent.CardID, eventZone, ok
 	case game.CardReferenceLinked:
 		for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, ref.LinkID)) {
 			if linked.CardID == 0 {
 				continue
 			}
-			if zone, ok := cardZone(g, linked.CardID); ok {
-				return linked.CardID, zone, true
+			if linkedZone, ok := cardZone(g, linked.CardID); ok {
+				return linked.CardID, linkedZone, true
 			}
 		}
-		return 0, game.ZoneNone, false
+		return 0, zone.None, false
 	default:
-		return 0, game.ZoneNone, false
+		return 0, zone.None, false
 	}
 }
 
-func cardZone(g *game.Game, cardID id.ID) (game.ZoneType, bool) {
+func cardZone(g *game.Game, cardID id.ID) (zone.Type, bool) {
 	for _, player := range g.Players {
 		if player.Library.Contains(cardID) {
-			return game.ZoneLibrary, true
+			return zone.Library, true
 		}
 		if player.Hand.Contains(cardID) {
-			return game.ZoneHand, true
+			return zone.Hand, true
 		}
 		if player.Graveyard.Contains(cardID) {
-			return game.ZoneGraveyard, true
+			return zone.Graveyard, true
 		}
 		if player.Exile.Contains(cardID) {
-			return game.ZoneExile, true
+			return zone.Exile, true
 		}
 		if player.CommandZone.Contains(cardID) {
-			return game.ZoneCommand, true
+			return zone.Command, true
 		}
 	}
-	return game.ZoneNone, false
+	return zone.None, false
 }
 
 func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopySpec) (*game.CardDef, bool) {
@@ -944,9 +946,9 @@ func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect *gam
 			_, ok := destroyPermanent(g, permanent.ObjectID)
 			succeeded = succeeded || ok
 		case game.EffectExile:
-			succeeded = movePermanentToZone(g, permanent, game.ZoneExile) || succeeded
+			succeeded = movePermanentToZone(g, permanent, zone.Exile) || succeeded
 		case game.EffectBounce:
-			succeeded = movePermanentToZone(g, permanent, game.ZoneHand) || succeeded
+			succeeded = movePermanentToZone(g, permanent, zone.Hand) || succeeded
 		case game.EffectTap:
 			setPermanentTapped(g, permanent, true)
 			succeeded = true
@@ -1580,7 +1582,7 @@ func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, l
 		if !ok || !owner.Exile.Remove(ref.CardID) {
 			continue
 		}
-		if _, ok := createCardPermanentWithChoices(e, g, card, obj.Controller, game.ZoneExile, agents, log); ok {
+		if _, ok := createCardPermanentWithChoices(e, g, card, obj.Controller, zone.Exile, agents, log); ok {
 			returned = true
 		}
 	}
@@ -1602,7 +1604,7 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 		TokenDef:      token,
 	}
 	initializePermanentCounters(permanent, token)
-	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{}, g, permanent, game.ZoneNone)
+	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{}, g, permanent, zone.None)
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.GameEvent{
 		Controller:  controller,
@@ -1610,8 +1612,8 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 		PermanentID: objectID,
 		TokenName:   token.Name,
 		TokenDef:    token,
-		FromZone:    game.ZoneNone,
-		ToZone:      game.ZoneBattlefield,
+		FromZone:    zone.None,
+		ToZone:      zone.Battlefield,
 	}
 	emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield

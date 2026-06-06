@@ -3,6 +3,8 @@ package game
 import (
 	"fmt"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/opt"
 )
@@ -38,17 +40,17 @@ type ModalAbilityContent struct {
 type SpellAbilityBody struct {
 	Text             string
 	Content          AbilityContent
-	AdditionalCosts  []AdditionalCost
-	AlternativeCosts []AlternativeCost
+	AdditionalCosts  []cost.Additional
+	AlternativeCosts []cost.Alternative
 }
 
 // ActivatedAbilityBody is a non-mana, non-loyalty activated ability.
 type ActivatedAbilityBody struct {
 	Text                string
 	ManaCost            opt.V[cost.Mana]
-	AdditionalCosts     []AdditionalCost
-	AlternativeCosts    []AlternativeCost
-	ZoneOfFunction      ZoneType
+	AdditionalCosts     []cost.Additional
+	AlternativeCosts    []cost.Alternative
+	ZoneOfFunction      zone.Type
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
 	Content             AbilityContent
@@ -62,8 +64,8 @@ type ActivatedAbilityBody struct {
 type ManaAbilityBody struct {
 	Text                string
 	ManaCost            opt.V[cost.Mana]
-	AdditionalCosts     []AdditionalCost
-	ZoneOfFunction      ZoneType
+	AdditionalCosts     []cost.Additional
+	ZoneOfFunction      zone.Type
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
 	// LegacyEffects is the legacy plain-sequence mana output. Retained for
@@ -97,7 +99,7 @@ type TriggeredAbilityBody struct {
 type StaticAbilityBody struct {
 	Text              string
 	Condition         opt.V[Condition]
-	ZoneOfFunction    ZoneType
+	ZoneOfFunction    zone.Type
 	KeywordAbilities  []KeywordAbility
 	ContinuousEffects []ContinuousEffect
 	RuleEffects       []RuleEffect
@@ -155,7 +157,7 @@ func etbReplacement(text string) ReplacementEffect {
 		Description: text,
 		MatchEvent:  EventPermanentEnteredBattlefield,
 		MatchToZone: true,
-		ToZone:      ZoneBattlefield,
+		ToZone:      zone.Battlefield,
 		Duration:    DurationPermanent,
 	}
 }
@@ -255,7 +257,7 @@ func (ability *AbilityDef) IsStatic() bool {
 }
 
 // FunctionZone returns the zone where this ability functions.
-func (ability *AbilityDef) FunctionZone() ZoneType {
+func (ability *AbilityDef) FunctionZone() zone.Type {
 	switch body := ability.Body.(type) {
 	case StaticAbilityBody:
 		return body.ZoneOfFunction
@@ -358,8 +360,8 @@ func (ability *AbilityDef) SpellBody() (SpellAbilityBody, bool) {
 	return SpellAbilityBody{
 		Text:             ability.Text,
 		Content:          ability.legacyContent(),
-		AdditionalCosts:  append([]AdditionalCost(nil), ability.AdditionalCosts...),
-		AlternativeCosts: append([]AlternativeCost(nil), ability.AlternativeCosts...),
+		AdditionalCosts:  append([]cost.Additional(nil), ability.AdditionalCosts...),
+		AlternativeCosts: append([]cost.Alternative(nil), ability.AlternativeCosts...),
 	}, true
 }
 
@@ -377,8 +379,8 @@ func (ability *AbilityDef) ActivatedBody() (ActivatedAbilityBody, bool) {
 	return ActivatedAbilityBody{
 		Text:                ability.Text,
 		ManaCost:            ability.ManaCost,
-		AdditionalCosts:     append([]AdditionalCost(nil), ability.AdditionalCosts...),
-		AlternativeCosts:    append([]AlternativeCost(nil), ability.AlternativeCosts...),
+		AdditionalCosts:     append([]cost.Additional(nil), ability.AdditionalCosts...),
+		AlternativeCosts:    append([]cost.Alternative(nil), ability.AlternativeCosts...),
 		ZoneOfFunction:      ability.ZoneOfFunction,
 		Timing:              ability.Timing,
 		ActivationCondition: ability.ActivationCondition,
@@ -401,7 +403,7 @@ func (ability *AbilityDef) ManaBody() (ManaAbilityBody, bool) {
 	return ManaAbilityBody{
 		Text:                ability.Text,
 		ManaCost:            ability.ManaCost,
-		AdditionalCosts:     append([]AdditionalCost(nil), ability.AdditionalCosts...),
+		AdditionalCosts:     append([]cost.Additional(nil), ability.AdditionalCosts...),
 		ZoneOfFunction:      ability.ZoneOfFunction,
 		Timing:              ability.Timing,
 		ActivationCondition: ability.ActivationCondition,

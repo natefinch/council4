@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -139,8 +140,8 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 		CardID:        cast.CardID,
 		Face:          cast.Face,
 		CardTypes:     []types.Card{types.Creature},
-		FromZone:      game.ZoneHand,
-		ToZone:        game.ZoneStack,
+		FromZone:      zone.Hand,
+		ToZone:        zone.Stack,
 	})
 	return true
 }

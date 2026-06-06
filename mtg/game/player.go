@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // Player represents a single player in a Commander game with all their
@@ -54,19 +55,19 @@ type Player struct {
 	// command zone. The battlefield is shared (in Game.Battlefield).
 
 	// Library is the player's draw deck — hidden, ordered.
-	Library Zone
+	Library zone.Zone
 
 	// Hand is the player's hand — hidden from opponents.
-	Hand Zone
+	Hand zone.Zone
 
 	// Graveyard is the player's discard pile — public, ordered.
-	Graveyard Zone
+	Graveyard zone.Zone
 
 	// Exile is the player's exile zone — usually public.
-	Exile Zone
+	Exile zone.Zone
 
 	// CommandZone is the player's command zone (commander starts here).
-	CommandZone Zone
+	CommandZone zone.Zone
 
 	// --- Game status ---
 
@@ -117,11 +118,11 @@ func NewPlayer(seat PlayerID, name string) *Player {
 		Life:            40,
 		CommanderDamage: make(map[id.ID]int),
 		ManaPool:        mana.NewPool(),
-		Library:         NewZone(ZoneLibrary),
-		Hand:            NewZone(ZoneHand),
-		Graveyard:       NewZone(ZoneGraveyard),
-		Exile:           NewZone(ZoneExile),
-		CommandZone:     NewZone(ZoneCommand),
+		Library:         zone.New(zone.Library),
+		Hand:            zone.New(zone.Hand),
+		Graveyard:       zone.New(zone.Graveyard),
+		Exile:           zone.New(zone.Exile),
+		CommandZone:     zone.New(zone.Command),
 	}
 }
 

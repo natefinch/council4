@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -113,11 +115,11 @@ func TestConditionTargetEnteredThisTurn(t *testing.T) {
 }
 
 func TestConditionCastFromZoneRequiresNonCopyStackObject(t *testing.T) {
-	condition := opt.Val(game.Condition{CastFromZone: opt.Val(game.ZoneGraveyard)})
+	condition := opt.Val(game.Condition{CastFromZone: opt.Val(zone.Graveyard)})
 	obj := &game.StackObject{
 		Kind:       game.StackSpell,
 		Controller: game.Player1,
-		SourceZone: game.ZoneGraveyard,
+		SourceZone: zone.Graveyard,
 	}
 	if !conditionSatisfied(game.NewGame([game.NumPlayers]game.PlayerConfig{}), conditionContext{controller: game.Player1, obj: obj}, condition) {
 		t.Fatal("condition did not match spell cast from graveyard")
@@ -127,7 +129,7 @@ func TestConditionCastFromZoneRequiresNonCopyStackObject(t *testing.T) {
 		t.Fatal("condition matched copied stack object")
 	}
 	obj.Copy = false
-	obj.SourceZone = game.ZoneHand
+	obj.SourceZone = zone.Hand
 	if conditionSatisfied(game.NewGame([game.NumPlayers]game.PlayerConfig{}), conditionContext{controller: game.Player1, obj: obj}, condition) {
 		t.Fatal("condition matched spell cast from hand")
 	}
@@ -340,7 +342,7 @@ func conditionalRedManaLand() *game.CardDef {
 					SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
 				},
 			}),
-			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
 			Effects: []game.Effect{{
 				Type:        game.EffectAddMana,
 				Amount:      1,
@@ -390,7 +392,7 @@ func angerLikeCard() *game.CardDef {
 			{
 				Kind:           game.StaticAbility,
 				Text:           "As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
-				ZoneOfFunction: game.ZoneGraveyard,
+				ZoneOfFunction: zone.Graveyard,
 				Condition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
 						SubtypesAny: []types.Sub{types.Mountain},

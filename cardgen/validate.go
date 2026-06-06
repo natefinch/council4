@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -347,8 +349,8 @@ func (v *cardValidator) validateEffect(faceName, path string, effect *game.Effec
 		switch {
 		case !effect.Search.Exists:
 			v.add(faceName, path, IssueMissingSearchSpec, "search effect has no SearchSpec")
-		case effect.Search.Val.SourceZone != game.ZoneLibrary ||
-			(effect.Search.Val.Destination != game.ZoneHand && effect.Search.Val.Destination != game.ZoneBattlefield):
+		case effect.Search.Val.SourceZone != zone.Library ||
+			(effect.Search.Val.Destination != zone.Hand && effect.Search.Val.Destination != zone.Battlefield):
 			v.add(faceName, path, IssueUnsupportedSearchSpec, "only library-to-hand and library-to-battlefield SearchSpec are currently supported")
 		case effect.Search.Val.Supertype.Exists && effect.Search.Val.Supertype.Val == types.Super(""):
 			v.add(faceName, appendPath(path, "Search"), IssueUnsupportedSearchSpec, "Supertype requires a non-empty value when present")

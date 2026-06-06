@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -23,7 +25,7 @@ func TestMadnessDiscardGoesToExile(t *testing.T) {
 		t.Fatal("madness card did not go to exile")
 	}
 	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
-		return event.CardID == cardID && event.FromZone == game.ZoneHand && event.ToZone == game.ZoneExile
+		return event.CardID == cardID && event.FromZone == zone.Hand && event.ToZone == zone.Exile
 	})
 }
 
@@ -50,7 +52,7 @@ func TestMadnessTriggerCastsCardFromExile(t *testing.T) {
 		t.Fatalf("stack top = %+v, want madness spell", obj)
 	}
 	assertEvent(t, g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
-		return event.CardID == cardID && event.FromZone == game.ZoneExile && event.ToZone == game.ZoneStack
+		return event.CardID == cardID && event.FromZone == zone.Exile && event.ToZone == zone.Stack
 	})
 }
 

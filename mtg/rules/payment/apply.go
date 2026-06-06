@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
@@ -30,8 +31,8 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 		s.EmitZoneChange(game.GameEvent{
 			Player:   playerID,
 			CardID:   cardID,
-			FromZone: game.ZoneGraveyard,
-			ToZone:   game.ZoneExile,
+			FromZone: zone.Graveyard,
+			ToZone:   zone.Exile,
 		})
 	}
 	for _, color := range paymentColors {

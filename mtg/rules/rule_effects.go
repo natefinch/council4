@@ -3,6 +3,8 @@ package rules
 import (
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 )
@@ -313,9 +315,9 @@ func staticCostModifiersForContext(g *game.Game, card *game.CardDef) []game.Cost
 	return modifiers
 }
 
-func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType) bool {
+func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
 	card, cardOK := g.GetCardInstance(cardID)
-	if sourceZone == game.ZoneGraveyard && cardOK && cardHasFlashbackAlternative(card) {
+	if sourceZone == zone.Graveyard && cardOK && cardHasFlashbackAlternative(card) {
 		return true
 	}
 	for _, effect := range activeRuleEffects(g) {
@@ -330,12 +332,12 @@ func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id
 	return false
 }
 
-func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []game.ZoneType {
-	zones := []game.ZoneType{game.ZoneHand}
+func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
+	zones := []zone.Type{zone.Hand}
 	if player, ok := playerByID(g, playerID); ok {
 		for _, cardID := range player.Graveyard.All() {
-			if canCastFromZoneByRuleEffect(g, playerID, cardID, game.ZoneGraveyard) {
-				zones = append(zones, game.ZoneGraveyard)
+			if canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Graveyard) {
+				zones = append(zones, zone.Graveyard)
 				break
 			}
 		}

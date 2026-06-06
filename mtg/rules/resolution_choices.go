@@ -3,6 +3,8 @@ package rules
 import (
 	"fmt"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -81,11 +83,11 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 			index++
 		}
 	case game.ResolutionChoiceCard:
-		zone := choice.Zone
-		if zone == game.ZoneNone {
-			zone = game.ZoneHand
+		choiceZone := choice.Zone
+		if choiceZone == zone.None {
+			choiceZone = zone.Hand
 		}
-		for i, cardID := range resolutionChoiceCardIDs(g, playerID, zone) {
+		for i, cardID := range resolutionChoiceCardIDs(g, playerID, choiceZone) {
 			add(i, cardChoiceLabel(g, cardID), game.ResolutionChoiceResult{Kind: choice.Kind, CardID: cardID})
 		}
 	default:
@@ -147,19 +149,19 @@ func choicePlayerMatches(controller, candidate game.PlayerID, relation game.Play
 	}
 }
 
-func resolutionChoiceCardIDs(g *game.Game, playerID game.PlayerID, zone game.ZoneType) []id.ID {
+func resolutionChoiceCardIDs(g *game.Game, playerID game.PlayerID, zoneType zone.Type) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
 	}
-	switch zone {
-	case game.ZoneHand:
+	switch zoneType {
+	case zone.Hand:
 		return player.Hand.All()
-	case game.ZoneGraveyard:
+	case zone.Graveyard:
 		return player.Graveyard.All()
-	case game.ZoneExile:
+	case zone.Exile:
 		return player.Exile.All()
-	case game.ZoneLibrary:
+	case zone.Library:
 		return player.Library.All()
 	default:
 		return nil

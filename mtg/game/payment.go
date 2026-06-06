@@ -4,69 +4,16 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
-	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/opt"
 )
-
-// AdditionalCostKind classifies a non-mana cost component.
-type AdditionalCostKind int
-
-// Additional cost kind values identify supported non-mana costs.
-const (
-	AdditionalCostUnknown AdditionalCostKind = iota
-	AdditionalCostSacrifice
-	AdditionalCostSacrificeSource
-	AdditionalCostDiscard
-	AdditionalCostPayLife
-	AdditionalCostExile
-	AdditionalCostReveal
-	AdditionalCostTap
-	AdditionalCostExileSource
-)
-
-// AdditionalCost describes a typed non-mana cost printed on a spell, ability,
-// or alternative cost. It is data only; mtg/rules chooses and pays it.
-type AdditionalCost struct {
-	Kind AdditionalCostKind
-
-	// Text preserves the human-readable cost text for logs and diagnostics.
-	Text string
-
-	// Amount is the number of matching objects/cards or life points required.
-	// Zero means one for object/card costs.
-	Amount int
-
-	// MatchPermanentType constrains battlefield costs such as "sacrifice a
-	// creature." When false, any permanent is allowed for permanent costs.
-	MatchPermanentType bool
-	PermanentType      types.Card
-
-	// MatchCardType constrains card costs such as "discard a creature card."
-	// When false, any card in the relevant zone is allowed for card costs.
-	MatchCardType bool
-	CardType      types.Card
-
-	// Zone is the zone cards are chosen from for card costs. Zero values are
-	// interpreted by rules for each cost kind, usually hand.
-	Zone ZoneType
-}
 
 // AdditionalCostSelection records the concrete objects or cards chosen to pay
-// one AdditionalCost.
+// one cost.Additional.
 type AdditionalCostSelection struct {
-	Cost AdditionalCost
+	Cost cost.Additional
 
 	PermanentIDs []id.ID
 	CardIDs      []id.ID
 	LifePaid     int
-}
-
-// AlternativeCost describes an optional cost that replaces a spell or ability's
-// normal mana cost when selected.
-type AlternativeCost struct {
-	Label           string
-	ManaCost        opt.V[cost.Mana]
-	AdditionalCosts []AdditionalCost
 }
 
 // SymbolPaymentMethod classifies how one mana symbol was paid.
@@ -118,6 +65,6 @@ type PaymentChoice struct {
 	Prompt string
 
 	Symbol          cost.Symbol
-	AdditionalCost  AdditionalCost
-	AlternativeCost AlternativeCost
+	AdditionalCost  cost.Additional
+	AlternativeCost cost.Alternative
 }

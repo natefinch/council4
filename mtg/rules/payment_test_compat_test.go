@@ -4,13 +4,14 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 type testSpellPaymentRequest struct {
 	playerID   game.PlayerID
 	cardID     id.ID
-	sourceZone game.ZoneType
+	sourceZone zone.Type
 	card       *game.CardDef
 	xValue     int
 	kickerPaid bool

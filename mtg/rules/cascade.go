@@ -3,6 +3,8 @@ package rules
 import (
 	"math/rand/v2"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -29,8 +31,8 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 		emitZoneChangeEvent(g, game.GameEvent{
 			Player:   obj.Controller,
 			CardID:   cardID,
-			FromZone: game.ZoneLibrary,
-			ToZone:   game.ZoneExile,
+			FromZone: zone.Library,
+			ToZone:   zone.Exile,
 		})
 		card, ok := g.GetCardInstance(cardID)
 		if !ok {
@@ -70,8 +72,8 @@ func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue 
 		emitZoneChangeEvent(g, game.GameEvent{
 			Player:   obj.Controller,
 			CardID:   found,
-			FromZone: game.ZoneExile,
-			ToZone:   game.ZoneHand,
+			FromZone: zone.Exile,
+			ToZone:   zone.Hand,
 		})
 	}
 	bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
@@ -90,8 +92,8 @@ func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.Play
 		emitZoneChangeEvent(g, game.GameEvent{
 			Player:   playerID,
 			CardID:   cardID,
-			FromZone: game.ZoneLibrary,
-			ToZone:   game.ZoneExile,
+			FromZone: zone.Library,
+			ToZone:   zone.Exile,
 		})
 		card, ok := g.GetCardInstance(cardID)
 		if !ok {
@@ -119,8 +121,8 @@ func bottomExiledCards(g *game.Game, player *game.Player, playerID game.PlayerID
 			emitZoneChangeEvent(g, game.GameEvent{
 				Player:   playerID,
 				CardID:   cardID,
-				FromZone: game.ZoneExile,
-				ToZone:   game.ZoneLibrary,
+				FromZone: zone.Exile,
+				ToZone:   zone.Library,
 			})
 		}
 	}
@@ -159,8 +161,8 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 		Controller:    playerID,
 		CardID:        cardID,
 		CardTypes:     cardTypes(spellDef),
-		FromZone:      game.ZoneExile,
-		ToZone:        game.ZoneStack,
+		FromZone:      zone.Exile,
+		ToZone:        zone.Stack,
 	})
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)

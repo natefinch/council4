@@ -3,6 +3,8 @@ package rules
 import (
 	"fmt"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -37,12 +39,12 @@ func (b actionBuilderType) playLand(cardID id.ID, face game.FaceIndex) action.Ac
 
 // castSpell builds a normal (non-kicked) CastSpell action for the given card,
 // source zone, face, targets, X value, and chosen modes.
-func (b actionBuilderType) castSpell(cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
+func (b actionBuilderType) castSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
 	return b.mustBuild(action.CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
 }
 
 // castKickedSpell builds a kicked CastSpell action.
-func (b actionBuilderType) castKickedSpell(cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
+func (b actionBuilderType) castKickedSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
 	return b.mustBuild(action.CastKickedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
 }
 

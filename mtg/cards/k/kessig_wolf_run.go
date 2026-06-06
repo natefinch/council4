@@ -35,9 +35,9 @@ var KessigWolfRun = func() *game.CardDef {
 			Text: `
 				{T}: Add {C}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{
+			AdditionalCosts: []cost.Additional{
 				{
-					Kind: game.AdditionalCostTap,
+					Kind: cost.AdditionalTap,
 				},
 			},
 			Content: game.PlainAbilityContent{
@@ -63,9 +63,9 @@ var KessigWolfRun = func() *game.CardDef {
 				cost.R,
 				cost.G,
 			}),
-			AdditionalCosts: []game.AdditionalCost{
+			AdditionalCosts: []cost.Additional{
 				{
-					Kind: game.AdditionalCostTap,
+					Kind: cost.AdditionalTap,
 				},
 			},
 			Content: game.PlainAbilityContent{

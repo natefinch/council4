@@ -4,6 +4,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -72,7 +74,7 @@ func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 		Type:           game.EffectCreateDelayedTrigger,
 		DelayedTrigger: opt.Val(game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}}),
 	}, nil)
-	movePermanentToZone(g, source, game.ZoneGraveyard)
+	movePermanentToZone(g, source, zone.Graveyard)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 
 	if got := g.Players[game.Player1].Hand.Size(); got != 1 {

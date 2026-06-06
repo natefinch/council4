@@ -30,9 +30,9 @@ var Arena = &game.CardDef{
 				ManaCost: opt.Val(cost.Mana{
 					cost.O(3),
 				}),
-				AdditionalCosts: []game.AdditionalCost{
+				AdditionalCosts: []cost.Additional{
 					{
-						Kind: game.AdditionalCostTap,
+						Kind: cost.AdditionalTap,
 					},
 				},
 				Content: game.PlainAbilityContent{

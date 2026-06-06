@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 )
@@ -49,7 +51,7 @@ type PlayLandAction struct {
 // CastSpellAction is the payload for casting a spell.
 type CastSpellAction struct {
 	CardID      id.ID
-	SourceZone  game.ZoneType
+	SourceZone  zone.Type
 	Face        game.FaceIndex
 	Targets     []game.Target
 	XValue      int
@@ -116,22 +118,22 @@ func PlayLandFace(cardID id.ID, face game.FaceIndex) Action {
 
 // CastSpell creates an action to cast a spell.
 func CastSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
-	return CastSpellFromZone(cardID, game.ZoneHand, targets, xValue, chosenModes)
+	return CastSpellFromZone(cardID, zone.Hand, targets, xValue, chosenModes)
 }
 
 // CastSpellFromZone creates an action to cast a spell from a specific zone.
-func CastSpellFromZone(cardID id.ID, sourceZone game.ZoneType, targets []game.Target, xValue int, chosenModes []int) Action {
+func CastSpellFromZone(cardID id.ID, sourceZone zone.Type, targets []game.Target, xValue int, chosenModes []int) Action {
 	return CastSpellFaceFromZone(cardID, sourceZone, game.FaceFront, targets, xValue, chosenModes)
 }
 
 // CastSpellFace creates an action to cast a specific printed face from hand.
 func CastSpellFace(cardID id.ID, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
-	return CastSpellFaceFromZone(cardID, game.ZoneHand, face, targets, xValue, chosenModes)
+	return CastSpellFaceFromZone(cardID, zone.Hand, face, targets, xValue, chosenModes)
 }
 
 // CastSpellFaceFromZone creates an action to cast a specific printed face from
 // a specific source zone.
-func CastSpellFaceFromZone(cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
+func CastSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
 	return Action{
 		Kind: ActionCastSpell,
 		castSpell: CastSpellAction{
@@ -147,18 +149,18 @@ func CastSpellFaceFromZone(cardID id.ID, sourceZone game.ZoneType, face game.Fac
 
 // CastKickedSpell creates an action to cast a spell with kicker paid.
 func CastKickedSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
-	return CastKickedSpellFromZone(cardID, game.ZoneHand, targets, xValue, chosenModes)
+	return CastKickedSpellFromZone(cardID, zone.Hand, targets, xValue, chosenModes)
 }
 
 // CastKickedSpellFromZone creates an action to cast a spell from a specific zone
 // with kicker paid.
-func CastKickedSpellFromZone(cardID id.ID, sourceZone game.ZoneType, targets []game.Target, xValue int, chosenModes []int) Action {
+func CastKickedSpellFromZone(cardID id.ID, sourceZone zone.Type, targets []game.Target, xValue int, chosenModes []int) Action {
 	return CastKickedSpellFaceFromZone(cardID, sourceZone, game.FaceFront, targets, xValue, chosenModes)
 }
 
 // CastKickedSpellFaceFromZone creates an action to cast a specific printed face
 // from a specific source zone with kicker paid.
-func CastKickedSpellFaceFromZone(cardID id.ID, sourceZone game.ZoneType, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
+func CastKickedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
 	action := CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, chosenModes)
 	action.castSpell.KickerPaid = true
 	return action
@@ -166,7 +168,7 @@ func CastKickedSpellFaceFromZone(cardID id.ID, sourceZone game.ZoneType, face ga
 
 // CastCommanderSpell creates an action to cast a commander from the command zone.
 func CastCommanderSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
-	return CastSpellFromZone(cardID, game.ZoneCommand, targets, xValue, chosenModes)
+	return CastSpellFromZone(cardID, zone.Command, targets, xValue, chosenModes)
 }
 
 // ActivateAbility creates an action to activate an ability.
@@ -326,7 +328,7 @@ func (a Action) Validate() error {
 		if a.castSpell.CardID == 0 {
 			return errors.New("cast spell action missing card ID")
 		}
-		if a.castSpell.SourceZone == game.ZoneNone {
+		if a.castSpell.SourceZone == zone.None {
 			return errors.New("cast spell action missing source zone")
 		}
 		if a.castSpell.XValue < 0 {
@@ -409,7 +411,7 @@ func playLandActionEmpty(a PlayLandAction) bool {
 
 func castSpellActionEmpty(a CastSpellAction) bool {
 	return a.CardID == 0 &&
-		a.SourceZone == game.ZoneNone &&
+		a.SourceZone == zone.None &&
 		a.Face == 0 &&
 		len(a.Targets) == 0 &&
 		a.XValue == 0 &&

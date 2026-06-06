@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -166,7 +168,7 @@ func disguiseCreature(manaCost cost.Mana) *game.CardDef {
 func addFaceDownPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef, kind game.FaceDownKind) *game.Permanent {
 	cardID := addCardToHand(g, controller, def)
 	card, _ := g.GetCardInstance(cardID)
-	permanent, ok := createCardPermanentFaceDown(g, card, controller, game.ZoneStack, game.FaceFront, kind)
+	permanent, ok := createCardPermanentFaceDown(g, card, controller, zone.Stack, game.FaceFront, kind)
 	if !ok {
 		panic("test failed to create face-down permanent")
 	}

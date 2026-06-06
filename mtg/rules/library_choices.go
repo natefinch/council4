@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func millCards(g *game.Game, playerID game.PlayerID, amount int) {
@@ -16,20 +17,20 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 			return
 		}
 		player.Library.Remove(cardID)
-		destination := commanderReplacementDestination(g, cardID, game.ZoneGraveyard)
+		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
 		zoneOwner := playerID
-		if card, ok := g.GetCardInstance(cardID); destination == game.ZoneCommand && ok {
+		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
 			zoneOwner = card.Owner
 		}
-		zone, ok := destinationZone(g, zoneOwner, destination)
+		destinationCards, ok := destinationZone(g, zoneOwner, destination)
 		if !ok {
 			return
 		}
-		zone.Add(cardID)
+		destinationCards.Add(cardID)
 		emitZoneChangeEvent(g, game.GameEvent{
 			Player:   playerID,
 			CardID:   cardID,
-			FromZone: game.ZoneLibrary,
+			FromZone: zone.Library,
 			ToZone:   destination,
 			Amount:   1,
 		})
@@ -59,20 +60,20 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	for _, cardID := range peekLibrary(player, amount) {
 		selected := e.chooseChoice(g, agents, libraryChoiceRequest(game.ChoiceSurveil, playerID, "Surveil: choose where to put card.", []string{"top", "graveyard"}), log)
 		if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
-			destination := commanderReplacementDestination(g, cardID, game.ZoneGraveyard)
+			destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
 			zoneOwner := playerID
-			if card, ok := g.GetCardInstance(cardID); destination == game.ZoneCommand && ok {
+			if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
 				zoneOwner = card.Owner
 			}
-			zone, ok := destinationZone(g, zoneOwner, destination)
+			destinationCards, ok := destinationZone(g, zoneOwner, destination)
 			if !ok {
 				continue
 			}
-			zone.Add(cardID)
+			destinationCards.Add(cardID)
 			emitZoneChangeEvent(g, game.GameEvent{
 				Player:   playerID,
 				CardID:   cardID,
-				FromZone: game.ZoneLibrary,
+				FromZone: zone.Library,
 				ToZone:   destination,
 				Amount:   1,
 			})

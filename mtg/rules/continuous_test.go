@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -76,7 +78,7 @@ func TestStaticPTEffectDisappearingChangesLethalDamageThreshold(t *testing.T) {
 		t.Fatalf("deaths before anthem leaves = %+v, want none", deaths)
 	}
 
-	movePermanentToZone(g, anthem, game.ZoneGraveyard)
+	movePermanentToZone(g, anthem, zone.Graveyard)
 	_, deaths = engine.applyStateBasedActionsWithDeaths(g)
 
 	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {

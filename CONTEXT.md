@@ -100,6 +100,10 @@ _Avoid_: Action, UI prompt, ad hoc callback
 A spell or ability waiting on the stack to resolve. In code, `game.StackObject` references its source card or permanent, controller, chosen runtime targets, modes, and X value.
 _Avoid_: Stack item, pending spell
 
+**Zone**:
+A game area identified by `zone.Type`, such as the library, hand, battlefield, graveyard, stack, exile, or command zone. Player-owned card collections use `zone.Zone`; the shared battlefield and stack use richer runtime representations in `game`.
+_Avoid_: Card location enum, pile
+
 **Activated Ability**:
 An ability with a cost and effect that an **Agent** may choose as an **Action** when legal. Non-mana activated abilities use the **Stack Object** path; mana abilities resolve immediately.
 _Avoid_: Manual ability hook, special action

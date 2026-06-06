@@ -4,6 +4,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -529,7 +531,7 @@ func TestPermanentTargetThatLeavesBeforeResolutionCountersSpellByRules(t *testin
 		t.Fatal("source card instance not found")
 	}
 	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
-	if !movePermanentToZone(g, target, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
 	log := TurnLog{}

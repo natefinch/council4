@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -22,7 +24,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 	tests := []struct {
 		name       string
 		setup      func() (*game.Game, *game.CardDef, id.ID, int)
-		sourceZone game.ZoneType // defaults to ZoneHand when zero
+		sourceZone zone.Type // defaults to zone.Hand when zero
 		kickerPaid bool
 		want       []string
 	}{
@@ -140,7 +142,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 				addBasicLandPermanent(g, game.Player1, types.Forest)
 				return g, flashbackSpell(), 0, 0
 			},
-			sourceZone: game.ZoneGraveyard,
+			sourceZone: zone.Graveyard,
 			want: []string{
 				"option=1:Flashback",
 				"tapped=[Forest]",
@@ -156,11 +158,11 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g, card, cardID, xValue := tt.setup()
 
-			zone := tt.sourceZone
-			if zone == game.ZoneNone {
-				zone = game.ZoneHand
+			sourceZone := tt.sourceZone
+			if sourceZone == zone.None {
+				sourceZone = zone.Hand
 			}
-			req := payment.SpellRequest{PlayerID: game.Player1, CardID: cardID, SourceZone: zone, Card: card, XValue: xValue, KickerPaid: tt.kickerPaid}
+			req := payment.SpellRequest{PlayerID: game.Player1, CardID: cardID, SourceZone: sourceZone, Card: card, XValue: xValue, KickerPaid: tt.kickerPaid}
 			options := paymentOrch.planner(g).PayableSpellOptions(req)
 			if len(options) == 0 {
 				t.Fatal("PayableSpellOptions() empty, want payable option")
@@ -253,8 +255,8 @@ func sacrificeCostSpell() *game.CardDef {
 		Types:    []types.Card{types.Sorcery},
 		Abilities: []game.AbilityDef{{
 			Kind: game.SpellAbility,
-			AdditionalCosts: []game.AdditionalCost{{
-				Kind:               game.AdditionalCostSacrifice,
+			AdditionalCosts: []cost.Additional{{
+				Kind:               cost.AdditionalSacrifice,
 				Text:               "Sacrifice a creature",
 				Amount:             1,
 				MatchPermanentType: true,

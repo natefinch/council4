@@ -47,9 +47,9 @@ var FanaticOfRhonas = func() *game.CardDef {
 			Text: `
 				{T}: Add {G}.
 			`,
-			AdditionalCosts: []game.AdditionalCost{
+			AdditionalCosts: []cost.Additional{
 				{
-					Kind: game.AdditionalCostTap,
+					Kind: cost.AdditionalTap,
 				},
 			},
 			Content: game.PlainAbilityContent{
@@ -70,9 +70,9 @@ var FanaticOfRhonas = func() *game.CardDef {
 			Text: `
 				Ferocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.
 			`,
-			AdditionalCosts: []game.AdditionalCost{
+			AdditionalCosts: []cost.Additional{
 				{
-					Kind: game.AdditionalCostTap,
+					Kind: cost.AdditionalTap,
 				},
 			},
 			ActivationCondition: opt.Val(game.Condition{

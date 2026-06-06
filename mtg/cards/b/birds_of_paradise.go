@@ -46,9 +46,9 @@ var BirdsOfParadise = func() *game.CardDef {
 			Text: `
 				{T}: Add one mana of any color.
 			`,
-			AdditionalCosts: []game.AdditionalCost{
+			AdditionalCosts: []cost.Additional{
 				{
-					Kind: game.AdditionalCostTap,
+					Kind: cost.AdditionalTap,
 				},
 			},
 			Content: game.PlainAbilityContent{

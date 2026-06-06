@@ -3,6 +3,8 @@ package rules
 import (
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -69,8 +71,8 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 		Controller: playerID,
 		Player:     card.Owner,
 		CardID:     cardID,
-		FromZone:   game.ZoneHand,
-		ToZone:     game.ZoneExile,
+		FromZone:   zone.Hand,
+		ToZone:     zone.Exile,
 	})
 	return true
 }
@@ -151,8 +153,8 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 		Controller:    playerID,
 		CardID:        cardID,
 		CardTypes:     cardTypes(spellDef),
-		FromZone:      game.ZoneExile,
-		ToZone:        game.ZoneStack,
+		FromZone:      zone.Exile,
+		ToZone:        zone.Stack,
 	})
 	return true
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -61,7 +62,7 @@ func (*rulesPaymentState) CardFace(card *game.CardInstance, face game.FaceIndex)
 	return cardFaceOrDefault(card, face)
 }
 
-func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone game.ZoneType) []game.CostModifier {
+func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type) []game.CostModifier {
 	var modifiers []game.CostModifier
 	for _, modifier := range s.g.CostModifiers {
 		if modifier.Kind != game.CostModifierSpell {
@@ -72,7 +73,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 		}
 		modifiers = append(modifiers, modifier)
 	}
-	if sourceZone == game.ZoneCommand && cardID != 0 {
+	if sourceZone == zone.Command && cardID != 0 {
 		player, ok := playerByID(s.g, playerID)
 		if ok && player.CommanderInstanceID == cardID && player.CommanderTax() > 0 {
 			modifiers = append(modifiers, game.CostModifier{
@@ -97,7 +98,7 @@ func (s *rulesPaymentState) EmitZoneChange(event game.GameEvent) {
 	emitZoneChangeEvent(s.g, event)
 }
 
-func (s *rulesPaymentState) MovePermanentToZone(p *game.Permanent, dest game.ZoneType) bool {
+func (s *rulesPaymentState) MovePermanentToZone(p *game.Permanent, dest zone.Type) bool {
 	return movePermanentToZone(s.g, p, dest)
 }
 
@@ -105,6 +106,6 @@ func (s *rulesPaymentState) DiscardFromHand(playerID game.PlayerID, cardID id.ID
 	return discardCardFromHand(s.g, playerID, cardID)
 }
 
-func (s *rulesPaymentState) MoveCard(playerID game.PlayerID, cardID id.ID, from, to game.ZoneType) bool {
+func (s *rulesPaymentState) MoveCard(playerID game.PlayerID, cardID id.ID, from, to zone.Type) bool {
 	return moveCardBetweenZones(s.g, playerID, cardID, from, to)
 }

@@ -153,8 +153,8 @@ func greenManaCreature() *game.CardDef {
 		Abilities: []game.AbilityDef{{
 			Kind:          game.ActivatedAbility,
 			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{{
-				Kind: game.AdditionalCostTap,
+			AdditionalCosts: []cost.Additional{{
+				Kind: cost.AdditionalTap,
 				Text: "{T}",
 			}},
 			Effects: []game.Effect{{Type: game.EffectAddMana, ManaColor: mana.G, Amount: 1}},

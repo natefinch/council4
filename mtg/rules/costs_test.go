@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -215,7 +217,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericReduction: 2,
 		})
 
-		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
 			t.Fatal("canPaySpellCosts() = false, want reduction to make {3}{G} payable with two lands")
 		}
 	})
@@ -229,7 +231,7 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericIncrease: 1,
 		})
 
-		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
 			t.Fatal("canPaySpellCosts() = true, want increase to require a second mana")
 		}
 	})
@@ -242,11 +244,11 @@ func TestSpellCostReductionIncreaseAndMinimumGeneric(t *testing.T) {
 			GenericReduction: 5,
 			MinimumGeneric:   1,
 		})
-		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
 			t.Fatal("canPaySpellCosts() = true without mana, want minimum generic cost")
 		}
 		addBasicLandPermanent(g, game.Player1, types.Island)
-		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
 			t.Fatal("canPaySpellCosts() = false with one mana, want minimum generic cost payable")
 		}
 	})
@@ -274,7 +276,7 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 		}}},
 	})
 
-	if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: game.ZoneHand}) {
+	if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
 		t.Fatal("static spell tax allowed {G} spell with only one mana")
 	}
 }
@@ -585,8 +587,8 @@ func addSnowBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype t
 func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef, m mana.Color, amount int) *game.Permanent {
 	def.Abilities = append(def.Abilities, game.AbilityDef{
 		Kind: game.ActivatedAbility,
-		AdditionalCosts: []game.AdditionalCost{
-			{Kind: game.AdditionalCostTap},
+		AdditionalCosts: []cost.Additional{
+			{Kind: cost.AdditionalTap},
 		},
 		IsManaAbility: true,
 		Effects: []game.Effect{
@@ -604,7 +606,7 @@ func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.C
 		Owner: controller,
 	}
 	g.CardInstances[cardID] = card
-	permanent, ok := createCardPermanent(g, card, controller, game.ZoneStack)
+	permanent, ok := createCardPermanent(g, card, controller, zone.Stack)
 	if !ok {
 		panic("mana ability permanent was not created")
 	}

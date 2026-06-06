@@ -3,6 +3,8 @@ package game
 import (
 	"errors"
 	"fmt"
+
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func validateTargetReference(index int, targets []TargetSpec, checkTargets bool) error {
@@ -183,7 +185,7 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	if p.Spec.SourceZone == ZoneNone || p.Spec.Destination == ZoneNone {
+	if p.Spec.SourceZone == zone.None || p.Spec.Destination == zone.None {
 		return errors.New("search requires source and destination zones")
 	}
 	return validateTargetReference(p.TargetIndex, targets, checkTargets)

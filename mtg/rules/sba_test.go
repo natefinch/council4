@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -452,7 +454,7 @@ func addPermanentForSBA(g *game.Game, controller game.PlayerID, def *game.CardDe
 		Owner: controller,
 	}
 	g.CardInstances[cardID] = card
-	permanent, ok := createCardPermanent(g, card, controller, game.ZoneStack)
+	permanent, ok := createCardPermanent(g, card, controller, zone.Stack)
 	if !ok {
 		panic("permanent for SBA was not created")
 	}

@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -74,7 +76,7 @@ func TestTriggerMovesCountersFromEventPermanentLKI(t *testing.T) {
 	source.Counters.Add(counter.PlusOnePlusOne, 2)
 	source.Counters.Add(counter.Charge, 3)
 
-	movePermanentToZone(g, source, game.ZoneGraveyard)
+	movePermanentToZone(g, source, zone.Graveyard)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("counter transfer trigger was not put on stack")
 	}
@@ -120,7 +122,7 @@ func TestTriggerEffectCanReferenceEventPermanentOnBattlefield(t *testing.T) {
 	})
 	card := g.CardInstances[cardID]
 	g.Players[game.Player2].Hand.Remove(cardID)
-	permanent, ok := createCardPermanentFaceWithChoices(engine, g, card, game.Player2, game.ZoneHand, game.FaceFront, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	permanent, ok := createCardPermanentFaceWithChoices(engine, g, card, game.Player2, zone.Hand, game.FaceFront, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	if !ok {
 		t.Fatal("create permanent failed")
 	}
@@ -281,7 +283,7 @@ func TestDeathTriggerCanUseEventPermanentLKIAndReturnEventCardAsEnchantment(t *t
 	})
 	cardID := source.CardInstanceID
 
-	movePermanentToZone(g, source, game.ZoneGraveyard)
+	movePermanentToZone(g, source, zone.Graveyard)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("death trigger was not put on stack")
 	}
@@ -313,7 +315,7 @@ func TestCounterTransferInterveningIfUsesLKI(t *testing.T) {
 		Types: []types.Card{types.Artifact}},
 	})
 
-	movePermanentToZone(g, source, game.ZoneGraveyard)
+	movePermanentToZone(g, source, zone.Graveyard)
 
 	if engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("counter transfer trigger was put on stack for artifact with no counters")
@@ -329,7 +331,7 @@ func TestCounterTransferUpToOneTargetMayHaveNoTarget(t *testing.T) {
 	})
 	source.Counters.Add(counter.PlusOnePlusOne, 1)
 
-	movePermanentToZone(g, source, game.ZoneGraveyard)
+	movePermanentToZone(g, source, zone.Graveyard)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("counter transfer trigger with no legal target was not put on stack")
 	}
@@ -355,7 +357,7 @@ func TestCounterTransferUpToOneTargetCanBeDeclined(t *testing.T) {
 		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
 	}
 
-	movePermanentToZone(g, source, game.ZoneGraveyard)
+	movePermanentToZone(g, source, zone.Graveyard)
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
 		t.Fatal("counter transfer trigger was not put on stack")
 	}
@@ -1269,7 +1271,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 		Abilities: []game.AbilityDef{
 			{
 				Kind:    game.TriggeredAbility,
-				Trigger: opt.Val(game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{Event: game.EventZoneChanged, Controller: game.TriggerControllerYou, RequirePermanentTypes: []types.Card{types.Artifact}, MatchFromZone: true, FromZone: game.ZoneBattlefield, MatchToZone: true, ToZone: game.ZoneGraveyard}, InterveningIf: "it had counters on it", InterveningIfEventPermanentHadCounters: true}),
+				Trigger: opt.Val(game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{Event: game.EventZoneChanged, Controller: game.TriggerControllerYou, RequirePermanentTypes: []types.Card{types.Artifact}, MatchFromZone: true, FromZone: zone.Battlefield, MatchToZone: true, ToZone: zone.Graveyard}, InterveningIf: "it had counters on it", InterveningIfEventPermanentHadCounters: true}),
 				Targets: []game.TargetSpec{
 					{MinTargets: 0, MaxTargets: 1, Constraint: "artifact or creature you control"},
 				},

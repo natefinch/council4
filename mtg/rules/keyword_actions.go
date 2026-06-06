@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -89,7 +90,7 @@ func discardCards(g *game.Game, playerID game.PlayerID, amount int) bool {
 }
 
 func searchSpecSupported(spec game.SearchSpec) bool {
-	return spec.SourceZone == game.ZoneLibrary && (spec.Destination == game.ZoneHand || spec.Destination == game.ZoneBattlefield)
+	return spec.SourceZone == zone.Library && (spec.Destination == zone.Hand || spec.Destination == zone.Battlefield)
 }
 
 func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID game.PlayerID, spec game.SearchSpec, amount int) bool {
@@ -114,10 +115,10 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID gam
 			return len(found) > 0
 		}
 		if spec.Reveal {
-			emitCardRevealEvent(g, obj, playerID, cardID, game.ZoneLibrary)
+			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
 		switch spec.Destination {
-		case game.ZoneHand:
+		case zone.Hand:
 			player.Hand.Add(cardID)
 			emitZoneChangeEvent(g, game.GameEvent{
 				SourceID:      stackObjectSourceID(obj),
@@ -125,16 +126,16 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID gam
 				Controller:    stackObjectController(obj),
 				Player:        playerID,
 				CardID:        cardID,
-				FromZone:      game.ZoneLibrary,
-				ToZone:        game.ZoneHand,
+				FromZone:      zone.Library,
+				ToZone:        zone.Hand,
 				Amount:        1,
 			})
-		case game.ZoneBattlefield:
+		case zone.Battlefield:
 			card, ok := g.GetCardInstance(cardID)
 			if !ok {
 				return len(found) > 0
 			}
-			if _, ok := createCardPermanentFaceWithOptions(e, g, card, playerID, game.ZoneLibrary, game.FaceFront, nil, permanentCreationOptions{ForceTapped: spec.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil); !ok {
+			if _, ok := createCardPermanentFaceWithOptions(e, g, card, playerID, zone.Library, game.FaceFront, nil, permanentCreationOptions{ForceTapped: spec.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil); !ok {
 				return len(found) > 0
 			}
 		default:
@@ -163,16 +164,16 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	return true
 }
 
-func revealCards(g *game.Game, obj *game.StackObject, playerID game.PlayerID, zone game.ZoneType, amount int) bool {
-	return len(revealCardIDs(g, obj, playerID, zone, amount)) > 0
+func revealCards(g *game.Game, obj *game.StackObject, playerID game.PlayerID, zoneType zone.Type, amount int) bool {
+	return len(revealCardIDs(g, obj, playerID, zoneType, amount)) > 0
 }
 
-func revealCardIDs(g *game.Game, obj *game.StackObject, playerID game.PlayerID, zone game.ZoneType, amount int) []id.ID {
+func revealCardIDs(g *game.Game, obj *game.StackObject, playerID game.PlayerID, zoneType zone.Type, amount int) []id.ID {
 	if amount <= 0 {
 		amount = 1
 	}
 	player, ok := playerByID(g, playerID)
-	if !ok || zone != game.ZoneLibrary {
+	if !ok || zoneType != zone.Library {
 		return nil
 	}
 	var revealed []id.ID
@@ -180,13 +181,13 @@ func revealCardIDs(g *game.Game, obj *game.StackObject, playerID game.PlayerID, 
 		if i >= amount {
 			break
 		}
-		emitCardRevealEvent(g, obj, playerID, cardID, zone)
+		emitCardRevealEvent(g, obj, playerID, cardID, zoneType)
 		revealed = append(revealed, cardID)
 	}
 	return revealed
 }
 
-func emitCardRevealEvent(g *game.Game, obj *game.StackObject, playerID game.PlayerID, cardID id.ID, zone game.ZoneType) {
+func emitCardRevealEvent(g *game.Game, obj *game.StackObject, playerID game.PlayerID, cardID id.ID, zoneType zone.Type) {
 	emitEvent(g, game.GameEvent{
 		Kind:          game.EventCardRevealed,
 		SourceID:      stackObjectSourceID(obj),
@@ -194,15 +195,15 @@ func emitCardRevealEvent(g *game.Game, obj *game.StackObject, playerID game.Play
 		Controller:    stackObjectController(obj),
 		Player:        playerID,
 		CardID:        cardID,
-		FromZone:      zone,
+		FromZone:      zoneType,
 		Amount:        1,
 	})
 }
 
 func clueTokenDef() *game.CardDef {
 	two := cost.Mana{cost.O(2)}
-	additionalCosts := []game.AdditionalCost{{
-		Kind:               game.AdditionalCostSacrificeSource,
+	additionalCosts := []cost.Additional{{
+		Kind:               cost.AdditionalSacrificeSource,
 		Text:               "Sacrifice this artifact",
 		Amount:             1,
 		MatchPermanentType: true,
@@ -215,7 +216,7 @@ func clueTokenDef() *game.CardDef {
 		Abilities: []game.AbilityDef{{
 			Kind:            game.ActivatedAbility,
 			Text:            "{2}, Sacrifice this artifact: Draw a card.",
-			Body:            game.ActivatedAbilityBody{Text: "{2}, Sacrifice this artifact: Draw a card.", ManaCost: opt.Val(two), AdditionalCosts: append([]game.AdditionalCost(nil), additionalCosts...), Content: game.PlainAbilityContent{LegacyEffects: append([]game.Effect(nil), effects...)}},
+			Body:            game.ActivatedAbilityBody{Text: "{2}, Sacrifice this artifact: Draw a card.", ManaCost: opt.Val(two), AdditionalCosts: append([]cost.Additional(nil), additionalCosts...), Content: game.PlainAbilityContent{LegacyEffects: append([]game.Effect(nil), effects...)}},
 			ManaCost:        opt.Val(two),
 			AdditionalCosts: additionalCosts,
 			Effects:         effects,

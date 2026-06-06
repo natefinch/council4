@@ -1,4 +1,4 @@
-// Package cost defines printed mana costs for spells and abilities.
+// Package cost defines declarative mana and non-mana costs for spells and abilities.
 package cost
 
 import (

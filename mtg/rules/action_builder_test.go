@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -44,7 +46,7 @@ func TestActionBuilderProducesValidActions(t *testing.T) {
 	t.Run("castSpell", func(t *testing.T) {
 		targets := []game.Target{{Kind: game.TargetPlayer, PlayerID: game.Player1}}
 		modes := []int{0}
-		act := actionBuild.castSpell(cardID, game.ZoneHand, game.FaceFront, targets, 3, modes)
+		act := actionBuild.castSpell(cardID, zone.Hand, game.FaceFront, targets, 3, modes)
 		if err := act.Validate(); err != nil {
 			t.Fatalf("castSpell() produced invalid action: %v", err)
 		}
@@ -61,7 +63,7 @@ func TestActionBuilderProducesValidActions(t *testing.T) {
 	})
 
 	t.Run("castKickedSpell", func(t *testing.T) {
-		act := actionBuild.castKickedSpell(cardID, game.ZoneHand, game.FaceFront, nil, 0, nil)
+		act := actionBuild.castKickedSpell(cardID, zone.Hand, game.FaceFront, nil, 0, nil)
 		if err := act.Validate(); err != nil {
 			t.Fatalf("castKickedSpell() produced invalid action: %v", err)
 		}
@@ -165,7 +167,7 @@ func TestActionBuilderPanicsOnInvalidInput(t *testing.T) {
 				t.Fatal("castSpell(0, ...) did not panic, want panic for zero card ID")
 			}
 		}()
-		actionBuild.castSpell(0, game.ZoneHand, game.FaceFront, nil, 0, nil)
+		actionBuild.castSpell(0, zone.Hand, game.FaceFront, nil, 0, nil)
 	})
 
 	t.Run("castKickedSpell_zeroCardID", func(t *testing.T) {
@@ -174,7 +176,7 @@ func TestActionBuilderPanicsOnInvalidInput(t *testing.T) {
 				t.Fatal("castKickedSpell(0, ...) did not panic, want panic for zero card ID")
 			}
 		}()
-		actionBuild.castKickedSpell(0, game.ZoneHand, game.FaceFront, nil, 0, nil)
+		actionBuild.castKickedSpell(0, zone.Hand, game.FaceFront, nil, 0, nil)
 	})
 
 	t.Run("activateAbility_zeroSourceID", func(t *testing.T) {
@@ -248,7 +250,7 @@ func TestActionBuilderSliceIsolation(t *testing.T) {
 
 	t.Run("castSpell_targets", func(t *testing.T) {
 		targets := []game.Target{{Kind: game.TargetPlayer, PlayerID: game.Player1}}
-		act := actionBuild.castSpell(cardID, game.ZoneHand, game.FaceFront, targets, 0, nil)
+		act := actionBuild.castSpell(cardID, zone.Hand, game.FaceFront, targets, 0, nil)
 		targets[0] = game.Target{Kind: game.TargetPermanent}
 		payload, _ := act.CastSpellPayload()
 		if payload.Targets[0].Kind != game.TargetPlayer {
@@ -258,7 +260,7 @@ func TestActionBuilderSliceIsolation(t *testing.T) {
 
 	t.Run("castSpell_modes", func(t *testing.T) {
 		modes := []int{1, 2}
-		act := actionBuild.castSpell(cardID, game.ZoneHand, game.FaceFront, nil, 0, modes)
+		act := actionBuild.castSpell(cardID, zone.Hand, game.FaceFront, nil, 0, modes)
 		modes[0] = 99
 		payload, _ := act.CastSpellPayload()
 		if payload.ChosenModes[0] != 1 {

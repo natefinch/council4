@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -18,7 +19,7 @@ type ObjectSnapshot struct {
 	Name           string
 	Owner          PlayerID
 	Controller     PlayerID
-	FromZone       ZoneType
+	FromZone       zone.Type
 	Colors         []color.Color
 	Supertypes     []types.Super
 	Types          []types.Card

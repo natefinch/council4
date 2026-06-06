@@ -3,6 +3,7 @@ package d
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -40,11 +41,7 @@ var DeathcapGlade = func() *game.CardDef {
 		Text: `
 			{T}: Add {B} or {G}.
 		`,
-		AdditionalCosts: []game.AdditionalCost{
-			{
-				Kind: game.AdditionalCostTap,
-			},
-		},
+		AdditionalCosts: cost.Tap,
 		Content: game.PlainAbilityContent{
 			Sequence: []game.Instruction{
 				{

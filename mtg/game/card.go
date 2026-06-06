@@ -3,6 +3,8 @@ package game
 import (
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -446,15 +448,15 @@ func lowerBodyToFlat(ability *AbilityDef) {
 	case SpellAbilityBody:
 		ability.Kind = SpellAbility
 		ability.Text = body.Text
-		ability.AdditionalCosts = append([]AdditionalCost(nil), body.AdditionalCosts...)
-		ability.AlternativeCosts = append([]AlternativeCost(nil), body.AlternativeCosts...)
+		ability.AdditionalCosts = append([]cost.Additional(nil), body.AdditionalCosts...)
+		ability.AlternativeCosts = append([]cost.Alternative(nil), body.AlternativeCosts...)
 		applyAbilityContent(ability, body.Content)
 	case ActivatedAbilityBody:
 		ability.Kind = ActivatedAbility
 		ability.Text = body.Text
 		ability.ManaCost = body.ManaCost
-		ability.AdditionalCosts = append([]AdditionalCost(nil), body.AdditionalCosts...)
-		ability.AlternativeCosts = append([]AlternativeCost(nil), body.AlternativeCosts...)
+		ability.AdditionalCosts = append([]cost.Additional(nil), body.AdditionalCosts...)
+		ability.AlternativeCosts = append([]cost.Alternative(nil), body.AlternativeCosts...)
 		ability.ZoneOfFunction = body.ZoneOfFunction
 		ability.Timing = body.Timing
 		ability.ActivationCondition = body.ActivationCondition
@@ -465,7 +467,7 @@ func lowerBodyToFlat(ability *AbilityDef) {
 		ability.IsManaAbility = true
 		ability.Text = body.Text
 		ability.ManaCost = body.ManaCost
-		ability.AdditionalCosts = append([]AdditionalCost(nil), body.AdditionalCosts...)
+		ability.AdditionalCosts = append([]cost.Additional(nil), body.AdditionalCosts...)
 		ability.ZoneOfFunction = body.ZoneOfFunction
 		ability.Timing = body.Timing
 		ability.ActivationCondition = body.ActivationCondition
@@ -504,8 +506,8 @@ func spellAbilityDef(body *SpellAbilityBody) AbilityDef {
 		Kind:             SpellAbility,
 		Text:             body.Text,
 		Body:             *body,
-		AdditionalCosts:  append([]AdditionalCost(nil), body.AdditionalCosts...),
-		AlternativeCosts: append([]AlternativeCost(nil), body.AlternativeCosts...),
+		AdditionalCosts:  append([]cost.Additional(nil), body.AdditionalCosts...),
+		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 	}
 	applyAbilityContent(&ability, body.Content)
 	return ability
@@ -517,8 +519,8 @@ func activatedAbilityDef(body *ActivatedAbilityBody) AbilityDef {
 		Text:                body.Text,
 		Body:                *body,
 		ManaCost:            body.ManaCost,
-		AdditionalCosts:     append([]AdditionalCost(nil), body.AdditionalCosts...),
-		AlternativeCosts:    append([]AlternativeCost(nil), body.AlternativeCosts...),
+		AdditionalCosts:     append([]cost.Additional(nil), body.AdditionalCosts...),
+		AlternativeCosts:    append([]cost.Alternative(nil), body.AlternativeCosts...),
 		ZoneOfFunction:      body.ZoneOfFunction,
 		Timing:              body.Timing,
 		ActivationCondition: body.ActivationCondition,
@@ -534,7 +536,7 @@ func manaAbilityDef(body *ManaAbilityBody) AbilityDef {
 		Text:                body.Text,
 		Body:                *body,
 		ManaCost:            body.ManaCost,
-		AdditionalCosts:     append([]AdditionalCost(nil), body.AdditionalCosts...),
+		AdditionalCosts:     append([]cost.Additional(nil), body.AdditionalCosts...),
 		ZoneOfFunction:      body.ZoneOfFunction,
 		Timing:              body.Timing,
 		ActivationCondition: body.ActivationCondition,
@@ -579,7 +581,7 @@ func replacementAbilityDef(body *ReplacementAbilityDef) AbilityDef {
 	if body.Replacement.MatchEvent != EventUnknown ||
 		body.Replacement.EntersTapped ||
 		len(body.Replacement.EntersWithCounters) != 0 ||
-		body.Replacement.ReplaceToZone != ZoneNone {
+		body.Replacement.ReplaceToZone != zone.None {
 		effects = append(effects, Effect{
 			Type:        EffectReplace,
 			TargetIndex: TargetIndexController,

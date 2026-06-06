@@ -58,9 +58,9 @@ var FiresOfYavimaya = func() *game.CardDef {
 			Text: `
 				Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.
 			`,
-			AdditionalCosts: []game.AdditionalCost{
+			AdditionalCosts: []cost.Additional{
 				{
-					Kind: game.AdditionalCostSacrificeSource,
+					Kind: cost.AdditionalSacrificeSource,
 				},
 			},
 			Content: game.PlainAbilityContent{

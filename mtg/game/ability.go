@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -381,9 +382,9 @@ type TriggerPattern struct {
 	ExcludeCardTypes []types.Card
 
 	MatchFromZone bool
-	FromZone      ZoneType
+	FromZone      zone.Type
 	MatchToZone   bool
-	ToZone        ZoneType
+	ToZone        zone.Type
 
 	MatchStackObjectKind bool
 	StackObjectKind      StackObjectKind
@@ -588,10 +589,10 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 	return ActivatedAbilityBody{
 		Text:           "Eternalize " + manaCost.String(),
 		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
-		ZoneOfFunction: ZoneGraveyard,
+		ZoneOfFunction: zone.Graveyard,
 		Timing:         SorceryOnly,
-		AdditionalCosts: []AdditionalCost{{
-			Kind: AdditionalCostExileSource,
+		AdditionalCosts: []cost.Additional{{
+			Kind: cost.AdditionalExileSource,
 			Text: "Exile this card from your graveyard",
 		}},
 		Content: PlainAbilityContent{Sequence: []Instruction{{
@@ -615,8 +616,8 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 // implementation supports library -> hand and library -> battlefield templates
 // with common type, supertype, and subtype filters.
 type SearchSpec struct {
-	SourceZone  ZoneType
-	Destination ZoneType
+	SourceZone  zone.Type
+	Destination zone.Type
 
 	CardType  opt.V[types.Card]
 	Supertype opt.V[types.Super]
@@ -800,11 +801,11 @@ type AbilityDef struct {
 
 	// AdditionalCosts describes typed non-mana costs. mtg/rules owns choosing
 	// and applying these costs.
-	AdditionalCosts []AdditionalCost
+	AdditionalCosts []cost.Additional
 
 	// AlternativeCosts are optional costs that replace the normal mana cost
 	// when selected. Required additional costs still apply.
-	AlternativeCosts []AlternativeCost
+	AlternativeCosts []cost.Alternative
 
 	// Trigger defines when a triggered ability fires. Nil for non-triggered.
 	Trigger opt.V[TriggerCondition]
@@ -840,7 +841,7 @@ type AbilityDef struct {
 
 	// ZoneOfFunction is the zone where this ability functions.
 	// Defaults to Battlefield for permanents (CR 113.6).
-	ZoneOfFunction ZoneType
+	ZoneOfFunction zone.Type
 
 	// Timing restricts when an activated ability can be used.
 	Timing TimingRestriction

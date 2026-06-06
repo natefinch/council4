@@ -1,4 +1,4 @@
-package game
+package zone
 
 import (
 	"math/rand/v2"
@@ -8,9 +8,9 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
-func TestZoneShuffleWithSameSeedProducesSameOrder(t *testing.T) {
-	first := NewZone(ZoneLibrary)
-	second := NewZone(ZoneLibrary)
+func TestShuffleWithSameSeedProducesSameOrder(t *testing.T) {
+	first := New(Library)
+	second := New(Library)
 	for i := id.ID(1); i <= 10; i++ {
 		first.AddToBottom(i)
 		second.AddToBottom(i)
@@ -24,13 +24,13 @@ func TestZoneShuffleWithSameSeedProducesSameOrder(t *testing.T) {
 	}
 }
 
-func TestZoneShufflePanicsOnNilRand(t *testing.T) {
+func TestShufflePanicsOnNilRand(t *testing.T) {
 	defer func() {
 		if recover() == nil {
 			t.Fatal("Shuffle(nil) did not panic")
 		}
 	}()
 
-	zone := NewZone(ZoneLibrary)
-	zone.Shuffle(nil)
+	cards := New(Library)
+	cards.Shuffle(nil)
 }

@@ -3,6 +3,8 @@ package payment
 import (
 	"maps"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -132,7 +134,7 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	sourceZone := req.SourceZone
 	if req.Source != nil && sourceCardID == 0 {
 		sourceCardID = req.Source.CardInstanceID
-		sourceZone = game.ZoneBattlefield
+		sourceZone = zone.Battlefield
 	}
 	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, abilityAdditionalCosts(req.Ability), req.Prefs, req.Source, sourceCardID, sourceZone)
 	if !ok {
@@ -223,7 +225,7 @@ func payGenericCost(s State, req GenericRequest) bool {
 
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.Prefs, nil, 0, game.ZoneNone)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.Prefs, nil, 0, zone.None)
 	if !ok {
 		return plan, false
 	}
@@ -241,10 +243,10 @@ func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	return plan, true
 }
 
-func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone game.ZoneType, option spellCostOption, xValue int, prefs *Preferences) (spellCostPlan, bool) {
+func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, prefs *Preferences) (spellCostPlan, bool) {
 	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, option: option})
 	plan := spellCostPlan{option: option}
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, prefs, nil, 0, game.ZoneNone)
+	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, prefs, nil, 0, zone.None)
 	if !ok {
 		return plan, false
 	}
@@ -479,7 +481,7 @@ func hasTapCost(ability *game.AbilityDef) bool {
 		return false
 	}
 	for _, addCost := range ability.AdditionalCosts {
-		if addCost.Kind == game.AdditionalCostTap {
+		if addCost.Kind == cost.AdditionalTap {
 			return true
 		}
 	}
@@ -500,11 +502,11 @@ func costHasVariableMana(manaCost *cost.Mana) bool {
 }
 
 // abilityAdditionalCosts returns a copy of the ability's additional costs.
-func abilityAdditionalCosts(ability *game.AbilityDef) []game.AdditionalCost {
+func abilityAdditionalCosts(ability *game.AbilityDef) []cost.Additional {
 	if ability == nil {
 		return nil
 	}
-	return append([]game.AdditionalCost(nil), ability.AdditionalCosts...)
+	return append([]cost.Additional(nil), ability.AdditionalCosts...)
 }
 
 // manaCostPtr returns a pointer to the mana cost value, or nil if it does not exist.

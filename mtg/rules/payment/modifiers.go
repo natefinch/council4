@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // costModificationContext carries the context needed to apply cost modifiers.
@@ -11,7 +12,7 @@ type costModificationContext struct {
 	player     game.PlayerID
 	card       *game.CardDef
 	cardID     id.ID
-	sourceZone game.ZoneType
+	sourceZone zone.Type
 	option     spellCostOption
 }
 

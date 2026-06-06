@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -39,8 +40,8 @@ var NatureSLore = &game.CardDef{
 						Primitive: game.Search{
 							TargetIndex: game.TargetIndexController,
 							Spec: game.SearchSpec{
-								SourceZone:  game.ZoneLibrary,
-								Destination: game.ZoneBattlefield,
+								SourceZone:  zone.Library,
+								Destination: zone.Battlefield,
 								CardType:    opt.Val(types.Land),
 								SubtypesAny: []types.Sub{
 									types.Forest,

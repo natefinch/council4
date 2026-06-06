@@ -3,6 +3,8 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -29,7 +31,7 @@ func TestMovePermanentToZoneMovesCardBackedPermanent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	permanent := addCombatCreaturePermanent(g, game.Player1)
 
-	if !movePermanentToZone(g, permanent, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, permanent, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
 	if len(g.Battlefield) != 0 {
@@ -53,7 +55,7 @@ func TestMovePermanentToZoneMovesTokenObjectIDToDestination(t *testing.T) {
 	}
 	g.Battlefield = append(g.Battlefield, token)
 
-	if !movePermanentToZone(g, token, game.ZoneGraveyard) {
+	if !movePermanentToZone(g, token, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
 	if len(g.Battlefield) != 0 {
@@ -215,7 +217,7 @@ func TestIllegalAuraStateBasedActionMovesAuraToGraveyard(t *testing.T) {
 		t.Fatal("attachPermanent() = false, want true")
 	}
 
-	movePermanentToZone(g, creature, game.ZoneGraveyard)
+	movePermanentToZone(g, creature, zone.Graveyard)
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
 	if _, ok := permanentByObjectID(g, aura.ObjectID); ok {
@@ -238,7 +240,7 @@ func TestEquipmentRemainsWhenEquippedCreatureLeaves(t *testing.T) {
 		t.Fatal("attachPermanent() = false, want true")
 	}
 
-	movePermanentToZone(g, creature, game.ZoneGraveyard)
+	movePermanentToZone(g, creature, zone.Graveyard)
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
 	if len(deaths) != 0 {
