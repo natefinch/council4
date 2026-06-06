@@ -18,46 +18,58 @@ import (
 //
 //	Flying
 //	{T}: Add one mana of any color.
-var BirdsOfParadise = &game.CardDef{CardFace: game.CardFace{Name: "Birds of Paradise",
-	ManaCost: opt.Val(cost.Mana{
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
+var BirdsOfParadise = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Birds of Paradise",
+			ManaCost: opt.Val(cost.Mana{
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Bird},
+			Power:     opt.Val(game.PT{Value: 0}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			OracleText: `
+				Flying
+				{T}: Add one mana of any color.
+			`,
+		},
+	}
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.FlyingStaticBody,
+	)
 
-	Types:      []types.Card{types.Creature},
-	Subtypes:   []types.Sub{types.Bird},
-	Power:      opt.Val(game.PT{Value: 0}),
-	Toughness:  opt.Val(game.PT{Value: 1}),
-	OracleText: "Flying\n{T}: Add one mana of any color.",
-	Abilities: []game.AbilityDef{
-		game.FlyingAbility,
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add one mana of any color.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectChoose,
-					TargetIndex: game.TargetIndexController,
-					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceMana,
-						Prompt: "Choose a color",
-						Colors: []mana.Color{
-							mana.W, mana.U, mana.B, mana.R, mana.G,
-						},
-					}),
-					LinkID: "birds-color",
-				},
-				{
-					Type:         game.EffectAddMana,
-					Amount:       1,
-					TargetIndex:  game.TargetIndexController,
-					ChoiceLinkID: "birds-color",
+	card.ManaAbilities = append(card.ManaAbilities,
+		game.ManaAbilityBody{
+			Text: `
+				{T}: Add one mana of any color.
+			`,
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{
+						Type:        game.EffectChoose,
+						TargetIndex: game.TargetIndexController,
+						Choice: opt.Val(game.ResolutionChoice{
+							Kind:   game.ResolutionChoiceMana,
+							Prompt: "Choose a color",
+							Colors: []mana.Color{
+								mana.W, mana.U, mana.B, mana.R, mana.G,
+							},
+						}),
+						LinkID: "birds-color",
+					},
+					{
+						Type:         game.EffectAddMana,
+						Amount:       1,
+						TargetIndex:  game.TargetIndexController,
+						ChoiceLinkID: "birds-color",
+					},
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green),
-}
+	)
+	return card
+}()

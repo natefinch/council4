@@ -18,44 +18,57 @@ import (
 //
 //	Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)
 //	{T}: Add {B}, {R}, or {G}.
-var IgnobleHierarch = &game.CardDef{CardFace: game.CardFace{Name: "Ignoble Hierarch",
-	ManaCost: opt.Val(cost.Mana{
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
+var IgnobleHierarch = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
+		CardFace: game.CardFace{
+			Name: "Ignoble Hierarch",
+			ManaCost: opt.Val(cost.Mana{
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Goblin, types.Shaman},
+			Power:     opt.Val(game.PT{Value: 0}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			OracleText: `
+				Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)
+				{T}: Add {B}, {R}, or {G}.
+			`,
+		},
+	}
 
-	Types:      []types.Card{types.Creature},
-	Subtypes:   []types.Sub{types.Goblin, types.Shaman},
-	Power:      opt.Val(game.PT{Value: 0}),
-	Toughness:  opt.Val(game.PT{Value: 1}),
-	OracleText: "Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.)\n{T}: Add {B}, {R}, or {G}.",
-	Abilities: []game.AbilityDef{
-		game.ExaltedAbility,
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {B}, {R}, or {G}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectChoose,
-					TargetIndex: game.TargetIndexController,
-					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceMana,
-						Prompt: "Choose a color",
-						Colors: []mana.Color{mana.B, mana.R, mana.G},
-					}),
-					LinkID: "ignoble-hierarch-color",
-				},
-				{
-					Type:         game.EffectAddMana,
-					Amount:       1,
-					TargetIndex:  game.TargetIndexController,
-					ChoiceLinkID: "ignoble-hierarch-color",
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.ExaltedStaticBody,
+	)
+
+	card.ManaAbilities = append(card.ManaAbilities,
+		game.ManaAbilityBody{
+			Text: `
+				{T}: Add {B}, {R}, or {G}.
+			`,
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{
+						Type:        game.EffectChoose,
+						TargetIndex: game.TargetIndexController,
+						Choice: opt.Val(game.ResolutionChoice{
+							Kind:   game.ResolutionChoiceMana,
+							Prompt: "Choose a color",
+							Colors: []mana.Color{mana.B, mana.R, mana.G},
+						}),
+						LinkID: "ignoble-hierarch-color",
+					},
+					{
+						Type:         game.EffectAddMana,
+						Amount:       1,
+						TargetIndex:  game.TargetIndexController,
+						ChoiceLinkID: "ignoble-hierarch-color",
+					},
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
-}
+	)
+	return card
+}()

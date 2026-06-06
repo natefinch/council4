@@ -18,20 +18,30 @@ import (
 //
 //	Creatures you control have haste.
 //	Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.
-var FiresOfYavimaya = &game.CardDef{CardFace: game.CardFace{Name: "Fires of Yavimaya",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(1),
-		cost.R,
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green, color.Red},
+var FiresOfYavimaya = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green, color.Red),
+		CardFace: game.CardFace{
+			Name: "Fires of Yavimaya",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.R,
+				cost.G,
+			}),
+			Colors: []color.Color{color.Green, color.Red},
+			Types:  []types.Card{types.Enchantment},
+			OracleText: `
+				Creatures you control have haste.
+				Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.
+			`,
+		},
+	}
 
-	Types:      []types.Card{types.Enchantment},
-	OracleText: "Creatures you control have haste.\nSacrifice this enchantment: Target creature gets +2/+2 until end of turn.",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.StaticAbility,
-			Text: "Creatures you control have haste.",
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.StaticAbilityBody{
+			Text: `
+				Creatures you control have haste.
+			`,
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectApplyContinuous,
@@ -46,32 +56,37 @@ var FiresOfYavimaya = &game.CardDef{CardFace: game.CardFace{Name: "Fires of Yavi
 				},
 			},
 		},
-		{
-			Kind: game.ActivatedAbility,
-			Text: "Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.",
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostSacrificeSource},
-			},
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
+	)
+
+	card.ActivatedAbilities = append(card.ActivatedAbilities,
+		game.ActivatedAbilityBody{
+			Text: `
+				Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.
+			`,
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostSacrificeSource}},
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+						},
+					},
+				},
+				Sequence: []game.Effect{
+					{
+						Type:           game.EffectModifyPT,
+						TargetIndex:    0,
+						PowerDelta:     2,
+						ToughnessDelta: 2,
+						UntilEndOfTurn: true,
 					},
 				},
 			},
-			Effects: []game.Effect{
-				{
-					Type:           game.EffectModifyPT,
-					TargetIndex:    0,
-					PowerDelta:     2,
-					ToughnessDelta: 2,
-					UntilEndOfTurn: true,
-				},
-			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
-}
+	)
+	return card
+}()

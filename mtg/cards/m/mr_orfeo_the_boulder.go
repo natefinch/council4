@@ -4,7 +4,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -17,55 +16,66 @@ import (
 // Oracle text:
 //
 //	Whenever you attack, double target creature's power until end of turn.
-var MrOrfeoTheBoulder = &game.CardDef{CardFace: game.CardFace{Name: "Mr. Orfeo, the Boulder",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(1),
-		cost.B,
-		cost.R,
-		cost.G,
-	}),
-	Colors: []color.Color{color.Black, color.Green, color.Red},
-
-	Supertypes: []types.Super{types.Legendary},
-	Types:      []types.Card{types.Creature},
-	Subtypes:   []types.Sub{types.Rhino, types.Warrior},
-	Power:      opt.Val(game.PT{Value: 2}),
-	Toughness:  opt.Val(game.PT{Value: 4}),
-	OracleText: "Whenever you attack, double target creature's power until end of turn.",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.TriggeredAbility,
-			Text: "Whenever you attack, double target creature's power until end of turn.",
-			Trigger: opt.Val(game.TriggerCondition{
-				Type: game.TriggerWhenever,
-				Pattern: game.TriggerPattern{
-					Event:      game.EventAttackerDeclared,
-					Controller: game.TriggerControllerYou,
-					OneOrMore:  true,
+var MrOrfeoTheBoulder = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
+	CardFace: game.CardFace{
+		Name: "Mr. Orfeo, the Boulder",
+		ManaCost: opt.Val(cost.Mana{
+			cost.O(1),
+			cost.B,
+			cost.R,
+			cost.G,
+		}),
+		Colors:     []color.Color{color.Black, color.Green, color.Red},
+		Supertypes: []types.Super{types.Legendary},
+		Types:      []types.Card{types.Creature},
+		Subtypes:   []types.Sub{types.Rhino, types.Warrior},
+		Power:      opt.Val(game.PT{Value: 2}),
+		Toughness:  opt.Val(game.PT{Value: 4}),
+		OracleText: `
+			Whenever you attack, double target creature's power until end of turn.
+		`,
+		TriggeredAbilities: []game.TriggeredAbilityBody{
+			{
+				Text: `
+					Whenever you attack, double target creature's power until end of turn.
+				`,
+				Trigger: game.TriggerCondition{
+					Type: game.TriggerWhenever,
+					Pattern: game.TriggerPattern{
+						Event:      game.EventAttackerDeclared,
+						Controller: game.TriggerControllerYou,
+						OneOrMore:  true,
+					},
 				},
-			}),
-			Targets: []game.TargetSpec{
-				{MinTargets: 1, MaxTargets: 1, Constraint: "creature",
-					Allow: game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
+				Content: game.PlainAbilityContent{
+					Targets: []game.TargetSpec{
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "creature",
+							Allow:      game.TargetAllowPermanent,
+							Predicate: game.TargetPredicate{
+								PermanentTypes: []types.Card{types.Creature},
+							},
+						},
+					},
+					Sequence: []game.Effect{
+						{
+							Type:           game.EffectModifyPT,
+							TargetIndex:    0,
+							UntilEndOfTurn: true,
+							PowerDeltaDynamic: opt.Val(game.DynamicAmount{
+								Kind: game.DynamicAmountObjectPower,
+								Object: game.ObjectReference{
+									Kind:        game.ObjectReferenceTargetPermanent,
+									TargetIndex: 0,
+								},
+							}),
+						},
 					},
 				},
 			},
-			Effects: []game.Effect{
-				{
-					Type:           game.EffectModifyPT,
-					TargetIndex:    0,
-					UntilEndOfTurn: true,
-					PowerDeltaDynamic: opt.Val(game.DynamicAmount{
-						Kind: game.DynamicAmountObjectPower,
-						Object: game.ObjectReference{
-							Kind:        game.ObjectReferenceTargetPermanent,
-							TargetIndex: 0,
-						},
-					}),
-				},
-			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Black, color.Green, color.Red),
+	},
 }

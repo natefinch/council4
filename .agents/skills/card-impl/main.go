@@ -1,6 +1,6 @@
 // Command card-impl generates a partial CardDef Go source file from Scryfall
-// data. It fetches a card by exact name, produces the mechanical fields, and
-// leaves Abilities empty for LLM completion.
+// data. It fetches a card by exact name, produces the mechanical fields in the
+// canonical card-source format, and leaves categorized abilities for completion.
 //
 // Usage:
 //

@@ -16,19 +16,28 @@ import (
 //
 //	Whenever equipped creature becomes blocked by a creature, you may draw two cards.
 //	Equip {1}
-var InfiltrationLens = &game.CardDef{CardFace: game.CardFace{Name: "Infiltration Lens",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(1),
-	}),
-	Types:      []types.Card{types.Artifact},
-	Subtypes:   []types.Sub{types.Equipment},
-	OracleText: "Whenever equipped creature becomes blocked by a creature, you may draw two cards.\nEquip {1}",
-	Abilities: []game.AbilityDef{
-		{
-			Kind:     game.TriggeredAbility,
-			Text:     "Whenever equipped creature becomes blocked by a creature, you may draw two cards.",
-			Optional: true,
-			Trigger: opt.Val(game.TriggerCondition{
+var InfiltrationLens = func() *game.CardDef {
+	card := &game.CardDef{
+		CardFace: game.CardFace{
+			Name: "Infiltration Lens",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+			}),
+			Types:    []types.Card{types.Artifact},
+			Subtypes: []types.Sub{types.Equipment},
+			OracleText: `
+				Whenever equipped creature becomes blocked by a creature, you may draw two cards.
+				Equip {1}
+			`,
+		},
+	}
+
+	card.TriggeredAbilities = append(card.TriggeredAbilities,
+		game.TriggeredAbilityBody{
+			Text: `
+				Whenever equipped creature becomes blocked by a creature, you may draw two cards.
+			`,
+			Trigger: game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
 					Event:                 game.EventBlockerDeclared,
@@ -36,33 +45,45 @@ var InfiltrationLens = &game.CardDef{CardFace: game.CardFace{Name: "Infiltration
 					Subject:               game.TriggerSubjectBlockedAttacker,
 					RequirePermanentTypes: []types.Card{types.Creature},
 				},
-			}),
-			Effects: []game.Effect{
-				{Type: game.EffectDraw, Amount: 2, TargetIndex: game.TargetIndexController},
+			},
+			Optional: true,
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{Type: game.EffectDraw, Amount: 2, TargetIndex: game.TargetIndexController},
+				},
 			},
 		},
-		{
-			Kind: game.ActivatedAbility,
-			Text: "Equip {1}",
-			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
-				cost.O(1),
-			}}},
+	)
+
+	card.ActivatedAbilities = append(card.ActivatedAbilities,
+		game.ActivatedAbilityBody{
+			Text: `
+				Equip {1}
+			`,
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(1),
 			}),
 			Timing: game.SorceryOnly,
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature you control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+							Controller:     game.ControllerYou,
+						},
 					},
 				},
 			},
+			KeywordAbilities: []game.KeywordAbility{
+				game.EquipKeyword{Cost: cost.Mana{
+					cost.O(1),
+				}},
+			},
 		},
-	}},
-}
+	)
+	return card
+}()

@@ -3,7 +3,7 @@ name: card-impl
 description: >
   Generate a council4 CardDef from a Magic card name. Fetches card data from
   Scryfall, generates the mechanical Go source, then parses the oracle text
-  to fill in Abilities. Use when the user says "implement card X",
+  into categorized CardFace ability fields. Use when the user says "implement card X",
   "add card X", "generate card definition for X", or similar.
 ---
 
@@ -19,7 +19,7 @@ Given one or more Magic: The Gathering card names:
    ```
    This fetches from Scryfall and writes a `.go` file under `mtg/cards/<letter>/`.
 
-2. **Read the generated file.** It has the mechanical fields filled in and `Abilities` left empty.
+2. **Read the generated file.** It has the mechanical fields filled in; the categorized ability fields are left empty for you to complete. Also read `mtg/cards/k/karplusan_forest.go` — this is the canonical source-formatting reference for all new card definitions.
 
 3. **Read the CARD-IMPLEMENTATION-GUIDE.md** in this skill directory. It contains:
    - The full Go type definitions for `AbilityDef`, `Effect`, `Keyword`, etc.
@@ -29,11 +29,12 @@ Given one or more Magic: The Gathering card names:
      supertypes/card types/subtypes, `mtg/game/compare` for integer
      predicates, and optional `CardDef.Back` for double-faced back faces.
 
-4. **Parse the oracle text** (shown in the comment block at the top of the generated file) and fill in:
-   - `Abilities` — the `[]game.AbilityDef` slice
+4. **Parse the oracle text** (shown in the comment block at the top of the generated file) and fill in the categorized ability fields:
+   - `ManaAbilities`, `ActivatedAbilities`, `TriggeredAbilities`, `StaticAbilities`, `LoyaltyAbilities`, `ReplacementAbilities`, or `SpellAbility` as appropriate — see CARD-IMPLEMENTATION-GUIDE.md
    - `EntersTapped` — if the oracle text says "enters tapped"
    - `EntersWithCounters` — if the oracle text says "enters with N counters"
    - Any other fields derivable from oracle text
+   Do **not** populate the legacy `Abilities []AbilityDef` slice.
 
 5. **Present the completed CardDef** for human review. Explain your reasoning for each ability you parsed.
 
@@ -49,7 +50,8 @@ Given one or more Magic: The Gathering card names:
 - Use only `EffectType`, `Keyword`, and other enum values that exist in the codebase. Do not invent new ones.
 - Use `types.Creature`/`types.Forest`/etc. from `mtg/game/types`; do not use old `game.Type*` or `game.*Subtype*` names.
 - `mtg/game/types` includes named constants for every Comprehensive Rules 205.3 subtype. Prefer those constants for new card definitions instead of `types.Sub("...")`; fall back to `types.Sub` only if the subtype truly is not present.
-- For multiple plain non-parameterized keywords in one oracle line, add one reusable helper ability per keyword (for example `game.DeathtouchAbility, game.IndestructibleAbility`) instead of combining them into one `AbilityDef`.
+- For multiple plain non-parameterized keywords, append one reusable `StaticAbilityBody` template per keyword to `StaticAbilities` (for example `game.DeathtouchStaticBody, game.IndestructibleStaticBody`). Do not use old `game.DeathtouchAbility`-style `AbilityDef` constructors in new card source.
+- Write card source in the canonical expanded style shown in `mtg/cards/k/karplusan_forest.go`: vertically-expanded `CardDef` and `CardFace` literals; `ColorIdentity` before `CardFace` in the struct; `OracleText` and every ability `Text` field using indented raw multiline string literals (opening backtick on its own line, one oracle paragraph per source line, closing backtick indented on its own line); categorized ability slices and bodies expanded one-brace-level-per-line with no compact `{{` forms. The generator produces this layout — preserve it rather than compacting.
 - For double-faced cards, edit front-face data on `CardDef` and back-face data on `Back: opt.Val(game.CardFace{...})`; do not add a `Faces` slice.
 - If a card has effects that cannot be expressed with the existing effect primitives, set `ImplementationID` to a descriptive name and leave a comment explaining what hand-written code would need to do.
 - Keep the oracle text comment block at the top of the file — it's useful for human review.

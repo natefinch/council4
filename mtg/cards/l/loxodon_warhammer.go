@@ -16,17 +16,27 @@ import (
 //
 //	Equipped creature gets +3/+0 and has trample and lifelink.
 //	Equip {3}
-var LoxodonWarhammer = &game.CardDef{CardFace: game.CardFace{Name: "Loxodon Warhammer",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(3),
-	}),
-	Types:      []types.Card{types.Artifact},
-	Subtypes:   []types.Sub{types.Equipment},
-	OracleText: "Equipped creature gets +3/+0 and has trample and lifelink.\nEquip {3}",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.StaticAbility,
-			Text: "Equipped creature gets +3/+0 and has trample and lifelink.",
+var LoxodonWarhammer = func() *game.CardDef {
+	card := &game.CardDef{
+		CardFace: game.CardFace{
+			Name: "Loxodon Warhammer",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+			}),
+			Types:    []types.Card{types.Artifact},
+			Subtypes: []types.Sub{types.Equipment},
+			OracleText: `
+				Equipped creature gets +3/+0 and has trample and lifelink.
+				Equip {3}
+			`,
+		},
+	}
+
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.StaticAbilityBody{
+			Text: `
+				Equipped creature gets +3/+0 and has trample and lifelink.
+			`,
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectApplyContinuous,
@@ -47,28 +57,37 @@ var LoxodonWarhammer = &game.CardDef{CardFace: game.CardFace{Name: "Loxodon Warh
 				},
 			},
 		},
-		{
-			Kind: game.ActivatedAbility,
-			Text: "Equip {3}",
-			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
-				cost.O(3),
-			}}},
+	)
+
+	card.ActivatedAbilities = append(card.ActivatedAbilities,
+		game.ActivatedAbilityBody{
+			Text: `
+				Equip {3}
+			`,
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(3),
 			}),
 			Timing: game.SorceryOnly,
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature you control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+							Controller:     game.ControllerYou,
+						},
 					},
 				},
 			},
+			KeywordAbilities: []game.KeywordAbility{
+				game.EquipKeyword{Cost: cost.Mana{
+					cost.O(3),
+				}},
+			},
 		},
-	}},
-}
+	)
+	return card
+}()

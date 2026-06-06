@@ -16,27 +16,35 @@ import (
 //
 //	This land enters tapped unless you control a Swamp or a Mountain.
 //	{T}: Add {B} or {R}.
-var DragonskullSummit = &game.CardDef{CardFace: game.CardFace{Name: "Dragonskull Summit",
-
-	Types:      []types.Card{types.Land},
-	OracleText: "This land enters tapped unless you control a Swamp or a Mountain.\n{T}: Add {B} or {R}.",
-	ReplacementAbilities: []game.ReplacementAbilityDef{
+var DragonskullSummit = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black, color.Red),
+		CardFace: game.CardFace{
+			Name:  "Dragonskull Summit",
+			Types: []types.Card{types.Land},
+			OracleText: `
+				This land enters tapped unless you control a Swamp or a Mountain.
+				{T}: Add {B} or {R}.
+			`,
+		},
+	}
+	card.ReplacementAbilities = append(card.ReplacementAbilities,
 		game.EntersTappedIfReplacement("This land enters tapped unless you control a Swamp or a Mountain.", &game.Condition{
 			Negate: true,
 			ControllerControls: game.PermanentFilter{
 				SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
 			},
 		}),
-	},
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {B} or {R}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
+	)
+	card.ManaAbilities = append(card.ManaAbilities, game.ManaAbilityBody{
+		Text: `
+			{T}: Add {B} or {R}.
+		`,
+		AdditionalCosts: []game.AdditionalCost{
+			{Kind: game.AdditionalCostTap},
+		},
+		Content: game.PlainAbilityContent{
+			Sequence: []game.Effect{
 				{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
@@ -55,5 +63,6 @@ var DragonskullSummit = &game.CardDef{CardFace: game.CardFace{Name: "Dragonskull
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Black, color.Red),
-}
+	})
+	return card
+}()

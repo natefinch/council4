@@ -1,6 +1,32 @@
 # Card Implementation Guide
 
-Reference for parsing Magic: The Gathering oracle text into council4 `game.AbilityDef` structs.
+Reference for parsing Magic: The Gathering oracle text into council4 `CardFace` ability fields.
+
+## Canonical source layout
+
+**Read `mtg/cards/k/karplusan_forest.go` before implementing any card.** It is the canonical
+reference for how new card source must be formatted. Key rules:
+
+1. The `CardDef` literal is vertically expanded — never compact on one line.
+2. `ColorIdentity` appears before `CardFace` in the struct literal.
+3. `CardFace` is vertically expanded; `Name`, `Types`, and other fields are ordinary struct fields.
+4. `OracleText` uses an indented raw multiline string: opening backtick on its own field line, one
+   oracle paragraph per source line, closing backtick indented on its own line.
+5. Every ability body's `Text` field uses the same indented raw multiline string style.
+6. Categorized ability slices and bodies are vertically expanded: one brace level per line. Do not
+   use compact `{{` forms for card ability bodies.
+7. Small truly atomic leaf values may stay one-line, e.g. `[]game.AdditionalCost{{Kind: ...}}` and
+   simple single-field `Effect` literals. Complex `Effect` values are vertically expanded.
+8. Use categorized `CardFace` fields (`ManaAbilities`, `ActivatedAbilities`, etc.), not the legacy
+   `CardFace.Abilities` slice.
+9. Preserve oracle order naturally when one categorized slice suffices. If categories are mixed and
+   field grouping would obscure oracle order, use an initializer function with categorized appends,
+   but still format the base `CardDef` and appended bodies in this expanded/raw-text style.
+10. Keep the top oracle comment block.
+11. Run `gofmt` after writing, but write this layout explicitly — do not rely on `gofmt` to create it.
+
+The generator (`go run .agents/skills/card-impl/main.go`) already emits mechanical fields in this
+style. Preserve that layout when filling in ability bodies.
 
 ## Go Type Definitions
 
@@ -45,27 +71,67 @@ Double-faced cards use `CardDef` root fields for the front face and
 `Back: opt.Val(game.CardFace{...})` for the optional back face. Do not add a
 `Faces` slice.
 
-### AbilityDef
+### Ability fields on CardFace
+
+Card source definitions use the **categorized fields** on `CardFace` directly. Do **not** populate the legacy `Abilities []AbilityDef` slice in registered card definitions.
 
 ```go
-type AbilityDef struct {
-    Text             string
-    KeywordAbilities []KeywordAbility // Sealed keyword variants this provides.
-    Body             AbilityBody       // Spell, activated, mana, loyalty, triggered, replacement, or static body.
-
-    // Legacy flat fields remain for compatibility while rules consumers migrate.
-    Kind    AbilityKind
-    Effects []Effect
-    Targets []TargetSpec
-    Modes   []Mode
-}
+// CardFace categorized ability fields:
+SpellAbility      opt.V[SpellAbilityBody]    // instants/sorceries — at most one
+ActivatedAbilities []ActivatedAbilityBody   // "[Cost]: [Effect]" abilities
+ManaAbilities      []ManaAbilityBody        // mana abilities (subset of activated, no targets)
+LoyaltyAbilities   []LoyaltyAbilityBody     // planeswalker +/−/0 abilities
+TriggeredAbilities []TriggeredAbilityBody   // When/Whenever/At abilities
+ReplacementAbilities []ReplacementAbilityDef // "if … would … instead …" abilities
+StaticAbilities    []StaticAbilityBody      // declarative continuous effects, keywords
 ```
 
-Prefer the categorized `CardFace` fields (`SpellAbility`, `ActivatedAbilities`,
-`ManaAbilities`, `LoyaltyAbilities`, `TriggeredAbilities`,
-`ReplacementAbilities`, and `StaticAbilities`) with explicit body structs. Legacy
-`Abilities` literals are still accepted; `CardFace.AbilityDefs()` normalizes them
-to body-backed `AbilityDef` values for rules code.
+For a card whose abilities all belong to one category, set the field directly:
+
+```go
+// Single-category: direct field
+ManaAbilities: []game.ManaAbilityBody{
+    {
+        Text: `
+            {T}: Add {G}.
+        `,
+        // ...
+    },
+},
+```
+
+For a card with **mixed categories**, use an immediately-invoked initializer function
+and `append` each ability to the correct field **in oracle-text order**:
+
+```go
+// Mixed categories: initializer function preserves oracle order
+var KessigWolfRun = func() *game.CardDef {
+    card := &game.CardDef{
+        ColorIdentity: color.NewIdentity(color.Green, color.Red),
+        CardFace: game.CardFace{
+            // Mechanical fields...
+        },
+    }
+    card.ManaAbilities = append(card.ManaAbilities, game.ManaAbilityBody{
+        // Ability fields...
+    })
+    card.ActivatedAbilities = append(card.ActivatedAbilities, game.ActivatedAbilityBody{
+        // Ability fields...
+    })
+    return card
+}()
+```
+
+The `CardFace` struct-field order is: `SpellAbility`, `ActivatedAbilities`, `ManaAbilities`,
+`LoyaltyAbilities`, `TriggeredAbilities`, `ReplacementAbilities`, `StaticAbilities`. Because
+oracle text commonly prints static/keyword abilities **before** activated/triggered abilities,
+you will often need an initializer function.
+
+`AbilityDef` and its `Body` field are a **compatibility view** consumed by existing rules
+paths via `CardFace.AbilityDefs()`. Nested granted abilities inside effect data (e.g.
+`ContinuousEffect.AddAbilities`, `EmblemAbilities`) still use `AbilityDef{Body: ...}` because
+no categorized container exists there; that is intentional and is not the same as a top-level
+card-face ability.
 
 Card color identity lives in `mtg/game/color`, not `mtg/game/mana`. Use
 `color.NewIdentity(color.Green, color.Red)` for `CardDef.ColorIdentity`.
@@ -490,37 +556,53 @@ Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated 
 
 #### Keywords (any ability kind)
 
-If a paragraph is just one or more plain non-parameterized keywords, use the reusable helper ability for each keyword:
-- `game.FlyingAbility`
-- `game.DeathtouchAbility`
-- `game.IndestructibleAbility`
+If a paragraph is just one or more plain non-parameterized keywords, use the reusable typed
+`StaticAbilityBody` templates for each keyword:
+- `game.FlyingStaticBody`
+- `game.DeathtouchStaticBody`
+- `game.IndestructibleStaticBody`
 - etc.
 
-For comma-separated keyword lines such as `Deathtouch, indestructible`, add each helper separately:
+For comma-separated keyword lines such as `Deathtouch, indestructible`, add each template separately:
 
 ```go
-Abilities: []game.AbilityDef{
-    game.DeathtouchAbility,
-    game.IndestructibleAbility,
-}
+// Single category — direct slice:
+StaticAbilities: []game.StaticAbilityBody{
+    game.DeathtouchStaticBody,
+    game.IndestructibleStaticBody,
+},
 ```
 
-Do not smash multiple plain keywords into one ad-hoc `AbilityDef`; use `game.SimpleKeywords(...)` only when a helper template is not suitable. Use explicit `AbilityDef` values for keyword abilities that need card-specific parameters or costs.
+When keywords appear on a card that also has activated or triggered abilities, use an initializer function
+and `append` in oracle order:
 
-For keywords with parameters:
-- **Protection from [color]**: `KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{color.Red}}}`
-- **Ward {N}**: `KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(N)}}}`
-- **Equip {N}**: `Kind: ActivatedAbility`, `KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}`, `ManaCost: opt.Val(cost.Mana{cost.O(N)})`, `Timing: game.SorceryOnly`
-- **Cycling {N}**: `Kind: ActivatedAbility`, `KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}`, `ManaCost: opt.Val(cost.Mana{...})`, `AdditionalCosts` with discard self
-- **Prowess**: `KeywordAbilities: game.SimpleKeywords(game.Prowess)` on a static ability; the rules engine creates the implicit trigger (CR 702.108)
-- **Flashback {cost}**: `KeywordAbilities: game.SimpleKeywords(game.Flashback)` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
+```go
+// Mixed categories — initializer preserves oracle order:
+var MyCard = func() *game.CardDef {
+    card := &game.CardDef{/* ... */}
+    card.StaticAbilities = append(card.StaticAbilities, game.FlyingStaticBody)
+    card.TriggeredAbilities = append(card.TriggeredAbilities, game.TriggeredAbilityBody{/* ... */})
+    return card
+}()
+```
+
+Do not smash multiple plain keywords into one ad-hoc body; use `game.SimpleKeywords(...)` only when a helper template is not suitable. Use explicit body structs for keyword abilities that need card-specific parameters or costs.
+
+For keywords with parameters, use the typed field on a `StaticAbilityBody` (or the appropriate body type):
+- **Protection from [color]**: `StaticAbilityBody{KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{color.Red}}}}`
+- **Ward {N}**: `StaticAbilityBody{KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(N)}}}}`
+- **Equip {N}**: `ActivatedAbilityBody{Text: "Equip {N}", ManaCost: opt.Val(cost.Mana{cost.O(N)}), Timing: game.SorceryOnly, KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}, Content: game.PlainAbilityContent{Targets: []game.TargetSpec{{...}}}}`
+- **Cycling {N}**: `ActivatedAbilityBody{Text: "Cycling {N}", ManaCost: opt.Val(cost.Mana{...}), AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostDiscardSelf}}, KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}}`
+- **Prowess**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Prowess)}`; the rules engine creates the implicit trigger (CR 702.108)
+- **Flashback {cost}**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Flashback)}` plus a spell `AlternativeCost{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 
 #### Spell abilities (instants/sorceries)
 
-- `Kind: SpellAbility`
+Set `SpellAbility: opt.Val(game.SpellAbilityBody{...})`:
 - `Text:` full oracle text
+- `Content`: `PlainAbilityContent{Targets: [...], Sequence: [...]}` or `ModalAbilityContent{Modes: [...]}`
 - Extract `Targets` from "target [constraint]" phrases
-- Extract `Effects` from the action verbs (see Effect Mapping below)
+- Extract `Sequence` effects from the action verbs (see Effect Mapping below)
 - For modal text (`Choose one —`, `Choose two —`, `Choose one or both —`,
   `Choose up to one —`), fill `Modes` and set `MinModes` / `MaxModes` from the
   choice count. Leave `MinModes` and `MaxModes` at zero only for legacy
@@ -528,16 +610,17 @@ For keywords with parameters:
 
 #### Activated abilities
 
-- `Kind: ActivatedAbility`
+Use `game.ActivatedAbilityBody{...}` in `ActivatedAbilities`, or
+`game.ManaAbilityBody{...}` in `ManaAbilities` when the effect adds mana with no targets:
 - Split on `:` — left side is costs, right side is effects
 - Parse mana symbols in cost → `ManaCost`
-- Parse non-mana costs → `AdditionalCosts` (e.g., `{T}` = tap, "Sacrifice a creature", "Pay 2 life")
-- `IsManaAbility: true` if the effect adds mana, has no targets, and is not a loyalty ability
+- Parse non-mana costs → `AdditionalCosts` (e.g., `{T}` = `AdditionalCostTap`, "Sacrifice a creature", "Pay 2 life")
+- Use `ManaAbilityBody` / `ManaAbilities` if the effect adds mana, has no targets, and is not a loyalty ability
 - `Timing`: set if "Activate only as a sorcery" or "Activate only once each turn"
 
 #### Triggered abilities
 
-- `Kind: TriggeredAbility`
+Use `game.TriggeredAbilityBody{...}` in `TriggeredAbilities`:
 - Parse the trigger word → `Trigger.Type` (TriggerWhen/TriggerWhenever/TriggerAt)
 - Parse the event → `Trigger.Pattern`
 - Common patterns:
@@ -569,7 +652,7 @@ For keywords with parameters:
 
 #### Static abilities
 
-- `Kind: StaticAbility`
+Use `game.StaticAbilityBody{...}` in `StaticAbilities`:
 - Common patterns:
   - "Creatures you control get +N/+M" → `Effects` with `EffectModifyPT`, `Selector: game.EffectSelectorCreaturesYouControl`
   - "Other creatures you control get +N/+M" → same with `EffectSelectorOtherCreaturesYouControl`
@@ -651,18 +734,19 @@ Use natural-language descriptions matching the oracle text:
 Oracle text: `Lightning Bolt deals 3 damage to any target.`
 
 ```go
-Abilities: []game.AbilityDef{
-    {
-        Kind: game.SpellAbility,
-        Text: "Lightning Bolt deals 3 damage to any target.",
+SpellAbility: opt.Val(game.SpellAbilityBody{
+    Text: `
+        Lightning Bolt deals 3 damage to any target.
+    `,
+    Content: game.PlainAbilityContent{
         Targets: []game.TargetSpec{
             {MinTargets: 1, MaxTargets: 1, Constraint: "any target"},
         },
-        Effects: []game.Effect{
+        Sequence: []game.Effect{
             {Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
         },
     },
-},
+}),
 ```
 
 ### Example 2: Sol Ring (mana ability)
@@ -670,22 +754,22 @@ Abilities: []game.AbilityDef{
 Oracle text: `{T}: Add {C}{C}.`
 
 ```go
-Abilities: []game.AbilityDef{
+ManaAbilities: []game.ManaAbilityBody{
     {
-        Kind:         game.ActivatedAbility,
-        Text:         "{T}: Add {C}{C}.",
-        IsManaAbility: true,
-        AdditionalCosts: []game.AdditionalCost{
-            {Kind: game.CostTap},
-        },
-        Effects: []game.Effect{
-            {Type: game.EffectAddMana, Amount: 2, ManaColor: mana.Colorless},
+        Text: `
+            {T}: Add {C}{C}.
+        `,
+        AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+        Content: game.PlainAbilityContent{
+            Sequence: []game.Effect{
+                {Type: game.EffectAddMana, Amount: 2, ManaColor: mana.Colorless},
+            },
         },
     },
 },
 ```
 
-### Example 3: Serra Angel (keyword abilities)
+### Example 3: Serra Angel (keyword abilities — same category, direct slice)
 
 Oracle text:
 ```
@@ -694,9 +778,9 @@ Vigilance (Attacking doesn't cause this creature to tap.)
 ```
 
 ```go
-Abilities: []game.AbilityDef{
-    game.FlyingAbility,
-    game.VigilanceAbility,
+StaticAbilities: []game.StaticAbilityBody{
+    game.FlyingStaticBody,
+    game.VigilanceStaticBody,
 },
 ```
 
@@ -705,19 +789,20 @@ Abilities: []game.AbilityDef{
 Oracle text: `Exile target creature. Its controller gains life equal to its power.`
 
 ```go
-Abilities: []game.AbilityDef{
-    {
-        Kind: game.SpellAbility,
-        Text: "Exile target creature. Its controller gains life equal to its power.",
+SpellAbility: opt.Val(game.SpellAbilityBody{
+    Text: `
+        Exile target creature. Its controller gains life equal to its power.
+    `,
+    Content: game.PlainAbilityContent{
         Targets: []game.TargetSpec{
             {MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
         },
-        Effects: []game.Effect{
+        Sequence: []game.Effect{
             {Type: game.EffectExile, TargetIndex: 0},
             {Type: game.EffectGainLife, TargetIndex: 0, Description: "controller gains life equal to creature's power"},
         },
     },
-},
+}),
 ```
 
 Note: Swords to Plowshares needs both a dynamic amount
@@ -730,11 +815,12 @@ still needs either a future recipient primitive or `ImplementationID`.
 Oracle text: `Whenever another creature enters, you gain 1 life.`
 
 ```go
-Abilities: []game.AbilityDef{
+TriggeredAbilities: []game.TriggeredAbilityBody{
     {
-        Kind: game.TriggeredAbility,
-        Text: "Whenever another creature enters, you gain 1 life.",
-        Trigger: opt.Val(game.TriggerCondition{
+        Text: `
+            Whenever another creature enters, you gain 1 life.
+        `,
+        Trigger: game.TriggerCondition{
             Type: game.TriggerWhenever,
             Pattern: game.TriggerPattern{
                 Event:                 game.EventPermanentEnteredBattlefield,
@@ -742,9 +828,11 @@ Abilities: []game.AbilityDef{
                 ExcludeSelf:           true,
                 RequirePermanentTypes: []types.Card{types.Creature},
             },
-        }),
-        Effects: []game.Effect{
-            {Type: game.EffectGainLife, Amount: 1, TargetIndex: -1},
+        },
+        Content: game.PlainAbilityContent{
+            Sequence: []game.Effect{
+                {Type: game.EffectGainLife, Amount: 1, TargetIndex: -1},
+            },
         },
     },
 },
@@ -757,10 +845,11 @@ Note: "another creature" means the trigger should not fire for Soul Warden itsel
 Oracle text: `Creatures you control get +1/+1.`
 
 ```go
-Abilities: []game.AbilityDef{
+StaticAbilities: []game.StaticAbilityBody{
     {
-        Kind: game.StaticAbility,
-        Text: "Creatures you control get +1/+1.",
+        Text: `
+            Creatures you control get +1/+1.
+        `,
         Effects: []game.Effect{
             {
                 Type:           game.EffectModifyPT,
@@ -771,6 +860,48 @@ Abilities: []game.AbilityDef{
         },
     },
 },
+```
+
+### Example 7: Kessig Wolf Run (mixed categories — initializer function)
+
+Oracle text:
+```
+{T}: Add {R} or {G}.
+{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
+```
+
+Struct field order (ActivatedAbilities before ManaAbilities) differs from oracle order,
+so use an initializer function:
+
+```go
+var KessigWolfRun = func() *game.CardDef {
+    card := &game.CardDef{
+        ColorIdentity: color.NewIdentity(color.Red, color.Green),
+        CardFace: game.CardFace{
+            Name:  "Kessig Wolf Run",
+            Types: []types.Card{types.Land},
+            OracleText: `
+                {T}: Add {R} or {G}.
+                {X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
+            `,
+        },
+    }
+    // oracle order: mana ability first, then activated ability
+    card.ManaAbilities = append(card.ManaAbilities, game.ManaAbilityBody{
+        Text: `
+            {T}: Add {R} or {G}.
+        `,
+        AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+        // ...
+    })
+    card.ActivatedAbilities = append(card.ActivatedAbilities, game.ActivatedAbilityBody{
+        Text: `
+            {X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
+        `,
+        // ...
+    })
+    return card
+}()
 ```
 
 ---
@@ -787,7 +918,7 @@ Abilities: []game.AbilityDef{
 
 5. **Tap symbol in costs**: `{T}` in an activated ability cost means the permanent taps itself. This goes in `AdditionalCosts` as `{Kind: game.CostTap}`, not in `ManaCost`.
 
-6. **Multiple paragraphs = multiple abilities**: Each `\n`-separated paragraph is a separate ability and gets its own `AbilityDef`, unless it's a comma-separated keyword list.
+6. **Multiple paragraphs = multiple abilities**: Each `\n`-separated paragraph is a separate ability and gets its own body in the appropriate field, unless it's a comma-separated keyword list.
 
 7. **Variable amounts**: When an effect says "equal to its power" or "equal to the number of...", the current `Effect.Amount` field can't express this. Use `Description` to document it, and consider setting `ImplementationID` if the card needs full rules accuracy.
 

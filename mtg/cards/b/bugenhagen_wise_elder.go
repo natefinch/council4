@@ -20,25 +20,39 @@ import (
 //	Reach
 //	At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.
 //	{T}: Add one mana of any color.
-var BugenhagenWiseElder = &game.CardDef{CardFace: game.CardFace{Name: "Bugenhagen, Wise Elder",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(1),
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
+var BugenhagenWiseElder = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Bugenhagen, Wise Elder",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.G,
+			}),
+			Colors:     []color.Color{color.Green},
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Creature},
+			Subtypes:   []types.Sub{types.Human, types.Shaman},
+			Power:      opt.Val(game.PT{Value: 1}),
+			Toughness:  opt.Val(game.PT{Value: 3}),
+			OracleText: `
+				Reach
+				At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.
+				{T}: Add one mana of any color.
+			`,
+		},
+	}
 
-	Supertypes: []types.Super{types.Legendary},
-	Types:      []types.Card{types.Creature},
-	Subtypes:   []types.Sub{types.Human, types.Shaman},
-	Power:      opt.Val(game.PT{Value: 1}),
-	Toughness:  opt.Val(game.PT{Value: 3}),
-	OracleText: "Reach\nAt the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.\n{T}: Add one mana of any color.",
-	Abilities: []game.AbilityDef{
-		game.ReachAbility,
-		{
-			Kind: game.TriggeredAbility,
-			Text: "At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.",
-			Trigger: opt.Val(game.TriggerCondition{
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.ReachStaticBody,
+	)
+
+	card.TriggeredAbilities = append(card.TriggeredAbilities,
+		game.TriggeredAbilityBody{
+			Text: `
+				At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.
+			`,
+			Trigger: game.TriggerCondition{
 				Type: game.TriggerAt,
 				Pattern: game.TriggerPattern{
 					Event:      game.EventBeginningOfStep,
@@ -55,38 +69,44 @@ var BugenhagenWiseElder = &game.CardDef{CardFace: game.CardFace{Name: "Bugenhage
 						}),
 					},
 				}),
-			}),
-			Effects: []game.Effect{
-				{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 			},
-		},
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add one mana of any color.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectChoose,
-					TargetIndex: game.TargetIndexController,
-					Choice: opt.Val(game.ResolutionChoice{
-						Kind:   game.ResolutionChoiceMana,
-						Prompt: "Choose a color",
-						Colors: []mana.Color{
-							mana.W, mana.U, mana.B, mana.R, mana.G,
-						},
-					}),
-					LinkID: "bugenhagen-color",
-				},
-				{
-					Type:         game.EffectAddMana,
-					Amount:       1,
-					TargetIndex:  game.TargetIndexController,
-					ChoiceLinkID: "bugenhagen-color",
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green),
-}
+	)
+
+	card.ManaAbilities = append(card.ManaAbilities,
+		game.ManaAbilityBody{
+			Text: `
+				{T}: Add one mana of any color.
+			`,
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{
+						Type:        game.EffectChoose,
+						TargetIndex: game.TargetIndexController,
+						Choice: opt.Val(game.ResolutionChoice{
+							Kind:   game.ResolutionChoiceMana,
+							Prompt: "Choose a color",
+							Colors: []mana.Color{
+								mana.W, mana.U, mana.B, mana.R, mana.G,
+							},
+						}),
+						LinkID: "bugenhagen-color",
+					},
+					{
+						Type:         game.EffectAddMana,
+						Amount:       1,
+						TargetIndex:  game.TargetIndexController,
+						ChoiceLinkID: "bugenhagen-color",
+					},
+				},
+			},
+		},
+	)
+	return card
+}()

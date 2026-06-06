@@ -17,65 +17,79 @@ import (
 //
 //	{T}: Add {C}.
 //	{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
-var KessigWolfRun = &game.CardDef{CardFace: game.CardFace{Name: "Kessig Wolf Run",
+var KessigWolfRun = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green, color.Red),
+		CardFace: game.CardFace{
+			Name:  "Kessig Wolf Run",
+			Types: []types.Card{types.Land},
+			OracleText: `
+				{T}: Add {C}.
+				{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
+			`,
+		},
+	}
 
-	Types:      []types.Card{types.Land},
-	OracleText: "{T}: Add {C}.\n{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.",
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {C}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.C, TargetIndex: game.TargetIndexController},
+	card.ManaAbilities = append(card.ManaAbilities,
+		game.ManaAbilityBody{
+			Text: `
+				{T}: Add {C}.
+			`,
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.C, TargetIndex: game.TargetIndexController},
+				},
 			},
 		},
-		{
-			Kind: game.ActivatedAbility,
-			Text: "{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.",
+	)
+
+	card.ActivatedAbilities = append(card.ActivatedAbilities,
+		game.ActivatedAbilityBody{
+			Text: `
+				{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
+			`,
 			ManaCost: opt.Val(cost.Mana{
 				cost.X,
 				cost.R,
 				cost.G,
 			}),
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+						},
 					},
 				},
-			},
-			Effects: []game.Effect{
-				{
-					Type:           game.EffectModifyPT,
-					TargetIndex:    0,
-					UntilEndOfTurn: true,
-					PowerDeltaDynamic: opt.Val(game.DynamicAmount{
-						Kind: game.DynamicAmountX,
-					}),
-				},
-				{
-					Type:           game.EffectApplyContinuous,
-					TargetIndex:    0,
-					UntilEndOfTurn: true,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:       game.LayerAbility,
-							AddKeywords: []game.Keyword{game.Trample},
+				Sequence: []game.Effect{
+					{
+						Type:           game.EffectModifyPT,
+						TargetIndex:    0,
+						UntilEndOfTurn: true,
+						PowerDeltaDynamic: opt.Val(game.DynamicAmount{
+							Kind: game.DynamicAmountX,
+						}),
+					},
+					{
+						Type:           game.EffectApplyContinuous,
+						TargetIndex:    0,
+						UntilEndOfTurn: true,
+						ContinuousEffects: []game.ContinuousEffect{
+							{
+								Layer:       game.LayerAbility,
+								AddKeywords: []game.Keyword{game.Trample},
+							},
 						},
 					},
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
-}
+	)
+	return card
+}()

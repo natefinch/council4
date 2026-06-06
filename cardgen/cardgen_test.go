@@ -249,12 +249,20 @@ func TestGenerateCardSource(t *testing.T) {
 		"types.Instant",
 		"Colors: []color.Color{color.Red}",
 		"ColorIdentity: color.NewIdentity(color.Red)",
-		"Abilities: []game.AbilityDef{}",
+		"TODO: Fill in ability fields from oracle text",
+		"Follow mtg/cards/k/karplusan_forest.go",
 		"Oracle text:",
 		"Lightning Bolt deals 3 damage to any target.",
 	}
 
 	assertSourceContainsAll(t, got, checks)
+	assertSourceContainsExact(t, got,
+		"var LightningBolt = &game.CardDef{\n\tColorIdentity: color.NewIdentity(color.Red),\n\tCardFace: game.CardFace{",
+		"OracleText: `\n\t\t\tLightning Bolt deals 3 damage to any target.\n\t\t`,",
+	)
+	if strings.Contains(got, `OracleText: "`) {
+		t.Fatalf("OracleText used a quoted string instead of canonical raw text:\n%s", got)
+	}
 }
 
 func TestGenerateCardSourceCreature(t *testing.T) {
@@ -288,6 +296,9 @@ func TestGenerateCardSourceCreature(t *testing.T) {
 	}
 
 	assertSourceContainsAll(t, got, checks)
+	assertSourceContainsExact(t, got,
+		"OracleText: `\n\t\t\tFlying\n\t\t\tVigilance (Attacking doesn't cause this creature to tap.)\n\t\t`,",
+	)
 }
 
 func TestGenerateCardSourceModalDFC(t *testing.T) {
@@ -329,6 +340,10 @@ func TestGenerateCardSourceModalDFC(t *testing.T) {
 		"game.EntersTappedReplacement",
 	}
 	assertSourceContainsAll(t, got, checks)
+	assertSourceContainsExact(t, got,
+		"OracleText: `\n\t\t\tCreate a token.\n\t\t`,",
+		"OracleText: `\n\t\t\tBack Land enters tapped.\n\t\t`,",
+	)
 }
 
 func TestGenerateCardSourceReversibleEmitsSeparateDefs(t *testing.T) {
@@ -388,6 +403,15 @@ func assertSourceContainsAll(t *testing.T, source string, checks []string) {
 	for _, check := range checks {
 		if !strings.Contains(compactSource, compactWhitespace(check)) {
 			t.Errorf("output missing %q\nfull output:\n%s", check, source)
+		}
+	}
+}
+
+func assertSourceContainsExact(t *testing.T, source string, checks ...string) {
+	t.Helper()
+	for _, check := range checks {
+		if !strings.Contains(source, check) {
+			t.Errorf("output missing exact source %q\nfull output:\n%s", check, source)
 		}
 	}
 }

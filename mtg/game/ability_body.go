@@ -50,6 +50,10 @@ type ActivatedAbilityBody struct {
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
 	Content             AbilityContent
+	// KeywordAbilities lists keyword abilities carried by this activation, e.g.
+	// EquipKeyword for equip activations. Rules use it for keyword dispatch and
+	// cost routing without inspecting Content.
+	KeywordAbilities []KeywordAbility
 }
 
 // ManaAbilityBody is an activated mana ability.
@@ -60,7 +64,14 @@ type ManaAbilityBody struct {
 	ZoneOfFunction      ZoneType
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
-	Sequence            []Effect
+	// Sequence is the legacy plain-sequence mana output. Retained for
+	// compatibility with categorized ManaAbilities on CardFace and existing
+	// tests. New card literals should use Content instead.
+	Sequence []Effect
+	// Content is the preferred mana output, supporting both plain sequences and
+	// modal mana (ModalAbilityContent). When non-nil, Content takes precedence
+	// over Sequence.
+	Content AbilityContent
 }
 
 // LoyaltyAbilityBody is a planeswalker loyalty ability.
@@ -280,12 +291,15 @@ func (ability *AbilityDef) LoyaltyCostValue() int {
 	return ability.LoyaltyCost
 }
 
-// WithBody returns a copy of this ability with Body populated from legacy fields
-// when needed. The flat fields remain populated as the compatibility view while
-// the rules layer migrates to consume AbilityBody directly.
+// WithBody returns a copy of this ability with both Body and flat compatibility
+// fields fully populated. When Body is already set, flat fields are lowered from
+// the body so rules consumers see consistent values. When Body is nil, it is
+// synthesised from the legacy flat fields, then the flat fields are refreshed
+// from that body.
 func (ability *AbilityDef) WithBody() AbilityDef {
 	normalized := *ability
 	if normalized.Body != nil {
+		lowerBodyToFlat(&normalized)
 		return normalized
 	}
 	switch normalized.Kind {
@@ -361,6 +375,7 @@ func (ability *AbilityDef) ActivatedBody() (ActivatedAbilityBody, bool) {
 		Timing:              ability.Timing,
 		ActivationCondition: ability.ActivationCondition,
 		Content:             ability.legacyContent(),
+		KeywordAbilities:    append([]KeywordAbility(nil), ability.KeywordAbilities...),
 	}, true
 }
 

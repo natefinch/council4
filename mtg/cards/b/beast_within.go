@@ -17,50 +17,61 @@ import (
 // Oracle text:
 //
 //	Destroy target permanent. Its controller creates a 3/3 green Beast creature token.
-var BeastWithin = &game.CardDef{CardFace: game.CardFace{Name: "Beast Within",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(2),
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
-
-	Types:      []types.Card{types.Instant},
-	OracleText: "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.SpellAbility,
-			Text: "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "permanent",
-					Allow:      game.TargetAllowPermanent,
+var BeastWithin = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Green),
+	CardFace: game.CardFace{
+		Name: "Beast Within",
+		ManaCost: opt.Val(cost.Mana{
+			cost.O(2),
+			cost.G,
+		}),
+		Colors: []color.Color{color.Green},
+		Types:  []types.Card{types.Instant},
+		OracleText: `
+			Destroy target permanent. Its controller creates a 3/3 green Beast creature token.
+		`,
+		SpellAbility: opt.Val(
+			game.SpellAbilityBody{
+				Text: `
+					Destroy target permanent. Its controller creates a 3/3 green Beast creature token.
+				`,
+				Content: game.PlainAbilityContent{
+					Targets: []game.TargetSpec{
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "permanent",
+							Allow:      game.TargetAllowPermanent,
+						},
+					},
+					Sequence: []game.Effect{
+						{Type: game.EffectDestroy, TargetIndex: 0},
+						{
+							Type:   game.EffectCreateToken,
+							Amount: 1,
+							Token:  opt.Val(beastWithinToken),
+							Recipient: opt.Val(game.PlayerReference{
+								Kind: game.PlayerReferenceObjectController,
+								Object: opt.Val(game.ObjectReference{
+									Kind:        game.ObjectReferenceTargetPermanent,
+									TargetIndex: 0,
+								}),
+							}),
+						},
+					},
 				},
 			},
-			Effects: []game.Effect{
-				{Type: game.EffectDestroy, TargetIndex: 0},
-				{
-					Type:   game.EffectCreateToken,
-					Amount: 1,
-					Token:  opt.Val(beastWithinToken),
-					Recipient: opt.Val(game.PlayerReference{
-						Kind: game.PlayerReferenceObjectController,
-						Object: opt.Val(game.ObjectReference{
-							Kind:        game.ObjectReferenceTargetPermanent,
-							TargetIndex: 0,
-						}),
-					}),
-				},
-			},
-		},
-	}}, ColorIdentity: color.NewIdentity(color.Green),
+		),
+	},
 }
 
-var beastWithinToken = &game.CardDef{CardFace: game.CardFace{Name: "Beast",
-	Colors:    []color.Color{color.Green},
-	Types:     []types.Card{types.Creature},
-	Subtypes:  []types.Sub{types.Beast},
-	Power:     opt.Val(game.PT{Value: 3}),
-	Toughness: opt.Val(game.PT{Value: 3})},
+var beastWithinToken = &game.CardDef{
+	CardFace: game.CardFace{
+		Name:      "Beast",
+		Colors:    []color.Color{color.Green},
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Beast},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	},
 }

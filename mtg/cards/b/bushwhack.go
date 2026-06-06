@@ -19,65 +19,77 @@ import (
 //	Choose one —
 //	• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.
 //	• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)
-var Bushwhack = &game.CardDef{CardFace: game.CardFace{Name: "Bushwhack",
-	ManaCost: opt.Val(cost.Mana{
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
-
-	Types:      []types.Card{types.Sorcery},
-	OracleText: "Choose one —\n• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.\n• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.SpellAbility,
-			Text: "Choose one —\n• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.\n• Target creature you control fights target creature you don't control.",
-			Modes: []game.Mode{
-				{
-					Text: "Search your library for a basic land card, reveal it, put it into your hand, then shuffle.",
-					Effects: []game.Effect{
+var Bushwhack = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Green),
+	CardFace: game.CardFace{
+		Name: "Bushwhack",
+		ManaCost: opt.Val(cost.Mana{
+			cost.G,
+		}),
+		Colors: []color.Color{color.Green},
+		Types:  []types.Card{types.Sorcery},
+		OracleText: `
+			Choose one —
+			• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.
+			• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)
+		`,
+		SpellAbility: opt.Val(
+			game.SpellAbilityBody{
+				Text: `
+					Choose one —
+					• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.
+					• Target creature you control fights target creature you don't control.
+				`,
+				Content: game.ModalAbilityContent{
+					Modes: []game.Mode{
 						{
-							Type:        game.EffectSearch,
-							TargetIndex: game.TargetIndexController,
-							Search: opt.Val(game.SearchSpec{
-								SourceZone:  game.ZoneLibrary,
-								Destination: game.ZoneHand,
-								CardType:    opt.Val(types.Land),
-								Supertype:   opt.Val(types.Basic),
-								Reveal:      true,
-								Shuffle:     true,
-							}),
-						},
-					},
-				},
-				{
-					Text: "Target creature you control fights target creature you don't control.",
-					Targets: []game.TargetSpec{
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature you control",
-							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerYou,
+							Text: "Search your library for a basic land card, reveal it, put it into your hand, then shuffle.",
+							Effects: []game.Effect{
+								{
+									Type:        game.EffectSearch,
+									TargetIndex: game.TargetIndexController,
+									Search: opt.Val(game.SearchSpec{
+										SourceZone:  game.ZoneLibrary,
+										Destination: game.ZoneHand,
+										CardType:    opt.Val(types.Land),
+										Supertype:   opt.Val(types.Basic),
+										Reveal:      true,
+										Shuffle:     true,
+									}),
+								},
 							},
 						},
 						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature you don't control",
-							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerNotYou,
+							Text: "Target creature you control fights target creature you don't control.",
+							Targets: []game.TargetSpec{
+								{
+									MinTargets: 1,
+									MaxTargets: 1,
+									Constraint: "creature you control",
+									Allow:      game.TargetAllowPermanent,
+									Predicate: game.TargetPredicate{
+										PermanentTypes: []types.Card{types.Creature},
+										Controller:     game.ControllerYou,
+									},
+								},
+								{
+									MinTargets: 1,
+									MaxTargets: 1,
+									Constraint: "creature you don't control",
+									Allow:      game.TargetAllowPermanent,
+									Predicate: game.TargetPredicate{
+										PermanentTypes: []types.Card{types.Creature},
+										Controller:     game.ControllerNotYou,
+									},
+								},
+							},
+							Effects: []game.Effect{
+								{Type: game.EffectFight},
 							},
 						},
-					},
-					Effects: []game.Effect{
-						{Type: game.EffectFight},
 					},
 				},
 			},
-		},
-	}}, ColorIdentity: color.NewIdentity(color.Green),
+		),
+	},
 }

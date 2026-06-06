@@ -12,7 +12,7 @@ Given a Magic: The Gathering card name, the library:
 
 1. Fetches the card's data from Scryfall's `/cards/named` API endpoint.
 2. Parses the mechanical fields: name, mana cost, colors, color identity, types, subtypes, supertypes, power/toughness, loyalty, defense, simple ETB tapped text, and double-faced card back faces. `game.CardDef` derives mana value from the generated mana cost.
-3. Generates a Go source file with a `game.CardDef` literal, leaving the `Abilities` slice empty for LLM completion.
+3. Generates a Go source file with a `game.CardDef` literal in the canonical expanded/raw-string layout, leaving the categorized ability fields empty for LLM completion. See `mtg/cards/k/karplusan_forest.go` for the canonical format.
 4. Validates generated card definitions against the currently executable rules
    model before batch workflows mark them supported, including structured
    object/card references, token-copy specs, library-to-battlefield searches,

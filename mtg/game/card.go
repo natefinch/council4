@@ -92,6 +92,11 @@ type CardFace struct {
 	Abilities        []AbilityDef
 	ImplementationID string
 	OracleText       string
+
+	// abilitiesNormalized is set by withAbilityBodies once all Abilities entries
+	// have been lowered to body+flat form. The AbilityDefs fast path requires this
+	// to distinguish "already normalized" from "body-only source literals".
+	abilitiesNormalized bool
 }
 
 // IsLegendary reports whether this card has the types.Legendary supertype.
@@ -174,9 +179,10 @@ func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
 	return face.ToCardDef(c), true
 }
 
-// WithAbilityBodies returns a card definition whose legacy AbilityDef entries
-// have Body populated. It preserves the legacy flat fields while rules code
-// migrates to AbilityBody consumers.
+// WithAbilityBodies returns a runtime card definition whose categorized and
+// legacy source abilities are materialized as body-backed AbilityDef values.
+// The rules layer uses that compatibility slice without rebuilding it in hot
+// paths while it migrates to AbilityBody consumers.
 func (c *CardDef) WithAbilityBodies() *CardDef {
 	card := *c
 	card.CardFace = c.withAbilityBodies()
@@ -281,7 +287,7 @@ func (f *CardFace) HasKeyword(kw Keyword) bool {
 // Every returned ability has Body populated, while the legacy flat fields remain
 // mirrored during rules migration.
 func (f *CardFace) AbilityDefs() []AbilityDef {
-	if !f.hasCategorizedAbilities() && abilitiesHaveBodies(f.Abilities) {
+	if f.abilitiesNormalized {
 		return f.Abilities
 	}
 	abilities := make([]AbilityDef, 0, len(f.Abilities)+len(f.ActivatedAbilities)+len(f.ManaAbilities)+len(f.LoyaltyAbilities)+len(f.TriggeredAbilities)+len(f.ReplacementAbilities)+len(f.StaticAbilities)+1)
@@ -309,16 +315,10 @@ func (f *CardFace) AbilityDefs() []AbilityDef {
 	for i := range f.StaticAbilities {
 		abilities = append(abilities, staticAbilityDef(&f.StaticAbilities[i]))
 	}
-	return abilities
-}
-
-func abilitiesHaveBodies(abilities []AbilityDef) bool {
 	for i := range abilities {
-		if abilities[i].Body == nil {
-			return false
-		}
+		normalizeNestedAbilityEffects(&abilities[i])
 	}
-	return true
+	return abilities
 }
 
 // ManaValue returns this face's mana value from its printed mana cost (CR 202.3).
@@ -383,15 +383,120 @@ func (f *CardFace) clone() CardFace {
 		Abilities:            append([]AbilityDef(nil), f.Abilities...),
 		ImplementationID:     f.ImplementationID,
 		OracleText:           f.OracleText,
+		abilitiesNormalized:  f.abilitiesNormalized,
 	}
 }
 
 func (f *CardFace) withAbilityBodies() CardFace {
 	face := f.clone()
+	face.Abilities = f.AbilityDefs()
 	for i := range face.Abilities {
-		face.Abilities[i] = face.Abilities[i].WithBody()
+		normalizeNestedAbilityEffects(&face.Abilities[i])
 	}
+	face.abilitiesNormalized = true
 	return face
+}
+
+// normalizeNestedAbilityEffects calls WithBody on any AbilityDef entries
+// nested inside an ability's flat Effects or Modes — specifically
+// ContinuousEffect.AddAbilities and Effect.EmblemAbilities. It must be called
+// after WithBody has populated the flat Effects/Modes fields. The Effects/Modes
+// slices must already be freshly-allocated copies (not shared with the body) so
+// we can safely replace nested slice headers without mutating card source data.
+func normalizeNestedAbilityEffects(ability *AbilityDef) {
+	for i := range ability.Effects {
+		normalizeEffectNestedAbilities(&ability.Effects[i])
+	}
+	for i := range ability.Modes {
+		for j := range ability.Modes[i].Effects {
+			normalizeEffectNestedAbilities(&ability.Modes[i].Effects[j])
+		}
+	}
+}
+
+func normalizeEffectNestedAbilities(effect *Effect) {
+	if len(effect.ContinuousEffects) > 0 {
+		ces := make([]ContinuousEffect, len(effect.ContinuousEffects))
+		copy(ces, effect.ContinuousEffects)
+		for j := range ces {
+			if len(ces[j].AddAbilities) > 0 {
+				abs := make([]AbilityDef, len(ces[j].AddAbilities))
+				for k := range ces[j].AddAbilities {
+					abs[k] = ces[j].AddAbilities[k].WithBody()
+				}
+				ces[j].AddAbilities = abs
+			}
+		}
+		effect.ContinuousEffects = ces
+	}
+	if len(effect.EmblemAbilities) > 0 {
+		abs := make([]AbilityDef, len(effect.EmblemAbilities))
+		for k := range effect.EmblemAbilities {
+			abs[k] = effect.EmblemAbilities[k].WithBody()
+		}
+		effect.EmblemAbilities = abs
+	}
+}
+
+// lowerBodyToFlat populates flat compatibility fields of ability from Body.
+// It is the body→flat direction of WithBody: called in-place when Body is
+// already set but flat fields may be absent (body-only card literals).
+func lowerBodyToFlat(ability *AbilityDef) {
+	switch body := ability.Body.(type) {
+	case SpellAbilityBody:
+		ability.Kind = SpellAbility
+		ability.Text = body.Text
+		ability.AdditionalCosts = append([]AdditionalCost(nil), body.AdditionalCosts...)
+		ability.AlternativeCosts = append([]AlternativeCost(nil), body.AlternativeCosts...)
+		applyAbilityContent(ability, body.Content)
+	case ActivatedAbilityBody:
+		ability.Kind = ActivatedAbility
+		ability.Text = body.Text
+		ability.ManaCost = body.ManaCost
+		ability.AdditionalCosts = append([]AdditionalCost(nil), body.AdditionalCosts...)
+		ability.AlternativeCosts = append([]AlternativeCost(nil), body.AlternativeCosts...)
+		ability.ZoneOfFunction = body.ZoneOfFunction
+		ability.Timing = body.Timing
+		ability.ActivationCondition = body.ActivationCondition
+		ability.KeywordAbilities = append([]KeywordAbility(nil), body.KeywordAbilities...)
+		applyAbilityContent(ability, body.Content)
+	case ManaAbilityBody:
+		ability.Kind = ActivatedAbility
+		ability.IsManaAbility = true
+		ability.Text = body.Text
+		ability.ManaCost = body.ManaCost
+		ability.AdditionalCosts = append([]AdditionalCost(nil), body.AdditionalCosts...)
+		ability.ZoneOfFunction = body.ZoneOfFunction
+		ability.Timing = body.Timing
+		ability.ActivationCondition = body.ActivationCondition
+		if body.Content != nil {
+			applyAbilityContent(ability, body.Content)
+		} else {
+			ability.Effects = append([]Effect(nil), body.Sequence...)
+		}
+	case LoyaltyAbilityBody:
+		ability.Kind = ActivatedAbility
+		ability.IsLoyaltyAbility = true
+		ability.Text = body.Text
+		ability.LoyaltyCost = body.LoyaltyCost
+		ability.ActivationCondition = body.ActivationCondition
+		applyAbilityContent(ability, body.Content)
+	case TriggeredAbilityBody:
+		ability.Kind = TriggeredAbility
+		ability.Text = body.Text
+		ability.Trigger = opt.Val(body.Trigger)
+		ability.Optional = body.Optional
+		ability.MaxTriggersPerTurn = body.MaxTriggersPerTurn
+		applyAbilityContent(ability, body.Content)
+	case StaticAbilityBody:
+		ability.Kind = StaticAbility
+		ability.Text = body.Text
+		ability.Condition = body.Condition
+		ability.ZoneOfFunction = body.ZoneOfFunction
+		ability.KeywordAbilities = append([]KeywordAbility(nil), body.KeywordAbilities...)
+		ability.Effects = append([]Effect(nil), body.Effects...)
+	default:
+	}
 }
 
 func spellAbilityDef(body *SpellAbilityBody) AbilityDef {
@@ -417,13 +522,14 @@ func activatedAbilityDef(body *ActivatedAbilityBody) AbilityDef {
 		ZoneOfFunction:      body.ZoneOfFunction,
 		Timing:              body.Timing,
 		ActivationCondition: body.ActivationCondition,
+		KeywordAbilities:    append([]KeywordAbility(nil), body.KeywordAbilities...),
 	}
 	applyAbilityContent(&ability, body.Content)
 	return ability
 }
 
 func manaAbilityDef(body *ManaAbilityBody) AbilityDef {
-	return AbilityDef{
+	ability := AbilityDef{
 		Kind:                ActivatedAbility,
 		Text:                body.Text,
 		Body:                *body,
@@ -433,8 +539,13 @@ func manaAbilityDef(body *ManaAbilityBody) AbilityDef {
 		Timing:              body.Timing,
 		ActivationCondition: body.ActivationCondition,
 		IsManaAbility:       true,
-		Effects:             append([]Effect(nil), body.Sequence...),
 	}
+	if body.Content != nil {
+		applyAbilityContent(&ability, body.Content)
+	} else {
+		ability.Effects = append([]Effect(nil), body.Sequence...)
+	}
+	return ability
 }
 
 func loyaltyAbilityDef(body *LoyaltyAbilityBody) AbilityDef {
@@ -506,7 +617,12 @@ func applyAbilityContent(ability *AbilityDef, content AbilityContent) {
 		ability.Effects = append([]Effect(nil), c.Sequence...)
 	case ModalAbilityContent:
 		ability.Targets = append([]TargetSpec(nil), c.SharedTargets...)
-		ability.Modes = append([]Mode(nil), c.Modes...)
+		ability.Modes = make([]Mode, len(c.Modes))
+		for i := range c.Modes {
+			ability.Modes[i] = c.Modes[i]
+			ability.Modes[i].Targets = append([]TargetSpec(nil), c.Modes[i].Targets...)
+			ability.Modes[i].Effects = append([]Effect(nil), c.Modes[i].Effects...)
+		}
 		ability.MinModes = c.MinModes
 		ability.MaxModes = c.MaxModes
 		ability.AllowDuplicateModes = c.AllowDuplicateModes

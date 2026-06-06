@@ -5,7 +5,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
-
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -20,25 +19,42 @@ import (
 //	Deathtouch, indestructible
 //	Rhonas can't attack or block unless you control another creature with power 4 or greater.
 //	{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.
-var RhonasTheIndomitable = &game.CardDef{CardFace: game.CardFace{Name: "Rhonas the Indomitable",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(2),
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
+var RhonasTheIndomitable = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Rhonas the Indomitable",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.G,
+			}),
+			Colors:     []color.Color{color.Green},
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Creature},
+			Subtypes:   []types.Sub{types.God},
+			Power:      opt.Val(game.PT{Value: 5}),
+			Toughness:  opt.Val(game.PT{Value: 5}),
+			OracleText: `
+				Deathtouch, indestructible
+				Rhonas can't attack or block unless you control another creature with power 4 or greater.
+				{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.
+			`,
+		},
+	}
 
-	Supertypes: []types.Super{types.Legendary},
-	Types:      []types.Card{types.Creature},
-	Subtypes:   []types.Sub{types.God},
-	Power:      opt.Val(game.PT{Value: 5}),
-	Toughness:  opt.Val(game.PT{Value: 5}),
-	OracleText: "Deathtouch, indestructible\nRhonas can't attack or block unless you control another creature with power 4 or greater.\n{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.",
-	Abilities: []game.AbilityDef{
-		game.DeathtouchAbility,
-		game.IndestructibleAbility,
-		{
-			Kind: game.StaticAbility,
-			Text: "Rhonas can't attack or block unless you control another creature with power 4 or greater.",
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.DeathtouchStaticBody,
+	)
+
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.IndestructibleStaticBody,
+	)
+
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.StaticAbilityBody{
+			Text: `
+				Rhonas can't attack or block unless you control another creature with power 4 or greater.
+			`,
 			Condition: opt.Val(game.Condition{
 				Text:   "unless you control another creature with power 4 or greater",
 				Negate: true,
@@ -59,45 +75,52 @@ var RhonasTheIndomitable = &game.CardDef{CardFace: game.CardFace{Name: "Rhonas t
 				},
 			},
 		},
-		{
-			Kind: game.ActivatedAbility,
-			Text: "{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.",
+	)
+
+	card.ActivatedAbilities = append(card.ActivatedAbilities,
+		game.ActivatedAbilityBody{
+			Text: `
+				{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.
+			`,
 			ManaCost: opt.Val(cost.Mana{
 				cost.O(2),
 				cost.G,
 			}),
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "another target creature",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Another:        true,
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "another target creature",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+							Another:        true,
+						},
 					},
 				},
-			},
-			Effects: []game.Effect{
-				{
-					Type:           game.EffectModifyPT,
-					TargetIndex:    0,
-					PowerDelta:     2,
-					ToughnessDelta: 0,
-					UntilEndOfTurn: true,
-				},
-				{
-					Type:           game.EffectApplyContinuous,
-					TargetIndex:    0,
-					UntilEndOfTurn: true,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:       game.LayerAbility,
-							AddKeywords: []game.Keyword{game.Trample},
+				Sequence: []game.Effect{
+					{
+						Type:           game.EffectModifyPT,
+						TargetIndex:    0,
+						PowerDelta:     2,
+						ToughnessDelta: 0,
+						UntilEndOfTurn: true,
+					},
+					{
+						Type:           game.EffectApplyContinuous,
+						TargetIndex:    0,
+						UntilEndOfTurn: true,
+						ContinuousEffects: []game.ContinuousEffect{
+							{
+								Layer:       game.LayerAbility,
+								AddKeywords: []game.Keyword{game.Trample},
+							},
 						},
 					},
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green),
-}
+	)
+	return card
+}()

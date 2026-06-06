@@ -20,30 +20,28 @@ import (
 // The parenthetical mana ability is reminder text for the Mountain and Forest
 // subtypes. It is modelled explicitly because council4 does not auto-derive
 // subtype mana abilities at runtime.
-var CinderGlade = &game.CardDef{CardFace: game.CardFace{Name: "Cinder Glade",
-
-	Types:      []types.Card{types.Land},
-	Subtypes:   []types.Sub{types.Mountain, types.Forest},
-	OracleText: "({T}: Add {R} or {G}.)\nThis land enters tapped unless you control two or more basic lands.",
-	ReplacementAbilities: []game.ReplacementAbilityDef{
-		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
-			Negate: true,
-			ControllerControls: game.PermanentFilter{
-				Types:      []types.Card{types.Land},
-				Supertypes: []types.Super{types.Basic},
-				MinCount:   2,
-			},
-		}),
-	},
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {R} or {G}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
+var CinderGlade = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green, color.Red),
+		CardFace: game.CardFace{
+			Name:     "Cinder Glade",
+			Types:    []types.Card{types.Land},
+			Subtypes: []types.Sub{types.Mountain, types.Forest},
+			OracleText: `
+				({T}: Add {R} or {G}.)
+				This land enters tapped unless you control two or more basic lands.
+			`,
+		},
+	}
+	card.ManaAbilities = append(card.ManaAbilities, game.ManaAbilityBody{
+		Text: `
+			{T}: Add {R} or {G}.
+		`,
+		AdditionalCosts: []game.AdditionalCost{
+			{Kind: game.AdditionalCostTap},
+		},
+		Content: game.PlainAbilityContent{
+			Sequence: []game.Effect{
 				{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
@@ -62,5 +60,16 @@ var CinderGlade = &game.CardDef{CardFace: game.CardFace{Name: "Cinder Glade",
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
-}
+	})
+	card.ReplacementAbilities = append(card.ReplacementAbilities,
+		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
+			Negate: true,
+			ControllerControls: game.PermanentFilter{
+				Types:      []types.Card{types.Land},
+				Supertypes: []types.Super{types.Basic},
+				MinCount:   2,
+			},
+		}),
+	)
+	return card
+}()

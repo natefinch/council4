@@ -25,67 +25,78 @@ import (
 //
 //	As this land enters, you may pay 3 life. If you don't, it enters tapped.
 //	{T}: Add {G}.
-var BridgeworksBattle = &game.CardDef{CardFace: game.CardFace{Name: "Bridgeworks Battle",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(2),
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
-
-	Types:      []types.Card{types.Sorcery},
-	OracleText: "Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)",
-
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.SpellAbility,
-			Text: "Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control.",
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature you control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
+var BridgeworksBattle = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Bridgeworks Battle",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.G,
+			}),
+			Colors: []color.Color{color.Green},
+			Types:  []types.Card{types.Sorcery},
+			OracleText: `
+				Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
+			`,
+			SpellAbility: opt.Val(
+				game.SpellAbilityBody{
+					Text: `
+						Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control.
+					`,
+					Content: game.PlainAbilityContent{
+						Targets: []game.TargetSpec{
+							{
+								MinTargets: 1,
+								MaxTargets: 1,
+								Constraint: "creature you control",
+								Allow:      game.TargetAllowPermanent,
+								Predicate: game.TargetPredicate{
+									PermanentTypes: []types.Card{types.Creature},
+									Controller:     game.ControllerYou,
+								},
+							},
+							{
+								// "up to one" — may choose zero or one
+								MinTargets: 0,
+								MaxTargets: 1,
+								Constraint: "creature you don't control",
+								Allow:      game.TargetAllowPermanent,
+								Predicate: game.TargetPredicate{
+									PermanentTypes: []types.Card{types.Creature},
+									Controller:     game.ControllerNotYou,
+								},
+							},
+						},
+						Sequence: []game.Effect{
+							{
+								Type:           game.EffectModifyPT,
+								PowerDelta:     2,
+								ToughnessDelta: 2,
+								TargetIndex:    0,
+								UntilEndOfTurn: true,
+							},
+							{
+								Type:               game.EffectFight,
+								TargetIndex:        0,
+								RelatedTargetIndex: opt.Val(1),
+								Description:        "target creature you control fights up to one target creature you don't control",
+							},
+						},
 					},
 				},
-				{
-					// "up to one" — may choose zero or one
-					MinTargets: 0,
-					MaxTargets: 1,
-					Constraint: "creature you don't control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerNotYou,
-					},
-				},
-			},
-			Effects: []game.Effect{
-				{
-					Type:           game.EffectModifyPT,
-					PowerDelta:     2,
-					ToughnessDelta: 2,
-					TargetIndex:    0,
-					UntilEndOfTurn: true,
-				},
-				{
-					Type:               game.EffectFight,
-					TargetIndex:        0,
-					RelatedTargetIndex: opt.Val(1),
-					Description:        "target creature you control fights up to one target creature you don't control",
-				},
-			},
+			),
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green),
+		Layout: game.LayoutModalDFC,
+	}
 
-	Layout: game.LayoutModalDFC,
-
-	Back: opt.Val(game.CardFace{
-		Name:       "Tanglespan Bridgeworks",
-		Types:      []types.Card{types.Land},
-		OracleText: "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {G}.",
+	back := game.CardFace{
+		Name:  "Tanglespan Bridgeworks",
+		Types: []types.Card{types.Land},
+		OracleText: `
+			As this land enters, you may pay 3 life. If you don't, it enters tapped.
+			{T}: Add {G}.
+		`,
 		ReplacementAbilities: []game.ReplacementAbilityDef{
 			game.EntersTappedUnlessPaidReplacement("As this land enters, you may pay 3 life. If you don't, it enters tapped.", game.ResolutionPayment{
 				Prompt: "Pay 3 life?",
@@ -94,18 +105,22 @@ var BridgeworksBattle = &game.CardDef{CardFace: game.CardFace{Name: "Bridgeworks
 				},
 			}),
 		},
-		Abilities: []game.AbilityDef{
-			{
-				Kind:          game.ActivatedAbility,
-				Text:          "{T}: Add {G}.",
-				IsManaAbility: true,
-				AdditionalCosts: []game.AdditionalCost{
-					{Kind: game.AdditionalCostTap},
-				},
-				Effects: []game.Effect{
+	}
+
+	back.ManaAbilities = append(back.ManaAbilities,
+		game.ManaAbilityBody{
+			Text: `
+				{T}: Add {G}.
+			`,
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
 					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
 				},
 			},
 		},
-	}),
-}
+	)
+
+	card.Back = opt.Val(back)
+	return card
+}()

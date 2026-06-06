@@ -59,6 +59,10 @@ The skill will:
 - **Current card model** - Implementations use `mtg/game/types` for card,
   supertype, and subtype values; `mtg/game/compare` for integer predicates; and
   optional `CardDef.Back` for double-faced back-face data.
+- **Canonical source format** - Card source follows the expanded/raw-string layout
+  shown in `mtg/cards/k/karplusan_forest.go`. The generator produces this layout;
+  subagents must preserve it and fill categorized ability fields, not the legacy
+  `Abilities` slice.
 - **Unsupported reports** - Reports fetch errors, missing files, pending
   validation, and static validation failures.
 - **Functionality rollup** - Groups missing rules/parser capabilities and lists

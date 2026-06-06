@@ -142,8 +142,12 @@ For each card:
 1. Invoke/use the project card-impl workflow.
 2. Generate the mechanical CardDef source with:
    go run .agents/skills/card-impl/main.go "<Card Name>"
-3. Read .agents/skills/card-impl/CARD-IMPLEMENTATION-GUIDE.md.
-4. Fill Abilities only using existing game/rules primitives.
+3. Read .agents/skills/card-impl/CARD-IMPLEMENTATION-GUIDE.md and
+   `mtg/cards/k/karplusan_forest.go` (canonical source-formatting reference).
+4. Fill categorized ability fields (ManaAbilities, ActivatedAbilities, TriggeredAbilities,
+   StaticAbilities, LoyaltyAbilities, ReplacementAbilities, SpellAbility) only using
+   existing game/rules primitives. Preserve the expanded, raw-string layout the generator
+   produces — do not compact it. Do not populate the legacy Abilities slice.
 5. Use current generated-card conventions: card/super/subtype vocabulary comes
    from `mtg/game/types` (`types.Card`, `types.Super`, `types.Sub`), integer
    comparisons use `mtg/game/compare`, and double-faced cards use front-face

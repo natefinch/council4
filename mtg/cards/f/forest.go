@@ -14,23 +14,28 @@ import (
 // Oracle text:
 //
 //	({T}: Add {G}.)
-var Forest = &game.CardDef{CardFace: game.CardFace{Name: "Forest",
-
-	Supertypes: []types.Super{types.Basic},
-	Types:      []types.Card{types.Land},
-	Subtypes:   []types.Sub{types.Forest},
-	OracleText: "({T}: Add {G}.)",
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {G}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+var Forest = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Green),
+	CardFace: game.CardFace{
+		Name:       "Forest",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Forest},
+		OracleText: `
+			({T}: Add {G}.)
+		`,
+		ManaAbilities: []game.ManaAbilityBody{
+			{
+				Text: `
+					{T}: Add {G}.
+				`,
+				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				Content: game.PlainAbilityContent{
+					Sequence: []game.Effect{
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+					},
+				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green),
+	},
 }

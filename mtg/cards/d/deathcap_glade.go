@@ -16,11 +16,19 @@ import (
 //
 //	This land enters tapped unless you control two or more other lands.
 //	{T}: Add {B} or {G}.
-var DeathcapGlade = &game.CardDef{CardFace: game.CardFace{Name: "Deathcap Glade",
-
-	Types:      []types.Card{types.Land},
-	OracleText: "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {G}.",
-	ReplacementAbilities: []game.ReplacementAbilityDef{
+var DeathcapGlade = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black, color.Green),
+		CardFace: game.CardFace{
+			Name:  "Deathcap Glade",
+			Types: []types.Card{types.Land},
+			OracleText: `
+				This land enters tapped unless you control two or more other lands.
+				{T}: Add {B} or {G}.
+			`,
+		},
+	}
+	card.ReplacementAbilities = append(card.ReplacementAbilities,
 		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more other lands.", &game.Condition{
 			Negate: true,
 			ControllerControls: game.PermanentFilter{
@@ -28,16 +36,16 @@ var DeathcapGlade = &game.CardDef{CardFace: game.CardFace{Name: "Deathcap Glade"
 				MinCount: 2,
 			},
 		}),
-	},
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {B} or {G}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
+	)
+	card.ManaAbilities = append(card.ManaAbilities, game.ManaAbilityBody{
+		Text: `
+			{T}: Add {B} or {G}.
+		`,
+		AdditionalCosts: []game.AdditionalCost{
+			{Kind: game.AdditionalCostTap},
+		},
+		Content: game.PlainAbilityContent{
+			Sequence: []game.Effect{
 				{
 					Type:        game.EffectChoose,
 					TargetIndex: game.TargetIndexController,
@@ -56,5 +64,6 @@ var DeathcapGlade = &game.CardDef{CardFace: game.CardFace{Name: "Deathcap Glade"
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Black, color.Green),
-}
+	})
+	return card
+}()

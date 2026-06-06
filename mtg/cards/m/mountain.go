@@ -14,23 +14,28 @@ import (
 // Oracle text:
 //
 //	({T}: Add {R}.)
-var Mountain = &game.CardDef{CardFace: game.CardFace{Name: "Mountain",
-
-	Supertypes: []types.Super{types.Basic},
-	Types:      []types.Card{types.Land},
-	Subtypes:   []types.Sub{types.Mountain},
-	OracleText: "({T}: Add {R}.)",
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {R}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
+var Mountain = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Red),
+	CardFace: game.CardFace{
+		Name:       "Mountain",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Mountain},
+		OracleText: `
+			({T}: Add {R}.)
+		`,
+		ManaAbilities: []game.ManaAbilityBody{
+			{
+				Text: `
+					{T}: Add {R}.
+				`,
+				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				Content: game.PlainAbilityContent{
+					Sequence: []game.Effect{
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
+					},
+				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Red),
+	},
 }

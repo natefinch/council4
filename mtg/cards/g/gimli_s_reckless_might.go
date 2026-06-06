@@ -19,19 +19,29 @@ import (
 //
 //	Creatures you control have haste.
 //	Formidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.
-var GimliSRecklessMight = &game.CardDef{CardFace: game.CardFace{Name: "Gimli's Reckless Might",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(3),
-		cost.R,
-	}),
-	Colors: []color.Color{color.Red},
+var GimliSRecklessMight = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Gimli's Reckless Might",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.R,
+			}),
+			Colors: []color.Color{color.Red},
+			Types:  []types.Card{types.Enchantment},
+			OracleText: `
+				Creatures you control have haste.
+				Formidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.
+			`,
+		},
+	}
 
-	Types:      []types.Card{types.Enchantment},
-	OracleText: "Creatures you control have haste.\nFormidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.StaticAbility,
-			Text: "Creatures you control have haste.",
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.StaticAbilityBody{
+			Text: `
+				Creatures you control have haste.
+			`,
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectApplyContinuous,
@@ -46,10 +56,14 @@ var GimliSRecklessMight = &game.CardDef{CardFace: game.CardFace{Name: "Gimli's R
 				},
 			},
 		},
-		{
-			Kind: game.TriggeredAbility,
-			Text: "Formidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.",
-			Trigger: opt.Val(game.TriggerCondition{
+	)
+
+	card.TriggeredAbilities = append(card.TriggeredAbilities,
+		game.TriggeredAbilityBody{
+			Text: `
+				Formidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.
+			`,
+			Trigger: game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
 					Event:      game.EventAttackerDeclared,
@@ -63,38 +77,41 @@ var GimliSRecklessMight = &game.CardDef{CardFace: game.CardFace{Name: "Gimli's R
 						TotalPower: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 8}),
 					},
 				}),
-			}),
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "attacking creature you control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
-						CombatState:    game.CombatStateAttacking,
-					},
-				},
-				{
-					MinTargets: 0,
-					MaxTargets: 1,
-					Constraint: "creature you don't control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerOpponent,
-					},
-				},
 			},
-			Effects: []game.Effect{
-				{
-					Type:               game.EffectFight,
-					TargetIndex:        0,
-					RelatedTargetIndex: opt.Val(1),
-					Description:        "target attacking creature you control fights up to one target creature you don't control",
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "attacking creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+							Controller:     game.ControllerYou,
+							CombatState:    game.CombatStateAttacking,
+						},
+					},
+					{
+						MinTargets: 0,
+						MaxTargets: 1,
+						Constraint: "creature you don't control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+							Controller:     game.ControllerOpponent,
+						},
+					},
+				},
+				Sequence: []game.Effect{
+					{
+						Type:               game.EffectFight,
+						TargetIndex:        0,
+						RelatedTargetIndex: opt.Val(1),
+						Description:        "target attacking creature you control fights up to one target creature you don't control",
+					},
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Red),
-}
+	)
+	return card
+}()

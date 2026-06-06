@@ -20,37 +20,48 @@ import (
 //	{T}: Add {G}.
 //	Ferocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.
 //	Eternalize {2}{G}{G}
-var FanaticOfRhonas = &game.CardDef{CardFace: game.CardFace{Name: "Fanatic of Rhonas",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(1),
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
+var FanaticOfRhonas = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Fanatic of Rhonas",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Snake, types.Druid},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 4}),
+			OracleText: `
+				{T}: Add {G}.
+				Ferocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.
+				Eternalize {2}{G}{G} ({2}{G}{G}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a 4/4 black Zombie Snake Druid with no mana cost. Eternalize only as a sorcery.)
+			`,
+		},
+	}
 
-	Types:      []types.Card{types.Creature},
-	Subtypes:   []types.Sub{types.Snake, types.Druid},
-	Power:      opt.Val(game.PT{Value: 1}),
-	Toughness:  opt.Val(game.PT{Value: 4}),
-	OracleText: "{T}: Add {G}.\nFerocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.\nEternalize {2}{G}{G} ({2}{G}{G}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a 4/4 black Zombie Snake Druid with no mana cost. Eternalize only as a sorcery.)",
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {G}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+	card.ManaAbilities = append(card.ManaAbilities,
+		game.ManaAbilityBody{
+			Text: `
+				{T}: Add {G}.
+			`,
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+				},
 			},
 		},
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "Ferocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
+	)
+
+	card.ManaAbilities = append(card.ManaAbilities,
+		game.ManaAbilityBody{
+			Text: `
+				Ferocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.
+			`,
+			AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
 			ActivationCondition: opt.Val(game.Condition{
 				Text: "you control a creature with power 4 or greater",
 				ControllerControls: game.PermanentFilter{
@@ -61,16 +72,22 @@ var FanaticOfRhonas = &game.CardDef{CardFace: game.CardFace{Name: "Fanatic of Rh
 					}),
 				},
 			}),
-			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+					{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+				},
 			},
 		},
-		game.EternalizeAbility(
+	)
+
+	card.ActivatedAbilities = append(card.ActivatedAbilities,
+		game.EternalizeActivatedBody(
 			cost.Mana{cost.O(2), cost.G, cost.G},
 			types.Snake, types.Druid,
 		),
-	}}, ColorIdentity: color.NewIdentity(color.Green),
-}
+	)
+	return card
+}()

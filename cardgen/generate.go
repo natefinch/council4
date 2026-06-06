@@ -27,8 +27,8 @@ type generatedCardFields struct {
 	EntersTapped bool
 }
 
-// GenerateCardSource generates a Go source file for a CardDef from Scryfall data.
-// The file belongs to the given package name (e.g., "l" for the l/ subdirectory).
+// GenerateCardSource generates a canonically formatted CardDef source file from
+// Scryfall data. The file belongs to the given package name (e.g., "l").
 func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
 	var b strings.Builder
 
@@ -245,7 +245,7 @@ func writeCardComment(b *strings.Builder, card *ScryfallCard, root generatedCard
 		}
 	}
 	_, _ = b.WriteString("//\n")
-	_, _ = b.WriteString("// TODO: Fill in Abilities from oracle text.\n")
+	_, _ = b.WriteString("// TODO: Fill in ability fields from oracle text using categorized CardFace fields.\n")
 }
 
 func writeSingleFaceComment(b *strings.Builder, fields generatedCardFields) {
@@ -261,29 +261,29 @@ func writeSingleFaceComment(b *strings.Builder, fields generatedCardFields) {
 		_, _ = fmt.Fprintf(b, "//   %s\n", line)
 	}
 	_, _ = b.WriteString("//\n")
-	_, _ = b.WriteString("// TODO: Fill in Abilities from oracle text.\n")
+	_, _ = b.WriteString("// TODO: Fill in ability fields from oracle text using categorized CardFace fields.\n")
 }
 
 func writeCardDef(b *strings.Builder, root generatedCardFields, layout string, faces []generatedCardFields) error {
 	varName := CardNameToVarName(root.Name)
 	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
+	if len(root.ColorIdentity) > 0 {
+		_, _ = fmt.Fprintf(b, "\tColorIdentity: color.NewIdentity(%s),\n", colorLiterals(root.ColorIdentity))
+	}
 	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
-	if err := writeFields(b, root, "\t\t", true, false); err != nil {
+	if err := writeFields(b, root, "\t\t", true); err != nil {
 		return err
 	}
 	_, _ = b.WriteString("\t},\n")
 	if layoutLiteral := layoutToLiteral(layout); layoutLiteral != "" {
 		_, _ = fmt.Fprintf(b, "\tLayout: %s,\n", layoutLiteral)
 	}
-	if len(root.ColorIdentity) > 0 {
-		_, _ = fmt.Fprintf(b, "\tColorIdentity: color.NewIdentity(%s),\n", colorLiterals(root.ColorIdentity))
-	}
 	if len(faces) > 0 {
 		if len(faces) > 1 {
 			return fmt.Errorf("%s has %d non-front faces; CardDef supports one optional Back face", root.Name, len(faces))
 		}
 		_, _ = b.WriteString("\tBack: opt.Val(game.CardFace{\n")
-		if err := writeFields(b, faces[0], "\t\t", true, false); err != nil {
+		if err := writeFields(b, faces[0], "\t\t", true); err != nil {
 			return err
 		}
 		_, _ = b.WriteString("\t}),\n")
@@ -292,7 +292,7 @@ func writeCardDef(b *strings.Builder, root generatedCardFields, layout string, f
 	return nil
 }
 
-func writeFields(b *strings.Builder, fields generatedCardFields, indent string, includeName, includeColorIdentity bool) error {
+func writeFields(b *strings.Builder, fields generatedCardFields, indent string, includeName bool) error {
 	if includeName {
 		_, _ = fmt.Fprintf(b, "%sName: %q,\n", indent, fields.Name)
 	}
@@ -307,9 +307,6 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 	}
 	if len(fields.Colors) > 0 {
 		_, _ = fmt.Fprintf(b, "%sColors: []color.Color{%s},\n", indent, colorLiterals(fields.Colors))
-	}
-	if includeColorIdentity && len(fields.ColorIdentity) > 0 {
-		_, _ = fmt.Fprintf(b, "%sColorIdentity: color.NewIdentity(%s),\n", indent, colorLiterals(fields.ColorIdentity))
 	}
 	parsed := ParseTypeLine(fields.TypeLine)
 	if len(parsed.Supertypes) > 0 {
@@ -355,11 +352,27 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 		_, _ = fmt.Fprintf(b, "%s},\n", indent)
 	}
 	if fields.OracleText != "" {
-		_, _ = fmt.Fprintf(b, "%sOracleText: %q,\n", indent, fields.OracleText)
+		writeRawTextField(b, indent, "OracleText", fields.OracleText)
 	}
-	_, _ = fmt.Fprintf(b, "%s// Abilities: filled in by LLM from oracle text.\n", indent)
-	_, _ = fmt.Fprintf(b, "%sAbilities: []game.AbilityDef{},\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// TODO: Fill in ability fields from oracle text.\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// Use categorized CardFace fields (SpellAbility, ActivatedAbilities,\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// ManaAbilities, LoyaltyAbilities, TriggeredAbilities, StaticAbilities).\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// Follow mtg/cards/k/karplusan_forest.go: raw multiline Text values and\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// vertically expanded ability bodies. For mixed categories, use an initializer\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// function and append in oracle order.\n", indent)
 	return nil
+}
+
+func writeRawTextField(b *strings.Builder, indent, field, text string) {
+	if strings.ContainsRune(text, '`') {
+		_, _ = fmt.Fprintf(b, "%s%s: %q,\n", indent, field, text)
+		return
+	}
+	_, _ = fmt.Fprintf(b, "%s%s: `\n", indent, field)
+	for line := range strings.SplitSeq(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		_, _ = fmt.Fprintf(b, "%s\t%s\n", indent, line)
+	}
+	_, _ = fmt.Fprintf(b, "%s`,\n", indent)
 }
 
 func indentContinuation(literal, indent string) string {

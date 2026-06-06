@@ -120,13 +120,20 @@ func (ability *AbilityDef) KeywordKinds() []Keyword {
 			keywords = append(keywords, keyword)
 		}
 	}
-	if body, ok := ability.Body.(StaticAbilityBody); ok {
-		for _, keywordAbility := range body.KeywordAbilities {
+	addFromKeywords := func(kas []KeywordAbility) {
+		for _, keywordAbility := range kas {
 			keyword := KeywordAbilityKind(keywordAbility)
 			if !slices.Contains(keywords, keyword) {
 				keywords = append(keywords, keyword)
 			}
 		}
+	}
+	switch body := ability.Body.(type) {
+	case StaticAbilityBody:
+		addFromKeywords(body.KeywordAbilities)
+	case ActivatedAbilityBody:
+		addFromKeywords(body.KeywordAbilities)
+	default:
 	}
 	return keywords
 }
@@ -146,11 +153,17 @@ func (ability *AbilityDef) KeywordAbility(keyword Keyword) (KeywordAbility, bool
 			return keywordAbility, true
 		}
 	}
-	if body, ok := ability.Body.(StaticAbilityBody); ok {
-		for _, keywordAbility := range body.KeywordAbilities {
-			if KeywordAbilityKind(keywordAbility) == keyword {
-				return keywordAbility, true
-			}
+	var bodyKeywords []KeywordAbility
+	switch body := ability.Body.(type) {
+	case StaticAbilityBody:
+		bodyKeywords = body.KeywordAbilities
+	case ActivatedAbilityBody:
+		bodyKeywords = body.KeywordAbilities
+	default:
+	}
+	for _, keywordAbility := range bodyKeywords {
+		if KeywordAbilityKind(keywordAbility) == keyword {
+			return keywordAbility, true
 		}
 	}
 	return nil, false
@@ -283,9 +296,15 @@ func (ability *AbilityDef) AddKeywordKindsTo(keywords map[Keyword]bool) {
 	for _, keywordAbility := range ability.KeywordAbilities {
 		keywords[KeywordAbilityKind(keywordAbility)] = true
 	}
-	if body, ok := ability.Body.(StaticAbilityBody); ok {
-		for _, keywordAbility := range body.KeywordAbilities {
-			keywords[KeywordAbilityKind(keywordAbility)] = true
-		}
+	var bodyKeywords []KeywordAbility
+	switch body := ability.Body.(type) {
+	case StaticAbilityBody:
+		bodyKeywords = body.KeywordAbilities
+	case ActivatedAbilityBody:
+		bodyKeywords = body.KeywordAbilities
+	default:
+	}
+	for _, keywordAbility := range bodyKeywords {
+		keywords[KeywordAbilityKind(keywordAbility)] = true
 	}
 }

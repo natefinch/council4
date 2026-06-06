@@ -17,17 +17,28 @@ import (
 //	Equipped creature has "{2}: This creature gets +1/+0 until end of turn."
 //	Whenever equipped creature deals damage to a blocking creature, this Equipment deals that much damage to each other creature defending player controls.
 //	Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
-var KusariGama = &game.CardDef{CardFace: game.CardFace{Name: "Kusari-Gama",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(3),
-	}),
-	Types:      []types.Card{types.Artifact},
-	Subtypes:   []types.Sub{types.Equipment},
-	OracleText: "Equipped creature has \"{2}: This creature gets +1/+0 until end of turn.\"\nWhenever equipped creature deals damage to a blocking creature, this Equipment deals that much damage to each other creature defending player controls.\nEquip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.StaticAbility,
-			Text: "Equipped creature has \"{2}: This creature gets +1/+0 until end of turn.\"",
+var KusariGama = func() *game.CardDef {
+	card := &game.CardDef{
+		CardFace: game.CardFace{
+			Name: "Kusari-Gama",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+			}),
+			Types:    []types.Card{types.Artifact},
+			Subtypes: []types.Sub{types.Equipment},
+			OracleText: `
+				Equipped creature has "{2}: This creature gets +1/+0 until end of turn."
+				Whenever equipped creature deals damage to a blocking creature, this Equipment deals that much damage to each other creature defending player controls.
+				Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
+			`,
+		},
+	}
+
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.StaticAbilityBody{
+			Text: `
+				Equipped creature has "{2}: This creature gets +1/+0 until end of turn."
+			`,
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectApplyContinuous,
@@ -38,17 +49,20 @@ var KusariGama = &game.CardDef{CardFace: game.CardFace{Name: "Kusari-Gama",
 							Selector: game.EffectSelectorEquippedCreature,
 							AddAbilities: []game.AbilityDef{
 								{
-									Kind: game.ActivatedAbility,
-									Text: "{2}: This creature gets +1/+0 until end of turn.",
-									ManaCost: opt.Val(cost.Mana{
-										cost.O(2),
-									}),
-									Effects: []game.Effect{
-										{
-											Type:           game.EffectModifyPT,
-											PowerDelta:     1,
-											UntilEndOfTurn: true,
-											TargetIndex:    game.TargetIndexSourcePermanent,
+									Body: game.ActivatedAbilityBody{
+										Text: `
+											{2}: This creature gets +1/+0 until end of turn.
+										`,
+										ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+										Content: game.PlainAbilityContent{
+											Sequence: []game.Effect{
+												{
+													Type:           game.EffectModifyPT,
+													PowerDelta:     1,
+													UntilEndOfTurn: true,
+													TargetIndex:    game.TargetIndexSourcePermanent,
+												},
+											},
 										},
 									},
 								},
@@ -58,10 +72,14 @@ var KusariGama = &game.CardDef{CardFace: game.CardFace{Name: "Kusari-Gama",
 				},
 			},
 		},
-		{
-			Kind: game.TriggeredAbility,
-			Text: "Whenever equipped creature deals damage to a blocking creature, this Equipment deals that much damage to each other creature defending player controls.",
-			Trigger: opt.Val(game.TriggerCondition{
+	)
+
+	card.TriggeredAbilities = append(card.TriggeredAbilities,
+		game.TriggeredAbilityBody{
+			Text: `
+				Whenever equipped creature deals damage to a blocking creature, this Equipment deals that much damage to each other creature defending player controls.
+			`,
+			Trigger: game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
 					Event:                      game.EventDamageDealt,
@@ -69,40 +87,51 @@ var KusariGama = &game.CardDef{CardFace: game.CardFace{Name: "Kusari-Gama",
 					DamageRecipient:            game.DamageRecipientPermanent,
 					DamageRecipientCombatState: game.CombatStateBlocking,
 				},
-			}),
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectDamage,
-					TargetIndex: game.TargetIndexSourcePermanent,
-					DynamicAmount: opt.Val(game.DynamicAmount{
-						Kind: game.DynamicAmountEventDamage,
-					}),
-					Selector: game.EffectSelectorOtherCreaturesDefendingPlayerControls,
-				},
 			},
-		},
-		{
-			Kind: game.ActivatedAbility,
-			Text: "Equip {3}",
-			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
-				cost.O(3),
-			}}},
-			ManaCost: opt.Val(cost.Mana{
-				cost.O(3),
-			}),
-			Timing: game.SorceryOnly,
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature you control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Effect{
+					{
+						Type:        game.EffectDamage,
+						TargetIndex: game.TargetIndexSourcePermanent,
+						DynamicAmount: opt.Val(game.DynamicAmount{
+							Kind: game.DynamicAmountEventDamage,
+						}),
+						Selector: game.EffectSelectorOtherCreaturesDefendingPlayerControls,
 					},
 				},
 			},
 		},
-	}},
-}
+	)
+
+	card.ActivatedAbilities = append(card.ActivatedAbilities,
+		game.ActivatedAbilityBody{
+			Text: `
+				Equip {3}
+			`,
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+			}),
+			Timing: game.SorceryOnly,
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+							Controller:     game.ControllerYou,
+						},
+					},
+				},
+			},
+			KeywordAbilities: []game.KeywordAbility{
+				game.EquipKeyword{Cost: cost.Mana{
+					cost.O(3),
+				}},
+			},
+		},
+	)
+	return card
+}()

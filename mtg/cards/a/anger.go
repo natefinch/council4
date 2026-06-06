@@ -18,41 +18,48 @@ import (
 //
 //	Haste
 //	As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
-var Anger = &game.CardDef{CardFace: game.CardFace{Name: "Anger",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(3),
-		cost.R,
-	}),
-	Colors: []color.Color{color.Red},
-
-	Types:      []types.Card{types.Creature},
-	Subtypes:   []types.Sub{types.Incarnation},
-	Power:      opt.Val(game.PT{Value: 2}),
-	Toughness:  opt.Val(game.PT{Value: 2}),
-	OracleText: "Haste\nAs long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
-	Abilities: []game.AbilityDef{
-		game.HasteAbility,
-		{
-			Kind:           game.StaticAbility,
-			Text:           "As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
-			ZoneOfFunction: game.ZoneGraveyard,
-			Condition: opt.Val(game.Condition{
-				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []types.Sub{types.Mountain},
-				},
-			}),
-			Effects: []game.Effect{
-				{
-					Type: game.EffectApplyContinuous,
-					ContinuousEffects: []game.ContinuousEffect{
-						{
-							Layer:       game.LayerAbility,
-							Selector:    game.EffectSelectorCreaturesYouControl,
-							AddKeywords: []game.Keyword{game.Haste},
+var Anger = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Red),
+	CardFace: game.CardFace{
+		Name: "Anger",
+		ManaCost: opt.Val(cost.Mana{
+			cost.O(3),
+			cost.R,
+		}),
+		Colors:    []color.Color{color.Red},
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Incarnation},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		OracleText: `
+			Haste
+			As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
+		`,
+		StaticAbilities: []game.StaticAbilityBody{
+			game.HasteStaticBody,
+			{
+				Text: `
+					As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
+				`,
+				Condition: opt.Val(game.Condition{
+					ControllerControls: game.PermanentFilter{
+						SubtypesAny: []types.Sub{types.Mountain},
+					},
+				}),
+				ZoneOfFunction: game.ZoneGraveyard,
+				Effects: []game.Effect{
+					{
+						Type: game.EffectApplyContinuous,
+						ContinuousEffects: []game.ContinuousEffect{
+							{
+								Layer:       game.LayerAbility,
+								Selector:    game.EffectSelectorCreaturesYouControl,
+								AddKeywords: []game.Keyword{game.Haste},
+							},
 						},
 					},
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Red),
+	},
 }

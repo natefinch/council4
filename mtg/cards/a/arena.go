@@ -15,47 +15,53 @@ import (
 //
 //	{3}, {T}: Tap target creature you control and target creature of an opponent's
 //	choice they control. Those creatures fight each other.
-var Arena = &game.CardDef{CardFace: game.CardFace{Name: "Arena",
-	Types:      []types.Card{types.Land},
-	OracleText: "{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other. (Each deals damage equal to its power to the other.)",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.ActivatedAbility,
-			Text: "{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other.",
-			ManaCost: opt.Val(cost.Mana{
-				cost.O(3),
-			}),
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature you control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
+var Arena = &game.CardDef{
+	CardFace: game.CardFace{
+		Name:  "Arena",
+		Types: []types.Card{types.Land},
+		OracleText: `
+			{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other. (Each deals damage equal to its power to the other.)
+		`,
+		ActivatedAbilities: []game.ActivatedAbilityBody{
+			{
+				Text: `
+					{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other.
+				`,
+				ManaCost: opt.Val(cost.Mana{
+					cost.O(3),
+				}),
+				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				Content: game.PlainAbilityContent{
+					Targets: []game.TargetSpec{
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "creature you control",
+							Allow:      game.TargetAllowPermanent,
+							Predicate: game.TargetPredicate{
+								PermanentTypes: []types.Card{types.Creature},
+								Controller:     game.ControllerYou,
+							},
+						},
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "creature of an opponent's choice they control",
+							Allow:      game.TargetAllowPermanent,
+							Predicate: game.TargetPredicate{
+								PermanentTypes: []types.Card{types.Creature},
+								Controller:     game.ControllerYou,
+							},
+							Chooser: game.TargetChooserOpponent,
+						},
+					},
+					Sequence: []game.Effect{
+						{Type: game.EffectTap, TargetIndex: 0},
+						{Type: game.EffectTap, TargetIndex: 1},
+						{Type: game.EffectFight},
 					},
 				},
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature of an opponent's choice they control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
-					},
-					Chooser: game.TargetChooserOpponent,
-				},
-			},
-			Effects: []game.Effect{
-				{Type: game.EffectTap, TargetIndex: 0},
-				{Type: game.EffectTap, TargetIndex: 1},
-				{Type: game.EffectFight},
 			},
 		},
-	}},
+	},
 }

@@ -88,9 +88,95 @@ const (
 	Exalted
 )
 
-// Reusable AbilityDef templates for non-parameterized keyword abilities.
-// Treat these values as immutable; copy them into CardDef.Abilities rather than
-// mutating their fields.
+// Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
+// Use these in CardFace.StaticAbilities slices or initializer-function appends.
+// Treat these values as immutable.
+var (
+	// DeathtouchStaticBody is the reusable StaticAbilityBody for deathtouch.
+	DeathtouchStaticBody = simpleKeywordStaticBody("Deathtouch", Deathtouch)
+
+	// DefenderStaticBody is the reusable StaticAbilityBody for defender.
+	DefenderStaticBody = simpleKeywordStaticBody("Defender", Defender)
+
+	// DoubleStrikeStaticBody is the reusable StaticAbilityBody for double strike.
+	DoubleStrikeStaticBody = simpleKeywordStaticBody("Double strike", DoubleStrike)
+
+	// FirstStrikeStaticBody is the reusable StaticAbilityBody for first strike.
+	FirstStrikeStaticBody = simpleKeywordStaticBody("First strike", FirstStrike)
+
+	// FlashStaticBody is the reusable StaticAbilityBody for flash.
+	FlashStaticBody = simpleKeywordStaticBody("Flash", Flash)
+
+	// FlyingStaticBody is the reusable StaticAbilityBody for flying.
+	FlyingStaticBody = simpleKeywordStaticBody("Flying", Flying)
+
+	// HasteStaticBody is the reusable StaticAbilityBody for haste.
+	HasteStaticBody = simpleKeywordStaticBody("Haste", Haste)
+
+	// HexproofStaticBody is the reusable StaticAbilityBody for hexproof.
+	HexproofStaticBody = simpleKeywordStaticBody("Hexproof", Hexproof)
+
+	// IndestructibleStaticBody is the reusable StaticAbilityBody for indestructible.
+	IndestructibleStaticBody = simpleKeywordStaticBody("Indestructible", Indestructible)
+
+	// LifelinkStaticBody is the reusable StaticAbilityBody for lifelink.
+	LifelinkStaticBody = simpleKeywordStaticBody("Lifelink", Lifelink)
+
+	// MenaceStaticBody is the reusable StaticAbilityBody for menace.
+	MenaceStaticBody = simpleKeywordStaticBody("Menace", Menace)
+
+	// ReachStaticBody is the reusable StaticAbilityBody for reach.
+	ReachStaticBody = simpleKeywordStaticBody("Reach", Reach)
+
+	// ShroudStaticBody is the reusable StaticAbilityBody for shroud.
+	ShroudStaticBody = simpleKeywordStaticBody("Shroud", Shroud)
+
+	// TrampleStaticBody is the reusable StaticAbilityBody for trample.
+	TrampleStaticBody = simpleKeywordStaticBody("Trample", Trample)
+
+	// VigilanceStaticBody is the reusable StaticAbilityBody for vigilance.
+	VigilanceStaticBody = simpleKeywordStaticBody("Vigilance", Vigilance)
+
+	// SplitSecondStaticBody is the reusable StaticAbilityBody for split second.
+	SplitSecondStaticBody = simpleKeywordStaticBody("Split second", SplitSecond)
+
+	// ConvokeStaticBody is the reusable StaticAbilityBody for convoke.
+	ConvokeStaticBody = simpleKeywordStaticBody("Convoke", Convoke)
+
+	// DelveStaticBody is the reusable StaticAbilityBody for delve.
+	DelveStaticBody = simpleKeywordStaticBody("Delve", Delve)
+
+	// StormStaticBody is the reusable StaticAbilityBody for storm.
+	StormStaticBody = simpleKeywordStaticBody("Storm", Storm)
+
+	// CascadeStaticBody is the reusable StaticAbilityBody for cascade.
+	CascadeStaticBody = simpleKeywordStaticBody("Cascade", Cascade)
+
+	// ProwessStaticBody is the reusable StaticAbilityBody for prowess.
+	ProwessStaticBody = simpleKeywordStaticBody("Prowess", Prowess)
+
+	// ImproviseStaticBody is the reusable StaticAbilityBody for improvise.
+	ImproviseStaticBody = simpleKeywordStaticBody("Improvise", Improvise)
+
+	// UndyingStaticBody is the reusable StaticAbilityBody for undying.
+	UndyingStaticBody = simpleKeywordStaticBody("Undying", Undying)
+
+	// PersistStaticBody is the reusable StaticAbilityBody for persist.
+	PersistStaticBody = simpleKeywordStaticBody("Persist", Persist)
+
+	// WitherStaticBody is the reusable StaticAbilityBody for wither.
+	WitherStaticBody = simpleKeywordStaticBody("Wither", Wither)
+
+	// InfectStaticBody is the reusable StaticAbilityBody for infect.
+	InfectStaticBody = simpleKeywordStaticBody("Infect", Infect)
+
+	// ExaltedStaticBody is the reusable StaticAbilityBody for exalted.
+	ExaltedStaticBody = simpleKeywordStaticBody("Exalted", Exalted)
+)
+
+// Reusable AbilityDef compatibility templates for rules and tests.
+// New card definitions should use the StaticAbilityBody templates above.
+// Treat these values as immutable.
 var (
 	// DeathtouchAbility is the reusable AbilityDef template for deathtouch.
 	DeathtouchAbility = simpleKeywordAbility("Deathtouch", Deathtouch)
@@ -175,13 +261,11 @@ var (
 )
 
 func simpleKeywordAbility(text string, keyword Keyword) AbilityDef {
-	keywordAbility := SimpleKeyword{Kind: keyword}
-	return AbilityDef{
-		Kind:             StaticAbility,
-		Text:             text,
-		Body:             StaticAbilityBody{Text: text, KeywordAbilities: []KeywordAbility{keywordAbility}},
-		KeywordAbilities: []KeywordAbility{keywordAbility},
-	}
+	return AbilityDef{Body: simpleKeywordStaticBody(text, keyword)}
+}
+
+func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbilityBody {
+	return StaticAbilityBody{Text: text, KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: keyword}}}
 }
 
 // TriggerType classifies what kind of event triggers a triggered ability.
@@ -492,6 +576,13 @@ type TokenCopySpec struct {
 // graveyard activation that exiles the source card and creates the standard
 // 4/4 black Zombie copy token with no mana cost.
 func EternalizeAbility(manaCost cost.Mana, creatureSubtypes ...types.Sub) AbilityDef {
+	return AbilityDef{Body: EternalizeActivatedBody(manaCost, creatureSubtypes...)}
+}
+
+// EternalizeActivatedBody builds the ActivatedAbilityBody for the Eternalize
+// keyword. Use this in CardFace.ActivatedAbilities when the card source uses
+// categorized fields instead of the legacy Abilities slice.
+func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) ActivatedAbilityBody {
 	tokenSubtypes := make([]types.Sub, 0, len(creatureSubtypes)+1)
 	tokenSubtypes = append(tokenSubtypes, types.Zombie)
 	tokenSubtypes = append(tokenSubtypes, creatureSubtypes...)
@@ -508,29 +599,17 @@ func EternalizeAbility(manaCost cost.Mana, creatureSubtypes ...types.Sub) Abilit
 			NoManaCost:   true,
 		}),
 	}
-	return AbilityDef{
-		Kind: ActivatedAbility,
-		Text: "Eternalize " + manaCost.String(),
-		Body: ActivatedAbilityBody{
-			Text:           "Eternalize " + manaCost.String(),
-			ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
-			ZoneOfFunction: ZoneGraveyard,
-			Timing:         SorceryOnly,
-			AdditionalCosts: []AdditionalCost{{
-				Kind: AdditionalCostExileSource,
-				Text: "Exile this card from your graveyard",
-			}},
-			Content: PlainAbilityContent{Sequence: []Effect{tokenCopyEffect}},
-		},
-		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Eternalize}},
-		ManaCost:         opt.Val(append(cost.Mana(nil), manaCost...)),
-		ZoneOfFunction:   ZoneGraveyard,
-		Timing:           SorceryOnly,
+	return ActivatedAbilityBody{
+		Text:           "Eternalize " + manaCost.String(),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction: ZoneGraveyard,
+		Timing:         SorceryOnly,
 		AdditionalCosts: []AdditionalCost{{
 			Kind: AdditionalCostExileSource,
 			Text: "Exile this card from your graveyard",
 		}},
-		Effects: []Effect{tokenCopyEffect},
+		Content:          PlainAbilityContent{Sequence: []Effect{tokenCopyEffect}},
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Eternalize}},
 	}
 }
 

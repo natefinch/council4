@@ -19,20 +19,31 @@ import (
 //	Equipped creature gets +1/+0 for each opponent you have.
 //	Whenever equipped creature is dealt damage, it deals that much damage to any target.
 //	Equip {4}
-var BlazingSunsteel = &game.CardDef{CardFace: game.CardFace{Name: "Blazing Sunsteel",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(1),
-		cost.R,
-	}),
-	Colors: []color.Color{color.Red},
+var BlazingSunsteel = func() *game.CardDef {
+	card := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Blazing Sunsteel",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.R,
+			}),
+			Colors:   []color.Color{color.Red},
+			Types:    []types.Card{types.Artifact},
+			Subtypes: []types.Sub{types.Equipment},
+			OracleText: `
+				Equipped creature gets +1/+0 for each opponent you have.
+				Whenever equipped creature is dealt damage, it deals that much damage to any target.
+				Equip {4}
+			`,
+		},
+	}
 
-	Types:      []types.Card{types.Artifact},
-	Subtypes:   []types.Sub{types.Equipment},
-	OracleText: "Equipped creature gets +1/+0 for each opponent you have.\nWhenever equipped creature is dealt damage, it deals that much damage to any target.\nEquip {4}",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.StaticAbility,
-			Text: "Equipped creature gets +1/+0 for each opponent you have.",
+	card.StaticAbilities = append(card.StaticAbilities,
+		game.StaticAbilityBody{
+			Text: `
+				Equipped creature gets +1/+0 for each opponent you have.
+			`,
 			Effects: []game.Effect{
 				{
 					Type:        game.EffectModifyPT,
@@ -44,61 +55,76 @@ var BlazingSunsteel = &game.CardDef{CardFace: game.CardFace{Name: "Blazing Sunst
 				},
 			},
 		},
-		{
-			Kind: game.TriggeredAbility,
-			Text: "Whenever equipped creature is dealt damage, it deals that much damage to any target.",
-			Trigger: opt.Val(game.TriggerCondition{
+	)
+
+	card.TriggeredAbilities = append(card.TriggeredAbilities,
+		game.TriggeredAbilityBody{
+			Text: `
+				Whenever equipped creature is dealt damage, it deals that much damage to any target.
+			`,
+			Trigger: game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
 					Event:           game.EventDamageDealt,
 					Source:          game.TriggerSourceAttachedPermanent,
 					DamageRecipient: game.DamageRecipientPermanent,
 				},
-			}),
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "any target",
-					Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
-				},
 			},
-			Effects: []game.Effect{
-				{
-					Type:        game.EffectDamage,
-					TargetIndex: 0,
-					DamageSource: opt.Val(game.ObjectReference{
-						Kind:        game.ObjectReferenceAttachedPermanent,
-						TargetIndex: game.TargetIndexSourcePermanent,
-					}),
-					DynamicAmount: opt.Val(game.DynamicAmount{
-						Kind: game.DynamicAmountEventDamage,
-					}),
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "any target",
+						Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+					},
 				},
-			},
-		},
-		{
-			Kind: game.ActivatedAbility,
-			Text: "Equip {4}",
-			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{
-				cost.O(4),
-			}}},
-			ManaCost: opt.Val(cost.Mana{
-				cost.O(4),
-			}),
-			Timing: game.SorceryOnly,
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature you control",
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
+				Sequence: []game.Effect{
+					{
+						Type:        game.EffectDamage,
+						TargetIndex: 0,
+						DamageSource: opt.Val(game.ObjectReference{
+							Kind:        game.ObjectReferenceAttachedPermanent,
+							TargetIndex: game.TargetIndexSourcePermanent,
+						}),
+						DynamicAmount: opt.Val(game.DynamicAmount{
+							Kind: game.DynamicAmountEventDamage,
+						}),
 					},
 				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Red),
-}
+	)
+
+	card.ActivatedAbilities = append(card.ActivatedAbilities,
+		game.ActivatedAbilityBody{
+			Text: `
+				Equip {4}
+			`,
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(4),
+			}),
+			Timing: game.SorceryOnly,
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{types.Creature},
+							Controller:     game.ControllerYou,
+						},
+					},
+				},
+			},
+			KeywordAbilities: []game.KeywordAbility{
+				game.EquipKeyword{Cost: cost.Mana{
+					cost.O(4),
+				}},
+			},
+		},
+	)
+	return card
+}()

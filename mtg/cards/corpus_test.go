@@ -52,6 +52,26 @@ func TestRegisteredCardAbilitiesHaveBodies(t *testing.T) {
 	}
 }
 
+// TestRegisteredCardFacesHaveNoLegacyAbilities asserts that registered card
+// source definitions use only the categorized CardFace fields and leave the
+// legacy Abilities slice empty. Nested AbilityDef values inside effect data
+// (e.g. ContinuousEffect.AddAbilities, EmblemAbilities) are not card-face
+// source abilities and are not checked here.
+func TestRegisteredCardFacesHaveNoLegacyAbilities(t *testing.T) {
+	for _, card := range registeredCards() {
+		t.Run(card.Name, func(t *testing.T) {
+			if n := len(card.Abilities); n != 0 {
+				t.Errorf("front face has %d legacy Abilities entries; use categorized fields instead", n)
+			}
+			if card.Back.Exists {
+				if n := len(card.Back.Val.Abilities); n != 0 {
+					t.Errorf("back face has %d legacy Abilities entries; use categorized fields instead", n)
+				}
+			}
+		})
+	}
+}
+
 func assertFaceAbilitiesHaveBodies(t *testing.T, faceName string, face *game.CardFace) {
 	t.Helper()
 	abilities := face.AbilityDefs()

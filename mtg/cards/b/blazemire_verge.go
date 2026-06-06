@@ -16,37 +16,43 @@ import (
 //
 //	{T}: Add {B}.
 //	{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
-var BlazemireVerge = &game.CardDef{CardFace: game.CardFace{Name: "Blazemire Verge",
-
-	Types:      []types.Card{types.Land},
-	OracleText: "{T}: Add {B}.\n{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {B}.",
-			IsManaAbility: true,
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.B, TargetIndex: game.TargetIndexController},
-			},
-		},
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
-			IsManaAbility: true,
-			ActivationCondition: opt.Val(game.Condition{
-				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
+var BlazemireVerge = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Black, color.Red),
+	CardFace: game.CardFace{
+		Name:  "Blazemire Verge",
+		Types: []types.Card{types.Land},
+		OracleText: `
+			{T}: Add {B}.
+			{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
+		`,
+		ManaAbilities: []game.ManaAbilityBody{
+			{
+				Text: `
+					{T}: Add {B}.
+				`,
+				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				Content: game.PlainAbilityContent{
+					Sequence: []game.Effect{
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.B, TargetIndex: game.TargetIndexController},
+					},
 				},
-			}),
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
 			},
-			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
+			{
+				Text: `
+					{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
+				`,
+				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				ActivationCondition: opt.Val(game.Condition{
+					ControllerControls: game.PermanentFilter{
+						SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
+					},
+				}),
+				Content: game.PlainAbilityContent{
+					Sequence: []game.Effect{
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
+					},
+				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Black, color.Red),
+	},
 }

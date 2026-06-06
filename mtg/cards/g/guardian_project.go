@@ -17,36 +17,44 @@ import (
 // Oracle text:
 //
 //	Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.
-var GuardianProject = &game.CardDef{CardFace: game.CardFace{Name: "Guardian Project",
-	ManaCost: opt.Val(cost.Mana{
-		cost.O(3),
-		cost.G,
-	}),
-	Colors: []color.Color{color.Green},
-
-	Types:      []types.Card{types.Enchantment},
-	OracleText: "Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.",
-	Abilities: []game.AbilityDef{
-		{
-			Kind: game.TriggeredAbility,
-			Text: "Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.",
-			Trigger: opt.Val(game.TriggerCondition{
-				Type: game.TriggerWhenever,
-				Pattern: game.TriggerPattern{
-					Event:                 game.EventPermanentEnteredBattlefield,
-					Controller:            game.TriggerControllerYou,
-					RequirePermanentTypes: []types.Card{types.Creature},
-					RequireNonToken:       true,
+var GuardianProject = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Green),
+	CardFace: game.CardFace{
+		Name: "Guardian Project",
+		ManaCost: opt.Val(cost.Mana{
+			cost.O(3),
+			cost.G,
+		}),
+		Colors: []color.Color{color.Green},
+		Types:  []types.Card{types.Enchantment},
+		OracleText: `
+			Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.
+		`,
+		TriggeredAbilities: []game.TriggeredAbilityBody{
+			{
+				Text: `
+					Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.
+				`,
+				Trigger: game.TriggerCondition{
+					Type: game.TriggerWhenever,
+					Pattern: game.TriggerPattern{
+						Event:                 game.EventPermanentEnteredBattlefield,
+						Controller:            game.TriggerControllerYou,
+						RequirePermanentTypes: []types.Card{types.Creature},
+						RequireNonToken:       true,
+					},
+					InterveningIf: "it doesn't have the same name as another creature you control or a creature card in your graveyard",
+					InterveningCondition: opt.Val(game.Condition{
+						Text: "it doesn't have the same name as another creature you control or a creature card in your graveyard",
+						EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true,
+					}),
 				},
-				InterveningIf: "it doesn't have the same name as another creature you control or a creature card in your graveyard",
-				InterveningCondition: opt.Val(game.Condition{
-					Text: "it doesn't have the same name as another creature you control or a creature card in your graveyard",
-					EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true,
-				}),
-			}),
-			Effects: []game.Effect{
-				{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+				Content: game.PlainAbilityContent{
+					Sequence: []game.Effect{
+						{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+					},
+				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green),
+	},
 }

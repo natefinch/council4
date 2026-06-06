@@ -16,25 +16,30 @@ import (
 // Oracle text:
 //
 //	{1}, {T}: Add {R}{G}.
-var MossfireValley = &game.CardDef{CardFace: game.CardFace{Name: "Mossfire Valley",
-
-	Types:      []types.Card{types.Land},
-	OracleText: "{1}, {T}: Add {R}{G}.",
-	Abilities: []game.AbilityDef{
-		{
-			Kind:          game.ActivatedAbility,
-			Text:          "{1}, {T}: Add {R}{G}.",
-			IsManaAbility: true,
-			ManaCost: opt.Val(cost.Mana{
-				cost.O(1),
-			}),
-			AdditionalCosts: []game.AdditionalCost{
-				{Kind: game.AdditionalCostTap},
-			},
-			Effects: []game.Effect{
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
-				{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+var MossfireValley = &game.CardDef{
+	ColorIdentity: color.NewIdentity(color.Green, color.Red),
+	CardFace: game.CardFace{
+		Name:  "Mossfire Valley",
+		Types: []types.Card{types.Land},
+		OracleText: `
+			{1}, {T}: Add {R}{G}.
+		`,
+		ManaAbilities: []game.ManaAbilityBody{
+			{
+				Text: `
+					{1}, {T}: Add {R}{G}.
+				`,
+				ManaCost: opt.Val(cost.Mana{
+					cost.O(1),
+				}),
+				AdditionalCosts: []game.AdditionalCost{{Kind: game.AdditionalCostTap}},
+				Content: game.PlainAbilityContent{
+					Sequence: []game.Effect{
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.R, TargetIndex: game.TargetIndexController},
+						{Type: game.EffectAddMana, Amount: 1, ManaColor: mana.G, TargetIndex: game.TargetIndexController},
+					},
+				},
 			},
 		},
-	}}, ColorIdentity: color.NewIdentity(color.Green, color.Red),
+	},
 }
