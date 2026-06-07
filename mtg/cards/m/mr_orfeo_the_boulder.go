@@ -48,7 +48,7 @@ var MrOrfeoTheBoulder = &game.CardDef{
 						OneOrMore:  true,
 					},
 				},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Targets: []game.TargetSpec{
 						{
 							MinTargets: 1,
@@ -77,7 +77,7 @@ var MrOrfeoTheBoulder = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

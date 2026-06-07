@@ -36,7 +36,7 @@ var KessigWolfRun = func() *game.CardDef {
 				{T}: Add {C}.
 			`,
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.AddMana{
@@ -45,7 +45,7 @@ var KessigWolfRun = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -60,7 +60,7 @@ var KessigWolfRun = func() *game.CardDef {
 				cost.G,
 			}),
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -99,7 +99,7 @@ var KessigWolfRun = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

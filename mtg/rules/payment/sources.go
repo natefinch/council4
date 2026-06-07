@@ -97,15 +97,15 @@ func isSimpleAddMana(body *game.ManaAbilityBody) bool {
 }
 
 func simpleAddMana(body *game.ManaAbilityBody) (game.AddMana, bool) {
-	if body.Content == nil {
+	if len(body.Content.Modes) == 0 || body.Content.IsModal() {
 		return game.AddMana{}, false
 	}
-	content, ok := body.Content.(game.PlainAbilityContent)
-	if !ok || len(content.Sequence) != 1 || content.Sequence[0].Primitive == nil ||
-		content.Sequence[0].Primitive.Kind() != game.PrimitiveAddMana {
+	sequence := body.Content.Modes[0].Sequence
+	if len(sequence) != 1 || sequence[0].Primitive == nil ||
+		sequence[0].Primitive.Kind() != game.PrimitiveAddMana {
 		return game.AddMana{}, false
 	}
-	addMana, ok := content.Sequence[0].Primitive.(game.AddMana)
+	addMana, ok := sequence[0].Primitive.(game.AddMana)
 	return addMana, ok && !addMana.Amount.IsDynamic() && addMana.ChoiceFrom == ""
 }
 

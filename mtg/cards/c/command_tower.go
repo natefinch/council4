@@ -26,7 +26,7 @@ var CommandTower = &game.CardDef{
 					{T}: Add one mana of any color in your commander's color identity.
 				`,
 				AdditionalCosts: cost.Tap,
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Choose{
@@ -45,7 +45,7 @@ var CommandTower = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

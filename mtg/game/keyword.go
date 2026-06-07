@@ -39,7 +39,7 @@ type CyclingKeyword struct {
 // KickerKeyword parameterizes Kicker additional costs and bonus instructions.
 type KickerKeyword struct {
 	Cost         cost.Mana
-	BonusContent AbilityContent
+	BonusContent ModalAbilityContent
 }
 
 // MadnessKeyword parameterizes Madness alternative costs.

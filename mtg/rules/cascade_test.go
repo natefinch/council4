@@ -137,7 +137,7 @@ func cascadeSpell(manaValue int) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cascade Spell",
 		ManaCost:        opt.Val(cost.Mana{cost.O(manaValue)}),
 		Types:           []types.Card{types.Instant},
-		SpellAbility:    opt.Val(game.SpellAbilityBody{}),
+		SpellAbility:    opt.Val(game.ModalAbilityContent{}),
 		StaticAbilities: []game.StaticAbilityBody{game.CascadeStaticBody}},
 	}
 }

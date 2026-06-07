@@ -285,7 +285,7 @@ func TestAbilityLayerAddsTypedAbilityBody(t *testing.T) {
 		AddAbilities: []game.AbilityBody{
 			game.ActivatedAbilityBody{
 				Text: "{2}: This creature gets +1/+0 until end of turn.",
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.ModifyPT{
@@ -295,7 +295,7 @@ func TestAbilityLayerAddsTypedAbilityBody(t *testing.T) {
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	})

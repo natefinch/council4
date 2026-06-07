@@ -189,13 +189,11 @@ func divinationLike() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Divination",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Sequence: []game.Instruction{
-					{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
-				},
+		SpellAbility: opt.Val(game.Mode{
+			Sequence: []game.Instruction{
+				{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
 			},
-		}),
+		}.Ability()),
 	}}
 }
 
@@ -203,13 +201,11 @@ func healingSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Healing",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Sequence: []game.Instruction{
-					{Primitive: game.GainLife{Amount: game.Fixed(3), TargetIndex: game.TargetIndexController}},
-				},
+		SpellAbility: opt.Val(game.Mode{
+			Sequence: []game.Instruction{
+				{Primitive: game.GainLife{Amount: game.Fixed(3), TargetIndex: game.TargetIndexController}},
 			},
-		}),
+		}.Ability()),
 	}}
 }
 
@@ -217,16 +213,14 @@ func lavaSpikeLike() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Lava Spike",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{
-					{MinTargets: 1, MaxTargets: 1, Constraint: "player"},
-				},
-				Sequence: []game.Instruction{
-					{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}},
-				},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{
+				{MinTargets: 1, MaxTargets: 1, Constraint: "player"},
 			},
-		}),
+			Sequence: []game.Instruction{
+				{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}},
+			},
+		}.Ability()),
 	}}
 }
 

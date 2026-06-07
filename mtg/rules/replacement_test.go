@@ -120,12 +120,10 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Red Strike",
 		Types:  []types.Card{types.Instant},
 		Colors: []color.Color{color.Red},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
-			},
-		})},
+		SpellAbility: opt.Val(game.Mode{
+			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
+		}.Ability())},
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -650,10 +648,8 @@ func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanen
 func targetCreatureInstant() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Target Creature Instant",
 		Types: []types.Card{types.Instant},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-			},
-		})},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+		}.Ability())},
 	}
 }

@@ -34,65 +34,56 @@ var Bushwhack = &game.CardDef{
 			• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.
 			• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)
 		`,
-		SpellAbility: opt.Val(
-			game.SpellAbilityBody{
-				Text: `
-					Choose one —
-					• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.
-					• Target creature you control fights target creature you don't control.
-				`,
-				Content: game.ModalAbilityContent{
-					Modes: []game.Mode{
+		SpellAbility: opt.Val(game.ModalAbilityContent{
+			Modes: []game.Mode{
+				{
+					Text: "Search your library for a basic land card, reveal it, put it into your hand, then shuffle.",
+					Sequence: []game.Instruction{
 						{
-							Text: "Search your library for a basic land card, reveal it, put it into your hand, then shuffle.",
-							Sequence: []game.Instruction{
-								{
-									Primitive: game.Search{
-										TargetIndex: game.TargetIndexController,
-										Spec: game.SearchSpec{
-											SourceZone:  zone.Library,
-											Destination: zone.Hand,
-											CardType:    opt.Val(types.Land),
-											Supertype:   opt.Val(types.Basic),
-											Reveal:      true,
-										},
-									},
-								},
-							},
-						},
-						{
-							Text: "Target creature you control fights target creature you don't control.",
-							Sequence: []game.Instruction{
-								{
-									Primitive: game.Fight{},
-								},
-							},
-							Targets: []game.TargetSpec{
-								{
-									MinTargets: 1,
-									MaxTargets: 1,
-									Constraint: "creature you control",
-									Allow:      game.TargetAllowPermanent,
-									Predicate: game.TargetPredicate{
-										PermanentTypes: []types.Card{types.Creature},
-										Controller:     game.ControllerYou,
-									},
-								},
-								{
-									MinTargets: 1,
-									MaxTargets: 1,
-									Constraint: "creature you don't control",
-									Allow:      game.TargetAllowPermanent,
-									Predicate: game.TargetPredicate{
-										PermanentTypes: []types.Card{types.Creature},
-										Controller:     game.ControllerNotYou,
-									},
+							Primitive: game.Search{
+								TargetIndex: game.TargetIndexController,
+								Spec: game.SearchSpec{
+									SourceZone:  zone.Library,
+									Destination: zone.Hand,
+									CardType:    opt.Val(types.Land),
+									Supertype:   opt.Val(types.Basic),
+									Reveal:      true,
 								},
 							},
 						},
 					},
 				},
+				{
+					Text: "Target creature you control fights target creature you don't control.",
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Fight{},
+						},
+					},
+					Targets: []game.TargetSpec{
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "creature you control",
+							Allow:      game.TargetAllowPermanent,
+							Predicate: game.TargetPredicate{
+								PermanentTypes: []types.Card{types.Creature},
+								Controller:     game.ControllerYou,
+							},
+						},
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "creature you don't control",
+							Allow:      game.TargetAllowPermanent,
+							Predicate: game.TargetPredicate{
+								PermanentTypes: []types.Card{types.Creature},
+								Controller:     game.ControllerNotYou,
+							},
+						},
+					},
+				},
 			},
-		),
+		}),
 	},
 }

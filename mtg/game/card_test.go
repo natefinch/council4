@@ -56,20 +56,17 @@ func TestTransformFrontLandCanBePlayedAsLand(t *testing.T) {
 
 func TestCardFaceAbilityCountAndBodyAtUsesCanonicalOrder(t *testing.T) {
 	face := CardFace{
-		SpellAbility: opt.Val(SpellAbilityBody{
-			Text:    "Draw a card.",
-			Content: PlainAbilityContent{Sequence: []Instruction{{Primitive: Draw{}}}},
-		}),
+		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{Primitive: Draw{}}}}.Ability()),
 		ManaAbilities: []ManaAbilityBody{{
 			Text:    "Add one mana.",
-			Content: PlainAbilityContent{Sequence: []Instruction{{Primitive: AddMana{}}}},
+			Content: Mode{Sequence: []Instruction{{Primitive: AddMana{}}}}.Ability(),
 		}},
 		TriggeredAbilities: []TriggeredAbilityBody{{
 			Text: "When this enters, draw a card.",
 			Trigger: TriggerCondition{
 				Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield},
 			},
-			Content: PlainAbilityContent{Sequence: []Instruction{{Primitive: Draw{}}}},
+			Content: Mode{Sequence: []Instruction{{Primitive: Draw{}}}}.Ability(),
 		}},
 		ReplacementAbilities: []ReplacementAbilityBody{{
 			Text: "If this would die, exile it instead.",
@@ -83,8 +80,8 @@ func TestCardFaceAbilityCountAndBodyAtUsesCanonicalOrder(t *testing.T) {
 	if face.AbilityCount() != 5 {
 		t.Fatalf("ability count = %d, want five categorized abilities", face.AbilityCount())
 	}
-	if _, ok := face.BodyAt(0).(SpellAbilityBody); !ok {
-		t.Fatalf("BodyAt(0) = %T, want SpellAbilityBody", face.BodyAt(0))
+	if _, ok := face.BodyAt(0).(ModalAbilityContent); !ok {
+		t.Fatalf("BodyAt(0) = %T, want ModalAbilityContent", face.BodyAt(0))
 	}
 	if _, ok := face.BodyAt(1).(ManaAbilityBody); !ok {
 		t.Fatalf("BodyAt(1) = %T, want ManaAbilityBody", face.BodyAt(1))
@@ -117,7 +114,7 @@ func TestCardFaceCloneClonesSpellCosts(t *testing.T) {
 				Text: "Discard a card",
 			}},
 		}},
-		SpellAbility: opt.Val(SpellAbilityBody{Text: "Draw a card."}),
+		SpellAbility: opt.Val(ModalAbilityContent{}),
 	}
 
 	cloned := face.clone()
@@ -136,7 +133,7 @@ func TestCardFaceCloneClonesSpellCosts(t *testing.T) {
 
 func TestClearAbilitiesRemovesCategorizedAbilities(t *testing.T) {
 	face := CardFace{
-		SpellAbility:         opt.Val(SpellAbilityBody{Text: "Draw"}),
+		SpellAbility:         opt.Val(ModalAbilityContent{}),
 		ActivatedAbilities:   []ActivatedAbilityBody{{Text: "Act"}},
 		ManaAbilities:        []ManaAbilityBody{{Text: "Mana"}},
 		LoyaltyAbilities:     []LoyaltyAbilityBody{{Text: "Loyal"}},

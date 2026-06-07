@@ -427,24 +427,16 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validateTargetReference(p.TargetIndex, targets, checkTargets)
 }
 
-func validateNestedAbilityContent(content AbilityContent) error {
-	switch c := content.(type) {
-	case PlainAbilityContent:
-		return ValidateInstructionSequence(c.Sequence, c.Targets)
-	case ModalAbilityContent:
-		for i := range c.Modes {
-			targets := c.Modes[i].Targets
-			if len(targets) == 0 {
-				targets = c.SharedTargets
-			}
-			if err := ValidateInstructionSequence(c.Modes[i].Sequence, targets); err != nil {
-				return fmt.Errorf("mode %d: %w", i, err)
-			}
-		}
-		return nil
-	case nil:
+func validateNestedAbilityContent(content ModalAbilityContent) error {
+	if len(content.Modes) == 0 {
 		return errors.New("delayed trigger requires content")
-	default:
-		return fmt.Errorf("unsupported delayed-trigger content %T", content)
 	}
+	for i := range content.Modes {
+		targets := append([]TargetSpec(nil), content.SharedTargets...)
+		targets = append(targets, content.Modes[i].Targets...)
+		if err := ValidateInstructionSequence(content.Modes[i].Sequence, targets); err != nil {
+			return fmt.Errorf("mode %d: %w", i, err)
+		}
+	}
+	return nil
 }

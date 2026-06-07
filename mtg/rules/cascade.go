@@ -142,17 +142,22 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 	if !ok {
 		return false
 	}
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets)
+	if !ok {
+		panic("validated cascade spell targets could not be segmented")
+	}
 	if !player.Exile.Remove(cardID) {
 		return false
 	}
 	obj := &game.StackObject{
-		ID:          g.IDGen.Next(),
-		Kind:        game.StackSpell,
-		SourceID:    cardID,
-		Face:        game.FaceFront,
-		Controller:  playerID,
-		Targets:     append([]game.Target(nil), targets...),
-		ChosenModes: append([]int(nil), modes...),
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackSpell,
+		SourceID:     cardID,
+		Face:         game.FaceFront,
+		Controller:   playerID,
+		Targets:      append([]game.Target(nil), targets...),
+		TargetCounts: targetCounts,
+		ChosenModes:  append([]int(nil), modes...),
 	}
 	stormCopies := stormCopyCount(g, spellDef)
 	pushSpellToStack(g, obj, game.GameEvent{

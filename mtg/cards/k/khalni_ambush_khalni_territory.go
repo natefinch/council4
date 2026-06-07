@@ -31,44 +31,39 @@ var KhalniAmbush = func() *game.CardDef {
 			OracleText: `
 				Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)
 			`,
-			SpellAbility: opt.Val(game.SpellAbilityBody{
-				Text: `
-					Target creature you control fights target creature you don't control.
-				`,
-				Content: game.PlainAbilityContent{
-					Targets: []game.TargetSpec{
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature you control",
-							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{
-									types.Creature,
-								},
-								Controller: game.ControllerYou,
+			SpellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{
+								types.Creature,
 							},
-						},
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature you don't control",
-							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{
-									types.Creature,
-								},
-								Controller: game.ControllerNotYou,
-							},
+							Controller: game.ControllerYou,
 						},
 					},
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Fight{},
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature you don't control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{
+								types.Creature,
+							},
+							Controller: game.ControllerNotYou,
 						},
 					},
 				},
-			}),
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Fight{},
+					},
+				},
+			}.Ability()),
 		},
 		Layout: game.LayoutModalDFC,
 	}
@@ -91,7 +86,7 @@ var KhalniAmbush = func() *game.CardDef {
 				{T}: Add {G}.
 			`,
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.AddMana{
@@ -100,7 +95,7 @@ var KhalniAmbush = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 

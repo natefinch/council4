@@ -50,7 +50,7 @@ var KusariGama = func() *game.CardDef {
 						ManaCost: opt.Val(cost.Mana{
 							cost.O(2),
 						}),
-						Content: game.PlainAbilityContent{
+						Content: game.Mode{
 							Sequence: []game.Instruction{
 								{
 									Primitive: game.ModifyPT{
@@ -60,7 +60,7 @@ var KusariGama = func() *game.CardDef {
 									},
 								},
 							},
-						},
+						}.Ability(),
 					},
 				},
 			},
@@ -82,7 +82,7 @@ var KusariGama = func() *game.CardDef {
 					DamageRecipientCombatState: game.CombatStateBlocking,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
@@ -93,7 +93,7 @@ var KusariGama = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -106,7 +106,7 @@ var KusariGama = func() *game.CardDef {
 				cost.O(3),
 			}),
 			Timing: game.SorceryOnly,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -121,7 +121,8 @@ var KusariGama = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
+
 			KeywordAbilities: []game.KeywordAbility{
 				game.EquipKeyword{
 					Cost: cost.Mana{

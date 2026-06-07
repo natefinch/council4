@@ -60,7 +60,7 @@ var LegolasMasterArcher = func() *game.CardDef {
 					SpellTargetsSource: true,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.AddCounter{
@@ -70,7 +70,7 @@ var LegolasMasterArcher = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -94,7 +94,7 @@ var LegolasMasterArcher = func() *game.CardDef {
 				},
 			},
 			Optional: true,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 0,
@@ -121,7 +121,7 @@ var LegolasMasterArcher = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

@@ -35,7 +35,7 @@ var GravenCairns = &game.CardDef{
 					{T}: Add {C}.
 				`,
 				AdditionalCosts: cost.Tap,
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.AddMana{
@@ -44,7 +44,7 @@ var GravenCairns = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 			{
 				Text: `
@@ -54,7 +54,7 @@ var GravenCairns = &game.CardDef{
 					cost.HybridMana(mana.B, mana.R),
 				}),
 				AdditionalCosts: cost.Tap,
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Choose{
@@ -95,7 +95,7 @@ var GravenCairns = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

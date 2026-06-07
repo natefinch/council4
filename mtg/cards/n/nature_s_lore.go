@@ -30,11 +30,6 @@ var NatureSLore = &game.CardDef{
 		OracleText: `
 			Search your library for a Forest card, put that card onto the battlefield, then shuffle.
 		`,
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Text: `
-				Search your library for a Forest card, put that card onto the battlefield, then shuffle.
-			`,
-			Content: common.RampLand{SubTypes: []types.Sub{types.Forest}}.Ability(),
-		}),
+		SpellAbility: opt.Val(common.RampLand{SubTypes: []types.Sub{types.Forest}}.Ability()),
 	},
 }

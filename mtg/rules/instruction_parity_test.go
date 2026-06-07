@@ -130,14 +130,14 @@ func TestActivatedAbilityInstructionSequenceResolves(t *testing.T) {
 			Name:  "Typed Activated Ability",
 			Types: []types.Card{types.Creature},
 			ActivatedAbilities: []game.ActivatedAbilityBody{{
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{{
 						Primitive: game.Draw{
 							Amount:      game.Fixed(1),
 							TargetIndex: game.TargetIndexController,
 						},
 					}},
-				},
+				}.Ability(),
 			}},
 		},
 	})
@@ -193,11 +193,11 @@ func TestEnduringCourageInstructionReturnsAsEnchantment(t *testing.T) {
 	if !permanentHasType(g, returned, types.Enchantment) {
 		t.Fatal("returned Enduring Courage is not an enchantment")
 	}
-	content, ok := carde.EnduringCourage.TriggeredAbilities[1].Content.(game.PlainAbilityContent)
-	if !ok {
-		t.Fatal("Enduring Courage return ability does not use plain content")
+	content := carde.EnduringCourage.TriggeredAbilities[1].Content
+	if content.IsModal() || len(content.Modes) != 1 {
+		t.Fatal("Enduring Courage return ability does not use one non-modal mode")
 	}
-	primitive, ok := content.Sequence[0].Primitive.(game.PutOnBattlefield)
+	primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
 	if !ok {
 		t.Fatal("Enduring Courage return ability does not use PutOnBattlefield")
 	}

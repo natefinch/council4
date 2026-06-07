@@ -65,7 +65,7 @@ var HalanaAndAlenaPartners = func() *game.CardDef {
 					Step:       game.StepBeginningOfCombat,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -107,7 +107,7 @@ var HalanaAndAlenaPartners = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

@@ -78,7 +78,7 @@ var GimliSRecklessMight = func() *game.CardDef {
 					},
 				}),
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -115,7 +115,7 @@ var GimliSRecklessMight = func() *game.CardDef {
 						Description: "target attacking creature you control fights up to one target creature you don't control",
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

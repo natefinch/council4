@@ -144,8 +144,8 @@ func (v *cardValidator) validateFace(faceName, path string, face *game.CardFace,
 
 func (v *cardValidator) validateAbilityBody(faceName, path string, body game.AbilityBody, targets []game.TargetSpec) {
 	switch abilityBody := body.(type) {
-	case game.SpellAbilityBody:
-		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
+	case game.ModalAbilityContent:
+		v.validateAbilityContent(faceName, path, abilityBody, targets)
 	case game.ActivatedAbilityBody:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
@@ -158,7 +158,7 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
-		if abilityBody.Content != nil {
+		if len(abilityBody.Content.Modes) > 0 {
 			v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 		}
 	case game.LoyaltyAbilityBody:
@@ -201,37 +201,26 @@ func (v *cardValidator) validateReplacementAbility(faceName, path string, abilit
 	}
 }
 
-func (v *cardValidator) validateAbilityContent(faceName, path string, content game.AbilityContent, fallbackTargets []game.TargetSpec) {
-	switch abilityContent := content.(type) {
-	case game.PlainAbilityContent:
-		for i := range abilityContent.Targets {
-			v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("Targets[%d]", i)), &abilityContent.Targets[i])
+func (v *cardValidator) validateAbilityContent(faceName, path string, content game.ModalAbilityContent, fallbackTargets []game.TargetSpec) {
+	if len(content.Modes) == 0 {
+		v.add(faceName, path, IssueInvalidAbilityBody, "ability content has no modes")
+		return
+	}
+	for i := range content.SharedTargets {
+		v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("SharedTargets[%d]", i)), &content.SharedTargets[i])
+	}
+	for i := range content.Modes {
+		mode := &content.Modes[i]
+		modePath := appendPath(path, fmt.Sprintf("Modes[%d]", i))
+		for j := range mode.Targets {
+			v.validateTargetSpec(faceName, appendPath(modePath, fmt.Sprintf("Targets[%d]", j)), &mode.Targets[j])
 		}
-		targets := abilityContent.Targets
+		targets := append([]game.TargetSpec(nil), content.SharedTargets...)
+		targets = append(targets, mode.Targets...)
 		if len(targets) == 0 {
 			targets = fallbackTargets
 		}
-		v.validateInstructionSequence(faceName, appendPath(path, "Sequence"), abilityContent.Sequence, targets)
-	case game.ModalAbilityContent:
-		for i := range abilityContent.SharedTargets {
-			v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("SharedTargets[%d]", i)), &abilityContent.SharedTargets[i])
-		}
-		for i := range abilityContent.Modes {
-			mode := &abilityContent.Modes[i]
-			modePath := appendPath(path, fmt.Sprintf("Modes[%d]", i))
-			for j := range mode.Targets {
-				v.validateTargetSpec(faceName, appendPath(modePath, fmt.Sprintf("Targets[%d]", j)), &mode.Targets[j])
-			}
-			targets := mode.Targets
-			if len(targets) == 0 {
-				targets = abilityContent.SharedTargets
-			}
-			v.validateInstructionSequence(faceName, appendPath(modePath, "Sequence"), mode.Sequence, targets)
-		}
-	case nil:
-		v.add(faceName, path, IssueInvalidAbilityBody, "ability content is nil")
-	default:
-		v.add(faceName, path, IssueInvalidAbilityBody, fmt.Sprintf("unknown ability content %T", content))
+		v.validateInstructionSequence(faceName, appendPath(modePath, "Sequence"), mode.Sequence, targets)
 	}
 }
 
@@ -251,7 +240,7 @@ func (v *cardValidator) validateKeywordAbility(faceName, path string, ability ga
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case game.KickerKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
-		if keyword.BonusContent != nil {
+		if len(keyword.BonusContent.Modes) > 0 {
 			v.validateAbilityContent(faceName, appendPath(path, "BonusContent"), keyword.BonusContent, targets)
 		}
 	case game.MadnessKeyword:

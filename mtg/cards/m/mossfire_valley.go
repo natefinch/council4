@@ -33,7 +33,7 @@ var MossfireValley = &game.CardDef{
 					cost.O(1),
 				}),
 				AdditionalCosts: cost.Tap,
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.AddMana{
@@ -48,7 +48,7 @@ var MossfireValley = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

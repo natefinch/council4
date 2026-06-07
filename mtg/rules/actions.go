@@ -387,6 +387,10 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		return false
 	}
 	cast.Targets = completedTargets
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets)
+	if !ok {
+		panic("validated spell targets could not be segmented")
+	}
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, cast.XValue, agents, log)
 	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: cast.XValue, KickerPaid: cast.KickerPaid, Prefs: prefs})
 	if !ok {
@@ -405,6 +409,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		Face:                cast.Face,
 		Controller:          playerID,
 		Targets:             append([]game.Target(nil), cast.Targets...),
+		TargetCounts:        targetCounts,
 		ChosenModes:         append([]int(nil), cast.ChosenModes...),
 		XValue:              cast.XValue,
 		KickerPaid:          cast.KickerPaid,
@@ -469,7 +474,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			AbilityIndex:   activate.AbilityIndex,
 			Controller:     playerID,
 		}
-		if manaBody.Content != nil {
+		if len(manaBody.Content.Modes) > 0 {
 			e.resolveAbilityContentWithChoices(g, obj, manaBody.Content, agents, log)
 		}
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, manaBody.Timing)
@@ -1065,14 +1070,10 @@ func manaBodyInstructionSequence(body *game.ManaAbilityBody) ([]game.Instruction
 	if body == nil {
 		return nil, false
 	}
-	if body.Content == nil {
+	if len(body.Content.Modes) == 0 || body.Content.IsModal() {
 		return nil, false
 	}
-	content, ok := body.Content.(game.PlainAbilityContent)
-	if !ok {
-		return nil, false
-	}
-	return content.Sequence, true
+	return body.Content.Modes[0].Sequence, true
 }
 
 func hasTapCostOf(additionalCosts []cost.Additional) bool {

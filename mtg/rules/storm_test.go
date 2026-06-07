@@ -109,11 +109,11 @@ func TestCounteringStormCopyDoesNotMoveSourceCard(t *testing.T) {
 func simpleGainLifeInstant(name string) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: name,
 		Types: []types.Card{types.Instant},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{Sequence: []game.Instruction{
+		SpellAbility: opt.Val(game.Mode{
+			Sequence: []game.Instruction{
 				{Primitive: game.GainLife{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
-			}},
-		})},
+			},
+		}.Ability())},
 	}
 }
 
@@ -126,12 +126,10 @@ func stormGainLifeInstant() *game.CardDef {
 func stormTargetCreatureInstant() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Targeted Storm Spell",
 		Types: []types.Card{types.Instant},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
-			},
-		}),
+		SpellAbility: opt.Val(game.Mode{
+			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
+		}.Ability()),
 		StaticAbilities: []game.StaticAbilityBody{game.StormStaticBody}},
 	}
 }

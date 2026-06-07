@@ -49,7 +49,7 @@ var InfiltrationLens = func() *game.CardDef {
 				},
 			},
 			Optional: true,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Draw{
@@ -58,7 +58,7 @@ var InfiltrationLens = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -71,7 +71,7 @@ var InfiltrationLens = func() *game.CardDef {
 				cost.O(1),
 			}),
 			Timing: game.SorceryOnly,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -86,7 +86,8 @@ var InfiltrationLens = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
+
 			KeywordAbilities: []game.KeywordAbility{
 				game.EquipKeyword{
 					Cost: cost.Mana{

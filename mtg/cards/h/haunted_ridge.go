@@ -44,7 +44,7 @@ var HauntedRidge = func() *game.CardDef {
 				{T}: Add {B} or {R}.
 			`,
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Choose{
@@ -66,7 +66,7 @@ var HauntedRidge = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

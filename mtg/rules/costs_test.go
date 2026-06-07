@@ -583,12 +583,14 @@ func addSnowBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype t
 func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef, m mana.Color, amount int) *game.Permanent {
 	def.ManaAbilities = append(def.ManaAbilities, game.ManaAbilityBody{
 		AdditionalCosts: cost.Tap,
-		Content: game.PlainAbilityContent{Sequence: []game.Instruction{
-			{Primitive: game.AddMana{
-				ManaColor: m,
-				Amount:    game.Fixed(amount),
-			}},
-		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{
+				{Primitive: game.AddMana{
+					ManaColor: m,
+					Amount:    game.Fixed(amount),
+				}},
+			},
+		}.Ability(),
 	})
 	cardID := g.IDGen.Next()
 	card := &game.CardInstance{

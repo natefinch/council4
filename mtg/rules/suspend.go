@@ -136,19 +136,24 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 	if !ok {
 		return false
 	}
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets)
+	if !ok {
+		panic("validated suspended spell targets could not be segmented")
+	}
 	if !player.Exile.Remove(cardID) {
 		return false
 	}
 	delete(g.SuspendedCards, cardID)
 	obj := &game.StackObject{
-		ID:          g.IDGen.Next(),
-		Kind:        game.StackSpell,
-		SourceID:    cardID,
-		Face:        game.FaceFront,
-		Controller:  playerID,
-		Targets:     append([]game.Target(nil), targets...),
-		ChosenModes: append([]int(nil), modes...),
-		Suspend:     true,
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackSpell,
+		SourceID:     cardID,
+		Face:         game.FaceFront,
+		Controller:   playerID,
+		Targets:      append([]game.Target(nil), targets...),
+		TargetCounts: targetCounts,
+		ChosenModes:  append([]int(nil), modes...),
+		Suspend:      true,
 	}
 	pushSpellToStack(g, obj, game.GameEvent{
 		SourceID:      cardID,

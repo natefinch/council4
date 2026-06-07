@@ -186,10 +186,7 @@ func TestCounteredSpellEmitsStackToGraveyardZoneChangeButNoResolveEvent(t *testi
 		t.Fatal("source card instance not found")
 	}
 	// Set target spec on the spell's content to require a creature target
-	if content, ok := card.Def.SpellAbility.Val.Content.(game.PlainAbilityContent); ok {
-		content.Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
-		card.Def.SpellAbility.Val.Content = content
-	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
 	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
@@ -239,10 +236,10 @@ func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pinger",
 		Types: []types.Card{types.Creature},
 		ActivatedAbilities: []game.ActivatedAbilityBody{{
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "target player"}},
 				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
-			},
+			}.Ability(),
 		}}},
 	})
 	g.Stack.Push(&game.StackObject{
@@ -466,9 +463,11 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 			AdditionalCosts: []cost.Additional{
 				{Kind: cost.AdditionalPayLife, Amount: 2},
 			},
-			Content: game.PlainAbilityContent{Sequence: []game.Instruction{
-				{Primitive: game.LoseLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(3)}},
-			}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{
+					{Primitive: game.LoseLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(3)}},
+				},
+			}.Ability(),
 		}}}},
 	)
 	g.Turn.Phase = game.PhasePrecombatMain

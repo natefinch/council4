@@ -42,7 +42,7 @@ var DeathcapGlade = func() *game.CardDef {
 			{T}: Add {B} or {G}.
 		`,
 		AdditionalCosts: cost.Tap,
-		Content: game.PlainAbilityContent{
+		Content: game.Mode{
 			Sequence: []game.Instruction{
 				{
 					Primitive: game.Choose{
@@ -64,7 +64,7 @@ var DeathcapGlade = func() *game.CardDef {
 					},
 				},
 			},
-		},
+		}.Ability(),
 	})
 	return card
 }()

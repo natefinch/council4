@@ -58,7 +58,7 @@ var HunterSTalent = func() *game.CardDef {
 					Source: game.TriggerSourceSelf,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -100,7 +100,7 @@ var HunterSTalent = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -117,7 +117,7 @@ var HunterSTalent = func() *game.CardDef {
 			ActivationCondition: opt.Val(game.Condition{
 				SourceClassLevelLessThan: 2,
 			}),
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.SetClassLevel{
@@ -126,7 +126,7 @@ var HunterSTalent = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -145,7 +145,7 @@ var HunterSTalent = func() *game.CardDef {
 					SourceClassLevelAtLeast: 2,
 				}),
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -184,7 +184,7 @@ var HunterSTalent = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -202,7 +202,7 @@ var HunterSTalent = func() *game.CardDef {
 				SourceClassLevelAtLeast:  2,
 				SourceClassLevelLessThan: 3,
 			}),
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.SetClassLevel{
@@ -211,7 +211,7 @@ var HunterSTalent = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -242,7 +242,7 @@ var HunterSTalent = func() *game.CardDef {
 					SourceClassLevelAtLeast: 3,
 				}),
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Draw{
@@ -251,7 +251,7 @@ var HunterSTalent = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

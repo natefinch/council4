@@ -51,7 +51,7 @@ var EnduringCourage = &game.CardDef{
 						},
 					},
 				},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.ModifyPT{
@@ -79,7 +79,7 @@ var EnduringCourage = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 			{
 				Text: `
@@ -102,7 +102,7 @@ var EnduringCourage = &game.CardDef{
 						}),
 					}),
 				},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.PutOnBattlefield{
@@ -121,7 +121,7 @@ var EnduringCourage = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

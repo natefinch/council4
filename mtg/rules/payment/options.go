@@ -90,14 +90,6 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 	return card.KickerKeyword()
 }
 
-// firstSpellAbility returns the first spell ability from a card, if any.
-func firstSpellAbility(card *game.CardDef) (*game.SpellAbilityBody, bool) {
-	if card != nil && card.SpellAbility.Exists {
-		return &card.SpellAbility.Val, true
-	}
-	return nil, false
-}
-
 // payableSpellOptionsFromState returns all spell cost options that can currently be paid.
 func payableSpellOptionsFromState(s State, req SpellRequest) []SpellOptionSummary {
 	var result []SpellOptionSummary

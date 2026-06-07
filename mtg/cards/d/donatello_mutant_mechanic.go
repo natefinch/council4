@@ -44,7 +44,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 				`,
 				AdditionalCosts: cost.Tap,
 				Timing:          game.SorceryOnly,
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Targets: []game.TargetSpec{
 						{
 							MinTargets: 1,
@@ -93,7 +93,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 							}),
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 		TriggeredAbilities: []game.TriggeredAbilityBody{
@@ -117,7 +117,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 					InterveningIf:                          "it had counters on it",
 					InterveningIfEventPermanentHadCounters: true,
 				},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Targets: []game.TargetSpec{
 						{
 							MinTargets: 0,
@@ -136,7 +136,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 							Description: "move all counters from the triggering artifact to target",
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

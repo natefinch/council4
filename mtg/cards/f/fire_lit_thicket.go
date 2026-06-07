@@ -32,7 +32,7 @@ var FireLitThicket = &game.CardDef{
 					{T}: Add {C}.
 				`,
 				AdditionalCosts: cost.Tap,
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.AddMana{
@@ -41,7 +41,7 @@ var FireLitThicket = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 			{
 				Text: `

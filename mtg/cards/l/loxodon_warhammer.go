@@ -63,7 +63,7 @@ var LoxodonWarhammer = func() *game.CardDef {
 				cost.O(3),
 			}),
 			Timing: game.SorceryOnly,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -78,7 +78,8 @@ var LoxodonWarhammer = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
+
 			KeywordAbilities: []game.KeywordAbility{
 				game.EquipKeyword{
 					Cost: cost.Mana{

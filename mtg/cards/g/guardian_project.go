@@ -51,7 +51,7 @@ var GuardianProject = &game.CardDef{
 						EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true,
 					}),
 				},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Draw{
@@ -60,7 +60,7 @@ var GuardianProject = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

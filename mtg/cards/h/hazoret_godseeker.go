@@ -65,7 +65,7 @@ var HazoretGodseeker = func() *game.CardDef {
 					Source: game.TriggerSourceSelf,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.StartEngines{
@@ -73,7 +73,7 @@ var HazoretGodseeker = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -86,7 +86,7 @@ var HazoretGodseeker = func() *game.CardDef {
 				cost.O(1),
 			}),
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -117,7 +117,7 @@ var HazoretGodseeker = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 

@@ -48,7 +48,7 @@ var IgnobleHierarch = func() *game.CardDef {
 				{T}: Add {B}, {R}, or {G}.
 			`,
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Choose{
@@ -71,7 +71,7 @@ var IgnobleHierarch = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

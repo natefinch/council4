@@ -71,7 +71,9 @@ func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 	}
 
 	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{
-		Trigger: game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}}},
+		Trigger: game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
+		}.Ability()},
 	}, nil)
 	movePermanentToZone(g, source, zone.Graveyard)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})

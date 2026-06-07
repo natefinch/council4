@@ -59,6 +59,47 @@ func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 	}
 }
 
+func TestModalResolutionUsesEachModesOwnTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	content := game.ModalAbilityContent{
+		Modes: []game.Mode{
+			{
+				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
+				Sequence: []game.Instruction{{
+					Primitive: game.GainLife{Amount: game.Fixed(1), TargetIndex: 0},
+				}},
+			},
+			{
+				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
+				Sequence: []game.Instruction{{
+					Primitive: game.GainLife{Amount: game.Fixed(2), TargetIndex: 0},
+				}},
+			},
+		},
+		MinModes: 2,
+		MaxModes: 2,
+	}
+	obj := &game.StackObject{
+		Controller:   game.Player1,
+		Targets:      []game.Target{game.PlayerTarget(game.Player2), game.PlayerTarget(game.Player3)},
+		TargetCounts: []int{1, 1},
+		ChosenModes:  []int{0, 1},
+	}
+
+	engine.resolveAbilityContentWithChoices(g, obj, content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if got := g.Players[game.Player2].Life; got != 41 {
+		t.Fatalf("first mode target life = %d, want 41", got)
+	}
+	if got := g.Players[game.Player3].Life; got != 42 {
+		t.Fatalf("second mode target life = %d, want 42", got)
+	}
+	if len(obj.Targets) != 2 {
+		t.Fatalf("stack targets were not restored: %+v", obj.Targets)
+	}
+}
+
 func TestCantGainLifeRuleEffectStopsLifeGainAndLifelink(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -151,17 +192,15 @@ func TestDynamicAmountCanUsePreviousInstructionResult(t *testing.T) {
 		ID: sourceID,
 		Def: &game.CardDef{CardFace: game.CardFace{Name: "Linked Amount Spell",
 			Types: []types.Card{types.Sorcery},
-			SpellAbility: opt.Val(game.SpellAbilityBody{
-				Content: game.PlainAbilityContent{
-					Sequence: []game.Instruction{
-						{Primitive: game.GainLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(3)}, PublishResult: "that-much"},
-						{Primitive: game.LoseLife{
-							TargetIndex: 0,
-							Amount:      game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountPreviousEffectResult, ResultKey: "that-much"}),
-						}},
-					},
+			SpellAbility: opt.Val(game.Mode{
+				Sequence: []game.Instruction{
+					{Primitive: game.GainLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(3)}, PublishResult: "that-much"},
+					{Primitive: game.LoseLife{
+						TargetIndex: 0,
+						Amount:      game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountPreviousEffectResult, ResultKey: "that-much"}),
+					}},
 				},
-			})},
+			}.Ability())},
 		},
 		Owner: game.Player1,
 	}
@@ -426,7 +465,7 @@ func commandTowerLikeLand() *game.CardDef {
 		ManaAbilities: []game.ManaAbilityBody{{
 			Text:            "{T}: Add one mana of any color in your commander's color identity.",
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Choose{
@@ -445,7 +484,7 @@ func commandTowerLikeLand() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		}}},
 	}
 }
@@ -1708,11 +1747,9 @@ func addInstructionSpellToStackForController(g *game.Game, controller game.Playe
 		ID: sourceID,
 		Def: &game.CardDef{CardFace: game.CardFace{Name: "Effect Spell",
 			Types: []types.Card{types.Sorcery},
-			SpellAbility: opt.Val(game.SpellAbilityBody{
-				Content: game.PlainAbilityContent{
-					Sequence: append([]game.Instruction(nil), instructions...),
-				},
-			})},
+			SpellAbility: opt.Val(game.Mode{
+				Sequence: append([]game.Instruction(nil), instructions...),
+			}.Ability())},
 		},
 		Owner: controller,
 	}

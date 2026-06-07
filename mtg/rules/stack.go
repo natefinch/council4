@@ -104,7 +104,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, activatedBody, obj.Controller, obj.Targets) {
 			return "countered by rules"
 		}
-		if activatedBody.Content != nil {
+		if len(activatedBody.Content.Modes) > 0 {
 			e.resolveAbilityContentWithChoices(g, obj, activatedBody.Content, agents, log)
 		}
 		return "resolved"
@@ -116,7 +116,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, loyaltyBody, obj.Controller, obj.Targets) {
 		return "countered by rules"
 	}
-	if loyaltyBody.Content != nil {
+	if len(loyaltyBody.Content.Modes) > 0 {
 		e.resolveAbilityContentWithChoices(g, obj, loyaltyBody.Content, agents, log)
 		return "resolved"
 	}

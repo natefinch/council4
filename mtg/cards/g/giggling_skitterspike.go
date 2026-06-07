@@ -52,7 +52,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 					Source: game.TriggerSourceSelf,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
@@ -66,7 +66,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -82,7 +82,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 					Source: game.TriggerSourceSelf,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
@@ -96,7 +96,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -114,7 +114,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 					StackObjectKind:      game.StackSpell,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
@@ -128,7 +128,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -141,7 +141,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 				cost.O(5),
 			}),
 			Timing: game.SorceryOnly,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Monstrosity{
@@ -150,7 +150,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

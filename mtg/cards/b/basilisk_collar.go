@@ -61,7 +61,7 @@ var BasiliskCollar = func() *game.CardDef {
 				cost.O(2),
 			}),
 			Timing: game.SorceryOnly,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -76,7 +76,8 @@ var BasiliskCollar = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
+
 			KeywordAbilities: []game.KeywordAbility{
 				game.EquipKeyword{
 					Cost: cost.Mana{

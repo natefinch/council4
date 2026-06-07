@@ -77,7 +77,7 @@ Card source definitions use the **categorized fields** on `CardFace` directly. T
 
 ```go
 // CardFace categorized ability fields:
-SpellAbility      opt.V[SpellAbilityBody]    // instants/sorceries — at most one
+SpellAbility      opt.V[ModalAbilityContent] // instants/sorceries — at most one
 ActivatedAbilities []ActivatedAbilityBody   // "[Cost]: [Effect]" abilities
 ManaAbilities      []ManaAbilityBody        // mana abilities (subset of activated, no targets)
 LoyaltyAbilities   []LoyaltyAbilityBody     // planeswalker +/−/0 abilities
@@ -573,16 +573,16 @@ Do not smash multiple plain keywords into one ad-hoc body; use `game.SimpleKeywo
 For keywords with parameters, use the typed field on a `StaticAbilityBody` (or the appropriate body type):
 - **Protection from [color]**: `StaticAbilityBody{KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{color.Red}}}}`
 - **Ward {N}**: `StaticAbilityBody{KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(N)}}}}`
-- **Equip {N}**: `ActivatedAbilityBody{Text: "Equip {N}", ManaCost: opt.Val(cost.Mana{cost.O(N)}), Timing: game.SorceryOnly, KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}, Content: game.PlainAbilityContent{Targets: []game.TargetSpec{{...}}}}`
+- **Equip {N}**: `ActivatedAbilityBody{Text: "Equip {N}", ManaCost: opt.Val(cost.Mana{cost.O(N)}), Timing: game.SorceryOnly, KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}, Content: game.Mode{Targets: []game.TargetSpec{{...}}}.Ability()}`
 - **Cycling {N}**: `ActivatedAbilityBody{Text: "Cycling {N}", ManaCost: opt.Val(cost.Mana{...}), AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalDiscard, Text: "Discard this card", Source: zone.Hand}}, KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}}`
 - **Prowess**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Prowess)}`; the rules engine creates the implicit trigger (CR 702.108)
 - **Flashback {cost}**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Flashback)}` plus `AlternativeCosts: []cost.Alternative{{Label: "Flashback", ManaCost: opt.Val(...)}}` on `CardFace`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 
 #### Spell abilities (instants/sorceries)
 
-Set `SpellAbility: opt.Val(game.SpellAbilityBody{...})`:
-- `Text:` full oracle text
-- `Content`: `PlainAbilityContent{Targets: [...], Sequence: [...]}` or `ModalAbilityContent{Modes: [...]}`
+Set `SpellAbility` directly to the spell's resolving content:
+- `opt.Val(game.Mode{Targets: [...], Sequence: [...]}.Ability())` for ordinary abilities
+- `opt.Val(game.ModalAbilityContent{Modes: [...], MinModes: ..., MaxModes: ...})` for a real mode choice
 - Extract `Targets` from "target [constraint]" phrases
 - Extract typed `Instruction` primitives from the action verbs (see Primitive Mapping below)
 - For modal text (`Choose one —`, `Choose two —`, `Choose one or both —`,
@@ -590,10 +590,10 @@ Set `SpellAbility: opt.Val(game.SpellAbilityBody{...})`:
   choice count. Leave `MinModes` and `MaxModes` at zero only for legacy
   choose-one mode lists.
 
-**Spell casting costs** live on `CardFace`, not `SpellAbilityBody`:
+**Spell casting costs** live on `CardFace`, not `SpellAbility`:
 - `CardFace.AdditionalCosts []cost.Additional` — extra costs paid alongside the mana cost (sacrifice, discard-as-cost, etc.)
 - `CardFace.AlternativeCosts []cost.Alternative` — costs that replace the mana cost (flashback, overload, etc.)
-- `SpellAbilityBody` holds only `Text` and `Content`; do **not** set `AdditionalCosts` or `AlternativeCosts` on the body.
+- `SpellAbility` contains only resolving content; do **not** put casting costs in it.
 
 #### Activated abilities
 
@@ -713,24 +713,19 @@ Use natural-language descriptions matching the oracle text:
 Oracle text: `Lightning Bolt deals 3 damage to any target.`
 
 ```go
-SpellAbility: opt.Val(game.SpellAbilityBody{
-    Text: `
-        Lightning Bolt deals 3 damage to any target.
-    `,
-    Content: game.PlainAbilityContent{
-        Targets: []game.TargetSpec{
-            {MinTargets: 1, MaxTargets: 1, Constraint: "any target"},
-        },
-        Sequence: []game.Instruction{
-            {
-                Primitive: game.Damage{
-                    Amount:    game.Fixed(3),
-                    Recipient: game.TargetRecipient(0),
-                },
+SpellAbility: opt.Val(game.Mode{
+    Targets: []game.TargetSpec{
+        {MinTargets: 1, MaxTargets: 1, Constraint: "any target"},
+    },
+    Sequence: []game.Instruction{
+        {
+            Primitive: game.Damage{
+                Amount:    game.Fixed(3),
+                Recipient: game.TargetRecipient(0),
             },
         },
     },
-}),
+}.Ability()),
 ```
 
 ### Example 2: Sol Ring (mana ability)
@@ -744,7 +739,7 @@ ManaAbilities: []game.ManaAbilityBody{
             {T}: Add {C}{C}.
         `,
         AdditionalCosts: cost.Tap,
-        Content: game.PlainAbilityContent{
+        Content: game.Mode{
             Sequence: []game.Instruction{
                 {
                     Primitive: game.AddMana{
@@ -753,7 +748,7 @@ ManaAbilities: []game.ManaAbilityBody{
                     },
                 },
             },
-        },
+        }.Ability(),
     },
 },
 ```

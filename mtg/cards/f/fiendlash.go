@@ -73,7 +73,7 @@ var Fiendlash = func() *game.CardDef {
 					DamageRecipient: game.DamageRecipientPermanent,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -105,7 +105,7 @@ var Fiendlash = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -119,7 +119,7 @@ var Fiendlash = func() *game.CardDef {
 				cost.R,
 			}),
 			Timing: game.SorceryOnly,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -134,7 +134,8 @@ var Fiendlash = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
+
 			KeywordAbilities: []game.KeywordAbility{
 				game.EquipKeyword{
 					Cost: cost.Mana{

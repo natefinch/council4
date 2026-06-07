@@ -43,67 +43,62 @@ var NibelheimAflame = &game.CardDef{
 			Choose target creature you control. It deals damage equal to its power to each other creature. If this spell was cast from a graveyard, discard your hand and draw four cards.
 			Flashback {5}{R}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
 		`,
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Text: `
-				Choose target creature you control. It deals damage equal to its power to each other creature. If this spell was cast from a graveyard, discard your hand and draw four cards.
-			`,
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "creature you control",
-						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
-								types.Creature,
-							},
-							Controller: game.ControllerYou,
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{
+				{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Constraint: "creature you control",
+					Allow:      game.TargetAllowPermanent,
+					Predicate: game.TargetPredicate{
+						PermanentTypes: []types.Card{
+							types.Creature,
 						},
-					},
-				},
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Damage{
-							Amount: game.Dynamic(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
-							}),
-							Recipient: game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
-						},
-						Description: "target creature deals damage equal to its power to each other creature",
-					},
-					{
-						Primitive: game.Discard{
-							Amount: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountControllerHandSize,
-							}),
-							TargetIndex: game.TargetIndexController,
-						},
-						Condition: opt.Val(game.EffectCondition{
-							Condition: opt.Val(game.Condition{
-								CastFromZone: opt.Val(zone.Graveyard),
-							}),
-						}),
-					},
-					{
-						Primitive: game.Draw{
-							Amount:      game.Fixed(4),
-							TargetIndex: game.TargetIndexController,
-						},
-						Condition: opt.Val(game.EffectCondition{
-							Condition: opt.Val(game.Condition{
-								CastFromZone: opt.Val(zone.Graveyard),
-							}),
-						}),
+						Controller: game.ControllerYou,
 					},
 				},
 			},
-		}),
+			Sequence: []game.Instruction{
+				{
+					Primitive: game.Damage{
+						Amount: game.Dynamic(game.DynamicAmount{
+							Kind:        game.DynamicAmountTargetPower,
+							TargetIndex: 0,
+						}),
+						Recipient: game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
+						DamageSource: opt.Val(game.ObjectReference{
+							Kind:        game.ObjectReferenceTargetPermanent,
+							TargetIndex: 0,
+						}),
+					},
+					Description: "target creature deals damage equal to its power to each other creature",
+				},
+				{
+					Primitive: game.Discard{
+						Amount: game.Dynamic(game.DynamicAmount{
+							Kind: game.DynamicAmountControllerHandSize,
+						}),
+						TargetIndex: game.TargetIndexController,
+					},
+					Condition: opt.Val(game.EffectCondition{
+						Condition: opt.Val(game.Condition{
+							CastFromZone: opt.Val(zone.Graveyard),
+						}),
+					}),
+				},
+				{
+					Primitive: game.Draw{
+						Amount:      game.Fixed(4),
+						TargetIndex: game.TargetIndexController,
+					},
+					Condition: opt.Val(game.EffectCondition{
+						Condition: opt.Val(game.Condition{
+							CastFromZone: opt.Val(zone.Graveyard),
+						}),
+					}),
+				},
+			},
+		}.Ability()),
 		StaticAbilities: []game.StaticAbilityBody{
 			{
 				Text: `

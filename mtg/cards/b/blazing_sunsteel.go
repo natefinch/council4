@@ -68,7 +68,7 @@ var BlazingSunsteel = func() *game.CardDef {
 					DamageRecipient: game.DamageRecipientPermanent,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -91,7 +91,7 @@ var BlazingSunsteel = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -104,7 +104,7 @@ var BlazingSunsteel = func() *game.CardDef {
 				cost.O(4),
 			}),
 			Timing: game.SorceryOnly,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -119,7 +119,8 @@ var BlazingSunsteel = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
+
 			KeywordAbilities: []game.KeywordAbility{
 				game.EquipKeyword{
 					Cost: cost.Mana{

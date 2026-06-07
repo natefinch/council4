@@ -72,7 +72,7 @@ var BugenhagenWiseElder = func() *game.CardDef {
 					},
 				}),
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Draw{
@@ -81,7 +81,7 @@ var BugenhagenWiseElder = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 

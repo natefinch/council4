@@ -31,7 +31,7 @@ var Arena = &game.CardDef{
 					cost.O(3),
 				}),
 				AdditionalCosts: cost.Tap,
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Targets: []game.TargetSpec{
 						{
 							MinTargets: 1,
@@ -74,7 +74,7 @@ var Arena = &game.CardDef{
 							Primitive: game.Fight{},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

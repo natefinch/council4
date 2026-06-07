@@ -192,11 +192,9 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 	g.Turn.Step = game.StepNone
 	verge := addCombatPermanent(g, game.Player1, conditionalRedManaLand())
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Red Spell",
-		ManaCost: opt.Val(cost.Mana{cost.R}),
-		Types:    []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Text: "Do nothing.",
-		})},
+		ManaCost:     opt.Val(cost.Mana{cost.R}),
+		Types:        []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.ModalAbilityContent{})},
 	})
 
 	if containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
@@ -340,10 +338,12 @@ func conditionalRedManaLand() *game.CardDef {
 				},
 			}),
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.AddMana{
-				Amount:    game.Fixed(1),
-				ManaColor: mana.R,
-			}}}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.AddMana{
+					Amount:    game.Fixed(1),
+					ManaColor: mana.R,
+				}}},
+			}.Ability(),
 		}}},
 	}
 }
@@ -369,7 +369,9 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 					},
 				}),
 			},
-			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
+			}.Ability(),
 		}}},
 	})
 }

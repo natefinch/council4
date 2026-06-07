@@ -36,13 +36,11 @@ func TestCardImplementationHandlesSpellResolutionThroughContext(t *testing.T) {
 	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Hand-Written Draw Burn",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/draw-burn",
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{
-					{MinTargets: 1, MaxTargets: 1, Constraint: "target player"},
-				},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{
+				{MinTargets: 1, MaxTargets: 1, Constraint: "target player"},
 			},
-		})},
+		}.Ability())},
 	}, []game.Target{game.PlayerTarget(game.Player2)})
 	log := TurnLog{}
 
@@ -80,13 +78,11 @@ func TestCardImplementationUsesNormalDamagePreventionHelpers(t *testing.T) {
 	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Hand-Written Permanent Burn",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/permanent-damage",
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{
-					{MinTargets: 1, MaxTargets: 1, Constraint: "target creature"},
-				},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{
+				{MinTargets: 1, MaxTargets: 1, Constraint: "target creature"},
 			},
-		})},
+		}.Ability())},
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -113,7 +109,7 @@ func TestUnregisteredCardImplementationPanics(t *testing.T) {
 	addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Missing Implementation",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/missing",
-		SpellAbility:     opt.Val(game.SpellAbilityBody{})},
+		SpellAbility:     opt.Val(game.ModalAbilityContent{})},
 	}, nil)
 
 	defer func() {

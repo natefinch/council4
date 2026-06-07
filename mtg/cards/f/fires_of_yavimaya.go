@@ -63,7 +63,7 @@ var FiresOfYavimaya = func() *game.CardDef {
 					Kind: cost.AdditionalSacrificeSource,
 				},
 			},
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -87,7 +87,7 @@ var FiresOfYavimaya = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

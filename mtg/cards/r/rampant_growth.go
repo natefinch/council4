@@ -30,11 +30,6 @@ var RampantGrowth = &game.CardDef{
 		OracleText: `
 			Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.
 		`,
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Text: `
-				Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.
-			`,
-			Content: common.RampLand{Tapped: true, Basic: true}.Ability(),
-		}),
+		SpellAbility: opt.Val(common.RampLand{Tapped: true, Basic: true}.Ability()),
 	},
 }

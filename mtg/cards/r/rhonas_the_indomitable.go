@@ -90,7 +90,7 @@ var RhonasTheIndomitable = func() *game.CardDef {
 				cost.O(2),
 				cost.G,
 			}),
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -128,7 +128,7 @@ var RhonasTheIndomitable = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 	return card

@@ -58,16 +58,16 @@ func TestEternalizeActivatedBodyBuildsKeywordActivation(t *testing.T) {
 	if !ActivatedBodyEternalize(body) {
 		t.Fatal("ActivatedBodyEternalize() = false")
 	}
-	content, ok := body.Content.(PlainAbilityContent)
-	if !ok {
-		t.Fatalf("body content = %T, want PlainAbilityContent", body.Content)
+	if body.Content.IsModal() || len(body.Content.Modes) != 1 {
+		t.Fatalf("body content = %+v, want one non-modal mode", body.Content)
 	}
-	if len(content.Sequence) != 1 {
-		t.Fatalf("sequence = %+v, want one create-token instruction", content.Sequence)
+	sequence := body.Content.Modes[0].Sequence
+	if len(sequence) != 1 {
+		t.Fatalf("sequence = %+v, want one create-token instruction", sequence)
 	}
-	prim, ok := content.Sequence[0].Primitive.(CreateToken)
+	prim, ok := sequence[0].Primitive.(CreateToken)
 	if !ok {
-		t.Fatalf("primitive = %T, want CreateToken", content.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want CreateToken", sequence[0].Primitive)
 	}
 	spec, ok := prim.Source.TokenCopy()
 	if !ok {
@@ -95,7 +95,7 @@ func TestBodyAccessors(t *testing.T) {
 		ZoneOfFunction:      zone.Graveyard,
 		Timing:              SorceryOnly,
 		ActivationCondition: activationCondition,
-		Content:             PlainAbilityContent{Targets: targets},
+		Content:             Mode{Targets: targets}.Ability(),
 		KeywordAbilities:    []KeywordAbility{EquipKeyword{Cost: cost.Mana{cost.O(2)}}},
 	}
 
@@ -120,6 +120,25 @@ func TestBodyAccessors(t *testing.T) {
 	loyalty := LoyaltyAbilityBody{LoyaltyCost: -2}
 	if BodyLoyaltyCost(loyalty) != -2 {
 		t.Fatalf("BodyLoyaltyCost = %d, want -2", BodyLoyaltyCost(loyalty))
+	}
+}
+
+func TestModalAbilityContentIsModal(t *testing.T) {
+	ordinary := Mode{Text: "Draw a card."}.Ability()
+	if ordinary.IsModal() {
+		t.Fatal("one required mode was treated as modal")
+	}
+	if ordinary.MinModes != 1 || ordinary.MaxModes != 1 || len(ordinary.Modes) != 1 {
+		t.Fatalf("Mode.Ability() = %+v, want one required mode", ordinary)
+	}
+
+	modal := ModalAbilityContent{
+		Modes:    []Mode{{Text: "First"}, {Text: "Second"}},
+		MinModes: 1,
+		MaxModes: 1,
+	}
+	if !modal.IsModal() {
+		t.Fatal("multiple modes were treated as non-modal")
 	}
 }
 

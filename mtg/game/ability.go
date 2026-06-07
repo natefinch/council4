@@ -438,7 +438,7 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 			Kind: cost.AdditionalExileSource,
 			Text: "Exile this card from your graveyard",
 		}},
-		Content: PlainAbilityContent{Sequence: []Instruction{{
+		Content: Mode{Sequence: []Instruction{{
 			Primitive: CreateToken{
 				Amount: Fixed(1),
 				Source: TokenCopyOf(TokenCopySpec{
@@ -450,7 +450,8 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 					NoManaCost:   true,
 				}),
 			},
-		}}},
+		}}}.Ability(),
+
 		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Eternalize}},
 	}
 }
@@ -542,9 +543,19 @@ type Mode struct {
 	// Text is the oracle text of this mode.
 	Text string
 
-	// Sequence is the typed instruction sequence this mode produces.
-	Sequence []Instruction
-
 	// Targets are the targeting requirements of this mode.
 	Targets []TargetSpec
+
+	// Sequence is the typed instruction sequence this mode produces.
+	Sequence []Instruction
+}
+
+// Ability creates ordinary non-modal ability content from this mode.
+func (m Mode) Ability() ModalAbilityContent {
+	return ModalAbilityContent{
+		Modes:               []Mode{m},
+		MinModes:            1,
+		MaxModes:            1,
+		AllowDuplicateModes: false,
+	}
 }

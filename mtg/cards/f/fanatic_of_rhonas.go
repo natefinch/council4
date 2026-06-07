@@ -48,7 +48,7 @@ var FanaticOfRhonas = func() *game.CardDef {
 				{T}: Add {G}.
 			`,
 			AdditionalCosts: cost.Tap,
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.AddMana{
@@ -57,7 +57,7 @@ var FanaticOfRhonas = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 
@@ -79,7 +79,7 @@ var FanaticOfRhonas = func() *game.CardDef {
 					}),
 				},
 			}),
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.AddMana{
@@ -88,7 +88,7 @@ var FanaticOfRhonas = func() *game.CardDef {
 						},
 					},
 				},
-			},
+			}.Ability(),
 		},
 	)
 

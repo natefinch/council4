@@ -27,7 +27,7 @@ const (
 type DelayedTriggerDef struct {
 	Timing   DelayedTriggerTiming
 	Optional bool
-	Content  AbilityContent
+	Content  ModalAbilityContent
 }
 
 // DelayedTrigger is a runtime delayed triggered ability waiting for its timing

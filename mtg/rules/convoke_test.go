@@ -137,7 +137,7 @@ func convokeSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Convoke Spell",
 		Types:           []types.Card{types.Sorcery},
 		ManaCost:        opt.Val(manaCost),
-		SpellAbility:    opt.Val(game.SpellAbilityBody{}),
+		SpellAbility:    opt.Val(game.ModalAbilityContent{}),
 		StaticAbilities: []game.StaticAbilityBody{game.ConvokeStaticBody}},
 	}
 }
@@ -153,7 +153,9 @@ func greenManaCreature() *game.CardDef {
 				Kind: cost.AdditionalTap,
 				Text: "{T}",
 			}},
-			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.AddMana{ManaColor: mana.G, Amount: game.Fixed(1)}}}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.AddMana{ManaColor: mana.G, Amount: game.Fixed(1)}}},
+			}.Ability(),
 		}}},
 	}
 }

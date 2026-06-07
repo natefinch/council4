@@ -15,6 +15,23 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestSingleModeContentDoesNotRequireModeChoice(t *testing.T) {
+	content := game.Mode{
+		Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
+	}.Ability()
+
+	choices := modeChoicesForContent(content)
+	if len(choices) != 1 || len(choices[0]) != 0 {
+		t.Fatalf("mode choices = %+v, want one choice with no selected modes", choices)
+	}
+	if !modesValidForContent(content, nil) {
+		t.Fatal("single-mode content rejected an empty mode choice")
+	}
+	if modesValidForContent(content, []int{0}) {
+		t.Fatal("single-mode content required an explicit mode selection")
+	}
+}
+
 func TestPlayerTargetedSpellCreatesOneLegalActionPerAlivePlayer(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -446,7 +463,7 @@ func TestAnotherTargetPredicateExcludesSourcePermanent(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Source Creature",
 		Types: []types.Card{types.Creature},
 		ActivatedAbilities: []game.ActivatedAbilityBody{{
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{{
 					MinTargets: 1,
 					MaxTargets: 1,
@@ -458,7 +475,7 @@ func TestAnotherTargetPredicateExcludesSourcePermanent(t *testing.T) {
 					},
 				}},
 				Sequence: []game.Instruction{{Primitive: game.Tap{TargetIndex: 0}}},
-			},
+			}.Ability(),
 		}}},
 	})
 	other := addCreaturePermanent(g, game.Player1)
@@ -526,10 +543,7 @@ func TestPermanentTargetThatLeavesBeforeResolutionCountersSpellByRules(t *testin
 		t.Fatal("source card instance not found")
 	}
 	// Set target spec on the spell's content to require a creature target
-	if content, ok := card.Def.SpellAbility.Val.Content.(game.PlainAbilityContent); ok {
-		content.Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
-		card.Def.SpellAbility.Val.Content = content
-	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
 	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
@@ -558,10 +572,7 @@ func TestPermanentTargetedDamageMarksDamageOnResolution(t *testing.T) {
 		t.Fatal("source card instance not found")
 	}
 	// Set target spec on the spell's content to require a creature target
-	if content, ok := card.Def.SpellAbility.Val.Content.(game.PlainAbilityContent); ok {
-		content.Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
-		card.Def.SpellAbility.Val.Content = content
-	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -585,7 +596,7 @@ func TestTargetChoiceKindsAtActionEnumerationLevel(t *testing.T) {
 			setupSpell: func() *game.CardDef {
 				return &game.CardDef{CardFace: game.CardFace{Name: "Shock No Target",
 					Types:        []types.Card{types.Sorcery},
-					SpellAbility: opt.Val(game.SpellAbilityBody{})},
+					SpellAbility: opt.Val(game.ModalAbilityContent{})},
 				}
 			},
 			setupBoard:      func(g *game.Game) {},
@@ -652,10 +663,10 @@ func TestInvalidTargetSpecAbilityProducesNoActivateActions(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Broken Ability Source",
 		Types: []types.Card{types.Creature},
 		ActivatedAbilities: []game.ActivatedAbilityBody{{
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets:  []game.TargetSpec{{MinTargets: 3, MaxTargets: 1, Constraint: "creature"}},
 				Sequence: []game.Instruction{{Primitive: game.Tap{TargetIndex: 0}}},
-			},
+			}.Ability(),
 		}}},
 	})
 	addCreaturePermanent(g, game.Player2)
@@ -764,11 +775,11 @@ func TestOpponentChosenTargetSlotFallsBackDeterministically(t *testing.T) {
 func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := opponentChosenTargetAbilitySource()
-	content, ok := source.ActivatedAbilities[0].Content.(game.PlainAbilityContent)
-	if !ok || len(content.Targets) < 2 {
+	content := source.ActivatedAbilities[0].Content
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Targets) < 2 {
 		t.Fatal("source card missing expected ability targets")
 	}
-	spec := content.Targets[1]
+	spec := content.Modes[0].Targets[1]
 	hexproof := addHexproofPermanent(g, game.Player2)
 	normal := addCreaturePermanent(g, game.Player2)
 
@@ -784,12 +795,10 @@ func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 
 func playerDamageSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
-				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}}},
-			},
-		})},
+		SpellAbility: opt.Val(game.Mode{
+			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
+			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}}},
+		}.Ability())},
 	}
 }
 
@@ -811,11 +820,9 @@ func permanentTargetSpellWithSpecs(specs []game.TargetSpec) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Permanent Target Spell",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets: specs,
-			},
-		})},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: specs,
+		}.Ability())},
 	}
 }
 
@@ -823,7 +830,7 @@ func opponentChosenTargetAbilitySource() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Arena-like Land",
 		Types: []types.Card{types.Land},
 		ActivatedAbilities: []game.ActivatedAbilityBody{{
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -850,7 +857,7 @@ func opponentChosenTargetAbilitySource() *game.CardDef {
 					{Primitive: game.Tap{TargetIndex: 1}},
 					{Primitive: game.Fight{}},
 				},
-			},
+			}.Ability(),
 		}}},
 	}
 }

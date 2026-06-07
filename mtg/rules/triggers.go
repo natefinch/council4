@@ -254,8 +254,10 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		Duration:       game.DurationUntilEndOfTurn,
 	}}
 	return &game.TriggeredAbilityBody{
-		Text:    "Prowess",
-		Content: game.PlainAbilityContent{Sequence: []game.Instruction{instr}},
+		Text: "Prowess",
+		Content: game.Mode{
+			Sequence: []game.Instruction{instr},
+		}.Ability(),
 	}, true
 }
 
@@ -273,8 +275,10 @@ func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		Duration:       game.DurationUntilEndOfTurn,
 	}}
 	return &game.TriggeredAbilityBody{
-		Text:             "Exalted",
-		Content:          game.PlainAbilityContent{Sequence: []game.Instruction{instr}},
+		Text: "Exalted",
+		Content: game.Mode{
+			Sequence: []game.Instruction{instr},
+		}.Ability(),
 		KeywordAbilities: game.SimpleKeywords(game.Exalted),
 	}, true
 }

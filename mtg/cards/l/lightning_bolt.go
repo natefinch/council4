@@ -28,27 +28,22 @@ var LightningBolt = &game.CardDef{
 		OracleText: `
 			Lightning Bolt deals 3 damage to any target.
 		`,
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Text: `
-				Lightning Bolt deals 3 damage to any target.
-			`,
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "any target",
-					},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{
+				{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Constraint: "any target",
 				},
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(3),
-							Recipient: game.TargetRecipient(0),
-						},
+			},
+			Sequence: []game.Instruction{
+				{
+					Primitive: game.Damage{
+						Amount:    game.Fixed(3),
+						Recipient: game.TargetRecipient(0),
 					},
 				},
 			},
-		}),
+		}.Ability()),
 	},
 }

@@ -69,14 +69,12 @@ func TestValidateCardReportsTypedInstructionTargetIndexOutOfRange(t *testing.T) 
 	card := &game.CardDef{CardFace: game.CardFace{
 		Name:       "Bad Typed Target",
 		OracleText: "Destroy target creature.",
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1}},
-				Sequence: []game.Instruction{{
-					Primitive: game.Destroy{TargetIndex: 1},
-				}},
-			},
-		}),
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1}},
+			Sequence: []game.Instruction{{
+				Primitive: game.Destroy{TargetIndex: 1},
+			}},
+		}.Ability()),
 	}}
 
 	issues := ValidateCard(card, ValidationOptions{})
@@ -110,15 +108,15 @@ func TestValidateCardReportsTypedSearchProblems(t *testing.T) {
 			card := &game.CardDef{CardFace: game.CardFace{
 				Name:       "Bad Search",
 				OracleText: "Search your library.",
-				SpellAbility: opt.Val(game.SpellAbilityBody{
-					Content: game.PlainAbilityContent{Sequence: []game.Instruction{{
+				SpellAbility: opt.Val(game.Mode{
+					Sequence: []game.Instruction{{
 						Primitive: game.Search{
 							Amount:      game.Fixed(1),
 							TargetIndex: game.TargetIndexController,
 							Spec:        tt.spec,
 						},
-					}}},
-				}),
+					}},
+				}.Ability()),
 			}}
 
 			issues := ValidateCard(card, ValidationOptions{})
@@ -133,16 +131,18 @@ func TestValidateCardChecksDelayedTriggerContent(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{
 		Name:       "Bad Delayed Trigger",
 		OracleText: "At the beginning of the next end step, destroy target creature.",
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{
+		SpellAbility: opt.Val(game.Mode{
+			Sequence: []game.Instruction{{
 				Primitive: game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 					Timing: game.DelayedAtBeginningOfNextEndStep,
-					Content: game.PlainAbilityContent{Sequence: []game.Instruction{{
-						Primitive: game.Destroy{TargetIndex: 0},
-					}}},
+					Content: game.Mode{
+						Sequence: []game.Instruction{{
+							Primitive: game.Destroy{TargetIndex: 0},
+						}},
+					}.Ability(),
 				}},
-			}}},
-		}),
+			}},
+		}.Ability()),
 	}}
 
 	issues := ValidateCard(card, ValidationOptions{})
@@ -154,13 +154,11 @@ func TestValidateCardChecksDelayedTriggerContent(t *testing.T) {
 func TestValidateCardReportsInvalidTargetSpec(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Bad Target Spec",
 		OracleText: "Destroy up to negative one target creature.",
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{
-					{MinTargets: 2, MaxTargets: 1},
-				},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{
+				{MinTargets: 2, MaxTargets: 1},
 			},
-		}),
+		}.Ability()),
 	}}
 
 	issues := ValidateCard(card, ValidationOptions{})
@@ -197,11 +195,9 @@ func TestValidateCardReportsInvalidTargetChooserSpec(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			card := &game.CardDef{CardFace: game.CardFace{Name: "Bad Target Chooser",
 				OracleText: "Tap target creature.",
-				SpellAbility: opt.Val(game.SpellAbilityBody{
-					Content: game.PlainAbilityContent{
-						Targets: []game.TargetSpec{tt.spec},
-					},
-				}),
+				SpellAbility: opt.Val(game.Mode{
+					Targets: []game.TargetSpec{tt.spec},
+				}.Ability()),
 			}}
 
 			issues := ValidateCard(card, ValidationOptions{})
@@ -246,18 +242,14 @@ func TestValidateCardChecksAlternateFace(t *testing.T) {
 func TestValidateCardChecksDoubleFacedRootFieldsAndBack(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Double Faced",
 		OracleText: "Root text.",
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 1}}},
-			},
-		})}, Back: opt.Val(game.CardFace{
+		SpellAbility: opt.Val(game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 1}}},
+		}.Ability())}, Back: opt.Val(game.CardFace{
 		Name:       "Back",
 		OracleText: "Draw a card.",
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Content: game.PlainAbilityContent{
-				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
-			},
-		}),
+		SpellAbility: opt.Val(game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
+		}.Ability()),
 	}),
 	}
 
@@ -272,11 +264,12 @@ func TestValidateCardChecksStructuredConditionObjectReferences(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Bad Condition",
 		OracleText: "Whenever a creature dies, if it was targeted, draw a card.",
 		TriggeredAbilities: []game.TriggeredAbilityBody{{
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{MinTargets: 1, MaxTargets: 1},
 				},
-			},
+			}.Ability(),
+
 			Trigger: game.TriggerCondition{
 				Pattern: game.TriggerPattern{Event: game.EventPermanentDied},
 				InterveningCondition: opt.Val(game.Condition{
@@ -356,8 +349,10 @@ func TestValidateCardChecksKeywordAbilities(t *testing.T) {
 		{
 			name: "kicker bonus content",
 			ability: game.KickerKeyword{
-				Cost:         cost.Mana{cost.G},
-				BonusContent: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}}},
+				Cost: cost.Mana{cost.G},
+				BonusContent: game.Mode{
+					Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
+				}.Ability(),
 			},
 			code: IssueInvalidAbilityBody,
 		},
@@ -401,21 +396,17 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 	}{
 		{
 			name: "plain content target index",
-			face: game.CardFace{SpellAbility: opt.Val(game.SpellAbilityBody{
-				Content: game.PlainAbilityContent{
-					Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
-				},
-			})},
+			face: game.CardFace{SpellAbility: opt.Val(game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
+			}.Ability())},
 			code: IssueInvalidAbilityBody,
 		},
 		{
 			name: "nested modal effect",
-			face: game.CardFace{SpellAbility: opt.Val(game.SpellAbilityBody{
-				Content: game.ModalAbilityContent{
-					Modes: []game.Mode{{
-						Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
-					}},
-				},
+			face: game.CardFace{SpellAbility: opt.Val(game.ModalAbilityContent{
+				Modes: []game.Mode{{
+					Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
+				}},
 			})},
 			code: IssueInvalidAbilityBody,
 		},
@@ -430,7 +421,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 			name: "activated keyword",
 			face: game.CardFace{ActivatedAbilities: []game.ActivatedAbilityBody{{
 				KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{}},
-				Content:          game.PlainAbilityContent{},
+				Content:          game.Mode{}.Ability(),
 			}}},
 			code: IssueInvalidKeywordAbility,
 		},
@@ -438,7 +429,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 			name: "triggered keyword",
 			face: game.CardFace{TriggeredAbilities: []game.TriggeredAbilityBody{{
 				KeywordAbilities: []game.KeywordAbility{game.WardKeyword{}},
-				Content:          game.PlainAbilityContent{},
+				Content:          game.Mode{}.Ability(),
 			}}},
 			code: IssueInvalidKeywordAbility,
 		},
@@ -453,13 +444,13 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 						}),
 					}),
 				},
-				Content: game.PlainAbilityContent{},
+				Content: game.Mode{}.Ability(),
 			}}},
 			code: IssueTargetIndexOutOfRange,
 		},
 		{
 			name: "nil content",
-			face: game.CardFace{SpellAbility: opt.Val(game.SpellAbilityBody{})},
+			face: game.CardFace{SpellAbility: opt.Val(game.ModalAbilityContent{})},
 			code: IssueInvalidAbilityBody,
 		},
 	}

@@ -53,7 +53,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 						OneOrMore: true,
 					},
 				},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Draw{
@@ -62,7 +62,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 			{
 				Text: `
@@ -80,7 +80,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 						OneOrMore: true,
 					},
 				},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Draw{
@@ -89,7 +89,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 			{
 				Text: `
@@ -103,7 +103,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 						Step:       game.StepBeginningOfCombat,
 					},
 				},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Targets: []game.TargetSpec{
 						{
 							MinTargets: 1,
@@ -166,7 +166,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 							}),
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

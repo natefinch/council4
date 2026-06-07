@@ -49,7 +49,7 @@ var MorbidOpportunist = &game.CardDef{
 					},
 				},
 				MaxTriggersPerTurn: 1,
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Draw{
@@ -58,7 +58,7 @@ var MorbidOpportunist = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

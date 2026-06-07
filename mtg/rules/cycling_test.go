@@ -83,9 +83,11 @@ func cyclingCard() *game.CardDef {
 					{Kind: cost.AdditionalDiscard, Text: "Discard this card", Amount: 1, Source: zone.Hand},
 				},
 				KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: manaCost}},
-				Content: game.PlainAbilityContent{Sequence: []game.Instruction{
-					{Primitive: game.Draw{TargetIndex: game.TargetIndexController, Amount: game.Fixed(1)}},
-				}},
+				Content: game.Mode{
+					Sequence: []game.Instruction{
+						{Primitive: game.Draw{TargetIndex: game.TargetIndexController, Amount: game.Fixed(1)}},
+					},
+				}.Ability(),
 			},
 		}},
 	}

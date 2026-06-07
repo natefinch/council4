@@ -27,7 +27,7 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	if !ok {
 		return
 	}
-	e.resolveAbilityContentWithChoices(g, obj, ability.Content, agents, log)
+	e.resolveAbilityContentWithChoices(g, obj, *ability, agents, log)
 	if obj.KickerPaid {
 		if kicker, ok := spellKicker(spellDef); ok {
 			e.resolveAbilityContentWithChoices(g, obj, kicker.BonusContent, agents, log)
@@ -35,25 +35,74 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	}
 }
 
-func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackObject, content game.AbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	switch abilityContent := content.(type) {
-	case game.PlainAbilityContent:
-		for i := range abilityContent.Sequence {
-			e.resolveInstructionWithChoices(g, obj, &abilityContent.Sequence[i], agents, log)
-		}
-	case game.ModalAbilityContent:
-		for _, modeIndex := range obj.ChosenModes {
-			if modeIndex < 0 || modeIndex >= len(abilityContent.Modes) {
-				continue
-			}
-			for i := range abilityContent.Modes[modeIndex].Sequence {
-				e.resolveInstructionWithChoices(g, obj, &abilityContent.Modes[modeIndex].Sequence[i], agents, log)
-			}
-		}
-	case nil:
-	default:
-		panic("rules: unsupported ability content")
+func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackObject, content game.ModalAbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	if len(content.Modes) == 0 {
+		return
 	}
+	if !content.IsModal() {
+		for i := range content.Modes[0].Sequence {
+			e.resolveInstructionWithChoices(g, obj, &content.Modes[0].Sequence[i], agents, log)
+		}
+		return
+	}
+	allTargets := obj.Targets
+	defer func() {
+		obj.Targets = allTargets
+	}()
+	for chosenIndex, modeIndex := range obj.ChosenModes {
+		if modeIndex < 0 || modeIndex >= len(content.Modes) {
+			continue
+		}
+		obj.Targets = targetsForChosenMode(content, obj, allTargets, chosenIndex)
+		for i := range content.Modes[modeIndex].Sequence {
+			e.resolveInstructionWithChoices(g, obj, &content.Modes[modeIndex].Sequence[i], agents, log)
+		}
+	}
+}
+
+func targetsForChosenMode(content game.ModalAbilityContent, obj *game.StackObject, allTargets []game.Target, chosenIndex int) []game.Target {
+	if len(obj.ChosenModes) == 1 {
+		return allTargets
+	}
+	expectedCounts := len(content.SharedTargets)
+	for _, modeIndex := range obj.ChosenModes {
+		if modeIndex < 0 || modeIndex >= len(content.Modes) {
+			continue
+		}
+		expectedCounts += len(content.Modes[modeIndex].Targets)
+	}
+	if expectedCounts != len(obj.TargetCounts) {
+		panic("modal stack object target counts do not match chosen mode targets")
+	}
+
+	sharedTargetCount := sumTargetCounts(obj.TargetCounts[:len(content.SharedTargets)])
+	countOffset := len(content.SharedTargets)
+	targetOffset := sharedTargetCount
+	if sumTargetCounts(obj.TargetCounts) != len(allTargets) {
+		panic("modal stack object target counts do not match runtime targets")
+	}
+	for i, modeIndex := range obj.ChosenModes {
+		if modeIndex < 0 || modeIndex >= len(content.Modes) {
+			continue
+		}
+		nextCountOffset := countOffset + len(content.Modes[modeIndex].Targets)
+		modeTargetCount := sumTargetCounts(obj.TargetCounts[countOffset:nextCountOffset])
+		if i == chosenIndex {
+			targets := append([]game.Target(nil), allTargets[:sharedTargetCount]...)
+			return append(targets, allTargets[targetOffset:targetOffset+modeTargetCount]...)
+		}
+		countOffset = nextCountOffset
+		targetOffset += modeTargetCount
+	}
+	panic("chosen mode target segment not found")
+}
+
+func sumTargetCounts(counts []int) int {
+	total := 0
+	for _, count := range counts {
+		total += count
+	}
+	return total
 }
 
 func spellHasKicker(card *game.CardDef) bool {
@@ -68,7 +117,7 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 	return card.KickerKeyword()
 }
 
-func firstSpellAbility(card *game.CardDef) (*game.SpellAbilityBody, bool) {
+func firstSpellAbility(card *game.CardDef) (*game.ModalAbilityContent, bool) {
 	if card != nil && card.SpellAbility.Exists {
 		return &card.SpellAbility.Val, true
 	}

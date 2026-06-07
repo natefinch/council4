@@ -48,7 +48,7 @@ Given one or more Magic: The Gathering card names:
 ## Important rules
 
 - Use only existing typed `game.Primitive` variants, `Keyword` values, and other enums. Do not invent new primitives in a card file.
-- Use `AdditionalCosts: cost.Tap` when tapping the source is the only additional cost on an **activated or mana ability** body. Use `cost.T` as the tap entry when combining it with other additional costs. Spell casting costs (flashback, kicker, sacrifice-as-cost) go on `CardFace`, not `SpellAbilityBody`.
+- Use `AdditionalCosts: cost.Tap` when tapping the source is the only additional cost on an **activated or mana ability** body. Use `cost.T` as the tap entry when combining it with other additional costs. Spell casting costs (flashback, kicker, sacrifice-as-cost) go on `CardFace`, not `SpellAbility`.
 - Use `types.Creature`/`types.Forest`/etc. from `mtg/game/types`; do not use old `game.Type*` or `game.*Subtype*` names.
 - `mtg/game/types` includes named constants for every Comprehensive Rules 205.3 subtype. Prefer those constants for new card definitions instead of `types.Sub("...")`; fall back to `types.Sub` only if the subtype truly is not present.
 - For multiple plain non-parameterized keywords, append one reusable `StaticAbilityBody` template per keyword to `StaticAbilities` (for example `game.DeathtouchStaticBody, game.IndestructibleStaticBody`). Do not invent flat keyword wrapper helpers in new card source.

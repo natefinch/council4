@@ -245,7 +245,7 @@ func genericCostSpell(generic int) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Generic Cost Spell",
 		ManaCost:     opt.Val(cost.Mana{cost.O(generic)}),
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{})},
+		SpellAbility: opt.Val(game.ModalAbilityContent{})},
 	}
 }
 
@@ -260,7 +260,7 @@ func sacrificeCostSpell() *game.CardDef {
 			MatchPermanentType: true,
 			PermanentType:      types.Creature,
 		}},
-		SpellAbility: opt.Val(game.SpellAbilityBody{})},
+		SpellAbility: opt.Val(game.ModalAbilityContent{})},
 	}
 }
 
@@ -270,7 +270,7 @@ func kickerSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Kicker Spell",
 		ManaCost:     greenCost(),
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{}),
+		SpellAbility: opt.Val(game.ModalAbilityContent{}),
 		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: greenCost().Val}},
 		}}},

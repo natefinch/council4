@@ -93,7 +93,9 @@ type CardFace struct {
 	Loyalty          opt.V[int]
 	Defense          opt.V[int]
 
-	SpellAbility         opt.V[SpellAbilityBody]
+	// SpellAbility is the resolving content of this face when cast as a spell.
+	// Its rules text is OracleText.
+	SpellAbility         opt.V[ModalAbilityContent]
 	ActivatedAbilities   []ActivatedAbilityBody
 	ManaAbilities        []ManaAbilityBody
 	LoyaltyAbilities     []LoyaltyAbilityBody
@@ -414,7 +416,7 @@ func (f *CardFace) MadnessCost() (cost.Mana, bool) {
 
 // ClearAbilities removes every categorized ability from this face.
 func (f *CardFace) ClearAbilities() {
-	f.SpellAbility = opt.V[SpellAbilityBody]{}
+	f.SpellAbility = opt.V[ModalAbilityContent]{}
 	f.ActivatedAbilities = nil
 	f.ManaAbilities = nil
 	f.LoyaltyAbilities = nil

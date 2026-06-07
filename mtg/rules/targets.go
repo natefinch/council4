@@ -198,13 +198,22 @@ func targetsValidForBodyFromSourceObject(g *game.Game, controller game.PlayerID,
 }
 
 func targetsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) bool {
-	if len(specs) == 0 {
-		return len(targets) == 0
-	}
-	return targetsValidForSpecFrom(g, controller, source, sourceObjectID, specs, targets, 0, 0)
+	_, ok := targetCountsForSpecs(g, controller, source, sourceObjectID, specs, targets)
+	return ok
 }
 
-func targetsValidForSpecFrom(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, specIndex, targetIndex int) bool {
+func targetCountsForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) ([]int, bool) {
+	if len(specs) == 0 {
+		return nil, len(targets) == 0
+	}
+	counts := make([]int, len(specs))
+	if !targetCountsForSpecFrom(g, controller, source, sourceObjectID, specs, targets, counts, 0, 0) {
+		return nil, false
+	}
+	return counts, true
+}
+
+func targetCountsForSpecFrom(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, counts []int, specIndex, targetIndex int) bool {
 	if specIndex == len(specs) {
 		return targetIndex == len(targets)
 	}
@@ -217,11 +226,16 @@ func targetsValidForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 	for count := spec.MinTargets; count <= maxTargets; count++ {
 		slice := targets[targetIndex : targetIndex+count]
 		if targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, slice) &&
-			targetsValidForSpecFrom(g, controller, source, sourceObjectID, specs, targets, specIndex+1, targetIndex+count) {
+			targetCountsForSpecFrom(g, controller, source, sourceObjectID, specs, targets, counts, specIndex+1, targetIndex+count) {
+			counts[specIndex] = count
 			return true
 		}
 	}
 	return false
+}
+
+func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target) ([]int, bool) {
+	return targetCountsForSpecs(g, controller, card, 0, spellTargetSpecs(card, chosenModes), targets)
 }
 
 func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, targets []game.Target) bool {
@@ -398,12 +412,16 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 	if !ok {
 		return nil
 	}
-	content, ok := ability.Content.(game.ModalAbilityContent)
-	if ok {
+	content := *ability
+	if len(content.Modes) > 0 {
 		if !modesValidForContent(content, chosenModes) {
 			return nil
 		}
-		var specs []game.TargetSpec
+		if !content.IsModal() {
+			specs := append([]game.TargetSpec(nil), content.SharedTargets...)
+			return append(specs, content.Modes[0].Targets...)
+		}
+		specs := append([]game.TargetSpec(nil), content.SharedTargets...)
 		for _, modeIndex := range chosenModes {
 			specs = append(specs, content.Modes[modeIndex].Targets...)
 		}
@@ -417,7 +435,7 @@ func modeChoicesForSpell(card *game.CardDef) [][]int {
 	if ability == nil {
 		return [][]int{nil}
 	}
-	return modeChoicesForContent(ability.Content)
+	return modeChoicesForContent(*ability)
 }
 
 func modeChoicesForBody(body game.AbilityBody) [][]int {
@@ -427,23 +445,22 @@ func modeChoicesForBody(body game.AbilityBody) [][]int {
 	return modeChoicesForContent(game.BodyContent(body))
 }
 
-func modeChoicesForContent(content game.AbilityContent) [][]int {
-	modal, ok := content.(game.ModalAbilityContent)
-	if !ok || len(modal.Modes) == 0 {
+func modeChoicesForContent(content game.ModalAbilityContent) [][]int {
+	if len(content.Modes) == 0 || !content.IsModal() {
 		return [][]int{nil}
 	}
 	// Modal choices are made before targets/costs are finalized and are locked
 	// into the stack object (CR 601.2d, CR 700.2).
-	minModes, maxModes := modeChoiceRangeFromContent(modal)
-	if minModes < 0 || maxModes < minModes || maxModes > len(modal.Modes) {
+	minModes, maxModes := modeChoiceRangeFromContent(content)
+	if minModes < 0 || maxModes < minModes || maxModes > len(content.Modes) {
 		return nil
 	}
-	if modal.AllowDuplicateModes {
-		return duplicateModeChoices(len(modal.Modes), minModes, maxModes)
+	if content.AllowDuplicateModes {
+		return duplicateModeChoices(len(content.Modes), minModes, maxModes)
 	}
 	var choices [][]int
 	for count := minModes; count <= maxModes; count++ {
-		choices = append(choices, modeCombinations(len(modal.Modes), count)...)
+		choices = append(choices, modeCombinations(len(content.Modes), count)...)
 	}
 	return choices
 }
@@ -453,7 +470,7 @@ func modesValidForSpell(card *game.CardDef, chosenModes []int) bool {
 	if !ok {
 		return len(chosenModes) == 0
 	}
-	return modesValidForContent(ability.Content, chosenModes)
+	return modesValidForContent(*ability, chosenModes)
 }
 
 func modesValidForBody(body game.AbilityBody, chosenModes []int) bool {
@@ -463,27 +480,28 @@ func modesValidForBody(body game.AbilityBody, chosenModes []int) bool {
 	return modesValidForContent(game.BodyContent(body), chosenModes)
 }
 
-func modesValidForContent(content game.AbilityContent, chosenModes []int) bool {
-	modal, ok := content.(game.ModalAbilityContent)
-	if !ok || len(modal.Modes) == 0 {
+func modesValidForContent(content game.ModalAbilityContent, chosenModes []int) bool {
+	if len(content.Modes) == 0 || !content.IsModal() {
 		return len(chosenModes) == 0
 	}
-	minModes, maxModes := modeChoiceRangeFromContent(modal)
+	minModes, maxModes := modeChoiceRangeFromContent(content)
 	if len(chosenModes) < minModes || len(chosenModes) > maxModes {
 		return false
 	}
 	seen := make(map[int]bool, len(chosenModes))
+	previousMode := -1
 	for i, modeIndex := range chosenModes {
-		if modeIndex < 0 || modeIndex >= len(modal.Modes) {
+		if modeIndex < 0 || modeIndex >= len(content.Modes) {
 			return false
 		}
-		if i > 0 && chosenModes[i-1] > modeIndex {
+		if i > 0 && previousMode > modeIndex {
 			return false
 		}
+		previousMode = modeIndex
 		// Canonical nondecreasing order avoids representing the same modal
 		// choice multiple ways while preserving duplicate-mode templates that
 		// explicitly permit repeats (CR 700.2d).
-		if !modal.AllowDuplicateModes {
+		if !content.AllowDuplicateModes {
 			if seen[modeIndex] {
 				return false
 			}

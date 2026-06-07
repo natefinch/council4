@@ -85,9 +85,9 @@ func TestWardCountersActivatedAbilityWhenCostIsNotPaid(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Targeting Permanent",
 		Types: []types.Card{types.Artifact},
 		ActivatedAbilities: []game.ActivatedAbilityBody{{
-			Content: game.PlainAbilityContent{
+			Content: game.Mode{
 				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-			},
+			}.Ability(),
 		}}},
 	})
 	g.Turn.PriorityPlayer = game.Player1

@@ -31,41 +31,36 @@ var BeastWithin = &game.CardDef{
 			Destroy target permanent. Its controller creates a 3/3 green Beast creature token.
 		`,
 		SpellAbility: opt.Val(
-			game.SpellAbilityBody{
-				Text: `
-					Destroy target permanent. Its controller creates a 3/3 green Beast creature token.
-				`,
-				Content: game.PlainAbilityContent{
-					Targets: []game.TargetSpec{
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "permanent",
-							Allow:      game.TargetAllowPermanent,
+			game.Mode{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "permanent",
+						Allow:      game.TargetAllowPermanent,
+					},
+				},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Destroy{
+							TargetIndex: 0,
 						},
 					},
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Destroy{
-								TargetIndex: 0,
-							},
-						},
-						{
-							Primitive: game.CreateToken{
-								Amount: game.Fixed(1),
-								Source: game.TokenDef(beastWithinToken),
-								Recipient: opt.Val(game.PlayerReference{
-									Kind: game.PlayerReferenceObjectController,
-									Object: opt.Val(game.ObjectReference{
-										Kind:        game.ObjectReferenceTargetPermanent,
-										TargetIndex: 0,
-									}),
+					{
+						Primitive: game.CreateToken{
+							Amount: game.Fixed(1),
+							Source: game.TokenDef(beastWithinToken),
+							Recipient: opt.Val(game.PlayerReference{
+								Kind: game.PlayerReferenceObjectController,
+								Object: opt.Val(game.ObjectReference{
+									Kind:        game.ObjectReferenceTargetPermanent,
+									TargetIndex: 0,
 								}),
-							},
+							}),
 						},
 					},
 				},
-			},
+			}.Ability(),
 		),
 	},
 }

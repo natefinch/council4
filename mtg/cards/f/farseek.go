@@ -31,12 +31,7 @@ var Farseek = &game.CardDef{
 			Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.
 		`,
 		SpellAbility: opt.Val(
-			game.SpellAbilityBody{
-				Text: `
-					Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.
-				`,
-				Content: common.RampLand{Tapped: true, SubTypes: []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}}.Ability(),
-			},
+			common.RampLand{Tapped: true, SubTypes: []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}}.Ability(),
 		),
 	},
 }

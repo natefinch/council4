@@ -44,7 +44,7 @@ func TapForOneOf(key game.ChoiceKey, colors ...mana.Color) game.ManaAbilityBody 
 	return game.ManaAbilityBody{
 		Text:            text,
 		AdditionalCosts: cost.Tap,
-		Content: game.PlainAbilityContent{
+		Content: game.Mode{
 			Sequence: []game.Instruction{
 				{
 					Primitive: game.Choose{
@@ -63,7 +63,7 @@ func TapForOneOf(key game.ChoiceKey, colors ...mana.Color) game.ManaAbilityBody 
 					},
 				},
 			},
-		},
+		}.Ability(),
 	}
 }
 
@@ -74,7 +74,7 @@ func TapForOne(clr mana.Color) game.ManaAbilityBody {
 			{T}: Add {%s}.
 		`, clr),
 		AdditionalCosts: cost.Tap,
-		Content: game.PlainAbilityContent{
+		Content: game.Mode{
 			Sequence: []game.Instruction{
 				{
 					Primitive: game.AddMana{
@@ -83,23 +83,23 @@ func TapForOne(clr mana.Color) game.ManaAbilityBody {
 					},
 				},
 			},
-		},
+		}.Ability(),
 	}
 }
 
-// RampLand creates a plain ability content to searches the controller's library for a land and puts it into play.
+// RampLand configures an ability that searches the controller's library for a land and puts it into play.
 type RampLand struct {
 	Basic, Tapped bool
 	SubTypes      []types.Sub
 }
 
-// Ability returns a plain ability content that searches the controller's library for a land and puts it into play.
-func (r RampLand) Ability() game.PlainAbilityContent {
-	return game.PlainAbilityContent{
+// Ability returns non-modal content that searches the controller's library for a land and puts it into play.
+func (r RampLand) Ability() game.ModalAbilityContent {
+	return game.Mode{
 		Sequence: []game.Instruction{
 			r.Instruction(),
 		},
-	}
+	}.Ability()
 }
 
 // Instruction returns a single instruction for the ramp land ability.

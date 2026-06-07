@@ -74,12 +74,12 @@ func TestInlineTriggeredAbilityRechecksProtectionFromSource(t *testing.T) {
 	}})
 	target := addProtectionFromColorPermanent(g, game.Player2, color.Red)
 	trigger := game.TriggeredAbilityBody{
-		Content: game.PlainAbilityContent{
+		Content: game.Mode{
 			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
 			Sequence: []game.Instruction{{
 				Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)},
 			}},
-		},
+		}.Ability(),
 	}
 	obj := &game.StackObject{
 		Kind:          game.StackTriggeredAbility,
@@ -1302,7 +1302,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 		TriggeredAbilities: []game.TriggeredAbilityBody{
 			{
 				Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{Event: game.EventZoneChanged, Controller: game.TriggerControllerYou, RequirePermanentTypes: []types.Card{types.Artifact}, MatchFromZone: true, FromZone: zone.Battlefield, MatchToZone: true, ToZone: zone.Graveyard}, InterveningIf: "it had counters on it", InterveningIfEventPermanentHadCounters: true},
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Targets: []game.TargetSpec{
 						{MinTargets: 0, MaxTargets: 1, Constraint: "artifact or creature you control"},
 					},
@@ -1316,7 +1316,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		}},
 	})
@@ -1367,7 +1367,10 @@ func triggeredCreature(pattern game.TriggerPattern, instructions []game.Instruct
 		TriggeredAbilities: []game.TriggeredAbilityBody{
 			{
 				Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: pattern},
-				Content: game.PlainAbilityContent{Targets: targets, Sequence: instructions},
+				Content: game.Mode{
+					Targets:  targets,
+					Sequence: instructions,
+				}.Ability(),
 			},
 		}},
 	}

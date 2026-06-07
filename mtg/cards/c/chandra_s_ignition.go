@@ -32,57 +32,52 @@ var ChandraSIgnition = &game.CardDef{
 			Target creature you control deals damage equal to its power to each other creature and each opponent.
 		`,
 		SpellAbility: opt.Val(
-			game.SpellAbilityBody{
-				Text: `
-					Target creature you control deals damage equal to its power to each other creature and each opponent.
-				`,
-				Content: game.PlainAbilityContent{
-					Targets: []game.TargetSpec{
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature you control",
-							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{
-									types.Creature,
-								},
-								Controller: game.ControllerYou,
+			game.Mode{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{
+								types.Creature,
 							},
-						},
-					},
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Damage{
-								Amount: game.Dynamic(game.DynamicAmount{
-									Kind:        game.DynamicAmountTargetPower,
-									TargetIndex: 0,
-								}),
-								Recipient: game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
-								DamageSource: opt.Val(game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
-								}),
-							},
-							Description: "deals damage equal to its power to each other creature",
-						},
-						{
-							Primitive: game.Damage{
-								Amount: game.Dynamic(game.DynamicAmount{
-									Kind:        game.DynamicAmountTargetPower,
-									TargetIndex: 0,
-								}),
-								Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
-								DamageSource: opt.Val(game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
-								}),
-							},
-							Description: "deals damage equal to its power to each opponent",
+							Controller: game.ControllerYou,
 						},
 					},
 				},
-			},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind:        game.DynamicAmountTargetPower,
+								TargetIndex: 0,
+							}),
+							Recipient: game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
+							DamageSource: opt.Val(game.ObjectReference{
+								Kind:        game.ObjectReferenceTargetPermanent,
+								TargetIndex: 0,
+							}),
+						},
+						Description: "deals damage equal to its power to each other creature",
+					},
+					{
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind:        game.DynamicAmountTargetPower,
+								TargetIndex: 0,
+							}),
+							Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+							DamageSource: opt.Val(game.ObjectReference{
+								Kind:        game.ObjectReferenceTargetPermanent,
+								TargetIndex: 0,
+							}),
+						},
+						Description: "deals damage equal to its power to each opponent",
+					},
+				},
+			}.Ability(),
 		),
 	},
 }

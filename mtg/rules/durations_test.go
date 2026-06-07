@@ -205,8 +205,10 @@ func TestDelayedNextEndStepTriggerFiresOnce(t *testing.T) {
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 	addEffectSpellToStack(g, game.Player1, game.CreateDelayedTrigger{
 		Trigger: game.DelayedTriggerDef{
-			Timing:  game.DelayedAtBeginningOfNextEndStep,
-			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}},
+			Timing: game.DelayedAtBeginningOfNextEndStep,
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
+			}.Ability(),
 		},
 	}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})

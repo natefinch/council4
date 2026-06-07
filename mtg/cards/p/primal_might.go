@@ -29,59 +29,54 @@ var PrimalMight = &game.CardDef{
 		OracleText: `
 			Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
 		`,
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			Text: `
-				Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control.
-			`,
-			Content: game.PlainAbilityContent{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "creature you control",
-						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
-								types.Creature,
-							},
-							Controller: game.ControllerYou,
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{
+				{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Constraint: "creature you control",
+					Allow:      game.TargetAllowPermanent,
+					Predicate: game.TargetPredicate{
+						PermanentTypes: []types.Card{
+							types.Creature,
 						},
-					},
-					{
-						MinTargets: 0,
-						MaxTargets: 1,
-						Constraint: "creature you don't control",
-						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
-								types.Creature,
-							},
-							Controller: game.ControllerNotYou,
-						},
+						Controller: game.ControllerYou,
 					},
 				},
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.ModifyPT{
-							TargetIndex: 0,
-							PowerDelta: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountX,
-							}),
-							ToughnessDelta: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountX,
-							}),
-							Duration: game.DurationUntilEndOfTurn,
+				{
+					MinTargets: 0,
+					MaxTargets: 1,
+					Constraint: "creature you don't control",
+					Allow:      game.TargetAllowPermanent,
+					Predicate: game.TargetPredicate{
+						PermanentTypes: []types.Card{
+							types.Creature,
 						},
-					},
-					{
-						Primitive: game.Fight{
-							TargetIndex:        0,
-							RelatedTargetIndex: opt.Val(1),
-						},
-						Description: "target creature you control fights up to one target creature you don't control",
+						Controller: game.ControllerNotYou,
 					},
 				},
 			},
-		}),
+			Sequence: []game.Instruction{
+				{
+					Primitive: game.ModifyPT{
+						TargetIndex: 0,
+						PowerDelta: game.Dynamic(game.DynamicAmount{
+							Kind: game.DynamicAmountX,
+						}),
+						ToughnessDelta: game.Dynamic(game.DynamicAmount{
+							Kind: game.DynamicAmountX,
+						}),
+						Duration: game.DurationUntilEndOfTurn,
+					},
+				},
+				{
+					Primitive: game.Fight{
+						TargetIndex:        0,
+						RelatedTargetIndex: opt.Val(1),
+					},
+					Description: "target creature you control fights up to one target creature you don't control",
+				},
+			},
+		}.Ability()),
 	},
 }

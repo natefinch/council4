@@ -11,18 +11,9 @@ type AbilityBody interface {
 	isAbilityBody()
 }
 
-// AbilityContent is a sealed data-only variant for an ability's instructions.
-type AbilityContent interface {
-	isAbilityContent()
-}
-
-// PlainAbilityContent is a non-modal target/effect sequence.
-type PlainAbilityContent struct {
-	Targets  []TargetSpec
-	Sequence []Instruction
-}
-
-// ModalAbilityContent is a mode-choice ability body.
+// ModalAbilityContent is an ability's target and instruction content. Ordinary
+// non-modal abilities contain one required mode; modal abilities contain a
+// choice among multiple modes or use a mode range other than exactly one.
 type ModalAbilityContent struct {
 	SharedTargets       []TargetSpec
 	Modes               []Mode
@@ -31,12 +22,10 @@ type ModalAbilityContent struct {
 	AllowDuplicateModes bool
 }
 
-// SpellAbilityBody is an instruction on an instant or sorcery spell.
-// Casting costs (AdditionalCosts, AlternativeCosts) live on the enclosing
-// CardFace, not here.
-type SpellAbilityBody struct {
-	Text    string
-	Content AbilityContent
+// IsModal reports whether the content requires a mode choice. Exactly one mode
+// with a minimum and maximum of one is ordinary non-modal content.
+func (m ModalAbilityContent) IsModal() bool {
+	return len(m.Modes) != 1 || m.MinModes != 1 || m.MaxModes != 1
 }
 
 // ActivatedAbilityBody is a non-mana, non-loyalty activated ability.
@@ -48,7 +37,7 @@ type ActivatedAbilityBody struct {
 	ZoneOfFunction      zone.Type
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
-	Content             AbilityContent
+	Content             ModalAbilityContent
 	// KeywordAbilities lists keyword abilities carried by this activation, e.g.
 	// EquipKeyword for equip activations. Rules use it for keyword dispatch and
 	// cost routing without inspecting Content.
@@ -63,9 +52,8 @@ type ManaAbilityBody struct {
 	ZoneOfFunction      zone.Type
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
-	// Content is the mana output, supporting both plain sequences and modal
-	// mana (ModalAbilityContent).
-	Content AbilityContent
+	// Content is the mana output.
+	Content ModalAbilityContent
 }
 
 // LoyaltyAbilityBody is a planeswalker loyalty ability.
@@ -73,7 +61,7 @@ type LoyaltyAbilityBody struct {
 	Text                string
 	LoyaltyCost         int
 	ActivationCondition opt.V[Condition]
-	Content             AbilityContent
+	Content             ModalAbilityContent
 }
 
 // TriggeredAbilityBody is an ability that triggers from a game event or state.
@@ -86,7 +74,7 @@ type TriggeredAbilityBody struct {
 	// e.g. WardKeyword for ward triggers. Rules use it for keyword dispatch without
 	// inspecting Content.
 	KeywordAbilities []KeywordAbility
-	Content          AbilityContent
+	Content          ModalAbilityContent
 }
 
 // StaticAbilityBody is a static ability that functions from a zone.
@@ -150,10 +138,7 @@ func etbReplacement(text string) ReplacementEffect {
 	}
 }
 
-func (PlainAbilityContent) isAbilityContent() {}
-func (ModalAbilityContent) isAbilityContent() {}
-
-func (SpellAbilityBody) isAbilityBody()       {}
+func (ModalAbilityContent) isAbilityBody()    {}
 func (ActivatedAbilityBody) isAbilityBody()   {}
 func (ManaAbilityBody) isAbilityBody()        {}
 func (LoyaltyAbilityBody) isAbilityBody()     {}
@@ -161,61 +146,58 @@ func (TriggeredAbilityBody) isAbilityBody()   {}
 func (ReplacementAbilityBody) isAbilityBody() {}
 func (StaticAbilityBody) isAbilityBody()      {}
 
-// BodyContent returns the AbilityContent of a sealed ability body.
-func BodyContent(body AbilityBody) AbilityContent {
+// BodyContent returns the content of a sealed ability body.
+func BodyContent(body AbilityBody) ModalAbilityContent {
 	switch b := body.(type) {
-	case SpellAbilityBody:
-		return b.Content
-	case *SpellAbilityBody:
+	case ModalAbilityContent:
+		return b
+	case *ModalAbilityContent:
 		if b == nil {
-			return nil
+			return ModalAbilityContent{}
 		}
-		return b.Content
+		return *b
 	case ActivatedAbilityBody:
 		return b.Content
 	case *ActivatedAbilityBody:
 		if b == nil {
-			return nil
+			return ModalAbilityContent{}
 		}
 		return b.Content
 	case ManaAbilityBody:
 		return b.Content
 	case *ManaAbilityBody:
 		if b == nil {
-			return nil
+			return ModalAbilityContent{}
 		}
 		return b.Content
 	case LoyaltyAbilityBody:
 		return b.Content
 	case *LoyaltyAbilityBody:
 		if b == nil {
-			return nil
+			return ModalAbilityContent{}
 		}
 		return b.Content
 	case TriggeredAbilityBody:
 		return b.Content
 	case *TriggeredAbilityBody:
 		if b == nil {
-			return nil
+			return ModalAbilityContent{}
 		}
 		return b.Content
 	default:
-		return nil
+		return ModalAbilityContent{}
 	}
 }
 
 // BodyTargets returns the target specs for a sealed ability body's content.
-// For plain content, returns the content's targets. For modal content, returns
-// shared targets.
+// Non-modal content uses its sole mode's targets; modal content uses shared targets.
 func BodyTargets(body AbilityBody) []TargetSpec {
-	switch content := BodyContent(body).(type) {
-	case PlainAbilityContent:
-		return content.Targets
-	case ModalAbilityContent:
-		return content.SharedTargets
-	default:
-		return nil
+	content := BodyContent(body)
+	if len(content.Modes) == 1 && !content.IsModal() {
+		targets := append([]TargetSpec(nil), content.SharedTargets...)
+		return append(targets, content.Modes[0].Targets...)
 	}
+	return content.SharedTargets
 }
 
 // BodyFunctionZone returns the zone where the body functions, if it has one.

@@ -42,7 +42,7 @@ var BlazemireVerge = &game.CardDef{
 						},
 					},
 				}),
-				Content: game.PlainAbilityContent{
+				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.AddMana{
@@ -51,7 +51,7 @@ var BlazemireVerge = &game.CardDef{
 							},
 						},
 					},
-				},
+				}.Ability(),
 			},
 		},
 	},

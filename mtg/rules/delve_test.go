@@ -113,7 +113,7 @@ func delveSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Delve Spell",
 		Types:           []types.Card{types.Sorcery},
 		ManaCost:        opt.Val(manaCost),
-		SpellAbility:    opt.Val(game.SpellAbilityBody{}),
+		SpellAbility:    opt.Val(game.ModalAbilityContent{}),
 		StaticAbilities: []game.StaticAbilityBody{game.DelveStaticBody}},
 	}
 }

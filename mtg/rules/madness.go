@@ -47,6 +47,10 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 	if !ok {
 		return false
 	}
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets)
+	if !ok {
+		panic("validated madness spell targets could not be segmented")
+	}
 	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
@@ -55,13 +59,14 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		return false
 	}
 	stackObj := &game.StackObject{
-		ID:          g.IDGen.Next(),
-		Kind:        game.StackSpell,
-		SourceID:    card.ID,
-		Face:        game.FaceFront,
-		Controller:  playerID,
-		Targets:     append([]game.Target(nil), targets...),
-		ChosenModes: append([]int(nil), modes...),
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackSpell,
+		SourceID:     card.ID,
+		Face:         game.FaceFront,
+		Controller:   playerID,
+		Targets:      append([]game.Target(nil), targets...),
+		TargetCounts: targetCounts,
+		ChosenModes:  append([]int(nil), modes...),
 	}
 	pushSpellToStack(g, stackObj, game.GameEvent{
 		SourceID:      card.ID,

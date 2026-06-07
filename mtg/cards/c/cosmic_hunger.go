@@ -30,56 +30,51 @@ var CosmicHunger = &game.CardDef{
 			Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle.
 		`,
 		SpellAbility: opt.Val(
-			game.SpellAbilityBody{
-				Text: `
-					Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle.
-				`,
-				Content: game.PlainAbilityContent{
-					Targets: []game.TargetSpec{
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature you control",
-							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{
-									types.Creature,
-								},
-								Controller: game.ControllerYou,
+			game.Mode{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{
+								types.Creature,
 							},
-						},
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "another creature, planeswalker, or battle",
-							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{
-									types.Creature,
-									types.Planeswalker,
-									types.Battle,
-								},
-								Another: true,
-							},
+							Controller: game.ControllerYou,
 						},
 					},
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Damage{
-								Amount: game.Dynamic(game.DynamicAmount{
-									Kind:        game.DynamicAmountTargetPower,
-									TargetIndex: 0,
-								}),
-								Recipient: game.TargetRecipient(1),
-								DamageSource: opt.Val(game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
-								}),
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "another creature, planeswalker, or battle",
+						Allow:      game.TargetAllowPermanent,
+						Predicate: game.TargetPredicate{
+							PermanentTypes: []types.Card{
+								types.Creature,
+								types.Planeswalker,
+								types.Battle,
 							},
+							Another: true,
 						},
 					},
 				},
-			},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Damage{
+							Amount: game.Dynamic(game.DynamicAmount{
+								Kind:        game.DynamicAmountTargetPower,
+								TargetIndex: 0,
+							}),
+							Recipient: game.TargetRecipient(1),
+							DamageSource: opt.Val(game.ObjectReference{
+								Kind:        game.ObjectReferenceTargetPermanent,
+								TargetIndex: 0,
+							}),
+						},
+					},
+				},
+			}.Ability(),
 		),
 	},
 }

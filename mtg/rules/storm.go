@@ -24,6 +24,7 @@ func createStormCopies(g *game.Game, original *game.StackObject, count int) {
 			Face:                original.Face,
 			Controller:          original.Controller,
 			Targets:             append([]game.Target(nil), original.Targets...),
+			TargetCounts:        append([]int(nil), original.TargetCounts...),
 			ChosenModes:         append([]int(nil), original.ChosenModes...),
 			XValue:              original.XValue,
 			KickerPaid:          original.KickerPaid,

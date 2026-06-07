@@ -72,6 +72,10 @@ type StackObject struct {
 	// (CR 601.2c, 603.3d).
 	Targets []Target
 
+	// TargetCounts records how many runtime targets were chosen for each
+	// TargetSpec, preserving mode-local target indexing during resolution.
+	TargetCounts []int
+
 	// ChosenModes are the indices of chosen modes for modal spells/abilities.
 	ChosenModes []int
 

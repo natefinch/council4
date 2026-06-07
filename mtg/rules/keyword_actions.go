@@ -199,9 +199,12 @@ func clueTokenDef() *game.CardDef {
 		MatchPermanentType: true,
 		PermanentType:      types.Artifact,
 	}}
-	drawContent := game.PlainAbilityContent{Sequence: []game.Instruction{
-		{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
-	}}
+	drawContent := game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
+		},
+	}.Ability()
+
 	return &game.CardDef{CardFace: game.CardFace{Name: "Clue Token",
 		Types:    []types.Card{types.Artifact},
 		Subtypes: []types.Sub{types.Clue},
