@@ -34,3 +34,20 @@ func TestShufflePanicsOnNilRand(t *testing.T) {
 	cards := New(Library)
 	cards.Shuffle(nil)
 }
+
+func TestRangeVisitsCardsInOrderAndCanStop(t *testing.T) {
+	cards := New(Library)
+	cards.AddToBottom(1)
+	cards.AddToBottom(2)
+	cards.AddToBottom(3)
+
+	var visited []id.ID
+	cards.Range(func(cardID id.ID) bool {
+		visited = append(visited, cardID)
+		return cardID != 2
+	})
+
+	if !slices.Equal(visited, []id.ID{1, 2}) {
+		t.Fatalf("visited cards = %v, want [1 2]", visited)
+	}
+}

@@ -162,6 +162,15 @@ func (z *Zone) All() []id.ID {
 	return result
 }
 
+// Range calls yield for each card ID in order until yield returns false.
+func (z *Zone) Range(yield func(id.ID) bool) {
+	for _, cardID := range z.cards {
+		if !yield(cardID) {
+			return
+		}
+	}
+}
+
 // SetFaceDown records whether a card in this zone is face-down.
 func (z *Zone) SetFaceDown(cardID id.ID, faceDown bool) {
 	if z.faceDown == nil {

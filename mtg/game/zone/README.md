@@ -31,8 +31,9 @@ top, ok := library.Top()
 ```
 
 The top is index zero. `Add` places a card on top, `AddToBottom` appends it,
-and `All` returns a copy in zone order. `Shuffle` requires an explicit
-`*rand.Rand` so callers control determinism.
+and `All` returns a copy in zone order. Use `Range` for read-only iteration
+without allocating a copy. `Shuffle` requires an explicit `*rand.Rand` so
+callers control determinism.
 
 `Zone` also tracks face-down cards for zones such as exile. The shared
 battlefield and stack use their richer runtime representations in `mtg/game`
