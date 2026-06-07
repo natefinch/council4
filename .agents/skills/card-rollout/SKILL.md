@@ -147,7 +147,8 @@ For each card:
 4. Fill categorized ability fields (ManaAbilities, ActivatedAbilities, TriggeredAbilities,
    StaticAbilities, LoyaltyAbilities, ReplacementAbilities, SpellAbility) only using
    existing game/rules primitives. Preserve the expanded, raw-string layout the generator
-   produces — do not compact it. Do not populate the legacy Abilities slice.
+   produces — do not compact it. The flat `Abilities []AbilityDef` field has been removed
+   from `CardFace`; use only the categorized fields.
 5. Use current generated-card conventions: card/super/subtype vocabulary comes
    from `mtg/game/types` (`types.Card`, `types.Super`, `types.Sub`), integer
    comparisons use `mtg/game/compare`, and double-faced cards use front-face
@@ -233,7 +234,7 @@ For each capability, include:
 - the oracle clauses or behavior that require it;
 - whether the current implementation is blocked, approximated, or delegated to
   `ImplementationID`;
-- likely code area when known, such as `game.Effect`, `TargetSpec`,
+- likely code area when known, such as typed `game.Primitive` variants, `TargetSpec`,
   `TriggerPattern`, replacement effects, mana choices, or parser mapping.
 
 Use stable, reusable capability names so future reports can merge repeated

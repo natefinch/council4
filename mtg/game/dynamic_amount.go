@@ -41,6 +41,4 @@ type DynamicAmount struct {
 	Selector    EffectSelector
 	Object      ObjectReference
 	ResultKey   ResultKey
-	// LinkID is retained for legacy Effect compatibility.
-	LinkID string
 }

@@ -30,11 +30,7 @@ var Forest = &game.CardDef{
 				Text: `
 					{T}: Add {G}.
 				`,
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
+				AdditionalCosts: cost.Tap,
 				Content: game.PlainAbilityContent{
 					Sequence: []game.Instruction{
 						{

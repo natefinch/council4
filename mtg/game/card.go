@@ -3,8 +3,6 @@ package game
 import (
 	"slices"
 
-	"github.com/natefinch/council4/mtg/game/zone"
-
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -91,13 +89,13 @@ type CardFace struct {
 	ReplacementAbilities []ReplacementAbilityDef
 	StaticAbilities      []StaticAbilityBody
 
-	Abilities        []AbilityDef
 	ImplementationID string
 	OracleText       string
 
-	// abilitiesNormalized is set by withAbilityBodies once all Abilities entries
-	// have been lowered to body+flat form. The AbilityDefs fast path requires this
-	// to distinguish "already normalized" from "body-only source literals".
+	// abilityDefs is the precomputed compatibility view built by withAbilityBodies
+	// from the categorized fields. It is set only on runtime card definitions
+	// (after WithAbilityBodies); card source literals leave it nil.
+	abilityDefs         []AbilityDef
 	abilitiesNormalized bool
 }
 
@@ -181,10 +179,10 @@ func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
 	return face.ToCardDef(c), true
 }
 
-// WithAbilityBodies returns a runtime card definition whose categorized and
-// legacy source abilities are materialized as body-backed AbilityDef values.
-// The rules layer uses that compatibility slice without rebuilding it in hot
-// paths while it migrates to AbilityBody consumers.
+// WithAbilityBodies returns a runtime card definition whose categorized
+// abilities have a precomputed body-backed AbilityDef compatibility view.
+// The rules layer uses that view without rebuilding it in hot paths while it
+// migrates to AbilityBody consumers.
 func (c *CardDef) WithAbilityBodies() *CardDef {
 	card := *c
 	card.CardFace = c.withAbilityBodies()
@@ -286,41 +284,28 @@ func (f *CardFace) HasKeyword(kw Keyword) bool {
 }
 
 // AbilityDefs returns all abilities on this face in the AbilityDef compatibility view.
-// Every returned ability has Body populated, while the legacy flat fields remain
-// mirrored during rules migration.
+// Every returned ability has Body populated. On runtime cards prepared with
+// WithAbilityBodies the precomputed cache is returned directly; on source
+// literals the view is built on demand from the categorized fields.
 func (f *CardFace) AbilityDefs() []AbilityDef {
 	if f.abilitiesNormalized {
-		return f.Abilities
+		return f.abilityDefs
 	}
-	abilities := make([]AbilityDef, 0, len(f.Abilities)+len(f.ActivatedAbilities)+len(f.ManaAbilities)+len(f.LoyaltyAbilities)+len(f.TriggeredAbilities)+len(f.ReplacementAbilities)+len(f.StaticAbilities)+1)
-	for i := range f.Abilities {
-		abilities = append(abilities, f.Abilities[i].WithBody())
-	}
-	if f.SpellAbility.Exists {
-		abilities = append(abilities, spellAbilityDef(&f.SpellAbility.Val))
-	}
-	for i := range f.ActivatedAbilities {
-		abilities = append(abilities, activatedAbilityDef(&f.ActivatedAbilities[i]))
-	}
-	for i := range f.ManaAbilities {
-		abilities = append(abilities, manaAbilityDef(&f.ManaAbilities[i]))
-	}
-	for i := range f.LoyaltyAbilities {
-		abilities = append(abilities, loyaltyAbilityDef(&f.LoyaltyAbilities[i]))
-	}
-	for i := range f.TriggeredAbilities {
-		abilities = append(abilities, triggeredAbilityDef(&f.TriggeredAbilities[i]))
-	}
-	for i := range f.ReplacementAbilities {
-		abilities = append(abilities, replacementAbilityDef(&f.ReplacementAbilities[i]))
-	}
-	for i := range f.StaticAbilities {
-		abilities = append(abilities, staticAbilityDef(&f.StaticAbilities[i]))
-	}
-	for i := range abilities {
-		normalizeNestedAbilityEffects(&abilities[i])
-	}
-	return abilities
+	return f.buildAbilityDefs()
+}
+
+// ClearAbilities removes every categorized ability and its normalized runtime
+// view from this face.
+func (f *CardFace) ClearAbilities() {
+	f.SpellAbility = opt.V[SpellAbilityBody]{}
+	f.ActivatedAbilities = nil
+	f.ManaAbilities = nil
+	f.LoyaltyAbilities = nil
+	f.TriggeredAbilities = nil
+	f.ReplacementAbilities = nil
+	f.StaticAbilities = nil
+	f.abilityDefs = nil
+	f.abilitiesNormalized = false
 }
 
 // ManaValue returns this face's mana value from its printed mana cost (CR 202.3).
@@ -351,14 +336,30 @@ func (f *CardFace) ToCardDef(parent *CardDef) *CardDef {
 	}
 }
 
-func (f *CardFace) hasCategorizedAbilities() bool {
-	return f.SpellAbility.Exists ||
-		len(f.ActivatedAbilities) != 0 ||
-		len(f.ManaAbilities) != 0 ||
-		len(f.LoyaltyAbilities) != 0 ||
-		len(f.TriggeredAbilities) != 0 ||
-		len(f.ReplacementAbilities) != 0 ||
-		len(f.StaticAbilities) != 0
+func (f *CardFace) buildAbilityDefs() []AbilityDef {
+	abilities := make([]AbilityDef, 0, len(f.ActivatedAbilities)+len(f.ManaAbilities)+len(f.LoyaltyAbilities)+len(f.TriggeredAbilities)+len(f.ReplacementAbilities)+len(f.StaticAbilities)+1)
+	if f.SpellAbility.Exists {
+		abilities = append(abilities, spellAbilityDef(&f.SpellAbility.Val))
+	}
+	for i := range f.ActivatedAbilities {
+		abilities = append(abilities, activatedAbilityDef(&f.ActivatedAbilities[i]))
+	}
+	for i := range f.ManaAbilities {
+		abilities = append(abilities, manaAbilityDef(&f.ManaAbilities[i]))
+	}
+	for i := range f.LoyaltyAbilities {
+		abilities = append(abilities, loyaltyAbilityDef(&f.LoyaltyAbilities[i]))
+	}
+	for i := range f.TriggeredAbilities {
+		abilities = append(abilities, triggeredAbilityDef(&f.TriggeredAbilities[i]))
+	}
+	for i := range f.ReplacementAbilities {
+		abilities = append(abilities, replacementAbilityDef(&f.ReplacementAbilities[i]))
+	}
+	for i := range f.StaticAbilities {
+		abilities = append(abilities, staticAbilityDef(&f.StaticAbilities[i]))
+	}
+	return abilities
 }
 
 func (f *CardFace) clone() CardFace {
@@ -382,62 +383,18 @@ func (f *CardFace) clone() CardFace {
 		TriggeredAbilities:   append([]TriggeredAbilityBody(nil), f.TriggeredAbilities...),
 		ReplacementAbilities: append([]ReplacementAbilityDef(nil), f.ReplacementAbilities...),
 		StaticAbilities:      append([]StaticAbilityBody(nil), f.StaticAbilities...),
-		Abilities:            append([]AbilityDef(nil), f.Abilities...),
 		ImplementationID:     f.ImplementationID,
 		OracleText:           f.OracleText,
+		abilityDefs:          append([]AbilityDef(nil), f.abilityDefs...),
 		abilitiesNormalized:  f.abilitiesNormalized,
 	}
 }
 
 func (f *CardFace) withAbilityBodies() CardFace {
 	face := f.clone()
-	face.Abilities = f.AbilityDefs()
-	for i := range face.Abilities {
-		normalizeNestedAbilityEffects(&face.Abilities[i])
-	}
+	face.abilityDefs = f.buildAbilityDefs()
 	face.abilitiesNormalized = true
 	return face
-}
-
-// normalizeNestedAbilityEffects calls WithBody on any AbilityDef entries
-// nested inside an ability's flat Effects or Modes — specifically
-// ContinuousEffect.AddAbilities and Effect.EmblemAbilities. It must be called
-// after WithBody has populated the flat Effects/Modes fields. The Effects/Modes
-// slices must already be freshly-allocated copies (not shared with the body) so
-// we can safely replace nested slice headers without mutating card source data.
-func normalizeNestedAbilityEffects(ability *AbilityDef) {
-	for i := range ability.Effects {
-		normalizeEffectNestedAbilities(&ability.Effects[i])
-	}
-	for i := range ability.Modes {
-		for j := range ability.Modes[i].LegacyEffects {
-			normalizeEffectNestedAbilities(&ability.Modes[i].LegacyEffects[j])
-		}
-	}
-}
-
-func normalizeEffectNestedAbilities(effect *Effect) {
-	if len(effect.ContinuousEffects) > 0 {
-		ces := make([]ContinuousEffect, len(effect.ContinuousEffects))
-		copy(ces, effect.ContinuousEffects)
-		for j := range ces {
-			if len(ces[j].AddAbilities) > 0 {
-				abs := make([]AbilityDef, len(ces[j].AddAbilities))
-				for k := range ces[j].AddAbilities {
-					abs[k] = ces[j].AddAbilities[k].WithBody()
-				}
-				ces[j].AddAbilities = abs
-			}
-		}
-		effect.ContinuousEffects = ces
-	}
-	if len(effect.EmblemAbilities) > 0 {
-		abs := make([]AbilityDef, len(effect.EmblemAbilities))
-		for k := range effect.EmblemAbilities {
-			abs[k] = effect.EmblemAbilities[k].WithBody()
-		}
-		effect.EmblemAbilities = abs
-	}
 }
 
 // lowerBodyToFlat populates flat compatibility fields of ability from Body.
@@ -473,8 +430,6 @@ func lowerBodyToFlat(ability *AbilityDef) {
 		ability.ActivationCondition = body.ActivationCondition
 		if body.Content != nil {
 			applyAbilityContent(ability, body.Content)
-		} else {
-			ability.Effects = append([]Effect(nil), body.LegacyEffects...)
 		}
 	case LoyaltyAbilityBody:
 		ability.Kind = ActivatedAbility
@@ -496,7 +451,6 @@ func lowerBodyToFlat(ability *AbilityDef) {
 		ability.Condition = body.Condition
 		ability.ZoneOfFunction = body.ZoneOfFunction
 		ability.KeywordAbilities = append([]KeywordAbility(nil), body.KeywordAbilities...)
-		ability.Effects = append([]Effect(nil), body.LegacyEffects...)
 	default:
 	}
 }
@@ -544,8 +498,6 @@ func manaAbilityDef(body *ManaAbilityBody) AbilityDef {
 	}
 	if body.Content != nil {
 		applyAbilityContent(&ability, body.Content)
-	} else {
-		ability.Effects = append([]Effect(nil), body.LegacyEffects...)
 	}
 	return ability
 }
@@ -577,31 +529,17 @@ func triggeredAbilityDef(body *TriggeredAbilityBody) AbilityDef {
 }
 
 func replacementAbilityDef(body *ReplacementAbilityDef) AbilityDef {
-	effects := append([]Effect(nil), body.Effects...)
-	if body.Replacement.MatchEvent != EventUnknown ||
-		body.Replacement.EntersTapped ||
-		len(body.Replacement.EntersWithCounters) != 0 ||
-		body.Replacement.ReplaceToZone != zone.None {
-		effects = append(effects, Effect{
-			Type:        EffectReplace,
-			TargetIndex: TargetIndexController,
-			Replacement: opt.Val(body.Replacement),
-		})
-	}
 	ability := AbilityDef{
 		Kind: StaticAbility,
 		Text: body.Text,
 		Body: StaticAbilityBody{
-			Text:          body.Text,
-			LegacyEffects: append([]Effect(nil), effects...),
+			Text: body.Text,
 		},
-		Effects: effects,
 	}
 	return ability.WithBody()
 }
 
 func staticAbilityDef(body *StaticAbilityBody) AbilityDef {
-	effects := append([]Effect(nil), body.LegacyEffects...)
 	return AbilityDef{
 		Kind:             StaticAbility,
 		Text:             body.Text,
@@ -609,7 +547,6 @@ func staticAbilityDef(body *StaticAbilityBody) AbilityDef {
 		Condition:        body.Condition,
 		ZoneOfFunction:   body.ZoneOfFunction,
 		KeywordAbilities: append([]KeywordAbility(nil), body.KeywordAbilities...),
-		Effects:          effects,
 	}
 }
 
@@ -617,14 +554,12 @@ func applyAbilityContent(ability *AbilityDef, content AbilityContent) {
 	switch c := content.(type) {
 	case PlainAbilityContent:
 		ability.Targets = append([]TargetSpec(nil), c.Targets...)
-		ability.Effects = append([]Effect(nil), c.LegacyEffects...)
 	case ModalAbilityContent:
 		ability.Targets = append([]TargetSpec(nil), c.SharedTargets...)
 		ability.Modes = make([]Mode, len(c.Modes))
 		for i := range c.Modes {
 			ability.Modes[i] = c.Modes[i]
 			ability.Modes[i].Targets = append([]TargetSpec(nil), c.Modes[i].Targets...)
-			ability.Modes[i].LegacyEffects = append([]Effect(nil), c.Modes[i].LegacyEffects...)
 		}
 		ability.MinModes = c.MinModes
 		ability.MaxModes = c.MaxModes

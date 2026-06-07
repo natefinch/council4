@@ -35,7 +35,7 @@ the other fields only when that operation needs them:
 
 ```go
 AdditionalCosts: []cost.Additional{
-	{Kind: cost.AdditionalTap},
+	cost.T,
 	{
 		Kind:               cost.AdditionalSacrifice,
 		Amount:             1,
@@ -44,6 +44,16 @@ AdditionalCosts: []cost.Additional{
 	},
 }
 ```
+
+For the common case where tapping the source is the only additional cost, use
+the predeclared slice directly:
+
+```go
+AdditionalCosts: cost.Tap
+```
+
+Use `cost.T` as the individual tap entry only when combining it with other
+additional costs.
 
 `Amount` defaults to one for costs involving objects or cards. `Text` supplies
 card-specific display text when the generic text for the kind is insufficient.

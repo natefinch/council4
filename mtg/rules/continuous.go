@@ -340,42 +340,6 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 				}
 			}
 		}
-		for i := range ability.Effects {
-			effect := &ability.Effects[i]
-			if layer == game.LayerPowerToughnessModify && effect.Type == game.EffectModifyPT && permanentValuesMatchSelectorForSource(source.permanent, source.controller, permanent, values, effect.Selector) {
-				powerDelta := effect.PowerDelta
-				if effect.DynamicAmount.Exists {
-					powerDelta = dynamicAmountValue(g, nil, source.controller, effect.DynamicAmount.Val)
-				}
-				effects = append(effects, game.ContinuousEffect{
-					SourceObjectID:   sourceObjectID(source),
-					SourceCardID:     source.cardID,
-					Controller:       source.controller,
-					Timestamp:        source.timestamp,
-					AffectedObjectID: permanent.ObjectID,
-					Layer:            game.LayerPowerToughnessModify,
-					PowerDelta:       powerDelta,
-					ToughnessDelta:   effect.ToughnessDelta,
-				})
-			}
-			if effect.Type != game.EffectApplyContinuous {
-				continue
-			}
-			for i := range effect.ContinuousEffects {
-				template := &effect.ContinuousEffects[i]
-				if template.Layer != layer {
-					continue
-				}
-				staticEffect := *template
-				staticEffect.SourceObjectID = sourceObjectID(source)
-				staticEffect.SourceCardID = source.cardID
-				staticEffect.Controller = source.controller
-				staticEffect.Timestamp = source.timestamp
-				if continuousEffectApplies(g, permanent, values, &staticEffect) {
-					effects = append(effects, staticEffect)
-				}
-			}
-		}
 	}
 	return effects
 }
@@ -434,21 +398,6 @@ func staticAbilityHasEffectForLayer(ability *game.AbilityDef, layer game.Continu
 	if body, ok := ability.StaticBody(); ok {
 		for i := range body.ContinuousEffects {
 			if body.ContinuousEffects[i].Layer == layer {
-				return true
-			}
-		}
-	}
-	for i := range ability.Effects {
-		effect := &ability.Effects[i]
-		if effect.Type == game.EffectModifyPT && layer == game.LayerPowerToughnessModify {
-			return true
-		}
-		if effect.Type != game.EffectApplyContinuous {
-			continue
-		}
-		for i := range effect.ContinuousEffects {
-			template := &effect.ContinuousEffects[i]
-			if template.Layer == layer {
 				return true
 			}
 		}
@@ -604,9 +553,11 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		values.colors = removeColors(values.colors, effect.RemoveColors)
 		values.colors = appendUniqueColors(values.colors, effect.AddColors...)
 	case game.LayerAbility:
-		values.abilities = append(values.abilities, effect.AddAbilities...)
 		for i := range effect.AddAbilities {
-			effect.AddAbilities[i].AddKeywordKindsTo(values.keywords)
+			ability := game.AbilityDef{Body: effect.AddAbilities[i]}
+			normalized := ability.WithBody()
+			values.abilities = append(values.abilities, normalized)
+			normalized.AddKeywordKindsTo(values.keywords)
 		}
 		for _, keyword := range effect.RemoveKeywords {
 			values.keywords[keyword] = false

@@ -75,10 +75,9 @@ func TestTargetedEffectUsesSelectedTarget(t *testing.T) {
 func TestDeadPlayerTargetDoesNotApplyEffect(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:        game.EffectDamage,
-		Amount:      3,
-		TargetIndex: 0,
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
+		Amount:    game.Fixed(3),
+		Recipient: game.TargetRecipient(0),
 	}, []game.Target{game.PlayerTarget(game.Player2)})
 	if !engine.eliminatePlayer(g, game.Player2) {
 		t.Fatal("eliminatePlayer() = false, want true")
@@ -356,12 +355,12 @@ func TestStructuredTargetPredicates(t *testing.T) {
 		Toughness: opt.Val(game.PT{Value: 3})},
 	})
 	whiteCreature := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "White Creature",
-		ManaCost:  opt.Val(cost.Mana{cost.O(4)}),
-		Colors:    []color.Color{color.White},
-		Types:     []types.Card{types.Creature},
-		Power:     opt.Val(game.PT{Value: 2}),
-		Toughness: opt.Val(game.PT{Value: 2}),
-		Abilities: []game.AbilityDef{{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flying)}}},
+		ManaCost:        opt.Val(cost.Mana{cost.O(4)}),
+		Colors:          []color.Color{color.White},
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 2}),
+		Toughness:       opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbilityBody{game.FlyingStaticBody}},
 	})
 	whiteCreature.Tapped = true
 	addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -446,24 +445,21 @@ func TestAnotherTargetPredicateExcludesSourcePermanent(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Source Creature",
 		Types: []types.Card{types.Creature},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.ActivatedAbility,
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "another target creature",
-						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Another:        true,
-						},
+		ActivatedAbilities: []game.ActivatedAbilityBody{{
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Constraint: "another target creature",
+					Allow:      game.TargetAllowPermanent,
+					Predicate: game.TargetPredicate{
+						PermanentTypes: []types.Card{types.Creature},
+						Another:        true,
 					},
-				},
-				Effects: []game.Effect{{Type: game.EffectTap, TargetIndex: 0}},
+				}},
+				Sequence: []game.Instruction{{Primitive: game.Tap{TargetIndex: 0}}},
 			},
-		}},
+		}}},
 	})
 	other := addCreaturePermanent(g, game.Player1)
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -521,16 +517,19 @@ func TestPermanentTargetThatLeavesBeforeResolutionCountersSpellByRules(t *testin
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCreaturePermanent(g, game.Player2)
-	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:        game.EffectDamage,
-		Amount:      3,
-		TargetIndex: 0,
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
+		Amount:    game.Fixed(3),
+		Recipient: game.TargetRecipient(0),
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	card, ok := g.GetCardInstance(sourceID)
 	if !ok {
 		t.Fatal("source card instance not found")
 	}
-	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+	// Set target spec on the spell's content to require a creature target
+	if content, ok := card.Def.SpellAbility.Val.Content.(game.PlainAbilityContent); ok {
+		content.Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+		card.Def.SpellAbility.Val.Content = content
+	}
 	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
@@ -550,16 +549,19 @@ func TestPermanentTargetedDamageMarksDamageOnResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCreaturePermanent(g, game.Player2)
-	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:        game.EffectDamage,
-		Amount:      3,
-		TargetIndex: 0,
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
+		Amount:    game.Fixed(3),
+		Recipient: game.TargetRecipient(0),
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	card, ok := g.GetCardInstance(sourceID)
 	if !ok {
 		t.Fatal("source card instance not found")
 	}
-	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+	// Set target spec on the spell's content to require a creature target
+	if content, ok := card.Def.SpellAbility.Val.Content.(game.PlainAbilityContent); ok {
+		content.Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+		card.Def.SpellAbility.Val.Content = content
+	}
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -582,10 +584,8 @@ func TestTargetChoiceKindsAtActionEnumerationLevel(t *testing.T) {
 			name: "no targets required produces one cast action",
 			setupSpell: func() *game.CardDef {
 				return &game.CardDef{CardFace: game.CardFace{Name: "Shock No Target",
-					Types: []types.Card{types.Sorcery},
-					Abilities: []game.AbilityDef{
-						{Kind: game.SpellAbility},
-					}},
+					Types:        []types.Card{types.Sorcery},
+					SpellAbility: opt.Val(game.SpellAbilityBody{})},
 				}
 			},
 			setupBoard:      func(g *game.Game) {},
@@ -651,15 +651,12 @@ func TestInvalidTargetSpecAbilityProducesNoActivateActions(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Broken Ability Source",
 		Types: []types.Card{types.Creature},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.ActivatedAbility,
-				Targets: []game.TargetSpec{
-					{MinTargets: 3, MaxTargets: 1, Constraint: "creature"},
-				},
-				Effects: []game.Effect{{Type: game.EffectTap, TargetIndex: 0}},
+		ActivatedAbilities: []game.ActivatedAbilityBody{{
+			Content: game.PlainAbilityContent{
+				Targets:  []game.TargetSpec{{MinTargets: 3, MaxTargets: 1, Constraint: "creature"}},
+				Sequence: []game.Instruction{{Primitive: game.Tap{TargetIndex: 0}}},
 			},
-		}},
+		}}},
 	})
 	addCreaturePermanent(g, game.Player2)
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -766,8 +763,12 @@ func TestOpponentChosenTargetSlotFallsBackDeterministically(t *testing.T) {
 
 func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	spec := opponentChosenTargetAbilitySource().Abilities[0].Targets[1]
 	source := opponentChosenTargetAbilitySource()
+	abilities := source.AbilityDefs()
+	if len(abilities) == 0 || len(abilities[0].Targets) < 2 {
+		t.Fatal("source card missing expected ability targets")
+	}
+	spec := abilities[0].Targets[1]
 	hexproof := addHexproofPermanent(g, game.Player2)
 	normal := addCreaturePermanent(g, game.Player2)
 
@@ -783,17 +784,12 @@ func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 
 func playerDamageSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.SpellAbility,
-				Targets: []game.TargetSpec{
-					{MinTargets: 1, MaxTargets: 1, Constraint: "player"},
-				},
-				Effects: []game.Effect{
-					{Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
-				},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
+				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}}},
 			},
-		}},
+		})},
 	}
 }
 
@@ -815,21 +811,19 @@ func permanentTargetSpellWithSpecs(specs []game.TargetSpec) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Permanent Target Spell",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{
-			{
-				Kind:    game.SpellAbility,
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
 				Targets: specs,
 			},
-		}},
+		})},
 	}
 }
 
 func opponentChosenTargetAbilitySource() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Arena-like Land",
 		Types: []types.Card{types.Land},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.ActivatedAbility,
+		ActivatedAbilities: []game.ActivatedAbilityBody{{
+			Content: game.PlainAbilityContent{
 				Targets: []game.TargetSpec{
 					{
 						MinTargets: 1,
@@ -851,12 +845,12 @@ func opponentChosenTargetAbilitySource() *game.CardDef {
 						Chooser: game.TargetChooserOpponent,
 					},
 				},
-				Effects: []game.Effect{
-					{Type: game.EffectTap, TargetIndex: 0},
-					{Type: game.EffectTap, TargetIndex: 1},
-					{Type: game.EffectFight},
+				Sequence: []game.Instruction{
+					{Primitive: game.Tap{TargetIndex: 0}},
+					{Primitive: game.Tap{TargetIndex: 1}},
+					{Primitive: game.Fight{}},
 				},
 			},
-		}},
+		}}},
 	}
 }

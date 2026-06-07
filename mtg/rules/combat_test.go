@@ -674,14 +674,10 @@ func TestMustBeBlockedRequirementRejectsNoBlocksWhenAble(t *testing.T) {
 	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Must Block Effect",
 		Types: []types.Card{types.Enchantment},
-		Abilities: []game.AbilityDef{{
-			Kind: game.StaticAbility,
-			Effects: []game.Effect{{
-				Type: game.EffectApplyRule,
-				RuleEffects: []game.RuleEffect{{
-					Kind:             game.RuleEffectMustBeBlocked,
-					AffectedObjectID: attacker.ObjectID,
-				}},
+		StaticAbilities: []game.StaticAbilityBody{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:             game.RuleEffectMustBeBlocked,
+				AffectedObjectID: attacker.ObjectID,
 			}},
 		}}},
 	})
@@ -714,14 +710,10 @@ func TestMustBeBlockedRequirementAllowsNoBlocksWhenUnable(t *testing.T) {
 	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Must Block Effect",
 		Types: []types.Card{types.Enchantment},
-		Abilities: []game.AbilityDef{{
-			Kind: game.StaticAbility,
-			Effects: []game.Effect{{
-				Type: game.EffectApplyRule,
-				RuleEffects: []game.RuleEffect{{
-					Kind:             game.RuleEffectMustBeBlocked,
-					AffectedObjectID: attacker.ObjectID,
-				}},
+		StaticAbilities: []game.StaticAbilityBody{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:             game.RuleEffectMustBeBlocked,
+				AffectedObjectID: attacker.ObjectID,
 			}},
 		}}},
 	})
@@ -953,23 +945,19 @@ func TestStaticRuleEffectsCanProhibitAttackingAndBlocking(t *testing.T) {
 	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pacifying Law",
 		Types: []types.Card{types.Enchantment},
-		Abilities: []game.AbilityDef{{
-			Kind: game.StaticAbility,
-			Effects: []game.Effect{{
-				Type: game.EffectApplyRule,
-				RuleEffects: []game.RuleEffect{
-					{
-						Kind:               game.RuleEffectCantAttack,
-						AffectedController: game.ControllerOpponent,
-						PermanentTypes:     []types.Card{types.Creature},
-					},
-					{
-						Kind:               game.RuleEffectCantBlock,
-						AffectedController: game.ControllerOpponent,
-						PermanentTypes:     []types.Card{types.Creature},
-					},
+		StaticAbilities: []game.StaticAbilityBody{{
+			RuleEffects: []game.RuleEffect{
+				{
+					Kind:               game.RuleEffectCantAttack,
+					AffectedController: game.ControllerOpponent,
+					PermanentTypes:     []types.Card{types.Creature},
 				},
-			}},
+				{
+					Kind:               game.RuleEffectCantBlock,
+					AffectedController: game.ControllerOpponent,
+					PermanentTypes:     []types.Card{types.Creature},
+				},
+			},
 		}}},
 	})
 	g.Combat = &game.CombatState{}
@@ -990,16 +978,12 @@ func TestCantAttackRuleCanApplyOnlyToSpecificDefender(t *testing.T) {
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "No Attacks Here",
 		Types: []types.Card{types.Enchantment},
-		Abilities: []game.AbilityDef{{
-			Kind: game.StaticAbility,
-			Effects: []game.Effect{{
-				Type: game.EffectApplyRule,
-				RuleEffects: []game.RuleEffect{{
-					Kind:               game.RuleEffectCantAttack,
-					AffectedController: game.ControllerOpponent,
-					PermanentTypes:     []types.Card{types.Creature},
-					DefendingPlayer:    game.PlayerYou,
-				}},
+		StaticAbilities: []game.StaticAbilityBody{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectCantAttack,
+				AffectedController: game.ControllerOpponent,
+				PermanentTypes:     []types.Card{types.Creature},
+				DefendingPlayer:    game.PlayerYou,
 			}},
 		}}},
 	})
@@ -1077,13 +1061,10 @@ func TestAttackTaxFiltersAndChargesDeclareAttackers(t *testing.T) {
 func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	manaDork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mana Dork",
-		Types:     []types.Card{types.Creature},
-		Power:     opt.Val(game.PT{Value: 1}),
-		Toughness: opt.Val(game.PT{Value: 1}),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.StaticAbility,
-			KeywordAbilities: game.SimpleKeywords(game.Haste),
-		}}},
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 1}),
+		Toughness:       opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbilityBody{game.HasteStaticBody}},
 	}, mana.G, 1)
 	manaDork.SummoningSick = false
 	g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: game.Player2, Amount: 1})
@@ -1844,12 +1825,9 @@ func addCombatCreaturePermanent(g *game.Game, controller game.PlayerID, keywords
 		Types: []types.Card{
 			types.Creature,
 		},
-		Abilities: []game.AbilityDef{
-			{
-				Kind:             game.StaticAbility,
-				KeywordAbilities: game.SimpleKeywords(keywords...),
-			},
-		}},
+		StaticAbilities: []game.StaticAbilityBody{{
+			KeywordAbilities: game.SimpleKeywords(keywords...),
+		}}},
 	})
 }
 
@@ -1861,12 +1839,9 @@ func addCombatCreaturePermanentWithPower(g *game.Game, controller game.PlayerID,
 		},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		Abilities: []game.AbilityDef{
-			{
-				Kind:             game.StaticAbility,
-				KeywordAbilities: game.SimpleKeywords(keywords...),
-			},
-		}},
+		StaticAbilities: []game.StaticAbilityBody{{
+			KeywordAbilities: game.SimpleKeywords(keywords...),
+		}}},
 	})
 }
 

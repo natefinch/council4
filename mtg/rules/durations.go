@@ -4,18 +4,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
-func untilEndOfTurnContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, effect *game.Effect) game.ContinuousEffect {
-	powerDelta := effect.PowerDelta
-	if effect.PowerDeltaDynamic.Exists {
-		powerDelta += dynamicAmountValue(g, obj, stackObjectController(obj), effect.PowerDeltaDynamic.Val)
-	}
-	toughnessDelta := effect.ToughnessDelta
-	if effect.ToughnessDeltaDynamic.Exists {
-		toughnessDelta += dynamicAmountValue(g, obj, stackObjectController(obj), effect.ToughnessDeltaDynamic.Val)
-	}
-	return untilEndOfTurnPTContinuousEffect(g, obj, permanent, powerDelta, toughnessDelta)
-}
-
 func untilEndOfTurnPTContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, powerDelta, toughnessDelta int) game.ContinuousEffect {
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	effectID := g.IDGen.Next()
@@ -74,18 +62,15 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
-	effects := append([]game.Effect(nil), def.Effects...)
-	targets := append([]game.TargetSpec(nil), def.Targets...)
-	ability := game.AbilityDef{
+	abilityDef := game.AbilityDef{
 		Kind:     game.TriggeredAbility,
 		Optional: def.Optional,
 		Body: game.TriggeredAbilityBody{
 			Optional: def.Optional,
-			Content:  game.PlainAbilityContent{Targets: append([]game.TargetSpec(nil), targets...), LegacyEffects: append([]game.Effect(nil), effects...)},
+			Content:  def.Content,
 		},
-		Effects: effects,
-		Targets: targets,
 	}
+	ability := abilityDef.WithBody()
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
 		ID:             g.IDGen.Next(),
 		SourceID:       sourceID,

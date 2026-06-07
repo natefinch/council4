@@ -246,23 +246,19 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	if slices.Contains(event.CardTypes, types.Creature) {
 		return nil, false
 	}
-	effects := []game.Effect{
-		{
-			Type:           game.EffectModifyPT,
-			TargetIndex:    game.TargetIndexSourcePermanent,
-			PowerDelta:     1,
-			ToughnessDelta: 1,
-			UntilEndOfTurn: true,
-		},
-	}
+	instr := game.Instruction{Primitive: game.ModifyPT{
+		TargetIndex:    game.TargetIndexSourcePermanent,
+		PowerDelta:     game.Fixed(1),
+		ToughnessDelta: game.Fixed(1),
+		Duration:       game.DurationUntilEndOfTurn,
+	}}
 	return &game.AbilityDef{
 		Kind: game.TriggeredAbility,
 		Text: "Prowess",
 		Body: game.TriggeredAbilityBody{
 			Text:    "Prowess",
-			Content: game.PlainAbilityContent{LegacyEffects: append([]game.Effect(nil), effects...)},
+			Content: game.PlainAbilityContent{Sequence: []game.Instruction{instr}},
 		},
-		Effects: effects,
 	}, true
 }
 
@@ -273,21 +269,17 @@ func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	if g.Combat == nil || len(g.Combat.Attackers) != 1 {
 		return nil, false
 	}
-	effects := []game.Effect{
-		{
-			Type:           game.EffectModifyPT,
-			Object:         opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
-			PowerDelta:     1,
-			ToughnessDelta: 1,
-			UntilEndOfTurn: true,
-		},
-	}
+	instr := game.Instruction{Primitive: game.ModifyPT{
+		Object:         opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
+		PowerDelta:     game.Fixed(1),
+		ToughnessDelta: game.Fixed(1),
+		Duration:       game.DurationUntilEndOfTurn,
+	}}
 	return &game.AbilityDef{
 		Kind:             game.TriggeredAbility,
 		Text:             "Exalted",
-		Body:             game.TriggeredAbilityBody{Text: "Exalted", Content: game.PlainAbilityContent{LegacyEffects: append([]game.Effect(nil), effects...)}},
+		Body:             game.TriggeredAbilityBody{Text: "Exalted", Content: game.PlainAbilityContent{Sequence: []game.Instruction{instr}}},
 		KeywordAbilities: game.SimpleKeywords(game.Exalted),
-		Effects:          effects,
 	}, true
 }
 

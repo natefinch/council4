@@ -25,11 +25,7 @@ var CommandTower = &game.CardDef{
 				Text: `
 					{T}: Add one mana of any color in your commander's color identity.
 				`,
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
+				AdditionalCosts: cost.Tap,
 				Content: game.PlainAbilityContent{
 					Sequence: []game.Instruction{
 						{

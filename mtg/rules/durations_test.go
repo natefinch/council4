@@ -5,19 +5,17 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
-	"github.com/natefinch/council4/opt"
 )
 
 func TestUntilEndOfTurnPTModifierUsesRuntimeContinuousEffect(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:           game.EffectModifyPT,
+	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
 		TargetIndex:    0,
-		PowerDelta:     3,
-		ToughnessDelta: 3,
-		UntilEndOfTurn: true,
+		PowerDelta:     game.Fixed(3),
+		ToughnessDelta: game.Fixed(3),
+		Duration:       game.DurationUntilEndOfTurn,
 	}, []game.Target{game.PermanentTarget(creature.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -37,14 +35,13 @@ func TestUntilEndOfTurnPTModifierSnapshotsDynamicX(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:           game.EffectModifyPT,
-		TargetIndex:    0,
-		UntilEndOfTurn: true,
-		PowerDeltaDynamic: opt.Val(game.DynamicAmount{
+	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
+		TargetIndex: 0,
+		Duration:    game.DurationUntilEndOfTurn,
+		PowerDelta: game.Dynamic(game.DynamicAmount{
 			Kind: game.DynamicAmountX,
 		}),
-		ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{
+		ToughnessDelta: game.Dynamic(game.DynamicAmount{
 			Kind: game.DynamicAmountX,
 		}),
 	}, []game.Target{game.PermanentTarget(creature.ObjectID)})
@@ -76,11 +73,10 @@ func TestUntilEndOfTurnPTModifierSnapshotsDynamicTargetPower(t *testing.T) {
 	engine := NewEngine(nil)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 	creature.Counters.Add(counter.PlusOnePlusOne, 1)
-	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:           game.EffectModifyPT,
-		TargetIndex:    0,
-		UntilEndOfTurn: true,
-		PowerDeltaDynamic: opt.Val(game.DynamicAmount{
+	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
+		TargetIndex: 0,
+		Duration:    game.DurationUntilEndOfTurn,
+		PowerDelta: game.Dynamic(game.DynamicAmount{
 			Kind:        game.DynamicAmountTargetPower,
 			TargetIndex: 0,
 		}),
@@ -109,12 +105,11 @@ func TestCleanupExpiresTemporaryContinuousEffectsButKeepsCountersAndStaticEffect
 	addAnthemPermanent(g, game.Player1)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	creature.Counters.Add(counter.PlusOnePlusOne, 1)
-	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:           game.EffectModifyPT,
+	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
 		TargetIndex:    0,
-		PowerDelta:     3,
-		ToughnessDelta: 3,
-		UntilEndOfTurn: true,
+		PowerDelta:     game.Fixed(3),
+		ToughnessDelta: game.Fixed(3),
+		Duration:       game.DurationUntilEndOfTurn,
 	}, []game.Target{game.PermanentTarget(creature.ObjectID)})
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -208,9 +203,11 @@ func TestDelayedNextEndStepTriggerFiresOnce(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
-	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:           game.EffectCreateDelayedTrigger,
-		DelayedTrigger: opt.Val(game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}}),
+	addEffectSpellToStack(g, game.Player1, game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{
+			Timing:  game.DelayedAtBeginningOfNextEndStep,
+			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}},
+		},
 	}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 

@@ -107,8 +107,9 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
 		return "resolved"
 	}
-	for i := range ability.Effects {
-		e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
+	if body, ok := ability.LoyaltyBody(); ok && body.Content != nil {
+		e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
+		return "resolved"
 	}
 	return "resolved"
 }
@@ -308,7 +309,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
 	}
 	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
-		target, targetOK := effectPermanent(g, obj, &game.Effect{TargetIndex: 0})
+		target, targetOK := effectPermanentAt(g, obj, 0)
 		if !targetOK || !attachPermanent(g, permanent, target) {
 			movePermanentToZone(g, permanent, zone.Graveyard)
 			return "graveyard"

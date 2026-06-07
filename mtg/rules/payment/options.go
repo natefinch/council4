@@ -28,8 +28,9 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 		return nil
 	}
 	ability, ok := firstSpellAbility(card)
+	kicker, kickerOK := spellKicker(card)
 	if !ok {
-		return []spellCostOption{{index: 0, label: "Normal cost", card: card, manaCost: manaCostPtr(card.ManaCost)}}
+		return []spellCostOption{{index: 0, label: "Normal cost", card: card, manaCost: spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid)}}
 	}
 	requiredAdditional := abilityAdditionalCosts(ability)
 	options := []spellCostOption{
@@ -37,7 +38,7 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
-			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), ability, kickerPaid),
+			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
 		},
 	}
@@ -58,7 +59,7 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 			index:           i + 1,
 			label:           label,
 			card:            card,
-			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), ability, kickerPaid),
+			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: additional,
 		})
 	}
@@ -72,20 +73,34 @@ func isFlashbackAlternative(alternative cost.Alternative) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
 }
 
-func spellManaCostWithKicker(base *cost.Mana, ability *game.AbilityDef, kickerPaid bool) *cost.Mana {
-	if !kickerPaid || ability == nil {
-		return base
-	}
-	kickerCost, ok := ability.KickerCost()
-	if !ok {
+func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerOK, kickerPaid bool) *cost.Mana {
+	if !kickerPaid || !kickerOK {
 		return base
 	}
 	combined := cost.Mana{}
 	if base != nil {
 		combined = append(combined, (*base)...)
 	}
-	combined = append(combined, kickerCost...)
+	combined = append(combined, kicker.Cost...)
 	return &combined
+}
+
+func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
+	if ability, ok := firstSpellAbility(card); ok {
+		if kicker, ok := ability.Kicker(); ok {
+			return kicker, true
+		}
+	}
+	if card == nil {
+		return game.KickerKeyword{}, false
+	}
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		if kicker, ok := abilities[i].Kicker(); ok {
+			return kicker, true
+		}
+	}
+	return game.KickerKeyword{}, false
 }
 
 // firstSpellAbility returns the first spell ability from a card, if any.

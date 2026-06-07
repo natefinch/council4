@@ -105,14 +105,7 @@ func simpleAddMana(ability *game.AbilityDef) (game.AddMana, bool) {
 		addMana, ok := content.Sequence[0].Primitive.(game.AddMana)
 		return addMana, ok && !addMana.Amount.IsDynamic() && addMana.ChoiceFrom == ""
 	}
-	if len(ability.Effects) != 1 || ability.Effects[0].Type != game.EffectAddMana {
-		return game.AddMana{}, false
-	}
-	effect := &ability.Effects[0]
-	return game.AddMana{
-		Amount:    game.Fixed(effect.Amount),
-		ManaColor: effect.ManaColor,
-	}, true
+	return game.AddMana{}, false
 }
 
 func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) []*game.Permanent {

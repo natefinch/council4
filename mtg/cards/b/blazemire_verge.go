@@ -1,6 +1,7 @@
 package b
 
 import (
+	"github.com/natefinch/council4/mtg/cards/common"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -27,35 +28,12 @@ var BlazemireVerge = &game.CardDef{
 			{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
 		`,
 		ManaAbilities: []game.ManaAbilityBody{
-			{
-				Text: `
-					{T}: Add {B}.
-				`,
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
-				Content: game.PlainAbilityContent{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.AddMana{
-								Amount:    game.Fixed(1),
-								ManaColor: mana.B,
-							},
-						},
-					},
-				},
-			},
+			common.TapForOne(mana.B),
 			{
 				Text: `
 					{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
 				`,
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
+				AdditionalCosts: cost.Tap,
 				ActivationCondition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
 						SubtypesAny: []types.Sub{

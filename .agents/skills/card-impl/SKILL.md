@@ -22,7 +22,7 @@ Given one or more Magic: The Gathering card names:
 2. **Read the generated file.** It has the mechanical fields filled in; the categorized ability fields are left empty for you to complete. Also read `mtg/cards/k/karplusan_forest.go` — this is the canonical source-formatting reference for all new card definitions.
 
 3. **Read the CARD-IMPLEMENTATION-GUIDE.md** in this skill directory. It contains:
-   - The full Go type definitions for `AbilityDef`, `Effect`, `Keyword`, etc.
+   - The Go type definitions for categorized ability bodies, typed primitives, keywords, and related card data.
    - Mapping rules from oracle text patterns to struct fields.
    - Worked examples of real cards.
    - Current generated-card conventions: `mtg/game/types` for
@@ -34,7 +34,7 @@ Given one or more Magic: The Gathering card names:
    - `EntersTapped` — if the oracle text says "enters tapped"
    - `EntersWithCounters` — if the oracle text says "enters with N counters"
    - Any other fields derivable from oracle text
-   Do **not** populate the legacy `Abilities []AbilityDef` slice.
+   The `Abilities []AbilityDef` field has been removed from `CardFace`; use only categorized fields.
 
 5. **Present the completed CardDef** for human review. Explain your reasoning for each ability you parsed.
 
@@ -47,7 +47,8 @@ Given one or more Magic: The Gathering card names:
 
 ## Important rules
 
-- Use only existing typed `game.Primitive` variants, `Keyword` values, and other enums. Do not author `game.Effect` or invent new primitives in a card file.
+- Use only existing typed `game.Primitive` variants, `Keyword` values, and other enums. Do not invent new primitives in a card file.
+- Use `AdditionalCosts: cost.Tap` when tapping the source is the only additional cost. Use `cost.T` as the tap entry when combining it with other additional costs.
 - Use `types.Creature`/`types.Forest`/etc. from `mtg/game/types`; do not use old `game.Type*` or `game.*Subtype*` names.
 - `mtg/game/types` includes named constants for every Comprehensive Rules 205.3 subtype. Prefer those constants for new card definitions instead of `types.Sub("...")`; fall back to `types.Sub` only if the subtype truly is not present.
 - For multiple plain non-parameterized keywords, append one reusable `StaticAbilityBody` template per keyword to `StaticAbilities` (for example `game.DeathtouchStaticBody, game.IndestructibleStaticBody`). Do not use old `game.DeathtouchAbility`-style `AbilityDef` constructors in new card source.

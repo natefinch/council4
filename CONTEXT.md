@@ -142,7 +142,7 @@ A purpose-built fog-of-war view of the game state for a specific player — own 
 _Avoid_: Game view, player state, info set, visible state
 
 **Effect Resolver**:
-The rules-engine code that executes `game.Effect` primitives when a spell or ability resolves. Effect data lives in `game`; behavior lives in `rules`.
+The rules-engine code that executes typed `game.Primitive` values when a spell or ability resolves. Primitive data lives in `game`; behavior lives in `rules` (dispatched via the primitive handler registry).
 _Avoid_: Card script, effect data
 
 ### AI Concepts

@@ -19,7 +19,7 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		RequirePermanentTypes: []types.Card{types.Creature},
-	}, []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
 	land := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Animated Land",
 		Types: []types.Card{types.Land}},
 	})
@@ -70,9 +70,8 @@ func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 		Controller:   game.Player1,
 	}
 
-	engine.resolveEffect(g, obj, &game.Effect{
-		Type:           game.EffectCreateDelayedTrigger,
-		DelayedTrigger: opt.Val(game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}}),
+	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}}},
 	}, nil)
 	movePermanentToZone(g, source, zone.Graveyard)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
@@ -93,22 +92,19 @@ func TestLinkedExileReturnOnlyUsesSameSourceLink(t *testing.T) {
 
 	objA := linkedSourceObject(sourceA)
 	objA.Targets = []game.Target{game.PermanentTarget(first.ObjectID)}
-	engine.resolveEffect(g, objA, &game.Effect{
-		Type:        game.EffectExile,
-		TargetIndex: 0,
-		LinkID:      linkID,
+	resolveInstruction(engine, g, objA, game.Exile{
+		TargetIndex:    0,
+		ExileLinkedKey: game.LinkedKey(linkID),
 	}, nil)
 	objB := linkedSourceObject(sourceB)
 	objB.Targets = []game.Target{game.PermanentTarget(second.ObjectID)}
-	engine.resolveEffect(g, objB, &game.Effect{
-		Type:        game.EffectExile,
-		TargetIndex: 0,
-		LinkID:      linkID,
+	resolveInstruction(engine, g, objB, game.Exile{
+		TargetIndex:    0,
+		ExileLinkedKey: game.LinkedKey(linkID),
 	}, nil)
 
-	engine.resolveEffect(g, linkedSourceObject(sourceA), &game.Effect{
-		Type:   game.EffectPutOnBattlefield,
-		LinkID: linkID,
+	resolveInstruction(engine, g, linkedSourceObject(sourceA), game.PutOnBattlefield{
+		Source: game.LinkedBattlefieldSource(game.LinkedKey(linkID)),
 	}, nil)
 
 	if !g.Players[game.Player3].Exile.Contains(second.CardInstanceID) {

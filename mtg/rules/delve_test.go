@@ -111,12 +111,10 @@ func TestDelvePaymentExcludesSourceCardFromGraveyard(t *testing.T) {
 
 func delveSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Delve Spell",
-		Types:    []types.Card{types.Sorcery},
-		ManaCost: opt.Val(manaCost),
-		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Delve)},
-			{Kind: game.SpellAbility},
-		}},
+		Types:           []types.Card{types.Sorcery},
+		ManaCost:        opt.Val(manaCost),
+		SpellAbility:    opt.Val(game.SpellAbilityBody{}),
+		StaticAbilities: []game.StaticAbilityBody{game.DelveStaticBody}},
 	}
 }
 

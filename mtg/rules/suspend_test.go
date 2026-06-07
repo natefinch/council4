@@ -131,8 +131,7 @@ func suspendSorcery(counters int, suspendCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Suspend Sorcery",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(9)}),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.StaticAbility,
+		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: []game.KeywordAbility{game.SuspendKeyword{Cost: suspendCost, TimeCounters: counters}},
 		}}},
 	}

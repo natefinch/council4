@@ -12,13 +12,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-func (e *Engine) resolveResolutionChoice(g *game.Game, obj *game.StackObject, effect *game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if !effect.Choice.Exists {
-		return true
-	}
-	return e.resolveResolutionChoiceValue(g, obj, &effect.Choice.Val, effect.LinkID, agents, log)
-}
-
 func (e *Engine) resolveResolutionChoiceValue(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice, key string, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	request, values := resolutionChoiceRequest(g, obj, choice)
 	if len(values) == 0 {

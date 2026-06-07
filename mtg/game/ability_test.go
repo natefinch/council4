@@ -126,7 +126,7 @@ func TestAbilityBodyAccessorsPreferBody(t *testing.T) {
 			Trigger: TriggerCondition{
 				Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield},
 			},
-			Content: PlainAbilityContent{LegacyEffects: []Effect{{Type: EffectDraw}}},
+			Content: PlainAbilityContent{Sequence: []Instruction{{Primitive: Draw{}}}},
 		},
 	}
 
@@ -152,7 +152,6 @@ func TestLegacyAbilityBodyViews(t *testing.T) {
 			MinTargets: 1,
 			MaxTargets: 1,
 		}},
-		Effects: []Effect{{Type: EffectDamage, TargetIndex: 0}},
 	}
 
 	body, ok := ability.ActivatedBody()
@@ -163,8 +162,8 @@ func TestLegacyAbilityBodyViews(t *testing.T) {
 	if !ok {
 		t.Fatalf("content = %T, want PlainAbilityContent", body.Content)
 	}
-	if len(content.Targets) != 1 || len(content.LegacyEffects) != 1 {
-		t.Fatalf("content = %+v, want one target and one effect", content)
+	if len(content.Targets) != 1 {
+		t.Fatalf("content = %+v, want one target", content)
 	}
 }
 
@@ -200,7 +199,7 @@ func TestAbilityFieldAccessorsPreferBody(t *testing.T) {
 func TestBodyOnlySpellAbilityBodyLowers(t *testing.T) {
 	src := AbilityDef{Body: SpellAbilityBody{
 		Text:    "Draw two cards.",
-		Content: PlainAbilityContent{LegacyEffects: []Effect{{Type: EffectDraw, Amount: 2}}},
+		Content: PlainAbilityContent{Sequence: []Instruction{{Primitive: Draw{Amount: Fixed(2)}}}},
 		AdditionalCosts: []cost.Additional{
 			{Kind: cost.AdditionalTap, Text: "Tap"},
 		},
@@ -219,8 +218,13 @@ func TestBodyOnlySpellAbilityBodyLowers(t *testing.T) {
 	if len(got.AlternativeCosts) != 1 {
 		t.Fatalf("AlternativeCosts = %+v, want one", got.AlternativeCosts)
 	}
-	if len(got.Effects) != 1 || got.Effects[0].Type != EffectDraw {
-		t.Fatalf("Effects = %+v, want draw", got.Effects)
+	spellBody, ok := got.SpellBody()
+	if !ok {
+		t.Fatal("SpellBody returned false")
+	}
+	content, ok := spellBody.Content.(PlainAbilityContent)
+	if !ok || len(content.Sequence) != 1 {
+		t.Fatalf("Content = %+v, want one instruction", spellBody.Content)
 	}
 }
 
@@ -261,9 +265,9 @@ func TestBodyOnlyActivatedEquipAbilityLowers(t *testing.T) {
 func TestBodyOnlyManaAbilityBodyPlainLowers(t *testing.T) {
 	src := AbilityDef{Body: ManaAbilityBody{
 		Text:            "{T}: Add {G}.",
-		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
-		Content: PlainAbilityContent{LegacyEffects: []Effect{
-			{Type: EffectAddMana, Amount: 1},
+		AdditionalCosts: cost.Tap,
+		Content: PlainAbilityContent{Sequence: []Instruction{
+			{Primitive: AddMana{Amount: Fixed(1)}},
 		}},
 	}}
 	got := src.WithBody()
@@ -276,8 +280,13 @@ func TestBodyOnlyManaAbilityBodyPlainLowers(t *testing.T) {
 	if !got.IsMana() {
 		t.Fatal("IsMana() should be true")
 	}
-	if len(got.Effects) != 1 || got.Effects[0].Type != EffectAddMana {
-		t.Fatalf("Effects = %+v, want AddMana", got.Effects)
+	manaBody, ok := got.ManaBody()
+	if !ok {
+		t.Fatal("ManaBody returned false")
+	}
+	content, ok := manaBody.Content.(PlainAbilityContent)
+	if !ok || len(content.Sequence) != 1 {
+		t.Fatalf("Content = %+v, want one AddMana instruction", manaBody.Content)
 	}
 }
 
@@ -287,8 +296,8 @@ func TestBodyOnlyManaAbilityBodyModalLowers(t *testing.T) {
 		Text: "{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.",
 		Content: ModalAbilityContent{
 			Modes: []Mode{
-				{Text: "Add {R}{R}.", LegacyEffects: []Effect{{Type: EffectAddMana}, {Type: EffectAddMana}}},
-				{Text: "Add {G}{G}.", LegacyEffects: []Effect{{Type: EffectAddMana}, {Type: EffectAddMana}}},
+				{Text: "Add {R}{R}.", Sequence: []Instruction{{Primitive: AddMana{}}, {Primitive: AddMana{}}}},
+				{Text: "Add {G}{G}.", Sequence: []Instruction{{Primitive: AddMana{}}, {Primitive: AddMana{}}}},
 			},
 		},
 	}}
@@ -307,8 +316,8 @@ func TestBodyOnlyLoyaltyAbilityBodyLowers(t *testing.T) {
 		Text:        "-2: Fight.",
 		LoyaltyCost: -2,
 		Content: PlainAbilityContent{
-			Targets:       []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
-			LegacyEffects: []Effect{{Type: EffectFight}},
+			Targets:  []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
+			Sequence: []Instruction{{Primitive: Fight{}}},
 		},
 	}}
 	got := src.WithBody()
@@ -324,8 +333,13 @@ func TestBodyOnlyLoyaltyAbilityBodyLowers(t *testing.T) {
 	if got.LoyaltyCost != -2 {
 		t.Fatalf("LoyaltyCost = %v, want -2", got.LoyaltyCost)
 	}
-	if len(got.Targets) != 1 || len(got.Effects) != 1 {
-		t.Fatalf("Targets/Effects = %v/%v, want 1/1", len(got.Targets), len(got.Effects))
+	loyaltyBody, ok := got.LoyaltyBody()
+	if !ok {
+		t.Fatal("LoyaltyBody returned false")
+	}
+	content, ok := loyaltyBody.Content.(PlainAbilityContent)
+	if !ok || len(content.Targets) != 1 || len(content.Sequence) != 1 {
+		t.Fatalf("Content = %+v, want 1 target and 1 instruction", loyaltyBody.Content)
 	}
 }
 
@@ -342,8 +356,8 @@ func TestBodyOnlyTriggeredAbilityBodyLowers(t *testing.T) {
 		},
 		Optional:           true,
 		MaxTriggersPerTurn: 1,
-		Content: PlainAbilityContent{LegacyEffects: []Effect{
-			{Type: EffectDraw, Amount: 1},
+		Content: PlainAbilityContent{Sequence: []Instruction{
+			{Primitive: Draw{Amount: Fixed(1)}},
 		}},
 	}}
 	got := src.WithBody()
@@ -362,8 +376,13 @@ func TestBodyOnlyTriggeredAbilityBodyLowers(t *testing.T) {
 	if got.MaxTriggersPerTurn != 1 {
 		t.Fatalf("MaxTriggersPerTurn = %v, want 1", got.MaxTriggersPerTurn)
 	}
-	if len(got.Effects) != 1 || got.Effects[0].Type != EffectDraw {
-		t.Fatalf("Effects = %+v, want draw", got.Effects)
+	triggeredBody, ok := got.TriggeredBody()
+	if !ok {
+		t.Fatal("TriggeredBody returned false")
+	}
+	content, ok := triggeredBody.Content.(PlainAbilityContent)
+	if !ok || len(content.Sequence) != 1 {
+		t.Fatalf("Content = %+v, want one instruction", triggeredBody.Content)
 	}
 }
 
@@ -376,7 +395,6 @@ func TestBodyOnlyStaticAbilityBodyLowers(t *testing.T) {
 		KeywordAbilities: []KeywordAbility{
 			SimpleKeyword{Kind: Flying},
 		},
-		LegacyEffects: []Effect{{Type: EffectApplyContinuous}},
 	}}
 	got := src.WithBody()
 	if got.Kind != StaticAbility {
@@ -393,8 +411,5 @@ func TestBodyOnlyStaticAbilityBodyLowers(t *testing.T) {
 	}
 	if len(got.KeywordAbilities) != 1 {
 		t.Fatalf("KeywordAbilities = %+v, want flying keyword", got.KeywordAbilities)
-	}
-	if len(got.Effects) != 1 {
-		t.Fatalf("Effects = %+v, want one effect", got.Effects)
 	}
 }

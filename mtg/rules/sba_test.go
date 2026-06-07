@@ -249,15 +249,10 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 	engine := NewEngine(nil)
 	zero := game.PT{Value: 0}
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Indestructible Zero Toughness",
-		Types:     []types.Card{types.Creature},
-		Power:     opt.Val(zero),
-		Toughness: opt.Val(zero),
-		Abilities: []game.AbilityDef{
-			{
-				Kind:             game.StaticAbility,
-				KeywordAbilities: game.SimpleKeywords(game.Indestructible),
-			},
-		}},
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(zero),
+		Toughness:       opt.Val(zero),
+		StaticAbilities: []game.StaticAbilityBody{game.IndestructibleStaticBody}},
 	})
 
 	changed, deaths := engine.checkPermanentStateBasedActions(g)

@@ -35,10 +35,32 @@ const (
 	PrimitiveDiscoverCards
 	PrimitivePay
 	PrimitiveChoose
+	PrimitiveGainLife
+	PrimitiveLoseLife
+	PrimitiveExile
+	PrimitiveBounce
+	PrimitiveSacrifice
+	PrimitiveUntap
+	PrimitiveCounterObject
+	PrimitiveMill
+	PrimitiveScry
+	PrimitiveSurveil
+	PrimitiveInvestigate
+	PrimitiveProliferate
+	PrimitiveGoad
+	PrimitiveRemoveCounter
+	PrimitiveTransform
+	PrimitivePhaseOut
+	PrimitiveRegenerate
+	PrimitiveSkipStep
+	PrimitiveCreateEmblem
+	PrimitiveCreateDelayedTrigger
+	PrimitiveCreateReplacement
+	PrimitivePreventDamage
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveChoose) + 1
+const primitiveKindCount = int(PrimitivePreventDamage) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -280,9 +302,11 @@ type Discard struct {
 	TargetIndex int
 }
 
-// Destroy destroys the permanent identified by TargetIndex.
+// Destroy destroys the permanent identified by TargetIndex, or every permanent
+// matched by Selector when set.
 type Destroy struct {
 	TargetIndex int
+	Selector    EffectSelector
 }
 
 // AddMana adds mana to the controller's pool.
@@ -416,6 +440,139 @@ type Choose struct {
 	PublishChoice ChoiceKey
 }
 
+// GainLife causes a player identified by TargetIndex (-1 = controller) to gain life.
+type GainLife struct {
+	Amount      Quantity
+	TargetIndex int
+}
+
+// LoseLife causes a player identified by TargetIndex (-1 = controller) to lose life.
+type LoseLife struct {
+	Amount      Quantity
+	TargetIndex int
+}
+
+// Exile exiles the permanent identified by TargetIndex, or every permanent
+// matched by Selector when set. ExileLinkedKey remembers the exiled object for
+// later "exile it, then return it" patterns.
+type Exile struct {
+	TargetIndex    int
+	Selector       EffectSelector
+	ExileLinkedKey LinkedKey
+}
+
+// Bounce returns the permanent identified by TargetIndex to its owner's hand,
+// or every permanent matched by Selector when set.
+type Bounce struct {
+	TargetIndex int
+	Selector    EffectSelector
+}
+
+// Sacrifice sacrifices the permanent identified by TargetIndex. When no target
+// is chosen, the controller's first permanent is used.
+type Sacrifice struct {
+	TargetIndex int
+}
+
+// Untap untaps the permanent identified by TargetIndex, or every permanent
+// matched by Selector when set.
+type Untap struct {
+	TargetIndex int
+	Selector    EffectSelector
+}
+
+// CounterObject counters the spell or ability targeted at TargetIndex.
+type CounterObject struct {
+	TargetIndex int
+}
+
+// Mill puts cards from the top of a player's library into their graveyard.
+type Mill struct {
+	Amount      Quantity
+	TargetIndex int
+}
+
+// Scry looks at and reorders the top cards of a player's library.
+type Scry struct {
+	Amount      Quantity
+	TargetIndex int
+}
+
+// Surveil looks at the top cards of a player's library, putting any into the
+// graveyard.
+type Surveil struct {
+	Amount      Quantity
+	TargetIndex int
+}
+
+// Investigate creates Clue tokens for the recipient (controller by default).
+type Investigate struct {
+	Amount    Quantity
+	Recipient opt.V[PlayerReference]
+}
+
+// Proliferate lets the controller add a counter of an existing kind to each
+// chosen permanent or player.
+type Proliferate struct{}
+
+// Goad goads the creature identified by TargetIndex.
+type Goad struct {
+	TargetIndex int
+}
+
+// RemoveCounter removes counters from the permanent identified by TargetIndex,
+// or every permanent matched by Selector when set.
+type RemoveCounter struct {
+	Amount      Quantity
+	TargetIndex int
+	Selector    EffectSelector
+	CounterKind counter.Kind
+}
+
+// Transform transforms the permanent identified by TargetIndex.
+type Transform struct {
+	TargetIndex int
+}
+
+// PhaseOut phases out the permanent identified by TargetIndex.
+type PhaseOut struct {
+	TargetIndex int
+}
+
+// Regenerate sets up a regeneration shield on the permanent identified by TargetIndex.
+type Regenerate struct {
+	TargetIndex int
+}
+
+// SkipStep schedules a player (TargetIndex; -1 = controller) to skip a step.
+type SkipStep struct {
+	TargetIndex int
+	Step        Step
+}
+
+// CreateEmblem creates an emblem owned by the controller with the given abilities.
+type CreateEmblem struct {
+	EmblemAbilities []AbilityDef
+}
+
+// CreateDelayedTrigger schedules a delayed triggered ability.
+type CreateDelayedTrigger struct {
+	Trigger DelayedTriggerDef
+}
+
+// CreateReplacement creates a replacement effect that applies to a future event.
+type CreateReplacement struct {
+	Replacement *ReplacementEffect
+	Duration    EffectDuration
+}
+
+// PreventDamage creates a damage-prevention shield for the player or permanent
+// identified by TargetIndex (-1 = controller).
+type PreventDamage struct {
+	Amount      Quantity
+	TargetIndex int
+}
+
 // Kind implements Primitive for Damage.
 func (Damage) Kind() PrimitiveKind { return PrimitiveDamage }
 
@@ -485,6 +642,72 @@ func (Pay) Kind() PrimitiveKind { return PrimitivePay }
 // Kind implements Primitive for Choose.
 func (Choose) Kind() PrimitiveKind { return PrimitiveChoose }
 
+// Kind implements Primitive for GainLife.
+func (GainLife) Kind() PrimitiveKind { return PrimitiveGainLife }
+
+// Kind implements Primitive for LoseLife.
+func (LoseLife) Kind() PrimitiveKind { return PrimitiveLoseLife }
+
+// Kind implements Primitive for Exile.
+func (Exile) Kind() PrimitiveKind { return PrimitiveExile }
+
+// Kind implements Primitive for Bounce.
+func (Bounce) Kind() PrimitiveKind { return PrimitiveBounce }
+
+// Kind implements Primitive for Sacrifice.
+func (Sacrifice) Kind() PrimitiveKind { return PrimitiveSacrifice }
+
+// Kind implements Primitive for Untap.
+func (Untap) Kind() PrimitiveKind { return PrimitiveUntap }
+
+// Kind implements Primitive for CounterObject.
+func (CounterObject) Kind() PrimitiveKind { return PrimitiveCounterObject }
+
+// Kind implements Primitive for Mill.
+func (Mill) Kind() PrimitiveKind { return PrimitiveMill }
+
+// Kind implements Primitive for Scry.
+func (Scry) Kind() PrimitiveKind { return PrimitiveScry }
+
+// Kind implements Primitive for Surveil.
+func (Surveil) Kind() PrimitiveKind { return PrimitiveSurveil }
+
+// Kind implements Primitive for Investigate.
+func (Investigate) Kind() PrimitiveKind { return PrimitiveInvestigate }
+
+// Kind implements Primitive for Proliferate.
+func (Proliferate) Kind() PrimitiveKind { return PrimitiveProliferate }
+
+// Kind implements Primitive for Goad.
+func (Goad) Kind() PrimitiveKind { return PrimitiveGoad }
+
+// Kind implements Primitive for RemoveCounter.
+func (RemoveCounter) Kind() PrimitiveKind { return PrimitiveRemoveCounter }
+
+// Kind implements Primitive for Transform.
+func (Transform) Kind() PrimitiveKind { return PrimitiveTransform }
+
+// Kind implements Primitive for PhaseOut.
+func (PhaseOut) Kind() PrimitiveKind { return PrimitivePhaseOut }
+
+// Kind implements Primitive for Regenerate.
+func (Regenerate) Kind() PrimitiveKind { return PrimitiveRegenerate }
+
+// Kind implements Primitive for SkipStep.
+func (SkipStep) Kind() PrimitiveKind { return PrimitiveSkipStep }
+
+// Kind implements Primitive for CreateEmblem.
+func (CreateEmblem) Kind() PrimitiveKind { return PrimitiveCreateEmblem }
+
+// Kind implements Primitive for CreateDelayedTrigger.
+func (CreateDelayedTrigger) Kind() PrimitiveKind { return PrimitiveCreateDelayedTrigger }
+
+// Kind implements Primitive for CreateReplacement.
+func (CreateReplacement) Kind() PrimitiveKind { return PrimitiveCreateReplacement }
+
+// Kind implements Primitive for PreventDamage.
+func (PreventDamage) Kind() PrimitiveKind { return PrimitivePreventDamage }
+
 func (Damage) isPrimitive()                      {}
 func (Draw) isPrimitive()                        {}
 func (Discard) isPrimitive()                     {}
@@ -508,6 +731,28 @@ func (Monstrosity) isPrimitive()                 {}
 func (DiscoverCards) isPrimitive()               {}
 func (Pay) isPrimitive()                         {}
 func (Choose) isPrimitive()                      {}
+func (GainLife) isPrimitive()                    {}
+func (LoseLife) isPrimitive()                    {}
+func (Exile) isPrimitive()                       {}
+func (Bounce) isPrimitive()                      {}
+func (Sacrifice) isPrimitive()                   {}
+func (Untap) isPrimitive()                       {}
+func (CounterObject) isPrimitive()               {}
+func (Mill) isPrimitive()                        {}
+func (Scry) isPrimitive()                        {}
+func (Surveil) isPrimitive()                     {}
+func (Investigate) isPrimitive()                 {}
+func (Proliferate) isPrimitive()                 {}
+func (Goad) isPrimitive()                        {}
+func (RemoveCounter) isPrimitive()               {}
+func (Transform) isPrimitive()                   {}
+func (PhaseOut) isPrimitive()                    {}
+func (Regenerate) isPrimitive()                  {}
+func (SkipStep) isPrimitive()                    {}
+func (CreateEmblem) isPrimitive()                {}
+func (CreateDelayedTrigger) isPrimitive()        {}
+func (CreateReplacement) isPrimitive()           {}
+func (PreventDamage) isPrimitive()               {}
 
 func (p Damage) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
 func (p Draw) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
@@ -559,6 +804,33 @@ func (p PutOnBattlefield) instructionRefs() primitiveRefs {
 func (p Choose) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesChoice: p.PublishChoice}
 }
+
+func (p GainLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p LoseLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+
+func (p Exile) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.ExileLinkedKey}
+}
+func (Bounce) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (Sacrifice) instructionRefs() primitiveRefs     { return primitiveRefs{} }
+func (Untap) instructionRefs() primitiveRefs         { return primitiveRefs{} }
+func (CounterObject) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p Mill) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
+func (p Scry) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
+func (p Surveil) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
+func (p Investigate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (Proliferate) instructionRefs() primitiveRefs   { return primitiveRefs{} }
+func (Goad) instructionRefs() primitiveRefs          { return primitiveRefs{} }
+
+func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (Transform) instructionRefs() primitiveRefs            { return primitiveRefs{} }
+func (PhaseOut) instructionRefs() primitiveRefs             { return primitiveRefs{} }
+func (Regenerate) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (SkipStep) instructionRefs() primitiveRefs             { return primitiveRefs{} }
+func (CreateEmblem) instructionRefs() primitiveRefs         { return primitiveRefs{} }
+func (CreateDelayedTrigger) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (CreateReplacement) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (p PreventDamage) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
 
 func quantityRefs(quantity Quantity) primitiveRefs {
 	if !quantity.IsDynamic() {

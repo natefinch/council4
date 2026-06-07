@@ -26,11 +26,10 @@ func TestRecipientReferenceUsesDestroyedTargetControllerLKI(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectDestroy, TargetIndex: 0}, &log)
-	engine.resolveEffect(g, obj, &game.Effect{
-		Type:   game.EffectCreateToken,
-		Amount: 1,
-		Token:  opt.Val(token),
+	resolveInstruction(engine, g, obj, game.Destroy{TargetIndex: 0}, &log)
+	resolveInstruction(engine, g, obj, game.CreateToken{
+		Amount: game.Fixed(1),
+		Source: game.TokenDef(token),
 		Recipient: opt.Val(game.PlayerReference{
 			Kind: game.PlayerReferenceObjectController,
 			Object: opt.Val(game.ObjectReference{
@@ -61,8 +60,7 @@ func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 2}),
 		Toughness: opt.Val(game.PT{Value: 2}),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.StaticAbility,
+		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: game.SimpleKeywords(game.Deathtouch, game.Lifelink),
 		}}},
 	})
@@ -80,14 +78,13 @@ func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, &game.Effect{
-		Type:        game.EffectDamage,
-		TargetIndex: 1,
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient: game.TargetRecipient(1),
 		DamageSource: opt.Val(game.ObjectReference{
 			Kind:        game.ObjectReferenceTargetPermanent,
 			TargetIndex: 0,
 		}),
-		DynamicAmount: opt.Val(game.DynamicAmount{
+		Amount: game.Dynamic(game.DynamicAmount{
 			Kind:        game.DynamicAmountTargetPower,
 			TargetIndex: 0,
 		}),
@@ -111,10 +108,9 @@ func TestLegacyTokenCreationStillUsesSpellController(t *testing.T) {
 	obj := &game.StackObject{Controller: game.Player1}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, &game.Effect{
-		Type:   game.EffectCreateToken,
-		Amount: 1,
-		Token:  opt.Val(token),
+	resolveInstruction(engine, g, obj, game.CreateToken{
+		Amount: game.Fixed(1),
+		Source: game.TokenDef(token),
 	}, &log)
 
 	if got := countControlledTokensNamed(g, game.Player1, "Legacy Token"); got != 1 {

@@ -35,11 +35,7 @@ var KessigWolfRun = func() *game.CardDef {
 			Text: `
 				{T}: Add {C}.
 			`,
-			AdditionalCosts: []cost.Additional{
-				{
-					Kind: cost.AdditionalTap,
-				},
-			},
+			AdditionalCosts: cost.Tap,
 			Content: game.PlainAbilityContent{
 				Sequence: []game.Instruction{
 					{
@@ -63,11 +59,7 @@ var KessigWolfRun = func() *game.CardDef {
 				cost.R,
 				cost.G,
 			}),
-			AdditionalCosts: []cost.Additional{
-				{
-					Kind: cost.AdditionalTap,
-				},
-			},
+			AdditionalCosts: cost.Tap,
 			Content: game.PlainAbilityContent{
 				Targets: []game.TargetSpec{
 					{

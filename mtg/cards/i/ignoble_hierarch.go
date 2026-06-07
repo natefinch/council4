@@ -47,11 +47,7 @@ var IgnobleHierarch = func() *game.CardDef {
 			Text: `
 				{T}: Add {B}, {R}, or {G}.
 			`,
-			AdditionalCosts: []cost.Additional{
-				{
-					Kind: cost.AdditionalTap,
-				},
-			},
+			AdditionalCosts: cost.Tap,
 			Content: game.PlainAbilityContent{
 				Sequence: []game.Instruction{
 					{

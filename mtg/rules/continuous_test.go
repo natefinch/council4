@@ -263,6 +263,49 @@ func TestKeywordAddRemoveEffectsStickAfterLayerSix(t *testing.T) {
 	}
 }
 
+func TestAbilityLayerAddsTypedAbilityBody(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 2}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Ability Recipient",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               1,
+		AffectedObjectID: creature.ObjectID,
+		Layer:            game.LayerAbility,
+		AddAbilities: []game.AbilityBody{
+			game.ActivatedAbilityBody{
+				Text: "{2}: This creature gets +1/+0 until end of turn.",
+				Content: game.PlainAbilityContent{
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.ModifyPT{
+								TargetIndex: game.TargetIndexSourcePermanent,
+								PowerDelta:  game.Fixed(1),
+								Duration:    game.DurationUntilEndOfTurn,
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	values := effectivePermanentValues(g, creature)
+	if len(values.abilities) != 1 {
+		t.Fatalf("abilities = %d, want 1", len(values.abilities))
+	}
+	if !values.abilities[0].IsActivated() {
+		t.Fatalf("ability = %+v, want activated ability", values.abilities[0])
+	}
+	if _, ok := values.abilities[0].Body.(game.ActivatedAbilityBody); !ok {
+		t.Fatalf("ability body = %T, want game.ActivatedAbilityBody", values.abilities[0].Body)
+	}
+}
+
 func TestControlChangeEffectsAffectLegalityAndSelectors(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
@@ -314,12 +357,11 @@ func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent 
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		Abilities: []game.AbilityDef{
+		StaticAbilities: []game.StaticAbilityBody{
 			{
-				Kind: game.StaticAbility,
-				Effects: []game.Effect{
+				ContinuousEffects: []game.ContinuousEffect{
 					{
-						Type:           game.EffectModifyPT,
+						Layer:          game.LayerPowerToughnessModify,
 						Selector:       game.EffectSelectorOtherCreaturesYouControl,
 						PowerDelta:     1,
 						ToughnessDelta: 1,

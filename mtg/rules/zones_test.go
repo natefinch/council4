@@ -269,8 +269,7 @@ func addAuraPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Test Aura",
 		Types:    []types.Card{types.Enchantment},
 		Subtypes: []types.Sub{types.Aura},
-		Abilities: []game.AbilityDef{{
-			Kind: game.StaticAbility,
+		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 				Allow: game.TargetAllowPermanent,
 				Predicate: game.TargetPredicate{
@@ -285,8 +284,7 @@ func landAuraCard() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Land Aura",
 		Types:    []types.Card{types.Enchantment},
 		Subtypes: []types.Sub{types.Aura},
-		Abilities: []game.AbilityDef{{
-			Kind: game.StaticAbility,
+		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 				Allow: game.TargetAllowPermanent,
 				Predicate: game.TargetPredicate{

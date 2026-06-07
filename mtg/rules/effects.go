@@ -10,7 +10,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -34,9 +33,8 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	}
 	e.resolveAbilityContentWithChoices(g, obj, spellBody.Content, agents, log)
 	if obj.KickerPaid {
-		bonus := ability.KickerBonusEffects()
-		for i := range bonus {
-			e.resolveEffectWithChoices(g, obj, &bonus[i], agents, log)
+		if kicker, ok := spellKicker(spellDef); ok {
+			e.resolveAbilityContentWithChoices(g, obj, kicker.BonusContent, agents, log)
 		}
 	}
 }
@@ -47,9 +45,6 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 		for i := range abilityContent.Sequence {
 			e.resolveInstructionWithChoices(g, obj, &abilityContent.Sequence[i], agents, log)
 		}
-		for i := range abilityContent.LegacyEffects {
-			e.resolveEffectWithChoices(g, obj, &abilityContent.LegacyEffects[i], agents, log)
-		}
 	case game.ModalAbilityContent:
 		for _, modeIndex := range obj.ChosenModes {
 			if modeIndex < 0 || modeIndex >= len(abilityContent.Modes) {
@@ -57,9 +52,6 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 			}
 			for i := range abilityContent.Modes[modeIndex].Sequence {
 				e.resolveInstructionWithChoices(g, obj, &abilityContent.Modes[modeIndex].Sequence[i], agents, log)
-			}
-			for i := range abilityContent.Modes[modeIndex].LegacyEffects {
-				e.resolveEffectWithChoices(g, obj, &abilityContent.Modes[modeIndex].LegacyEffects[i], agents, log)
 			}
 		}
 	case nil:
@@ -69,12 +61,26 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 }
 
 func spellHasKicker(card *game.CardDef) bool {
-	ability, ok := firstSpellAbility(card)
-	if !ok {
-		return false
-	}
-	_, ok = ability.KickerCost()
+	_, ok := spellKicker(card)
 	return ok
+}
+
+func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
+	if ability, ok := firstSpellAbility(card); ok {
+		if kicker, ok := ability.Kicker(); ok {
+			return kicker, true
+		}
+	}
+	if card == nil {
+		return game.KickerKeyword{}, false
+	}
+	abilities := card.AbilityDefs()
+	for i := range abilities {
+		if kicker, ok := abilities[i].Kicker(); ok {
+			return kicker, true
+		}
+	}
+	return game.KickerKeyword{}, false
 }
 
 func firstSpellAbility(card *game.CardDef) (*game.AbilityDef, bool) {
@@ -85,14 +91,6 @@ func firstSpellAbility(card *game.CardDef) (*game.AbilityDef, bool) {
 		}
 	}
 	return nil, false
-}
-
-func (e *Engine) resolveEffect(g *game.Game, obj *game.StackObject, effect *game.Effect, log *TurnLog) {
-	newEffectResolver(e, g, obj, [game.NumPlayers]PlayerAgent{}, log).resolve(effect)
-}
-
-func (e *Engine) resolveEffectWithChoices(g *game.Game, obj *game.StackObject, effect *game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	newEffectResolver(e, g, obj, agents, log).resolve(effect)
 }
 
 func (e *Engine) resolveInstructionWithChoices(g *game.Game, obj *game.StackObject, instr *game.Instruction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -126,84 +124,21 @@ type effectResolved struct {
 }
 
 // record writes the resolution state into the stack object so that follow-up
-// "if you do" / "that much" effects see what actually happened
+// "if you do" / "that much" instructions see what actually happened
 // (CR 608.2c; impossible actions CR 101.3).
-func (res effectResolved) record(obj *game.StackObject, effect *game.Effect) {
+func (res effectResolved) record(obj *game.StackObject, linkID string) {
 	if res.accepted && res.succeeded {
-		rememberEffectAmount(obj, effect, res.amount)
-		rememberEffectExcessDamage(obj, effect, res.excessDamage)
+		rememberEffectAmount(obj, linkID, res.amount)
+		rememberEffectExcessDamage(obj, linkID, res.excessDamage)
 	}
-	rememberEffectResolutionResult(obj, effect, res.accepted, res.succeeded, res.amount)
-}
-
-func effectResultGateFromInstruction(gate game.InstructionResultGate) opt.V[game.EffectResultCondition] {
-	if gate.Key == "" {
-		return opt.V[game.EffectResultCondition]{}
-	}
-	return opt.Val(game.EffectResultCondition{
-		LinkID:    string(gate.Key),
-		Accepted:  gate.Accepted,
-		Succeeded: gate.Succeeded,
-	})
+	rememberInstructionResolutionResult(obj, linkID, res.accepted, res.succeeded, res.amount)
 }
 
 func recordResultKey(obj *game.StackObject, key game.ResultKey, res effectResolved) {
 	if key == "" {
 		return
 	}
-	res.record(obj, &game.Effect{LinkID: string(key)})
-}
-
-// amount returns the computed effect amount, resolving any dynamic formula.
-func (r *effectResolver) amount(effect *game.Effect) int {
-	return effectAmount(r.game, r.obj, effect)
-}
-
-// permanent resolves the target permanent for this effect, using the effect's
-// TargetIndex to look up the chosen target on the stack object.
-func (r *effectResolver) permanent(effect *game.Effect) (*game.Permanent, bool) {
-	return effectPermanent(r.game, r.obj, effect)
-}
-
-// player resolves the target player for this effect.
-func (r *effectResolver) player(effect *game.Effect) (game.PlayerID, bool) {
-	return effectPlayer(r.game, r.obj, effect)
-}
-
-func (r *effectResolver) effectRecipientOrPlayer(effect *game.Effect) (game.PlayerID, bool) {
-	if effect.Recipient.Exists {
-		return resolvePlayerReference(r.game, r.obj, effect.Recipient.Val)
-	}
-	return r.player(effect)
-}
-
-func (r *effectResolver) effectRecipientOrController(effect *game.Effect) (game.PlayerID, bool) {
-	if effect.Recipient.Exists {
-		return resolvePlayerReference(r.game, r.obj, effect.Recipient.Val)
-	}
-	return r.obj.Controller, true
-}
-
-// manaColor returns the mana color for an add-mana effect, respecting any
-// resolution choice that overrides the effect's declared color.
-func (r *effectResolver) manaColor(effect *game.Effect) mana.Color {
-	return r.effectManaColor(r.obj, effect)
-}
-
-// resolve checks conditions and then executes the effect, recording the result
-// for any linked follow-up effects.
-func (r *effectResolver) resolve(effect *game.Effect) {
-	if !effectConditionSatisfied(r.game, r.obj, effect.Condition) {
-		return
-	}
-	if !cardConditionSatisfied(r.game, r.obj, effect.CardCondition) {
-		return
-	}
-	if !effectResultConditionSatisfied(r.obj, effect.ResultCondition) {
-		return
-	}
-	res := r.executeEffect(effect)
-	res.record(r.obj, effect)
+	res.record(obj, string(key))
 }
 
 func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
@@ -218,8 +153,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		return
 	}
 	if instr.ResultGate.Exists {
-		gate := effectResultGateFromInstruction(instr.ResultGate.Val)
-		if !effectResultConditionSatisfied(r.obj, gate) {
+		if !instructionResultGateSatisfied(r.obj, instr.ResultGate.Val) {
 			return
 		}
 	}
@@ -248,436 +182,6 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	if instr.PublishResult != "" {
 		recordResultKey(r.obj, instr.PublishResult, res)
 	}
-}
-
-// executeEffect runs the effect instruction and returns the outcome. It does
-// not record the result; the caller (resolve) handles that so the deferred
-// memory write is explicit rather than scattered through the switch.
-// Each branch mutates res before returning so early returns keep the same
-// state the old deferred recorder observed.
-//
-//nolint:maintidx // Effect dispatch is intentionally centralized around the rules effect enum.
-func (r *effectResolver) executeEffect(effect *game.Effect) (res effectResolved) {
-	res.accepted = true
-	res.amount = r.amount(effect)
-	if effect.Optional && !r.engine.chooseMay(r.game, r.agents, stackObjectController(r.obj), "Apply optional effect?", r.log) {
-		res.accepted = false
-		return res
-	}
-	if effect.Choice.Exists {
-		if !r.engine.resolveResolutionChoice(r.game, r.obj, effect, r.agents, r.log) {
-			return res
-		}
-		res.succeeded = true
-		if effect.Type == game.EffectChoose {
-			return res
-		}
-	}
-	if effect.Payment.Exists {
-		res.accepted, res.succeeded = r.engine.resolveResolutionPayment(r.game, r.obj, effect, r.agents, r.log)
-		if !res.succeeded || effect.Type == game.EffectPay {
-			return res
-		}
-	}
-	if !IsEffectTypeExecuted(effect.Type) {
-		logUnsupportedEffect(r.log, r.obj, effect)
-		return res
-	}
-	if effect.Selector != game.EffectSelectorNone {
-		res.succeeded = resolveMassPermanentEffect(r.game, r.obj, effect, res.amount)
-		return res
-	}
-	if effect.PlayerSelector != game.PlayerSelectorNone {
-		res.succeeded = resolveMassPlayerEffect(r.game, r.obj, effect, res.amount)
-		return res
-	}
-	switch effect.Type {
-	case game.EffectDraw:
-		if res.amount <= 0 {
-			return res
-		}
-		playerID, ok := r.player(effect)
-		if !ok {
-			return res
-		}
-		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log)
-	case game.EffectGainLife:
-		if res.amount <= 0 {
-			return res
-		}
-		playerID, ok := r.player(effect)
-		if !ok {
-			return res
-		}
-		res.succeeded = gainLife(r.game, playerID, res.amount) > 0
-	case game.EffectLoseLife:
-		if res.amount <= 0 {
-			return res
-		}
-		playerID, ok := r.player(effect)
-		if !ok {
-			return res
-		}
-		res.succeeded = loseLife(r.game, playerID, res.amount) > 0
-	case game.EffectAddMana:
-		if res.amount <= 0 {
-			res.amount = 1
-		}
-		player, ok := playerByID(r.game, r.obj.Controller)
-		if !ok || player.Eliminated {
-			return res
-		}
-		if stackObjectSourceIsSnow(r.game, r.obj) {
-			player.ManaPool.AddSnow(r.manaColor(effect), res.amount)
-		} else {
-			player.ManaPool.Add(r.manaColor(effect), res.amount)
-		}
-		res.succeeded = true
-	case game.EffectDamage:
-		if res.amount <= 0 {
-			return res
-		}
-		source, ok := resolveEffectDamageSource(r.game, r.obj, effect)
-		if !ok {
-			return res
-		}
-		if playerID, ok := r.player(effect); ok {
-			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
-			if source.permanent != nil {
-				applyLifelink(r.game, source.permanent, dealt)
-			}
-			res.amount = damageResultAmount(effect, dealt, 0)
-			res.succeeded = dealt > 0
-			return res
-		}
-		permanent, ok := r.permanent(effect)
-		if !ok {
-			return res
-		}
-		lethalRemaining := lethalDamageRemaining(r.game, permanent)
-		if source.permanent != nil {
-			lethalRemaining = lethalDamageRemainingFromSource(r.game, source.permanent, permanent)
-		}
-		dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
-		applyDamageSourceKeywordEffects(r.game, source.permanent, permanent, dealt)
-		res.excessDamage = max(0, dealt-lethalRemaining)
-		res.amount = damageResultAmount(effect, dealt, res.excessDamage)
-		res.succeeded = dealt > 0 && (effect.ResultAmount != game.EffectResultAmountExcessDamage || res.excessDamage > 0)
-	case game.EffectDestroy:
-		permanent, ok := r.permanent(effect)
-		if !ok {
-			return res
-		}
-		_, res.succeeded = destroyPermanent(r.game, permanent.ObjectID)
-	case game.EffectCounter:
-		res.succeeded = counterTargetStackObject(r.game, r.obj, effect)
-	case game.EffectExile:
-		permanent, ok := r.permanent(effect)
-		if !ok {
-			return res
-		}
-		linkedObjectRef := permanentLinkedObjectRef(permanent)
-		res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile)
-		if effect.LinkID != "" {
-			rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, effect.LinkID), linkedObjectRef)
-		}
-	case game.EffectBounce:
-		permanent, ok := r.permanent(effect)
-		if !ok {
-			return res
-		}
-		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
-	case game.EffectSacrifice:
-		permanent, ok := r.permanent(effect)
-		if !ok {
-			permanent, ok = firstPermanentControlledBy(r.game, r.obj.Controller)
-		}
-		if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
-			return res
-		}
-		res.succeeded = movePermanentToZone(r.game, permanent, zone.Graveyard)
-	case game.EffectDiscard:
-		playerID, ok := r.player(effect)
-		if ok {
-			res.succeeded = discardCards(r.game, playerID, res.amount)
-		}
-	case game.EffectTap:
-		if permanent, ok := r.permanent(effect); ok {
-			setPermanentTapped(r.game, permanent, true)
-			res.succeeded = true
-		}
-	case game.EffectUntap:
-		if permanent, ok := r.permanent(effect); ok {
-			setPermanentTapped(r.game, permanent, false)
-			res.succeeded = true
-		}
-	case game.EffectModifyPT:
-		if permanent, ok := r.permanent(effect); ok && effect.UntilEndOfTurn {
-			r.game.ContinuousEffects = append(r.game.ContinuousEffects, untilEndOfTurnContinuousEffect(r.game, r.obj, permanent, effect))
-			res.succeeded = true
-		}
-	case game.EffectAddCounter:
-		if permanent, ok := r.permanent(effect); ok && res.amount > 0 {
-			permanent.Counters.Add(effect.CounterKind, res.amount)
-			res.succeeded = true
-		}
-	case game.EffectRemoveCounter:
-		if permanent, ok := r.permanent(effect); ok && res.amount > 0 {
-			permanent.Counters.Remove(effect.CounterKind, res.amount)
-			res.succeeded = true
-		}
-	case game.EffectMoveCounters:
-		res.succeeded = moveCounters(r.game, r.obj, effect)
-	case game.EffectApplyContinuous:
-		permanent, _ := r.permanent(effect)
-		res.succeeded = applyContinuousEffectTemplates(r.game, r.obj, permanent, effect)
-	case game.EffectCreateToken:
-		if res.amount <= 0 {
-			res.amount = 1
-		}
-		if !effect.Token.Exists && !effect.TokenCopy.Exists {
-			return res
-		}
-		recipient := r.obj.Controller
-		if effect.Recipient.Exists {
-			var ok bool
-			recipient, ok = resolvePlayerReference(r.game, r.obj, effect.Recipient.Val)
-			if !ok {
-				return res
-			}
-		}
-		for range res.amount {
-			token, ok := r.tokenDefinition(effect)
-			if !ok {
-				return res
-			}
-			if _, ok := createTokenPermanent(r.game, recipient, token); !ok {
-				return res
-			}
-		}
-		res.succeeded = res.amount > 0
-	case game.EffectInvestigate:
-		if res.amount <= 0 {
-			res.amount = 1
-		}
-		recipient := r.obj.Controller
-		if effect.Recipient.Exists {
-			var ok bool
-			recipient, ok = resolvePlayerReference(r.game, r.obj, effect.Recipient.Val)
-			if !ok {
-				return res
-			}
-		}
-		for range res.amount {
-			if _, ok := createTokenPermanent(r.game, recipient, clueTokenDef()); !ok {
-				return res
-			}
-		}
-		res.succeeded = true
-	case game.EffectCreateDelayedTrigger:
-		res.succeeded = effect.DelayedTrigger.Exists && scheduleDelayedTrigger(r.game, r.obj, &effect.DelayedTrigger.Val)
-	case game.EffectPutOnBattlefield:
-		if effect.Card.Exists {
-			res.succeeded = r.putReferencedCardOnBattlefield(effect)
-		} else if effect.LinkID != "" {
-			res.succeeded = r.putLinkedCardOnBattlefield(effect)
-			if !res.succeeded {
-				res.succeeded = returnLinkedExiledObjects(r.engine, r.game, r.obj, effect.LinkID, r.agents, r.log)
-			}
-		}
-	case game.EffectPrevent:
-		res.succeeded = createPreventionShield(r.game, r.obj, effect)
-	case game.EffectRegenerate:
-		if permanent, ok := r.permanent(effect); ok {
-			permanent.RegenerationShields++
-			res.succeeded = true
-		}
-	case game.EffectSkipStep:
-		playerID, ok := r.player(effect)
-		if ok {
-			scheduleSkipStep(r.game, playerID, effect.Step)
-			res.succeeded = true
-		}
-	case game.EffectTransform:
-		if permanent, ok := r.permanent(effect); ok {
-			res.succeeded = transformPermanent(r.game, permanent)
-		}
-	case game.EffectPhaseOut:
-		if permanent, ok := r.permanent(effect); ok {
-			permanent.PhasedOut = true
-			removePermanentFromCombat(r.game, permanent.ObjectID)
-			res.succeeded = true
-		}
-	case game.EffectCreateEmblem:
-		r.game.Emblems = append(r.game.Emblems, game.Emblem{Owner: r.obj.Controller, Abilities: append([]game.AbilityDef(nil), effect.EmblemAbilities...)})
-		res.succeeded = true
-	case game.EffectMill:
-		playerID, ok := r.player(effect)
-		if ok {
-			millCards(r.game, playerID, res.amount)
-			res.succeeded = res.amount > 0
-		}
-	case game.EffectSearch:
-		if !effect.Search.Exists || !searchSpecSupported(effect.Search.Val) {
-			logUnsupportedEffect(r.log, r.obj, effect)
-			return res
-		}
-		playerID, ok := r.player(effect)
-		if ok {
-			res.succeeded = r.engine.searchLibrary(r.game, r.obj, playerID, effect.Search.Val, res.amount)
-		}
-	case game.EffectReveal:
-		playerID, ok := r.effectRecipientOrPlayer(effect)
-		if ok {
-			revealed := revealCardIDs(r.game, r.obj, playerID, zone.Library, res.amount)
-			if effect.LinkID != "" {
-				for _, cardID := range revealed {
-					rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, effect.LinkID), game.LinkedObjectRef{CardID: cardID})
-				}
-			}
-			res.succeeded = len(revealed) > 0
-		}
-	case game.EffectScry:
-		playerID, ok := r.player(effect)
-		if ok {
-			r.engine.scryCards(r.game, r.agents, r.log, playerID, res.amount)
-			res.succeeded = res.amount > 0
-		}
-	case game.EffectSurveil:
-		playerID, ok := r.player(effect)
-		if ok {
-			r.engine.surveilCards(r.game, r.agents, r.log, playerID, res.amount)
-			res.succeeded = res.amount > 0
-		}
-	case game.EffectFight:
-		resolveFight(r.game, r.obj, effect)
-		res.succeeded = true
-	case game.EffectReplace:
-		res.succeeded = createReplacementEffect(r.game, r.obj, effect)
-	case game.EffectChoose, game.EffectPay:
-		res.succeeded = true
-	case game.EffectApplyRule:
-		res.succeeded = createRuleEffects(r.game, r.obj, effect)
-	case game.EffectProliferate:
-		res.succeeded = r.engine.resolveProliferate(r.game, r.obj, r.agents, r.log)
-	case game.EffectGoad:
-		if permanent, ok := r.permanent(effect); ok && permanentHasType(r.game, permanent, types.Creature) {
-			goadPermanent(r.game, permanent, r.obj.Controller)
-			res.succeeded = true
-		}
-	case game.EffectStartEngines:
-		playerID, ok := r.player(effect)
-		if ok {
-			res.succeeded = startEngines(r.game, playerID)
-		}
-	case game.EffectSetClassLevel:
-		permanent, ok := r.permanent(effect)
-		if ok && res.amount > permanent.ClassLevel {
-			permanent.ClassLevel = res.amount
-			res.succeeded = true
-		}
-	case game.EffectMonstrosity:
-		permanent, ok := r.permanent(effect)
-		if ok && !permanent.Monstrous {
-			if res.amount > 0 {
-				permanent.Counters.Add(counter.PlusOnePlusOne, res.amount)
-			}
-			permanent.Monstrous = true
-			res.succeeded = true
-		}
-	case game.EffectShufflePermanentIntoLibrary:
-		permanent, ok := r.permanent(effect)
-		if !ok {
-			return res
-		}
-
-		owner := permanent.Owner
-		if !movePermanentToZone(r.game, permanent, zone.Library) {
-			return res
-		}
-		if player, ok := playerByID(r.game, owner); ok {
-			player.Library.Shuffle(r.engine.rng)
-		}
-		res.succeeded = true
-	case game.EffectDiscover:
-		res.succeeded = r.engine.resolveDiscover(r.game, r.obj, res.amount, r.agents, r.log)
-	default:
-	}
-	return res
-}
-
-func (r *effectResolver) putLinkedCardOnBattlefield(effect *game.Effect) bool {
-	key := linkedObjectSourceKey(r.game, r.obj, effect.LinkID)
-	refs := linkedObjects(r.game, key)
-	if len(refs) == 0 {
-		return false
-	}
-	controller, ok := r.effectRecipientOrController(effect)
-	if !ok {
-		return false
-	}
-	for _, ref := range refs {
-		if ref.CardID == 0 {
-			continue
-		}
-		card, ok := r.game.GetCardInstance(ref.CardID)
-		if !ok || !cardMatchesCondition(card.Def, effect.CardCondition) {
-			continue
-		}
-		owner, ok := playerByID(r.game, card.Owner)
-		if !ok || !owner.Library.Remove(card.ID) {
-			continue
-		}
-		if _, ok := createCardPermanentWithChoices(r.engine, r.game, card, controller, zone.Library, r.agents, r.log); ok {
-			clearLinkedObjects(r.game, key)
-			return true
-		}
-		owner.Library.Add(card.ID)
-	}
-	return false
-}
-
-func (r *effectResolver) putReferencedCardOnBattlefield(effect *game.Effect) bool {
-	ref := effect.Card.Val
-	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, ref)
-	if !ok || fromZone == zone.None {
-		return false
-	}
-	card, ok := r.game.GetCardInstance(cardID)
-	if !ok {
-		return false
-	}
-	controller, ok := r.effectRecipientOrController(effect)
-	if !ok {
-		return false
-	}
-	if ref.Kind == game.CardReferenceEvent {
-		if owner, ok := playerByID(r.game, card.Owner); ok {
-			controller = owner.ID
-		}
-	}
-	if !removeCardFromZone(r.game, card.Owner, cardID, fromZone) {
-		return false
-	}
-	permanent, ok := createCardPermanentFaceWithContinuous(r.engine, r.game, card, controller, fromZone, game.FaceFront, effect.ContinuousEffects, r.agents, r.log)
-	if !ok {
-		destinationCards, zoneOK := destinationZone(r.game, card.Owner, fromZone)
-		if zoneOK {
-			destinationCards.Add(cardID)
-		}
-		return false
-	}
-	return permanent != nil
-}
-
-func (r *effectResolver) tokenDefinition(effect *game.Effect) (*game.CardDef, bool) {
-	if effect.TokenCopy.Exists {
-		return buildTokenCopyDef(r.game, r.obj, effect.TokenCopy.Val)
-	}
-	if effect.Token.Exists {
-		return effect.Token.Val, effect.Token.Val != nil
-	}
-	return nil, false
 }
 
 func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardReference) (id.ID, zone.Type, bool) {
@@ -828,73 +332,10 @@ func copyCardFaceAbilityFields(dst, src *game.CardFace) {
 	dst.TriggeredAbilities = append([]game.TriggeredAbilityBody(nil), src.TriggeredAbilities...)
 	dst.ReplacementAbilities = append([]game.ReplacementAbilityDef(nil), src.ReplacementAbilities...)
 	dst.StaticAbilities = append([]game.StaticAbilityBody(nil), src.StaticAbilities...)
-	dst.Abilities = append([]game.AbilityDef(nil), src.Abilities...)
 }
 
 func clearCardFaceAbilities(face *game.CardFace) {
-	face.SpellAbility = opt.V[game.SpellAbilityBody]{}
-	face.ActivatedAbilities = nil
-	face.ManaAbilities = nil
-	face.LoyaltyAbilities = nil
-	face.TriggeredAbilities = nil
-	face.ReplacementAbilities = nil
-	face.StaticAbilities = nil
-	face.Abilities = nil
-}
-
-// IsEffectTypeExecuted reports whether the generic rules resolver currently
-// implements the given effect primitive.
-func IsEffectTypeExecuted(effectType game.EffectType) bool {
-	switch effectType {
-	case game.EffectDraw,
-		game.EffectGainLife,
-		game.EffectLoseLife,
-		game.EffectAddMana,
-		game.EffectDamage,
-		game.EffectDestroy,
-		game.EffectCounter,
-		game.EffectExile,
-		game.EffectBounce,
-		game.EffectSacrifice,
-		game.EffectDiscard,
-		game.EffectTap,
-		game.EffectUntap,
-		game.EffectModifyPT,
-		game.EffectAddCounter,
-		game.EffectRemoveCounter,
-		game.EffectMoveCounters,
-		game.EffectApplyContinuous,
-		game.EffectCreateToken,
-		game.EffectCreateDelayedTrigger,
-		game.EffectPutOnBattlefield,
-		game.EffectPrevent,
-		game.EffectRegenerate,
-		game.EffectSkipStep,
-		game.EffectTransform,
-		game.EffectPhaseOut,
-		game.EffectCreateEmblem,
-		game.EffectMill,
-		game.EffectSearch,
-		game.EffectReveal,
-		game.EffectScry,
-		game.EffectSurveil,
-		game.EffectFight,
-		game.EffectReplace,
-		game.EffectChoose,
-		game.EffectPay,
-		game.EffectApplyRule,
-		game.EffectProliferate,
-		game.EffectGoad,
-		game.EffectInvestigate,
-		game.EffectShufflePermanentIntoLibrary,
-		game.EffectDiscover,
-		game.EffectStartEngines,
-		game.EffectSetClassLevel,
-		game.EffectMonstrosity:
-		return true
-	default:
-		return false
-	}
+	face.ClearAbilities()
 }
 
 func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, log *TurnLog) bool {
@@ -923,92 +364,6 @@ func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
 	return permanentHasSupertype(g, permanent, types.Snow)
 }
 
-func resolveMassPermanentEffect(g *game.Game, obj *game.StackObject, effect *game.Effect, amount int) bool {
-	damageSource, sourceOK := resolveEffectDamageSource(g, obj, effect)
-	if !sourceOK {
-		return false
-	}
-	permanentIDs := selectedPermanentIDsForEffect(g, obj, effect, obj.Controller, damageSource.permanent)
-	succeeded := false
-	for _, permanentID := range permanentIDs {
-		permanent, ok := permanentByObjectID(g, permanentID)
-		if !ok {
-			continue
-		}
-		switch effect.Type {
-		case game.EffectDamage:
-			if amount > 0 {
-				dealt := dealPermanentDamage(g, damageSource.sourceID, damageSource.sourceObjectID, damageSource.controller, permanent, amount, false)
-				applyDamageSourceKeywordEffects(g, damageSource.permanent, permanent, dealt)
-				succeeded = dealt > 0 || succeeded
-			}
-		case game.EffectDestroy:
-			_, ok := destroyPermanent(g, permanent.ObjectID)
-			succeeded = succeeded || ok
-		case game.EffectExile:
-			succeeded = movePermanentToZone(g, permanent, zone.Exile) || succeeded
-		case game.EffectBounce:
-			succeeded = movePermanentToZone(g, permanent, zone.Hand) || succeeded
-		case game.EffectTap:
-			setPermanentTapped(g, permanent, true)
-			succeeded = true
-		case game.EffectUntap:
-			setPermanentTapped(g, permanent, false)
-			succeeded = true
-		case game.EffectAddCounter:
-			if amount > 0 {
-				permanent.Counters.Add(effect.CounterKind, amount)
-				succeeded = true
-			}
-		case game.EffectRemoveCounter:
-			if amount > 0 {
-				permanent.Counters.Remove(effect.CounterKind, amount)
-				succeeded = true
-			}
-		case game.EffectApplyContinuous:
-			succeeded = applyContinuousEffectTemplates(g, obj, permanent, effect) || succeeded
-		default:
-		}
-	}
-	return succeeded
-}
-
-func resolveMassPlayerEffect(g *game.Game, obj *game.StackObject, effect *game.Effect, amount int) bool {
-	if effect.Type != game.EffectDamage || amount <= 0 {
-		return false
-	}
-	damageSource, ok := resolveEffectDamageSource(g, obj, effect)
-	if !ok {
-		return false
-	}
-	succeeded := false
-	for _, playerID := range selectedPlayerIDs(g, obj.Controller, effect.PlayerSelector) {
-		dealt := dealPlayerDamage(g, damageSource.sourceID, damageSource.sourceObjectID, damageSource.controller, playerID, amount, false)
-		if damageSource.permanent != nil {
-			applyLifelink(g, damageSource.permanent, dealt)
-		}
-		succeeded = dealt > 0 || succeeded
-	}
-	return succeeded
-}
-
-func logUnsupportedEffect(log *TurnLog, obj *game.StackObject, effect *game.Effect) {
-	log.addUnsupportedEffect(UnsupportedEffectLog{
-		StackObjectID: stackObjectID(obj),
-		SourceID:      stackObjectSourceID(obj),
-		Controller:    stackObjectController(obj),
-		EffectType:    effect.Type,
-		Description:   effect.Description,
-	})
-}
-
-func effectAmount(g *game.Game, obj *game.StackObject, effect *game.Effect) int {
-	if !effect.DynamicAmount.Exists || effect.DynamicAmount.Val.Kind == game.DynamicAmountNone {
-		return effect.Amount
-	}
-	return dynamicAmountValue(g, obj, stackObjectController(obj), effect.DynamicAmount.Val)
-}
-
 func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount) int {
 	amount := 0
 	switch dynamic.Kind {
@@ -1022,14 +377,14 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		if obj == nil {
 			break
 		}
-		if permanent, ok := effectPermanent(g, obj, &game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
+		if permanent, ok := effectPermanentAt(g, obj, dynamic.TargetIndex); ok {
 			amount = effectivePower(g, permanent)
 		}
 	case game.DynamicAmountTargetToughness:
 		if obj == nil {
 			break
 		}
-		if permanent, ok := effectPermanent(g, obj, &game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
+		if permanent, ok := effectPermanentAt(g, obj, dynamic.TargetIndex); ok {
 			if toughness, ok := effectiveToughness(g, permanent); ok {
 				amount = toughness
 			}
@@ -1038,7 +393,7 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		if obj == nil {
 			break
 		}
-		if permanent, ok := effectPermanent(g, obj, &game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
+		if permanent, ok := effectPermanentAt(g, obj, dynamic.TargetIndex); ok {
 			if def, ok := permanentCardDef(g, permanent); ok {
 				amount = def.ManaValue()
 			}
@@ -1047,7 +402,7 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		if obj == nil {
 			break
 		}
-		if permanent, ok := effectPermanent(g, obj, &game.Effect{TargetIndex: dynamic.TargetIndex}); ok {
+		if permanent, ok := effectPermanentAt(g, obj, dynamic.TargetIndex); ok {
 			amount = permanent.Counters.Get(dynamic.CounterKind)
 		}
 	case game.DynamicAmountControllerLife:
@@ -1097,10 +452,7 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 }
 
 func dynamicResultKey(dynamic game.DynamicAmount) string {
-	if dynamic.ResultKey != "" {
-		return string(dynamic.ResultKey)
-	}
-	return dynamic.LinkID
+	return string(dynamic.ResultKey)
 }
 
 func resolvedObjectPower(g *game.Game, resolved *resolvedObjectReference) int {
@@ -1113,61 +465,30 @@ func resolvedObjectPower(g *game.Game, resolved *resolvedObjectReference) int {
 	return 0
 }
 
-func rememberEffectAmount(obj *game.StackObject, effect *game.Effect, amount int) {
-	if effect.LinkID == "" {
+func rememberEffectAmount(obj *game.StackObject, linkID string, amount int) {
+	if linkID == "" {
 		return
 	}
 	if obj.ResolvedAmounts == nil {
 		obj.ResolvedAmounts = make(map[string]int)
 	}
-	obj.ResolvedAmounts[effect.LinkID] = amount
+	obj.ResolvedAmounts[linkID] = amount
 }
 
-func rememberEffectExcessDamage(obj *game.StackObject, effect *game.Effect, excessDamage int) {
-	if effect.LinkID == "" || excessDamage <= 0 {
+func rememberEffectExcessDamage(obj *game.StackObject, linkID string, excessDamage int) {
+	if linkID == "" || excessDamage <= 0 {
 		return
 	}
 	if obj.ResolvedExcessDamage == nil {
 		obj.ResolvedExcessDamage = make(map[string]int)
 	}
-	obj.ResolvedExcessDamage[effect.LinkID] = excessDamage
-}
-
-func damageResultAmount(effect *game.Effect, dealt, excess int) int {
-	if effect.ResultAmount == game.EffectResultAmountExcessDamage {
-		return excess
-	}
-	return dealt
-}
-
-func moveCounters(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
-	destination, ok := effectPermanent(g, obj, effect)
-	if !ok {
-		return false
-	}
-	counters, source, ok := effectCounterSource(g, obj, effect.CounterSource)
-	if !ok || counters.IsEmpty() {
-		return false
-	}
-	if source != nil && source.ObjectID == destination.ObjectID {
-		return false
-	}
-	for kind, amount := range counters.All() {
-		destination.Counters.Add(kind, amount)
-	}
-	if source == nil {
-		return true
-	}
-	for kind, amount := range counters.All() {
-		source.Counters.Remove(kind, amount)
-	}
-	return true
+	obj.ResolvedExcessDamage[linkID] = excessDamage
 }
 
 func effectCounterSource(g *game.Game, obj *game.StackObject, source game.CounterSourceSpec) (counter.Set, *game.Permanent, bool) {
 	switch source.Kind {
 	case game.CounterSourceTarget:
-		permanent, ok := effectPermanent(g, obj, &game.Effect{TargetIndex: source.TargetIndex})
+		permanent, ok := effectPermanentAt(g, obj, source.TargetIndex)
 		if !ok {
 			return counter.Set{}, nil, false
 		}
@@ -1196,7 +517,7 @@ func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt
 	}
 	cond := condition.Val
 	if cond.PermanentType.Exists {
-		permanent, ok := effectPermanent(g, obj, &game.Effect{TargetIndex: cond.TargetIndex})
+		permanent, ok := effectPermanentAt(g, obj, cond.TargetIndex)
 		if !ok {
 			return false
 		}
@@ -1265,78 +586,38 @@ func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition
 	return true
 }
 
-func effectResultConditionSatisfied(obj *game.StackObject, condition opt.V[game.EffectResultCondition]) bool {
-	if !condition.Exists || condition.Val.LinkID == "" {
+func instructionResultGateSatisfied(obj *game.StackObject, gate game.InstructionResultGate) bool {
+	if gate.Key == "" {
 		return true
 	}
 	if obj == nil || obj.ResolutionResults == nil {
 		return false
 	}
-	cond := condition.Val
-	result, ok := obj.ResolutionResults[cond.LinkID]
+	result, ok := obj.ResolutionResults[string(gate.Key)]
 	if !ok {
 		return false
 	}
-	if cond.Accepted != game.TriAny && (cond.Accepted == game.TriTrue) != result.Accepted {
+	if gate.Accepted != game.TriAny && (gate.Accepted == game.TriTrue) != result.Accepted {
 		return false
 	}
-	if cond.Succeeded != game.TriAny && (cond.Succeeded == game.TriTrue) != result.Succeeded {
+	if gate.Succeeded != game.TriAny && (gate.Succeeded == game.TriTrue) != result.Succeeded {
 		return false
 	}
 	return true
 }
 
-func rememberEffectResolutionResult(obj *game.StackObject, effect *game.Effect, accepted, succeeded bool, amount int) {
-	if obj == nil || effect.LinkID == "" {
+func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, accepted, succeeded bool, amount int) {
+	if obj == nil || linkID == "" {
 		return
 	}
 	if obj.ResolutionResults == nil {
-		obj.ResolutionResults = make(map[string]game.EffectResolutionResult)
+		obj.ResolutionResults = make(map[string]game.InstructionResolutionResult)
 	}
-	obj.ResolutionResults[effect.LinkID] = game.EffectResolutionResult{
+	obj.ResolutionResults[linkID] = game.InstructionResolutionResult{
 		Accepted:  accepted,
 		Succeeded: succeeded,
 		Amount:    amount,
 	}
-}
-
-func applyContinuousEffectTemplates(g *game.Game, obj *game.StackObject, permanent *game.Permanent, effect *game.Effect) bool {
-	if len(effect.ContinuousEffects) == 0 {
-		return false
-	}
-	sourceID, sourceObjectID := damageSourceIDs(g, obj)
-	timestamp := game.Timestamp(g.IDGen.Next())
-	applied := false
-	for i := range effect.ContinuousEffects {
-		template := &effect.ContinuousEffects[i]
-		// Runtime continuous effects are applied by the layer system; animation
-		// effects such as "becomes a 0/0 creature" use type and P/T layers
-		// (CR 611, CR 613).
-		runtimeEffect := *template
-		runtimeEffect.ID = g.IDGen.Next()
-		runtimeEffect.SourceCardID = sourceID
-		runtimeEffect.SourceObjectID = sourceObjectID
-		runtimeEffect.Controller = obj.Controller
-		runtimeEffect.Timestamp = timestamp
-		runtimeEffect.CreatedTurn = g.Turn.TurnNumber
-		if effect.UntilEndOfTurn {
-			runtimeEffect.Duration = game.DurationUntilEndOfTurn
-		} else if effect.Duration != game.DurationPermanent {
-			runtimeEffect.Duration = effect.Duration
-		}
-		if runtimeEffect.Duration == game.DurationUntilYourNextTurn && runtimeEffect.ExpiresFor == game.Player1 {
-			runtimeEffect.ExpiresFor = obj.Controller
-		}
-		if runtimeEffect.AffectedObjectID == 0 && runtimeEffect.Selector == game.EffectSelectorNone {
-			if permanent == nil {
-				continue
-			}
-			runtimeEffect.AffectedObjectID = permanent.ObjectID
-		}
-		g.ContinuousEffects = append(g.ContinuousEffects, runtimeEffect)
-		applied = true
-	}
-	return applied
 }
 
 func damageSourceIDs(g *game.Game, obj *game.StackObject) (sourceID, sourceObjectID id.ID) {
@@ -1365,37 +646,6 @@ type effectDamageSource struct {
 	permanent      *game.Permanent
 }
 
-func resolveEffectDamageSource(g *game.Game, obj *game.StackObject, effect *game.Effect) (effectDamageSource, bool) {
-	if !effect.DamageSource.Exists {
-		sourceID, sourceObjectID := damageSourceIDs(g, obj)
-		return effectDamageSource{
-			sourceID:       sourceID,
-			sourceObjectID: sourceObjectID,
-			controller:     obj.Controller,
-		}, true
-	}
-	resolved, ok := resolveObjectReference(g, obj, effect.DamageSource.Val)
-	if !ok {
-		return effectDamageSource{}, false
-	}
-	if resolved.permanent == nil {
-		if resolved.snapshot.ObjectID == 0 {
-			return effectDamageSource{}, false
-		}
-		return effectDamageSource{
-			sourceID:       resolved.snapshot.CardID,
-			sourceObjectID: resolved.snapshot.ObjectID,
-			controller:     resolved.snapshot.Controller,
-		}, true
-	}
-	return effectDamageSource{
-		sourceID:       resolved.permanent.CardInstanceID,
-		sourceObjectID: resolved.permanent.ObjectID,
-		controller:     effectiveController(g, resolved.permanent),
-		permanent:      resolved.permanent,
-	}, true
-}
-
 func applyDamageSourceKeywordEffects(g *game.Game, source, damaged *game.Permanent, damage int) {
 	if source == nil || damage <= 0 {
 		return
@@ -1417,14 +667,14 @@ func selectedPermanentIDs(g *game.Game, controller game.PlayerID, source *game.P
 	return permanentIDs
 }
 
-func selectedPermanentIDsForEffect(g *game.Game, obj *game.StackObject, effect *game.Effect, controller game.PlayerID, source *game.Permanent) []id.ID {
-	if effect.Selector == game.EffectSelectorOtherCreaturesDefendingPlayerControls {
+func selectedPermanentIDsForSelector(g *game.Game, obj *game.StackObject, controller game.PlayerID, source *game.Permanent, selector game.EffectSelector, targetIndex int) []id.ID {
+	if selector == game.EffectSelectorOtherCreaturesDefendingPlayerControls {
 		return selectedOtherCreaturesDefendingPlayerControls(g, obj)
 	}
-	if effect.Selector != game.EffectSelectorAllCreaturesExceptTarget {
-		return selectedPermanentIDs(g, controller, source, effect.Selector)
+	if selector != game.EffectSelectorAllCreaturesExceptTarget {
+		return selectedPermanentIDs(g, controller, source, selector)
 	}
-	excluded, _ := targetPermanentObjectID(obj, effect.TargetIndex)
+	excluded, _ := targetPermanentObjectID(obj, targetIndex)
 	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
 	for _, permanent := range g.Battlefield {
 		if permanent.ObjectID == excluded || !permanentHasType(g, permanent, types.Creature) {
@@ -1496,55 +746,11 @@ func permanentMatchesSelectorForSource(g *game.Game, source *game.Permanent, con
 	}
 }
 
-func effectPlayer(g *game.Game, obj *game.StackObject, effect *game.Effect) (game.PlayerID, bool) {
-	if choice, ok := linkedResolutionChoice(obj, effect.ChoiceLinkID); ok && choice.Kind == game.ResolutionChoicePlayer {
-		if !isPlayerAlive(g, choice.Player) {
-			return 0, false
-		}
-		return choice.Player, true
-	}
-	if effect.TargetIndex == game.TargetIndexController {
-		if !isPlayerAlive(g, obj.Controller) {
-			return 0, false
-		}
-		return obj.Controller, true
-	}
-	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {
-		return 0, false
-	}
-	target := obj.Targets[effect.TargetIndex]
-	if target.Kind != game.TargetPlayer {
-		return 0, false
-	}
-	if !isPlayerAlive(g, target.PlayerID) {
-		return 0, false
-	}
-	return target.PlayerID, true
-}
-
-func (*effectResolver) effectManaColor(obj *game.StackObject, effect *game.Effect) mana.Color {
-	if choice, ok := linkedResolutionChoice(obj, effect.ChoiceLinkID); ok && choice.Kind == game.ResolutionChoiceMana {
-		return choice.Color
-	}
-	return effect.ManaColor
-}
-
-func effectPermanent(g *game.Game, obj *game.StackObject, effect *game.Effect) (*game.Permanent, bool) {
-	if effect.Object.Exists {
-		resolved, ok := resolveObjectReference(g, obj, effect.Object.Val)
-		return resolved.permanent, ok && resolved.permanent != nil
-	}
-	if effect.TargetIndex == game.TargetIndexSourcePermanent {
+func effectPermanentAt(g *game.Game, obj *game.StackObject, targetIndex int) (*game.Permanent, bool) {
+	if targetIndex == game.TargetIndexSourcePermanent {
 		return sourcePermanent(g, obj)
 	}
-	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {
-		return nil, false
-	}
-	target := obj.Targets[effect.TargetIndex]
-	if target.Kind != game.TargetPermanent {
-		return nil, false
-	}
-	return permanentByObjectID(g, target.PermanentID)
+	return effectPermanentTarget(g, obj, targetIndex)
 }
 
 func sourcePermanent(g *game.Game, obj *game.StackObject) (*game.Permanent, bool) {

@@ -179,12 +179,9 @@ func creatureCard(name string, power, toughness int, keywords ...game.Keyword) *
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(p),
 		Toughness: opt.Val(t),
-		Abilities: []game.AbilityDef{
-			{
-				Kind:             game.StaticAbility,
-				KeywordAbilities: game.SimpleKeywords(keywords...),
-			},
-		}},
+		StaticAbilities: []game.StaticAbilityBody{{
+			KeywordAbilities: game.SimpleKeywords(keywords...),
+		}}},
 	}
 }
 
@@ -192,48 +189,45 @@ func divinationLike() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Divination",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.SpellAbility,
-				Effects: []game.Effect{
-					{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Instruction{
+					{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
 				},
 			},
-		}},
-	}
+		}),
+	}}
 }
 
 func healingSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Healing",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.SpellAbility,
-				Effects: []game.Effect{
-					{Type: game.EffectGainLife, Amount: 3, TargetIndex: game.TargetIndexController},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				Sequence: []game.Instruction{
+					{Primitive: game.GainLife{Amount: game.Fixed(3), TargetIndex: game.TargetIndexController}},
 				},
 			},
-		}},
-	}
+		}),
+	}}
 }
 
 func lavaSpikeLike() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Simple Lava Spike",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.SpellAbility,
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
 				Targets: []game.TargetSpec{
 					{MinTargets: 1, MaxTargets: 1, Constraint: "player"},
 				},
-				Effects: []game.Effect{
-					{Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
+				Sequence: []game.Instruction{
+					{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}},
 				},
 			},
-		}},
-	}
+		}),
+	}}
 }
 
 func greenCost() opt.V[cost.Mana] {

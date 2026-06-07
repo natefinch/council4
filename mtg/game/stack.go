@@ -119,8 +119,8 @@ type StackObject struct {
 	ResolvedExcessDamage map[string]int
 
 	// ResolutionResults stores named success/choice results from earlier
-	// effects on this stack object for "if you do" / "if you don't" branches.
-	ResolutionResults map[string]EffectResolutionResult
+	// instructions on this stack object for "if you do" / "if you don't" branches.
+	ResolutionResults map[string]InstructionResolutionResult
 
 	// ResolutionChoices stores named values chosen while resolving this stack
 	// object, for later instructions such as "of the chosen color" (CR 608.2c).

@@ -194,10 +194,9 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Red Spell",
 		ManaCost: opt.Val(cost.Mana{cost.R}),
 		Types:    []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{
-			Kind: game.SpellAbility,
+		SpellAbility: opt.Val(game.SpellAbilityBody{
 			Text: "Do nothing.",
-		}}},
+		})},
 	})
 
 	if containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
@@ -333,22 +332,18 @@ func setSorcerySpeedTurn(g *game.Game, playerID game.PlayerID) {
 func conditionalRedManaLand() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Conditional Red Land",
 		Types: []types.Card{types.Land},
-		Abilities: []game.AbilityDef{{
-			Kind:          game.ActivatedAbility,
-			Text:          "{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
-			IsManaAbility: true,
+		ManaAbilities: []game.ManaAbilityBody{{
+			Text: "{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
 			ActivationCondition: opt.Val(game.Condition{
 				ControllerControls: game.PermanentFilter{
 					SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
 				},
 			}),
-			AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
-			Effects: []game.Effect{{
-				Type:        game.EffectAddMana,
-				Amount:      1,
-				ManaColor:   mana.R,
-				TargetIndex: game.TargetIndexController,
-			}},
+			AdditionalCosts: cost.Tap,
+			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.AddMana{
+				Amount:    game.Fixed(1),
+				ManaColor: mana.R,
+			}}}},
 		}}},
 	}
 }
@@ -356,10 +351,9 @@ func conditionalRedManaLand() *game.CardDef {
 func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Bugenhagen-like",
 		Types: []types.Card{types.Creature},
-		Abilities: []game.AbilityDef{{
-			Kind: game.TriggeredAbility,
+		TriggeredAbilities: []game.TriggeredAbilityBody{{
 			Text: "At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.",
-			Trigger: opt.Val(game.TriggerCondition{
+			Trigger: game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
 					Event: game.EventCardDrawn,
@@ -374,8 +368,8 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 						}),
 					},
 				}),
-			}),
-			Effects: []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}},
+			},
+			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}},
 		}}},
 	})
 }
@@ -383,28 +377,19 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 func angerLikeCard() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Anger-like",
 		Types: []types.Card{types.Creature},
-		Abilities: []game.AbilityDef{
+		StaticAbilities: []game.StaticAbilityBody{
+			game.HasteStaticBody,
 			{
-				Kind:             game.StaticAbility,
-				Text:             "Haste",
-				KeywordAbilities: game.SimpleKeywords(game.Haste),
-			},
-			{
-				Kind:           game.StaticAbility,
-				Text:           "As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.",
 				ZoneOfFunction: zone.Graveyard,
 				Condition: opt.Val(game.Condition{
 					ControllerControls: game.PermanentFilter{
 						SubtypesAny: []types.Sub{types.Mountain},
 					},
 				}),
-				Effects: []game.Effect{{
-					Type: game.EffectApplyContinuous,
-					ContinuousEffects: []game.ContinuousEffect{{
-						Layer:       game.LayerAbility,
-						Selector:    game.EffectSelectorCreaturesYouControl,
-						AddKeywords: []game.Keyword{game.Haste},
-					}},
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:       game.LayerAbility,
+					Selector:    game.EffectSelectorCreaturesYouControl,
+					AddKeywords: []game.Keyword{game.Haste},
 				}},
 			},
 		}},

@@ -42,23 +42,21 @@ var KusariGama = func() *game.CardDef {
 			{
 				Layer:    game.LayerAbility,
 				Selector: game.EffectSelectorEquippedCreature,
-				AddAbilities: []game.AbilityDef{
-					{
-						Body: game.ActivatedAbilityBody{
-							Text: `
+				AddAbilities: []game.AbilityBody{
+					game.ActivatedAbilityBody{
+						Text: `
 											{2}: This creature gets +1/+0 until end of turn.
 										`,
-							ManaCost: opt.Val(cost.Mana{
-								cost.O(2),
-							}),
-							Content: game.PlainAbilityContent{
-								Sequence: []game.Instruction{
-									{
-										Primitive: game.ModifyPT{
-											TargetIndex: game.TargetIndexSourcePermanent,
-											PowerDelta:  game.Fixed(1),
-											Duration:    game.DurationUntilEndOfTurn,
-										},
+						ManaCost: opt.Val(cost.Mana{
+							cost.O(2),
+						}),
+						Content: game.PlainAbilityContent{
+							Sequence: []game.Instruction{
+								{
+									Primitive: game.ModifyPT{
+										TargetIndex: game.TargetIndexSourcePermanent,
+										PowerDelta:  game.Fixed(1),
+										Duration:    game.DurationUntilEndOfTurn,
 									},
 								},
 							},

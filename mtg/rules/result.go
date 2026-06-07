@@ -26,7 +26,6 @@ type TurnLog struct {
 	Actions        []ActionLog
 	Choices        []game.ChoiceDecision
 	Resolves       []ResolveLog
-	Unsupported    []UnsupportedEffectLog
 	CombatDamage   []CombatDamageLog
 	CreatureDamage []CreatureDamageLog
 	Deaths         []PermanentDeathLog
@@ -44,7 +43,6 @@ const (
 	TurnLogEntryAction
 	TurnLogEntryChoice
 	TurnLogEntryResolve
-	TurnLogEntryUnsupportedEffect
 	TurnLogEntryCombatDamage
 	TurnLogEntryCreatureDamage
 	TurnLogEntryDeath
@@ -58,7 +56,6 @@ type TurnLogEntry struct {
 	Action         ActionLog
 	Choice         game.ChoiceDecision
 	Resolve        ResolveLog
-	Unsupported    UnsupportedEffectLog
 	CombatDamage   CombatDamageLog
 	CreatureDamage CreatureDamageLog
 	Death          PermanentDeathLog
@@ -105,16 +102,6 @@ type ResolveLog struct {
 	Controller    game.PlayerID
 	Kind          game.StackObjectKind
 	Result        string
-}
-
-// UnsupportedEffectLog records an effect primitive the resolver does not
-// currently execute.
-type UnsupportedEffectLog struct {
-	StackObjectID id.ID
-	SourceID      id.ID
-	Controller    game.PlayerID
-	EffectType    game.EffectType
-	Description   string
 }
 
 // CombatDamageLog records combat damage dealt to a player.
@@ -199,14 +186,6 @@ func (log *TurnLog) addResolve(resolve ResolveLog) {
 	}
 	log.Resolves = append(log.Resolves, resolve)
 	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryResolve, Resolve: resolve})
-}
-
-func (log *TurnLog) addUnsupportedEffect(unsupported UnsupportedEffectLog) {
-	if log == nil {
-		return
-	}
-	log.Unsupported = append(log.Unsupported, unsupported)
-	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryUnsupportedEffect, Unsupported: unsupported})
 }
 
 func (log *TurnLog) addCombatDamage(damage CombatDamageLog) {

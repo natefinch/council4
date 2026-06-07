@@ -1,11 +1,11 @@
 package r
 
 import (
+	"github.com/natefinch/council4/mtg/cards/common"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -34,23 +34,7 @@ var RampantGrowth = &game.CardDef{
 			Text: `
 				Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.
 			`,
-			Content: game.PlainAbilityContent{
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Search{
-							TargetIndex: game.TargetIndexController,
-							Spec: game.SearchSpec{
-								SourceZone:   zone.Library,
-								Destination:  zone.Battlefield,
-								CardType:     opt.Val(types.Land),
-								Supertype:    opt.Val(types.Basic),
-								Shuffle:      true,
-								EntersTapped: true,
-							},
-						},
-					},
-				},
-			},
+			Content: common.RampLand{Tapped: true, Basic: true}.Ability(),
 		}),
 	},
 }

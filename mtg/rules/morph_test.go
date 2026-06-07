@@ -145,8 +145,7 @@ func morphCreature(manaCost cost.Mana) *game.CardDef {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.StaticAbility,
+		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: []game.KeywordAbility{game.MorphKeyword{Cost: manaCost}},
 		}}},
 	}
@@ -158,8 +157,7 @@ func disguiseCreature(manaCost cost.Mana) *game.CardDef {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.StaticAbility,
+		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: []game.KeywordAbility{game.DisguiseKeyword{Cost: manaCost}},
 		}}},
 	}

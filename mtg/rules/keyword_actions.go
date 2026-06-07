@@ -9,14 +9,6 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func resolveFight(g *game.Game, obj *game.StackObject, effect *game.Effect) {
-	secondIndex := 1
-	if effect.RelatedTargetIndex.Exists {
-		secondIndex = effect.RelatedTargetIndex.Val
-	}
-	resolveFightTargets(g, obj, effect.TargetIndex, secondIndex)
-}
-
 func resolveFightTargets(g *game.Game, obj *game.StackObject, firstIndex, secondIndex int) {
 	first, firstOK := effectPermanentTarget(g, obj, firstIndex)
 	second, secondOK := effectPermanentTarget(g, obj, secondIndex)
@@ -51,16 +43,16 @@ func emitFightEvent(g *game.Game, permanent, related *game.Permanent) {
 	})
 }
 
-func counterTargetStackObject(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
-	stackObjectID, ok := effectStackObjectID(obj, effect)
+func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int) bool {
+	stackObjectID, ok := effectStackObjectID(obj, targetIndex)
 	return ok && counterStackObject(g, stackObjectID)
 }
 
-func effectStackObjectID(obj *game.StackObject, effect *game.Effect) (id.ID, bool) {
-	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {
+func effectStackObjectID(obj *game.StackObject, targetIndex int) (id.ID, bool) {
+	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
 		return 0, false
 	}
-	target := obj.Targets[effect.TargetIndex]
+	target := obj.Targets[targetIndex]
 	if target.Kind != game.TargetStackObject || target.StackObjectID == 0 {
 		return 0, false
 	}
@@ -141,9 +133,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID gam
 		default:
 		}
 	}
-	if spec.Shuffle {
-		player.Library.Shuffle(e.rng)
-	}
+	player.Library.Shuffle(e.rng)
 	return len(found) > 0
 }
 
@@ -209,17 +199,17 @@ func clueTokenDef() *game.CardDef {
 		MatchPermanentType: true,
 		PermanentType:      types.Artifact,
 	}}
-	effects := []game.Effect{{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController}}
+	drawContent := game.PlainAbilityContent{Sequence: []game.Instruction{
+		{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
+	}}
 	return &game.CardDef{CardFace: game.CardFace{Name: "Clue Token",
 		Types:    []types.Card{types.Artifact},
 		Subtypes: []types.Sub{types.Clue},
-		Abilities: []game.AbilityDef{{
-			Kind:            game.ActivatedAbility,
+		ActivatedAbilities: []game.ActivatedAbilityBody{{
 			Text:            "{2}, Sacrifice this artifact: Draw a card.",
-			Body:            game.ActivatedAbilityBody{Text: "{2}, Sacrifice this artifact: Draw a card.", ManaCost: opt.Val(two), AdditionalCosts: append([]cost.Additional(nil), additionalCosts...), Content: game.PlainAbilityContent{LegacyEffects: append([]game.Effect(nil), effects...)}},
 			ManaCost:        opt.Val(two),
 			AdditionalCosts: additionalCosts,
-			Effects:         effects,
+			Content:         drawContent,
 		}}},
 	}
 }

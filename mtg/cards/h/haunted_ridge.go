@@ -43,11 +43,7 @@ var HauntedRidge = func() *game.CardDef {
 			Text: `
 				{T}: Add {B} or {R}.
 			`,
-			AdditionalCosts: []cost.Additional{
-				{
-					Kind: cost.AdditionalTap,
-				},
-			},
+			AdditionalCosts: cost.Tap,
 			Content: game.PlainAbilityContent{
 				Sequence: []game.Instruction{
 					{

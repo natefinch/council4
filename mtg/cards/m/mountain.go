@@ -30,11 +30,7 @@ var Mountain = &game.CardDef{
 				Text: `
 					{T}: Add {R}.
 				`,
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
+				AdditionalCosts: cost.Tap,
 				Content: game.PlainAbilityContent{
 					Sequence: []game.Instruction{
 						{

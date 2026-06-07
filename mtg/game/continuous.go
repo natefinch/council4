@@ -110,7 +110,7 @@ type ContinuousEffect struct {
 
 	AddKeywords    []Keyword
 	RemoveKeywords []Keyword
-	AddAbilities   []AbilityDef
+	AddAbilities   []AbilityBody
 
 	SetPower              opt.V[PT]
 	SetToughness          opt.V[PT]

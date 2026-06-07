@@ -93,7 +93,7 @@ func TestCascadeChainsFromCascadedSpell(t *testing.T) {
 func TestDiscoverExilesUntilEligibleCardAndCastsIt(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectDiscover, Amount: 3}, nil)
+	addEffectSpellToStack(g, game.Player1, game.DiscoverCards{Amount: game.Fixed(3)}, nil)
 	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Discover Hit", 3))
 	landID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Island", Types: []types.Card{types.Land}}})
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 4))
@@ -115,7 +115,7 @@ func TestDiscoverExilesUntilEligibleCardAndCastsIt(t *testing.T) {
 func TestDiscoverDeclinePutsFoundCardIntoHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, &game.Effect{Type: game.EffectDiscover, Amount: 2}, nil)
+	addEffectSpellToStack(g, game.Player1, game.DiscoverCards{Amount: game.Fixed(2)}, nil)
 	hitID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Declined Hit", 2))
 	skippedID := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Too Expensive", 5))
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
@@ -135,12 +135,10 @@ func TestDiscoverDeclinePutsFoundCardIntoHand(t *testing.T) {
 
 func cascadeSpell(manaValue int) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cascade Spell",
-		ManaCost: opt.Val(cost.Mana{cost.O(manaValue)}),
-		Types:    []types.Card{types.Instant},
-		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Cascade)},
-			{Kind: game.SpellAbility},
-		}},
+		ManaCost:        opt.Val(cost.Mana{cost.O(manaValue)}),
+		Types:           []types.Card{types.Instant},
+		SpellAbility:    opt.Val(game.SpellAbilityBody{}),
+		StaticAbilities: []game.StaticAbilityBody{game.CascadeStaticBody}},
 	}
 }
 

@@ -21,10 +21,8 @@ type AbilityContent interface {
 
 // PlainAbilityContent is a non-modal target/effect sequence.
 type PlainAbilityContent struct {
-	Targets []TargetSpec
-	// LegacyEffects supports old ability definitions. New definitions use Sequence.
-	LegacyEffects []Effect
-	Sequence      []Instruction
+	Targets  []TargetSpec
+	Sequence []Instruction
 }
 
 // ModalAbilityContent is a mode-choice ability body.
@@ -68,13 +66,8 @@ type ManaAbilityBody struct {
 	ZoneOfFunction      zone.Type
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
-	// LegacyEffects is the legacy plain-sequence mana output. Retained for
-	// compatibility with categorized ManaAbilities on CardFace and existing
-	// tests. New card literals should use Content instead.
-	LegacyEffects []Effect
-	// Content is the preferred mana output, supporting both plain sequences and
-	// modal mana (ModalAbilityContent). When non-nil, Content takes precedence
-	// over LegacyEffects.
+	// Content is the mana output, supporting both plain sequences and modal
+	// mana (ModalAbilityContent).
 	Content AbilityContent
 }
 
@@ -103,11 +96,6 @@ type StaticAbilityBody struct {
 	KeywordAbilities  []KeywordAbility
 	ContinuousEffects []ContinuousEffect
 	RuleEffects       []RuleEffect
-	// LegacyEffects supports old static declarations.
-	LegacyEffects []Effect
-	// Sequence supports old resolving static definitions. New static abilities
-	// use ContinuousEffects or RuleEffects because static abilities do not resolve.
-	Sequence []Instruction
 }
 
 // ReplacementAbilityDef is a replacement/prevention ability on a printed face.
@@ -115,7 +103,6 @@ type ReplacementAbilityDef struct {
 	Text        string
 	Replacement ReplacementEffect
 	UnlessPaid  opt.V[ResolutionPayment]
-	Effects     []Effect
 }
 
 // EntersTappedReplacement creates a replacement ability for "enters tapped".
@@ -407,7 +394,7 @@ func (ability *AbilityDef) ManaBody() (ManaAbilityBody, bool) {
 		ZoneOfFunction:      ability.ZoneOfFunction,
 		Timing:              ability.Timing,
 		ActivationCondition: ability.ActivationCondition,
-		LegacyEffects:       append([]Effect(nil), ability.Effects...),
+		Content:             ability.legacyContent(),
 	}, true
 }
 
@@ -470,7 +457,6 @@ func (ability *AbilityDef) StaticBody() (StaticAbilityBody, bool) {
 		Condition:        ability.Condition,
 		ZoneOfFunction:   ability.ZoneOfFunction,
 		KeywordAbilities: append([]KeywordAbility(nil), ability.KeywordAbilities...),
-		LegacyEffects:    append([]Effect(nil), ability.Effects...),
 	}, true
 }
 
@@ -485,7 +471,6 @@ func (ability *AbilityDef) legacyContent() AbilityContent {
 		}
 	}
 	return PlainAbilityContent{
-		Targets:       append([]TargetSpec(nil), ability.Targets...),
-		LegacyEffects: append([]Effect(nil), ability.Effects...),
+		Targets: append([]TargetSpec(nil), ability.Targets...),
 	}
 }

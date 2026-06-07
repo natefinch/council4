@@ -15,14 +15,10 @@ func TestEquippedCreatureSelectorGrantsKeywords(t *testing.T) {
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Creature",
 		Types: []types.Card{types.Creature}},
 	})
-	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.Effect{{
-		Type:        game.EffectApplyContinuous,
-		TargetIndex: game.TargetIndexSourcePermanent,
-		ContinuousEffects: []game.ContinuousEffect{{
-			Layer:       game.LayerAbility,
-			Selector:    game.EffectSelectorEquippedCreature,
-			AddKeywords: []game.Keyword{game.Deathtouch, game.Lifelink},
-		}},
+	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.ContinuousEffect{{
+		Layer:       game.LayerAbility,
+		Selector:    game.EffectSelectorEquippedCreature,
+		AddKeywords: []game.Keyword{game.Deathtouch, game.Lifelink},
 	}}))
 
 	if !attachPermanent(g, equipment, creature) {
@@ -44,11 +40,13 @@ func TestEquippedCreatureSelectorDynamicOpponentCountPT(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1})},
 	})
-	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.Effect{{
-		Type:        game.EffectModifyPT,
-		TargetIndex: game.TargetIndexSourcePermanent,
-		Selector:    game.EffectSelectorEquippedCreature,
-		DynamicAmount: opt.Val(game.DynamicAmount{
+	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.ContinuousEffect{{
+		Layer:    game.LayerPowerToughnessModify,
+		Selector: game.EffectSelectorEquippedCreature,
+		PowerDeltaDynamic: opt.Val(game.DynamicAmount{
+			Kind: game.DynamicAmountOpponentCount,
+		}),
+		ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{
 			Kind: game.DynamicAmountOpponentCount,
 		}),
 	}}))
@@ -113,14 +111,13 @@ func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, &game.Effect{
-		Type:        game.EffectDamage,
-		TargetIndex: 0,
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient: game.TargetRecipient(0),
 		DamageSource: opt.Val(game.ObjectReference{
 			Kind:        game.ObjectReferenceAttachedPermanent,
 			TargetIndex: game.TargetIndexSourcePermanent,
 		}),
-		DynamicAmount: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountEventDamage}),
+		Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountEventDamage}),
 	}, &log)
 
 	if got := g.Players[game.Player2].Life; got != 36 {
@@ -149,14 +146,13 @@ func TestObjectPowerDynamicAmountUsesAttachedPermanent(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, &game.Effect{
-		Type:        game.EffectDamage,
-		TargetIndex: 0,
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient: game.TargetRecipient(0),
 		DamageSource: opt.Val(game.ObjectReference{
 			Kind:        game.ObjectReferenceAttachedPermanent,
 			TargetIndex: game.TargetIndexSourcePermanent,
 		}),
-		DynamicAmount: opt.Val(game.DynamicAmount{
+		Amount: game.Dynamic(game.DynamicAmount{
 			Kind: game.DynamicAmountObjectPower,
 			Object: game.ObjectReference{
 				Kind:        game.ObjectReferenceAttachedPermanent,
@@ -174,13 +170,10 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Igniter",
-		Types:     []types.Card{types.Creature},
-		Power:     opt.Val(game.PT{Value: 3}),
-		Toughness: opt.Val(game.PT{Value: 3}),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.StaticAbility,
-			KeywordAbilities: game.SimpleKeywords(game.Deathtouch),
-		}}},
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 3}),
+		Toughness:       opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbilityBody{game.DeathtouchStaticBody}},
 	})
 	other := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Other Creature",
 		Types:     []types.Card{types.Creature},
@@ -191,22 +184,23 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 		Controller: game.Player1,
 		Targets:    []game.Target{game.PermanentTarget(source.ObjectID)},
 	}
-	effect := game.Effect{
-		Type:        game.EffectDamage,
-		TargetIndex: 0,
+	baseDamage := game.Damage{
 		DamageSource: opt.Val(game.ObjectReference{
 			Kind:        game.ObjectReferenceTargetPermanent,
 			TargetIndex: 0,
 		}),
-		DynamicAmount: opt.Val(game.DynamicAmount{
+		Amount: game.Dynamic(game.DynamicAmount{
 			Kind:        game.DynamicAmountTargetPower,
 			TargetIndex: 0,
 		}),
 	}
 	log := TurnLog{}
 
-	effect.Selector = game.EffectSelectorAllCreaturesExceptTarget
-	engine.resolveEffect(g, obj, &effect, &log)
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient:    game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
+		DamageSource: baseDamage.DamageSource,
+		Amount:       baseDamage.Amount,
+	}, &log)
 	if source.MarkedDamage != 0 {
 		t.Fatal("source creature was damaged by all-creatures-except-target selector")
 	}
@@ -214,9 +208,11 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 		t.Fatalf("other creature damage/deathtouch = %d/%v, want 3/true", other.MarkedDamage, other.MarkedDeathtouchDamage)
 	}
 
-	effect.Selector = game.EffectSelectorNone
-	effect.PlayerSelector = game.PlayerSelectorOpponents
-	engine.resolveEffect(g, obj, &effect, &log)
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient:    game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+		DamageSource: baseDamage.DamageSource,
+		Amount:       baseDamage.Amount,
+	}, &log)
 	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
 		if got := g.Players[playerID].Life; got != 37 {
 			t.Fatalf("Player%d life = %d, want 37", playerID+1, got)
@@ -227,13 +223,10 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 	}
 }
 
-func equipmentWithStaticEffect(effects []game.Effect) *game.CardDef {
+func equipmentWithStaticEffect(effects []game.ContinuousEffect) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Equipment",
-		Types:    []types.Card{types.Artifact},
-		Subtypes: []types.Sub{types.Equipment},
-		Abilities: []game.AbilityDef{{
-			Kind:    game.StaticAbility,
-			Effects: effects,
-		}}},
+		Types:           []types.Card{types.Artifact},
+		Subtypes:        []types.Sub{types.Equipment},
+		StaticAbilities: []game.StaticAbilityBody{{ContinuousEffects: effects}}},
 	}
 }

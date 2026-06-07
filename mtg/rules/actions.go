@@ -447,10 +447,6 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		}
 		if body, ok := ability.ManaBody(); ok && body.Content != nil {
 			e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
-		} else {
-			for i := range ability.Effects {
-				e.resolveEffectWithChoices(g, obj, &ability.Effects[i], agents, log)
-			}
 		}
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, ability)
 		return true
@@ -973,24 +969,7 @@ func manaAbilityHasAddManaEffect(ability *game.AbilityDef) bool {
 		}
 		return hasAddMana
 	}
-	if len(ability.Effects) == 0 {
-		return false
-	}
-	hasAddMana := false
-	for i := range ability.Effects {
-		effect := &ability.Effects[i]
-		switch effect.Type {
-		case game.EffectAddMana:
-			hasAddMana = true
-		case game.EffectChoose:
-			if !effect.Choice.Exists || effect.Choice.Val.Kind != game.ResolutionChoiceMana {
-				return false
-			}
-		default:
-			return false
-		}
-	}
-	return hasAddMana
+	return false
 }
 
 func manaAbilityChoicesAvailable(g *game.Game, playerID game.PlayerID, ability *game.AbilityDef) bool {
@@ -1013,18 +992,6 @@ func manaAbilityChoicesAvailable(g *game.Game, playerID game.PlayerID, ability *
 			}
 		}
 		return true
-	}
-	for i := range ability.Effects {
-		effect := &ability.Effects[i]
-		if effect.Type != game.EffectChoose || !effect.Choice.Exists {
-			continue
-		}
-		choice := effect.Choice.Val
-		choicePlayer := resolutionChoicePlayer(playerID, &choice)
-		_, values := resolutionChoiceOptions(g, choicePlayer, &choice)
-		if len(values) == 0 {
-			return false
-		}
 	}
 	return true
 }

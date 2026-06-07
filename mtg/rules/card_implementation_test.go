@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 type fakeDrawBurnImplementation struct{}
@@ -35,14 +36,13 @@ func TestCardImplementationHandlesSpellResolutionThroughContext(t *testing.T) {
 	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Hand-Written Draw Burn",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/draw-burn",
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.SpellAbility,
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
 				Targets: []game.TargetSpec{
 					{MinTargets: 1, MaxTargets: 1, Constraint: "target player"},
 				},
 			},
-		}},
+		})},
 	}, []game.Target{game.PlayerTarget(game.Player2)})
 	log := TurnLog{}
 
@@ -80,14 +80,13 @@ func TestCardImplementationUsesNormalDamagePreventionHelpers(t *testing.T) {
 	sourceID := addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Hand-Written Permanent Burn",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/permanent-damage",
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.SpellAbility,
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
 				Targets: []game.TargetSpec{
 					{MinTargets: 1, MaxTargets: 1, Constraint: "target creature"},
 				},
 			},
-		}},
+		})},
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -114,7 +113,7 @@ func TestUnregisteredCardImplementationPanics(t *testing.T) {
 	addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Missing Implementation",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/missing",
-		Abilities:        []game.AbilityDef{{Kind: game.SpellAbility}}},
+		SpellAbility:     opt.Val(game.SpellAbilityBody{})},
 	}, nil)
 
 	defer func() {

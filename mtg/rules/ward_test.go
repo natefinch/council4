@@ -84,9 +84,10 @@ func TestWardCountersActivatedAbilityWhenCostIsNotPaid(t *testing.T) {
 	warded := addWardPermanent(g, game.Player2, cost.Mana{cost.O(1)})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Targeting Permanent",
 		Types: []types.Card{types.Artifact},
-		Abilities: []game.AbilityDef{{
-			Kind:    game.ActivatedAbility,
-			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+		ActivatedAbilities: []game.ActivatedAbilityBody{{
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+			},
 		}}},
 	})
 	g.Turn.PriorityPlayer = game.Player1
@@ -110,8 +111,7 @@ func addWardPermanent(g *game.Game, controller game.PlayerID, manaCost cost.Mana
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.StaticAbility,
+		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: manaCost}},
 		}}},
 	})

@@ -243,9 +243,9 @@ func namedCreature(name string, colors ...color.Color) *game.CardDef {
 
 func genericCostSpell(generic int) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Generic Cost Spell",
-		ManaCost:  opt.Val(cost.Mana{cost.O(generic)}),
-		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}}},
+		ManaCost:     opt.Val(cost.Mana{cost.O(generic)}),
+		Types:        []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.SpellAbilityBody{})},
 	}
 }
 
@@ -253,8 +253,7 @@ func sacrificeCostSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Sacrifice Cost Spell",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{
-			Kind: game.SpellAbility,
+		SpellAbility: opt.Val(game.SpellAbilityBody{
 			AdditionalCosts: []cost.Additional{{
 				Kind:               cost.AdditionalSacrifice,
 				Text:               "Sacrifice a creature",
@@ -262,7 +261,7 @@ func sacrificeCostSpell() *game.CardDef {
 				MatchPermanentType: true,
 				PermanentType:      types.Creature,
 			}},
-		}}},
+		})},
 	}
 }
 
@@ -270,10 +269,10 @@ func sacrificeCostSpell() *game.CardDef {
 // When kicked (kickerPaid=true) the combined cost is {G}{G}.
 func kickerSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Kicker Spell",
-		ManaCost: greenCost(),
-		Types:    []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{
-			Kind:             game.SpellAbility,
+		ManaCost:     greenCost(),
+		Types:        []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.SpellAbilityBody{}),
+		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: greenCost().Val}},
 		}}},
 	}

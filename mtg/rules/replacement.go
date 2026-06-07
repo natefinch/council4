@@ -112,25 +112,6 @@ func recordReplacementDecision(g *game.Game, player game.PlayerID, options []str
 	})
 }
 
-func createReplacementEffect(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
-	if !effect.Replacement.Exists {
-		return false
-	}
-	replacement := effect.Replacement.Val
-	replacement.ID = g.IDGen.Next()
-	replacement.Controller = obj.Controller
-	replacement.SourceCardID, replacement.SourceObjectID = damageSourceIDs(g, obj)
-	replacement.CreatedTurn = g.Turn.TurnNumber
-	if effect.Duration != game.DurationPermanent {
-		replacement.Duration = effect.Duration
-	}
-	if replacement.Duration == game.DurationPermanent && effect.UntilEndOfTurn {
-		replacement.Duration = game.DurationUntilEndOfTurn
-	}
-	g.ReplacementEffects = append(g.ReplacementEffects, replacement)
-	return true
-}
-
 func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) zone.Type {
 	destination := event.ToZone
 	applied := make(map[id.ID]bool)
@@ -311,26 +292,26 @@ func replacementEffectLabels(replacements []game.ReplacementEffect) []string {
 	return labels
 }
 
-func createPreventionShield(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
-	if effect.Amount <= 0 {
+func createPreventionShield(g *game.Game, obj *game.StackObject, amount, targetIndex int, duration game.EffectDuration) bool {
+	if amount <= 0 {
 		return false
 	}
 	shield := game.PreventionShield{
 		ID:          g.IDGen.Next(),
 		Controller:  obj.Controller,
-		Amount:      effect.Amount,
-		Duration:    effectDurationOrDefault(effect.Duration, game.DurationUntilEndOfTurn),
+		Amount:      amount,
+		Duration:    effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
 		CreatedTurn: g.Turn.TurnNumber,
 	}
-	if effect.TargetIndex == game.TargetIndexController {
+	if targetIndex == game.TargetIndexController {
 		shield.Player = obj.Controller
 		g.PreventionShields = append(g.PreventionShields, shield)
 		return true
 	}
-	if effect.TargetIndex < 0 || effect.TargetIndex >= len(obj.Targets) {
+	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
 		return false
 	}
-	target := obj.Targets[effect.TargetIndex]
+	target := obj.Targets[targetIndex]
 	switch target.Kind {
 	case game.TargetPlayer:
 		shield.Player = target.PlayerID

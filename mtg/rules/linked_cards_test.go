@@ -25,8 +25,8 @@ func TestChaosWarpLikeEffectsUseTargetOwnerAndLinkedReveal(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	for _, effect := range chaosWarpLikeEffects() {
-		engine.resolveEffect(g, obj, &effect, &log)
+	for _, instr := range chaosWarpLikeInstructions() {
+		engine.resolveInstructionWithChoices(g, obj, &instr, [game.NumPlayers]PlayerAgent{}, &log)
 	}
 
 	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
@@ -64,15 +64,18 @@ func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	engine.resolveEffect(g, obj, &game.Effect{
-		Type:        game.EffectReveal,
-		Amount:      1,
-		TargetIndex: 0,
-		LinkID:      "revealed",
-	}, &log)
-	engine.resolveEffect(g, obj, &game.Effect{
-		Type:   game.EffectPutOnBattlefield,
-		LinkID: "revealed",
+	revealInstr := game.Instruction{
+		Primitive: game.Reveal{
+			Amount:        game.Fixed(1),
+			TargetIndex:   0,
+			PublishLinked: "revealed",
+		},
+	}
+	engine.resolveInstructionWithChoices(g, obj, &revealInstr, [game.NumPlayers]PlayerAgent{}, &log)
+	putInstr := game.Instruction{
+		Primitive: game.PutOnBattlefield{
+			Source: game.LinkedBattlefieldSource("revealed"),
+		},
 		CardCondition: opt.Val(game.CardCondition{
 			Card: game.CardReference{
 				Kind:   game.CardReferenceLinked,
@@ -80,7 +83,8 @@ func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 			},
 			RequirePermanentCard: true,
 		}),
-	}, &log)
+	}
+	engine.resolveInstructionWithChoices(g, obj, &putInstr, [game.NumPlayers]PlayerAgent{}, &log)
 
 	if !g.Players[game.Player2].Library.Contains(instantID) {
 		t.Fatal("nonpermanent linked card left library")
@@ -93,7 +97,7 @@ func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 	}
 }
 
-func chaosWarpLikeEffects() []game.Effect {
+func chaosWarpLikeInstructions() []game.Instruction {
 	ownerOfTarget := opt.Val(game.PlayerReference{
 		Kind: game.PlayerReferenceObjectOwner,
 		Object: opt.Val(game.ObjectReference{
@@ -101,20 +105,22 @@ func chaosWarpLikeEffects() []game.Effect {
 			TargetIndex: 0,
 		}),
 	})
-	return []game.Effect{
-		{Type: game.EffectShufflePermanentIntoLibrary, TargetIndex: 0},
+	return []game.Instruction{
+		{Primitive: game.ShufflePermanentIntoLibrary{TargetIndex: 0}},
 		{
-			Type:        game.EffectReveal,
-			Amount:      1,
-			TargetIndex: 0,
-			LinkID:      "revealed",
-			Recipient:   ownerOfTarget,
+			Primitive: game.Reveal{
+				Amount:        game.Fixed(1),
+				TargetIndex:   0,
+				PublishLinked: "revealed",
+				Recipient:     ownerOfTarget,
+			},
 		},
 		{
-			Type:        game.EffectPutOnBattlefield,
-			TargetIndex: 0,
-			LinkID:      "revealed",
-			Recipient:   ownerOfTarget,
+			Primitive: game.PutOnBattlefield{
+				TargetIndex: 0,
+				Source:      game.LinkedBattlefieldSource("revealed"),
+				Recipient:   ownerOfTarget,
+			},
 			CardCondition: opt.Val(game.CardCondition{
 				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: "revealed"},
 				RequirePermanentCard: true,

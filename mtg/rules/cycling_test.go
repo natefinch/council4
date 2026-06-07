@@ -76,17 +76,16 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 func cyclingCard() *game.CardDef {
 	manaCost := cost.Mana{cost.O(1)}
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cycling Test Card",
-		Abilities: []game.AbilityDef{
+		ActivatedAbilities: []game.ActivatedAbilityBody{
 			{
-				Kind:             game.ActivatedAbility,
-				KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: manaCost}},
-				ManaCost:         opt.Val(manaCost),
+				ManaCost: opt.Val(manaCost),
 				AdditionalCosts: []cost.Additional{
 					{Kind: cost.AdditionalDiscard, Text: "Discard this card", Amount: 1, Source: zone.Hand},
 				},
-				Effects: []game.Effect{
-					{Type: game.EffectDraw, TargetIndex: game.TargetIndexController, Amount: 1},
-				},
+				KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: manaCost}},
+				Content: game.PlainAbilityContent{Sequence: []game.Instruction{
+					{Primitive: game.Draw{TargetIndex: game.TargetIndexController, Amount: game.Fixed(1)}},
+				}},
 			},
 		}},
 	}

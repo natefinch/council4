@@ -1,10 +1,10 @@
 package b
 
 import (
+	"github.com/natefinch/council4/mtg/cards/common"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -41,43 +41,6 @@ var BirdsOfParadise = func() *game.CardDef {
 		game.FlyingStaticBody,
 	)
 
-	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbilityBody{
-			Text: `
-				{T}: Add one mana of any color.
-			`,
-			AdditionalCosts: []cost.Additional{
-				{
-					Kind: cost.AdditionalTap,
-				},
-			},
-			Content: game.PlainAbilityContent{
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Choose{
-							Choice: game.ResolutionChoice{
-								Kind:   game.ResolutionChoiceMana,
-								Prompt: "Choose a color",
-								Colors: []mana.Color{
-									mana.W,
-									mana.U,
-									mana.B,
-									mana.R,
-									mana.G,
-								},
-							},
-							PublishChoice: game.ChoiceKey("birds-color"),
-						},
-					},
-					{
-						Primitive: game.AddMana{
-							Amount:     game.Fixed(1),
-							ChoiceFrom: game.ChoiceKey("birds-color"),
-						},
-					},
-				},
-			},
-		},
-	)
+	card.ManaAbilities = []game.ManaAbilityBody{common.TapForOneOfAny("birds-color")}
 	return card
 }()

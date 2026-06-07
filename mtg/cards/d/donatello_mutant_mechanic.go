@@ -42,12 +42,8 @@ var DonatelloMutantMechanic = &game.CardDef{
 				Text: `
 					{T}: Put three +1/+1 counters on target artifact you control. If it isn't a creature, it becomes a 0/0 Robot creature in addition to its other types. Activate only as a sorcery.
 				`,
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
-				Timing: game.SorceryOnly,
+				AdditionalCosts: cost.Tap,
+				Timing:          game.SorceryOnly,
 				Content: game.PlainAbilityContent{
 					Targets: []game.TargetSpec{
 						{

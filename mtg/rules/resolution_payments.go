@@ -5,13 +5,6 @@ import (
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
-func (e *Engine) resolveResolutionPayment(g *game.Game, obj *game.StackObject, effect *game.Effect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (accepted, succeeded bool) {
-	if !effect.Payment.Exists {
-		return true, true
-	}
-	return e.resolveResolutionPaymentValue(g, obj, &effect.Payment.Val, agents, log)
-}
-
 func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (accepted, succeeded bool) {
 	playerID := stackObjectController(obj)
 	if !canPayResolutionPayment(g, playerID, res) {

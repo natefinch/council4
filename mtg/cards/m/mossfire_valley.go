@@ -32,11 +32,7 @@ var MossfireValley = &game.CardDef{
 				ManaCost: opt.Val(cost.Mana{
 					cost.O(1),
 				}),
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
+				AdditionalCosts: cost.Tap,
 				Content: game.PlainAbilityContent{
 					Sequence: []game.Instruction{
 						{

@@ -230,23 +230,20 @@ Callers iterate `result.choices` to produce one legal action per target combinat
 
 ## Effect resolver
 
-Single-effect resolution is structured around `effectResolver` in `effects.go`. The resolver bundles the per-resolution context (`*Engine`, `*game.Game`, `*game.StackObject`, agents array, `*TurnLog`) so the resolution body is a method rather than a free function with five repeated parameters.
+Instruction resolution is structured around `effectResolver` in `effects.go`. The resolver bundles the per-resolution context (`*Engine`, `*game.Game`, `*game.StackObject`, agents array, `*TurnLog`) so primitive handlers do not repeat those parameters.
 
-`effectResolver` exposes convenience methods that remove the repeated parameter passing from the switch body:
+`effectResolver` exposes convenience methods used by primitive handlers:
 
-- `amount(effect)` — resolves the dynamic or static amount for the effect.
-- `permanent(effect)` — looks up the target permanent from the stack object's target list.
-- `player(effect)` — looks up the target player from the target list or controller.
-- `manaColor(effect)` — returns the mana color, respecting resolution-time color choices.
+- `quantity(q)` — resolves a fixed or dynamic `game.Quantity`.
+- `permanentAt(index)` — looks up a target permanent from the stack object's target list.
+- `playerAt(index)` — looks up a target player or the instruction controller.
 
 Resolution follows a two-step call chain:
 
-1. `resolve(effect)` checks `EffectCondition` and `EffectResultCondition` guards, then calls `executeEffect` and records the result.
-2. `executeEffect(effect) effectResolved` runs the effect instruction and returns the outcome as an `effectResolved` value.
+1. `resolveInstruction` checks instruction conditions and result gates, handles optional instructions, and finds the handler registered for the primitive's sealed `PrimitiveKind`.
+2. The typed handler in `primitive_handlers.go` performs the action and returns an `effectResolved` outcome.
 
-`effectResolved` captures three fields: `accepted` (the player did not decline an optional effect), `succeeded` (the effect applied), and `amount` (the computed amount, used by linked "that much" follow-ups). Its `record(obj, effect)` method writes the outcome into `obj.ResolvedAmounts` and `obj.ResolutionResults` so downstream "if you do" / "that much" effects see the correct state (CR 608.2c).
-
-Splitting execution from recording eliminates the deferred closure that previously threaded `accepted`, `succeeded`, and `amount` back to the remembering logic, making the control flow explicit.
+`effectResolved` captures whether the instruction was accepted, whether it applied, and any computed amount or excess damage. Named results are written to the stack object so later "if you do" and "that much" instructions observe the actual outcome (CR 608.2c).
 
 Damage helpers apply prevention before mutating life totals, counters, marked damage, combat logs, or damage events. Prevention shields track remaining amount and expire with turn duration. Shield counters prevent the next damage event to that permanent and emit `EventDamagePrevented` instead of `EventDamageDealt`. Color-based Protection, represented by `ProtectionKeyword`, prevents damage from matching colored sources and makes those permanents illegal targets for matching spells and abilities both when chosen and when resolved.
 
@@ -254,7 +251,7 @@ Destroy effects use a pre-zone-change replacement hook. If multiple supported re
 
 ## Hand-written card implementations
 
-Most cards should be represented declaratively with `game.AbilityDef` and `game.Effect` primitives. Cards that need behavior outside the current primitive set may set `CardDef.ImplementationID` and register a matching `CardImplementation` on the `Engine`.
+Most cards should be represented declaratively with `game.AbilityDef` bodies and typed `game.Primitive` instructions. Cards that need behavior outside the current primitive set may set `CardDef.ImplementationID` and register a matching `CardImplementation` on the `Engine`.
 
 This hook currently covers instant and sorcery spell-effect resolution after normal target re-checking. Permanents, triggered abilities, and activated abilities still resolve through the existing declarative paths. Hand-written implementations receive a `CardContext` instead of `*game.Game`; context methods wrap the same rules helpers used by declarative effects, so custom code participates in draw logging, events, damage prevention, and other mutation-boundary behavior.
 

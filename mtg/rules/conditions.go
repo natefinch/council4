@@ -128,7 +128,7 @@ func conditionTargetEnteredThisTurn(g *game.Game, ctx conditionContext, targetIn
 	if ctx.obj == nil {
 		return false
 	}
-	permanent, ok := effectPermanent(g, ctx.obj, &game.Effect{TargetIndex: targetIndex})
+	permanent, ok := effectPermanentAt(g, ctx.obj, targetIndex)
 	if !ok {
 		return false
 	}

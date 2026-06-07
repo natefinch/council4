@@ -78,10 +78,11 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Targeting Rod",
 					Types: []types.Card{types.Artifact},
-					Abilities: []game.AbilityDef{{
-						Kind:    game.ActivatedAbility,
-						Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
-						Effects: []game.Effect{{Type: game.EffectDamage, TargetIndex: 0, Amount: 1}},
+					ActivatedAbilities: []game.ActivatedAbilityBody{{
+						Content: game.PlainAbilityContent{
+							Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
+							Sequence: []game.Instruction{{Primitive: game.Damage{Recipient: game.TargetRecipient(0), Amount: game.Fixed(1)}}},
+						},
 					}}},
 				})
 				setMainPhasePriority(g, game.Player1)
@@ -293,31 +294,34 @@ func intList(values []int) string {
 
 func noCostSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "No Cost Spell",
-		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}}},
+		Types:        []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.SpellAbilityBody{})},
 	}
 }
 
 func zeroCostSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Zero Cost Spell",
-		ManaCost:  opt.Val(cost.Mana{cost.O(0)}),
-		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}}},
+		ManaCost:     opt.Val(cost.Mana{cost.O(0)}),
+		Types:        []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.SpellAbilityBody{})},
 	}
 }
 
 func xSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization X Spell",
-		ManaCost:  opt.Val(cost.Mana{cost.X, cost.G}),
-		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility}}},
+		ManaCost:     opt.Val(cost.Mana{cost.X, cost.G}),
+		Types:        []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.SpellAbilityBody{})},
 	}
 }
 
 func characterizationKickerSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Kicker",
-		Types:     []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{Kind: game.SpellAbility, KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: greenCost().Val}}}}},
+		Types:        []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.SpellAbilityBody{}),
+		StaticAbilities: []game.StaticAbilityBody{{
+			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: greenCost().Val}},
+		}}},
 	}
 }
 
@@ -344,20 +348,20 @@ func sacrificeArtifactSpell() *game.CardDef {
 func additionalCostSpell(name string, additionalCost cost.Additional) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: name,
 		Types: []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{
-			Kind:            game.SpellAbility,
+		SpellAbility: opt.Val(game.SpellAbilityBody{
 			AdditionalCosts: []cost.Additional{additionalCost},
-		}}},
+		})},
 	}
 }
 
 func artifactTargetSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "No Legal Artifact Target",
 		Types: []types.Card{types.Sorcery},
-		Abilities: []game.AbilityDef{{
-			Kind:    game.SpellAbility,
-			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "artifact"}},
-		}}},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "artifact"}},
+			},
+		})},
 	}
 }
 
@@ -365,15 +369,14 @@ func flashbackSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Flashback",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
-		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flashback)},
-			{
-				Kind: game.SpellAbility,
-				AlternativeCosts: []cost.Alternative{{
-					Label:    flashbackAlternativeLabel,
-					ManaCost: greenCost(),
-				}},
-			},
-		}},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			AlternativeCosts: []cost.Alternative{{
+				Label:    flashbackAlternativeLabel,
+				ManaCost: greenCost(),
+			}},
+		}),
+		StaticAbilities: []game.StaticAbilityBody{{
+			KeywordAbilities: game.SimpleKeywords(game.Flashback),
+		}}},
 	}
 }

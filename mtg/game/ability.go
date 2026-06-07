@@ -3,8 +3,6 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/counter"
-	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -428,63 +426,6 @@ const (
 	DuringUpkeep
 )
 
-// EffectType classifies a legacy Effect. Card Implementations use typed
-// Primitive variants instead.
-type EffectType int
-
-// Effect type values enumerate supported effect categories.
-const (
-	EffectUnknown EffectType = iota
-	EffectDamage
-	EffectDestroy
-	EffectExile
-	EffectBounce
-	EffectCounter
-	EffectDraw
-	EffectDiscard
-	EffectMill
-	EffectSearch
-	EffectCreateToken
-	EffectGainLife
-	EffectLoseLife
-	EffectAddMana
-	EffectModifyPT
-	EffectAddCounter
-	EffectRemoveCounter
-	EffectPutOnBattlefield
-	EffectSacrifice
-	EffectTap
-	EffectUntap
-	EffectGainControl
-	EffectCopy
-	EffectScry
-	EffectSurveil
-	EffectFight
-	EffectTransform
-	EffectAttach
-	EffectReplace
-	EffectPrevent
-	EffectCreateDelayedTrigger
-	EffectRegenerate
-	EffectSkipStep
-	EffectPhaseOut
-	EffectCreateEmblem
-	EffectApplyContinuous
-	EffectMoveCounters
-	EffectChoose
-	EffectPay
-	EffectApplyRule
-	EffectProliferate
-	EffectGoad
-	EffectReveal
-	EffectInvestigate
-	EffectShufflePermanentIntoLibrary
-	EffectDiscover
-	EffectStartEngines
-	EffectSetClassLevel
-	EffectMonstrosity
-)
-
 // EffectResultAmountKind identifies which numeric result an effect records for
 // later linked "that much" or X instructions.
 type EffectResultAmountKind int
@@ -580,8 +521,7 @@ func EternalizeAbility(manaCost cost.Mana, creatureSubtypes ...types.Sub) Abilit
 }
 
 // EternalizeActivatedBody builds the ActivatedAbilityBody for the Eternalize
-// keyword. Use this in CardFace.ActivatedAbilities when the card source uses
-// categorized fields instead of the legacy Abilities slice.
+// keyword. Use this in CardFace.ActivatedAbilities with categorized fields.
 func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) ActivatedAbilityBody {
 	tokenSubtypes := make([]types.Sub, 0, len(creatureSubtypes)+1)
 	tokenSubtypes = append(tokenSubtypes, types.Zombie)
@@ -625,7 +565,6 @@ type SearchSpec struct {
 	SubtypesAny []types.Sub
 
 	Reveal       bool
-	Shuffle      bool
 	EntersTapped bool
 }
 
@@ -658,66 +597,6 @@ const (
 	// TargetIndexSourcePermanent means the effect refers to the source permanent.
 	TargetIndexSourcePermanent = -2
 )
-
-// Effect describes a legacy game effect produced by an ability. Card
-// Implementations use Instruction and typed Primitive variants instead.
-type Effect struct {
-	Type          EffectType
-	Amount        int
-	DynamicAmount opt.V[DynamicAmount]
-	TargetIndex   int
-	// RelatedTargetIndex identifies a second chosen target used with the
-	// primary TargetIndex by paired-object effects such as fight. If unset,
-	// those effects use their historical default target ordering.
-	RelatedTargetIndex opt.V[int]
-	Object             opt.V[ObjectReference]
-	DamageSource       opt.V[ObjectReference]
-	Recipient          opt.V[PlayerReference]
-	Condition          opt.V[EffectCondition]
-	CardCondition      opt.V[CardCondition]
-
-	// Optional asks the effect's controller whether to apply this single
-	// resolution instruction. LinkID can be used with ResultCondition on later
-	// effects to model "if you do" / "if you don't" branches as instructions are
-	// followed in order (CR 608.2c).
-	Optional        bool
-	ResultCondition opt.V[EffectResultCondition]
-
-	PowerDelta            int
-	ToughnessDelta        int
-	PowerDeltaDynamic     opt.V[DynamicAmount]
-	ToughnessDeltaDynamic opt.V[DynamicAmount]
-	ResultAmount          EffectResultAmountKind
-	CounterKind           counter.Kind
-	CounterSource         CounterSourceSpec
-	ManaColor             mana.Color
-	// Choice asks for a value while resolving this instruction and stores it
-	// under LinkID for later instructions to consume (CR 608.2c, CR 609.3).
-	Choice opt.V[ResolutionChoice]
-	// ChoiceLinkID consumes a value produced by a prior resolution choice, such
-	// as a chosen color for mana or a chosen player for player effects.
-	ChoiceLinkID string
-	// Payment asks the controller whether to pay a cost during resolution; the
-	// payment result is recorded through LinkID/ResultCondition (CR 608.2c,
-	// CR 117.12).
-	Payment           opt.V[ResolutionPayment]
-	UntilEndOfTurn    bool
-	Duration          EffectDuration
-	Step              Step
-	Selector          EffectSelector
-	PlayerSelector    PlayerSelector
-	Token             opt.V[*CardDef]
-	TokenCopy         opt.V[TokenCopySpec]
-	ContinuousEffects []ContinuousEffect
-	DelayedTrigger    opt.V[DelayedTriggerDef]
-	EmblemAbilities   []AbilityDef
-	Replacement       opt.V[ReplacementEffect]
-	RuleEffects       []RuleEffect
-	Search            opt.V[SearchSpec]
-	Card              opt.V[CardReference]
-	LinkID            string
-	Description       string
-}
 
 // TargetSpec describes the targeting requirements of an ability.
 type TargetSpec struct {
@@ -759,10 +638,6 @@ const (
 type Mode struct {
 	// Text is the oracle text of this mode.
 	Text string
-
-	// LegacyEffects are the legacy effects this mode produces.
-	// New Card Implementations use Sequence.
-	LegacyEffects []Effect
 
 	// Sequence is the typed instruction sequence this mode produces.
 	Sequence []Instruction
@@ -818,9 +693,6 @@ type AbilityDef struct {
 	// the stack; the controller chooses whether to apply their effects on
 	// resolution.
 	Optional bool
-
-	// Effects lists the effects this ability produces.
-	Effects []Effect
 
 	// Targets lists targeting requirements. Empty for untargeted abilities.
 	Targets []TargetSpec

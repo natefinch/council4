@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestStormCreatesCopiesForPriorSpellsThisTurn(t *testing.T) {
@@ -108,30 +109,30 @@ func TestCounteringStormCopyDoesNotMoveSourceCard(t *testing.T) {
 func simpleGainLifeInstant(name string) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: name,
 		Types: []types.Card{types.Instant},
-		Abilities: []game.AbilityDef{{
-			Kind:    game.SpellAbility,
-			Effects: []game.Effect{{Type: game.EffectGainLife, Amount: 1, TargetIndex: game.TargetIndexController}},
-		}}},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{Sequence: []game.Instruction{
+				{Primitive: game.GainLife{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
+			}},
+		})},
 	}
 }
 
 func stormGainLifeInstant() *game.CardDef {
 	card := simpleGainLifeInstant("Storm Spell")
-	card.Abilities = append([]game.AbilityDef{{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Storm)}}, card.Abilities...)
+	card.StaticAbilities = append([]game.StaticAbilityBody{game.StormStaticBody}, card.StaticAbilities...)
 	return card
 }
 
 func stormTargetCreatureInstant() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Targeted Storm Spell",
 		Types: []types.Card{types.Instant},
-		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Storm)},
-			{
-				Kind:    game.SpellAbility,
-				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-				Effects: []game.Effect{{Type: game.EffectDamage, Amount: 1, TargetIndex: 0}},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
 			},
-		}},
+		}),
+		StaticAbilities: []game.StaticAbilityBody{game.StormStaticBody}},
 	}
 }
 

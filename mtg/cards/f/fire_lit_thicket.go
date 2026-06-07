@@ -31,11 +31,7 @@ var FireLitThicket = &game.CardDef{
 				Text: `
 					{T}: Add {C}.
 				`,
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
+				AdditionalCosts: cost.Tap,
 				Content: game.PlainAbilityContent{
 					Sequence: []game.Instruction{
 						{
@@ -54,11 +50,7 @@ var FireLitThicket = &game.CardDef{
 				ManaCost: opt.Val(cost.Mana{
 					cost.HybridMana(mana.R, mana.G),
 				}),
-				AdditionalCosts: []cost.Additional{
-					{
-						Kind: cost.AdditionalTap,
-					},
-				},
+				AdditionalCosts: cost.Tap,
 				Content: game.ModalAbilityContent{
 					Modes: []game.Mode{
 						game.Mode{

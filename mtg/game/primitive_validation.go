@@ -66,7 +66,7 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 	case DynamicAmountTargetPower, DynamicAmountTargetToughness, DynamicAmountTargetManaValue, DynamicAmountTargetCounters:
 		return validateTargetReference(dynamic.TargetIndex, targets, checkTargets)
 	case DynamicAmountPreviousEffectResult, DynamicAmountPreviousEffectExcessDamage:
-		if dynamic.ResultKey == "" && dynamic.LinkID == "" {
+		if dynamic.ResultKey == "" {
 			return errors.New("previous-result quantity requires a result key")
 		}
 	case DynamicAmountObjectPower:
@@ -109,6 +109,9 @@ func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 }
 
 func (p Destroy) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Selector != EffectSelectorNone {
+		return nil
+	}
 	return validateTargetReference(p.TargetIndex, targets, checkTargets)
 }
 
@@ -188,6 +191,13 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if p.Spec.SourceZone == zone.None || p.Spec.Destination == zone.None {
 		return errors.New("search requires source and destination zones")
 	}
+	if p.Spec.SourceZone != zone.Library ||
+		p.Spec.Destination != zone.Hand && p.Spec.Destination != zone.Battlefield {
+		return errors.New("search only supports library-to-hand and library-to-battlefield")
+	}
+	if p.Spec.Supertype.Exists && p.Spec.Supertype.Val == "" {
+		return errors.New("search supertype cannot be empty")
+	}
 	return validateTargetReference(p.TargetIndex, targets, checkTargets)
 }
 
@@ -199,7 +209,12 @@ func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 		return err
 	}
 	if p.Recipient.Exists {
-		return validatePlayerReference(p.Recipient.Val, targets, checkTargets)
+		if err := validatePlayerReference(p.Recipient.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	if p.PublishLinked != "" && !p.Amount.IsDynamic() && p.Amount.Value() != 1 {
+		return errors.New("linked reveal must reveal exactly one card")
 	}
 	return nil
 }
@@ -271,4 +286,165 @@ func (p Choose) validatePrimitive([]TargetSpec, bool) error {
 		return errors.New("choose instruction has no choice kind")
 	}
 	return nil
+}
+
+func (p GainLife) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p LoseLife) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Selector != EffectSelectorNone {
+		return nil
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Bounce) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Selector != EffectSelectorNone {
+		return nil
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Untap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Selector != EffectSelectorNone {
+		return nil
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Scry) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Surveil) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Investigate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Recipient.Exists {
+		return validatePlayerReference(p.Recipient.Val, targets, checkTargets)
+	}
+	return nil
+}
+
+func (Proliferate) validatePrimitive([]TargetSpec, bool) error {
+	return nil
+}
+
+func (p Goad) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p RemoveCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Selector != EffectSelectorNone {
+		return nil
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Transform) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p PhaseOut) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
+	if len(p.EmblemAbilities) == 0 {
+		return errors.New("create emblem requires at least one ability")
+	}
+	return nil
+}
+
+func (p CreateDelayedTrigger) validatePrimitive([]TargetSpec, bool) error {
+	if p.Trigger.Timing == 0 {
+		return errors.New("delayed trigger requires timing")
+	}
+	return validateNestedAbilityContent(p.Trigger.Content)
+}
+
+func (p CreateReplacement) validatePrimitive([]TargetSpec, bool) error {
+	if p.Replacement == nil {
+		return errors.New("create replacement requires a replacement")
+	}
+	if p.Replacement.MatchEvent == EventUnknown {
+		return errors.New("create replacement requires an event")
+	}
+	return nil
+}
+
+func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateTargetReference(p.TargetIndex, targets, checkTargets)
+}
+
+func validateNestedAbilityContent(content AbilityContent) error {
+	switch c := content.(type) {
+	case PlainAbilityContent:
+		return ValidateInstructionSequence(c.Sequence, c.Targets)
+	case ModalAbilityContent:
+		for i := range c.Modes {
+			targets := c.Modes[i].Targets
+			if len(targets) == 0 {
+				targets = c.SharedTargets
+			}
+			if err := ValidateInstructionSequence(c.Modes[i].Sequence, targets); err != nil {
+				return fmt.Errorf("mode %d: %w", i, err)
+			}
+		}
+		return nil
+	case nil:
+		return errors.New("delayed trigger requires content")
+	default:
+		return fmt.Errorf("unsupported delayed-trigger content %T", content)
+	}
 }

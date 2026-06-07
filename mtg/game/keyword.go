@@ -38,10 +38,10 @@ type CyclingKeyword struct {
 	Cost cost.Mana
 }
 
-// KickerKeyword parameterizes Kicker additional costs and bonus effects.
+// KickerKeyword parameterizes Kicker additional costs and bonus instructions.
 type KickerKeyword struct {
-	Cost  cost.Mana
-	Bonus []Effect
+	Cost         cost.Mana
+	BonusContent AbilityContent
 }
 
 // MadnessKeyword parameterizes Madness alternative costs.
@@ -282,13 +282,13 @@ func (ability *AbilityDef) KickerCost() (cost.Mana, bool) {
 	return kicker.Cost, true
 }
 
-// KickerBonusEffects returns effects applied if this spell was kicked.
-func (ability *AbilityDef) KickerBonusEffects() []Effect {
+// KickerBonusContent returns the ability content applied if this spell was kicked.
+func (ability *AbilityDef) KickerBonusContent() AbilityContent {
 	kicker, ok := ability.Kicker()
 	if !ok {
 		return nil
 	}
-	return kicker.Bonus
+	return kicker.BonusContent
 }
 
 // AddKeywordKindsTo adds every keyword represented by this ability to keywords.

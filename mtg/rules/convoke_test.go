@@ -135,12 +135,10 @@ func setMainPhasePriority(g *game.Game, playerID game.PlayerID) {
 
 func convokeSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Convoke Spell",
-		Types:    []types.Card{types.Sorcery},
-		ManaCost: opt.Val(manaCost),
-		Abilities: []game.AbilityDef{
-			{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Convoke)},
-			{Kind: game.SpellAbility},
-		}},
+		Types:           []types.Card{types.Sorcery},
+		ManaCost:        opt.Val(manaCost),
+		SpellAbility:    opt.Val(game.SpellAbilityBody{}),
+		StaticAbilities: []game.StaticAbilityBody{game.ConvokeStaticBody}},
 	}
 }
 
@@ -150,14 +148,12 @@ func greenManaCreature() *game.CardDef {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		Abilities: []game.AbilityDef{{
-			Kind:          game.ActivatedAbility,
-			IsManaAbility: true,
+		ManaAbilities: []game.ManaAbilityBody{{
 			AdditionalCosts: []cost.Additional{{
 				Kind: cost.AdditionalTap,
 				Text: "{T}",
 			}},
-			Effects: []game.Effect{{Type: game.EffectAddMana, ManaColor: mana.G, Amount: 1}},
+			Content: game.PlainAbilityContent{Sequence: []game.Instruction{{Primitive: game.AddMana{ManaColor: mana.G, Amount: game.Fixed(1)}}}},
 		}}},
 	}
 }

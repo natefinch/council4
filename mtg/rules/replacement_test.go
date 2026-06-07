@@ -120,15 +120,12 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Red Strike",
 		Types:  []types.Card{types.Instant},
 		Colors: []color.Color{color.Red},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.SpellAbility,
-				Targets: []game.TargetSpec{
-					{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
-				},
-				Effects: []game.Effect{{Type: game.EffectDamage, Amount: 1, TargetIndex: 0}},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
 			},
-		}},
+		})},
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -198,7 +195,7 @@ func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
 
-	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPrevent, Amount: 2, TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(2), TargetIndex: 0}, nil)
 	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, target, 5, false)
 
 	if dealt != 3 {
@@ -214,7 +211,7 @@ func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 		return event.PermanentID == target.ObjectID && event.Amount == 2
 	})
 
-	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), TargetIndex: 0}, nil)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 	if len(g.PreventionShields) != 0 {
 		t.Fatalf("prevention shields after cleanup = %+v, want expired", g.PreventionShields)
@@ -230,8 +227,8 @@ func TestMultiplePreventionShieldsRecordDeterministicReplacementOrder(t *testing
 		Controller: game.Player2,
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
-	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
-	engine.resolveEffect(g, obj, &game.Effect{Type: game.EffectPrevent, Amount: 1, TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), TargetIndex: 0}, nil)
 
 	dealPermanentDamage(g, sourceID, 0, game.Player1, target, 3, false)
 
@@ -258,10 +255,10 @@ func TestRegenerationReplacesDestroyAndRemovesFromCombat(t *testing.T) {
 		},
 	}
 
-	engine.resolveEffect(g, &game.StackObject{
+	resolveInstruction(engine, g, &game.StackObject{
 		Controller: game.Player2,
 		Targets:    []game.Target{game.PermanentTarget(blocker.ObjectID)},
-	}, &game.Effect{Type: game.EffectRegenerate, TargetIndex: 0}, nil)
+	}, game.Regenerate{TargetIndex: 0}, nil)
 	removed, ok := destroyPermanent(g, blocker.ObjectID)
 
 	if ok || removed != nil {
@@ -440,15 +437,21 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
-		Type:        game.EffectReplace,
-		Replacement: opt.Val(game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: zone.Battlefield, MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Exile}),
+	resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.CreateReplacement{
+		Replacement: &game.ReplacementEffect{
+			Description:   "exile instead",
+			MatchEvent:    game.EventZoneChanged,
+			MatchFromZone: true,
+			FromZone:      zone.Battlefield,
+			MatchToZone:   true,
+			ToZone:        zone.Graveyard,
+			ReplaceToZone: zone.Exile,
+		},
 	}, nil)
 
 	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
-
 	if g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
 		t.Fatal("replacement did not redirect away from graveyard")
 	}
@@ -483,9 +486,15 @@ func payLifeETBModalLand() *game.CardDef {
 func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
-		Type:        game.EffectReplace,
-		Replacement: opt.Val(game.ReplacementEffect{Description: "enter modified", MatchEvent: game.EventPermanentEnteredBattlefield, MatchToZone: true, ToZone: zone.Battlefield, EntersTapped: true, EntersWithCounters: []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 1}}}),
+	resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.CreateReplacement{
+		Replacement: &game.ReplacementEffect{
+			Description:        "enter modified",
+			MatchEvent:         game.EventPermanentEnteredBattlefield,
+			MatchToZone:        true,
+			ToZone:             zone.Battlefield,
+			EntersTapped:       true,
+			EntersWithCounters: []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 1}},
+		},
 	}, nil)
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Entering Creature",
 		Types:     []types.Card{types.Creature},
@@ -499,7 +508,6 @@ func TestGenericETBReplacementAppliesTappedAndCounters(t *testing.T) {
 	g.Players[game.Player1].Hand.Remove(cardID)
 
 	permanent, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
-
 	if !ok || !permanent.Tapped {
 		t.Fatalf("permanent = %+v, want tapped by replacement", permanent)
 	}
@@ -530,16 +538,14 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 			ReplaceToZone: zone.Hand,
 		},
 	} {
-		engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
-			Type:        game.EffectReplace,
-			Replacement: opt.Val(replacement),
+		resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.CreateReplacement{
+			Replacement: &replacement,
 		}, nil)
 	}
 
 	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
-
 	if len(g.ReplacementDecisions) != 1 {
 		t.Fatalf("replacement decisions = %+v, want one order decision", g.ReplacementDecisions)
 	}
@@ -559,14 +565,21 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 		Types: []types.Card{types.Enchantment}},
 	})
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	engine.resolveEffect(g, &game.StackObject{
+	resolveInstruction(engine, g, &game.StackObject{
 		Kind:         game.StackActivatedAbility,
 		Controller:   game.Player1,
 		SourceID:     source.ObjectID,
 		SourceCardID: source.CardInstanceID,
-	}, &game.Effect{
-		Type:        game.EffectReplace,
-		Replacement: opt.Val(game.ReplacementEffect{Description: "exile instead", MatchEvent: game.EventZoneChanged, MatchFromZone: true, FromZone: zone.Battlefield, MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Exile}),
+	}, game.CreateReplacement{
+		Replacement: &game.ReplacementEffect{
+			Description:   "exile instead",
+			MatchEvent:    game.EventZoneChanged,
+			MatchFromZone: true,
+			FromZone:      zone.Battlefield,
+			MatchToZone:   true,
+			ToZone:        zone.Graveyard,
+			ReplaceToZone: zone.Exile,
+		},
 	}, nil)
 
 	if !movePermanentToZone(g, source, zone.Graveyard) {
@@ -575,7 +588,6 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("target should move to graveyard")
 	}
-
 	if !g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
 		t.Fatal("replacement from departed source should not apply")
 	}
@@ -585,8 +597,7 @@ func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Would Draw"}})
-	engine.resolveEffect(g, &game.StackObject{Controller: game.Player1}, &game.Effect{
-		Type:        game.EffectSkipStep,
+	resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.SkipStep{
 		TargetIndex: game.TargetIndexController,
 		Step:        game.StepDraw,
 	}, nil)
@@ -620,34 +631,29 @@ func addProtectionFromColorPermanent(g *game.Game, controller game.PlayerID, pro
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		Abilities: []game.AbilityDef{
-			{
-				Kind:             game.StaticAbility,
-				KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{protectedColor}}},
-			},
-		}},
+		StaticAbilities: []game.StaticAbilityBody{{
+			KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{protectedColor}}},
+		}}},
 	})
 }
 
 func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Hexproof Creature",
-		Types:     []types.Card{types.Creature},
-		Power:     opt.Val(pt),
-		Toughness: opt.Val(pt),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.StaticAbility,
-			KeywordAbilities: game.SimpleKeywords(game.Hexproof),
-		}}},
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbilityBody{game.HexproofStaticBody}},
 	})
 }
 
 func targetCreatureInstant() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Target Creature Instant",
 		Types: []types.Card{types.Instant},
-		Abilities: []game.AbilityDef{{
-			Kind:    game.SpellAbility,
-			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-		}}},
+		SpellAbility: opt.Val(game.SpellAbilityBody{
+			Content: game.PlainAbilityContent{
+				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+			},
+		})},
 	}
 }

@@ -202,6 +202,13 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 
 func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.Selector != game.EffectSelectorNone {
+		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+			_, destroyed := destroyPermanent(r.game, permanent.ObjectID)
+			res.succeeded = destroyed || res.succeeded
+		}
+		return res
+	}
 	permanent, ok := r.permanentAt(prim.TargetIndex)
 	if ok {
 		_, res.succeeded = destroyPermanent(r.game, permanent.ObjectID)
@@ -468,6 +475,263 @@ func handlePay(r *effectResolver, prim game.Pay) effectResolved {
 func handleChoose(r *effectResolver, prim game.Choose) effectResolved {
 	succeeded := r.engine.resolveResolutionChoiceValue(r.game, r.obj, &prim.Choice, string(prim.PublishChoice), r.agents, r.log)
 	return effectResolved{accepted: true, succeeded: succeeded}
+}
+
+func handleGainLife(r *effectResolver, prim game.GainLife) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	playerID, ok := r.playerAt(prim.TargetIndex)
+	if ok {
+		res.succeeded = gainLife(r.game, playerID, res.amount) > 0
+	}
+	return res
+}
+
+func handleLoseLife(r *effectResolver, prim game.LoseLife) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	playerID, ok := r.playerAt(prim.TargetIndex)
+	if ok {
+		res.succeeded = loseLife(r.game, playerID, res.amount) > 0
+	}
+	return res
+}
+
+func handleExile(r *effectResolver, prim game.Exile) effectResolved {
+	res := effectResolved{accepted: true}
+	if prim.Selector != game.EffectSelectorNone {
+		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+			res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile) || res.succeeded
+		}
+		return res
+	}
+	permanent, ok := r.permanentAt(prim.TargetIndex)
+	if !ok {
+		return res
+	}
+	linkedObjectRef := permanentLinkedObjectRef(permanent)
+	res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile)
+	if prim.ExileLinkedKey != "" {
+		rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.ExileLinkedKey)), linkedObjectRef)
+	}
+	return res
+}
+
+func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
+	res := effectResolved{accepted: true}
+	if prim.Selector != game.EffectSelectorNone {
+		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+			res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand) || res.succeeded
+		}
+		return res
+	}
+	permanent, ok := r.permanentAt(prim.TargetIndex)
+	if ok {
+		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
+	}
+	return res
+}
+
+func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.permanentAt(prim.TargetIndex)
+	if !ok {
+		permanent, ok = firstPermanentControlledBy(r.game, r.obj.Controller)
+	}
+	if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
+		return res
+	}
+	res.succeeded = movePermanentToZone(r.game, permanent, zone.Graveyard)
+	return res
+}
+
+func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
+	res := effectResolved{accepted: true}
+	if prim.Selector != game.EffectSelectorNone {
+		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+			setPermanentTapped(r.game, permanent, false)
+			res.succeeded = true
+		}
+		return res
+	}
+	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+		setPermanentTapped(r.game, permanent, false)
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResolved {
+	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.TargetIndex)}
+}
+
+func handleMill(r *effectResolver, prim game.Mill) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.playerAt(prim.TargetIndex)
+	if ok {
+		millCards(r.game, playerID, res.amount)
+		res.succeeded = res.amount > 0
+	}
+	return res
+}
+
+func handleScry(r *effectResolver, prim game.Scry) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.playerAt(prim.TargetIndex)
+	if ok {
+		r.engine.scryCards(r.game, r.agents, r.log, playerID, res.amount)
+		res.succeeded = res.amount > 0
+	}
+	return res
+}
+
+func handleSurveil(r *effectResolver, prim game.Surveil) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.playerAt(prim.TargetIndex)
+	if ok {
+		r.engine.surveilCards(r.game, r.agents, r.log, playerID, res.amount)
+		res.succeeded = res.amount > 0
+	}
+	return res
+}
+
+func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		res.amount = 1
+	}
+	var recipientRef game.PlayerReference
+	if prim.Recipient.Exists {
+		recipientRef = prim.Recipient.Val
+	}
+	recipient, ok := r.recipientController(recipientRef)
+	if !ok {
+		return res
+	}
+	for range res.amount {
+		if _, ok := createTokenPermanent(r.game, recipient, clueTokenDef()); !ok {
+			return res
+		}
+	}
+	res.succeeded = true
+	return res
+}
+
+func handleProliferate(r *effectResolver, _ game.Proliferate) effectResolved {
+	return effectResolved{accepted: true, succeeded: r.engine.resolveProliferate(r.game, r.obj, r.agents, r.log)}
+}
+
+func handleGoad(r *effectResolver, prim game.Goad) effectResolved {
+	res := effectResolved{accepted: true}
+	if permanent, ok := r.permanentAt(prim.TargetIndex); ok && permanentHasType(r.game, permanent, types.Creature) {
+		goadPermanent(r.game, permanent, r.obj.Controller)
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	if prim.Selector != game.EffectSelectorNone {
+		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+			permanent.Counters.Remove(prim.CounterKind, res.amount)
+			res.succeeded = true
+		}
+		return res
+	}
+	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+		permanent.Counters.Remove(prim.CounterKind, res.amount)
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleTransform(r *effectResolver, prim game.Transform) effectResolved {
+	res := effectResolved{accepted: true}
+	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+		res.succeeded = transformPermanent(r.game, permanent)
+	}
+	return res
+}
+
+func handlePhaseOut(r *effectResolver, prim game.PhaseOut) effectResolved {
+	res := effectResolved{accepted: true}
+	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+		permanent.PhasedOut = true
+		removePermanentFromCombat(r.game, permanent.ObjectID)
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
+	res := effectResolved{accepted: true}
+	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+		permanent.RegenerationShields++
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
+	res := effectResolved{accepted: true}
+	if playerID, ok := r.playerAt(prim.TargetIndex); ok {
+		scheduleSkipStep(r.game, playerID, prim.Step)
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleCreateEmblem(r *effectResolver, prim game.CreateEmblem) effectResolved {
+	r.game.Emblems = append(r.game.Emblems, game.Emblem{
+		Owner:     r.obj.Controller,
+		Abilities: append([]game.AbilityDef(nil), prim.EmblemAbilities...),
+	})
+	return effectResolved{accepted: true, succeeded: true}
+}
+
+func handleCreateDelayedTrigger(r *effectResolver, prim game.CreateDelayedTrigger) effectResolved {
+	return effectResolved{accepted: true, succeeded: scheduleDelayedTrigger(r.game, r.obj, &prim.Trigger)}
+}
+
+func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) effectResolved {
+	replacement := *prim.Replacement
+	replacement.ID = r.game.IDGen.Next()
+	replacement.Controller = r.obj.Controller
+	replacement.SourceCardID, replacement.SourceObjectID = damageSourceIDs(r.game, r.obj)
+	replacement.CreatedTurn = r.game.Turn.TurnNumber
+	if prim.Duration != game.DurationPermanent {
+		replacement.Duration = prim.Duration
+	}
+	r.game.ReplacementEffects = append(r.game.ReplacementEffects, replacement)
+	return effectResolved{accepted: true, succeeded: true}
+}
+
+func handlePreventDamage(r *effectResolver, prim game.PreventDamage) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim.TargetIndex, game.DurationUntilEndOfTurn)
+	return res
+}
+
+// selectedPermanents resolves the permanents matched by a mass selector for the
+// current resolution, using the source permanent for "you control" relations.
+func (r *effectResolver) selectedPermanents(selector game.EffectSelector, targetIndex int) []*game.Permanent {
+	source, _ := sourcePermanent(r.game, r.obj)
+	ids := selectedPermanentIDsForSelector(r.game, r.obj, r.obj.Controller, source, selector, targetIndex)
+	permanents := make([]*game.Permanent, 0, len(ids))
+	for _, permanentID := range ids {
+		if permanent, ok := permanentByObjectID(r.game, permanentID); ok {
+			permanents = append(permanents, permanent)
+		}
+	}
+	return permanents
 }
 
 func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent *game.Permanent, templates []game.ContinuousEffect, duration game.EffectDuration) bool {

@@ -17,8 +17,8 @@ reference for how new card source must be formatted. Key rules:
    use compact `{{` forms for card ability bodies.
 7. Small truly atomic leaf values may stay one-line, e.g. `[]cost.Additional{{Kind: ...}}` and
    simple single-field `Effect` literals. Complex `Effect` values are vertically expanded.
-8. Use categorized `CardFace` fields (`ManaAbilities`, `ActivatedAbilities`, etc.), not the legacy
-   `CardFace.Abilities` slice.
+8. Use categorized `CardFace` fields (`ManaAbilities`, `ActivatedAbilities`, etc.). The
+   `CardFace.Abilities` flat field no longer exists; categorized fields are the only input.
 9. Preserve oracle order naturally when one categorized slice suffices. If categories are mixed and
    field grouping would obscure oracle order, use an initializer function with categorized appends,
    but still format the base `CardDef` and appended bodies in this expanded/raw-text style.
@@ -73,7 +73,7 @@ Double-faced cards use `CardDef` root fields for the front face and
 
 ### Ability fields on CardFace
 
-Card source definitions use the **categorized fields** on `CardFace` directly. Do **not** populate the legacy `Abilities []AbilityDef` slice in registered card definitions.
+Card source definitions use the **categorized fields** on `CardFace` directly. The flat `Abilities []AbilityDef` field has been removed; use `SpellAbility`, `ActivatedAbilities`, `ManaAbilities`, `LoyaltyAbilities`, `TriggeredAbilities`, `ReplacementAbilities`, or `StaticAbilities`.
 
 ```go
 // CardFace categorized ability fields:
@@ -128,10 +128,8 @@ oracle text commonly prints static/keyword abilities **before** activated/trigge
 you will often need an initializer function.
 
 `AbilityDef` and its `Body` field are a **compatibility view** consumed by existing rules
-paths via `CardFace.AbilityDefs()`. Nested granted abilities inside effect data (e.g.
-`ContinuousEffect.AddAbilities`, `EmblemAbilities`) still use `AbilityDef{Body: ...}` because
-no categorized container exists there; that is intentional and is not the same as a top-level
-card-face ability.
+paths via `CardFace.AbilityDefs()`. Card source must use categorized body values, including
+typed `AbilityBody` values in `ContinuousEffect.AddAbilities`.
 
 Card color identity lives in `mtg/game/color`, not `mtg/game/mana`. Use
 `color.NewIdentity(color.Green, color.Red)` for `CardDef.ColorIdentity`.
@@ -186,12 +184,16 @@ The supported Card Implementation primitives are:
 Damage, Draw, Discard, Destroy, AddMana, AddCounter, MoveCounters,
 ApplyContinuous, ApplyRule, ModifyPT, Fight, Tap, Search, Reveal,
 PutOnBattlefield, CreateToken, ShufflePermanentIntoLibrary,
-StartEngines, SetClassLevel, Monstrosity, DiscoverCards, Pay, Choose
+StartEngines, SetClassLevel, Monstrosity, DiscoverCards, Pay, Choose,
+GainLife, LoseLife, Exile, Bounce, Sacrifice, Untap, CounterObject,
+Mill, Scry, Surveil, Investigate, Proliferate, Goad, RemoveCounter,
+Transform, PhaseOut, Regenerate, SkipStep, CreateEmblem,
+CreateDelayedTrigger, CreateReplacement, PreventDamage
 ```
 
-Do not author the legacy wide `game.Effect` struct. If no typed primitive
-expresses the oracle text, use `ImplementationID` and document the required
-hand-written behavior.
+Instructions and typed primitives are the only declarative resolution model.
+If no typed primitive expresses the oracle text, use `ImplementationID` and
+document the required hand-written behavior.
 
 Use `game.Fixed(N)` or `game.Dynamic(game.DynamicAmount{...})` for numeric
 primitive fields. Use `game.TargetRecipient`, `game.SelectorRecipient`, or
@@ -520,7 +522,7 @@ cost.S                         // {S}
 
 ### Step 1: Split oracle text into paragraphs
 
-Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated list of plain keywords on a single line counts as multiple keyword abilities, one `AbilityDef` per keyword.
+Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated list of plain keywords on a single line counts as multiple keyword abilities, one `StaticAbilityBody` per keyword.
 
 ### Step 2: Classify each paragraph
 
@@ -593,7 +595,7 @@ Use `game.ActivatedAbilityBody{...}` in `ActivatedAbilities`, or
 `game.ManaAbilityBody{...}` in `ManaAbilities` when the effect adds mana with no targets:
 - Split on `:` — left side is costs, right side is effects
 - Parse mana symbols in cost → `ManaCost`
-- Parse non-mana costs into `[]cost.Additional` (e.g., `{T}` = `cost.AdditionalTap`, "Sacrifice a creature", "Pay 2 life")
+- Parse non-mana costs into `[]cost.Additional`. Use `cost.Tap` when `{T}` is the only additional cost, or `cost.T` as one entry when `{T}` is combined with other additional costs.
 - Use `ManaAbilityBody` / `ManaAbilities` if the effect adds mana, has no targets, and is not a loyalty ability
 - `Timing`: set if "Activate only as a sorcery" or "Activate only once each turn"
 
@@ -675,7 +677,7 @@ instructions.
 | "discover N" | `DiscoverCards` | `Amount: game.Fixed(N)` |
 
 Oracle patterns not represented by the listed primitives require an
-`ImplementationID`; do not fall back to `game.Effect`.
+`ImplementationID`.
 
 ### TargetIndex convention
 
@@ -735,7 +737,7 @@ ManaAbilities: []game.ManaAbilityBody{
         Text: `
             {T}: Add {C}{C}.
         `,
-        AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
+        AdditionalCosts: cost.Tap,
         Content: game.PlainAbilityContent{
             Sequence: []game.Instruction{
                 {
@@ -769,17 +771,16 @@ StaticAbilities: []game.StaticAbilityBody{
 
 Oracle text: `Exile target creature. Its controller gains life equal to its power.`
 
-This card cannot currently be expressed by the typed primitive set because
-there is no exile primitive or life-gain primitive. Set a descriptive
-`ImplementationID` and document both operations for the hand-written resolver.
+Although `Exile` and `GainLife` exist, the life amount needs the exiled
+creature's last-known power, which is not yet a supported `Quantity`. Use an
+`ImplementationID` and document that requirement.
 
 ### Example 5: Soul Warden (triggered ability)
 
 Oracle text: `Whenever another creature enters, you gain 1 life.`
 
-The trigger pattern is expressible, but life gain is not yet a typed primitive.
-Set `ImplementationID` rather than authoring a legacy `game.Effect`. When a
-typed life-gain primitive is added, use `ExcludeSelf: true` for "another."
+Use `ExcludeSelf: true` for "another" and resolve the trigger with a `GainLife`
+instruction targeting the controller.
 
 ### Example 6: Glorious Anthem (static anthem effect)
 
@@ -832,7 +833,7 @@ var KessigWolfRun = func() *game.CardDef {
         Text: `
             {T}: Add {R} or {G}.
         `,
-        AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
+        AdditionalCosts: cost.Tap,
         // ...
     })
     card.ActivatedAbilities = append(card.ActivatedAbilities, game.ActivatedAbilityBody{
@@ -857,7 +858,7 @@ var KessigWolfRun = func() *game.CardDef {
 
 4. **"You" as target vs. controller**: When the text says "you gain 1 life", "you" is the controller, not a target. Use `TargetIndex: -1`. Only use `TargetIndex: 0+` when there's an explicit "target" word.
 
-5. **Tap symbol in costs**: `{T}` in an activated ability cost means the permanent taps itself. This goes in `AdditionalCosts` as `{Kind: cost.AdditionalTap}`, not in `ManaCost`.
+5. **Tap symbol in costs**: `{T}` in an activated ability cost means the permanent taps itself. Use `AdditionalCosts: cost.Tap` when it is the only additional cost, or `cost.T` in a combined additional-cost slice. It does not belong in `ManaCost`.
 
 6. **Multiple paragraphs = multiple abilities**: Each `\n`-separated paragraph is a separate ability and gets its own body in the appropriate field, unless it's a comma-separated keyword list.
 

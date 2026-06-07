@@ -37,7 +37,7 @@ Dependency direction: `agent/` and `sim/` depend on `rules/` and `game/`; `cmd/c
 
 **State-based actions** — unexported functions inside `rules/`, checked before granting priority, looping until stable.
 
-**Effects** — resolving abilities use ordered `Instruction` values in `game/`. Each instruction wraps one sealed, typed Effect Primitive plus shared sequencing data such as conditions, optionality, and result publication. `rules/` dispatches primitives through a centralized handler table. Static abilities declare continuous and rule effects directly because they do not resolve. The former wide `Effect` struct remains only as a compatibility surface for older tests and rules-owned mechanics; registered Card Implementations do not author it. Cards too complex for declarative primitives use hand-written resolver functions registered in `rules/`.
+**Effects** — resolving abilities use ordered `Instruction` values in `game/`. Each instruction wraps one sealed, typed Effect Primitive plus shared sequencing data such as conditions, optionality, and result publication. `rules/` dispatches primitives through a centralized handler table. Static abilities declare continuous and rule effects directly because they do not resolve. The legacy wide `Effect` struct has been removed entirely; all resolution flows through typed primitives. Cards too complex for declarative primitives use hand-written resolver functions registered in `rules/`.
 
 **Card data** — `cards.Registry` maps card names to `*game.CardDef` values. It is pure data with no behavior. The `deck/` package uses the registry to resolve decklists. Custom card resolvers for the escape hatch live in `rules/`.
 

@@ -24,47 +24,50 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 	firstFighter := addCombatPermanent(g, game.Player1, phaseZeroCard("Valiant Cub", types.Creature, 2))
 	secondFighter := addCombatPermanent(g, game.Player2, phaseZeroCard("Hill Giant", types.Creature, 3))
 	four := game.PT{Value: 4}
-	sourceID := addLinkedResultSpellToStackForController(g, game.Player1, []game.Effect{
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
 		{
-			Type:   game.EffectChoose,
-			LinkID: "chosen-color",
-			Choice: opt.Val(game.ResolutionChoice{
-				Kind: game.ResolutionChoiceMana,
-			}),
+			Primitive: game.Choose{
+				Choice:        game.ResolutionChoice{Kind: game.ResolutionChoiceMana},
+				PublishChoice: "chosen-color",
+			},
 		},
-		{Type: game.EffectAddMana, Amount: 2, ChoiceLinkID: "chosen-color"},
-		{Type: game.EffectDraw, Amount: 1, TargetIndex: game.TargetIndexController},
-		{Type: game.EffectDamage, Amount: 3, TargetIndex: 0},
+		{Primitive: game.AddMana{Amount: game.Fixed(2), ChoiceFrom: "chosen-color"}},
+		{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
+		{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}},
 		{
-			Type:        game.EffectSearch,
-			Amount:      1,
-			TargetIndex: game.TargetIndexController,
-			Search: opt.Val(game.SearchSpec{
-				SourceZone:  zone.Library,
-				Destination: zone.Hand,
-				CardType:    opt.Val(types.Creature),
-				Reveal:      true,
-			}),
-		},
-		{
-			Type:        game.EffectApplyContinuous,
-			TargetIndex: 1,
-			ContinuousEffects: []game.ContinuousEffect{
-				{Layer: game.LayerType, AddTypes: []types.Card{types.Creature}},
-				{Layer: game.LayerPowerToughnessSet, SetPower: opt.Val(four), SetToughness: opt.Val(four)},
+			Primitive: game.Search{
+				Amount:      game.Fixed(1),
+				TargetIndex: game.TargetIndexController,
+				Spec: game.SearchSpec{
+					SourceZone:  zone.Library,
+					Destination: zone.Hand,
+					CardType:    opt.Val(types.Creature),
+					Reveal:      true,
+				},
 			},
 		},
 		{
-			Type:           game.EffectModifyPT,
-			TargetIndex:    2,
-			PowerDelta:     1,
-			ToughnessDelta: 1,
-			UntilEndOfTurn: true,
+			Primitive: game.ApplyContinuous{
+				TargetIndex: 1,
+				ContinuousEffects: []game.ContinuousEffect{
+					{Layer: game.LayerType, AddTypes: []types.Card{types.Creature}},
+					{Layer: game.LayerPowerToughnessSet, SetPower: opt.Val(four), SetToughness: opt.Val(four)},
+				},
+			},
 		},
 		{
-			Type:               game.EffectFight,
-			TargetIndex:        2,
-			RelatedTargetIndex: opt.Val(3),
+			Primitive: game.ModifyPT{
+				TargetIndex:    2,
+				PowerDelta:     game.Fixed(1),
+				ToughnessDelta: game.Fixed(1),
+				Duration:       game.DurationUntilEndOfTurn,
+			},
+		},
+		{
+			Primitive: game.Fight{
+				TargetIndex:        2,
+				RelatedTargetIndex: opt.Val(3),
+			},
 		},
 	}, []game.Target{
 		game.PlayerTarget(game.Player2),

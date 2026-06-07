@@ -33,7 +33,7 @@ Each card is an exported `*game.CardDef` variable in its letter sub-package (e.g
    go run .agents/skills/card-impl/main.go "Card Name"
    ```
 
-2. Fill in the categorized ability fields on `game.CardFace` (use the `card-impl` Copilot skill or do it manually): `SpellAbility`, `ActivatedAbilities`, `ManaAbilities`, `LoyaltyAbilities`, `TriggeredAbilities`, `ReplacementAbilities`, and `StaticAbilities` as appropriate. Do not populate the legacy `Abilities` field. For plain non-parameterized keywords, append reusable `StaticAbilityBody` templates such as `game.FlyingStaticBody` or `game.DeathtouchStaticBody`. Front-face data lives in the embedded `game.CardFace` on `CardDef`; for double-faced cards, `Back` holds back-face data. Follow the expanded/raw-string source layout shown in `mtg/cards/k/karplusan_forest.go`.
+2. Fill in the categorized ability fields on `game.CardFace` (use the `card-impl` Copilot skill or do it manually): `SpellAbility`, `ActivatedAbilities`, `ManaAbilities`, `LoyaltyAbilities`, `TriggeredAbilities`, `ReplacementAbilities`, and `StaticAbilities` as appropriate. For plain non-parameterized keywords, append reusable `StaticAbilityBody` templates such as `game.FlyingStaticBody` or `game.DeathtouchStaticBody`. Front-face data lives in the embedded `game.CardFace` on `CardDef`; for double-faced cards, `Back` holds back-face data. Follow the expanded/raw-string source layout shown in `mtg/cards/k/karplusan_forest.go`.
 
 3. Regenerate the card list:
    ```bash

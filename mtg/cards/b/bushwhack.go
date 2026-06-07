@@ -43,7 +43,7 @@ var Bushwhack = &game.CardDef{
 				`,
 				Content: game.ModalAbilityContent{
 					Modes: []game.Mode{
-						game.Mode{
+						{
 							Text: "Search your library for a basic land card, reveal it, put it into your hand, then shuffle.",
 							Sequence: []game.Instruction{
 								{
@@ -55,13 +55,12 @@ var Bushwhack = &game.CardDef{
 											CardType:    opt.Val(types.Land),
 											Supertype:   opt.Val(types.Basic),
 											Reveal:      true,
-											Shuffle:     true,
 										},
 									},
 								},
 							},
 						},
-						game.Mode{
+						{
 							Text: "Target creature you control fights target creature you don't control.",
 							Sequence: []game.Instruction{
 								{
@@ -75,10 +74,8 @@ var Bushwhack = &game.CardDef{
 									Constraint: "creature you control",
 									Allow:      game.TargetAllowPermanent,
 									Predicate: game.TargetPredicate{
-										PermanentTypes: []types.Card{
-											types.Creature,
-										},
-										Controller: game.ControllerYou,
+										PermanentTypes: []types.Card{types.Creature},
+										Controller:     game.ControllerYou,
 									},
 								},
 								{
@@ -87,10 +84,8 @@ var Bushwhack = &game.CardDef{
 									Constraint: "creature you don't control",
 									Allow:      game.TargetAllowPermanent,
 									Predicate: game.TargetPredicate{
-										PermanentTypes: []types.Card{
-											types.Creature,
-										},
-										Controller: game.ControllerNotYou,
+										PermanentTypes: []types.Card{types.Creature},
+										Controller:     game.ControllerNotYou,
 									},
 								},
 							},

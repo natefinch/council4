@@ -9,14 +9,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
-func createRuleEffects(g *game.Game, obj *game.StackObject, effect *game.Effect) bool {
-	duration := effect.Duration
-	if duration == game.DurationPermanent && effect.UntilEndOfTurn {
-		duration = game.DurationUntilEndOfTurn
-	}
-	return createRuleEffectTemplates(g, obj, effect.TargetIndex, effect.RuleEffects, duration)
-}
-
 func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, targetIndex int, templates []game.RuleEffect, duration game.EffectDuration) bool {
 	if len(templates) == 0 {
 		return false
@@ -78,27 +70,6 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 					continue
 				}
 				for _, ruleEffect := range body.RuleEffects {
-					ruleEffect.Controller = effectiveController(g, source)
-					ruleEffect.SourceObjectID = source.ObjectID
-					ruleEffect.SourceCardID = source.CardInstanceID
-					if ruleEffect.AffectedSource {
-						ruleEffect.AffectedObjectID = source.ObjectID
-					}
-					effects = append(effects, ruleEffect)
-				}
-			}
-			for i := range ability.Effects {
-				effect := &ability.Effects[i]
-				if effect.Type != game.EffectApplyRule {
-					continue
-				}
-				if !conditionSatisfied(g, conditionContext{
-					controller: effectiveController(g, source),
-					source:     source,
-				}, ability.Condition) {
-					continue
-				}
-				for _, ruleEffect := range effect.RuleEffects {
 					ruleEffect.Controller = effectiveController(g, source)
 					ruleEffect.SourceObjectID = source.ObjectID
 					ruleEffect.SourceCardID = source.CardInstanceID

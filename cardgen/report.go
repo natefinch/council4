@@ -275,10 +275,6 @@ func nextWorkForIssue(code ValidationCode) string {
 	switch code {
 	case IssueOracleWithoutAbilities:
 		return "Fill generated AbilityDef data for this oracle text or add a hand-written ImplementationID."
-	case IssueUnexecutedEffect:
-		return "Implement rules execution for the generated effect type or map the card to a hand-written implementation."
-	case IssueMissingSearchSpec, IssueUnsupportedSearchSpec:
-		return "Expand SearchSpec modeling or search-effect rules for this tutor/reveal pattern."
 	case IssueTargetIndexOutOfRange, IssueInvalidTargetSpec:
 		return "Fix target parsing/generation so effects and target specs line up."
 	case IssueUnregisteredImplementation:

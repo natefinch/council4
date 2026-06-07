@@ -8,9 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/opt"
 )
 
 func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
@@ -151,10 +149,9 @@ func TestDestroyPermanentEmitsZoneChangeAndDeathEvents(t *testing.T) {
 func TestDamageEffectEmitsDamageEvent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:        game.EffectDamage,
-		Amount:      3,
-		TargetIndex: 0,
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
+		Amount:    game.Fixed(3),
+		Recipient: game.TargetRecipient(0),
 	}, []game.Target{game.PlayerTarget(game.Player2)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -180,16 +177,19 @@ func TestCounteredSpellEmitsStackToGraveyardZoneChangeButNoResolveEvent(t *testi
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addCombatCreaturePermanent(g, game.Player2)
-	sourceID := addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:        game.EffectDamage,
-		Amount:      3,
-		TargetIndex: 0,
+	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
+		Amount:    game.Fixed(3),
+		Recipient: game.TargetRecipient(0),
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	card, ok := g.GetCardInstance(sourceID)
 	if !ok {
 		t.Fatal("source card instance not found")
 	}
-	card.Def.Abilities[0].Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+	// Set target spec on the spell's content to require a creature target
+	if content, ok := card.Def.SpellAbility.Val.Content.(game.PlainAbilityContent); ok {
+		content.Targets = []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
+		card.Def.SpellAbility.Val.Content = content
+	}
 	if !movePermanentToZone(g, target, zone.Graveyard) {
 		t.Fatal("movePermanentToZone() = false, want true")
 	}
@@ -214,10 +214,9 @@ func TestMassDamageEffectEmitsDamageEventForEachPermanent(t *testing.T) {
 	addCombatPermanent(g, game.Player3, &game.CardDef{CardFace: game.CardFace{Name: "Relic",
 		Types: []types.Card{types.Artifact}},
 	})
-	addEffectSpellToStack(g, game.Player1, &game.Effect{
-		Type:     game.EffectDamage,
-		Amount:   2,
-		Selector: game.EffectSelectorAllCreatures,
+	addEffectSpellToStack(g, game.Player1, game.Damage{
+		Amount:    game.Fixed(2),
+		Recipient: game.SelectorRecipient(game.EffectSelectorAllCreatures),
 	}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -239,15 +238,12 @@ func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pinger",
 		Types: []types.Card{types.Creature},
-		Abilities: []game.AbilityDef{
-			{
-				Kind: game.ActivatedAbility,
-				Effects: []game.Effect{
-					{Type: game.EffectDamage, Amount: 1, TargetIndex: 0},
-				},
-				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "target player"}},
+		ActivatedAbilities: []game.ActivatedAbilityBody{{
+			Content: game.PlainAbilityContent{
+				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "target player"}},
+				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
 			},
-		}},
+		}}},
 	})
 	g.Stack.Push(&game.StackObject{
 		ID:           g.IDGen.Next(),
@@ -463,26 +459,24 @@ func TestTapUntapAndTargetEvents(t *testing.T) {
 func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pain Walker",
-		Types:   []types.Card{types.Planeswalker},
-		Loyalty: opt.Val(3),
-		Abilities: []game.AbilityDef{{
-			Kind:             game.ActivatedAbility,
-			IsLoyaltyAbility: true,
-			LoyaltyCost:      -1,
+	// Use a simple creature with an activated ability that costs life
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pain Creature",
+		Types: []types.Card{types.Creature},
+		ActivatedAbilities: []game.ActivatedAbilityBody{{
 			AdditionalCosts: []cost.Additional{
 				{Kind: cost.AdditionalPayLife, Amount: 2},
 			},
-			Effects: []game.Effect{{Type: game.EffectLoseLife, TargetIndex: game.TargetIndexController, Amount: 3}},
-		}}},
-	})
-	planeswalker.Counters.Add(counter.Loyalty, 3)
+			Content: game.PlainAbilityContent{Sequence: []game.Instruction{
+				{Primitive: game.LoseLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(3)}},
+			}},
+		}}}},
+	)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = game.Player1
 
-	if !engine.applyAction(g, game.Player1, action.ActivateAbility(planeswalker.ObjectID, 0, nil, 0)) {
-		t.Fatal("life-payment loyalty ability activation failed")
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(creature.ObjectID, 0, nil, 0)) {
+		t.Fatal("life-payment ability activation failed")
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
 
