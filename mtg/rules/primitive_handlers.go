@@ -692,7 +692,7 @@ func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
 func handleCreateEmblem(r *effectResolver, prim game.CreateEmblem) effectResolved {
 	r.game.Emblems = append(r.game.Emblems, game.Emblem{
 		Owner:     r.obj.Controller,
-		Abilities: append([]game.AbilityBody(nil), prim.EmblemAbilities...),
+		Abilities: append([]game.Ability(nil), prim.EmblemAbilities...),
 	})
 	return effectResolved{accepted: true, succeeded: true}
 }

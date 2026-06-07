@@ -194,7 +194,7 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Red Spell",
 		ManaCost:     opt.Val(cost.Mana{cost.R}),
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 
 	if containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
@@ -330,7 +330,7 @@ func setSorcerySpeedTurn(g *game.Game, playerID game.PlayerID) {
 func conditionalRedManaLand() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Conditional Red Land",
 		Types: []types.Card{types.Land},
-		ManaAbilities: []game.ManaAbilityBody{{
+		ManaAbilities: []game.ManaAbility{{
 			Text: "{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
 			ActivationCondition: opt.Val(game.Condition{
 				ControllerControls: game.PermanentFilter{
@@ -351,7 +351,7 @@ func conditionalRedManaLand() *game.CardDef {
 func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Bugenhagen-like",
 		Types: []types.Card{types.Creature},
-		TriggeredAbilities: []game.TriggeredAbilityBody{{
+		TriggeredAbilities: []game.TriggeredAbility{{
 			Text: "At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.",
 			Trigger: game.TriggerCondition{
 				Type: game.TriggerWhenever,
@@ -379,7 +379,7 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 func angerLikeCard() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Anger-like",
 		Types: []types.Card{types.Creature},
-		StaticAbilities: []game.StaticAbilityBody{
+		StaticAbilities: []game.StaticAbility{
 			game.HasteStaticBody,
 			{
 				ZoneOfFunction: zone.Graveyard,
@@ -401,7 +401,7 @@ func angerLikeCard() *game.CardDef {
 func cinderLikeLand() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cinder-like",
 		Types: []types.Card{types.Land},
-		ReplacementAbilities: []game.ReplacementAbilityBody{
+		ReplacementAbilities: []game.ReplacementAbility{
 			game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
 				Negate: true,
 				ControllerControls: game.PermanentFilter{

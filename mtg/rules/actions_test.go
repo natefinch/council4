@@ -188,7 +188,7 @@ func TestFlashCreatureLegalAtInstantSpeed(t *testing.T) {
 	flashID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Ambush Viper",
 		ManaCost:        greenCost(),
 		Types:           []types.Card{types.Creature},
-		StaticAbilities: []game.StaticAbilityBody{game.FlashStaticBody}},
+		StaticAbilities: []game.StaticAbility{game.FlashStaticBody}},
 	})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhaseBeginning
@@ -318,7 +318,7 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 		AdditionalCosts: []cost.Additional{
 			{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 		},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 	first := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})}})
 	second := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})}})
@@ -349,7 +349,7 @@ func TestPaymentChoiceCanPayPhyrexianManaWithLife(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Phyrexian Choice",
 		ManaCost:     opt.Val(manaCost),
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -379,7 +379,7 @@ func TestPaymentChoiceRejectsUnavailablePhyrexianLifeOption(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Phyrexian Choice",
 		ManaCost:     opt.Val(manaCost),
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -405,7 +405,7 @@ func TestPaymentChoiceDoesNotOvercommitPhyrexianLife(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Double Phyrexian Choice",
 		ManaCost:     opt.Val(manaCost),
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 	firstSwamp := addBasicLandPermanent(g, game.Player1, types.Swamp)
 	secondSwamp := addBasicLandPermanent(g, game.Player1, types.Swamp)
@@ -434,7 +434,7 @@ func TestPaymentChoiceFallbackSelectsMultipleAdditionalCostObjects(t *testing.T)
 		AdditionalCosts: []cost.Additional{
 			{Kind: cost.AdditionalSacrifice, Text: "Sacrifice two creatures", Amount: 2, MatchPermanentType: true, PermanentType: types.Creature},
 		},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 	first := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})}})
 	second := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})}})
@@ -500,7 +500,7 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 				},
 			},
 		},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Offering", Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})}})
 	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -529,7 +529,7 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 		AdditionalCosts: []cost.Additional{
 			{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 		},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Llanowar Elves",
 		Types:     []types.Card{types.Creature},
@@ -763,7 +763,7 @@ func TestEquipAbilityOnlyAsSorceryToCreatureYouControl(t *testing.T) {
 func TestGeneralActivatedAbilityUsesStackAndResolves(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbilityBody{
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
 		ManaCost: greenCost(),
 		Content: game.Mode{
 			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
@@ -801,7 +801,7 @@ func TestGeneralActivatedAbilityUsesStackAndResolves(t *testing.T) {
 func TestGeneralActivatedAbilityTapCostRespectsSummoningSickness(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbilityBody{
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
 		AdditionalCosts: cost.Tap,
 		Content: game.Mode{
 			Sequence: []game.Instruction{{Primitive: game.GainLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(1)}}},
@@ -834,7 +834,7 @@ func TestGeneralActivatedAbilityTapCostRespectsSummoningSickness(t *testing.T) {
 func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbilityBody{
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
 		Timing: game.OncePerTurn,
 		Content: game.Mode{
 			Sequence: []game.Instruction{{Primitive: game.GainLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(1)}}},
@@ -865,7 +865,7 @@ func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbilityBody{
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
 		AdditionalCosts: []cost.Additional{
 			{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 		},
@@ -1034,7 +1034,7 @@ func TestSplitSecondAllowsOnlyManaAbilitiesAndPass(t *testing.T) {
 		ID: splitSecondID,
 		Def: &game.CardDef{CardFace: game.CardFace{Name: "Split Second Spell",
 			Types:           []types.Card{types.Instant},
-			StaticAbilities: []game.StaticAbilityBody{game.SplitSecondStaticBody}},
+			StaticAbilities: []game.StaticAbility{game.SplitSecondStaticBody}},
 		},
 		Owner: game.Player2,
 	}
@@ -1069,7 +1069,7 @@ func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 		SpellAbility: opt.Val(game.Mode{
 			Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
 		}.Ability()),
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{
 				Cost: kickerCost,
 				BonusContent: game.Mode{
@@ -1109,7 +1109,7 @@ func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Greedy Kicker Spell",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(baseCost),
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{
 				Cost: kickerCost,
 				BonusContent: game.Mode{
@@ -1148,7 +1148,7 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 		SpellAbility: opt.Val(game.Mode{
 			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
 		}.Ability()),
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: game.SimpleKeywords(game.Flashback),
 		}}},
 	})
@@ -1192,8 +1192,8 @@ func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 			Label:    flashbackAlternativeLabel,
 			ManaCost: opt.Val(flashbackCost),
 		}},
-		SpellAbility: opt.Val(game.ModalAbilityContent{}),
-		StaticAbilities: []game.StaticAbilityBody{{
+		SpellAbility: opt.Val(game.AbilityContent{}),
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: game.SimpleKeywords(game.Flashback),
 		}}},
 	})
@@ -1215,7 +1215,7 @@ func TestGraveyardAbilityExilesSourceCardAsCost(t *testing.T) {
 		Subtypes:  []types.Sub{types.Snake, types.Druid},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 4}),
-		ActivatedAbilities: []game.ActivatedAbilityBody{
+		ActivatedAbilities: []game.ActivatedAbility{
 			game.EternalizeActivatedBody(cost.Mana{cost.O(0)}, types.Snake, types.Druid),
 		}},
 	})
@@ -1265,7 +1265,7 @@ func TestGraveyardOnlyAbilityIsNotActivatedFromBattlefield(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
-		ActivatedAbilities: []game.ActivatedAbilityBody{{
+		ActivatedAbilities: []game.ActivatedAbility{{
 			ZoneOfFunction: zone.Graveyard,
 			Content: game.Mode{
 				Sequence: []game.Instruction{{Primitive: game.GainLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(1)}}},
@@ -1292,7 +1292,7 @@ func TestRuleEffectAllowsCastingFromGraveyard(t *testing.T) {
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Graveyard Permission",
 		Types: []types.Card{types.Enchantment},
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			RuleEffects: []game.RuleEffect{{
 				Kind:           game.RuleEffectCastFromZone,
 				AffectedPlayer: game.PlayerYou,
@@ -1404,8 +1404,8 @@ func TestTransformPhaseOutAndEmblemEffects(t *testing.T) {
 
 	resolveInstruction(engine, g, obj, game.Transform{TargetIndex: 0}, nil)
 	resolveInstruction(engine, g, obj, game.PhaseOut{TargetIndex: 0}, nil)
-	emblemAbility := game.StaticAbilityBody{Text: "Test emblem ability"}
-	resolveInstruction(engine, g, obj, game.CreateEmblem{EmblemAbilities: []game.AbilityBody{emblemAbility}}, nil)
+	emblemAbility := game.StaticAbility{Text: "Test emblem ability"}
+	resolveInstruction(engine, g, obj, game.CreateEmblem{EmblemAbilities: []game.Ability{emblemAbility}}, nil)
 
 	if permanent.Transformed || !permanent.PhasedOut {
 		t.Fatalf("permanent transformed/phased = %v/%v, want false/true", permanent.Transformed, permanent.PhasedOut)
@@ -1416,7 +1416,7 @@ func TestTransformPhaseOutAndEmblemEffects(t *testing.T) {
 	if len(g.Emblems) != 1 || g.Emblems[0].Owner != game.Player1 || len(g.Emblems[0].Abilities) != 1 {
 		t.Fatalf("emblems = %+v, want one Player1 emblem", g.Emblems)
 	}
-	body, ok := g.Emblems[0].Abilities[0].(game.StaticAbilityBody)
+	body, ok := g.Emblems[0].Abilities[0].(game.StaticAbility)
 	if !ok || body.Text != emblemAbility.Text {
 		t.Fatalf("emblem body = %+v, want static body %q", g.Emblems[0].Abilities[0], emblemAbility.Text)
 	}
@@ -1476,7 +1476,7 @@ func greenSorcery() *game.CardDef {
 func modalCharm() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Test Charm",
 		Types: []types.Card{types.Instant},
-		SpellAbility: opt.Val(game.ModalAbilityContent{
+		SpellAbility: opt.Val(game.AbilityContent{
 			MinModes: 1,
 			MaxModes: 1,
 			Modes: []game.Mode{
@@ -1506,7 +1506,7 @@ func modalSpellWithModeRangeAndDuplicates(minModes, maxModes int, allowDuplicate
 	return &game.CardDef{CardFace: game.CardFace{Name: "Flexible Charm",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{
+		SpellAbility: opt.Val(game.AbilityContent{
 			MinModes:            minModes,
 			MaxModes:            maxModes,
 			AllowDuplicateModes: allowDuplicates,
@@ -1524,7 +1524,7 @@ func equipEquipment() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Test Sword",
 		Types:    []types.Card{types.Artifact},
 		Subtypes: []types.Sub{types.Equipment},
-		ActivatedAbilities: []game.ActivatedAbilityBody{{
+		ActivatedAbilities: []game.ActivatedAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: manaCost}},
 			ManaCost:         opt.Val(manaCost),
 			Timing:           game.SorceryOnly,
@@ -1535,13 +1535,13 @@ func equipEquipment() *game.CardDef {
 	}
 }
 
-func activatedAbilityPermanent(ability *game.ActivatedAbilityBody) *game.CardDef {
+func activatedAbilityPermanent(ability *game.ActivatedAbility) *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{CardFace: game.CardFace{Name: "Activated Creature",
 		Types:              []types.Card{types.Creature},
 		Power:              opt.Val(pt),
 		Toughness:          opt.Val(pt),
-		ActivatedAbilities: []game.ActivatedAbilityBody{*ability}},
+		ActivatedAbilities: []game.ActivatedAbility{*ability}},
 	}
 }
 
@@ -1556,7 +1556,7 @@ func TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn(t *testing.T) {
 	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Test Walker",
 		Types:   []types.Card{types.Planeswalker},
 		Loyalty: opt.Val(3),
-		LoyaltyAbilities: []game.LoyaltyAbilityBody{{
+		LoyaltyAbilities: []game.LoyaltyAbility{{
 			LoyaltyCost: -2,
 			Content: game.Mode{
 				Sequence: []game.Instruction{{

@@ -36,7 +36,7 @@ var Anger = &game.CardDef{
 			Haste
 			As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
 		`,
-		StaticAbilities: []game.StaticAbilityBody{
+		StaticAbilities: []game.StaticAbility{
 			game.HasteStaticBody,
 			{
 				Text: `

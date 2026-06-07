@@ -36,7 +36,7 @@ var DragonskullSummit = func() *game.CardDef {
 			},
 		}),
 	)
-	card.ManaAbilities = append(card.ManaAbilities, game.ManaAbilityBody{
+	card.ManaAbilities = append(card.ManaAbilities, game.ManaAbility{
 		Text: `
 			{T}: Add {B} or {R}.
 		`,

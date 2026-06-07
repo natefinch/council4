@@ -43,7 +43,7 @@ var IgnobleHierarch = func() *game.CardDef {
 	)
 
 	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbilityBody{
+		game.ManaAbility{
 			Text: `
 				{T}: Add {B}, {R}, or {G}.
 			`,

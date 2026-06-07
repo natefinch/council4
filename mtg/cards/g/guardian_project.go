@@ -30,7 +30,7 @@ var GuardianProject = &game.CardDef{
 		OracleText: `
 			Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.
 		`,
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Text: `
 					Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.

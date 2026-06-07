@@ -29,7 +29,7 @@ var GravenCairns = &game.CardDef{
 			{T}: Add {C}.
 			{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.
 		`,
-		ManaAbilities: []game.ManaAbilityBody{
+		ManaAbilities: []game.ManaAbility{
 			{
 				Text: `
 					{T}: Add {C}.

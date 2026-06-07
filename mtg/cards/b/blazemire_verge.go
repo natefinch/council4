@@ -27,7 +27,7 @@ var BlazemireVerge = &game.CardDef{
 			{T}: Add {B}.
 			{T}: Add {R}. Activate only if you control a Swamp or a Mountain.
 		`,
-		ManaAbilities: []game.ManaAbilityBody{
+		ManaAbilities: []game.ManaAbility{
 			common.TapForOne(mana.B),
 			{
 				Text: `

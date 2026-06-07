@@ -39,7 +39,7 @@ type CyclingKeyword struct {
 // KickerKeyword parameterizes Kicker additional costs and bonus instructions.
 type KickerKeyword struct {
 	Cost         cost.Mana
-	BonusContent ModalAbilityContent
+	BonusContent AbilityContent
 }
 
 // MadnessKeyword parameterizes Madness alternative costs.
@@ -110,25 +110,25 @@ func KeywordAbilityKind(ability KeywordAbility) Keyword {
 }
 
 // BodyKeywordAbilities returns the keyword abilities carried by a sealed body.
-func BodyKeywordAbilities(body AbilityBody) []KeywordAbility {
+func BodyKeywordAbilities(body Ability) []KeywordAbility {
 	switch b := body.(type) {
-	case StaticAbilityBody:
+	case StaticAbility:
 		return b.KeywordAbilities
-	case *StaticAbilityBody:
+	case *StaticAbility:
 		if b == nil {
 			return nil
 		}
 		return b.KeywordAbilities
-	case ActivatedAbilityBody:
+	case ActivatedAbility:
 		return b.KeywordAbilities
-	case *ActivatedAbilityBody:
+	case *ActivatedAbility:
 		if b == nil {
 			return nil
 		}
 		return b.KeywordAbilities
-	case TriggeredAbilityBody:
+	case TriggeredAbility:
 		return b.KeywordAbilities
-	case *TriggeredAbilityBody:
+	case *TriggeredAbility:
 		if b == nil {
 			return nil
 		}
@@ -139,13 +139,13 @@ func BodyKeywordAbilities(body AbilityBody) []KeywordAbility {
 }
 
 // BodyHasKeyword reports whether a sealed body carries the given keyword.
-func BodyHasKeyword(body AbilityBody, kw Keyword) bool {
+func BodyHasKeyword(body Ability, kw Keyword) bool {
 	_, ok := BodyKeywordAbility(body, kw)
 	return ok
 }
 
 // BodyKeywordAbility returns the first sealed keyword variant matching kw on body.
-func BodyKeywordAbility(body AbilityBody, kw Keyword) (KeywordAbility, bool) {
+func BodyKeywordAbility(body Ability, kw Keyword) (KeywordAbility, bool) {
 	for _, ka := range BodyKeywordAbilities(body) {
 		if KeywordAbilityKind(ka) == kw {
 			return ka, true
@@ -155,7 +155,7 @@ func BodyKeywordAbility(body AbilityBody, kw Keyword) (KeywordAbility, bool) {
 }
 
 // BodyAddKeywordKindsTo adds every keyword represented by body to m.
-func BodyAddKeywordKindsTo(body AbilityBody, m map[Keyword]bool) {
+func BodyAddKeywordKindsTo(body Ability, m map[Keyword]bool) {
 	for _, ka := range BodyKeywordAbilities(body) {
 		m[KeywordAbilityKind(ka)] = true
 	}
@@ -164,7 +164,7 @@ func BodyAddKeywordKindsTo(body AbilityBody, m map[Keyword]bool) {
 // BodyWardCost returns the Ward cost from a TriggeredAbilityBody's keywords.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards and triggers.
-func BodyWardCost(body TriggeredAbilityBody) (cost.Mana, bool) {
+func BodyWardCost(body TriggeredAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Ward)
 	if !ok {
 		return nil, false
@@ -179,7 +179,7 @@ func BodyWardCost(body TriggeredAbilityBody) (cost.Mana, bool) {
 // BodyMadnessCost returns the Madness cost from a TriggeredAbilityBody's keywords.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards and triggers.
-func BodyMadnessCost(body TriggeredAbilityBody) (cost.Mana, bool) {
+func BodyMadnessCost(body TriggeredAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Madness)
 	if !ok {
 		return nil, false
@@ -194,7 +194,7 @@ func BodyMadnessCost(body TriggeredAbilityBody) (cost.Mana, bool) {
 // StaticBodyEnchantTarget returns the Enchant target spec for a static ability body.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards and permanents.
-func StaticBodyEnchantTarget(body StaticAbilityBody) (TargetSpec, bool) {
+func StaticBodyEnchantTarget(body StaticAbility) (TargetSpec, bool) {
 	ka, ok := BodyKeywordAbility(body, Enchant)
 	if !ok {
 		return TargetSpec{}, false
@@ -209,7 +209,7 @@ func StaticBodyEnchantTarget(body StaticAbilityBody) (TargetSpec, bool) {
 // ActivatedBodySuspendInfo returns suspend info from an ActivatedAbilityBody.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
-func ActivatedBodySuspendInfo(body ActivatedAbilityBody) (cost.Mana, int, bool) {
+func ActivatedBodySuspendInfo(body ActivatedAbility) (cost.Mana, int, bool) {
 	ka, ok := BodyKeywordAbility(body, Suspend)
 	if !ok {
 		return nil, 0, false
@@ -224,7 +224,7 @@ func ActivatedBodySuspendInfo(body ActivatedAbilityBody) (cost.Mana, int, bool) 
 // StaticBodySuspendInfo returns suspend info from a StaticAbilityBody.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
-func StaticBodySuspendInfo(body StaticAbilityBody) (cost.Mana, int, bool) {
+func StaticBodySuspendInfo(body StaticAbility) (cost.Mana, int, bool) {
 	ka, ok := BodyKeywordAbility(body, Suspend)
 	if !ok {
 		return nil, 0, false
@@ -239,7 +239,7 @@ func StaticBodySuspendInfo(body StaticAbilityBody) (cost.Mana, int, bool) {
 // ActivatedBodyMorphCost returns the morph cost from an ActivatedAbilityBody.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
-func ActivatedBodyMorphCost(body ActivatedAbilityBody) (cost.Mana, bool) {
+func ActivatedBodyMorphCost(body ActivatedAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Morph)
 	if !ok {
 		return nil, false
@@ -254,7 +254,7 @@ func ActivatedBodyMorphCost(body ActivatedAbilityBody) (cost.Mana, bool) {
 // StaticBodyMorphCost returns the morph cost from a StaticAbilityBody.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
-func StaticBodyMorphCost(body StaticAbilityBody) (cost.Mana, bool) {
+func StaticBodyMorphCost(body StaticAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Morph)
 	if !ok {
 		return nil, false
@@ -269,7 +269,7 @@ func StaticBodyMorphCost(body StaticAbilityBody) (cost.Mana, bool) {
 // ActivatedBodyDisguiseCost returns the disguise cost from an ActivatedAbilityBody.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
-func ActivatedBodyDisguiseCost(body ActivatedAbilityBody) (cost.Mana, bool) {
+func ActivatedBodyDisguiseCost(body ActivatedAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Disguise)
 	if !ok {
 		return nil, false
@@ -284,7 +284,7 @@ func ActivatedBodyDisguiseCost(body ActivatedAbilityBody) (cost.Mana, bool) {
 // StaticBodyDisguiseCost returns the disguise cost from a StaticAbilityBody.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
-func StaticBodyDisguiseCost(body StaticAbilityBody) (cost.Mana, bool) {
+func StaticBodyDisguiseCost(body StaticAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Disguise)
 	if !ok {
 		return nil, false
@@ -299,14 +299,14 @@ func StaticBodyDisguiseCost(body StaticAbilityBody) (cost.Mana, bool) {
 // ActivatedBodyEternalize reports whether the body is an eternalize ability.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
-func ActivatedBodyEternalize(body ActivatedAbilityBody) bool {
+func ActivatedBodyEternalize(body ActivatedAbility) bool {
 	return BodyHasKeyword(body, Eternalize)
 }
 
 // ActivatedBodyKicker returns the KickerKeyword from an ActivatedAbilityBody's keywords.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
-func ActivatedBodyKicker(body ActivatedAbilityBody) (KickerKeyword, bool) {
+func ActivatedBodyKicker(body ActivatedAbility) (KickerKeyword, bool) {
 	ka, ok := BodyKeywordAbility(body, Kicker)
 	if !ok {
 		return KickerKeyword{}, false
@@ -318,7 +318,7 @@ func ActivatedBodyKicker(body ActivatedAbilityBody) (KickerKeyword, bool) {
 // StaticBodyProtectionColors returns the protection colors from a StaticAbilityBody.
 //
 //nolint:gocritic // Keep value-based API for simple use with body values stored by cards and permanents.
-func StaticBodyProtectionColors(body StaticAbilityBody) []color.Color {
+func StaticBodyProtectionColors(body StaticAbility) []color.Color {
 	ka, ok := BodyKeywordAbility(body, Protection)
 	if !ok {
 		return nil

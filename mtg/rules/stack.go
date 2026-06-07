@@ -82,7 +82,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	if body == nil {
 		return "missing source"
 	}
-	activatedBody, activatedOK := body.(game.ActivatedAbilityBody)
+	activatedBody, activatedOK := body.(game.ActivatedAbility)
 	if permanentOK && activatedOK && isEquipmentPermanent(g, permanent) && game.BodyHasKeyword(activatedBody, game.Equip) {
 		sourceObjectID := obj.SourceID
 		if !permanentOK {
@@ -109,7 +109,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		}
 		return "resolved"
 	}
-	loyaltyBody, loyaltyOK := body.(game.LoyaltyAbilityBody)
+	loyaltyBody, loyaltyOK := body.(game.LoyaltyAbility)
 	if !loyaltyOK {
 		return "missing source"
 	}
@@ -136,14 +136,14 @@ func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.Stac
 	if !ok {
 		return "missing source"
 	}
-	body, ok := def.BodyAt(obj.AbilityIndex).(game.TriggeredAbilityBody)
+	body, ok := def.BodyAt(obj.AbilityIndex).(game.TriggeredAbility)
 	if !ok {
 		return "missing source"
 	}
 	return e.resolveTriggeredAbilityBodyWithChoices(g, obj, def, &body, agents, log)
 }
 
-func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.StackObject, source *game.CardDef, body *game.TriggeredAbilityBody, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.StackObject, source *game.CardDef, body *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	if body == nil {
 		return "missing source"
 	}
@@ -171,7 +171,7 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 	return "resolved"
 }
 
-func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.TriggeredAbilityBody, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	targetObj, ok := stackObjectByID(g, obj.WardTargetStackObjectID)
 	if !ok {
 		return "resolved"

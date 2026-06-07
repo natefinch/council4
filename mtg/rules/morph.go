@@ -13,8 +13,8 @@ import (
 
 var faceDownCastCost = cost.Mana{cost.O(3)}
 
-func faceDownDisguiseWardBody() game.StaticAbilityBody {
-	return game.StaticAbilityBody{
+func faceDownDisguiseWardBody() game.StaticAbility {
+	return game.StaticAbility{
 		Text:             "Ward {2}",
 		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(2)}}},
 	}

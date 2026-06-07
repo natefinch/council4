@@ -41,7 +41,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever this creature attacks, blocks, or becomes the target of a spell, it deals damage equal to its power to each opponent.
 			`,
@@ -71,7 +71,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever this creature attacks, blocks, or becomes the target of a spell, it deals damage equal to its power to each opponent.
 			`,
@@ -101,7 +101,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever this creature attacks, blocks, or becomes the target of a spell, it deals damage equal to its power to each opponent.
 			`,
@@ -133,7 +133,7 @@ var GigglingSkitterspike = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				{5}: Monstrosity 5. (If this creature isn't monstrous, put five +1/+1 counters on it and it becomes monstrous.)
 			`,

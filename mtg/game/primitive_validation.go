@@ -427,7 +427,7 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validateTargetReference(p.TargetIndex, targets, checkTargets)
 }
 
-func validateNestedAbilityContent(content ModalAbilityContent) error {
+func validateNestedAbilityContent(content AbilityContent) error {
 	if len(content.Modes) == 0 {
 		return errors.New("delayed trigger requires content")
 	}

@@ -179,7 +179,7 @@ func creatureCard(name string, power, toughness int, keywords ...game.Keyword) *
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(p),
 		Toughness: opt.Val(t),
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: game.SimpleKeywords(keywords...),
 		}}},
 	}

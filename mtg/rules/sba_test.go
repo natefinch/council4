@@ -252,7 +252,7 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 		Types:           []types.Card{types.Creature},
 		Power:           opt.Val(zero),
 		Toughness:       opt.Val(zero),
-		StaticAbilities: []game.StaticAbilityBody{game.IndestructibleStaticBody}},
+		StaticAbilities: []game.StaticAbility{game.IndestructibleStaticBody}},
 	})
 
 	changed, deaths := engine.checkPermanentStateBasedActions(g)

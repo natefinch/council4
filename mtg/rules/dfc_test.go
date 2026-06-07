@@ -145,7 +145,7 @@ func modalDFCSpellLand() *game.CardDef {
 			Name:     "Back Land",
 			Types:    []types.Card{types.Land},
 			Subtypes: []types.Sub{types.Forest},
-			ReplacementAbilities: []game.ReplacementAbilityBody{
+			ReplacementAbilities: []game.ReplacementAbility{
 				game.EntersTappedReplacement("This land enters tapped."),
 			},
 		}),
@@ -177,7 +177,7 @@ func transformCreature() *game.CardDef {
 func transformCreatureWithBackTrigger() *game.CardDef {
 	card := transformCreature()
 	back := card.Back.Val
-	back.TriggeredAbilities = []game.TriggeredAbilityBody{
+	back.TriggeredAbilities = []game.TriggeredAbility{
 		{
 			Trigger: game.TriggerCondition{
 				Type:    game.TriggerWhenever,

@@ -15,7 +15,7 @@ func madnessCostForCard(card *game.CardDef) (cost.Mana, bool) {
 	return card.MadnessCost()
 }
 
-func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.TriggeredAbilityBody, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	cardID := obj.SourceID
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {

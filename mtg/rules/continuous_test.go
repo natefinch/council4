@@ -228,7 +228,7 @@ func TestCopyEffectChangesEffectiveCombatKeywords(t *testing.T) {
 			Types:     []types.Card{types.Creature},
 			Power:     opt.Val(copyPower),
 			Toughness: opt.Val(copyPower),
-			Abilities: []game.AbilityBody{game.StaticAbilityBody{Text: "Flying", KeywordAbilities: game.SimpleKeywords(game.Flying)}},
+			Abilities: []game.Ability{game.StaticAbility{Text: "Flying", KeywordAbilities: game.SimpleKeywords(game.Flying)}},
 		}),
 	})
 
@@ -282,8 +282,8 @@ func TestAbilityLayerAddsTypedAbilityBody(t *testing.T) {
 		ID:               1,
 		AffectedObjectID: creature.ObjectID,
 		Layer:            game.LayerAbility,
-		AddAbilities: []game.AbilityBody{
-			game.ActivatedAbilityBody{
+		AddAbilities: []game.Ability{
+			game.ActivatedAbility{
 				Text: "{2}: This creature gets +1/+0 until end of turn.",
 				Content: game.Mode{
 					Sequence: []game.Instruction{
@@ -304,7 +304,7 @@ func TestAbilityLayerAddsTypedAbilityBody(t *testing.T) {
 	if len(values.abilities) != 1 {
 		t.Fatalf("abilities = %d, want 1", len(values.abilities))
 	}
-	if _, ok := values.abilities[0].(game.ActivatedAbilityBody); !ok {
+	if _, ok := values.abilities[0].(game.ActivatedAbility); !ok {
 		t.Fatalf("ability body = %T, want game.ActivatedAbilityBody", values.abilities[0])
 	}
 }
@@ -360,7 +360,7 @@ func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent 
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		StaticAbilities: []game.StaticAbilityBody{
+		StaticAbilities: []game.StaticAbility{
 			{
 				ContinuousEffects: []game.ContinuousEffect{
 					{

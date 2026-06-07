@@ -129,7 +129,7 @@ func TestActivatedAbilityInstructionSequenceResolves(t *testing.T) {
 		CardFace: game.CardFace{
 			Name:  "Typed Activated Ability",
 			Types: []types.Card{types.Creature},
-			ActivatedAbilities: []game.ActivatedAbilityBody{{
+			ActivatedAbilities: []game.ActivatedAbility{{
 				Content: game.Mode{
 					Sequence: []game.Instruction{{
 						Primitive: game.Draw{

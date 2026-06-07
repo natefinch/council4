@@ -449,7 +449,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		return false
 	}
 
-	if manaBody, ok := body.(game.ManaAbilityBody); ok && canActivateManaAbility(g, playerID, permanent, &manaBody, activate.AbilityIndex) {
+	if manaBody, ok := body.(game.ManaAbility); ok && canActivateManaAbility(g, playerID, permanent, &manaBody, activate.AbilityIndex) {
 		if len(activate.Targets) != 0 || activate.XValue != 0 {
 			return false
 		}
@@ -485,8 +485,8 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if !ok {
 		return false
 	}
-	activatedBody, activatedOK := body.(game.ActivatedAbilityBody)
-	loyaltyBody, loyaltyOK := body.(game.LoyaltyAbilityBody)
+	activatedBody, activatedOK := body.(game.ActivatedAbility)
+	loyaltyBody, loyaltyOK := body.(game.LoyaltyAbility)
 	if !activatedOK && !loyaltyOK {
 		return false
 	}
@@ -599,7 +599,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	return true
 }
 
-func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.LoyaltyAbilityBody, abilityIndex int, targets []game.Target, xValue int) bool {
+func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.LoyaltyAbility, abilityIndex int, targets []game.Target, xValue int) bool {
 	_ = abilityIndex
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
@@ -819,7 +819,7 @@ func costHasVariableMana(manaCost *cost.Mana) bool {
 	return false
 }
 
-func activatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.Permanent, game.AbilityBody, bool) {
+func activatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.Permanent, game.Ability, bool) {
 	if abilityIndex < 0 {
 		return nil, nil, false
 	}
@@ -838,48 +838,48 @@ func activatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 	return permanent, body, true
 }
 
-func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbilityBody, bool) {
+func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbility, bool) {
 	if abilityIndex < 0 {
-		return nil, game.ActivatedAbilityBody{}, false
+		return nil, game.ActivatedAbility{}, false
 	}
 
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Hand.Contains(sourceID) {
-		return nil, game.ActivatedAbilityBody{}, false
+		return nil, game.ActivatedAbility{}, false
 	}
 	card, ok := g.GetCardInstance(sourceID)
 	if !ok {
-		return nil, game.ActivatedAbilityBody{}, false
+		return nil, game.ActivatedAbility{}, false
 	}
 	frontDef := cardFaceOrDefault(card, game.FaceFront)
-	body, ok := frontDef.BodyAt(abilityIndex).(game.ActivatedAbilityBody)
+	body, ok := frontDef.BodyAt(abilityIndex).(game.ActivatedAbility)
 	if !ok {
-		return nil, game.ActivatedAbilityBody{}, false
+		return nil, game.ActivatedAbility{}, false
 	}
 	return card, body, true
 }
 
-func graveyardAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbilityBody, bool) {
+func graveyardAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbility, bool) {
 	if abilityIndex < 0 {
-		return nil, game.ActivatedAbilityBody{}, false
+		return nil, game.ActivatedAbility{}, false
 	}
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Graveyard.Contains(sourceID) {
-		return nil, game.ActivatedAbilityBody{}, false
+		return nil, game.ActivatedAbility{}, false
 	}
 	card, ok := g.GetCardInstance(sourceID)
 	if !ok {
-		return nil, game.ActivatedAbilityBody{}, false
+		return nil, game.ActivatedAbility{}, false
 	}
 	frontDef := cardFaceOrDefault(card, game.FaceFront)
-	body, ok := frontDef.BodyAt(abilityIndex).(game.ActivatedAbilityBody)
+	body, ok := frontDef.BodyAt(abilityIndex).(game.ActivatedAbility)
 	if !ok {
-		return nil, game.ActivatedAbilityBody{}, false
+		return nil, game.ActivatedAbility{}, false
 	}
 	return card, body, true
 }
 
-func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbilityBody, abilityIndex int, targets []game.Target, xValue int) bool {
+func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
@@ -909,7 +909,7 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
 }
 
-func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbilityBody, abilityIndex int, targets []game.Target, xValue int) bool {
+func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
@@ -936,7 +936,7 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 	})
 }
 
-func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbilityBody, abilityIndex int, targets []game.Target, xValue int) bool {
+func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -957,7 +957,7 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
 }
 
-func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbilityBody, abilityIndex int, targets []game.Target, xValue int) bool {
+func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -986,7 +986,7 @@ func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id
 	})
 }
 
-func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbilityBody, abilityIndex int) bool {
+func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbility, abilityIndex int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
@@ -1012,7 +1012,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
 }
 
-func manaBodyHasAddManaEffect(body *game.ManaAbilityBody) bool {
+func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
 	if body == nil {
 		return false
 	}
@@ -1039,7 +1039,7 @@ func manaBodyHasAddManaEffect(body *game.ManaAbilityBody) bool {
 	return false
 }
 
-func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, body *game.ManaAbilityBody) bool {
+func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, body *game.ManaAbility) bool {
 	if body == nil {
 		return false
 	}
@@ -1066,7 +1066,7 @@ func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, body *game.M
 	return true
 }
 
-func manaBodyInstructionSequence(body *game.ManaAbilityBody) ([]game.Instruction, bool) {
+func manaBodyInstructionSequence(body *game.ManaAbility) ([]game.Instruction, bool) {
 	if body == nil {
 		return nil, false
 	}

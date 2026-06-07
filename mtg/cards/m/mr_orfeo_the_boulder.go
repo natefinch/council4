@@ -35,7 +35,7 @@ var MrOrfeoTheBoulder = &game.CardDef{
 		OracleText: `
 			Whenever you attack, double target creature's power until end of turn.
 		`,
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Text: `
 					Whenever you attack, double target creature's power until end of turn.

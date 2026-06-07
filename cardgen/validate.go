@@ -142,11 +142,11 @@ func (v *cardValidator) validateFace(faceName, path string, face *game.CardFace,
 	}
 }
 
-func (v *cardValidator) validateAbilityBody(faceName, path string, body game.AbilityBody, targets []game.TargetSpec) {
+func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Ability, targets []game.TargetSpec) {
 	switch abilityBody := body.(type) {
-	case game.ModalAbilityContent:
+	case game.AbilityContent:
 		v.validateAbilityContent(faceName, path, abilityBody, targets)
-	case game.ActivatedAbilityBody:
+	case game.ActivatedAbility:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
@@ -154,19 +154,19 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
 		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
-	case game.ManaAbilityBody:
+	case game.ManaAbility:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
 		if len(abilityBody.Content.Modes) > 0 {
 			v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 		}
-	case game.LoyaltyAbilityBody:
+	case game.LoyaltyAbility:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
-	case game.TriggeredAbilityBody:
+	case game.TriggeredAbility:
 		if abilityBody.Trigger.InterveningCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "Trigger.InterveningCondition"), &abilityBody.Trigger.InterveningCondition.Val, targets)
 		}
@@ -174,7 +174,7 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
 		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
-	case game.StaticAbilityBody:
+	case game.StaticAbility:
 		if abilityBody.Condition.Exists {
 			v.validateCondition(faceName, appendPath(path, "Condition"), &abilityBody.Condition.Val, targets)
 		}
@@ -191,7 +191,7 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 	}
 }
 
-func (v *cardValidator) validateReplacementAbility(faceName, path string, ability *game.ReplacementAbilityBody) {
+func (v *cardValidator) validateReplacementAbility(faceName, path string, ability *game.ReplacementAbility) {
 	if ability == nil {
 		v.add(faceName, path, IssueInvalidAbilityBody, "replacement ability is nil")
 		return
@@ -201,7 +201,7 @@ func (v *cardValidator) validateReplacementAbility(faceName, path string, abilit
 	}
 }
 
-func (v *cardValidator) validateAbilityContent(faceName, path string, content game.ModalAbilityContent, fallbackTargets []game.TargetSpec) {
+func (v *cardValidator) validateAbilityContent(faceName, path string, content game.AbilityContent, fallbackTargets []game.TargetSpec) {
 	if len(content.Modes) == 0 {
 		v.add(faceName, path, IssueInvalidAbilityBody, "ability content has no modes")
 		return

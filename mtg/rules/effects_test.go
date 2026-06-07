@@ -62,7 +62,7 @@ func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 func TestModalResolutionUsesEachModesOwnTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	content := game.ModalAbilityContent{
+	content := game.AbilityContent{
 		Modes: []game.Mode{
 			{
 				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
@@ -105,7 +105,7 @@ func TestCantGainLifeRuleEffectStopsLifeGainAndLifelink(t *testing.T) {
 	engine := NewEngine(nil)
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "No Lifegain",
 		Types: []types.Card{types.Enchantment},
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			RuleEffects: []game.RuleEffect{{
 				Kind:           game.RuleEffectCantGainLife,
 				AffectedPlayer: game.PlayerAny,
@@ -462,7 +462,7 @@ func TestCommanderIdentityColorChoiceUnavailableWithoutColors(t *testing.T) {
 func commandTowerLikeLand() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Command Tower-like Land",
 		Types: []types.Card{types.Land},
-		ManaAbilities: []game.ManaAbilityBody{{
+		ManaAbilities: []game.ManaAbility{{
 			Text:            "{T}: Add one mana of any color in your commander's color identity.",
 			AdditionalCosts: cost.Tap,
 			Content: game.Mode{
@@ -642,7 +642,7 @@ func TestCounterEffectCannotCounterProtectedCreatureSpell(t *testing.T) {
 	engine := NewEngine(nil)
 	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Counter Shield",
 		Types: []types.Card{types.Enchantment},
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			RuleEffects: []game.RuleEffect{{
 				Kind:               game.RuleEffectCantBeCountered,
 				AffectedController: game.ControllerYou,
@@ -1583,7 +1583,7 @@ func TestCreateTokenPermanentAppliesReplacementAbilities(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
-		ReplacementAbilities: []game.ReplacementAbilityBody{
+		ReplacementAbilities: []game.ReplacementAbility{
 			game.EntersTappedReplacement("This token enters tapped."),
 			game.EntersWithCountersReplacement("This token enters with a +1/+1 counter.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 1}),
 		}},
@@ -1625,7 +1625,7 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 		Controller:   game.Player1,
 		AbilityIndex: 0,
 	})
-	g.CardInstances[sourceID].Def.ActivatedAbilities = []game.ActivatedAbilityBody{
+	g.CardInstances[sourceID].Def.ActivatedAbilities = []game.ActivatedAbility{
 		game.EternalizeActivatedBody(cost.Mana{cost.O(0)}, types.Snake, types.Druid),
 	}
 
@@ -1661,7 +1661,7 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 func TestCopyCardDefPreservesCategorizedAbilitiesWithoutDuplication(t *testing.T) {
 	source := &game.CardDef{CardFace: game.CardFace{
 		Name: "Categorized Source",
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			Text:             "Flying",
 			KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{Kind: game.Flying}},
 		}},
@@ -1679,7 +1679,7 @@ func TestCopyCardDefPreservesCategorizedAbilitiesWithoutDuplication(t *testing.T
 
 func TestClearCardFaceAbilitiesClearsCategorizedAbilities(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			Text:             "Flying",
 			KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{Kind: game.Flying}},
 		}},
@@ -1691,7 +1691,7 @@ func TestClearCardFaceAbilitiesClearsCategorizedAbilities(t *testing.T) {
 	if face.AbilityCount() != 0 {
 		t.Fatalf("abilities = %d, want categorized abilities cleared", face.AbilityCount())
 	}
-	face.StaticAbilities = []game.StaticAbilityBody{game.FlyingStaticBody}
+	face.StaticAbilities = []game.StaticAbility{game.FlyingStaticBody}
 	if !face.HasKeyword(game.Flying) {
 		t.Fatal("ability cache remained stale after clearing and adding a categorized ability")
 	}

@@ -22,7 +22,7 @@ type pendingTriggeredAbility struct {
 	targets      []game.Target
 	event        game.GameEvent
 	hasEvent     bool
-	inline       *game.TriggeredAbilityBody
+	inline       *game.TriggeredAbility
 	wardTargetID id.ID
 }
 
@@ -85,7 +85,7 @@ func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.GameE
 			sourceID:     event.CardID,
 			sourceCardID: event.CardID,
 			face:         game.FaceFront,
-			inline: &game.TriggeredAbilityBody{
+			inline: &game.TriggeredAbility{
 				Text:             "Madness",
 				KeywordAbilities: []game.KeywordAbility{game.MadnessKeyword{Cost: cost}},
 			},
@@ -159,7 +159,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 	var pending []pendingTriggeredAbility
 	controller := effectiveController(g, permanent)
 	for i, body := range permanentEffectiveAbilities(g, permanent) {
-		if triggered, ok := body.(game.TriggeredAbilityBody); ok {
+		if triggered, ok := body.(game.TriggeredAbility); ok {
 			trigger := &triggered.Trigger
 			if !triggerMatchesEvent(g, permanent, &trigger.Pattern, event) || !triggerInterveningIf(g, permanent, controller, trigger, &event) {
 				continue
@@ -177,7 +177,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 			})
 			continue
 		}
-		static, ok := body.(game.StaticAbilityBody)
+		static, ok := body.(game.StaticAbility)
 		if !ok || !game.BodyHasKeyword(static, game.Ward) {
 			continue
 		}
@@ -222,7 +222,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 	return pending
 }
 
-func wardTriggerForEvent(permanent *game.Permanent, controller game.PlayerID, wardBody *game.StaticAbilityBody, event game.GameEvent) (*game.TriggeredAbilityBody, bool) {
+func wardTriggerForEvent(permanent *game.Permanent, controller game.PlayerID, wardBody *game.StaticAbility, event game.GameEvent) (*game.TriggeredAbility, bool) {
 	if event.Kind != game.EventObjectBecameTarget || event.PermanentID != permanent.ObjectID || event.StackObjectID == 0 {
 		return nil, false
 	}
@@ -234,13 +234,13 @@ func wardTriggerForEvent(permanent *game.Permanent, controller game.PlayerID, wa
 	if !ok {
 		return nil, false
 	}
-	return &game.TriggeredAbilityBody{
+	return &game.TriggeredAbility{
 		Text:             "Ward",
 		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: ward.Cost}},
 	}, true
 }
 
-func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) (*game.TriggeredAbilityBody, bool) {
+func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) (*game.TriggeredAbility, bool) {
 	if event.Kind != game.EventSpellCast || event.Controller != controller || !hasKeyword(g, permanent, game.Prowess) {
 		return nil, false
 	}
@@ -253,7 +253,7 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		ToughnessDelta: game.Fixed(1),
 		Duration:       game.DurationUntilEndOfTurn,
 	}}
-	return &game.TriggeredAbilityBody{
+	return &game.TriggeredAbility{
 		Text: "Prowess",
 		Content: game.Mode{
 			Sequence: []game.Instruction{instr},
@@ -261,7 +261,7 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	}, true
 }
 
-func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) (*game.TriggeredAbilityBody, bool) {
+func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) (*game.TriggeredAbility, bool) {
 	if event.Kind != game.EventAttackerDeclared || event.Controller != controller || !hasKeyword(g, permanent, game.Exalted) {
 		return nil, false
 	}
@@ -274,7 +274,7 @@ func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		ToughnessDelta: game.Fixed(1),
 		Duration:       game.DurationUntilEndOfTurn,
 	}}
-	return &game.TriggeredAbilityBody{
+	return &game.TriggeredAbility{
 		Text: "Exalted",
 		Content: game.Mode{
 			Sequence: []game.Instruction{instr},
@@ -292,7 +292,7 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 	for _, permanent := range g.Battlefield {
 		controller := effectiveController(g, permanent)
 		for i, body := range permanentEffectiveAbilities(g, permanent) {
-			triggeredBody, ok := body.(game.TriggeredAbilityBody)
+			triggeredBody, ok := body.(game.TriggeredAbility)
 			if !ok {
 				continue
 			}
@@ -379,7 +379,7 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.GameEvent) (*game.Per
 	}, true
 }
 
-func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbilityBody, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
 	result := targetChoicesForBodyFromSourceObject(g, controller, source, sourceObjectID, *ability)
 	switch result.kind {
 	case targetNoLegalChoices, targetInvalidSpec:
@@ -738,7 +738,7 @@ func (e *Engine) preparePlayerTriggers(g *game.Game, playerID game.PlayerID, tri
 	return prepared
 }
 
-func pendingTriggerAbility(g *game.Game, trigger *pendingTriggeredAbility) (*game.TriggeredAbilityBody, bool) {
+func pendingTriggerAbility(g *game.Game, trigger *pendingTriggeredAbility) (*game.TriggeredAbility, bool) {
 	source, _ := pendingTriggerSourceDef(g, trigger)
 	return pendingTriggerAbilityFromDef(source, trigger)
 }
@@ -756,7 +756,7 @@ func pendingTriggerSourceDef(g *game.Game, trigger *pendingTriggeredAbility) (*g
 	return trigger.sourceToken.FaceDef(trigger.face)
 }
 
-func pendingTriggerAbilityFromDef(def *game.CardDef, trigger *pendingTriggeredAbility) (*game.TriggeredAbilityBody, bool) {
+func pendingTriggerAbilityFromDef(def *game.CardDef, trigger *pendingTriggeredAbility) (*game.TriggeredAbility, bool) {
 	if trigger.inline != nil {
 		return trigger.inline, true
 	}
@@ -764,7 +764,7 @@ func pendingTriggerAbilityFromDef(def *game.CardDef, trigger *pendingTriggeredAb
 		return nil, false
 	}
 	body := def.BodyAt(trigger.abilityIndex)
-	triggered, ok := body.(game.TriggeredAbilityBody)
+	triggered, ok := body.(game.TriggeredAbility)
 	if !ok {
 		return nil, false
 	}

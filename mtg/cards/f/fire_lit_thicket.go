@@ -26,7 +26,7 @@ var FireLitThicket = &game.CardDef{
 			{T}: Add {C}.
 			{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.
 		`,
-		ManaAbilities: []game.ManaAbilityBody{
+		ManaAbilities: []game.ManaAbility{
 			{
 				Text: `
 					{T}: Add {C}.
@@ -51,7 +51,7 @@ var FireLitThicket = &game.CardDef{
 					cost.HybridMana(mana.R, mana.G),
 				}),
 				AdditionalCosts: cost.Tap,
-				Content: game.ModalAbilityContent{
+				Content: game.AbilityContent{
 					Modes: []game.Mode{
 						game.Mode{
 							Text: "Add {R}{R}.",

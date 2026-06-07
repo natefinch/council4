@@ -263,7 +263,7 @@ func TestValidateCardChecksDoubleFacedRootFieldsAndBack(t *testing.T) {
 func TestValidateCardChecksStructuredConditionObjectReferences(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Bad Condition",
 		OracleText: "Whenever a creature dies, if it was targeted, draw a card.",
-		TriggeredAbilities: []game.TriggeredAbilityBody{{
+		TriggeredAbilities: []game.TriggeredAbility{{
 			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{MinTargets: 1, MaxTargets: 1},
@@ -292,7 +292,7 @@ func TestValidateCardChecksStructuredConditionObjectReferences(t *testing.T) {
 func TestValidateCardChecksEnchantTargetSpec(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Bad Aura",
 		OracleText: "Enchant creature",
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 				MinTargets: 2,
 				MaxTargets: 1,
@@ -310,7 +310,7 @@ func TestValidateCardChecksEnchantTargetSpec(t *testing.T) {
 func TestValidateCardAllowsSelectorOnlyContinuousEffects(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Static Haste",
 		OracleText: "Creatures you control have haste.",
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			ContinuousEffects: []game.ContinuousEffect{{
 				Layer:       game.LayerAbility,
 				Selector:    game.EffectSelectorCreaturesYouControl,
@@ -374,7 +374,7 @@ func TestValidateCardChecksKeywordAbilities(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			card := &game.CardDef{CardFace: game.CardFace{Name: "Keyword Card",
 				OracleText: "Keyword ability.",
-				StaticAbilities: []game.StaticAbilityBody{{
+				StaticAbilities: []game.StaticAbility{{
 					KeywordAbilities: []game.KeywordAbility{tt.ability},
 				}}},
 			}
@@ -403,7 +403,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 		},
 		{
 			name: "nested modal effect",
-			face: game.CardFace{SpellAbility: opt.Val(game.ModalAbilityContent{
+			face: game.CardFace{SpellAbility: opt.Val(game.AbilityContent{
 				Modes: []game.Mode{{
 					Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
 				}},
@@ -412,14 +412,14 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 		},
 		{
 			name: "static keyword",
-			face: game.CardFace{StaticAbilities: []game.StaticAbilityBody{{
+			face: game.CardFace{StaticAbilities: []game.StaticAbility{{
 				KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{}},
 			}}},
 			code: IssueInvalidKeywordAbility,
 		},
 		{
 			name: "activated keyword",
-			face: game.CardFace{ActivatedAbilities: []game.ActivatedAbilityBody{{
+			face: game.CardFace{ActivatedAbilities: []game.ActivatedAbility{{
 				KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{}},
 				Content:          game.Mode{}.Ability(),
 			}}},
@@ -427,7 +427,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 		},
 		{
 			name: "triggered keyword",
-			face: game.CardFace{TriggeredAbilities: []game.TriggeredAbilityBody{{
+			face: game.CardFace{TriggeredAbilities: []game.TriggeredAbility{{
 				KeywordAbilities: []game.KeywordAbility{game.WardKeyword{}},
 				Content:          game.Mode{}.Ability(),
 			}}},
@@ -435,7 +435,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 		},
 		{
 			name: "trigger intervening condition",
-			face: game.CardFace{TriggeredAbilities: []game.TriggeredAbilityBody{{
+			face: game.CardFace{TriggeredAbilities: []game.TriggeredAbility{{
 				Trigger: game.TriggerCondition{
 					InterveningCondition: opt.Val(game.Condition{
 						Object: opt.Val(game.ObjectReference{
@@ -450,7 +450,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 		},
 		{
 			name: "nil content",
-			face: game.CardFace{SpellAbility: opt.Val(game.ModalAbilityContent{})},
+			face: game.CardFace{SpellAbility: opt.Val(game.AbilityContent{})},
 			code: IssueInvalidAbilityBody,
 		},
 	}

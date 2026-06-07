@@ -64,7 +64,7 @@ var basicLandTypes = []struct {
 	{subtype: types.Forest, color: mana.G},
 }
 
-func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.ManaAbilityBody, bool) {
+func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.ManaAbility, bool) {
 	card, ok := s.PermanentCardDef(permanent)
 	if !ok {
 		return 0, nil, false
@@ -91,12 +91,12 @@ func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Perma
 	return 0, nil, false
 }
 
-func isSimpleAddMana(body *game.ManaAbilityBody) bool {
+func isSimpleAddMana(body *game.ManaAbility) bool {
 	_, ok := simpleAddMana(body)
 	return ok
 }
 
-func simpleAddMana(body *game.ManaAbilityBody) (game.AddMana, bool) {
+func simpleAddMana(body *game.ManaAbility) (game.AddMana, bool) {
 	if len(body.Content.Modes) == 0 || body.Content.IsModal() {
 		return game.AddMana{}, false
 	}

@@ -95,13 +95,13 @@ type CardFace struct {
 
 	// SpellAbility is the resolving content of this face when cast as a spell.
 	// Its rules text is OracleText.
-	SpellAbility         opt.V[ModalAbilityContent]
-	ActivatedAbilities   []ActivatedAbilityBody
-	ManaAbilities        []ManaAbilityBody
-	LoyaltyAbilities     []LoyaltyAbilityBody
-	TriggeredAbilities   []TriggeredAbilityBody
-	ReplacementAbilities []ReplacementAbilityBody
-	StaticAbilities      []StaticAbilityBody
+	SpellAbility         opt.V[AbilityContent]
+	ActivatedAbilities   []ActivatedAbility
+	ManaAbilities        []ManaAbility
+	LoyaltyAbilities     []LoyaltyAbility
+	TriggeredAbilities   []TriggeredAbility
+	ReplacementAbilities []ReplacementAbility
+	StaticAbilities      []StaticAbility
 
 	ImplementationID string
 	OracleText       string
@@ -335,7 +335,7 @@ func (f *CardFace) TriggeredAbilityIndex(index int) int {
 // BodyAt returns the ability body at the given canonical index. The canonical
 // order is: Spell (if present), Activated, Mana, Loyalty, Triggered,
 // Replacement, Static. Returns nil for out-of-range indexes.
-func (f *CardFace) BodyAt(index int) AbilityBody {
+func (f *CardFace) BodyAt(index int) Ability {
 	if index < 0 {
 		return nil
 	}
@@ -416,7 +416,7 @@ func (f *CardFace) MadnessCost() (cost.Mana, bool) {
 
 // ClearAbilities removes every categorized ability from this face.
 func (f *CardFace) ClearAbilities() {
-	f.SpellAbility = opt.V[ModalAbilityContent]{}
+	f.SpellAbility = opt.V[AbilityContent]{}
 	f.ActivatedAbilities = nil
 	f.ManaAbilities = nil
 	f.LoyaltyAbilities = nil
@@ -470,12 +470,12 @@ func (f *CardFace) clone() CardFace {
 		Loyalty:              f.Loyalty,
 		Defense:              f.Defense,
 		SpellAbility:         f.SpellAbility,
-		ActivatedAbilities:   append([]ActivatedAbilityBody(nil), f.ActivatedAbilities...),
-		ManaAbilities:        append([]ManaAbilityBody(nil), f.ManaAbilities...),
-		LoyaltyAbilities:     append([]LoyaltyAbilityBody(nil), f.LoyaltyAbilities...),
-		TriggeredAbilities:   append([]TriggeredAbilityBody(nil), f.TriggeredAbilities...),
-		ReplacementAbilities: append([]ReplacementAbilityBody(nil), f.ReplacementAbilities...),
-		StaticAbilities:      append([]StaticAbilityBody(nil), f.StaticAbilities...),
+		ActivatedAbilities:   append([]ActivatedAbility(nil), f.ActivatedAbilities...),
+		ManaAbilities:        append([]ManaAbility(nil), f.ManaAbilities...),
+		LoyaltyAbilities:     append([]LoyaltyAbility(nil), f.LoyaltyAbilities...),
+		TriggeredAbilities:   append([]TriggeredAbility(nil), f.TriggeredAbilities...),
+		ReplacementAbilities: append([]ReplacementAbility(nil), f.ReplacementAbilities...),
+		StaticAbilities:      append([]StaticAbility(nil), f.StaticAbilities...),
 		ImplementationID:     f.ImplementationID,
 		OracleText:           f.OracleText,
 	}

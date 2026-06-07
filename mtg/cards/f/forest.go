@@ -25,7 +25,7 @@ var Forest = &game.CardDef{
 		OracleText: `
 			({T}: Add {G}.)
 		`,
-		ManaAbilities: []game.ManaAbilityBody{
+		ManaAbilities: []game.ManaAbility{
 			{
 				Text: `
 					{T}: Add {G}.

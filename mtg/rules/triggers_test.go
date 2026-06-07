@@ -73,7 +73,7 @@ func TestInlineTriggeredAbilityRechecksProtectionFromSource(t *testing.T) {
 		Colors: []color.Color{color.Red},
 	}})
 	target := addProtectionFromColorPermanent(g, game.Player2, color.Red)
-	trigger := game.TriggeredAbilityBody{
+	trigger := game.TriggeredAbility{
 		Content: game.Mode{
 			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
 			Sequence: []game.Instruction{{
@@ -235,7 +235,7 @@ func TestExaltedTriggersForCreatureAttackingAlone(t *testing.T) {
 		Types:           []types.Card{types.Creature},
 		Power:           opt.Val(game.PT{Value: 0}),
 		Toughness:       opt.Val(game.PT{Value: 1}),
-		StaticAbilities: []game.StaticAbilityBody{game.ExaltedStaticBody}},
+		StaticAbilities: []game.StaticAbility{game.ExaltedStaticBody}},
 	})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	g.Combat = &game.CombatState{
@@ -264,7 +264,7 @@ func TestExaltedDoesNotTriggerForMultipleAttackers(t *testing.T) {
 		Types:           []types.Card{types.Creature},
 		Power:           opt.Val(game.PT{Value: 0}),
 		Toughness:       opt.Val(game.PT{Value: 1}),
-		StaticAbilities: []game.StaticAbilityBody{game.ExaltedStaticBody}},
+		StaticAbilities: []game.StaticAbility{game.ExaltedStaticBody}},
 	})
 	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
@@ -1299,7 +1299,7 @@ func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, 
 func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *game.Permanent {
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Counter Transfer Source",
 		Types: []types.Card{types.Enchantment},
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{Event: game.EventZoneChanged, Controller: game.TriggerControllerYou, RequirePermanentTypes: []types.Card{types.Artifact}, MatchFromZone: true, FromZone: zone.Battlefield, MatchToZone: true, ToZone: zone.Graveyard}, InterveningIf: "it had counters on it", InterveningIfEventPermanentHadCounters: true},
 				Content: game.Mode{
@@ -1364,7 +1364,7 @@ func triggeredCreature(pattern game.TriggerPattern, instructions []game.Instruct
 		ManaCost:  greenCost(),
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: pattern},
 				Content: game.Mode{

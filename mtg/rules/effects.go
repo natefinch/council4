@@ -35,7 +35,7 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	}
 }
 
-func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackObject, content game.ModalAbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackObject, content game.AbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	if len(content.Modes) == 0 {
 		return
 	}
@@ -60,7 +60,7 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 	}
 }
 
-func targetsForChosenMode(content game.ModalAbilityContent, obj *game.StackObject, allTargets []game.Target, chosenIndex int) []game.Target {
+func targetsForChosenMode(content game.AbilityContent, obj *game.StackObject, allTargets []game.Target, chosenIndex int) []game.Target {
 	if len(obj.ChosenModes) == 1 {
 		return allTargets
 	}
@@ -117,7 +117,7 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 	return card.KickerKeyword()
 }
 
-func firstSpellAbility(card *game.CardDef) (*game.ModalAbilityContent, bool) {
+func firstSpellAbility(card *game.CardDef) (*game.AbilityContent, bool) {
 	if card != nil && card.SpellAbility.Exists {
 		return &card.SpellAbility.Val, true
 	}
@@ -357,12 +357,12 @@ func copyCardFace(source *game.CardFace) game.CardFace {
 
 func copyCardFaceAbilityFields(dst, src *game.CardFace) {
 	dst.SpellAbility = src.SpellAbility
-	dst.ActivatedAbilities = append([]game.ActivatedAbilityBody(nil), src.ActivatedAbilities...)
-	dst.ManaAbilities = append([]game.ManaAbilityBody(nil), src.ManaAbilities...)
-	dst.LoyaltyAbilities = append([]game.LoyaltyAbilityBody(nil), src.LoyaltyAbilities...)
-	dst.TriggeredAbilities = append([]game.TriggeredAbilityBody(nil), src.TriggeredAbilities...)
-	dst.ReplacementAbilities = append([]game.ReplacementAbilityBody(nil), src.ReplacementAbilities...)
-	dst.StaticAbilities = append([]game.StaticAbilityBody(nil), src.StaticAbilities...)
+	dst.ActivatedAbilities = append([]game.ActivatedAbility(nil), src.ActivatedAbilities...)
+	dst.ManaAbilities = append([]game.ManaAbility(nil), src.ManaAbilities...)
+	dst.LoyaltyAbilities = append([]game.LoyaltyAbility(nil), src.LoyaltyAbilities...)
+	dst.TriggeredAbilities = append([]game.TriggeredAbility(nil), src.TriggeredAbilities...)
+	dst.ReplacementAbilities = append([]game.ReplacementAbility(nil), src.ReplacementAbilities...)
+	dst.StaticAbilities = append([]game.StaticAbility(nil), src.StaticAbilities...)
 }
 
 func clearCardFaceAbilities(face *game.CardFace) {

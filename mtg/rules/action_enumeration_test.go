@@ -78,7 +78,7 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Targeting Rod",
 					Types: []types.Card{types.Artifact},
-					ActivatedAbilities: []game.ActivatedAbilityBody{{
+					ActivatedAbilities: []game.ActivatedAbility{{
 						Content: game.Mode{
 							Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
 							Sequence: []game.Instruction{{Primitive: game.Damage{Recipient: game.TargetRecipient(0), Amount: game.Fixed(1)}}},
@@ -295,7 +295,7 @@ func intList(values []int) string {
 func noCostSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "No Cost Spell",
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	}
 }
 
@@ -303,7 +303,7 @@ func zeroCostSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Zero Cost Spell",
 		ManaCost:     opt.Val(cost.Mana{cost.O(0)}),
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	}
 }
 
@@ -311,15 +311,15 @@ func xSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization X Spell",
 		ManaCost:     opt.Val(cost.Mana{cost.X, cost.G}),
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{})},
+		SpellAbility: opt.Val(game.AbilityContent{})},
 	}
 }
 
 func characterizationKickerSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Kicker",
 		Types:        []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.ModalAbilityContent{}),
-		StaticAbilities: []game.StaticAbilityBody{{
+		SpellAbility: opt.Val(game.AbilityContent{}),
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: greenCost().Val}},
 		}}},
 	}
@@ -349,7 +349,7 @@ func additionalCostSpell(name string, additionalCost cost.Additional) *game.Card
 	return &game.CardDef{CardFace: game.CardFace{Name: name,
 		Types:           []types.Card{types.Sorcery},
 		AdditionalCosts: []cost.Additional{additionalCost},
-		SpellAbility:    opt.Val(game.ModalAbilityContent{})},
+		SpellAbility:    opt.Val(game.AbilityContent{})},
 	}
 }
 
@@ -370,8 +370,8 @@ func flashbackSpell() *game.CardDef {
 			Label:    flashbackAlternativeLabel,
 			ManaCost: greenCost(),
 		}},
-		SpellAbility: opt.Val(game.ModalAbilityContent{}),
-		StaticAbilities: []game.StaticAbilityBody{{
+		SpellAbility: opt.Val(game.AbilityContent{}),
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: game.SimpleKeywords(game.Flashback),
 		}}},
 	}

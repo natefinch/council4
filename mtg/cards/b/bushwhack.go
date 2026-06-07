@@ -34,7 +34,7 @@ var Bushwhack = &game.CardDef{
 			• Search your library for a basic land card, reveal it, put it into your hand, then shuffle.
 			• Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)
 		`,
-		SpellAbility: opt.Val(game.ModalAbilityContent{
+		SpellAbility: opt.Val(game.AbilityContent{
 			Modes: []game.Mode{
 				{
 					Text: "Search your library for a basic land card, reveal it, put it into your hand, then shuffle.",

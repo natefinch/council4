@@ -261,7 +261,7 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Taxed Creature", Types: []types.Card{types.Creature}, ManaCost: opt.Val(manaCost)}}
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Spell Tax",
 		Types: []types.Card{types.Enchantment},
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			RuleEffects: []game.RuleEffect{{
 				Kind: game.RuleEffectCostModifier,
 				CostModifier: game.CostModifier{
@@ -581,7 +581,7 @@ func addSnowBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype t
 }
 
 func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef, m mana.Color, amount int) *game.Permanent {
-	def.ManaAbilities = append(def.ManaAbilities, game.ManaAbilityBody{
+	def.ManaAbilities = append(def.ManaAbilities, game.ManaAbility{
 		AdditionalCosts: cost.Tap,
 		Content: game.Mode{
 			Sequence: []game.Instruction{

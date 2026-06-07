@@ -38,7 +38,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 			+1: Add {R} or {G}. Creature spells you cast this turn can't be countered.
 			−2: Target creature you control fights target creature you don't control.
 		`,
-		StaticAbilities: []game.StaticAbilityBody{
+		StaticAbilities: []game.StaticAbility{
 			{
 				Text: `
 					Creatures you control get +1/+0.
@@ -52,7 +52,7 @@ var DomriAnarchOfBolas = &game.CardDef{
 				},
 			},
 		},
-		LoyaltyAbilities: []game.LoyaltyAbilityBody{
+		LoyaltyAbilities: []game.LoyaltyAbility{
 			{
 				Text: `
 					+1: Add {R} or {G}. Creature spells you cast this turn can't be countered.

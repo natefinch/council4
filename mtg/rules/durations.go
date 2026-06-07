@@ -62,7 +62,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
-	ability := game.TriggeredAbilityBody{
+	ability := game.TriggeredAbility{
 		Optional: def.Optional,
 		Content:  def.Content,
 	}

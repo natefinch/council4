@@ -54,7 +54,7 @@ var HazoretGodseeker = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Start your engines!
 			`,
@@ -78,7 +78,7 @@ var HazoretGodseeker = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				{1}, {T}: Target creature with power 2 or less can't be blocked this turn.
 			`,
@@ -121,7 +121,7 @@ var HazoretGodseeker = func() *game.CardDef {
 		},
 	)
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Hazoret can't attack or block unless you have max speed.
 			`,

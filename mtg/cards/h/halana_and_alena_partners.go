@@ -53,7 +53,7 @@ var HalanaAndAlenaPartners = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				At the beginning of combat on your turn, put X +1/+1 counters on another target creature you control, where X is Halana and Alena's power. That creature gains haste until end of turn.
 			`,

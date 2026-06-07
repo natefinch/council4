@@ -41,6 +41,6 @@ var BirdsOfParadise = func() *game.CardDef {
 		game.FlyingStaticBody,
 	)
 
-	card.ManaAbilities = []game.ManaAbilityBody{common.TapForOneOfAny("birds-color")}
+	card.ManaAbilities = []game.ManaAbility{common.TapForOneOfAny("birds-color")}
 	return card
 }()

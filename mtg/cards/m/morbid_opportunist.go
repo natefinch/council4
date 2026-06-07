@@ -32,7 +32,7 @@ var MorbidOpportunist = &game.CardDef{
 		OracleText: `
 			Whenever one or more other creatures die, draw a card. This ability triggers only once each turn.
 		`,
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Text: `
 					Whenever one or more other creatures die, draw a card. This ability triggers only once each turn.

@@ -39,7 +39,7 @@ var Fiendlash = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Equipped creature gets +2/+0 and has reach.
 			`,
@@ -61,7 +61,7 @@ var Fiendlash = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever equipped creature is dealt damage, it deals damage equal to its power to target player or planeswalker.
 			`,
@@ -110,7 +110,7 @@ var Fiendlash = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				Equip {2}{R}
 			`,

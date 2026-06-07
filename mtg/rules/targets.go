@@ -44,15 +44,15 @@ func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.Ca
 	return targetChoicesForSpecs(g, controller, card, 0, specs)
 }
 
-func targetChoicesForBody(g *game.Game, controller game.PlayerID, body game.AbilityBody) targetChoiceResult {
+func targetChoicesForBody(g *game.Game, controller game.PlayerID, body game.Ability) targetChoiceResult {
 	return targetChoicesForBodyFromSource(g, controller, nil, body)
 }
 
-func targetChoicesForBodyFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, body game.AbilityBody) targetChoiceResult {
+func targetChoicesForBodyFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, body game.Ability) targetChoiceResult {
 	return targetChoicesForBodyFromSourceObject(g, controller, source, 0, body)
 }
 
-func targetChoicesForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.AbilityBody) targetChoiceResult {
+func targetChoicesForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability) targetChoiceResult {
 	if body == nil {
 		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}}
 	}
@@ -182,15 +182,15 @@ func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.Car
 	return targetsValidForSpecs(g, controller, card, 0, specs, targets)
 }
 
-func targetsValidForBody(g *game.Game, controller game.PlayerID, body game.AbilityBody, targets []game.Target) bool {
+func targetsValidForBody(g *game.Game, controller game.PlayerID, body game.Ability, targets []game.Target) bool {
 	return targetsValidForBodyFromSource(g, controller, nil, body, targets)
 }
 
-func targetsValidForBodyFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, body game.AbilityBody, targets []game.Target) bool {
+func targetsValidForBodyFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, body game.Ability, targets []game.Target) bool {
 	return targetsValidForBodyFromSourceObject(g, controller, source, 0, body, targets)
 }
 
-func targetsValidForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.AbilityBody, targets []game.Target) bool {
+func targetsValidForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target) bool {
 	if body == nil {
 		return len(targets) == 0
 	}
@@ -266,15 +266,15 @@ func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, controller game.P
 	return hasAnyLegalTargetForSpecs(g, controller, card, 0, specs, targets)
 }
 
-func bodyHasAnyLegalTargets(g *game.Game, body game.AbilityBody, controller game.PlayerID, targets []game.Target) bool {
+func bodyHasAnyLegalTargets(g *game.Game, body game.Ability, controller game.PlayerID, targets []game.Target) bool {
 	return bodyHasAnyLegalTargetsFromSource(g, nil, body, controller, targets)
 }
 
-func bodyHasAnyLegalTargetsFromSource(g *game.Game, source *game.CardDef, body game.AbilityBody, controller game.PlayerID, targets []game.Target) bool {
+func bodyHasAnyLegalTargetsFromSource(g *game.Game, source *game.CardDef, body game.Ability, controller game.PlayerID, targets []game.Target) bool {
 	return bodyHasAnyLegalTargetsFromSourceObject(g, source, 0, body, controller, targets)
 }
 
-func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.AbilityBody, controller game.PlayerID, targets []game.Target) bool {
+func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.Ability, controller game.PlayerID, targets []game.Target) bool {
 	if body == nil {
 		return len(targets) == 0
 	}
@@ -292,7 +292,7 @@ func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.
 	return e.completeAnnouncementTargets(g, controller, card, 0, spellTargetSpecs(card, chosenModes), targets, agents, log)
 }
 
-func (e *Engine) completeAbilityAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.AbilityBody, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+func (e *Engine) completeAbilityAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
 	if body == nil {
 		return targets, len(targets) == 0
 	}
@@ -438,14 +438,14 @@ func modeChoicesForSpell(card *game.CardDef) [][]int {
 	return modeChoicesForContent(*ability)
 }
 
-func modeChoicesForBody(body game.AbilityBody) [][]int {
+func modeChoicesForBody(body game.Ability) [][]int {
 	if body == nil {
 		return [][]int{nil}
 	}
 	return modeChoicesForContent(game.BodyContent(body))
 }
 
-func modeChoicesForContent(content game.ModalAbilityContent) [][]int {
+func modeChoicesForContent(content game.AbilityContent) [][]int {
 	if len(content.Modes) == 0 || !content.IsModal() {
 		return [][]int{nil}
 	}
@@ -473,14 +473,14 @@ func modesValidForSpell(card *game.CardDef, chosenModes []int) bool {
 	return modesValidForContent(*ability, chosenModes)
 }
 
-func modesValidForBody(body game.AbilityBody, chosenModes []int) bool {
+func modesValidForBody(body game.Ability, chosenModes []int) bool {
 	if body == nil {
 		return len(chosenModes) == 0
 	}
 	return modesValidForContent(game.BodyContent(body), chosenModes)
 }
 
-func modesValidForContent(content game.ModalAbilityContent, chosenModes []int) bool {
+func modesValidForContent(content game.AbilityContent, chosenModes []int) bool {
 	if len(content.Modes) == 0 || !content.IsModal() {
 		return len(chosenModes) == 0
 	}
@@ -511,7 +511,7 @@ func modesValidForContent(content game.ModalAbilityContent, chosenModes []int) b
 	return true
 }
 
-func modeChoiceRangeFromContent(content game.ModalAbilityContent) (minModes, maxModes int) {
+func modeChoiceRangeFromContent(content game.AbilityContent) (minModes, maxModes int) {
 	if len(content.Modes) == 0 {
 		return 0, 0
 	}

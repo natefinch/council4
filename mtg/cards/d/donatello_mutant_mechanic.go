@@ -37,7 +37,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 			{T}: Put three +1/+1 counters on target artifact you control. If it isn't a creature, it becomes a 0/0 Robot creature in addition to its other types. Activate only as a sorcery.
 			Whenever an artifact you control is put into a graveyard from the battlefield, if it had counters on it, put those counters on up to one target artifact or creature you control.
 		`,
-		ActivatedAbilities: []game.ActivatedAbilityBody{
+		ActivatedAbilities: []game.ActivatedAbility{
 			{
 				Text: `
 					{T}: Put three +1/+1 counters on target artifact you control. If it isn't a creature, it becomes a 0/0 Robot creature in addition to its other types. Activate only as a sorcery.
@@ -96,7 +96,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 				}.Ability(),
 			},
 		},
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Text: `
 					Whenever an artifact you control is put into a graveyard from the battlefield, if it had counters on it, put those counters on up to one target artifact or creature you control.

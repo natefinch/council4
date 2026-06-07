@@ -6,15 +6,15 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// AbilityBody is a sealed data-only variant for how an ability functions.
-type AbilityBody interface {
-	isAbilityBody()
+// Ability is a sealed data-only variant for how an ability functions.
+type Ability interface {
+	isAbility()
 }
 
-// ModalAbilityContent is an ability's target and instruction content. Ordinary
+// AbilityContent is an ability's target and instruction content. Ordinary
 // non-modal abilities contain one required mode; modal abilities contain a
 // choice among multiple modes or use a mode range other than exactly one.
-type ModalAbilityContent struct {
+type AbilityContent struct {
 	SharedTargets       []TargetSpec
 	Modes               []Mode
 	MinModes            int
@@ -24,12 +24,12 @@ type ModalAbilityContent struct {
 
 // IsModal reports whether the content requires a mode choice. Exactly one mode
 // with a minimum and maximum of one is ordinary non-modal content.
-func (m ModalAbilityContent) IsModal() bool {
+func (m AbilityContent) IsModal() bool {
 	return len(m.Modes) != 1 || m.MinModes != 1 || m.MaxModes != 1
 }
 
-// ActivatedAbilityBody is a non-mana, non-loyalty activated ability.
-type ActivatedAbilityBody struct {
+// ActivatedAbility is a non-mana, non-loyalty activated ability.
+type ActivatedAbility struct {
 	Text                string
 	ManaCost            opt.V[cost.Mana]
 	AdditionalCosts     []cost.Additional
@@ -37,15 +37,15 @@ type ActivatedAbilityBody struct {
 	ZoneOfFunction      zone.Type
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
-	Content             ModalAbilityContent
+	Content             AbilityContent
 	// KeywordAbilities lists keyword abilities carried by this activation, e.g.
 	// EquipKeyword for equip activations. Rules use it for keyword dispatch and
 	// cost routing without inspecting Content.
 	KeywordAbilities []KeywordAbility
 }
 
-// ManaAbilityBody is an activated mana ability.
-type ManaAbilityBody struct {
+// ManaAbility is an activated mana ability.
+type ManaAbility struct {
 	Text                string
 	ManaCost            opt.V[cost.Mana]
 	AdditionalCosts     []cost.Additional
@@ -53,19 +53,19 @@ type ManaAbilityBody struct {
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]
 	// Content is the mana output.
-	Content ModalAbilityContent
+	Content AbilityContent
 }
 
-// LoyaltyAbilityBody is a planeswalker loyalty ability.
-type LoyaltyAbilityBody struct {
+// LoyaltyAbility is a planeswalker loyalty ability.
+type LoyaltyAbility struct {
 	Text                string
 	LoyaltyCost         int
 	ActivationCondition opt.V[Condition]
-	Content             ModalAbilityContent
+	Content             AbilityContent
 }
 
-// TriggeredAbilityBody is an ability that triggers from a game event or state.
-type TriggeredAbilityBody struct {
+// TriggeredAbility is an ability that triggers from a game event or state.
+type TriggeredAbility struct {
 	Text               string
 	Trigger            TriggerCondition
 	Optional           bool
@@ -74,11 +74,11 @@ type TriggeredAbilityBody struct {
 	// e.g. WardKeyword for ward triggers. Rules use it for keyword dispatch without
 	// inspecting Content.
 	KeywordAbilities []KeywordAbility
-	Content          ModalAbilityContent
+	Content          AbilityContent
 }
 
-// StaticAbilityBody is a static ability that functions from a zone.
-type StaticAbilityBody struct {
+// StaticAbility is a static ability that functions from a zone.
+type StaticAbility struct {
 	Text              string
 	Condition         opt.V[Condition]
 	ZoneOfFunction    zone.Type
@@ -87,34 +87,34 @@ type StaticAbilityBody struct {
 	RuleEffects       []RuleEffect
 }
 
-// ReplacementAbilityBody is a replacement/prevention ability on a printed face.
-type ReplacementAbilityBody struct {
+// ReplacementAbility is a replacement/prevention ability on a printed face.
+type ReplacementAbility struct {
 	Text        string
 	Replacement ReplacementEffect
 	UnlessPaid  opt.V[ResolutionPayment]
 }
 
 // EntersTappedReplacement creates a replacement ability for "enters tapped".
-func EntersTappedReplacement(text string) ReplacementAbilityBody {
+func EntersTappedReplacement(text string) ReplacementAbility {
 	replacement := etbReplacement(text)
 	replacement.EntersTapped = true
-	return ReplacementAbilityBody{Text: text, Replacement: replacement}
+	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
 // EntersTappedIfReplacement creates a conditional "enters tapped" replacement.
-func EntersTappedIfReplacement(text string, condition *Condition) ReplacementAbilityBody {
+func EntersTappedIfReplacement(text string, condition *Condition) ReplacementAbility {
 	replacement := etbReplacement(text)
 	replacement.Condition = opt.Val(*condition)
 	replacement.EntersTapped = true
-	return ReplacementAbilityBody{Text: text, Replacement: replacement}
+	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
 // EntersTappedUnlessPaidReplacement creates an ETB payment replacement. If the
 // payment is not paid, the permanent enters tapped.
-func EntersTappedUnlessPaidReplacement(text string, payment ResolutionPayment) ReplacementAbilityBody {
+func EntersTappedUnlessPaidReplacement(text string, payment ResolutionPayment) ReplacementAbility {
 	replacement := etbReplacement(text)
 	replacement.EntersTapped = true
-	return ReplacementAbilityBody{
+	return ReplacementAbility{
 		Text:        text,
 		Replacement: replacement,
 		UnlessPaid:  opt.Val(payment),
@@ -122,10 +122,10 @@ func EntersTappedUnlessPaidReplacement(text string, payment ResolutionPayment) R
 }
 
 // EntersWithCountersReplacement creates an ETB counter-placement replacement.
-func EntersWithCountersReplacement(text string, placements ...CounterPlacement) ReplacementAbilityBody {
+func EntersWithCountersReplacement(text string, placements ...CounterPlacement) ReplacementAbility {
 	replacement := etbReplacement(text)
 	replacement.EntersWithCounters = append([]CounterPlacement(nil), placements...)
-	return ReplacementAbilityBody{Text: text, Replacement: replacement}
+	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
 func etbReplacement(text string) ReplacementEffect {
@@ -138,60 +138,60 @@ func etbReplacement(text string) ReplacementEffect {
 	}
 }
 
-func (ModalAbilityContent) isAbilityBody()    {}
-func (ActivatedAbilityBody) isAbilityBody()   {}
-func (ManaAbilityBody) isAbilityBody()        {}
-func (LoyaltyAbilityBody) isAbilityBody()     {}
-func (TriggeredAbilityBody) isAbilityBody()   {}
-func (ReplacementAbilityBody) isAbilityBody() {}
-func (StaticAbilityBody) isAbilityBody()      {}
+func (AbilityContent) isAbility()     {}
+func (ActivatedAbility) isAbility()   {}
+func (ManaAbility) isAbility()        {}
+func (LoyaltyAbility) isAbility()     {}
+func (TriggeredAbility) isAbility()   {}
+func (ReplacementAbility) isAbility() {}
+func (StaticAbility) isAbility()      {}
 
 // BodyContent returns the content of a sealed ability body.
-func BodyContent(body AbilityBody) ModalAbilityContent {
+func BodyContent(body Ability) AbilityContent {
 	switch b := body.(type) {
-	case ModalAbilityContent:
+	case AbilityContent:
 		return b
-	case *ModalAbilityContent:
+	case *AbilityContent:
 		if b == nil {
-			return ModalAbilityContent{}
+			return AbilityContent{}
 		}
 		return *b
-	case ActivatedAbilityBody:
+	case ActivatedAbility:
 		return b.Content
-	case *ActivatedAbilityBody:
+	case *ActivatedAbility:
 		if b == nil {
-			return ModalAbilityContent{}
+			return AbilityContent{}
 		}
 		return b.Content
-	case ManaAbilityBody:
+	case ManaAbility:
 		return b.Content
-	case *ManaAbilityBody:
+	case *ManaAbility:
 		if b == nil {
-			return ModalAbilityContent{}
+			return AbilityContent{}
 		}
 		return b.Content
-	case LoyaltyAbilityBody:
+	case LoyaltyAbility:
 		return b.Content
-	case *LoyaltyAbilityBody:
+	case *LoyaltyAbility:
 		if b == nil {
-			return ModalAbilityContent{}
+			return AbilityContent{}
 		}
 		return b.Content
-	case TriggeredAbilityBody:
+	case TriggeredAbility:
 		return b.Content
-	case *TriggeredAbilityBody:
+	case *TriggeredAbility:
 		if b == nil {
-			return ModalAbilityContent{}
+			return AbilityContent{}
 		}
 		return b.Content
 	default:
-		return ModalAbilityContent{}
+		return AbilityContent{}
 	}
 }
 
 // BodyTargets returns the target specs for a sealed ability body's content.
 // Non-modal content uses its sole mode's targets; modal content uses shared targets.
-func BodyTargets(body AbilityBody) []TargetSpec {
+func BodyTargets(body Ability) []TargetSpec {
 	content := BodyContent(body)
 	if len(content.Modes) == 1 && !content.IsModal() {
 		targets := append([]TargetSpec(nil), content.SharedTargets...)
@@ -201,25 +201,25 @@ func BodyTargets(body AbilityBody) []TargetSpec {
 }
 
 // BodyFunctionZone returns the zone where the body functions, if it has one.
-func BodyFunctionZone(body AbilityBody) zone.Type {
+func BodyFunctionZone(body Ability) zone.Type {
 	switch b := body.(type) {
-	case StaticAbilityBody:
+	case StaticAbility:
 		return b.ZoneOfFunction
-	case *StaticAbilityBody:
+	case *StaticAbility:
 		if b == nil {
 			return zone.None
 		}
 		return b.ZoneOfFunction
-	case ActivatedAbilityBody:
+	case ActivatedAbility:
 		return b.ZoneOfFunction
-	case *ActivatedAbilityBody:
+	case *ActivatedAbility:
 		if b == nil {
 			return zone.None
 		}
 		return b.ZoneOfFunction
-	case ManaAbilityBody:
+	case ManaAbility:
 		return b.ZoneOfFunction
-	case *ManaAbilityBody:
+	case *ManaAbility:
 		if b == nil {
 			return zone.None
 		}
@@ -230,18 +230,18 @@ func BodyFunctionZone(body AbilityBody) zone.Type {
 }
 
 // BodyTimingRestriction returns the timing restriction for the body, if any.
-func BodyTimingRestriction(body AbilityBody) TimingRestriction {
+func BodyTimingRestriction(body Ability) TimingRestriction {
 	switch b := body.(type) {
-	case ActivatedAbilityBody:
+	case ActivatedAbility:
 		return b.Timing
-	case *ActivatedAbilityBody:
+	case *ActivatedAbility:
 		if b == nil {
 			return NoTimingRestriction
 		}
 		return b.Timing
-	case ManaAbilityBody:
+	case ManaAbility:
 		return b.Timing
-	case *ManaAbilityBody:
+	case *ManaAbility:
 		if b == nil {
 			return NoTimingRestriction
 		}
@@ -252,25 +252,25 @@ func BodyTimingRestriction(body AbilityBody) TimingRestriction {
 }
 
 // BodyActivationCondition returns the activation condition for the body, if any.
-func BodyActivationCondition(body AbilityBody) opt.V[Condition] {
+func BodyActivationCondition(body Ability) opt.V[Condition] {
 	switch b := body.(type) {
-	case ActivatedAbilityBody:
+	case ActivatedAbility:
 		return b.ActivationCondition
-	case *ActivatedAbilityBody:
+	case *ActivatedAbility:
 		if b == nil {
 			return opt.V[Condition]{}
 		}
 		return b.ActivationCondition
-	case ManaAbilityBody:
+	case ManaAbility:
 		return b.ActivationCondition
-	case *ManaAbilityBody:
+	case *ManaAbility:
 		if b == nil {
 			return opt.V[Condition]{}
 		}
 		return b.ActivationCondition
-	case LoyaltyAbilityBody:
+	case LoyaltyAbility:
 		return b.ActivationCondition
-	case *LoyaltyAbilityBody:
+	case *LoyaltyAbility:
 		if b == nil {
 			return opt.V[Condition]{}
 		}
@@ -281,11 +281,11 @@ func BodyActivationCondition(body AbilityBody) opt.V[Condition] {
 }
 
 // BodyLoyaltyCost returns the loyalty cost for the body, if any.
-func BodyLoyaltyCost(body AbilityBody) int {
+func BodyLoyaltyCost(body Ability) int {
 	switch loyalty := body.(type) {
-	case LoyaltyAbilityBody:
+	case LoyaltyAbility:
 		return loyalty.LoyaltyCost
-	case *LoyaltyAbilityBody:
+	case *LoyaltyAbility:
 		if loyalty == nil {
 			return 0
 		}

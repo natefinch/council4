@@ -37,7 +37,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 			Whenever one or more creatures you control fight or become blocked, draw a card.
 			At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)
 		`,
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Text: `
 					Whenever one or more creatures you control fight or become blocked, draw a card.

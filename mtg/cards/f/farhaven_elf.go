@@ -33,7 +33,7 @@ var FarhavenElf = &game.CardDef{
 		OracleText: `
 			When this creature enters, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.
 		`,
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Text: `
 					When this creature enters, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.

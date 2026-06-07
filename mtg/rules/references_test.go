@@ -60,7 +60,7 @@ func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 2}),
 		Toughness: opt.Val(game.PT{Value: 2}),
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: game.SimpleKeywords(game.Deathtouch, game.Lifelink),
 		}}},
 	})

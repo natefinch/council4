@@ -42,7 +42,7 @@ type CopyableValues struct {
 	Toughness        opt.V[PT]
 	DynamicPower     opt.V[DynamicValue]
 	DynamicToughness opt.V[DynamicValue]
-	Abilities        []AbilityBody
+	Abilities        []Ability
 	OracleText       string
 }
 
@@ -110,7 +110,7 @@ type ContinuousEffect struct {
 
 	AddKeywords    []Keyword
 	RemoveKeywords []Keyword
-	AddAbilities   []AbilityBody
+	AddAbilities   []Ability
 
 	SetPower              opt.V[PT]
 	SetToughness          opt.V[PT]

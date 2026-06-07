@@ -123,7 +123,7 @@ func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 	if len(abilities) != 1 {
 		t.Fatalf("face-down disguise abilities = %+v, want ward ability", abilities)
 	}
-	staticBody, ok := abilities[0].(game.StaticAbilityBody)
+	staticBody, ok := abilities[0].(game.StaticAbility)
 	if !ok || !game.BodyHasKeyword(staticBody, game.Ward) {
 		t.Fatalf("face-down disguise abilities = %+v, want ward ability", abilities)
 	}
@@ -146,7 +146,7 @@ func morphCreature(manaCost cost.Mana) *game.CardDef {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.MorphKeyword{Cost: manaCost}},
 		}}},
 	}
@@ -158,7 +158,7 @@ func disguiseCreature(manaCost cost.Mana) *game.CardDef {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(pt),
 		Toughness: opt.Val(pt),
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.DisguiseKeyword{Cost: manaCost}},
 		}}},
 	}

@@ -25,7 +25,7 @@ var Mountain = &game.CardDef{
 		OracleText: `
 			({T}: Add {R}.)
 		`,
-		ManaAbilities: []game.ManaAbilityBody{
+		ManaAbilities: []game.ManaAbility{
 			{
 				Text: `
 					{T}: Add {R}.

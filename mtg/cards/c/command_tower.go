@@ -20,7 +20,7 @@ var CommandTower = &game.CardDef{
 		OracleText: `
 			{T}: Add one mana of any color in your commander's color identity.
 		`,
-		ManaAbilities: []game.ManaAbilityBody{
+		ManaAbilities: []game.ManaAbility{
 			{
 				Text: `
 					{T}: Add one mana of any color in your commander's color identity.

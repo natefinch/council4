@@ -119,7 +119,7 @@ func simpleGainLifeInstant(name string) *game.CardDef {
 
 func stormGainLifeInstant() *game.CardDef {
 	card := simpleGainLifeInstant("Storm Spell")
-	card.StaticAbilities = append([]game.StaticAbilityBody{game.StormStaticBody}, card.StaticAbilities...)
+	card.StaticAbilities = append([]game.StaticAbility{game.StormStaticBody}, card.StaticAbilities...)
 	return card
 }
 
@@ -130,7 +130,7 @@ func stormTargetCreatureInstant() *game.CardDef {
 			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
 			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
 		}.Ability()),
-		StaticAbilities: []game.StaticAbilityBody{game.StormStaticBody}},
+		StaticAbilities: []game.StaticAbility{game.StormStaticBody}},
 	}
 }
 

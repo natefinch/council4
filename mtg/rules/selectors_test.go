@@ -173,7 +173,7 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 		Types:           []types.Card{types.Creature},
 		Power:           opt.Val(game.PT{Value: 3}),
 		Toughness:       opt.Val(game.PT{Value: 3}),
-		StaticAbilities: []game.StaticAbilityBody{game.DeathtouchStaticBody}},
+		StaticAbilities: []game.StaticAbility{game.DeathtouchStaticBody}},
 	})
 	other := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Other Creature",
 		Types:     []types.Card{types.Creature},
@@ -227,6 +227,6 @@ func equipmentWithStaticEffect(effects []game.ContinuousEffect) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Equipment",
 		Types:           []types.Card{types.Artifact},
 		Subtypes:        []types.Sub{types.Equipment},
-		StaticAbilities: []game.StaticAbilityBody{{ContinuousEffects: effects}}},
+		StaticAbilities: []game.StaticAbility{{ContinuousEffects: effects}}},
 	}
 }

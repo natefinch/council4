@@ -14,7 +14,7 @@ import (
 func TestSimpleKeywordStaticBodyTemplates(t *testing.T) {
 	tests := []struct {
 		name    string
-		body    StaticAbilityBody
+		body    StaticAbility
 		keyword Keyword
 	}{
 		{name: "DeathtouchStaticBody", body: DeathtouchStaticBody, keyword: Deathtouch},
@@ -87,7 +87,7 @@ func TestEternalizeActivatedBodyBuildsKeywordActivation(t *testing.T) {
 func TestBodyAccessors(t *testing.T) {
 	targets := []TargetSpec{{MinTargets: 1, MaxTargets: 1}}
 	activationCondition := opt.Val(Condition{SourceNotMonstrous: true})
-	body := ActivatedAbilityBody{
+	body := ActivatedAbility{
 		Text:                "Equip {2}",
 		ManaCost:            opt.Val(cost.Mana{cost.O(2)}),
 		AdditionalCosts:     cost.Tap,
@@ -117,7 +117,7 @@ func TestBodyAccessors(t *testing.T) {
 		t.Fatalf("BodyTargets = %+v, want %+v", gotTargets, targets)
 	}
 
-	loyalty := LoyaltyAbilityBody{LoyaltyCost: -2}
+	loyalty := LoyaltyAbility{LoyaltyCost: -2}
 	if BodyLoyaltyCost(loyalty) != -2 {
 		t.Fatalf("BodyLoyaltyCost = %d, want -2", BodyLoyaltyCost(loyalty))
 	}
@@ -132,7 +132,7 @@ func TestModalAbilityContentIsModal(t *testing.T) {
 		t.Fatalf("Mode.Ability() = %+v, want one required mode", ordinary)
 	}
 
-	modal := ModalAbilityContent{
+	modal := AbilityContent{
 		Modes:    []Mode{{Text: "First"}, {Text: "Second"}},
 		MinModes: 1,
 		MaxModes: 1,
@@ -143,21 +143,21 @@ func TestModalAbilityContentIsModal(t *testing.T) {
 }
 
 func TestKeywordBodyHelpers(t *testing.T) {
-	wardBody := TriggeredAbilityBody{
+	wardBody := TriggeredAbility{
 		KeywordAbilities: []KeywordAbility{WardKeyword{Cost: cost.Mana{cost.O(2)}}},
 	}
 	if wardCost, ok := BodyWardCost(wardBody); !ok || !slices.Equal(wardCost, cost.Mana{cost.O(2)}) {
 		t.Fatalf("BodyWardCost = %+v/%v, want {2}/true", wardCost, ok)
 	}
 
-	madnessBody := TriggeredAbilityBody{
+	madnessBody := TriggeredAbility{
 		KeywordAbilities: []KeywordAbility{MadnessKeyword{Cost: cost.Mana{cost.B}}},
 	}
 	if manaCost, ok := BodyMadnessCost(madnessBody); !ok || !slices.Equal(manaCost, cost.Mana{cost.B}) {
 		t.Fatalf("BodyMadnessCost = %+v/%v, want {B}/true", manaCost, ok)
 	}
 
-	activated := ActivatedAbilityBody{
+	activated := ActivatedAbility{
 		KeywordAbilities: []KeywordAbility{
 			SuspendKeyword{Cost: cost.Mana{cost.U}, TimeCounters: 3},
 			MorphKeyword{Cost: cost.Mana{cost.O(3)}},
@@ -178,7 +178,7 @@ func TestKeywordBodyHelpers(t *testing.T) {
 		t.Fatalf("ActivatedBodyKicker = %+v/%v, want {R}/true", kicker, ok)
 	}
 
-	staticBody := StaticAbilityBody{
+	staticBody := StaticAbility{
 		KeywordAbilities: []KeywordAbility{
 			EnchantKeyword{Target: TargetSpec{Constraint: "creature"}},
 			ProtectionKeyword{FromColors: []color.Color{color.Black, color.Red}},

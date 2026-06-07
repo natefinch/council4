@@ -50,7 +50,7 @@ var RhonasTheIndomitable = func() *game.CardDef {
 		game.IndestructibleStaticBody,
 	)
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Rhonas can't attack or block unless you control another creature with power 4 or greater.
 			`,
@@ -82,7 +82,7 @@ var RhonasTheIndomitable = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				{2}{G}: Another target creature gets +2/+0 and gains trample until end of turn.
 			`,

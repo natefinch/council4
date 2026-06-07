@@ -109,7 +109,7 @@ func TestUnregisteredCardImplementationPanics(t *testing.T) {
 	addImplementationSpellToStack(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Missing Implementation",
 		Types:            []types.Card{types.Sorcery},
 		ImplementationID: "test/missing",
-		SpellAbility:     opt.Val(game.ModalAbilityContent{})},
+		SpellAbility:     opt.Val(game.AbilityContent{})},
 	}, nil)
 
 	defer func() {

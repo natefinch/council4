@@ -235,7 +235,7 @@ func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pinger",
 		Types: []types.Card{types.Creature},
-		ActivatedAbilities: []game.ActivatedAbilityBody{{
+		ActivatedAbilities: []game.ActivatedAbility{{
 			Content: game.Mode{
 				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "target player"}},
 				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
@@ -459,7 +459,7 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 	// Use a simple creature with an activated ability that costs life
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pain Creature",
 		Types: []types.Card{types.Creature},
-		ActivatedAbilities: []game.ActivatedAbilityBody{{
+		ActivatedAbilities: []game.ActivatedAbility{{
 			AdditionalCosts: []cost.Additional{
 				{Kind: cost.AdditionalPayLife, Amount: 2},
 			},

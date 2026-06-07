@@ -208,7 +208,7 @@ func clueTokenDef() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Clue Token",
 		Types:    []types.Card{types.Artifact},
 		Subtypes: []types.Sub{types.Clue},
-		ActivatedAbilities: []game.ActivatedAbilityBody{{
+		ActivatedAbilities: []game.ActivatedAbility{{
 			Text:            "{2}, Sacrifice this artifact: Draw a card.",
 			ManaCost:        opt.Val(two),
 			AdditionalCosts: additionalCosts,

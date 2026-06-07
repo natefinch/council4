@@ -34,7 +34,7 @@ var KusariGama = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Equipped creature has "{2}: This creature gets +1/+0 until end of turn."
 			`,
@@ -42,8 +42,8 @@ var KusariGama = func() *game.CardDef {
 			{
 				Layer:    game.LayerAbility,
 				Selector: game.EffectSelectorEquippedCreature,
-				AddAbilities: []game.AbilityBody{
-					game.ActivatedAbilityBody{
+				AddAbilities: []game.Ability{
+					game.ActivatedAbility{
 						Text: `
 											{2}: This creature gets +1/+0 until end of turn.
 										`,
@@ -69,7 +69,7 @@ var KusariGama = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever equipped creature deals damage to a blocking creature, this Equipment deals that much damage to each other creature defending player controls.
 			`,
@@ -98,7 +98,7 @@ var KusariGama = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				Equip {3}
 			`,

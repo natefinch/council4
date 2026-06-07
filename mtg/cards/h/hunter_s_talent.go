@@ -47,7 +47,7 @@ var HunterSTalent = func() *game.CardDef {
 	}
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				When this Class enters, target creature you control deals damage equal to its power to target creature you don't control.
 			`,
@@ -105,7 +105,7 @@ var HunterSTalent = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				{1}{G}: Level 2
 			`,
@@ -131,7 +131,7 @@ var HunterSTalent = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever you attack, target attacking creature gets +1/+0 and gains trample until end of turn.
 			`,
@@ -189,7 +189,7 @@ var HunterSTalent = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				{3}{G}: Level 3
 			`,
@@ -216,7 +216,7 @@ var HunterSTalent = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				At the beginning of your end step, if you control a creature with power 4 or greater, draw a card.
 			`,

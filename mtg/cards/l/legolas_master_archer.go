@@ -48,7 +48,7 @@ var LegolasMasterArcher = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever you cast a spell that targets Legolas, put a +1/+1 counter on Legolas.
 			`,
@@ -75,7 +75,7 @@ var LegolasMasterArcher = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever you cast a spell that targets a creature you don't control, Legolas deals damage equal to its power to up to one target creature.
 			`,

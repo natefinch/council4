@@ -22,7 +22,7 @@ var Arena = &game.CardDef{
 		OracleText: `
 			{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other. (Each deals damage equal to its power to the other.)
 		`,
-		ActivatedAbilities: []game.ActivatedAbilityBody{
+		ActivatedAbilities: []game.ActivatedAbility{
 			{
 				Text: `
 					{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other.

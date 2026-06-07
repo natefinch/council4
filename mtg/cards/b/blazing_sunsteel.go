@@ -39,7 +39,7 @@ var BlazingSunsteel = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Equipped creature gets +1/+0 for each opponent you have.
 			`,
@@ -56,7 +56,7 @@ var BlazingSunsteel = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever equipped creature is dealt damage, it deals that much damage to any target.
 			`,
@@ -96,7 +96,7 @@ var BlazingSunsteel = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				Equip {4}
 			`,

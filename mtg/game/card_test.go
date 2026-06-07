@@ -57,21 +57,21 @@ func TestTransformFrontLandCanBePlayedAsLand(t *testing.T) {
 func TestCardFaceAbilityCountAndBodyAtUsesCanonicalOrder(t *testing.T) {
 	face := CardFace{
 		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{Primitive: Draw{}}}}.Ability()),
-		ManaAbilities: []ManaAbilityBody{{
+		ManaAbilities: []ManaAbility{{
 			Text:    "Add one mana.",
 			Content: Mode{Sequence: []Instruction{{Primitive: AddMana{}}}}.Ability(),
 		}},
-		TriggeredAbilities: []TriggeredAbilityBody{{
+		TriggeredAbilities: []TriggeredAbility{{
 			Text: "When this enters, draw a card.",
 			Trigger: TriggerCondition{
 				Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield},
 			},
 			Content: Mode{Sequence: []Instruction{{Primitive: Draw{}}}}.Ability(),
 		}},
-		ReplacementAbilities: []ReplacementAbilityBody{{
+		ReplacementAbilities: []ReplacementAbility{{
 			Text: "If this would die, exile it instead.",
 		}},
-		StaticAbilities: []StaticAbilityBody{{
+		StaticAbilities: []StaticAbility{{
 			Text:             "Flying",
 			KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Flying}},
 		}},
@@ -80,19 +80,19 @@ func TestCardFaceAbilityCountAndBodyAtUsesCanonicalOrder(t *testing.T) {
 	if face.AbilityCount() != 5 {
 		t.Fatalf("ability count = %d, want five categorized abilities", face.AbilityCount())
 	}
-	if _, ok := face.BodyAt(0).(ModalAbilityContent); !ok {
+	if _, ok := face.BodyAt(0).(AbilityContent); !ok {
 		t.Fatalf("BodyAt(0) = %T, want ModalAbilityContent", face.BodyAt(0))
 	}
-	if _, ok := face.BodyAt(1).(ManaAbilityBody); !ok {
+	if _, ok := face.BodyAt(1).(ManaAbility); !ok {
 		t.Fatalf("BodyAt(1) = %T, want ManaAbilityBody", face.BodyAt(1))
 	}
-	if _, ok := face.BodyAt(2).(TriggeredAbilityBody); !ok {
+	if _, ok := face.BodyAt(2).(TriggeredAbility); !ok {
 		t.Fatalf("BodyAt(2) = %T, want TriggeredAbilityBody", face.BodyAt(2))
 	}
-	if _, ok := face.BodyAt(3).(ReplacementAbilityBody); !ok {
+	if _, ok := face.BodyAt(3).(ReplacementAbility); !ok {
 		t.Fatalf("BodyAt(3) = %T, want ReplacementAbilityBody", face.BodyAt(3))
 	}
-	if _, ok := face.BodyAt(4).(StaticAbilityBody); !ok {
+	if _, ok := face.BodyAt(4).(StaticAbility); !ok {
 		t.Fatalf("BodyAt(4) = %T, want StaticAbilityBody", face.BodyAt(4))
 	}
 	if !face.HasKeyword(Flying) {
@@ -114,7 +114,7 @@ func TestCardFaceCloneClonesSpellCosts(t *testing.T) {
 				Text: "Discard a card",
 			}},
 		}},
-		SpellAbility: opt.Val(ModalAbilityContent{}),
+		SpellAbility: opt.Val(AbilityContent{}),
 	}
 
 	cloned := face.clone()
@@ -133,13 +133,13 @@ func TestCardFaceCloneClonesSpellCosts(t *testing.T) {
 
 func TestClearAbilitiesRemovesCategorizedAbilities(t *testing.T) {
 	face := CardFace{
-		SpellAbility:         opt.Val(ModalAbilityContent{}),
-		ActivatedAbilities:   []ActivatedAbilityBody{{Text: "Act"}},
-		ManaAbilities:        []ManaAbilityBody{{Text: "Mana"}},
-		LoyaltyAbilities:     []LoyaltyAbilityBody{{Text: "Loyal"}},
-		TriggeredAbilities:   []TriggeredAbilityBody{{Text: "Trig"}},
-		ReplacementAbilities: []ReplacementAbilityBody{{Text: "Replace"}},
-		StaticAbilities:      []StaticAbilityBody{{Text: "Static"}},
+		SpellAbility:         opt.Val(AbilityContent{}),
+		ActivatedAbilities:   []ActivatedAbility{{Text: "Act"}},
+		ManaAbilities:        []ManaAbility{{Text: "Mana"}},
+		LoyaltyAbilities:     []LoyaltyAbility{{Text: "Loyal"}},
+		TriggeredAbilities:   []TriggeredAbility{{Text: "Trig"}},
+		ReplacementAbilities: []ReplacementAbility{{Text: "Replace"}},
+		StaticAbilities:      []StaticAbility{{Text: "Static"}},
 	}
 
 	face.ClearAbilities()

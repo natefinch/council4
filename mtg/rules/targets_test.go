@@ -377,7 +377,7 @@ func TestStructuredTargetPredicates(t *testing.T) {
 		Types:           []types.Card{types.Creature},
 		Power:           opt.Val(game.PT{Value: 2}),
 		Toughness:       opt.Val(game.PT{Value: 2}),
-		StaticAbilities: []game.StaticAbilityBody{game.FlyingStaticBody}},
+		StaticAbilities: []game.StaticAbility{game.FlyingStaticBody}},
 	})
 	whiteCreature.Tapped = true
 	addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -462,7 +462,7 @@ func TestAnotherTargetPredicateExcludesSourcePermanent(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Source Creature",
 		Types: []types.Card{types.Creature},
-		ActivatedAbilities: []game.ActivatedAbilityBody{{
+		ActivatedAbilities: []game.ActivatedAbility{{
 			Content: game.Mode{
 				Targets: []game.TargetSpec{{
 					MinTargets: 1,
@@ -596,7 +596,7 @@ func TestTargetChoiceKindsAtActionEnumerationLevel(t *testing.T) {
 			setupSpell: func() *game.CardDef {
 				return &game.CardDef{CardFace: game.CardFace{Name: "Shock No Target",
 					Types:        []types.Card{types.Sorcery},
-					SpellAbility: opt.Val(game.ModalAbilityContent{})},
+					SpellAbility: opt.Val(game.AbilityContent{})},
 				}
 			},
 			setupBoard:      func(g *game.Game) {},
@@ -662,7 +662,7 @@ func TestInvalidTargetSpecAbilityProducesNoActivateActions(t *testing.T) {
 	engine := NewEngine(nil)
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Broken Ability Source",
 		Types: []types.Card{types.Creature},
-		ActivatedAbilities: []game.ActivatedAbilityBody{{
+		ActivatedAbilities: []game.ActivatedAbility{{
 			Content: game.Mode{
 				Targets:  []game.TargetSpec{{MinTargets: 3, MaxTargets: 1, Constraint: "creature"}},
 				Sequence: []game.Instruction{{Primitive: game.Tap{TargetIndex: 0}}},
@@ -829,7 +829,7 @@ func permanentTargetSpellWithSpecs(specs []game.TargetSpec) *game.CardDef {
 func opponentChosenTargetAbilitySource() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Arena-like Land",
 		Types: []types.Card{types.Land},
-		ActivatedAbilities: []game.ActivatedAbilityBody{{
+		ActivatedAbilities: []game.ActivatedAbility{{
 			Content: game.Mode{
 				Targets: []game.TargetSpec{
 					{

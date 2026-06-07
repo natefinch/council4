@@ -35,7 +35,7 @@ var EnduringCourage = &game.CardDef{
 			Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.
 			When Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)
 		`,
-		TriggeredAbilities: []game.TriggeredAbilityBody{
+		TriggeredAbilities: []game.TriggeredAbility{
 			{
 				Text: `
 					Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.

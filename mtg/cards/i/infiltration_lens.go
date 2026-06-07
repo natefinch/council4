@@ -33,7 +33,7 @@ var InfiltrationLens = func() *game.CardDef {
 	}
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Whenever equipped creature becomes blocked by a creature, you may draw two cards.
 			`,
@@ -63,7 +63,7 @@ var InfiltrationLens = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				Equip {1}
 			`,

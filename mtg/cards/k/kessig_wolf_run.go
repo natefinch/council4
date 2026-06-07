@@ -31,7 +31,7 @@ var KessigWolfRun = func() *game.CardDef {
 	}
 
 	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbilityBody{
+		game.ManaAbility{
 			Text: `
 				{T}: Add {C}.
 			`,
@@ -50,7 +50,7 @@ var KessigWolfRun = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				{X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
 			`,

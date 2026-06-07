@@ -32,7 +32,7 @@ var BasiliskCollar = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Equipped creature has deathtouch and lifelink.
 			`,
@@ -53,7 +53,7 @@ var BasiliskCollar = func() *game.CardDef {
 		// EffectAttach (type 27) is not executed by the rules engine; the Equip
 		// keyword together with ManaCost, Timing, and Targets is sufficient for
 		// the rules layer to perform attachment.
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				Equip {2}
 			`,

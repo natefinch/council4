@@ -22,7 +22,7 @@ type Emblem struct {
 	Owner PlayerID
 
 	// Abilities lists the abilities this emblem provides.
-	Abilities []AbilityBody
+	Abilities []Ability
 }
 
 // SuspendedCard tracks a card exiled with suspend.

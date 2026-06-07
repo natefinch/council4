@@ -24,7 +24,7 @@ var MossfireValley = &game.CardDef{
 		OracleText: `
 			{1}, {T}: Add {R}{G}.
 		`,
-		ManaAbilities: []game.ManaAbilityBody{
+		ManaAbilities: []game.ManaAbility{
 			{
 				Text: `
 					{1}, {T}: Add {R}{G}.

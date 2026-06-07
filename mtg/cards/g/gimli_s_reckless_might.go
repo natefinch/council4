@@ -37,7 +37,7 @@ var GimliSRecklessMight = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Creatures you control have haste.
 			`,
@@ -54,7 +54,7 @@ var GimliSRecklessMight = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				Formidable — Whenever you attack, if creatures you control have total power 8 or greater, target attacking creature you control fights up to one target creature you don't control.
 			`,

@@ -37,7 +37,7 @@ var FiresOfYavimaya = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Creatures you control have haste.
 			`,
@@ -54,7 +54,7 @@ var FiresOfYavimaya = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				Sacrifice this enchantment: Target creature gets +2/+2 until end of turn.
 			`,

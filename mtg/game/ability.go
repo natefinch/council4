@@ -8,27 +8,6 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// AbilityKind classifies an ability by how it functions in the game (CR 113.3).
-type AbilityKind int
-
-const (
-	// SpellAbility is an instruction on an instant or sorcery, executed when
-	// the spell resolves (CR 113.3a).
-	SpellAbility AbilityKind = iota
-
-	// ActivatedAbility has the form "[Cost]: [Effect]" and can be activated
-	// by paying the cost (CR 113.3b, 602).
-	ActivatedAbility
-
-	// TriggeredAbility begins with "When", "Whenever", or "At" and triggers
-	// automatically when its condition is met (CR 113.3c, 603).
-	TriggeredAbility
-
-	// StaticAbility is a declarative statement that generates a continuous
-	// effect while its source is in the appropriate zone (CR 113.3d, 604).
-	StaticAbility
-)
-
 // Keyword represents an evergreen or commonly-used keyword ability (CR 702).
 type Keyword int
 
@@ -173,8 +152,8 @@ var (
 	ExaltedStaticBody = simpleKeywordStaticBody("Exalted", Exalted)
 )
 
-func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbilityBody {
-	return StaticAbilityBody{Text: text, KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: keyword}}}
+func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
+	return StaticAbility{Text: text, KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: keyword}}}
 }
 
 // TriggerType classifies what kind of event triggers a triggered ability.
@@ -425,11 +404,11 @@ type TokenCopySpec struct {
 
 // EternalizeActivatedBody builds the ActivatedAbilityBody for the Eternalize
 // keyword. Use this in CardFace.ActivatedAbilities with categorized fields.
-func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) ActivatedAbilityBody {
+func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) ActivatedAbility {
 	tokenSubtypes := make([]types.Sub, 0, len(creatureSubtypes)+1)
 	tokenSubtypes = append(tokenSubtypes, types.Zombie)
 	tokenSubtypes = append(tokenSubtypes, creatureSubtypes...)
-	return ActivatedAbilityBody{
+	return ActivatedAbility{
 		Text:           "Eternalize " + manaCost.String(),
 		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
 		ZoneOfFunction: zone.Graveyard,
@@ -551,8 +530,8 @@ type Mode struct {
 }
 
 // Ability creates ordinary non-modal ability content from this mode.
-func (m Mode) Ability() ModalAbilityContent {
-	return ModalAbilityContent{
+func (m Mode) Ability() AbilityContent {
+	return AbilityContent{
 		Modes:               []Mode{m},
 		MinModes:            1,
 		MaxModes:            1,

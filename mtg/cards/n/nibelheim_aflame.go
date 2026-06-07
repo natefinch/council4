@@ -99,7 +99,7 @@ var NibelheimAflame = &game.CardDef{
 				},
 			},
 		}.Ability()),
-		StaticAbilities: []game.StaticAbilityBody{
+		StaticAbilities: []game.StaticAbility{
 			{
 				Text: `
 					Flashback {5}{R}{R}

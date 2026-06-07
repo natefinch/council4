@@ -32,7 +32,7 @@ var LoxodonWarhammer = func() *game.CardDef {
 		},
 	}
 
-	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbilityBody{
+	card.StaticAbilities = append(card.StaticAbilities, game.StaticAbility{
 		Text: `
 				Equipped creature gets +3/+0 and has trample and lifelink.
 			`,
@@ -55,7 +55,7 @@ var LoxodonWarhammer = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbilityBody{
+		game.ActivatedAbility{
 			Text: `
 				Equip {3}
 			`,

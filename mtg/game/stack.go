@@ -53,7 +53,7 @@ type StackObject struct {
 	// InlineTrigger stores generated triggered abilities (delayed triggers, ward
 	// triggers, prowess, exalted, madness) that are not addressable by AbilityIndex
 	// on the source definition.
-	InlineTrigger *TriggeredAbilityBody
+	InlineTrigger *TriggeredAbility
 
 	// TriggerEvent is the event that caused this triggered ability to trigger.
 	// HasTriggerEvent distinguishes a real zero-valued event from no event.

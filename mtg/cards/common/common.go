@@ -14,12 +14,12 @@ import (
 )
 
 // TapForOneOfAny creates a mana ability body for a tap mana ability with a choice from any of the five basic mana colors.
-func TapForOneOfAny(key game.ChoiceKey) game.ManaAbilityBody {
+func TapForOneOfAny(key game.ChoiceKey) game.ManaAbility {
 	return TapForOneOf(key, mana.W, mana.U, mana.B, mana.R, mana.G)
 }
 
 // TapForOneOf creates a mana ability body for a tap mana ability with a choice from two mana colors.
-func TapForOneOf(key game.ChoiceKey, colors ...mana.Color) game.ManaAbilityBody {
+func TapForOneOf(key game.ChoiceKey, colors ...mana.Color) game.ManaAbility {
 	var text string
 	switch len(colors) {
 	case 2:
@@ -41,7 +41,7 @@ func TapForOneOf(key game.ChoiceKey, colors ...mana.Color) game.ManaAbilityBody 
 	default:
 		panic("invalid number of colors: " + strconv.Itoa(len(colors)))
 	}
-	return game.ManaAbilityBody{
+	return game.ManaAbility{
 		Text:            text,
 		AdditionalCosts: cost.Tap,
 		Content: game.Mode{
@@ -68,8 +68,8 @@ func TapForOneOf(key game.ChoiceKey, colors ...mana.Color) game.ManaAbilityBody 
 }
 
 // TapForOne creates a mana ability body for a tap mana ability.
-func TapForOne(clr mana.Color) game.ManaAbilityBody {
-	return game.ManaAbilityBody{
+func TapForOne(clr mana.Color) game.ManaAbility {
+	return game.ManaAbility{
 		Text: fmt.Sprintf(`
 			{T}: Add {%s}.
 		`, clr),
@@ -94,7 +94,7 @@ type RampLand struct {
 }
 
 // Ability returns non-modal content that searches the controller's library for a land and puts it into play.
-func (r RampLand) Ability() game.ModalAbilityContent {
+func (r RampLand) Ability() game.AbilityContent {
 	return game.Mode{
 		Sequence: []game.Instruction{
 			r.Instruction(),

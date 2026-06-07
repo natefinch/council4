@@ -43,7 +43,7 @@ var FanaticOfRhonas = func() *game.CardDef {
 	}
 
 	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbilityBody{
+		game.ManaAbility{
 			Text: `
 				{T}: Add {G}.
 			`,
@@ -62,7 +62,7 @@ var FanaticOfRhonas = func() *game.CardDef {
 	)
 
 	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbilityBody{
+		game.ManaAbility{
 			Text: `
 				Ferocious — {T}: Add {G}{G}{G}{G}. Activate only if you control a creature with power 4 or greater.
 			`,

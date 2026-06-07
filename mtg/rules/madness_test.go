@@ -101,7 +101,7 @@ func TestDeclinedMadnessTriggerMovesCardToGraveyard(t *testing.T) {
 func madnessSorcery(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Madness Sorcery",
 		Types: []types.Card{types.Sorcery},
-		StaticAbilities: []game.StaticAbilityBody{{
+		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.MadnessKeyword{Cost: manaCost}},
 		}}},
 	}

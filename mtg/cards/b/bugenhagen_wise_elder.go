@@ -48,7 +48,7 @@ var BugenhagenWiseElder = func() *game.CardDef {
 	)
 
 	card.TriggeredAbilities = append(card.TriggeredAbilities,
-		game.TriggeredAbilityBody{
+		game.TriggeredAbility{
 			Text: `
 				At the beginning of your upkeep, if you control a creature with power 7 or greater, draw a card.
 			`,
@@ -85,7 +85,7 @@ var BugenhagenWiseElder = func() *game.CardDef {
 		},
 	)
 
-	card.ManaAbilities = []game.ManaAbilityBody{common.TapForOneOfAny("bugenhagen-color")}
+	card.ManaAbilities = []game.ManaAbility{common.TapForOneOfAny("bugenhagen-color")}
 
 	return card
 }()
