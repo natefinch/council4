@@ -77,20 +77,20 @@ Card source definitions use the **categorized fields** on `CardFace` directly. T
 
 ```go
 // CardFace categorized ability fields:
-SpellAbility      opt.V[ModalAbilityContent] // instants/sorceries — at most one
-ActivatedAbilities []ActivatedAbilityBody   // "[Cost]: [Effect]" abilities
-ManaAbilities      []ManaAbilityBody        // mana abilities (subset of activated, no targets)
-LoyaltyAbilities   []LoyaltyAbilityBody     // planeswalker +/−/0 abilities
-TriggeredAbilities []TriggeredAbilityBody   // When/Whenever/At abilities
-ReplacementAbilities []ReplacementAbilityBody // "if … would … instead …" abilities
-StaticAbilities    []StaticAbilityBody      // declarative continuous effects, keywords
+SpellAbility      opt.V[AbilityContent] // instants/sorceries — at most one
+ActivatedAbilities []ActivatedAbility   // "[Cost]: [Effect]" abilities
+ManaAbilities      []ManaAbility        // mana abilities (subset of activated, no targets)
+LoyaltyAbilities   []LoyaltyAbility     // planeswalker +/−/0 abilities
+TriggeredAbilities []TriggeredAbility   // When/Whenever/At abilities
+ReplacementAbilities []ReplacementAbility // "if … would … instead …" abilities
+StaticAbilities    []StaticAbility      // declarative continuous effects, keywords
 ```
 
 For a card whose abilities all belong to one category, set the field directly:
 
 ```go
 // Single-category: direct field
-ManaAbilities: []game.ManaAbilityBody{
+ManaAbilities: []game.ManaAbility{
     {
         Text: `
             {T}: Add {G}.
@@ -112,10 +112,10 @@ var KessigWolfRun = func() *game.CardDef {
             // Mechanical fields...
         },
     }
-    card.ManaAbilities = append(card.ManaAbilities, game.ManaAbilityBody{
+    card.ManaAbilities = append(card.ManaAbilities, game.ManaAbility{
         // Ability fields...
     })
-    card.ActivatedAbilities = append(card.ActivatedAbilities, game.ActivatedAbilityBody{
+    card.ActivatedAbilities = append(card.ActivatedAbilities, game.ActivatedAbility{
         // Ability fields...
     })
     return card
@@ -130,21 +130,10 @@ you will often need an initializer function.
 Rules and tests consume the categorized body values directly. When a caller needs the
 stable canonical ability index order, use `CardFace.AbilityCount()` and
 `CardFace.BodyAt()`. Nested abilities granted by `ContinuousEffect.AddAbilities`
-also use typed `AbilityBody` values.
+also use typed `Ability` values.
 
 Card color identity lives in `mtg/game/color`, not `mtg/game/mana`. Use
 `color.NewIdentity(color.Green, color.Red)` for `CardDef.ColorIdentity`.
-
-### AbilityKind
-
-```go
-const (
-    SpellAbility     AbilityKind = iota  // Instant/sorcery instructions
-    ActivatedAbility                      // "[Cost]: [Effect]"
-    TriggeredAbility                      // "When/Whenever/At..."
-    StaticAbility                         // Declarative continuous effect
-)
-```
 
 ### Keyword (all valid values)
 
@@ -330,7 +319,7 @@ type ReplacementEffect struct {
 }
 ```
 
-Use `ReplacementAbilityBody` and the constructors
+Use `ReplacementAbility` and the constructors
 `EntersTappedReplacement`, `EntersTappedIfReplacement`,
 `EntersTappedUnlessPaidReplacement`, and `EntersWithCountersReplacement` for
 supported enters-the-battlefield replacement text (CR 614). Other replacement
@@ -362,7 +351,7 @@ type RuleEffect struct {
 }
 ```
 
-Put `RuleEffects` directly on `StaticAbilityBody` for static rule-changing text
+Put `RuleEffects` directly on `StaticAbility` for static rule-changing text
 such as "players can't gain life" (CR 119.6), "creatures can't attack/block"
 (CR 506.2, CR 509.1b), "spells cost N more/less", and graveyard-cast
 permissions (CR 601.3). Use an `ApplyRule` primitive only when a resolving
@@ -523,7 +512,7 @@ cost.S                         // {S}
 
 ### Step 1: Split oracle text into paragraphs
 
-Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated list of plain keywords on a single line counts as multiple keyword abilities, one `StaticAbilityBody` per keyword.
+Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated list of plain keywords on a single line counts as multiple keyword abilities, one `StaticAbility` per keyword.
 
 ### Step 2: Classify each paragraph
 
@@ -539,7 +528,7 @@ Each paragraph (separated by `\n`) is one ability. Exception: a comma-separated 
 #### Keywords (any ability kind)
 
 If a paragraph is just one or more plain non-parameterized keywords, use the reusable typed
-`StaticAbilityBody` templates for each keyword:
+`StaticAbility` templates for each keyword:
 - `game.FlyingStaticBody`
 - `game.DeathtouchStaticBody`
 - `game.IndestructibleStaticBody`
@@ -549,7 +538,7 @@ For comma-separated keyword lines such as `Deathtouch, indestructible`, add each
 
 ```go
 // Single category — direct slice:
-StaticAbilities: []game.StaticAbilityBody{
+StaticAbilities: []game.StaticAbility{
     game.DeathtouchStaticBody,
     game.IndestructibleStaticBody,
 },
@@ -563,26 +552,26 @@ and `append` in oracle order:
 var MyCard = func() *game.CardDef {
     card := &game.CardDef{/* ... */}
     card.StaticAbilities = append(card.StaticAbilities, game.FlyingStaticBody)
-    card.TriggeredAbilities = append(card.TriggeredAbilities, game.TriggeredAbilityBody{/* ... */})
+    card.TriggeredAbilities = append(card.TriggeredAbilities, game.TriggeredAbility{/* ... */})
     return card
 }()
 ```
 
 Do not smash multiple plain keywords into one ad-hoc body; use `game.SimpleKeywords(...)` only when a helper template is not suitable. Use explicit body structs for keyword abilities that need card-specific parameters or costs.
 
-For keywords with parameters, use the typed field on a `StaticAbilityBody` (or the appropriate body type):
-- **Protection from [color]**: `StaticAbilityBody{KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{color.Red}}}}`
-- **Ward {N}**: `StaticAbilityBody{KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(N)}}}}`
-- **Equip {N}**: `ActivatedAbilityBody{Text: "Equip {N}", ManaCost: opt.Val(cost.Mana{cost.O(N)}), Timing: game.SorceryOnly, KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}, Content: game.Mode{Targets: []game.TargetSpec{{...}}}.Ability()}`
-- **Cycling {N}**: `ActivatedAbilityBody{Text: "Cycling {N}", ManaCost: opt.Val(cost.Mana{...}), AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalDiscard, Text: "Discard this card", Source: zone.Hand}}, KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}}`
-- **Prowess**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Prowess)}`; the rules engine creates the implicit trigger (CR 702.108)
-- **Flashback {cost}**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Flashback)}` plus `AlternativeCosts: []cost.Alternative{{Label: "Flashback", ManaCost: opt.Val(...)}}` on `CardFace`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
+For keywords with parameters, use the typed field on a `StaticAbility` (or the appropriate ability type):
+- **Protection from [color]**: `StaticAbility{KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: []color.Color{color.Red}}}}`
+- **Ward {N}**: `StaticAbility{KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(N)}}}}`
+- **Equip {N}**: `ActivatedAbility{Text: "Equip {N}", ManaCost: opt.Val(cost.Mana{cost.O(N)}), Timing: game.SorceryOnly, KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}, Content: game.Mode{Targets: []game.TargetSpec{{...}}}.Ability()}`
+- **Cycling {N}**: `ActivatedAbility{Text: "Cycling {N}", ManaCost: opt.Val(cost.Mana{...}), AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalDiscard, Text: "Discard this card", Source: zone.Hand}}, KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}}`
+- **Prowess**: `StaticAbility{KeywordAbilities: game.SimpleKeywords(game.Prowess)}`; the rules engine creates the implicit trigger (CR 702.108)
+- **Flashback {cost}**: `StaticAbility{KeywordAbilities: game.SimpleKeywords(game.Flashback)}` plus `AlternativeCosts: []cost.Alternative{{Label: "Flashback", ManaCost: opt.Val(...)}}` on `CardFace`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 
 #### Spell abilities (instants/sorceries)
 
 Set `SpellAbility` directly to the spell's resolving content:
 - `opt.Val(game.Mode{Targets: [...], Sequence: [...]}.Ability())` for ordinary abilities
-- `opt.Val(game.ModalAbilityContent{Modes: [...], MinModes: ..., MaxModes: ...})` for a real mode choice
+- `opt.Val(game.AbilityContent{Modes: [...], MinModes: ..., MaxModes: ...})` for a real mode choice
 - Extract `Targets` from "target [constraint]" phrases
 - Extract typed `Instruction` primitives from the action verbs (see Primitive Mapping below)
 - For modal text (`Choose one —`, `Choose two —`, `Choose one or both —`,
@@ -597,17 +586,17 @@ Set `SpellAbility` directly to the spell's resolving content:
 
 #### Activated abilities
 
-Use `game.ActivatedAbilityBody{...}` in `ActivatedAbilities`, or
-`game.ManaAbilityBody{...}` in `ManaAbilities` when the effect adds mana with no targets:
+Use `game.ActivatedAbility{...}` in `ActivatedAbilities`, or
+`game.ManaAbility{...}` in `ManaAbilities` when the effect adds mana with no targets:
 - Split on `:` — left side is costs, right side is effects
 - Parse mana symbols in cost → `ManaCost`
 - Parse non-mana costs into `[]cost.Additional`. Use `cost.Tap` when `{T}` is the only additional cost, or `cost.T` as one entry when `{T}` is combined with other additional costs.
-- Use `ManaAbilityBody` / `ManaAbilities` if the effect adds mana, has no targets, and is not a loyalty ability
+- Use `ManaAbility` / `ManaAbilities` if the effect adds mana, has no targets, and is not a loyalty ability
 - `Timing`: set if "Activate only as a sorcery" or "Activate only once each turn"
 
 #### Triggered abilities
 
-Use `game.TriggeredAbilityBody{...}` in `TriggeredAbilities`:
+Use `game.TriggeredAbility{...}` in `TriggeredAbilities`:
 - Parse the trigger word → `Trigger.Type` (TriggerWhen/TriggerWhenever/TriggerAt)
 - Parse the event → `Trigger.Pattern`
 - Common patterns:
@@ -639,7 +628,7 @@ Use `game.TriggeredAbilityBody{...}` in `TriggeredAbilities`:
 
 #### Static abilities
 
-Use `game.StaticAbilityBody{...}` in `StaticAbilities`:
+Use `game.StaticAbility{...}` in `StaticAbilities`:
 - Common patterns:
   - "Creatures you control get +N/+M" → `ContinuousEffects` with `LayerPowerToughnessModify` and `EffectSelectorCreaturesYouControl`
   - "Other creatures you control get +N/+M" → same with `EffectSelectorOtherCreaturesYouControl`
@@ -733,7 +722,7 @@ SpellAbility: opt.Val(game.Mode{
 Oracle text: `{T}: Add {C}{C}.`
 
 ```go
-ManaAbilities: []game.ManaAbilityBody{
+ManaAbilities: []game.ManaAbility{
     {
         Text: `
             {T}: Add {C}{C}.
@@ -762,7 +751,7 @@ Vigilance (Attacking doesn't cause this creature to tap.)
 ```
 
 ```go
-StaticAbilities: []game.StaticAbilityBody{
+StaticAbilities: []game.StaticAbility{
     game.FlyingStaticBody,
     game.VigilanceStaticBody,
 },
@@ -788,7 +777,7 @@ instruction targeting the controller.
 Oracle text: `Creatures you control get +1/+1.`
 
 ```go
-StaticAbilities: []game.StaticAbilityBody{
+StaticAbilities: []game.StaticAbility{
     {
         Text: `
             Creatures you control get +1/+1.
@@ -830,14 +819,14 @@ var KessigWolfRun = func() *game.CardDef {
         },
     }
     // oracle order: mana ability first, then activated ability
-    card.ManaAbilities = append(card.ManaAbilities, game.ManaAbilityBody{
+    card.ManaAbilities = append(card.ManaAbilities, game.ManaAbility{
         Text: `
             {T}: Add {R} or {G}.
         `,
         AdditionalCosts: cost.Tap,
         // ...
     })
-    card.ActivatedAbilities = append(card.ActivatedAbilities, game.ActivatedAbilityBody{
+    card.ActivatedAbilities = append(card.ActivatedAbilities, game.ActivatedAbility{
         Text: `
             {X}{R}{G}, {T}: Target creature gets +X/+0 and gains trample until end of turn.
         `,
@@ -859,7 +848,7 @@ var KessigWolfRun = func() *game.CardDef {
 
 4. **"You" as target vs. controller**: When the text says "you gain 1 life", "you" is the controller, not a target. Use `TargetIndex: -1`. Only use `TargetIndex: 0+` when there's an explicit "target" word.
 
-5. **Tap symbol in costs**: `{T}` in an **activated ability** cost means the permanent taps itself. Use `AdditionalCosts: cost.Tap` when it is the only additional cost in `ActivatedAbilityBody` or `ManaAbilityBody`, or `cost.T` in a combined additional-cost slice. It does not belong in `ManaCost`. Tap is never a spell's casting cost.
+5. **Tap symbol in costs**: `{T}` in an **activated ability** cost means the permanent taps itself. Use `AdditionalCosts: cost.Tap` when it is the only additional cost in `ActivatedAbility` or `ManaAbility`, or `cost.T` in a combined additional-cost slice. It does not belong in `ManaCost`. Tap is never a spell's casting cost.
 
 6. **Multiple paragraphs = multiple abilities**: Each `\n`-separated paragraph is a separate ability and gets its own body in the appropriate field, unless it's a comma-separated keyword list.
 
