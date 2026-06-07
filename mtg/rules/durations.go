@@ -62,15 +62,10 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
-	abilityDef := game.AbilityDef{
-		Kind:     game.TriggeredAbility,
+	ability := game.TriggeredAbilityBody{
 		Optional: def.Optional,
-		Body: game.TriggeredAbilityBody{
-			Optional: def.Optional,
-			Content:  def.Content,
-		},
+		Content:  def.Content,
 	}
-	ability := abilityDef.WithBody()
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
 		ID:             g.IDGen.Next(),
 		SourceID:       sourceID,
@@ -109,7 +104,7 @@ func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {
 			SourceCardID:   trigger.SourceID,
 			SourceTokenDef: trigger.SourceTokenDef,
 			Controller:     trigger.Controller,
-			InlineAbility:  &ability,
+			InlineTrigger:  &ability,
 		})
 	}
 	g.DelayedTriggers = remaining

@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -60,6 +61,40 @@ func TestDeathTriggerGoesOnStack(t *testing.T) {
 
 	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
 		t.Fatalf("hand size = %d, want death trigger to draw one card", got)
+	}
+}
+
+func TestInlineTriggeredAbilityRechecksProtectionFromSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Red Trigger Source",
+		Types:  []types.Card{types.Creature},
+		Colors: []color.Color{color.Red},
+	}})
+	target := addProtectionFromColorPermanent(g, game.Player2, color.Red)
+	trigger := game.TriggeredAbilityBody{
+		Content: game.PlainAbilityContent{
+			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+			Sequence: []game.Instruction{{
+				Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)},
+			}},
+		},
+	}
+	obj := &game.StackObject{
+		Kind:          game.StackTriggeredAbility,
+		SourceID:      source.ObjectID,
+		SourceCardID:  source.CardInstanceID,
+		Controller:    game.Player1,
+		InlineTrigger: &trigger,
+		Targets:       []game.Target{game.PermanentTarget(target.ObjectID)},
+	}
+
+	if got := engine.resolveStackObject(g, obj, &TurnLog{}); got != "countered by rules" {
+		t.Fatalf("resolution = %q, want countered by rules", got)
+	}
+	if target.MarkedDamage != 0 {
+		t.Fatalf("marked damage = %d, want no damage through protection", target.MarkedDamage)
 	}
 }
 

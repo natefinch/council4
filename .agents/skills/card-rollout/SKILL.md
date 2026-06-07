@@ -147,7 +147,7 @@ For each card:
 4. Fill categorized ability fields (ManaAbilities, ActivatedAbilities, TriggeredAbilities,
    StaticAbilities, LoyaltyAbilities, ReplacementAbilities, SpellAbility) only using
    existing game/rules primitives. Preserve the expanded, raw-string layout the generator
-   produces — do not compact it. The flat `Abilities []AbilityDef` field has been removed
+   produces — do not compact it. The flat `Abilities` field has been removed
    from `CardFace`; use only the categorized fields.
 5. Use current generated-card conventions: card/super/subtype vocabulary comes
    from `mtg/game/types` (`types.Card`, `types.Super`, `types.Sub`), integer

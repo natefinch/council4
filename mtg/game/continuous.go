@@ -42,7 +42,7 @@ type CopyableValues struct {
 	Toughness        opt.V[PT]
 	DynamicPower     opt.V[DynamicValue]
 	DynamicToughness opt.V[DynamicValue]
-	Abilities        []AbilityDef
+	Abilities        []AbilityBody
 	OracleText       string
 }
 

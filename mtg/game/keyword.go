@@ -1,8 +1,6 @@
 package game
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 )
@@ -111,200 +109,223 @@ func KeywordAbilityKind(ability KeywordAbility) Keyword {
 	return ability.keyword()
 }
 
-// KeywordKinds returns all keywords represented by this ability.
-func (ability *AbilityDef) KeywordKinds() []Keyword {
-	var keywords []Keyword
-	for _, keywordAbility := range ability.KeywordAbilities {
-		keyword := KeywordAbilityKind(keywordAbility)
-		if !slices.Contains(keywords, keyword) {
-			keywords = append(keywords, keyword)
-		}
-	}
-	addFromKeywords := func(kas []KeywordAbility) {
-		for _, keywordAbility := range kas {
-			keyword := KeywordAbilityKind(keywordAbility)
-			if !slices.Contains(keywords, keyword) {
-				keywords = append(keywords, keyword)
-			}
-		}
-	}
-	switch body := ability.Body.(type) {
+// BodyKeywordAbilities returns the keyword abilities carried by a sealed body.
+func BodyKeywordAbilities(body AbilityBody) []KeywordAbility {
+	switch b := body.(type) {
 	case StaticAbilityBody:
-		addFromKeywords(body.KeywordAbilities)
+		return b.KeywordAbilities
+	case *StaticAbilityBody:
+		if b == nil {
+			return nil
+		}
+		return b.KeywordAbilities
 	case ActivatedAbilityBody:
-		addFromKeywords(body.KeywordAbilities)
+		return b.KeywordAbilities
+	case *ActivatedAbilityBody:
+		if b == nil {
+			return nil
+		}
+		return b.KeywordAbilities
+	case TriggeredAbilityBody:
+		return b.KeywordAbilities
+	case *TriggeredAbilityBody:
+		if b == nil {
+			return nil
+		}
+		return b.KeywordAbilities
 	default:
+		return nil
 	}
-	return keywords
 }
 
-// HasKeyword reports whether this ability grants the given keyword.
-func (ability *AbilityDef) HasKeyword(keyword Keyword) bool {
-	if _, ok := ability.KeywordAbility(keyword); ok {
-		return true
-	}
-	return false
+// BodyHasKeyword reports whether a sealed body carries the given keyword.
+func BodyHasKeyword(body AbilityBody, kw Keyword) bool {
+	_, ok := BodyKeywordAbility(body, kw)
+	return ok
 }
 
-// KeywordAbility returns the first sealed keyword variant matching keyword.
-func (ability *AbilityDef) KeywordAbility(keyword Keyword) (KeywordAbility, bool) {
-	for _, keywordAbility := range ability.KeywordAbilities {
-		if KeywordAbilityKind(keywordAbility) == keyword {
-			return keywordAbility, true
-		}
-	}
-	var bodyKeywords []KeywordAbility
-	switch body := ability.Body.(type) {
-	case StaticAbilityBody:
-		bodyKeywords = body.KeywordAbilities
-	case ActivatedAbilityBody:
-		bodyKeywords = body.KeywordAbilities
-	default:
-	}
-	for _, keywordAbility := range bodyKeywords {
-		if KeywordAbilityKind(keywordAbility) == keyword {
-			return keywordAbility, true
+// BodyKeywordAbility returns the first sealed keyword variant matching kw on body.
+func BodyKeywordAbility(body AbilityBody, kw Keyword) (KeywordAbility, bool) {
+	for _, ka := range BodyKeywordAbilities(body) {
+		if KeywordAbilityKind(ka) == kw {
+			return ka, true
 		}
 	}
 	return nil, false
 }
 
-// EnchantTarget returns the target restriction for an Enchant keyword ability.
-func (ability *AbilityDef) EnchantTarget() (TargetSpec, bool) {
-	keyword, ok := ability.KeywordAbility(Enchant)
-	if !ok {
-		return TargetSpec{}, false
+// BodyAddKeywordKindsTo adds every keyword represented by body to m.
+func BodyAddKeywordKindsTo(body AbilityBody, m map[Keyword]bool) {
+	for _, ka := range BodyKeywordAbilities(body) {
+		m[KeywordAbilityKind(ka)] = true
 	}
-	enchant, ok := keyword.(EnchantKeyword)
-	if !ok {
-		return TargetSpec{}, false
-	}
-	return enchant.Target, true
 }
 
-// WardCost returns the mana-valued Ward cost for this ability.
-func (ability *AbilityDef) WardCost() (cost.Mana, bool) {
-	keyword, ok := ability.KeywordAbility(Ward)
+// BodyWardCost returns the Ward cost from a TriggeredAbilityBody's keywords.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards and triggers.
+func BodyWardCost(body TriggeredAbilityBody) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Ward)
 	if !ok {
 		return nil, false
 	}
-	ward, ok := keyword.(WardKeyword)
+	ward, ok := ka.(WardKeyword)
 	if !ok {
 		return nil, false
 	}
 	return ward.Cost, true
 }
 
-// MadnessCost returns the mana-valued Madness cost for this ability.
-func (ability *AbilityDef) MadnessCost() (cost.Mana, bool) {
-	keyword, ok := ability.KeywordAbility(Madness)
+// BodyMadnessCost returns the Madness cost from a TriggeredAbilityBody's keywords.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards and triggers.
+func BodyMadnessCost(body TriggeredAbilityBody) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Madness)
 	if !ok {
 		return nil, false
 	}
-	madness, ok := keyword.(MadnessKeyword)
+	madness, ok := ka.(MadnessKeyword)
 	if !ok {
 		return nil, false
 	}
 	return madness.Cost, true
 }
 
-// SuspendInfo returns the Suspend cost and time counters for this ability.
-func (ability *AbilityDef) SuspendInfo() (cost.Mana, int, bool) {
-	keyword, ok := ability.KeywordAbility(Suspend)
+// StaticBodyEnchantTarget returns the Enchant target spec for a static ability body.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards and permanents.
+func StaticBodyEnchantTarget(body StaticAbilityBody) (TargetSpec, bool) {
+	ka, ok := BodyKeywordAbility(body, Enchant)
+	if !ok {
+		return TargetSpec{}, false
+	}
+	enchant, ok := ka.(EnchantKeyword)
+	if !ok {
+		return TargetSpec{}, false
+	}
+	return enchant.Target, true
+}
+
+// ActivatedBodySuspendInfo returns suspend info from an ActivatedAbilityBody.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
+func ActivatedBodySuspendInfo(body ActivatedAbilityBody) (cost.Mana, int, bool) {
+	ka, ok := BodyKeywordAbility(body, Suspend)
 	if !ok {
 		return nil, 0, false
 	}
-	suspend, ok := keyword.(SuspendKeyword)
+	suspend, ok := ka.(SuspendKeyword)
 	if !ok || suspend.TimeCounters <= 0 {
 		return nil, 0, false
 	}
 	return suspend.Cost, suspend.TimeCounters, true
 }
 
-// MorphCost returns the turn-face-up cost for a Morph keyword ability.
-func (ability *AbilityDef) MorphCost() (cost.Mana, bool) {
-	keyword, ok := ability.KeywordAbility(Morph)
+// StaticBodySuspendInfo returns suspend info from a StaticAbilityBody.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
+func StaticBodySuspendInfo(body StaticAbilityBody) (cost.Mana, int, bool) {
+	ka, ok := BodyKeywordAbility(body, Suspend)
+	if !ok {
+		return nil, 0, false
+	}
+	suspend, ok := ka.(SuspendKeyword)
+	if !ok || suspend.TimeCounters <= 0 {
+		return nil, 0, false
+	}
+	return suspend.Cost, suspend.TimeCounters, true
+}
+
+// ActivatedBodyMorphCost returns the morph cost from an ActivatedAbilityBody.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
+func ActivatedBodyMorphCost(body ActivatedAbilityBody) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Morph)
 	if !ok {
 		return nil, false
 	}
-	morph, ok := keyword.(MorphKeyword)
+	morph, ok := ka.(MorphKeyword)
 	if !ok {
 		return nil, false
 	}
 	return morph.Cost, true
 }
 
-// DisguiseCost returns the turn-face-up cost for a Disguise keyword ability.
-func (ability *AbilityDef) DisguiseCost() (cost.Mana, bool) {
-	keyword, ok := ability.KeywordAbility(Disguise)
+// StaticBodyMorphCost returns the morph cost from a StaticAbilityBody.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
+func StaticBodyMorphCost(body StaticAbilityBody) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Morph)
 	if !ok {
 		return nil, false
 	}
-	disguise, ok := keyword.(DisguiseKeyword)
+	morph, ok := ka.(MorphKeyword)
+	if !ok {
+		return nil, false
+	}
+	return morph.Cost, true
+}
+
+// ActivatedBodyDisguiseCost returns the disguise cost from an ActivatedAbilityBody.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
+func ActivatedBodyDisguiseCost(body ActivatedAbilityBody) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Disguise)
+	if !ok {
+		return nil, false
+	}
+	disguise, ok := ka.(DisguiseKeyword)
 	if !ok {
 		return nil, false
 	}
 	return disguise.Cost, true
 }
 
-// ProtectionColors returns the colors this ability grants protection from.
-func (ability *AbilityDef) ProtectionColors() []color.Color {
-	keyword, ok := ability.KeywordAbility(Protection)
+// StaticBodyDisguiseCost returns the disguise cost from a StaticAbilityBody.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
+func StaticBodyDisguiseCost(body StaticAbilityBody) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Disguise)
+	if !ok {
+		return nil, false
+	}
+	disguise, ok := ka.(DisguiseKeyword)
+	if !ok {
+		return nil, false
+	}
+	return disguise.Cost, true
+}
+
+// ActivatedBodyEternalize reports whether the body is an eternalize ability.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
+func ActivatedBodyEternalize(body ActivatedAbilityBody) bool {
+	return BodyHasKeyword(body, Eternalize)
+}
+
+// ActivatedBodyKicker returns the KickerKeyword from an ActivatedAbilityBody's keywords.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards.
+func ActivatedBodyKicker(body ActivatedAbilityBody) (KickerKeyword, bool) {
+	ka, ok := BodyKeywordAbility(body, Kicker)
+	if !ok {
+		return KickerKeyword{}, false
+	}
+	kicker, ok := ka.(KickerKeyword)
+	return kicker, ok
+}
+
+// StaticBodyProtectionColors returns the protection colors from a StaticAbilityBody.
+//
+//nolint:gocritic // Keep value-based API for simple use with body values stored by cards and permanents.
+func StaticBodyProtectionColors(body StaticAbilityBody) []color.Color {
+	ka, ok := BodyKeywordAbility(body, Protection)
 	if !ok {
 		return nil
 	}
-	protection, ok := keyword.(ProtectionKeyword)
+	protection, ok := ka.(ProtectionKeyword)
 	if !ok {
 		return nil
 	}
 	return protection.FromColors
-}
-
-// Kicker returns the Kicker keyword variant for this ability.
-func (ability *AbilityDef) Kicker() (KickerKeyword, bool) {
-	keyword, ok := ability.KeywordAbility(Kicker)
-	if !ok {
-		return KickerKeyword{}, false
-	}
-	kicker, ok := keyword.(KickerKeyword)
-	if !ok {
-		return KickerKeyword{}, false
-	}
-	return kicker, true
-}
-
-// KickerCost returns the optional additional mana cost for Kicker.
-func (ability *AbilityDef) KickerCost() (cost.Mana, bool) {
-	kicker, ok := ability.Kicker()
-	if !ok {
-		return nil, false
-	}
-	return kicker.Cost, true
-}
-
-// KickerBonusContent returns the ability content applied if this spell was kicked.
-func (ability *AbilityDef) KickerBonusContent() AbilityContent {
-	kicker, ok := ability.Kicker()
-	if !ok {
-		return nil
-	}
-	return kicker.BonusContent
-}
-
-// AddKeywordKindsTo adds every keyword represented by this ability to keywords.
-func (ability *AbilityDef) AddKeywordKindsTo(keywords map[Keyword]bool) {
-	for _, keywordAbility := range ability.KeywordAbilities {
-		keywords[KeywordAbilityKind(keywordAbility)] = true
-	}
-	var bodyKeywords []KeywordAbility
-	switch body := ability.Body.(type) {
-	case StaticAbilityBody:
-		bodyKeywords = body.KeywordAbilities
-	case ActivatedAbilityBody:
-		bodyKeywords = body.KeywordAbilities
-	default:
-	}
-	for _, keywordAbility := range bodyKeywords {
-		keywords[KeywordAbilityKind(keywordAbility)] = true
-	}
 }

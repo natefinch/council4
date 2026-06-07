@@ -1,89 +1,51 @@
 package game
 
 import (
-	"reflect"
 	"slices"
 	"testing"
-
-	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
-func TestSimpleKeywordAbilityTemplates(t *testing.T) {
+func TestSimpleKeywordStaticBodyTemplates(t *testing.T) {
 	tests := []struct {
 		name    string
-		ability AbilityDef
+		body    StaticAbilityBody
 		keyword Keyword
 	}{
-		{name: "DeathtouchAbility", ability: DeathtouchAbility, keyword: Deathtouch},
-		{name: "DefenderAbility", ability: DefenderAbility, keyword: Defender},
-		{name: "DoubleStrikeAbility", ability: DoubleStrikeAbility, keyword: DoubleStrike},
-		{name: "FirstStrikeAbility", ability: FirstStrikeAbility, keyword: FirstStrike},
-		{name: "FlashAbility", ability: FlashAbility, keyword: Flash},
-		{name: "FlyingAbility", ability: FlyingAbility, keyword: Flying},
-		{name: "HasteAbility", ability: HasteAbility, keyword: Haste},
-		{name: "HexproofAbility", ability: HexproofAbility, keyword: Hexproof},
-		{name: "IndestructibleAbility", ability: IndestructibleAbility, keyword: Indestructible},
-		{name: "LifelinkAbility", ability: LifelinkAbility, keyword: Lifelink},
-		{name: "MenaceAbility", ability: MenaceAbility, keyword: Menace},
-		{name: "ReachAbility", ability: ReachAbility, keyword: Reach},
-		{name: "ShroudAbility", ability: ShroudAbility, keyword: Shroud},
-		{name: "TrampleAbility", ability: TrampleAbility, keyword: Trample},
-		{name: "VigilanceAbility", ability: VigilanceAbility, keyword: Vigilance},
-		{name: "SplitSecondAbility", ability: SplitSecondAbility, keyword: SplitSecond},
-		{name: "ConvokeAbility", ability: ConvokeAbility, keyword: Convoke},
-		{name: "DelveAbility", ability: DelveAbility, keyword: Delve},
-		{name: "StormAbility", ability: StormAbility, keyword: Storm},
-		{name: "CascadeAbility", ability: CascadeAbility, keyword: Cascade},
-		{name: "ProwessAbility", ability: ProwessAbility, keyword: Prowess},
-		{name: "ImproviseAbility", ability: ImproviseAbility, keyword: Improvise},
-		{name: "UndyingAbility", ability: UndyingAbility, keyword: Undying},
-		{name: "PersistAbility", ability: PersistAbility, keyword: Persist},
-		{name: "WitherAbility", ability: WitherAbility, keyword: Wither},
-		{name: "InfectAbility", ability: InfectAbility, keyword: Infect},
-		{name: "ExaltedAbility", ability: ExaltedAbility, keyword: Exalted},
+		{name: "DeathtouchStaticBody", body: DeathtouchStaticBody, keyword: Deathtouch},
+		{name: "FlashStaticBody", body: FlashStaticBody, keyword: Flash},
+		{name: "FlyingStaticBody", body: FlyingStaticBody, keyword: Flying},
+		{name: "HexproofStaticBody", body: HexproofStaticBody, keyword: Hexproof},
+		{name: "TrampleStaticBody", body: TrampleStaticBody, keyword: Trample},
+		{name: "ExaltedStaticBody", body: ExaltedStaticBody, keyword: Exalted},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.ability.EffectiveKind() != StaticAbility {
-				t.Fatalf("effective kind = %v, want StaticAbility", tt.ability.EffectiveKind())
+			if tt.body.Text == "" {
+				t.Fatal("template text should not be empty")
 			}
-			if tt.ability.Text != "" {
-				t.Fatal("text should be empty on body-only template")
+			if !BodyHasKeyword(tt.body, tt.keyword) {
+				t.Fatalf("BodyHasKeyword(%v) = false", tt.keyword)
 			}
-			if !slices.Equal(tt.ability.KeywordKinds(), []Keyword{tt.keyword}) {
-				t.Fatalf("keywords = %+v, want [%v]", tt.ability.KeywordKinds(), tt.keyword)
-			}
-
-			withoutTemplateFields := tt.ability
-			withoutTemplateFields.Body = nil
-			if !reflect.DeepEqual(withoutTemplateFields, AbilityDef{}) {
-				t.Fatalf("ability has extra fields beyond Body: %+v", withoutTemplateFields)
+			kas := BodyKeywordAbilities(tt.body)
+			if len(kas) != 1 || KeywordAbilityKind(kas[0]) != tt.keyword {
+				t.Fatalf("keywords = %+v, want [%v]", kas, tt.keyword)
 			}
 		})
 	}
 }
 
-func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
+func TestEternalizeActivatedBodyBuildsKeywordActivation(t *testing.T) {
 	manaCost := cost.Mana{cost.O(2), cost.G}
-	ability := EternalizeAbility(manaCost, types.Snake, types.Druid)
+	body := EternalizeActivatedBody(manaCost, types.Snake, types.Druid)
 	manaCost[0] = cost.O(9)
 
-	if ability.EffectiveKind() != ActivatedAbility || !slices.Equal(ability.KeywordKinds(), []Keyword{Eternalize}) {
-		t.Fatalf("effective kind/keywords = %v/%+v, want Eternalize activated ability", ability.EffectiveKind(), ability.KeywordKinds())
-	}
-	if !ability.IsActivated() {
-		t.Fatal("eternalize body is not an activated body")
-	}
-	body, ok := ability.ActivatedBody()
-	if !ok {
-		t.Fatal("ActivatedBody returned false for eternalize ability")
-	}
 	if body.ZoneOfFunction != zone.Graveyard || body.Timing != SorceryOnly {
 		t.Fatalf("zone/timing = %v/%v, want graveyard sorcery", body.ZoneOfFunction, body.Timing)
 	}
@@ -92,6 +54,9 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	}
 	if len(body.AdditionalCosts) != 1 || body.AdditionalCosts[0].Kind != cost.AdditionalExileSource {
 		t.Fatalf("additional costs = %+v, want source exile", body.AdditionalCosts)
+	}
+	if !ActivatedBodyEternalize(body) {
+		t.Fatal("ActivatedBodyEternalize() = false")
 	}
 	content, ok := body.Content.(PlainAbilityContent)
 	if !ok {
@@ -119,297 +84,92 @@ func TestEternalizeAbilityBuildsKeywordActivation(t *testing.T) {
 	}
 }
 
-func TestAbilityBodyAccessorsPreferBody(t *testing.T) {
-	ability := AbilityDef{
-		Kind: SpellAbility,
-		Body: TriggeredAbilityBody{
-			Trigger: TriggerCondition{
-				Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield},
-			},
-			Content: PlainAbilityContent{Sequence: []Instruction{{Primitive: Draw{}}}},
-		},
+func TestBodyAccessors(t *testing.T) {
+	targets := []TargetSpec{{MinTargets: 1, MaxTargets: 1}}
+	activationCondition := opt.Val(Condition{SourceNotMonstrous: true})
+	body := ActivatedAbilityBody{
+		Text:                "Equip {2}",
+		ManaCost:            opt.Val(cost.Mana{cost.O(2)}),
+		AdditionalCosts:     cost.Tap,
+		AlternativeCosts:    []cost.Alternative{{Label: "Alt"}},
+		ZoneOfFunction:      zone.Graveyard,
+		Timing:              SorceryOnly,
+		ActivationCondition: activationCondition,
+		Content:             PlainAbilityContent{Targets: targets},
+		KeywordAbilities:    []KeywordAbility{EquipKeyword{Cost: cost.Mana{cost.O(2)}}},
 	}
 
-	triggered, ok := ability.TriggeredBody()
-	if !ok {
-		t.Fatal("TriggeredBody returned false")
+	if BodyFunctionZone(body) != zone.Graveyard {
+		t.Fatalf("BodyFunctionZone = %v, want graveyard", BodyFunctionZone(body))
 	}
-	if triggered.Trigger.Pattern.Event != EventPermanentEnteredBattlefield {
-		t.Fatalf("trigger event = %v, want permanent entered", triggered.Trigger.Pattern.Event)
+	if BodyTimingRestriction(body) != SorceryOnly {
+		t.Fatalf("BodyTimingRestriction = %v, want SorceryOnly", BodyTimingRestriction(body))
 	}
-	if !ability.IsTriggered() || ability.IsSpell() {
-		t.Fatalf("body classification mismatch: triggered=%v spell=%v", ability.IsTriggered(), ability.IsSpell())
+	gotCondition := BodyActivationCondition(body)
+	if !gotCondition.Exists || !gotCondition.Val.SourceNotMonstrous {
+		t.Fatalf("BodyActivationCondition = %+v, want SourceNotMonstrous", gotCondition)
 	}
-	if ability.EffectiveKind() != TriggeredAbility {
-		t.Fatalf("effective kind = %v, want TriggeredAbility", ability.EffectiveKind())
+	if !BodyHasKeyword(body, Equip) {
+		t.Fatal("BodyHasKeyword(Equip) = false")
+	}
+	gotTargets := BodyTargets(body)
+	if len(gotTargets) != 1 || gotTargets[0].MinTargets != targets[0].MinTargets || gotTargets[0].MaxTargets != targets[0].MaxTargets {
+		t.Fatalf("BodyTargets = %+v, want %+v", gotTargets, targets)
+	}
+
+	loyalty := LoyaltyAbilityBody{LoyaltyCost: -2}
+	if BodyLoyaltyCost(loyalty) != -2 {
+		t.Fatalf("BodyLoyaltyCost = %d, want -2", BodyLoyaltyCost(loyalty))
 	}
 }
 
-func TestLegacyAbilityBodyViews(t *testing.T) {
-	ability := AbilityDef{
-		Kind: ActivatedAbility,
-		Targets: []TargetSpec{{
-			MinTargets: 1,
-			MaxTargets: 1,
-		}},
+func TestKeywordBodyHelpers(t *testing.T) {
+	wardBody := TriggeredAbilityBody{
+		KeywordAbilities: []KeywordAbility{WardKeyword{Cost: cost.Mana{cost.O(2)}}},
+	}
+	if wardCost, ok := BodyWardCost(wardBody); !ok || !slices.Equal(wardCost, cost.Mana{cost.O(2)}) {
+		t.Fatalf("BodyWardCost = %+v/%v, want {2}/true", wardCost, ok)
 	}
 
-	body, ok := ability.ActivatedBody()
-	if !ok {
-		t.Fatal("ActivatedBody returned false")
+	madnessBody := TriggeredAbilityBody{
+		KeywordAbilities: []KeywordAbility{MadnessKeyword{Cost: cost.Mana{cost.B}}},
 	}
-	content, ok := body.Content.(PlainAbilityContent)
-	if !ok {
-		t.Fatalf("content = %T, want PlainAbilityContent", body.Content)
-	}
-	if len(content.Targets) != 1 {
-		t.Fatalf("content = %+v, want one target", content)
-	}
-}
-
-func TestAbilityFieldAccessorsPreferBody(t *testing.T) {
-	activationCondition := opt.Val(Condition{ControllerHasMaxSpeed: true})
-	ability := AbilityDef{
-		Kind:                ActivatedAbility,
-		ZoneOfFunction:      zone.Battlefield,
-		Timing:              NoTimingRestriction,
-		ActivationCondition: opt.Val(Condition{SourceNotMonstrous: true}),
-		LoyaltyCost:         1,
-		Body: LoyaltyAbilityBody{
-			LoyaltyCost:         -2,
-			ActivationCondition: activationCondition,
-		},
+	if manaCost, ok := BodyMadnessCost(madnessBody); !ok || !slices.Equal(manaCost, cost.Mana{cost.B}) {
+		t.Fatalf("BodyMadnessCost = %+v/%v, want {B}/true", manaCost, ok)
 	}
 
-	if ability.FunctionZone() != zone.Battlefield {
-		t.Fatalf("function zone = %v, want legacy battlefield fallback", ability.FunctionZone())
-	}
-	if ability.TimingRestriction() != NoTimingRestriction {
-		t.Fatalf("timing = %v, want legacy no restriction fallback", ability.TimingRestriction())
-	}
-	if ability.LoyaltyCostValue() != -2 {
-		t.Fatalf("loyalty cost = %v, want body value", ability.LoyaltyCostValue())
-	}
-	if got := ability.ActivationConditionValue(); !got.Exists || !got.Val.ControllerHasMaxSpeed {
-		t.Fatalf("activation condition = %+v, want body condition", got)
-	}
-}
-
-// TestBodyOnlySpellAbilityBodyLowers verifies SpellAbilityBody lowers to flat fields.
-func TestBodyOnlySpellAbilityBodyLowers(t *testing.T) {
-	src := AbilityDef{Body: SpellAbilityBody{
-		Text:    "Draw two cards.",
-		Content: PlainAbilityContent{Sequence: []Instruction{{Primitive: Draw{Amount: Fixed(2)}}}},
-		AdditionalCosts: []cost.Additional{
-			{Kind: cost.AdditionalTap, Text: "Tap"},
-		},
-		AlternativeCosts: []cost.Alternative{{Label: "Overload"}},
-	}}
-	got := src.WithBody()
-	if got.Kind != SpellAbility {
-		t.Fatalf("Kind = %v, want SpellAbility", got.Kind)
-	}
-	if got.Text != "Draw two cards." {
-		t.Fatalf("Text = %q, want spell text", got.Text)
-	}
-	if len(got.AdditionalCosts) != 1 || got.AdditionalCosts[0].Kind != cost.AdditionalTap {
-		t.Fatalf("AdditionalCosts = %+v, want tap", got.AdditionalCosts)
-	}
-	if len(got.AlternativeCosts) != 1 {
-		t.Fatalf("AlternativeCosts = %+v, want one", got.AlternativeCosts)
-	}
-	spellBody, ok := got.SpellBody()
-	if !ok {
-		t.Fatal("SpellBody returned false")
-	}
-	content, ok := spellBody.Content.(PlainAbilityContent)
-	if !ok || len(content.Sequence) != 1 {
-		t.Fatalf("Content = %+v, want one instruction", spellBody.Content)
-	}
-}
-
-// TestBodyOnlyActivatedEquipAbilityLowers verifies ActivatedAbilityBody with equip keyword lowers to flat fields.
-func TestBodyOnlyActivatedEquipAbilityLowers(t *testing.T) {
-	equipCost := cost.Mana{cost.O(2)}
-	src := AbilityDef{Body: ActivatedAbilityBody{
-		Text:     "Equip {2}",
-		ManaCost: opt.Val(equipCost),
-		Timing:   SorceryOnly,
-		Content: PlainAbilityContent{
-			Targets: []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
-		},
-		KeywordAbilities: []KeywordAbility{EquipKeyword{Cost: equipCost}},
-	}}
-	got := src.WithBody()
-	if got.Kind != ActivatedAbility {
-		t.Fatalf("Kind = %v, want ActivatedAbility", got.Kind)
-	}
-	if !got.IsActivated() {
-		t.Fatal("IsActivated() should be true")
-	}
-	if got.Timing != SorceryOnly {
-		t.Fatalf("Timing = %v, want SorceryOnly", got.Timing)
-	}
-	if len(got.Targets) != 1 {
-		t.Fatalf("Targets = %+v, want one target", got.Targets)
-	}
-	if !got.HasKeyword(Equip) {
-		t.Fatal("HasKeyword(Equip) should be true after lowering")
-	}
-	if len(got.KeywordAbilities) != 1 {
-		t.Fatalf("KeywordAbilities = %+v, want equip keyword", got.KeywordAbilities)
-	}
-}
-
-// TestBodyOnlyManaAbilityBodyPlainLowers verifies plain ManaAbilityBody lowers to flat fields.
-func TestBodyOnlyManaAbilityBodyPlainLowers(t *testing.T) {
-	src := AbilityDef{Body: ManaAbilityBody{
-		Text:            "{T}: Add {G}.",
-		AdditionalCosts: cost.Tap,
-		Content: PlainAbilityContent{Sequence: []Instruction{
-			{Primitive: AddMana{Amount: Fixed(1)}},
-		}},
-	}}
-	got := src.WithBody()
-	if got.Kind != ActivatedAbility {
-		t.Fatalf("Kind = %v, want ActivatedAbility", got.Kind)
-	}
-	if !got.IsManaAbility {
-		t.Fatal("IsManaAbility should be true")
-	}
-	if !got.IsMana() {
-		t.Fatal("IsMana() should be true")
-	}
-	manaBody, ok := got.ManaBody()
-	if !ok {
-		t.Fatal("ManaBody returned false")
-	}
-	content, ok := manaBody.Content.(PlainAbilityContent)
-	if !ok || len(content.Sequence) != 1 {
-		t.Fatalf("Content = %+v, want one AddMana instruction", manaBody.Content)
-	}
-}
-
-// TestBodyOnlyManaAbilityBodyModalLowers verifies modal ManaAbilityBody lowers to flat modes.
-func TestBodyOnlyManaAbilityBodyModalLowers(t *testing.T) {
-	src := AbilityDef{Body: ManaAbilityBody{
-		Text: "{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.",
-		Content: ModalAbilityContent{
-			Modes: []Mode{
-				{Text: "Add {R}{R}.", Sequence: []Instruction{{Primitive: AddMana{}}, {Primitive: AddMana{}}}},
-				{Text: "Add {G}{G}.", Sequence: []Instruction{{Primitive: AddMana{}}, {Primitive: AddMana{}}}},
-			},
-		},
-	}}
-	got := src.WithBody()
-	if got.Kind != ActivatedAbility || !got.IsManaAbility {
-		t.Fatalf("Kind/IsMana = %v/%v, want ActivatedAbility mana", got.Kind, got.IsManaAbility)
-	}
-	if len(got.Modes) != 2 {
-		t.Fatalf("Modes = %v, want 2 modes for modal mana", len(got.Modes))
-	}
-}
-
-// TestBodyOnlyLoyaltyAbilityBodyLowers verifies LoyaltyAbilityBody lowers to flat fields.
-func TestBodyOnlyLoyaltyAbilityBodyLowers(t *testing.T) {
-	src := AbilityDef{Body: LoyaltyAbilityBody{
-		Text:        "-2: Fight.",
-		LoyaltyCost: -2,
-		Content: PlainAbilityContent{
-			Targets:  []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
-			Sequence: []Instruction{{Primitive: Fight{}}},
-		},
-	}}
-	got := src.WithBody()
-	if got.Kind != ActivatedAbility {
-		t.Fatalf("Kind = %v, want ActivatedAbility", got.Kind)
-	}
-	if !got.IsLoyaltyAbility {
-		t.Fatal("IsLoyaltyAbility should be true")
-	}
-	if !got.IsLoyalty() {
-		t.Fatal("IsLoyalty() should be true")
-	}
-	if got.LoyaltyCost != -2 {
-		t.Fatalf("LoyaltyCost = %v, want -2", got.LoyaltyCost)
-	}
-	loyaltyBody, ok := got.LoyaltyBody()
-	if !ok {
-		t.Fatal("LoyaltyBody returned false")
-	}
-	content, ok := loyaltyBody.Content.(PlainAbilityContent)
-	if !ok || len(content.Targets) != 1 || len(content.Sequence) != 1 {
-		t.Fatalf("Content = %+v, want 1 target and 1 instruction", loyaltyBody.Content)
-	}
-}
-
-// TestBodyOnlyTriggeredAbilityBodyLowers verifies TriggeredAbilityBody lowers to flat fields.
-func TestBodyOnlyTriggeredAbilityBodyLowers(t *testing.T) {
-	src := AbilityDef{Body: TriggeredAbilityBody{
-		Text: "Whenever this enters, draw a card.",
-		Trigger: TriggerCondition{
-			Type: TriggerWhenever,
-			Pattern: TriggerPattern{
-				Event:  EventPermanentEnteredBattlefield,
-				Source: TriggerSourceSelf,
-			},
-		},
-		Optional:           true,
-		MaxTriggersPerTurn: 1,
-		Content: PlainAbilityContent{Sequence: []Instruction{
-			{Primitive: Draw{Amount: Fixed(1)}},
-		}},
-	}}
-	got := src.WithBody()
-	if got.Kind != TriggeredAbility {
-		t.Fatalf("Kind = %v, want TriggeredAbility", got.Kind)
-	}
-	if !got.IsTriggered() {
-		t.Fatal("IsTriggered() should be true")
-	}
-	if !got.Trigger.Exists || got.Trigger.Val.Pattern.Event != EventPermanentEnteredBattlefield {
-		t.Fatalf("Trigger = %+v, want ETB trigger", got.Trigger)
-	}
-	if !got.Optional {
-		t.Fatal("Optional should be true")
-	}
-	if got.MaxTriggersPerTurn != 1 {
-		t.Fatalf("MaxTriggersPerTurn = %v, want 1", got.MaxTriggersPerTurn)
-	}
-	triggeredBody, ok := got.TriggeredBody()
-	if !ok {
-		t.Fatal("TriggeredBody returned false")
-	}
-	content, ok := triggeredBody.Content.(PlainAbilityContent)
-	if !ok || len(content.Sequence) != 1 {
-		t.Fatalf("Content = %+v, want one instruction", triggeredBody.Content)
-	}
-}
-
-// TestBodyOnlyStaticAbilityBodyLowers verifies StaticAbilityBody lowers to flat fields.
-func TestBodyOnlyStaticAbilityBodyLowers(t *testing.T) {
-	activationCond := opt.Val(Condition{ControllerHasMaxSpeed: true})
-	src := AbilityDef{Body: StaticAbilityBody{
-		Text:      "Flying",
-		Condition: activationCond,
+	activated := ActivatedAbilityBody{
 		KeywordAbilities: []KeywordAbility{
-			SimpleKeyword{Kind: Flying},
+			SuspendKeyword{Cost: cost.Mana{cost.U}, TimeCounters: 3},
+			MorphKeyword{Cost: cost.Mana{cost.O(3)}},
+			DisguiseKeyword{Cost: cost.Mana{cost.O(2), cost.U}},
+			KickerKeyword{Cost: cost.Mana{cost.R}},
 		},
-	}}
-	got := src.WithBody()
-	if got.Kind != StaticAbility {
-		t.Fatalf("Kind = %v, want StaticAbility", got.Kind)
 	}
-	if !got.IsStatic() {
-		t.Fatal("IsStatic() should be true")
+	if manaCost, counters, ok := ActivatedBodySuspendInfo(activated); !ok || counters != 3 || !slices.Equal(manaCost, cost.Mana{cost.U}) {
+		t.Fatalf("ActivatedBodySuspendInfo = %+v/%d/%v, want {U}/3/true", manaCost, counters, ok)
 	}
-	if !got.Condition.Exists || !got.Condition.Val.ControllerHasMaxSpeed {
-		t.Fatalf("Condition = %+v, want max-speed condition", got.Condition)
+	if manaCost, ok := ActivatedBodyMorphCost(activated); !ok || !slices.Equal(manaCost, cost.Mana{cost.O(3)}) {
+		t.Fatalf("ActivatedBodyMorphCost = %+v/%v, want {3}/true", manaCost, ok)
 	}
-	if !got.HasKeyword(Flying) {
-		t.Fatal("HasKeyword(Flying) should be true after lowering")
+	if manaCost, ok := ActivatedBodyDisguiseCost(activated); !ok || !slices.Equal(manaCost, cost.Mana{cost.O(2), cost.U}) {
+		t.Fatalf("ActivatedBodyDisguiseCost = %+v/%v, want {2}{U}/true", manaCost, ok)
 	}
-	if len(got.KeywordAbilities) != 1 {
-		t.Fatalf("KeywordAbilities = %+v, want flying keyword", got.KeywordAbilities)
+	if kicker, ok := ActivatedBodyKicker(activated); !ok || !slices.Equal(kicker.Cost, cost.Mana{cost.R}) {
+		t.Fatalf("ActivatedBodyKicker = %+v/%v, want {R}/true", kicker, ok)
+	}
+
+	staticBody := StaticAbilityBody{
+		KeywordAbilities: []KeywordAbility{
+			EnchantKeyword{Target: TargetSpec{Constraint: "creature"}},
+			ProtectionKeyword{FromColors: []color.Color{color.Black, color.Red}},
+		},
+	}
+	target, ok := StaticBodyEnchantTarget(staticBody)
+	if !ok || target.Constraint != "creature" {
+		t.Fatalf("StaticBodyEnchantTarget = %+v/%v, want creature/true", target, ok)
+	}
+	if colors := StaticBodyProtectionColors(staticBody); !slices.Equal(colors, []color.Color{color.Black, color.Red}) {
+		t.Fatalf("StaticBodyProtectionColors = %+v, want black/red", colors)
 	}
 }

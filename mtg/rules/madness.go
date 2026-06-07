@@ -9,17 +9,13 @@ import (
 )
 
 func madnessCostForCard(card *game.CardDef) (cost.Mana, bool) {
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		ability := &abilities[i]
-		if manaCost, ok := ability.MadnessCost(); ok {
-			return manaCost, true
-		}
+	if card == nil {
+		return nil, false
 	}
-	return nil, false
+	return card.MadnessCost()
 }
 
-func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.TriggeredAbilityBody, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	cardID := obj.SourceID
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
@@ -33,7 +29,7 @@ func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *ga
 		moveExiledCardToGraveyard(g, obj.Controller, cardID)
 		return "declined"
 	}
-	manaCost, ok := ability.MadnessCost()
+	manaCost, ok := game.BodyMadnessCost(*ability)
 	if !ok || !e.castMadnessSpellWithChoices(g, obj.Controller, card, manaCost, agents, log) {
 		moveExiledCardToGraveyard(g, obj.Controller, cardID)
 		return "resolved"

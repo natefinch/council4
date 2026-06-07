@@ -44,19 +44,19 @@ func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.Ca
 	return targetChoicesForSpecs(g, controller, card, 0, specs)
 }
 
-func targetChoicesForAbility(g *game.Game, controller game.PlayerID, ability *game.AbilityDef) targetChoiceResult {
-	return targetChoicesForAbilityFromSource(g, controller, nil, ability)
+func targetChoicesForBody(g *game.Game, controller game.PlayerID, body game.AbilityBody) targetChoiceResult {
+	return targetChoicesForBodyFromSource(g, controller, nil, body)
 }
 
-func targetChoicesForAbilityFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, ability *game.AbilityDef) targetChoiceResult {
-	return targetChoicesForAbilityFromSourceObject(g, controller, source, 0, ability)
+func targetChoicesForBodyFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, body game.AbilityBody) targetChoiceResult {
+	return targetChoicesForBodyFromSourceObject(g, controller, source, 0, body)
 }
 
-func targetChoicesForAbilityFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef) targetChoiceResult {
-	if ability == nil {
+func targetChoicesForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.AbilityBody) targetChoiceResult {
+	if body == nil {
 		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}}
 	}
-	return targetChoicesForSpecs(g, controller, source, sourceObjectID, ability.Targets)
+	return targetChoicesForSpecs(g, controller, source, sourceObjectID, game.BodyTargets(body))
 }
 
 // targetChoicesForSpecs enumerates every legal target combination for specs.
@@ -182,19 +182,19 @@ func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.Car
 	return targetsValidForSpecs(g, controller, card, 0, specs, targets)
 }
 
-func targetsValidForAbility(g *game.Game, controller game.PlayerID, ability *game.AbilityDef, targets []game.Target) bool {
-	return targetsValidForAbilityFromSource(g, controller, nil, ability, targets)
+func targetsValidForBody(g *game.Game, controller game.PlayerID, body game.AbilityBody, targets []game.Target) bool {
+	return targetsValidForBodyFromSource(g, controller, nil, body, targets)
 }
 
-func targetsValidForAbilityFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, ability *game.AbilityDef, targets []game.Target) bool {
-	return targetsValidForAbilityFromSourceObject(g, controller, source, 0, ability, targets)
+func targetsValidForBodyFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, body game.AbilityBody, targets []game.Target) bool {
+	return targetsValidForBodyFromSourceObject(g, controller, source, 0, body, targets)
 }
 
-func targetsValidForAbilityFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef, targets []game.Target) bool {
-	if ability == nil {
+func targetsValidForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.AbilityBody, targets []game.Target) bool {
+	if body == nil {
 		return len(targets) == 0
 	}
-	return targetsValidForSpecs(g, controller, source, sourceObjectID, ability.Targets, targets)
+	return targetsValidForSpecs(g, controller, source, sourceObjectID, game.BodyTargets(body), targets)
 }
 
 func targetsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) bool {
@@ -252,19 +252,19 @@ func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, controller game.P
 	return hasAnyLegalTargetForSpecs(g, controller, card, 0, specs, targets)
 }
 
-func abilityHasAnyLegalTargets(g *game.Game, ability *game.AbilityDef, controller game.PlayerID, targets []game.Target) bool {
-	return abilityHasAnyLegalTargetsFromSource(g, nil, ability, controller, targets)
+func bodyHasAnyLegalTargets(g *game.Game, body game.AbilityBody, controller game.PlayerID, targets []game.Target) bool {
+	return bodyHasAnyLegalTargetsFromSource(g, nil, body, controller, targets)
 }
 
-func abilityHasAnyLegalTargetsFromSource(g *game.Game, source *game.CardDef, ability *game.AbilityDef, controller game.PlayerID, targets []game.Target) bool {
-	return abilityHasAnyLegalTargetsFromSourceObject(g, source, 0, ability, controller, targets)
+func bodyHasAnyLegalTargetsFromSource(g *game.Game, source *game.CardDef, body game.AbilityBody, controller game.PlayerID, targets []game.Target) bool {
+	return bodyHasAnyLegalTargetsFromSourceObject(g, source, 0, body, controller, targets)
 }
 
-func abilityHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef, controller game.PlayerID, targets []game.Target) bool {
-	if ability == nil {
+func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.AbilityBody, controller game.PlayerID, targets []game.Target) bool {
+	if body == nil {
 		return len(targets) == 0
 	}
-	return hasAnyLegalTargetForSpecs(g, controller, source, sourceObjectID, ability.Targets, targets)
+	return hasAnyLegalTargetForSpecs(g, controller, source, sourceObjectID, game.BodyTargets(body), targets)
 }
 
 func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) bool {
@@ -278,11 +278,11 @@ func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.
 	return e.completeAnnouncementTargets(g, controller, card, 0, spellTargetSpecs(card, chosenModes), targets, agents, log)
 }
 
-func (e *Engine) completeAbilityAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.AbilityDef, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
-	if ability == nil {
+func (e *Engine) completeAbilityAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.AbilityBody, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	if body == nil {
 		return targets, len(targets) == 0
 	}
-	return e.completeAnnouncementTargets(g, controller, source, sourceObjectID, ability.Targets, targets, agents, log)
+	return e.completeAnnouncementTargets(g, controller, source, sourceObjectID, game.BodyTargets(body), targets, agents, log)
 }
 
 func (e *Engine) completeAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
@@ -398,40 +398,52 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 	if !ok {
 		return nil
 	}
-	if len(ability.Modes) > 0 {
-		if !modesValidForAbility(ability, chosenModes) {
+	content, ok := ability.Content.(game.ModalAbilityContent)
+	if ok {
+		if !modesValidForContent(content, chosenModes) {
 			return nil
 		}
 		var specs []game.TargetSpec
 		for _, modeIndex := range chosenModes {
-			specs = append(specs, ability.Modes[modeIndex].Targets...)
+			specs = append(specs, content.Modes[modeIndex].Targets...)
 		}
 		return specs
 	}
-	return ability.Targets
+	return game.BodyTargets(*ability)
 }
 
 func modeChoicesForSpell(card *game.CardDef) [][]int {
 	ability, _ := firstSpellAbility(card)
-	return modeChoicesForAbility(ability)
+	if ability == nil {
+		return [][]int{nil}
+	}
+	return modeChoicesForContent(ability.Content)
 }
 
-func modeChoicesForAbility(ability *game.AbilityDef) [][]int {
-	if ability == nil || len(ability.Modes) == 0 {
+func modeChoicesForBody(body game.AbilityBody) [][]int {
+	if body == nil {
+		return [][]int{nil}
+	}
+	return modeChoicesForContent(game.BodyContent(body))
+}
+
+func modeChoicesForContent(content game.AbilityContent) [][]int {
+	modal, ok := content.(game.ModalAbilityContent)
+	if !ok || len(modal.Modes) == 0 {
 		return [][]int{nil}
 	}
 	// Modal choices are made before targets/costs are finalized and are locked
 	// into the stack object (CR 601.2d, CR 700.2).
-	minModes, maxModes := modeChoiceRange(ability)
-	if minModes < 0 || maxModes < minModes || maxModes > len(ability.Modes) {
+	minModes, maxModes := modeChoiceRangeFromContent(modal)
+	if minModes < 0 || maxModes < minModes || maxModes > len(modal.Modes) {
 		return nil
 	}
-	if ability.AllowDuplicateModes {
-		return duplicateModeChoices(len(ability.Modes), minModes, maxModes)
+	if modal.AllowDuplicateModes {
+		return duplicateModeChoices(len(modal.Modes), minModes, maxModes)
 	}
 	var choices [][]int
 	for count := minModes; count <= maxModes; count++ {
-		choices = append(choices, modeCombinations(len(ability.Modes), count)...)
+		choices = append(choices, modeCombinations(len(modal.Modes), count)...)
 	}
 	return choices
 }
@@ -441,23 +453,28 @@ func modesValidForSpell(card *game.CardDef, chosenModes []int) bool {
 	if !ok {
 		return len(chosenModes) == 0
 	}
-	return modesValidForAbility(ability, chosenModes)
+	return modesValidForContent(ability.Content, chosenModes)
 }
 
-func modesValidForAbility(ability *game.AbilityDef, chosenModes []int) bool {
-	if ability == nil {
+func modesValidForBody(body game.AbilityBody, chosenModes []int) bool {
+	if body == nil {
 		return len(chosenModes) == 0
 	}
-	if len(ability.Modes) == 0 {
+	return modesValidForContent(game.BodyContent(body), chosenModes)
+}
+
+func modesValidForContent(content game.AbilityContent, chosenModes []int) bool {
+	modal, ok := content.(game.ModalAbilityContent)
+	if !ok || len(modal.Modes) == 0 {
 		return len(chosenModes) == 0
 	}
-	minModes, maxModes := modeChoiceRange(ability)
+	minModes, maxModes := modeChoiceRangeFromContent(modal)
 	if len(chosenModes) < minModes || len(chosenModes) > maxModes {
 		return false
 	}
 	seen := make(map[int]bool, len(chosenModes))
 	for i, modeIndex := range chosenModes {
-		if modeIndex < 0 || modeIndex >= len(ability.Modes) {
+		if modeIndex < 0 || modeIndex >= len(modal.Modes) {
 			return false
 		}
 		if i > 0 && chosenModes[i-1] > modeIndex {
@@ -466,7 +483,7 @@ func modesValidForAbility(ability *game.AbilityDef, chosenModes []int) bool {
 		// Canonical nondecreasing order avoids representing the same modal
 		// choice multiple ways while preserving duplicate-mode templates that
 		// explicitly permit repeats (CR 700.2d).
-		if !ability.AllowDuplicateModes {
+		if !modal.AllowDuplicateModes {
 			if seen[modeIndex] {
 				return false
 			}
@@ -476,12 +493,12 @@ func modesValidForAbility(ability *game.AbilityDef, chosenModes []int) bool {
 	return true
 }
 
-func modeChoiceRange(ability *game.AbilityDef) (minModes, maxModes int) {
-	if ability == nil || len(ability.Modes) == 0 {
+func modeChoiceRangeFromContent(content game.ModalAbilityContent) (minModes, maxModes int) {
+	if len(content.Modes) == 0 {
 		return 0, 0
 	}
-	minModes = ability.MinModes
-	maxModes = ability.MaxModes
+	minModes = content.MinModes
+	maxModes = content.MaxModes
 	if minModes == 0 && maxModes == 0 {
 		return 1, 1
 	}

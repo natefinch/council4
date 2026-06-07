@@ -399,7 +399,7 @@ func angerLikeCard() *game.CardDef {
 func cinderLikeLand() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cinder-like",
 		Types: []types.Card{types.Land},
-		ReplacementAbilities: []game.ReplacementAbilityDef{
+		ReplacementAbilities: []game.ReplacementAbilityBody{
 			game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
 				Negate: true,
 				ControllerControls: game.PermanentFilter{

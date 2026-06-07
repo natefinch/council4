@@ -454,11 +454,10 @@ func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []color.
 	var colors []color.Color
 	abilities := permanentEffectiveAbilities(g, permanent)
 	for i := range abilities {
-		ability := &abilities[i]
-		if !abilityHasKeyword(ability, game.Protection) {
-			continue
+		body, ok := abilities[i].(game.StaticAbilityBody)
+		if ok {
+			colors = append(colors, game.StaticBodyProtectionColors(body)...)
 		}
-		colors = append(colors, ability.ProtectionColors()...)
 	}
 	return colors
 }

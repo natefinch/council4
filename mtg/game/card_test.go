@@ -54,7 +54,7 @@ func TestTransformFrontLandCanBePlayedAsLand(t *testing.T) {
 	}
 }
 
-func TestCardFaceAbilityDefsIncludesCategorizedAbilities(t *testing.T) {
+func TestCardFaceAbilityCountAndBodyAtUsesCanonicalOrder(t *testing.T) {
 	face := CardFace{
 		SpellAbility: opt.Val(SpellAbilityBody{
 			Text:    "Draw a card.",
@@ -71,7 +71,7 @@ func TestCardFaceAbilityDefsIncludesCategorizedAbilities(t *testing.T) {
 			},
 			Content: PlainAbilityContent{Sequence: []Instruction{{Primitive: Draw{}}}},
 		}},
-		ReplacementAbilities: []ReplacementAbilityDef{{
+		ReplacementAbilities: []ReplacementAbilityBody{{
 			Text: "If this would die, exile it instead.",
 		}},
 		StaticAbilities: []StaticAbilityBody{{
@@ -80,42 +80,79 @@ func TestCardFaceAbilityDefsIncludesCategorizedAbilities(t *testing.T) {
 		}},
 	}
 
-	abilities := face.AbilityDefs()
-
-	if len(abilities) != 5 {
-		t.Fatalf("abilities = %d, want five categorized abilities", len(abilities))
+	if face.AbilityCount() != 5 {
+		t.Fatalf("ability count = %d, want five categorized abilities", face.AbilityCount())
 	}
-	if !abilities[0].IsSpell() || !abilities[1].IsMana() || !abilities[2].IsTriggered() || !abilities[3].IsStatic() || !abilities[4].IsStatic() {
-		t.Fatalf("ability kinds = %+v, want spell/mana/triggered/replacement-static/static", abilities)
+	if _, ok := face.BodyAt(0).(SpellAbilityBody); !ok {
+		t.Fatalf("BodyAt(0) = %T, want SpellAbilityBody", face.BodyAt(0))
 	}
-	for i := range abilities {
-		if abilities[i].Body == nil {
-			t.Fatalf("ability %d has nil Body: %+v", i, abilities[i])
-		}
+	if _, ok := face.BodyAt(1).(ManaAbilityBody); !ok {
+		t.Fatalf("BodyAt(1) = %T, want ManaAbilityBody", face.BodyAt(1))
+	}
+	if _, ok := face.BodyAt(2).(TriggeredAbilityBody); !ok {
+		t.Fatalf("BodyAt(2) = %T, want TriggeredAbilityBody", face.BodyAt(2))
+	}
+	if _, ok := face.BodyAt(3).(ReplacementAbilityBody); !ok {
+		t.Fatalf("BodyAt(3) = %T, want ReplacementAbilityBody", face.BodyAt(3))
+	}
+	if _, ok := face.BodyAt(4).(StaticAbilityBody); !ok {
+		t.Fatalf("BodyAt(4) = %T, want StaticAbilityBody", face.BodyAt(4))
 	}
 	if !face.HasKeyword(Flying) {
 		t.Fatal("categorized static keyword was not visible through HasKeyword")
 	}
 }
 
-func TestWithAbilityBodiesPreservesCategorizedAbilities(t *testing.T) {
-	card := &CardDef{CardFace: CardFace{
-		ReplacementAbilities: []ReplacementAbilityDef{
-			EntersTappedReplacement("This permanent enters tapped."),
-		},
-	}}
-
-	normalized := card.WithAbilityBodies()
-
-	if len(normalized.ReplacementAbilities) != 1 {
-		t.Fatalf("ReplacementAbilities len = %d, want 1", len(normalized.ReplacementAbilities))
+func TestCardFaceCloneClonesSpellCosts(t *testing.T) {
+	face := CardFace{
+		AdditionalCosts: []cost.Additional{{
+			Kind: cost.AdditionalPayLife,
+			Text: "Pay 2 life",
+		}},
+		AlternativeCosts: []cost.Alternative{{
+			Label:    "Flashback",
+			ManaCost: opt.Val(cost.Mana{cost.O(3), cost.U}),
+			AdditionalCosts: []cost.Additional{{
+				Kind: cost.AdditionalDiscard,
+				Text: "Discard a card",
+			}},
+		}},
+		SpellAbility: opt.Val(SpellAbilityBody{Text: "Draw a card."}),
 	}
-	// Runtime card caches the compatibility view.
-	if normalized.abilityDefs == nil {
-		t.Fatal("runtime card ability cache was not populated by WithAbilityBodies")
+
+	cloned := face.clone()
+
+	face.AdditionalCosts[0].Text = "changed"
+	face.AlternativeCosts[0].Label = "changed"
+	face.AlternativeCosts[0].ManaCost.Val[0] = cost.O(9)
+	face.AlternativeCosts[0].AdditionalCosts[0].Text = "changed"
+	if cloned.AdditionalCosts[0].Text != "Pay 2 life" ||
+		cloned.AlternativeCosts[0].Label != "Flashback" ||
+		cloned.AlternativeCosts[0].ManaCost.Val[0] != cost.O(3) ||
+		cloned.AlternativeCosts[0].AdditionalCosts[0].Text != "Discard a card" {
+		t.Fatalf("cloned face costs alias source costs: %+v %+v", cloned.AdditionalCosts, cloned.AlternativeCosts)
 	}
-	abilities := normalized.AbilityDefs()
-	if len(abilities) != 1 || abilities[0].Body == nil {
-		t.Fatalf("compatibility abilities = %+v, want one body-backed replacement", abilities)
+}
+
+func TestClearAbilitiesRemovesCategorizedAbilities(t *testing.T) {
+	face := CardFace{
+		SpellAbility:         opt.Val(SpellAbilityBody{Text: "Draw"}),
+		ActivatedAbilities:   []ActivatedAbilityBody{{Text: "Act"}},
+		ManaAbilities:        []ManaAbilityBody{{Text: "Mana"}},
+		LoyaltyAbilities:     []LoyaltyAbilityBody{{Text: "Loyal"}},
+		TriggeredAbilities:   []TriggeredAbilityBody{{Text: "Trig"}},
+		ReplacementAbilities: []ReplacementAbilityBody{{Text: "Replace"}},
+		StaticAbilities:      []StaticAbilityBody{{Text: "Static"}},
+	}
+
+	face.ClearAbilities()
+
+	if face.AbilityCount() != 0 {
+		t.Fatalf("AbilityCount = %d, want 0", face.AbilityCount())
+	}
+	if face.SpellAbility.Exists || len(face.ActivatedAbilities) != 0 || len(face.ManaAbilities) != 0 ||
+		len(face.LoyaltyAbilities) != 0 || len(face.TriggeredAbilities) != 0 ||
+		len(face.ReplacementAbilities) != 0 || len(face.StaticAbilities) != 0 {
+		t.Fatalf("ClearAbilities did not clear categorized fields: %+v", face)
 	}
 }

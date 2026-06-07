@@ -123,7 +123,8 @@ func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 	if len(abilities) != 1 {
 		t.Fatalf("face-down disguise abilities = %+v, want ward ability", abilities)
 	}
-	if _, ok := abilities[0].WardCost(); !ok {
+	staticBody, ok := abilities[0].(game.StaticAbilityBody)
+	if !ok || !game.BodyHasKeyword(staticBody, game.Ward) {
 		t.Fatalf("face-down disguise abilities = %+v, want ward ability", abilities)
 	}
 

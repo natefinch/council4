@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -27,12 +28,9 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 	if card == nil {
 		return nil
 	}
-	ability, ok := firstSpellAbility(card)
 	kicker, kickerOK := spellKicker(card)
-	if !ok {
-		return []spellCostOption{{index: 0, label: "Normal cost", card: card, manaCost: spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid)}}
-	}
-	requiredAdditional := abilityAdditionalCosts(ability)
+	requiredAdditional := card.AdditionalCosts
+	hasFlashbackAlternative := slices.ContainsFunc(card.AlternativeCosts, isFlashbackAlternative)
 	options := []spellCostOption{
 		{
 			index:           0,
@@ -42,7 +40,7 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
 		},
 	}
-	for i, alternative := range ability.AlternativeCosts {
+	for i, alternative := range card.AlternativeCosts {
 		if isFlashbackAlternative(alternative) && sourceZone != zone.Graveyard {
 			continue
 		}
@@ -63,7 +61,7 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 			additionalCosts: additional,
 		})
 	}
-	if sourceZone == zone.Graveyard {
+	if sourceZone == zone.Graveyard && hasFlashbackAlternative {
 		return options[1:]
 	}
 	return options
@@ -86,30 +84,16 @@ func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerO
 }
 
 func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
-	if ability, ok := firstSpellAbility(card); ok {
-		if kicker, ok := ability.Kicker(); ok {
-			return kicker, true
-		}
-	}
 	if card == nil {
 		return game.KickerKeyword{}, false
 	}
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		if kicker, ok := abilities[i].Kicker(); ok {
-			return kicker, true
-		}
-	}
-	return game.KickerKeyword{}, false
+	return card.KickerKeyword()
 }
 
 // firstSpellAbility returns the first spell ability from a card, if any.
-func firstSpellAbility(card *game.CardDef) (*game.AbilityDef, bool) {
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		if abilities[i].IsSpell() {
-			return &abilities[i], true
-		}
+func firstSpellAbility(card *game.CardDef) (*game.SpellAbilityBody, bool) {
+	if card != nil && card.SpellAbility.Exists {
+		return &card.SpellAbility.Val, true
 	}
 	return nil, false
 }

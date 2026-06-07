@@ -63,13 +63,25 @@ type CardDef struct {
 	// Back holds the printed back-face characteristics for double-faced cards.
 	// The CardDef root fields are the printed front-face characteristics.
 	Back opt.V[CardFace]
+
+	// Alternate holds an alternate spell on the front side, used for split cards,
+	// adventures, prepared spells, etc.
+	Alternate opt.V[CardFace]
 }
 
 // CardFace is one printed face of a card. It mirrors the printed
 // characteristics from CardDef that can differ between faces.
 type CardFace struct {
-	Name             string
-	ManaCost         opt.V[cost.Mana]
+	Name     string
+	ManaCost opt.V[cost.Mana]
+
+	// AdditionalCosts are non-mana costs paid in addition to this face's
+	// ManaCost when it is cast as a spell.
+	AdditionalCosts []cost.Additional
+
+	// AlternativeCosts replace this face's ManaCost when one is selected.
+	AlternativeCosts []cost.Alternative
+
 	Colors           []color.Color
 	Supertypes       []types.Super
 	Types            []types.Card
@@ -86,17 +98,11 @@ type CardFace struct {
 	ManaAbilities        []ManaAbilityBody
 	LoyaltyAbilities     []LoyaltyAbilityBody
 	TriggeredAbilities   []TriggeredAbilityBody
-	ReplacementAbilities []ReplacementAbilityDef
+	ReplacementAbilities []ReplacementAbilityBody
 	StaticAbilities      []StaticAbilityBody
 
 	ImplementationID string
 	OracleText       string
-
-	// abilityDefs is the precomputed compatibility view built by withAbilityBodies
-	// from the categorized fields. It is set only on runtime card definitions
-	// (after WithAbilityBodies); card source literals leave it nil.
-	abilityDefs         []AbilityDef
-	abilitiesNormalized bool
 }
 
 // IsLegendary reports whether this card has the types.Legendary supertype.
@@ -177,20 +183,6 @@ func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
 		return nil, false
 	}
 	return face.ToCardDef(c), true
-}
-
-// WithAbilityBodies returns a runtime card definition whose categorized
-// abilities have a precomputed body-backed AbilityDef compatibility view.
-// The rules layer uses that view without rebuilding it in hot paths while it
-// migrates to AbilityBody consumers.
-func (c *CardDef) WithAbilityBodies() *CardDef {
-	card := *c
-	card.CardFace = c.withAbilityBodies()
-	if c.Back.Exists {
-		back := c.Back.Val
-		card.Back = opt.Val(back.withAbilityBodies())
-	}
-	return &card
 }
 
 // FaceIndexes returns the printed faces available on this card.
@@ -274,28 +266,153 @@ func (f *CardFace) HasAnySubtype(subtypes ...types.Sub) bool {
 
 // HasKeyword reports whether any ability on this face grants the given keyword.
 func (f *CardFace) HasKeyword(kw Keyword) bool {
-	abilities := f.AbilityDefs()
-	for i := range abilities {
-		if abilities[i].HasKeyword(kw) {
+	if f.SpellAbility.Exists && BodyHasKeyword(f.SpellAbility.Val, kw) {
+		return true
+	}
+	for i := range f.ActivatedAbilities {
+		if BodyHasKeyword(f.ActivatedAbilities[i], kw) {
+			return true
+		}
+	}
+	for i := range f.ManaAbilities {
+		if BodyHasKeyword(f.ManaAbilities[i], kw) {
+			return true
+		}
+	}
+	for i := range f.LoyaltyAbilities {
+		if BodyHasKeyword(f.LoyaltyAbilities[i], kw) {
+			return true
+		}
+	}
+	for i := range f.TriggeredAbilities {
+		if BodyHasKeyword(f.TriggeredAbilities[i], kw) {
+			return true
+		}
+	}
+	for i := range f.StaticAbilities {
+		if BodyHasKeyword(f.StaticAbilities[i], kw) {
 			return true
 		}
 	}
 	return false
 }
 
-// AbilityDefs returns all abilities on this face in the AbilityDef compatibility view.
-// Every returned ability has Body populated. On runtime cards prepared with
-// WithAbilityBodies the precomputed cache is returned directly; on source
-// literals the view is built on demand from the categorized fields.
-func (f *CardFace) AbilityDefs() []AbilityDef {
-	if f.abilitiesNormalized {
-		return f.abilityDefs
+// AbilityCount returns the number of abilities on this face in the canonical
+// index order (Spell, Activated, Mana, Loyalty, Triggered, Replacement, Static).
+func (f *CardFace) AbilityCount() int {
+	n := 0
+	if f.SpellAbility.Exists {
+		n++
 	}
-	return f.buildAbilityDefs()
+	return n + len(f.ActivatedAbilities) + len(f.ManaAbilities) + len(f.LoyaltyAbilities) + len(f.TriggeredAbilities) + len(f.ReplacementAbilities) + len(f.StaticAbilities)
 }
 
-// ClearAbilities removes every categorized ability and its normalized runtime
-// view from this face.
+// ActivatedAbilityIndex returns the canonical index of an activated ability.
+func (f *CardFace) ActivatedAbilityIndex(index int) int {
+	if f.SpellAbility.Exists {
+		return index + 1
+	}
+	return index
+}
+
+// ManaAbilityIndex returns the canonical index of a mana ability.
+func (f *CardFace) ManaAbilityIndex(index int) int {
+	return f.ActivatedAbilityIndex(len(f.ActivatedAbilities)) + index
+}
+
+// LoyaltyAbilityIndex returns the canonical index of a loyalty ability.
+func (f *CardFace) LoyaltyAbilityIndex(index int) int {
+	return f.ManaAbilityIndex(len(f.ManaAbilities)) + index
+}
+
+// TriggeredAbilityIndex returns the canonical index of a triggered ability.
+func (f *CardFace) TriggeredAbilityIndex(index int) int {
+	return f.LoyaltyAbilityIndex(len(f.LoyaltyAbilities)) + index
+}
+
+// BodyAt returns the ability body at the given canonical index. The canonical
+// order is: Spell (if present), Activated, Mana, Loyalty, Triggered,
+// Replacement, Static. Returns nil for out-of-range indexes.
+func (f *CardFace) BodyAt(index int) AbilityBody {
+	if index < 0 {
+		return nil
+	}
+	i := index
+	if f.SpellAbility.Exists {
+		if i == 0 {
+			return f.SpellAbility.Val
+		}
+		i--
+	}
+	if i < len(f.ActivatedAbilities) {
+		return f.ActivatedAbilities[i]
+	}
+	i -= len(f.ActivatedAbilities)
+	if i < len(f.ManaAbilities) {
+		return f.ManaAbilities[i]
+	}
+	i -= len(f.ManaAbilities)
+	if i < len(f.LoyaltyAbilities) {
+		return f.LoyaltyAbilities[i]
+	}
+	i -= len(f.LoyaltyAbilities)
+	if i < len(f.TriggeredAbilities) {
+		return f.TriggeredAbilities[i]
+	}
+	i -= len(f.TriggeredAbilities)
+	if i < len(f.ReplacementAbilities) {
+		return f.ReplacementAbilities[i]
+	}
+	i -= len(f.ReplacementAbilities)
+	if i < len(f.StaticAbilities) {
+		return f.StaticAbilities[i]
+	}
+	return nil
+}
+
+// KickerKeyword returns the first kicker keyword on any ability of this face.
+func (f *CardFace) KickerKeyword() (KickerKeyword, bool) {
+	for i := range f.ActivatedAbilities {
+		if kicker, ok := ActivatedBodyKicker(f.ActivatedAbilities[i]); ok {
+			return kicker, true
+		}
+	}
+	for i := range f.StaticAbilities {
+		if ka, ok := BodyKeywordAbility(f.StaticAbilities[i], Kicker); ok {
+			if kicker, ok := ka.(KickerKeyword); ok {
+				return kicker, true
+			}
+		}
+	}
+	return KickerKeyword{}, false
+}
+
+// WardKeywords returns all WardKeyword variants on this face.
+func (f *CardFace) WardKeywords() []WardKeyword {
+	var wards []WardKeyword
+	for i := range f.StaticAbilities {
+		if ka, ok := BodyKeywordAbility(f.StaticAbilities[i], Ward); ok {
+			if ward, ok := ka.(WardKeyword); ok {
+				wards = append(wards, ward)
+			}
+		}
+	}
+	return wards
+}
+
+// MadnessCost returns the Madness cost if this face has a madness alternative cost.
+func (f *CardFace) MadnessCost() (cost.Mana, bool) {
+	for i := range f.StaticAbilities {
+		if ka, ok := BodyKeywordAbility(f.StaticAbilities[i], Madness); ok {
+			if madness, ok := ka.(MadnessKeyword); ok {
+				return madness.Cost, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// ClearAbilities removes every categorized ability from this face.
 func (f *CardFace) ClearAbilities() {
 	f.SpellAbility = opt.V[SpellAbilityBody]{}
 	f.ActivatedAbilities = nil
@@ -304,8 +421,6 @@ func (f *CardFace) ClearAbilities() {
 	f.TriggeredAbilities = nil
 	f.ReplacementAbilities = nil
 	f.StaticAbilities = nil
-	f.abilityDefs = nil
-	f.abilitiesNormalized = false
 }
 
 // ManaValue returns this face's mana value from its printed mana cost (CR 202.3).
@@ -336,36 +451,12 @@ func (f *CardFace) ToCardDef(parent *CardDef) *CardDef {
 	}
 }
 
-func (f *CardFace) buildAbilityDefs() []AbilityDef {
-	abilities := make([]AbilityDef, 0, len(f.ActivatedAbilities)+len(f.ManaAbilities)+len(f.LoyaltyAbilities)+len(f.TriggeredAbilities)+len(f.ReplacementAbilities)+len(f.StaticAbilities)+1)
-	if f.SpellAbility.Exists {
-		abilities = append(abilities, spellAbilityDef(&f.SpellAbility.Val))
-	}
-	for i := range f.ActivatedAbilities {
-		abilities = append(abilities, activatedAbilityDef(&f.ActivatedAbilities[i]))
-	}
-	for i := range f.ManaAbilities {
-		abilities = append(abilities, manaAbilityDef(&f.ManaAbilities[i]))
-	}
-	for i := range f.LoyaltyAbilities {
-		abilities = append(abilities, loyaltyAbilityDef(&f.LoyaltyAbilities[i]))
-	}
-	for i := range f.TriggeredAbilities {
-		abilities = append(abilities, triggeredAbilityDef(&f.TriggeredAbilities[i]))
-	}
-	for i := range f.ReplacementAbilities {
-		abilities = append(abilities, replacementAbilityDef(&f.ReplacementAbilities[i]))
-	}
-	for i := range f.StaticAbilities {
-		abilities = append(abilities, staticAbilityDef(&f.StaticAbilities[i]))
-	}
-	return abilities
-}
-
 func (f *CardFace) clone() CardFace {
 	return CardFace{
 		Name:                 f.Name,
 		ManaCost:             f.ManaCost,
+		AdditionalCosts:      append([]cost.Additional(nil), f.AdditionalCosts...),
+		AlternativeCosts:     cloneAlternativeCosts(f.AlternativeCosts),
 		Colors:               append([]color.Color(nil), f.Colors...),
 		Supertypes:           append([]types.Super(nil), f.Supertypes...),
 		Types:                append([]types.Card(nil), f.Types...),
@@ -381,193 +472,23 @@ func (f *CardFace) clone() CardFace {
 		ManaAbilities:        append([]ManaAbilityBody(nil), f.ManaAbilities...),
 		LoyaltyAbilities:     append([]LoyaltyAbilityBody(nil), f.LoyaltyAbilities...),
 		TriggeredAbilities:   append([]TriggeredAbilityBody(nil), f.TriggeredAbilities...),
-		ReplacementAbilities: append([]ReplacementAbilityDef(nil), f.ReplacementAbilities...),
+		ReplacementAbilities: append([]ReplacementAbilityBody(nil), f.ReplacementAbilities...),
 		StaticAbilities:      append([]StaticAbilityBody(nil), f.StaticAbilities...),
 		ImplementationID:     f.ImplementationID,
 		OracleText:           f.OracleText,
-		abilityDefs:          append([]AbilityDef(nil), f.abilityDefs...),
-		abilitiesNormalized:  f.abilitiesNormalized,
 	}
 }
 
-func (f *CardFace) withAbilityBodies() CardFace {
-	face := f.clone()
-	face.abilityDefs = f.buildAbilityDefs()
-	face.abilitiesNormalized = true
-	return face
-}
-
-// lowerBodyToFlat populates flat compatibility fields of ability from Body.
-// It is the body→flat direction of WithBody: called in-place when Body is
-// already set but flat fields may be absent (body-only card literals).
-func lowerBodyToFlat(ability *AbilityDef) {
-	switch body := ability.Body.(type) {
-	case SpellAbilityBody:
-		ability.Kind = SpellAbility
-		ability.Text = body.Text
-		ability.AdditionalCosts = append([]cost.Additional(nil), body.AdditionalCosts...)
-		ability.AlternativeCosts = append([]cost.Alternative(nil), body.AlternativeCosts...)
-		applyAbilityContent(ability, body.Content)
-	case ActivatedAbilityBody:
-		ability.Kind = ActivatedAbility
-		ability.Text = body.Text
-		ability.ManaCost = body.ManaCost
-		ability.AdditionalCosts = append([]cost.Additional(nil), body.AdditionalCosts...)
-		ability.AlternativeCosts = append([]cost.Alternative(nil), body.AlternativeCosts...)
-		ability.ZoneOfFunction = body.ZoneOfFunction
-		ability.Timing = body.Timing
-		ability.ActivationCondition = body.ActivationCondition
-		ability.KeywordAbilities = append([]KeywordAbility(nil), body.KeywordAbilities...)
-		applyAbilityContent(ability, body.Content)
-	case ManaAbilityBody:
-		ability.Kind = ActivatedAbility
-		ability.IsManaAbility = true
-		ability.Text = body.Text
-		ability.ManaCost = body.ManaCost
-		ability.AdditionalCosts = append([]cost.Additional(nil), body.AdditionalCosts...)
-		ability.ZoneOfFunction = body.ZoneOfFunction
-		ability.Timing = body.Timing
-		ability.ActivationCondition = body.ActivationCondition
-		if body.Content != nil {
-			applyAbilityContent(ability, body.Content)
+func cloneAlternativeCosts(costs []cost.Alternative) []cost.Alternative {
+	cloned := make([]cost.Alternative, len(costs))
+	for i := range costs {
+		cloned[i] = costs[i]
+		if costs[i].ManaCost.Exists {
+			cloned[i].ManaCost.Val = append(cost.Mana(nil), costs[i].ManaCost.Val...)
 		}
-	case LoyaltyAbilityBody:
-		ability.Kind = ActivatedAbility
-		ability.IsLoyaltyAbility = true
-		ability.Text = body.Text
-		ability.LoyaltyCost = body.LoyaltyCost
-		ability.ActivationCondition = body.ActivationCondition
-		applyAbilityContent(ability, body.Content)
-	case TriggeredAbilityBody:
-		ability.Kind = TriggeredAbility
-		ability.Text = body.Text
-		ability.Trigger = opt.Val(body.Trigger)
-		ability.Optional = body.Optional
-		ability.MaxTriggersPerTurn = body.MaxTriggersPerTurn
-		applyAbilityContent(ability, body.Content)
-	case StaticAbilityBody:
-		ability.Kind = StaticAbility
-		ability.Text = body.Text
-		ability.Condition = body.Condition
-		ability.ZoneOfFunction = body.ZoneOfFunction
-		ability.KeywordAbilities = append([]KeywordAbility(nil), body.KeywordAbilities...)
-	default:
+		cloned[i].AdditionalCosts = append([]cost.Additional(nil), costs[i].AdditionalCosts...)
 	}
-}
-
-func spellAbilityDef(body *SpellAbilityBody) AbilityDef {
-	ability := AbilityDef{
-		Kind:             SpellAbility,
-		Text:             body.Text,
-		Body:             *body,
-		AdditionalCosts:  append([]cost.Additional(nil), body.AdditionalCosts...),
-		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
-	}
-	applyAbilityContent(&ability, body.Content)
-	return ability
-}
-
-func activatedAbilityDef(body *ActivatedAbilityBody) AbilityDef {
-	ability := AbilityDef{
-		Kind:                ActivatedAbility,
-		Text:                body.Text,
-		Body:                *body,
-		ManaCost:            body.ManaCost,
-		AdditionalCosts:     append([]cost.Additional(nil), body.AdditionalCosts...),
-		AlternativeCosts:    append([]cost.Alternative(nil), body.AlternativeCosts...),
-		ZoneOfFunction:      body.ZoneOfFunction,
-		Timing:              body.Timing,
-		ActivationCondition: body.ActivationCondition,
-		KeywordAbilities:    append([]KeywordAbility(nil), body.KeywordAbilities...),
-	}
-	applyAbilityContent(&ability, body.Content)
-	return ability
-}
-
-func manaAbilityDef(body *ManaAbilityBody) AbilityDef {
-	ability := AbilityDef{
-		Kind:                ActivatedAbility,
-		Text:                body.Text,
-		Body:                *body,
-		ManaCost:            body.ManaCost,
-		AdditionalCosts:     append([]cost.Additional(nil), body.AdditionalCosts...),
-		ZoneOfFunction:      body.ZoneOfFunction,
-		Timing:              body.Timing,
-		ActivationCondition: body.ActivationCondition,
-		IsManaAbility:       true,
-	}
-	if body.Content != nil {
-		applyAbilityContent(&ability, body.Content)
-	}
-	return ability
-}
-
-func loyaltyAbilityDef(body *LoyaltyAbilityBody) AbilityDef {
-	ability := AbilityDef{
-		Kind:                ActivatedAbility,
-		Text:                body.Text,
-		Body:                *body,
-		ActivationCondition: body.ActivationCondition,
-		IsLoyaltyAbility:    true,
-		LoyaltyCost:         body.LoyaltyCost,
-	}
-	applyAbilityContent(&ability, body.Content)
-	return ability
-}
-
-func triggeredAbilityDef(body *TriggeredAbilityBody) AbilityDef {
-	ability := AbilityDef{
-		Kind:               TriggeredAbility,
-		Text:               body.Text,
-		Body:               *body,
-		Trigger:            opt.Val(body.Trigger),
-		Optional:           body.Optional,
-		MaxTriggersPerTurn: body.MaxTriggersPerTurn,
-	}
-	applyAbilityContent(&ability, body.Content)
-	return ability
-}
-
-func replacementAbilityDef(body *ReplacementAbilityDef) AbilityDef {
-	ability := AbilityDef{
-		Kind: StaticAbility,
-		Text: body.Text,
-		Body: StaticAbilityBody{
-			Text: body.Text,
-		},
-	}
-	return ability.WithBody()
-}
-
-func staticAbilityDef(body *StaticAbilityBody) AbilityDef {
-	return AbilityDef{
-		Kind:             StaticAbility,
-		Text:             body.Text,
-		Body:             *body,
-		Condition:        body.Condition,
-		ZoneOfFunction:   body.ZoneOfFunction,
-		KeywordAbilities: append([]KeywordAbility(nil), body.KeywordAbilities...),
-	}
-}
-
-func applyAbilityContent(ability *AbilityDef, content AbilityContent) {
-	switch c := content.(type) {
-	case PlainAbilityContent:
-		ability.Targets = append([]TargetSpec(nil), c.Targets...)
-	case ModalAbilityContent:
-		ability.Targets = append([]TargetSpec(nil), c.SharedTargets...)
-		ability.Modes = make([]Mode, len(c.Modes))
-		for i := range c.Modes {
-			ability.Modes[i] = c.Modes[i]
-			ability.Modes[i].Targets = append([]TargetSpec(nil), c.Modes[i].Targets...)
-		}
-		ability.MinModes = c.MinModes
-		ability.MaxModes = c.MaxModes
-		ability.AllowDuplicateModes = c.AllowDuplicateModes
-	case nil:
-	default:
-		panic("game: unsupported AbilityContent")
-	}
+	return cloned
 }
 
 // CardInstance represents a specific card in a game — one of the 100 cards

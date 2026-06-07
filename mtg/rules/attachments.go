@@ -90,10 +90,8 @@ func enchantTargetSpecForPermanent(g *game.Game, aura *game.Permanent) (game.Tar
 }
 
 func enchantTargetSpecForCard(card *game.CardDef) (game.TargetSpec, bool) {
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		ability := &abilities[i]
-		spec, ok := ability.EnchantTarget()
+	for i := range card.StaticAbilities {
+		spec, ok := game.StaticBodyEnchantTarget(card.StaticAbilities[i])
 		if !ok {
 			continue
 		}

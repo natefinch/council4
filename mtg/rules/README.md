@@ -251,7 +251,7 @@ Destroy effects use a pre-zone-change replacement hook. If multiple supported re
 
 ## Hand-written card implementations
 
-Most cards should be represented declaratively with `game.AbilityDef` bodies and typed `game.Primitive` instructions. Cards that need behavior outside the current primitive set may set `CardDef.ImplementationID` and register a matching `CardImplementation` on the `Engine`.
+Most cards should be represented declaratively with categorized ability bodies on `CardFace` and typed `game.Primitive` instructions. Cards that need behavior outside the current primitive set may set `CardDef.ImplementationID` and register a matching `CardImplementation` on the `Engine`.
 
 This hook currently covers instant and sorcery spell-effect resolution after normal target re-checking. Permanents, triggered abilities, and activated abilities still resolve through the existing declarative paths. Hand-written implementations receive a `CardContext` instead of `*game.Game`; context methods wrap the same rules helpers used by declarative effects, so custom code participates in draw logging, events, damage prevention, and other mutation-boundary behavior.
 

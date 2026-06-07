@@ -54,10 +54,10 @@ func TestRegisteredCardAbilitiesHaveBodies(t *testing.T) {
 
 func assertFaceAbilitiesHaveBodies(t *testing.T, faceName string, face *game.CardFace) {
 	t.Helper()
-	abilities := face.AbilityDefs()
-	for abilityIndex := range abilities {
-		if abilities[abilityIndex].Body == nil {
-			t.Fatalf("%s ability %d has nil Body: %+v", faceName, abilityIndex, abilities[abilityIndex])
+	for abilityIndex := 0; abilityIndex < face.AbilityCount(); abilityIndex++ {
+		body := face.BodyAt(abilityIndex)
+		if body == nil {
+			t.Fatalf("%s ability %d has nil body", faceName, abilityIndex)
 		}
 	}
 }

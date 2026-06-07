@@ -73,7 +73,7 @@ Double-faced cards use `CardDef` root fields for the front face and
 
 ### Ability fields on CardFace
 
-Card source definitions use the **categorized fields** on `CardFace` directly. The flat `Abilities []AbilityDef` field has been removed; use `SpellAbility`, `ActivatedAbilities`, `ManaAbilities`, `LoyaltyAbilities`, `TriggeredAbilities`, `ReplacementAbilities`, or `StaticAbilities`.
+Card source definitions use the **categorized fields** on `CardFace` directly. The flat `Abilities` field has been removed; use `SpellAbility`, `ActivatedAbilities`, `ManaAbilities`, `LoyaltyAbilities`, `TriggeredAbilities`, `ReplacementAbilities`, or `StaticAbilities`.
 
 ```go
 // CardFace categorized ability fields:
@@ -82,7 +82,7 @@ ActivatedAbilities []ActivatedAbilityBody   // "[Cost]: [Effect]" abilities
 ManaAbilities      []ManaAbilityBody        // mana abilities (subset of activated, no targets)
 LoyaltyAbilities   []LoyaltyAbilityBody     // planeswalker +/−/0 abilities
 TriggeredAbilities []TriggeredAbilityBody   // When/Whenever/At abilities
-ReplacementAbilities []ReplacementAbilityDef // "if … would … instead …" abilities
+ReplacementAbilities []ReplacementAbilityBody // "if … would … instead …" abilities
 StaticAbilities    []StaticAbilityBody      // declarative continuous effects, keywords
 ```
 
@@ -127,9 +127,10 @@ The `CardFace` struct-field order is: `SpellAbility`, `ActivatedAbilities`, `Man
 oracle text commonly prints static/keyword abilities **before** activated/triggered abilities,
 you will often need an initializer function.
 
-`AbilityDef` and its `Body` field are a **compatibility view** consumed by existing rules
-paths via `CardFace.AbilityDefs()`. Card source must use categorized body values, including
-typed `AbilityBody` values in `ContinuousEffect.AddAbilities`.
+Rules and tests consume the categorized body values directly. When a caller needs the
+stable canonical ability index order, use `CardFace.AbilityCount()` and
+`CardFace.BodyAt()`. Nested abilities granted by `ContinuousEffect.AddAbilities`
+also use typed `AbilityBody` values.
 
 Card color identity lives in `mtg/game/color`, not `mtg/game/mana`. Use
 `color.NewIdentity(color.Green, color.Red)` for `CardDef.ColorIdentity`.
@@ -329,7 +330,7 @@ type ReplacementEffect struct {
 }
 ```
 
-Use `ReplacementAbilityDef` and the constructors
+Use `ReplacementAbilityBody` and the constructors
 `EntersTappedReplacement`, `EntersTappedIfReplacement`,
 `EntersTappedUnlessPaidReplacement`, and `EntersWithCountersReplacement` for
 supported enters-the-battlefield replacement text (CR 614). Other replacement
@@ -575,7 +576,7 @@ For keywords with parameters, use the typed field on a `StaticAbilityBody` (or t
 - **Equip {N}**: `ActivatedAbilityBody{Text: "Equip {N}", ManaCost: opt.Val(cost.Mana{cost.O(N)}), Timing: game.SorceryOnly, KeywordAbilities: []game.KeywordAbility{game.EquipKeyword{Cost: cost.Mana{cost.O(N)}}}, Content: game.PlainAbilityContent{Targets: []game.TargetSpec{{...}}}}`
 - **Cycling {N}**: `ActivatedAbilityBody{Text: "Cycling {N}", ManaCost: opt.Val(cost.Mana{...}), AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalDiscard, Text: "Discard this card", Source: zone.Hand}}, KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: cost.Mana{...}}}}`
 - **Prowess**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Prowess)}`; the rules engine creates the implicit trigger (CR 702.108)
-- **Flashback {cost}**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Flashback)}` plus a spell `cost.Alternative{Label: "Flashback", ManaCost: ...}`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
+- **Flashback {cost}**: `StaticAbilityBody{KeywordAbilities: game.SimpleKeywords(game.Flashback)}` plus `AlternativeCosts: []cost.Alternative{{Label: "Flashback", ManaCost: opt.Val(...)}}` on `CardFace`; flashback costs are usable only from graveyard and exile the spell when it leaves the stack (CR 702.34)
 
 #### Spell abilities (instants/sorceries)
 
@@ -588,6 +589,11 @@ Set `SpellAbility: opt.Val(game.SpellAbilityBody{...})`:
   `Choose up to one —`), fill `Modes` and set `MinModes` / `MaxModes` from the
   choice count. Leave `MinModes` and `MaxModes` at zero only for legacy
   choose-one mode lists.
+
+**Spell casting costs** live on `CardFace`, not `SpellAbilityBody`:
+- `CardFace.AdditionalCosts []cost.Additional` — extra costs paid alongside the mana cost (sacrifice, discard-as-cost, etc.)
+- `CardFace.AlternativeCosts []cost.Alternative` — costs that replace the mana cost (flashback, overload, etc.)
+- `SpellAbilityBody` holds only `Text` and `Content`; do **not** set `AdditionalCosts` or `AlternativeCosts` on the body.
 
 #### Activated abilities
 
@@ -858,7 +864,7 @@ var KessigWolfRun = func() *game.CardDef {
 
 4. **"You" as target vs. controller**: When the text says "you gain 1 life", "you" is the controller, not a target. Use `TargetIndex: -1`. Only use `TargetIndex: 0+` when there's an explicit "target" word.
 
-5. **Tap symbol in costs**: `{T}` in an activated ability cost means the permanent taps itself. Use `AdditionalCosts: cost.Tap` when it is the only additional cost, or `cost.T` in a combined additional-cost slice. It does not belong in `ManaCost`.
+5. **Tap symbol in costs**: `{T}` in an **activated ability** cost means the permanent taps itself. Use `AdditionalCosts: cost.Tap` when it is the only additional cost in `ActivatedAbilityBody` or `ManaAbilityBody`, or `cost.T` in a combined additional-cost slice. It does not belong in `ManaCost`. Tap is never a spell's casting cost.
 
 6. **Multiple paragraphs = multiple abilities**: Each `\n`-separated paragraph is a separate ability and gets its own body in the appropriate field, unless it's a comma-separated keyword list.
 

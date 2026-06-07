@@ -35,7 +35,7 @@ type permanentEffectiveValues struct {
 	supertypes []types.Super
 	types      []types.Card
 	subtypes   []types.Sub
-	abilities  []game.AbilityDef
+	abilities  []game.AbilityBody
 	controller game.PlayerID
 
 	power            int
@@ -83,9 +83,9 @@ func permanentEffectiveColors(g *game.Game, permanent *game.Permanent) []color.C
 	return append([]color.Color(nil), values.colors...)
 }
 
-func permanentEffectiveAbilities(g *game.Game, permanent *game.Permanent) []game.AbilityDef {
+func permanentEffectiveAbilities(g *game.Game, permanent *game.Permanent) []game.AbilityBody {
 	values := effectivePermanentValues(g, permanent)
-	return append([]game.AbilityDef(nil), values.abilities...)
+	return append([]game.AbilityBody(nil), values.abilities...)
 }
 
 func permanentEffectiveName(g *game.Game, permanent *game.Permanent) string {
@@ -120,7 +120,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	if permanent.FaceDown {
 		values.types = []types.Card{types.Creature}
 		if permanent.FaceDownKind == game.FaceDownDisguise {
-			values.abilities = []game.AbilityDef{faceDownDisguiseWardAbility()}
+			values.abilities = []game.AbilityBody{faceDownDisguiseWardBody()}
 			rebuildKeywords(&values)
 		}
 		values.power, values.powerOK = 2, true
@@ -137,7 +137,10 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values.supertypes = append([]types.Super(nil), card.Supertypes...)
 	values.types = append([]types.Card(nil), card.Types...)
 	values.subtypes = append([]types.Sub(nil), card.Subtypes...)
-	values.abilities = append([]game.AbilityDef(nil), card.AbilityDefs()...)
+	values.abilities = make([]game.AbilityBody, 0, card.AbilityCount())
+	for i := 0; i < card.AbilityCount(); i++ {
+		values.abilities = append(values.abilities, card.BodyAt(i))
+	}
 	if card.Power.Exists {
 		values.powerPT = ptPtr(card.Power)
 		values.dynamicPower = dynamicValuePtr(card.DynamicPower)
@@ -311,33 +314,30 @@ func staticAbilitySources(g *game.Game, layer game.ContinuousLayer) []staticAbil
 
 func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer) []game.ContinuousEffect {
 	var effects []game.ContinuousEffect
-	abilities := source.card.AbilityDefs()
-	for i := range abilities {
-		ability := &abilities[i]
-		if !staticAbilityFunctionsFromSource(ability, source) {
+	for i := range source.card.StaticAbilities {
+		body := &source.card.StaticAbilities[i]
+		if !staticAbilityFunctionsFromSource(body, source) {
 			continue
 		}
 		if !conditionSatisfied(g, conditionContext{
 			controller:             source.controller,
 			source:                 source.permanent,
 			useBaseCharacteristics: true,
-		}, ability.Condition) {
+		}, body.Condition) {
 			continue
 		}
-		if body, ok := ability.StaticBody(); ok {
-			for i := range body.ContinuousEffects {
-				template := &body.ContinuousEffects[i]
-				if template.Layer != layer {
-					continue
-				}
-				staticEffect := *template
-				staticEffect.SourceObjectID = sourceObjectID(source)
-				staticEffect.SourceCardID = source.cardID
-				staticEffect.Controller = source.controller
-				staticEffect.Timestamp = source.timestamp
-				if continuousEffectApplies(g, permanent, values, &staticEffect) {
-					effects = append(effects, staticEffect)
-				}
+		for i := range body.ContinuousEffects {
+			template := &body.ContinuousEffects[i]
+			if template.Layer != layer {
+				continue
+			}
+			staticEffect := *template
+			staticEffect.SourceObjectID = sourceObjectID(source)
+			staticEffect.SourceCardID = source.cardID
+			staticEffect.Controller = source.controller
+			staticEffect.Timestamp = source.timestamp
+			if continuousEffectApplies(g, permanent, values, &staticEffect) {
+				effects = append(effects, staticEffect)
 			}
 		}
 	}
@@ -381,42 +381,42 @@ func staticAbilityCardHasLayer(card *game.CardDef, onBattlefield bool, layer gam
 	if card == nil {
 		return false
 	}
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		ability := &abilities[i]
-		if !staticAbilityFunctionsInZone(ability, onBattlefield) {
+	for i := range card.StaticAbilities {
+		body := &card.StaticAbilities[i]
+		if !staticAbilityFunctionsInZone(body, onBattlefield) {
 			continue
 		}
-		if staticAbilityHasEffectForLayer(ability, layer) {
+		if staticAbilityHasEffectForLayer(body, layer) {
 			return true
 		}
 	}
 	return false
 }
 
-func staticAbilityHasEffectForLayer(ability *game.AbilityDef, layer game.ContinuousLayer) bool {
-	if body, ok := ability.StaticBody(); ok {
-		for i := range body.ContinuousEffects {
-			if body.ContinuousEffects[i].Layer == layer {
-				return true
-			}
+func staticAbilityHasEffectForLayer(body *game.StaticAbilityBody, layer game.ContinuousLayer) bool {
+	if body == nil {
+		return false
+	}
+	for i := range body.ContinuousEffects {
+		if body.ContinuousEffects[i].Layer == layer {
+			return true
 		}
 	}
 	return false
 }
 
-func staticAbilityFunctionsFromSource(ability *game.AbilityDef, source staticAbilitySource) bool {
-	return staticAbilityFunctionsInZone(ability, source.permanent != nil)
+func staticAbilityFunctionsFromSource(body *game.StaticAbilityBody, source staticAbilitySource) bool {
+	return staticAbilityFunctionsInZone(body, source.permanent != nil)
 }
 
-func staticAbilityFunctionsInZone(ability *game.AbilityDef, onBattlefield bool) bool {
-	if ability == nil || !ability.IsStatic() {
+func staticAbilityFunctionsInZone(body *game.StaticAbilityBody, onBattlefield bool) bool {
+	if body == nil {
 		return false
 	}
 	if onBattlefield {
-		return abilityFunctionsOnBattlefield(ability)
+		return bodyFunctionsOnBattlefield(body)
 	}
-	return ability.FunctionZone() == zone.Graveyard
+	return body.ZoneOfFunction == zone.Graveyard
 }
 
 func sourceObjectID(source staticAbilitySource) id.ID {
@@ -553,11 +553,9 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		values.colors = removeColors(values.colors, effect.RemoveColors)
 		values.colors = appendUniqueColors(values.colors, effect.AddColors...)
 	case game.LayerAbility:
-		for i := range effect.AddAbilities {
-			ability := game.AbilityDef{Body: effect.AddAbilities[i]}
-			normalized := ability.WithBody()
-			values.abilities = append(values.abilities, normalized)
-			normalized.AddKeywordKindsTo(values.keywords)
+		for _, body := range effect.AddAbilities {
+			values.abilities = append(values.abilities, body)
+			game.BodyAddKeywordKindsTo(body, values.keywords)
 		}
 		for _, keyword := range effect.RemoveKeywords {
 			values.keywords[keyword] = false
@@ -608,7 +606,7 @@ func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentE
 	values.supertypes = append([]types.Super(nil), copyValues.Supertypes...)
 	values.types = append([]types.Card(nil), copyValues.Types...)
 	values.subtypes = append([]types.Sub(nil), copyValues.Subtypes...)
-	values.abilities = append([]game.AbilityDef(nil), copyValues.Abilities...)
+	values.abilities = append([]game.AbilityBody(nil), copyValues.Abilities...)
 	values.powerPT = ptPtr(copyValues.Power)
 	values.dynamicPower = dynamicValuePtr(copyValues.DynamicPower)
 	values.toughnessPT = ptPtr(copyValues.Toughness)
@@ -662,14 +660,18 @@ func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanent
 }
 
 func rebuildKeywords(values *permanentEffectiveValues) {
-	values.keywords = make(map[game.Keyword]bool)
-	for i := range values.abilities {
-		values.abilities[i].AddKeywordKindsTo(values.keywords)
+	if values.keywords == nil {
+		values.keywords = make(map[game.Keyword]bool)
+	} else {
+		clear(values.keywords)
+	}
+	for _, body := range values.abilities {
+		game.BodyAddKeywordKindsTo(body, values.keywords)
 	}
 }
 
-func abilityFunctionsOnBattlefield(ability *game.AbilityDef) bool {
-	functionZone := ability.FunctionZone()
+func bodyFunctionsOnBattlefield(body game.AbilityBody) bool {
+	functionZone := game.BodyFunctionZone(body)
 	return functionZone == zone.None || functionZone == zone.Battlefield
 }
 

@@ -50,9 +50,10 @@ type StackObject struct {
 	// abilities. It is ignored for spells.
 	AbilityIndex int
 
-	// InlineAbility stores generated abilities, such as delayed triggers, that
-	// are not addressable by AbilityIndex on the source definition.
-	InlineAbility *AbilityDef
+	// InlineTrigger stores generated triggered abilities (delayed triggers, ward
+	// triggers, prowess, exalted, madness) that are not addressable by AbilityIndex
+	// on the source definition.
+	InlineTrigger *TriggeredAbilityBody
 
 	// TriggerEvent is the event that caused this triggered ability to trigger.
 	// HasTriggerEvent distinguishes a real zero-valued event from no event.

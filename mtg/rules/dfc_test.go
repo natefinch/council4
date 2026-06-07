@@ -145,7 +145,7 @@ func modalDFCSpellLand() *game.CardDef {
 			Name:     "Back Land",
 			Types:    []types.Card{types.Land},
 			Subtypes: []types.Sub{types.Forest},
-			ReplacementAbilities: []game.ReplacementAbilityDef{
+			ReplacementAbilities: []game.ReplacementAbilityBody{
 				game.EntersTappedReplacement("This land enters tapped."),
 			},
 		}),

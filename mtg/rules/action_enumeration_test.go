@@ -347,10 +347,9 @@ func sacrificeArtifactSpell() *game.CardDef {
 
 func additionalCostSpell(name string, additionalCost cost.Additional) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: name,
-		Types: []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			AdditionalCosts: []cost.Additional{additionalCost},
-		})},
+		Types:           []types.Card{types.Sorcery},
+		AdditionalCosts: []cost.Additional{additionalCost},
+		SpellAbility:    opt.Val(game.SpellAbilityBody{})},
 	}
 }
 
@@ -369,12 +368,11 @@ func flashbackSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Flashback",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			AlternativeCosts: []cost.Alternative{{
-				Label:    flashbackAlternativeLabel,
-				ManaCost: greenCost(),
-			}},
-		}),
+		AlternativeCosts: []cost.Alternative{{
+			Label:    flashbackAlternativeLabel,
+			ManaCost: greenCost(),
+		}},
+		SpellAbility: opt.Val(game.SpellAbilityBody{}),
 		StaticAbilities: []game.StaticAbilityBody{{
 			KeywordAbilities: game.SimpleKeywords(game.Flashback),
 		}}},

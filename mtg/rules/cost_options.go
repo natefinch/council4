@@ -26,21 +26,11 @@ func spellAdditionalCosts(card *game.CardDef) []cost.Additional {
 	if card == nil {
 		return nil
 	}
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		ability := &abilities[i]
-		if ability.IsSpell() {
-			return abilityAdditionalCosts(ability)
-		}
-	}
-	return nil
+	return append([]cost.Additional(nil), card.AdditionalCosts...)
 }
 
-func abilityAdditionalCosts(ability *game.AbilityDef) []cost.Additional {
-	if ability == nil {
-		return nil
-	}
-	return append([]cost.Additional(nil), ability.AdditionalCosts...)
+func abilityAdditionalCosts(additionalCosts []cost.Additional) []cost.Additional {
+	return append([]cost.Additional(nil), additionalCosts...)
 }
 
 func sacrificeCostMatcher(sacCost string) (func(*game.CardDef) bool, bool) {

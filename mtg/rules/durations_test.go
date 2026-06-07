@@ -236,13 +236,13 @@ func TestDelayedNextEndStepTriggersUseAPNAPStackOrder(t *testing.T) {
 			ID:         1,
 			Controller: game.Player2,
 			Timing:     game.DelayedAtBeginningOfNextEndStep,
-			Ability:    game.AbilityDef{Kind: game.TriggeredAbility},
+			Ability:    game.TriggeredAbilityBody{},
 		},
 		game.DelayedTrigger{
 			ID:         2,
 			Controller: game.Player1,
 			Timing:     game.DelayedAtBeginningOfNextEndStep,
-			Ability:    game.AbilityDef{Kind: game.TriggeredAbility},
+			Ability:    game.TriggeredAbilityBody{},
 		},
 	)
 

@@ -64,48 +64,49 @@ var basicLandTypes = []struct {
 	{subtype: types.Forest, color: mana.G},
 }
 
-func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.AbilityDef, bool) {
+func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.ManaAbilityBody, bool) {
 	card, ok := s.PermanentCardDef(permanent)
 	if !ok {
 		return 0, nil, false
 	}
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		ability := &abilities[i]
-		if ability.IsMana() &&
-			hasTapCost(ability) &&
-			!ability.ManaCost.Exists &&
-			len(ability.Targets) == 0 &&
-			isSimpleAddMana(ability) {
-			if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick {
-				return 0, nil, false
-			}
-
-			if !s.ActivationConditionSatisfied(playerID, permanent, ability) {
-				continue
-			}
-			return i, ability, true
+	face := &card.CardFace
+	offset := 0
+	if face.SpellAbility.Exists {
+		offset++
+	}
+	offset += len(face.ActivatedAbilities)
+	for i := range face.ManaAbilities {
+		body := &face.ManaAbilities[i]
+		if !hasTapCostOf(body.AdditionalCosts) || body.ManaCost.Exists || !isSimpleAddMana(body) {
+			continue
 		}
+		if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick {
+			return 0, nil, false
+		}
+		if !s.ActivationConditionSatisfied(playerID, permanent, body.ActivationCondition) {
+			continue
+		}
+		return offset + i, body, true
 	}
 	return 0, nil, false
 }
 
-func isSimpleAddMana(ability *game.AbilityDef) bool {
-	_, ok := simpleAddMana(ability)
+func isSimpleAddMana(body *game.ManaAbilityBody) bool {
+	_, ok := simpleAddMana(body)
 	return ok
 }
 
-func simpleAddMana(ability *game.AbilityDef) (game.AddMana, bool) {
-	if body, ok := ability.ManaBody(); ok && body.Content != nil {
-		content, ok := body.Content.(game.PlainAbilityContent)
-		if !ok || len(content.Sequence) != 1 || content.Sequence[0].Primitive == nil ||
-			content.Sequence[0].Primitive.Kind() != game.PrimitiveAddMana {
-			return game.AddMana{}, false
-		}
-		addMana, ok := content.Sequence[0].Primitive.(game.AddMana)
-		return addMana, ok && !addMana.Amount.IsDynamic() && addMana.ChoiceFrom == ""
+func simpleAddMana(body *game.ManaAbilityBody) (game.AddMana, bool) {
+	if body.Content == nil {
+		return game.AddMana{}, false
 	}
-	return game.AddMana{}, false
+	content, ok := body.Content.(game.PlainAbilityContent)
+	if !ok || len(content.Sequence) != 1 || content.Sequence[0].Primitive == nil ||
+		content.Sequence[0].Primitive.Kind() != game.PrimitiveAddMana {
+		return game.AddMana{}, false
+	}
+	addMana, ok := content.Sequence[0].Primitive.(game.AddMana)
+	return addMana, ok && !addMana.Amount.IsDynamic() && addMana.ChoiceFrom == ""
 }
 
 func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) []*game.Permanent {

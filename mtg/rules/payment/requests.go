@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.
@@ -21,13 +22,15 @@ type SpellRequest struct {
 // AbilityRequest bundles all parameters needed to check or pay activated
 // ability costs.
 type AbilityRequest struct {
-	PlayerID     game.PlayerID
-	Source       *game.Permanent
-	SourceCardID id.ID
-	SourceZone   zone.Type
-	Ability      *game.AbilityDef
-	XValue       int
-	Prefs        *Preferences
+	PlayerID         game.PlayerID
+	Source           *game.Permanent
+	SourceCardID     id.ID
+	SourceZone       zone.Type
+	ManaCost         opt.V[cost.Mana]
+	AdditionalCosts  []cost.Additional
+	AlternativeCosts []cost.Alternative
+	XValue           int
+	Prefs            *Preferences
 }
 
 // GenericRequest bundles parameters for a generic mana payment — used by

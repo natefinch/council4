@@ -347,7 +347,7 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 		}
 	}
 	if fields.EntersTapped {
-		_, _ = fmt.Fprintf(b, "%sReplacementAbilities: []game.ReplacementAbilityDef{\n", indent)
+		_, _ = fmt.Fprintf(b, "%sReplacementAbilities: []game.ReplacementAbilityBody{\n", indent)
 		_, _ = fmt.Fprintf(b, "%s\tgame.EntersTappedReplacement(%q),\n", indent, "This permanent enters tapped.")
 		_, _ = fmt.Fprintf(b, "%s},\n", indent)
 	}

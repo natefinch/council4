@@ -333,7 +333,7 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
-		ReplacementAbilities: []game.ReplacementAbilityDef{
+		ReplacementAbilities: []game.ReplacementAbilityBody{
 			game.EntersTappedReplacement("Tapped Walker enters tapped."),
 			game.EntersWithCountersReplacement("Tapped Walker enters with two +1/+1 counters.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 2}),
 		}},
@@ -471,7 +471,7 @@ func payLifeETBModalLand() *game.CardDef {
 		Back: opt.Val(game.CardFace{
 			Name:  "Pay Life Land",
 			Types: []types.Card{types.Land},
-			ReplacementAbilities: []game.ReplacementAbilityDef{
+			ReplacementAbilities: []game.ReplacementAbilityBody{
 				game.EntersTappedUnlessPaidReplacement("As this land enters, you may pay 3 life. If you don't, it enters tapped.", game.ResolutionPayment{
 					Prompt: "Pay 3 life?",
 					AdditionalCosts: []cost.Additional{

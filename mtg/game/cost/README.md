@@ -55,6 +55,9 @@ AdditionalCosts: cost.Tap
 Use `cost.T` as the individual tap entry only when combining it with other
 additional costs.
 
+Put spell casting costs on `game.CardFace.AdditionalCosts`. Put activated and
+mana ability costs on the corresponding ability body.
+
 `Amount` defaults to one for costs involving objects or cards. `Text` supplies
 card-specific display text when the generic text for the kind is insufficient.
 `MatchPermanentType` and `PermanentType` constrain battlefield objects;
@@ -86,6 +89,9 @@ cost.Alternative{
 	ManaCost: opt.Val(cost.Mana{cost.O(2), cost.R}),
 }
 ```
+
+Put spell alternatives on `game.CardFace.AlternativeCosts`. Activated ability
+alternatives remain on the corresponding ability body.
 
 Required costs on the spell or ability still apply in addition to the selected
 alternative's `AdditionalCosts`.

@@ -89,11 +89,25 @@ func (v *cardValidator) validate() {
 		}
 		v.validateFace(name, "Back", &face, true)
 	}
+	if v.card.Alternate.Exists {
+		face := v.card.Alternate.Val
+		name := face.Name
+		if strings.TrimSpace(name) == "" {
+			name = "alternate face"
+		}
+		v.validateFace(name, "Alternate", &face, true)
+	}
 }
 
 func (v *cardValidator) validateFace(faceName, path string, face *game.CardFace, walkAbilities bool) {
-	abilities := face.AbilityDefs()
-	if strings.TrimSpace(face.OracleText) != "" && len(abilities) == 0 && face.ImplementationID == "" {
+	hasAbilities := face.SpellAbility.Exists ||
+		len(face.ActivatedAbilities) > 0 ||
+		len(face.ManaAbilities) > 0 ||
+		len(face.LoyaltyAbilities) > 0 ||
+		len(face.TriggeredAbilities) > 0 ||
+		len(face.ReplacementAbilities) > 0 ||
+		len(face.StaticAbilities) > 0
+	if strings.TrimSpace(face.OracleText) != "" && !hasAbilities && face.ImplementationID == "" {
 		v.add(faceName, path, IssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
 	if face.ImplementationID != "" && len(v.opts.KnownImplementationIDs) > 0 && !v.opts.KnownImplementationIDs[face.ImplementationID] {
@@ -105,27 +119,26 @@ func (v *cardValidator) validateFace(faceName, path string, face *game.CardFace,
 	if !walkAbilities {
 		return
 	}
-	for i := range abilities {
-		abilityPath := appendPath(path, fmt.Sprintf("Abilities[%d]", i))
-		v.validateAbility(faceName, abilityPath, &abilities[i])
+	if face.SpellAbility.Exists {
+		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), face.SpellAbility.Val, nil)
 	}
-}
-
-func (v *cardValidator) validateAbility(faceName, path string, ability *game.AbilityDef) {
-	if ability.Body != nil {
-		v.validateAbilityBody(faceName, appendPath(path, "Body"), ability.Body, ability.Targets)
+	for i := range face.ActivatedAbilities {
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ActivatedAbilities[%d]", i)), face.ActivatedAbilities[i], nil)
 	}
-	if ability.Condition.Exists {
-		v.validateCondition(faceName, appendPath(path, "Condition"), &ability.Condition.Val, ability.Targets)
+	for i := range face.ManaAbilities {
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ManaAbilities[%d]", i)), face.ManaAbilities[i], nil)
 	}
-	if ability.Trigger.Exists && ability.Trigger.Val.InterveningCondition.Exists {
-		v.validateCondition(faceName, appendPath(path, "Trigger.InterveningCondition"), &ability.Trigger.Val.InterveningCondition.Val, ability.Targets)
+	for i := range face.LoyaltyAbilities {
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("LoyaltyAbilities[%d]", i)), face.LoyaltyAbilities[i], nil)
 	}
-	if ability.ActivationCondition.Exists {
-		v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &ability.ActivationCondition.Val, ability.Targets)
+	for i := range face.TriggeredAbilities {
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("TriggeredAbilities[%d]", i)), face.TriggeredAbilities[i], nil)
 	}
-	for i := range ability.KeywordAbilities {
-		v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), ability.KeywordAbilities[i], ability.Targets)
+	for i := range face.ReplacementAbilities {
+		v.validateReplacementAbility(faceName, appendPath(path, fmt.Sprintf("ReplacementAbilities[%d]", i)), &face.ReplacementAbilities[i])
+	}
+	for i := range face.StaticAbilities {
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)), face.StaticAbilities[i], nil)
 	}
 }
 
@@ -136,6 +149,9 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 	case game.ActivatedAbilityBody:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
+		}
+		for i := range abilityBody.KeywordAbilities {
+			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
 		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 	case game.ManaAbilityBody:
@@ -154,6 +170,9 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 		if abilityBody.Trigger.InterveningCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "Trigger.InterveningCondition"), &abilityBody.Trigger.InterveningCondition.Val, targets)
 		}
+		for i := range abilityBody.KeywordAbilities {
+			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
+		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 	case game.StaticAbilityBody:
 		if abilityBody.Condition.Exists {
@@ -169,6 +188,16 @@ func (v *cardValidator) validateAbilityBody(faceName, path string, body game.Abi
 		v.add(faceName, path, IssueInvalidAbilityBody, "ability body is nil")
 	default:
 		v.add(faceName, path, IssueInvalidAbilityBody, fmt.Sprintf("unknown ability body %T", body))
+	}
+}
+
+func (v *cardValidator) validateReplacementAbility(faceName, path string, ability *game.ReplacementAbilityBody) {
+	if ability == nil {
+		v.add(faceName, path, IssueInvalidAbilityBody, "replacement ability is nil")
+		return
+	}
+	if ability.Replacement.Condition.Exists {
+		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), &ability.Replacement.Condition.Val, nil)
 	}
 }
 

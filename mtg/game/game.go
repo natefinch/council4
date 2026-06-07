@@ -22,7 +22,7 @@ type Emblem struct {
 	Owner PlayerID
 
 	// Abilities lists the abilities this emblem provides.
-	Abilities []AbilityDef
+	Abilities []AbilityBody
 }
 
 // SuspendedCard tracks a card exiled with suspend.
@@ -232,7 +232,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		if cfg.Commander != nil {
 			ci := &CardInstance{
 				ID:    g.IDGen.Next(),
-				Def:   cfg.Commander.WithAbilityBodies(),
+				Def:   cfg.Commander,
 				Owner: pid,
 			}
 			g.CardInstances[ci.ID] = ci
@@ -245,7 +245,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		for _, def := range cfg.Deck {
 			ci := &CardInstance{
 				ID:    g.IDGen.Next(),
-				Def:   def.WithAbilityBodies(),
+				Def:   def,
 				Owner: pid,
 			}
 			g.CardInstances[ci.ID] = ci

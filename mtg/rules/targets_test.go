@@ -764,11 +764,11 @@ func TestOpponentChosenTargetSlotFallsBackDeterministically(t *testing.T) {
 func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := opponentChosenTargetAbilitySource()
-	abilities := source.AbilityDefs()
-	if len(abilities) == 0 || len(abilities[0].Targets) < 2 {
+	content, ok := source.ActivatedAbilities[0].Content.(game.PlainAbilityContent)
+	if !ok || len(content.Targets) < 2 {
 		t.Fatal("source card missing expected ability targets")
 	}
-	spec := abilities[0].Targets[1]
+	spec := content.Targets[1]
 	hexproof := addHexproofPermanent(g, game.Player2)
 	normal := addCreaturePermanent(g, game.Player2)
 

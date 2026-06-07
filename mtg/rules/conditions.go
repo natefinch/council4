@@ -228,12 +228,9 @@ func permanentMatchesConditionFilter(g *game.Game, permanent *game.Permanent, fi
 	return true
 }
 
-func activationConditionSatisfied(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef) bool {
-	if ability == nil {
-		return false
-	}
+func activationConditionSatisfied(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool {
 	return conditionSatisfied(g, conditionContext{
 		controller: playerID,
 		source:     permanent,
-	}, ability.ActivationConditionValue())
+	}, condition)
 }

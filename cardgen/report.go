@@ -274,7 +274,7 @@ func nextWorkForCard(card *UnsupportedReportCard) []string {
 func nextWorkForIssue(code ValidationCode) string {
 	switch code {
 	case IssueOracleWithoutAbilities:
-		return "Fill generated AbilityDef data for this oracle text or add a hand-written ImplementationID."
+		return "Fill generated ability data for this oracle text or add a hand-written ImplementationID."
 	case IssueTargetIndexOutOfRange, IssueInvalidTargetSpec:
 		return "Fix target parsing/generation so effects and target specs line up."
 	case IssueUnregisteredImplementation:

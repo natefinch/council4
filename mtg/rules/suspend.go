@@ -13,10 +13,13 @@ import (
 )
 
 func suspendCostForCard(card *game.CardDef) (cost.Mana, int, bool) {
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		ability := &abilities[i]
-		if manaCost, counters, ok := ability.SuspendInfo(); ok {
+	for i := range card.ActivatedAbilities {
+		if manaCost, counters, ok := game.ActivatedBodySuspendInfo(card.ActivatedAbilities[i]); ok {
+			return manaCost, counters, true
+		}
+	}
+	for i := range card.StaticAbilities {
+		if manaCost, counters, ok := game.StaticBodySuspendInfo(card.StaticAbilities[i]); ok {
 			return manaCost, counters, true
 		}
 	}

@@ -223,7 +223,13 @@ func TestCopyEffectChangesEffectiveCombatKeywords(t *testing.T) {
 		ID:               1,
 		AffectedObjectID: copier.ObjectID,
 		Layer:            game.LayerCopy,
-		CopyValues:       opt.Val(game.CopyableValues{Name: "Copied Dragon", Types: []types.Card{types.Creature}, Power: opt.Val(copyPower), Toughness: opt.Val(copyPower), Abilities: []game.AbilityDef{{Kind: game.StaticAbility, KeywordAbilities: game.SimpleKeywords(game.Flying)}}}),
+		CopyValues: opt.Val(game.CopyableValues{
+			Name:      "Copied Dragon",
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(copyPower),
+			Toughness: opt.Val(copyPower),
+			Abilities: []game.AbilityBody{game.StaticAbilityBody{Text: "Flying", KeywordAbilities: game.SimpleKeywords(game.Flying)}},
+		}),
 	})
 
 	if got := permanentEffectiveName(g, copier); got != "Copied Dragon" {
@@ -298,11 +304,8 @@ func TestAbilityLayerAddsTypedAbilityBody(t *testing.T) {
 	if len(values.abilities) != 1 {
 		t.Fatalf("abilities = %d, want 1", len(values.abilities))
 	}
-	if !values.abilities[0].IsActivated() {
-		t.Fatalf("ability = %+v, want activated ability", values.abilities[0])
-	}
-	if _, ok := values.abilities[0].Body.(game.ActivatedAbilityBody); !ok {
-		t.Fatalf("ability body = %T, want game.ActivatedAbilityBody", values.abilities[0].Body)
+	if _, ok := values.abilities[0].(game.ActivatedAbilityBody); !ok {
+		t.Fatalf("ability body = %T, want game.ActivatedAbilityBody", values.abilities[0])
 	}
 }
 

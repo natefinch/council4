@@ -104,7 +104,7 @@ var BridgeworksBattle = func() *game.CardDef {
 			As this land enters, you may pay 3 life. If you don't, it enters tapped.
 			{T}: Add {G}.
 		`,
-		ReplacementAbilities: []game.ReplacementAbilityDef{
+		ReplacementAbilities: []game.ReplacementAbilityBody{
 			game.EntersTappedUnlessPaidReplacement("As this land enters, you may pay 3 life. If you don't, it enters tapped.", game.ResolutionPayment{
 				Prompt: "Pay 3 life?",
 				AdditionalCosts: []cost.Additional{

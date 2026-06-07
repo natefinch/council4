@@ -227,6 +227,22 @@ func TestValidateCardChecksFaces(t *testing.T) {
 	}
 }
 
+func TestValidateCardChecksAlternateFace(t *testing.T) {
+	card := &game.CardDef{
+		CardFace: game.CardFace{Name: "Main Spell"},
+		Alternate: opt.Val(game.CardFace{
+			Name:       "Alternate Spell",
+			OracleText: "Draw a card.",
+		}),
+	}
+
+	issues := ValidateCard(card, ValidationOptions{})
+
+	if !hasIssue(issues, IssueOracleWithoutAbilities) {
+		t.Fatalf("issues = %+v, want alternate face oracle issue", issues)
+	}
+}
+
 func TestValidateCardChecksDoubleFacedRootFieldsAndBack(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Double Faced",
 		OracleText: "Root text.",
@@ -407,6 +423,22 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 			name: "static keyword",
 			face: game.CardFace{StaticAbilities: []game.StaticAbilityBody{{
 				KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{}},
+			}}},
+			code: IssueInvalidKeywordAbility,
+		},
+		{
+			name: "activated keyword",
+			face: game.CardFace{ActivatedAbilities: []game.ActivatedAbilityBody{{
+				KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{}},
+				Content:          game.PlainAbilityContent{},
+			}}},
+			code: IssueInvalidKeywordAbility,
+		},
+		{
+			name: "triggered keyword",
+			face: game.CardFace{TriggeredAbilities: []game.TriggeredAbilityBody{{
+				KeywordAbilities: []game.KeywordAbility{game.WardKeyword{}},
+				Content:          game.PlainAbilityContent{},
 			}}},
 			code: IssueInvalidKeywordAbility,
 		},

@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // State is the adapter interface that the payment planner requires from the
@@ -62,7 +63,7 @@ type stateQueries interface {
 type stateAbilityQueries interface {
 	// ActivationConditionSatisfied reports whether an activated ability's
 	// non-timing activation restriction is satisfied.
-	ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef) bool
+	ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool
 
 	// CostModifiersForSpell returns all applicable cost modifiers for a spell
 	// being cast by the given player from the given zone. This includes global

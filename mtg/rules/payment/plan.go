@@ -120,13 +120,13 @@ func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {
 
 func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	plan := abilityCostPlan{}
-	if req.Source == nil && req.SourceCardID == 0 || req.Ability == nil {
+	if req.Source == nil && req.SourceCardID == 0 {
 		return plan, false
 	}
-	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.Ability.ManaCost)) {
+	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.ManaCost)) {
 		return plan, false
 	}
-	tapSource := hasTapCost(req.Ability)
+	tapSource := hasTapCostOf(req.AdditionalCosts)
 	if tapSource && (req.Source == nil || !canTapForAbility(s, req.Source)) {
 		return plan, false
 	}
@@ -136,7 +136,7 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 		sourceCardID = req.Source.CardInstanceID
 		sourceZone = zone.Battlefield
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, abilityAdditionalCosts(req.Ability), req.Prefs, req.Source, sourceCardID, sourceZone)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.Prefs, req.Source, sourceCardID, sourceZone)
 	if !ok {
 		return plan, false
 	}
@@ -147,7 +147,7 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	for _, sacrifice := range additional.sacrifices {
 		excluded[sacrifice.ObjectID] = true
 	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.Ability.ManaCost), req.XValue, excluded, req.Prefs)
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, excluded, req.Prefs)
 	if !ok {
 		return plan, false
 	}
@@ -475,12 +475,9 @@ func snapshotPool(player *game.Player) map[mana.Unit]int {
 	return player.ManaPool.Units()
 }
 
-// hasTapCost reports whether the ability has a tap additional cost.
-func hasTapCost(ability *game.AbilityDef) bool {
-	if ability == nil {
-		return false
-	}
-	for _, addCost := range ability.AdditionalCosts {
+// hasTapCostOf reports whether the cost list has a tap additional cost.
+func hasTapCostOf(additionalCosts []cost.Additional) bool {
+	for _, addCost := range additionalCosts {
 		if addCost.Kind == cost.AdditionalTap {
 			return true
 		}
@@ -499,14 +496,6 @@ func costHasVariableMana(manaCost *cost.Mana) bool {
 		}
 	}
 	return false
-}
-
-// abilityAdditionalCosts returns a copy of the ability's additional costs.
-func abilityAdditionalCosts(ability *game.AbilityDef) []cost.Additional {
-	if ability == nil {
-		return nil
-	}
-	return append([]cost.Additional(nil), ability.AdditionalCosts...)
 }
 
 // manaCostPtr returns a pointer to the mana cost value, or nil if it does not exist.

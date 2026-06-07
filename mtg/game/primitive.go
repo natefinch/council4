@@ -552,7 +552,7 @@ type SkipStep struct {
 
 // CreateEmblem creates an emblem owned by the controller with the given abilities.
 type CreateEmblem struct {
-	EmblemAbilities []AbilityDef
+	EmblemAbilities []AbilityBody
 }
 
 // CreateDelayedTrigger schedules a delayed triggered ability.

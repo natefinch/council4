@@ -12,28 +12,38 @@ import (
 )
 
 var faceDownCastCost = cost.Mana{cost.O(3)}
-var faceDownDisguiseWardCost = cost.Mana{cost.O(2)}
 
-func faceDownDisguiseWardAbility() game.AbilityDef {
-	return game.AbilityDef{
-		Kind:             game.StaticAbility,
+func faceDownDisguiseWardBody() game.StaticAbilityBody {
+	return game.StaticAbilityBody{
 		Text:             "Ward {2}",
-		Body:             game.StaticAbilityBody{Text: "Ward {2}", KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: faceDownDisguiseWardCost}}},
-		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: faceDownDisguiseWardCost}},
+		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: cost.Mana{cost.O(2)}}},
 	}
 }
 
 func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (cost.Mana, bool) {
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		ability := &abilities[i]
+	for i := range card.ActivatedAbilities {
+		ability := card.ActivatedAbilities[i]
 		switch kind {
 		case game.FaceDownMorph:
-			if manaCost, ok := ability.MorphCost(); ok {
+			if manaCost, ok := game.ActivatedBodyMorphCost(ability); ok {
 				return manaCost, true
 			}
 		case game.FaceDownDisguise:
-			if manaCost, ok := ability.DisguiseCost(); ok {
+			if manaCost, ok := game.ActivatedBodyDisguiseCost(ability); ok {
+				return manaCost, true
+			}
+		default:
+		}
+	}
+	for i := range card.StaticAbilities {
+		ability := card.StaticAbilities[i]
+		switch kind {
+		case game.FaceDownMorph:
+			if manaCost, ok := game.StaticBodyMorphCost(ability); ok {
+				return manaCost, true
+			}
+		case game.FaceDownDisguise:
+			if manaCost, ok := game.StaticBodyDisguiseCost(ability); ok {
 				return manaCost, true
 			}
 		default:

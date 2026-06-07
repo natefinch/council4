@@ -138,7 +138,7 @@ The `game/` package already has solid type definitions covering:
 - `Zone` (library, hand, graveyard, exile, command — ordered, with face-down tracking)
 - `Stack` (LIFO spell/ability resolution)
 - `CombatState` (attackers, blockers, damage assignment)
-- `AbilityDef` (activated, triggered, static, spell abilities with full detail)
+- Sealed `AbilityBody` variants plus categorized `CardFace` ability fields (activated, triggered, static, spell, mana, loyalty, replacement)
 - Leaf packages: `id/` (unique IDs), `mana/` (colors, costs, pools), `counter/` (counter types)
 
 **What's missing (needs to be built):**

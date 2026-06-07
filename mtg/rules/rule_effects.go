@@ -56,28 +56,25 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 		if !ok {
 			continue
 		}
-		abilities := sourceDef.AbilityDefs()
-		for i := range abilities {
-			ability := &abilities[i]
-			if !ability.IsStatic() || !abilityFunctionsOnBattlefield(ability) {
+		for i := range sourceDef.StaticAbilities {
+			body := sourceDef.StaticAbilities[i]
+			if !bodyFunctionsOnBattlefield(body) {
 				continue
 			}
-			if body, ok := ability.StaticBody(); ok {
-				if !conditionSatisfied(g, conditionContext{
-					controller: effectiveController(g, source),
-					source:     source,
-				}, body.Condition) {
-					continue
+			if !conditionSatisfied(g, conditionContext{
+				controller: effectiveController(g, source),
+				source:     source,
+			}, body.Condition) {
+				continue
+			}
+			for _, ruleEffect := range body.RuleEffects {
+				ruleEffect.Controller = effectiveController(g, source)
+				ruleEffect.SourceObjectID = source.ObjectID
+				ruleEffect.SourceCardID = source.CardInstanceID
+				if ruleEffect.AffectedSource {
+					ruleEffect.AffectedObjectID = source.ObjectID
 				}
-				for _, ruleEffect := range body.RuleEffects {
-					ruleEffect.Controller = effectiveController(g, source)
-					ruleEffect.SourceObjectID = source.ObjectID
-					ruleEffect.SourceCardID = source.CardInstanceID
-					if ruleEffect.AffectedSource {
-						ruleEffect.AffectedObjectID = source.ObjectID
-					}
-					effects = append(effects, ruleEffect)
-				}
+				effects = append(effects, ruleEffect)
 			}
 		}
 	}
@@ -321,9 +318,5 @@ func cardHasFlashbackAlternative(card *game.CardInstance) bool {
 	if !frontDef.HasKeyword(game.Flashback) {
 		return false
 	}
-	ability, ok := firstSpellAbility(frontDef)
-	if !ok {
-		return false
-	}
-	return slices.ContainsFunc(ability.AlternativeCosts, isFlashbackAlternative)
+	return slices.ContainsFunc(frontDef.AlternativeCosts, isFlashbackAlternative)
 }

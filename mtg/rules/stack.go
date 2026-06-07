@@ -78,17 +78,17 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	if !defOK {
 		return "missing source"
 	}
-	abilities := def.AbilityDefs()
-	if obj.AbilityIndex < 0 || obj.AbilityIndex >= len(abilities) {
+	body := def.BodyAt(obj.AbilityIndex)
+	if body == nil {
 		return "missing source"
 	}
-	ability := &abilities[obj.AbilityIndex]
-	if permanentOK && isEquipmentPermanent(g, permanent) && abilityHasKeyword(ability, game.Equip) {
+	activatedBody, activatedOK := body.(game.ActivatedAbilityBody)
+	if permanentOK && activatedOK && isEquipmentPermanent(g, permanent) && game.BodyHasKeyword(activatedBody, game.Equip) {
 		sourceObjectID := obj.SourceID
 		if !permanentOK {
 			sourceObjectID = 0
 		}
-		if !abilityHasAnyLegalTargetsFromSourceObject(g, def, sourceObjectID, ability, obj.Controller, obj.Targets) {
+		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, sourceObjectID, activatedBody, obj.Controller, obj.Targets) {
 			return "countered by rules"
 		}
 		if len(obj.Targets) != 1 || obj.Targets[0].Kind != game.TargetPermanent {
@@ -100,15 +100,24 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		}
 		return "resolved"
 	}
-	if !abilityHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, ability, obj.Controller, obj.Targets) {
-		return "countered by rules"
-	}
-	if body, ok := ability.ActivatedBody(); ok && body.Content != nil {
-		e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
+	if activatedOK {
+		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, activatedBody, obj.Controller, obj.Targets) {
+			return "countered by rules"
+		}
+		if activatedBody.Content != nil {
+			e.resolveAbilityContentWithChoices(g, obj, activatedBody.Content, agents, log)
+		}
 		return "resolved"
 	}
-	if body, ok := ability.LoyaltyBody(); ok && body.Content != nil {
-		e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
+	loyaltyBody, loyaltyOK := body.(game.LoyaltyAbilityBody)
+	if !loyaltyOK {
+		return "missing source"
+	}
+	if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, loyaltyBody, obj.Controller, obj.Targets) {
+		return "countered by rules"
+	}
+	if loyaltyBody.Content != nil {
+		e.resolveAbilityContentWithChoices(g, obj, loyaltyBody.Content, agents, log)
 		return "resolved"
 	}
 	return "resolved"
@@ -119,57 +128,56 @@ func (e *Engine) resolveTriggeredAbility(g *game.Game, obj *game.StackObject, lo
 }
 
 func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
-	if obj.InlineAbility != nil {
-		return e.resolveTriggeredAbilityDefWithChoices(g, obj, nil, obj.InlineAbility, agents, log)
+	if obj.InlineTrigger != nil {
+		source, _ := stackObjectSourceDef(g, obj)
+		return e.resolveTriggeredAbilityBodyWithChoices(g, obj, source, obj.InlineTrigger, agents, log)
 	}
 	def, ok := stackObjectSourceDef(g, obj)
 	if !ok {
 		return "missing source"
 	}
-	abilities := def.AbilityDefs()
-	if obj.AbilityIndex < 0 || obj.AbilityIndex >= len(abilities) {
-		return "missing source"
-	}
-	ability := &abilities[obj.AbilityIndex]
-	return e.resolveTriggeredAbilityDefWithChoices(g, obj, def, ability, agents, log)
-}
-
-func (e *Engine) resolveTriggeredAbilityDefWithChoices(g *game.Game, obj *game.StackObject, source *game.CardDef, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
-	triggeredBody, ok := ability.TriggeredBody()
+	body, ok := def.BodyAt(obj.AbilityIndex).(game.TriggeredAbilityBody)
 	if !ok {
 		return "missing source"
 	}
-	if _, ok := ability.WardCost(); ok {
-		return e.resolveWardTriggeredAbilityWithChoices(g, obj, ability, agents, log)
+	return e.resolveTriggeredAbilityBodyWithChoices(g, obj, def, &body, agents, log)
+}
+
+func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.StackObject, source *game.CardDef, body *game.TriggeredAbilityBody, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	if body == nil {
+		return "missing source"
 	}
-	if _, ok := ability.MadnessCost(); ok {
-		return e.resolveMadnessTriggeredAbilityWithChoices(g, obj, ability, agents, log)
+	if _, ok := game.BodyWardCost(*body); ok {
+		return e.resolveWardTriggeredAbilityWithChoices(g, obj, body, agents, log)
+	}
+	if _, ok := game.BodyMadnessCost(*body); ok {
+		return e.resolveMadnessTriggeredAbilityWithChoices(g, obj, body, agents, log)
 	}
 	var event *game.GameEvent
 	if obj.HasTriggerEvent {
 		event = &obj.TriggerEvent
 	}
 	sourcePermanent, _ := permanentByObjectID(g, obj.SourceID)
-	if !triggerInterveningIf(g, sourcePermanent, obj.Controller, &triggeredBody.Trigger, event) {
+	if !triggerInterveningIf(g, sourcePermanent, obj.Controller, &body.Trigger, event) {
 		return "intervening if false"
 	}
-	if !abilityHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, ability, obj.Controller, obj.Targets) {
+	if !bodyHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, *body, obj.Controller, obj.Targets) {
 		return "countered by rules"
 	}
-	if triggeredBody.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
+	if body.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
 		return "declined"
 	}
-	e.resolveAbilityContentWithChoices(g, obj, triggeredBody.Content, agents, log)
+	e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
 	return "resolved"
 }
 
-func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.AbilityDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, ability *game.TriggeredAbilityBody, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	targetObj, ok := stackObjectByID(g, obj.WardTargetStackObjectID)
 	if !ok {
 		return "resolved"
 	}
 	payer := targetObj.Controller
-	wardCost, ok := ability.WardCost()
+	wardCost, ok := game.BodyWardCost(*ability)
 	if !ok {
 		return "resolved"
 	}

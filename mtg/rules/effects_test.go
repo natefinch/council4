@@ -406,12 +406,11 @@ func TestCommanderIdentityColorChoiceUnavailableWithoutColors(t *testing.T) {
 			if !ok {
 				t.Fatal("permanent card definition not found")
 			}
-			abilities := card.AbilityDefs()
-			if len(abilities) == 0 {
+			if len(card.ManaAbilities) == 0 {
 				t.Fatal("no abilities on card")
 			}
 
-			if canActivateManaAbility(g, game.Player1, tower, &abilities[0], 0) {
+			if canActivateManaAbility(g, game.Player1, tower, &card.ManaAbilities[0], 0) {
 				t.Fatal("canActivateManaAbility() = true, want false without commander color options")
 			}
 			if got := NewEngine(nil).legalActivateAbilityActions(g, game.Player1); len(got) != 0 {
@@ -862,8 +861,8 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 		if !clue.Token || clue.TokenDef == nil || clue.TokenDef.Name != "Clue Token" || !clue.TokenDef.HasSubtype(types.Clue) {
 			t.Fatalf("clue token = %+v def=%+v", clue, clue.TokenDef)
 		}
-		if len(clue.TokenDef.AbilityDefs()) != 1 {
-			t.Fatalf("clue abilities = %d, want activated draw ability", len(clue.TokenDef.AbilityDefs()))
+		if clue.TokenDef.AbilityCount() != 1 || len(clue.TokenDef.ActivatedAbilities) != 1 {
+			t.Fatalf("clue abilities = count=%d activated=%d, want activated draw ability", clue.TokenDef.AbilityCount(), len(clue.TokenDef.ActivatedAbilities))
 		}
 		g.Players[game.Player1].ManaPool.Add(mana.C, 2)
 		if !engine.applyAction(g, game.Player1, actionBuild.activateAbility(clue.ObjectID, 0, nil, 0)) {
@@ -1545,7 +1544,7 @@ func TestCreateTokenPermanentAppliesReplacementAbilities(t *testing.T) {
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
-		ReplacementAbilities: []game.ReplacementAbilityDef{
+		ReplacementAbilities: []game.ReplacementAbilityBody{
 			game.EntersTappedReplacement("This token enters tapped."),
 			game.EntersWithCountersReplacement("This token enters with a +1/+1 counter.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 1}),
 		}},
@@ -1630,10 +1629,9 @@ func TestCopyCardDefPreservesCategorizedAbilitiesWithoutDuplication(t *testing.T
 	}}
 
 	copied := copyCardDef(source)
-	abilities := copied.AbilityDefs()
 
-	if len(abilities) != 1 {
-		t.Fatalf("copied abilities = %d, want one categorized ability without duplication", len(abilities))
+	if copied.AbilityCount() != 1 {
+		t.Fatalf("copied abilities = %d, want one categorized ability without duplication", copied.AbilityCount())
 	}
 	if !copied.HasKeyword(game.Flying) {
 		t.Fatal("copied categorized keyword ability was not preserved")
@@ -1641,18 +1639,18 @@ func TestCopyCardDefPreservesCategorizedAbilitiesWithoutDuplication(t *testing.T
 }
 
 func TestClearCardFaceAbilitiesClearsCategorizedAbilities(t *testing.T) {
-	card := (&game.CardDef{CardFace: game.CardFace{
+	card := &game.CardDef{CardFace: game.CardFace{
 		StaticAbilities: []game.StaticAbilityBody{{
 			Text:             "Flying",
 			KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{Kind: game.Flying}},
 		}},
-	}}).WithAbilityBodies()
+	}}
 	face := card.CardFace
 
 	clearCardFaceAbilities(&face)
 
-	if len(face.AbilityDefs()) != 0 {
-		t.Fatalf("abilities = %+v, want categorized and cached abilities cleared", face.AbilityDefs())
+	if face.AbilityCount() != 0 {
+		t.Fatalf("abilities = %d, want categorized abilities cleared", face.AbilityCount())
 	}
 	face.StaticAbilities = []game.StaticAbilityBody{game.FlyingStaticBody}
 	if !face.HasKeyword(game.Flying) {

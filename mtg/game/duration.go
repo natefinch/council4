@@ -40,5 +40,5 @@ type DelayedTrigger struct {
 	Controller     PlayerID
 	CreatedTurn    int
 	Timing         DelayedTriggerTiming
-	Ability        AbilityDef
+	Ability        TriggeredAbilityBody
 }

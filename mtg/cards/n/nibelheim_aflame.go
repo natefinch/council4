@@ -27,6 +27,16 @@ var NibelheimAflame = &game.CardDef{
 			cost.R,
 			cost.R,
 		}),
+		AlternativeCosts: []cost.Alternative{
+			{
+				Label: "Flashback",
+				ManaCost: opt.Val(cost.Mana{
+					cost.O(5),
+					cost.R,
+					cost.R,
+				}),
+			},
+		},
 		Colors: []color.Color{color.Red},
 		Types:  []types.Card{types.Sorcery},
 		OracleText: `
@@ -91,17 +101,6 @@ var NibelheimAflame = &game.CardDef{
 							}),
 						}),
 					},
-				},
-			},
-
-			AlternativeCosts: []cost.Alternative{
-				{
-					Label: "Flashback",
-					ManaCost: opt.Val(cost.Mana{
-						cost.O(5),
-						cost.R,
-						cost.R,
-					}),
 				},
 			},
 		}),

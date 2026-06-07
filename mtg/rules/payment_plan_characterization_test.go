@@ -253,15 +253,14 @@ func sacrificeCostSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Sacrifice Cost Spell",
 		ManaCost: greenCost(),
 		Types:    []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.SpellAbilityBody{
-			AdditionalCosts: []cost.Additional{{
-				Kind:               cost.AdditionalSacrifice,
-				Text:               "Sacrifice a creature",
-				Amount:             1,
-				MatchPermanentType: true,
-				PermanentType:      types.Creature,
-			}},
-		})},
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalSacrifice,
+			Text:               "Sacrifice a creature",
+			Amount:             1,
+			MatchPermanentType: true,
+			PermanentType:      types.Creature,
+		}},
+		SpellAbility: opt.Val(game.SpellAbilityBody{})},
 	}
 }
 

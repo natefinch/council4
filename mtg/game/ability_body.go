@@ -1,11 +1,8 @@
 package game
 
 import (
-	"fmt"
-
-	"github.com/natefinch/council4/mtg/game/zone"
-
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -35,11 +32,11 @@ type ModalAbilityContent struct {
 }
 
 // SpellAbilityBody is an instruction on an instant or sorcery spell.
+// Casting costs (AdditionalCosts, AlternativeCosts) live on the enclosing
+// CardFace, not here.
 type SpellAbilityBody struct {
-	Text             string
-	Content          AbilityContent
-	AdditionalCosts  []cost.Additional
-	AlternativeCosts []cost.Alternative
+	Text    string
+	Content AbilityContent
 }
 
 // ActivatedAbilityBody is a non-mana, non-loyalty activated ability.
@@ -85,7 +82,11 @@ type TriggeredAbilityBody struct {
 	Trigger            TriggerCondition
 	Optional           bool
 	MaxTriggersPerTurn int
-	Content            AbilityContent
+	// KeywordAbilities lists keyword abilities carried by this triggered ability,
+	// e.g. WardKeyword for ward triggers. Rules use it for keyword dispatch without
+	// inspecting Content.
+	KeywordAbilities []KeywordAbility
+	Content          AbilityContent
 }
 
 // StaticAbilityBody is a static ability that functions from a zone.
@@ -98,34 +99,34 @@ type StaticAbilityBody struct {
 	RuleEffects       []RuleEffect
 }
 
-// ReplacementAbilityDef is a replacement/prevention ability on a printed face.
-type ReplacementAbilityDef struct {
+// ReplacementAbilityBody is a replacement/prevention ability on a printed face.
+type ReplacementAbilityBody struct {
 	Text        string
 	Replacement ReplacementEffect
 	UnlessPaid  opt.V[ResolutionPayment]
 }
 
 // EntersTappedReplacement creates a replacement ability for "enters tapped".
-func EntersTappedReplacement(text string) ReplacementAbilityDef {
+func EntersTappedReplacement(text string) ReplacementAbilityBody {
 	replacement := etbReplacement(text)
 	replacement.EntersTapped = true
-	return ReplacementAbilityDef{Text: text, Replacement: replacement}
+	return ReplacementAbilityBody{Text: text, Replacement: replacement}
 }
 
 // EntersTappedIfReplacement creates a conditional "enters tapped" replacement.
-func EntersTappedIfReplacement(text string, condition *Condition) ReplacementAbilityDef {
+func EntersTappedIfReplacement(text string, condition *Condition) ReplacementAbilityBody {
 	replacement := etbReplacement(text)
 	replacement.Condition = opt.Val(*condition)
 	replacement.EntersTapped = true
-	return ReplacementAbilityDef{Text: text, Replacement: replacement}
+	return ReplacementAbilityBody{Text: text, Replacement: replacement}
 }
 
 // EntersTappedUnlessPaidReplacement creates an ETB payment replacement. If the
 // payment is not paid, the permanent enters tapped.
-func EntersTappedUnlessPaidReplacement(text string, payment ResolutionPayment) ReplacementAbilityDef {
+func EntersTappedUnlessPaidReplacement(text string, payment ResolutionPayment) ReplacementAbilityBody {
 	replacement := etbReplacement(text)
 	replacement.EntersTapped = true
-	return ReplacementAbilityDef{
+	return ReplacementAbilityBody{
 		Text:        text,
 		Replacement: replacement,
 		UnlessPaid:  opt.Val(payment),
@@ -133,10 +134,10 @@ func EntersTappedUnlessPaidReplacement(text string, payment ResolutionPayment) R
 }
 
 // EntersWithCountersReplacement creates an ETB counter-placement replacement.
-func EntersWithCountersReplacement(text string, placements ...CounterPlacement) ReplacementAbilityDef {
+func EntersWithCountersReplacement(text string, placements ...CounterPlacement) ReplacementAbilityBody {
 	replacement := etbReplacement(text)
 	replacement.EntersWithCounters = append([]CounterPlacement(nil), placements...)
-	return ReplacementAbilityDef{Text: text, Replacement: replacement}
+	return ReplacementAbilityBody{Text: text, Replacement: replacement}
 }
 
 func etbReplacement(text string) ReplacementEffect {
@@ -152,325 +153,161 @@ func etbReplacement(text string) ReplacementEffect {
 func (PlainAbilityContent) isAbilityContent() {}
 func (ModalAbilityContent) isAbilityContent() {}
 
-func (SpellAbilityBody) isAbilityBody()     {}
-func (ActivatedAbilityBody) isAbilityBody() {}
-func (ManaAbilityBody) isAbilityBody()      {}
-func (LoyaltyAbilityBody) isAbilityBody()   {}
-func (TriggeredAbilityBody) isAbilityBody() {}
-func (StaticAbilityBody) isAbilityBody()    {}
+func (SpellAbilityBody) isAbilityBody()       {}
+func (ActivatedAbilityBody) isAbilityBody()   {}
+func (ManaAbilityBody) isAbilityBody()        {}
+func (LoyaltyAbilityBody) isAbilityBody()     {}
+func (TriggeredAbilityBody) isAbilityBody()   {}
+func (ReplacementAbilityBody) isAbilityBody() {}
+func (StaticAbilityBody) isAbilityBody()      {}
 
-// AbilityBodyKind returns the legacy AbilityKind represented by a body variant.
-func AbilityBodyKind(body AbilityBody) AbilityKind {
-	switch body.(type) {
+// BodyContent returns the AbilityContent of a sealed ability body.
+func BodyContent(body AbilityBody) AbilityContent {
+	switch b := body.(type) {
 	case SpellAbilityBody:
-		return SpellAbility
+		return b.Content
+	case *SpellAbilityBody:
+		if b == nil {
+			return nil
+		}
+		return b.Content
 	case ActivatedAbilityBody:
-		return ActivatedAbility
+		return b.Content
+	case *ActivatedAbilityBody:
+		if b == nil {
+			return nil
+		}
+		return b.Content
 	case ManaAbilityBody:
-		return ActivatedAbility
+		return b.Content
+	case *ManaAbilityBody:
+		if b == nil {
+			return nil
+		}
+		return b.Content
 	case LoyaltyAbilityBody:
-		return ActivatedAbility
+		return b.Content
+	case *LoyaltyAbilityBody:
+		if b == nil {
+			return nil
+		}
+		return b.Content
 	case TriggeredAbilityBody:
-		return TriggeredAbility
-	case StaticAbilityBody:
-		return StaticAbility
-	case nil:
-		panic("game: nil AbilityBody")
+		return b.Content
+	case *TriggeredAbilityBody:
+		if b == nil {
+			return nil
+		}
+		return b.Content
 	default:
-		panic(fmt.Sprintf("game: unsupported AbilityBody %T", body))
+		return nil
 	}
 }
 
-// EffectiveKind returns the ability kind, preferring the sealed body when present.
-func (ability *AbilityDef) EffectiveKind() AbilityKind {
-	if ability.Body != nil {
-		return AbilityBodyKind(ability.Body)
+// BodyTargets returns the target specs for a sealed ability body's content.
+// For plain content, returns the content's targets. For modal content, returns
+// shared targets.
+func BodyTargets(body AbilityBody) []TargetSpec {
+	switch content := BodyContent(body).(type) {
+	case PlainAbilityContent:
+		return content.Targets
+	case ModalAbilityContent:
+		return content.SharedTargets
+	default:
+		return nil
 	}
-	return ability.Kind
 }
 
-// IsSpell reports whether this ability is a spell ability.
-func (ability *AbilityDef) IsSpell() bool {
-	if ability.Body != nil {
-		_, ok := ability.Body.(SpellAbilityBody)
-		return ok
-	}
-	return ability.Kind == SpellAbility
-}
-
-// IsActivated reports whether this ability is a non-mana, non-loyalty activated ability.
-func (ability *AbilityDef) IsActivated() bool {
-	if ability.Body != nil {
-		_, ok := ability.Body.(ActivatedAbilityBody)
-		return ok
-	}
-	return ability.Kind == ActivatedAbility && !ability.IsManaAbility && !ability.IsLoyaltyAbility
-}
-
-// IsMana reports whether this ability is an activated mana ability.
-func (ability *AbilityDef) IsMana() bool {
-	if ability.Body != nil {
-		_, ok := ability.Body.(ManaAbilityBody)
-		return ok
-	}
-	return ability.Kind == ActivatedAbility && ability.IsManaAbility && !ability.IsLoyaltyAbility
-}
-
-// IsLoyalty reports whether this ability is a loyalty ability.
-func (ability *AbilityDef) IsLoyalty() bool {
-	if ability.Body != nil {
-		_, ok := ability.Body.(LoyaltyAbilityBody)
-		return ok
-	}
-	return ability.Kind == ActivatedAbility && ability.IsLoyaltyAbility
-}
-
-// IsTriggered reports whether this ability has a triggered ability body.
-func (ability *AbilityDef) IsTriggered() bool {
-	if ability.Body != nil {
-		_, ok := ability.Body.(TriggeredAbilityBody)
-		return ok
-	}
-	return ability.Kind == TriggeredAbility
-}
-
-// IsStatic reports whether this ability is a static ability.
-func (ability *AbilityDef) IsStatic() bool {
-	if ability.Body != nil {
-		_, ok := ability.Body.(StaticAbilityBody)
-		return ok
-	}
-	return ability.Kind == StaticAbility
-}
-
-// FunctionZone returns the zone where this ability functions.
-func (ability *AbilityDef) FunctionZone() zone.Type {
-	switch body := ability.Body.(type) {
+// BodyFunctionZone returns the zone where the body functions, if it has one.
+func BodyFunctionZone(body AbilityBody) zone.Type {
+	switch b := body.(type) {
 	case StaticAbilityBody:
-		return body.ZoneOfFunction
+		return b.ZoneOfFunction
+	case *StaticAbilityBody:
+		if b == nil {
+			return zone.None
+		}
+		return b.ZoneOfFunction
 	case ActivatedAbilityBody:
-		return body.ZoneOfFunction
+		return b.ZoneOfFunction
+	case *ActivatedAbilityBody:
+		if b == nil {
+			return zone.None
+		}
+		return b.ZoneOfFunction
 	case ManaAbilityBody:
-		return body.ZoneOfFunction
+		return b.ZoneOfFunction
+	case *ManaAbilityBody:
+		if b == nil {
+			return zone.None
+		}
+		return b.ZoneOfFunction
+	default:
+		return zone.None
 	}
-	return ability.ZoneOfFunction
 }
 
-// TimingRestriction returns the timing restriction for this ability.
-func (ability *AbilityDef) TimingRestriction() TimingRestriction {
-	switch body := ability.Body.(type) {
+// BodyTimingRestriction returns the timing restriction for the body, if any.
+func BodyTimingRestriction(body AbilityBody) TimingRestriction {
+	switch b := body.(type) {
 	case ActivatedAbilityBody:
-		return body.Timing
+		return b.Timing
+	case *ActivatedAbilityBody:
+		if b == nil {
+			return NoTimingRestriction
+		}
+		return b.Timing
 	case ManaAbilityBody:
-		return body.Timing
+		return b.Timing
+	case *ManaAbilityBody:
+		if b == nil {
+			return NoTimingRestriction
+		}
+		return b.Timing
+	default:
+		return NoTimingRestriction
 	}
-	return ability.Timing
 }
 
-// ActivationConditionValue returns the activation condition for this ability.
-func (ability *AbilityDef) ActivationConditionValue() opt.V[Condition] {
-	switch body := ability.Body.(type) {
+// BodyActivationCondition returns the activation condition for the body, if any.
+func BodyActivationCondition(body AbilityBody) opt.V[Condition] {
+	switch b := body.(type) {
 	case ActivatedAbilityBody:
-		return body.ActivationCondition
+		return b.ActivationCondition
+	case *ActivatedAbilityBody:
+		if b == nil {
+			return opt.V[Condition]{}
+		}
+		return b.ActivationCondition
 	case ManaAbilityBody:
-		return body.ActivationCondition
+		return b.ActivationCondition
+	case *ManaAbilityBody:
+		if b == nil {
+			return opt.V[Condition]{}
+		}
+		return b.ActivationCondition
 	case LoyaltyAbilityBody:
-		return body.ActivationCondition
-	}
-	return ability.ActivationCondition
-}
-
-// LoyaltyCostValue returns the loyalty cost for this ability.
-func (ability *AbilityDef) LoyaltyCostValue() int {
-	if body, ok := ability.Body.(LoyaltyAbilityBody); ok {
-		return body.LoyaltyCost
-	}
-	return ability.LoyaltyCost
-}
-
-// WithBody returns a copy of this ability with both Body and flat compatibility
-// fields fully populated. When Body is already set, flat fields are lowered from
-// the body so rules consumers see consistent values. When Body is nil, it is
-// synthesised from the legacy flat fields, then the flat fields are refreshed
-// from that body.
-func (ability *AbilityDef) WithBody() AbilityDef {
-	normalized := *ability
-	if normalized.Body != nil {
-		lowerBodyToFlat(&normalized)
-		return normalized
-	}
-	switch normalized.Kind {
-	case SpellAbility:
-		if body, ok := normalized.SpellBody(); ok {
-			normalized.Body = body
+		return b.ActivationCondition
+	case *LoyaltyAbilityBody:
+		if b == nil {
+			return opt.V[Condition]{}
 		}
-	case ActivatedAbility:
-		if normalized.IsManaAbility {
-			if body, ok := normalized.ManaBody(); ok {
-				normalized.Body = body
-			}
-			return normalized
-		}
-		if normalized.IsLoyaltyAbility {
-			if body, ok := normalized.LoyaltyBody(); ok {
-				normalized.Body = body
-			}
-			return normalized
-		}
-		if body, ok := normalized.ActivatedBody(); ok {
-			normalized.Body = body
-		}
-	case TriggeredAbility:
-		if body, ok := normalized.TriggeredBody(); ok {
-			normalized.Body = body
-		}
-	case StaticAbility:
-		if body, ok := normalized.StaticBody(); ok {
-			normalized.Body = body
-		}
+		return b.ActivationCondition
 	default:
+		return opt.V[Condition]{}
 	}
-	return normalized
 }
 
-// SpellBody returns this ability's spell body, including a legacy view.
-func (ability *AbilityDef) SpellBody() (SpellAbilityBody, bool) {
-	if body, ok := ability.Body.(SpellAbilityBody); ok {
-		return body, true
-	}
-	if ability.Body != nil {
-		return SpellAbilityBody{}, false
-	}
-	if ability.Kind != SpellAbility {
-		return SpellAbilityBody{}, false
-	}
-	return SpellAbilityBody{
-		Text:             ability.Text,
-		Content:          ability.legacyContent(),
-		AdditionalCosts:  append([]cost.Additional(nil), ability.AdditionalCosts...),
-		AlternativeCosts: append([]cost.Alternative(nil), ability.AlternativeCosts...),
-	}, true
-}
-
-// ActivatedBody returns this ability's activated body, including a legacy view.
-func (ability *AbilityDef) ActivatedBody() (ActivatedAbilityBody, bool) {
-	if body, ok := ability.Body.(ActivatedAbilityBody); ok {
-		return body, true
-	}
-	if ability.Body != nil {
-		return ActivatedAbilityBody{}, false
-	}
-	if ability.Kind != ActivatedAbility || ability.IsManaAbility || ability.IsLoyaltyAbility {
-		return ActivatedAbilityBody{}, false
-	}
-	return ActivatedAbilityBody{
-		Text:                ability.Text,
-		ManaCost:            ability.ManaCost,
-		AdditionalCosts:     append([]cost.Additional(nil), ability.AdditionalCosts...),
-		AlternativeCosts:    append([]cost.Alternative(nil), ability.AlternativeCosts...),
-		ZoneOfFunction:      ability.ZoneOfFunction,
-		Timing:              ability.Timing,
-		ActivationCondition: ability.ActivationCondition,
-		Content:             ability.legacyContent(),
-		KeywordAbilities:    append([]KeywordAbility(nil), ability.KeywordAbilities...),
-	}, true
-}
-
-// ManaBody returns this ability's mana body, including a legacy view.
-func (ability *AbilityDef) ManaBody() (ManaAbilityBody, bool) {
-	if body, ok := ability.Body.(ManaAbilityBody); ok {
-		return body, true
-	}
-	if ability.Body != nil {
-		return ManaAbilityBody{}, false
-	}
-	if ability.Kind != ActivatedAbility || !ability.IsManaAbility || ability.IsLoyaltyAbility {
-		return ManaAbilityBody{}, false
-	}
-	return ManaAbilityBody{
-		Text:                ability.Text,
-		ManaCost:            ability.ManaCost,
-		AdditionalCosts:     append([]cost.Additional(nil), ability.AdditionalCosts...),
-		ZoneOfFunction:      ability.ZoneOfFunction,
-		Timing:              ability.Timing,
-		ActivationCondition: ability.ActivationCondition,
-		Content:             ability.legacyContent(),
-	}, true
-}
-
-// LoyaltyBody returns this ability's loyalty body, including a legacy view.
-func (ability *AbilityDef) LoyaltyBody() (LoyaltyAbilityBody, bool) {
-	if body, ok := ability.Body.(LoyaltyAbilityBody); ok {
-		return body, true
-	}
-	if ability.Body != nil {
-		return LoyaltyAbilityBody{}, false
-	}
-	if ability.Kind != ActivatedAbility || !ability.IsLoyaltyAbility {
-		return LoyaltyAbilityBody{}, false
-	}
-	return LoyaltyAbilityBody{
-		Text:                ability.Text,
-		LoyaltyCost:         ability.LoyaltyCost,
-		ActivationCondition: ability.ActivationCondition,
-		Content:             ability.legacyContent(),
-	}, true
-}
-
-// TriggeredBody returns this ability's triggered body, including a legacy view.
-func (ability *AbilityDef) TriggeredBody() (TriggeredAbilityBody, bool) {
-	if body, ok := ability.Body.(TriggeredAbilityBody); ok {
-		return body, true
-	}
-	if ability.Body != nil {
-		return TriggeredAbilityBody{}, false
-	}
-	if ability.Kind != TriggeredAbility {
-		return TriggeredAbilityBody{}, false
-	}
-	trigger := TriggerCondition{}
-	if ability.Trigger.Exists {
-		trigger = ability.Trigger.Val
-	}
-	return TriggeredAbilityBody{
-		Text:               ability.Text,
-		Trigger:            trigger,
-		Optional:           ability.Optional,
-		MaxTriggersPerTurn: ability.MaxTriggersPerTurn,
-		Content:            ability.legacyContent(),
-	}, true
-}
-
-// StaticBody returns this ability's static body, including a legacy view.
-func (ability *AbilityDef) StaticBody() (StaticAbilityBody, bool) {
-	if body, ok := ability.Body.(StaticAbilityBody); ok {
-		return body, true
-	}
-	if ability.Body != nil {
-		return StaticAbilityBody{}, false
-	}
-	if ability.Kind != StaticAbility {
-		return StaticAbilityBody{}, false
-	}
-	return StaticAbilityBody{
-		Text:             ability.Text,
-		Condition:        ability.Condition,
-		ZoneOfFunction:   ability.ZoneOfFunction,
-		KeywordAbilities: append([]KeywordAbility(nil), ability.KeywordAbilities...),
-	}, true
-}
-
-func (ability *AbilityDef) legacyContent() AbilityContent {
-	if len(ability.Modes) != 0 || ability.MinModes != 0 || ability.MaxModes != 0 || ability.AllowDuplicateModes {
-		return ModalAbilityContent{
-			SharedTargets:       append([]TargetSpec(nil), ability.Targets...),
-			Modes:               append([]Mode(nil), ability.Modes...),
-			MinModes:            ability.MinModes,
-			MaxModes:            ability.MaxModes,
-			AllowDuplicateModes: ability.AllowDuplicateModes,
+// BodyLoyaltyCost returns the loyalty cost for the body, if any.
+func BodyLoyaltyCost(body AbilityBody) int {
+	switch loyalty := body.(type) {
+	case LoyaltyAbilityBody:
+		return loyalty.LoyaltyCost
+	case *LoyaltyAbilityBody:
+		if loyalty == nil {
+			return 0
 		}
+		return loyalty.LoyaltyCost
 	}
-	return PlainAbilityContent{
-		Targets: append([]TargetSpec(nil), ability.Targets...),
-	}
+	return 0
 }

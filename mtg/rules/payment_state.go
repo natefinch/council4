@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 // rulesPaymentState implements payment.State by delegating to the rules-engine
@@ -46,8 +47,8 @@ func (s *rulesPaymentState) PermanentEffectiveColors(p *game.Permanent) []color.
 	return permanentEffectiveColors(s.g, p)
 }
 
-func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, ability *game.AbilityDef) bool {
-	return activationConditionSatisfied(s.g, playerID, permanent, ability)
+func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool {
+	return activationConditionSatisfied(s.g, playerID, permanent, condition)
 }
 
 func (s *rulesPaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent, bool) {

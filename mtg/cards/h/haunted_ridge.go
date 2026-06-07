@@ -26,7 +26,7 @@ var HauntedRidge = func() *game.CardDef {
 				This land enters tapped unless you control two or more other lands.
 				{T}: Add {B} or {R}.
 			`,
-			ReplacementAbilities: []game.ReplacementAbilityDef{
+			ReplacementAbilities: []game.ReplacementAbilityBody{
 				game.EntersTappedIfReplacement("This land enters tapped unless you control two or more other lands.", &game.Condition{
 					Negate: true,
 					ControllerControls: game.PermanentFilter{

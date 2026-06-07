@@ -105,6 +105,26 @@ func TestWardCountersActivatedAbilityWhenCostIsNotPaid(t *testing.T) {
 	}
 }
 
+func TestFaceDownDisguiseWardCountersSpellWhenCostIsNotPaid(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	warded := addFaceDownPermanent(g, game.Player2, disguiseCreature(cost.Mana{cost.W}), game.FaceDownDisguise)
+	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(warded.ObjectID)}, 0, nil)) {
+		t.Fatal("targeting spell cast failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("face-down disguise ward trigger was not put on the stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if g.Stack.Size() != 0 {
+		t.Fatalf("stack size = %d, want disguise ward to counter targeting spell", g.Stack.Size())
+	}
+}
+
 func addWardPermanent(g *game.Game, controller game.PlayerID, manaCost cost.Mana) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Ward Creature",

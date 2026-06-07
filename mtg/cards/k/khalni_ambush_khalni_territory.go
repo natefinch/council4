@@ -80,7 +80,7 @@ var KhalniAmbush = func() *game.CardDef {
 			This land enters tapped.
 			{T}: Add {G}.
 		`,
-		ReplacementAbilities: []game.ReplacementAbilityDef{
+		ReplacementAbilities: []game.ReplacementAbilityBody{
 			game.EntersTappedReplacement("This land enters tapped."),
 		},
 	}

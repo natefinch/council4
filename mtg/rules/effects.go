@@ -27,11 +27,7 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	if !ok {
 		return
 	}
-	spellBody, ok := ability.SpellBody()
-	if !ok {
-		return
-	}
-	e.resolveAbilityContentWithChoices(g, obj, spellBody.Content, agents, log)
+	e.resolveAbilityContentWithChoices(g, obj, ability.Content, agents, log)
 	if obj.KickerPaid {
 		if kicker, ok := spellKicker(spellDef); ok {
 			e.resolveAbilityContentWithChoices(g, obj, kicker.BonusContent, agents, log)
@@ -66,29 +62,15 @@ func spellHasKicker(card *game.CardDef) bool {
 }
 
 func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
-	if ability, ok := firstSpellAbility(card); ok {
-		if kicker, ok := ability.Kicker(); ok {
-			return kicker, true
-		}
-	}
 	if card == nil {
 		return game.KickerKeyword{}, false
 	}
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		if kicker, ok := abilities[i].Kicker(); ok {
-			return kicker, true
-		}
-	}
-	return game.KickerKeyword{}, false
+	return card.KickerKeyword()
 }
 
-func firstSpellAbility(card *game.CardDef) (*game.AbilityDef, bool) {
-	abilities := card.AbilityDefs()
-	for i := range abilities {
-		if abilities[i].IsSpell() {
-			return &abilities[i], true
-		}
+func firstSpellAbility(card *game.CardDef) (*game.SpellAbilityBody, bool) {
+	if card != nil && card.SpellAbility.Exists {
+		return &card.SpellAbility.Val, true
 	}
 	return nil, false
 }
@@ -330,7 +312,7 @@ func copyCardFaceAbilityFields(dst, src *game.CardFace) {
 	dst.ManaAbilities = append([]game.ManaAbilityBody(nil), src.ManaAbilities...)
 	dst.LoyaltyAbilities = append([]game.LoyaltyAbilityBody(nil), src.LoyaltyAbilities...)
 	dst.TriggeredAbilities = append([]game.TriggeredAbilityBody(nil), src.TriggeredAbilities...)
-	dst.ReplacementAbilities = append([]game.ReplacementAbilityDef(nil), src.ReplacementAbilities...)
+	dst.ReplacementAbilities = append([]game.ReplacementAbilityBody(nil), src.ReplacementAbilities...)
 	dst.StaticAbilities = append([]game.StaticAbilityBody(nil), src.StaticAbilities...)
 }
 
