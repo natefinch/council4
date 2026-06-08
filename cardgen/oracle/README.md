@@ -104,6 +104,15 @@ neither a recognized action nor keyword receives a warning diagnostic covering
 its exact source span. Unknown costs receive their own warning. The compiler
 never substitutes guessed executable behavior for unsupported wording.
 
+The strict executable backend currently lowers plain non-parameterized
+keywords, exact single-color tap mana abilities, fixed single-target damage and
+destruction, fixed draw and life changes, fixed controller scry, fixed
+controller or target-player discard and mill, and one-target tap and untap. It
+also lowers exact `When this creature enters, EFFECT` and
+`When this permanent enters, EFFECT` triggers when `EFFECT` is exactly one of
+those supported spell-like effects. Every semantic element and meaningful
+source token must be consumed; otherwise the whole card is rejected.
+
 ## Testing
 
 Unit tests cover representative activated, loyalty, modal, keyword, reminder,

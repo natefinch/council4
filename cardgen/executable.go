@@ -79,6 +79,7 @@ func executableAbilityFields(
 
 	var staticBodies []string
 	var manaAbilities []string
+	var triggeredAbilities []string
 	var spellAbility string
 	var unsupported []oracle.Diagnostic
 	for i, ability := range compilation.Abilities {
@@ -99,6 +100,9 @@ func executableAbilityFields(
 		staticBodies = append(staticBodies, lowered.staticBodies...)
 		if lowered.manaAbility != "" {
 			manaAbilities = append(manaAbilities, lowered.manaAbility)
+		}
+		if lowered.triggeredAbility != "" {
+			triggeredAbilities = append(triggeredAbilities, lowered.triggeredAbility)
 		}
 		if lowered.spellAbility != "" {
 			if spellAbility != "" {
@@ -122,6 +126,9 @@ func executableAbilityFields(
 	if len(manaAbilities) > 0 {
 		fields = append(fields, manaAbilityField(manaAbilities))
 	}
+	if len(triggeredAbilities) > 0 {
+		fields = append(fields, triggeredAbilityField(triggeredAbilities))
+	}
 	if spellAbility != "" {
 		fields = append(fields, "SpellAbility: opt.Val("+spellAbility+"),")
 	}
@@ -132,15 +139,17 @@ func executableAbilityFields(
 }
 
 type abilityLowering struct {
-	staticBodies []string
-	manaAbility  string
-	spellAbility string
-	consumed     semanticConsumption
-	sourceSpans  []oracle.Span
+	staticBodies     []string
+	manaAbility      string
+	triggeredAbility string
+	spellAbility     string
+	consumed         semanticConsumption
+	sourceSpans      []oracle.Span
 }
 
 type semanticConsumption struct {
 	cost       bool
+	trigger    bool
 	modes      int
 	targets    int
 	conditions int
@@ -215,6 +224,31 @@ func lowerExecutableAbility(
 			},
 			sourceSpans: spans,
 		}, nil
+	case oracle.AbilityTriggered:
+		triggeredAbility, diagnostic := executableEnterTrigger(cardName, ability, syntax)
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		spans := []oracle.Span{ability.Trigger.Span}
+		for _, effect := range ability.Effects {
+			spans = append(spans, effect.Span)
+		}
+		for _, target := range ability.Targets {
+			spans = append(spans, target.Span)
+		}
+		for _, reference := range ability.References {
+			spans = append(spans, reference.Span)
+		}
+		return abilityLowering{
+			triggeredAbility: triggeredAbility,
+			consumed: semanticConsumption{
+				trigger:    true,
+				targets:    len(ability.Targets),
+				effects:    len(ability.Effects),
+				references: len(ability.References),
+			},
+			sourceSpans: spans,
+		}, nil
 	default:
 		return abilityLowering{}, executableDiagnostic(
 			ability,
@@ -229,6 +263,7 @@ func (lowering abilityLowering) complete(
 	syntax oracle.Ability,
 ) bool {
 	if lowering.consumed.cost != (ability.Cost != nil) ||
+		lowering.consumed.trigger != (ability.Trigger != nil) ||
 		lowering.consumed.modes != len(ability.Modes) ||
 		lowering.consumed.targets != len(ability.Targets) ||
 		lowering.consumed.conditions != len(ability.Conditions) ||
@@ -247,6 +282,83 @@ func (lowering abilityLowering) complete(
 		return false
 	}
 	return true
+}
+
+func executableEnterTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (string, *oracle.Diagnostic) {
+	if ability.Trigger == nil ||
+		ability.Trigger.Kind != oracle.TriggerWhen ||
+		(ability.Trigger.Event != "this creature enters" &&
+			ability.Trigger.Event != "this permanent enters") ||
+		ability.Trigger.Condition != nil ||
+		len(ability.Effects) != 1 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported enter trigger",
+			"the executable source backend supports only exact self-enter triggers with one supported effect",
+		)
+	}
+	comma := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.Comma
+	})
+	if comma < 0 || comma+1 >= len(syntax.Tokens) {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported enter trigger",
+			"the executable source backend supports only exact self-enter triggers with one supported effect",
+		)
+	}
+	body := ability
+	body.Kind = oracle.AbilitySpell
+	body.Span = ability.Effects[0].Span
+	body.Text = titleFirst(ability.Effects[0].Text)
+	body.Trigger = nil
+	body.References = bodyReferences(ability.References, ability.Trigger.Span)
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Tokens = syntax.Tokens[comma+1:]
+	bodySyntax.Span = body.Span
+	bodySyntax.Text = body.Text
+	content, diagnostic := executableSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported enter trigger effect",
+			diagnostic.Detail,
+		)
+	}
+	return fmt.Sprintf(`{
+	Text: %s,
+	Trigger: game.TriggerCondition{
+		Type: game.TriggerWhen,
+		Pattern: game.TriggerPattern{
+			Event: game.EventPermanentEnteredBattlefield,
+			Source: game.TriggerSourceSelf,
+		},
+	},
+	Content: %s,
+}`, rawStringLiteral(ability.Text), content), nil
+}
+
+func bodyReferences(
+	references []oracle.CompiledReference,
+	triggerSpan oracle.Span,
+) []oracle.CompiledReference {
+	var body []oracle.CompiledReference
+	for _, reference := range references {
+		if spanCovered(reference.Span, []oracle.Span{triggerSpan}) {
+			continue
+		}
+		body = append(body, reference)
+	}
+	return body
 }
 
 func spanCovered(span oracle.Span, covering []oracle.Span) bool {
@@ -450,6 +562,26 @@ func executableSpell(
 			return executableFixedDamageSpell(cardName, ability, syntax)
 		case oracle.EffectDraw:
 			return executableFixedDrawSpell(ability, syntax)
+		case oracle.EffectDestroy:
+			return executableFixedDestroySpell(ability)
+		case oracle.EffectGain:
+			return executableFixedLifeSpell(ability, "gain", "GainLife")
+		case oracle.EffectLose:
+			return executableFixedLifeSpell(ability, "lose", "LoseLife")
+		case oracle.EffectScry:
+			return executableFixedControllerSpell(ability, syntax, "scry", "Scry")
+		case oracle.EffectDiscard:
+			return executableFixedCardCountPlayerSpell(
+				ability, syntax, "discard", "discards", "Discard",
+			)
+		case oracle.EffectMill:
+			return executableFixedCardCountPlayerSpell(
+				ability, syntax, "mill", "mills", "Mill",
+			)
+		case oracle.EffectTap:
+			return executableFixedPermanentTargetSpell(ability, "Tap", "Tap")
+		case oracle.EffectUntap:
+			return executableFixedPermanentTargetSpell(ability, "Untap", "Untap")
 		default:
 		}
 	}
@@ -458,6 +590,334 @@ func executableSpell(
 		"unsupported spell ability",
 		"the executable source backend does not yet lower this spell ability",
 	)
+}
+
+func executableFixedPermanentTargetSpell(
+	ability oracle.CompiledAbility,
+	verb string,
+	primitive string,
+) (string, *oracle.Diagnostic) {
+	if len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		ability.Effects[0].Negated ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported "+strings.ToLower(verb)+" spell",
+			"the executable source backend supports only exact "+strings.ToLower(verb)+" of one target permanent",
+		)
+	}
+	targetSource, ok := permanentTargetSource(ability.Targets[0])
+	if !ok || ability.Text != verb+" "+ability.Targets[0].Text+"." {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported "+strings.ToLower(verb)+" spell",
+			"the executable source backend supports only exact "+strings.ToLower(verb)+" of one target permanent",
+		)
+	}
+	return fmt.Sprintf(`game.Mode{
+	Targets: []game.TargetSpec{
+		%s,
+	},
+	Sequence: []game.Instruction{
+		{
+			Primitive: game.%s{
+				TargetIndex: 0,
+			},
+		},
+	},
+}.Ability()`, targetSource, primitive), nil
+}
+
+func executableFixedCardCountPlayerSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+	controllerVerb string,
+	targetVerb string,
+	primitive string,
+) (string, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
+	if !effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
+		effect.Negated ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported "+controllerVerb+" spell",
+			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
+		)
+	}
+	targetIndex := "game.TargetIndexController"
+	var targets string
+	switch {
+	case len(ability.Targets) == 0 &&
+		len(syntax.Tokens) == 4 &&
+		strings.EqualFold(syntax.Tokens[0].Text, controllerVerb) &&
+		fixedCardCountSyntax(syntax.Tokens[1], syntax.Tokens[2], effect.Amount.Value) &&
+		syntax.Tokens[3].Kind == oracle.Period:
+	case len(ability.Targets) == 1 &&
+		len(syntax.Tokens) == 6 &&
+		strings.EqualFold(syntax.Tokens[0].Text, "target") &&
+		strings.EqualFold(syntax.Tokens[1].Text, "player") &&
+		strings.EqualFold(syntax.Tokens[2].Text, targetVerb) &&
+		fixedCardCountSyntax(syntax.Tokens[3], syntax.Tokens[4], effect.Amount.Value) &&
+		syntax.Tokens[5].Kind == oracle.Period:
+		targetSource, ok := playerTargetSource(ability.Targets[0])
+		if !ok {
+			return "", executableDiagnostic(
+				ability,
+				"unsupported "+controllerVerb+" spell",
+				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
+			)
+		}
+		targetIndex = "0"
+		targets = "Targets: []game.TargetSpec{\n" + targetSource + ",\n},"
+	default:
+		return "", executableDiagnostic(
+			ability,
+			"unsupported "+controllerVerb+" spell",
+			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
+		)
+	}
+	return fmt.Sprintf(`game.Mode{
+	%s
+	Sequence: []game.Instruction{
+		{
+			Primitive: game.%s{
+				Amount: game.Fixed(%d),
+				TargetIndex: %s,
+			},
+		},
+	},
+}.Ability()`, targets, primitive, effect.Amount.Value, targetIndex), nil
+}
+
+func fixedCardCountSyntax(amountToken, cardToken oracle.Token, amount int) bool {
+	if amount == 1 &&
+		strings.EqualFold(amountToken.Text, "a") &&
+		strings.EqualFold(cardToken.Text, "card") {
+		return true
+	}
+	return fixedNumberToken(amountToken, amount) &&
+		strings.EqualFold(cardToken.Text, "cards")
+}
+
+func executableFixedControllerSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+	verb string,
+	primitive string,
+) (string, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
+	if !effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
+		effect.Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		len(syntax.Tokens) != 3 ||
+		!strings.EqualFold(syntax.Tokens[0].Text, verb) ||
+		!fixedNumberToken(syntax.Tokens[1], effect.Amount.Value) ||
+		syntax.Tokens[2].Kind != oracle.Period {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported "+verb+" spell",
+			"the executable source backend supports only exact fixed controller "+verb,
+		)
+	}
+	return fmt.Sprintf(`game.Mode{
+	Sequence: []game.Instruction{
+		{
+			Primitive: game.%s{
+				Amount: game.Fixed(%d),
+				TargetIndex: game.TargetIndexController,
+			},
+		},
+	},
+}.Ability()`, primitive, effect.Amount.Value), nil
+}
+
+func executableFixedLifeSpell(
+	ability oracle.CompiledAbility,
+	verb string,
+	primitive string,
+) (string, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
+	if !effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
+		effect.Negated ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported life spell",
+			"the executable source backend supports only exact fixed life changes",
+		)
+	}
+	targetIndex := "game.TargetIndexController"
+	var targets string
+	switch {
+	case len(ability.Targets) == 0 &&
+		ability.Text == fmt.Sprintf("You %s %d life.", verb, effect.Amount.Value):
+	case len(ability.Targets) == 1:
+		targetSource, ok := playerTargetSource(ability.Targets[0])
+		if !ok ||
+			ability.Text != fmt.Sprintf(
+				"%s %ss %d life.",
+				titleFirst(ability.Targets[0].Text),
+				verb,
+				effect.Amount.Value,
+			) {
+			return "", executableDiagnostic(
+				ability,
+				"unsupported life spell",
+				"the executable source backend supports only exact fixed life changes",
+			)
+		}
+		targets = "Targets: []game.TargetSpec{\n" + targetSource + ",\n},"
+		targetIndex = "0"
+	default:
+		return "", executableDiagnostic(
+			ability,
+			"unsupported life spell",
+			"the executable source backend supports only exact fixed life changes",
+		)
+	}
+	return fmt.Sprintf(`game.Mode{
+	%s
+	Sequence: []game.Instruction{
+		{
+			Primitive: game.%s{
+				Amount: game.Fixed(%d),
+				TargetIndex: %s,
+			},
+		},
+	},
+}.Ability()`, targets, primitive, effect.Amount.Value, targetIndex), nil
+}
+
+func playerTargetSource(target oracle.CompiledTarget) (string, bool) {
+	const format = `{
+	MinTargets: 1,
+	MaxTargets: 1,
+	Constraint: %q,
+	Allow: game.TargetAllowPlayer,%s
+}`
+	var predicate string
+	switch target.Selector.Kind {
+	case oracle.SelectorPlayer:
+		if !strings.EqualFold(target.Text, "target player") {
+			return "", false
+		}
+	case oracle.SelectorOpponent:
+		if !strings.EqualFold(target.Text, "target opponent") {
+			return "", false
+		}
+		predicate = `
+	Predicate: game.TargetPredicate{
+		Player: game.PlayerOpponent,
+	},`
+	default:
+		return "", false
+	}
+	return fmt.Sprintf(format, target.Text, predicate), true
+}
+
+func titleFirst(text string) string {
+	if text == "" {
+		return ""
+	}
+	return strings.ToUpper(text[:1]) + text[1:]
+}
+
+func executableFixedDestroySpell(
+	ability oracle.CompiledAbility,
+) (string, *oracle.Diagnostic) {
+	if len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Effects[0].Negated {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported destroy spell",
+			"the executable source backend supports only exact destruction of one target permanent",
+		)
+	}
+	targetSource, ok := permanentTargetSource(ability.Targets[0])
+	if !ok || ability.Text != "Destroy "+ability.Targets[0].Text+"." {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported destroy spell",
+			"the executable source backend supports only exact destruction of one target permanent",
+		)
+	}
+	return fmt.Sprintf(`game.Mode{
+	Targets: []game.TargetSpec{
+		%s,
+	},
+	Sequence: []game.Instruction{
+		{
+			Primitive: game.Destroy{
+				TargetIndex: 0,
+			},
+		},
+	},
+}.Ability()`, targetSource), nil
+}
+
+func permanentTargetSource(target oracle.CompiledTarget) (string, bool) {
+	const format = `{
+	MinTargets: 1,
+	MaxTargets: 1,
+	Constraint: %q,
+	Allow: game.TargetAllowPermanent,%s
+}`
+	var predicate string
+	var noun string
+	switch target.Selector.Kind {
+	case oracle.SelectorArtifact:
+		noun = "artifact"
+		predicate = permanentTypePredicate("Artifact")
+	case oracle.SelectorCreature:
+		noun = "creature"
+		predicate = permanentTypePredicate("Creature")
+	case oracle.SelectorEnchantment:
+		noun = "enchantment"
+		predicate = permanentTypePredicate("Enchantment")
+	case oracle.SelectorLand:
+		noun = "land"
+		predicate = permanentTypePredicate("Land")
+	case oracle.SelectorPermanent:
+		noun = "permanent"
+	default:
+		return "", false
+	}
+	if target.Text != "target "+noun {
+		return "", false
+	}
+	return fmt.Sprintf(format, target.Text, predicate), true
+}
+
+func permanentTypePredicate(cardType string) string {
+	return fmt.Sprintf(`
+	Predicate: game.TargetPredicate{
+		PermanentTypes: []types.Card{types.%s},
+	},`, cardType)
 }
 
 func executableFixedDrawSpell(
@@ -734,6 +1194,16 @@ func staticAbilityField(bodies []string) string {
 func manaAbilityField(abilities []string) string {
 	var builder strings.Builder
 	_, _ = builder.WriteString("ManaAbilities: []game.ManaAbility{\n")
+	for _, ability := range abilities {
+		_, _ = fmt.Fprintf(&builder, "\t%s,\n", ability)
+	}
+	_, _ = builder.WriteString("},")
+	return builder.String()
+}
+
+func triggeredAbilityField(abilities []string) string {
+	var builder strings.Builder
+	_, _ = builder.WriteString("TriggeredAbilities: []game.TriggeredAbility{\n")
 	for _, ability := range abilities {
 		_, _ = fmt.Fprintf(&builder, "\t%s,\n", ability)
 	}

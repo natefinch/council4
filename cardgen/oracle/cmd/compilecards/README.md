@@ -7,9 +7,12 @@ whose complete rules text is supported by the executable backend.
 The strict backend supports vanilla faces, plain non-parameterized keyword
 abilities with reusable `mtg/game` templates, exact single-color
 `{T}: Add {W/U/B/R/G/C}.` abilities, fixed damage from a spell to one supported
-target, and fixed controller or target-player card draw. Near-miss wording such
-as variable quantities, compound effects, conditional effects, mana choices,
-and divided or mass damage is rejected. The backend never emits TODOs or partial
+target, fixed single-target destruction, fixed draw and life changes, fixed
+controller scry, fixed controller or target-player discard and mill, and
+one-target tap and untap. It also supports exact self-enter triggers containing
+one supported effect. Near-miss wording such as variable quantities, compound
+or conditional effects, qualified targets, optional triggers, mana choices, and
+divided or mass effects is rejected. The backend never emits TODOs or partial
 ability implementations. Unsupported cards, unsupported layouts,
 source-generation failures, non-ASCII package names, and filename collisions
 are written to the report.
@@ -59,11 +62,19 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported multiple spell abilities` | A face has more than one separately parsed spell ability. The current backend emits only one `SpellAbility` value per face. |
 | `unsupported damage spell` | A damage effect was recognized, but its source, amount, recipient, targeting, or surrounding wording is outside the exact fixed single-target templates. |
 | `unsupported draw spell` | A draw effect was recognized, but its amount, recipient, targeting, or surrounding wording is outside the exact fixed draw templates. |
+| `unsupported destroy spell` | A destroy effect was recognized, but it is not exact unconditional destruction of one artifact, creature, enchantment, land, or permanent target. |
+| `unsupported life spell` | A gain-life or lose-life effect was recognized, but its amount, affected player, or surrounding wording is outside the exact fixed templates. |
+| `unsupported scry spell` | A scry effect was recognized, but it is not an exact fixed amount performed by the controller. |
+| `unsupported discard spell` | A discard effect was recognized, but it is not an exact fixed number of cards discarded by the controller or one target player. |
+| `unsupported tap spell` | A tap effect was recognized, but it is not exact tapping of one artifact, creature, enchantment, land, or permanent target. |
+| `unsupported untap spell` | An untap effect was recognized, but it is not exact untapping of one artifact, creature, enchantment, land, or permanent target. |
+| `unsupported mill spell` | A mill effect was recognized, but it is not an exact fixed number of cards milled by the controller or one target player. |
+| `unsupported enter trigger` | A self-enter trigger was recognized, but its event, condition, optionality, structure, or number of effects is outside the exact supported template. |
+| `unsupported enter trigger effect` | The trigger clause is supported, but its single effect does not match a supported complete spell-like effect template. |
 | `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but it is not an exact supported single-color tap mana ability. |
 | `unsupported mana symbol` | A mana effect otherwise matched the supported template, but its output symbol is not one of `{W}`, `{U}`, `{B}`, `{R}`, `{G}`, or `{C}`. |
 | `incomplete executable lowering` | A lowering path did not account for every semantic element or meaningful source token. This internal safety check rejects the whole card rather than emitting a partial implementation. |
 | `unsupported loyalty ability` | The parser recognized a planeswalker loyalty ability, but the executable backend cannot emit it yet. |
-| `unsupported triggered ability` | The parser recognized a `when`, `whenever`, or `at` trigger, but the executable backend cannot emit triggered abilities yet. |
 | `unsupported replacement ability` | The parser recognized replacement wording, but the executable backend cannot emit replacement abilities yet. |
 | `unsupported static ability` | The text is a non-keyword static ability. The current backend supports only static abilities composed entirely of supported keyword templates. |
 | `unsupported reminder ability` | The entire Oracle text is reminder text. This is valid syntax, but it does not map to an executable ability emitted by the backend. |

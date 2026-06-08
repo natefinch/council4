@@ -267,8 +267,14 @@ func compileSelector(tokens []Token) CompiledSelector {
 	selector := CompiledSelector{Raw: joinedSourceText(tokens)}
 	words := normalizedWords(tokens)
 	switch {
+	case containsNoun(words, "artifact"):
+		selector.Kind = SelectorArtifact
 	case containsNoun(words, "creature"):
 		selector.Kind = SelectorCreature
+	case containsNoun(words, "enchantment"):
+		selector.Kind = SelectorEnchantment
+	case containsNoun(words, "land"):
+		selector.Kind = SelectorLand
 	case containsNoun(words, "planeswalker"):
 		selector.Kind = SelectorPlaneswalker
 	case containsNoun(words, "battle"):

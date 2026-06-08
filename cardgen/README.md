@@ -57,8 +57,10 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
   returns source-spanned diagnostics identifying the unsupported ability kind,
   keyword, parameter, or mixed rules text. Supported executable templates
   currently include plain keywords, exact single-color tap mana abilities,
-  fixed single-target spell damage, and fixed controller or target-player
-  spell draw.
+  fixed single-target damage and destruction, fixed draw and life changes,
+  fixed controller scry, fixed controller or target-player discard and mill,
+  one-target tap and untap, and simple self-enter triggers containing exactly
+  one of those supported effects.
 - `ValidateCard(card, opts)` / `ValidateCards(cards, opts)` — report static
   support issues in generated `CardDef` values.
 - `ParseCardList`, `NewManifestFromItems`, `FetchManifest`, and

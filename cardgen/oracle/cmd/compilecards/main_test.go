@@ -16,7 +16,7 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	corpus := `[
 		{"id":"v","oracle_id":"ov","name":"Vanilla Bear","layout":"normal","type_line":"Creature — Bear","power":"2","toughness":"2"},
 		{"id":"k","oracle_id":"ok","name":"Flying Bear","layout":"normal","type_line":"Creature — Bear","oracle_text":"Flying","power":"2","toughness":"2"},
-		{"id":"u","oracle_id":"ou","name":"Drawing Bear","layout":"normal","type_line":"Creature — Bear","oracle_text":"When this creature enters, draw a card.","power":"2","toughness":"2"}
+		{"id":"u","oracle_id":"ou","name":"Drawing Bear","layout":"normal","type_line":"Creature — Bear","oracle_text":"When this creature enters, draw a card, then discard a card.","power":"2","toughness":"2"}
 	]`
 	if err := os.WriteFile(input, []byte(corpus), 0o600); err != nil {
 		t.Fatal(err)

@@ -133,7 +133,10 @@ const (
 	SelectorAny
 	SelectorPlayer
 	SelectorOpponent
+	SelectorArtifact
 	SelectorCreature
+	SelectorEnchantment
+	SelectorLand
 	SelectorPermanent
 	SelectorCard
 	SelectorSpell
