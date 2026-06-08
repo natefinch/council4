@@ -4,18 +4,19 @@
 cards in parallel, and writes deterministic Go definitions for only the cards
 whose complete rules text is supported by the executable backend.
 
-The strict backend supports vanilla faces, plain non-parameterized keyword
-abilities with reusable `mtg/game` templates, exact single-color
-`{T}: Add {W/U/B/R/G/C}.` abilities, fixed damage from a spell to one supported
-target, fixed single-target destruction, fixed draw and life changes, fixed
-controller scry, fixed controller or target-player discard and mill, and
-one-target tap and untap. It also supports exact self-enter triggers containing
-one supported effect. Near-miss wording such as variable quantities, compound
-or conditional effects, qualified targets, optional triggers, mana choices, and
-divided or mass effects is rejected. The backend never emits TODOs or partial
-ability implementations. Unsupported cards, unsupported layouts,
-source-generation failures, non-ASCII package names, and filename collisions
-are written to the report.
+The strict backend supports vanilla faces, plain non-parameterized keywords,
+mana-cost Ward and Cycling, supported tap mana choices, unconditional
+enters-tapped replacements, fixed single-target damage, destruction, exile,
+return-to-hand, and power/toughness changes, narrow mass destruction, fixed draw
+and life changes, fixed controller scry, fixed controller or target-player
+discard and mill, and one-target tap and untap. It also supports exact
+self-enter and self-dies triggers containing one supported effect. Near-miss
+wording such as variable quantities, compound or conditional effects, qualified
+targets, optional triggers, restricted mana, and divided or unsupported mass
+effects is rejected. The backend never emits TODOs or partial ability
+implementations. Unsupported cards, unsupported layouts, source-generation
+failures, non-ASCII package names, and filename collisions are written to the
+report.
 
 Writes are serialized after compilation. Existing files at matching generated
 paths are overwritten. Each affected letter package's `cards.go` registry is
@@ -62,7 +63,10 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported multiple spell abilities` | A face has more than one separately parsed spell ability. The current backend emits only one `SpellAbility` value per face. |
 | `unsupported damage spell` | A damage effect was recognized, but its source, amount, recipient, targeting, or surrounding wording is outside the exact fixed single-target templates. |
 | `unsupported draw spell` | A draw effect was recognized, but its amount, recipient, targeting, or surrounding wording is outside the exact fixed draw templates. |
-| `unsupported destroy spell` | A destroy effect was recognized, but it is not exact unconditional destruction of one artifact, creature, enchantment, land, or permanent target. |
+| `unsupported destroy spell` | A destroy effect was recognized, but it is neither exact unconditional destruction of one supported target permanent nor an exact supported destroy-all form. |
+| `unsupported exile spell` | An exile effect was recognized, but it is not exact exile of one supported target permanent. |
+| `unsupported return spell` | A return effect was recognized, but it is not exact return of one supported target permanent to its owner's hand. |
+| `unsupported power/toughness spell` | A power/toughness change was recognized, but it is not an exact fixed signed change to one target creature until end of turn. |
 | `unsupported life spell` | A gain-life or lose-life effect was recognized, but its amount, affected player, or surrounding wording is outside the exact fixed templates. |
 | `unsupported scry spell` | A scry effect was recognized, but it is not an exact fixed amount performed by the controller. |
 | `unsupported discard spell` | A discard effect was recognized, but it is not an exact fixed number of cards discarded by the controller or one target player. |
@@ -71,6 +75,10 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported mill spell` | A mill effect was recognized, but it is not an exact fixed number of cards milled by the controller or one target player. |
 | `unsupported enter trigger` | A self-enter trigger was recognized, but its event, condition, optionality, structure, or number of effects is outside the exact supported template. |
 | `unsupported enter trigger effect` | The trigger clause is supported, but its single effect does not match a supported complete spell-like effect template. |
+| `unsupported dies trigger` | A self-dies trigger was recognized, but its event, condition, structure, or number of effects is outside the exact supported template. |
+| `unsupported dies trigger effect` | The self-dies trigger clause is supported, but its single effect does not match a supported complete spell-like effect template. |
+| `unsupported enters-tapped replacement` | Replacement wording was recognized, but it is not an exact unconditional supported self enters-tapped sentence. |
+| `unsupported Cycling ability` | Cycling was recognized, but it is not an exact ordinary Cycling ability with a representable mana cost. |
 | `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but it is not an exact supported single-color tap mana ability. |
 | `unsupported mana symbol` | A mana effect otherwise matched the supported template, but its output symbol is not one of `{W}`, `{U}`, `{B}`, `{R}`, `{G}`, or `{C}`. |
 | `incomplete executable lowering` | A lowering path did not account for every semantic element or meaningful source token. This internal safety check rejects the whole card rather than emitting a partial implementation. |

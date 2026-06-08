@@ -37,6 +37,10 @@ func TestCompileActivatedAbility(t *testing.T) {
 		ability.Effects[0].Duration != DurationUntilEndOfTurn {
 		t.Fatalf("effects = %#v", ability.Effects)
 	}
+	if ability.Effects[0].PowerDelta != (CompiledSignedAmount{Value: 2, Known: true}) ||
+		ability.Effects[0].ToughnessDelta != (CompiledSignedAmount{Value: 2, Known: true}) {
+		t.Fatalf("power/toughness change = %#v", ability.Effects[0])
+	}
 }
 
 func TestCompileTriggeredAbility(t *testing.T) {
@@ -46,6 +50,7 @@ func TestCompileTriggeredAbility(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
+
 	ability := compilation.Abilities[0]
 	if ability.Trigger == nil ||
 		ability.Trigger.Kind != TriggerWhenever ||
@@ -57,6 +62,39 @@ func TestCompileTriggeredAbility(t *testing.T) {
 	}
 	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
 		t.Fatalf("effects = %#v", ability.Effects)
+	}
+}
+
+func TestCompileReturnToOwnersHand(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"Return target creature to its owner's hand.",
+		ParseContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectReturn {
+		t.Fatalf("effects = %#v", ability.Effects)
+	}
+	if len(ability.Targets) != 1 ||
+		ability.Targets[0].Selector.Kind != SelectorCreature ||
+		ability.Targets[0].Text != "target creature to its owner's hand" {
+		t.Fatalf("targets = %#v", ability.Targets)
+	}
+	if len(ability.References) != 1 ||
+		ability.References[0].Kind != ReferencePronoun ||
+		ability.References[0].Text != "its" {
+		t.Fatalf("references = %#v", ability.References)
+	}
+	if len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Effects[0].Negated ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 {
+		t.Fatalf("ability = %#v", ability)
 	}
 }
 

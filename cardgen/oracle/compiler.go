@@ -364,20 +364,50 @@ func compileEffects(
 			if kind == EffectUnknown {
 				continue
 			}
+			powerDelta, toughnessDelta := compilePTChange(tokens[i+1:])
 			effects = append(effects, CompiledEffect{
-				Kind:     kind,
-				Span:     sentence.Span,
-				Text:     sentence.Text,
-				VerbSpan: token.Span,
-				Duration: duration,
-				Selector: compileSelector(tokens[i+1:]),
-				Amount:   compileEffectAmount(tokens[i+1:]),
-				Symbol:   firstSymbol(tokens[i+1:]),
-				Negated:  effectNegated(tokens, i),
+				Kind:           kind,
+				Span:           sentence.Span,
+				Text:           sentence.Text,
+				VerbSpan:       token.Span,
+				Duration:       duration,
+				Selector:       compileSelector(tokens[i+1:]),
+				Amount:         compileEffectAmount(tokens[i+1:]),
+				PowerDelta:     powerDelta,
+				ToughnessDelta: toughnessDelta,
+				Symbol:         firstSymbol(tokens[i+1:]),
+				Negated:        effectNegated(tokens, i),
 			})
 		}
+
 	}
 	return effects
+}
+
+func compilePTChange(tokens []Token) (power, toughness CompiledSignedAmount) {
+	for i := 0; i+4 < len(tokens); i++ {
+		power, powerOK := signedAmount(tokens[i], tokens[i+1])
+		toughness, toughnessOK := signedAmount(tokens[i+3], tokens[i+4])
+		if powerOK && tokens[i+2].Kind == Slash && toughnessOK {
+			return power, toughness
+		}
+	}
+	return CompiledSignedAmount{}, CompiledSignedAmount{}
+}
+
+func signedAmount(sign, amount Token) (CompiledSignedAmount, bool) {
+	if amount.Kind != Integer || (sign.Kind != Plus && sign.Kind != Minus) {
+		return CompiledSignedAmount{}, false
+	}
+	value, err := strconv.Atoi(amount.Text)
+	if err != nil {
+		return CompiledSignedAmount{}, false
+	}
+	negative := sign.Kind == Minus
+	if negative {
+		value = -value
+	}
+	return CompiledSignedAmount{Value: value, Known: true, Negative: negative}, true
 }
 
 func compileEffectAmount(tokens []Token) CompiledAmount {
@@ -495,6 +525,8 @@ func effectKind(token Token) EffectKind {
 		return EffectDouble
 	case "draw", "draws":
 		return EffectDraw
+	case "enters":
+		return EffectEnterTapped
 	case "exile", "exiles":
 		return EffectExile
 	case "fight", "fights":
@@ -585,7 +617,14 @@ func compileKeywords(tokens []Token) []CompiledKeyword {
 			}
 			end := i + width
 			parameter := ""
-			if end < len(tokens) && (tokens[end].Kind == Symbol || tokens[end].Kind == Integer) {
+			if end < len(tokens) && tokens[end].Kind == Symbol {
+				var symbols strings.Builder
+				for end < len(tokens) && tokens[end].Kind == Symbol {
+					_, _ = symbols.WriteString(tokens[end].Text)
+					end++
+				}
+				parameter = symbols.String()
+			} else if end < len(tokens) && tokens[end].Kind == Integer {
 				parameter = tokens[end].Text
 				end++
 			}

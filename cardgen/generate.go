@@ -54,11 +54,13 @@ func genCardSource(
 	}
 	if abilityFields != nil {
 		root.AbilityFields = abilityFields.root
+		root.EntersTapped = false
 	}
 	root.Executable = abilityFields != nil
 	for i := range faces {
 		if abilityFields != nil {
 			faces[i].AbilityFields = abilityFields.faces[i]
+			faces[i].EntersTapped = false
 		}
 		faces[i].Executable = abilityFields != nil
 	}
@@ -67,6 +69,7 @@ func genCardSource(
 	needsMana := fieldsNeedMana(root) || anyFaceNeedsMana(faces)
 	needsOpt := fieldsNeedOpt(root) || anyFaceNeedsOpt(faces) || len(faces) > 0
 	needsTypes := fieldsNeedTypes(root) || slices.ContainsFunc(faces, fieldsNeedTypes)
+	needsZone := fieldsNeedZone(root) || slices.ContainsFunc(faces, fieldsNeedZone)
 
 	_, _ = fmt.Fprintf(&b, "package %s\n\n", pkgName)
 	_, _ = b.WriteString("import (\n")
@@ -79,6 +82,9 @@ func genCardSource(
 	}
 	if needsTypes {
 		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/types\"\n")
+	}
+	if needsZone {
+		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/zone\"\n")
 	}
 	if needsMana {
 		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/mana\"\n")
@@ -231,6 +237,10 @@ func fieldsNeedTypes(fields generatedCardFields) bool {
 		len(parsed.Types) > 0 ||
 		len(parsed.Subtypes) > 0 ||
 		abilityFieldsUsePackage(fields.AbilityFields, "types")
+}
+
+func fieldsNeedZone(fields generatedCardFields) bool {
+	return abilityFieldsUsePackage(fields.AbilityFields, "zone")
 }
 
 func abilityFieldsUsePackage(fields []string, packageName string) bool {
@@ -397,7 +407,7 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 		}
 	}
 	if fields.EntersTapped {
-		_, _ = fmt.Fprintf(b, "%sReplacementAbilities: []game.ReplacementAbilityBody{\n", indent)
+		_, _ = fmt.Fprintf(b, "%sReplacementAbilities: []game.ReplacementAbility{\n", indent)
 		_, _ = fmt.Fprintf(b, "%s\tgame.EntersTappedReplacement(%q),\n", indent, "This permanent enters tapped.")
 		_, _ = fmt.Fprintf(b, "%s},\n", indent)
 	}

@@ -49,9 +49,17 @@ func GenerateExecutableCardSource(
 
 func executableFaces(card *ScryfallCard) []generatedCardFields {
 	if card.Layout == "reversible_card" && len(card.CardFaces) > 0 {
-		return facesFromAllCardFaces(card)
+		fields := facesFromAllCardFaces(card)
+		for i := range fields {
+			fields[i].EntersTapped = false
+		}
+		return fields
 	}
-	return append([]generatedCardFields{rootFields(card)}, generatedFaces(card)...)
+	fields := append([]generatedCardFields{rootFields(card)}, generatedFaces(card)...)
+	for i := range fields {
+		fields[i].EntersTapped = false
+	}
+	return fields
 }
 
 func executableAbilityFields(
@@ -78,8 +86,10 @@ func executableAbilityFields(
 	}
 
 	var staticBodies []string
+	var activatedAbilities []string
 	var manaAbilities []string
 	var triggeredAbilities []string
+	var replacementAbilities []string
 	var spellAbility string
 	var unsupported []oracle.Diagnostic
 	for i, ability := range compilation.Abilities {
@@ -98,11 +108,17 @@ func executableAbilityFields(
 			continue
 		}
 		staticBodies = append(staticBodies, lowered.staticBodies...)
+		if lowered.activatedAbility != "" {
+			activatedAbilities = append(activatedAbilities, lowered.activatedAbility)
+		}
 		if lowered.manaAbility != "" {
 			manaAbilities = append(manaAbilities, lowered.manaAbility)
 		}
 		if lowered.triggeredAbility != "" {
 			triggeredAbilities = append(triggeredAbilities, lowered.triggeredAbility)
+		}
+		if lowered.replacementAbility != "" {
+			replacementAbilities = append(replacementAbilities, lowered.replacementAbility)
 		}
 		if lowered.spellAbility != "" {
 			if spellAbility != "" {
@@ -123,11 +139,17 @@ func executableAbilityFields(
 	if len(staticBodies) > 0 {
 		fields = append(fields, staticAbilityField(staticBodies))
 	}
+	if len(activatedAbilities) > 0 {
+		fields = append(fields, activatedAbilityField(activatedAbilities))
+	}
 	if len(manaAbilities) > 0 {
 		fields = append(fields, manaAbilityField(manaAbilities))
 	}
 	if len(triggeredAbilities) > 0 {
 		fields = append(fields, triggeredAbilityField(triggeredAbilities))
+	}
+	if len(replacementAbilities) > 0 {
+		fields = append(fields, replacementAbilityField(replacementAbilities))
 	}
 	if spellAbility != "" {
 		fields = append(fields, "SpellAbility: opt.Val("+spellAbility+"),")
@@ -139,12 +161,14 @@ func executableAbilityFields(
 }
 
 type abilityLowering struct {
-	staticBodies     []string
-	manaAbility      string
-	triggeredAbility string
-	spellAbility     string
-	consumed         semanticConsumption
-	sourceSpans      []oracle.Span
+	staticBodies       []string
+	activatedAbility   string
+	manaAbility        string
+	triggeredAbility   string
+	replacementAbility string
+	spellAbility       string
+	consumed           semanticConsumption
+	sourceSpans        []oracle.Span
 }
 
 type semanticConsumption struct {
@@ -170,12 +194,29 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower modal abilities",
 		)
 	}
+	if cyclingAbility, ok, diagnostic := executableCyclingAbility(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		spans := []oracle.Span{ability.Keywords[0].Span}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
+		}
+		return abilityLowering{
+			activatedAbility: cyclingAbility,
+			consumed: semanticConsumption{
+				keywords: 1,
+			},
+			sourceSpans: spans,
+		}, nil
+	}
 	switch ability.Kind {
 	case oracle.AbilityStatic:
 		bodies, diagnostic := executableKeywordAbility(ability, syntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
+
 		spans := make([]oracle.Span, 0, len(ability.Keywords)+len(syntax.Reminders))
 		for _, keyword := range ability.Keywords {
 			spans = append(spans, keyword.Span)
@@ -249,6 +290,19 @@ func lowerExecutableAbility(
 			},
 			sourceSpans: spans,
 		}, nil
+	case oracle.AbilityReplacement:
+		replacementAbility, diagnostic := executableEntersTappedReplacement(ability)
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return abilityLowering{
+			replacementAbility: replacementAbility,
+			consumed: semanticConsumption{
+				effects:    1,
+				references: len(ability.References),
+			},
+			sourceSpans: []oracle.Span{ability.Effects[0].Span},
+		}, nil
 	default:
 		return abilityLowering{}, executableDiagnostic(
 			ability,
@@ -256,6 +310,107 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func executableCyclingAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (source string, matched bool, diagnostic *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Cycling" {
+		return "", false, nil
+	}
+	keyword := ability.Keywords[0]
+	if keyword.Parameter == "" ||
+		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return "", true, executableDiagnostic(
+			ability,
+			"unsupported Cycling ability",
+			"the executable source backend supports only exact Cycling with a mana cost",
+		)
+	}
+	manaCost, err := ParseManaCostLiteral(keyword.Parameter)
+	if err != nil || manaCost == "" {
+		return "", true, executableDiagnostic(
+			ability,
+			"unsupported Cycling ability",
+			"the executable source backend supports only exact Cycling with a mana cost",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return "", true, executableDiagnostic(
+			ability,
+			"unsupported Cycling ability",
+			"the executable source backend supports only exact Cycling with a mana cost",
+		)
+	}
+	return fmt.Sprintf(`{
+	Text: %q,
+	ManaCost: opt.Val(%s),
+	AdditionalCosts: []cost.Additional{
+		{
+			Kind: cost.AdditionalDiscard,
+			Text: "Discard this card",
+			Amount: 1,
+			Source: zone.Hand,
+		},
+	},
+	KeywordAbilities: []game.KeywordAbility{
+		game.CyclingKeyword{Cost: %s},
+	},
+	Content: game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive: game.Draw{
+					Amount: game.Fixed(1),
+					TargetIndex: game.TargetIndexController,
+				},
+			},
+		},
+	}.Ability(),
+}`, keyword.Name+" "+keyword.Parameter, manaCost, manaCost), true, nil
+}
+
+func executableEntersTappedReplacement(
+	ability oracle.CompiledAbility,
+) (string, *oracle.Diagnostic) {
+	if len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectEnterTapped ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferenceThisObject {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported enters-tapped replacement",
+			"the executable source backend supports only exact unconditional self enters-tapped replacements",
+		)
+	}
+	switch ability.Text {
+	case "This land enters tapped.",
+		"This artifact enters tapped.",
+		"This creature enters tapped.",
+		"This permanent enters tapped.":
+	default:
+		return "", executableDiagnostic(
+			ability,
+			"unsupported enters-tapped replacement",
+			"the executable source backend supports only exact unconditional self enters-tapped replacements",
+		)
+	}
+	return fmt.Sprintf("game.EntersTappedReplacement(%q)", ability.Text), nil
 }
 
 func (lowering abilityLowering) complete(
@@ -289,10 +444,16 @@ func executableEnterTrigger(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (string, *oracle.Diagnostic) {
+	eventKind, supportedEvent := executableSelfTriggerEvent(ability)
+	summary := "unsupported enter trigger"
+	detail := "the executable source backend supports only exact self-enter triggers with one supported effect"
+	if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
+		summary = "unsupported dies trigger"
+		detail = "the executable source backend supports only exact self-dies triggers with one supported effect"
+	}
 	if ability.Trigger == nil ||
 		ability.Trigger.Kind != oracle.TriggerWhen ||
-		(ability.Trigger.Event != "this creature enters" &&
-			ability.Trigger.Event != "this permanent enters") ||
+		!supportedEvent ||
 		ability.Trigger.Condition != nil ||
 		len(ability.Effects) != 1 ||
 		len(ability.Conditions) != 0 ||
@@ -301,8 +462,8 @@ func executableEnterTrigger(
 		ability.AbilityWord != "" {
 		return "", executableDiagnostic(
 			ability,
-			"unsupported enter trigger",
-			"the executable source backend supports only exact self-enter triggers with one supported effect",
+			summary,
+			detail,
 		)
 	}
 	comma := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
@@ -311,8 +472,8 @@ func executableEnterTrigger(
 	if comma < 0 || comma+1 >= len(syntax.Tokens) {
 		return "", executableDiagnostic(
 			ability,
-			"unsupported enter trigger",
-			"the executable source backend supports only exact self-enter triggers with one supported effect",
+			summary,
+			detail,
 		)
 	}
 	body := ability
@@ -330,7 +491,7 @@ func executableEnterTrigger(
 	if diagnostic != nil {
 		return "", executableDiagnostic(
 			ability,
-			"unsupported enter trigger effect",
+			summary+" effect",
 			diagnostic.Detail,
 		)
 	}
@@ -339,12 +500,33 @@ func executableEnterTrigger(
 	Trigger: game.TriggerCondition{
 		Type: game.TriggerWhen,
 		Pattern: game.TriggerPattern{
-			Event: game.EventPermanentEnteredBattlefield,
+			Event: game.%s,
 			Source: game.TriggerSourceSelf,
 		},
 	},
 	Content: %s,
-}`, rawStringLiteral(ability.Text), content), nil
+}`, rawStringLiteral(ability.Text), eventKind, content), nil
+}
+
+func executableSelfTriggerEvent(ability oracle.CompiledAbility) (string, bool) {
+	if ability.Trigger == nil {
+		return "", false
+	}
+	switch ability.Trigger.Event {
+	case "this creature enters",
+		"this permanent enters",
+		"this aura enters",
+		"this artifact enters",
+		"this equipment enters",
+		"this land enters",
+		"this vehicle enters",
+		"this enchantment enters":
+		return "EventPermanentEnteredBattlefield", true
+	case "this creature dies", "this permanent dies":
+		return "EventPermanentDied", true
+	default:
+		return "", false
+	}
 }
 
 func bodyReferences(
@@ -399,6 +581,18 @@ func executableKeywordAbility(
 	bodies := make([]string, 0, len(ability.Keywords))
 	for _, keyword := range ability.Keywords {
 		if keyword.Parameter != "" {
+			if keyword.Name == "Ward" {
+				manaCost, err := ParseManaCostLiteral(keyword.Parameter)
+				if err == nil && manaCost != "" {
+					bodies = append(bodies, fmt.Sprintf(`game.StaticAbility{
+	Text: %q,
+	KeywordAbilities: []game.KeywordAbility{
+		game.WardKeyword{Cost: %s},
+	},
+}`, keyword.Text, manaCost))
+					continue
+				}
+			}
 			return nil, executableDiagnostic(
 				ability,
 				"unsupported parameterized keyword",
@@ -456,12 +650,27 @@ func executableTapManaAbility(
 		len(ability.Keywords) != 0 ||
 		len(ability.Targets) != 0 ||
 		len(ability.Conditions) != 0 ||
-		len(ability.References) != 0 ||
-		!exactTapManaSyntax(syntax.Tokens) {
+		len(ability.References) != 0 {
 		return "", executableDiagnostic(
 			ability,
 			"unsupported activated ability",
-			"the executable source backend supports only exact single-color tap mana abilities",
+			"the executable source backend supports only exact supported tap mana abilities",
+		)
+	}
+	if exactAnyColorTapManaSyntax(syntax.Tokens) {
+		return executableChoiceTapManaAbility(
+			ability.Text,
+			[]string{"W", "U", "B", "R", "G"},
+		), nil
+	}
+	if colors, ok := exactChoiceTapManaSyntax(syntax.Tokens); ok {
+		return executableChoiceTapManaAbility(ability.Text, colors), nil
+	}
+	if !exactTapManaSyntax(syntax.Tokens) {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported activated ability",
+			"the executable source backend supports only exact supported tap mana abilities",
 		)
 	}
 	color, ok := manaColorName(ability.Effects[0].Symbol)
@@ -486,6 +695,90 @@ func executableTapManaAbility(
 		},
 	}.Ability(),
 }`, rawStringLiteral(ability.Text), color), nil
+}
+
+func exactAnyColorTapManaSyntax(tokens []oracle.Token) bool {
+	return len(tokens) == 9 &&
+		tokens[0].Kind == oracle.Symbol &&
+		strings.EqualFold(tokens[0].Text, "{T}") &&
+		tokens[1].Kind == oracle.Colon &&
+		equalTokenWord(tokens[2], "add") &&
+		equalTokenWord(tokens[3], "one") &&
+		equalTokenWord(tokens[4], "mana") &&
+		equalTokenWord(tokens[5], "of") &&
+		equalTokenWord(tokens[6], "any") &&
+		equalTokenWord(tokens[7], "color") &&
+		tokens[8].Kind == oracle.Period
+}
+
+func equalTokenWord(token oracle.Token, word string) bool {
+	return token.Kind == oracle.Word && strings.EqualFold(token.Text, word)
+}
+
+func exactChoiceTapManaSyntax(tokens []oracle.Token) ([]string, bool) {
+	if len(tokens) < 7 ||
+		tokens[0].Kind != oracle.Symbol ||
+		!strings.EqualFold(tokens[0].Text, "{T}") ||
+		tokens[1].Kind != oracle.Colon ||
+		!equalTokenWord(tokens[2], "add") ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return nil, false
+	}
+	var colors []string
+	for i := 3; i < len(tokens)-1; {
+		token := tokens[i]
+		color, ok := manaColorName(token.Text)
+		if token.Kind != oracle.Symbol || !ok {
+			return nil, false
+		}
+		colors = append(colors, color)
+		i++
+		if i == len(tokens)-1 {
+			break
+		}
+		if tokens[i].Kind == oracle.Comma {
+			i++
+			if i < len(tokens)-1 && equalTokenWord(tokens[i], "or") {
+				i++
+			}
+			continue
+		}
+		if !equalTokenWord(tokens[i], "or") {
+			return nil, false
+		}
+		i++
+	}
+	return colors, len(colors) >= 2
+}
+
+func executableChoiceTapManaAbility(text string, colors []string) string {
+	manaColors := make([]string, len(colors))
+	for i, color := range colors {
+		manaColors[i] = "mana." + color
+	}
+	return fmt.Sprintf(`{
+	Text: %s,
+	AdditionalCosts: cost.Tap,
+	Content: game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive: game.Choose{
+					Choice: game.ResolutionChoice{
+						Kind: game.ResolutionChoiceMana,
+						Colors: []mana.Color{%s},
+					},
+					PublishChoice: game.ChoiceKey("oracle-mana-color"),
+				},
+			},
+			{
+				Primitive: game.AddMana{
+					Amount: game.Fixed(1),
+					ChoiceFrom: game.ChoiceKey("oracle-mana-color"),
+				},
+			},
+		},
+	}.Ability(),
+}`, rawStringLiteral(text), strings.Join(manaColors, ", "))
 }
 
 func exactTapManaSyntax(tokens []oracle.Token) bool {
@@ -582,6 +875,12 @@ func executableSpell(
 			return executableFixedPermanentTargetSpell(ability, "Tap", "Tap")
 		case oracle.EffectUntap:
 			return executableFixedPermanentTargetSpell(ability, "Untap", "Untap")
+		case oracle.EffectExile:
+			return executableFixedPermanentTargetSpell(ability, "Exile", "Exile")
+		case oracle.EffectReturn:
+			return executableFixedBounceSpell(ability)
+		case oracle.EffectModifyPT:
+			return executableFixedModifyPTSpell(ability)
 		default:
 		}
 	}
@@ -590,6 +889,122 @@ func executableSpell(
 		"unsupported spell ability",
 		"the executable source backend does not yet lower this spell ability",
 	)
+}
+
+func executableFixedModifyPTSpell(
+	ability oracle.CompiledAbility,
+) (string, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
+	if len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		ability.Targets[0].Selector.Kind != oracle.SelectorCreature ||
+		!effect.PowerDelta.Known ||
+		!effect.ToughnessDelta.Known ||
+		effect.Negated ||
+		effect.Duration != oracle.DurationUntilEndOfTurn ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Text != fmt.Sprintf(
+			"Target creature gets %s/%s until end of turn.",
+			signedAmountText(effect.PowerDelta),
+			signedAmountText(effect.ToughnessDelta),
+		) {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported power/toughness spell",
+			"the executable source backend supports only exact fixed target-creature power/toughness changes until end of turn",
+		)
+	}
+	target := ability.Targets[0]
+	target.Text = "target creature"
+	targetSource, ok := permanentTargetSource(target)
+	if !ok {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported power/toughness spell",
+			"the executable source backend supports only exact fixed target-creature power/toughness changes until end of turn",
+		)
+	}
+	return fmt.Sprintf(`game.Mode{
+	Targets: []game.TargetSpec{
+		%s,
+	},
+	Sequence: []game.Instruction{
+		{
+			Primitive: game.ModifyPT{
+				TargetIndex: 0,
+				PowerDelta: game.Fixed(%d),
+				ToughnessDelta: game.Fixed(%d),
+				Duration: game.DurationUntilEndOfTurn,
+			},
+		},
+	},
+}.Ability()`, targetSource, effect.PowerDelta.Value, effect.ToughnessDelta.Value), nil
+}
+
+func signedAmountText(amount oracle.CompiledSignedAmount) string {
+	if amount.Negative {
+		magnitude := amount.Value
+		if magnitude < 0 {
+			magnitude = -magnitude
+		}
+		return fmt.Sprintf("-%d", magnitude)
+	}
+	return fmt.Sprintf("+%d", amount.Value)
+}
+
+func executableFixedBounceSpell(
+	ability oracle.CompiledAbility,
+) (string, *oracle.Diagnostic) {
+	if len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		ability.Effects[0].Negated ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferencePronoun ||
+		!strings.EqualFold(ability.References[0].Text, "its") {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported return spell",
+			"the executable source backend supports only exact return of one target permanent to its owner's hand",
+		)
+	}
+	target := ability.Targets[0]
+	var targetSource string
+	var ok bool
+	for _, noun := range []string{"artifact", "creature", "enchantment", "land", "permanent"} {
+		if ability.Text != "Return target "+noun+" to its owner's hand." {
+			continue
+		}
+		target.Text = "target " + noun
+		targetSource, ok = permanentTargetSource(target)
+		break
+	}
+	if !ok {
+		return "", executableDiagnostic(
+			ability,
+			"unsupported return spell",
+			"the executable source backend supports only exact return of one target permanent to its owner's hand",
+		)
+	}
+	return fmt.Sprintf(`game.Mode{
+	Targets: []game.TargetSpec{
+		%s,
+	},
+	Sequence: []game.Instruction{
+		{
+			Primitive: game.Bounce{
+				TargetIndex: 0,
+			},
+		},
+	},
+}.Ability()`, targetSource), nil
 }
 
 func executableFixedPermanentTargetSpell(
@@ -844,6 +1259,17 @@ func titleFirst(text string) string {
 func executableFixedDestroySpell(
 	ability oracle.CompiledAbility,
 ) (string, *oracle.Diagnostic) {
+	if selector, ok := exactMassDestroySelector(ability); ok {
+		return fmt.Sprintf(`game.Mode{
+	Sequence: []game.Instruction{
+		{
+			Primitive: game.Destroy{
+				Selector: game.%s,
+			},
+		},
+	},
+}.Ability()`, selector), nil
+	}
 	if len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 ||
@@ -878,6 +1304,27 @@ func executableFixedDestroySpell(
 		},
 	},
 }.Ability()`, targetSource), nil
+}
+
+func exactMassDestroySelector(ability oracle.CompiledAbility) (string, bool) {
+	if len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Effects[0].Negated {
+		return "", false
+	}
+	switch ability.Text {
+	case "Destroy all creatures.":
+		return "EffectSelectorAllCreatures", true
+	case "Destroy all artifacts.":
+		return "EffectSelectorAllArtifacts", true
+	case "Destroy all enchantments.":
+		return "EffectSelectorAllEnchantments", true
+	default:
+		return "", false
+	}
 }
 
 func permanentTargetSource(target oracle.CompiledTarget) (string, bool) {
@@ -1191,6 +1638,16 @@ func staticAbilityField(bodies []string) string {
 	return builder.String()
 }
 
+func activatedAbilityField(abilities []string) string {
+	var builder strings.Builder
+	_, _ = builder.WriteString("ActivatedAbilities: []game.ActivatedAbility{\n")
+	for _, ability := range abilities {
+		_, _ = fmt.Fprintf(&builder, "\t%s,\n", ability)
+	}
+	_, _ = builder.WriteString("},")
+	return builder.String()
+}
+
 func manaAbilityField(abilities []string) string {
 	var builder strings.Builder
 	_, _ = builder.WriteString("ManaAbilities: []game.ManaAbility{\n")
@@ -1209,4 +1666,15 @@ func triggeredAbilityField(abilities []string) string {
 	}
 	_, _ = builder.WriteString("},")
 	return builder.String()
+}
+
+func replacementAbilityField(abilities []string) string {
+	var b strings.Builder
+	_, _ = b.WriteString("ReplacementAbilities: []game.ReplacementAbility{\n")
+	for _, ability := range abilities {
+		_, _ = b.WriteString(ability)
+		_, _ = b.WriteString(",\n")
+	}
+	_, _ = b.WriteString("},")
+	return b.String()
 }

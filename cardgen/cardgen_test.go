@@ -337,6 +337,7 @@ func TestGenerateCardSourceModalDFC(t *testing.T) {
 		"types.Land",
 		"types.Forest",
 		"color.NewIdentity(color.Green)",
+		"ReplacementAbilities: []game.ReplacementAbility{",
 		"game.EntersTappedReplacement",
 	}
 	assertSourceContainsAll(t, got, checks)

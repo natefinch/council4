@@ -185,6 +185,7 @@ const (
 	EffectDiscover
 	EffectDouble
 	EffectDraw
+	EffectEnterTapped
 	EffectExile
 	EffectFight
 	EffectGain
@@ -219,21 +220,30 @@ const (
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind     EffectKind
-	Span     Span
-	Text     string
-	VerbSpan Span
-	Duration DurationKind
-	Selector CompiledSelector
-	Amount   CompiledAmount
-	Symbol   string
-	Negated  bool
+	Kind           EffectKind
+	Span           Span
+	Text           string
+	VerbSpan       Span
+	Duration       DurationKind
+	Selector       CompiledSelector
+	Amount         CompiledAmount
+	PowerDelta     CompiledSignedAmount
+	ToughnessDelta CompiledSignedAmount
+	Symbol         string
+	Negated        bool
 }
 
 // CompiledAmount is a fixed numeric amount recognized in an effect.
 type CompiledAmount struct {
 	Value int
 	Known bool
+}
+
+// CompiledSignedAmount is a fixed signed amount recognized in an effect.
+type CompiledSignedAmount struct {
+	Value    int
+	Known    bool
+	Negative bool
 }
 
 // CompiledKeyword is a recognized keyword ability.

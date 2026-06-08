@@ -105,12 +105,13 @@ its exact source span. Unknown costs receive their own warning. The compiler
 never substitutes guessed executable behavior for unsupported wording.
 
 The strict executable backend currently lowers plain non-parameterized
-keywords, exact single-color tap mana abilities, fixed single-target damage and
+keywords, mana-cost Ward and Cycling, supported tap mana choices,
+unconditional enters-tapped replacements, fixed single-target damage,
+destruction, exile, return-to-hand, and power/toughness changes, narrow mass
 destruction, fixed draw and life changes, fixed controller scry, fixed
 controller or target-player discard and mill, and one-target tap and untap. It
-also lowers exact `When this creature enters, EFFECT` and
-`When this permanent enters, EFFECT` triggers when `EFFECT` is exactly one of
-those supported spell-like effects. Every semantic element and meaningful
+also lowers exact supported self-enter and self-dies triggers when their body is
+exactly one supported spell-like effect. Every semantic element and meaningful
 source token must be consumed; otherwise the whole card is rejected.
 
 ## Testing
