@@ -210,7 +210,7 @@ func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, 
 		return 0
 	}
 	loseLife(g, playerID, dealt)
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:            game.EventDamageDealt,
 		SourceID:        sourceID,
 		SourceObjectID:  sourceObjectID,
@@ -239,7 +239,7 @@ func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controlle
 		return 0
 	}
 	markPermanentDamage(g, permanent, dealt)
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:            game.EventDamageDealt,
 		SourceID:        sourceID,
 		SourceObjectID:  sourceObjectID,

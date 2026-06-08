@@ -76,7 +76,7 @@ func TestAttachedPermanentTriggerFilterUsesLKI(t *testing.T) {
 	rememberLastKnown(g, &snapshot)
 	detachPermanent(g, equipment)
 
-	if !triggerSourceAttachedPermanentMatches(g, equipment, game.GameEvent{
+	if !triggerSourceAttachedPermanentMatches(g, equipment, game.Event{
 		Kind:            game.EventDamageDealt,
 		PermanentID:     creature.ObjectID,
 		DamageRecipient: game.DamageRecipientPermanent,
@@ -101,7 +101,7 @@ func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 		SourceCardID:    equipment.CardInstanceID,
 		Controller:      game.Player1,
 		HasTriggerEvent: true,
-		TriggerEvent: game.GameEvent{
+		TriggerEvent: game.Event{
 			Kind:            game.EventDamageDealt,
 			PermanentID:     creature.ObjectID,
 			Amount:          4,

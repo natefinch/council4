@@ -103,7 +103,7 @@ func TestConditionTargetEnteredThisTurn(t *testing.T) {
 	if conditionSatisfied(g, conditionContext{controller: game.Player1, obj: obj}, condition) {
 		t.Fatal("condition matched before enter event")
 	}
-	emitEvent(g, game.GameEvent{Kind: game.EventPermanentEnteredBattlefield, PermanentID: creature.ObjectID})
+	emitEvent(g, game.Event{Kind: game.EventPermanentEnteredBattlefield, PermanentID: creature.ObjectID})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1, obj: obj}, condition) {
 		t.Fatal("condition did not match target that entered this turn")
 	}
@@ -161,7 +161,7 @@ func TestConditionEventPermanentNameUniqueAmongControlledAndGraveyardCreatures(t
 	condition := opt.Val(game.Condition{EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true})
 	ctx := conditionContext{
 		controller: game.Player1,
-		event: &game.GameEvent{
+		event: &game.Event{
 			PermanentID: unique.ObjectID,
 		},
 	}
@@ -177,7 +177,7 @@ func TestConditionEventPermanentNameUniqueAmongControlledAndGraveyardCreatures(t
 	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	unique = addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Unique", Types: []types.Card{types.Creature}}})
 	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Unique", Types: []types.Card{types.Creature}}})
-	ctx.event = &game.GameEvent{PermanentID: unique.ObjectID}
+	ctx.event = &game.Event{PermanentID: unique.ObjectID}
 	if conditionSatisfied(g, ctx, condition) {
 		t.Fatal("condition matched with a same-name creature card in graveyard")
 	}

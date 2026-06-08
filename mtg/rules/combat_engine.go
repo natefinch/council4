@@ -334,7 +334,7 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 			setPermanentTapped(g, attacker, true)
 		}
 
-		emitEvent(g, game.GameEvent{
+		emitEvent(g, game.Event{
 			Kind:           game.EventAttackerDeclared,
 			SourceID:       attacker.CardInstanceID,
 			SourceObjectID: attacker.ObjectID,
@@ -408,7 +408,7 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 		if blocker == nil {
 			continue
 		}
-		emitEvent(g, game.GameEvent{
+		emitEvent(g, game.Event{
 			Kind:              game.EventBlockerDeclared,
 			SourceID:          blocker.CardInstanceID,
 			SourceObjectID:    blocker.ObjectID,

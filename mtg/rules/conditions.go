@@ -11,7 +11,7 @@ import (
 type conditionContext struct {
 	controller             game.PlayerID
 	source                 *game.Permanent
-	event                  *game.GameEvent
+	event                  *game.Event
 	obj                    *game.StackObject
 	useBaseCharacteristics bool
 }

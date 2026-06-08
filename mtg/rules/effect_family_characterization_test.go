@@ -183,7 +183,7 @@ func phaseZeroEventSnapshot(g *game.Game, labels map[id.ID]string) []string {
 	return snapshot
 }
 
-func phaseZeroEventLine(g *game.Game, labels map[id.ID]string, event game.GameEvent) string {
+func phaseZeroEventLine(g *game.Game, labels map[id.ID]string, event game.Event) string {
 	switch event.Kind {
 	case game.EventLifeLost:
 		return fmt.Sprintf("life-lost %s amount=%d", phaseZeroPlayer(event.Player), event.Amount)
@@ -206,14 +206,14 @@ func phaseZeroEventLine(g *game.Game, labels map[id.ID]string, event game.GameEv
 	}
 }
 
-func phaseZeroDamageEventLine(g *game.Game, labels map[id.ID]string, event game.GameEvent) string {
+func phaseZeroDamageEventLine(g *game.Game, labels map[id.ID]string, event game.Event) string {
 	if event.DamageRecipient == game.DamageRecipientPlayer {
 		return fmt.Sprintf("damage player %s amount=%d source=%s", phaseZeroPlayer(event.Player), event.Amount, cardName(g, event.SourceID))
 	}
 	return fmt.Sprintf("damage permanent %s amount=%d source=%s", labels[event.PermanentID], event.Amount, cardName(g, event.SourceID))
 }
 
-func phaseZeroEventObjectName(g *game.Game, labels map[id.ID]string, event game.GameEvent) string {
+func phaseZeroEventObjectName(g *game.Game, labels map[id.ID]string, event game.Event) string {
 	if event.PermanentID != 0 {
 		if label := labels[event.PermanentID]; label != "" {
 			return label

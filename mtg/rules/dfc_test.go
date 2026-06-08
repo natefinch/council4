@@ -111,7 +111,7 @@ func TestBackFaceTriggeredAbilityResolvesUsingCapturedFace(t *testing.T) {
 		Transformed:    true,
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
-	g.Events = append(g.Events, game.GameEvent{
+	g.Events = append(g.Events, game.Event{
 		Kind:       game.EventSpellCast,
 		Controller: game.Player1,
 		CardTypes:  []types.Card{types.Instant},

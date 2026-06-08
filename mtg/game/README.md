@@ -32,7 +32,7 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 ├── zone/                      # Zone vocabulary and ordered card collections
 ├── stack.go                   # Stack (LIFO) & StackObject (spells/abilities resolving)
 ├── target.go                  # Target — runtime target choices for spells/abilities
-├── event.go                   # GameEvent — typed rules facts emitted by mtg/rules
+├── event.go                   # Event — typed rules facts emitted by mtg/rules
 ├── continuous.go              # ContinuousEffect layers, CopyableValues, DynamicValue
 ├── cost_modifier.go           # CostModifier and AttackTax runtime cost data
 ├── duration.go                # EffectDuration and delayed-trigger data
@@ -168,7 +168,7 @@ Modal abilities use `Modes` plus `MinModes`, `MaxModes`, and `AllowDuplicateMode
 
 Activated abilities are authored using `ActivatedAbility` (regular), `ManaAbility` (mana), or `LoyaltyAbility` (planeswalker) and carry mana costs, typed additional costs, timing restrictions, target specs, X values, a zone of function, and optional `KeywordAbilities` (e.g. `EquipKeyword`). The rules engine uses those fields for tap mana abilities, Equip, Cycling from hand, source-exiling graveyard abilities, and general activated abilities with supported effects. Cycling and graveyard abilities use the same `StackActivatedAbility` shape with the source card preserved after it moves as a cost. `Game.ActivatedAbilitiesThisTurn` tracks once-per-turn activation guards by source object or source card and ability index.
 
-Triggered abilities use `TriggerCondition.Pattern` to match typed `GameEvent` values. The first trigger slice supports exact event-kind matching plus filters for controller, source/self, `ExcludeSelf` for "another" event-source wording, affected player, permanent/card type include/exclude filters, nontoken permanent events, zone transition, damage recipient, and beginning-of-step events with an explicit `Step`. `TriggerCondition.InterveningCondition` is the structured form of an intervening-if predicate and is checked both when the event triggers and when the ability resolves. `TriggerCondition.State` models simple latched state triggers. Optional "you may" triggered abilities set `TriggeredAbility.Optional`; they still use the stack, and the rules engine asks for the yes/no choice when they resolve. The legacy `TriggerCondition.Event` string is documentation only and is not used for rules behavior.
+Triggered abilities use `TriggerCondition.Pattern` to match typed `Event` values. The first trigger slice supports exact event-kind matching plus filters for controller, source/self, `ExcludeSelf` for "another" event-source wording, affected player, permanent/card type include/exclude filters, nontoken permanent events, zone transition, damage recipient, and beginning-of-step events with an explicit `Step`. `TriggerCondition.InterveningCondition` is the structured form of an intervening-if predicate and is checked both when the event triggers and when the ability resolves. `TriggerCondition.State` models simple latched state triggers. Optional "you may" triggered abilities set `TriggeredAbility.Optional`; they still use the stack, and the rules engine asks for the yes/no choice when they resolve. The legacy `TriggerCondition.Event` string is documentation only and is not used for rules behavior.
 
 ### Choices
 
@@ -180,7 +180,7 @@ Triggered abilities use `TriggerCondition.Pattern` to match typed `GameEvent` va
 
 ### Game Events
 
-`GameEvent` (`event.go`) is the shared typed vocabulary for rules-relevant facts such as spell casts/resolutions, permanents entering or dying, damage dealt or prevented, destruction replacement, cards drawn/discarded/revealed, zone changes, face-up turns, and combat declarations. Token events may carry `TokenDef` as last-known definition data because tokens have no `CardInstanceID`.
+`Event` (`event.go`) is the shared typed vocabulary for rules-relevant facts such as spell casts/resolutions, permanents entering or dying, damage dealt or prevented, destruction replacement, cards drawn/discarded/revealed, zone changes, face-up turns, and combat declarations. Token events may carry `TokenDef` as last-known definition data because tokens have no `CardInstanceID`.
 
 Events are not player `Action`s and are not report-oriented `GameResult` logs. `mtg/game` defines the event data so card definitions can refer to event kinds and trigger patterns without importing rules behavior; `mtg/rules` emits and consumes events at mutation boundaries. `Game.TriggerEventCursor` records how far trigger detection has consumed the event stream.
 

@@ -56,7 +56,7 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 	if !ok || obj.Kind != game.StackActivatedAbility || obj.SourceID != cyclingID || obj.SourceCardID != cyclingID || len(obj.AdditionalCostsPaid) != 1 {
 		t.Fatalf("cycling stack object = %+v, want activated ability sourced from cycled card", obj)
 	}
-	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.Event) bool {
 		return event.Player == game.Player1 &&
 			event.CardID == cyclingID &&
 			event.FromZone == zone.Hand &&

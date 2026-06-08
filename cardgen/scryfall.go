@@ -14,6 +14,8 @@ import (
 
 // ScryfallCard holds the subset of Scryfall card JSON we care about.
 type ScryfallCard struct {
+	ID            string             `json:"id"`
+	OracleID      string             `json:"oracle_id"`
 	Name          string             `json:"name"`
 	Layout        string             `json:"layout"`
 	ManaCost      string             `json:"mana_cost"`

@@ -763,7 +763,6 @@ func (p MoveCounters) instructionRefs() primitiveRefs  { return quantityRefs(p.A
 func (ApplyContinuous) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (ApplyRule) instructionRefs() primitiveRefs       { return primitiveRefs{} }
 
-//nolint:gocritic // Value receivers are required by the sealed Primitive interface.
 func (p ModifyPT) instructionRefs() primitiveRefs {
 	return mergePrimitiveRefs(quantityRefs(p.PowerDelta), quantityRefs(p.ToughnessDelta))
 }
@@ -771,7 +770,6 @@ func (Fight) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (Tap) instructionRefs() primitiveRefs      { return primitiveRefs{} }
 func (p Search) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 
-//nolint:gocritic // Value receivers are required by the sealed Primitive interface.
 func (p CreateToken) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
 func (ShufflePermanentIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (StartEngines) instructionRefs() primitiveRefs                { return primitiveRefs{} }

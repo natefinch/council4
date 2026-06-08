@@ -247,7 +247,7 @@ const (
 	TriggerPlayerOpponent
 )
 
-// TriggerPattern matches a GameEvent for triggered-ability detection.
+// TriggerPattern matches a Event for triggered-ability detection.
 // Zero-valued filters are wildcards except Event, which must be set.
 type TriggerPattern struct {
 	Event EventKind

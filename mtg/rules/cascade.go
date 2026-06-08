@@ -28,7 +28,7 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 		player.Library.Remove(cardID)
 		player.Exile.Add(cardID)
 		revealed = append(revealed, cardID)
-		emitZoneChangeEvent(g, game.GameEvent{
+		emitZoneChangeEvent(g, game.Event{
 			Player:   obj.Controller,
 			CardID:   cardID,
 			FromZone: zone.Library,
@@ -69,7 +69,7 @@ func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue 
 	}
 	if player.Exile.Remove(found) {
 		player.Hand.Add(found)
-		emitZoneChangeEvent(g, game.GameEvent{
+		emitZoneChangeEvent(g, game.Event{
 			Player:   obj.Controller,
 			CardID:   found,
 			FromZone: zone.Exile,
@@ -89,7 +89,7 @@ func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.Play
 		player.Library.Remove(cardID)
 		player.Exile.Add(cardID)
 		revealed = append(revealed, cardID)
-		emitZoneChangeEvent(g, game.GameEvent{
+		emitZoneChangeEvent(g, game.Event{
 			Player:   playerID,
 			CardID:   cardID,
 			FromZone: zone.Library,
@@ -118,7 +118,7 @@ func bottomExiledCards(g *game.Game, player *game.Player, playerID game.PlayerID
 	for _, cardID := range cardIDs {
 		if player.Exile.Remove(cardID) {
 			player.Library.AddToBottom(cardID)
-			emitZoneChangeEvent(g, game.GameEvent{
+			emitZoneChangeEvent(g, game.Event{
 				Player:   playerID,
 				CardID:   cardID,
 				FromZone: zone.Exile,
@@ -160,7 +160,7 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 		ChosenModes:  append([]int(nil), modes...),
 	}
 	stormCopies := stormCopyCount(g, spellDef)
-	pushSpellToStack(g, obj, game.GameEvent{
+	pushSpellToStack(g, obj, game.Event{
 		SourceID:      cardID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,

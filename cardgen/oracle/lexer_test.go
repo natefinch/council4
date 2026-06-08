@@ -121,6 +121,35 @@ func TestLexerInvalidInput(t *testing.T) {
 	}
 }
 
+func TestInvalidReason(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		want   string
+	}{
+		"invalid UTF-8": {source: string([]byte{0xff}), want: "invalid UTF-8 encoding"},
+		"NUL":           {source: "\x00", want: "NUL is not valid in Oracle text"},
+		"midstream BOM": {source: "A\uFEFF", want: "a UTF-8 BOM is only valid at the start of Oracle text"},
+		"unclosed":      {source: "{T", want: "unclosed braced symbol"},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			lexer := NewLexer(test.source)
+			token := lexer.Next()
+			if token.Kind != Invalid {
+				token = lexer.Next()
+			}
+			if got := InvalidReason(token); got != test.want {
+				t.Fatalf("reason = %q, want %q", got, test.want)
+			}
+		})
+	}
+	if got := InvalidReason(Token{Kind: Word}); got != "" {
+		t.Fatalf("word reason = %q", got)
+	}
+}
+
 func TestLexerLeadingBOM(t *testing.T) {
 	t.Parallel()
 	lexer := NewLexer("\uFEFFFlying")

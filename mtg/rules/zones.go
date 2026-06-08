@@ -57,7 +57,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		permanent.Tapped = true
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
-	event := game.GameEvent{
+	event := game.Event{
 		SourceID:    card.ID,
 		Controller:  controller,
 		Player:      card.Owner,
@@ -106,7 +106,7 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 		SummoningSick:  true,
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
-	event := game.GameEvent{
+	event := game.Event{
 		SourceID:    card.ID,
 		Controller:  controller,
 		Player:      card.Owner,
@@ -152,7 +152,7 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zo
 	}
 	snapshot := snapshotPermanent(g, permanent, zone.Battlefield)
 	rememberLastKnown(g, &snapshot)
-	event := game.GameEvent{
+	event := game.Event{
 		Kind:        game.EventZoneChanged,
 		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,
@@ -203,7 +203,7 @@ func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fr
 		return false
 	}
 	to.Add(cardID)
-	emitZoneChangeEvent(g, game.GameEvent{
+	emitZoneChangeEvent(g, game.Event{
 		Player:   playerID,
 		CardID:   cardID,
 		FromZone: fromZone,
@@ -228,7 +228,7 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 		if _, ok := madnessCostForCard(cardFaceOrDefault(card, game.FaceFront)); ok {
 			destination = zone.Exile
 		}
-		destination = replacementZoneChangeDestination(g, game.GameEvent{
+		destination = replacementZoneChangeDestination(g, game.Event{
 			Kind:       game.EventZoneChanged,
 			Controller: playerID,
 			Player:     playerID,
@@ -247,7 +247,7 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 		return false
 	}
 	destinationCards.Add(cardID)
-	event := game.GameEvent{
+	event := game.Event{
 		Player:   playerID,
 		CardID:   cardID,
 		FromZone: zone.Hand,
@@ -262,7 +262,7 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 }
 
 func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destination zone.Type) {
-	event := game.GameEvent{
+	event := game.Event{
 		Controller:  permanent.Controller,
 		Player:      permanent.Owner,
 		CardID:      permanent.CardInstanceID,

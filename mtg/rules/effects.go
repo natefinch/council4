@@ -843,7 +843,7 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 	initializePermanentCounters(permanent, token)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{}, g, permanent, zone.None)
 	g.Battlefield = append(g.Battlefield, permanent)
-	event := game.GameEvent{
+	event := game.Event{
 		Controller:  controller,
 		Player:      controller,
 		PermanentID: objectID,

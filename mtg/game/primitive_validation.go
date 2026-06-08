@@ -156,7 +156,6 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	return validateTargetReference(p.TargetIndex, targets, checkTargets)
 }
 
-//nolint:gocritic // Value receivers are required by the sealed Primitive interface.
 func (p ModifyPT) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.PowerDelta, targets, checkTargets); err != nil {
 		return err
@@ -232,7 +231,6 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 	return nil
 }
 
-//nolint:gocritic // Value receivers are required by the sealed Primitive interface.
 func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if !p.Source.Valid() {
 		return errors.New("create token requires a valid source")

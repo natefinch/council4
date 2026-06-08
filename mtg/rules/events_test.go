@@ -21,23 +21,23 @@ func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
 	if !ok || drawn != cardID {
 		t.Fatalf("drawCard() = %v, %v, want %v, true", drawn, ok, cardID)
 	}
-	assertEvent(t, g.Events, game.EventCardDrawn, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventCardDrawn, func(event game.Event) bool {
 		return event.Player == game.Player1 &&
 			event.CardID == cardID &&
 			event.FromZone == zone.Library &&
 			event.ToZone == zone.Hand &&
 			event.Amount == 1
 	})
-	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == cardID &&
 			event.FromZone == zone.Library &&
 			event.ToZone == zone.Hand
 	})
-	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == cardID &&
 			event.FromZone == zone.Library &&
 			event.ToZone == zone.Hand
-	}); zoneIndex > eventIndex(g.Events, game.EventCardDrawn, func(event game.GameEvent) bool {
+	}); zoneIndex > eventIndex(g.Events, game.EventCardDrawn, func(event game.Event) bool {
 		return event.CardID == cardID
 	}) {
 		t.Fatalf("draw zone-change event should precede draw-specific event: %+v", g.Events)
@@ -56,17 +56,17 @@ func TestCastAndResolvePermanentSpellEmitsEvents(t *testing.T) {
 		t.Fatal("applyAction() = false, want true")
 	}
 
-	assertEvent(t, g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventSpellCast, func(event game.Event) bool {
 		return event.CardID == spellID &&
 			event.Controller == game.Player1 &&
 			event.FromZone == zone.Hand &&
 			event.ToZone == zone.Stack
 	})
-	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == spellID &&
 			event.FromZone == zone.Hand &&
 			event.ToZone == zone.Stack
-	}); zoneIndex > eventIndex(g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
+	}); zoneIndex > eventIndex(g.Events, game.EventSpellCast, func(event game.Event) bool {
 		return event.CardID == spellID
 	}) {
 		t.Fatalf("cast zone-change event should precede cast-specific event: %+v", g.Events)
@@ -74,15 +74,15 @@ func TestCastAndResolvePermanentSpellEmitsEvents(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	assertEvent(t, g.Events, game.EventSpellResolved, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventSpellResolved, func(event game.Event) bool {
 		return event.CardID == spellID && event.Controller == game.Player1
 	})
-	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == spellID &&
 			event.FromZone == zone.Stack &&
 			event.ToZone == zone.Battlefield
 	})
-	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.GameEvent) bool {
+	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.Event) bool {
 		return event.CardID == spellID &&
 			event.Controller == game.Player1 &&
 			event.FromZone == zone.Stack &&
@@ -105,12 +105,12 @@ func TestPlayLandEmitsHandToBattlefieldZoneChange(t *testing.T) {
 		t.Fatal("applyAction(PlayLand) = false, want true")
 	}
 
-	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == landID &&
 			event.FromZone == zone.Hand &&
 			event.ToZone == zone.Battlefield
 	})
-	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.GameEvent) bool {
+	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.Event) bool {
 		return event.CardID == landID &&
 			event.FromZone == zone.Hand &&
 			event.ToZone == zone.Battlefield
@@ -118,7 +118,7 @@ func TestPlayLandEmitsHandToBattlefieldZoneChange(t *testing.T) {
 	if zoneIndex == -1 || etbIndex == -1 || zoneIndex > etbIndex {
 		t.Fatalf("land play zone change index = %d, ETB index = %d, want hand-to-battlefield zone change before ETB in %+v", zoneIndex, etbIndex, g.Events)
 	}
-	assertNoEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	assertNoEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == landID &&
 			event.FromZone == zone.Stack
 	})
@@ -133,13 +133,13 @@ func TestDestroyPermanentEmitsZoneChangeAndDeathEvents(t *testing.T) {
 	if !ok {
 		t.Fatal("destroyPermanent() ok = false, want true")
 	}
-	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID &&
 			event.CardID == permanent.CardInstanceID &&
 			event.FromZone == zone.Battlefield &&
 			event.ToZone == zone.Graveyard
 	})
-	assertEvent(t, g.Events, game.EventPermanentDied, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventPermanentDied, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID &&
 			event.CardID == permanent.CardInstanceID &&
 			event.Controller == game.Player2
@@ -156,19 +156,19 @@ func TestDamageEffectEmitsDamageEvent(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.Event) bool {
 		return event.Player == game.Player2 &&
 			event.Controller == game.Player1 &&
 			event.Amount == 3 &&
 			event.DamageRecipient == game.DamageRecipientPlayer &&
 			!event.CombatDamage
 	})
-	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == sourceID &&
 			event.FromZone == zone.Stack &&
 			event.ToZone == zone.Graveyard
 	})
-	assertEvent(t, g.Events, game.EventSpellResolved, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventSpellResolved, func(event game.Event) bool {
 		return event.CardID == sourceID
 	})
 }
@@ -193,12 +193,12 @@ func TestCounteredSpellEmitsStackToGraveyardZoneChangeButNoResolveEvent(t *testi
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == sourceID &&
 			event.FromZone == zone.Stack &&
 			event.ToZone == zone.Graveyard
 	})
-	assertNoEvent(t, g.Events, game.EventSpellResolved, func(event game.GameEvent) bool {
+	assertNoEvent(t, g.Events, game.EventSpellResolved, func(event game.Event) bool {
 		return event.CardID == sourceID
 	})
 }
@@ -218,12 +218,12 @@ func TestMassDamageEffectEmitsDamageEventForEachPermanent(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.Event) bool {
 		return event.PermanentID == creature1.ObjectID &&
 			event.Amount == 2 &&
 			event.DamageRecipient == game.DamageRecipientPermanent
 	})
-	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.Event) bool {
 		return event.PermanentID == creature2.ObjectID &&
 			event.Amount == 2 &&
 			event.DamageRecipient == game.DamageRecipientPermanent
@@ -254,7 +254,7 @@ func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.Event) bool {
 		return event.SourceID == source.CardInstanceID &&
 			event.SourceObjectID == source.ObjectID &&
 			event.Player == game.Player2 &&
@@ -278,7 +278,7 @@ func TestCombatDamageToPermanentEmitsCombatDamageEvent(t *testing.T) {
 
 	engine.resolveCombatDamage(g, &TurnLog{})
 
-	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.Event) bool {
 		return event.SourceObjectID == attacker.ObjectID &&
 			event.PermanentID == blocker.ObjectID &&
 			event.Amount == 3 &&
@@ -298,13 +298,13 @@ func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
 		t.Fatal("token was not created")
 	}
 
-	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID &&
 			event.TokenName == token.Name &&
 			event.FromZone == zone.None &&
 			event.ToZone == zone.Battlefield
 	})
-	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.GameEvent) bool {
+	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID &&
 			event.TokenName == token.Name &&
 			event.FromZone == zone.None &&
@@ -323,22 +323,22 @@ func TestDiscardToMaximumHandSizeEmitsDiscardAndZoneChangeEvents(t *testing.T) {
 
 	discardToMaximumHandSize(g, game.Player1)
 
-	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.Event) bool {
 		return event.Player == game.Player1 &&
 			event.CardID != 0 &&
 			event.FromZone == zone.Hand &&
 			event.ToZone == zone.Graveyard &&
 			event.Amount == 1
 	})
-	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID != 0 &&
 			event.FromZone == zone.Hand &&
 			event.ToZone == zone.Graveyard
 	})
-	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	if zoneIndex := eventIndex(g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.FromZone == zone.Hand &&
 			event.ToZone == zone.Graveyard
-	}); zoneIndex > eventIndex(g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
+	}); zoneIndex > eventIndex(g.Events, game.EventCardDiscarded, func(event game.Event) bool {
 		return event.FromZone == zone.Hand &&
 			event.ToZone == zone.Graveyard
 	}) {
@@ -369,12 +369,12 @@ func TestDeclareAttackersAndBlockersEmitEvents(t *testing.T) {
 		t.Fatal("applyDeclareBlockers() = false, want true")
 	}
 
-	assertEvent(t, g.Events, game.EventAttackerDeclared, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventAttackerDeclared, func(event game.Event) bool {
 		return event.PermanentID == attacker.ObjectID &&
 			event.Controller == game.Player1 &&
 			event.AttackTarget.Player == game.Player2
 	})
-	assertEvent(t, g.Events, game.EventBlockerDeclared, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventBlockerDeclared, func(event game.Event) bool {
 		return event.PermanentID == blocker.ObjectID &&
 			event.Controller == game.Player2 &&
 			event.BlockedAttackerID == attacker.ObjectID
@@ -384,10 +384,10 @@ func TestDeclareAttackersAndBlockersEmitEvents(t *testing.T) {
 func TestEventsArePartitionedByTurn(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	emitEvent(g, game.GameEvent{Kind: game.EventLifeGained, Player: game.Player1, Amount: 1})
+	emitEvent(g, game.Event{Kind: game.EventLifeGained, Player: game.Player1, Amount: 1})
 
 	engine.advanceToNextTurn(g)
-	emitEvent(g, game.GameEvent{Kind: game.EventLifeLost, Player: game.Player2, Amount: 2})
+	emitEvent(g, game.Event{Kind: game.EventLifeLost, Player: game.Player2, Amount: 2})
 
 	turnOne := g.EventsForTurn(1)
 	if len(turnOne) != 1 || turnOne[0].Kind != game.EventLifeGained {
@@ -415,10 +415,10 @@ func TestLifeGainAndLossEmitEvents(t *testing.T) {
 		t.Fatalf("loseLife() = %d, want 4", lost)
 	}
 
-	assertEvent(t, g.Events, game.EventLifeGained, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventLifeGained, func(event game.Event) bool {
 		return event.Player == game.Player1 && event.Amount == 3
 	})
-	assertEvent(t, g.Events, game.EventLifeLost, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventLifeLost, func(event game.Event) bool {
 		return event.Player == game.Player2 && event.Amount == 4
 	})
 }
@@ -431,10 +431,10 @@ func TestTapUntapAndTargetEvents(t *testing.T) {
 	setPermanentTapped(g, permanent, true)
 	setPermanentTapped(g, permanent, false)
 
-	assertEvent(t, g.Events, game.EventPermanentTapped, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventPermanentTapped, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID && event.Controller == game.Player1
 	})
-	assertEvent(t, g.Events, game.EventPermanentUntapped, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventPermanentUntapped, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID && event.Controller == game.Player1
 	})
 
@@ -445,7 +445,7 @@ func TestTapUntapAndTargetEvents(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(permanent.ObjectID)}, 0, nil)) {
 		t.Fatal("targeted spell cast failed")
 	}
-	assertEvent(t, g.Events, game.EventObjectBecameTarget, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventObjectBecameTarget, func(event game.Event) bool {
 		return event.SourceID == spellID &&
 			event.Controller == game.Player1 &&
 			event.PermanentID == permanent.ObjectID &&
@@ -479,15 +479,15 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	assertEvent(t, g.Events, game.EventLifeLost, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventLifeLost, func(event game.Event) bool {
 		return event.Player == game.Player1 && event.Amount == 2
 	})
-	assertEvent(t, g.Events, game.EventLifeLost, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventLifeLost, func(event game.Event) bool {
 		return event.Player == game.Player1 && event.Amount == 3
 	})
 }
 
-func assertEvent(t *testing.T, events []game.GameEvent, kind game.EventKind, matches func(game.GameEvent) bool) {
+func assertEvent(t *testing.T, events []game.Event, kind game.EventKind, matches func(game.Event) bool) {
 	t.Helper()
 	for _, event := range events {
 		if event.Kind == kind && matches(event) {
@@ -497,7 +497,7 @@ func assertEvent(t *testing.T, events []game.GameEvent, kind game.EventKind, mat
 	t.Fatalf("missing event kind %v in events: %+v", kind, events)
 }
 
-func assertNoEvent(t *testing.T, events []game.GameEvent, kind game.EventKind, matches func(game.GameEvent) bool) {
+func assertNoEvent(t *testing.T, events []game.Event, kind game.EventKind, matches func(game.Event) bool) {
 	t.Helper()
 	for _, event := range events {
 		if event.Kind == kind && matches(event) {
@@ -506,7 +506,7 @@ func assertNoEvent(t *testing.T, events []game.GameEvent, kind game.EventKind, m
 	}
 }
 
-func eventIndex(events []game.GameEvent, kind game.EventKind, matches func(game.GameEvent) bool) int {
+func eventIndex(events []game.Event, kind game.EventKind, matches func(game.Event) bool) int {
 	for i, event := range events {
 		if event.Kind == kind && matches(event) {
 			return i

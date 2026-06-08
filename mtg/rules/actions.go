@@ -418,7 +418,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		SourceZone:          sourceZone,
 	}
 	stormCopies := stormCopyCount(g, spellDef)
-	pushSpellToStack(g, obj, game.GameEvent{
+	pushSpellToStack(g, obj, game.Event{
 		SourceID:      cast.CardID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,

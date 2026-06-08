@@ -29,7 +29,7 @@ func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *ga
 		moveExiledCardToGraveyard(g, obj.Controller, cardID)
 		return "declined"
 	}
-	manaCost, ok := game.BodyMadnessCost(*ability)
+	manaCost, ok := game.BodyMadnessCost(ability)
 	if !ok || !e.castMadnessSpellWithChoices(g, obj.Controller, card, manaCost, agents, log) {
 		moveExiledCardToGraveyard(g, obj.Controller, cardID)
 		return "resolved"
@@ -68,7 +68,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		TargetCounts: targetCounts,
 		ChosenModes:  append([]int(nil), modes...),
 	}
-	pushSpellToStack(g, stackObj, game.GameEvent{
+	pushSpellToStack(g, stackObj, game.Event{
 		SourceID:      card.ID,
 		StackObjectID: stackObj.ID,
 		Controller:    playerID,
@@ -104,7 +104,7 @@ func moveExiledCardToGraveyard(g *game.Game, playerID game.PlayerID, cardID id.I
 		return false
 	}
 	player.Graveyard.Add(cardID)
-	emitZoneChangeEvent(g, game.GameEvent{
+	emitZoneChangeEvent(g, game.Event{
 		Player:   playerID,
 		CardID:   cardID,
 		FromZone: zone.Exile,

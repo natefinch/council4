@@ -32,13 +32,13 @@ func TestShieldCounterPreventsDamageBeforeMutationAndEvents(t *testing.T) {
 	if target.Counters.Get(counter.Shield) != 0 {
 		t.Fatalf("shield counters = %d, want 0", target.Counters.Get(counter.Shield))
 	}
-	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.Event) bool {
 		return event.SourceID == sourceID &&
 			event.PermanentID == target.ObjectID &&
 			event.Amount == 3 &&
 			event.DamageRecipient == game.DamageRecipientPermanent
 	})
-	assertNoEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+	assertNoEvent(t, g.Events, game.EventDamageDealt, func(event game.Event) bool {
 		return event.PermanentID == target.ObjectID
 	})
 }
@@ -62,12 +62,12 @@ func TestShieldCounterReplacesDestroyBeforeZoneChange(t *testing.T) {
 	if g.Players[game.Player2].Graveyard.Contains(target.CardInstanceID) {
 		t.Fatal("shield-replaced permanent moved to graveyard")
 	}
-	assertEvent(t, g.Events, game.EventDestroyReplaced, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDestroyReplaced, func(event game.Event) bool {
 		return event.PermanentID == target.ObjectID &&
 			event.FromZone == zone.Battlefield &&
 			event.ToZone == zone.Graveyard
 	})
-	assertNoEvent(t, g.Events, game.EventPermanentDied, func(event game.GameEvent) bool {
+	assertNoEvent(t, g.Events, game.EventPermanentDied, func(event game.Event) bool {
 		return event.PermanentID == target.ObjectID
 	})
 }
@@ -111,7 +111,7 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 	if protected.MarkedDamage != 0 {
 		t.Fatalf("marked damage = %d, want 0", protected.MarkedDamage)
 	}
-	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.Event) bool {
 		return event.SourceID == sourceID &&
 			event.PermanentID == protected.ObjectID &&
 			event.Amount == 2
@@ -205,7 +205,7 @@ func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 	if len(g.PreventionShields) != 0 {
 		t.Fatalf("prevention shields = %+v, want consumed", g.PreventionShields)
 	}
-	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.Event) bool {
 		return event.PermanentID == target.ObjectID && event.Amount == 2
 	})
 
@@ -271,7 +271,7 @@ func TestRegenerationReplacesDestroyAndRemovesFromCombat(t *testing.T) {
 	if len(g.Combat.Blockers) != 0 || len(g.Combat.BlockerOrder[attacker.ObjectID]) != 0 {
 		t.Fatalf("combat after regeneration blockers=%+v order=%+v, want blocker removed", g.Combat.Blockers, g.Combat.BlockerOrder)
 	}
-	assertEvent(t, g.Events, game.EventDestroyReplaced, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDestroyReplaced, func(event game.Event) bool {
 		return event.PermanentID == blocker.ObjectID
 	})
 }
@@ -456,7 +456,7 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	if !g.Players[game.Player1].Exile.Contains(target.CardInstanceID) {
 		t.Fatal("replacement did not move card to exile")
 	}
-	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.PermanentID == target.ObjectID && event.ToZone == zone.Exile
 	})
 }

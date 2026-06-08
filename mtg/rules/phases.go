@@ -127,7 +127,7 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 func emitBeginningOfStepEvent(g *game.Game, step game.Step) {
 	// Triggered abilities with "At the beginning of [step]" look for this
 	// turn-based event (CR 603.6c).
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:       game.EventBeginningOfStep,
 		Controller: g.Turn.ActivePlayer,
 		Player:     g.Turn.ActivePlayer,

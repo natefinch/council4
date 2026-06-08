@@ -30,7 +30,7 @@ func (*Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
 
 	player.Library.Remove(cardID)
 	player.Hand.Add(cardID)
-	event := game.GameEvent{
+	event := game.Event{
 		Player:   playerID,
 		CardID:   cardID,
 		FromZone: zone.Library,

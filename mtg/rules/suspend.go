@@ -14,12 +14,12 @@ import (
 
 func suspendCostForCard(card *game.CardDef) (cost.Mana, int, bool) {
 	for i := range card.ActivatedAbilities {
-		if manaCost, counters, ok := game.ActivatedBodySuspendInfo(card.ActivatedAbilities[i]); ok {
+		if manaCost, counters, ok := game.ActivatedBodySuspendInfo(&card.ActivatedAbilities[i]); ok {
 			return manaCost, counters, true
 		}
 	}
 	for i := range card.StaticAbilities {
-		if manaCost, counters, ok := game.StaticBodySuspendInfo(card.StaticAbilities[i]); ok {
+		if manaCost, counters, ok := game.StaticBodySuspendInfo(&card.StaticAbilities[i]); ok {
 			return manaCost, counters, true
 		}
 	}
@@ -70,7 +70,7 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 		Controller:   playerID,
 		TimeCounters: counters,
 	}
-	emitZoneChangeEvent(g, game.GameEvent{
+	emitZoneChangeEvent(g, game.Event{
 		Controller: playerID,
 		Player:     card.Owner,
 		CardID:     cardID,
@@ -155,7 +155,7 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 		ChosenModes:  append([]int(nil), modes...),
 		Suspend:      true,
 	}
-	pushSpellToStack(g, obj, game.GameEvent{
+	pushSpellToStack(g, obj, game.Event{
 		SourceID:      cardID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,

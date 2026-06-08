@@ -57,7 +57,7 @@ type StackObject struct {
 
 	// TriggerEvent is the event that caused this triggered ability to trigger.
 	// HasTriggerEvent distinguishes a real zero-valued event from no event.
-	TriggerEvent    GameEvent
+	TriggerEvent    Event
 	HasTriggerEvent bool
 
 	// WardTargetStackObjectID is the spell or ability a Ward trigger may

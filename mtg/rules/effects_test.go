@@ -1274,7 +1274,7 @@ func TestSelectorOtherCreaturesDefendingPlayerControlsUsesTriggerRecipientContro
 		ID:              g.IDGen.Next(),
 		Controller:      game.Player1,
 		HasTriggerEvent: true,
-		TriggerEvent: game.GameEvent{
+		TriggerEvent: game.Event{
 			Kind:        game.EventDamageDealt,
 			PermanentID: damagedBlocker.ObjectID,
 		},

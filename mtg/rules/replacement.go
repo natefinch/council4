@@ -76,7 +76,7 @@ func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent) bool {
 	}
 	if hasShieldCounter {
 		permanent.Counters.Remove(counter.Shield, 1)
-		emitEvent(g, game.GameEvent{
+		emitEvent(g, game.Event{
 			Kind:        game.EventDestroyReplaced,
 			Controller:  effectiveController(g, permanent),
 			Player:      permanent.Owner,
@@ -112,7 +112,7 @@ func recordReplacementDecision(g *game.Game, player game.PlayerID, options []str
 	})
 }
 
-func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) zone.Type {
+func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type {
 	destination := event.ToZone
 	applied := make(map[id.ID]bool)
 	for {
@@ -134,7 +134,7 @@ func replacementZoneChangeDestination(g *game.Game, event game.GameEvent) zone.T
 }
 
 func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone zone.Type) {
-	event := game.GameEvent{
+	event := game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,
@@ -165,7 +165,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 	}
 }
 
-func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, def *game.CardDef, event game.GameEvent) []game.ReplacementEffect {
+func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, def *game.CardDef, event game.Event) []game.ReplacementEffect {
 	var replacements []game.ReplacementEffect
 	for i := range def.ReplacementAbilities {
 		ability := &def.ReplacementAbilities[i]
@@ -212,7 +212,7 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 	})
 }
 
-func matchingZoneReplacementEffects(g *game.Game, event game.GameEvent, applied map[id.ID]bool) []game.ReplacementEffect {
+func matchingZoneReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
@@ -224,7 +224,7 @@ func matchingZoneReplacementEffects(g *game.Game, event game.GameEvent, applied 
 	return matches
 }
 
-func matchingETBReplacementEffects(g *game.Game, event game.GameEvent) []game.ReplacementEffect {
+func matchingETBReplacementEffects(g *game.Game, event game.Event) []game.ReplacementEffect {
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
@@ -239,7 +239,7 @@ func matchingETBReplacementEffects(g *game.Game, event game.GameEvent) []game.Re
 	return matches
 }
 
-func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.GameEvent) bool {
+func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event) bool {
 	if !replacementSourceStillApplies(g, replacement) {
 		return false
 	}
@@ -272,7 +272,7 @@ func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEf
 	return ok
 }
 
-func replacementEventPlayer(event game.GameEvent) game.PlayerID {
+func replacementEventPlayer(event game.Event) game.PlayerID {
 	if event.Player >= 0 && event.Player < game.NumPlayers {
 		return event.Player
 	}
@@ -397,7 +397,7 @@ func replaceDestroyWithRegeneration(g *game.Game, permanent *game.Permanent) boo
 	permanent.MarkedDamage = 0
 	permanent.MarkedDeathtouchDamage = false
 	removePermanentFromCombat(g, permanent.ObjectID)
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventDestroyReplaced,
 		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,
@@ -412,7 +412,7 @@ func replaceDestroyWithRegeneration(g *game.Game, permanent *game.Permanent) boo
 }
 
 func emitDamagePreventedEvent(g *game.Game, event damageEvent, prevented int) {
-	preventedEvent := game.GameEvent{
+	preventedEvent := game.Event{
 		Kind:            game.EventDamagePrevented,
 		SourceID:        event.sourceID,
 		SourceObjectID:  event.sourceObjectID,
@@ -456,7 +456,7 @@ func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []color.
 	for i := range abilities {
 		body, ok := abilities[i].(game.StaticAbility)
 		if ok {
-			colors = append(colors, game.StaticBodyProtectionColors(body)...)
+			colors = append(colors, game.StaticBodyProtectionColors(&body)...)
 		}
 	}
 	return colors

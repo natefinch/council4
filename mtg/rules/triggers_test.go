@@ -241,7 +241,7 @@ func TestExaltedTriggersForCreatureAttackingAlone(t *testing.T) {
 	g.Combat = &game.CombatState{
 		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
 	}
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventAttackerDeclared,
 		Controller:  game.Player1,
 		PermanentID: attacker.ObjectID,
@@ -274,7 +274,7 @@ func TestExaltedDoesNotTriggerForMultipleAttackers(t *testing.T) {
 			{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
 		},
 	}
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventAttackerDeclared,
 		Controller:  game.Player1,
 		PermanentID: first.ObjectID,
@@ -503,7 +503,7 @@ func TestTriggerPatternExcludeSelfSkipsSourcePermanent(t *testing.T) {
 		RequirePermanentTypes: []types.Card{types.Creature},
 	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
 
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  game.Player1,
 		Player:      game.Player1,
@@ -515,7 +515,7 @@ func TestTriggerPatternExcludeSelfSkipsSourcePermanent(t *testing.T) {
 	}
 
 	other := addCombatCreaturePermanent(g, game.Player1)
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  game.Player1,
 		Player:      game.Player1,
@@ -888,7 +888,7 @@ func TestBlockedAttackerSubjectMatchesAttachedPermanent(t *testing.T) {
 	if !attachPermanent(g, equipment, attacker) {
 		t.Fatal("attachPermanent failed")
 	}
-	event := game.GameEvent{
+	event := game.Event{
 		Kind:              game.EventBlockerDeclared,
 		Controller:        game.Player2,
 		PermanentID:       blocker.ObjectID,
@@ -931,7 +931,7 @@ func TestSpellTargetTriggerPredicates(t *testing.T) {
 		},
 	}
 	g.Stack.Push(obj)
-	event := game.GameEvent{Kind: game.EventSpellCast, StackObjectID: obj.ID, Controller: game.Player1}
+	event := game.Event{Kind: game.EventSpellCast, StackObjectID: obj.ID, Controller: game.Player1}
 	if !triggerMatchesEvent(g, source, &game.TriggerPattern{
 		Event:              game.EventSpellCast,
 		Controller:         game.TriggerControllerYou,
@@ -977,20 +977,20 @@ func TestTriggeredAbilityMaxTriggersPerTurn(t *testing.T) {
 	}
 	card.Def.TriggeredAbilities[0].MaxTriggersPerTurn = 1
 
-	emitEvent(g, game.GameEvent{Kind: game.EventCardDrawn, Player: game.Player1})
-	emitEvent(g, game.GameEvent{Kind: game.EventCardDrawn, Player: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("first trigger was not put on stack")
 	}
 	if got := g.Stack.Size(); got != 1 {
 		t.Fatalf("stack size after two same-turn events = %d, want 1", got)
 	}
-	emitEvent(g, game.GameEvent{Kind: game.EventCardDrawn, Player: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
 	if engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("trigger exceeded max triggers per turn")
 	}
 	engine.advanceToNextTurn(g)
-	emitEvent(g, game.GameEvent{Kind: game.EventCardDrawn, Player: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("trigger did not reset next turn")
 	}
@@ -1007,8 +1007,8 @@ func TestOneOrMoreTriggerCoalescesDetectionBatch(t *testing.T) {
 	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
 	first := addCombatCreaturePermanent(g, game.Player1)
 	second := addCombatCreaturePermanent(g, game.Player1)
-	emitEvent(g, game.GameEvent{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: first.ObjectID, CardID: first.CardInstanceID})
-	emitEvent(g, game.GameEvent{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: second.ObjectID, CardID: second.CardInstanceID})
+	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: first.ObjectID, CardID: first.CardInstanceID})
+	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: second.ObjectID, CardID: second.CardInstanceID})
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("one-or-more trigger was not put on stack")
@@ -1070,7 +1070,7 @@ func TestDamageTriggerCanRequireAttackingRecipient(t *testing.T) {
 		Attackers: []game.AttackDeclaration{{Attacker: attacking.ObjectID, Target: game.AttackTarget{Player: game.Player1}}},
 	}
 
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:            game.EventDamageDealt,
 		Controller:      game.Player1,
 		PermanentID:     nonattacking.ObjectID,
@@ -1080,7 +1080,7 @@ func TestDamageTriggerCanRequireAttackingRecipient(t *testing.T) {
 	if engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("damage trigger matched nonattacking recipient")
 	}
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:            game.EventDamageDealt,
 		Controller:      game.Player1,
 		PermanentID:     attacking.ObjectID,
@@ -1273,19 +1273,16 @@ func TestTriggeredAbilitiesUseAgentOrderWithinController(t *testing.T) {
 	}
 }
 
-//nolint:gocritic // Test helpers accept value patterns so call sites can use literals.
 func addTriggeredPermanent(g *game.Game, controller game.PlayerID, pattern game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.Permanent {
 	return addCombatPermanent(g, controller, triggeredCreature(pattern, instructions, targets))
 }
 
-//nolint:gocritic // Test helpers accept value patterns so call sites can use literals.
 func addOptionalTriggeredPermanent(g *game.Game, controller game.PlayerID, pattern game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.Permanent {
 	card := triggeredCreature(pattern, instructions, targets)
 	card.TriggeredAbilities[0].Optional = true
 	return addCombatPermanent(g, controller, card)
 }
 
-//nolint:gocritic // Test helpers accept value patterns so call sites can use literals.
 func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, pattern game.TriggerPattern, lifeAtLeast int, instructions []game.Instruction) *game.Permanent {
 	permanent := addTriggeredPermanent(g, controller, pattern, instructions, nil)
 	card, ok := g.GetCardInstance(permanent.CardInstanceID)
@@ -1337,7 +1334,7 @@ func TestTriggerPatternRequireNonToken(t *testing.T) {
 	}
 	card := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Nontoken", Types: []types.Card{types.Creature}}})
 
-	if triggerMatchesEvent(g, source, &pattern, game.GameEvent{
+	if triggerMatchesEvent(g, source, &pattern, game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  game.Player1,
 		PermanentID: token.ObjectID,
@@ -1346,7 +1343,7 @@ func TestTriggerPatternRequireNonToken(t *testing.T) {
 	}) {
 		t.Fatal("non-token trigger matched token event")
 	}
-	if !triggerMatchesEvent(g, source, &pattern, game.GameEvent{
+	if !triggerMatchesEvent(g, source, &pattern, game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  game.Player1,
 		PermanentID: card.ObjectID,
@@ -1356,7 +1353,6 @@ func TestTriggerPatternRequireNonToken(t *testing.T) {
 	}
 }
 
-//nolint:gocritic // Test helpers accept value patterns so call sites can use literals.
 func triggeredCreature(pattern game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{CardFace: game.CardFace{Name: "Triggered Creature",

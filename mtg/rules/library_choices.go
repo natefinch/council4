@@ -27,7 +27,7 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 			return
 		}
 		destinationCards.Add(cardID)
-		emitZoneChangeEvent(g, game.GameEvent{
+		emitZoneChangeEvent(g, game.Event{
 			Player:   playerID,
 			CardID:   cardID,
 			FromZone: zone.Library,
@@ -70,7 +70,7 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 				continue
 			}
 			destinationCards.Add(cardID)
-			emitZoneChangeEvent(g, game.GameEvent{
+			emitZoneChangeEvent(g, game.Event{
 				Player:   playerID,
 				CardID:   cardID,
 				FromZone: zone.Library,

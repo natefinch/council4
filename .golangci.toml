@@ -92,10 +92,10 @@ enabled-tags = [
 
 [linters.settings.gocritic.settings]
 [linters.settings.gocritic.settings.hugeParam]
-sizeThreshold = 256
+sizeThreshold = 512
 
 [linters.settings.gocritic.settings.rangeValCopy]
-sizeThreshold = 256
+sizeThreshold = 512
 
 [linters.settings.gosec]
 excludes = [

@@ -28,7 +28,7 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 			panic("payment plan became invalid while exiling delve cards")
 		}
 		player.Exile.Add(cardID)
-		s.EmitZoneChange(game.GameEvent{
+		s.EmitZoneChange(game.Event{
 			Player:   playerID,
 			CardID:   cardID,
 			FromZone: zone.Graveyard,

@@ -147,7 +147,7 @@ func permanentForCard(g *game.Game, cardID id.ID) *game.Permanent {
 	return nil
 }
 
-func sawAction(actions []ActionLog, kind action.ActionKind) bool {
+func sawAction(actions []ActionLog, kind action.Kind) bool {
 	for i := range actions {
 		logged := &actions[i]
 		if logged.Action.Kind == kind {

@@ -20,7 +20,7 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 	}
 	result := e.resolveStackObjectWithChoices(g, obj, agents, log)
 	if obj.Kind == game.StackSpell && spellResolved(result) {
-		emitEvent(g, game.GameEvent{
+		emitEvent(g, game.Event{
 			Kind:          game.EventSpellResolved,
 			SourceID:      obj.SourceID,
 			StackObjectID: obj.ID,
@@ -147,13 +147,13 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 	if body == nil {
 		return "missing source"
 	}
-	if _, ok := game.BodyWardCost(*body); ok {
+	if _, ok := game.BodyWardCost(body); ok {
 		return e.resolveWardTriggeredAbilityWithChoices(g, obj, body, agents, log)
 	}
-	if _, ok := game.BodyMadnessCost(*body); ok {
+	if _, ok := game.BodyMadnessCost(body); ok {
 		return e.resolveMadnessTriggeredAbilityWithChoices(g, obj, body, agents, log)
 	}
-	var event *game.GameEvent
+	var event *game.Event
 	if obj.HasTriggerEvent {
 		event = &obj.TriggerEvent
 	}
@@ -177,7 +177,7 @@ func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.
 		return "resolved"
 	}
 	payer := targetObj.Controller
-	wardCost, ok := game.BodyWardCost(*ability)
+	wardCost, ok := game.BodyWardCost(ability)
 	if !ok {
 		return "resolved"
 	}
@@ -346,7 +346,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		// after the spell was cast from a graveyard (CR 702.34a, CR 702.34c).
 		intendedDestination = zone.Exile
 	}
-	destination := replacementZoneChangeDestination(g, game.GameEvent{
+	destination := replacementZoneChangeDestination(g, game.Event{
 		Kind:          game.EventZoneChanged,
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
@@ -363,7 +363,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		return false
 	}
 	destinationCards.Add(card.ID)
-	event := game.GameEvent{
+	event := game.Event{
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
 		Controller:    stackObjectController(obj),

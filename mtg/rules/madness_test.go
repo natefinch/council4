@@ -24,7 +24,7 @@ func TestMadnessDiscardGoesToExile(t *testing.T) {
 	if !g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("madness card did not go to exile")
 	}
-	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.Event) bool {
 		return event.CardID == cardID && event.FromZone == zone.Hand && event.ToZone == zone.Exile
 	})
 }
@@ -51,7 +51,7 @@ func TestMadnessTriggerCastsCardFromExile(t *testing.T) {
 	if !ok || obj.Kind != game.StackSpell || obj.SourceID != cardID {
 		t.Fatalf("stack top = %+v, want madness spell", obj)
 	}
-	assertEvent(t, g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventSpellCast, func(event game.Event) bool {
 		return event.CardID == cardID && event.FromZone == zone.Exile && event.ToZone == zone.Stack
 	})
 }

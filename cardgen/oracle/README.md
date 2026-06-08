@@ -110,3 +110,20 @@ invariants. When the ignored local Scryfall cache is available at
 `oracle_text` entry and rejects any invalid token. Compiler corpus tests also
 require every non-reminder ability to produce semantic content or an explicit
 unsupported diagnostic.
+
+## Full-corpus lexer check
+
+`cmd/checklexer` streams a Scryfall card bulk-data array and checks every root
+and card-face Oracle text with a bounded parallel worker pool. It emits
+deterministic JSON or text reports listing unsupported cards, exact invalid
+tokens, reasons, and source spans. See
+[`cmd/checklexer/README.md`](cmd/checklexer/README.md) for usage.
+
+`cmd/checkparser` performs the corresponding full-corpus lexer-plus-parser
+check, including card-face type context for spell and loyalty classification.
+See [`cmd/checkparser/README.md`](cmd/checkparser/README.md).
+
+`cmd/compilecards` performs strict semantic compilation and bulk source
+generation. It emits only fully executable cards and reports every unsupported
+card without creating a partial definition. See
+[`cmd/compilecards/README.md`](cmd/compilecards/README.md).

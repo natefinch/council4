@@ -10,7 +10,7 @@ func TestEventsForTurnReturnsCopy(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
 	g.Turn.TurnNumber = 1
 	g.EventTurnStarts = []int{0}
-	g.AppendEvent(GameEvent{
+	g.AppendEvent(Event{
 		Kind:      EventSpellCast,
 		CardTypes: []types.Card{types.Instant},
 	})
@@ -31,8 +31,8 @@ func TestEventsThisTurnAndPreviousTurnReturnCopies(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
 	g.Turn.TurnNumber = 2
 	g.EventTurnStarts = []int{0, 1}
-	g.AppendEvent(GameEvent{Kind: EventLifeGained, Amount: 1})
-	g.AppendEvent(GameEvent{Kind: EventLifeLost, Amount: 2})
+	g.AppendEvent(Event{Kind: EventLifeGained, Amount: 1})
+	g.AppendEvent(Event{Kind: EventLifeLost, Amount: 2})
 
 	previous := g.EventsPreviousTurn()
 	current := g.EventsThisTurn()
@@ -51,7 +51,7 @@ func TestAppendEventCopiesEventSlices(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
 	cardTypes := []types.Card{types.Sorcery}
 
-	g.AppendEvent(GameEvent{Kind: EventSpellCast, CardTypes: cardTypes})
+	g.AppendEvent(Event{Kind: EventSpellCast, CardTypes: cardTypes})
 	cardTypes[0] = types.Artifact
 
 	if g.Events[0].CardTypes[0] != types.Sorcery {

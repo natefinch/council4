@@ -82,7 +82,7 @@ type Delimited struct {
 	Tokens []Token
 }
 
-// Modal is a choose header followed by bullet options.
+// Modal is a choose header followed by bullet or inline options.
 type Modal struct {
 	Header  Phrase
 	Options []Mode

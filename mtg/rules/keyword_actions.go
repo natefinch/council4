@@ -33,7 +33,7 @@ func effectPermanentTarget(g *game.Game, obj *game.StackObject, targetIndex int)
 }
 
 func emitFightEvent(g *game.Game, permanent, related *game.Permanent) {
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:               game.EventFight,
 		SourceID:           permanent.CardInstanceID,
 		SourceObjectID:     permanent.ObjectID,
@@ -112,7 +112,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID gam
 		switch spec.Destination {
 		case zone.Hand:
 			player.Hand.Add(cardID)
-			emitZoneChangeEvent(g, game.GameEvent{
+			emitZoneChangeEvent(g, game.Event{
 				SourceID:      stackObjectSourceID(obj),
 				StackObjectID: stackObjectID(obj),
 				Controller:    stackObjectController(obj),
@@ -178,7 +178,7 @@ func revealCardIDs(g *game.Game, obj *game.StackObject, playerID game.PlayerID, 
 }
 
 func emitCardRevealEvent(g *game.Game, obj *game.StackObject, playerID game.PlayerID, cardID id.ID, zoneType zone.Type) {
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:          game.EventCardRevealed,
 		SourceID:      stackObjectSourceID(obj),
 		StackObjectID: stackObjectID(obj),

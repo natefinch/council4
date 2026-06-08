@@ -58,10 +58,10 @@ func TestCardImplementationHandlesSpellResolutionThroughContext(t *testing.T) {
 	if !g.Players[game.Player1].Graveyard.Contains(sourceID) {
 		t.Fatal("custom-implemented spell did not move to graveyard after resolution")
 	}
-	assertEvent(t, g.Events, game.EventCardDrawn, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventCardDrawn, func(event game.Event) bool {
 		return event.Player == game.Player1 && event.CardID == firstDraw
 	})
-	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamageDealt, func(event game.Event) bool {
 		return event.SourceID == sourceID &&
 			event.Player == game.Player2 &&
 			event.Amount == 3 &&
@@ -93,12 +93,12 @@ func TestCardImplementationUsesNormalDamagePreventionHelpers(t *testing.T) {
 	if target.Counters.Get(counter.Shield) != 0 {
 		t.Fatalf("shield counters = %d, want 0", target.Counters.Get(counter.Shield))
 	}
-	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.Event) bool {
 		return event.SourceID == sourceID &&
 			event.PermanentID == target.ObjectID &&
 			event.Amount == 3
 	})
-	assertNoEvent(t, g.Events, game.EventDamageDealt, func(event game.GameEvent) bool {
+	assertNoEvent(t, g.Events, game.EventDamageDealt, func(event game.Event) bool {
 		return event.PermanentID == target.ObjectID
 	})
 }

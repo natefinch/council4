@@ -114,11 +114,11 @@ _Avoid_: Target spec, raw target ID
 
 **Game Event**:
 A rules-relevant fact that occurred during a **Game**, such as a spell being cast, a permanent entering the battlefield, damage being dealt, or a creature dying.
-In code, `game.GameEvent` values are appended to `game.Game.Events` by `rules.Engine` helpers at mutation boundaries.
+In code, `game.Event` values are appended to `game.Game.Events` by `rules.Engine` helpers at mutation boundaries.
 _Avoid_: Log entry, action history, report record
 
 **Replacement/Prevention Effect**:
-A rules behavior that changes or prevents a pending mutation before it happens, such as preventing damage or replacing destruction with shield-counter removal. In code, the current slice lives in `mtg/rules` before damage and destroy helpers mutate state, while the resulting facts are emitted as `game.GameEvent`s.
+A rules behavior that changes or prevents a pending mutation before it happens, such as preventing damage or replacing destruction with shield-counter removal. In code, the current slice lives in `mtg/rules` before damage and destroy helpers mutate state, while the resulting facts are emitted as `game.Event`s.
 _Avoid_: Post-mutation cleanup, log-only prevention
 
 **Continuous Effect**:

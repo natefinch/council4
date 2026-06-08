@@ -24,8 +24,6 @@ func (e CommanderLegalityError) Error() string {
 }
 
 // ValidateCommanderConfigs returns commander legality errors for each configured player.
-//
-//nolint:gocritic // Keep the exported API accepting fixed-size player configs by value.
 func ValidateCommanderConfigs(configs [game.NumPlayers]game.PlayerConfig) []CommanderLegalityError {
 	var errs []CommanderLegalityError
 	for i, config := range configs {

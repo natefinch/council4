@@ -45,12 +45,10 @@ const (
 	DamageRecipientPermanent
 )
 
-// GameEvent records a rules-relevant fact emitted by rules helpers as state
+// Event records a rules-relevant fact emitted by rules helpers as state
 // changes happen. Events are data, not behavior: card definitions and reports
 // may refer to this vocabulary, while mtg/rules owns emission and consumers.
-//
-//nolint:revive // GameEvent is the established exported API name.
-type GameEvent struct {
+type Event struct {
 	Kind EventKind
 
 	// SourceID is the source card instance ID when there is one.
@@ -129,15 +127,15 @@ type GameEvent struct {
 }
 
 // AppendEvent records a rules event. Unknown events are ignored.
-func (g *Game) AppendEvent(event GameEvent) {
+func (g *Game) AppendEvent(event Event) {
 	if event.Kind == EventUnknown {
 		return
 	}
-	g.Events = append(g.Events, cloneGameEvent(event))
+	g.Events = append(g.Events, cloneEvent(event))
 }
 
 // EventsForTurn returns the rules events emitted during the requested turn.
-func (g *Game) EventsForTurn(turnNumber int) []GameEvent {
+func (g *Game) EventsForTurn(turnNumber int) []Event {
 	if turnNumber <= 0 {
 		return nil
 	}
@@ -153,31 +151,31 @@ func (g *Game) EventsForTurn(turnNumber int) []GameEvent {
 	if start < 0 || start > end || end > len(g.Events) {
 		return nil
 	}
-	return cloneGameEvents(g.Events[start:end])
+	return cloneEvents(g.Events[start:end])
 }
 
 // EventsThisTurn returns the rules events emitted during the current turn.
-func (g *Game) EventsThisTurn() []GameEvent {
+func (g *Game) EventsThisTurn() []Event {
 	return g.EventsForTurn(g.Turn.TurnNumber)
 }
 
 // EventsPreviousTurn returns the rules events emitted during the previous turn.
-func (g *Game) EventsPreviousTurn() []GameEvent {
+func (g *Game) EventsPreviousTurn() []Event {
 	return g.EventsForTurn(g.Turn.TurnNumber - 1)
 }
 
-func cloneGameEvents(events []GameEvent) []GameEvent {
+func cloneEvents(events []Event) []Event {
 	if len(events) == 0 {
 		return nil
 	}
-	cloned := make([]GameEvent, len(events))
+	cloned := make([]Event, len(events))
 	for i, event := range events {
-		cloned[i] = cloneGameEvent(event)
+		cloned[i] = cloneEvent(event)
 	}
 	return cloned
 }
 
-func cloneGameEvent(event GameEvent) GameEvent {
+func cloneEvent(event Event) Event {
 	event.CardTypes = append([]types.Card(nil), event.CardTypes...)
 	return event
 }

@@ -16,7 +16,7 @@ import (
 //
 // Callers that produce storm copies must compute the copy count before calling
 // this helper, because EventSpellCast is emitted inside.
-func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.GameEvent) {
+func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event) {
 	g.Stack.Push(obj)
 	emitTargetEvents(g, obj)
 	emitZoneChangeEvent(g, castEvent)

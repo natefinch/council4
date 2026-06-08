@@ -95,7 +95,7 @@ func (s *rulesPaymentState) LoseLife(playerID game.PlayerID, amount int) {
 	loseLife(s.g, playerID, amount)
 }
 
-func (s *rulesPaymentState) EmitZoneChange(event game.GameEvent) {
+func (s *rulesPaymentState) EmitZoneChange(event game.Event) {
 	emitZoneChangeEvent(s.g, event)
 }
 

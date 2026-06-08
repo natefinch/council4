@@ -1,6 +1,7 @@
 package oracle
 
 import (
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -244,4 +245,24 @@ func isWordContinue(r rune) bool {
 
 func isWordJoiner(r rune) bool {
 	return r == '\'' || r == '\u2019' || r == '-'
+}
+
+// InvalidReason explains why an Invalid token could not be lexed. It returns
+// an empty string for all other token kinds.
+func InvalidReason(token Token) string {
+	if token.Kind != Invalid {
+		return ""
+	}
+	switch {
+	case !utf8.ValidString(token.Text):
+		return "invalid UTF-8 encoding"
+	case strings.ContainsRune(token.Text, 0):
+		return "NUL is not valid in Oracle text"
+	case strings.ContainsRune(token.Text, '\uFEFF'):
+		return "a UTF-8 BOM is only valid at the start of Oracle text"
+	case strings.HasPrefix(token.Text, "{"):
+		return "unclosed braced symbol"
+	default:
+		return "invalid Oracle text"
+	}
 }

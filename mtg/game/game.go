@@ -136,7 +136,7 @@ type Game struct {
 	// Events records rules-relevant facts emitted by the rules engine as
 	// state-changing helpers mutate this game. It is distinct from GameResult
 	// logs, which are report-oriented summaries produced by rules.Engine.
-	Events []GameEvent
+	Events []Event
 
 	// EventTurnStarts records the Events index where each turn's partition
 	// starts. Turn N uses index N-1.
@@ -185,16 +185,12 @@ type TriggeredAbilityUse struct {
 //   - Adds deck cards to libraries
 //   - Shuffles libraries
 //   - Sets turn 1 with Player1 as the active player
-//
-//nolint:gocritic // The fixed-size player array is the public setup API.
 func NewGame(configs [NumPlayers]PlayerConfig) *Game {
 	return NewGameWithRand(configs, rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())))
 }
 
 // NewGameWithRand creates a game using rng for all setup randomness. The same
 // rng is consumed sequentially across players' library shuffles.
-//
-//nolint:gocritic // The fixed-size player array is the public setup API.
 func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 	if rng == nil {
 		panic("nil rng")

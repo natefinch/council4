@@ -2,11 +2,11 @@ package rules
 
 import "github.com/natefinch/council4/mtg/game"
 
-func emitEvent(g *game.Game, event game.GameEvent) {
+func emitEvent(g *game.Game, event game.Event) {
 	g.AppendEvent(event)
 }
 
-func emitZoneChangeEvent(g *game.Game, event game.GameEvent) {
+func emitZoneChangeEvent(g *game.Game, event game.Event) {
 	event.Kind = game.EventZoneChanged
 	emitEvent(g, event)
 }
@@ -21,7 +21,7 @@ func markCurrentTurnEventStart(g *game.Game) {
 }
 
 func emitPermanentTappedEvent(g *game.Game, permanent *game.Permanent) {
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentTapped,
 		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,
@@ -33,7 +33,7 @@ func emitPermanentTappedEvent(g *game.Game, permanent *game.Permanent) {
 }
 
 func emitPermanentUntappedEvent(g *game.Game, permanent *game.Permanent) {
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentUntapped,
 		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,
@@ -58,7 +58,7 @@ func setPermanentTapped(g *game.Game, permanent *game.Permanent, tapped bool) {
 
 func emitTargetEvents(g *game.Game, obj *game.StackObject) {
 	for _, target := range obj.Targets {
-		event := game.GameEvent{
+		event := game.Event{
 			Kind:          game.EventObjectBecameTarget,
 			StackObjectID: obj.ID,
 			Controller:    obj.Controller,

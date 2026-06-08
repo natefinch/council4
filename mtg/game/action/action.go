@@ -12,12 +12,12 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
-// ActionKind identifies which kind of game action an Action represents.
-type ActionKind int //nolint:revive // ActionKind is the established exported API name.
+// Kind identifies which kind of game action an Action represents.
+type Kind int
 
 // Action kind values identify the payload carried by an Action.
 const (
-	ActionPass ActionKind = iota
+	ActionPass Kind = iota
 	ActionPlayLand
 	ActionCastSpell
 	ActionActivateAbility
@@ -30,7 +30,7 @@ const (
 
 // Action is a tagged struct representing a single player decision.
 type Action struct {
-	Kind ActionKind
+	Kind Kind
 
 	playLand         PlayLandAction
 	castSpell        CastSpellAction

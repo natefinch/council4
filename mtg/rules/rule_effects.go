@@ -127,7 +127,7 @@ func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 		return 0
 	}
 	player.Life += amount
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:   game.EventLifeGained,
 		Player: playerID,
 		Amount: amount,
@@ -145,7 +145,7 @@ func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	}
 	player.Life -= amount
 	increaseActivePlayerSpeedForOpponentLifeLoss(g, playerID)
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:   game.EventLifeLost,
 		Player: playerID,
 		Amount: amount,

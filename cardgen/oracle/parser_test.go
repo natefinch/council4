@@ -132,6 +132,47 @@ func TestParseModalAbility(t *testing.T) {
 	}
 }
 
+func TestParseInlineModalAbility(t *testing.T) {
+	t.Parallel()
+	source := "Choose one — Noxious Hydra Breath deals 5 damage to each player; or destroy each tapped non-Head creature."
+	document, diagnostics := Parse(source, ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if ability.Modal == nil || len(ability.Modal.Options) != 2 {
+		t.Fatalf("modal = %#v", ability.Modal)
+	}
+	if ability.Modal.Header.Text != "Choose one —" {
+		t.Fatalf("header = %q", ability.Modal.Header.Text)
+	}
+	if got := ability.Modal.Options[0].Text; got != "Noxious Hydra Breath deals 5 damage to each player" {
+		t.Fatalf("first mode = %q", got)
+	}
+	if got := ability.Modal.Options[1].Text; got != "destroy each tapped non-Head creature." {
+		t.Fatalf("second mode = %q", got)
+	}
+}
+
+func TestChooseSentenceBeforeVillainousChoiceIsNotModalHeader(t *testing.T) {
+	t.Parallel()
+	source := "Choose up to four target creatures you don't control. For each of them, that creature's controller faces a villainous choice — That creature becomes a 1/1 white Human creature and loses all abilities, or you create a token that's a copy of it."
+	document, diagnostics := Parse(source, ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if ability.Kind != AbilitySpell || ability.Modal != nil || ability.Text != source {
+		t.Fatalf("ability = %#v", ability)
+	}
+}
+
 func TestParseQuotedAbility(t *testing.T) {
 	t.Parallel()
 	source := `Equipped creature has "{2}: This creature gets +1/+0 until end of turn."`
@@ -178,6 +219,49 @@ func TestParseNestedDelimitedText(t *testing.T) {
 				t.Fatalf("reminders = %#v, quoted = %#v", ability.Reminders, ability.Quoted)
 			}
 		})
+	}
+}
+
+func TestParseMultilineReminderOnlyAbility(t *testing.T) {
+	t.Parallel()
+	source := "(You can cover a face-down creature with this reminder card.\nA card with morph can be turned face up any time for its morph cost.)"
+	document, diagnostics := Parse(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if ability.Kind != AbilityReminder || ability.Text != source {
+		t.Fatalf("ability = %#v", ability)
+	}
+	if len(ability.Reminders) != 1 || ability.Reminders[0].Text != source {
+		t.Fatalf("reminders = %#v", ability.Reminders)
+	}
+}
+
+func TestParseUnclosedMultilineReminderRecoversAtNewline(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse("(unclosed\nFlying", ParseContext{})
+	if len(document.Abilities) != 2 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unclosed parenthesis" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
+func TestParseEmbeddedParenthesisDoesNotJoinAbilities(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse("Flying (gains flying\nTrample)", ParseContext{})
+	if len(document.Abilities) != 2 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	if len(diagnostics) != 2 ||
+		diagnostics[0].Summary != "unclosed parenthesis" ||
+		diagnostics[1].Summary != "unmatched parenthesis" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 }
 

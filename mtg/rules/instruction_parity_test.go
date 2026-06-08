@@ -175,7 +175,7 @@ func TestEnduringCourageInstructionReturnsAsEnchantment(t *testing.T) {
 		Controller:      game.Player1,
 		AbilityIndex:    1,
 		HasTriggerEvent: true,
-		TriggerEvent: game.GameEvent{
+		TriggerEvent: game.Event{
 			Kind:        game.EventPermanentDied,
 			PermanentID: courage.ObjectID,
 		},

@@ -81,7 +81,7 @@ type stateMutations interface {
 	LoseLife(playerID game.PlayerID, amount int)
 
 	// EmitZoneChange emits a zone-change game event.
-	EmitZoneChange(event game.GameEvent)
+	EmitZoneChange(event game.Event)
 
 	// MovePermanentToZone moves a permanent to the destination zone,
 	// handling detach, zone-change events, and token cleanup.

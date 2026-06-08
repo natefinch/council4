@@ -86,7 +86,7 @@ func TestSuspendCastsSpellWhenLastCounterRemoved(t *testing.T) {
 	if !ok || obj.SourceID != cardID || !obj.Suspend {
 		t.Fatalf("stack top = %+v, want suspended spell", obj)
 	}
-	assertEvent(t, g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventSpellCast, func(event game.Event) bool {
 		return event.CardID == cardID && event.FromZone == zone.Exile && event.ToZone == zone.Stack
 	})
 }

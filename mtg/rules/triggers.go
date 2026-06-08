@@ -20,7 +20,7 @@ type pendingTriggeredAbility struct {
 	face         game.FaceIndex
 	abilityIndex int
 	targets      []game.Target
-	event        game.GameEvent
+	event        game.Event
 	hasEvent     bool
 	inline       *game.TriggeredAbility
 	wardTargetID id.ID
@@ -35,7 +35,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	if start < 0 || start > len(g.Events) {
 		start = len(g.Events)
 	}
-	events := append([]game.GameEvent(nil), g.Events[start:]...)
+	events := append([]game.Event(nil), g.Events[start:]...)
 	g.TriggerEventCursor = len(g.Events)
 	pending := e.detectTriggeredAbilities(g, events)
 	pending = append(pending, e.detectMadnessTriggeredAbilities(g, events)...)
@@ -66,7 +66,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	return true
 }
 
-func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.GameEvent) []pendingTriggeredAbility {
+func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
 		if event.Kind != game.EventCardDiscarded || event.ToZone != zone.Exile || event.CardID == 0 {
@@ -96,7 +96,7 @@ func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.GameE
 	return pending
 }
 
-func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.GameEvent) []pendingTriggeredAbility {
+func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
 		for _, permanent := range g.Battlefield {
@@ -155,7 +155,7 @@ type triggerBatchKey struct {
 	controller   game.PlayerID
 }
 
-func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.GameEvent) []pendingTriggeredAbility {
+func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {
 	var pending []pendingTriggeredAbility
 	controller := effectiveController(g, permanent)
 	for i, body := range permanentEffectiveAbilities(g, permanent) {
@@ -222,7 +222,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 	return pending
 }
 
-func wardTriggerForEvent(permanent *game.Permanent, controller game.PlayerID, wardBody *game.StaticAbility, event game.GameEvent) (*game.TriggeredAbility, bool) {
+func wardTriggerForEvent(permanent *game.Permanent, controller game.PlayerID, wardBody *game.StaticAbility, event game.Event) (*game.TriggeredAbility, bool) {
 	if event.Kind != game.EventObjectBecameTarget || event.PermanentID != permanent.ObjectID || event.StackObjectID == 0 {
 		return nil, false
 	}
@@ -240,7 +240,7 @@ func wardTriggerForEvent(permanent *game.Permanent, controller game.PlayerID, wa
 	}, true
 }
 
-func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) (*game.TriggeredAbility, bool) {
+func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.Event) (*game.TriggeredAbility, bool) {
 	if event.Kind != game.EventSpellCast || event.Controller != controller || !hasKeyword(g, permanent, game.Prowess) {
 		return nil, false
 	}
@@ -261,7 +261,7 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 	}, true
 }
 
-func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.GameEvent) (*game.TriggeredAbility, bool) {
+func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.Event) (*game.TriggeredAbility, bool) {
 	if event.Kind != game.EventAttackerDeclared || event.Controller != controller || !hasKeyword(g, permanent, game.Exalted) {
 		return nil, false
 	}
@@ -347,7 +347,7 @@ func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, cond
 	return true
 }
 
-func leftBattlefieldTriggerSource(g *game.Game, event game.GameEvent) (*game.Permanent, bool) {
+func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permanent, bool) {
 	if event.FromZone != zone.Battlefield || event.PermanentID == 0 {
 		return nil, false
 	}
@@ -396,7 +396,7 @@ func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *
 	return append([]game.Target(nil), choices[selected[0]]...), true
 }
 
-func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.TriggerPattern, event game.GameEvent) bool {
+func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {
 	if pattern.Event == game.EventUnknown || pattern.Event != event.Kind {
 		return false
 	}
@@ -465,7 +465,7 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	return true
 }
 
-func eventStackObjectKindMatches(g *game.Game, event game.GameEvent, kind game.StackObjectKind) bool {
+func eventStackObjectKindMatches(g *game.Game, event game.Event, kind game.StackObjectKind) bool {
 	if event.StackObjectID == 0 {
 		return false
 	}
@@ -473,7 +473,7 @@ func eventStackObjectKindMatches(g *game.Game, event game.GameEvent, kind game.S
 	return ok && obj.Kind == kind
 }
 
-func eventPermanentIsToken(g *game.Game, event game.GameEvent) bool {
+func eventPermanentIsToken(g *game.Game, event game.Event) bool {
 	if event.PermanentID != 0 {
 		if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
 			return permanent.Token
@@ -485,7 +485,7 @@ func eventPermanentIsToken(g *game.Game, event game.GameEvent) bool {
 	return event.TokenDef != nil || (event.CardID == 0 && event.TokenName != "")
 }
 
-func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.PlayerID, trigger *game.TriggerCondition, event *game.GameEvent) bool {
+func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.PlayerID, trigger *game.TriggerCondition, event *game.Event) bool {
 	if trigger == nil {
 		return true
 	}
@@ -521,7 +521,7 @@ func triggerControllerMatches(sourceController game.PlayerID, filter game.Trigge
 	}
 }
 
-func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.TriggerSourceFilter, subject game.TriggerSubjectObject, event game.GameEvent) bool {
+func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.TriggerSourceFilter, subject game.TriggerSubjectObject, event game.Event) bool {
 	if filter == game.TriggerSourceAttachedPermanent {
 		return triggerSourceAttachedPermanentMatchesSubject(g, source, event, subject)
 	}
@@ -535,11 +535,11 @@ func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.Trig
 		(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
 }
 
-func triggerSourceAttachedPermanentMatches(g *game.Game, source *game.Permanent, event game.GameEvent) bool {
+func triggerSourceAttachedPermanentMatches(g *game.Game, source *game.Permanent, event game.Event) bool {
 	return triggerSourceAttachedPermanentMatchesSubject(g, source, event, game.TriggerSubjectDefault)
 }
 
-func triggerSourceAttachedPermanentMatchesSubject(g *game.Game, source *game.Permanent, event game.GameEvent, subject game.TriggerSubjectObject) bool {
+func triggerSourceAttachedPermanentMatchesSubject(g *game.Game, source *game.Permanent, event game.Event, subject game.TriggerSubjectObject) bool {
 	subjectID := triggerSubjectObjectID(event, subject)
 	if source.ObjectID == 0 || subjectID == 0 {
 		return false
@@ -553,7 +553,7 @@ func triggerSourceAttachedPermanentMatchesSubject(g *game.Game, source *game.Per
 	return false
 }
 
-func triggerSubjectObjectID(event game.GameEvent, subject game.TriggerSubjectObject) id.ID {
+func triggerSubjectObjectID(event game.Event, subject game.TriggerSubjectObject) id.ID {
 	switch subject {
 	case game.TriggerSubjectBlockedAttacker:
 		return event.BlockedAttackerID
@@ -562,7 +562,7 @@ func triggerSubjectObjectID(event game.GameEvent, subject game.TriggerSubjectObj
 	}
 }
 
-func triggerSubjectPermanent(g *game.Game, subject game.TriggerSubjectObject, event game.GameEvent) (*game.Permanent, bool) {
+func triggerSubjectPermanent(g *game.Game, subject game.TriggerSubjectObject, event game.Event) (*game.Permanent, bool) {
 	objectID := triggerSubjectObjectID(event, subject)
 	if objectID == 0 {
 		return nil, false
@@ -577,7 +577,7 @@ func triggerSubjectPermanent(g *game.Game, subject game.TriggerSubjectObject, ev
 	return resolved.permanent, resolved.permanent != nil
 }
 
-func spellTargetsSource(g *game.Game, source *game.Permanent, event game.GameEvent) bool {
+func spellTargetsSource(g *game.Game, source *game.Permanent, event game.Event) bool {
 	if event.Kind != game.EventSpellCast || source.ObjectID == 0 {
 		return false
 	}
@@ -593,7 +593,7 @@ func spellTargetsSource(g *game.Game, source *game.Permanent, event game.GameEve
 	return false
 }
 
-func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.TargetAllow, predicate game.TargetPredicate, event game.GameEvent) bool {
+func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.TargetAllow, predicate game.TargetPredicate, event game.Event) bool {
 	if event.Kind != game.EventSpellCast {
 		return false
 	}
@@ -624,7 +624,7 @@ func triggerPlayerMatches(sourceController game.PlayerID, filter game.TriggerPla
 	}
 }
 
-func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType types.Card) bool {
+func eventPermanentHasType(g *game.Game, event game.Event, cardType types.Card) bool {
 	if event.PermanentID != 0 {
 		if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
 			return permanentHasType(g, permanent, cardType)
@@ -646,7 +646,7 @@ func eventPermanentHasType(g *game.Game, event game.GameEvent, cardType types.Ca
 	return false
 }
 
-func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required, excluded []types.Card) bool {
+func eventPermanentTypeFiltersMatch(g *game.Game, event game.Event, required, excluded []types.Card) bool {
 	for _, cardType := range required {
 		if !eventPermanentHasType(g, event, cardType) {
 			return false
@@ -660,7 +660,7 @@ func eventPermanentTypeFiltersMatch(g *game.Game, event game.GameEvent, required
 	return true
 }
 
-func eventCardTypeFiltersMatch(g *game.Game, event game.GameEvent, required, excluded []types.Card) bool {
+func eventCardTypeFiltersMatch(g *game.Game, event game.Event, required, excluded []types.Card) bool {
 	cardTypes := event.CardTypes
 	if len(cardTypes) == 0 && event.CardID != 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
@@ -680,7 +680,7 @@ func eventCardTypeFiltersMatch(g *game.Game, event game.GameEvent, required, exc
 	return true
 }
 
-func eventPermanentHadCounters(g *game.Game, event *game.GameEvent) bool {
+func eventPermanentHadCounters(g *game.Game, event *game.Event) bool {
 	if event == nil || event.PermanentID == 0 {
 		return false
 	}

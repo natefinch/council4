@@ -55,7 +55,7 @@ func TestEternalizeActivatedBodyBuildsKeywordActivation(t *testing.T) {
 	if len(body.AdditionalCosts) != 1 || body.AdditionalCosts[0].Kind != cost.AdditionalExileSource {
 		t.Fatalf("additional costs = %+v, want source exile", body.AdditionalCosts)
 	}
-	if !ActivatedBodyEternalize(body) {
+	if !ActivatedBodyEternalize(&body) {
 		t.Fatal("ActivatedBodyEternalize() = false")
 	}
 	if body.Content.IsModal() || len(body.Content.Modes) != 1 {
@@ -143,21 +143,21 @@ func TestModalAbilityContentIsModal(t *testing.T) {
 }
 
 func TestKeywordBodyHelpers(t *testing.T) {
-	wardBody := TriggeredAbility{
+	wardBody := &TriggeredAbility{
 		KeywordAbilities: []KeywordAbility{WardKeyword{Cost: cost.Mana{cost.O(2)}}},
 	}
 	if wardCost, ok := BodyWardCost(wardBody); !ok || !slices.Equal(wardCost, cost.Mana{cost.O(2)}) {
 		t.Fatalf("BodyWardCost = %+v/%v, want {2}/true", wardCost, ok)
 	}
 
-	madnessBody := TriggeredAbility{
+	madnessBody := &TriggeredAbility{
 		KeywordAbilities: []KeywordAbility{MadnessKeyword{Cost: cost.Mana{cost.B}}},
 	}
 	if manaCost, ok := BodyMadnessCost(madnessBody); !ok || !slices.Equal(manaCost, cost.Mana{cost.B}) {
 		t.Fatalf("BodyMadnessCost = %+v/%v, want {B}/true", manaCost, ok)
 	}
 
-	activated := ActivatedAbility{
+	activated := &ActivatedAbility{
 		KeywordAbilities: []KeywordAbility{
 			SuspendKeyword{Cost: cost.Mana{cost.U}, TimeCounters: 3},
 			MorphKeyword{Cost: cost.Mana{cost.O(3)}},
@@ -178,7 +178,7 @@ func TestKeywordBodyHelpers(t *testing.T) {
 		t.Fatalf("ActivatedBodyKicker = %+v/%v, want {R}/true", kicker, ok)
 	}
 
-	staticBody := StaticAbility{
+	staticBody := &StaticAbility{
 		KeywordAbilities: []KeywordAbility{
 			EnchantKeyword{Target: TargetSpec{Constraint: "creature"}},
 			ProtectionKeyword{FromColors: []color.Color{color.Black, color.Red}},

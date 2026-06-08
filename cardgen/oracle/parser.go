@@ -26,21 +26,26 @@ func Parse(source string, context ParseContext) (Document, []Diagnostic) {
 		ability, abilityDiagnostics := parseAbility(source, lines[i], context)
 		diagnostics = append(diagnostics, abilityDiagnostics...)
 		if isModalHeader(lines[i]) {
-			modal := &Modal{Header: phraseFromTokens(source, lines[i])}
+			dash := topLevelIndex(lines[i], EmDash)
+			headerTokens := lines[i]
+			if dash+1 < len(lines[i]) {
+				headerTokens = lines[i][:dash+1]
+			}
+			modal := &Modal{Header: phraseFromTokens(source, headerTokens)}
 			j := i + 1
-			for j < len(lines) && startsWith(lines[j], Bullet) {
-				modeTokens := lines[j][1:]
-				mode := Mode{
-					Span:   spanOf(modeTokens),
-					Text:   sliceSpan(source, spanOf(modeTokens)),
-					Tokens: cloneTokens(modeTokens),
+			if dash+1 < len(lines[i]) {
+				for _, modeTokens := range inlineModeTokens(lines[i][dash+1:]) {
+					mode, modeDiagnostics := parseMode(source, modeTokens)
+					modal.Options = append(modal.Options, mode)
+					diagnostics = append(diagnostics, modeDiagnostics...)
 				}
-				mode.Sentences = parseSentences(source, modeTokens)
-				mode.Reminders, mode.Quoted, diagnostics = parseDelimited(
-					source, modeTokens, diagnostics,
-				)
-				modal.Options = append(modal.Options, mode)
-				j++
+			} else {
+				for j < len(lines) && startsWith(lines[j], Bullet) {
+					mode, modeDiagnostics := parseMode(source, lines[j][1:])
+					modal.Options = append(modal.Options, mode)
+					diagnostics = append(diagnostics, modeDiagnostics...)
+					j++
+				}
 			}
 			if len(modal.Options) == 0 {
 				diagnostics = append(diagnostics, Diagnostic{
@@ -88,6 +93,58 @@ func parseAbility(
 	var diagnostics []Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
 	return ability, diagnostics
+}
+
+func parseMode(source string, tokens []Token) (Mode, []Diagnostic) {
+	mode := Mode{
+		Span:   spanOf(tokens),
+		Text:   sliceSpan(source, spanOf(tokens)),
+		Tokens: cloneTokens(tokens),
+	}
+	mode.Sentences = parseSentences(source, tokens)
+	var diagnostics []Diagnostic
+	mode.Reminders, mode.Quoted, diagnostics = parseDelimited(source, tokens, diagnostics)
+	return mode, diagnostics
+}
+
+func inlineModeTokens(tokens []Token) [][]Token {
+	parts := splitTopLevelTokens(tokens, Semicolon)
+	if len(parts) < 2 {
+		return nil
+	}
+	for i := 1; i < len(parts); i++ {
+		if startsWithWord(parts[i], "or") {
+			parts[i] = parts[i][1:]
+		}
+	}
+	return parts
+}
+
+func splitTopLevelTokens(tokens []Token, separator Kind) [][]Token {
+	var parts [][]Token
+	start := 0
+	depth := 0
+	quoted := false
+	for i, token := range tokens {
+		switch token.Kind {
+		case LeftParen:
+			if !quoted {
+				depth++
+			}
+		case RightParen:
+			if !quoted && depth > 0 {
+				depth--
+			}
+		case Quote:
+			quoted = !quoted
+		default:
+			if token.Kind == separator && depth == 0 && !quoted {
+				parts = append(parts, cloneTokens(tokens[start:i]))
+				start = i + 1
+			}
+		}
+	}
+	return append(parts, cloneTokens(tokens[start:]))
 }
 
 func classifyAbility(tokens []Token, context ParseContext) AbilityKind {
@@ -264,18 +321,86 @@ func lexAll(source string) ([]Token, []Diagnostic) {
 func splitLines(tokens []Token) [][]Token {
 	var lines [][]Token
 	start := 0
+	protected := protectedByMultilineOuterDelimiter(tokens)
 	for i, token := range tokens {
-		if token.Kind != Newline && token.Kind != EOF {
+		if token.Kind == Newline && protected[i] {
 			continue
 		}
-		lines = append(lines, cloneTokens(tokens[start:i]))
-		start = i + 1
+		if token.Kind == Newline || token.Kind == EOF {
+			lines = append(lines, cloneTokens(tokens[start:i]))
+			start = i + 1
+		}
 	}
 	return lines
 }
 
+func protectedByMultilineOuterDelimiter(tokens []Token) []bool {
+	difference := make([]int, len(tokens)+1)
+	addPair := func(start, end int) {
+		difference[start+1]++
+		difference[end]--
+	}
+	for start := 0; start < len(tokens); {
+		end := start
+		for end < len(tokens) && tokens[end].Kind != Newline && tokens[end].Kind != EOF {
+			end++
+		}
+		if start < end {
+			switch tokens[start].Kind {
+			case LeftParen:
+				if end := matchingDelimiter(tokens, start, LeftParen, RightParen); end >= 0 {
+					addPair(start, end)
+				}
+			case Quote:
+				if end := matchingDelimiter(tokens, start, Quote, Quote); end >= 0 {
+					addPair(start, end)
+				}
+			default:
+			}
+		}
+		start = end + 1
+	}
+	protected := make([]bool, len(tokens))
+	depth := 0
+	for i := range tokens {
+		depth += difference[i]
+		protected[i] = depth > 0
+	}
+	return protected
+}
+
+func matchingDelimiter(tokens []Token, start int, open, closeKind Kind) int {
+	depth := 0
+	for i := start; i < len(tokens); i++ {
+		switch {
+		case open == closeKind && tokens[i].Kind == open:
+			if depth != 0 {
+				return i
+			}
+			depth = 1
+		case open != closeKind && tokens[i].Kind == open:
+			depth++
+		case open != closeKind && tokens[i].Kind == closeKind:
+			depth--
+			if depth == 0 {
+				return i
+			}
+		default:
+		}
+	}
+	return -1
+}
+
 func isModalHeader(tokens []Token) bool {
-	return startsWithWord(tokens, "choose") && topLevelIndex(tokens, EmDash) >= 0
+	if !startsWithWord(tokens, "choose") {
+		return false
+	}
+	dash := topLevelIndex(tokens, EmDash)
+	if dash < 0 {
+		return false
+	}
+	period := topLevelIndex(tokens, Period)
+	return period < 0 || dash < period
 }
 
 func topLevelIndex(tokens []Token, wanted Kind) int {

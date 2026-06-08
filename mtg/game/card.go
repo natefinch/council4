@@ -375,7 +375,7 @@ func (f *CardFace) BodyAt(index int) Ability {
 // KickerKeyword returns the first kicker keyword on any ability of this face.
 func (f *CardFace) KickerKeyword() (KickerKeyword, bool) {
 	for i := range f.ActivatedAbilities {
-		if kicker, ok := ActivatedBodyKicker(f.ActivatedAbilities[i]); ok {
+		if kicker, ok := ActivatedBodyKicker(&f.ActivatedAbilities[i]); ok {
 			return kicker, true
 		}
 	}

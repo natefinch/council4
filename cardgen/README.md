@@ -52,6 +52,9 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 
 - `FetchCard(name string)` — fetches a card from Scryfall by exact name.
 - `GenerateCardSource(card, pkgName)` — generates Go source for a `CardDef`.
+- `GenerateExecutableCardSource(card, pkgName)` — generates source only when
+  every face is fully supported by the strict executable backend; otherwise it
+  returns source-spanned Oracle diagnostics.
 - `ValidateCard(card, opts)` / `ValidateCards(cards, opts)` — report static
   support issues in generated `CardDef` values.
 - `ParseCardList`, `NewManifestFromItems`, `FetchManifest`, and

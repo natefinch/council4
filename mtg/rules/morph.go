@@ -22,7 +22,7 @@ func faceDownDisguiseWardBody() game.StaticAbility {
 
 func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (cost.Mana, bool) {
 	for i := range card.ActivatedAbilities {
-		ability := card.ActivatedAbilities[i]
+		ability := &card.ActivatedAbilities[i]
 		switch kind {
 		case game.FaceDownMorph:
 			if manaCost, ok := game.ActivatedBodyMorphCost(ability); ok {
@@ -36,7 +36,7 @@ func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (cost.Mana,
 		}
 	}
 	for i := range card.StaticAbilities {
-		ability := card.StaticAbilities[i]
+		ability := &card.StaticAbilities[i]
 		switch kind {
 		case game.FaceDownMorph:
 			if manaCost, ok := game.StaticBodyMorphCost(ability); ok {
@@ -143,7 +143,7 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 		FaceDownFace: cast.Face,
 		FaceDownKind: cast.FaceDownKind,
 	}
-	pushSpellToStack(g, obj, game.GameEvent{
+	pushSpellToStack(g, obj, game.Event{
 		SourceID:      cast.CardID,
 		StackObjectID: obj.ID,
 		Controller:    playerID,
@@ -212,7 +212,7 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 		permanent.Counters.Add(counter.Shield, 1)
 	}
 	emitFaceDownRevealEvent(g, permanent)
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentTurnedFaceUp,
 		Controller:  playerID,
 		Player:      permanent.Owner,
@@ -224,7 +224,7 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 }
 
 func emitFaceDownRevealEvent(g *game.Game, permanent *game.Permanent) {
-	emitEvent(g, game.GameEvent{
+	emitEvent(g, game.Event{
 		Kind:        game.EventCardRevealed,
 		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,

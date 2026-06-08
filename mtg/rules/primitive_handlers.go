@@ -287,7 +287,6 @@ func handleApplyRule(r *effectResolver, prim game.ApplyRule) effectResolved {
 	}
 }
 
-//nolint:gocritic // ModifyPT is unavoidably large; pointer conversion would change the Primitive interface.
 func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 	res := effectResolved{accepted: true}
 	var object game.ObjectReference
@@ -381,7 +380,6 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 	return res
 }
 
-//nolint:gocritic // CreateToken is unavoidably large; pointer conversion would change the Primitive interface.
 func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if res.amount <= 0 {

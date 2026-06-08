@@ -65,10 +65,10 @@ func TestCommanderPermanentZoneChangesUseCommandZoneReplacement(t *testing.T) {
 				g.Players[game.Player1].Hand.Contains(commander.CardInstanceID) {
 				t.Fatal("commander also appeared in a replaced destination zone")
 			}
-			assertEvent(t, g.Events, game.EventZoneChanged, func(event game.GameEvent) bool {
+			assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 				return event.CardID == commander.CardInstanceID && event.FromZone == zone.Battlefield && event.ToZone == zone.Command
 			})
-			assertNoEvent(t, g.Events, game.EventPermanentDied, func(event game.GameEvent) bool {
+			assertNoEvent(t, g.Events, game.EventPermanentDied, func(event game.Event) bool {
 				return event.CardID == commander.CardInstanceID
 			})
 		})
@@ -86,7 +86,7 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 		if !g.Players[game.Player1].CommandZone.Contains(commanderID) || g.Players[game.Player1].Graveyard.Contains(commanderID) {
 			t.Fatal("discarded commander did not use command-zone replacement")
 		}
-		assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.GameEvent) bool {
+		assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.Event) bool {
 			return event.CardID == commanderID && event.ToZone == zone.Command
 		})
 	})
@@ -177,7 +177,7 @@ func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 	if !forest.Tapped {
 		t.Fatal("commander cast did not pay colored mana")
 	}
-	assertEvent(t, g.Events, game.EventSpellCast, func(event game.GameEvent) bool {
+	assertEvent(t, g.Events, game.EventSpellCast, func(event game.Event) bool {
 		return event.CardID == commanderID && event.FromZone == zone.Command && event.ToZone == zone.Stack
 	})
 }
