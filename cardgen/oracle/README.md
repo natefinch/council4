@@ -80,18 +80,21 @@ than losing the remainder of the card.
 ## Semantic compiler
 
 `Compile(source, context)` runs the lexer and parser, then lowers the syntax
-tree into source-spanned semantic IR. `CompileDocument` accepts an existing
-syntax tree when callers need to inspect or transform it first.
+tree into a source-spanned semantic intermediate representation.
+`CompileDocument` accepts an existing syntax tree when callers need to inspect
+or transform it first.
 
-The IR mirrors the information needed by categorized `game.CardFace` abilities
-without constructing runtime game values yet. It records:
+The intermediate representation mirrors the information needed by categorized
+`game.CardFace` abilities without constructing runtime game values yet. It
+records:
 
 - ordered activated and loyalty cost components;
 - trigger clauses and intervening-if conditions;
 - modes and inclusive target cardinalities;
 - conservative selectors and controller constraints;
 - keyword abilities and parameters;
-- instruction verbs, negation, and common durations;
+- instruction verbs, fixed amounts, mana symbols, negation, and common
+  durations;
 - card-name, `this`-object, `that`-object, and pronoun references.
 
 Recognition is deliberately conservative. Reminder and quoted text do not leak

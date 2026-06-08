@@ -177,6 +177,52 @@ func TestCompileThirdPersonEffects(t *testing.T) {
 	}
 }
 
+func TestCompileFixedEffectValues(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		context ParseContext
+		kind    EffectKind
+		amount  int
+		symbol  string
+	}{
+		"Draw two cards.": {
+			context: ParseContext{InstantOrSorcery: true},
+			kind:    EffectDraw,
+			amount:  2,
+		},
+		"Shock deals 3 damage to any target.": {
+			context: ParseContext{CardName: "Shock", InstantOrSorcery: true},
+			kind:    EffectDealDamage,
+			amount:  3,
+		},
+		"{T}: Add {G}.": {
+			kind:   EffectAddMana,
+			amount: 1,
+			symbol: "{G}",
+		},
+	}
+	for source, test := range tests {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(source, test.context)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := compilation.Abilities[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != test.kind ||
+				!effect.Amount.Known ||
+				effect.Amount.Value != test.amount ||
+				effect.Symbol != test.symbol {
+				t.Fatalf("effect = %#v", effect)
+			}
+		})
+	}
+}
+
 func TestCompileCounterVerbAndNoun(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

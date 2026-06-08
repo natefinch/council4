@@ -4,9 +4,13 @@
 cards in parallel, and writes deterministic Go definitions for only the cards
 whose complete rules text is supported by the executable backend.
 
-The initial strict backend supports vanilla faces and plain, non-parameterized
-keyword abilities that have reusable `mtg/game` templates. It never emits TODOs
-or partial ability implementations. Unsupported cards, unsupported layouts,
+The strict backend supports vanilla faces, plain non-parameterized keyword
+abilities with reusable `mtg/game` templates, exact single-color
+`{T}: Add {W/U/B/R/G/C}.` abilities, fixed damage from a spell to one supported
+target, and fixed controller or target-player card draw. Near-miss wording such
+as variable quantities, compound effects, conditional effects, mana choices,
+and divided or mass damage is rejected. The backend never emits TODOs or partial
+ability implementations. Unsupported cards, unsupported layouts,
 source-generation failures, non-ASCII package names, and filename collisions
 are written to the report.
 
@@ -51,8 +55,13 @@ semantic compiler and executable backend both identify limitations.
 | --- | --- |
 | `unsupported Oracle construct` | The semantic compiler could not identify a supported action or keyword in the indicated text. This is an Oracle-language recognition gap, before executable source generation. |
 | `unsupported cost` | An activated or loyalty cost was preserved as text but was not assigned complete typed cost semantics. |
-| `unsupported spell ability` | The text was correctly classified as an instant or sorcery spell ability, but the executable backend cannot lower spell effects yet. |
-| `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but the executable backend cannot emit it yet. |
+| `unsupported spell ability` | The text was correctly classified as an instant or sorcery spell ability, but it does not match a supported complete spell template. |
+| `unsupported multiple spell abilities` | A face has more than one separately parsed spell ability. The current backend emits only one `SpellAbility` value per face. |
+| `unsupported damage spell` | A damage effect was recognized, but its source, amount, recipient, targeting, or surrounding wording is outside the exact fixed single-target templates. |
+| `unsupported draw spell` | A draw effect was recognized, but its amount, recipient, targeting, or surrounding wording is outside the exact fixed draw templates. |
+| `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but it is not an exact supported single-color tap mana ability. |
+| `unsupported mana symbol` | A mana effect otherwise matched the supported template, but its output symbol is not one of `{W}`, `{U}`, `{B}`, `{R}`, `{G}`, or `{C}`. |
+| `incomplete executable lowering` | A lowering path did not account for every semantic element or meaningful source token. This internal safety check rejects the whole card rather than emitting a partial implementation. |
 | `unsupported loyalty ability` | The parser recognized a planeswalker loyalty ability, but the executable backend cannot emit it yet. |
 | `unsupported triggered ability` | The parser recognized a `when`, `whenever`, or `at` trigger, but the executable backend cannot emit triggered abilities yet. |
 | `unsupported replacement ability` | The parser recognized replacement wording, but the executable backend cannot emit replacement abilities yet. |

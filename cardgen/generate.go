@@ -195,7 +195,7 @@ func layoutEmitsFaces(layout string) bool {
 }
 
 func fieldsNeedCost(fields generatedCardFields) bool {
-	return fields.ManaCost != ""
+	return fields.ManaCost != "" || abilityFieldsUsePackage(fields.AbilityFields, "cost")
 }
 
 func fieldsNeedColor(fields generatedCardFields) bool {
@@ -203,7 +203,8 @@ func fieldsNeedColor(fields generatedCardFields) bool {
 }
 
 func fieldsNeedMana(fields generatedCardFields) bool {
-	return costLiteralNeedsManaPackage(fields.ManaCost)
+	return costLiteralNeedsManaPackage(fields.ManaCost) ||
+		abilityFieldsUsePackage(fields.AbilityFields, "mana")
 }
 
 func costLiteralNeedsManaPackage(manaCost string) bool {
@@ -216,12 +217,26 @@ func costLiteralNeedsManaPackage(manaCost string) bool {
 }
 
 func fieldsNeedOpt(fields generatedCardFields) bool {
-	return fields.ManaCost != "" || fields.Power != nil || fields.Toughness != nil || fields.Loyalty != nil || fields.Defense != nil
+	return fields.ManaCost != "" ||
+		fields.Power != nil ||
+		fields.Toughness != nil ||
+		fields.Loyalty != nil ||
+		fields.Defense != nil ||
+		abilityFieldsUsePackage(fields.AbilityFields, "opt")
 }
 
 func fieldsNeedTypes(fields generatedCardFields) bool {
 	parsed := ParseTypeLine(fields.TypeLine)
-	return len(parsed.Supertypes) > 0 || len(parsed.Types) > 0 || len(parsed.Subtypes) > 0
+	return len(parsed.Supertypes) > 0 ||
+		len(parsed.Types) > 0 ||
+		len(parsed.Subtypes) > 0 ||
+		abilityFieldsUsePackage(fields.AbilityFields, "types")
+}
+
+func abilityFieldsUsePackage(fields []string, packageName string) bool {
+	return slices.ContainsFunc(fields, func(field string) bool {
+		return strings.Contains(field, packageName+".")
+	})
 }
 
 func anyFaceNeedsCost(faces []generatedCardFields) bool {

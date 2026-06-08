@@ -55,7 +55,10 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 - `GenerateExecutableCardSource(card, pkgName)` — generates source only when
   every face is fully supported by the strict executable backend; otherwise it
   returns source-spanned diagnostics identifying the unsupported ability kind,
-  keyword, parameter, or mixed rules text.
+  keyword, parameter, or mixed rules text. Supported executable templates
+  currently include plain keywords, exact single-color tap mana abilities,
+  fixed single-target spell damage, and fixed controller or target-player
+  spell draw.
 - `ValidateCard(card, opts)` / `ValidateCards(cards, opts)` — report static
   support issues in generated `CardDef` values.
 - `ParseCardList`, `NewManifestFromItems`, `FetchManifest`, and

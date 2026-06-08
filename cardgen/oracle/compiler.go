@@ -232,15 +232,19 @@ func compileTargets(tokens []Token) []CompiledTarget {
 				start = i - 1
 				cardinality.Min = count
 				cardinality.Max = count
+			} else if equalWord(tokens[i-1], "any") {
+				start = i - 1
 			}
 		}
 		end := targetPhraseEnd(tokens, i+1)
 		phraseTokens := tokens[start:end]
+		selectorTokens := append([]Token(nil), tokens[start:i]...)
+		selectorTokens = append(selectorTokens, tokens[i+1:end]...)
 		targets = append(targets, CompiledTarget{
 			Span:        spanOf(phraseTokens),
 			Text:        joinedSourceText(phraseTokens),
 			Cardinality: cardinality,
-			Selector:    compileSelector(tokens[i+1 : end]),
+			Selector:    compileSelector(selectorTokens),
 		})
 	}
 	return targets
@@ -361,11 +365,39 @@ func compileEffects(
 				VerbSpan: token.Span,
 				Duration: duration,
 				Selector: compileSelector(tokens[i+1:]),
+				Amount:   compileEffectAmount(tokens[i+1:]),
+				Symbol:   firstSymbol(tokens[i+1:]),
 				Negated:  effectNegated(tokens, i),
 			})
 		}
 	}
 	return effects
+}
+
+func compileEffectAmount(tokens []Token) CompiledAmount {
+	for _, token := range tokens {
+		if value := numberWord(token); value > 0 {
+			return CompiledAmount{Value: value, Known: true}
+		}
+		if equalWord(token, "a") || equalWord(token, "an") {
+			return CompiledAmount{Value: 1, Known: true}
+		}
+	}
+	for _, token := range tokens {
+		if token.Kind == Symbol {
+			return CompiledAmount{Value: 1, Known: true}
+		}
+	}
+	return CompiledAmount{}
+}
+
+func firstSymbol(tokens []Token) string {
+	for _, token := range tokens {
+		if token.Kind == Symbol {
+			return token.Text
+		}
+	}
+	return ""
 }
 
 func effectKindAt(tokens []Token, index int) EffectKind {

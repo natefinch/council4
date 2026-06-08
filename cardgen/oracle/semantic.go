@@ -222,7 +222,15 @@ type CompiledEffect struct {
 	VerbSpan Span
 	Duration DurationKind
 	Selector CompiledSelector
+	Amount   CompiledAmount
+	Symbol   string
 	Negated  bool
+}
+
+// CompiledAmount is a fixed numeric amount recognized in an effect.
+type CompiledAmount struct {
+	Value int
+	Known bool
 }
 
 // CompiledKeyword is a recognized keyword ability.
