@@ -1,0 +1,112 @@
+# Oracle text
+
+Package `oracle` is the deterministic front end for turning Scryfall
+`oracle_text` into council4's typed `game.CardFace` ability data. It is kept
+inside `cardgen` because parsing card text is generation-time tooling, not
+runtime game behavior.
+
+The pipeline is:
+
+```text
+Oracle text -> lexer -> syntax tree -> semantic compiler -> CardFace data
+```
+
+## Lexer
+
+`NewLexer(source)` constructs a synchronous pull scanner. Repeated calls to
+`Next` return tokens until `EOF`.
+
+The lexer recognizes structural Oracle-text syntax:
+
+- words and integers;
+- braced symbols such as `{T}`, `{2/W}`, and `{R/G}`;
+- significant newlines;
+- punctuation, parentheses, and quoted granted abilities;
+- modal bullets (`•`) and ability-word em dashes (`—`);
+- loyalty and power/toughness signs;
+- standalone possessive apostrophes, brackets, ampersands, and other printable
+  glyphs used by unusual card names or supplemental products.
+
+English vocabulary is intentionally not encoded as token kinds. For example,
+`Whenever`, `target`, and `destroy` are all `Word` tokens. Their meaning depends
+on surrounding syntax and card-face context, so the parser and compiler own
+that interpretation.
+
+Horizontal whitespace is skipped. Every emitted token stores its exact source
+slice and a half-open byte span. Positions also include one-based rune line and
+column coordinates for diagnostics. Byte offsets are authoritative for slicing.
+CRLF is emitted as one `Newline` token.
+
+A UTF-8 BOM is accepted only at byte zero. Valid but unclassified Unicode is
+preserved as a `Glyph` token so the parser can diagnose it in context. Invalid
+UTF-8, NUL, later BOMs, and unclosed braced symbols produce `Invalid` tokens.
+Invalid input always consumes bytes, allowing callers to diagnose an error and
+continue without stalling.
+
+## Example
+
+```go
+lexer := oracle.NewLexer("{T}: Add {G}.")
+for {
+	token := lexer.Next()
+	if token.Kind == oracle.EOF {
+		break
+	}
+	// Inspect token.Kind, token.Text, and token.Span.
+}
+```
+
+## Syntax parser
+
+`Parse(source, context)` returns a lossless `Document` plus diagnostics. Card
+context identifies instant and sorcery faces because otherwise identical text
+can be a spell ability or a static ability. It also identifies planeswalker
+faces so loyalty costs are not confused with ordinary activated abilities.
+
+The syntax tree preserves ordered abilities and exact source spans. It
+represents ability-word prefixes, top-level activation costs, sentences,
+parenthesized reminder text, quoted granted abilities, and modal choose headers
+with bullet options. Mode spans exclude the bullet marker. Delimiters inside
+quotes or reminder text remain owned by that enclosing construct rather than
+creating overlapping sibling nodes. The parser classifies spell, activated, loyalty, triggered,
+replacement, static, and reminder paragraphs. This classification is syntactic;
+lowering English phrases into executable game primitives is a separate compiler
+stage.
+
+Malformed delimiters and lexical errors produce localized diagnostics. Parsing
+continues at paragraph boundaries, so callers receive a partial tree rather
+than losing the remainder of the card.
+
+## Semantic compiler
+
+`Compile(source, context)` runs the lexer and parser, then lowers the syntax
+tree into source-spanned semantic IR. `CompileDocument` accepts an existing
+syntax tree when callers need to inspect or transform it first.
+
+The IR mirrors the information needed by categorized `game.CardFace` abilities
+without constructing runtime game values yet. It records:
+
+- ordered activated and loyalty cost components;
+- trigger clauses and intervening-if conditions;
+- modes and inclusive target cardinalities;
+- conservative selectors and controller constraints;
+- keyword abilities and parameters;
+- instruction verbs, negation, and common durations;
+- card-name, `this`-object, `that`-object, and pronoun references.
+
+Recognition is deliberately conservative. Reminder and quoted text do not leak
+into the containing ability's semantics. Trigger conditions and activation
+costs are excluded from resolving effects. Any non-reminder construct that has
+neither a recognized action nor keyword receives a warning diagnostic covering
+its exact source span. Unknown costs receive their own warning. The compiler
+never substitutes guessed executable behavior for unsupported wording.
+
+## Testing
+
+Unit tests cover representative activated, loyalty, modal, keyword, reminder,
+Class, and quoted-ability text. A fuzz test enforces termination and span
+invariants. When the ignored local Scryfall cache is available at
+`.cardwork/deck/cache/scryfall`, the package tests every root and face
+`oracle_text` entry and rejects any invalid token. Compiler corpus tests also
+require every non-reminder ability to produce semantic content or an explicit
+unsupported diagnostic.
