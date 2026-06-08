@@ -52,6 +52,9 @@ func TestGenerateExecutableCardSourceRejectsPartialAbility(t *testing.T) {
 	if source != "" || len(diagnostics) == 0 {
 		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
 	}
+	if got := diagnostics[0].Summary; got != "unsupported triggered ability" {
+		t.Fatalf("summary = %q", got)
+	}
 }
 
 func TestGenerateExecutableCardSourceRejectsPartiallyRecognizedKeywordLine(t *testing.T) {
@@ -68,6 +71,80 @@ func TestGenerateExecutableCardSourceRejectsPartiallyRecognizedKeywordLine(t *te
 	}
 	if source != "" || len(diagnostics) == 0 {
 		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+	}
+	if got := diagnostics[0].Summary; got != "unsupported mixed keyword ability" {
+		t.Fatalf("summary = %q", got)
+	}
+}
+
+func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		typeLine   string
+		oracleText string
+		summary    string
+		detail     string
+	}{
+		"spell": {
+			typeLine:   "Sorcery",
+			oracleText: "Draw two cards.",
+			summary:    "unsupported spell ability",
+			detail:     "does not yet lower spell abilities",
+		},
+		"activated": {
+			typeLine:   "Creature — Bear",
+			oracleText: "{T}: Add {G}.",
+			summary:    "unsupported activated ability",
+			detail:     "does not yet lower activated abilities",
+		},
+		"static rules text": {
+			typeLine:   "Enchantment",
+			oracleText: "Creatures you control get +1/+1.",
+			summary:    "unsupported static ability",
+			detail:     "non-keyword static rules text",
+		},
+		"parameterized keyword": {
+			typeLine:   "Creature — Snake",
+			oracleText: "Toxic 1",
+			summary:    "unsupported parameterized keyword",
+			detail:     `Toxic with parameter "1"`,
+		},
+		"keyword without template": {
+			typeLine:   "Creature — Dinosaur",
+			oracleText: "Ward",
+			summary:    "unsupported keyword ability",
+			detail:     "no reusable game template for Ward",
+		},
+		"modal": {
+			typeLine:   "Sorcery",
+			oracleText: "Choose one —\n• Draw a card.\n• Destroy target creature.",
+			summary:    "unsupported modal ability",
+			detail:     "does not yet lower modal abilities",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Unsupported Example",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+			}
+			if got := diagnostics[0].Summary; got != test.summary {
+				t.Fatalf("summary = %q, want %q", got, test.summary)
+			}
+			if got := diagnostics[0].Detail; !strings.Contains(got, test.detail) {
+				t.Fatalf("detail = %q, want substring %q", got, test.detail)
+			}
+		})
 	}
 }
 

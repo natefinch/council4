@@ -5,3 +5,5 @@
 deck.txt
 
 MagicCompRules*.txt
+oracle-cards-*.json
+.DS_Store

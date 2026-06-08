@@ -80,14 +80,9 @@ func executableAbilityFields(
 	var bodies []string
 	var unsupported []oracle.Diagnostic
 	for i, ability := range compilation.Abilities {
-		abilityBodies, ok := executableKeywordAbility(ability, compilation.Syntax.Abilities[i])
-		if !ok {
-			unsupported = append(unsupported, oracle.Diagnostic{
-				Severity: oracle.SeverityWarning,
-				Summary:  "unsupported executable ability",
-				Detail:   "the executable source backend currently supports only plain non-parameterized keyword abilities",
-				Span:     ability.Span,
-			})
+		abilityBodies, diagnostic := executableKeywordAbility(ability, compilation.Syntax.Abilities[i])
+		if diagnostic != nil {
+			unsupported = append(unsupported, *diagnostic)
 			continue
 		}
 		bodies = append(bodies, abilityBodies...)
@@ -101,18 +96,69 @@ func executableAbilityFields(
 	return []string{staticAbilityField(bodies)}, diagnostics
 }
 
-func executableKeywordAbility(ability oracle.CompiledAbility, syntax oracle.Ability) ([]string, bool) {
-	if ability.Kind != oracle.AbilityStatic ||
-		ability.AbilityWord != "" ||
-		ability.Cost != nil ||
-		ability.Trigger != nil ||
-		len(ability.Modes) > 0 ||
-		len(ability.Targets) > 0 ||
+func executableKeywordAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) ([]string, *oracle.Diagnostic) {
+	if len(ability.Modes) > 0 {
+		return nil, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend does not yet lower modal abilities",
+		)
+	}
+	if ability.Kind != oracle.AbilityStatic {
+		return nil, executableDiagnostic(
+			ability,
+			"unsupported "+ability.Kind.String()+" ability",
+			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
+		)
+	}
+	if ability.AbilityWord != "" {
+		return nil, executableDiagnostic(
+			ability,
+			"unsupported ability word",
+			fmt.Sprintf("the executable source backend does not yet lower the %q ability word", ability.AbilityWord),
+		)
+	}
+	if len(ability.Keywords) == 0 {
+		return nil, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend does not yet lower non-keyword static rules text",
+		)
+	}
+	bodies := make([]string, 0, len(ability.Keywords))
+	for _, keyword := range ability.Keywords {
+		if keyword.Parameter != "" {
+			return nil, executableDiagnostic(
+				ability,
+				"unsupported parameterized keyword",
+				fmt.Sprintf(
+					"the executable source backend does not yet lower %s with parameter %q",
+					keyword.Name,
+					keyword.Parameter,
+				),
+			)
+		}
+		body, ok := keywordStaticBodies[keyword.Name]
+		if !ok {
+			return nil, executableDiagnostic(
+				ability,
+				"unsupported keyword ability",
+				fmt.Sprintf(
+					"the executable source backend has no reusable game template for %s",
+					keyword.Name,
+				),
+			)
+		}
+		bodies = append(bodies, body)
+	}
+	if len(ability.Targets) > 0 ||
 		len(ability.Conditions) > 0 ||
 		len(ability.Effects) > 0 ||
-		len(ability.References) > 0 ||
-		len(ability.Keywords) == 0 {
-		return nil, false
+		len(ability.References) > 0 {
+		return nil, mixedKeywordDiagnostic(ability)
 	}
 	for _, token := range syntax.Tokens {
 		if token.Kind == oracle.Comma ||
@@ -120,20 +166,37 @@ func executableKeywordAbility(ability oracle.CompiledAbility, syntax oracle.Abil
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
 		}
-		return nil, false
+		return nil, mixedKeywordDiagnostic(ability)
 	}
-	bodies := make([]string, 0, len(ability.Keywords))
+	return bodies, nil
+}
+
+func executableDiagnostic(
+	ability oracle.CompiledAbility,
+	summary string,
+	detail string,
+) *oracle.Diagnostic {
+	return &oracle.Diagnostic{
+		Severity: oracle.SeverityWarning,
+		Summary:  summary,
+		Detail:   detail,
+		Span:     ability.Span,
+	}
+}
+
+func mixedKeywordDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
+	names := make([]string, 0, len(ability.Keywords))
 	for _, keyword := range ability.Keywords {
-		if keyword.Parameter != "" {
-			return nil, false
-		}
-		body, ok := keywordStaticBodies[keyword.Name]
-		if !ok {
-			return nil, false
-		}
-		bodies = append(bodies, body)
+		names = append(names, keyword.Name)
 	}
-	return bodies, true
+	return executableDiagnostic(
+		ability,
+		"unsupported mixed keyword ability",
+		fmt.Sprintf(
+			"the executable source backend recognized %s but does not yet lower the additional rules text",
+			strings.Join(names, ", "),
+		),
+	)
 }
 
 func spanCoveredByKeyword(span oracle.Span, keywords []oracle.CompiledKeyword) bool {

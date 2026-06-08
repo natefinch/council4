@@ -54,7 +54,8 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 - `GenerateCardSource(card, pkgName)` — generates Go source for a `CardDef`.
 - `GenerateExecutableCardSource(card, pkgName)` — generates source only when
   every face is fully supported by the strict executable backend; otherwise it
-  returns source-spanned Oracle diagnostics.
+  returns source-spanned diagnostics identifying the unsupported ability kind,
+  keyword, parameter, or mixed rules text.
 - `ValidateCard(card, opts)` / `ValidateCards(cards, opts)` — report static
   support issues in generated `CardDef` values.
 - `ParseCardList`, `NewManifestFromItems`, `FetchManifest`, and
