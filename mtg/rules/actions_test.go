@@ -1054,12 +1054,6 @@ func TestSplitSecondAllowsOnlyManaAbilitiesAndPass(t *testing.T) {
 	}
 }
 
-// TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn was deleted because
-// production code (resolveActivatedAbilityWithChoices in stack.go) only checks
-// ActivatedBody(), not LoyaltyBody(). This means LoyaltyAbilityBody.Content
-// is never resolved. The loyalty cost is paid correctly, but the ability
-// effect doesn't execute. This requires a production code change to fix.
-
 func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

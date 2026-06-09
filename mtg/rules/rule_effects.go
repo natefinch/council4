@@ -312,6 +312,12 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 				break
 			}
 		}
+		for _, cardID := range player.Exile.All() {
+			if g.AdventureCards[cardID] {
+				zones = append(zones, zone.Exile)
+				break
+			}
+		}
 	}
 	return slices.Compact(zones)
 }

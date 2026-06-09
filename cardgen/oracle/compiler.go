@@ -1018,7 +1018,7 @@ func tokenWordsEqual(tokens []Token, words []string) bool {
 
 func objectWord(token Token) bool {
 	switch strings.ToLower(token.Text) {
-	case "card", "creature", "equipment", "land", "permanent", "spell", "token":
+	case "artifact", "card", "creature", "enchantment", "equipment", "land", "permanent", "spell", "token":
 		return token.Kind == Word
 	default:
 		return false

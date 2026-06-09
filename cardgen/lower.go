@@ -30,6 +30,7 @@ type loweredFaceAbilities struct {
 	StaticAbilities      []loweredStaticAbility
 	ActivatedAbilities   []game.ActivatedAbility
 	ManaAbilities        []game.ManaAbility
+	LoyaltyAbilities     []game.LoyaltyAbility
 	TriggeredAbilities   []game.TriggeredAbility
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
@@ -40,6 +41,7 @@ func (f loweredFaceAbilities) empty() bool {
 	return len(f.StaticAbilities) == 0 &&
 		len(f.ActivatedAbilities) == 0 &&
 		len(f.ManaAbilities) == 0 &&
+		len(f.LoyaltyAbilities) == 0 &&
 		len(f.TriggeredAbilities) == 0 &&
 		len(f.ReplacementAbilities) == 0 &&
 		!f.SpellAbility.Exists
@@ -51,6 +53,7 @@ type abilityLowering struct {
 	staticAbilities    []loweredStaticAbility
 	activatedAbility   opt.V[game.ActivatedAbility]
 	manaAbility        opt.V[game.ManaAbility]
+	loyaltyAbility     opt.V[game.LoyaltyAbility]
 	triggeredAbility   opt.V[game.TriggeredAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
@@ -132,6 +135,9 @@ func lowerFaceAbilities(
 		if lowered.manaAbility.Exists {
 			result.ManaAbilities = append(result.ManaAbilities, lowered.manaAbility.Val)
 		}
+		if lowered.loyaltyAbility.Exists {
+			result.LoyaltyAbilities = append(result.LoyaltyAbilities, lowered.loyaltyAbility.Val)
+		}
 		if lowered.triggeredAbility.Exists {
 			result.TriggeredAbilities = append(result.TriggeredAbilities, lowered.triggeredAbility.Val)
 		}
@@ -162,11 +168,7 @@ func lowerExecutableAbility(
 	syntax oracle.Ability,
 ) (abilityLowering, *oracle.Diagnostic) {
 	if len(ability.Modes) > 0 {
-		return abilityLowering{}, executableDiagnostic(
-			ability,
-			"unsupported modal ability",
-			"the executable source backend does not yet lower modal abilities",
-		)
+		return lowerModalAbility(cardName, ability, syntax)
 	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
 		return lowered, diagnostic
@@ -209,6 +211,8 @@ func lowerExecutableAbility(
 		}, nil
 	case oracle.AbilityActivated:
 		return lowerActivatedAbilityKind(cardName, ability, syntax)
+	case oracle.AbilityLoyalty:
+		return lowerLoyaltyAbility(cardName, ability, syntax)
 	case oracle.AbilitySpell:
 		spellAbility, diagnostic := lowerSpell(cardName, ability, syntax)
 		if diagnostic != nil {
@@ -348,6 +352,300 @@ func hasAddManaEffect(ability oracle.CompiledAbility) bool {
 	return slices.ContainsFunc(ability.Effects, func(effect oracle.CompiledEffect) bool {
 		return effect.Kind == oracle.EffectAddMana
 	})
+}
+
+// lowerLoyaltyAbility lowers an AbilityLoyalty into a game.LoyaltyAbility.
+// It accepts only exact signed integer loyalty costs and supported single or
+// ordered effect bodies. Variable costs (X) are rejected.
+func lowerLoyaltyAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	const unsupportedDetail = "the executable source backend supports only exact signed loyalty costs with a supported effect body"
+	if ability.Cost == nil ||
+		len(ability.Cost.Components) != 1 ||
+		ability.Cost.Components[0].Kind != oracle.CostLoyalty ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
+	}
+	loyaltyCost, ok := parseLoyaltyCostAmount(ability.Cost.Components[0].Amount)
+	if !ok {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", "the executable source backend supports only fixed integer loyalty costs, not variable costs")
+	}
+
+	colon := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.Colon
+	})
+	if colon < 0 || colon+1 >= len(syntax.Tokens) {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
+	}
+	body := ability
+	body.Kind = oracle.AbilitySpell
+	body.Cost = nil
+	body.Span = oracle.Span{
+		Start: syntax.Tokens[colon+1].Span.Start,
+		End:   syntax.Span.End,
+	}
+	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset:])
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Span = body.Span
+	bodySyntax.Text = body.Text
+	bodySyntax.Tokens = syntax.Tokens[colon+1:]
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", diagnostic.Detail)
+	}
+
+	spans := make(
+		[]oracle.Span,
+		0,
+		1+len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
+	)
+	spans = append(spans, ability.Cost.Span)
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	for _, target := range ability.Targets {
+		spans = append(spans, target.Span)
+	}
+	for _, reference := range ability.References {
+		spans = append(spans, reference.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		loyaltyAbility: opt.Val(game.LoyaltyAbility{
+			Text:        ability.Text,
+			LoyaltyCost: loyaltyCost,
+			Content:     content,
+		}),
+		consumed: semanticConsumption{
+			cost:       true,
+			targets:    len(ability.Targets),
+			effects:    len(ability.Effects),
+			references: len(ability.References),
+		},
+		sourceSpans: spans,
+	}, nil
+}
+
+// parseLoyaltyCostAmount converts a loyalty cost amount string such as "+1",
+// "−2", or "0" into a signed integer. It returns false for variable costs
+// (e.g. "+X") or malformed input.
+func parseLoyaltyCostAmount(amount string) (int, bool) {
+	if amount == "" {
+		return 0, false
+	}
+	rest := amount
+	sign := 1
+	switch {
+	case strings.HasPrefix(rest, "+"):
+		rest = rest[1:]
+	case strings.HasPrefix(rest, "\u2212"):
+		// Unicode minus sign U+2212 (3 bytes in UTF-8)
+		sign = -1
+		rest = rest[len("\u2212"):]
+	case strings.HasPrefix(rest, "-"):
+		sign = -1
+		rest = rest[1:]
+	default:
+		// no sign prefix — treat as positive (e.g., "0")
+	}
+	n, err := strconv.Atoi(rest)
+	if err != nil {
+		return 0, false
+	}
+	return sign * n, true
+}
+
+// lowerModalAbility lowers a modal CompiledAbility into a spell or activated
+// ability with multiple modes. Only "Choose one —" is supported; other
+// cardinalities are rejected. Each mode is lowered independently through the
+// shared spell-effect lowering path.
+func lowerModalAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	if syntax.Modal == nil {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend does not yet lower modal abilities",
+		)
+	}
+	minModes, maxModes, ok := parseChooseHeader(syntax.Modal.Header)
+	if !ok {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend supports only exact fixed-cardinality \"Choose one\" modal abilities",
+		)
+	}
+	if minModes != 1 || maxModes != 1 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend supports only \"Choose one\" modal abilities",
+		)
+	}
+
+	// Top-level semantic fields must be empty for a modal header: the header
+	// "Choose one —" carries no targets, effects, keywords, or conditions of its own.
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		len(ability.Effects) != 0 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend does not support shared targets, costs, or conditions across modes",
+		)
+	}
+	if len(ability.Modes) != len(syntax.Modal.Options) {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"semantic mode count does not match syntax mode count",
+		)
+	}
+
+	modes := make([]game.Mode, 0, len(ability.Modes))
+	for i, compiledMode := range ability.Modes {
+		syntaxMode := syntax.Modal.Options[i]
+		mode, diagnostic := lowerModalMode(cardName, compiledMode, syntaxMode)
+		if diagnostic != nil {
+			return abilityLowering{}, executableDiagnostic(
+				ability,
+				"unsupported modal ability",
+				diagnostic.Detail,
+			)
+		}
+		modes = append(modes, mode)
+	}
+
+	content := game.AbilityContent{
+		Modes:    modes,
+		MinModes: minModes,
+		MaxModes: maxModes,
+	}
+	switch ability.Kind {
+	case oracle.AbilitySpell, oracle.AbilityStatic:
+	default:
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend supports only spell or static modal abilities",
+		)
+	}
+	return abilityLowering{
+		spellAbility: opt.Val(content),
+		consumed: semanticConsumption{
+			modes: len(ability.Modes),
+		},
+		sourceSpans: []oracle.Span{syntax.Modal.Header.Span},
+	}, nil
+}
+
+// parseChooseHeader inspects a modal header phrase and returns (minModes,
+// maxModes, ok). It accepts only "Choose <word> —" where <word> is a cardinal
+// number spelled out as a single word ("one", "two", etc.) and rejects "or
+// both", "or more", "at random", and other multi-word cardinalities.
+func parseChooseHeader(header oracle.Phrase) (minModes, maxModes int, ok bool) {
+	tokens := header.Tokens
+	// Expected: [Word("Choose"), Word(<number>), EmDash]
+	if len(tokens) != 3 ||
+		tokens[0].Kind != oracle.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
+		tokens[1].Kind != oracle.Word ||
+		tokens[2].Kind != oracle.EmDash {
+		return 0, 0, false
+	}
+	n, numOK := parseCardinalWord(tokens[1].Text)
+	if !numOK {
+		return 0, 0, false
+	}
+	return n, n, true
+}
+
+// parseCardinalWord converts a lowercase English cardinal number word ("one",
+// "two", … "ten") to an integer. Returns (0, false) for unrecognized words.
+func parseCardinalWord(word string) (int, bool) {
+	switch strings.ToLower(word) {
+	case "one":
+		return 1, true
+	case "two":
+		return 2, true
+	case "three":
+		return 3, true
+	case "four":
+		return 4, true
+	case "five":
+		return 5, true
+	case "six":
+		return 6, true
+	case "seven":
+		return 7, true
+	case "eight":
+		return 8, true
+	case "nine":
+		return 9, true
+	case "ten":
+		return 10, true
+	default:
+		return 0, false
+	}
+}
+
+// lowerModalMode lowers one compiled mode into a game.Mode by routing through
+// the shared spell-effect lowering path. Mode-local targets, effects, keywords,
+// references, and source spans are all consumed independently.
+func lowerModalMode(
+	cardName string,
+	mode oracle.CompiledMode,
+	syntaxMode oracle.Mode,
+) (game.Mode, *oracle.Diagnostic) {
+	body := oracle.CompiledAbility{
+		Kind:       oracle.AbilitySpell,
+		Span:       mode.Span,
+		Text:       mode.Text,
+		Targets:    mode.Targets,
+		Conditions: mode.Conditions,
+		Effects:    mode.Effects,
+		Keywords:   mode.Keywords,
+		References: mode.References,
+	}
+	bodySyntax := oracle.Ability{
+		Kind:      oracle.AbilitySpell,
+		Span:      syntaxMode.Span,
+		Text:      syntaxMode.Text,
+		Tokens:    syntaxMode.Tokens,
+		Reminders: syntaxMode.Reminders,
+		Quoted:    syntaxMode.Quoted,
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.Mode{}, diagnostic
+	}
+	if content.IsModal() || len(content.Modes) != 1 {
+		return game.Mode{}, &oracle.Diagnostic{
+			Severity: oracle.SeverityWarning,
+			Summary:  "unsupported modal ability",
+			Detail:   "mode lowering produced unexpected modal content",
+			Span:     mode.Span,
+		}
+	}
+	return content.Modes[0], nil
 }
 
 func lowerActivatedAbility(

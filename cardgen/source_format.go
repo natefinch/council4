@@ -42,6 +42,12 @@ func layoutToLiteral(layout string) string {
 		return "game.LayoutDoubleFacedToken"
 	case "reversible_card":
 		return "game.LayoutReversibleCard"
+	case "adventure":
+		return "game.LayoutAdventure"
+	case "split":
+		return "game.LayoutSplit"
+	case "prepare":
+		return "game.LayoutPrepare"
 	default:
 		return ""
 	}

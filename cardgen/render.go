@@ -117,6 +117,9 @@ func (r Renderer) RenderCardSource(
 	} else {
 		root := rootFields(card)
 		faces := generatedFaces(card)
+		if len(faces) == 0 {
+			faces = alternateFields(card)
+		}
 		r.writeCardComment(&body, card, root, faces)
 		if err := r.writeCardDef(&body, ctx, defs[0], card.Layout, hints); err != nil {
 			return "", err
@@ -225,6 +228,14 @@ func (r Renderer) writeCardDef(
 		ctx.need(importOpt)
 		_, _ = b.WriteString("\tBack: opt.Val(game.CardFace{\n")
 		if err := r.writeFaceFields(b, ctx, &def.Back.Val, "\t\t", hintAt(hints, 1)); err != nil {
+			return err
+		}
+		_, _ = b.WriteString("\t}),\n")
+	}
+	if def.Alternate.Exists {
+		ctx.need(importOpt)
+		_, _ = b.WriteString("\tAlternate: opt.Val(game.CardFace{\n")
+		if err := r.writeFaceFields(b, ctx, &def.Alternate.Val, "\t\t", hintAt(hints, 1)); err != nil {
 			return err
 		}
 		_, _ = b.WriteString("\t}),\n")
@@ -441,6 +452,18 @@ func (r Renderer) renderFaceAbilityFields(ctx *renderCtx, face *game.CardFace, h
 			elements = append(elements, rendered+",")
 		}
 		fields = append(fields, sliceField("TriggeredAbilities", "game.TriggeredAbility", elements))
+	}
+
+	if len(face.LoyaltyAbilities) > 0 {
+		elements := make([]string, 0, len(face.LoyaltyAbilities))
+		for i := range face.LoyaltyAbilities {
+			rendered, err := r.renderLoyaltyAbility(ctx, &face.LoyaltyAbilities[i])
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("LoyaltyAbilities", "game.LoyaltyAbility", elements))
 	}
 
 	if len(face.ReplacementAbilities) > 0 {
@@ -726,6 +749,20 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	return structLit("game.TriggeredAbility", fields), nil
 }
 
+func (r Renderer) renderLoyaltyAbility(ctx *renderCtx, ability *game.LoyaltyAbility) (string, error) {
+	var fields []string
+	if ability.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
+	}
+	fields = append(fields, fmt.Sprintf("LoyaltyCost: %d,", ability.LoyaltyCost))
+	content, err := r.renderAbilityContent(ctx, ability.Content)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Content: %s,", content))
+	return structLit("game.LoyaltyAbility", fields), nil
+}
+
 func (r Renderer) renderTriggerCondition(trigger *game.TriggerCondition) (string, error) {
 	triggerType, err := renderTriggerType(trigger.Type)
 	if err != nil {
@@ -842,14 +879,38 @@ func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.Pe
 }
 
 func (r Renderer) renderAbilityContent(ctx *renderCtx, content game.AbilityContent) (string, error) {
-	if content.IsModal() {
-		return "", errors.New("render: modal ability content is not supported")
+	if !content.IsModal() {
+		mode, err := r.renderMode(ctx, content.Modes[0])
+		if err != nil {
+			return "", err
+		}
+		return mode + ".Ability()", nil
 	}
-	mode, err := r.renderMode(ctx, content.Modes[0])
-	if err != nil {
-		return "", err
+	return r.renderModalAbilityContent(ctx, content)
+}
+
+// renderModalAbilityContent renders a modal game.AbilityContent with multiple
+// modes, MinModes, and MaxModes as a game.AbilityContent struct literal.
+func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.AbilityContent) (string, error) {
+	if len(content.Modes) == 0 {
+		return "", errors.New("render: modal ability content has no modes")
 	}
-	return mode + ".Ability()", nil
+	modeElements := make([]string, 0, len(content.Modes))
+	for i := range content.Modes {
+		rendered, err := r.renderMode(ctx, content.Modes[i])
+		if err != nil {
+			return "", err
+		}
+		modeElements = append(modeElements, rendered+",")
+	}
+	fields := []string{sliceField("Modes", "game.Mode", modeElements)}
+	if content.MinModes != 0 {
+		fields = append(fields, fmt.Sprintf("MinModes: %d,", content.MinModes))
+	}
+	if content.MaxModes != 0 {
+		fields = append(fields, fmt.Sprintf("MaxModes: %d,", content.MaxModes))
+	}
+	return structLit("game.AbilityContent", fields), nil
 }
 
 func (r Renderer) renderMode(ctx *renderCtx, mode game.Mode) (string, error) {

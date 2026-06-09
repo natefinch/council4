@@ -710,3 +710,198 @@ func TestLowerFightSpell(t *testing.T) {
 		t.Fatalf("primitive = %+v, want targets 0 and 1 fight", mode.Sequence[0].Primitive)
 	}
 }
+
+func TestLowerLoyaltyAbilityPositiveCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Walker",
+		Layout:     "normal",
+		TypeLine:   "Legendary Planeswalker — Test",
+		OracleText: "+1: Draw a card.",
+		Loyalty:    func() *string { s := "3"; return &s }(),
+	})
+	if len(face.LoyaltyAbilities) != 1 {
+		t.Fatalf("got %d loyalty abilities, want 1", len(face.LoyaltyAbilities))
+	}
+	la := face.LoyaltyAbilities[0]
+	if la.LoyaltyCost != 1 {
+		t.Fatalf("LoyaltyCost = %d, want 1", la.LoyaltyCost)
+	}
+	if la.Content.IsModal() || len(la.Content.Modes) != 1 {
+		t.Fatalf("content = %+v, want single non-modal mode", la.Content)
+	}
+	draw, ok := la.Content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok || draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+		t.Fatalf("primitive = %+v, want controller draws one", la.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerLoyaltyAbilityNegativeCost(t *testing.T) {
+	t.Parallel()
+	loyaltyText := "\u22122: Target player mills three cards."
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Walker",
+		Layout:     "normal",
+		TypeLine:   "Legendary Planeswalker — Test",
+		OracleText: loyaltyText,
+		Loyalty:    func() *string { s := "4"; return &s }(),
+	})
+	if len(face.LoyaltyAbilities) != 1 {
+		t.Fatalf("got %d loyalty abilities, want 1", len(face.LoyaltyAbilities))
+	}
+	la := face.LoyaltyAbilities[0]
+	if la.LoyaltyCost != -2 {
+		t.Fatalf("LoyaltyCost = %d, want -2", la.LoyaltyCost)
+	}
+	mill, ok := la.Content.Modes[0].Sequence[0].Primitive.(game.Mill)
+	if !ok || mill.Amount.Value() != 3 {
+		t.Fatalf("primitive = %+v, want mills three", la.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerLoyaltyAbilityZeroCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Walker",
+		Layout:     "normal",
+		TypeLine:   "Legendary Planeswalker — Test",
+		OracleText: "0: Scry 2.",
+		Loyalty:    func() *string { s := "3"; return &s }(),
+	})
+	if len(face.LoyaltyAbilities) != 1 {
+		t.Fatalf("got %d loyalty abilities, want 1", len(face.LoyaltyAbilities))
+	}
+	la := face.LoyaltyAbilities[0]
+	if la.LoyaltyCost != 0 {
+		t.Fatalf("LoyaltyCost = %d, want 0", la.LoyaltyCost)
+	}
+	scry, ok := la.Content.Modes[0].Sequence[0].Primitive.(game.Scry)
+	if !ok || scry.Amount.Value() != 2 {
+		t.Fatalf("primitive = %+v, want scry two", la.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerLoyaltyAbilityMultiple(t *testing.T) {
+	t.Parallel()
+	oracleText := "+1: Draw a card.\n\u22122: You lose 3 life."
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Walker",
+		Layout:     "normal",
+		TypeLine:   "Legendary Planeswalker — Test",
+		OracleText: oracleText,
+		Loyalty:    func() *string { s := "3"; return &s }(),
+	})
+	if len(face.LoyaltyAbilities) != 2 {
+		t.Fatalf("got %d loyalty abilities, want 2", len(face.LoyaltyAbilities))
+	}
+	if face.LoyaltyAbilities[0].LoyaltyCost != 1 {
+		t.Fatalf("first LoyaltyCost = %d, want 1", face.LoyaltyAbilities[0].LoyaltyCost)
+	}
+	if face.LoyaltyAbilities[1].LoyaltyCost != -2 {
+		t.Fatalf("second LoyaltyCost = %d, want -2", face.LoyaltyAbilities[1].LoyaltyCost)
+	}
+}
+
+func TestLowerLoyaltyAbilityVariableCostRejected(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Walker",
+		Layout:     "normal",
+		TypeLine:   "Legendary Planeswalker — Test",
+		OracleText: "\u2212X: Target player mills X cards.",
+		Loyalty:    func() *string { s := "3"; return &s }(),
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for variable loyalty cost, got none")
+	}
+}
+
+func TestLowerModalChooseOneSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Charm",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Choose one \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("no spell ability")
+	}
+	content := face.SpellAbility.Val
+	if !content.IsModal() {
+		t.Fatal("spell ability is not modal")
+	}
+	if len(content.Modes) != 2 {
+		t.Fatalf("got %d modes, want 2", len(content.Modes))
+	}
+	if content.MinModes != 1 || content.MaxModes != 1 {
+		t.Fatalf("MinModes=%d MaxModes=%d, want both 1", content.MinModes, content.MaxModes)
+	}
+	draw, ok := content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok || draw.Amount.Value() != 1 {
+		t.Fatalf("mode 0 primitive = %+v, want draw one", content.Modes[0].Sequence[0].Primitive)
+	}
+	gain, ok := content.Modes[1].Sequence[0].Primitive.(game.GainLife)
+	if !ok || gain.Amount.Value() != 3 {
+		t.Fatalf("mode 1 primitive = %+v, want gain 3 life", content.Modes[1].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerModalChooseOneWithTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Charm",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Choose one \u2014\n\u2022 Destroy target artifact.\n\u2022 Draw a card.",
+	})
+	content := face.SpellAbility.Val
+	if !content.IsModal() || len(content.Modes) != 2 {
+		t.Fatalf("content = %+v, want modal with 2 modes", content)
+	}
+	if len(content.Modes[0].Targets) != 1 {
+		t.Fatalf("mode 0 targets = %+v, want one target", content.Modes[0].Targets)
+	}
+	if _, ok := content.Modes[0].Sequence[0].Primitive.(game.Destroy); !ok {
+		t.Fatalf("mode 0 primitive = %T, want game.Destroy", content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerModalChooseOneOrBothRejected(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Charm",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Choose one or both \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for choose one or both, got none")
+	}
+}
+
+func TestLowerModalChooseTwoRejected(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Charm",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Choose two \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.\n\u2022 Scry 1.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for choose two, got none")
+	}
+}
+
+func TestLowerModalUnsupportedModeBodyRejected(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Charm",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Choose one \u2014\n\u2022 Draw a card.\n\u2022 Search your library for a card.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for unsupported mode body, got none")
+	}
+}

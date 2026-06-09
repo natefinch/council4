@@ -4,11 +4,10 @@ This document is both the rollout checklist and the execution guide for
 expanding executable Oracle-text compilation. An agent should be able to resume
 from this file without relying on conversation history.
 
-**Current corpus support: 2,212 / 38,101 cards**
+**Current corpus support: 2,231 / 38,101 cards**
 
 The expansion plan was established in `7e65c8e` (`compiler expansion plan`).
-Expansion steps 1–7 are complete. Begin with step 8 and do not combine numbered
-steps into one commit.
+Expansion steps 1–10 are complete.
 
 ## Goal
 
@@ -430,7 +429,7 @@ Selection{RequiredTypes:[Creature]}, SourcePermanentReference())`.
 
 ### 9. Loyalty and modal abilities
 
-- [ ] Complete and commit step 9.
+- [x] Complete and commit step 9.
 
 **Planning signal:** 695 loyalty blockers plus 335 modal blockers.
 
@@ -455,9 +454,19 @@ Reject variable mode counts, repeatable modes, "choose one or both," entwine,
 escalate, hidden mode dependencies, and any target-index arrangement that is not
 represented exactly.
 
+Completed with loyalty ability infrastructure and "Choose one" modal spells.
+The corpus moved from 2,158 to 2,164 generated cards (+6); all 6 newly
+supported cards were "Choose one" modal Instants/Sorceries and were inspected
+with no false positives. Zero loyalty-ability cards were generated because every
+planeswalker in the corpus has at least one ability body too complex for the
+current lowerer, but the full loyalty lowering pipeline (cost parsing, effect
+lowering, rendering) is in place.
+
+Choose-N with N≥2 and choose-one-or-both variants remain unsupported (#16).
+
 ### 10. Layouts, then frequency-driven mechanics
 
-- [ ] Complete and commit step 10.
+- [x] Complete and commit step 10.
 
 **Planning signal:** 344 playable layout blockers and 10,288 Oracle constructs.
 
@@ -480,6 +489,20 @@ the same vertical-slice, corpus, Opus review, validation, and commit gates.
 
 Do not optimize for diagnostic count alone. Prefer reusable compiler and game
 model depth that safely unlocks several exact families.
+
+Completed with exact Adventure and split layout support in both the typed card
+definition pipeline and runtime casting/resolution paths, including
+`Alternate`-face rendering, hand-casting of alternate spell faces, split-half
+casting, and Adventure exile tracking plus creature recasting from exile.
+`prepare` was removed from the generator support list because its prepared-state
+and copy-casting runtime semantics are still unimplemented; deferred follow-up
+is tracked in issue #18. This step also fixed the `objectWord` mechanical bug
+so exact "This artifact enters tapped." replacements now lower successfully.
+The corpus moved from 2,164 to 2,176 generated cards (+12): 5 Adventure cards,
+2 split cards, and 5 normal artifact mana rocks unlocked by the
+object-reference fix. Every newly generated card in
+`.cardwork/step-10-delta.json` was inspected after the runtime fixes, and the
+delta contains no remaining false positives.
 
 ## Known technical limits
 

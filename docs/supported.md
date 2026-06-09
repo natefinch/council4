@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,212
+Cards supported: 2,231
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -11,6 +11,7 @@ Cards supported: 2,212
 - Aardvark Sloth
 - Abbey Gargoyles
 - Abbey Griffin
+- Abrade
 - Abyssal Horror
 - Acolyte of Xathrid
 - Adult Gold Dragon
@@ -303,6 +304,7 @@ Cards supported: 2,212
 - Chant of the Skifsang
 - Chapel Geist
 - Chaplain's Blessing
+- Charcoal Diamond
 - Chardalyn Dragon
 - Charging Badger
 - Charging Monstrosaur
@@ -348,6 +350,7 @@ Cards supported: 2,212
 - Conservatory
 - Constricting Tendrils
 - Consulate Skygate
+- Consult the Necrosages
 - Contagious Nim
 - Contaminated Aquifer
 - Contingency Plan
@@ -551,6 +554,7 @@ Cards supported: 2,212
 - Elvish Ranger
 - Elvish Visionary
 - Elvish Warrior
+- Embereth Shieldbreaker // Battle Display
 - Enatu Golem
 - Enforcer Griffin
 - Engulfing Eruption
@@ -560,6 +564,7 @@ Cards supported: 2,212
 - Enraged Giant
 - Enraged Killbot
 - Erase
+- Esper Charm
 - Esper Cormorants
 - Ethercaste Knight
 - Eviscerate
@@ -607,6 +612,7 @@ Cards supported: 2,212
 - Field Creeper
 - Fields of Strife
 - Fiery Finish
+- Fiery Intervention
 - Fighting Drake
 - Filigree Familiar
 - Filigree Sages
@@ -614,6 +620,7 @@ Cards supported: 2,212
 - Final Death
 - Final Reward
 - Fire Ambush
+- Fire Diamond
 - Fire Elemental
 - Fire Nation Ambushers
 - Fire Nation Soldier
@@ -683,6 +690,7 @@ Cards supported: 2,212
 - Galina's Knight
 - Gallant Citizen
 - Galvanic Key
+- Garenbrig Carver // Shield's Might
 - Gargoyle
 - Garruk's Companion
 - Garruk's Gorehorn
@@ -1123,6 +1131,7 @@ Cards supported: 2,212
 - Marauder's Axe
 - Maraxus
 - Marble Chalice
+- Marble Diamond
 - Marit Lage
 - Maritime Guard
 - Markov Patrician
@@ -1137,6 +1146,7 @@ Cards supported: 2,212
 - Mer Man
 - Merchant of Secrets
 - Merfolk Mesmerist
+- Merfolk Secretkeeper // Venture Deeper
 - Merfolk Wizard
 - Merfolk of the Depths
 - Merfolk of the Pearl Trident
@@ -1152,6 +1162,7 @@ Cards supported: 2,212
 - Millennial Gargoyle
 - Millstone
 - Mind Rot
+- Minecart Daredevil // Ride the Rails
 - Minion
 - Minotaur
 - Minotaur Abomination
@@ -1184,6 +1195,7 @@ Cards supported: 2,212
 - Moonglove Winnower
 - Moorish Cavalry
 - Moriok Reaver
+- Moss Diamond
 - Moss Kami
 - Moss Monster
 - Moss Viper
@@ -1269,6 +1281,7 @@ Cards supported: 2,212
 - Obelisk of Naya
 - Obsianus Golem
 - Obsidian Giant
+- Obyra's Attendants // Desperate Parry
 - Octopus
 - Oculus
 - Oggyar Battle-Seer
@@ -1308,6 +1321,7 @@ Cards supported: 2,212
 - Overkill
 - Oversoul of Dusk
 - Oxidda Scrapmelter
+- Pain // Suffering
 - Palace Familiar
 - Paladin en-Vec
 - Panther Warriors
@@ -1469,6 +1483,7 @@ Cards supported: 2,212
 - Ridge Rannet
 - Rimeshield Frost Giant
 - Rimewood Falls
+- Rimrock Knight // Boulder Rush
 - Ringwarden Owl
 - Riot Devils
 - Riot Gear
@@ -1674,6 +1689,7 @@ Cards supported: 2,212
 - Skeletal Snake
 - Skeleton Pirate
 - Skull Prophet
+- Sky Diamond
 - Sky Ruin Drake
 - Sky Spirit
 - Sky Terror
@@ -1762,6 +1778,7 @@ Cards supported: 2,212
 - Stark Industries
 - Starlight Invoker
 - Starlit Angel
+- Start from Scratch
 - Staunch Defenders
 - Staunch Shieldmate
 - Steadfast Guard
@@ -1967,6 +1984,7 @@ Cards supported: 2,212
 - Ultramarines Honour Guard
 - Umara Entangler
 - Umbral Expanse
+- Umezawa's Charm
 - Unburden
 - Undead Minotaur
 - Underdark Basilisk
@@ -2107,6 +2125,7 @@ Cards supported: 2,212
 - Water Elemental
 - Waterfall Aerialist
 - Waveskimmer Aven
+- Wax // Wane
 - Wayward Giant
 - Weakness
 - Weatherseed Faeries
