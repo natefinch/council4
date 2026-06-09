@@ -216,6 +216,18 @@ func TestTapManaChoiceAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestTapManaChoiceAbilitySupportsColorlessMana(t *testing.T) {
+	ability := TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.C)
+
+	if ability.Text != "{T}: Add {W}, {U}, {B}, or {C}." {
+		t.Fatalf("text = %q, want explicit mana symbols", ability.Text)
+	}
+	choose, ok := ability.Content.Modes[0].Sequence[0].Primitive.(Choose)
+	if !ok || choose.Choice.Prompt != "Choose a type of mana" {
+		t.Fatalf("choice = %+v, want mana-type prompt", choose)
+	}
+}
+
 func TestBodyAccessors(t *testing.T) {
 	targets := []TargetSpec{{MinTargets: 1, MaxTargets: 1}}
 	activationCondition := opt.Val(Condition{SourceNotMonstrous: true})

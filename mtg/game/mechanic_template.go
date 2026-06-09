@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -107,6 +108,10 @@ func manaSymbol(manaColor mana.Color) string {
 func TapManaChoiceAbility(colors ...mana.Color) ManaAbility {
 	manaColors := append([]mana.Color(nil), colors...)
 	validateManaColorChoice(manaColors)
+	prompt := "Choose a color"
+	if containsManaColor(manaColors, mana.C) {
+		prompt = "Choose a type of mana"
+	}
 	return ManaAbility{
 		Text:            tapManaChoiceText(manaColors),
 		AdditionalCosts: cost.Tap,
@@ -115,7 +120,7 @@ func TapManaChoiceAbility(colors ...mana.Color) ManaAbility {
 				Primitive: Choose{
 					Choice: ResolutionChoice{
 						Kind:   ResolutionChoiceMana,
-						Prompt: "Choose a color",
+						Prompt: prompt,
 						Colors: manaColors,
 					},
 					PublishChoice: tapManaChoiceKey,
@@ -132,13 +137,13 @@ func TapManaChoiceAbility(colors ...mana.Color) ManaAbility {
 }
 
 func validateManaColorChoice(colors []mana.Color) {
-	if len(colors) < 2 || len(colors) > 5 {
-		panic("game: tap mana choice requires two through five colors")
+	if len(colors) < 2 || len(colors) > 6 {
+		panic("game: tap mana choice requires two through six mana types")
 	}
 	seen := make(map[mana.Color]struct{}, len(colors))
 	for _, manaColor := range colors {
 		switch manaColor {
-		case mana.W, mana.U, mana.B, mana.R, mana.G:
+		case mana.W, mana.U, mana.B, mana.R, mana.G, mana.C:
 		default:
 			panic(fmt.Sprintf("game: invalid mana color choice %q", manaColor))
 		}
@@ -150,12 +155,17 @@ func validateManaColorChoice(colors []mana.Color) {
 }
 
 func tapManaChoiceText(colors []mana.Color) string {
-	if len(colors) == 5 {
+	if len(colors) == 5 &&
+		colors[0] == mana.W &&
+		colors[1] == mana.U &&
+		colors[2] == mana.B &&
+		colors[3] == mana.R &&
+		colors[4] == mana.G {
 		return "{T}: Add one mana of any color."
 	}
 	symbols := make([]string, len(colors))
 	for i, manaColor := range colors {
-		symbols[i] = fmt.Sprintf("{%s}", manaColor)
+		symbols[i] = fmt.Sprintf("{%s}", manaSymbol(manaColor))
 	}
 	if len(symbols) == 2 {
 		return fmt.Sprintf("{T}: Add %s or %s.", symbols[0], symbols[1])
@@ -165,4 +175,8 @@ func tapManaChoiceText(colors []mana.Color) string {
 		strings.Join(symbols[:len(symbols)-1], ", "),
 		symbols[len(symbols)-1],
 	)
+}
+
+func containsManaColor(colors []mana.Color, want mana.Color) bool {
+	return slices.Contains(colors, want)
 }

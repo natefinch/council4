@@ -619,13 +619,13 @@ func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
 		return nil, false
 	}
 	choose, ok := content.Modes[0].Sequence[0].Primitive.(game.Choose)
-	if !ok || len(choose.Choice.Colors) < 2 || len(choose.Choice.Colors) > 5 {
+	if !ok || len(choose.Choice.Colors) < 2 || len(choose.Choice.Colors) > 6 {
 		return nil, false
 	}
 	seen := make(map[mana.Color]struct{}, len(choose.Choice.Colors))
 	for _, manaColor := range choose.Choice.Colors {
 		switch manaColor {
-		case mana.W, mana.U, mana.B, mana.R, mana.G:
+		case mana.W, mana.U, mana.B, mana.R, mana.G, mana.C:
 		default:
 			return nil, false
 		}
