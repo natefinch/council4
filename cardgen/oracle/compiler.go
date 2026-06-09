@@ -399,21 +399,33 @@ func compileEffects(
 }
 
 func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect, bool) {
-	if sentence.Text != "This creature can't block." {
+	var kind EffectKind
+	var verb string
+	var selector CompiledSelector
+	switch sentence.Text {
+	case "This creature can't block.":
+		kind = EffectCantBlock
+		verb = "block"
+		selector = CompiledSelector{
+			Kind: SelectorCreature,
+			Raw:  "this creature",
+		}
+	case "This spell can't be countered.":
+		kind = EffectCantBeCountered
+		verb = "countered"
+		selector = CompiledSelector{Raw: "this spell"}
+	default:
 		return CompiledEffect{}, false
 	}
 	for _, token := range tokens {
-		if equalWord(token, "block") {
+		if equalWord(token, verb) {
 			return CompiledEffect{
-				Kind:     EffectCantBlock,
+				Kind:     kind,
 				Span:     sentence.Span,
 				Text:     sentence.Text,
 				VerbSpan: token.Span,
-				Selector: CompiledSelector{
-					Kind: SelectorCreature,
-					Raw:  "this creature",
-				},
-				Negated: true,
+				Selector: selector,
+				Negated:  true,
 			}, true
 		}
 	}

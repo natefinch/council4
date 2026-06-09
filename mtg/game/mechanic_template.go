@@ -24,6 +24,16 @@ var CantBlockStaticBody = StaticAbility{
 	}},
 }
 
+// CantBeCounteredStaticBody is the complete static ability for an uncounterable spell.
+var CantBeCounteredStaticBody = StaticAbility{
+	Text:           "This spell can't be countered.",
+	ZoneOfFunction: zone.Stack,
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantBeCountered,
+		AffectedSource: true,
+	}},
+}
+
 // WardStaticAbility builds the complete static ability for Ward with a mana cost.
 func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	keywordCost := append(cost.Mana(nil), manaCost...)

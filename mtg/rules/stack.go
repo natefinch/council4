@@ -250,6 +250,9 @@ func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 		if effect.Kind != game.RuleEffectCantBeCountered {
 			continue
 		}
+		if effect.AffectedObjectID != 0 && effect.AffectedObjectID != obj.ID {
+			continue
+		}
 		if !controllerRelationMatches(effect.Controller, obj.Controller, effect.AffectedController) {
 			continue
 		}

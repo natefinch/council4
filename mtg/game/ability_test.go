@@ -149,6 +149,22 @@ func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestCantBeCounteredStaticBodyBuildsCompleteMechanic(t *testing.T) {
+	if CantBeCounteredStaticBody.Text != "This spell can't be countered." {
+		t.Fatalf("text = %q", CantBeCounteredStaticBody.Text)
+	}
+	if CantBeCounteredStaticBody.ZoneOfFunction != zone.Stack {
+		t.Fatalf("zone = %v, want stack", CantBeCounteredStaticBody.ZoneOfFunction)
+	}
+	if len(CantBeCounteredStaticBody.RuleEffects) != 1 {
+		t.Fatalf("rule effects = %+v", CantBeCounteredStaticBody.RuleEffects)
+	}
+	effect := CantBeCounteredStaticBody.RuleEffects[0]
+	if effect.Kind != RuleEffectCantBeCountered || !effect.AffectedSource {
+		t.Fatalf("rule effect = %+v", effect)
+	}
+}
+
 func TestWardStaticAbilityBuildsCompleteMechanic(t *testing.T) {
 	manaCost := cost.Mana{cost.O(2), cost.U}
 	ability := WardStaticAbility(manaCost)
