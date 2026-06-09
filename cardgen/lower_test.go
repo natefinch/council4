@@ -256,6 +256,128 @@ func TestLowerEntersTappedReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerConditionalEntersTappedReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Vista",
+		Layout:     "normal",
+		TypeLine:   "Land — Forest Plains",
+		OracleText: "This land enters tapped unless you control two or more basic lands.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	repl := face.ReplacementAbilities[0]
+	if !repl.Replacement.EntersTapped {
+		t.Fatal("replacement is not an enters-tapped replacement")
+	}
+	if !repl.Replacement.Condition.Exists {
+		t.Fatal("conditional replacement has no condition")
+	}
+	cond := repl.Replacement.Condition.Val
+	if !cond.Negate {
+		t.Fatal("condition should be negated (unless)")
+	}
+	filter := cond.ControllerControls
+	if len(filter.Types) != 1 || filter.Types[0] != types.Land {
+		t.Fatalf("filter types = %#v, want [types.Land]", filter.Types)
+	}
+	if len(filter.Supertypes) != 1 || filter.Supertypes[0] != types.Basic {
+		t.Fatalf("filter supertypes = %#v, want [types.Basic]", filter.Supertypes)
+	}
+	if filter.MinCount != 2 {
+		t.Fatalf("filter MinCount = %d, want 2", filter.MinCount)
+	}
+}
+
+func TestLowerReminderManaAbilitySingleColor(t *testing.T) {
+	t.Parallel()
+	// Basic lands express their mana ability as a parenthesized reminder.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Forest",
+		Layout:     "normal",
+		TypeLine:   "Basic Land — Forest",
+		OracleText: "({T}: Add {G}.)",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	mode := face.ManaAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("got %d instructions, want 1", len(mode.Sequence))
+	}
+	addMana, ok := mode.Sequence[0].Primitive.(game.AddMana)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.AddMana", mode.Sequence[0].Primitive)
+	}
+	if addMana.ManaColor != mana.G {
+		t.Fatalf("mana color = %q, want mana.G", addMana.ManaColor)
+	}
+}
+
+func TestLowerReminderManaAbilityChoice(t *testing.T) {
+	t.Parallel()
+	// Dual lands express their mana ability as a parenthesized reminder.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Dual",
+		Layout:     "normal",
+		TypeLine:   "Land — Mountain Forest",
+		OracleText: "({T}: Add {R} or {G}.)",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	mode := face.ManaAbilities[0].Content.Modes[0]
+	choose, ok := mode.Sequence[0].Primitive.(game.Choose)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Choose", mode.Sequence[0].Primitive)
+	}
+	if choose.Choice.Kind != game.ResolutionChoiceMana {
+		t.Fatalf("choice kind = %v, want ResolutionChoiceMana", choose.Choice.Kind)
+	}
+	if len(choose.Choice.Colors) != 2 {
+		t.Fatalf("choice colors = %#v, want two colors", choose.Choice.Colors)
+	}
+}
+
+func TestLowerReminderManaAbilityRejectsHybridCost(t *testing.T) {
+	t.Parallel()
+	// Hybrid-mana cost reminders are not mana abilities; they must be rejected.
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Hybrid",
+		Layout:     "normal",
+		TypeLine:   "Creature — Soldier",
+		OracleText: "({R/W} can be paid with either {R} or {W}.)\nFirst strike",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for hybrid-cost reminder, got none")
+	}
+}
+
+func TestLowerReminderManaAbilityRejectsNonMana(t *testing.T) {
+	t.Parallel()
+	// A parenthesized reminder that is not a mana ability must be rejected.
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Card",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "(This creature can block as though it had flying.)\nFlying",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for non-mana reminder, got none")
+	}
+}
+
 func TestLowerEnterTrigger(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

@@ -321,10 +321,13 @@ func lowerExecutableAbility(
 			replacementAbility: opt.Val(replacementAbility),
 			consumed: semanticConsumption{
 				effects:    1,
+				conditions: len(ability.Conditions),
 				references: len(ability.References),
 			},
 			sourceSpans: []oracle.Span{ability.Effects[0].Span},
 		}, nil
+	case oracle.AbilityReminder:
+		return lowerReminderManaAbility(ability)
 	default:
 		return abilityLowering{}, executableDiagnostic(
 			ability,
@@ -704,13 +707,58 @@ func lowerCyclingAbility(
 	return game.CyclingActivatedAbility(manaCost), true, nil
 }
 
+// lowerReminderManaAbility handles a parenthesized reminder mana ability such
+// as "({T}: Add {R} or {G}.)" — reminder text that describes the tap-for-mana
+// behavior granted by basic-land subtypes. These are compiled with no semantic
+// elements because their content is filtered as parenthesized. We re-compile
+// the inner text and lower it as a mana ability.
+func lowerReminderManaAbility(
+	ability oracle.CompiledAbility,
+) (abilityLowering, *oracle.Diagnostic) {
+	unsupported := func() *oracle.Diagnostic {
+		return executableDiagnostic(
+			ability,
+			"unsupported reminder ability",
+			"the executable source backend does not yet lower reminder abilities",
+		)
+	}
+	if len(ability.Text) < 2 ||
+		ability.Text[0] != '(' ||
+		ability.Text[len(ability.Text)-1] != ')' {
+		return abilityLowering{}, unsupported()
+	}
+	inner := strings.TrimSpace(ability.Text[1 : len(ability.Text)-1])
+	innerComp, innerDiags := oracle.Compile(inner, oracle.ParseContext{})
+	if len(innerDiags) != 0 ||
+		len(innerComp.Abilities) != 1 ||
+		innerComp.Abilities[0].Kind != oracle.AbilityActivated {
+		return abilityLowering{}, unsupported()
+	}
+	innerAbility := innerComp.Abilities[0]
+	innerSyntax := innerComp.Syntax.Abilities[0]
+	if !hasAddManaEffect(innerAbility) {
+		return abilityLowering{}, unsupported()
+	}
+	manaAbility, diagnostic := lowerTapManaAbility(innerAbility, innerSyntax)
+	if diagnostic != nil {
+		return abilityLowering{}, unsupported()
+	}
+	// The compiled reminder ability has no independent semantic elements;
+	// all content is filtered as parenthesized. The consumed counts are all
+	// zero, matching the empty CompiledAbility fields.
+	return abilityLowering{
+		manaAbility: opt.Val(manaAbility),
+		consumed:    semanticConsumption{},
+		sourceSpans: []oracle.Span{ability.Span},
+	}, nil
+}
+
 func lowerEntersTappedReplacement(
 	ability oracle.CompiledAbility,
 ) (game.ReplacementAbility, *oracle.Diagnostic) {
 	if len(ability.Effects) != 1 ||
 		ability.Effects[0].Kind != oracle.EffectEnterTapped ||
 		len(ability.Targets) != 0 ||
-		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		len(ability.References) != 1 ||
@@ -719,6 +767,16 @@ func lowerEntersTappedReplacement(
 			ability,
 			"unsupported enters-tapped replacement",
 			"the executable source backend supports only exact unconditional self enters-tapped replacements",
+		)
+	}
+	if len(ability.Conditions) == 1 {
+		return lowerConditionalEntersTappedReplacement(ability)
+	}
+	if len(ability.Conditions) != 0 {
+		return game.ReplacementAbility{}, executableDiagnostic(
+			ability,
+			"unsupported enters-tapped replacement",
+			"the executable source backend supports only zero or one condition for self enters-tapped replacements",
 		)
 	}
 	switch ability.Text {
@@ -734,6 +792,33 @@ func lowerEntersTappedReplacement(
 		)
 	}
 	return game.EntersTappedReplacement(ability.Text), nil
+}
+
+// lowerConditionalEntersTappedReplacement handles the exact wording family
+// "This land enters tapped unless you control two or more basic lands.".
+func lowerConditionalEntersTappedReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, *oracle.Diagnostic) {
+	condition := ability.Conditions[0]
+	const supportedConditionText = "unless you control two or more basic lands"
+	const supportedAbilityText = "This land enters tapped unless you control two or more basic lands."
+	if condition.Kind != oracle.ConditionUnless ||
+		condition.Text != supportedConditionText ||
+		ability.Text != supportedAbilityText {
+		return game.ReplacementAbility{}, executableDiagnostic(
+			ability,
+			"unsupported conditional enters-tapped replacement",
+			"the executable source backend supports only the exact condition: unless you control two or more basic lands",
+		)
+	}
+	return game.EntersTappedIfReplacement(ability.Text, &game.Condition{
+		Negate: true,
+		ControllerControls: game.PermanentFilter{
+			Types:      []types.Card{types.Land},
+			Supertypes: []types.Super{types.Basic},
+			MinCount:   2,
+		},
+	}), nil
 }
 
 func (lowering *abilityLowering) complete(

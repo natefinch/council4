@@ -446,7 +446,7 @@ func (r Renderer) renderFaceAbilityFields(ctx *renderCtx, face *game.CardFace, h
 	if len(face.ReplacementAbilities) > 0 {
 		elements := make([]string, 0, len(face.ReplacementAbilities))
 		for i := range face.ReplacementAbilities {
-			rendered, err := r.renderReplacementAbility(&face.ReplacementAbilities[i])
+			rendered, err := r.renderReplacementAbility(ctx, &face.ReplacementAbilities[i])
 			if err != nil {
 				return nil, err
 			}
@@ -714,13 +714,88 @@ func (Renderer) renderTriggerPattern(pattern *game.TriggerPattern) (string, erro
 	return structLit("game.TriggerPattern", fields), nil
 }
 
-func (Renderer) renderReplacementAbility(ability *game.ReplacementAbility) (string, error) {
-	if ability.Replacement.EntersTapped &&
-		!ability.Replacement.Condition.Exists &&
-		!ability.UnlessPaid.Exists {
-		return fmt.Sprintf("game.EntersTappedReplacement(%q)", ability.Text), nil
+func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.EntersTapped && !ability.UnlessPaid.Exists {
+		if !ability.Replacement.Condition.Exists {
+			return fmt.Sprintf("game.EntersTappedReplacement(%q)", ability.Text), nil
+		}
+		condStr, err := r.renderConditionForETBReplacement(ctx, &ability.Replacement.Condition.Val)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EntersTappedIfReplacement(%q, %s)", ability.Text, condStr), nil
 	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+// renderConditionForETBReplacement renders a game.Condition for use in a
+// conditional enters-tapped replacement. Only the exact supported shape is
+// accepted; any other combination returns an error.
+func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Condition) (string, error) {
+	// Reject unsupported condition fields.
+	if cond.ControlsMatching.Exists ||
+		cond.Object.Exists ||
+		len(cond.Types) != 0 ||
+		cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures ||
+		cond.SourceClassLevelAtLeast != 0 ||
+		cond.SourceClassLevelLessThan != 0 ||
+		cond.SourceNotMonstrous ||
+		cond.ControllerHasMaxSpeed ||
+		cond.TargetEnteredThisTurn.Exists ||
+		cond.CastFromZone.Exists {
+		return "", errors.New("render: unsupported condition shape for ETB replacement")
+	}
+	filter := cond.ControllerControls
+	if filter.Empty() {
+		return "", errors.New("render: ETB replacement condition has no ControllerControls filter")
+	}
+	// Reject unsupported PermanentFilter fields.
+	if len(filter.SubtypesAny) != 0 ||
+		filter.Power.Exists ||
+		filter.Toughness.Exists ||
+		filter.TotalPower.Exists ||
+		filter.ExcludeSource {
+		return "", errors.New("render: unsupported PermanentFilter shape for ETB replacement condition")
+	}
+	filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
+	if err != nil {
+		return "", err
+	}
+	var fields []string
+	if cond.Negate {
+		fields = append(fields, "Negate: true,")
+	}
+	fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
+	return "&" + structLit("game.Condition", fields), nil
+}
+
+// renderPermanentFilterForCondition renders a game.PermanentFilter with only
+// Types, Supertypes, and MinCount for use in condition rendering.
+func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {
+	var fields []string
+	if len(filter.Types) > 0 {
+		lits, err := renderTypesCardSlice(ctx, filter.Types)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Types: %s,", lits))
+	}
+	if len(filter.Supertypes) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(filter.Supertypes))
+		for _, st := range filter.Supertypes {
+			lit, err := supertypeLiteral(st)
+			if err != nil {
+				return "", err
+			}
+			literals = append(literals, lit)
+		}
+		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
+	}
+	if filter.MinCount != 0 {
+		fields = append(fields, fmt.Sprintf("MinCount: %d,", filter.MinCount))
+	}
+	return structLit("game.PermanentFilter", fields), nil
 }
 
 func (r Renderer) renderAbilityContent(ctx *renderCtx, content game.AbilityContent) (string, error) {

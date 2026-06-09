@@ -201,6 +201,82 @@ func TestGenerateExecutableCardSourceEntersTapped(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEntersTappedUnlessTwoBasicLands(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Vista",
+		Layout:     "normal",
+		TypeLine:   "Land — Forest Plains",
+		OracleText: "This land enters tapped unless you control two or more basic lands.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// gofmt aligns PermanentFilter fields; check value literals rather than
+	// aligned field assignments to stay resilient to column-width changes.
+	for _, wanted := range []string{
+		"game.EntersTappedIfReplacement",
+		"Negate: true",
+		"[]types.Card{types.Land}",
+		"[]types.Super{types.Basic}",
+		"MinCount:",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped
+// verifies that near-miss conditions outside the supported wording family are
+// rejected. Supported: "unless you control two or more basic lands".
+func TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+	}{
+		{
+			name:       "unless single basic land",
+			oracleText: "This land enters tapped unless you control a basic land.",
+		},
+		{
+			name:       "unless two or more non-basic lands",
+			oracleText: "This land enters tapped unless you control two or more lands.",
+		},
+		{
+			name:       "if instead of unless",
+			oracleText: "This land enters tapped if you control two or more basic lands.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Vista",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: tt.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" {
+				t.Fatalf("source = %q, want no partial card for near-miss wording", source)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected diagnostics for unsupported condition, got none")
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceBackFaceEntersTappedOnce(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

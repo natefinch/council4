@@ -4,10 +4,10 @@ This document is both the rollout checklist and the execution guide for
 expanding executable Oracle-text compilation. An agent should be able to resume
 from this file without relying on conversation history.
 
-**Current corpus support: 2,010 / 37,628 cards**
+**Current corpus support: 2,080 / 37,628 cards**
 
 The expansion plan was established in `7e65c8e` (`compiler expansion plan`).
-Expansion steps 1–6 are complete. Begin with step 7 and do not combine numbered
+Expansion steps 1–7 are complete. Begin with step 8 and do not combine numbered
 steps into one commit.
 
 ## Goal
@@ -331,7 +331,7 @@ type lines.
 
 ### 7. Conditional enters-tapped replacements
 
-- [ ] Complete and commit step 7.
+- [x] Complete and commit step 7.
 
 **Planning signal:** 1,247 blockers.
 
@@ -351,6 +351,29 @@ Implementation guidance:
 Reject any condition that requires missing information, linked choices,
 unrepresented land-type logic, or a payment form the rules cannot offer and
 apply exactly.
+
+Completed with two unlocked families. The corpus moved from 2,010 to 2,080
+generated cards (+70); all newly supported cards were inspected with no false
+positives.
+
+**Family A — conditional enters-tapped (10 cards):** Canopy Vista, Cinder
+Glade, Eclipsed Steppe, Prairie Stream, Radiant Summit, Scorched Geyser,
+Smoldering Marsh, Sodden Verdure, Sunken Hollow, Vernal Fen. Wording: "This
+land enters tapped unless you control two or more basic lands." Lowered to
+`game.EntersTappedIfReplacement` with `game.Condition{Negate: true,
+ControllerControls: game.PermanentFilter{Types: []types.Card{types.Land},
+Supertypes: []types.Super{types.Basic}, MinCount: 2}}`.
+
+**Family B — parenthesized mana ability reminder (60 cards):** Basic lands
+(Forest, Island, Mountain, Plains, Swamp, snow-covered variants), old dual
+lands (Badlands, Bayou, Plateau, Savannah, Scrubland, Taiga, Tropical Island,
+Tundra, Underground Sea, Volcanic Island), bicycle lands (Canyon Slough, Fetid
+Pools, etc.), and triomes (Indatha Triome, Jetmir's Garden, Ketria Triome,
+etc.). These cards had only parenthesized reminder mana ability text; the
+compiler now recognises `AbilityReminder` abilities whose inner content is an
+activated mana ability and lowers them through the existing `lowerTapManaAbility`
+path. Hybrid-mana cost reminders (e.g. `({R/W} can be paid with…)`) remain
+unsupported and are correctly rejected.
 
 ### 8. Common static effects
 
