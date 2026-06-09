@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,158
+Cards supported: 2,164
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -9,6 +9,7 @@ Cards supported: 2,158
 - Aardvark Sloth
 - Abbey Gargoyles
 - Abbey Griffin
+- Abrade
 - Abyssal Horror
 - Acolyte of Xathrid
 - Adult Gold Dragon
@@ -338,6 +339,7 @@ Cards supported: 2,158
 - Conservatory
 - Constricting Tendrils
 - Consulate Skygate
+- Consult the Necrosages
 - Contagious Nim
 - Contaminated Aquifer
 - Contingency Plan
@@ -547,6 +549,7 @@ Cards supported: 2,158
 - Enraged Giant
 - Enraged Killbot
 - Erase
+- Esper Charm
 - Esper Cormorants
 - Ethercaste Knight
 - Eviscerate
@@ -593,6 +596,7 @@ Cards supported: 2,158
 - Field Creeper
 - Fields of Strife
 - Fiery Finish
+- Fiery Intervention
 - Fighting Drake
 - Filigree Familiar
 - Filigree Sages
@@ -1717,6 +1721,7 @@ Cards supported: 2,158
 - Stangg Twin
 - Starlight Invoker
 - Starlit Angel
+- Start from Scratch
 - Staunch Defenders
 - Staunch Shieldmate
 - Steadfast Guard
@@ -1919,6 +1924,7 @@ Cards supported: 2,158
 - Ultramarines Honour Guard
 - Umara Entangler
 - Umbral Expanse
+- Umezawa's Charm
 - Unburden
 - Undead Minotaur
 - Underdark Basilisk
