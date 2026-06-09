@@ -1,5 +1,7 @@
 package cardgen
 
+import "strings"
+
 type scryfallFaceFields struct {
 	Name       string
 	Layout     string
@@ -21,6 +23,9 @@ func rootFields(card *ScryfallCard) scryfallFaceFields {
 		root := fieldsFromFace(card.CardFaces[0])
 		root.Layout = card.Layout
 		root.ColorIdentity = append([]string(nil), card.ColorIdentity...)
+		if layoutEmitsAlternate(card.Layout) {
+			root.Colors = colorsFromManaCost(root.ManaCost)
+		}
 		return root
 	}
 	return scryfallFaceFields{
@@ -63,6 +68,19 @@ func generatedFaces(card *ScryfallCard) []scryfallFaceFields {
 	return faces
 }
 
+func alternateFields(card *ScryfallCard) []scryfallFaceFields {
+	if len(card.CardFaces) < 2 || !layoutEmitsAlternate(card.Layout) {
+		return nil
+	}
+	faces := make([]scryfallFaceFields, 0, len(card.CardFaces)-1)
+	for _, face := range card.CardFaces[1:] {
+		fields := fieldsFromFace(face)
+		fields.Colors = colorsFromManaCost(fields.ManaCost)
+		faces = append(faces, fields)
+	}
+	return faces
+}
+
 func facesFromAllCardFaces(card *ScryfallCard) []scryfallFaceFields {
 	faces := make([]scryfallFaceFields, 0, len(card.CardFaces))
 	for _, face := range card.CardFaces {
@@ -76,7 +94,7 @@ func facesFromAllCardFaces(card *ScryfallCard) []scryfallFaceFields {
 
 func faceLayoutUsesFrontAsRoot(layout string) bool {
 	switch layout {
-	case "transform", "modal_dfc", "meld", "double_faced_token", "reversible_card":
+	case "transform", "modal_dfc", "meld", "double_faced_token", "reversible_card", "adventure", "split", "prepare":
 		return true
 	default:
 		return false
@@ -90,4 +108,35 @@ func layoutEmitsFaces(layout string) bool {
 	default:
 		return false
 	}
+}
+
+func layoutEmitsAlternate(layout string) bool {
+	switch layout {
+	case "adventure", "split", "prepare":
+		return true
+	default:
+		return false
+	}
+}
+
+func colorsFromManaCost(manaCost string) []string {
+	seen := map[string]bool{}
+	for _, match := range manaSymbolRe.FindAllStringSubmatch(strings.ToUpper(manaCost), -1) {
+		if len(match) < 2 {
+			continue
+		}
+		symbol := match[1]
+		for _, color := range []string{"W", "U", "B", "R", "G"} {
+			if strings.Contains(symbol, color) {
+				seen[color] = true
+			}
+		}
+	}
+	var colors []string
+	for _, color := range []string{"W", "U", "B", "R", "G"} {
+		if seen[color] {
+			colors = append(colors, color)
+		}
+	}
+	return colors
 }

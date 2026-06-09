@@ -54,4 +54,6 @@ var supportedLayouts = map[string]bool{
 	"meld":               true,
 	"double_faced_token": true,
 	"reversible_card":    true,
+	"adventure":          true,
+	"split":              true,
 }

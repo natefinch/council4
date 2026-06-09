@@ -117,6 +117,9 @@ func (r Renderer) RenderCardSource(
 	} else {
 		root := rootFields(card)
 		faces := generatedFaces(card)
+		if len(faces) == 0 {
+			faces = alternateFields(card)
+		}
 		r.writeCardComment(&body, card, root, faces)
 		if err := r.writeCardDef(&body, ctx, defs[0], card.Layout, hints); err != nil {
 			return "", err
@@ -225,6 +228,14 @@ func (r Renderer) writeCardDef(
 		ctx.need(importOpt)
 		_, _ = b.WriteString("\tBack: opt.Val(game.CardFace{\n")
 		if err := r.writeFaceFields(b, ctx, &def.Back.Val, "\t\t", hintAt(hints, 1)); err != nil {
+			return err
+		}
+		_, _ = b.WriteString("\t}),\n")
+	}
+	if def.Alternate.Exists {
+		ctx.need(importOpt)
+		_, _ = b.WriteString("\tAlternate: opt.Val(game.CardFace{\n")
+		if err := r.writeFaceFields(b, ctx, &def.Alternate.Val, "\t\t", hintAt(hints, 1)); err != nil {
 			return err
 		}
 		_, _ = b.WriteString("\t}),\n")

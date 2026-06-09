@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,164
+Cards supported: 2,176
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -295,6 +295,7 @@ Cards supported: 2,164
 - Chant of the Skifsang
 - Chapel Geist
 - Chaplain's Blessing
+- Charcoal Diamond
 - Chardalyn Dragon
 - Charging Badger
 - Charging Monstrosaur
@@ -540,6 +541,7 @@ Cards supported: 2,164
 - Elvish Ranger
 - Elvish Visionary
 - Elvish Warrior
+- Embereth Shieldbreaker // Battle Display
 - Enatu Golem
 - Enforcer Griffin
 - Engulfing Eruption
@@ -604,6 +606,7 @@ Cards supported: 2,164
 - Final Death
 - Final Reward
 - Fire Ambush
+- Fire Diamond
 - Fire Elemental
 - Fire Nation Ambushers
 - Fire Nation Soldier
@@ -669,6 +672,7 @@ Cards supported: 2,164
 - Galina's Knight
 - Gallant Citizen
 - Galvanic Key
+- Garenbrig Carver // Shield's Might
 - Gargoyle
 - Garruk's Companion
 - Garruk's Gorehorn
@@ -1092,6 +1096,7 @@ Cards supported: 2,164
 - Marauder's Axe
 - Maraxus
 - Marble Chalice
+- Marble Diamond
 - Marit Lage
 - Maritime Guard
 - Markov Patrician
@@ -1106,6 +1111,7 @@ Cards supported: 2,164
 - Mer Man
 - Merchant of Secrets
 - Merfolk Mesmerist
+- Merfolk Secretkeeper // Venture Deeper
 - Merfolk Wizard
 - Merfolk of the Depths
 - Merfolk of the Pearl Trident
@@ -1121,6 +1127,7 @@ Cards supported: 2,164
 - Millennial Gargoyle
 - Millstone
 - Mind Rot
+- Minecart Daredevil // Ride the Rails
 - Minion
 - Minotaur
 - Minotaur Abomination
@@ -1153,6 +1160,7 @@ Cards supported: 2,164
 - Moonglove Winnower
 - Moorish Cavalry
 - Moriok Reaver
+- Moss Diamond
 - Moss Kami
 - Moss Monster
 - Moss Viper
@@ -1237,6 +1245,7 @@ Cards supported: 2,164
 - Obelisk of Naya
 - Obsianus Golem
 - Obsidian Giant
+- Obyra's Attendants // Desperate Parry
 - Octopus
 - Oculus
 - Oggyar Battle-Seer
@@ -1275,6 +1284,7 @@ Cards supported: 2,164
 - Overkill
 - Oversoul of Dusk
 - Oxidda Scrapmelter
+- Pain // Suffering
 - Palace Familiar
 - Paladin en-Vec
 - Panther Warriors
@@ -1635,6 +1645,7 @@ Cards supported: 2,164
 - Skeletal Snake
 - Skeleton Pirate
 - Skull Prophet
+- Sky Diamond
 - Sky Ruin Drake
 - Sky Spirit
 - Sky Terror
@@ -2061,6 +2072,7 @@ Cards supported: 2,164
 - Water Elemental
 - Waterfall Aerialist
 - Waveskimmer Aven
+- Wax // Wane
 - Wayward Giant
 - Weakness
 - Weatherseed Faeries

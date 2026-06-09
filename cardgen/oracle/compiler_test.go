@@ -539,6 +539,30 @@ func TestCompileEntersTappedUnlessCondition(t *testing.T) {
 	}
 }
 
+func TestCompileArtifactAndEnchantmentEntersTappedReference(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"This artifact enters tapped.",
+		"This enchantment enters tapped.",
+	}
+	for _, source := range tests {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Kind != AbilityReplacement {
+				t.Fatalf("kind = %v, want AbilityReplacement", ability.Kind)
+			}
+			if len(ability.References) != 1 || ability.References[0].Kind != ReferenceThisObject {
+				t.Fatalf("references = %#v", ability.References)
+			}
+		})
+	}
+}
+
 func TestCompileUnsupportedConstruct(t *testing.T) {
 	t.Parallel()
 	source := "Start your engines!"

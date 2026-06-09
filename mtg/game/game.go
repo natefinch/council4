@@ -107,6 +107,9 @@ type Game struct {
 	// SuspendedCards tracks cards exiled with suspend and their time counters.
 	SuspendedCards map[id.ID]SuspendedCard
 
+	// AdventureCards tracks cards in exile that may be cast from adventure exile.
+	AdventureCards map[id.ID]bool
+
 	// LastKnownInformation stores snapshots for objects that have moved zones.
 	LastKnownInformation map[id.ID]ObjectSnapshot
 
@@ -199,6 +202,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		CardInstances:              make(map[id.ID]*CardInstance),
 		CommanderIDs:               make(map[id.ID]bool),
 		SuspendedCards:             make(map[id.ID]SuspendedCard),
+		AdventureCards:             make(map[id.ID]bool),
 		LastKnownInformation:       make(map[id.ID]ObjectSnapshot),
 		LinkedObjects:              make(map[LinkedObjectKey][]LinkedObjectRef),
 		SkippedSteps:               make(map[PlayerID]map[Step]int),

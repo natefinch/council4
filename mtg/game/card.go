@@ -22,16 +22,20 @@ const (
 	LayoutMeld             CardLayout = "meld"
 	LayoutDoubleFacedToken CardLayout = "double_faced_token"
 	LayoutReversibleCard   CardLayout = "reversible_card"
+	LayoutAdventure        CardLayout = "adventure"
+	LayoutSplit            CardLayout = "split"
+	LayoutPrepare          CardLayout = "prepare"
 )
 
 // FaceIndex identifies one printed face of a card. The zero value is the front
 // face so existing single-face cards and actions keep their historical meaning.
 type FaceIndex int
 
-// Face index values identify the front and back faces of a card.
+// Face index values identify the front, back, and alternate faces of a card.
 const (
 	FaceFront FaceIndex = iota
 	FaceBack
+	FaceAlternate
 )
 
 // PT represents a creature's power or toughness. It can be a numeric
@@ -172,6 +176,8 @@ func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
 		return c.clone(), true
 	case FaceBack:
 		return c.Back.Val, c.Back.Exists
+	case FaceAlternate:
+		return c.Alternate.Val, c.Alternate.Exists
 	default:
 		return CardFace{}, false
 	}
@@ -187,21 +193,42 @@ func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
 	return face.ToCardDef(c), true
 }
 
+// AlternateFace returns the alternate face for adventure, split, and prepare layouts.
+func (c *CardDef) AlternateFace() (CardFace, bool) {
+	return c.Alternate.Val, c.Alternate.Exists
+}
+
 // FaceIndexes returns the printed faces available on this card.
 func (c *CardDef) FaceIndexes() []FaceIndex {
+	faces := []FaceIndex{FaceFront}
 	if c.Back.Exists {
-		return []FaceIndex{FaceFront, FaceBack}
+		faces = append(faces, FaceBack)
 	}
-	return []FaceIndex{FaceFront}
+	if c.Alternate.Exists {
+		faces = append(faces, FaceAlternate)
+	}
+	return faces
 }
 
 // CanChooseCastFace reports whether this face can be chosen while casting the
-// card as a spell. Modal DFCs may choose any non-land face; other layouts cast
-// only their front face.
+// card as a spell. Modal DFCs may choose any non-land printed face they expose;
+// adventure, split, and prepare cards may choose their alternate spell face.
+// Other layouts cast only their front face.
 func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
 	face, ok := c.Face(index)
 	if !ok || face.HasType(types.Land) {
 		return false
+	}
+	if index == FaceAlternate {
+		if !c.Alternate.Exists {
+			return false
+		}
+		switch c.Layout {
+		case LayoutAdventure, LayoutSplit, LayoutPrepare:
+			return true
+		default:
+			return false
+		}
 	}
 	if c.IsModalDoubleFaced() {
 		return true
