@@ -1450,6 +1450,15 @@ func lowerKeywordAbility(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) ([]loweredStaticAbility, *oracle.Diagnostic) {
+	for _, keyword := range ability.Keywords {
+		if keyword.Name == "Devoid" && ability.Text != "Devoid (This card has no color.)" {
+			return nil, executableDiagnostic(
+				ability,
+				"unsupported Devoid ability",
+				"the executable source backend supports only exact \"Devoid (This card has no color.)\" abilities",
+			)
+		}
+	}
 	if len(ability.Modes) > 0 {
 		return nil, executableDiagnostic(
 			ability,
@@ -2794,6 +2803,7 @@ func parseManaSymbolValue(sym string) (cost.Symbol, error) {
 // keywordStaticBodies maps a keyword name to its reusable typed StaticAbility and
 // the package-level variable reference the Renderer emits for it.
 var keywordStaticBodies = map[string]loweredStaticAbility{
+	"Devoid":         {Body: game.DevoidStaticBody, VarName: "game.DevoidStaticBody"},
 	"Deathtouch":     {Body: game.DeathtouchStaticBody, VarName: "game.DeathtouchStaticBody"},
 	"Defender":       {Body: game.DefenderStaticBody, VarName: "game.DefenderStaticBody"},
 	"Delve":          {Body: game.DelveStaticBody, VarName: "game.DelveStaticBody"},

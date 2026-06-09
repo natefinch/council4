@@ -653,7 +653,7 @@ func compileDuration(tokens []Token) DurationKind {
 var keywordNames = map[string]string{
 	"affinity": "Affinity", "annihilator": "Annihilator", "cascade": "Cascade",
 	"companion": "Companion", "convoke": "Convoke", "cycling": "Cycling",
-	"deathtouch": "Deathtouch", "defender": "Defender", "delve": "Delve",
+	"deathtouch": "Deathtouch", "defender": "Defender", "delve": "Delve", "devoid": "Devoid",
 	"disguise": "Disguise", "double strike": "Double strike", "emerge": "Emerge",
 	"enchant": "Enchant", "equip": "Equip", "escape": "Escape",
 	"eternalize": "Eternalize", "exalted": "Exalted", "first strike": "First strike",

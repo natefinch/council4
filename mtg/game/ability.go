@@ -14,6 +14,7 @@ type Keyword int
 // Keyword values enumerate supported keyword abilities.
 const (
 	KeywordNone Keyword = iota
+	Devoid
 	Deathtouch
 	Defender
 	DoubleStrike
@@ -70,6 +71,9 @@ const (
 // Use these in CardFace.StaticAbilities slices or initializer-function appends.
 // Treat these values as immutable.
 var (
+	// DevoidStaticBody is the reusable StaticAbilityBody for devoid.
+	DevoidStaticBody = simpleKeywordStaticBody("Devoid", Devoid)
+
 	// DeathtouchStaticBody is the reusable StaticAbilityBody for deathtouch.
 	DeathtouchStaticBody = simpleKeywordStaticBody("Deathtouch", Deathtouch)
 

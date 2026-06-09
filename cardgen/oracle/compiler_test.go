@@ -190,6 +190,24 @@ func TestCompileKeywordsAndReminder(t *testing.T) {
 	}
 }
 
+func TestCompileDevoidAndReminder(t *testing.T) {
+	t.Parallel()
+	source := "Devoid (This card has no color.)"
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if len(ability.Keywords) != 1 ||
+		ability.Keywords[0].Name != "Devoid" ||
+		ability.Keywords[0].Text != "Devoid" {
+		t.Fatalf("keywords = %#v", ability.Keywords)
+	}
+	if len(ability.Effects) != 0 || len(ability.References) != 0 {
+		t.Fatalf("reminder text leaked semantics: %#v", ability)
+	}
+}
+
 func TestCompileEnchantKeywordParameter(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile("Enchant creature", ParseContext{})

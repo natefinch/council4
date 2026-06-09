@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,231 / 38,101**
+**Cards supported: 2,234 / 38,101**
 
 The pipeline is:
 
@@ -107,8 +107,8 @@ its exact source span. Unknown costs receive their own warning. The compiler
 never substitutes guessed executable behavior for unsupported wording.
 
 The strict executable backend currently lowers plain non-parameterized
-keywords, mana-cost Ward, Cycling, and Equip, base-type Enchant, color-based
-Protection, supported tap mana choices, ordinary activated abilities with exact
+keywords, exact `Devoid (This card has no color.)`, mana-cost Ward, Cycling, and
+Equip, base-type Enchant, color-based Protection, supported tap mana choices, ordinary activated abilities with exact
 mana-only, tap-only, or mana-then-tap costs and supported effect bodies,
 unconditional enters-tapped replacements, fixed single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes, narrow mass
