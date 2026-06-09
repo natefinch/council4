@@ -1715,12 +1715,6 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 			summary:    "unsupported keyword ability",
 			detail:     "no reusable game template for Ward",
 		},
-		"modal": {
-			typeLine:   "Sorcery",
-			oracleText: "Choose two —\n• Draw a card.\n• Destroy target creature.\n• You gain 3 life.",
-			summary:    "unsupported modal ability",
-			detail:     "supports only \"Choose one\"",
-		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -1745,6 +1739,28 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 				t.Fatalf("detail = %q, want substring %q", got, test.detail)
 			}
 		})
+	}
+}
+
+func TestGenerateExecutableCardSourceChooseTwo(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Command",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose two —\n• Draw a card.\n• Destroy target creature.\n• You gain 3 life.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{"MinModes: 2,", "MaxModes: 2,"} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
 	}
 }
 

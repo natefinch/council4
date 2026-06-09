@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,176
+Cards supported: 2,181
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -76,6 +76,7 @@ Cards supported: 2,176
 - Anvilwrought Raptor
 - Ape
 - Apex Devastator
+- Applied Biomancy
 - Aquus Steed
 - Arachnoid
 - Arashin Cleric
@@ -103,6 +104,7 @@ Cards supported: 2,176
 - Armored Wolf-Rider
 - Armorer Guildmage
 - Arrogant Vampire
+- Artful Takedown
 - Artifact Zombie
 - Ascended Lawmage
 - Ashaya, the Awoken World
@@ -369,6 +371,7 @@ Cards supported: 2,176
 - Crookshank Kobolds
 - Cruel Finality
 - Crumbling Necropolis
+- Crush Contraband
 - Crystacean
 - Crystal Ball
 - Cultist's Staff
@@ -1968,6 +1971,7 @@ Cards supported: 2,176
 - Vampire Rogue
 - Vampire of the Dire Moon
 - Vampiric Spirit
+- Vandalize
 - Vanquisher's Axe
 - Varmint
 - Vassal Soul
@@ -2114,6 +2118,7 @@ Cards supported: 2,176
 - Winged Shepherd
 - Winter's Grasp
 - Winter's Intervention
+- Winterflame
 - Wipe Clean
 - Wirewood Elf
 - Wishcoin Crab

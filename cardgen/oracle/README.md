@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,176 / 37,628**
+**Cards supported: 2,181 / 37,628**
 
 The pipeline is:
 
@@ -117,6 +117,8 @@ exact investigate and proliferate, fixed controller or target-player discard
 and mill, one-target tap, untap, and regeneration, exact fights between two
 target creatures, and fixed power/toughness buffs on enchanted creature,
 equipped creature, creatures you control, and other creatures you control.
+Exact `Choose N` and `Choose one or both` modal headers lower to runtime-enforced
+minimum and maximum mode counts when every mode is otherwise supported.
 Adventure and split layouts are supported when each printed face is otherwise
 exactly representable; these layouts keep the front face in the root
 `game.CardDef`, emit the second spell face as `Alternate`, and derive per-face

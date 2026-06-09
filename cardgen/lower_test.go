@@ -867,29 +867,50 @@ func TestLowerModalChooseOneWithTarget(t *testing.T) {
 	}
 }
 
-func TestLowerModalChooseOneOrBothRejected(t *testing.T) {
+func TestLowerModalChooseTwoSpell(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Command",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose two \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.\n\u2022 Proliferate.",
+	})
+	content := face.SpellAbility.Val
+	if content.MinModes != 2 || content.MaxModes != 2 {
+		t.Fatalf("MinModes=%d MaxModes=%d, want both 2", content.MinModes, content.MaxModes)
+	}
+	if len(content.Modes) != 3 {
+		t.Fatalf("got %d modes, want 3", len(content.Modes))
+	}
+}
+
+func TestLowerModalChooseOneOrBoth(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Charm",
 		Layout:     "normal",
 		TypeLine:   "Instant",
 		OracleText: "Choose one or both \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for choose one or both, got none")
+	content := face.SpellAbility.Val
+	if content.MinModes != 1 || content.MaxModes != 2 {
+		t.Fatalf("MinModes=%d MaxModes=%d, want 1 and 2", content.MinModes, content.MaxModes)
+	}
+	if len(content.Modes) != 2 {
+		t.Fatalf("got %d modes, want 2", len(content.Modes))
 	}
 }
 
-func TestLowerModalChooseTwoRejected(t *testing.T) {
+func TestLowerModalChoiceCountExceedsModesRejected(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Test Charm",
+		Name:       "Test Command",
 		Layout:     "normal",
-		TypeLine:   "Instant",
-		OracleText: "Choose two \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.\n\u2022 Scry 1.",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose three \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.",
 	})
 	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for choose two, got none")
+		t.Fatal("expected diagnostics when choice count exceeds modes, got none")
 	}
 }
 

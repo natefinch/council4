@@ -482,14 +482,15 @@ func lowerModalAbility(
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported modal ability",
-			"the executable source backend supports only exact fixed-cardinality \"Choose one\" modal abilities",
+			"the executable source backend supports only exact \"Choose N\" and \"Choose one or both\" modal abilities",
 		)
 	}
-	if minModes != 1 || maxModes != 1 {
+	if minModes < 1 || maxModes < minModes || maxModes > len(ability.Modes) ||
+		(minModes == 1 && maxModes == 2 && len(ability.Modes) != 2) {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported modal ability",
-			"the executable source backend supports only \"Choose one\" modal abilities",
+			"the modal choice range does not match the number of modes",
 		)
 	}
 
@@ -556,11 +557,19 @@ func lowerModalAbility(
 }
 
 // parseChooseHeader inspects a modal header phrase and returns (minModes,
-// maxModes, ok). It accepts only "Choose <word> —" where <word> is a cardinal
-// number spelled out as a single word ("one", "two", etc.) and rejects "or
-// both", "or more", "at random", and other multi-word cardinalities.
+// maxModes, ok). It accepts "Choose <word> —" where <word> is a cardinal
+// number spelled out as a single word ("one", "two", etc.), plus exact
+// "Choose one or both —" headers.
 func parseChooseHeader(header oracle.Phrase) (minModes, maxModes int, ok bool) {
 	tokens := header.Tokens
+	if len(tokens) == 5 &&
+		tokens[0].Kind == oracle.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == oracle.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == oracle.Word && strings.EqualFold(tokens[2].Text, "or") &&
+		tokens[3].Kind == oracle.Word && strings.EqualFold(tokens[3].Text, "both") &&
+		tokens[4].Kind == oracle.EmDash {
+		return 1, 2, true
+	}
 	// Expected: [Word("Choose"), Word(<number>), EmDash]
 	if len(tokens) != 3 ||
 		tokens[0].Kind != oracle.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
