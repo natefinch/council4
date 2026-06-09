@@ -11,7 +11,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -326,31 +325,7 @@ func lowerCyclingAbility(
 			"the executable source backend supports only exact Cycling with a mana cost",
 		)
 	}
-	return game.ActivatedAbility{
-		Text:     keyword.Name + " " + keyword.Parameter,
-		ManaCost: opt.Val(manaCost),
-		AdditionalCosts: []cost.Additional{
-			{
-				Kind:   cost.AdditionalDiscard,
-				Text:   "Discard this card",
-				Amount: 1,
-				Source: zone.Hand,
-			},
-		},
-		KeywordAbilities: []game.KeywordAbility{
-			game.CyclingKeyword{Cost: manaCost},
-		},
-		Content: game.Mode{
-			Sequence: []game.Instruction{
-				{
-					Primitive: game.Draw{
-						Amount: game.Fixed(1),
-						Player: game.ControllerReference(),
-					},
-				},
-			},
-		}.Ability(),
-	}, true, nil
+	return game.CyclingActivatedAbility(manaCost), true, nil
 }
 
 func lowerEntersTappedReplacement(
@@ -557,12 +532,7 @@ func lowerKeywordAbility(
 				manaCost, err := parseManaCostValue(keyword.Parameter)
 				if err == nil && len(manaCost) > 0 {
 					bodies = append(bodies, loweredStaticAbility{
-						Body: game.StaticAbility{
-							Text: keyword.Text,
-							KeywordAbilities: []game.KeywordAbility{
-								game.WardKeyword{Cost: manaCost},
-							},
-						},
+						Body: game.WardStaticAbility(manaCost),
 					})
 					continue
 				}
@@ -633,12 +603,11 @@ func lowerTapManaAbility(
 	}
 	if exactAnyColorTapManaSyntax(syntax.Tokens) {
 		return choiceTapManaAbility(
-			ability.Text,
 			[]string{"W", "U", "B", "R", "G"},
 		), nil
 	}
 	if colors, ok := exactChoiceTapManaSyntax(syntax.Tokens); ok {
-		return choiceTapManaAbility(ability.Text, colors), nil
+		return choiceTapManaAbility(colors), nil
 	}
 	if !exactTapManaSyntax(syntax.Tokens) {
 		return game.ManaAbility{}, executableDiagnostic(
@@ -663,52 +632,17 @@ func lowerTapManaAbility(
 			fmt.Sprintf("the executable source backend cannot emit mana symbol %q", ability.Effects[0].Symbol),
 		)
 	}
-	return game.ManaAbility{
-		Text:            ability.Text,
-		AdditionalCosts: cost.Tap,
-		Content: game.Mode{
-			Sequence: []game.Instruction{
-				{
-					Primitive: game.AddMana{
-						Amount:    game.Fixed(1),
-						ManaColor: manaColor,
-					},
-				},
-			},
-		}.Ability(),
-	}, nil
+	return game.TapManaAbility(manaColor), nil
 }
 
-func choiceTapManaAbility(text string, colorNames []string) game.ManaAbility {
+func choiceTapManaAbility(colorNames []string) game.ManaAbility {
 	colors := make([]mana.Color, 0, len(colorNames))
 	for _, name := range colorNames {
 		if color, ok := manaColorValue(name); ok {
 			colors = append(colors, color)
 		}
 	}
-	return game.ManaAbility{
-		Text:            text,
-		AdditionalCosts: cost.Tap,
-		Content: game.Mode{
-			Sequence: []game.Instruction{
-				{
-					Primitive: game.Choose{
-						Choice: game.ResolutionChoice{
-							Kind:   game.ResolutionChoiceMana,
-							Colors: colors,
-						},
-						PublishChoice: game.ChoiceKey("oracle-mana-color"),
-					},
-				},
-				{
-					Primitive: game.AddMana{
-						Amount:     game.Fixed(1),
-						ChoiceFrom: game.ChoiceKey("oracle-mana-color"),
-					},
-				},
-			},
-		}.Ability(),
-	}
+	return game.TapManaChoiceAbility(colors...)
 }
 
 func lowerSpell(

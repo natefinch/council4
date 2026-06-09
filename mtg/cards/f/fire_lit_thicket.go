@@ -27,22 +27,7 @@ var FireLitThicket = &game.CardDef{
 			{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.
 		`,
 		ManaAbilities: []game.ManaAbility{
-			{
-				Text: `
-					{T}: Add {C}.
-				`,
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.AddMana{
-								Amount:    game.Fixed(1),
-								ManaColor: mana.C,
-							},
-						},
-					},
-				}.Ability(),
-			},
+			game.TapManaAbility(mana.C),
 			{
 				Text: `
 					{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.

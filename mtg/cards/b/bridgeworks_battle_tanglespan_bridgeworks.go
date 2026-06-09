@@ -1,7 +1,6 @@
 package b
 
 import (
-	"github.com/natefinch/council4/mtg/cards/common"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -109,7 +108,7 @@ var BridgeworksBattle = func() *game.CardDef {
 		},
 	}
 
-	back.ManaAbilities = append(back.ManaAbilities, common.TapForOne(mana.G))
+	back.ManaAbilities = append(back.ManaAbilities, game.TapManaAbility(mana.G))
 
 	card.Back = opt.Val(back)
 	return card

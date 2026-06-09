@@ -3,7 +3,6 @@ package h
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -38,36 +37,6 @@ var HauntedRidge = func() *game.CardDef {
 		},
 	}
 
-	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbility{
-			Text: `
-				{T}: Add {B} or {R}.
-			`,
-			AdditionalCosts: cost.Tap,
-			Content: game.Mode{
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Choose{
-							Choice: game.ResolutionChoice{
-								Kind:   game.ResolutionChoiceMana,
-								Prompt: "Choose a color",
-								Colors: []mana.Color{
-									mana.B,
-									mana.R,
-								},
-							},
-							PublishChoice: game.ChoiceKey("haunted-ridge-color"),
-						},
-					},
-					{
-						Primitive: game.AddMana{
-							Amount:     game.Fixed(1),
-							ChoiceFrom: game.ChoiceKey("haunted-ridge-color"),
-						},
-					},
-				},
-			}.Ability(),
-		},
-	)
+	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.B, mana.R))
 	return card
 }()

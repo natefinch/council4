@@ -50,42 +50,7 @@ var BasiliskCollar = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		// EffectAttach (type 27) is not executed by the rules engine; the Equip
-		// keyword together with ManaCost, Timing, and Targets is sufficient for
-		// the rules layer to perform attachment.
-		game.ActivatedAbility{
-			Text: `
-				Equip {2}
-			`,
-			ManaCost: opt.Val(cost.Mana{
-				cost.O(2),
-			}),
-			Timing: game.SorceryOnly,
-			Content: game.Mode{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "creature you control",
-						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
-								types.Creature,
-							},
-							Controller: game.ControllerYou,
-						},
-					},
-				},
-			}.Ability(),
-
-			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{
-					Cost: cost.Mana{
-						cost.O(2),
-					},
-				},
-			},
-		},
+		game.EquipActivatedAbility(cost.Mana{cost.O(2)}),
 	)
 	return card
 }()

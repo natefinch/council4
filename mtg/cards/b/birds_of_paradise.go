@@ -1,10 +1,10 @@
 package b
 
 import (
-	"github.com/natefinch/council4/mtg/cards/common"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -41,6 +41,6 @@ var BirdsOfParadise = func() *game.CardDef {
 		game.FlyingStaticBody,
 	)
 
-	card.ManaAbilities = []game.ManaAbility{common.TapForOneOfAny("birds-color")}
+	card.ManaAbilities = []game.ManaAbility{game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G)}
 	return card
 }()

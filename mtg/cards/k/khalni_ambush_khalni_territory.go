@@ -83,24 +83,7 @@ var KhalniAmbush = func() *game.CardDef {
 		},
 	}
 
-	back.ManaAbilities = append(back.ManaAbilities,
-		game.ManaAbility{
-			Text: `
-				{T}: Add {G}.
-			`,
-			AdditionalCosts: cost.Tap,
-			Content: game.Mode{
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.AddMana{
-							Amount:    game.Fixed(1),
-							ManaColor: mana.G,
-						},
-					},
-				},
-			}.Ability(),
-		},
-	)
+	back.ManaAbilities = append(back.ManaAbilities, game.TapManaAbility(mana.G))
 
 	card.Back = opt.Val(back)
 	return card

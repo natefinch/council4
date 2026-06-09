@@ -128,11 +128,9 @@ func TestFaceDownDisguiseWardCountersSpellWhenCostIsNotPaid(t *testing.T) {
 func addWardPermanent(g *game.Game, controller game.PlayerID, manaCost cost.Mana) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Ward Creature",
-		Types:     []types.Card{types.Creature},
-		Power:     opt.Val(pt),
-		Toughness: opt.Val(pt),
-		StaticAbilities: []game.StaticAbility{{
-			KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: manaCost}},
-		}}},
-	})
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.WardStaticAbility(manaCost)},
+	}})
 }

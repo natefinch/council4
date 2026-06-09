@@ -30,22 +30,7 @@ var GravenCairns = &game.CardDef{
 			{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.
 		`,
 		ManaAbilities: []game.ManaAbility{
-			{
-				Text: `
-					{T}: Add {C}.
-				`,
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.AddMana{
-								Amount:    game.Fixed(1),
-								ManaColor: mana.C,
-							},
-						},
-					},
-				}.Ability(),
-			},
+			game.TapManaAbility(mana.C),
 			{
 				Text: `
 					{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.

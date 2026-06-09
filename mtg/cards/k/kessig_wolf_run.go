@@ -30,24 +30,7 @@ var KessigWolfRun = func() *game.CardDef {
 		},
 	}
 
-	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbility{
-			Text: `
-				{T}: Add {C}.
-			`,
-			AdditionalCosts: cost.Tap,
-			Content: game.Mode{
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.AddMana{
-							Amount:    game.Fixed(1),
-							ManaColor: mana.C,
-						},
-					},
-				},
-			}.Ability(),
-		},
-	)
+	card.ManaAbilities = append(card.ManaAbilities, game.TapManaAbility(mana.C))
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
 		game.ActivatedAbility{

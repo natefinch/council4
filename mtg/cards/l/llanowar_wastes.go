@@ -26,22 +26,7 @@ var LlanowarWastes = &game.CardDef{
 			{T}: Add {B} or {G}. This land deals 1 damage to you.
 		`,
 		ManaAbilities: []game.ManaAbility{
-			{
-				Text: `
-					{T}: Add {C}.
-				`,
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.AddMana{
-								Amount:    game.Fixed(1),
-								ManaColor: mana.C,
-							},
-						},
-					},
-				}.Ability(),
-			},
+			game.TapManaAbility(mana.C),
 			{
 				Text: `
 					{T}: Add {B} or {G}. This land deals 1 damage to you.

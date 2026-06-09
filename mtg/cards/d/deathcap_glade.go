@@ -3,7 +3,6 @@ package d
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -37,34 +36,6 @@ var DeathcapGlade = func() *game.CardDef {
 			},
 		}),
 	)
-	card.ManaAbilities = append(card.ManaAbilities, game.ManaAbility{
-		Text: `
-			{T}: Add {B} or {G}.
-		`,
-		AdditionalCosts: cost.Tap,
-		Content: game.Mode{
-			Sequence: []game.Instruction{
-				{
-					Primitive: game.Choose{
-						Choice: game.ResolutionChoice{
-							Kind:   game.ResolutionChoiceMana,
-							Prompt: "Choose a color",
-							Colors: []mana.Color{
-								mana.B,
-								mana.G,
-							},
-						},
-						PublishChoice: game.ChoiceKey("deathcap-glade-color"),
-					},
-				},
-				{
-					Primitive: game.AddMana{
-						Amount:     game.Fixed(1),
-						ChoiceFrom: game.ChoiceKey("deathcap-glade-color"),
-					},
-				},
-			},
-		}.Ability(),
-	})
+	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.B, mana.G))
 	return card
 }()

@@ -174,6 +174,45 @@ func BodyWardCost(body *TriggeredAbility) (cost.Mana, bool) {
 	return ward.Cost, true
 }
 
+// StaticBodyWardCost returns the Ward cost from a static ability.
+func StaticBodyWardCost(body *StaticAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Ward)
+	if !ok {
+		return nil, false
+	}
+	ward, ok := ka.(WardKeyword)
+	if !ok {
+		return nil, false
+	}
+	return ward.Cost, true
+}
+
+// ActivatedBodyCyclingCost returns the Cycling cost from an activated ability.
+func ActivatedBodyCyclingCost(body *ActivatedAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Cycling)
+	if !ok {
+		return nil, false
+	}
+	cycling, ok := ka.(CyclingKeyword)
+	if !ok {
+		return nil, false
+	}
+	return cycling.Cost, true
+}
+
+// ActivatedBodyEquipCost returns the Equip cost from an activated ability.
+func ActivatedBodyEquipCost(body *ActivatedAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Equip)
+	if !ok {
+		return nil, false
+	}
+	equip, ok := ka.(EquipKeyword)
+	if !ok {
+		return nil, false
+	}
+	return equip.Cost, true
+}
+
 // BodyMadnessCost returns the Madness cost from a TriggeredAbilityBody's keywords.
 func BodyMadnessCost(body *TriggeredAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Madness)

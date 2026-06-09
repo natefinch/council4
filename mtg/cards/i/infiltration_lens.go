@@ -63,39 +63,7 @@ var InfiltrationLens = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbility{
-			Text: `
-				Equip {1}
-			`,
-			ManaCost: opt.Val(cost.Mana{
-				cost.O(1),
-			}),
-			Timing: game.SorceryOnly,
-			Content: game.Mode{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "creature you control",
-						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
-								types.Creature,
-							},
-							Controller: game.ControllerYou,
-						},
-					},
-				},
-			}.Ability(),
-
-			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{
-					Cost: cost.Mana{
-						cost.O(1),
-					},
-				},
-			},
-		},
+		game.EquipActivatedAbility(cost.Mana{cost.O(1)}),
 	)
 	return card
 }()

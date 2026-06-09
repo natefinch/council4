@@ -93,39 +93,7 @@ var BlazingSunsteel = func() *game.CardDef {
 	)
 
 	card.ActivatedAbilities = append(card.ActivatedAbilities,
-		game.ActivatedAbility{
-			Text: `
-				Equip {4}
-			`,
-			ManaCost: opt.Val(cost.Mana{
-				cost.O(4),
-			}),
-			Timing: game.SorceryOnly,
-			Content: game.Mode{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "creature you control",
-						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
-								types.Creature,
-							},
-							Controller: game.ControllerYou,
-						},
-					},
-				},
-			}.Ability(),
-
-			KeywordAbilities: []game.KeywordAbility{
-				game.EquipKeyword{
-					Cost: cost.Mana{
-						cost.O(4),
-					},
-				},
-			},
-		},
+		game.EquipActivatedAbility(cost.Mana{cost.O(4)}),
 	)
 	return card
 }()

@@ -478,6 +478,14 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 	if hint != nil && hint.VarName != "" {
 		return hint.VarName, nil
 	}
+	if manaCost, ok := game.StaticBodyWardCost(body); ok &&
+		reflect.DeepEqual(*body, game.WardStaticAbility(manaCost)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.WardStaticAbility(%s)", renderedCost), nil
+	}
 	var fields []string
 	if body.Text != "" {
 		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(body.Text)))
@@ -497,6 +505,23 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 }
 
 func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.ActivatedAbility) (string, error) {
+	if manaCost, ok := game.ActivatedBodyEquipCost(ability); ok &&
+		reflect.DeepEqual(*ability, game.EquipActivatedAbility(manaCost)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EquipActivatedAbility(%s)", renderedCost), nil
+	}
+	if manaCost, ok := game.ActivatedBodyCyclingCost(ability); ok &&
+		reflect.DeepEqual(*ability, game.CyclingActivatedAbility(manaCost)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.CyclingActivatedAbility(%s)", renderedCost), nil
+	}
+
 	var fields []string
 	if ability.Text != "" {
 		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
@@ -536,6 +561,31 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 }
 
 func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (string, error) {
+	for _, manaColor := range []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G, mana.C} {
+		if !reflect.DeepEqual(*ability, game.TapManaAbility(manaColor)) {
+			continue
+		}
+		ctx.need(importMana)
+		colorLiteral, err := renderManaColor(manaColor)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.TapManaAbility(%s)", colorLiteral), nil
+	}
+	if colors, ok := tapManaChoiceColors(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapManaChoiceAbility(colors...)) {
+		ctx.need(importMana)
+		colorLiterals := make([]string, 0, len(colors))
+		for _, manaColor := range colors {
+			colorLiteral, err := renderManaColor(manaColor)
+			if err != nil {
+				return "", err
+			}
+			colorLiterals = append(colorLiterals, colorLiteral)
+		}
+		return fmt.Sprintf("game.TapManaChoiceAbility(%s)", strings.Join(colorLiterals, ", ")), nil
+	}
+
 	var fields []string
 	if ability.Text != "" {
 		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
@@ -561,6 +611,30 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 	}
 	fields = append(fields, fmt.Sprintf("Content: %s,", content))
 	return structLit("game.ManaAbility", fields), nil
+}
+
+func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
+	content := ability.Content
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
+		return nil, false
+	}
+	choose, ok := content.Modes[0].Sequence[0].Primitive.(game.Choose)
+	if !ok || len(choose.Choice.Colors) < 2 || len(choose.Choice.Colors) > 5 {
+		return nil, false
+	}
+	seen := make(map[mana.Color]struct{}, len(choose.Choice.Colors))
+	for _, manaColor := range choose.Choice.Colors {
+		switch manaColor {
+		case mana.W, mana.U, mana.B, mana.R, mana.G:
+		default:
+			return nil, false
+		}
+		if _, duplicate := seen[manaColor]; duplicate {
+			return nil, false
+		}
+		seen[manaColor] = struct{}{}
+	}
+	return choose.Choice.Colors, true
 }
 
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {

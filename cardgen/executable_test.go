@@ -59,10 +59,7 @@ func TestGenerateExecutableCardSourceTapManaAbility(t *testing.T) {
 	for _, wanted := range []string{
 		`"github.com/natefinch/council4/mtg/game/mana"`,
 		"ManaAbilities: []game.ManaAbility",
-		"AdditionalCosts: cost.Tap",
-		"Primitive: game.AddMana",
-		"game.Fixed(1)",
-		"ManaColor: mana.G",
+		"game.TapManaAbility(mana.G)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -147,12 +144,7 @@ func TestGenerateExecutableCardSourceAnyColorTapMana(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.Choose",
-		"game.ResolutionChoiceMana",
-		"Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G}",
-		`PublishChoice: game.ChoiceKey("oracle-mana-color")`,
-		"Primitive: game.AddMana",
-		`game.ChoiceKey("oracle-mana-color")`,
+		"game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -175,7 +167,7 @@ func TestGenerateExecutableCardSourceColorChoiceTapMana(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "Colors: []mana.Color{mana.R, mana.G}") {
+	if !strings.Contains(source, "game.TapManaChoiceAbility(mana.R, mana.G)") {
 		t.Fatalf("source has wrong mana choices:\n%s", source)
 	}
 }
@@ -195,7 +187,7 @@ func TestGenerateExecutableCardSourceThreeColorTapMana(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "Colors: []mana.Color{mana.W, mana.U, mana.B}") {
+	if !strings.Contains(source, "game.TapManaChoiceAbility(mana.W, mana.U, mana.B)") {
 		t.Fatalf("source has wrong mana choices:\n%s", source)
 	}
 }
@@ -219,7 +211,7 @@ func TestGenerateExecutableCardSourceManaWard(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"StaticAbilities: []game.StaticAbility",
-		"game.WardKeyword",
+		"game.WardStaticAbility",
 		"cost.Mana",
 		"cost.O(2)",
 	} {
@@ -245,15 +237,10 @@ func TestGenerateExecutableCardSourceCycling(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		`"github.com/natefinch/council4/mtg/game/zone"`,
 		"ActivatedAbilities: []game.ActivatedAbility",
-		"ManaCost: opt.Val(cost.Mana",
+		"game.CyclingActivatedAbility(cost.Mana",
 		"cost.O(1)",
 		"cost.U",
-		"cost.AdditionalDiscard",
-		"Source: zone.Hand",
-		"game.CyclingKeyword",
-		"Primitive: game.Draw",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

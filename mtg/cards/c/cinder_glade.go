@@ -1,7 +1,6 @@
 package c
 
 import (
-	"github.com/natefinch/council4/mtg/cards/common"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -33,7 +32,7 @@ var CinderGlade = func() *game.CardDef {
 			`,
 		},
 	}
-	card.ManaAbilities = append(card.ManaAbilities, common.TapForOneOf("cinder-glade-color", mana.R, mana.G))
+	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.R, mana.G))
 	card.ReplacementAbilities = append(card.ReplacementAbilities,
 		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
 			Negate: true,

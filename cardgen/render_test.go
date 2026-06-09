@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -50,6 +51,24 @@ func generateExecutable(t *testing.T, card *ScryfallCard) string {
 		t.Fatalf("GenerateExecutableCardSource(%q) diagnostics: %#v", card.Name, diagnostics)
 	}
 	return source
+}
+
+func TestRenderUsesEquipMechanicTemplate(t *testing.T) {
+	card := &ScryfallCard{Name: "Test Equipment", Layout: "normal", TypeLine: "Artifact — Equipment"}
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name:               card.Name,
+		Types:              []types.Card{types.Artifact},
+		Subtypes:           []types.Sub{types.Equipment},
+		ActivatedAbilities: []game.ActivatedAbility{game.EquipActivatedAbility(cost.Mana{cost.O(2)})},
+	}}
+
+	source, err := (Renderer{}).RenderCardSource(card, []*game.CardDef{def}, []faceRenderHints{{}}, "cards")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(source, "game.EquipActivatedAbility(cost.Mana{cost.O(2)})") {
+		t.Fatalf("source does not use Equip template:\n%s", source)
+	}
 }
 
 func TestRenderDeterministic(t *testing.T) {

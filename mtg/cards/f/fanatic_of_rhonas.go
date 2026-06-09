@@ -42,24 +42,7 @@ var FanaticOfRhonas = func() *game.CardDef {
 		},
 	}
 
-	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbility{
-			Text: `
-				{T}: Add {G}.
-			`,
-			AdditionalCosts: cost.Tap,
-			Content: game.Mode{
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.AddMana{
-							Amount:    game.Fixed(1),
-							ManaColor: mana.G,
-						},
-					},
-				},
-			}.Ability(),
-		},
-	)
+	card.ManaAbilities = append(card.ManaAbilities, game.TapManaAbility(mana.G))
 
 	card.ManaAbilities = append(card.ManaAbilities,
 		game.ManaAbility{

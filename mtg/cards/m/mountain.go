@@ -3,7 +3,6 @@ package m
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -26,22 +25,7 @@ var Mountain = &game.CardDef{
 			({T}: Add {R}.)
 		`,
 		ManaAbilities: []game.ManaAbility{
-			{
-				Text: `
-					{T}: Add {R}.
-				`,
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.AddMana{
-								Amount:    game.Fixed(1),
-								ManaColor: mana.R,
-							},
-						},
-					},
-				}.Ability(),
-			},
+			game.TapManaAbility(mana.R),
 		},
 	},
 }

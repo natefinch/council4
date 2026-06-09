@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -81,6 +82,137 @@ func TestEternalizeActivatedBodyBuildsKeywordActivation(t *testing.T) {
 	}
 	if !spec.SetPower.Exists || spec.SetPower.Val.Value != 4 || !spec.SetToughness.Exists || spec.SetToughness.Val.Value != 4 {
 		t.Fatalf("token P/T = %+v/%+v, want 4/4", spec.SetPower, spec.SetToughness)
+	}
+}
+
+func TestCyclingActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
+	manaCost := cost.Mana{cost.O(2), cost.G}
+	ability := CyclingActivatedAbility(manaCost)
+	manaCost[0] = cost.O(9)
+
+	if ability.Text != "Cycling {2}{G}" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Cycling {2}{G}")
+	}
+	if ability.ZoneOfFunction != zone.Hand {
+		t.Fatalf("zone = %v, want hand", ability.ZoneOfFunction)
+	}
+	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, []cost.Symbol{cost.O(2), cost.G}) {
+		t.Fatalf("mana cost = %+v, want copied cycling cost", ability.ManaCost)
+	}
+	if len(ability.AdditionalCosts) != 1 ||
+		ability.AdditionalCosts[0].Kind != cost.AdditionalDiscard ||
+		ability.AdditionalCosts[0].Source != zone.Hand ||
+		ability.AdditionalCosts[0].Amount != 1 {
+		t.Fatalf("additional costs = %+v, want discard this card from hand", ability.AdditionalCosts)
+	}
+	keywordCost, ok := ActivatedBodyCyclingCost(&ability)
+	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(2), cost.G}) {
+		t.Fatalf("cycling keyword cost = %v, %v; want copied {2}{G}", keywordCost, ok)
+	}
+	content := BodyContent(ability)
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
+		t.Fatalf("content = %+v, want one non-modal instruction", content)
+	}
+	draw, ok := content.Modes[0].Sequence[0].Primitive.(Draw)
+	if !ok || draw.Amount.Value() != 1 || draw.Player != ControllerReference() {
+		t.Fatalf("instruction = %+v, want controller draws one", content.Modes[0].Sequence[0])
+	}
+}
+
+func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
+	manaCost := cost.Mana{cost.O(2), cost.R}
+	ability := EquipActivatedAbility(manaCost)
+	manaCost[0] = cost.O(9)
+
+	if ability.Text != "Equip {2}{R}" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Equip {2}{R}")
+	}
+	if ability.ZoneOfFunction != zone.Battlefield || ability.Timing != SorceryOnly {
+		t.Fatalf("zone/timing = %v/%v, want battlefield/sorcery", ability.ZoneOfFunction, ability.Timing)
+	}
+	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, []cost.Symbol{cost.O(2), cost.R}) {
+		t.Fatalf("mana cost = %+v, want copied equip cost", ability.ManaCost)
+	}
+	keywordCost, ok := ActivatedBodyEquipCost(&ability)
+	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(2), cost.R}) {
+		t.Fatalf("equip keyword cost = %v, %v; want copied {2}{R}", keywordCost, ok)
+	}
+	targets := BodyTargets(ability)
+	if len(targets) != 1 ||
+		targets[0].MinTargets != 1 ||
+		targets[0].MaxTargets != 1 ||
+		targets[0].Allow != TargetAllowPermanent ||
+		!slices.Equal(targets[0].Predicate.PermanentTypes, []types.Card{types.Creature}) ||
+		targets[0].Predicate.Controller != ControllerYou {
+		t.Fatalf("targets = %+v, want one creature you control", targets)
+	}
+}
+
+func TestWardStaticAbilityBuildsCompleteMechanic(t *testing.T) {
+	manaCost := cost.Mana{cost.O(2), cost.U}
+	ability := WardStaticAbility(manaCost)
+	manaCost[0] = cost.O(9)
+
+	if ability.Text != "Ward {2}{U}" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Ward {2}{U}")
+	}
+	keywordCost, ok := StaticBodyWardCost(&ability)
+	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(2), cost.U}) {
+		t.Fatalf("ward keyword cost = %v, %v; want copied {2}{U}", keywordCost, ok)
+	}
+}
+
+func TestTapManaAbilityBuildsCompleteMechanic(t *testing.T) {
+	ability := TapManaAbility(mana.G)
+
+	if ability.Text != "{T}: Add {G}." {
+		t.Fatalf("text = %q, want %q", ability.Text, "{T}: Add {G}.")
+	}
+	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0] != cost.T {
+		t.Fatalf("additional costs = %+v, want tap", ability.AdditionalCosts)
+	}
+	content := BodyContent(ability)
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
+		t.Fatalf("content = %+v, want one non-modal instruction", content)
+	}
+	add, ok := content.Modes[0].Sequence[0].Primitive.(AddMana)
+	if !ok || add.Amount.Value() != 1 || add.ManaColor != mana.G || add.ChoiceFrom != "" {
+		t.Fatalf("instruction = %+v, want add one green mana", content.Modes[0].Sequence[0])
+	}
+}
+
+func TestTapManaAbilityUsesOracleColorlessSymbol(t *testing.T) {
+	ability := TapManaAbility(mana.C)
+	if ability.Text != "{T}: Add {C}." {
+		t.Fatalf("text = %q, want %q", ability.Text, "{T}: Add {C}.")
+	}
+}
+
+func TestTapManaChoiceAbilityBuildsCompleteMechanic(t *testing.T) {
+	colors := []mana.Color{mana.B, mana.R}
+	ability := TapManaChoiceAbility(colors...)
+	colors[0] = mana.G
+
+	if ability.Text != "{T}: Add {B} or {R}." {
+		t.Fatalf("text = %q, want %q", ability.Text, "{T}: Add {B} or {R}.")
+	}
+	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0] != cost.T {
+		t.Fatalf("additional costs = %+v, want tap", ability.AdditionalCosts)
+	}
+	content := BodyContent(ability)
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
+		t.Fatalf("content = %+v, want choose then add", content)
+	}
+	choose, ok := content.Modes[0].Sequence[0].Primitive.(Choose)
+	if !ok ||
+		choose.Choice.Kind != ResolutionChoiceMana ||
+		!slices.Equal(choose.Choice.Colors, []mana.Color{mana.B, mana.R}) ||
+		choose.PublishChoice == "" {
+		t.Fatalf("first instruction = %+v, want copied black/red mana choice", content.Modes[0].Sequence[0])
+	}
+	add, ok := content.Modes[0].Sequence[1].Primitive.(AddMana)
+	if !ok || add.Amount.Value() != 1 || add.ManaColor != "" || add.ChoiceFrom != choose.PublishChoice {
+		t.Fatalf("second instruction = %+v, want one mana from published choice", content.Modes[0].Sequence[1])
 	}
 }
 

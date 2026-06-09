@@ -42,37 +42,6 @@ var IgnobleHierarch = func() *game.CardDef {
 		game.ExaltedStaticBody,
 	)
 
-	card.ManaAbilities = append(card.ManaAbilities,
-		game.ManaAbility{
-			Text: `
-				{T}: Add {B}, {R}, or {G}.
-			`,
-			AdditionalCosts: cost.Tap,
-			Content: game.Mode{
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Choose{
-							Choice: game.ResolutionChoice{
-								Kind:   game.ResolutionChoiceMana,
-								Prompt: "Choose a color",
-								Colors: []mana.Color{
-									mana.B,
-									mana.R,
-									mana.G,
-								},
-							},
-							PublishChoice: game.ChoiceKey("ignoble-hierarch-color"),
-						},
-					},
-					{
-						Primitive: game.AddMana{
-							Amount:     game.Fixed(1),
-							ChoiceFrom: game.ChoiceKey("ignoble-hierarch-color"),
-						},
-					},
-				},
-			}.Ability(),
-		},
-	)
+	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.B, mana.R, mana.G))
 	return card
 }()
