@@ -24,6 +24,15 @@ var CantBlockStaticBody = StaticAbility{
 	}},
 }
 
+// CantBeBlockedStaticBody is the complete static ability for an unblockable creature.
+var CantBeBlockedStaticBody = StaticAbility{
+	Text: "This creature can't be blocked.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantBeBlocked,
+		AffectedSource: true,
+	}},
+}
+
 // CantBeCounteredStaticBody is the complete static ability for an uncounterable spell.
 var CantBeCounteredStaticBody = StaticAbility{
 	Text:           "This spell can't be countered.",

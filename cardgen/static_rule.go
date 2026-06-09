@@ -15,6 +15,10 @@ func lowerStaticRuleDeclaration(
 	var varName string
 	var detail string
 	switch ability.Effects[0].Kind {
+	case oracle.EffectCantBeBlocked:
+		body = game.CantBeBlockedStaticBody
+		varName = "game.CantBeBlockedStaticBody"
+		detail = "the executable source backend supports only exact self cannot-be-blocked text"
 	case oracle.EffectCantBlock:
 		body = game.CantBlockStaticBody
 		varName = "game.CantBlockStaticBody"

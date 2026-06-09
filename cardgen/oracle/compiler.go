@@ -410,6 +410,13 @@ func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect,
 			Kind: SelectorCreature,
 			Raw:  "this creature",
 		}
+	case "This creature can't be blocked.":
+		kind = EffectCantBeBlocked
+		verb = "blocked"
+		selector = CompiledSelector{
+			Kind: SelectorCreature,
+			Raw:  "this creature",
+		}
 	case "This spell can't be countered.":
 		kind = EffectCantBeCountered
 		verb = "countered"

@@ -124,6 +124,49 @@ func TestGenerateExecutableCardSourceSelfCannotBlock(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfCannotBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Elusive Bear",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't be blocked.",
+		Colors:     []string{"U"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.CantBeBlockedStaticBody") {
+		t.Fatalf("source missing cannot-be-blocked static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsConditionalCannotBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Conditional Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't be blocked as long as you control an artifact.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceSelfUncounterable(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
