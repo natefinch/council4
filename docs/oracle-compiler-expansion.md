@@ -134,17 +134,23 @@ or narrow recognition.
 
 ## Corpus workflow
 
-Use the checked-in Scryfall Oracle Cards corpus:
+Use the checked-in Scryfall Oracle Cards corpus through `corpusdelta`:
 
 ```bash
-go run ./cardgen/oracle/cmd/compilecards \
+go run ./cardgen/oracle/cmd/corpusdelta \
   -in cardgen/oracle/oracle-cards-20260608090247.json \
+  -baseline .cardwork/step-PREV-report.json \
   -out .cardwork/step-N-generated \
-  -report .cardwork/step-N-report.json
+  -report .cardwork/step-N-report.json \
+  -manifest .cardwork/step-N-delta.json
 ```
 
 Never target `mtg/cards` during development. Overwrite repository cards only
 when the user explicitly requests it after the temporary tree is accepted.
+
+The command compares reports by stable card ID, verifies counts and newly
+generated source paths, updates `docs/supported.md`, emits the inspection
+manifest, and tests and vets every generated package.
 
 Record:
 
@@ -155,28 +161,14 @@ Record:
 - every newly generated card;
 - every diagnostic family that disappeared or materially shrank.
 
-To identify newly generated cards, compare names that left the unsupported set:
-
-```bash
-jq -r '.unsupported[].name' .cardwork/step-PREV-report.json | sort -u > /tmp/unsupported-before
-jq -r '.unsupported[].name' .cardwork/step-N-report.json | sort -u > /tmp/unsupported-after
-comm -23 /tmp/unsupported-before /tmp/unsupported-after
-```
-
-Inspect every newly generated source file. Classify each by wording family and
+Inspect every newly generated source listed in `.cardwork/step-N-delta.json`.
+Classify each by wording family and
 confirm that every ability is represented, targets and costs are exact,
 instruction order is correct, and no reminder or qualifier was lost. A positive
 count is not success if even one new card is a false positive.
 
-Validate generated packages from inside the Go module:
-
-```bash
-tmp=$(mktemp -d cardgen/roundtrippkgXXXXXX)
-trap 'rm -rf "$tmp"' EXIT
-cp -R .cardwork/step-N-generated/. "$tmp"/
-go test "./$tmp/..." -count=1
-go vet "./$tmp/..."
-```
+`corpusdelta` validates generated packages from a temporary directory inside the
+Go module and removes that directory afterward.
 
 Do not run `mage lint` while tests are creating or deleting temporary
 `cardgen/roundtrippkg*` packages; lint type-checking can observe a transient

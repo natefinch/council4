@@ -26,6 +26,11 @@ go run ./cardgen/oracle/cmd/compilecards \
   -report .cardwork/oracle-compile-report.json
 ```
 
+During compiler expansion work, prefer
+[`corpusdelta`](../corpusdelta/README.md), which runs this command and
+automatically prepares the corpus delta, supported-card list, generated-package
+validation, and review manifest.
+
 To overwrite matching repository card files:
 
 ```bash

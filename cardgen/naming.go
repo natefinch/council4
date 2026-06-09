@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -40,6 +41,31 @@ func CardNameToFileName(name string) string {
 		prevWasUnderscore = false
 	}
 	return strings.TrimSuffix(b.String(), "_")
+}
+
+// CardNameToSafeFileName converts a card name to a file name that cannot be
+// mistaken for a package registry, test file, or platform-specific Go file.
+func CardNameToSafeFileName(name string) string {
+	base := CardNameToFileName(name)
+	if base == "cards" || strings.HasSuffix(base, "_test") {
+		return base + "_card"
+	}
+	parts := strings.Split(base, "_")
+	for _, suffix := range goFileSuffixes {
+		if len(parts) >= len(suffix) && slices.Equal(parts[len(parts)-len(suffix):], suffix) {
+			return base + "_card"
+		}
+	}
+	return base
+}
+
+var goFileSuffixes = [][]string{
+	{"aix"}, {"android"}, {"darwin"}, {"dragonfly"}, {"freebsd"}, {"illumos"},
+	{"ios"}, {"js"}, {"linux"}, {"netbsd"}, {"openbsd"}, {"plan9"}, {"solaris"},
+	{"wasip1"}, {"windows"},
+	{"386"}, {"amd64"}, {"arm"}, {"arm64"}, {"loong64"}, {"mips"}, {"mips64"},
+	{"mips64le"}, {"mipsle"}, {"ppc64"}, {"ppc64le"}, {"riscv64"}, {"s390x"},
+	{"wasm"},
 }
 
 // CardNameToPackageLetter returns the lowercase first letter of the card name.

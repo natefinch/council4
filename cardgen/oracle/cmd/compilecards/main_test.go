@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/natefinch/council4/cardgen"
 )
 
 func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
@@ -79,19 +81,16 @@ func TestCompileCorpusRejectsPathCollisions(t *testing.T) {
 
 func TestSafeFileNameAvoidsGoBuildSuffix(t *testing.T) {
 	t.Parallel()
-	if got := safeFileName("Bayou Dragonfly"); got != "bayou_dragonfly_card" {
-		t.Fatalf("safeFileName = %q", got)
+	tests := map[string]string{
+		"Bayou Dragonfly":     "bayou_dragonfly_card",
+		"Dragonfly":           "dragonfly_card",
+		"Dragonfly Hatchling": "dragonfly_hatchling",
+		"Memory Test":         "memory_test_card",
+		"Cards":               "cards_card",
 	}
-	if got := safeFileName("Dragonfly"); got != "dragonfly_card" {
-		t.Fatalf("safeFileName = %q", got)
-	}
-	if got := safeFileName("Dragonfly Hatchling"); got != "dragonfly_hatchling" {
-		t.Fatalf("safeFileName = %q", got)
-	}
-	if got := safeFileName("Memory Test"); got != "memory_test_card" {
-		t.Fatalf("safeFileName = %q", got)
-	}
-	if got := safeFileName("Cards"); got != "cards_card" {
-		t.Fatalf("safeFileName = %q", got)
+	for name, want := range tests {
+		if got := cardgen.CardNameToSafeFileName(name); got != want {
+			t.Fatalf("CardNameToSafeFileName(%q) = %q, want %q", name, got, want)
+		}
 	}
 }

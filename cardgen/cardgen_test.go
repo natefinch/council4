@@ -172,6 +172,22 @@ func TestCardNameToFileName(t *testing.T) {
 	}
 }
 
+func TestCardNameToSafeFileName(t *testing.T) {
+	tests := map[string]string{
+		"Lightning Bolt":  "lightning_bolt",
+		"Cards":           "cards_card",
+		"Memory Test":     "memory_test_card",
+		"Bayou Dragonfly": "bayou_dragonfly_card",
+	}
+	for name, want := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := CardNameToSafeFileName(name); got != want {
+				t.Fatalf("CardNameToSafeFileName(%q) = %q, want %q", name, got, want)
+			}
+		})
+	}
+}
+
 func TestCardNameToPackageLetter(t *testing.T) {
 	tests := []struct {
 		name string

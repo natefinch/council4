@@ -158,3 +158,8 @@ See [`cmd/checkparser/README.md`](cmd/checkparser/README.md).
 generation. It emits only fully executable cards and reports every unsupported
 card without creating a partial definition. See
 [`cmd/compilecards/README.md`](cmd/compilecards/README.md).
+
+`cmd/corpusdelta` orchestrates expansion-corpus compilation, stable-ID report
+comparison, `docs/supported.md` regeneration, generated-package validation, and
+review-manifest generation. See
+[`cmd/corpusdelta/README.md`](cmd/corpusdelta/README.md).
