@@ -179,6 +179,7 @@ const (
 	EffectAddMana
 	EffectAttach
 	EffectCast
+	EffectCantBeBlocked
 	EffectCantBeCountered
 	EffectCantBlock
 	EffectCounter

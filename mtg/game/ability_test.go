@@ -149,6 +149,19 @@ func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestCantBeBlockedStaticBodyBuildsCompleteMechanic(t *testing.T) {
+	if CantBeBlockedStaticBody.Text != "This creature can't be blocked." {
+		t.Fatalf("text = %q", CantBeBlockedStaticBody.Text)
+	}
+	if len(CantBeBlockedStaticBody.RuleEffects) != 1 {
+		t.Fatalf("rule effects = %+v", CantBeBlockedStaticBody.RuleEffects)
+	}
+	effect := CantBeBlockedStaticBody.RuleEffects[0]
+	if effect.Kind != RuleEffectCantBeBlocked || !effect.AffectedSource {
+		t.Fatalf("rule effect = %+v", effect)
+	}
+}
+
 func TestCantBeCounteredStaticBodyBuildsCompleteMechanic(t *testing.T) {
 	if CantBeCounteredStaticBody.Text != "This spell can't be countered." {
 		t.Fatalf("text = %q", CantBeCounteredStaticBody.Text)

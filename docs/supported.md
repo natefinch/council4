@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,243
+Cards supported: 2,258
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -141,6 +141,7 @@ Cards supported: 2,243
 - Axebane Stag
 - Axegrinder Giant
 - Azorius Guildgate
+- Azorius Knight-Arbiter
 - Azure Drake
 - Azure Mage
 - Back to Nature
@@ -200,6 +201,7 @@ Cards supported: 2,243
 - Blanchwood Treefolk
 - Blasted Landscape
 - Blessed Orator
+- Blighted Agent
 - Blightstep Pathway // Searstep Pathway
 - Blightwidow
 - Blind Phantasm
@@ -368,6 +370,7 @@ Cards supported: 2,243
 - Courier Griffin
 - Courier Hawk
 - Court Archers
+- Covert Operative
 - Cowl Prowler
 - Crab
 - Cragcrown Pathway // Timbercrown Pathway
@@ -630,7 +633,6 @@ Cards supported: 2,243
 - Fire Nation's Conquest
 - Fire Snake
 - First Mate Ragavan
-- Fish
 - Fisk Tower
 - Fists of the Anvil
 - Flame Lash
@@ -948,6 +950,7 @@ Cards supported: 2,243
 - Insomnia, Crown City
 - Inspiration
 - Inspiring Cleric
+- Invisible Stalker
 - Iron Giant
 - Iron Myr
 - Iron Tusk Elephant
@@ -975,6 +978,7 @@ Cards supported: 2,243
 - Jeskai Student
 - Jeskai Windscout
 - Jetmir's Garden
+- Jhessian Infiltrator
 - Jhessian Lookout
 - Jhovall Queen
 - Jhovall Rider
@@ -1056,6 +1060,7 @@ Cards supported: 2,243
 - Lash of Malice
 - Lash of the Whip
 - Last Gasp
+- Latch Seeker
 - Lathnu Sailback
 - Lava Serpent
 - Lay Waste
@@ -1162,6 +1167,7 @@ Cards supported: 2,243
 - Messenger Drake
 - Messenger Falcons
 - Metallurgeon
+- Metathran Soldier
 - Midnight Assassin
 - Might of Oaks
 - Migrating Ketradon
@@ -1178,6 +1184,7 @@ Cards supported: 2,243
 - Misshapen Fiend
 - Mist Leopard
 - Mist Raven
+- Mist-Cloaked Herald
 - Mistral Charger
 - Mistral Singer
 - Mistvault Bridge
@@ -1343,6 +1350,8 @@ Cards supported: 2,243
 - Peregrine Griffin
 - Pest
 - Phantom Monster
+- Phantom Ninja
+- Phantom Warrior
 - Pharika's Chosen
 - Pheres-Band Centaurs
 - Phobos
@@ -1372,6 +1381,7 @@ Cards supported: 2,243
 - Plaguebearer of Nurgle
 - Plains
 - Plant Warrior
+- Plasma Elemental
 - Plateau
 - Plated Crusher
 - Plated Seastrider
@@ -1719,6 +1729,7 @@ Cards supported: 2,243
 - Slimebind
 - Slippery Bogle
 - Slippery Karst
+- Slither Blade
 - Sliver
 - Sliver Army
 - Sliver Construct
@@ -1804,6 +1815,7 @@ Cards supported: 2,243
 - Stone-Throwing Devils
 - Stoneskin
 - Stonework Puma
+- Storm Fleet Sprinter
 - Stormcaller of Keranos
 - Stormchaser Mage
 - Stormcloud Spirit
@@ -1860,6 +1872,7 @@ Cards supported: 2,243
 - Talas Air Ship
 - Talas Merchant
 - Talas Scout
+- Talas Warrior
 - Talon Trooper
 - Talruum Minotaur
 - Tangle Mantis
@@ -1916,6 +1929,7 @@ Cards supported: 2,243
 - Thunderhead Squadron
 - Thundering Giant
 - Thunderscape Apprentice
+- Tidal Kraken
 - Tidehollow Strix
 - Tidepool Turtle
 - Tidings
@@ -1968,6 +1982,7 @@ Cards supported: 2,243
 - Tresserhorn Sinks
 - Trip Noose
 - Triskelavite
+- Triton Shorestalker
 - Triton Shorethief
 - Trokin High Guard
 - Troll Warrior

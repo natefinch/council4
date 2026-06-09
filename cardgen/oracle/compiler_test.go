@@ -100,6 +100,27 @@ func TestCompileSelfCannotBlockStaticAbility(t *testing.T) {
 	}
 }
 
+func TestCompileSelfCannotBeBlockedStaticAbility(t *testing.T) {
+	t.Parallel()
+	source := "This creature can't be blocked."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+
+	ability := compilation.Abilities[0]
+	if ability.Kind != AbilityStatic ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != EffectCantBeBlocked ||
+		!ability.Effects[0].Negated {
+		t.Fatalf("ability = %#v", ability)
+	}
+	if len(ability.References) != 1 ||
+		ability.References[0].Kind != ReferenceThisObject {
+		t.Fatalf("references = %#v", ability.References)
+	}
+}
+
 func TestCompileSelfUncounterableStaticAbility(t *testing.T) {
 	t.Parallel()
 	source := "This spell can't be countered."
