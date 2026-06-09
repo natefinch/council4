@@ -381,6 +381,107 @@ func TestGenerateExecutableCardSourceOrderedEffects(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSurveil(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Surveil",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Surveil 2.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Surveil") {
+		t.Fatalf("source missing Surveil primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceInvestigate(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Investigate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Investigate.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Investigate") {
+		t.Fatalf("source missing Investigate primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceProliferate(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Proliferate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Proliferate.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Proliferate{}") {
+		t.Fatalf("source missing Proliferate primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRegenerate(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Regenerate",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Regenerate target creature.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Regenerate") {
+		t.Fatalf("source missing Regenerate primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceFight(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Fight",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(1)") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamageTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1146,6 +1247,10 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "divided damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage divided as you choose among any number of targets."},
 		{name: "mass damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage to each opponent."},
 		{name: "variable draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "Draw X cards."},
+		{name: "variable surveil", cardName: "Test Surveil", typeLine: "Sorcery", oracleText: "Surveil X."},
+		{name: "repeated investigate", cardName: "Test Investigate", typeLine: "Sorcery", oracleText: "Investigate three times."},
+		{name: "repeated proliferate", cardName: "Test Proliferate", typeLine: "Sorcery", oracleText: "Proliferate X times."},
+		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
 		{name: "conditional draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "If you control a creature, draw two cards."},
 		{name: "compound draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "Draw two cards, then discard a card."},
 		{name: "multiple targeted clauses", cardName: "Test Spell", typeLine: "Sorcery", oracleText: "Destroy target artifact. Tap target creature."},

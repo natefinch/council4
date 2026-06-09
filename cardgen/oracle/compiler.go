@@ -533,6 +533,8 @@ func effectKind(token Token) EffectKind {
 		return EffectFight
 	case "gain", "gains":
 		return EffectGain
+	case "investigate", "investigates":
+		return EffectInvestigate
 	case "lose", "loses":
 		return EffectLose
 	case "mill", "mills":
@@ -541,6 +543,10 @@ func effectKind(token Token) EffectKind {
 		return EffectModifyPT
 	case "put", "puts":
 		return EffectPut
+	case "proliferate", "proliferates":
+		return EffectProliferate
+	case "regenerate", "regenerates":
+		return EffectRegenerate
 	case "return", "returns":
 		return EffectReturn
 	case "reveal", "reveals":
@@ -549,6 +555,8 @@ func effectKind(token Token) EffectKind {
 		return EffectSacrifice
 	case "scry", "scries":
 		return EffectScry
+	case "surveil", "surveils":
+		return EffectSurveil
 	case "search", "searches":
 		return EffectSearch
 	case "shuffle", "shuffles":

@@ -314,6 +314,59 @@ func TestCompileFixedEffectValues(t *testing.T) {
 	}
 }
 
+func TestCompileSurveilEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Surveil 2.", ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 1 ||
+		effects[0].Kind != EffectSurveil ||
+		effects[0].Amount != (CompiledAmount{Value: 2, Known: true}) {
+		t.Fatalf("effects = %#v, want surveil 2", effects)
+	}
+}
+
+func TestCompileInvestigateEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Investigate.", ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectInvestigate {
+		t.Fatalf("effects = %#v, want investigate", effects)
+	}
+}
+
+func TestCompileProliferateEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Proliferate.", ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectProliferate {
+		t.Fatalf("effects = %#v, want proliferate", effects)
+	}
+}
+
+func TestCompileRegenerateEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"Regenerate target creature.",
+		ParseContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectRegenerate {
+		t.Fatalf("effects = %#v, want regenerate", effects)
+	}
+}
+
 func TestCompileCounterVerbAndNoun(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

@@ -117,8 +117,10 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
   Ward, Cycling, Equip, base-type Enchant, color-based Protection, supported
   tap mana choices, unconditional enters-tapped replacements, fixed single-target
   damage, destruction, exile, return-to-hand, and power/toughness changes,
-  narrow mass destruction, fixed draw and life changes, fixed controller scry,
-  fixed controller or target-player discard and mill, one-target tap and untap,
+  narrow mass destruction, fixed draw and life changes, fixed controller scry
+  and surveil, exact investigate and proliferate, fixed controller or
+  target-player discard and mill, one-target tap, untap, and regeneration, and
+  exact fights between two target creatures,
   and simple self-enter or self-dies triggers containing exactly one supported
   effect. Spells may contain an ordered sequence of independently supported
   sentence-sized effects, with at most one targeted clause until target-index

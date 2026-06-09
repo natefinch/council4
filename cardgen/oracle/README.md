@@ -5,6 +5,8 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
+**Cards supported: 1,838 / 37,628**
+
 The pipeline is:
 
 ```text
@@ -105,14 +107,18 @@ its exact source span. Unknown costs receive their own warning. The compiler
 never substitutes guessed executable behavior for unsupported wording.
 
 The strict executable backend currently lowers plain non-parameterized
-keywords, mana-cost Ward and Cycling, supported tap mana choices,
+keywords, mana-cost Ward, Cycling, and Equip, base-type Enchant, color-based
+Protection, supported tap mana choices,
 unconditional enters-tapped replacements, fixed single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes, narrow mass
-destruction, fixed draw and life changes, fixed controller scry, fixed
-controller or target-player discard and mill, and one-target tap and untap. It
-also lowers exact supported self-enter and self-dies triggers when their body is
-exactly one supported spell-like effect. Every semantic element and meaningful
-source token must be consumed; otherwise the whole card is rejected.
+destruction, fixed draw and life changes, fixed controller scry and surveil,
+exact investigate and proliferate, fixed controller or target-player discard
+and mill, one-target tap, untap, and regeneration, and exact fights between two
+target creatures. Supported sentence-sized effects may be lowered in Oracle
+order when at most one clause targets. It also lowers exact supported self-enter
+and self-dies triggers when their body is exactly one supported spell-like
+effect. Every semantic element and meaningful source token must be consumed;
+otherwise the whole card is rejected.
 
 This compiler IR is the recognition stage. The strict backend in `cardgen`
 consumes it and lowers each recognized ability into a second, **typed**

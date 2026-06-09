@@ -189,14 +189,18 @@ const (
 	EffectExile
 	EffectFight
 	EffectGain
+	EffectInvestigate
 	EffectLose
 	EffectMill
 	EffectModifyPT
 	EffectPut
+	EffectProliferate
+	EffectRegenerate
 	EffectReturn
 	EffectReveal
 	EffectSacrifice
 	EffectScry
+	EffectSurveil
 	EffectSearch
 	EffectShuffle
 	EffectTap

@@ -343,3 +343,84 @@ func TestLowerOrderedSpellEffects(t *testing.T) {
 		t.Fatalf("second primitive = %+v, want draw one", mode.Sequence[1].Primitive)
 	}
 }
+
+func TestLowerSurveilSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Surveil",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	surveil, ok := mode.Sequence[0].Primitive.(game.Surveil)
+	if !ok ||
+		surveil.Amount.Value() != 2 ||
+		surveil.Player != game.ControllerReference() {
+		t.Fatalf("primitive = %+v, want controller surveils two", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerInvestigateSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Investigate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Investigate.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	investigate, ok := mode.Sequence[0].Primitive.(game.Investigate)
+	if !ok || investigate.Amount.Value() != 1 {
+		t.Fatalf("primitive = %+v, want investigate once", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerProliferateSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Proliferate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Proliferate.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if _, ok := mode.Sequence[0].Primitive.(game.Proliferate); !ok {
+		t.Fatalf("primitive = %T, want game.Proliferate", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerRegenerateSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Regenerate",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Regenerate target creature.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	regenerate, ok := mode.Sequence[0].Primitive.(game.Regenerate)
+	if !ok || regenerate.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("primitive = %+v, want regenerate target permanent", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerFightSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Fight",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights target creature you don't control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 {
+		t.Fatalf("targets = %+v, want two creatures", mode.Targets)
+	}
+	fight, ok := mode.Sequence[0].Primitive.(game.Fight)
+	if !ok ||
+		fight.Object != game.TargetPermanentReference(0) ||
+		fight.RelatedObject != game.TargetPermanentReference(1) {
+		t.Fatalf("primitive = %+v, want targets 0 and 1 fight", mode.Sequence[0].Primitive)
+	}
+}

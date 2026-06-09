@@ -269,7 +269,11 @@ func lowerExecutableAbility(
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
-		spans := make([]oracle.Span, 0, len(ability.Effects)+len(ability.Targets)+len(ability.References))
+		spans := make(
+			[]oracle.Span,
+			0,
+			len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
+		)
 		for _, effect := range ability.Effects {
 			spans = append(spans, effect.Span)
 		}
@@ -278,6 +282,9 @@ func lowerExecutableAbility(
 		}
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
+		}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
 		}
 		return abilityLowering{
 			spellAbility: opt.Val(spellAbility),
@@ -914,6 +921,13 @@ func lowerSingleEffectSpell(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
+	ability.Text = textWithoutDelimited(ability.Text, ability.Span, syntax.Reminders)
+	syntax.Tokens = slices.DeleteFunc(
+		append([]oracle.Token(nil), syntax.Tokens...),
+		func(token oracle.Token) bool {
+			return spanCoveredByDelimited(token.Span, syntax.Reminders)
+		},
+	)
 	switch ability.Effects[0].Kind {
 	case oracle.EffectDealDamage:
 		return lowerFixedDamageSpell(cardName, ability)
@@ -933,6 +947,20 @@ func lowerSingleEffectSpell(
 		return lowerFixedControllerSpell(ability, syntax, "scry", func(amount int, player game.PlayerReference) game.Primitive {
 			return game.Scry{Amount: game.Fixed(amount), Player: player}
 		})
+	case oracle.EffectSurveil:
+		return lowerFixedControllerSpell(ability, syntax, "surveil", func(amount int, player game.PlayerReference) game.Primitive {
+			return game.Surveil{Amount: game.Fixed(amount), Player: player}
+		})
+	case oracle.EffectInvestigate:
+		return lowerInvestigateSpell(ability, syntax)
+	case oracle.EffectProliferate:
+		return lowerExactPrimitiveSpell(ability, syntax, "proliferate", game.Proliferate{})
+	case oracle.EffectRegenerate:
+		return lowerFixedPermanentTargetSpell(ability, "Regenerate", func(object game.ObjectReference) game.Primitive {
+			return game.Regenerate{Object: object}
+		})
+	case oracle.EffectFight:
+		return lowerFightSpell(ability)
 	case oracle.EffectDiscard:
 		return lowerFixedCardCountPlayerSpell(
 			ability, syntax, "discard", "discards", func(amount int, player game.PlayerReference) game.Primitive {
@@ -968,6 +996,135 @@ func lowerSingleEffectSpell(
 			"the executable source backend does not yet lower this spell ability",
 		)
 	}
+}
+
+func textWithoutDelimited(text string, span oracle.Span, groups []oracle.Delimited) string {
+	var result strings.Builder
+	cursor := span.Start.Offset
+	for _, group := range groups {
+		if group.Span.Start.Offset < cursor ||
+			group.Span.End.Offset > span.End.Offset {
+			continue
+		}
+		start := group.Span.Start.Offset - span.Start.Offset
+		end := cursor - span.Start.Offset
+		_, _ = result.WriteString(text[end:start])
+		cursor = group.Span.End.Offset
+	}
+	_, _ = result.WriteString(text[cursor-span.Start.Offset:])
+	return strings.TrimSpace(result.String())
+}
+
+func lowerFightSpell(ability oracle.CompiledAbility) (game.AbilityContent, *oracle.Diagnostic) {
+	if len(ability.Targets) != 2 ||
+		ability.Targets[0].Cardinality != (oracle.TargetCardinality{Min: 1, Max: 1}) ||
+		ability.Targets[1].Cardinality != (oracle.TargetCardinality{Min: 1, Max: 1}) ||
+		ability.Effects[0].Negated ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Text != titleFirst(ability.Targets[0].Text)+" fights "+ability.Targets[1].Text+"." {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported fight spell",
+			"the executable source backend supports only exact fights between two target creatures",
+		)
+	}
+	first, firstOK := fightCreatureTargetSpec(ability.Targets[0])
+	second, secondOK := fightCreatureTargetSpec(ability.Targets[1])
+	if !firstOK || !secondOK {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported fight spell",
+			"the executable source backend supports only exact fights between two target creatures",
+		)
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{first, second},
+		Sequence: []game.Instruction{{
+			Primitive: game.Fight{
+				Object:        game.TargetPermanentReference(0),
+				RelatedObject: game.TargetPermanentReference(1),
+			},
+		}},
+	}.Ability(), nil
+}
+
+func fightCreatureTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+	if target.Selector.Kind != oracle.SelectorCreature ||
+		target.Selector.Another ||
+		target.Selector.Other ||
+		target.Selector.Attacking ||
+		target.Selector.Blocking ||
+		target.Selector.Tapped ||
+		target.Selector.Untapped {
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: target.Text,
+		Allow:      game.TargetAllowPermanent,
+		Predicate: game.TargetPredicate{
+			PermanentTypes: []types.Card{types.Creature},
+		},
+	}
+	var expected string
+	switch target.Selector.Controller {
+	case oracle.ControllerAny:
+		expected = "target creature"
+	case oracle.ControllerYou:
+		expected = "target creature you control"
+		spec.Predicate.Controller = game.ControllerYou
+	case oracle.ControllerOpponent:
+		expected = "target creature an opponent controls"
+		spec.Predicate.Controller = game.ControllerOpponent
+	case oracle.ControllerNotYou:
+		expected = "target creature you don't control"
+		spec.Predicate.Controller = game.ControllerNotYou
+	default:
+		return game.TargetSpec{}, false
+	}
+	return spec, strings.EqualFold(target.Text, expected)
+}
+
+func lowerInvestigateSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ability,
+		syntax,
+		"investigate",
+		game.Investigate{Amount: game.Fixed(1)},
+	)
+}
+
+func lowerExactPrimitiveSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+	verb string,
+	primitive game.Primitive,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	if ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		len(syntax.Tokens) != 2 ||
+		!equalTokenWord(syntax.Tokens[0], verb) ||
+		syntax.Tokens[1].Kind != oracle.Period {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported "+verb+" spell",
+			"the executable source backend supports only exact "+verb,
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: primitive,
+	}}}.Ability(), nil
 }
 
 func lowerOrderedEffectSequence(
