@@ -145,6 +145,36 @@ func TestAdventureFizzledGoesToGraveyard(t *testing.T) {
 	}
 }
 
+func TestAdventureCounteredGoesToGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToHand(g, game.Player1, adventureCreatureCard())
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpellFace(cardID, game.FaceAlternate, nil, 0, nil)) {
+		t.Fatal("applyAction CastSpellFace(alternate) = false, want true")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("adventure spell was not put on the stack")
+	}
+	if !counterStackObject(g, obj.ID) {
+		t.Fatal("counterStackObject(adventure) = false, want true")
+	}
+
+	if !g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("countered adventure spell did not go to graveyard")
+	}
+	if g.Players[game.Player1].Exile.Contains(cardID) {
+		t.Fatal("countered adventure spell was exiled")
+	}
+	if g.AdventureCards[cardID] {
+		t.Fatal("countered adventure spell was tracked in AdventureCards")
+	}
+}
+
 func TestAdventureCreatureFaceNotLegalFromOrdinaryExile(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
