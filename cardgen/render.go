@@ -145,7 +145,7 @@ func (Renderer) writeImports(b *strings.Builder, ctx *renderCtx) {
 	_, _ = b.WriteString(")\n\n")
 }
 
-func (Renderer) writeCardComment(b *strings.Builder, card *ScryfallCard, root generatedCardFields, faces []generatedCardFields) {
+func (Renderer) writeCardComment(b *strings.Builder, card *ScryfallCard, root scryfallFaceFields, faces []scryfallFaceFields) {
 	_, _ = fmt.Fprintf(b, "// %s\n", card.Name)
 	_, _ = b.WriteString("//\n")
 	_, _ = fmt.Fprintf(b, "// Type: %s\n", card.TypeLine)
@@ -182,7 +182,7 @@ func (Renderer) writeCardComment(b *strings.Builder, card *ScryfallCard, root ge
 	}
 }
 
-func (Renderer) writeFaceComment(b *strings.Builder, fields generatedCardFields) {
+func (Renderer) writeFaceComment(b *strings.Builder, fields scryfallFaceFields) {
 	_, _ = fmt.Fprintf(b, "// %s\n", fields.Name)
 	_, _ = b.WriteString("//\n")
 	_, _ = fmt.Fprintf(b, "// Type: %s\n", fields.TypeLine)
@@ -1602,8 +1602,7 @@ func (Renderer) renderManaCost(ctx *renderCtx, manaCost cost.Mana) (string, erro
 }
 
 // renderManaCostMultiline renders a printed face ManaCost as a multi-line
-// cost.Mana literal matching ParseManaCostLiteral so gofmt produces output
-// identical to the existing generated cards.
+// cost.Mana literal so gofmt preserves the canonical generated-card layout.
 func renderManaCostMultiline(ctx *renderCtx, manaCost cost.Mana) (string, error) {
 	ctx.need(importCost)
 	if len(manaCost) == 0 {

@@ -84,7 +84,7 @@ func lowerExecutableFaces(card *ScryfallCard) ([]loweredFaceAbilities, []oracle.
 }
 
 func lowerFaceAbilities(
-	face generatedCardFields,
+	face scryfallFaceFields,
 ) (loweredFaceAbilities, []oracle.Diagnostic) {
 	parsedType := ParseTypeLine(face.TypeLine)
 	if len(parsedType.Types) == 0 {

@@ -203,21 +203,3 @@ func goIdentifierSuffix(name string) string {
 	}
 	return b.String()
 }
-
-// ColorToLiteral converts a Scryfall single-letter color to a Go color.Color name.
-func ColorToLiteral(letter string) string {
-	switch letter {
-	case "W":
-		return "color.White"
-	case "U":
-		return "color.Blue"
-	case "B":
-		return "color.Black"
-	case "R":
-		return "color.Red"
-	case "G":
-		return "color.Green"
-	default:
-		return "/* unknown color: " + letter + " */"
-	}
-}

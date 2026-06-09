@@ -127,7 +127,7 @@ intermediate representation made of `game.*` values (`game.ActivatedAbility`,
 `game.CardDef`, validates it with `game.ValidateCardDef`, and only then renders
 Go source. This compiler package stays purely about Oracle-text recognition; it
 never constructs runtime `game` values itself. See
-[`cardgen/README.md`](../README.md#executable-lowering-pipeline-typed-intermediate-representation)
+[`cardgen/README.md`](../README.md#compiler-stages)
 and [ADR 0008](../../docs/adr/0008-typed-ir-lowering.md).
 
 ## Testing

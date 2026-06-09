@@ -4,12 +4,12 @@
 //
 // # Adding a card
 //
-// Use the card-impl skill to generate a card definition:
+// Use the Oracle compiler to generate supported card definitions:
 //
-//	go run .agents/skills/card-impl/main.go "Card Name"
+//	go run ./cardgen/oracle/cmd/compilecards -in oracle-cards.json -out mtg/cards
 //
-// This creates a file under the appropriate letter sub-package. After adding
-// cards, run go generate to update the sub-package card lists:
+// After adding or editing cards manually, run go generate to update the
+// sub-package card lists:
 //
 //	go generate ./mtg/cards/...
 //

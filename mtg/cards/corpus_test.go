@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
 	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/cards/a"
 	"github.com/natefinch/council4/mtg/cards/b"
@@ -33,7 +32,7 @@ func TestRegisteredCardsValidate(t *testing.T) {
 	}
 	for _, card := range registeredCards() {
 		t.Run(card.Name, func(t *testing.T) {
-			issues := cardgen.ValidateCard(card, cardgen.ValidationOptions{})
+			issues := game.ValidateCardDef(card)
 			if len(issues) != 0 {
 				t.Fatalf("validation issues:\n%s", formatValidationIssues(issues))
 			}
@@ -91,7 +90,7 @@ func registeredCardSets() [][]*game.CardDef {
 	}
 }
 
-func formatValidationIssues(issues []cardgen.ValidationIssue) string {
+func formatValidationIssues(issues []game.CardDefIssue) string {
 	var out strings.Builder
 	for _, issue := range issues {
 		_, _ = fmt.Fprintf(&out, "- %s %s: %s\n", issue.Code, issue.Path, issue.Message)

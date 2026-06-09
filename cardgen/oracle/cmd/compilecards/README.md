@@ -4,19 +4,14 @@
 cards in parallel, and writes deterministic Go definitions for only the cards
 whose complete rules text is supported by the executable backend.
 
-The strict backend supports vanilla faces, plain non-parameterized keywords,
-mana-cost Ward and Cycling, supported tap mana choices, unconditional
-enters-tapped replacements, fixed single-target damage, destruction, exile,
-return-to-hand, and power/toughness changes, narrow mass destruction, fixed draw
-and life changes, fixed controller scry, fixed controller or target-player
-discard and mill, and one-target tap and untap. It also supports exact
-self-enter and self-dies triggers containing one supported effect. Near-miss
-wording such as variable quantities, compound or conditional effects, qualified
-targets, optional triggers, restricted mana, and divided or unsupported mass
+The strict backend supports the mechanic families listed in the package
+[`README`](../../README.md), including ordered spell effects, supported keyword
+templates, mana abilities, fixed quantities and targets, Surveil, Investigate,
+Proliferate, Regenerate, and Fight. Near-miss wording such as variable
+quantities, unsupported conditions or qualifiers, restricted mana, and divided
 effects is rejected. The backend never emits TODOs or partial ability
-implementations. Unsupported cards, unsupported layouts, source-generation
-failures, non-ASCII package names, and filename collisions are written to the
-report.
+implementations. Unsupported cards, layouts, source-generation failures,
+non-ASCII package names, and filename collisions are written to the report.
 
 Writes are serialized after compilation. Existing files at matching generated
 paths are overwritten. Each affected letter package's `cards.go` registry is
@@ -69,6 +64,11 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported power/toughness spell` | A power/toughness change was recognized, but it is not an exact fixed signed change to one target creature until end of turn. |
 | `unsupported life spell` | A gain-life or lose-life effect was recognized, but its amount, affected player, or surrounding wording is outside the exact fixed templates. |
 | `unsupported scry spell` | A scry effect was recognized, but it is not an exact fixed amount performed by the controller. |
+| `unsupported surveil spell` | A surveil effect was recognized, but it is not an exact fixed amount performed by the controller. |
+| `unsupported investigate spell` | Investigate was recognized, but the instruction is repeated, qualified, or otherwise outside the exact supported form. |
+| `unsupported proliferate spell` | Proliferate was recognized, but the instruction is repeated, qualified, or otherwise outside the exact supported form. |
+| `unsupported regenerate spell` | Regenerate was recognized, but it does not target exactly one supported permanent. |
+| `unsupported fight spell` | Fight was recognized, but its two creature targets or controller restrictions cannot be represented exactly. |
 | `unsupported discard spell` | A discard effect was recognized, but it is not an exact fixed number of cards discarded by the controller or one target player. |
 | `unsupported tap spell` | A tap effect was recognized, but it is not exact tapping of one artifact, creature, enchantment, land, or permanent target. |
 | `unsupported untap spell` | An untap effect was recognized, but it is not exact untapping of one artifact, creature, enchantment, land, or permanent target. |

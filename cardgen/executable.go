@@ -82,19 +82,11 @@ func faceHintsFrom(faceAbilities []loweredFaceAbilities) []faceRenderHints {
 // executableFaces returns the printed fields for each face in the positional
 // order used by the typed lowering: reversible cards expose every face, while
 // other layouts expose the root face followed by any additional emitted faces.
-func executableFaces(card *ScryfallCard) []generatedCardFields {
+func executableFaces(card *ScryfallCard) []scryfallFaceFields {
 	if card.Layout == "reversible_card" && len(card.CardFaces) > 0 {
-		fields := facesFromAllCardFaces(card)
-		for i := range fields {
-			fields[i].EntersTapped = false
-		}
-		return fields
+		return facesFromAllCardFaces(card)
 	}
-	fields := append([]generatedCardFields{rootFields(card)}, generatedFaces(card)...)
-	for i := range fields {
-		fields[i].EntersTapped = false
-	}
-	return fields
+	return append([]scryfallFaceFields{rootFields(card)}, generatedFaces(card)...)
 }
 
 // assembleCardDefs builds the typed game.CardDef values validated before
@@ -141,7 +133,7 @@ func assembleCardDefs(card *ScryfallCard, faceAbilities []loweredFaceAbilities) 
 	return []*game.CardDef{def}, nil
 }
 
-func buildCardFace(fields generatedCardFields, abilities loweredFaceAbilities) (game.CardFace, error) {
+func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (game.CardFace, error) {
 	face := game.CardFace{
 		Name:       fields.Name,
 		OracleText: fields.OracleText,
