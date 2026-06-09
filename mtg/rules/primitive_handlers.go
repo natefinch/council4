@@ -3,7 +3,6 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
-	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -15,54 +14,50 @@ func (r *effectResolver) quantity(q game.Quantity) int {
 	return q.Value()
 }
 
-func (r *effectResolver) permanentAt(targetIndex int) (*game.Permanent, bool) {
-	if targetIndex == game.TargetIndexSourcePermanent {
-		return sourcePermanent(r.game, r.obj)
-	}
-	return effectPermanentTarget(r.game, r.obj, targetIndex)
+func (r *effectResolver) resolveObject(object game.ObjectReference) (*game.Permanent, bool) {
+	resolved, ok := resolveObjectReference(r.game, r.obj, object)
+	return resolved.permanent, ok && resolved.permanent != nil
 }
 
-func (r *effectResolver) objectPermanent(object game.ObjectReference, targetIndex int) (*game.Permanent, bool) {
-	if object.Kind != game.ObjectReferenceNone {
-		resolved, ok := resolveObjectReference(r.game, r.obj, object)
-		return resolved.permanent, ok && resolved.permanent != nil
-	}
-	return r.permanentAt(targetIndex)
-}
-
-func (r *effectResolver) playerAt(targetIndex int) (game.PlayerID, bool) {
-	if targetIndex == game.TargetIndexController {
-		if !isPlayerAlive(r.game, r.obj.Controller) {
-			return 0, false
-		}
-		return r.obj.Controller, true
-	}
-	if targetIndex < 0 || targetIndex >= len(r.obj.Targets) {
-		return 0, false
-	}
-	target := r.obj.Targets[targetIndex]
-	if target.Kind != game.TargetPlayer || !isPlayerAlive(r.game, target.PlayerID) {
-		return 0, false
-	}
-	return target.PlayerID, true
-}
-
-func (r *effectResolver) recipientPlayer(recipient game.PlayerReference, fallbackTarget int) (game.PlayerID, bool) {
-	if recipient.Kind != game.PlayerReferenceNone {
-		return resolvePlayerReference(r.game, r.obj, recipient)
-	}
-	return r.playerAt(fallbackTarget)
+func (r *effectResolver) resolvePlayer(player game.PlayerReference) (game.PlayerID, bool) {
+	return resolvePlayerReference(r.game, r.obj, player)
 }
 
 func (r *effectResolver) recipientController(recipient game.PlayerReference) (game.PlayerID, bool) {
-	if recipient.Kind != game.PlayerReferenceNone {
-		return resolvePlayerReference(r.game, r.obj, recipient)
+	if recipient.Kind() != game.PlayerReferenceNone {
+		return r.resolvePlayer(recipient)
 	}
 	return r.obj.Controller, true
 }
 
+func (r *effectResolver) groupPermanents(group game.GroupReference) []*game.Permanent {
+	ids := newReferenceResolver(r.game, r.obj).groupMembers(group)
+	permanents := make([]*game.Permanent, 0, len(ids))
+	for _, permanentID := range ids {
+		if permanent, ok := permanentByObjectID(r.game, permanentID); ok {
+			permanents = append(permanents, permanent)
+		}
+	}
+	return permanents
+}
+
+func (r *effectResolver) groupPermanentsWithSource(group game.GroupReference, source *game.Permanent) []*game.Permanent {
+	ids := newReferenceResolverWithSource(r.game, r.obj, source).groupMembers(group)
+	permanents := make([]*game.Permanent, 0, len(ids))
+	for _, permanentID := range ids {
+		if permanent, ok := permanentByObjectID(r.game, permanentID); ok {
+			permanents = append(permanents, permanent)
+		}
+	}
+	return permanents
+}
+
+func (r *effectResolver) playerGroupMembers(group game.PlayerGroupReference) []game.PlayerID {
+	return newReferenceResolver(r.game, r.obj).playerGroup(group)
+}
+
 func (r *effectResolver) damageSource(source game.ObjectReference) (effectDamageSource, bool) {
-	if source.Kind == game.ObjectReferenceNone {
+	if source.Kind() == game.ObjectReferenceNone {
 		sourceID, sourceObjectID := damageSourceIDs(r.game, r.obj)
 		return effectDamageSource{
 			sourceID:       sourceID,
@@ -105,9 +100,15 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 	if !ok {
 		return res
 	}
-	if targetIndex, ok := prim.Recipient.TargetIndex(); ok {
-		if playerID, playerOK := r.playerAt(targetIndex); playerOK {
-			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
+	if object, ok := prim.Recipient.ObjectReference(); ok {
+		return r.damageReferencedPermanent(res, source, prim.ResultAmountKind, object)
+	}
+	if player, ok := prim.Recipient.PlayerReference(); ok {
+		return r.damageReferencedPlayer(res, source, prim.ResultAmountKind, player)
+	}
+	if player, ok := prim.Recipient.AnyTargetPlayerReference(); ok {
+		if resolvedPlayer, playerOK := r.resolvePlayer(player); playerOK {
+			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, resolvedPlayer, res.amount, false)
 			if source.permanent != nil {
 				applyLifelink(r.game, source.permanent, dealt)
 			}
@@ -115,26 +116,15 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 			res.succeeded = dealt > 0
 			return res
 		}
-		permanent, permanentOK := r.permanentAt(targetIndex)
-		if !permanentOK {
-			return res
-		}
-		lethalRemaining := lethalDamageRemaining(r.game, permanent)
-		if source.permanent != nil {
-			lethalRemaining = lethalDamageRemainingFromSource(r.game, source.permanent, permanent)
-		}
-		dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
-		applyDamageSourceKeywordEffects(r.game, source.permanent, permanent, dealt)
-		res.excessDamage = max(0, dealt-lethalRemaining)
-		res.amount = typedDamageResultAmount(prim.ResultAmountKind, dealt, res.excessDamage)
-		res.succeeded = dealt > 0 && (prim.ResultAmountKind != game.EffectResultAmountExcessDamage || res.excessDamage > 0)
-		return res
 	}
-	if selector, ok := prim.Recipient.Selector(); ok {
-		return r.damageSelectedPermanents(res, source, selector)
+	if object, ok := prim.Recipient.AnyTargetObjectReference(); ok {
+		return r.damageReferencedPermanent(res, source, prim.ResultAmountKind, object)
 	}
-	if selector, ok := prim.Recipient.PlayerSelector(); ok {
-		for _, playerID := range selectedPlayerIDs(r.game, r.obj.Controller, selector) {
+	if group, ok := prim.Recipient.GroupReference(); ok {
+		return r.damageSelectedPermanents(res, source, group)
+	}
+	if group, ok := prim.Recipient.PlayerGroupReference(); ok {
+		for _, playerID := range r.playerGroupMembers(group) {
 			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
 			if source.permanent != nil {
 				applyLifelink(r.game, source.permanent, dealt)
@@ -145,26 +135,39 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 	return res
 }
 
-func (r *effectResolver) damageSelectedPermanents(res effectResolved, source effectDamageSource, selector game.EffectSelector) effectResolved {
-	var permanentIDs []id.ID
-	switch selector {
-	case game.EffectSelectorOtherCreaturesDefendingPlayerControls:
-		permanentIDs = selectedOtherCreaturesDefendingPlayerControls(r.game, r.obj)
-	case game.EffectSelectorAllCreaturesExceptTarget:
-		excluded, _ := targetPermanentObjectID(r.obj, 0)
-		for _, permanent := range r.game.Battlefield {
-			if permanent.ObjectID != excluded && permanentHasType(r.game, permanent, types.Creature) {
-				permanentIDs = append(permanentIDs, permanent.ObjectID)
-			}
-		}
-	default:
-		permanentIDs = selectedPermanentIDs(r.game, r.obj.Controller, source.permanent, selector)
+func (r *effectResolver) damageReferencedPlayer(res effectResolved, source effectDamageSource, resultKind game.EffectResultAmountKind, player game.PlayerReference) effectResolved {
+	playerID, ok := r.resolvePlayer(player)
+	if !ok {
+		return res
 	}
-	for _, permanentID := range permanentIDs {
-		permanent, ok := permanentByObjectID(r.game, permanentID)
-		if !ok {
-			continue
-		}
+	dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
+	if source.permanent != nil {
+		applyLifelink(r.game, source.permanent, dealt)
+	}
+	res.amount = typedDamageResultAmount(resultKind, dealt, 0)
+	res.succeeded = dealt > 0
+	return res
+}
+
+func (r *effectResolver) damageReferencedPermanent(res effectResolved, source effectDamageSource, resultKind game.EffectResultAmountKind, object game.ObjectReference) effectResolved {
+	permanent, ok := r.resolveObject(object)
+	if !ok {
+		return res
+	}
+	lethalRemaining := lethalDamageRemaining(r.game, permanent)
+	if source.permanent != nil {
+		lethalRemaining = lethalDamageRemainingFromSource(r.game, source.permanent, permanent)
+	}
+	dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
+	applyDamageSourceKeywordEffects(r.game, source.permanent, permanent, dealt)
+	res.excessDamage = max(0, dealt-lethalRemaining)
+	res.amount = typedDamageResultAmount(resultKind, dealt, res.excessDamage)
+	res.succeeded = dealt > 0 && (resultKind != game.EffectResultAmountExcessDamage || res.excessDamage > 0)
+	return res
+}
+
+func (r *effectResolver) damageSelectedPermanents(res effectResolved, source effectDamageSource, group game.GroupReference) effectResolved {
+	for _, permanent := range r.groupPermanentsWithSource(group, source.permanent) {
 		dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
 		applyDamageSourceKeywordEffects(r.game, source.permanent, permanent, dealt)
 		res.succeeded = dealt > 0 || res.succeeded
@@ -184,7 +187,7 @@ func handleDraw(r *effectResolver, prim game.Draw) effectResolved {
 	if res.amount <= 0 {
 		return res
 	}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log)
 	}
@@ -193,7 +196,7 @@ func handleDraw(r *effectResolver, prim game.Draw) effectResolved {
 
 func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = discardCards(r.game, playerID, res.amount)
 	}
@@ -202,14 +205,14 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 
 func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	res := effectResolved{accepted: true}
-	if prim.Selector != game.EffectSelectorNone {
-		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+	if prim.Group.Valid() {
+		for _, permanent := range r.groupPermanents(prim.Group) {
 			_, destroyed := destroyPermanent(r.game, permanent.ObjectID)
 			res.succeeded = destroyed || res.succeeded
 		}
 		return res
 	}
-	permanent, ok := r.permanentAt(prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if ok {
 		_, res.succeeded = destroyPermanent(r.game, permanent.ObjectID)
 	}
@@ -240,7 +243,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 
 func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	permanent, ok := r.permanentAt(prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if ok && res.amount > 0 {
 		permanent.Counters.Add(prim.CounterKind, res.amount)
 		res.succeeded = true
@@ -250,7 +253,7 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 
 func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	destination, ok := r.permanentAt(prim.TargetIndex)
+	destination, ok := r.resolveObject(prim.Object)
 	if !ok {
 		return res
 	}
@@ -272,9 +275,7 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 	res := effectResolved{accepted: true}
 	var permanent *game.Permanent
 	if prim.Object.Exists {
-		permanent, _ = r.objectPermanent(prim.Object.Val, prim.TargetIndex)
-	} else {
-		permanent, _ = r.permanentAt(prim.TargetIndex)
+		permanent, _ = r.resolveObject(prim.Object.Val)
 	}
 	res.succeeded = applyTypedContinuousEffects(r.game, r.obj, permanent, prim.ContinuousEffects, prim.Duration)
 	return res
@@ -283,17 +284,13 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 func handleApplyRule(r *effectResolver, prim game.ApplyRule) effectResolved {
 	return effectResolved{
 		accepted:  true,
-		succeeded: createRuleEffectTemplates(r.game, r.obj, prim.TargetIndex, prim.RuleEffects, prim.Duration),
+		succeeded: createRuleEffectTemplates(r.game, r.obj, prim.Object, prim.RuleEffects, prim.Duration),
 	}
 }
 
 func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 	res := effectResolved{accepted: true}
-	var object game.ObjectReference
-	if prim.Object.Exists {
-		object = prim.Object.Val
-	}
-	permanent, ok := r.objectPermanent(object, prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if !ok || prim.Duration != game.DurationUntilEndOfTurn {
 		return res
 	}
@@ -305,23 +302,19 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 }
 
 func handleFight(r *effectResolver, prim game.Fight) effectResolved {
-	secondIndex := 1
-	if prim.RelatedTargetIndex.Exists {
-		secondIndex = prim.RelatedTargetIndex.Val
-	}
-	first, firstOK := effectPermanentTarget(r.game, r.obj, prim.TargetIndex)
-	second, secondOK := effectPermanentTarget(r.game, r.obj, secondIndex)
+	first, firstOK := r.resolveObject(prim.Object)
+	second, secondOK := r.resolveObject(prim.RelatedObject)
 	if !firstOK || !secondOK || first.ObjectID == second.ObjectID ||
 		!permanentHasType(r.game, first, types.Creature) || !permanentHasType(r.game, second, types.Creature) {
 		return effectResolved{accepted: true}
 	}
-	resolveFightTargets(r.game, r.obj, prim.TargetIndex, secondIndex)
+	resolveFightPermanents(r.game, first, second)
 	return effectResolved{accepted: true, succeeded: true}
 }
 
 func handleTap(r *effectResolver, prim game.Tap) effectResolved {
 	res := effectResolved{accepted: true}
-	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+	if permanent, ok := r.resolveObject(prim.Object); ok {
 		setPermanentTapped(r.game, permanent, true)
 		res.succeeded = true
 	}
@@ -333,7 +326,7 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	if !searchSpecSupported(prim.Spec) {
 		return res
 	}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = r.engine.searchLibrary(r.game, r.obj, playerID, prim.Spec, res.amount)
 	}
@@ -342,11 +335,11 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 
 func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	var recipient game.PlayerReference
+	playerRef := prim.Player
 	if prim.Recipient.Exists {
-		recipient = prim.Recipient.Val
+		playerRef = prim.Recipient.Val
 	}
-	playerID, ok := r.recipientPlayer(recipient, prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(playerRef)
 	if !ok {
 		return res
 	}
@@ -408,7 +401,7 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 
 func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePermanentIntoLibrary) effectResolved {
 	res := effectResolved{accepted: true}
-	permanent, ok := r.permanentAt(prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if !ok {
 		return res
 	}
@@ -425,7 +418,7 @@ func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePerma
 
 func handleStartEngines(r *effectResolver, prim game.StartEngines) effectResolved {
 	res := effectResolved{accepted: true}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = startEngines(r.game, playerID)
 	}
@@ -434,7 +427,7 @@ func handleStartEngines(r *effectResolver, prim game.StartEngines) effectResolve
 
 func handleSetClassLevel(r *effectResolver, prim game.SetClassLevel) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	permanent, ok := r.permanentAt(prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if ok && res.amount > permanent.ClassLevel {
 		permanent.ClassLevel = res.amount
 		res.succeeded = true
@@ -444,7 +437,7 @@ func handleSetClassLevel(r *effectResolver, prim game.SetClassLevel) effectResol
 
 func handleMonstrosity(r *effectResolver, prim game.Monstrosity) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	permanent, ok := r.permanentAt(prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if ok && !permanent.Monstrous {
 		if res.amount > 0 {
 			permanent.Counters.Add(counter.PlusOnePlusOne, res.amount)
@@ -480,7 +473,7 @@ func handleGainLife(r *effectResolver, prim game.GainLife) effectResolved {
 	if res.amount <= 0 {
 		return res
 	}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = gainLife(r.game, playerID, res.amount) > 0
 	}
@@ -492,7 +485,7 @@ func handleLoseLife(r *effectResolver, prim game.LoseLife) effectResolved {
 	if res.amount <= 0 {
 		return res
 	}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = loseLife(r.game, playerID, res.amount) > 0
 	}
@@ -501,13 +494,13 @@ func handleLoseLife(r *effectResolver, prim game.LoseLife) effectResolved {
 
 func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 	res := effectResolved{accepted: true}
-	if prim.Selector != game.EffectSelectorNone {
-		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+	if prim.Group.Valid() {
+		for _, permanent := range r.groupPermanents(prim.Group) {
 			res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile) || res.succeeded
 		}
 		return res
 	}
-	permanent, ok := r.permanentAt(prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if !ok {
 		return res
 	}
@@ -521,13 +514,13 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
-	if prim.Selector != game.EffectSelectorNone {
-		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+	if prim.Group.Valid() {
+		for _, permanent := range r.groupPermanents(prim.Group) {
 			res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand) || res.succeeded
 		}
 		return res
 	}
-	permanent, ok := r.permanentAt(prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if ok {
 		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
 	}
@@ -536,7 +529,7 @@ func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 
 func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	res := effectResolved{accepted: true}
-	permanent, ok := r.permanentAt(prim.TargetIndex)
+	permanent, ok := r.resolveObject(prim.Object)
 	if !ok {
 		permanent, ok = firstPermanentControlledBy(r.game, r.obj.Controller)
 	}
@@ -549,14 +542,14 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 
 func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 	res := effectResolved{accepted: true}
-	if prim.Selector != game.EffectSelectorNone {
-		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+	if prim.Group.Valid() {
+		for _, permanent := range r.groupPermanents(prim.Group) {
 			setPermanentTapped(r.game, permanent, false)
 			res.succeeded = true
 		}
 		return res
 	}
-	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+	if permanent, ok := r.resolveObject(prim.Object); ok {
 		setPermanentTapped(r.game, permanent, false)
 		res.succeeded = true
 	}
@@ -564,12 +557,15 @@ func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 }
 
 func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResolved {
-	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.TargetIndex)}
+	if prim.Object.Kind() != game.ObjectReferenceTargetStackObject {
+		return effectResolved{accepted: true}
+	}
+	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex())}
 }
 
 func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		millCards(r.game, playerID, res.amount)
 		res.succeeded = res.amount > 0
@@ -579,7 +575,7 @@ func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 
 func handleScry(r *effectResolver, prim game.Scry) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		r.engine.scryCards(r.game, r.agents, r.log, playerID, res.amount)
 		res.succeeded = res.amount > 0
@@ -589,7 +585,7 @@ func handleScry(r *effectResolver, prim game.Scry) effectResolved {
 
 func handleSurveil(r *effectResolver, prim game.Surveil) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.playerAt(prim.TargetIndex)
+	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		r.engine.surveilCards(r.game, r.agents, r.log, playerID, res.amount)
 		res.succeeded = res.amount > 0
@@ -625,7 +621,7 @@ func handleProliferate(r *effectResolver, _ game.Proliferate) effectResolved {
 
 func handleGoad(r *effectResolver, prim game.Goad) effectResolved {
 	res := effectResolved{accepted: true}
-	if permanent, ok := r.permanentAt(prim.TargetIndex); ok && permanentHasType(r.game, permanent, types.Creature) {
+	if permanent, ok := r.resolveObject(prim.Object); ok && permanentHasType(r.game, permanent, types.Creature) {
 		goadPermanent(r.game, permanent, r.obj.Controller)
 		res.succeeded = true
 	}
@@ -637,14 +633,14 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 	if res.amount <= 0 {
 		return res
 	}
-	if prim.Selector != game.EffectSelectorNone {
-		for _, permanent := range r.selectedPermanents(prim.Selector, prim.TargetIndex) {
+	if prim.Group.Valid() {
+		for _, permanent := range r.groupPermanents(prim.Group) {
 			permanent.Counters.Remove(prim.CounterKind, res.amount)
 			res.succeeded = true
 		}
 		return res
 	}
-	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+	if permanent, ok := r.resolveObject(prim.Object); ok {
 		permanent.Counters.Remove(prim.CounterKind, res.amount)
 		res.succeeded = true
 	}
@@ -653,7 +649,7 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 
 func handleTransform(r *effectResolver, prim game.Transform) effectResolved {
 	res := effectResolved{accepted: true}
-	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+	if permanent, ok := r.resolveObject(prim.Object); ok {
 		res.succeeded = transformPermanent(r.game, permanent)
 	}
 	return res
@@ -661,7 +657,7 @@ func handleTransform(r *effectResolver, prim game.Transform) effectResolved {
 
 func handlePhaseOut(r *effectResolver, prim game.PhaseOut) effectResolved {
 	res := effectResolved{accepted: true}
-	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+	if permanent, ok := r.resolveObject(prim.Object); ok {
 		permanent.PhasedOut = true
 		removePermanentFromCombat(r.game, permanent.ObjectID)
 		res.succeeded = true
@@ -671,7 +667,7 @@ func handlePhaseOut(r *effectResolver, prim game.PhaseOut) effectResolved {
 
 func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
 	res := effectResolved{accepted: true}
-	if permanent, ok := r.permanentAt(prim.TargetIndex); ok {
+	if permanent, ok := r.resolveObject(prim.Object); ok {
 		permanent.RegenerationShields++
 		res.succeeded = true
 	}
@@ -680,7 +676,7 @@ func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
 
 func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
 	res := effectResolved{accepted: true}
-	if playerID, ok := r.playerAt(prim.TargetIndex); ok {
+	if playerID, ok := r.resolvePlayer(prim.Player); ok {
 		scheduleSkipStep(r.game, playerID, prim.Step)
 		res.succeeded = true
 	}
@@ -714,22 +710,8 @@ func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) eff
 
 func handlePreventDamage(r *effectResolver, prim game.PreventDamage) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim.TargetIndex, game.DurationUntilEndOfTurn)
+	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim.Object, prim.Player, game.DurationUntilEndOfTurn)
 	return res
-}
-
-// selectedPermanents resolves the permanents matched by a mass selector for the
-// current resolution, using the source permanent for "you control" relations.
-func (r *effectResolver) selectedPermanents(selector game.EffectSelector, targetIndex int) []*game.Permanent {
-	source, _ := sourcePermanent(r.game, r.obj)
-	ids := selectedPermanentIDsForSelector(r.game, r.obj, r.obj.Controller, source, selector, targetIndex)
-	permanents := make([]*game.Permanent, 0, len(ids))
-	for _, permanentID := range ids {
-		if permanent, ok := permanentByObjectID(r.game, permanentID); ok {
-			permanents = append(permanents, permanent)
-		}
-	}
-	return permanents
 }
 
 func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent *game.Permanent, templates []game.ContinuousEffect, duration game.EffectDuration) bool {
@@ -753,7 +735,7 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		if runtimeEffect.Duration == game.DurationUntilYourNextTurn && runtimeEffect.ExpiresFor == game.Player1 {
 			runtimeEffect.ExpiresFor = obj.Controller
 		}
-		if runtimeEffect.AffectedObjectID == 0 && runtimeEffect.Selector == game.EffectSelectorNone {
+		if runtimeEffect.AffectedObjectID == 0 && !runtimeEffect.Group.Valid() {
 			if permanent == nil {
 				continue
 			}

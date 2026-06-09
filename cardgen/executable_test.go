@@ -286,7 +286,7 @@ func TestGenerateExecutableCardSourceFixedDamage(t *testing.T) {
 		"game.TargetAllowPermanent | game.TargetAllowPlayer",
 		"Primitive: game.Damage",
 		"game.Fixed(3)",
-		"Recipient: game.TargetRecipient(0)",
+		"Recipient: game.AnyTargetDamageRecipient(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -357,7 +357,7 @@ func TestGenerateExecutableCardSourceFixedDraw(t *testing.T) {
 			for _, wanted := range []string{
 				"Primitive: game.Draw",
 				fmt.Sprintf("game.Fixed(%d)", amount),
-				"TargetIndex: game.TargetIndexController",
+				"Player: game.ControllerReference()",
 			} {
 				if !strings.Contains(source, wanted) {
 					t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -389,7 +389,7 @@ func TestGenerateExecutableCardSourceTargetPlayerDraw(t *testing.T) {
 		"game.TargetAllowPlayer",
 		"Primitive: game.Draw",
 		"game.Fixed(2)",
-		"TargetIndex: 0",
+		"Player: game.TargetPlayerReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -418,7 +418,7 @@ func TestGenerateExecutableCardSourceDestroyCreature(t *testing.T) {
 		`Constraint: "target creature"`,
 		"PermanentTypes: []types.Card{types.Creature}",
 		"Primitive: game.Destroy",
-		"TargetIndex: 0",
+		"Object: game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -477,7 +477,7 @@ func TestGenerateExecutableCardSourceDestroyAllCreatures(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Primitive: game.Destroy",
-		"Selector: game.EffectSelectorAllCreatures",
+		"Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -577,7 +577,7 @@ func TestGenerateExecutableCardSourceExileCreature(t *testing.T) {
 		`Constraint: "target creature"`,
 		"PermanentTypes: []types.Card{types.Creature}",
 		"Primitive: game.Exile",
-		"TargetIndex: 0",
+		"Object: game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -604,7 +604,7 @@ func TestGenerateExecutableCardSourceBounceCreature(t *testing.T) {
 		`Constraint: "target creature"`,
 		"PermanentTypes: []types.Card{types.Creature}",
 		"Primitive: game.Bounce",
-		"TargetIndex: 0",
+		"Object: game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -632,7 +632,7 @@ func TestGenerateExecutableCardSourceGainLife(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.GainLife",
 		"game.Fixed(3)",
-		"TargetIndex: game.TargetIndexController",
+		"Player: game.ControllerReference()",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -647,8 +647,8 @@ func TestGenerateExecutableCardSourceLifeRecipients(t *testing.T) {
 		primitive string
 		recipient string
 	}{
-		{text: "You lose 2 life.", primitive: "game.LoseLife", recipient: "game.TargetIndexController"},
-		{text: "Target player gains 4 life.", primitive: "game.GainLife", recipient: "TargetIndex: 0"},
+		{text: "You lose 2 life.", primitive: "game.LoseLife", recipient: "game.ControllerReference()"},
+		{text: "Target player gains 4 life.", primitive: "game.GainLife", recipient: "Player: game.TargetPlayerReference(0)"},
 		{text: "Target opponent loses 3 life.", primitive: "game.LoseLife", recipient: "Player: game.PlayerOpponent"},
 	}
 	for _, test := range tests {
@@ -705,7 +705,7 @@ func TestGenerateExecutableCardSourceScry(t *testing.T) {
 			for _, wanted := range []string{
 				"Primitive: game.Scry",
 				fmt.Sprintf("game.Fixed(%d)", test.amount),
-				"TargetIndex: game.TargetIndexController",
+				"Player: game.ControllerReference()",
 			} {
 				if !strings.Contains(source, wanted) {
 					t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -737,7 +737,7 @@ func TestGenerateExecutableCardSourceDiscard(t *testing.T) {
 		"game.TargetAllowPlayer",
 		"Primitive: game.Discard",
 		"game.Fixed(2)",
-		"TargetIndex: 0",
+		"Player: game.TargetPlayerReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -763,7 +763,7 @@ func TestGenerateExecutableCardSourceControllerDiscard(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.Discard",
 		"game.Fixed(1)",
-		"TargetIndex: game.TargetIndexController",
+		"Player: game.ControllerReference()",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -792,7 +792,7 @@ func TestGenerateExecutableCardSourceTapTarget(t *testing.T) {
 		`Constraint: "target creature"`,
 		"PermanentTypes: []types.Card{types.Creature}",
 		"Primitive: game.Tap",
-		"TargetIndex: 0",
+		"Object: game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -857,7 +857,7 @@ func TestGenerateExecutableCardSourceMill(t *testing.T) {
 		"game.TargetAllowPlayer",
 		"Primitive: game.Mill",
 		"game.Fixed(3)",
-		"TargetIndex: 0",
+		"Player: game.TargetPlayerReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -883,7 +883,7 @@ func TestGenerateExecutableCardSourceControllerMill(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.Mill",
 		"game.Fixed(4)",
-		"TargetIndex: game.TargetIndexController",
+		"Player: game.ControllerReference()",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -917,7 +917,7 @@ func TestGenerateExecutableCardSourceEnterDrawTrigger(t *testing.T) {
 		"game.TriggerSourceSelf",
 		"Primitive: game.Draw",
 		"game.Fixed(1)",
-		"TargetIndex: game.TargetIndexController",
+		"Player: game.ControllerReference()",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -974,7 +974,7 @@ func TestGenerateExecutableCardSourceEnterTargetTrigger(t *testing.T) {
 		"TriggeredAbilities: []game.TriggeredAbility",
 		"PermanentTypes: []types.Card{types.Artifact}",
 		"Primitive: game.Destroy",
-		"TargetIndex: 0",
+		"Object: game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

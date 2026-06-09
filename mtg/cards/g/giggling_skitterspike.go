@@ -57,12 +57,10 @@ var GigglingSkitterspike = func() *game.CardDef {
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountObjectPower,
-								Object: game.ObjectReference{
-									Kind: game.ObjectReferenceSourcePermanent,
-								},
+								Kind:   game.DynamicAmountObjectPower,
+								Object: game.SourcePermanentReference(),
 							}),
-							Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+							Recipient: game.PlayerGroupDamageRecipient(game.OpponentsReference()),
 						},
 					},
 				},
@@ -87,12 +85,10 @@ var GigglingSkitterspike = func() *game.CardDef {
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountObjectPower,
-								Object: game.ObjectReference{
-									Kind: game.ObjectReferenceSourcePermanent,
-								},
+								Kind:   game.DynamicAmountObjectPower,
+								Object: game.SourcePermanentReference(),
 							}),
-							Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+							Recipient: game.PlayerGroupDamageRecipient(game.OpponentsReference()),
 						},
 					},
 				},
@@ -119,12 +115,10 @@ var GigglingSkitterspike = func() *game.CardDef {
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountObjectPower,
-								Object: game.ObjectReference{
-									Kind: game.ObjectReferenceSourcePermanent,
-								},
+								Kind:   game.DynamicAmountObjectPower,
+								Object: game.SourcePermanentReference(),
 							}),
-							Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+							Recipient: game.PlayerGroupDamageRecipient(game.OpponentsReference()),
 						},
 					},
 				},
@@ -145,8 +139,8 @@ var GigglingSkitterspike = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Monstrosity{
-							TargetIndex: game.TargetIndexSourcePermanent,
-							Amount:      game.Fixed(5),
+							Object: game.SourcePermanentReference(),
+							Amount: game.Fixed(5),
 						},
 					},
 				},

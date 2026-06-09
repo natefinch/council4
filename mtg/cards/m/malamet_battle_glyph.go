@@ -60,7 +60,7 @@ var MalametBattleGlyph = &game.CardDef{
 				{
 					Primitive: game.AddCounter{
 						Amount:      game.Fixed(1),
-						TargetIndex: 0,
+						Object:      game.TargetPermanentReference(0),
 						CounterKind: counter.PlusOnePlusOne,
 					},
 					Condition: opt.Val(game.EffectCondition{
@@ -71,7 +71,10 @@ var MalametBattleGlyph = &game.CardDef{
 					Description: "if the creature you control entered this turn, put a +1/+1 counter on it",
 				},
 				{
-					Primitive: game.Fight{},
+					Primitive: game.Fight{
+						Object:        game.TargetPermanentReference(0),
+						RelatedObject: game.TargetPermanentReference(1),
+					},
 				},
 			},
 		}.Ability()),

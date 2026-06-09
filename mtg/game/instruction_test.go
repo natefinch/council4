@@ -32,7 +32,7 @@ func TestValidateInstructionSequenceAcceptsLinkedBattlefieldSource(t *testing.T)
 		{
 			Primitive: Reveal{
 				Amount:        Fixed(1),
-				TargetIndex:   TargetIndexController,
+				Player:        ControllerReference(),
 				PublishLinked: LinkedKey("revealed-card"),
 			},
 		},
@@ -94,8 +94,8 @@ func TestValidateInstructionSequenceRejectsChoiceKeyUsedAsLinkedKey(t *testing.T
 
 func TestValidateInstructionSequenceRejectsDuplicateResultKey(t *testing.T) {
 	err := ValidateInstructionSequence([]Instruction{
-		{Primitive: Draw{Amount: Fixed(1), TargetIndex: TargetIndexController}, PublishResult: ResultKey("dup")},
-		{Primitive: Draw{Amount: Fixed(1), TargetIndex: TargetIndexController}, PublishResult: ResultKey("dup")},
+		{Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()}, PublishResult: ResultKey("dup")},
+		{Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()}, PublishResult: ResultKey("dup")},
 	})
 	if err == nil || !strings.Contains(err.Error(), "duplicate result key") {
 		t.Fatalf("error = %v, want duplicate result key", err)
@@ -105,11 +105,11 @@ func TestValidateInstructionSequenceRejectsDuplicateResultKey(t *testing.T) {
 func TestValidateInstructionSequenceRejectsForwardResultGate(t *testing.T) {
 	err := ValidateInstructionSequence([]Instruction{
 		{
-			Primitive:   Draw{Amount: Fixed(1), TargetIndex: TargetIndexController},
+			Primitive:   Draw{Amount: Fixed(1), Player: ControllerReference()},
 			ResultGate:  opt.Val(InstructionResultGate{Key: ResultKey("later")}),
 			Description: "forward result gate",
 		},
-		{Primitive: Draw{Amount: Fixed(1), TargetIndex: TargetIndexController}, PublishResult: ResultKey("later")},
+		{Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()}, PublishResult: ResultKey("later")},
 	})
 	if err == nil || !strings.Contains(err.Error(), "not yet published") {
 		t.Fatalf("error = %v, want forward-reference failure", err)
@@ -123,7 +123,7 @@ func TestValidateInstructionSequenceRejectsUnknownDynamicResultKey(t *testing.T)
 				Kind:      DynamicAmountPreviousEffectResult,
 				ResultKey: ResultKey("missing"),
 			}),
-			TargetIndex: TargetIndexController,
+			Player: ControllerReference(),
 		},
 	}})
 	if err == nil || !strings.Contains(err.Error(), "result key") {
@@ -133,7 +133,7 @@ func TestValidateInstructionSequenceRejectsUnknownDynamicResultKey(t *testing.T)
 
 func TestValidateInstructionSequenceRejectsOutOfRangePrimitiveTarget(t *testing.T) {
 	err := ValidateInstructionSequence(
-		[]Instruction{{Primitive: Destroy{TargetIndex: 1}}},
+		[]Instruction{{Primitive: Destroy{Object: TargetPermanentReference(1)}}},
 		[]TargetSpec{{MinTargets: 1, MaxTargets: 1}},
 	)
 	if err == nil || !strings.Contains(err.Error(), "target index 1") {
@@ -156,10 +156,10 @@ func TestModifyPTQuantitySupportsDynamicPowerAndToughness(t *testing.T) {
 		ToughnessDelta: Dynamic(toughness),
 		Duration:       DurationUntilEndOfTurn,
 	}
-	if !primitive.PowerDelta.DynamicAmount().Exists || primitive.PowerDelta.DynamicAmount().Val != power {
+	if !primitive.PowerDelta.DynamicAmount().Exists || !reflect.DeepEqual(primitive.PowerDelta.DynamicAmount().Val, power) {
 		t.Fatalf("power dynamic = %+v, want %+v", primitive.PowerDelta.DynamicAmount(), power)
 	}
-	if !primitive.ToughnessDelta.DynamicAmount().Exists || primitive.ToughnessDelta.DynamicAmount().Val != toughness {
+	if !primitive.ToughnessDelta.DynamicAmount().Exists || !reflect.DeepEqual(primitive.ToughnessDelta.DynamicAmount().Val, toughness) {
 		t.Fatalf("toughness dynamic = %+v, want %+v", primitive.ToughnessDelta.DynamicAmount(), toughness)
 	}
 	if primitive.Duration != DurationUntilEndOfTurn {
@@ -203,5 +203,54 @@ func TestPutOnBattlefieldSourceStates(t *testing.T) {
 	}
 	if got, ok := linkedSource.LinkedKey(); !ok || got != LinkedKey("revealed-card") {
 		t.Fatalf("linked source = %+v, want linked key", linkedSource)
+	}
+}
+
+func TestQuantityValueSemantics(t *testing.T) {
+	// Fixed: zero value is 0, Fixed(n) returns n, IsDynamic is false.
+	zero := Quantity{}
+	if zero.IsDynamic() {
+		t.Fatal("zero Quantity.IsDynamic() = true, want false")
+	}
+	if zero.Value() != 0 {
+		t.Fatalf("zero Quantity.Value() = %d, want 0", zero.Value())
+	}
+	if zero.DynamicAmount().Exists {
+		t.Fatal("zero Quantity.DynamicAmount().Exists = true, want false")
+	}
+
+	fixed := Fixed(7)
+	if fixed.IsDynamic() {
+		t.Fatal("fixed Quantity.IsDynamic() = true, want false")
+	}
+	if fixed.Value() != 7 {
+		t.Fatalf("fixed Quantity.Value() = %d, want 7", fixed.Value())
+	}
+	if fixed.DynamicAmount().Exists {
+		t.Fatal("fixed Quantity.DynamicAmount().Exists = true, want false")
+	}
+
+	// Dynamic: IsDynamic is true, Value returns 0, DynamicAmount returns the formula.
+	d := DynamicAmount{Kind: DynamicAmountX}
+	dyn := Dynamic(d)
+	if !dyn.IsDynamic() {
+		t.Fatal("dynamic Quantity.IsDynamic() = false, want true")
+	}
+	if dyn.Value() != 0 {
+		t.Fatalf("dynamic Quantity.Value() = %d, want 0", dyn.Value())
+	}
+	da := dyn.DynamicAmount()
+	if !da.Exists {
+		t.Fatal("dynamic Quantity.DynamicAmount().Exists = false, want true")
+	}
+	if da.Val.Kind != DynamicAmountX {
+		t.Fatalf("dynamic Quantity.DynamicAmount().Val.Kind = %v, want DynamicAmountX", da.Val.Kind)
+	}
+
+	// Copy independence: copying a dynamic Quantity and reading via accessor returns independent copy.
+	copied := dyn
+	dacopy := copied.DynamicAmount()
+	if !dacopy.Exists || dacopy.Val.Kind != DynamicAmountX {
+		t.Fatalf("copy Quantity.DynamicAmount() = %+v, want DynamicAmountX", dacopy)
 	}
 }

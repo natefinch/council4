@@ -108,14 +108,14 @@ var RhonasTheIndomitable = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.ModifyPT{
-							TargetIndex: 0,
-							PowerDelta:  game.Fixed(2),
-							Duration:    game.DurationUntilEndOfTurn,
+							Object:     game.TargetPermanentReference(0),
+							PowerDelta: game.Fixed(2),
+							Duration:   game.DurationUntilEndOfTurn,
 						},
 					},
 					{
 						Primitive: game.ApplyContinuous{
-							TargetIndex: 0,
+							Object: opt.Val(game.TargetPermanentReference(0)),
 							ContinuousEffects: []game.ContinuousEffect{
 								{
 									Layer: game.LayerAbility,

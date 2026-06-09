@@ -72,7 +72,7 @@ var BridgeworksBattle = func() *game.CardDef {
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.ModifyPT{
-								TargetIndex:    0,
+								Object:         game.TargetPermanentReference(0),
 								PowerDelta:     game.Fixed(2),
 								ToughnessDelta: game.Fixed(2),
 								Duration:       game.DurationUntilEndOfTurn,
@@ -80,8 +80,8 @@ var BridgeworksBattle = func() *game.CardDef {
 						},
 						{
 							Primitive: game.Fight{
-								TargetIndex:        0,
-								RelatedTargetIndex: opt.Val(1),
+								Object:        game.TargetPermanentReference(0),
+								RelatedObject: game.TargetPermanentReference(1),
 							},
 							Description: "target creature you control fights up to one target creature you don't control",
 						},

@@ -289,9 +289,9 @@ func TestAbilityLayerAddsTypedAbilityBody(t *testing.T) {
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.ModifyPT{
-								TargetIndex: game.TargetIndexSourcePermanent,
-								PowerDelta:  game.Fixed(1),
-								Duration:    game.DurationUntilEndOfTurn,
+								Object:     game.SourcePermanentReference(),
+								PowerDelta: game.Fixed(1),
+								Duration:   game.DurationUntilEndOfTurn,
 							},
 						},
 					},
@@ -326,8 +326,41 @@ func TestControlChangeEffectsAffectLegalityAndSelectors(t *testing.T) {
 	if !canAttackWith(g, creature, game.Player2) {
 		t.Fatal("new effective controller cannot attack with control-changed creature")
 	}
-	if !permanentMatchesSelectorForSource(g, nil, game.Player2, creature, game.EffectSelectorCreaturesYouControl) {
-		t.Fatal("creatures-you-control selector did not use effective controller")
+	values := effectivePermanentValues(g, creature)
+	effect := &game.ContinuousEffect{
+		Controller: game.Player2,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+		}),
+	}
+	if !continuousEffectApplies(g, creature, &values, effect) {
+		t.Fatal("creatures-you-control group did not use effective controller")
+	}
+}
+
+func TestContinuousEffectBattlefieldGroupMatchesCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Relic",
+		Types: []types.Card{types.Artifact},
+	}})
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:         1,
+		Controller: game.Player1,
+		Layer:      game.LayerAbility,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		}),
+		AddKeywords: []game.Keyword{game.Haste},
+	})
+
+	if !hasKeyword(g, creature, game.Haste) {
+		t.Fatal("creature did not gain haste from battlefield creature group")
+	}
+	if hasKeyword(g, artifact, game.Haste) {
+		t.Fatal("noncreature artifact incorrectly matched battlefield creature group")
 	}
 }
 
@@ -354,6 +387,98 @@ func TestCopyEffectPreservesDynamicStarValues(t *testing.T) {
 	}
 }
 
+// TestContinuousEffectObjectControlledGroupMatchesOwnedCreatures verifies that
+// a GroupDomainObjectControlled effect only applies to permanents controlled by
+// the same player who controls the anchor permanent.
+func TestContinuousEffectObjectControlledGroupMatchesOwnedCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	allyCreature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerAbility,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		}),
+		AddKeywords: []game.Keyword{game.Haste},
+	})
+
+	if !hasKeyword(g, allyCreature, game.Haste) {
+		t.Fatal("creature controlled by same player did not gain haste from ObjectControlled group")
+	}
+	if !hasKeyword(g, anchor, game.Haste) {
+		t.Fatal("anchor creature itself did not gain haste from ObjectControlled group")
+	}
+	if hasKeyword(g, opponentCreature, game.Haste) {
+		t.Fatal("opponent's creature incorrectly gained haste from ObjectControlled group")
+	}
+}
+
+// TestContinuousEffectObjectControlledGroupExclusion verifies that the exclusion
+// ObjectReference removes a specific permanent from the ObjectControlled group.
+func TestContinuousEffectObjectControlledGroupExclusion(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	other := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	// The effect excludes the source (anchor) from the group it creates.
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerAbility,
+		Group: game.ObjectControlledGroupExcluding(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			game.SourcePermanentReference(),
+		),
+		AddKeywords: []game.Keyword{game.Haste},
+	})
+
+	if !hasKeyword(g, other, game.Haste) {
+		t.Fatal("non-excluded creature did not gain haste")
+	}
+	if hasKeyword(g, anchor, game.Haste) {
+		t.Fatal("excluded source creature incorrectly gained haste from ObjectControlled group")
+	}
+}
+
+// TestContinuousEffectObjectControlledGroupUsesEffectiveController verifies that
+// control-change effects are respected when matching ObjectControlled groups.
+func TestContinuousEffectObjectControlledGroupUsesEffectiveController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	stolen := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	// Control-change effect gives Player1 control of stolen, then an anthem-style
+	// effect from anchor grants haste to all creatures Player1 controls.
+	g.ContinuousEffects = append(g.ContinuousEffects,
+		game.ContinuousEffect{
+			ID:               1,
+			AffectedObjectID: stolen.ObjectID,
+			Layer:            game.LayerControl,
+			NewController:    opt.Val(game.Player1),
+		},
+		game.ContinuousEffect{
+			ID:             2,
+			Controller:     game.Player1,
+			SourceObjectID: anchor.ObjectID,
+			Layer:          game.LayerAbility,
+			Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			}),
+			AddKeywords: []game.Keyword{game.Haste},
+		},
+	)
+
+	if !hasKeyword(g, stolen, game.Haste) {
+		t.Fatal("control-changed creature should gain haste from ObjectControlled group")
+	}
+}
+
 func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Anthem Captain",
@@ -364,8 +489,12 @@ func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent 
 			{
 				ContinuousEffects: []game.ContinuousEffect{
 					{
-						Layer:          game.LayerPowerToughnessModify,
-						Selector:       game.EffectSelectorOtherCreaturesYouControl,
+						Layer: game.LayerPowerToughnessModify,
+						Group: game.BattlefieldGroup(game.Selection{
+							RequiredTypes: []types.Card{types.Creature},
+							Controller:    game.ControllerYou,
+							ExcludeSource: true,
+						}),
 						PowerDelta:     1,
 						ToughnessDelta: 1,
 					},

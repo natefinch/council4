@@ -87,35 +87,55 @@ type primitiveRefs struct {
 type damageRecipientKind int
 
 const (
-	damageRecipientTarget damageRecipientKind = iota
-	damageRecipientSelector
-	damageRecipientPlayerSelector
+	damageRecipientObject damageRecipientKind = iota
+	damageRecipientPlayer
+	damageRecipientAnyTarget
+	damageRecipientGroup
+	damageRecipientPlayerGroup
 )
 
 // DamageRecipient is a typed union identifying who receives damage.
-// Use TargetRecipient, SelectorRecipient, or PlayerSelectorRecipient to construct.
+// Use ObjectDamageRecipient, PlayerDamageRecipient, AnyTargetDamageRecipient,
+// GroupDamageRecipient, or PlayerGroupDamageRecipient to construct.
 type DamageRecipient struct {
-	set   bool
-	kind  damageRecipientKind
-	index int
-	sel   EffectSelector
-	psel  PlayerSelector
+	set         bool
+	kind        damageRecipientKind
+	object      ObjectReference
+	player      PlayerReference
+	group       *GroupReference
+	playerGroup PlayerGroupReference
 }
 
-// TargetRecipient creates a recipient for a single chosen target at index.
-// Use TargetIndexController (-1) for the controller, TargetIndexSourcePermanent (-2) for the source.
-func TargetRecipient(index int) DamageRecipient {
-	return DamageRecipient{set: true, kind: damageRecipientTarget, index: index}
+// ObjectDamageRecipient creates a recipient for a single permanent.
+func ObjectDamageRecipient(object ObjectReference) DamageRecipient {
+	return DamageRecipient{set: true, kind: damageRecipientObject, object: object}
 }
 
-// SelectorRecipient creates a recipient for a mass-damage selector covering permanents.
-func SelectorRecipient(sel EffectSelector) DamageRecipient {
-	return DamageRecipient{set: true, kind: damageRecipientSelector, sel: sel}
+// PlayerDamageRecipient creates a recipient for a single player.
+func PlayerDamageRecipient(player PlayerReference) DamageRecipient {
+	return DamageRecipient{set: true, kind: damageRecipientPlayer, player: player}
 }
 
-// PlayerSelectorRecipient creates a recipient for a mass-damage player selector.
-func PlayerSelectorRecipient(psel PlayerSelector) DamageRecipient {
-	return DamageRecipient{set: true, kind: damageRecipientPlayerSelector, psel: psel}
+// AnyTargetDamageRecipient creates a recipient for a target slot that may name a
+// player or permanent.
+func AnyTargetDamageRecipient(targetIndex int) DamageRecipient {
+	return DamageRecipient{
+		set:    true,
+		kind:   damageRecipientAnyTarget,
+		object: TargetPermanentReference(targetIndex),
+		player: TargetPlayerReference(targetIndex),
+	}
+}
+
+// GroupDamageRecipient creates a recipient for a group of permanents.
+func GroupDamageRecipient(group GroupReference) DamageRecipient {
+	g := group
+	return DamageRecipient{set: true, kind: damageRecipientGroup, group: &g}
+}
+
+// PlayerGroupDamageRecipient creates a recipient for a group of players.
+func PlayerGroupDamageRecipient(group PlayerGroupReference) DamageRecipient {
+	return DamageRecipient{set: true, kind: damageRecipientPlayerGroup, playerGroup: group}
 }
 
 // Valid reports whether the recipient identifies a supported target set.
@@ -124,39 +144,70 @@ func (r DamageRecipient) Valid() bool {
 		return false
 	}
 	switch r.kind {
-	case damageRecipientTarget:
-		return true
-	case damageRecipientSelector:
-		return r.sel != EffectSelectorNone
-	case damageRecipientPlayerSelector:
-		return r.psel != PlayerSelectorNone
+	case damageRecipientObject:
+		return r.object.Kind() != ObjectReferenceNone && len(r.object.Validate()) == 0
+	case damageRecipientPlayer:
+		return r.player.Kind() != PlayerReferenceNone && len(r.player.Validate()) == 0
+	case damageRecipientAnyTarget:
+		return r.object.Kind() == ObjectReferenceTargetPermanent &&
+			r.player.Kind() == PlayerReferenceTargetPlayer &&
+			len(r.object.Validate()) == 0 &&
+			len(r.player.Validate()) == 0
+	case damageRecipientGroup:
+		return r.group != nil && r.group.Valid()
+	case damageRecipientPlayerGroup:
+		return len(r.playerGroup.Validate()) == 0
 	default:
 		return false
 	}
 }
 
-// TargetIndex returns the target index when this recipient addresses one target.
-func (r DamageRecipient) TargetIndex() (int, bool) {
-	if !r.Valid() || r.kind != damageRecipientTarget {
-		return 0, false
+// ObjectReference returns the permanent reference when this recipient addresses one permanent.
+func (r DamageRecipient) ObjectReference() (ObjectReference, bool) {
+	if !r.Valid() || r.kind != damageRecipientObject {
+		return ObjectReference{}, false
 	}
-	return r.index, true
+	return r.object, true
 }
 
-// Selector returns the permanent selector when this recipient is a mass selector.
-func (r DamageRecipient) Selector() (EffectSelector, bool) {
-	if !r.Valid() || r.kind != damageRecipientSelector {
-		return EffectSelectorNone, false
+// PlayerReference returns the player reference when this recipient addresses one player.
+func (r DamageRecipient) PlayerReference() (PlayerReference, bool) {
+	if !r.Valid() || r.kind != damageRecipientPlayer {
+		return PlayerReference{}, false
 	}
-	return r.sel, true
+	return r.player, true
 }
 
-// PlayerSelector returns the player selector when this recipient is a mass player selector.
-func (r DamageRecipient) PlayerSelector() (PlayerSelector, bool) {
-	if !r.Valid() || r.kind != damageRecipientPlayerSelector {
-		return PlayerSelectorNone, false
+// GroupReference returns the group reference when this recipient addresses a permanent group.
+func (r DamageRecipient) GroupReference() (GroupReference, bool) {
+	if !r.Valid() || r.kind != damageRecipientGroup {
+		return GroupReference{}, false
 	}
-	return r.psel, true
+	return *r.group, true
+}
+
+// PlayerGroupReference returns the player-group reference when this recipient addresses a player group.
+func (r DamageRecipient) PlayerGroupReference() (PlayerGroupReference, bool) {
+	if !r.Valid() || r.kind != damageRecipientPlayerGroup {
+		return PlayerGroupReference{}, false
+	}
+	return r.playerGroup, true
+}
+
+// AnyTargetObjectReference returns the permanent reference when this recipient addresses any target.
+func (r DamageRecipient) AnyTargetObjectReference() (ObjectReference, bool) {
+	if !r.Valid() || r.kind != damageRecipientAnyTarget {
+		return ObjectReference{}, false
+	}
+	return r.object, true
+}
+
+// AnyTargetPlayerReference returns the player reference when this recipient addresses any target.
+func (r DamageRecipient) AnyTargetPlayerReference() (PlayerReference, bool) {
+	if !r.Valid() || r.kind != damageRecipientAnyTarget {
+		return PlayerReference{}, false
+	}
+	return r.player, true
 }
 
 type tokenSourceKind int
@@ -290,23 +341,22 @@ type Damage struct {
 	ResultAmountKind EffectResultAmountKind
 }
 
-// Draw draws cards for a player identified by TargetIndex (-1 = controller).
+// Draw draws cards for a referenced player.
 type Draw struct {
-	Amount      Quantity
-	TargetIndex int
+	Amount Quantity
+	Player PlayerReference
 }
 
-// Discard causes a player to discard cards.
+// Discard causes a referenced player to discard cards.
 type Discard struct {
-	Amount      Quantity
-	TargetIndex int
+	Amount Quantity
+	Player PlayerReference
 }
 
-// Destroy destroys the permanent identified by TargetIndex, or every permanent
-// matched by Selector when set.
+// Destroy destroys one referenced permanent or every permanent in a referenced group.
 type Destroy struct {
-	TargetIndex int
-	Selector    EffectSelector
+	Object ObjectReference
+	Group  GroupReference
 }
 
 // AddMana adds mana to the controller's pool.
@@ -319,24 +369,23 @@ type AddMana struct {
 	ChoiceFrom ChoiceKey
 }
 
-// AddCounter places counters on a permanent.
+// AddCounter places counters on a referenced permanent.
 type AddCounter struct {
 	Amount      Quantity
-	TargetIndex int
+	Object      ObjectReference
 	CounterKind counter.Kind
 }
 
 // MoveCounters moves counters from a source to a target permanent.
 type MoveCounters struct {
 	Amount      Quantity
-	TargetIndex int
+	Object      ObjectReference
 	CounterKind counter.Kind
 	Source      CounterSourceSpec
 }
 
 // ApplyContinuous applies continuous effects to a target (or globally).
 type ApplyContinuous struct {
-	TargetIndex       int
 	Object            opt.V[ObjectReference]
 	ContinuousEffects []ContinuousEffect
 	Duration          EffectDuration
@@ -344,15 +393,14 @@ type ApplyContinuous struct {
 
 // ApplyRule creates rule effects for a target (or globally).
 type ApplyRule struct {
-	TargetIndex int
+	Object      opt.V[ObjectReference]
 	RuleEffects []RuleEffect
 	Duration    EffectDuration
 }
 
 // ModifyPT modifies a permanent's power and/or toughness.
 type ModifyPT struct {
-	TargetIndex    int
-	Object         opt.V[ObjectReference]
+	Object         ObjectReference
 	PowerDelta     Quantity
 	ToughnessDelta Quantity
 	Duration       EffectDuration
@@ -360,33 +408,32 @@ type ModifyPT struct {
 
 // Fight makes two permanents fight each other.
 type Fight struct {
-	TargetIndex        int
-	RelatedTargetIndex opt.V[int]
+	Object        ObjectReference
+	RelatedObject ObjectReference
 }
 
-// Tap taps the permanent identified by TargetIndex.
+// Tap taps the referenced permanent.
 type Tap struct {
-	TargetIndex int
+	Object ObjectReference
 }
 
-// Search searches a library for cards matching spec.
+// Search searches a player's library for cards matching spec.
 type Search struct {
-	TargetIndex int
-	Spec        SearchSpec
-	Amount      Quantity
+	Player PlayerReference
+	Spec   SearchSpec
+	Amount Quantity
 }
 
-// Reveal reveals cards from a zone and optionally links them.
+// Reveal reveals cards from a player's zone and optionally links them.
 type Reveal struct {
 	Amount        Quantity
-	TargetIndex   int
+	Player        PlayerReference
 	Recipient     opt.V[PlayerReference]
 	PublishLinked LinkedKey
 }
 
 // PutOnBattlefield puts a card or linked object onto the battlefield.
 type PutOnBattlefield struct {
-	TargetIndex       int
 	Source            BattlefieldSource
 	Recipient         opt.V[PlayerReference]
 	ContinuousEffects []ContinuousEffect
@@ -399,26 +446,26 @@ type CreateToken struct {
 	Recipient opt.V[PlayerReference]
 }
 
-// ShufflePermanentIntoLibrary shuffles the target permanent into its owner's library.
+// ShufflePermanentIntoLibrary shuffles the referenced permanent into its owner's library.
 type ShufflePermanentIntoLibrary struct {
-	TargetIndex int
+	Object ObjectReference
 }
 
 // StartEngines starts engine effects for a player.
 type StartEngines struct {
-	TargetIndex int
+	Player PlayerReference
 }
 
-// SetClassLevel sets the class level of the source Class permanent.
+// SetClassLevel sets the class level of a referenced Class permanent.
 type SetClassLevel struct {
-	TargetIndex int
-	Amount      Quantity
+	Object ObjectReference
+	Amount Quantity
 }
 
-// Monstrosity makes the source creature monstrous.
+// Monstrosity makes a referenced creature monstrous.
 type Monstrosity struct {
-	TargetIndex int
-	Amount      Quantity
+	Object ObjectReference
+	Amount Quantity
 }
 
 // DiscoverCards performs a discover for N.
@@ -440,69 +487,66 @@ type Choose struct {
 	PublishChoice ChoiceKey
 }
 
-// GainLife causes a player identified by TargetIndex (-1 = controller) to gain life.
+// GainLife causes a referenced player to gain life.
 type GainLife struct {
-	Amount      Quantity
-	TargetIndex int
+	Amount Quantity
+	Player PlayerReference
 }
 
-// LoseLife causes a player identified by TargetIndex (-1 = controller) to lose life.
+// LoseLife causes a referenced player to lose life.
 type LoseLife struct {
-	Amount      Quantity
-	TargetIndex int
+	Amount Quantity
+	Player PlayerReference
 }
 
-// Exile exiles the permanent identified by TargetIndex, or every permanent
-// matched by Selector when set. ExileLinkedKey remembers the exiled object for
-// later "exile it, then return it" patterns.
+// Exile exiles one referenced permanent or every permanent in a referenced group.
+// ExileLinkedKey remembers the exiled object for later "exile it, then return it" patterns.
 type Exile struct {
-	TargetIndex    int
-	Selector       EffectSelector
+	Object         ObjectReference
+	Group          GroupReference
 	ExileLinkedKey LinkedKey
 }
 
-// Bounce returns the permanent identified by TargetIndex to its owner's hand,
-// or every permanent matched by Selector when set.
+// Bounce returns one referenced permanent or every permanent in a referenced group to hand.
 type Bounce struct {
-	TargetIndex int
-	Selector    EffectSelector
+	Object ObjectReference
+	Group  GroupReference
 }
 
-// Sacrifice sacrifices the permanent identified by TargetIndex. When no target
-// is chosen, the controller's first permanent is used.
+// Sacrifice sacrifices the referenced permanent. When no object is set, the
+// controller's first permanent is used.
 type Sacrifice struct {
-	TargetIndex int
+	Object ObjectReference
 }
 
-// Untap untaps the permanent identified by TargetIndex, or every permanent
-// matched by Selector when set.
+// Untap untaps one referenced permanent or every permanent in a referenced group.
 type Untap struct {
-	TargetIndex int
-	Selector    EffectSelector
+	Object ObjectReference
+	Group  GroupReference
 }
 
-// CounterObject counters the spell or ability targeted at TargetIndex.
+// CounterObject counters a referenced spell or ability on the stack.
 type CounterObject struct {
-	TargetIndex int
+	Object ObjectReference
 }
 
-// Mill puts cards from the top of a player's library into their graveyard.
+// Mill puts cards from the top of a referenced player's library into their graveyard.
 type Mill struct {
-	Amount      Quantity
-	TargetIndex int
+	Amount Quantity
+	Player PlayerReference
 }
 
-// Scry looks at and reorders the top cards of a player's library.
+// Scry looks at and reorders the top cards of a referenced player's library.
 type Scry struct {
-	Amount      Quantity
-	TargetIndex int
+	Amount Quantity
+	Player PlayerReference
 }
 
-// Surveil looks at the top cards of a player's library, putting any into the
+// Surveil looks at the top cards of a referenced player's library, putting any into the
 // graveyard.
 type Surveil struct {
-	Amount      Quantity
-	TargetIndex int
+	Amount Quantity
+	Player PlayerReference
 }
 
 // Investigate creates Clue tokens for the recipient (controller by default).
@@ -515,39 +559,38 @@ type Investigate struct {
 // chosen permanent or player.
 type Proliferate struct{}
 
-// Goad goads the creature identified by TargetIndex.
+// Goad goads the referenced creature.
 type Goad struct {
-	TargetIndex int
+	Object ObjectReference
 }
 
-// RemoveCounter removes counters from the permanent identified by TargetIndex,
-// or every permanent matched by Selector when set.
+// RemoveCounter removes counters from one referenced permanent or every permanent in a referenced group.
 type RemoveCounter struct {
 	Amount      Quantity
-	TargetIndex int
-	Selector    EffectSelector
+	Object      ObjectReference
+	Group       GroupReference
 	CounterKind counter.Kind
 }
 
-// Transform transforms the permanent identified by TargetIndex.
+// Transform transforms the referenced permanent.
 type Transform struct {
-	TargetIndex int
+	Object ObjectReference
 }
 
-// PhaseOut phases out the permanent identified by TargetIndex.
+// PhaseOut phases out the referenced permanent.
 type PhaseOut struct {
-	TargetIndex int
+	Object ObjectReference
 }
 
-// Regenerate sets up a regeneration shield on the permanent identified by TargetIndex.
+// Regenerate sets up a regeneration shield on the referenced permanent.
 type Regenerate struct {
-	TargetIndex int
+	Object ObjectReference
 }
 
-// SkipStep schedules a player (TargetIndex; -1 = controller) to skip a step.
+// SkipStep schedules a referenced player to skip a step.
 type SkipStep struct {
-	TargetIndex int
-	Step        Step
+	Player PlayerReference
+	Step   Step
 }
 
 // CreateEmblem creates an emblem owned by the controller with the given abilities.
@@ -566,11 +609,12 @@ type CreateReplacement struct {
 	Duration    EffectDuration
 }
 
-// PreventDamage creates a damage-prevention shield for the player or permanent
-// identified by TargetIndex (-1 = controller).
+// PreventDamage creates a damage-prevention shield for exactly one referenced
+// player or permanent.
 type PreventDamage struct {
-	Amount      Quantity
-	TargetIndex int
+	Amount Quantity
+	Object ObjectReference
+	Player PlayerReference
 }
 
 // Kind implements Primitive for Damage.

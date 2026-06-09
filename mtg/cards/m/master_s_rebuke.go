@@ -61,10 +61,10 @@ var MasterSRebuke = &game.CardDef{
 				{
 					Primitive: game.Damage{
 						Amount: game.Dynamic(game.DynamicAmount{
-							Kind:        game.DynamicAmountTargetPower,
-							TargetIndex: 0,
+							Kind:   game.DynamicAmountTargetPower,
+							Object: game.TargetPermanentReference(0),
 						}),
-						Recipient: game.TargetRecipient(1),
+						Recipient: game.ObjectDamageRecipient(game.TargetPermanentReference(1)),
 					},
 				},
 			},

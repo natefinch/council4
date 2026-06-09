@@ -81,7 +81,7 @@ func TestLegalActionEnumerationCharacterization(t *testing.T) {
 					ActivatedAbilities: []game.ActivatedAbility{{
 						Content: game.Mode{
 							Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
-							Sequence: []game.Instruction{{Primitive: game.Damage{Recipient: game.TargetRecipient(0), Amount: game.Fixed(1)}}},
+							Sequence: []game.Instruction{{Primitive: game.Damage{Recipient: game.AnyTargetDamageRecipient(0), Amount: game.Fixed(1)}}},
 						}.Ability(),
 					}}},
 				})

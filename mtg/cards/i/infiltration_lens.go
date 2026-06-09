@@ -53,8 +53,8 @@ var InfiltrationLens = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Draw{
-							Amount:      game.Fixed(2),
-							TargetIndex: game.TargetIndexController,
+							Amount: game.Fixed(2),
+							Player: game.ControllerReference(),
 						},
 					},
 				},

@@ -40,8 +40,8 @@ var KusariGama = func() *game.CardDef {
 			`,
 		ContinuousEffects: []game.ContinuousEffect{
 			{
-				Layer:    game.LayerAbility,
-				Selector: game.EffectSelectorEquippedCreature,
+				Layer: game.LayerAbility,
+				Group: game.AttachedObjectGroup(game.SourcePermanentReference()),
 				AddAbilities: []game.Ability{
 					game.ActivatedAbility{
 						Text: `
@@ -54,9 +54,9 @@ var KusariGama = func() *game.CardDef {
 							Sequence: []game.Instruction{
 								{
 									Primitive: game.ModifyPT{
-										TargetIndex: game.TargetIndexSourcePermanent,
-										PowerDelta:  game.Fixed(1),
-										Duration:    game.DurationUntilEndOfTurn,
+										Object:     game.SourcePermanentReference(),
+										PowerDelta: game.Fixed(1),
+										Duration:   game.DurationUntilEndOfTurn,
 									},
 								},
 							},
@@ -89,7 +89,11 @@ var KusariGama = func() *game.CardDef {
 							Amount: game.Dynamic(game.DynamicAmount{
 								Kind: game.DynamicAmountEventDamage,
 							}),
-							Recipient: game.SelectorRecipient(game.EffectSelectorOtherCreaturesDefendingPlayerControls),
+							Recipient: game.GroupDamageRecipient(game.ObjectControlledGroupExcluding(
+								game.EventPermanentReference(),
+								game.Selection{RequiredTypes: []types.Card{types.Creature}},
+								game.EventPermanentReference(),
+							)),
 						},
 					},
 				},

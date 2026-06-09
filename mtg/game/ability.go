@@ -263,10 +263,22 @@ type TriggerPattern struct {
 	ExcludePermanentTypes []types.Card
 	RequireNonToken       bool
 
+	// SubjectSelection is the Selection-based form of the event subject
+	// permanent filters (RequirePermanentTypes/ExcludePermanentTypes and
+	// RequireNonToken). It is wildcard by default; the rules matcher adapts the
+	// legacy fields when it is empty, and the two forms must not both be set.
+	SubjectSelection Selection
+
 	// RequireCardTypes and ExcludeCardTypes filter spell-cast events by the
 	// spell's types as chosen/cast on the stack (CR 601.2, CR 603.2).
 	RequireCardTypes []types.Card
 	ExcludeCardTypes []types.Card
+
+	// CardSelection is the Selection-based form of the cast-spell card filters
+	// (RequireCardTypes/ExcludeCardTypes). It is wildcard by default; the rules
+	// matcher adapts the legacy fields when it is empty, and the two forms must
+	// not both be set.
+	CardSelection Selection
 
 	MatchFromZone bool
 	FromZone      zone.Type
@@ -325,33 +337,6 @@ const (
 	EffectResultAmountExcessDamage
 )
 
-// EffectSelector identifies a set of permanents affected by a mass effect.
-type EffectSelector string
-
-// Effect selector values identify mass-effect recipient groups.
-const (
-	EffectSelectorNone                                  EffectSelector = ""
-	EffectSelectorAllCreatures                          EffectSelector = "all creatures"
-	EffectSelectorAllCreaturesExceptTarget              EffectSelector = "all creatures except target"
-	EffectSelectorAllArtifacts                          EffectSelector = "all artifacts"
-	EffectSelectorAllEnchantments                       EffectSelector = "all enchantments"
-	EffectSelectorAllNonlandPermanents                  EffectSelector = "all nonland permanents"
-	EffectSelectorAllPermanents                         EffectSelector = "all permanents"
-	EffectSelectorCreaturesYouControl                   EffectSelector = "creatures you control"
-	EffectSelectorOtherCreaturesYouControl              EffectSelector = "other creatures you control"
-	EffectSelectorEquippedCreature                      EffectSelector = "equipped creature"
-	EffectSelectorOtherCreaturesDefendingPlayerControls EffectSelector = "other creatures defending player controls"
-)
-
-// PlayerSelector identifies a set of players affected by a mass effect.
-type PlayerSelector string
-
-// Player selector values identify groups of affected players.
-const (
-	PlayerSelectorNone      PlayerSelector = ""
-	PlayerSelectorOpponents PlayerSelector = "opponents"
-)
-
 // CounterSourceKind identifies where an effect reads counters from.
 type CounterSourceKind int
 
@@ -370,8 +355,8 @@ const (
 
 // CounterSourceSpec describes the source object for counter-moving effects.
 type CounterSourceSpec struct {
-	Kind        CounterSourceKind
-	TargetIndex int
+	Kind   CounterSourceKind
+	Object ObjectReference
 }
 
 // TokenCopySource identifies what object/card supplies copiable values for a
@@ -457,8 +442,8 @@ type EffectCondition struct {
 	// Text preserves the printed condition for logs, diagnostics, and review.
 	Text string
 
-	// TargetIndex identifies the target whose current characteristics are tested.
-	TargetIndex int
+	// Object identifies the object whose current characteristics are tested.
+	Object ObjectReference
 
 	PermanentType opt.V[types.Card]
 
@@ -469,17 +454,6 @@ type EffectCondition struct {
 	// stack object bound.
 	Condition opt.V[Condition]
 }
-
-// TargetIndex sentinel values identify objects or players that are not chosen
-// targets. Non-negative TargetIndex values index into the runtime targets chosen
-// for the spell or ability.
-const (
-	// TargetIndexController means the effect applies to that spell or ability's controller.
-	TargetIndexController = -1
-
-	// TargetIndexSourcePermanent means the effect refers to the source permanent.
-	TargetIndexSourcePermanent = -2
-)
 
 // TargetSpec describes the targeting requirements of an ability.
 type TargetSpec struct {
@@ -497,6 +471,12 @@ type TargetSpec struct {
 	// definitions. Constraint remains for display and as a legacy fallback.
 	Allow     TargetAllow
 	Predicate TargetPredicate
+
+	// Selection is the shared Selection-based form of the structured target
+	// predicate. When present it supersedes Predicate; the two must not both be
+	// specified. Predicate remains for existing cards and is adapted to a
+	// Selection by the rules matcher when Selection is absent.
+	Selection opt.V[Selection]
 
 	// Chooser identifies who chooses this target slot during announcement. The
 	// default controller chooser preserves normal targeting. For non-controller

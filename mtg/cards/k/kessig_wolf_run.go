@@ -77,7 +77,7 @@ var KessigWolfRun = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.ModifyPT{
-							TargetIndex: 0,
+							Object: game.TargetPermanentReference(0),
 							PowerDelta: game.Dynamic(game.DynamicAmount{
 								Kind: game.DynamicAmountX,
 							}),
@@ -86,7 +86,7 @@ var KessigWolfRun = func() *game.CardDef {
 					},
 					{
 						Primitive: game.ApplyContinuous{
-							TargetIndex: 0,
+							Object: opt.Val(game.TargetPermanentReference(0)),
 							ContinuousEffects: []game.ContinuousEffect{
 								{
 									Layer: game.LayerAbility,

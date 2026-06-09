@@ -408,14 +408,16 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		if obj == nil {
 			break
 		}
-		if permanent, ok := effectPermanentAt(g, obj, dynamic.TargetIndex); ok {
+		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok && resolved.permanent != nil {
+			permanent := resolved.permanent
 			amount = effectivePower(g, permanent)
 		}
 	case game.DynamicAmountTargetToughness:
 		if obj == nil {
 			break
 		}
-		if permanent, ok := effectPermanentAt(g, obj, dynamic.TargetIndex); ok {
+		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok && resolved.permanent != nil {
+			permanent := resolved.permanent
 			if toughness, ok := effectiveToughness(g, permanent); ok {
 				amount = toughness
 			}
@@ -424,7 +426,8 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		if obj == nil {
 			break
 		}
-		if permanent, ok := effectPermanentAt(g, obj, dynamic.TargetIndex); ok {
+		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok && resolved.permanent != nil {
+			permanent := resolved.permanent
 			if def, ok := permanentCardDef(g, permanent); ok {
 				amount = def.ManaValue()
 			}
@@ -433,7 +436,8 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		if obj == nil {
 			break
 		}
-		if permanent, ok := effectPermanentAt(g, obj, dynamic.TargetIndex); ok {
+		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok && resolved.permanent != nil {
+			permanent := resolved.permanent
 			amount = permanent.Counters.Get(dynamic.CounterKind)
 		}
 	case game.DynamicAmountControllerLife:
@@ -449,7 +453,7 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 			amount = player.Graveyard.Size()
 		}
 	case game.DynamicAmountCountSelector:
-		amount = len(selectedPermanentIDs(g, controller, nil, dynamic.Selector))
+		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
 	case game.DynamicAmountPreviousEffectResult:
 		key := dynamicResultKey(dynamic)
 		if obj != nil && key != "" {
@@ -519,10 +523,11 @@ func rememberEffectExcessDamage(obj *game.StackObject, linkID string, excessDama
 func effectCounterSource(g *game.Game, obj *game.StackObject, source game.CounterSourceSpec) (counter.Set, *game.Permanent, bool) {
 	switch source.Kind {
 	case game.CounterSourceTarget:
-		permanent, ok := effectPermanentAt(g, obj, source.TargetIndex)
-		if !ok {
+		resolved, ok := resolveObjectReference(g, obj, source.Object)
+		if !ok || resolved.permanent == nil {
 			return counter.Set{}, nil, false
 		}
+		permanent := resolved.permanent
 		return cloneCounters(permanent.Counters), permanent, true
 	case game.CounterSourceEventPermanent:
 		if !obj.HasTriggerEvent || obj.TriggerEvent.PermanentID == 0 {
@@ -548,10 +553,11 @@ func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt
 	}
 	cond := condition.Val
 	if cond.PermanentType.Exists {
-		permanent, ok := effectPermanentAt(g, obj, cond.TargetIndex)
-		if !ok {
+		resolved, ok := resolveObjectReference(g, obj, cond.Object)
+		if !ok || resolved.permanent == nil {
 			return false
 		}
+		permanent := resolved.permanent
 		matches := permanentHasType(g, permanent, cond.PermanentType.Val)
 		if cond.Negate {
 			matches = !matches
@@ -687,100 +693,16 @@ func applyDamageSourceKeywordEffects(g *game.Game, source, damaged *game.Permane
 	applyLifelink(g, source, damage)
 }
 
-func selectedPermanentIDs(g *game.Game, controller game.PlayerID, source *game.Permanent, selector game.EffectSelector) []id.ID {
-	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
-	for _, permanent := range g.Battlefield {
-		if !permanentMatchesSelectorForSource(g, source, controller, permanent, selector) {
-			continue
-		}
-		permanentIDs = append(permanentIDs, permanent.ObjectID)
+// countPermanentsMatchingGroup counts battlefield permanents in a GroupReference.
+func countPermanentsMatchingGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference) int {
+	resolverObj := obj
+	if resolverObj == nil {
+		resolverObj = &game.StackObject{Controller: controller}
 	}
-	return permanentIDs
-}
-
-func selectedPermanentIDsForSelector(g *game.Game, obj *game.StackObject, controller game.PlayerID, source *game.Permanent, selector game.EffectSelector, targetIndex int) []id.ID {
-	if selector == game.EffectSelectorOtherCreaturesDefendingPlayerControls {
-		return selectedOtherCreaturesDefendingPlayerControls(g, obj)
-	}
-	if selector != game.EffectSelectorAllCreaturesExceptTarget {
-		return selectedPermanentIDs(g, controller, source, selector)
-	}
-	excluded, _ := targetPermanentObjectID(obj, targetIndex)
-	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
-	for _, permanent := range g.Battlefield {
-		if permanent.ObjectID == excluded || !permanentHasType(g, permanent, types.Creature) {
-			continue
-		}
-		permanentIDs = append(permanentIDs, permanent.ObjectID)
-	}
-	return permanentIDs
-}
-
-func selectedOtherCreaturesDefendingPlayerControls(g *game.Game, obj *game.StackObject) []id.ID {
-	if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.PermanentID == 0 {
-		return []id.ID{}
-	}
-	resolved, ok := resolvePermanentOrLastKnown(g, obj.TriggerEvent.PermanentID)
-	if !ok {
-		return []id.ID{}
-	}
-	defendingPlayer, ok := resolved.controller(g)
-	if !ok {
-		return []id.ID{}
-	}
-	permanentIDs := make([]id.ID, 0, len(g.Battlefield))
-	for _, permanent := range g.Battlefield {
-		if permanent.ObjectID == obj.TriggerEvent.PermanentID {
-			continue
-		}
-		if effectiveController(g, permanent) != defendingPlayer || !permanentHasType(g, permanent, types.Creature) {
-			continue
-		}
-		permanentIDs = append(permanentIDs, permanent.ObjectID)
-	}
-	return permanentIDs
-}
-
-func selectedPlayerIDs(g *game.Game, controller game.PlayerID, selector game.PlayerSelector) []game.PlayerID {
-	switch selector {
-	case game.PlayerSelectorOpponents:
-		return aliveOpponents(g, controller)
-	default:
-		return nil
-	}
-}
-
-func permanentMatchesSelector(g *game.Game, permanent *game.Permanent, selector game.EffectSelector) bool {
-	return permanentMatchesSelectorForSource(g, nil, 0, permanent, selector)
-}
-
-func permanentMatchesSelectorForSource(g *game.Game, source *game.Permanent, controller game.PlayerID, permanent *game.Permanent, selector game.EffectSelector) bool {
-	switch selector {
-	case game.EffectSelectorAllCreatures:
-		return permanentHasType(g, permanent, types.Creature)
-	case game.EffectSelectorAllArtifacts:
-		return permanentHasType(g, permanent, types.Artifact)
-	case game.EffectSelectorAllEnchantments:
-		return permanentHasType(g, permanent, types.Enchantment)
-	case game.EffectSelectorAllNonlandPermanents:
-		return !permanentHasType(g, permanent, types.Land)
-	case game.EffectSelectorAllPermanents:
-		return true
-	case game.EffectSelectorCreaturesYouControl:
-		return effectiveController(g, permanent) == controller && permanentHasType(g, permanent, types.Creature)
-	case game.EffectSelectorOtherCreaturesYouControl:
-		return source != nil && permanent.ObjectID != source.ObjectID && effectiveController(g, permanent) == controller && permanentHasType(g, permanent, types.Creature)
-	case game.EffectSelectorEquippedCreature:
-		return source != nil && source.AttachedTo.Exists && permanent.ObjectID == source.AttachedTo.Val
-	default:
-		return false
-	}
+	return len(newReferenceResolver(g, resolverObj).groupMembers(group))
 }
 
 func effectPermanentAt(g *game.Game, obj *game.StackObject, targetIndex int) (*game.Permanent, bool) {
-	if targetIndex == game.TargetIndexSourcePermanent {
-		return sourcePermanent(g, obj)
-	}
 	return effectPermanentTarget(g, obj, targetIndex)
 }
 

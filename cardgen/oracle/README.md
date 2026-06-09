@@ -114,6 +114,16 @@ also lowers exact supported self-enter and self-dies triggers when their body is
 exactly one supported spell-like effect. Every semantic element and meaningful
 source token must be consumed; otherwise the whole card is rejected.
 
+This compiler IR is the recognition stage. The strict backend in `cardgen`
+consumes it and lowers each recognized ability into a second, **typed**
+intermediate representation made of `game.*` values (`game.ActivatedAbility`,
+`game.ManaAbility`, `game.TriggeredAbility`, and so on), assembles a
+`game.CardDef`, validates it with `game.ValidateCardDef`, and only then renders
+Go source. This compiler package stays purely about Oracle-text recognition; it
+never constructs runtime `game` values itself. See
+[`cardgen/README.md`](../README.md#executable-lowering-pipeline-typed-intermediate-representation)
+and [ADR 0008](../../docs/adr/0008-typed-ir-lowering.md).
+
 ## Testing
 
 Unit tests cover representative activated, loyalty, modal, keyword, reminder,

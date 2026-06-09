@@ -17,7 +17,7 @@ func TestEquippedCreatureSelectorGrantsKeywords(t *testing.T) {
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.ContinuousEffect{{
 		Layer:       game.LayerAbility,
-		Selector:    game.EffectSelectorEquippedCreature,
+		Group:       game.AttachedObjectGroup(game.SourcePermanentReference()),
 		AddKeywords: []game.Keyword{game.Deathtouch, game.Lifelink},
 	}}))
 
@@ -41,8 +41,8 @@ func TestEquippedCreatureSelectorDynamicOpponentCountPT(t *testing.T) {
 		Toughness: opt.Val(game.PT{Value: 1})},
 	})
 	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect([]game.ContinuousEffect{{
-		Layer:    game.LayerPowerToughnessModify,
-		Selector: game.EffectSelectorEquippedCreature,
+		Layer: game.LayerPowerToughnessModify,
+		Group: game.AttachedObjectGroup(game.SourcePermanentReference()),
 		PowerDeltaDynamic: opt.Val(game.DynamicAmount{
 			Kind: game.DynamicAmountOpponentCount,
 		}),
@@ -112,12 +112,9 @@ func TestEventDamageDynamicAmountAndAttachedDamageSource(t *testing.T) {
 	log := TurnLog{}
 
 	resolveInstruction(engine, g, obj, game.Damage{
-		Recipient: game.TargetRecipient(0),
-		DamageSource: opt.Val(game.ObjectReference{
-			Kind:        game.ObjectReferenceAttachedPermanent,
-			TargetIndex: game.TargetIndexSourcePermanent,
-		}),
-		Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountEventDamage}),
+		Recipient:    game.AnyTargetDamageRecipient(0),
+		DamageSource: opt.Val(game.SourceAttachedPermanentReference()),
+		Amount:       game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountEventDamage}),
 	}, &log)
 
 	if got := g.Players[game.Player2].Life; got != 36 {
@@ -147,17 +144,11 @@ func TestObjectPowerDynamicAmountUsesAttachedPermanent(t *testing.T) {
 	log := TurnLog{}
 
 	resolveInstruction(engine, g, obj, game.Damage{
-		Recipient: game.TargetRecipient(0),
-		DamageSource: opt.Val(game.ObjectReference{
-			Kind:        game.ObjectReferenceAttachedPermanent,
-			TargetIndex: game.TargetIndexSourcePermanent,
-		}),
+		Recipient:    game.AnyTargetDamageRecipient(0),
+		DamageSource: opt.Val(game.SourceAttachedPermanentReference()),
 		Amount: game.Dynamic(game.DynamicAmount{
-			Kind: game.DynamicAmountObjectPower,
-			Object: game.ObjectReference{
-				Kind:        game.ObjectReferenceAttachedPermanent,
-				TargetIndex: game.TargetIndexSourcePermanent,
-			},
+			Kind:   game.DynamicAmountObjectPower,
+			Object: game.SourceAttachedPermanentReference(),
 		}),
 	}, &log)
 
@@ -185,19 +176,16 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 		Targets:    []game.Target{game.PermanentTarget(source.ObjectID)},
 	}
 	baseDamage := game.Damage{
-		DamageSource: opt.Val(game.ObjectReference{
-			Kind:        game.ObjectReferenceTargetPermanent,
-			TargetIndex: 0,
-		}),
+		DamageSource: opt.Val(game.TargetPermanentReference(0)),
 		Amount: game.Dynamic(game.DynamicAmount{
-			Kind:        game.DynamicAmountTargetPower,
-			TargetIndex: 0,
+			Kind:   game.DynamicAmountTargetPower,
+			Object: game.TargetPermanentReference(0),
 		}),
 	}
 	log := TurnLog{}
 
 	resolveInstruction(engine, g, obj, game.Damage{
-		Recipient:    game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
+		Recipient:    game.GroupDamageRecipient(game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.TargetPermanentReference(0))),
 		DamageSource: baseDamage.DamageSource,
 		Amount:       baseDamage.Amount,
 	}, &log)
@@ -209,7 +197,7 @@ func TestAllCreaturesExceptTargetAndOpponentPlayerSelector(t *testing.T) {
 	}
 
 	resolveInstruction(engine, g, obj, game.Damage{
-		Recipient:    game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
+		Recipient:    game.PlayerGroupDamageRecipient(game.OpponentsReference()),
 		DamageSource: baseDamage.DamageSource,
 		Amount:       baseDamage.Amount,
 	}, &log)
@@ -228,5 +216,127 @@ func equipmentWithStaticEffect(effects []game.ContinuousEffect) *game.CardDef {
 		Types:           []types.Card{types.Artifact},
 		Subtypes:        []types.Sub{types.Equipment},
 		StaticAbilities: []game.StaticAbility{{ContinuousEffects: effects}}},
+	}
+}
+
+func damageRecipientCreatureCard(name string) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:      name,
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+	}}
+}
+
+// TestDamageEquippedCreatureUnsetSourceMatchesNothing pins the legacy behavior
+// that a Damage primitive whose recipient is EquippedCreature deals nothing when
+// DamageSource is unset, because the source-dependent selector resolves relative
+// to the (nil) DamageSource rather than the stack object's source permanent.
+func TestDamageEquippedCreatureUnsetSourceMatchesNothing(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatPermanent(g, game.Player1, damageRecipientCreatureCard("Bearer"))
+	equipment := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
+	if !attachPermanent(g, equipment, creature) {
+		t.Fatal("attachPermanent failed")
+	}
+	obj := &game.StackObject{Controller: game.Player1, SourceID: equipment.ObjectID}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient: game.GroupDamageRecipient(game.AttachedObjectGroup(game.SourcePermanentReference())),
+		Amount:    game.Fixed(2),
+	}, &log)
+
+	if creature.MarkedDamage != 0 {
+		t.Fatalf("equipped creature damage = %d, want 0 with unset DamageSource", creature.MarkedDamage)
+	}
+}
+
+// TestDamageEquippedCreatureExplicitSourceResolvesRelativeToObject proves the
+// EquippedCreature recipient resolves relative to the resolved DamageSource
+// object, not the stack object's source permanent.
+func TestDamageEquippedCreatureExplicitSourceResolvesRelativeToObject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creatureA := addCombatPermanent(g, game.Player1, damageRecipientCreatureCard("CreatureA"))
+	creatureB := addCombatPermanent(g, game.Player1, damageRecipientCreatureCard("CreatureB"))
+	equipA := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
+	equipB := addCombatPermanent(g, game.Player1, equipmentWithStaticEffect(nil))
+	if !attachPermanent(g, equipA, creatureA) || !attachPermanent(g, equipB, creatureB) {
+		t.Fatal("attachPermanent failed")
+	}
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		SourceID:   equipA.ObjectID,
+		Targets:    []game.Target{game.PermanentTarget(equipB.ObjectID)},
+	}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient:    game.GroupDamageRecipient(game.AttachedObjectGroup(game.SourcePermanentReference())),
+		DamageSource: opt.Val(game.TargetPermanentReference(0)),
+		Amount:       game.Fixed(2),
+	}, &log)
+
+	if creatureB.MarkedDamage != 2 {
+		t.Fatalf("creatureB equipped by DamageSource damage = %d, want 2", creatureB.MarkedDamage)
+	}
+	if creatureA.MarkedDamage != 0 {
+		t.Fatalf("creatureA equipped by stack source damage = %d, want 0", creatureA.MarkedDamage)
+	}
+}
+
+// TestDamageOtherCreaturesYouControlUnsetSourceMatchesNothing pins the legacy
+// behavior that an OtherCreaturesYouControl recipient deals nothing when
+// DamageSource is unset: ExcludeSource with no source permanent matches nothing.
+func TestDamageOtherCreaturesYouControlUnsetSourceMatchesNothing(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, damageRecipientCreatureCard("Source"))
+	other := addCombatPermanent(g, game.Player1, damageRecipientCreatureCard("Other"))
+	obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, ExcludeSource: true})),
+		Amount:    game.Fixed(2),
+	}, &log)
+
+	if other.MarkedDamage != 0 || source.MarkedDamage != 0 {
+		t.Fatalf("other/source damage = %d/%d, want 0/0 with unset DamageSource", other.MarkedDamage, source.MarkedDamage)
+	}
+}
+
+// TestDamageOtherCreaturesYouControlExplicitSourceResolvesRelativeToObject
+// proves the OtherCreaturesYouControl recipient excludes the resolved
+// DamageSource object, not the stack object's source permanent.
+func TestDamageOtherCreaturesYouControlExplicitSourceResolvesRelativeToObject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	stackSource := addCombatPermanent(g, game.Player1, damageRecipientCreatureCard("StackSource"))
+	damageSource := addCombatPermanent(g, game.Player1, damageRecipientCreatureCard("DamageSource"))
+	bystander := addCombatPermanent(g, game.Player1, damageRecipientCreatureCard("Bystander"))
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		SourceID:   stackSource.ObjectID,
+		Targets:    []game.Target{game.PermanentTarget(damageSource.ObjectID)},
+	}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, ExcludeSource: true})),
+		DamageSource: opt.Val(game.TargetPermanentReference(0)),
+		Amount:       game.Fixed(2),
+	}, &log)
+
+	if damageSource.MarkedDamage != 0 {
+		t.Fatalf("DamageSource creature damage = %d, want 0 (excluded as the source)", damageSource.MarkedDamage)
+	}
+	if stackSource.MarkedDamage != 2 {
+		t.Fatalf("stack source creature damage = %d, want 2 (not the excluded source)", stackSource.MarkedDamage)
+	}
+	if bystander.MarkedDamage != 2 {
+		t.Fatalf("bystander creature damage = %d, want 2", bystander.MarkedDamage)
 	}
 }

@@ -22,9 +22,11 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 ├── ability.go                 # Ability-related helpers, keywords, trigger conditions, modes
 ├── ability_body.go            # Sealed ability body variants and shared body helpers
 ├── condition.go               # Reusable Condition and PermanentFilter predicates
+├── selection.go               # Selection — shared valence-agnostic characteristic matcher data
 ├── instruction.go             # Instruction, InstructionKey, Quantity, sequence validation
 ├── primitive.go               # Typed Primitive variants (the sole effect model)
 ├── reference.go               # ObjectReference, PlayerReference, and CardReference effect bindings
+├── group_reference.go         # GroupReference — candidate-domain binding for mass effects
 ├── subtype.go                 # Central artifact/creature/enchantment/land subtype constants
 ├── choice.go                  # ChoiceRequest/ChoiceDecision for non-action decisions
 ├── permanent.go               # Permanent — battlefield state for a card or token
@@ -91,7 +93,8 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `ChoiceRequest` | `choice.go` | A bounded non-action decision such as trigger target choice, trigger ordering, or optional-effect yes/no. |
 | `CardFace` | `card.go` | One printed face's characteristics: name, mana cost, colors, supertypes/types/subtypes, categorized abilities, P/T, loyalty, battle defense, replacement abilities, optional implementation ID, and oracle text. |
 | `Condition` | `condition.go` | Reusable data-only predicates for static ability conditions, activation restrictions, intervening-if checks, effect conditions, and replacement effects. |
-| `ObjectReference`, `PlayerReference`, `CardReference` | `reference.go` | Reusable resolution-time bindings for effects that need source objects, target-derived controllers/owners, linked objects/cards, damage sources, non-default recipients, or card-condition checks. |
+| `ObjectReference`, `PlayerReference`, `CardReference` | `reference.go` | Reusable resolution-time bindings for effects that need source objects, target-derived controllers/owners, linked objects/cards, damage sources, non-default recipients, or card-condition checks. Named constructors (e.g. `SourcePermanentReference`, `TargetPlayerReference`, `ObjectOwnerReference`) build every valid binding, and `Validate()` reports structural problems for `ValidateCardDef`. |
+| `GroupReference` | `group_reference.go` | Pure data describing **where** a mass effect finds a group of permanents: a candidate domain (battlefield, attached object, object-controlled), a `Selection` that narrows it, and optional anchor/exclusion object references. The zero value is invalid. |
 
 ### Player
 
@@ -170,7 +173,19 @@ Activated abilities are authored using `ActivatedAbility` (regular), `ManaAbilit
 
 Triggered abilities use `TriggerCondition.Pattern` to match typed `Event` values. The first trigger slice supports exact event-kind matching plus filters for controller, source/self, `ExcludeSelf` for "another" event-source wording, affected player, permanent/card type include/exclude filters, nontoken permanent events, zone transition, damage recipient, and beginning-of-step events with an explicit `Step`. `TriggerCondition.InterveningCondition` is the structured form of an intervening-if predicate and is checked both when the event triggers and when the ability resolves. `TriggerCondition.State` models simple latched state triggers. Optional "you may" triggered abilities set `TriggeredAbility.Optional`; they still use the stack, and the rules engine asks for the yes/no choice when they resolve. The legacy `TriggerCondition.Event` string is documentation only and is not used for rules behavior.
 
-### Choices
+### Selection
+
+`Selection` (`selection.go`) is pure, valence-agnostic rules data describing **what** characteristics an object must share, never where candidate objects come from. It is the single matcher description that subsumes the characteristic fields previously duplicated across `TargetPredicate`, `PermanentFilter`, the permanent/card filters of `TriggerPattern`, and the `EffectSelector` mass-effect constants. The zero value is a wildcard that matches anything; `Empty()` reports the wildcard state and `Validate()` reports structural contradictions (a card type both required and excluded, every any-of type/color excluded, a keyword both required and excluded) for `ValidateCardDef`.
+
+Selection separates conjunctive and disjunctive list semantics on purpose, because the legacy types disagreed: `RequiredTypes` and `Supertypes` are all-of (an "artifact creature" type line), while `RequiredTypesAny`, `SubtypesAny`, and `ColorsAny` are any-of ("creature or artifact"). `ExcludedTypes`, `ExcludedColors`, and `ExcludedKeyword` reject when any listed value is present. Numeric `ManaValue`, `Power`, and `Toughness` use `compare.Int`. `Controller`/`Player` are relative to a viewing player resolved by the rules adapter, `ExcludeSource` drops the predicate's own source object, and `NonToken` rejects tokens. Counting, total power, and candidate-domain concerns (controlled, defending, equipped, all permanents) stay **outside** Selection and remain with the legacy types until the later reference phase owns runtime binding.
+
+During this phase Selection is additive: `TargetSpec.Selection`, `Condition.ControlsMatching`, and `TriggerPattern.SubjectSelection`/`CardSelection` are new optional fields, and `TargetPredicate.Selection()`/`PermanentFilter.Selection()` adapt the legacy data to a `Selection` (sharing backing slices, so callers must not mutate the result). `ValidateCardDef` rejects specifying both a legacy filter and its Selection equivalent on the same spec. The single matcher that interprets every `Selection` lives in `mtg/rules`.
+
+### Group Reference
+
+`GroupReference` (`group_reference.go`) is pure rules data that pairs a `Selection` (**what** matches) with the **where**: a closed `GroupReferenceDomain` vocabulary (`GroupDomainBattlefield`, `GroupDomainAttachedObject`, `GroupDomainObjectControlled`), an optional anchor `ObjectReference` the domain is defined relative to, and an optional excluded `ObjectReference`. It expresses every candidate-domain concern that deliberately stays outside Selection — battlefield groups, the object an Equipment is attached to, the creatures a defending player controls, and source/target exclusions. Named constructors (`BattlefieldGroup`, `BattlefieldGroupExcluding`, `AttachedObjectGroup`, `ObjectControlledGroup`, `ObjectControlledGroupExcluding`) build every valid shape, accessors (`Domain`, `Selection`, `Anchor`, `Exclusion`) read it back, and `Valid()`/`Validate()` reject the invalid zero value and inconsistent combinations. `EffectSelector.GroupReference()` converts each mass-effect selector constant to its equivalent group, including `EquippedCreature`, `AllCreaturesExceptTarget`, and `OtherCreaturesDefendingPlayerControls`; the runtime enumeration that resolves a `GroupReference` to concrete objects lives in `mtg/rules`.
+
+
 
 `ChoiceRequest` and `ChoiceDecision` (`choice.go`) describe engine-mediated decisions that are not priority actions. The current rules engine uses choices for triggered-ability target selection, ordering simultaneous triggers controlled by the same player, optional triggered ability resolution, payment choices, resolution-time value choices, commander-color mana choices, and scry/surveil top-card decisions. Choice data lives in `mtg/game` so agents and rules code can share the request shape without moving behavior out of `mtg/rules`.
 
@@ -235,3 +250,27 @@ This package is the **data model** used by the rules engine. Future layers will 
 ### Double-faced cards
 
 `CardDef.Layout` and `CardDef.Back` model transform, modal DFC, and double-faced token layouts. `CardDef` root fields are the front-face/default characteristics, and `Back` is present only when the card has a second printed face. Cast actions, stack objects, permanents, events, and LKI snapshots carry `FaceIndex` so modal DFC faces and transformed permanents use the correct face-specific costs, types, abilities, P/T, and replacement abilities while they are on the stack or battlefield.
+
+## CardDef Structural Validation
+
+`ValidateCardDef(card *CardDef) []CardDefIssue` performs deep pure-data structural validation of a card definition and is the authoritative owner of all structural checks that depend only on game data:
+
+- **Nil card** — reports `CardDefIssueNilCard` without dereferencing the pointer.
+- **Missing name** — reports `CardDefIssueMissingName` for blank names.
+- **Oracle text without abilities** — reports `CardDefIssueOracleWithoutAbilities` when `OracleText` is non-empty but no abilities and no `ImplementationID` are present.
+- **TargetSpec validity** — reports `CardDefIssueInvalidTargetSpec` for invalid min/max target counts and unsupported chooser constraints.
+- **Target index bounds** — reports `CardDefIssueTargetIndexOutOfRange` when an instruction or condition references a target index that has no matching `TargetSpec`.
+- **Reference structure** — reports `CardDefIssueInvalidReference` for `ObjectReference`/`PlayerReference` bindings whose kind and fields are inconsistent (an unknown kind, a linked-object reference with no link ID, an object controller/owner reference with no object, and so on), delegating to each reference's `Validate()` method.
+- **Keyword variants** — reports `CardDefIssueInvalidKeywordAbility` for unknown/nil keywords, keywords with missing costs, and `SuspendKeyword` with non-positive `TimeCounters`.
+- **Conditions** — validates structured `ObjectReference` bindings in `ActivationCondition`, trigger `InterveningCondition`, and `StaticAbility.Condition`.
+- **Continuous effects** — recursively validates `AddAbilities` on `ContinuousEffect` values.
+- **Instruction sequences** — delegates to `ValidateInstructionSequence` for nil primitives, invalid primitive references, forward result gates, and duplicate key publications.
+- **Nested abilities and replacements** — walks all face ability fields (SpellAbility, ActivatedAbilities, ManaAbilities, LoyaltyAbilities, TriggeredAbilities, ReplacementAbilities, StaticAbilities) plus Back and Alternate faces.
+
+`ValidateCardDef` is a package function (not a method) so that nil `*CardDef` values can be diagnosed without a valid receiver. Issues are returned as `[]CardDefIssue`; each issue records a `FaceName`, `Path`, `Code`, and `Message`.
+
+Tooling and runtime policy concerns — such as `KnownImplementationIDs`, `ReportImplementationIDs`, generated-card-not-found, and validation-run-failed — belong in the `cardgen` adapter layer, not here. No oracle-text parsing or compiler concepts are present in this package.
+
+### Typed data as a compiler target
+
+Because `mtg/game` owns the canonical typed card model and its structural validation, the `cardgen` executable backend uses these same types as a typed **intermediate representation (IR)**. `cardgen` lowers Oracle text directly into `game.StaticAbility`, `game.ActivatedAbility`, `game.ManaAbility`, `game.TriggeredAbility`, `game.ReplacementAbility`, and `game.AbilityContent` values, assembles a `game.CardDef`, and calls `ValidateCardDef` before rendering Go source. This keeps the boundary clean: `mtg/game` owns the typed data and what makes it structurally valid, `mtg/rules` owns behavior, and `cardgen` owns recognition (Oracle text → typed values) and rendering (typed values → Go source). See [`cardgen/README.md`](../../cardgen/README.md#executable-lowering-pipeline-typed-intermediate-representation) and [ADR 0008](../../docs/adr/0008-typed-ir-lowering.md).

@@ -110,7 +110,7 @@ func (r RampLand) Instruction() game.Instruction {
 	}
 	return game.Instruction{
 		Primitive: game.Search{
-			TargetIndex: game.TargetIndexController,
+			Player: game.ControllerReference(),
 			Spec: game.SearchSpec{
 				SourceZone:   zone.Library,
 				Destination:  zone.Battlefield,

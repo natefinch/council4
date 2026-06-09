@@ -55,18 +55,14 @@ var EnduringCourage = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.ModifyPT{
-								Object: opt.Val(game.ObjectReference{
-									Kind: game.ObjectReferenceEventPermanent,
-								}),
+								Object:     game.EventPermanentReference(),
 								PowerDelta: game.Fixed(2),
 								Duration:   game.DurationUntilEndOfTurn,
 							},
 						},
 						{
 							Primitive: game.ApplyContinuous{
-								Object: opt.Val(game.ObjectReference{
-									Kind: game.ObjectReferenceEventPermanent,
-								}),
+								Object: opt.Val(game.EventPermanentReference()),
 								ContinuousEffects: []game.ContinuousEffect{
 									{
 										Layer: game.LayerAbility,
@@ -97,16 +93,13 @@ var EnduringCourage = &game.CardDef{
 						Types: []types.Card{
 							types.Creature,
 						},
-						Object: opt.Val(game.ObjectReference{
-							Kind: game.ObjectReferenceEventPermanent,
-						}),
+						Object: opt.Val(game.EventPermanentReference()),
 					}),
 				},
 				Content: game.Mode{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.PutOnBattlefield{
-								TargetIndex: game.TargetIndexController,
 								Source: game.CardBattlefieldSource(game.CardReference{
 									Kind: game.CardReferenceSource,
 								}),

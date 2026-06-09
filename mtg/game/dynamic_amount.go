@@ -36,9 +36,8 @@ type DynamicAmount struct {
 	Constant   int
 	Multiplier int
 
-	TargetIndex int
 	CounterKind counter.Kind
-	Selector    EffectSelector
+	Group       GroupReference
 	Object      ObjectReference
 	ResultKey   ResultKey
 }

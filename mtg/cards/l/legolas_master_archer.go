@@ -65,7 +65,7 @@ var LegolasMasterArcher = func() *game.CardDef {
 					{
 						Primitive: game.AddCounter{
 							Amount:      game.Fixed(1),
-							TargetIndex: game.TargetIndexSourcePermanent,
+							Object:      game.SourcePermanentReference(),
 							CounterKind: counter.PlusOnePlusOne,
 						},
 					},
@@ -112,12 +112,10 @@ var LegolasMasterArcher = func() *game.CardDef {
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountObjectPower,
-								Object: game.ObjectReference{
-									Kind: game.ObjectReferenceSourcePermanent,
-								},
+								Kind:   game.DynamicAmountObjectPower,
+								Object: game.SourcePermanentReference(),
 							}),
-							Recipient: game.TargetRecipient(0),
+							Recipient: game.ObjectDamageRecipient(game.TargetPermanentReference(0)),
 						},
 					},
 				},

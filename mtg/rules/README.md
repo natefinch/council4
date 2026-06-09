@@ -211,6 +211,29 @@ The continuous-effect layer derives effective permanent values on demand rather 
 
 The layer system still has carry-forward work for richer CDA forms, exact copy/back-face interactions, and performance memoization as card coverage grows.
 
+## Selection matching
+
+`Selection` is defined as pure data in `mtg/game`; the single rules-side interpreter lives in `selection.go` here. `matchSelection(*selectionSubject, *game.Selection)` implements every Selection field semantic exactly once, and the legacy target, controller-controls, trigger, and mass-effect paths route through it via thin adapters rather than re-implementing characteristic checks.
+
+`selectionSubject` is a tagged struct (not an interface) that captures the genuine per-context differences while the field logic stays shared:
+
+- **Kind** (`subjectPermanent`, `subjectEventPermanent`, `subjectCastSpell`) selects the characteristic source: a live permanent's effective/base value set, a triggering event's permanent (including last-known information, the cast card, or a `TokenDef`), or a cast spell's card types.
+- **`clampPower`** distinguishes the target read (power clamped to ≥ 0 and always applicable) from the strict controller-controls read (requires printed power). **`useBase`** forfeits power and toughness, preserving the base-characteristic condition behavior.
+- **`controller`/`viewer`** carry controller relativity so `ControllerYou`/`ControllerOpponent` resolve against the correct player (chooser for opponent-chosen targets), and **`sourceObjectID`** drives `ExcludeSource`.
+
+The adapters are: `targetSelection` (targets, `clampPower`), `controllerControlsMatchingSelection` (conditions, base/effective and counting/total-power kept outside the matcher), `triggerSubjectSelection`/`triggerCardSelection` (trigger event subject and cast-spell filters), and `selectorSelection` (mass effects). `selectorSelection` returns fixed package-level `Selection` values so the hot continuous-matching path stays allocation-free, and it returns `ok=false` for the domain selectors (`EquippedCreature`, `AllCreaturesExceptTarget`, `OtherCreaturesDefendingPlayerControls`) whose candidate-domain semantics are expressed by `game.GroupReference` and resolved by the reference resolver's `groupMembers`. The effect-selector path also short-circuits to no match when an `Other...` selector has no source permanent, a divergence from target "another" wording that `ExcludeSource` alone cannot express; the reference resolver preserves that divergence for `ExcludeSource` groups. `selection_parity_test.go` characterizes every legacy `TargetPredicate`, `PermanentFilter`, trigger filter, and `EffectSelector` constant against reference oracles to prove the shared matcher is behavior-preserving, and `reference_resolver_test.go` proves `groupMembers(selector.GroupReference())` matches the legacy mass-effect enumeration for every selector.
+
+## Reference resolution
+
+`referenceResolver` (`references.go`) is the internal module that binds a `*game.Game` and the resolving `*game.StackObject` and owns every runtime reference lookup. It is constructed per resolution by `newReferenceResolver(g, obj)` and exposes:
+
+- `object(game.ObjectReference)` — resolves a target-slot, source, attached, linked, or event object to a live `*game.Permanent` or its last-known-information snapshot (`resolvedObjectReference`).
+- `player(game.PlayerReference)` — resolves the controller, a target player, or an object's controller/owner, rejecting eliminated players.
+- `permanentAt`/`playerAt` — target-slot and sentinel (`TargetIndexController`, `TargetIndexSourcePermanent`) lookups.
+- `groupMembers(game.GroupReference)` — enumerates a group's object IDs in battlefield order, owning candidate-domain enumeration (battlefield, attached object, object-controlled), `Selection` matching, and object-reference exclusions that Selection deliberately keeps outside itself.
+
+The free functions `resolveObjectReference`, `resolvePlayerReference`, `resolvePermanentOrLastKnown`, and `targetPermanentObjectID` are thin adapters that delegate to the module, and `effectResolver.permanentAt`/`playerAt` and the mass-effect enumeration in `selectedPermanentIDsForSelector` route through it. The continuous-effect hot path keeps using `selectorSelection` directly and is intentionally not routed through `GroupReference`, so its allocation behavior is unchanged.
+
 ## Targeting result semantics
 
 Target enumeration uses an explicit `targetChoiceResult` struct so callers never infer outcome from nil-slice shape. The `kind` field carries one of four states:
@@ -235,8 +258,8 @@ Instruction resolution is structured around `effectResolver` in `effects.go`. Th
 `effectResolver` exposes convenience methods used by primitive handlers:
 
 - `quantity(q)` — resolves a fixed or dynamic `game.Quantity`.
-- `permanentAt(index)` — looks up a target permanent from the stack object's target list.
-- `playerAt(index)` — looks up a target player or the instruction controller.
+- `permanentAt(index)` — looks up a target permanent from the stack object's target list, delegating to the reference resolver module.
+- `playerAt(index)` — looks up a target player or the instruction controller, delegating to the reference resolver module.
 
 Resolution follows a two-step call chain:
 

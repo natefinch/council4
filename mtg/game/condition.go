@@ -22,6 +22,13 @@ type Condition struct {
 	// permanents. It is ignored when the filter is empty.
 	ControllerControls PermanentFilter
 
+	// ControlsMatching is the Selection-based successor to ControllerControls.
+	// When present, the context controller must control at least MinCount
+	// objects matching the Selection (MinCount defaults to 1), optionally
+	// constrained by TotalPower. ControllerControls and ControlsMatching must
+	// not both be specified.
+	ControlsMatching opt.V[SelectionCount]
+
 	// Object tests a referenced object in the current condition context, such as
 	// a triggering event permanent. It may use last-known information.
 	Object                                                       opt.V[ObjectReference]
@@ -70,6 +77,7 @@ func (f PermanentFilter) Empty() bool {
 // Empty reports whether the condition contains no active predicate.
 func (c *Condition) Empty() bool {
 	return c.ControllerControls.Empty() &&
+		!c.ControlsMatching.Exists &&
 		!c.Object.Exists &&
 		len(c.Types) == 0 &&
 		!c.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures &&

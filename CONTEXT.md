@@ -112,6 +112,14 @@ _Avoid_: Manual ability hook, special action
 The concrete target chosen while casting a spell or activating an ability. In code, `game.Target` is separate from `game.TargetSpec`, which only describes what may be targeted.
 _Avoid_: Target spec, raw target ID
 
+**Selection**:
+Pure, valence-agnostic data describing WHICH game objects share a characteristic predicate — required/excluded types, supertypes, any-of subtypes/colors, controller/player relation, tapped/combat state, keywords, mana value, and power/toughness. It describes WHAT matches, never where candidates come from; counting and candidate-domain concerns stay outside it. In code, `game.Selection` is interpreted by a single matcher in `mtg/rules` that subsumes the legacy `TargetPredicate`, `PermanentFilter`, `TriggerPattern` filters, and `EffectSelector` characteristic logic.
+_Avoid_: Predicate, filter, selector, matcher (for the data itself)
+
+**Group Reference**:
+Pure data describing WHERE a mass effect finds a group of permanents — a candidate domain (battlefield, the object an Equipment is attached to, the permanents an object's controller controls), a **Selection** that narrows it, and optional anchor/exclusion object references. Group Reference owns the candidate-domain and exclusion concerns that **Selection** deliberately leaves out. In code, `game.GroupReference` is pure data with a closed domain vocabulary; `EffectSelector.GroupReference()` converts each mass-effect selector to its equivalent, and the reference resolver in `mtg/rules` enumerates a group's concrete objects.
+_Avoid_: Object reference (for a group), selector, group filter
+
 **Game Event**:
 A rules-relevant fact that occurred during a **Game**, such as a spell being cast, a permanent entering the battlefield, damage being dealt, or a creature dying.
 In code, `game.Event` values are appended to `game.Game.Events` by `rules.Engine` helpers at mutation boundaries.
@@ -174,6 +182,10 @@ _Avoid_: Results, stats, output
 **Card Registry**:
 A lookup table (`cards.Registry`) mapping card names to `CardDef` values. Pure data, no behavior. Used by the decklist parser to resolve card names.
 _Avoid_: Card database, card store, card catalog
+
+**Card Generation (cardgen)**:
+Isolated tooling that turns Scryfall data and Oracle text into `CardDef` Go source. Its executable backend is a three-stage compiler: **recognition** (Oracle text → conservative semantic IR in `cardgen/oracle`), **lowering** (semantic IR → a typed intermediate representation of `game.*` ability values, then an assembled `game.CardDef` validated by `game.ValidateCardDef`), and **rendering** (typed `CardDef` → deterministic Go source). `mtg/game` owns the typed data and validity; `mtg/rules` owns behavior; `cardgen` owns recognition and rendering. Cards it cannot fully recognize fall back to the hand-written **Card Implementation** escape hatch via `ImplementationID`. See [ADR 0008](docs/adr/0008-typed-ir-lowering.md).
+_Avoid_: Card compiler (the package is tooling, not part of the runtime engine)
 
 ## Relationships
 

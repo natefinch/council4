@@ -448,38 +448,79 @@ func continuousEffectApplies(g *game.Game, permanent *game.Permanent, values *pe
 	if effect.AffectedObjectID != 0 {
 		return effect.AffectedObjectID == permanent.ObjectID
 	}
-	if effect.Selector == game.EffectSelectorNone {
+	if !effect.Group.Valid() {
 		return false
 	}
 	source, _ := permanentByObjectID(g, effect.SourceObjectID)
-	return permanentValuesMatchSelectorForSource(source, effect.Controller, permanent, values, effect.Selector)
-}
-
-func permanentValuesMatchSelectorForSource(source *game.Permanent, controller game.PlayerID, permanent *game.Permanent, values *permanentEffectiveValues, selector game.EffectSelector) bool {
-	switch selector {
-	case game.EffectSelectorAllCreatures:
-		return valuesHasType(values, types.Creature)
-	case game.EffectSelectorAllArtifacts:
-		return valuesHasType(values, types.Artifact)
-	case game.EffectSelectorAllEnchantments:
-		return valuesHasType(values, types.Enchantment)
-	case game.EffectSelectorAllNonlandPermanents:
-		return !valuesHasType(values, types.Land)
-	case game.EffectSelectorAllPermanents:
-		return true
-	case game.EffectSelectorCreaturesYouControl:
-		return values.controller == controller && valuesHasType(values, types.Creature)
-	case game.EffectSelectorOtherCreaturesYouControl:
-		return source != nil && permanent.ObjectID != source.ObjectID && values.controller == controller && valuesHasType(values, types.Creature)
-	case game.EffectSelectorEquippedCreature:
-		return source != nil && source.AttachedTo.Exists && permanent.ObjectID == source.AttachedTo.Val
+	resolver := newReferenceResolverWithSource(g, &game.StackObject{Controller: effect.Controller}, source)
+	switch effect.Group.Domain() {
+	case game.GroupDomainAttachedObject:
+		anchor, ok := effect.Group.Anchor()
+		if !ok {
+			return false
+		}
+		resolvedAnchor, ok := resolver.object(anchor)
+		if !ok || resolvedAnchor.permanent == nil || !resolvedAnchor.permanent.AttachedTo.Exists {
+			return false
+		}
+		return resolvedAnchor.permanent.AttachedTo.Val == permanent.ObjectID
+	case game.GroupDomainBattlefield:
+		return continuousSelectionApplies(g, resolver, effect.Group, source, permanent, values, effect.Controller)
+	case game.GroupDomainObjectControlled:
+		anchor, ok := effect.Group.Anchor()
+		if !ok {
+			return false
+		}
+		resolvedAnchor, ok := resolver.object(anchor)
+		if !ok {
+			return false
+		}
+		anchorController, ok := resolvedAnchor.controller(g)
+		if !ok {
+			return false
+		}
+		if effectiveController(g, permanent) != anchorController {
+			return false
+		}
+		return continuousSelectionApplies(g, resolver, effect.Group, source, permanent, values, effect.Controller)
 	default:
 		return false
 	}
 }
 
-func valuesHasType(values *permanentEffectiveValues, cardType types.Card) bool {
-	return slices.Contains(values.types, cardType)
+// continuousSelectionApplies checks whether permanent satisfies the group's
+// Selection and exclusion without allocating a members slice, shared by the
+// Battlefield and ObjectControlled continuous-effect domains.
+func continuousSelectionApplies(g *game.Game, resolver referenceResolver, group game.GroupReference, source, permanent *game.Permanent, values *permanentEffectiveValues, controller game.PlayerID) bool {
+	sel := group.Selection()
+	if sel.ExcludeSource && source == nil {
+		return false
+	}
+	exclude, hasExclude := group.Exclusion()
+	if hasExclude {
+		excluded, ok := resolver.object(exclude)
+		if ok && excluded.permanent != nil && excluded.permanent.ObjectID == permanent.ObjectID {
+			return false
+		}
+		excludedID, _ := resolver.objectIdentityID(exclude)
+		if excludedID != 0 && excludedID == permanent.ObjectID {
+			return false
+		}
+	}
+	subject := selectionSubject{
+		kind:      subjectPermanent,
+		g:         g,
+		permanent: permanent,
+		values:    values,
+		viewer:    controller,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = values.controller
+	}
+	if source != nil {
+		subject.sourceObjectID = source.ObjectID
+	}
+	return matchSelection(&subject, &sel)
 }
 
 func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEffect {

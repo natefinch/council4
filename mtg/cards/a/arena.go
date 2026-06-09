@@ -62,16 +62,19 @@ var Arena = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Tap{
-								TargetIndex: 0,
+								Object: game.TargetPermanentReference(0),
 							},
 						},
 						{
 							Primitive: game.Tap{
-								TargetIndex: 1,
+								Object: game.TargetPermanentReference(1),
 							},
 						},
 						{
-							Primitive: game.Fight{},
+							Primitive: game.Fight{
+								Object:        game.TargetPermanentReference(0),
+								RelatedObject: game.TargetPermanentReference(1),
+							},
 						},
 					},
 				}.Ability(),

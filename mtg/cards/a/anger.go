@@ -52,8 +52,11 @@ var Anger = &game.CardDef{
 				ZoneOfFunction: zone.Graveyard,
 				ContinuousEffects: []game.ContinuousEffect{
 					{
-						Layer:    game.LayerAbility,
-						Selector: game.EffectSelectorCreaturesYouControl,
+						Layer: game.LayerAbility,
+						Group: game.BattlefieldGroup(game.Selection{
+							RequiredTypes: []types.Card{types.Creature},
+							Controller:    game.ControllerYou,
+						}),
 						AddKeywords: []game.Keyword{
 							game.Haste,
 						},

@@ -85,16 +85,16 @@ var HalanaAndAlenaPartners = func() *game.CardDef {
 					{
 						Primitive: game.AddCounter{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: game.TargetIndexSourcePermanent,
+								Kind:   game.DynamicAmountTargetPower,
+								Object: game.SourcePermanentReference(),
 							}),
-							TargetIndex: 0,
+							Object:      game.TargetPermanentReference(0),
 							CounterKind: counter.PlusOnePlusOne,
 						},
 					},
 					{
 						Primitive: game.ApplyContinuous{
-							TargetIndex: 0,
+							Object: opt.Val(game.TargetPermanentReference(0)),
 							ContinuousEffects: []game.ContinuousEffect{
 								{
 									Layer: game.LayerAbility,

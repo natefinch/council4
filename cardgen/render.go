@@ -1,0 +1,1757 @@
+package cardgen
+
+import (
+	"errors"
+	"fmt"
+	"reflect"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
+
+// Import paths that the renderer may emit. The game package is always needed.
+const (
+	importGame    = "github.com/natefinch/council4/mtg/game"
+	importColor   = "github.com/natefinch/council4/mtg/game/color"
+	importCompare = "github.com/natefinch/council4/mtg/game/compare"
+	importCost    = "github.com/natefinch/council4/mtg/game/cost"
+	importMana    = "github.com/natefinch/council4/mtg/game/mana"
+	importTypes   = "github.com/natefinch/council4/mtg/game/types"
+	importZone    = "github.com/natefinch/council4/mtg/game/zone"
+	importOpt     = "github.com/natefinch/council4/opt"
+)
+
+// renderCtx accumulates import paths needed during one rendering pass.
+// It is not safe for concurrent use.
+type renderCtx struct {
+	imports map[string]struct{}
+}
+
+func newRenderCtx() *renderCtx {
+	return &renderCtx{imports: map[string]struct{}{importGame: {}}}
+}
+
+func (c *renderCtx) need(path string) { c.imports[path] = struct{}{} }
+
+func (c *renderCtx) sortedImports() []string {
+	paths := make([]string, 0, len(c.imports))
+	for p := range c.imports {
+		paths = append(paths, p)
+	}
+	slices.Sort(paths)
+	return paths
+}
+
+// faceRenderHints carries presentation metadata for rendering one card face.
+// The renderer uses hints only to select rendering style; all mechanical values
+// come from the validated game.CardDef. A hint is verified against the CardDef
+// before use; a mismatch returns an error.
+type faceRenderHints struct {
+	// StaticVarNames is indexed parallel to game.CardFace.StaticAbilities.
+	// An empty VarName means "render as struct literal".
+	StaticVarNames []staticVarHint
+}
+
+// staticVarHint carries an optional package-level variable reference and the
+// expected StaticAbility body for divergence verification before use.
+type staticVarHint struct {
+	VarName string
+	Body    game.StaticAbility
+}
+
+// renderPTValue renders a typed game.PT as a Go literal.
+func renderPTValue(pt game.PT) string {
+	if pt.IsStar {
+		return "game.PT{IsStar: true}"
+	}
+	return fmt.Sprintf("game.PT{Value: %d}", pt.Value)
+}
+
+// Renderer renders typed game ability values and complete CardDef values as
+// deterministic Go source. A zero-value Renderer is ready to use. Every method
+// renders from typed values using exported accessors so that repeated calls
+// with identical input produce byte-identical output.
+type Renderer struct{}
+
+// RenderCardSource renders a complete Go source file for executable CardDefs.
+// The validated game.CardDef values in defs are the sole source of every
+// mechanical and ability value. The original ScryfallCard provides only
+// comment and variable-name metadata and the layout used to map defs to faces.
+// The hints carry presentation metadata (such as static-ability variable
+// references) verified against the CardDef values before use.
+func (r Renderer) RenderCardSource(
+	card *ScryfallCard,
+	defs []*game.CardDef,
+	hints []faceRenderHints,
+	pkgName string,
+) (string, error) {
+	if len(defs) == 0 {
+		return "", errors.New("render: no CardDef to render")
+	}
+
+	ctx := newRenderCtx()
+	reversible := card.Layout == "reversible_card" && len(card.CardFaces) > 0
+
+	var body strings.Builder
+	if reversible {
+		commentFaces := facesFromAllCardFaces(card)
+		for i, def := range defs {
+			if i > 0 {
+				_, _ = body.WriteString("\n")
+			}
+			if i < len(commentFaces) {
+				r.writeFaceComment(&body, commentFaces[i])
+			}
+			if err := r.writeReversibleFaceDef(&body, ctx, def, card.Layout, hintAt(hints, i)); err != nil {
+				return "", err
+			}
+		}
+	} else {
+		root := rootFields(card)
+		faces := generatedFaces(card)
+		r.writeCardComment(&body, card, root, faces)
+		if err := r.writeCardDef(&body, ctx, defs[0], card.Layout, hints); err != nil {
+			return "", err
+		}
+	}
+
+	var b strings.Builder
+	_, _ = fmt.Fprintf(&b, "package %s\n\n", pkgName)
+	r.writeImports(&b, ctx)
+	_, _ = b.WriteString(body.String())
+	return formatGeneratedSource(b.String())
+}
+
+func hintAt(hints []faceRenderHints, i int) faceRenderHints {
+	if i < len(hints) {
+		return hints[i]
+	}
+	return faceRenderHints{}
+}
+
+func (Renderer) writeImports(b *strings.Builder, ctx *renderCtx) {
+	_, _ = b.WriteString("import (\n")
+	for _, path := range ctx.sortedImports() {
+		_, _ = fmt.Fprintf(b, "\t%q\n", path)
+	}
+	_, _ = b.WriteString(")\n\n")
+}
+
+func (Renderer) writeCardComment(b *strings.Builder, card *ScryfallCard, root generatedCardFields, faces []generatedCardFields) {
+	_, _ = fmt.Fprintf(b, "// %s\n", card.Name)
+	_, _ = b.WriteString("//\n")
+	_, _ = fmt.Fprintf(b, "// Type: %s\n", card.TypeLine)
+	if card.ManaCost != "" {
+		_, _ = fmt.Fprintf(b, "// Cost: %s\n", card.ManaCost)
+	}
+	for _, face := range faces {
+		_, _ = fmt.Fprintf(b, "// Face: %s — %s", face.Name, face.TypeLine)
+		if face.ManaCost != "" {
+			_, _ = fmt.Fprintf(b, " (%s)", face.ManaCost)
+		}
+		_, _ = b.WriteString("\n")
+	}
+	_, _ = b.WriteString("//\n")
+	_, _ = b.WriteString("// Oracle text:\n")
+	oracle := card.OracleText
+	if oracle == "" {
+		oracle = root.OracleText
+	}
+	if oracle != "" {
+		for line := range strings.SplitSeq(oracle, "\n") {
+			_, _ = fmt.Fprintf(b, "//   %s\n", line)
+		}
+	} else {
+		for i, face := range faces {
+			if i > 0 {
+				_, _ = b.WriteString("//   ---\n")
+			}
+			_, _ = fmt.Fprintf(b, "//   %s\n", face.Name)
+			for line := range strings.SplitSeq(face.OracleText, "\n") {
+				_, _ = fmt.Fprintf(b, "//   %s\n", line)
+			}
+		}
+	}
+}
+
+func (Renderer) writeFaceComment(b *strings.Builder, fields generatedCardFields) {
+	_, _ = fmt.Fprintf(b, "// %s\n", fields.Name)
+	_, _ = b.WriteString("//\n")
+	_, _ = fmt.Fprintf(b, "// Type: %s\n", fields.TypeLine)
+	if fields.ManaCost != "" {
+		_, _ = fmt.Fprintf(b, "// Cost: %s\n", fields.ManaCost)
+	}
+	_, _ = b.WriteString("//\n")
+	_, _ = b.WriteString("// Oracle text:\n")
+	for line := range strings.SplitSeq(fields.OracleText, "\n") {
+		_, _ = fmt.Fprintf(b, "//   %s\n", line)
+	}
+}
+
+func (r Renderer) writeCardDef(
+	b *strings.Builder,
+	ctx *renderCtx,
+	def *game.CardDef,
+	layout string,
+	hints []faceRenderHints,
+) error {
+	varName := CardNameToVarName(def.Name)
+	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
+	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
+		ctx.need(importColor)
+		colorLits, err := colorValueLiterals(cols)
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(b, "\tColorIdentity: color.NewIdentity(%s),\n", colorLits)
+	}
+	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
+	if err := r.writeFaceFields(b, ctx, &def.CardFace, "\t\t", hintAt(hints, 0)); err != nil {
+		return err
+	}
+	_, _ = b.WriteString("\t},\n")
+	if layoutLiteral := layoutToLiteral(layout); layoutLiteral != "" {
+		_, _ = fmt.Fprintf(b, "\tLayout: %s,\n", layoutLiteral)
+	}
+	if def.Back.Exists {
+		ctx.need(importOpt)
+		_, _ = b.WriteString("\tBack: opt.Val(game.CardFace{\n")
+		if err := r.writeFaceFields(b, ctx, &def.Back.Val, "\t\t", hintAt(hints, 1)); err != nil {
+			return err
+		}
+		_, _ = b.WriteString("\t}),\n")
+	}
+	_, _ = b.WriteString("}\n")
+	return nil
+}
+
+func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def *game.CardDef, layout string, hints faceRenderHints) error {
+	varName := CardNameToVarName(def.Name)
+	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
+	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
+		ctx.need(importColor)
+		colorLits, err := colorValueLiterals(cols)
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(b, "\tColorIdentity: color.NewIdentity(%s),\n", colorLits)
+	}
+	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
+	if err := r.writeFaceFields(b, ctx, &def.CardFace, "\t\t", hints); err != nil {
+		return err
+	}
+	_, _ = b.WriteString("\t},\n")
+	if layoutLiteral := layoutToLiteral(layout); layoutLiteral != "" {
+		_, _ = fmt.Fprintf(b, "\tLayout: %s,\n", layoutLiteral)
+	}
+	_, _ = b.WriteString("}\n")
+	return nil
+}
+
+func (r Renderer) writeFaceFields(b *strings.Builder, ctx *renderCtx, face *game.CardFace, indent string, hints faceRenderHints) error {
+	if err := r.writeFaceScalarFields(b, ctx, face, indent); err != nil {
+		return err
+	}
+	block, err := r.renderFaceAbilityFields(ctx, face, hints)
+	if err != nil {
+		return err
+	}
+	for _, field := range block {
+		for line := range strings.SplitSeq(field, "\n") {
+			_, _ = fmt.Fprintf(b, "%s%s\n", indent, line)
+		}
+	}
+	if face.OracleText != "" {
+		writeRawTextField(b, indent, "OracleText", face.OracleText)
+	}
+	return nil
+}
+
+// writeFaceScalarFields renders the printed scalar CardFace fields (name, mana
+// cost, colors, types, power/toughness/loyalty/defense) directly from the
+// validated typed values on face.
+func (Renderer) writeFaceScalarFields(b *strings.Builder, ctx *renderCtx, face *game.CardFace, indent string) error {
+	_, _ = fmt.Fprintf(b, "%sName: %q,\n", indent, face.Name)
+	if face.ManaCost.Exists {
+		ctx.need(importOpt)
+		rawCostLit, err := renderManaCostMultiline(ctx, face.ManaCost.Val)
+		if err != nil {
+			return err
+		}
+		costLiteral := indentContinuation(rawCostLit, indent)
+		_, _ = fmt.Fprintf(b, "%sManaCost: opt.Val(%s),\n", indent, costLiteral)
+	}
+	if len(face.Colors) > 0 {
+		ctx.need(importColor)
+		colorLits, err := colorValueLiterals(face.Colors)
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(b, "%sColors: []color.Color{%s},\n", indent, colorLits)
+	}
+	if len(face.Supertypes) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(face.Supertypes))
+		for _, st := range face.Supertypes {
+			lit, err := supertypeLiteral(st)
+			if err != nil {
+				return err
+			}
+			literals = append(literals, lit)
+		}
+		_, _ = fmt.Fprintf(b, "%sSupertypes: []types.Super{%s},\n", indent, strings.Join(literals, ", "))
+	}
+	if len(face.Types) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(face.Types))
+		for _, t := range face.Types {
+			lit, err := cardTypeLiteral(t)
+			if err != nil {
+				return err
+			}
+			literals = append(literals, lit)
+		}
+		_, _ = fmt.Fprintf(b, "%sTypes: []types.Card{%s},\n", indent, strings.Join(literals, ", "))
+	}
+	if len(face.Subtypes) > 0 {
+		ctx.need(importTypes)
+		cardTypeStrings := make([]string, 0, len(face.Types))
+		for _, t := range face.Types {
+			cardTypeStrings = append(cardTypeStrings, string(t))
+		}
+		literals := make([]string, 0, len(face.Subtypes))
+		for _, sub := range face.Subtypes {
+			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
+		}
+		_, _ = fmt.Fprintf(b, "%sSubtypes: []types.Sub{%s},\n", indent, strings.Join(literals, ", "))
+	}
+	if face.Power.Exists {
+		ctx.need(importOpt)
+		_, _ = fmt.Fprintf(b, "%sPower: opt.Val(%s),\n", indent, renderPTValue(face.Power.Val))
+	}
+	if face.Toughness.Exists {
+		ctx.need(importOpt)
+		_, _ = fmt.Fprintf(b, "%sToughness: opt.Val(%s),\n", indent, renderPTValue(face.Toughness.Val))
+	}
+	if face.Loyalty.Exists {
+		ctx.need(importOpt)
+		_, _ = fmt.Fprintf(b, "%sLoyalty: opt.Val(%d),\n", indent, face.Loyalty.Val)
+	}
+	if face.Defense.Exists {
+		ctx.need(importOpt)
+		_, _ = fmt.Fprintf(b, "%sDefense: opt.Val(%d),\n", indent, face.Defense.Val)
+	}
+	return nil
+}
+
+// colorValueLiterals renders a slice of typed color.Color values as a
+// comma-separated list of Go constant references. Returns an error for any
+// unrecognised color value.
+func colorValueLiterals(colors []color.Color) (string, error) {
+	literals := make([]string, 0, len(colors))
+	for _, c := range colors {
+		lit, err := colorValueToLiteral(c)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, lit)
+	}
+	return strings.Join(literals, ", "), nil
+}
+
+func colorValueToLiteral(c color.Color) (string, error) {
+	switch c {
+	case color.White:
+		return "color.White", nil
+	case color.Blue:
+		return "color.Blue", nil
+	case color.Black:
+		return "color.Black", nil
+	case color.Red:
+		return "color.Red", nil
+	case color.Green:
+		return "color.Green", nil
+	default:
+		return "", fmt.Errorf("render: unsupported color %q", string(c))
+	}
+}
+
+// renderFaceAbilityFields renders the categorized ability fields for one face in
+// canonical order. Each returned element is a complete "Field: value," fragment.
+// All values come from the validated face; hints only select rendering style and
+// are verified against the face before use.
+func (r Renderer) renderFaceAbilityFields(ctx *renderCtx, face *game.CardFace, hints faceRenderHints) ([]string, error) {
+	var fields []string
+
+	if len(face.StaticAbilities) > 0 {
+		elements := make([]string, 0, len(face.StaticAbilities))
+		for i := range face.StaticAbilities {
+			hint := staticHintAt(hints, i)
+			if hint != nil && hint.VarName != "" && !reflect.DeepEqual(hint.Body, face.StaticAbilities[i]) {
+				return nil, fmt.Errorf("render: hint VarName %q for static ability %d does not match CardDef value (divergence)", hint.VarName, i)
+			}
+			rendered, err := r.renderStaticAbility(ctx, &face.StaticAbilities[i], hint)
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("StaticAbilities", "game.StaticAbility", elements))
+	}
+
+	if len(face.ActivatedAbilities) > 0 {
+		elements := make([]string, 0, len(face.ActivatedAbilities))
+		for i := range face.ActivatedAbilities {
+			rendered, err := r.renderActivatedAbility(ctx, &face.ActivatedAbilities[i])
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("ActivatedAbilities", "game.ActivatedAbility", elements))
+	}
+
+	if len(face.ManaAbilities) > 0 {
+		elements := make([]string, 0, len(face.ManaAbilities))
+		for i := range face.ManaAbilities {
+			rendered, err := r.renderManaAbility(ctx, &face.ManaAbilities[i])
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("ManaAbilities", "game.ManaAbility", elements))
+	}
+
+	if len(face.TriggeredAbilities) > 0 {
+		elements := make([]string, 0, len(face.TriggeredAbilities))
+		for i := range face.TriggeredAbilities {
+			rendered, err := r.renderTriggeredAbility(ctx, &face.TriggeredAbilities[i])
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("TriggeredAbilities", "game.TriggeredAbility", elements))
+	}
+
+	if len(face.ReplacementAbilities) > 0 {
+		elements := make([]string, 0, len(face.ReplacementAbilities))
+		for i := range face.ReplacementAbilities {
+			rendered, err := r.renderReplacementAbility(&face.ReplacementAbilities[i])
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("ReplacementAbilities", "game.ReplacementAbility", elements))
+	}
+
+	if face.SpellAbility.Exists {
+		ctx.need(importOpt)
+		content, err := r.renderAbilityContent(ctx, face.SpellAbility.Val)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("SpellAbility: opt.Val(%s),", content))
+	}
+
+	return fields, nil
+}
+
+func staticHintAt(hints faceRenderHints, i int) *staticVarHint {
+	if i < len(hints.StaticVarNames) {
+		return &hints.StaticVarNames[i]
+	}
+	return nil
+}
+
+func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, hint *staticVarHint) (string, error) {
+	if hint != nil && hint.VarName != "" {
+		return hint.VarName, nil
+	}
+	var fields []string
+	if body.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(body.Text)))
+	}
+	if len(body.KeywordAbilities) > 0 {
+		elements := make([]string, 0, len(body.KeywordAbilities))
+		for _, keyword := range body.KeywordAbilities {
+			rendered, err := r.renderKeywordAbility(ctx, keyword)
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("KeywordAbilities", "game.KeywordAbility", elements))
+	}
+	return structLit("game.StaticAbility", fields), nil
+}
+
+func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.ActivatedAbility) (string, error) {
+	var fields []string
+	if ability.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
+	}
+	if ability.ManaCost.Exists {
+		ctx.need(importOpt)
+		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", manaCostLit))
+	}
+	if len(ability.AdditionalCosts) > 0 {
+		rendered, err := r.renderAdditionalCosts(ctx, ability.AdditionalCosts)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
+	}
+	if len(ability.KeywordAbilities) > 0 {
+		elements := make([]string, 0, len(ability.KeywordAbilities))
+		for _, keyword := range ability.KeywordAbilities {
+			rendered, err := r.renderKeywordAbility(ctx, keyword)
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("KeywordAbilities", "game.KeywordAbility", elements))
+	}
+	content, err := r.renderAbilityContent(ctx, ability.Content)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Content: %s,", content))
+	return structLit("game.ActivatedAbility", fields), nil
+}
+
+func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (string, error) {
+	var fields []string
+	if ability.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
+	}
+	if ability.ManaCost.Exists {
+		ctx.need(importOpt)
+		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", manaCostLit))
+	}
+	if len(ability.AdditionalCosts) > 0 {
+		rendered, err := r.renderAdditionalCosts(ctx, ability.AdditionalCosts)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
+	}
+	content, err := r.renderAbilityContent(ctx, ability.Content)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Content: %s,", content))
+	return structLit("game.ManaAbility", fields), nil
+}
+
+func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {
+	var fields []string
+	if ability.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
+	}
+	trigger, err := r.renderTriggerCondition(&ability.Trigger)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Trigger: %s,", trigger))
+	content, err := r.renderAbilityContent(ctx, ability.Content)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Content: %s,", content))
+	return structLit("game.TriggeredAbility", fields), nil
+}
+
+func (r Renderer) renderTriggerCondition(trigger *game.TriggerCondition) (string, error) {
+	triggerType, err := renderTriggerType(trigger.Type)
+	if err != nil {
+		return "", err
+	}
+	pattern, err := r.renderTriggerPattern(&trigger.Pattern)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TriggerCondition", []string{
+		fmt.Sprintf("Type: %s,", triggerType),
+		fmt.Sprintf("Pattern: %s,", pattern),
+	}), nil
+}
+
+func (Renderer) renderTriggerPattern(pattern *game.TriggerPattern) (string, error) {
+	event, err := renderEventKind(pattern.Event)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Event: %s,", event)}
+	if pattern.Source != game.TriggerSourceAny {
+		source, err := renderTriggerSource(pattern.Source)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Source: %s,", source))
+	}
+	return structLit("game.TriggerPattern", fields), nil
+}
+
+func (Renderer) renderReplacementAbility(ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.EntersTapped &&
+		!ability.Replacement.Condition.Exists &&
+		!ability.UnlessPaid.Exists {
+		return fmt.Sprintf("game.EntersTappedReplacement(%q)", ability.Text), nil
+	}
+	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func (r Renderer) renderAbilityContent(ctx *renderCtx, content game.AbilityContent) (string, error) {
+	if content.IsModal() {
+		return "", errors.New("render: modal ability content is not supported")
+	}
+	mode, err := r.renderMode(ctx, content.Modes[0])
+	if err != nil {
+		return "", err
+	}
+	return mode + ".Ability()", nil
+}
+
+func (r Renderer) renderMode(ctx *renderCtx, mode game.Mode) (string, error) {
+	var fields []string
+	if mode.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(mode.Text)))
+	}
+	if len(mode.Targets) > 0 {
+		elements := make([]string, 0, len(mode.Targets))
+		for i := range mode.Targets {
+			rendered, err := r.renderTargetSpec(ctx, &mode.Targets[i])
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("Targets", "game.TargetSpec", elements))
+	}
+	elements := make([]string, 0, len(mode.Sequence))
+	for i := range mode.Sequence {
+		rendered, err := r.renderInstruction(ctx, &mode.Sequence[i])
+		if err != nil {
+			return "", err
+		}
+		elements = append(elements, rendered+",")
+	}
+	fields = append(fields, sliceField("Sequence", "game.Instruction", elements))
+	return structLit("game.Mode", fields), nil
+}
+
+func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instruction) (string, error) {
+	primitive, err := r.renderPrimitive(ctx, instruction.Primitive)
+	if err != nil {
+		return "", err
+	}
+	return structLit("", []string{fmt.Sprintf("Primitive: %s,", primitive)}), nil
+}
+
+func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	if primitive == nil {
+		return "", errors.New("render: nil primitive")
+	}
+	switch primitive.Kind() {
+	case game.PrimitiveDamage:
+		value, ok := primitive.(game.Damage)
+		if !ok {
+			return "", errors.New("render: internal error: Damage kind has unexpected concrete type")
+		}
+		recipient, err := r.renderDamageRecipient(ctx, value.Recipient)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Damage", []string{
+			fmt.Sprintf("Amount: %s,", renderQuantity(value.Amount)),
+			fmt.Sprintf("Recipient: %s,", recipient),
+		}), nil
+	case game.PrimitiveDraw:
+		value, ok := primitive.(game.Draw)
+		if !ok {
+			return "", errors.New("render: internal error: Draw kind has unexpected concrete type")
+		}
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		return r.renderAmountPlayer("game.Draw", value.Amount, player), nil
+	case game.PrimitiveDiscard:
+		value, ok := primitive.(game.Discard)
+		if !ok {
+			return "", errors.New("render: internal error: Discard kind has unexpected concrete type")
+		}
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		return r.renderAmountPlayer("game.Discard", value.Amount, player), nil
+	case game.PrimitiveMill:
+		value, ok := primitive.(game.Mill)
+		if !ok {
+			return "", errors.New("render: internal error: Mill kind has unexpected concrete type")
+		}
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		return r.renderAmountPlayer("game.Mill", value.Amount, player), nil
+	case game.PrimitiveScry:
+		value, ok := primitive.(game.Scry)
+		if !ok {
+			return "", errors.New("render: internal error: Scry kind has unexpected concrete type")
+		}
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		return r.renderAmountPlayer("game.Scry", value.Amount, player), nil
+	case game.PrimitiveGainLife:
+		value, ok := primitive.(game.GainLife)
+		if !ok {
+			return "", errors.New("render: internal error: GainLife kind has unexpected concrete type")
+		}
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		return r.renderAmountPlayer("game.GainLife", value.Amount, player), nil
+	case game.PrimitiveLoseLife:
+		value, ok := primitive.(game.LoseLife)
+		if !ok {
+			return "", errors.New("render: internal error: LoseLife kind has unexpected concrete type")
+		}
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		return r.renderAmountPlayer("game.LoseLife", value.Amount, player), nil
+	case game.PrimitiveDestroy:
+		value, ok := primitive.(game.Destroy)
+		if !ok {
+			return "", errors.New("render: internal error: Destroy kind has unexpected concrete type")
+		}
+		return r.renderObjectOrGroup(ctx, "game.Destroy", value.Object, value.Group)
+	case game.PrimitiveBounce:
+		value, ok := primitive.(game.Bounce)
+		if !ok {
+			return "", errors.New("render: internal error: Bounce kind has unexpected concrete type")
+		}
+		return r.renderObjectOrGroup(ctx, "game.Bounce", value.Object, value.Group)
+	case game.PrimitiveUntap:
+		value, ok := primitive.(game.Untap)
+		if !ok {
+			return "", errors.New("render: internal error: Untap kind has unexpected concrete type")
+		}
+		return r.renderObjectOrGroup(ctx, "game.Untap", value.Object, value.Group)
+	case game.PrimitiveExile:
+		value, ok := primitive.(game.Exile)
+		if !ok {
+			return "", errors.New("render: internal error: Exile kind has unexpected concrete type")
+		}
+		return r.renderObjectOrGroup(ctx, "game.Exile", value.Object, value.Group)
+	case game.PrimitiveTap:
+		value, ok := primitive.(game.Tap)
+		if !ok {
+			return "", errors.New("render: internal error: Tap kind has unexpected concrete type")
+		}
+		object, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Tap", []string{fmt.Sprintf("Object: %s,", object)}), nil
+	case game.PrimitiveAddMana:
+		value, ok := primitive.(game.AddMana)
+		if !ok {
+			return "", errors.New("render: internal error: AddMana kind has unexpected concrete type")
+		}
+		return r.renderAddMana(ctx, &value)
+	case game.PrimitiveModifyPT:
+		value, ok := primitive.(game.ModifyPT)
+		if !ok {
+			return "", errors.New("render: internal error: ModifyPT kind has unexpected concrete type")
+		}
+		return r.renderModifyPT(&value)
+	case game.PrimitiveChoose:
+		value, ok := primitive.(game.Choose)
+		if !ok {
+			return "", errors.New("render: internal error: Choose kind has unexpected concrete type")
+		}
+		return r.renderChoose(ctx, value)
+	default:
+		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
+	}
+}
+
+func (Renderer) renderAmountPlayer(typeName string, amount game.Quantity, player string) string {
+	return structLit(typeName, []string{
+		fmt.Sprintf("Amount: %s,", renderQuantity(amount)),
+		fmt.Sprintf("Player: %s,", player),
+	})
+}
+
+func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object game.ObjectReference, group game.GroupReference) (string, error) {
+	if group.Domain() != 0 {
+		rendered, err := r.renderGroupReference(ctx, group)
+		if err != nil {
+			return "", err
+		}
+		return structLit(typeName, []string{fmt.Sprintf("Group: %s,", rendered)}), nil
+	}
+	rendered, err := r.renderObjectReference(object)
+	if err != nil {
+		return "", err
+	}
+	return structLit(typeName, []string{fmt.Sprintf("Object: %s,", rendered)}), nil
+}
+
+func (Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, error) {
+	fields := []string{fmt.Sprintf("Amount: %s,", renderQuantity(value.Amount))}
+	if value.ManaColor != "" {
+		ctx.need(importMana)
+		colorLiteral, err := renderManaColor(value.ManaColor)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ManaColor: %s,", colorLiteral))
+	}
+	if value.ChoiceFrom != "" {
+		fields = append(fields, fmt.Sprintf("ChoiceFrom: game.ChoiceKey(%q),", string(value.ChoiceFrom)))
+	}
+	return structLit("game.AddMana", fields), nil
+}
+
+func (r Renderer) renderModifyPT(value *game.ModifyPT) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ModifyPT", []string{
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("PowerDelta: %s,", renderQuantity(value.PowerDelta)),
+		fmt.Sprintf("ToughnessDelta: %s,", renderQuantity(value.ToughnessDelta)),
+		fmt.Sprintf("Duration: %s,", duration),
+	}), nil
+}
+
+func (r Renderer) renderChoose(ctx *renderCtx, value game.Choose) (string, error) {
+	choice, err := r.renderResolutionChoice(ctx, value.Choice)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Choice: %s,", choice)}
+	if value.PublishChoice != "" {
+		fields = append(fields, fmt.Sprintf("PublishChoice: game.ChoiceKey(%q),", string(value.PublishChoice)))
+	}
+	return structLit("game.Choose", fields), nil
+}
+
+func (Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionChoice) (string, error) {
+	kind, err := renderResolutionChoiceKind(choice.Kind)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
+	if len(choice.Colors) > 0 {
+		ctx.need(importMana)
+		colors, err := renderManaColorSlice(ctx, choice.Colors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Colors: %s,", colors))
+	}
+	return structLit("game.ResolutionChoice", fields), nil
+}
+
+func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (string, error) {
+	fields := []string{
+		fmt.Sprintf("MinTargets: %d,", spec.MinTargets),
+		fmt.Sprintf("MaxTargets: %d,", spec.MaxTargets),
+	}
+	if spec.Constraint != "" {
+		fields = append(fields, fmt.Sprintf("Constraint: %q,", spec.Constraint))
+	}
+	if spec.Allow != game.TargetAllowUnspecified {
+		fields = append(fields, fmt.Sprintf("Allow: %s,", renderTargetAllow(spec.Allow)))
+	}
+	if predicate, ok, err := r.renderTargetPredicate(ctx, spec.Predicate); err != nil {
+		return "", err
+	} else if ok {
+		fields = append(fields, fmt.Sprintf("Predicate: %s,", predicate))
+	}
+	return structLit("game.TargetSpec", fields), nil
+}
+
+func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredicate) (lit string, ok bool, err error) {
+	var fields []string
+	if len(predicate.PermanentTypes) > 0 {
+		ctx.need(importTypes)
+		lits, err := renderTypesCardSlice(ctx, predicate.PermanentTypes)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", lits))
+	}
+	if predicate.Player != game.PlayerAny {
+		pr, err := renderPlayerRelation(predicate.Player)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Player: %s,", pr))
+	}
+	if len(fields) == 0 {
+		return "", false, nil
+	}
+	return structLit("game.TargetPredicate", fields), true, nil
+}
+
+func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference) (string, error) {
+	selection, err := r.renderSelection(ctx, group.Selection())
+	if err != nil {
+		return "", err
+	}
+	exclude, hasExclude := group.Exclusion()
+	switch group.Domain() {
+	case game.GroupDomainBattlefield:
+		if hasExclude {
+			rendered, err := r.renderObjectReference(exclude)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.BattlefieldGroupExcluding(%s, %s)", selection, rendered), nil
+		}
+		return fmt.Sprintf("game.BattlefieldGroup(%s)", selection), nil
+	case game.GroupDomainAttachedObject:
+		anchor, _ := group.Anchor()
+		rendered, err := r.renderObjectReference(anchor)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.AttachedObjectGroup(%s)", rendered), nil
+	case game.GroupDomainObjectControlled:
+		anchor, _ := group.Anchor()
+		renderedAnchor, err := r.renderObjectReference(anchor)
+		if err != nil {
+			return "", err
+		}
+		if hasExclude {
+			renderedExclude, err := r.renderObjectReference(exclude)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.ObjectControlledGroupExcluding(%s, %s, %s)", renderedAnchor, selection, renderedExclude), nil
+		}
+		return fmt.Sprintf("game.ObjectControlledGroup(%s, %s)", renderedAnchor, selection), nil
+	default:
+		return "", fmt.Errorf("render: unsupported group reference domain %d", group.Domain())
+	}
+}
+
+func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (string, error) {
+	var fields []string
+
+	if len(selection.RequiredTypes) > 0 {
+		ctx.need(importTypes)
+		lits, err := renderTypesCardSlice(ctx, selection.RequiredTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("RequiredTypes: %s,", lits))
+	}
+	if len(selection.RequiredTypesAny) > 0 {
+		ctx.need(importTypes)
+		lits, err := renderTypesCardSlice(ctx, selection.RequiredTypesAny)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("RequiredTypesAny: %s,", lits))
+	}
+	if len(selection.ExcludedTypes) > 0 {
+		ctx.need(importTypes)
+		lits, err := renderTypesCardSlice(ctx, selection.ExcludedTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
+	}
+
+	if len(selection.Supertypes) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(selection.Supertypes))
+		for _, st := range selection.Supertypes {
+			lit, err := supertypeLiteral(st)
+			if err != nil {
+				return "", err
+			}
+			literals = append(literals, lit)
+		}
+		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
+	}
+	if len(selection.SubtypesAny) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(selection.SubtypesAny))
+		for _, sub := range selection.SubtypesAny {
+			literals = append(literals, SubtypeToLiteral(string(sub), nil))
+		}
+		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
+
+	if len(selection.ColorsAny) > 0 {
+		colorLits, err := renderColorSlice(ctx, selection.ColorsAny)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ColorsAny: %s,", colorLits))
+	}
+	if len(selection.ExcludedColors) > 0 {
+		colorLits, err := renderColorSlice(ctx, selection.ExcludedColors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", colorLits))
+	}
+
+	if selection.Controller != game.ControllerAny {
+		cr, err := renderControllerRelation(selection.Controller)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Controller: %s,", cr))
+	}
+	if selection.Player != game.PlayerAny {
+		pr, err := renderPlayerRelation(selection.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Player: %s,", pr))
+	}
+
+	if selection.Tapped != game.TriAny {
+		ts, err := renderTriState(selection.Tapped)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Tapped: %s,", ts))
+	}
+	if selection.CombatState != game.CombatStateAny {
+		cs, err := renderCombatStateFilter(selection.CombatState)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("CombatState: %s,", cs))
+	}
+
+	if selection.Keyword != game.KeywordNone {
+		kw, err := renderKeyword(selection.Keyword)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Keyword: %s,", kw))
+	}
+	if selection.ExcludedKeyword != game.KeywordNone {
+		kw, err := renderKeyword(selection.ExcludedKeyword)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedKeyword: %s,", kw))
+	}
+
+	if selection.ManaValue.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, selection.ManaValue.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ManaValue: opt.Val(%s),", cmp))
+	}
+	if selection.Power.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, selection.Power.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Power: opt.Val(%s),", cmp))
+	}
+	if selection.Toughness.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, selection.Toughness.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Toughness: opt.Val(%s),", cmp))
+	}
+
+	if selection.ExcludeSource {
+		fields = append(fields, "ExcludeSource: true,")
+	}
+	if selection.NonToken {
+		fields = append(fields, "NonToken: true,")
+	}
+
+	return compactStructLit("game.Selection", fields), nil
+}
+
+func renderColorSlice(ctx *renderCtx, colors []color.Color) (string, error) {
+	ctx.need(importColor)
+	literals := make([]string, 0, len(colors))
+	for _, c := range colors {
+		lit, err := colorValueToLiteral(c)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, lit)
+	}
+	return "[]color.Color{" + strings.Join(literals, ", ") + "}", nil
+}
+
+func renderControllerRelation(cr game.ControllerRelation) (string, error) {
+	switch cr {
+	case game.ControllerAny:
+		return "game.ControllerAny", nil
+	case game.ControllerYou:
+		return "game.ControllerYou", nil
+	case game.ControllerOpponent:
+		return "game.ControllerOpponent", nil
+	case game.ControllerNotYou:
+		return "game.ControllerNotYou", nil
+	default:
+		return "", fmt.Errorf("render: unsupported controller relation %d", cr)
+	}
+}
+
+func renderTriState(ts game.TriState) (string, error) {
+	switch ts {
+	case game.TriAny:
+		return "game.TriAny", nil
+	case game.TriTrue:
+		return "game.TriTrue", nil
+	case game.TriFalse:
+		return "game.TriFalse", nil
+	default:
+		return "", fmt.Errorf("render: unsupported tri-state %d", ts)
+	}
+}
+
+func renderCombatStateFilter(cs game.CombatStateFilter) (string, error) {
+	switch cs {
+	case game.CombatStateAny:
+		return "game.CombatStateAny", nil
+	case game.CombatStateAttacking:
+		return "game.CombatStateAttacking", nil
+	case game.CombatStateBlocking:
+		return "game.CombatStateBlocking", nil
+	case game.CombatStateAttackingOrBlocking:
+		return "game.CombatStateAttackingOrBlocking", nil
+	default:
+		return "", fmt.Errorf("render: unsupported combat state filter %d", cs)
+	}
+}
+
+func renderKeyword(kw game.Keyword) (string, error) {
+	switch kw {
+	case game.KeywordNone:
+		return "game.KeywordNone", nil
+	case game.Deathtouch:
+		return "game.Deathtouch", nil
+	case game.Defender:
+		return "game.Defender", nil
+	case game.DoubleStrike:
+		return "game.DoubleStrike", nil
+	case game.FirstStrike:
+		return "game.FirstStrike", nil
+	case game.Flash:
+		return "game.Flash", nil
+	case game.Flying:
+		return "game.Flying", nil
+	case game.Haste:
+		return "game.Haste", nil
+	case game.Hexproof:
+		return "game.Hexproof", nil
+	case game.Indestructible:
+		return "game.Indestructible", nil
+	case game.Lifelink:
+		return "game.Lifelink", nil
+	case game.Menace:
+		return "game.Menace", nil
+	case game.Protection:
+		return "game.Protection", nil
+	case game.Reach:
+		return "game.Reach", nil
+	case game.Shroud:
+		return "game.Shroud", nil
+	case game.Trample:
+		return "game.Trample", nil
+	case game.Vigilance:
+		return "game.Vigilance", nil
+	case game.Ward:
+		return "game.Ward", nil
+	case game.SplitSecond:
+		return "game.SplitSecond", nil
+	case game.Equip:
+		return "game.Equip", nil
+	case game.Enchant:
+		return "game.Enchant", nil
+	case game.Cycling:
+		return "game.Cycling", nil
+	case game.Flashback:
+		return "game.Flashback", nil
+	case game.Kicker:
+		return "game.Kicker", nil
+	case game.Madness:
+		return "game.Madness", nil
+	case game.Morph:
+		return "game.Morph", nil
+	case game.Disguise:
+		return "game.Disguise", nil
+	case game.Convoke:
+		return "game.Convoke", nil
+	case game.Delve:
+		return "game.Delve", nil
+	case game.Suspend:
+		return "game.Suspend", nil
+	case game.Storm:
+		return "game.Storm", nil
+	case game.Cascade:
+		return "game.Cascade", nil
+	case game.Prowess:
+		return "game.Prowess", nil
+	case game.Mutate:
+		return "game.Mutate", nil
+	case game.Companion:
+		return "game.Companion", nil
+	case game.Ninjutsu:
+		return "game.Ninjutsu", nil
+	case game.Escape:
+		return "game.Escape", nil
+	case game.Foretell:
+		return "game.Foretell", nil
+	case game.Craft:
+		return "game.Craft", nil
+	case game.Discover:
+		return "game.Discover", nil
+	case game.Eternalize:
+		return "game.Eternalize", nil
+	case game.Affinity:
+		return "game.Affinity", nil
+	case game.Improvise:
+		return "game.Improvise", nil
+	case game.Emerge:
+		return "game.Emerge", nil
+	case game.Undying:
+		return "game.Undying", nil
+	case game.Persist:
+		return "game.Persist", nil
+	case game.Wither:
+		return "game.Wither", nil
+	case game.Infect:
+		return "game.Infect", nil
+	case game.Toxic:
+		return "game.Toxic", nil
+	case game.Annihilator:
+		return "game.Annihilator", nil
+	case game.Exalted:
+		return "game.Exalted", nil
+	default:
+		return "", fmt.Errorf("render: unsupported keyword %d", kw)
+	}
+}
+
+func renderCompareInt(ctx *renderCtx, cmp compare.Int) (string, error) {
+	ctx.need(importCompare)
+	op, err := renderCompareOp(cmp.Op)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("compare.Int{Op: %s, Value: %d}", op, cmp.Value), nil
+}
+
+func renderCompareOp(op compare.Op) (string, error) {
+	switch op {
+	case compare.Any:
+		return "compare.Any", nil
+	case compare.Equal:
+		return "compare.Equal", nil
+	case compare.LessOrEqual:
+		return "compare.LessOrEqual", nil
+	case compare.GreaterOrEqual:
+		return "compare.GreaterOrEqual", nil
+	case compare.LessThan:
+		return "compare.LessThan", nil
+	case compare.GreaterThan:
+		return "compare.GreaterThan", nil
+	default:
+		return "", fmt.Errorf("render: unsupported compare op %d", op)
+	}
+}
+
+func (r Renderer) renderDamageRecipient(ctx *renderCtx, recipient game.DamageRecipient) (string, error) {
+	if object, ok := recipient.AnyTargetObjectReference(); ok {
+		return fmt.Sprintf("game.AnyTargetDamageRecipient(%d)", object.TargetIndex()), nil
+	}
+	if object, ok := recipient.ObjectReference(); ok {
+		rendered, err := r.renderObjectReference(object)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ObjectDamageRecipient(%s)", rendered), nil
+	}
+	if player, ok := recipient.PlayerReference(); ok {
+		rendered, err := r.renderPlayerReference(player)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.PlayerDamageRecipient(%s)", rendered), nil
+	}
+	if group, ok := recipient.GroupReference(); ok {
+		rendered, err := r.renderGroupReference(ctx, group)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.GroupDamageRecipient(%s)", rendered), nil
+	}
+	return "", errors.New("render: unsupported damage recipient")
+}
+
+func (Renderer) renderObjectReference(reference game.ObjectReference) (string, error) {
+	switch reference.Kind() {
+	case game.ObjectReferenceTargetPermanent:
+		return fmt.Sprintf("game.TargetPermanentReference(%d)", reference.TargetIndex()), nil
+	case game.ObjectReferenceTargetStackObject:
+		return fmt.Sprintf("game.TargetStackObjectReference(%d)", reference.TargetIndex()), nil
+	case game.ObjectReferenceSourcePermanent:
+		return "game.SourcePermanentReference()", nil
+	case game.ObjectReferenceSourceAttachedPermanent:
+		return "game.SourceAttachedPermanentReference()", nil
+	case game.ObjectReferenceTargetAttachedPermanent:
+		return fmt.Sprintf("game.TargetAttachedPermanentReference(%d)", reference.TargetIndex()), nil
+	case game.ObjectReferenceLinkedObject:
+		return fmt.Sprintf("game.LinkedObjectReference(%q)", reference.LinkID()), nil
+	case game.ObjectReferenceEventPermanent:
+		return "game.EventPermanentReference()", nil
+	default:
+		return "", fmt.Errorf("render: unsupported object reference kind %d", reference.Kind())
+	}
+}
+
+func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string, error) {
+	switch reference.Kind() {
+	case game.PlayerReferenceController:
+		return "game.ControllerReference()", nil
+	case game.PlayerReferenceTargetPlayer:
+		return fmt.Sprintf("game.TargetPlayerReference(%d)", reference.TargetIndex()), nil
+	case game.PlayerReferenceObjectController:
+		object, _ := reference.Object()
+		rendered, err := r.renderObjectReference(object)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ObjectControllerReference(%s)", rendered), nil
+	case game.PlayerReferenceObjectOwner:
+		object, _ := reference.Object()
+		rendered, err := r.renderObjectReference(object)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ObjectOwnerReference(%s)", rendered), nil
+	default:
+		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
+	}
+}
+
+func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbility) (string, error) {
+	if ward, ok := keyword.(game.WardKeyword); ok {
+		wardCost, err := r.renderManaCost(ctx, ward.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.WardKeyword{Cost: %s}", wardCost), nil
+	}
+	if cycling, ok := keyword.(game.CyclingKeyword); ok {
+		cyclingCost, err := r.renderManaCost(ctx, cycling.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.CyclingKeyword{Cost: %s}", cyclingCost), nil
+	}
+	return "", fmt.Errorf("render: unsupported keyword ability %T", keyword)
+}
+
+func (Renderer) renderManaCost(ctx *renderCtx, manaCost cost.Mana) (string, error) {
+	ctx.need(importCost)
+	if len(manaCost) == 0 {
+		return "cost.Mana{}", nil
+	}
+	symbols := make([]string, 0, len(manaCost))
+	for _, symbol := range manaCost {
+		sym, err := renderManaSymbol(ctx, symbol)
+		if err != nil {
+			return "", err
+		}
+		symbols = append(symbols, sym)
+	}
+	return "cost.Mana{" + strings.Join(symbols, ", ") + "}", nil
+}
+
+// renderManaCostMultiline renders a printed face ManaCost as a multi-line
+// cost.Mana literal matching ParseManaCostLiteral so gofmt produces output
+// identical to the existing generated cards.
+func renderManaCostMultiline(ctx *renderCtx, manaCost cost.Mana) (string, error) {
+	ctx.need(importCost)
+	if len(manaCost) == 0 {
+		return "cost.Mana{}", nil
+	}
+	symbols := make([]string, 0, len(manaCost))
+	for _, symbol := range manaCost {
+		sym, err := renderManaSymbol(ctx, symbol)
+		if err != nil {
+			return "", err
+		}
+		symbols = append(symbols, sym)
+	}
+	return "cost.Mana{\n\t\t\t" + strings.Join(symbols, ",\n\t\t\t") + ",\n\t\t}", nil
+}
+
+func (Renderer) renderAdditionalCosts(ctx *renderCtx, costs []cost.Additional) (string, error) {
+	ctx.need(importCost)
+	if len(costs) == 1 &&
+		costs[0].Kind == cost.AdditionalTap &&
+		costs[0].Text == "" &&
+		costs[0].Amount == 0 &&
+		costs[0].Source == zone.None {
+		return "cost.Tap", nil
+	}
+	elements := make([]string, 0, len(costs))
+	for _, additional := range costs {
+		rendered, err := renderAdditional(ctx, additional)
+		if err != nil {
+			return "", err
+		}
+		elements = append(elements, rendered+",")
+	}
+	return sliceLit("cost.Additional", elements), nil
+}
+
+func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error) {
+	ctx.need(importCost)
+	kind, err := renderAdditionalKind(additional.Kind)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
+	if additional.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %q,", additional.Text))
+	}
+	if additional.Amount != 0 {
+		fields = append(fields, fmt.Sprintf("Amount: %d,", additional.Amount))
+	}
+	if additional.Source != zone.None {
+		ctx.need(importZone)
+		zoneLiteral, err := renderZone(additional.Source)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Source: %s,", zoneLiteral))
+	}
+	return structLit("", fields), nil
+}
+
+func renderQuantity(quantity game.Quantity) string {
+	return fmt.Sprintf("game.Fixed(%d)", quantity.Value())
+}
+
+func renderManaSymbol(ctx *renderCtx, symbol cost.Symbol) (string, error) {
+	ctx.need(importCost)
+	switch symbol.Kind {
+	case cost.ColoredSymbol:
+		switch symbol.Color {
+		case mana.W:
+			return "cost.W", nil
+		case mana.U:
+			return "cost.U", nil
+		case mana.B:
+			return "cost.B", nil
+		case mana.R:
+			return "cost.R", nil
+		case mana.G:
+			return "cost.G", nil
+		default:
+			return "", fmt.Errorf("render: unsupported colored mana symbol %q", string(symbol.Color))
+		}
+	case cost.GenericSymbol:
+		return fmt.Sprintf("cost.O(%d)", symbol.Generic), nil
+	case cost.ColorlessSymbol:
+		return "cost.C", nil
+	case cost.VariableSymbol:
+		return "cost.X", nil
+	case cost.SnowSymbol:
+		return "cost.S", nil
+	case cost.HybridSymbol:
+		ctx.need(importMana)
+		first, err := renderManaColor(symbol.Color)
+		if err != nil {
+			return "", fmt.Errorf("render: unsupported hybrid mana color: %w", err)
+		}
+		second, err := renderManaColor(symbol.AltColor)
+		if err != nil {
+			return "", fmt.Errorf("render: unsupported hybrid mana alt color: %w", err)
+		}
+		return fmt.Sprintf("cost.HybridMana(%s, %s)", first, second), nil
+	case cost.TwobridSymbol:
+		ctx.need(importMana)
+		c, err := renderManaColor(symbol.Color)
+		if err != nil {
+			return "", fmt.Errorf("render: unsupported twobrid mana color: %w", err)
+		}
+		return fmt.Sprintf("cost.Twobrid(%s)", c), nil
+	case cost.PhyrexianSymbol:
+		ctx.need(importMana)
+		c, err := renderManaColor(symbol.Color)
+		if err != nil {
+			return "", fmt.Errorf("render: unsupported phyrexian mana color: %w", err)
+		}
+		return fmt.Sprintf("cost.PhyrexianMana(%s)", c), nil
+	default:
+		return "", fmt.Errorf("render: unsupported mana symbol kind %d", symbol.Kind)
+	}
+}
+
+func renderManaColor(c mana.Color) (string, error) {
+	switch c {
+	case mana.W:
+		return "mana.W", nil
+	case mana.U:
+		return "mana.U", nil
+	case mana.B:
+		return "mana.B", nil
+	case mana.R:
+		return "mana.R", nil
+	case mana.G:
+		return "mana.G", nil
+	case mana.C:
+		return "mana.C", nil
+	default:
+		return "", fmt.Errorf("render: unsupported mana color %q", string(c))
+	}
+}
+
+func renderManaColorSlice(ctx *renderCtx, colors []mana.Color) (string, error) {
+	ctx.need(importMana)
+	literals := make([]string, 0, len(colors))
+	for _, c := range colors {
+		literal, err := renderManaColor(c)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, literal)
+	}
+	return "[]mana.Color{" + strings.Join(literals, ", ") + "}", nil
+}
+
+func renderTypesCardSlice(ctx *renderCtx, cardTypes []types.Card) (string, error) {
+	ctx.need(importTypes)
+	literals := make([]string, 0, len(cardTypes))
+	for _, cardType := range cardTypes {
+		lit, err := cardTypeLiteral(cardType)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, lit)
+	}
+	return "[]types.Card{" + strings.Join(literals, ", ") + "}", nil
+}
+
+// cardTypeLiteral returns the Go constant for a types.Card value. It errors for
+// any card type not known to the renderer's supported subset, preventing silent
+// emission of comment fallbacks.
+func cardTypeLiteral(t types.Card) (string, error) {
+	lit := CardTypeToLiteral(string(t))
+	if strings.HasPrefix(lit, "/*") {
+		return "", fmt.Errorf("render: unsupported card type %q", string(t))
+	}
+	return lit, nil
+}
+
+// supertypeLiteral returns the Go constant for a types.Super value. It errors
+// for any supertype not known to the renderer's supported subset.
+func supertypeLiteral(st types.Super) (string, error) {
+	lit := SupertypeToLiteral(string(st))
+	if strings.HasPrefix(lit, "/*") {
+		return "", fmt.Errorf("render: unsupported supertype %q", string(st))
+	}
+	return lit, nil
+}
+
+func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
+	switch kind {
+	case cost.AdditionalDiscard:
+		return "cost.AdditionalDiscard", nil
+	case cost.AdditionalTap:
+		return "cost.AdditionalTap", nil
+	default:
+		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
+	}
+}
+
+func renderTargetAllow(allow game.TargetAllow) string {
+	var parts []string
+	if allow&game.TargetAllowPermanent != 0 {
+		parts = append(parts, "game.TargetAllowPermanent")
+	}
+	if allow&game.TargetAllowPlayer != 0 {
+		parts = append(parts, "game.TargetAllowPlayer")
+	}
+	if allow&game.TargetAllowStackObject != 0 {
+		parts = append(parts, "game.TargetAllowStackObject")
+	}
+	if len(parts) == 0 {
+		return "game.TargetAllowUnspecified"
+	}
+	return strings.Join(parts, " | ")
+}
+
+func renderPlayerRelation(relation game.PlayerRelation) (string, error) {
+	switch relation {
+	case game.PlayerAny:
+		return "game.PlayerAny", nil
+	case game.PlayerYou:
+		return "game.PlayerYou", nil
+	case game.PlayerOpponent:
+		return "game.PlayerOpponent", nil
+	case game.PlayerNotYou:
+		return "game.PlayerNotYou", nil
+	default:
+		return "", fmt.Errorf("render: unsupported player relation %d", relation)
+	}
+}
+
+func renderTriggerType(triggerType game.TriggerType) (string, error) {
+	switch triggerType {
+	case game.TriggerWhen:
+		return "game.TriggerWhen", nil
+	case game.TriggerWhenever:
+		return "game.TriggerWhenever", nil
+	case game.TriggerAt:
+		return "game.TriggerAt", nil
+	case game.TriggerState:
+		return "game.TriggerState", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger type %d", triggerType)
+	}
+}
+
+func renderTriggerSource(source game.TriggerSourceFilter) (string, error) {
+	switch source {
+	case game.TriggerSourceSelf:
+		return "game.TriggerSourceSelf", nil
+	case game.TriggerSourceAttachedPermanent:
+		return "game.TriggerSourceAttachedPermanent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger source %d", source)
+	}
+}
+
+func renderEventKind(event game.EventKind) (string, error) {
+	switch event {
+	case game.EventPermanentEnteredBattlefield:
+		return "game.EventPermanentEnteredBattlefield", nil
+	case game.EventPermanentDied:
+		return "game.EventPermanentDied", nil
+	default:
+		return "", fmt.Errorf("render: unsupported event kind %d", event)
+	}
+}
+
+func renderDuration(duration game.EffectDuration) (string, error) {
+	switch duration {
+	case game.DurationUntilEndOfTurn:
+		return "game.DurationUntilEndOfTurn", nil
+	default:
+		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
+	}
+}
+
+func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) {
+	switch kind {
+	case game.ResolutionChoiceMana:
+		return "game.ResolutionChoiceMana", nil
+	case game.ResolutionChoiceCardType:
+		return "game.ResolutionChoiceCardType", nil
+	case game.ResolutionChoicePlayer:
+		return "game.ResolutionChoicePlayer", nil
+	case game.ResolutionChoiceCard:
+		return "game.ResolutionChoiceCard", nil
+	default:
+		return "", fmt.Errorf("render: unsupported resolution choice kind %d", kind)
+	}
+}
+
+func renderZone(zoneType zone.Type) (string, error) {
+	switch zoneType {
+	case zone.Hand:
+		return "zone.Hand", nil
+	default:
+		return "", fmt.Errorf("render: unsupported zone %d", zoneType)
+	}
+}
+
+// renderText renders a string field value, preferring a raw backtick literal for
+// multi-line text and falling back to a quoted literal when the text already
+// contains a backtick.
+func renderText(text string) string {
+	if strings.ContainsRune(text, '`') {
+		return strconv.Quote(text)
+	}
+	if strings.ContainsRune(text, '\n') {
+		return "`" + text + "`"
+	}
+	return strconv.Quote(text)
+}
+
+func structLit(typeName string, fields []string) string {
+	if len(fields) == 0 {
+		return typeName + "{}"
+	}
+	return typeName + "{\n" + strings.Join(fields, "\n") + "\n}"
+}
+
+func sliceLit(elementType string, elements []string) string {
+	if len(elements) == 0 {
+		return "[]" + elementType + "{}"
+	}
+	return "[]" + elementType + "{\n" + strings.Join(elements, "\n") + "\n}"
+}
+
+func sliceField(fieldName, elementType string, elements []string) string {
+	return fieldName + ": " + sliceLit(elementType, elements) + ","
+}
+
+// compactStructLit renders a struct literal on a single line so that gofmt
+// preserves it inline. Each field must be a "Key: value" fragment without a
+// trailing comma.
+func compactStructLit(typeName string, fields []string) string {
+	return typeName + "{" + strings.Join(fields, ", ") + "}"
+}

@@ -51,28 +51,25 @@ var ChandraSIgnition = &game.CardDef{
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
+								Kind:   game.DynamicAmountTargetPower,
+								Object: game.TargetPermanentReference(0),
 							}),
-							Recipient: game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
+							Recipient: game.GroupDamageRecipient(game.BattlefieldGroupExcluding(
+								game.Selection{RequiredTypes: []types.Card{types.Creature}},
+								game.TargetPermanentReference(0),
+							)),
+							DamageSource: opt.Val(game.TargetPermanentReference(0)),
 						},
 						Description: "deals damage equal to its power to each other creature",
 					},
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
+								Kind:   game.DynamicAmountTargetPower,
+								Object: game.TargetPermanentReference(0),
 							}),
-							Recipient: game.PlayerSelectorRecipient(game.PlayerSelectorOpponents),
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
+							Recipient:    game.PlayerGroupDamageRecipient(game.OpponentsReference()),
+							DamageSource: opt.Val(game.TargetPermanentReference(0)),
 						},
 						Description: "deals damage equal to its power to each opponent",
 					},

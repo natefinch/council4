@@ -24,26 +24,20 @@ type generatedCardFields struct {
 	Loyalty   *string
 	Defense   *string
 
-	EntersTapped  bool
-	AbilityFields []string
-	Executable    bool
-}
-
-type generatedAbilityFields struct {
-	root  []string
-	faces [][]string
+	EntersTapped bool
 }
 
 // GenerateCardSource generates a canonically formatted CardDef source file from
-// Scryfall data. The file belongs to the given package name (e.g., "l").
+// Scryfall data. The file belongs to the given package name (e.g., "l"). It
+// always emits a partial definition with a TODO; executable cards use
+// GenerateExecutableCardSource instead.
 func GenerateCardSource(card *ScryfallCard, pkgName string) (string, error) {
-	return genCardSource(card, pkgName, nil)
+	return genCardSource(card, pkgName)
 }
 
 func genCardSource(
 	card *ScryfallCard,
 	pkgName string,
-	abilityFields *generatedAbilityFields,
 ) (string, error) {
 	var b strings.Builder
 
@@ -52,24 +46,11 @@ func genCardSource(
 	if card.Layout == "reversible_card" && len(card.CardFaces) > 0 {
 		faces = facesFromAllCardFaces(card)
 	}
-	if abilityFields != nil {
-		root.AbilityFields = abilityFields.root
-		root.EntersTapped = false
-	}
-	root.Executable = abilityFields != nil
-	for i := range faces {
-		if abilityFields != nil {
-			faces[i].AbilityFields = abilityFields.faces[i]
-			faces[i].EntersTapped = false
-		}
-		faces[i].Executable = abilityFields != nil
-	}
 	needsCost := fieldsNeedCost(root) || anyFaceNeedsCost(faces)
 	needsColor := fieldsNeedColor(root) || anyFaceNeedsColor(faces)
 	needsMana := fieldsNeedMana(root) || anyFaceNeedsMana(faces)
 	needsOpt := fieldsNeedOpt(root) || anyFaceNeedsOpt(faces) || len(faces) > 0
 	needsTypes := fieldsNeedTypes(root) || slices.ContainsFunc(faces, fieldsNeedTypes)
-	needsZone := fieldsNeedZone(root) || slices.ContainsFunc(faces, fieldsNeedZone)
 
 	_, _ = fmt.Fprintf(&b, "package %s\n\n", pkgName)
 	_, _ = b.WriteString("import (\n")
@@ -82,9 +63,6 @@ func genCardSource(
 	}
 	if needsTypes {
 		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/types\"\n")
-	}
-	if needsZone {
-		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/zone\"\n")
 	}
 	if needsMana {
 		_, _ = b.WriteString("\t\"github.com/natefinch/council4/mtg/game/mana\"\n")
@@ -201,7 +179,7 @@ func layoutEmitsFaces(layout string) bool {
 }
 
 func fieldsNeedCost(fields generatedCardFields) bool {
-	return fields.ManaCost != "" || abilityFieldsUsePackage(fields.AbilityFields, "cost")
+	return fields.ManaCost != ""
 }
 
 func fieldsNeedColor(fields generatedCardFields) bool {
@@ -209,8 +187,7 @@ func fieldsNeedColor(fields generatedCardFields) bool {
 }
 
 func fieldsNeedMana(fields generatedCardFields) bool {
-	return costLiteralNeedsManaPackage(fields.ManaCost) ||
-		abilityFieldsUsePackage(fields.AbilityFields, "mana")
+	return costLiteralNeedsManaPackage(fields.ManaCost)
 }
 
 func costLiteralNeedsManaPackage(manaCost string) bool {
@@ -227,26 +204,14 @@ func fieldsNeedOpt(fields generatedCardFields) bool {
 		fields.Power != nil ||
 		fields.Toughness != nil ||
 		fields.Loyalty != nil ||
-		fields.Defense != nil ||
-		abilityFieldsUsePackage(fields.AbilityFields, "opt")
+		fields.Defense != nil
 }
 
 func fieldsNeedTypes(fields generatedCardFields) bool {
 	parsed := ParseTypeLine(fields.TypeLine)
 	return len(parsed.Supertypes) > 0 ||
 		len(parsed.Types) > 0 ||
-		len(parsed.Subtypes) > 0 ||
-		abilityFieldsUsePackage(fields.AbilityFields, "types")
-}
-
-func fieldsNeedZone(fields generatedCardFields) bool {
-	return abilityFieldsUsePackage(fields.AbilityFields, "zone")
-}
-
-func abilityFieldsUsePackage(fields []string, packageName string) bool {
-	return slices.ContainsFunc(fields, func(field string) bool {
-		return strings.Contains(field, packageName+".")
-	})
+		len(parsed.Subtypes) > 0
 }
 
 func anyFaceNeedsCost(faces []generatedCardFields) bool {
@@ -303,9 +268,7 @@ func writeCardComment(b *strings.Builder, card *ScryfallCard, root generatedCard
 		}
 	}
 	_, _ = b.WriteString("//\n")
-	if !root.Executable {
-		_, _ = b.WriteString("// TODO: Fill in ability fields from oracle text using categorized CardFace fields.\n")
-	}
+	_, _ = b.WriteString("// TODO: Fill in ability fields from oracle text using categorized CardFace fields.\n")
 }
 
 func writeSingleFaceComment(b *strings.Builder, fields generatedCardFields) {
@@ -353,6 +316,31 @@ func writeCardDef(b *strings.Builder, root generatedCardFields, layout string, f
 }
 
 func writeFields(b *strings.Builder, fields generatedCardFields, indent string, includeName bool) error {
+	if err := writePrintedScalarFields(b, fields, indent, includeName); err != nil {
+		return err
+	}
+	if fields.EntersTapped {
+		_, _ = fmt.Fprintf(b, "%sReplacementAbilities: []game.ReplacementAbility{\n", indent)
+		_, _ = fmt.Fprintf(b, "%s\tgame.EntersTappedReplacement(%q),\n", indent, "This permanent enters tapped.")
+		_, _ = fmt.Fprintf(b, "%s},\n", indent)
+	}
+	if fields.OracleText != "" {
+		writeRawTextField(b, indent, "OracleText", fields.OracleText)
+	}
+	_, _ = fmt.Fprintf(b, "%s// TODO: Fill in ability fields from oracle text.\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// Use categorized CardFace fields (SpellAbility, ActivatedAbilities,\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// ManaAbilities, LoyaltyAbilities, TriggeredAbilities, StaticAbilities).\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// Follow mtg/cards/k/karplusan_forest.go: raw multiline Text values and\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// vertically expanded ability bodies. For mixed categories, use an initializer\n", indent)
+	_, _ = fmt.Fprintf(b, "%s// function and append in oracle order.\n", indent)
+	return nil
+}
+
+// writePrintedScalarFields emits the printed CardFace fields parsed from
+// Scryfall data (name, mana cost, colors, types, and power/toughness/loyalty/
+// defense). It is shared by the non-executable generator and the executable
+// Renderer so both paths render identical printed fields.
+func writePrintedScalarFields(b *strings.Builder, fields generatedCardFields, indent string, includeName bool) error {
 	if includeName {
 		_, _ = fmt.Fprintf(b, "%sName: %q,\n", indent, fields.Name)
 	}
@@ -405,27 +393,6 @@ func writeFields(b *strings.Builder, fields generatedCardFields, indent string, 
 		if n, err := strconv.Atoi(*fields.Defense); err == nil {
 			_, _ = fmt.Fprintf(b, "%sDefense: opt.Val(%d),\n", indent, n)
 		}
-	}
-	if fields.EntersTapped {
-		_, _ = fmt.Fprintf(b, "%sReplacementAbilities: []game.ReplacementAbility{\n", indent)
-		_, _ = fmt.Fprintf(b, "%s\tgame.EntersTappedReplacement(%q),\n", indent, "This permanent enters tapped.")
-		_, _ = fmt.Fprintf(b, "%s},\n", indent)
-	}
-	for _, field := range fields.AbilityFields {
-		for line := range strings.SplitSeq(field, "\n") {
-			_, _ = fmt.Fprintf(b, "%s%s\n", indent, line)
-		}
-	}
-	if fields.OracleText != "" {
-		writeRawTextField(b, indent, "OracleText", fields.OracleText)
-	}
-	if !fields.Executable {
-		_, _ = fmt.Fprintf(b, "%s// TODO: Fill in ability fields from oracle text.\n", indent)
-		_, _ = fmt.Fprintf(b, "%s// Use categorized CardFace fields (SpellAbility, ActivatedAbilities,\n", indent)
-		_, _ = fmt.Fprintf(b, "%s// ManaAbilities, LoyaltyAbilities, TriggeredAbilities, StaticAbilities).\n", indent)
-		_, _ = fmt.Fprintf(b, "%s// Follow mtg/cards/k/karplusan_forest.go: raw multiline Text values and\n", indent)
-		_, _ = fmt.Fprintf(b, "%s// vertically expanded ability bodies. For mixed categories, use an initializer\n", indent)
-		_, _ = fmt.Fprintf(b, "%s// function and append in oracle order.\n", indent)
 	}
 	return nil
 }

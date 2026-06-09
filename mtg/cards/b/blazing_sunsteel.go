@@ -45,8 +45,8 @@ var BlazingSunsteel = func() *game.CardDef {
 			`,
 		ContinuousEffects: []game.ContinuousEffect{
 			{
-				Layer:    game.LayerPowerToughnessModify,
-				Selector: game.EffectSelectorEquippedCreature,
+				Layer: game.LayerPowerToughnessModify,
+				Group: game.AttachedObjectGroup(game.SourcePermanentReference()),
 				PowerDeltaDynamic: opt.Val(game.DynamicAmount{
 					Kind: game.DynamicAmountOpponentCount,
 				}),
@@ -83,11 +83,8 @@ var BlazingSunsteel = func() *game.CardDef {
 							Amount: game.Dynamic(game.DynamicAmount{
 								Kind: game.DynamicAmountEventDamage,
 							}),
-							Recipient: game.TargetRecipient(0),
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceAttachedPermanent,
-								TargetIndex: game.TargetIndexSourcePermanent,
-							}),
+							Recipient:    game.AnyTargetDamageRecipient(0),
+							DamageSource: opt.Val(game.EventPermanentReference()),
 						},
 					},
 				},

@@ -9,7 +9,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/opt"
 )
 
 type pendingTriggeredAbility struct {
@@ -248,7 +247,7 @@ func prowessTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		return nil, false
 	}
 	instr := game.Instruction{Primitive: game.ModifyPT{
-		TargetIndex:    game.TargetIndexSourcePermanent,
+		Object:         game.SourcePermanentReference(),
 		PowerDelta:     game.Fixed(1),
 		ToughnessDelta: game.Fixed(1),
 		Duration:       game.DurationUntilEndOfTurn,
@@ -269,7 +268,7 @@ func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		return nil, false
 	}
 	instr := game.Instruction{Primitive: game.ModifyPT{
-		Object:         opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
+		Object:         game.EventPermanentReference(),
 		PowerDelta:     game.Fixed(1),
 		ToughnessDelta: game.Fixed(1),
 		Duration:       game.DurationUntilEndOfTurn,
@@ -444,14 +443,28 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 			return false
 		}
 	}
-	if !eventPermanentTypeFiltersMatch(g, event, pattern.RequirePermanentTypes, pattern.ExcludePermanentTypes) {
-		return false
+	if subjectSel := triggerSubjectSelection(pattern); !subjectSel.Empty() {
+		subject := selectionSubject{
+			kind:       subjectEventPermanent,
+			g:          g,
+			event:      event,
+			controller: event.Controller,
+			viewer:     sourceController,
+		}
+		if !matchSelection(&subject, &subjectSel) {
+			return false
+		}
 	}
-	if pattern.RequireNonToken && eventPermanentIsToken(g, event) {
-		return false
-	}
-	if !eventCardTypeFiltersMatch(g, event, pattern.RequireCardTypes, pattern.ExcludeCardTypes) {
-		return false
+	if cardSel := triggerCardSelection(pattern); !cardSel.Empty() {
+		subject := selectionSubject{
+			kind:      subjectCastSpell,
+			g:         g,
+			event:     event,
+			cardTypes: eventSpellCardTypes(g, event),
+		}
+		if !matchSelection(&subject, &cardSel) {
+			return false
+		}
 	}
 	if pattern.MatchStackObjectKind && !eventStackObjectKindMatches(g, event, pattern.StackObjectKind) {
 		return false
@@ -646,38 +659,43 @@ func eventPermanentHasType(g *game.Game, event game.Event, cardType types.Card) 
 	return false
 }
 
-func eventPermanentTypeFiltersMatch(g *game.Game, event game.Event, required, excluded []types.Card) bool {
-	for _, cardType := range required {
-		if !eventPermanentHasType(g, event, cardType) {
-			return false
-		}
+// triggerSubjectSelection returns the Selection a trigger pattern matches its
+// event subject permanent against, preferring the explicit SubjectSelection and
+// otherwise adapting the legacy permanent-type and non-token filters.
+func triggerSubjectSelection(pattern *game.TriggerPattern) game.Selection {
+	if !pattern.SubjectSelection.Empty() {
+		return pattern.SubjectSelection
 	}
-	for _, cardType := range excluded {
-		if eventPermanentHasType(g, event, cardType) {
-			return false
-		}
+	return game.Selection{
+		RequiredTypes: pattern.RequirePermanentTypes,
+		ExcludedTypes: pattern.ExcludePermanentTypes,
+		NonToken:      pattern.RequireNonToken,
 	}
-	return true
 }
 
-func eventCardTypeFiltersMatch(g *game.Game, event game.Event, required, excluded []types.Card) bool {
+// triggerCardSelection returns the Selection a trigger pattern matches a cast
+// spell's card types against, preferring the explicit CardSelection and
+// otherwise adapting the legacy card-type filters.
+func triggerCardSelection(pattern *game.TriggerPattern) game.Selection {
+	if !pattern.CardSelection.Empty() {
+		return pattern.CardSelection
+	}
+	return game.Selection{
+		RequiredTypes: pattern.RequireCardTypes,
+		ExcludedTypes: pattern.ExcludeCardTypes,
+	}
+}
+
+// eventSpellCardTypes resolves the card types a spell-cast event matches against,
+// using the event's recorded types and falling back to the front face.
+func eventSpellCardTypes(g *game.Game, event game.Event) []types.Card {
 	cardTypes := event.CardTypes
 	if len(cardTypes) == 0 && event.CardID != 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
 			cardTypes = cardFaceOrDefault(card, game.FaceFront).Types
 		}
 	}
-	for _, cardType := range required {
-		if !slices.Contains(cardTypes, cardType) {
-			return false
-		}
-	}
-	for _, cardType := range excluded {
-		if slices.Contains(cardTypes, cardType) {
-			return false
-		}
-	}
-	return true
+	return cardTypes
 }
 
 func eventPermanentHadCounters(g *game.Game, event *game.Event) bool {

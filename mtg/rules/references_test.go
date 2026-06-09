@@ -26,17 +26,11 @@ func TestRecipientReferenceUsesDestroyedTargetControllerLKI(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	resolveInstruction(engine, g, obj, game.Destroy{TargetIndex: 0}, &log)
+	resolveInstruction(engine, g, obj, game.Destroy{Object: game.TargetPermanentReference(0)}, &log)
 	resolveInstruction(engine, g, obj, game.CreateToken{
-		Amount: game.Fixed(1),
-		Source: game.TokenDef(token),
-		Recipient: opt.Val(game.PlayerReference{
-			Kind: game.PlayerReferenceObjectController,
-			Object: opt.Val(game.ObjectReference{
-				Kind:        game.ObjectReferenceTargetPermanent,
-				TargetIndex: 0,
-			}),
-		}),
+		Amount:    game.Fixed(1),
+		Source:    game.TokenDef(token),
+		Recipient: opt.Val(game.ObjectControllerReference(game.TargetPermanentReference(0))),
 	}, &log)
 
 	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
@@ -79,14 +73,11 @@ func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 	log := TurnLog{}
 
 	resolveInstruction(engine, g, obj, game.Damage{
-		Recipient: game.TargetRecipient(1),
-		DamageSource: opt.Val(game.ObjectReference{
-			Kind:        game.ObjectReferenceTargetPermanent,
-			TargetIndex: 0,
-		}),
+		Recipient:    game.AnyTargetDamageRecipient(1),
+		DamageSource: opt.Val(game.TargetPermanentReference(0)),
 		Amount: game.Dynamic(game.DynamicAmount{
-			Kind:        game.DynamicAmountTargetPower,
-			TargetIndex: 0,
+			Kind:   game.DynamicAmountTargetPower,
+			Object: game.TargetPermanentReference(0),
 		}),
 	}, &log)
 

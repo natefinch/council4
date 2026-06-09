@@ -32,12 +32,12 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 			},
 		},
 		{Primitive: game.AddMana{Amount: game.Fixed(2), ChoiceFrom: "chosen-color"}},
-		{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
-		{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}},
+		{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+		{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.AnyTargetDamageRecipient(0)}},
 		{
 			Primitive: game.Search{
-				Amount:      game.Fixed(1),
-				TargetIndex: game.TargetIndexController,
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
 				Spec: game.SearchSpec{
 					SourceZone:  zone.Library,
 					Destination: zone.Hand,
@@ -48,7 +48,7 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 		},
 		{
 			Primitive: game.ApplyContinuous{
-				TargetIndex: 1,
+				Object: opt.Val(game.TargetPermanentReference(1)),
 				ContinuousEffects: []game.ContinuousEffect{
 					{Layer: game.LayerType, AddTypes: []types.Card{types.Creature}},
 					{Layer: game.LayerPowerToughnessSet, SetPower: opt.Val(four), SetToughness: opt.Val(four)},
@@ -57,7 +57,7 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 		},
 		{
 			Primitive: game.ModifyPT{
-				TargetIndex:    2,
+				Object:         game.TargetPermanentReference(2),
 				PowerDelta:     game.Fixed(1),
 				ToughnessDelta: game.Fixed(1),
 				Duration:       game.DurationUntilEndOfTurn,
@@ -65,8 +65,8 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 		},
 		{
 			Primitive: game.Fight{
-				TargetIndex:        2,
-				RelatedTargetIndex: opt.Val(3),
+				Object:        game.TargetPermanentReference(2),
+				RelatedObject: game.TargetPermanentReference(3),
 			},
 		},
 	}, []game.Target{

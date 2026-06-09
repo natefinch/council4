@@ -72,7 +72,7 @@ func TestValidateCardReportsTypedInstructionTargetIndexOutOfRange(t *testing.T) 
 		SpellAbility: opt.Val(game.Mode{
 			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1}},
 			Sequence: []game.Instruction{{
-				Primitive: game.Destroy{TargetIndex: 1},
+				Primitive: game.Destroy{Object: game.TargetPermanentReference(1)},
 			}},
 		}.Ability()),
 	}}
@@ -111,9 +111,9 @@ func TestValidateCardReportsTypedSearchProblems(t *testing.T) {
 				SpellAbility: opt.Val(game.Mode{
 					Sequence: []game.Instruction{{
 						Primitive: game.Search{
-							Amount:      game.Fixed(1),
-							TargetIndex: game.TargetIndexController,
-							Spec:        tt.spec,
+							Amount: game.Fixed(1),
+							Player: game.ControllerReference(),
+							Spec:   tt.spec,
 						},
 					}},
 				}.Ability()),
@@ -137,7 +137,7 @@ func TestValidateCardChecksDelayedTriggerContent(t *testing.T) {
 					Timing: game.DelayedAtBeginningOfNextEndStep,
 					Content: game.Mode{
 						Sequence: []game.Instruction{{
-							Primitive: game.Destroy{TargetIndex: 0},
+							Primitive: game.Destroy{Object: game.TargetPermanentReference(0)},
 						}},
 					}.Ability(),
 				}},
@@ -243,12 +243,12 @@ func TestValidateCardChecksDoubleFacedRootFieldsAndBack(t *testing.T) {
 	card := &game.CardDef{CardFace: game.CardFace{Name: "Double Faced",
 		OracleText: "Root text.",
 		SpellAbility: opt.Val(game.Mode{
-			Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 1}}},
+			Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(1)}}},
 		}.Ability())}, Back: opt.Val(game.CardFace{
 		Name:       "Back",
 		OracleText: "Draw a card.",
 		SpellAbility: opt.Val(game.Mode{
-			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
+			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
 		}.Ability()),
 	}),
 	}
@@ -273,10 +273,7 @@ func TestValidateCardChecksStructuredConditionObjectReferences(t *testing.T) {
 			Trigger: game.TriggerCondition{
 				Pattern: game.TriggerPattern{Event: game.EventPermanentDied},
 				InterveningCondition: opt.Val(game.Condition{
-					Object: opt.Val(game.ObjectReference{
-						Kind:        game.ObjectReferenceTargetPermanent,
-						TargetIndex: 1,
-					}),
+					Object: opt.Val(game.TargetPermanentReference(1)),
 				}),
 			},
 		}}},
@@ -312,8 +309,11 @@ func TestValidateCardAllowsSelectorOnlyContinuousEffects(t *testing.T) {
 		OracleText: "Creatures you control have haste.",
 		StaticAbilities: []game.StaticAbility{{
 			ContinuousEffects: []game.ContinuousEffect{{
-				Layer:       game.LayerAbility,
-				Selector:    game.EffectSelectorCreaturesYouControl,
+				Layer: game.LayerAbility,
+				Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+				}),
 				AddKeywords: []game.Keyword{game.Haste},
 			}},
 		}}},
@@ -351,7 +351,7 @@ func TestValidateCardChecksKeywordAbilities(t *testing.T) {
 			ability: game.KickerKeyword{
 				Cost: cost.Mana{cost.G},
 				BonusContent: game.Mode{
-					Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
+					Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}}},
 				}.Ability(),
 			},
 			code: IssueInvalidAbilityBody,
@@ -397,7 +397,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 		{
 			name: "plain content target index",
 			face: game.CardFace{SpellAbility: opt.Val(game.Mode{
-				Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
+				Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}}},
 			}.Ability())},
 			code: IssueInvalidAbilityBody,
 		},
@@ -405,7 +405,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 			name: "nested modal effect",
 			face: game.CardFace{SpellAbility: opt.Val(game.AbilityContent{
 				Modes: []game.Mode{{
-					Sequence: []game.Instruction{{Primitive: game.Destroy{TargetIndex: 0}}},
+					Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}}},
 				}},
 			})},
 			code: IssueInvalidAbilityBody,
@@ -438,10 +438,7 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 			face: game.CardFace{TriggeredAbilities: []game.TriggeredAbility{{
 				Trigger: game.TriggerCondition{
 					InterveningCondition: opt.Val(game.Condition{
-						Object: opt.Val(game.ObjectReference{
-							Kind:        game.ObjectReferenceTargetPermanent,
-							TargetIndex: 1,
-						}),
+						Object: opt.Val(game.TargetPermanentReference(1)),
 					}),
 				},
 				Content: game.Mode{}.Ability(),
@@ -467,6 +464,143 @@ func TestValidateCardChecksAbilityBodies(t *testing.T) {
 				t.Fatalf("issues = %+v, want %s", issues, tt.code)
 			}
 		})
+	}
+}
+
+// Adapter parity tests verify that ValidateCard correctly delegates structural
+// validation to game.ValidateCardDef and that policy-only codes are preserved.
+
+func TestValidateCardAdapterNilCard(t *testing.T) {
+	issues := ValidateCard(nil, ValidationOptions{})
+	if !hasIssue(issues, IssueNilCard) {
+		t.Fatalf("issues = %+v, want %s for nil card", issues, IssueNilCard)
+	}
+	if len(issues) != 1 {
+		t.Fatalf("issues = %+v, want exactly one nil-card issue", issues)
+	}
+	if issues[0].CardName != "" {
+		t.Fatalf("issues[0].CardName = %q, want empty for nil card", issues[0].CardName)
+	}
+}
+
+func TestValidateCardAdapterPreservesCardName(t *testing.T) {
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:       "Lightning Bolt",
+		OracleText: "Deal 3 damage.",
+	}}
+	issues := ValidateCard(card, ValidationOptions{})
+	for _, issue := range issues {
+		if issue.CardName != "Lightning Bolt" {
+			t.Fatalf("issue.CardName = %q, want %q", issue.CardName, "Lightning Bolt")
+		}
+	}
+}
+
+func TestValidateCardAdapterPreservesFaceNameAndPath(t *testing.T) {
+	card := &game.CardDef{
+		CardFace: game.CardFace{Name: "Front"},
+		Back: opt.Val(game.CardFace{
+			Name:       "BackFace",
+			OracleText: "Draw a card.",
+		}),
+	}
+
+	issues := ValidateCard(card, ValidationOptions{})
+
+	for _, issue := range issues {
+		if issue.Code == IssueOracleWithoutAbilities && issue.FaceName == "BackFace" && issue.Path == "Back" {
+			return
+		}
+	}
+	t.Fatalf("issues = %+v, want oracle issue on BackFace with path Back", issues)
+}
+
+func TestValidateCardAdapterMapsStructuralCodes(t *testing.T) {
+	tests := []struct {
+		name string
+		card *game.CardDef
+		want ValidationCode
+	}{
+		{
+			name: "nil card",
+			card: nil,
+			want: IssueNilCard,
+		},
+		{
+			name: "missing name",
+			card: &game.CardDef{CardFace: game.CardFace{Name: ""}},
+			want: IssueMissingName,
+		},
+		{
+			name: "oracle without abilities",
+			card: &game.CardDef{CardFace: game.CardFace{
+				Name: "X", OracleText: "Draw a card.",
+			}},
+			want: IssueOracleWithoutAbilities,
+		},
+		{
+			name: "invalid target spec",
+			card: &game.CardDef{CardFace: game.CardFace{
+				Name:       "X",
+				OracleText: "Tap target.",
+				SpellAbility: opt.Val(game.Mode{
+					Targets: []game.TargetSpec{{MinTargets: 2, MaxTargets: 1}},
+				}.Ability()),
+			}},
+			want: IssueInvalidTargetSpec,
+		},
+		{
+			name: "invalid ability body",
+			card: &game.CardDef{CardFace: game.CardFace{
+				Name:         "X",
+				OracleText:   "Effect.",
+				SpellAbility: opt.Val(game.AbilityContent{}),
+			}},
+			want: IssueInvalidAbilityBody,
+		},
+		{
+			name: "invalid selection",
+			card: &game.CardDef{CardFace: game.CardFace{
+				Name:       "X",
+				OracleText: "Destroy target creature.",
+				SpellAbility: opt.Val(game.Mode{
+					Targets: []game.TargetSpec{{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Allow:      game.TargetAllowPermanent,
+						Selection: opt.Val(game.Selection{
+							RequiredTypes: []types.Card{types.Creature},
+							ExcludedTypes: []types.Card{types.Creature},
+						}),
+					}},
+				}.Ability()),
+			}},
+			want: IssueInvalidSelection,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			issues := ValidateCard(tt.card, ValidationOptions{})
+			if !hasIssue(issues, tt.want) {
+				t.Fatalf("issues = %+v, want %s", issues, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateCardAdapterPolicyOnlyCodesNotInStructuralIssues(t *testing.T) {
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:             "Card With Impl",
+		OracleText:       "Do something.",
+		ImplementationID: "some-impl",
+	}}
+
+	issues := ValidateCard(card, ValidationOptions{})
+
+	for _, issue := range issues {
+		if issue.Code == IssueUnregisteredImplementation || issue.Code == IssueImplementationRequired {
+			t.Fatalf("issues = %+v, unexpected policy issue without opts", issue)
+		}
 	}
 }
 

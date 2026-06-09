@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -668,11 +667,9 @@ func playerTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.
 	if !isPlayerAlive(g, playerID) || !targetSpecAllowsPlayers(spec) {
 		return false
 	}
-	switch spec.Predicate.Player {
-	case game.PlayerYou:
-		return playerID == controller
-	case game.PlayerOpponent, game.PlayerNotYou:
-		return playerID != controller
+	sel := targetSelection(spec)
+	if sel.Player != game.PlayerAny {
+		return selectionPlayerRelationMatches(sel.Player, playerID, controller)
 	}
 	normalized := normalizedTargetConstraint(spec)
 	if strings.Contains(normalized, "opponent") && playerID == controller {
@@ -689,13 +686,26 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 	if !ok || permanent.PhasedOut {
 		return false
 	}
-	if spec.Predicate.Another && sourceObjectID != 0 && permanent.ObjectID == sourceObjectID {
-		return false
+	sel := targetSelection(spec)
+	if !sel.Empty() {
+		values := effectivePermanentValues(g, permanent)
+		subject := selectionSubject{
+			kind:           subjectPermanent,
+			g:              g,
+			permanent:      permanent,
+			values:         &values,
+			viewer:         controller,
+			sourceObjectID: sourceObjectID,
+			clampPower:     true,
+		}
+		if sel.Controller != game.ControllerAny {
+			subject.controller = effectiveController(g, permanent)
+		}
+		if !matchSelection(&subject, &sel) {
+			return false
+		}
 	}
-	if !permanentControllerMatchesSpec(g, controller, spec, permanent) {
-		return false
-	}
-	if !structuredPermanentPredicateMatches(g, spec.Predicate, permanent) {
+	if sel.Controller == game.ControllerAny && !permanentConstraintControllerMatches(g, controller, spec, permanent) {
 		return false
 	}
 	if normalizedTargetConstraint(spec) == "any target" {
@@ -706,59 +716,13 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 	return permanentTypeMatchesSpec(g, spec, permanent)
 }
 
-func structuredPermanentPredicateMatches(g *game.Game, predicate game.TargetPredicate, permanent *game.Permanent) bool {
-	if len(predicate.PermanentTypes) > 0 && !slices.ContainsFunc(predicate.PermanentTypes, func(cardType types.Card) bool {
-		return permanentHasType(g, permanent, cardType)
-	}) {
-		return false
+// targetSelection returns the Selection a TargetSpec matches against, preferring
+// the explicit Selection and otherwise adapting the legacy TargetPredicate.
+func targetSelection(spec *game.TargetSpec) game.Selection {
+	if spec.Selection.Exists {
+		return spec.Selection.Val
 	}
-	if slices.ContainsFunc(predicate.ExcludedTypes, func(cardType types.Card) bool {
-		return permanentHasType(g, permanent, cardType)
-	}) {
-		return false
-	}
-	colors := permanentEffectiveColors(g, permanent)
-	if len(predicate.Colors) > 0 && !slices.ContainsFunc(predicate.Colors, func(color color.Color) bool {
-		return slices.Contains(colors, color)
-	}) {
-		return false
-	}
-	if slices.ContainsFunc(predicate.ExcludedColors, func(color color.Color) bool {
-		return slices.Contains(colors, color)
-	}) {
-		return false
-	}
-	if predicate.Tapped == game.TriTrue && !permanent.Tapped {
-		return false
-	}
-	if predicate.Tapped == game.TriFalse && permanent.Tapped {
-		return false
-	}
-	if !combatStateMatches(g, permanent, predicate.CombatState) {
-		return false
-	}
-	if predicate.Keyword != game.KeywordNone && !hasKeyword(g, permanent, predicate.Keyword) {
-		return false
-	}
-	if predicate.ExcludedKeyword != game.KeywordNone && hasKeyword(g, permanent, predicate.ExcludedKeyword) {
-		return false
-	}
-	if predicate.ManaValue.Exists {
-		def, ok := permanentCardDef(g, permanent)
-		if !ok || !predicate.ManaValue.Val.Matches(def.ManaValue()) {
-			return false
-		}
-	}
-	if predicate.Power.Exists && !predicate.Power.Val.Matches(effectivePower(g, permanent)) {
-		return false
-	}
-	if predicate.Toughness.Exists {
-		toughness, ok := effectiveToughness(g, permanent)
-		if !ok || !predicate.Toughness.Val.Matches(toughness) {
-			return false
-		}
-	}
-	return true
+	return spec.Predicate.Selection()
 }
 
 func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.CombatStateFilter) bool {
@@ -801,14 +765,8 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 	return source != nil && permanentProtectedFromSourceDef(g, permanent, source)
 }
 
-func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, permanent *game.Permanent) bool {
+func permanentConstraintControllerMatches(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, permanent *game.Permanent) bool {
 	permanentController := effectiveController(g, permanent)
-	switch spec.Predicate.Controller {
-	case game.ControllerYou:
-		return permanentController == controller
-	case game.ControllerOpponent, game.ControllerNotYou:
-		return permanentController != controller && isPlayerAlive(g, permanentController)
-	}
 	normalized := normalizedTargetConstraint(spec)
 	switch {
 	case strings.Contains(normalized, "you control") || strings.Contains(normalized, "controlled by you"):
@@ -824,6 +782,9 @@ func permanentControllerMatchesSpec(g *game.Game, controller game.PlayerID, spec
 }
 
 func permanentTypeMatchesSpec(g *game.Game, spec *game.TargetSpec, permanent *game.Permanent) bool {
+	if spec.Selection.Exists && normalizedTargetConstraint(spec) == "" {
+		return true
+	}
 	if len(spec.Predicate.PermanentTypes) > 0 || len(spec.Predicate.ExcludedTypes) > 0 {
 		return true
 	}

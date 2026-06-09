@@ -45,8 +45,11 @@ var DomriAnarchOfBolas = &game.CardDef{
 				`,
 				ContinuousEffects: []game.ContinuousEffect{
 					{
-						Layer:      game.LayerPowerToughnessModify,
-						Selector:   game.EffectSelectorCreaturesYouControl,
+						Layer: game.LayerPowerToughnessModify,
+						Group: game.BattlefieldGroup(game.Selection{
+							RequiredTypes: []types.Card{types.Creature},
+							Controller:    game.ControllerYou,
+						}),
 						PowerDelta: 1,
 					},
 				},
@@ -81,7 +84,6 @@ var DomriAnarchOfBolas = &game.CardDef{
 						},
 						{
 							Primitive: game.ApplyRule{
-								TargetIndex: game.TargetIndexController,
 								RuleEffects: []game.RuleEffect{
 									{
 										Kind:               game.RuleEffectCantBeCountered,
@@ -131,7 +133,10 @@ var DomriAnarchOfBolas = &game.CardDef{
 					},
 					Sequence: []game.Instruction{
 						{
-							Primitive: game.Fight{},
+							Primitive: game.Fight{
+								Object:        game.TargetPermanentReference(0),
+								RelatedObject: game.TargetPermanentReference(1),
+							},
 						},
 					},
 				}.Ability(),

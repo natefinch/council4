@@ -57,8 +57,8 @@ var NeyithOfTheDireHunt = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Draw{
-								Amount:      game.Fixed(1),
-								TargetIndex: game.TargetIndexController,
+								Amount: game.Fixed(1),
+								Player: game.ControllerReference(),
 							},
 						},
 					},
@@ -84,8 +84,8 @@ var NeyithOfTheDireHunt = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Draw{
-								Amount:      game.Fixed(1),
-								TargetIndex: game.TargetIndexController,
+								Amount: game.Fixed(1),
+								Player: game.ControllerReference(),
 							},
 						},
 					},
@@ -133,13 +133,10 @@ var NeyithOfTheDireHunt = &game.CardDef{
 						},
 						{
 							Primitive: game.ModifyPT{
-								TargetIndex: 0,
+								Object: game.TargetPermanentReference(0),
 								PowerDelta: game.Dynamic(game.DynamicAmount{
-									Kind: game.DynamicAmountObjectPower,
-									Object: game.ObjectReference{
-										Kind:        game.ObjectReferenceTargetPermanent,
-										TargetIndex: 0,
-									},
+									Kind:   game.DynamicAmountObjectPower,
+									Object: game.TargetPermanentReference(0),
 								}),
 								Duration: game.DurationUntilEndOfTurn,
 							},
@@ -151,7 +148,7 @@ var NeyithOfTheDireHunt = &game.CardDef{
 						},
 						{
 							Primitive: game.ApplyRule{
-								TargetIndex: 0,
+								Object: opt.Val(game.TargetPermanentReference(0)),
 								RuleEffects: []game.RuleEffect{
 									{
 										Kind: game.RuleEffectMustBeBlocked,

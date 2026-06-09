@@ -41,7 +41,7 @@ var Bushwhack = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Search{
-								TargetIndex: game.TargetIndexController,
+								Player: game.ControllerReference(),
 								Spec: game.SearchSpec{
 									SourceZone:  zone.Library,
 									Destination: zone.Hand,
@@ -57,7 +57,10 @@ var Bushwhack = &game.CardDef{
 					Text: "Target creature you control fights target creature you don't control.",
 					Sequence: []game.Instruction{
 						{
-							Primitive: game.Fight{},
+							Primitive: game.Fight{
+								Object:        game.TargetPermanentReference(0),
+								RelatedObject: game.TargetPermanentReference(1),
+							},
 						},
 					},
 					Targets: []game.TargetSpec{

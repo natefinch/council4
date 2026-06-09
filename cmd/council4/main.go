@@ -191,7 +191,7 @@ func divinationLike() *game.CardDef {
 		Types:    []types.Card{types.Sorcery},
 		SpellAbility: opt.Val(game.Mode{
 			Sequence: []game.Instruction{
-				{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
+				{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
 			},
 		}.Ability()),
 	}}
@@ -203,7 +203,7 @@ func healingSpell() *game.CardDef {
 		Types:    []types.Card{types.Sorcery},
 		SpellAbility: opt.Val(game.Mode{
 			Sequence: []game.Instruction{
-				{Primitive: game.GainLife{Amount: game.Fixed(3), TargetIndex: game.TargetIndexController}},
+				{Primitive: game.GainLife{Amount: game.Fixed(3), Player: game.ControllerReference()}},
 			},
 		}.Ability()),
 	}}
@@ -218,7 +218,7 @@ func lavaSpikeLike() *game.CardDef {
 				{MinTargets: 1, MaxTargets: 1, Constraint: "player"},
 			},
 			Sequence: []game.Instruction{
-				{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}},
+				{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.AnyTargetDamageRecipient(0)}},
 			},
 		}.Ability()),
 	}}

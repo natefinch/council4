@@ -40,7 +40,7 @@ var LightningBolt = &game.CardDef{
 				{
 					Primitive: game.Damage{
 						Amount:    game.Fixed(3),
-						Recipient: game.TargetRecipient(0),
+						Recipient: game.AnyTargetDamageRecipient(0),
 					},
 				},
 			},

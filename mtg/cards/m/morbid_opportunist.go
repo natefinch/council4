@@ -53,8 +53,8 @@ var MorbidOpportunist = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.Draw{
-								Amount:      game.Fixed(1),
-								TargetIndex: game.TargetIndexController,
+								Amount: game.Fixed(1),
+								Player: game.ControllerReference(),
 							},
 						},
 					},

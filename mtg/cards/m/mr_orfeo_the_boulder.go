@@ -65,13 +65,10 @@ var MrOrfeoTheBoulder = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.ModifyPT{
-								TargetIndex: 0,
+								Object: game.TargetPermanentReference(0),
 								PowerDelta: game.Dynamic(game.DynamicAmount{
-									Kind: game.DynamicAmountObjectPower,
-									Object: game.ObjectReference{
-										Kind:        game.ObjectReferenceTargetPermanent,
-										TargetIndex: 0,
-									},
+									Kind:   game.DynamicAmountObjectPower,
+									Object: game.TargetPermanentReference(0),
 								}),
 								Duration: game.DurationUntilEndOfTurn,
 							},

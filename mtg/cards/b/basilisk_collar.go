@@ -38,8 +38,8 @@ var BasiliskCollar = func() *game.CardDef {
 			`,
 		ContinuousEffects: []game.ContinuousEffect{
 			{
-				Layer:    game.LayerAbility,
-				Selector: game.EffectSelectorEquippedCreature,
+				Layer: game.LayerAbility,
+				Group: game.AttachedObjectGroup(game.SourcePermanentReference()),
 				AddKeywords: []game.Keyword{
 					game.Deathtouch,
 					game.Lifelink,

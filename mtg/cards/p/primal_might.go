@@ -59,7 +59,7 @@ var PrimalMight = &game.CardDef{
 			Sequence: []game.Instruction{
 				{
 					Primitive: game.ModifyPT{
-						TargetIndex: 0,
+						Object: game.TargetPermanentReference(0),
 						PowerDelta: game.Dynamic(game.DynamicAmount{
 							Kind: game.DynamicAmountX,
 						}),
@@ -71,8 +71,8 @@ var PrimalMight = &game.CardDef{
 				},
 				{
 					Primitive: game.Fight{
-						TargetIndex:        0,
-						RelatedTargetIndex: opt.Val(1),
+						Object:        game.TargetPermanentReference(0),
+						RelatedObject: game.TargetPermanentReference(1),
 					},
 					Description: "target creature you control fights up to one target creature you don't control",
 				},

@@ -122,7 +122,7 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 		Colors: []color.Color{color.Red},
 		SpellAbility: opt.Val(game.Mode{
 			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
+			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.AnyTargetDamageRecipient(0)}}},
 		}.Ability())},
 	})
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -193,7 +193,7 @@ func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
 
-	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(2), TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(2), Object: game.TargetPermanentReference(0)}, nil)
 	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, target, 5, false)
 
 	if dealt != 3 {
@@ -209,7 +209,7 @@ func TestPreventionShieldPreventsTrackedAmountAndExpires(t *testing.T) {
 		return event.PermanentID == target.ObjectID && event.Amount == 2
 	})
 
-	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), Object: game.TargetPermanentReference(0)}, nil)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 	if len(g.PreventionShields) != 0 {
 		t.Fatalf("prevention shields after cleanup = %+v, want expired", g.PreventionShields)
@@ -225,8 +225,8 @@ func TestMultiplePreventionShieldsRecordDeterministicReplacementOrder(t *testing
 		Controller: game.Player2,
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
-	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), TargetIndex: 0}, nil)
-	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), Object: game.TargetPermanentReference(0)}, nil)
+	resolveInstruction(engine, g, obj, game.PreventDamage{Amount: game.Fixed(1), Object: game.TargetPermanentReference(0)}, nil)
 
 	dealPermanentDamage(g, sourceID, 0, game.Player1, target, 3, false)
 
@@ -256,7 +256,7 @@ func TestRegenerationReplacesDestroyAndRemovesFromCombat(t *testing.T) {
 	resolveInstruction(engine, g, &game.StackObject{
 		Controller: game.Player2,
 		Targets:    []game.Target{game.PermanentTarget(blocker.ObjectID)},
-	}, game.Regenerate{TargetIndex: 0}, nil)
+	}, game.Regenerate{Object: game.TargetPermanentReference(0)}, nil)
 	removed, ok := destroyPermanent(g, blocker.ObjectID)
 
 	if ok || removed != nil {
@@ -596,8 +596,8 @@ func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Would Draw"}})
 	resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.SkipStep{
-		TargetIndex: game.TargetIndexController,
-		Step:        game.StepDraw,
+		Player: game.ControllerReference(),
+		Step:   game.StepDraw,
 	}, nil)
 
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})

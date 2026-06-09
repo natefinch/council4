@@ -61,14 +61,11 @@ var ContestOfClaws = &game.CardDef{
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
+								Kind:   game.DynamicAmountTargetPower,
+								Object: game.TargetPermanentReference(0),
 							}),
-							Recipient: game.TargetRecipient(1),
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
+							Recipient:        game.ObjectDamageRecipient(game.TargetPermanentReference(1)),
+							DamageSource:     opt.Val(game.TargetPermanentReference(0)),
 							ResultAmountKind: game.EffectResultAmountExcessDamage,
 						},
 						PublishResult: game.ResultKey("excess"),

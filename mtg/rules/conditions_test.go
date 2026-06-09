@@ -370,7 +370,7 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 				}),
 			},
 			Content: game.Mode{
-				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
+				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
 			}.Ability(),
 		}}},
 	})
@@ -389,8 +389,11 @@ func angerLikeCard() *game.CardDef {
 					},
 				}),
 				ContinuousEffects: []game.ContinuousEffect{{
-					Layer:       game.LayerAbility,
-					Selector:    game.EffectSelectorCreaturesYouControl,
+					Layer: game.LayerAbility,
+					Group: game.BattlefieldGroup(game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+						Controller:    game.ControllerYou,
+					}),
 					AddKeywords: []game.Keyword{game.Haste},
 				}},
 			},

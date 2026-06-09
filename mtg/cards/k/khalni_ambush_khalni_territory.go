@@ -60,7 +60,10 @@ var KhalniAmbush = func() *game.CardDef {
 				},
 				Sequence: []game.Instruction{
 					{
-						Primitive: game.Fight{},
+						Primitive: game.Fight{
+							Object:        game.TargetPermanentReference(0),
+							RelatedObject: game.TargetPermanentReference(1),
+						},
 					},
 				},
 			}.Ability()),

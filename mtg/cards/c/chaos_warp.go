@@ -42,34 +42,20 @@ var ChaosWarp = &game.CardDef{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.ShufflePermanentIntoLibrary{
-							TargetIndex: 0,
+							Object: game.TargetPermanentReference(0),
 						},
 					},
 					{
 						Primitive: game.Reveal{
-							Amount:      game.Fixed(1),
-							TargetIndex: 0,
-							Recipient: opt.Val(game.PlayerReference{
-								Kind: game.PlayerReferenceObjectOwner,
-								Object: opt.Val(game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
-								}),
-							}),
+							Amount:        game.Fixed(1),
+							Player:        game.ObjectOwnerReference(game.TargetPermanentReference(0)),
 							PublishLinked: game.LinkedKey("chaos-warp-revealed"),
 						},
 					},
 					{
 						Primitive: game.PutOnBattlefield{
-							TargetIndex: 0,
-							Source:      game.LinkedBattlefieldSource(game.LinkedKey("chaos-warp-revealed")),
-							Recipient: opt.Val(game.PlayerReference{
-								Kind: game.PlayerReferenceObjectOwner,
-								Object: opt.Val(game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
-								}),
-							}),
+							Source:    game.LinkedBattlefieldSource(game.LinkedKey("chaos-warp-revealed")),
+							Recipient: opt.Val(game.ObjectOwnerReference(game.TargetPermanentReference(0))),
 						},
 						CardCondition: opt.Val(game.CardCondition{
 							Card: game.CardReference{

@@ -89,14 +89,11 @@ var HunterSTalent = func() *game.CardDef {
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind:        game.DynamicAmountTargetPower,
-								TargetIndex: 0,
+								Kind:   game.DynamicAmountTargetPower,
+								Object: game.TargetPermanentReference(0),
 							}),
-							Recipient: game.TargetRecipient(1),
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceTargetPermanent,
-								TargetIndex: 0,
-							}),
+							Recipient:    game.ObjectDamageRecipient(game.TargetPermanentReference(1)),
+							DamageSource: opt.Val(game.TargetPermanentReference(0)),
 						},
 					},
 				},
@@ -121,8 +118,8 @@ var HunterSTalent = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.SetClassLevel{
-							TargetIndex: game.TargetIndexSourcePermanent,
-							Amount:      game.Fixed(2),
+							Object: game.SourcePermanentReference(),
+							Amount: game.Fixed(2),
 						},
 					},
 				},
@@ -164,14 +161,14 @@ var HunterSTalent = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.ModifyPT{
-							TargetIndex: 0,
-							PowerDelta:  game.Fixed(1),
-							Duration:    game.DurationUntilEndOfTurn,
+							Object:     game.TargetPermanentReference(0),
+							PowerDelta: game.Fixed(1),
+							Duration:   game.DurationUntilEndOfTurn,
 						},
 					},
 					{
 						Primitive: game.ApplyContinuous{
-							TargetIndex: 0,
+							Object: opt.Val(game.TargetPermanentReference(0)),
 							ContinuousEffects: []game.ContinuousEffect{
 								{
 									Layer: game.LayerAbility,
@@ -206,8 +203,8 @@ var HunterSTalent = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.SetClassLevel{
-							TargetIndex: game.TargetIndexSourcePermanent,
-							Amount:      game.Fixed(3),
+							Object: game.SourcePermanentReference(),
+							Amount: game.Fixed(3),
 						},
 					},
 				},
@@ -246,8 +243,8 @@ var HunterSTalent = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Draw{
-							Amount:      game.Fixed(1),
-							TargetIndex: game.TargetIndexController,
+							Amount: game.Fixed(1),
+							Player: game.ControllerReference(),
 						},
 					},
 				},

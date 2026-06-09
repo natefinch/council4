@@ -43,8 +43,11 @@ var GimliSRecklessMight = func() *game.CardDef {
 			`,
 		ContinuousEffects: []game.ContinuousEffect{
 			{
-				Layer:    game.LayerAbility,
-				Selector: game.EffectSelectorCreaturesYouControl,
+				Layer: game.LayerAbility,
+				Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+				}),
 				AddKeywords: []game.Keyword{
 					game.Haste,
 				},
@@ -109,8 +112,8 @@ var GimliSRecklessMight = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Fight{
-							TargetIndex:        0,
-							RelatedTargetIndex: opt.Val(1),
+							Object:        game.TargetPermanentReference(0),
+							RelatedObject: game.TargetPermanentReference(1),
 						},
 						Description: "target attacking creature you control fights up to one target creature you don't control",
 					},

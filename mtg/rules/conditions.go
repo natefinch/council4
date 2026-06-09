@@ -22,8 +22,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	cond := condition.Val
 	matches := true
-	if !cond.ControllerControls.Empty() {
-		matches = matches && controllerControlsMatchingPermanent(g, ctx, cond.ControllerControls)
+	if cond.ControlsMatching.Exists {
+		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
+	} else if !cond.ControllerControls.Empty() {
+		matches = matches && controllerControlsMatchingSelection(g, ctx, controlSelectionFromFilter(cond.ControllerControls))
 	}
 	if cond.Object.Exists || len(cond.Types) > 0 {
 		matches = matches && conditionObjectMatches(g, ctx, &cond)
@@ -61,7 +63,7 @@ func conditionObjectMatches(g *game.Game, ctx conditionContext, cond *game.Condi
 	if obj == nil && ctx.event != nil {
 		obj = &game.StackObject{HasTriggerEvent: true, TriggerEvent: *ctx.event, Controller: ctx.controller}
 	}
-	ref := game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}
+	ref := game.EventPermanentReference()
 	if cond.Object.Exists {
 		ref = cond.Object.Val
 	}
@@ -84,17 +86,23 @@ func resolvedObjectHasType(g *game.Game, resolved *resolvedObjectReference, card
 	return slices.Contains(resolved.snapshot.Types, cardType)
 }
 
-func controllerControlsMatchingPermanent(g *game.Game, ctx conditionContext, filter game.PermanentFilter) bool {
-	want := filter.MinCount
+func controlSelectionFromFilter(filter game.PermanentFilter) game.SelectionCount {
+	return game.SelectionCount{
+		Selection:  filter.Selection(),
+		MinCount:   filter.MinCount,
+		TotalPower: filter.TotalPower,
+	}
+}
+
+func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, control game.SelectionCount) bool {
+	want := control.MinCount
 	if want <= 0 {
 		want = 1
 	}
 	count := 0
 	totalPower := 0
+	sel := control.Selection
 	for _, permanent := range g.Battlefield {
-		if filter.ExcludeSource && ctx.source != nil && permanent.ObjectID == ctx.source.ObjectID {
-			continue
-		}
 		if ctx.useBaseCharacteristics {
 			if permanent.Controller != ctx.controller {
 				continue
@@ -102,24 +110,52 @@ func controllerControlsMatchingPermanent(g *game.Game, ctx conditionContext, fil
 		} else if effectiveController(g, permanent) != ctx.controller {
 			continue
 		}
-		if !permanentMatchesConditionFilter(g, permanent, filter, ctx.useBaseCharacteristics) {
+		var values permanentEffectiveValues
+		if ctx.useBaseCharacteristics {
+			values = basePermanentValues(g, permanent)
+		} else {
+			values = effectivePermanentValues(g, permanent)
+		}
+		subject := selectionSubject{
+			kind:      subjectPermanent,
+			g:         g,
+			permanent: permanent,
+			values:    &values,
+			viewer:    ctx.controller,
+			useBase:   ctx.useBaseCharacteristics,
+		}
+		if sel.Controller != game.ControllerAny {
+			if ctx.useBaseCharacteristics {
+				subject.controller = permanent.Controller
+			} else {
+				subject.controller = effectiveController(g, permanent)
+			}
+		}
+		if ctx.source != nil {
+			subject.sourceObjectID = ctx.source.ObjectID
+		}
+		if !matchSelection(&subject, &sel) {
 			continue
 		}
 		count++
-		if filter.TotalPower.Exists {
-			values := effectivePermanentValues(g, permanent)
-			if values.powerOK {
-				totalPower += values.power
+		if control.TotalPower.Exists {
+			powerValues := &values
+			if ctx.useBaseCharacteristics {
+				effective := effectivePermanentValues(g, permanent)
+				powerValues = &effective
+			}
+			if powerValues.powerOK {
+				totalPower += powerValues.power
 			}
 		}
 		if count >= want {
-			if !filter.TotalPower.Exists || filter.TotalPower.Val.Matches(totalPower) {
+			if !control.TotalPower.Exists || control.TotalPower.Val.Matches(totalPower) {
 				return true
 			}
 		}
 	}
-	if filter.TotalPower.Exists {
-		return count >= want && filter.TotalPower.Val.Matches(totalPower)
+	if control.TotalPower.Exists {
+		return count >= want && control.TotalPower.Val.Matches(totalPower)
 	}
 	return false
 }
@@ -185,47 +221,6 @@ func resolvedObjectName(g *game.Game, resolved *resolvedObjectReference) string 
 		return permanentEffectiveName(g, resolved.permanent)
 	}
 	return resolved.snapshot.Name
-}
-
-func permanentMatchesConditionFilter(g *game.Game, permanent *game.Permanent, filter game.PermanentFilter, useBase bool) bool {
-	var values permanentEffectiveValues
-	if useBase {
-		values = basePermanentValues(g, permanent)
-	} else {
-		values = effectivePermanentValues(g, permanent)
-	}
-	for _, cardType := range filter.Types {
-		if !slices.Contains(values.types, cardType) {
-			return false
-		}
-	}
-	for _, supertype := range filter.Supertypes {
-		if !slices.Contains(values.supertypes, supertype) {
-			return false
-		}
-	}
-	if len(filter.SubtypesAny) > 0 && !slices.ContainsFunc(filter.SubtypesAny, func(subtype types.Sub) bool {
-		return slices.Contains(values.subtypes, subtype)
-	}) {
-		return false
-	}
-	if filter.Power.Exists {
-		if useBase {
-			return false
-		}
-		if !values.powerOK || !filter.Power.Val.Matches(values.power) {
-			return false
-		}
-	}
-	if filter.Toughness.Exists {
-		if useBase {
-			return false
-		}
-		if !values.toughnessOK || !filter.Toughness.Val.Matches(values.toughness) {
-			return false
-		}
-	}
-	return true
 }
 
 func activationConditionSatisfied(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool {

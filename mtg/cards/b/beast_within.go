@@ -43,20 +43,14 @@ var BeastWithin = &game.CardDef{
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Destroy{
-							TargetIndex: 0,
+							Object: game.TargetPermanentReference(0),
 						},
 					},
 					{
 						Primitive: game.CreateToken{
-							Amount: game.Fixed(1),
-							Source: game.TokenDef(beastWithinToken),
-							Recipient: opt.Val(game.PlayerReference{
-								Kind: game.PlayerReferenceObjectController,
-								Object: opt.Val(game.ObjectReference{
-									Kind:        game.ObjectReferenceTargetPermanent,
-									TargetIndex: 0,
-								}),
-							}),
+							Amount:    game.Fixed(1),
+							Source:    game.TokenDef(beastWithinToken),
+							Recipient: opt.Val(game.ObjectControllerReference(game.TargetPermanentReference(0))),
 						},
 					},
 				},

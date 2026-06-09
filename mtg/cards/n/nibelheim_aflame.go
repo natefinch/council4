@@ -62,14 +62,14 @@ var NibelheimAflame = &game.CardDef{
 				{
 					Primitive: game.Damage{
 						Amount: game.Dynamic(game.DynamicAmount{
-							Kind:        game.DynamicAmountTargetPower,
-							TargetIndex: 0,
+							Kind:   game.DynamicAmountTargetPower,
+							Object: game.TargetPermanentReference(0),
 						}),
-						Recipient: game.SelectorRecipient(game.EffectSelectorAllCreaturesExceptTarget),
-						DamageSource: opt.Val(game.ObjectReference{
-							Kind:        game.ObjectReferenceTargetPermanent,
-							TargetIndex: 0,
-						}),
+						Recipient: game.GroupDamageRecipient(game.BattlefieldGroupExcluding(
+							game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							game.TargetPermanentReference(0),
+						)),
+						DamageSource: opt.Val(game.TargetPermanentReference(0)),
 					},
 					Description: "target creature deals damage equal to its power to each other creature",
 				},
@@ -78,7 +78,7 @@ var NibelheimAflame = &game.CardDef{
 						Amount: game.Dynamic(game.DynamicAmount{
 							Kind: game.DynamicAmountControllerHandSize,
 						}),
-						TargetIndex: game.TargetIndexController,
+						Player: game.ControllerReference(),
 					},
 					Condition: opt.Val(game.EffectCondition{
 						Condition: opt.Val(game.Condition{
@@ -88,8 +88,8 @@ var NibelheimAflame = &game.CardDef{
 				},
 				{
 					Primitive: game.Draw{
-						Amount:      game.Fixed(4),
-						TargetIndex: game.TargetIndexController,
+						Amount: game.Fixed(4),
+						Player: game.ControllerReference(),
 					},
 					Condition: opt.Val(game.EffectCondition{
 						Condition: opt.Val(game.Condition{

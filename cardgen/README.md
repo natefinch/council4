@@ -6,6 +6,22 @@ files for the council4 card registry, and owns supporting generator commands.
 Runtime game, rules, card registry, and simulation code live outside this
 directory.
 
+## Validation ownership
+
+Structural CardDef validation — nil card, missing name, oracle text without abilities, TargetSpec bounds, target index range, keyword variant checks, condition references, continuous effects, instruction sequences, and nested ability walks — is owned by [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation) in the `mtg/game` package.
+
+`cardgen.ValidateCard` and `cardgen.ValidateCards` are thin adapters: they call `game.ValidateCardDef`, map each `game.CardDefIssue` to a `ValidationIssue` with the card name added, and then apply the policy-only checks that belong to the tooling layer:
+
+| Code | Owned by |
+|------|----------|
+| `nil-card` through `invalid-ability-body` | `game.ValidateCardDef` (structural) |
+| `unregistered-implementation` | `cardgen` — depends on `ValidationOptions.KnownImplementationIDs` |
+| `implementation-required` | `cardgen` — depends on `ValidationOptions.ReportImplementationIDs` |
+| `generated-card-not-found` | `cardgen` — runtime/tooling policy |
+| `validation-run-failed` | `cardgen` — tooling error reporting |
+
+`ValidateCard(card, opts)` and `ValidateCards(cards, opts)` preserve the exact `CardName`, `FaceName`, `Path`, `Code`, and `Message` fields expected by existing tests and batch reports.
+
 ## What it does
 
 Given a Magic: The Gathering card name, the library:
@@ -20,6 +36,40 @@ Given a Magic: The Gathering card name, the library:
 5. Reports cards that still rely on missing rules/parser functionality, including
    generated-source `Missing primitives` comments and `ImplementationID` escape
    hatches.
+
+## Executable lowering pipeline (typed intermediate representation)
+
+`GenerateExecutableCardSource` does not build Go source by concatenating
+strings. It lowers Oracle text into a typed **intermediate representation
+(IR)** of `game.*` ability values, validates an assembled `game.CardDef`, and
+only then renders deterministic Go source. The pipeline has three distinct
+stages, each owned by a different layer:
+
+1. **Recognition / lowering (`cardgen/lower.go`).** `lowerExecutableFaces`
+   compiles Oracle text and dispatches each recognized ability to a `lowerXxx`
+   helper that returns a typed `game.*` value (for example
+   `lowerTapManaAbility` returns a `game.ManaAbility`, `lowerSpell` returns a
+   `game.AbilityContent`). The per-face result is a `loweredFaceAbilities`
+   holding the categorized typed values in Oracle order. Unsupported text
+   produces a source-spanned `oracle.Diagnostic` instead of a value.
+2. **Assembly + validation (`cardgen/executable.go`).** `assembleCardDefs`
+   combines parsed Scryfall fields (mana cost, colors, types, P/T, oracle text)
+   with the lowered typed abilities into one or more `game.CardDef` values, then
+   calls [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
+   Any structural issue is converted to a diagnostic and the card is failed
+   before any source is emitted.
+3. **Deterministic rendering (`cardgen/render.go`).** `Renderer.RenderCardSource`
+   walks the validated typed values and emits Go source. It never iterates maps
+   for ordering, sorts imports, detects needed packages from the rendered
+   values, and produces byte-identical output for identical input. Sealed
+   interfaces are rendered by switching on the value's `Kind()` and performing a
+   single type assertion per case — never a Go type switch.
+
+The handwritten **Card Implementation escape hatch** is preserved: cards whose
+mechanics the lowering layer does not recognize are reported as unsupported and
+fall back to a hand-written `game.CardDef` with an `ImplementationID`, exactly
+as before. The typed pipeline only owns cards it can fully recognize, assemble,
+and validate.
 
 ## Usage
 
@@ -52,10 +102,13 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
 
 - `FetchCard(name string)` — fetches a card from Scryfall by exact name.
 - `GenerateCardSource(card, pkgName)` — generates Go source for a `CardDef`.
-- `GenerateExecutableCardSource(card, pkgName)` — generates source only when
-  every face is fully supported by the strict executable backend; otherwise it
-  returns source-spanned diagnostics identifying the unsupported ability kind,
-  keyword, parameter, or mixed rules text. Supported executable templates
+- `GenerateExecutableCardSource(card, pkgName)` — lowers each face to a typed
+  intermediate representation, assembles and `game.ValidateCardDef`-validates a
+  `game.CardDef`, and renders deterministic source via `Renderer`. It emits
+  source only when every face is fully supported by the strict executable
+  backend; otherwise it returns source-spanned diagnostics identifying the
+  unsupported ability kind, keyword, parameter, mixed rules text, or structural
+  validation failure. Supported executable templates
   currently include plain keywords, mana-cost Ward and Cycling, supported tap
   mana choices, unconditional enters-tapped replacements, fixed single-target
   damage, destruction, exile, return-to-hand, and power/toughness changes,

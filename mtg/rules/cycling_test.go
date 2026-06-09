@@ -85,7 +85,7 @@ func cyclingCard() *game.CardDef {
 				KeywordAbilities: []game.KeywordAbility{game.CyclingKeyword{Cost: manaCost}},
 				Content: game.Mode{
 					Sequence: []game.Instruction{
-						{Primitive: game.Draw{TargetIndex: game.TargetIndexController, Amount: game.Fixed(1)}},
+						{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
 					},
 				}.Ability(),
 			},

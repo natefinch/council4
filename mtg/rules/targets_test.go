@@ -94,7 +94,7 @@ func TestDeadPlayerTargetDoesNotApplyEffect(t *testing.T) {
 	engine := NewEngine(nil)
 	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
 		Amount:    game.Fixed(3),
-		Recipient: game.TargetRecipient(0),
+		Recipient: game.AnyTargetDamageRecipient(0),
 	}, []game.Target{game.PlayerTarget(game.Player2)})
 	if !engine.eliminatePlayer(g, game.Player2) {
 		t.Fatal("eliminatePlayer() = false, want true")
@@ -474,7 +474,7 @@ func TestAnotherTargetPredicateExcludesSourcePermanent(t *testing.T) {
 						Another:        true,
 					},
 				}},
-				Sequence: []game.Instruction{{Primitive: game.Tap{TargetIndex: 0}}},
+				Sequence: []game.Instruction{{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}}},
 			}.Ability(),
 		}}},
 	})
@@ -536,7 +536,7 @@ func TestPermanentTargetThatLeavesBeforeResolutionCountersSpellByRules(t *testin
 	target := addCreaturePermanent(g, game.Player2)
 	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
 		Amount:    game.Fixed(3),
-		Recipient: game.TargetRecipient(0),
+		Recipient: game.AnyTargetDamageRecipient(0),
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	card, ok := g.GetCardInstance(sourceID)
 	if !ok {
@@ -565,7 +565,7 @@ func TestPermanentTargetedDamageMarksDamageOnResolution(t *testing.T) {
 	target := addCreaturePermanent(g, game.Player2)
 	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
 		Amount:    game.Fixed(3),
-		Recipient: game.TargetRecipient(0),
+		Recipient: game.AnyTargetDamageRecipient(0),
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	card, ok := g.GetCardInstance(sourceID)
 	if !ok {
@@ -665,7 +665,7 @@ func TestInvalidTargetSpecAbilityProducesNoActivateActions(t *testing.T) {
 		ActivatedAbilities: []game.ActivatedAbility{{
 			Content: game.Mode{
 				Targets:  []game.TargetSpec{{MinTargets: 3, MaxTargets: 1, Constraint: "creature"}},
-				Sequence: []game.Instruction{{Primitive: game.Tap{TargetIndex: 0}}},
+				Sequence: []game.Instruction{{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}}},
 			}.Ability(),
 		}}},
 	})
@@ -797,7 +797,7 @@ func playerDamageSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Sorcery},
 		SpellAbility: opt.Val(game.Mode{
 			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
-			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.TargetRecipient(0)}}},
+			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.AnyTargetDamageRecipient(0)}}},
 		}.Ability())},
 	}
 }
@@ -853,8 +853,8 @@ func opponentChosenTargetAbilitySource() *game.CardDef {
 					},
 				},
 				Sequence: []game.Instruction{
-					{Primitive: game.Tap{TargetIndex: 0}},
-					{Primitive: game.Tap{TargetIndex: 1}},
+					{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}},
+					{Primitive: game.Tap{Object: game.TargetPermanentReference(1)}},
 					{Primitive: game.Fight{}},
 				},
 			}.Ability(),

@@ -16,10 +16,10 @@ func TestDiesTriggerUsesLastKnownEffectiveType(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		RequirePermanentTypes: []types.Card{types.Creature},
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	land := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Animated Land",
 		Types: []types.Card{types.Land}},
 	})
@@ -72,7 +72,7 @@ func TestDelayedTriggerSourceIdentitySurvivesSourceZoneChange(t *testing.T) {
 
 	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{
 		Trigger: game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep, Content: game.Mode{
-			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
+			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
 		}.Ability()},
 	}, nil)
 	movePermanentToZone(g, source, zone.Graveyard)
@@ -95,13 +95,13 @@ func TestLinkedExileReturnOnlyUsesSameSourceLink(t *testing.T) {
 	objA := linkedSourceObject(sourceA)
 	objA.Targets = []game.Target{game.PermanentTarget(first.ObjectID)}
 	resolveInstruction(engine, g, objA, game.Exile{
-		TargetIndex:    0,
+		Object:         game.TargetPermanentReference(0),
 		ExileLinkedKey: game.LinkedKey(linkID),
 	}, nil)
 	objB := linkedSourceObject(sourceB)
 	objB.Targets = []game.Target{game.PermanentTarget(second.ObjectID)}
 	resolveInstruction(engine, g, objB, game.Exile{
-		TargetIndex:    0,
+		Object:         game.TargetPermanentReference(0),
 		ExileLinkedKey: game.LinkedKey(linkID),
 	}, nil)
 

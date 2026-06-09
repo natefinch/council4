@@ -46,12 +46,12 @@ var Fiendlash = func() *game.CardDef {
 		ContinuousEffects: []game.ContinuousEffect{
 			{
 				Layer:      game.LayerPowerToughnessModify,
-				Selector:   game.EffectSelectorEquippedCreature,
+				Group:      game.AttachedObjectGroup(game.SourcePermanentReference()),
 				PowerDelta: 2,
 			},
 			{
-				Layer:    game.LayerAbility,
-				Selector: game.EffectSelectorEquippedCreature,
+				Layer: game.LayerAbility,
+				Group: game.AttachedObjectGroup(game.SourcePermanentReference()),
 				AddKeywords: []game.Keyword{
 					game.Reach,
 				},
@@ -91,17 +91,11 @@ var Fiendlash = func() *game.CardDef {
 					{
 						Primitive: game.Damage{
 							Amount: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountObjectPower,
-								Object: game.ObjectReference{
-									Kind:        game.ObjectReferenceAttachedPermanent,
-									TargetIndex: game.TargetIndexSourcePermanent,
-								},
+								Kind:   game.DynamicAmountObjectPower,
+								Object: game.EventPermanentReference(),
 							}),
-							Recipient: game.TargetRecipient(0),
-							DamageSource: opt.Val(game.ObjectReference{
-								Kind:        game.ObjectReferenceAttachedPermanent,
-								TargetIndex: game.TargetIndexSourcePermanent,
-							}),
+							Recipient:    game.AnyTargetDamageRecipient(0),
+							DamageSource: opt.Val(game.EventPermanentReference()),
 						},
 					},
 				},

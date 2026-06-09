@@ -109,7 +109,7 @@ func TestBuildUnsupportedReportWithSourceIncludesMissingFunctionality(t *testing
 // Blocked Card
 //
 // Missing primitives:
-//   - EffectSelectorEquippedCreature does not exist; equipped creature cannot
+//   - Equipped-creature group references do not exist; equipped creature cannot
 //     be selected declaratively.
 //   - DynamicAmountCountOpponents does not exist.
 var BlockedCard = nil
@@ -145,7 +145,7 @@ var BlockedCard = nil
 		"functionality-blocked cards: 1",
 		"- Missing functionality:",
 		"## Missing functionality rollup",
-		"### EffectSelectorEquippedCreature",
+		"### Equipped",
 		"- Cards: Blocked Card",
 	} {
 		if !strings.Contains(output, want) {

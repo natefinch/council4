@@ -67,7 +67,7 @@ func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 	revealInstr := game.Instruction{
 		Primitive: game.Reveal{
 			Amount:        game.Fixed(1),
-			TargetIndex:   0,
+			Player:        game.TargetPlayerReference(0),
 			PublishLinked: "revealed",
 		},
 	}
@@ -98,28 +98,21 @@ func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 }
 
 func chaosWarpLikeInstructions() []game.Instruction {
-	ownerOfTarget := opt.Val(game.PlayerReference{
-		Kind: game.PlayerReferenceObjectOwner,
-		Object: opt.Val(game.ObjectReference{
-			Kind:        game.ObjectReferenceTargetPermanent,
-			TargetIndex: 0,
-		}),
-	})
+	ownerOfTarget := opt.Val(game.ObjectOwnerReference(game.TargetPermanentReference(0)))
 	return []game.Instruction{
-		{Primitive: game.ShufflePermanentIntoLibrary{TargetIndex: 0}},
+		{Primitive: game.ShufflePermanentIntoLibrary{Object: game.TargetPermanentReference(0)}},
 		{
 			Primitive: game.Reveal{
 				Amount:        game.Fixed(1),
-				TargetIndex:   0,
+				Player:        ownerOfTarget.Val,
 				PublishLinked: "revealed",
 				Recipient:     ownerOfTarget,
 			},
 		},
 		{
 			Primitive: game.PutOnBattlefield{
-				TargetIndex: 0,
-				Source:      game.LinkedBattlefieldSource("revealed"),
-				Recipient:   ownerOfTarget,
+				Source:    game.LinkedBattlefieldSource("revealed"),
+				Recipient: ownerOfTarget,
 			},
 			CardCondition: opt.Val(game.CardCondition{
 				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: "revealed"},

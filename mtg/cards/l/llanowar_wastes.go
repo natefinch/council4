@@ -71,7 +71,7 @@ var LlanowarWastes = &game.CardDef{
 						{
 							Primitive: game.Damage{
 								Amount:    game.Fixed(1),
-								Recipient: game.TargetRecipient(game.TargetIndexController),
+								Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
 							},
 						},
 					},

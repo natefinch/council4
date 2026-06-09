@@ -39,12 +39,12 @@ var LoxodonWarhammer = func() *game.CardDef {
 		ContinuousEffects: []game.ContinuousEffect{
 			{
 				Layer:      game.LayerPowerToughnessModify,
-				Selector:   game.EffectSelectorEquippedCreature,
+				Group:      game.AttachedObjectGroup(game.SourcePermanentReference()),
 				PowerDelta: 3,
 			},
 			{
-				Layer:    game.LayerAbility,
-				Selector: game.EffectSelectorEquippedCreature,
+				Layer: game.LayerAbility,
+				Group: game.AttachedObjectGroup(game.SourcePermanentReference()),
 				AddKeywords: []game.Keyword{
 					game.Trample,
 					game.Lifelink,

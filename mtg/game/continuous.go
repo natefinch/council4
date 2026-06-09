@@ -81,7 +81,7 @@ type ContinuousEffect struct {
 	ExpiresFor     PlayerID
 
 	AffectedObjectID id.ID
-	Selector         EffectSelector
+	Group            GroupReference
 
 	Layer ContinuousLayer
 

@@ -292,7 +292,7 @@ func replacementEffectLabels(replacements []game.ReplacementEffect) []string {
 	return labels
 }
 
-func createPreventionShield(g *game.Game, obj *game.StackObject, amount, targetIndex int, duration game.EffectDuration) bool {
+func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, object game.ObjectReference, player game.PlayerReference, duration game.EffectDuration) bool {
 	if amount <= 0 {
 		return false
 	}
@@ -303,23 +303,20 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount, targetI
 		Duration:    effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
 		CreatedTurn: g.Turn.TurnNumber,
 	}
-	if targetIndex == game.TargetIndexController {
-		shield.Player = obj.Controller
+	if player.Kind() != game.PlayerReferenceNone {
+		playerID, ok := resolvePlayerReference(g, obj, player)
+		if !ok {
+			return false
+		}
+		shield.Player = playerID
 		g.PreventionShields = append(g.PreventionShields, shield)
 		return true
 	}
-	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
+	resolved, ok := resolveObjectReference(g, obj, object)
+	if !ok || resolved.permanent == nil {
 		return false
 	}
-	target := obj.Targets[targetIndex]
-	switch target.Kind {
-	case game.TargetPlayer:
-		shield.Player = target.PlayerID
-	case game.TargetPermanent:
-		shield.PermanentID = target.PermanentID
-	default:
-		return false
-	}
+	shield.PermanentID = resolved.permanent.ObjectID
 	g.PreventionShields = append(g.PreventionShields, shield)
 	return true
 }

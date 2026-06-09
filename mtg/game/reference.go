@@ -1,6 +1,8 @@
 package game
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -13,22 +15,129 @@ type ObjectReferenceKind int
 const (
 	ObjectReferenceNone ObjectReferenceKind = iota
 	ObjectReferenceTargetPermanent
+	ObjectReferenceTargetStackObject
 	ObjectReferenceSourcePermanent
-	ObjectReferenceAttachedPermanent
+	ObjectReferenceSourceAttachedPermanent
+	ObjectReferenceTargetAttachedPermanent
 	ObjectReferenceLinkedObject
 	ObjectReferenceEventPermanent
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
 type ObjectReference struct {
-	Kind ObjectReferenceKind
+	kind ObjectReferenceKind
 
-	// TargetIndex indexes the stack object's selected targets for target-derived
+	// targetIndex indexes the stack object's selected targets for target-derived
 	// references.
-	TargetIndex int
+	targetIndex int
 
-	// LinkID identifies a linked object recorded by an earlier effect.
-	LinkID string
+	// linkID identifies a linked object recorded by an earlier effect.
+	linkID string
+}
+
+// Kind reports the reference kind.
+func (r ObjectReference) Kind() ObjectReferenceKind { return r.kind }
+
+// TargetIndex reports the target slot index for target-derived references.
+func (r ObjectReference) TargetIndex() int { return r.targetIndex }
+
+// LinkID reports the linked-object identifier for linked references.
+func (r ObjectReference) LinkID() string { return r.linkID }
+
+// TargetPermanentReference references the permanent chosen for the target slot at
+// targetIndex.
+func TargetPermanentReference(targetIndex int) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceTargetPermanent, targetIndex: targetIndex}
+}
+
+// TargetStackObjectReference references the stack object chosen for the target
+// slot at targetIndex.
+func TargetStackObjectReference(targetIndex int) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceTargetStackObject, targetIndex: targetIndex}
+}
+
+// SourcePermanentReference references the source permanent of the resolving stack
+// object.
+func SourcePermanentReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceSourcePermanent}
+}
+
+// SourceAttachedPermanentReference references the permanent that the source permanent
+// is attached to, such as the creature an Aura or Equipment is attached to.
+func SourceAttachedPermanentReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceSourceAttachedPermanent}
+}
+
+// TargetAttachedPermanentReference references the permanent that the targeted
+// permanent at targetIndex is attached to.
+func TargetAttachedPermanentReference(targetIndex int) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceTargetAttachedPermanent, targetIndex: targetIndex}
+}
+
+// LinkedObjectReference references a linked object recorded by an earlier effect
+// under linkID.
+func LinkedObjectReference(linkID string) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceLinkedObject, linkID: linkID}
+}
+
+// EventPermanentReference references the permanent named by the triggering event of
+// the resolving stack object.
+func EventPermanentReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceEventPermanent}
+}
+
+// Validate reports structural problems with an ObjectReference that represent
+// card-definition bugs. It checks kind/field consistency only; target-index
+// bounds depend on the surrounding TargetSpec list and are checked by
+// ValidateCardDef.
+func (r ObjectReference) Validate() []string {
+	switch r.kind {
+	case ObjectReferenceTargetPermanent:
+		if r.linkID != "" {
+			return []string{"target permanent reference must not set LinkID"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"target permanent reference must not use a negative TargetIndex"}
+		}
+	case ObjectReferenceTargetStackObject:
+		if r.linkID != "" {
+			return []string{"target stack object reference must not set LinkID"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"target stack object reference must not use a negative TargetIndex"}
+		}
+	case ObjectReferenceSourcePermanent:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"source permanent reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceSourceAttachedPermanent:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"source-attached permanent reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceTargetAttachedPermanent:
+		if r.linkID != "" {
+			return []string{"target-attached permanent reference must not set LinkID"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"target-attached permanent reference must not use a negative TargetIndex"}
+		}
+	case ObjectReferenceLinkedObject:
+		if r.linkID == "" {
+			return []string{"linked object reference requires LinkID"}
+		}
+		if r.targetIndex != 0 {
+			return []string{"linked object reference must not set TargetIndex"}
+		}
+	case ObjectReferenceEventPermanent:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"event permanent reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceNone:
+		return []string{"object reference has no kind"}
+	default:
+		return []string{fmt.Sprintf("unknown object reference kind %d", r.kind)}
+	}
+	return nil
 }
 
 // PlayerReferenceKind identifies a runtime player binding used by declarative
@@ -46,14 +155,82 @@ const (
 
 // PlayerReference describes how a rules effect finds a player at resolution.
 type PlayerReference struct {
-	Kind PlayerReferenceKind
+	kind PlayerReferenceKind
 
-	// TargetIndex indexes the stack object's selected targets for target-player
+	// targetIndex indexes the stack object's selected targets for target-player
 	// references.
-	TargetIndex int
+	targetIndex int
 
-	// Object binds controller/owner lookups to a reusable object reference.
-	Object opt.V[ObjectReference]
+	// object binds controller/owner lookups to a reusable object reference.
+	object opt.V[ObjectReference]
+}
+
+// Kind reports the reference kind.
+func (r PlayerReference) Kind() PlayerReferenceKind { return r.kind }
+
+// TargetIndex reports the target slot index for target-player references.
+func (r PlayerReference) TargetIndex() int { return r.targetIndex }
+
+// Object reports the nested object reference for controller/owner lookups.
+func (r PlayerReference) Object() (ObjectReference, bool) {
+	return r.object.Val, r.object.Exists
+}
+
+// ControllerReference references the controller of the resolving stack object.
+func ControllerReference() PlayerReference {
+	return PlayerReference{kind: PlayerReferenceController}
+}
+
+// TargetPlayerReference references the player chosen for the target slot at
+// targetIndex.
+func TargetPlayerReference(targetIndex int) PlayerReference {
+	return PlayerReference{kind: PlayerReferenceTargetPlayer, targetIndex: targetIndex}
+}
+
+// ObjectControllerReference references the controller of the object identified by
+// object.
+func ObjectControllerReference(object ObjectReference) PlayerReference {
+	return PlayerReference{kind: PlayerReferenceObjectController, object: opt.Val(object)}
+}
+
+// ObjectOwnerReference references the owner of the object identified by object.
+func ObjectOwnerReference(object ObjectReference) PlayerReference {
+	return PlayerReference{kind: PlayerReferenceObjectOwner, object: opt.Val(object)}
+}
+
+// Validate reports structural problems with a PlayerReference that represent
+// card-definition bugs. It checks player-level kind/field consistency and the
+// structure of any nested object reference; target-index bounds depend on the
+// surrounding TargetSpec list and are checked by ValidateCardDef.
+func (r PlayerReference) Validate() []string {
+	switch r.kind {
+	case PlayerReferenceController:
+		if r.targetIndex != 0 || r.object.Exists {
+			return []string{"controller reference must not set TargetIndex or Object"}
+		}
+	case PlayerReferenceTargetPlayer:
+		if r.object.Exists {
+			return []string{"target player reference must not set Object"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"target player reference must not use a negative TargetIndex"}
+		}
+	case PlayerReferenceObjectController, PlayerReferenceObjectOwner:
+		if !r.object.Exists {
+			return []string{"object controller/owner reference requires Object"}
+		}
+		if r.targetIndex != 0 {
+			return []string{"object controller/owner reference must not set TargetIndex"}
+		}
+		if problems := appendPrefixed(nil, "object", r.object.Val.Validate()); len(problems) > 0 {
+			return problems
+		}
+	case PlayerReferenceNone:
+		return []string{"player reference has no kind"}
+	default:
+		return []string{fmt.Sprintf("unknown player reference kind %d", r.kind)}
+	}
+	return nil
 }
 
 // CardReferenceKind identifies a runtime card binding used by declarative

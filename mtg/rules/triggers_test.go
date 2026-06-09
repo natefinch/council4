@@ -17,10 +17,10 @@ func TestSelfETBTriggerGoesOnStackAndResolves(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	spellID := addCardToHand(g, game.Player1, triggeredCreature(game.TriggerPattern{
+	spellID := addCardToHand(g, game.Player1, triggeredCreature(&game.TriggerPattern{
 		Event:  game.EventPermanentEnteredBattlefield,
 		Source: game.TriggerSourceSelf,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil))
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil))
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
@@ -47,10 +47,10 @@ func TestDeathTriggerGoesOnStack(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		RequirePermanentTypes: []types.Card{types.Creature},
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	creature := addCombatCreaturePermanent(g, game.Player2)
 
 	destroyPermanent(g, creature.ObjectID)
@@ -77,7 +77,7 @@ func TestInlineTriggeredAbilityRechecksProtectionFromSource(t *testing.T) {
 		Content: game.Mode{
 			Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
 			Sequence: []game.Instruction{{
-				Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)},
+				Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.AnyTargetDamageRecipient(0)},
 			}},
 		}.Ability(),
 	}
@@ -132,12 +132,12 @@ func TestTriggerMovesCountersFromEventPermanentLKI(t *testing.T) {
 func TestTriggerEffectCanReferenceEventPermanentOnBattlefield(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                 game.EventPermanentEnteredBattlefield,
 		RequirePermanentTypes: []types.Card{types.Creature},
 	}, []game.Instruction{{
 		Primitive: game.ApplyContinuous{
-			Object:   opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
+			Object:   opt.Val(game.EventPermanentReference()),
 			Duration: game.DurationUntilEndOfTurn,
 			ContinuousEffects: []game.ContinuousEffect{
 				{
@@ -179,12 +179,12 @@ func TestTriggerEffectCanReferenceEventPermanentOnBattlefield(t *testing.T) {
 func TestTriggerPatternCanRequireStackSpellTargetingSelf(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	target := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	target := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                game.EventObjectBecameTarget,
 		Source:               game.TriggerSourceSelf,
 		MatchStackObjectKind: true,
 		StackObjectKind:      game.StackSpell,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 	spell := &game.StackObject{
 		ID:         g.IDGen.Next(),
@@ -208,12 +208,12 @@ func TestTriggerPatternCanRequireStackSpellTargetingSelf(t *testing.T) {
 func TestTriggerPatternStackSpellDoesNotMatchAbilityTargetingSelf(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	target := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	target := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                game.EventObjectBecameTarget,
 		Source:               game.TriggerSourceSelf,
 		MatchStackObjectKind: true,
 		StackObjectKind:      game.StackSpell,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	ability := &game.StackObject{
 		ID:         g.IDGen.Next(),
 		Kind:       game.StackActivatedAbility,
@@ -288,7 +288,7 @@ func TestExaltedDoesNotTriggerForMultipleAttackers(t *testing.T) {
 func TestDeathTriggerCanUseEventPermanentLKIAndReturnEventCardAsEnchantment(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	triggerSource := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	triggerSource := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event: game.EventPermanentDied,
 	}, []game.Instruction{{
 		Primitive: game.PutOnBattlefield{
@@ -304,7 +304,7 @@ func TestDeathTriggerCanUseEventPermanentLKIAndReturnEventCardAsEnchantment(t *t
 		t.Fatal("trigger source card not found")
 	}
 	triggerCard.Def.TriggeredAbilities[0].Trigger.InterveningCondition = opt.Val(game.Condition{
-		Object: opt.Val(game.ObjectReference{Kind: game.ObjectReferenceEventPermanent}),
+		Object: opt.Val(game.EventPermanentReference()),
 		Types:  []types.Card{types.Creature},
 	})
 	source := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Enduring Creature",
@@ -407,10 +407,10 @@ func TestSelfDeathTriggerUsesLeftBattlefieldSource(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	permanent := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	permanent := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:  game.EventPermanentDied,
 		Source: game.TriggerSourceSelf,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	destroyPermanent(g, permanent.ObjectID)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -431,10 +431,10 @@ func TestTokenTriggersUseTokenDefinition(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	token := triggeredCreature(game.TriggerPattern{
+	token := triggeredCreature(&game.TriggerPattern{
 		Event:  game.EventPermanentEnteredBattlefield,
 		Source: game.TriggerSourceSelf,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	permanent, ok := createTokenPermanent(g, game.Player1, token)
 	if !ok {
@@ -459,10 +459,10 @@ func TestTokenSelfETBTriggerDoesNotMatchOtherToken(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Drawn"}})
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Drawn"}})
-	token := triggeredCreature(game.TriggerPattern{
+	token := triggeredCreature(&game.TriggerPattern{
 		Event:  game.EventPermanentEnteredBattlefield,
 		Source: game.TriggerSourceSelf,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	if _, ok := createTokenPermanent(g, game.Player1, token); !ok {
 		t.Fatal("first token was not created")
@@ -496,12 +496,12 @@ func TestTokenSelfETBTriggerDoesNotMatchOtherToken(t *testing.T) {
 func TestTriggerPatternExcludeSelfSkipsSourcePermanent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                 game.EventPermanentEnteredBattlefield,
 		Controller:            game.TriggerControllerYou,
 		ExcludeSelf:           true,
 		RequirePermanentTypes: []types.Card{types.Creature},
-	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
@@ -535,10 +535,10 @@ func TestTokenSelfDeathTriggerUsesLeftBattlefieldSource(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	token := triggeredCreature(game.TriggerPattern{
+	token := triggeredCreature(&game.TriggerPattern{
 		Event:  game.EventPermanentDied,
 		Source: game.TriggerSourceSelf,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	permanent, ok := createTokenPermanent(g, game.Player1, token)
 	if !ok {
@@ -563,10 +563,10 @@ func TestTokenSelfDeathTriggerDoesNotMatchOtherToken(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	token := triggeredCreature(game.TriggerPattern{
+	token := triggeredCreature(&game.TriggerPattern{
 		Event:  game.EventPermanentDied,
 		Source: game.TriggerSourceSelf,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	first, ok := createTokenPermanent(g, game.Player1, token)
 	if !ok {
@@ -597,11 +597,11 @@ func TestDamageTriggerGoesOnStack(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:           game.EventDamageDealt,
 		Player:          game.TriggerPlayerOpponent,
 		DamageRecipient: game.DamageRecipientPlayer,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	dealPlayerDamage(g, 0, 0, game.Player2, game.Player2, 1, false)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -618,10 +618,10 @@ func TestDrawTriggerChoosesDeterministicLegalTarget(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:  game.EventCardDrawn,
 		Player: game.TriggerPlayerYou,
-	}, []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}}, []game.TargetSpec{
+	}, []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.AnyTargetDamageRecipient(0)}}}, []game.TargetSpec{
 		{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"},
 	})
 
@@ -642,10 +642,10 @@ func TestTriggerTargetChoiceCanBeMadeByAgent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:  game.EventCardDrawn,
 		Player: game.TriggerPlayerYou,
-	}, []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}}, []game.TargetSpec{
+	}, []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.AnyTargetDamageRecipient(0)}}}, []game.TargetSpec{
 		{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"},
 	})
 	agents := [game.NumPlayers]PlayerAgent{
@@ -677,9 +677,9 @@ func TestOptionalTriggeredAbilityChoiceHappensOnResolution(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Triggering Drawn"}})
-	addOptionalTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addOptionalTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event: game.EventCardDrawn,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	agents := [game.NumPlayers]PlayerAgent{
 		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
 	}
@@ -711,10 +711,10 @@ func TestCastTriggerGoesOnStackAboveCastSpell(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:      game.EventSpellCast,
 		Controller: game.TriggerControllerYou,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	spellID := addCardToHand(g, game.Player1, greenInstant())
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -742,10 +742,10 @@ func TestBeginningOfUpkeepTriggerResolvesBeforeDrawStep(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Upkeep Draw"}})
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Draw"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event: game.EventBeginningOfStep,
 		Step:  game.StepUpkeep,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -758,10 +758,10 @@ func TestBeginningOfEndStepTriggerResolves(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "End Step Draw"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event: game.EventBeginningOfStep,
 		Step:  game.StepEnd,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 
@@ -775,10 +775,10 @@ func TestBeginningOfDrawStepTriggerResolvesAfterTurnDraw(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Trigger Draw"}})
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Turn Draw"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event: game.EventBeginningOfStep,
 		Step:  game.StepDraw,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -791,10 +791,10 @@ func TestBeginningOfCombatTriggerResolves(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Combat Draw"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event: game.EventBeginningOfStep,
 		Step:  game.StepBeginningOfCombat,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	engine.runCombatPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -807,9 +807,9 @@ func TestBeginningOfStepTriggerRequiresExplicitStep(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Should Not Draw"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event: game.EventBeginningOfStep,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -823,7 +823,7 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First"}})
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second"}})
-	source := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	card, ok := g.GetCardInstance(source.CardInstanceID)
 	if !ok {
 		t.Fatal("source card instance not found")
@@ -851,12 +851,12 @@ func TestSpellCastTriggerFiltersCardTypesAndController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerOpponent,
 		RequireCardTypes: []types.Card{types.Instant},
 		ExcludeCardTypes: []types.Card{types.Creature},
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	spellID := addCardToHand(g, game.Player2, greenInstant())
 	addBasicLandPermanent(g, game.Player2, types.Forest)
 	g.Turn.ActivePlayer = game.Player2
@@ -894,24 +894,24 @@ func TestBlockedAttackerSubjectMatchesAttachedPermanent(t *testing.T) {
 		PermanentID:       blocker.ObjectID,
 		BlockedAttackerID: attacker.ObjectID,
 	}
-	pattern := game.TriggerPattern{
+	pattern := &game.TriggerPattern{
 		Event:                 game.EventBlockerDeclared,
 		Controller:            game.TriggerControllerYou,
 		Source:                game.TriggerSourceAttachedPermanent,
 		Subject:               game.TriggerSubjectBlockedAttacker,
 		RequirePermanentTypes: []types.Card{types.Creature},
 	}
-	if !triggerMatchesEvent(g, equipment, &pattern, event) {
+	if !triggerMatchesEvent(g, equipment, pattern, event) {
 		t.Fatal("attached equipment did not match blocked attacker subject")
 	}
 	pattern.Subject = game.TriggerSubjectDefault
-	if triggerMatchesEvent(g, equipment, &pattern, event) {
+	if triggerMatchesEvent(g, equipment, pattern, event) {
 		t.Fatal("attached equipment matched blocker as default subject")
 	}
 	pattern.Subject = game.TriggerSubjectBlockedAttacker
 	nonCreatureBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Land", Types: []types.Card{types.Land}}})
 	event.PermanentID = nonCreatureBlocker.ObjectID
-	if triggerMatchesEvent(g, equipment, &pattern, event) {
+	if triggerMatchesEvent(g, equipment, pattern, event) {
 		t.Fatal("creature type filter matched blocked attacker instead of blocker")
 	}
 }
@@ -967,10 +967,10 @@ func TestSpellTargetTriggerPredicates(t *testing.T) {
 func TestTriggeredAbilityMaxTriggersPerTurn(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	source := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:  game.EventCardDrawn,
 		Player: game.TriggerPlayerYou,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	card, ok := g.GetCardInstance(source.CardInstanceID)
 	if !ok {
 		t.Fatal("source card instance not found")
@@ -999,12 +999,12 @@ func TestTriggeredAbilityMaxTriggersPerTurn(t *testing.T) {
 func TestOneOrMoreTriggerCoalescesDetectionBatch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		Controller:            game.TriggerControllerYou,
 		RequirePermanentTypes: []types.Card{types.Creature},
 		OneOrMore:             true,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	first := addCombatCreaturePermanent(g, game.Player1)
 	second := addCombatCreaturePermanent(g, game.Player1)
 	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: first.ObjectID, CardID: first.CardInstanceID})
@@ -1021,11 +1021,11 @@ func TestOneOrMoreTriggerCoalescesDetectionBatch(t *testing.T) {
 func TestFightEventTriggersForControlledFighter(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                 game.EventFight,
 		Controller:            game.TriggerControllerYou,
 		RequirePermanentTypes: []types.Card{types.Creature},
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	second := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
 	obj := &game.StackObject{
@@ -1059,11 +1059,11 @@ func TestDamageTriggerCanRequireAttackingRecipient(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                      game.EventDamageDealt,
 		DamageRecipient:            game.DamageRecipientPermanent,
 		DamageRecipientCombatState: game.CombatStateAttacking,
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	nonattacking := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	attacking := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	g.Combat = &game.CombatState{
@@ -1100,11 +1100,11 @@ func TestDamageTriggerCanRequireAttackingRecipient(t *testing.T) {
 func TestSpellCastTriggerExcludesCreatureSpells(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerOpponent,
 		ExcludeCardTypes: []types.Card{types.Creature},
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	spellID := addCardToHand(g, game.Player2, greenCreature())
 	addBasicLandPermanent(g, game.Player2, types.Forest)
 	g.Turn.ActivePlayer = game.Player2
@@ -1124,12 +1124,12 @@ func TestPermanentTriggerRequireExcludeTypeFilters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		Controller:            game.TriggerControllerOpponent,
 		RequirePermanentTypes: []types.Card{types.Artifact},
 		ExcludePermanentTypes: []types.Card{types.Creature},
-	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	artifact := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Relic",
 		Types: []types.Card{types.Artifact}},
 	})
@@ -1150,7 +1150,7 @@ func TestInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		g.Players[game.Player1].Life = 40
-		addTriggeredPermanentWithCondition(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}})
+		addTriggeredPermanentWithCondition(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}})
 		addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 		if _, ok := engine.drawCard(g, game.Player2); !ok {
 			t.Fatal("drawCard() = false, want true")
@@ -1163,7 +1163,7 @@ func TestInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		g.Players[game.Player1].Life = 41
-		addTriggeredPermanentWithCondition(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}})
+		addTriggeredPermanentWithCondition(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}})
 		addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Event Drawn"}})
 		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Trigger Drawn"}})
 		if _, ok := engine.drawCard(g, game.Player2); !ok {
@@ -1189,7 +1189,7 @@ func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
 	engine := NewEngine(nil)
 	g.Players[game.Player1].Life = 10
 	g.Players[game.Player2].Life = 41
-	triggerSource := addTriggeredPermanentWithCondition(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}})
+	triggerSource := addTriggeredPermanentWithCondition(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}})
 	newController := game.Player2
 	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
 		ID:               1,
@@ -1222,8 +1222,8 @@ func TestTriggeredAbilitiesUseAPNAPStackOrder(t *testing.T) {
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.PriorityPlayer = game.Player1
 	addCardToLibrary(g, game.Player3, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-	addTriggeredPermanent(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
-	addTriggeredPermanent(g, game.Player2, game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
+	addTriggeredPermanent(g, game.Player2, &game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
 
 	if _, ok := engine.drawCard(g, game.Player3); !ok {
 		t.Fatal("drawCard() = false, want true")
@@ -1246,8 +1246,8 @@ func TestTriggeredAbilitiesUseAgentOrderWithinController(t *testing.T) {
 	engine := NewEngine(nil)
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.PriorityPlayer = game.Player1
-	first := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
-	second := addTriggeredPermanent(g, game.Player1, game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
+	first := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
+	second := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
 	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 	agents := [game.NumPlayers]PlayerAgent{
 		game.Player1: &choiceOnlyAgent{choices: [][]int{{1, 0}}},
@@ -1273,17 +1273,17 @@ func TestTriggeredAbilitiesUseAgentOrderWithinController(t *testing.T) {
 	}
 }
 
-func addTriggeredPermanent(g *game.Game, controller game.PlayerID, pattern game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.Permanent {
+func addTriggeredPermanent(g *game.Game, controller game.PlayerID, pattern *game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.Permanent {
 	return addCombatPermanent(g, controller, triggeredCreature(pattern, instructions, targets))
 }
 
-func addOptionalTriggeredPermanent(g *game.Game, controller game.PlayerID, pattern game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.Permanent {
+func addOptionalTriggeredPermanent(g *game.Game, controller game.PlayerID, pattern *game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.Permanent {
 	card := triggeredCreature(pattern, instructions, targets)
 	card.TriggeredAbilities[0].Optional = true
 	return addCombatPermanent(g, controller, card)
 }
 
-func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, pattern game.TriggerPattern, lifeAtLeast int, instructions []game.Instruction) *game.Permanent {
+func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, pattern *game.TriggerPattern, lifeAtLeast int, instructions []game.Instruction) *game.Permanent {
 	permanent := addTriggeredPermanent(g, controller, pattern, instructions, nil)
 	card, ok := g.GetCardInstance(permanent.CardInstanceID)
 	if !ok {
@@ -1306,7 +1306,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.MoveCounters{
-								TargetIndex: 0,
+								Object: game.TargetPermanentReference(0),
 								Source: game.CounterSourceSpec{
 									Kind: game.CounterSourceEventPermanent,
 								},
@@ -1321,20 +1321,20 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 
 func TestTriggerPatternRequireNonToken(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	pattern := game.TriggerPattern{
+	pattern := &game.TriggerPattern{
 		Event:                 game.EventPermanentEnteredBattlefield,
 		Controller:            game.TriggerControllerYou,
 		RequirePermanentTypes: []types.Card{types.Creature},
 		RequireNonToken:       true,
 	}
-	source := addTriggeredPermanent(g, game.Player1, pattern, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}}, nil)
+	source := addTriggeredPermanent(g, game.Player1, pattern, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	token, ok := createTokenPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Token", Types: []types.Card{types.Creature}}})
 	if !ok {
 		t.Fatal("createTokenPermanent failed")
 	}
 	card := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Nontoken", Types: []types.Card{types.Creature}}})
 
-	if triggerMatchesEvent(g, source, &pattern, game.Event{
+	if triggerMatchesEvent(g, source, pattern, game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  game.Player1,
 		PermanentID: token.ObjectID,
@@ -1343,7 +1343,7 @@ func TestTriggerPatternRequireNonToken(t *testing.T) {
 	}) {
 		t.Fatal("non-token trigger matched token event")
 	}
-	if !triggerMatchesEvent(g, source, &pattern, game.Event{
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
 		Controller:  game.Player1,
 		PermanentID: card.ObjectID,
@@ -1353,7 +1353,7 @@ func TestTriggerPatternRequireNonToken(t *testing.T) {
 	}
 }
 
-func triggeredCreature(pattern game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.CardDef {
+func triggeredCreature(pattern *game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{CardFace: game.CardFace{Name: "Triggered Creature",
 		Types:     []types.Card{types.Creature},
@@ -1362,7 +1362,7 @@ func triggeredCreature(pattern game.TriggerPattern, instructions []game.Instruct
 		Toughness: opt.Val(pt),
 		TriggeredAbilities: []game.TriggeredAbility{
 			{
-				Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: pattern},
+				Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: *pattern},
 				Content: game.Mode{
 					Targets:  targets,
 					Sequence: instructions,

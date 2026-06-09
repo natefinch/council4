@@ -57,30 +57,39 @@ type Instruction struct {
 // Quantity is a resolved numeric value — either a fixed literal or a dynamic
 // formula evaluated when the instruction resolves (CR 608.2c).
 // Exactly one of fixed or dynamic is meaningful; use Fixed() or Dynamic().
+// Fixed Quantities are allocation-free; Dynamic allocates once at construction.
 type Quantity struct {
 	fixed   int
-	dynamic opt.V[DynamicAmount]
+	dynamic *DynamicAmount
 }
 
 // Fixed returns a Quantity with a constant value.
 func Fixed(n int) Quantity { return Quantity{fixed: n} }
 
 // Dynamic returns a Quantity computed at resolution time.
-func Dynamic(d DynamicAmount) Quantity { return Quantity{dynamic: opt.Val(d)} }
+func Dynamic(d DynamicAmount) Quantity {
+	dc := d
+	return Quantity{dynamic: &dc}
+}
 
 // IsDynamic reports whether this Quantity is computed at resolution time.
-func (q Quantity) IsDynamic() bool { return q.dynamic.Exists }
+func (q Quantity) IsDynamic() bool { return q.dynamic != nil }
 
 // Value returns the fixed value of the Quantity. If dynamic, returns 0.
 func (q Quantity) Value() int {
-	if q.dynamic.Exists {
+	if q.dynamic != nil {
 		return 0
 	}
 	return q.fixed
 }
 
 // DynamicAmount returns the dynamic formula, if any.
-func (q Quantity) DynamicAmount() opt.V[DynamicAmount] { return q.dynamic }
+func (q Quantity) DynamicAmount() opt.V[DynamicAmount] {
+	if q.dynamic == nil {
+		return opt.V[DynamicAmount]{}
+	}
+	return opt.Val(*q.dynamic)
+}
 
 // ValidateInstructionSequence checks that a slice of Instructions has no structural
 // errors: no duplicate published keys, no ResultGate referencing an unknown or

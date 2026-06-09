@@ -67,7 +67,7 @@ func TestTransformChangesEffectiveFaceCharacteristics(t *testing.T) {
 	g.Battlefield = append(g.Battlefield, permanent)
 	obj := &game.StackObject{Controller: game.Player1, Targets: []game.Target{game.PermanentTarget(permanent.ObjectID)}}
 
-	resolveInstruction(engine, g, obj, game.Transform{TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.Transform{Object: game.TargetPermanentReference(0)}, nil)
 
 	if permanent.Face != game.FaceBack || !permanent.Transformed {
 		t.Fatalf("permanent face/transformed = %v/%v, want back/true", permanent.Face, permanent.Transformed)
@@ -91,7 +91,7 @@ func TestTransformDoesNothingToModalDFC(t *testing.T) {
 	g.Battlefield = append(g.Battlefield, permanent)
 	obj := &game.StackObject{Controller: game.Player1, Targets: []game.Target{game.PermanentTarget(permanent.ObjectID)}}
 
-	resolveInstruction(engine, g, obj, game.Transform{TargetIndex: 0}, nil)
+	resolveInstruction(engine, g, obj, game.Transform{Object: game.TargetPermanentReference(0)}, nil)
 
 	if permanent.Face != game.FaceBack || permanent.Transformed {
 		t.Fatalf("modal DFC face/transformed = %v/%v, want back/false", permanent.Face, permanent.Transformed)
@@ -184,7 +184,7 @@ func transformCreatureWithBackTrigger() *game.CardDef {
 				Pattern: game.TriggerPattern{Event: game.EventSpellCast, Controller: game.TriggerControllerYou},
 			},
 			Content: game.Mode{
-				Sequence: []game.Instruction{{Primitive: game.GainLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(1)}}},
+				Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
 			}.Ability(),
 		},
 	}

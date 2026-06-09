@@ -7,9 +7,10 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
-func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, targetIndex int, templates []game.RuleEffect, duration game.EffectDuration) bool {
+func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V[game.ObjectReference], templates []game.RuleEffect, duration game.EffectDuration) bool {
 	if len(templates) == 0 {
 		return false
 	}
@@ -22,8 +23,10 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, targetIndex 
 		if ruleEffect.AffectedSource {
 			ruleEffect.AffectedObjectID = sourceObjectID
 		} else if ruleEffect.AffectedObjectID == 0 {
-			if objectID, ok := targetPermanentObjectID(obj, targetIndex); ok {
-				ruleEffect.AffectedObjectID = objectID
+			if object.Exists {
+				if resolved, ok := resolveObjectReference(g, obj, object.Val); ok && resolved.permanent != nil {
+					ruleEffect.AffectedObjectID = resolved.permanent.ObjectID
+				}
 			}
 		}
 		ruleEffect.CreatedTurn = g.Turn.TurnNumber

@@ -5,6 +5,42 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
+// referenceResolver is the internal module that binds a game and a resolving
+// stack object and owns every runtime reference lookup: target-slot objects and
+// players, source and attached permanents, linked objects, event/last-known
+// information, alive-player checks, and group enumeration with Selection
+// matching and exclusions. It is created per resolution; the resolveObjectReference,
+// resolvePlayerReference, permanentAt, and playerAt entry points are thin
+// adapters over it.
+//
+// By default the resolver derives the source permanent from the stack object
+// (obj.SourceID). A caller whose source basis differs from the stack source,
+// such as Damage resolving a group relative to its own DamageSource, builds the
+// resolver with newReferenceResolverWithSource so source-dependent references
+// (the source permanent and the EquippedCreature/Other... selectors) bind to the
+// caller's permanent, including an explicit nil that resolves to no source.
+type referenceResolver struct {
+	g   *game.Game
+	obj *game.StackObject
+
+	// source overrides the stack-derived source permanent when sourceFixed is
+	// set. A nil source with sourceFixed true means "no source permanent".
+	source      *game.Permanent
+	sourceFixed bool
+}
+
+func newReferenceResolver(g *game.Game, obj *game.StackObject) referenceResolver {
+	return referenceResolver{g: g, obj: obj}
+}
+
+// newReferenceResolverWithSource builds a resolver whose source permanent is
+// fixed to source rather than derived from obj.SourceID. Passing a nil source
+// fixes the basis to "no source permanent", preserving the legacy behavior of
+// source-dependent selectors when the calling context has no source object.
+func newReferenceResolverWithSource(g *game.Game, obj *game.StackObject, source *game.Permanent) referenceResolver {
+	return referenceResolver{g: g, obj: obj, source: source, sourceFixed: true}
+}
+
 type resolvedObjectReference struct {
 	permanent *game.Permanent
 	snapshot  game.ObjectSnapshot
@@ -30,40 +66,321 @@ func (r *resolvedObjectReference) owner() (game.PlayerID, bool) {
 	return 0, false
 }
 
-func resolveObjectReference(g *game.Game, obj *game.StackObject, ref game.ObjectReference) (resolvedObjectReference, bool) {
-	switch ref.Kind {
+// object resolves an ObjectReference to a live permanent or its last-known
+// snapshot.
+func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectReference, bool) {
+	switch ref.Kind() {
 	case game.ObjectReferenceTargetPermanent:
-		objectID, ok := targetPermanentObjectID(obj, ref.TargetIndex)
+		objectID, ok := targetPermanentObjectID(r.obj, ref.TargetIndex())
 		if !ok {
 			return resolvedObjectReference{}, false
 		}
-		return resolvePermanentOrLastKnown(g, objectID)
+		return resolvePermanentOrLastKnown(r.g, objectID)
 	case game.ObjectReferenceSourcePermanent:
-		if permanent, ok := sourcePermanent(g, obj); ok {
+		if permanent, ok := r.sourcePermanent(); ok {
 			return resolvedObjectReference{permanent: permanent}, true
 		}
-		return resolvePermanentOrLastKnown(g, obj.SourceID)
-	case game.ObjectReferenceAttachedPermanent:
-		objectID, ok := attachedPermanentObjectID(g, obj, ref)
+		if r.sourceFixed {
+			return resolvedObjectReference{}, false
+		}
+		return resolvePermanentOrLastKnown(r.g, r.obj.SourceID)
+	case game.ObjectReferenceSourceAttachedPermanent:
+		permanent, ok := r.sourcePermanent()
+		if !ok || !permanent.AttachedTo.Exists {
+			return resolvedObjectReference{}, false
+		}
+		return resolvePermanentOrLastKnown(r.g, permanent.AttachedTo.Val)
+	case game.ObjectReferenceTargetAttachedPermanent:
+		objectID, ok := targetPermanentObjectID(r.obj, ref.TargetIndex())
 		if !ok {
 			return resolvedObjectReference{}, false
 		}
-		return resolvePermanentOrLastKnown(g, objectID)
+		permanent, ok := permanentByObjectID(r.g, objectID)
+		if !ok || !permanent.AttachedTo.Exists {
+			return resolvedObjectReference{}, false
+		}
+		return resolvePermanentOrLastKnown(r.g, permanent.AttachedTo.Val)
 	case game.ObjectReferenceLinkedObject:
-		for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, ref.LinkID)) {
-			if resolved, ok := resolvePermanentOrLastKnown(g, linked.ObjectID); ok {
+		for _, linked := range linkedObjects(r.g, linkedObjectSourceKey(r.g, r.obj, ref.LinkID())) {
+			if resolved, ok := resolvePermanentOrLastKnown(r.g, linked.ObjectID); ok {
 				return resolved, true
 			}
 		}
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceEventPermanent:
-		if obj != nil && obj.HasTriggerEvent && obj.TriggerEvent.PermanentID != 0 {
-			return resolvePermanentOrLastKnown(g, obj.TriggerEvent.PermanentID)
+		if r.obj != nil && r.obj.HasTriggerEvent && r.obj.TriggerEvent.PermanentID != 0 {
+			return resolvePermanentOrLastKnown(r.g, r.obj.TriggerEvent.PermanentID)
 		}
 		return resolvedObjectReference{}, false
 	default:
 		return resolvedObjectReference{}, false
 	}
+}
+
+// player resolves a PlayerReference to a live player.
+func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool) {
+	var playerID game.PlayerID
+	var ok bool
+	switch ref.Kind() {
+	case game.PlayerReferenceController:
+		playerID, ok = r.obj.Controller, true
+	case game.PlayerReferenceTargetPlayer:
+		playerID, ok = r.targetPlayer(ref.TargetIndex())
+	case game.PlayerReferenceObjectController:
+		playerID, ok = r.referencedObjectController(ref)
+	case game.PlayerReferenceObjectOwner:
+		playerID, ok = r.referencedObjectOwner(ref)
+	default:
+		return 0, false
+	}
+	if !ok || !isPlayerAlive(r.g, playerID) {
+		return 0, false
+	}
+	return playerID, true
+}
+
+// playerGroup resolves a PlayerGroupReference to alive players in stable player order.
+func (r referenceResolver) playerGroup(ref game.PlayerGroupReference) []game.PlayerID {
+	switch ref.Kind {
+	case game.PlayerGroupReferenceOpponents:
+		return aliveOpponents(r.g, r.obj.Controller)
+	case game.PlayerGroupReferenceAllPlayers:
+		players := make([]game.PlayerID, 0, game.NumPlayers)
+		for _, player := range r.g.Players {
+			if !player.Eliminated {
+				players = append(players, player.ID)
+			}
+		}
+		return players
+	default:
+		return nil
+	}
+}
+
+// permanentAt resolves a target slot to a permanent.
+func (r referenceResolver) permanentAt(targetIndex int) (*game.Permanent, bool) {
+	return effectPermanentTarget(r.g, r.obj, targetIndex)
+}
+
+// playerAt resolves a target slot to a player.
+func (r referenceResolver) playerAt(targetIndex int) (game.PlayerID, bool) {
+	return r.targetPlayer(targetIndex)
+}
+
+func (r referenceResolver) sourcePermanent() (*game.Permanent, bool) {
+	if r.sourceFixed {
+		return r.source, r.source != nil
+	}
+	return sourcePermanent(r.g, r.obj)
+}
+
+func (r referenceResolver) targetPlayer(targetIndex int) (game.PlayerID, bool) {
+	if targetIndex < 0 || targetIndex >= len(r.obj.Targets) {
+		return 0, false
+	}
+	target := r.obj.Targets[targetIndex]
+	if target.Kind != game.TargetPlayer || !isPlayerAlive(r.g, target.PlayerID) {
+		return 0, false
+	}
+	return target.PlayerID, true
+}
+
+func (r referenceResolver) referencedObjectController(ref game.PlayerReference) (game.PlayerID, bool) {
+	object, ok := ref.Object()
+	if !ok {
+		return 0, false
+	}
+	resolved, ok := r.object(object)
+	if !ok {
+		return 0, false
+	}
+	return resolved.controller(r.g)
+}
+
+func (r referenceResolver) referencedObjectOwner(ref game.PlayerReference) (game.PlayerID, bool) {
+	object, ok := ref.Object()
+	if !ok {
+		return 0, false
+	}
+	resolved, ok := r.object(object)
+	if !ok {
+		return 0, false
+	}
+	return resolved.owner()
+}
+
+// groupMembers enumerates the object IDs of the permanents that belong to a
+// resolved GroupReference, preserving battlefield iteration order. It owns the
+// candidate-domain enumeration and the object-reference exclusions that
+// Selection deliberately keeps outside itself.
+func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
+	switch ref.Domain() {
+	case game.GroupDomainAttachedObject:
+		return r.attachedObjectGroupMembers(ref)
+	case game.GroupDomainObjectControlled:
+		return r.objectControlledGroupMembers(ref)
+	case game.GroupDomainBattlefield:
+		return r.battlefieldGroupMembers(ref)
+	default:
+		return []id.ID{}
+	}
+}
+
+func (r referenceResolver) attachedObjectGroupMembers(ref game.GroupReference) []id.ID {
+	anchor, ok := ref.Anchor()
+	if !ok {
+		return []id.ID{}
+	}
+	resolved, ok := r.object(anchor)
+	if !ok || resolved.permanent == nil || !resolved.permanent.AttachedTo.Exists {
+		return []id.ID{}
+	}
+	attachedID := resolved.permanent.AttachedTo.Val
+	if _, ok := permanentByObjectID(r.g, attachedID); !ok {
+		return []id.ID{}
+	}
+	return []id.ID{attachedID}
+}
+
+func (r referenceResolver) battlefieldGroupMembers(ref game.GroupReference) []id.ID {
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	if sel.ExcludeSource && source == nil {
+		return []id.ID{}
+	}
+	excludedID := r.exclusionObjectID(ref)
+	members := make([]id.ID, 0, len(r.g.Battlefield))
+	for _, permanent := range r.g.Battlefield {
+		if excludedID != 0 && permanent.ObjectID == excludedID {
+			continue
+		}
+		if !r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		members = append(members, permanent.ObjectID)
+	}
+	return members
+}
+
+func (r referenceResolver) objectControlledGroupMembers(ref game.GroupReference) []id.ID {
+	anchor, ok := ref.Anchor()
+	if !ok {
+		return []id.ID{}
+	}
+	resolved, ok := r.object(anchor)
+	if !ok {
+		return []id.ID{}
+	}
+	controller, ok := resolved.controller(r.g)
+	if !ok {
+		return []id.ID{}
+	}
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	if sel.ExcludeSource && source == nil {
+		return []id.ID{}
+	}
+	excludedID := r.exclusionObjectID(ref)
+	members := make([]id.ID, 0, len(r.g.Battlefield))
+	for _, permanent := range r.g.Battlefield {
+		if excludedID != 0 && permanent.ObjectID == excludedID {
+			continue
+		}
+		if effectiveController(r.g, permanent) != controller {
+			continue
+		}
+		if !r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		members = append(members, permanent.ObjectID)
+	}
+	return members
+}
+
+// permanentMatchesGroupSelection reports whether permanent satisfies the group's
+// Selection. Callers hoist the source-exclusion divergence (an ExcludeSource
+// group with no source permanent matches nothing) out of the enumeration loop.
+func (r referenceResolver) permanentMatchesGroupSelection(sel *game.Selection, source, permanent *game.Permanent) bool {
+	values := effectivePermanentValues(r.g, permanent)
+	subject := selectionSubject{
+		kind:      subjectPermanent,
+		g:         r.g,
+		permanent: permanent,
+		values:    &values,
+		viewer:    r.obj.Controller,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = effectiveController(r.g, permanent)
+	}
+	if source != nil {
+		subject.sourceObjectID = source.ObjectID
+	}
+	return matchSelection(&subject, sel)
+}
+
+// exclusionObjectID resolves the group's excluded object to its identity object
+// ID, returning 0 when the group has no exclusion or the excluded object cannot
+// be identified. It reads the reference's identity even when the permanent has
+// left the battlefield, matching the legacy "except target" exclusion.
+func (r referenceResolver) exclusionObjectID(ref game.GroupReference) id.ID {
+	exclude, ok := ref.Exclusion()
+	if !ok {
+		return 0
+	}
+	objectID, _ := r.objectIdentityID(exclude)
+	return objectID
+}
+
+func (r referenceResolver) objectIdentityID(ref game.ObjectReference) (id.ID, bool) {
+	switch ref.Kind() {
+	case game.ObjectReferenceTargetPermanent:
+		return targetPermanentObjectID(r.obj, ref.TargetIndex())
+	case game.ObjectReferenceSourcePermanent:
+		if r.obj == nil || r.obj.SourceID == 0 {
+			return 0, false
+		}
+		return r.obj.SourceID, true
+	case game.ObjectReferenceEventPermanent:
+		if r.obj != nil && r.obj.HasTriggerEvent && r.obj.TriggerEvent.PermanentID != 0 {
+			return r.obj.TriggerEvent.PermanentID, true
+		}
+		return 0, false
+	case game.ObjectReferenceSourceAttachedPermanent:
+		permanent, ok := r.sourcePermanent()
+		if !ok || !permanent.AttachedTo.Exists {
+			return 0, false
+		}
+		return permanent.AttachedTo.Val, true
+	case game.ObjectReferenceTargetAttachedPermanent:
+		objectID, ok := targetPermanentObjectID(r.obj, ref.TargetIndex())
+		if !ok {
+			return 0, false
+		}
+		permanent, ok := permanentByObjectID(r.g, objectID)
+		if !ok || !permanent.AttachedTo.Exists {
+			return 0, false
+		}
+		return permanent.AttachedTo.Val, true
+	case game.ObjectReferenceLinkedObject:
+		for _, linked := range linkedObjects(r.g, linkedObjectSourceKey(r.g, r.obj, ref.LinkID())) {
+			if linked.ObjectID != 0 {
+				return linked.ObjectID, true
+			}
+		}
+		return 0, false
+	default:
+		return 0, false
+	}
+}
+
+// resolveObjectReference is a thin adapter over the referenceResolver module.
+func resolveObjectReference(g *game.Game, obj *game.StackObject, ref game.ObjectReference) (resolvedObjectReference, bool) {
+	return newReferenceResolver(g, obj).object(ref)
+}
+
+// resolvePlayerReference is a thin adapter over the referenceResolver module.
+func resolvePlayerReference(g *game.Game, obj *game.StackObject, ref game.PlayerReference) (game.PlayerID, bool) {
+	return newReferenceResolver(g, obj).player(ref)
 }
 
 func resolvePermanentOrLastKnown(g *game.Game, objectID id.ID) (resolvedObjectReference, bool) {
@@ -85,79 +402,4 @@ func targetPermanentObjectID(obj *game.StackObject, targetIndex int) (id.ID, boo
 		return 0, false
 	}
 	return target.PermanentID, true
-}
-
-func attachedPermanentObjectID(g *game.Game, obj *game.StackObject, ref game.ObjectReference) (id.ID, bool) {
-	var permanent *game.Permanent
-	var ok bool
-	if ref.TargetIndex >= 0 {
-		objectID, targetOK := targetPermanentObjectID(obj, ref.TargetIndex)
-		if !targetOK {
-			return 0, false
-		}
-		permanent, ok = permanentByObjectID(g, objectID)
-	} else {
-		permanent, ok = sourcePermanent(g, obj)
-	}
-	if !ok || !permanent.AttachedTo.Exists {
-		if ref.TargetIndex < 0 && obj.HasTriggerEvent && obj.TriggerEvent.PermanentID != 0 {
-			return obj.TriggerEvent.PermanentID, true
-		}
-		return 0, false
-	}
-	return permanent.AttachedTo.Val, true
-}
-
-func resolvePlayerReference(g *game.Game, obj *game.StackObject, ref game.PlayerReference) (game.PlayerID, bool) {
-	var playerID game.PlayerID
-	var ok bool
-	switch ref.Kind {
-	case game.PlayerReferenceController:
-		playerID, ok = obj.Controller, true
-	case game.PlayerReferenceTargetPlayer:
-		playerID, ok = targetPlayer(g, obj, ref.TargetIndex)
-	case game.PlayerReferenceObjectController:
-		playerID, ok = referencedObjectController(g, obj, ref)
-	case game.PlayerReferenceObjectOwner:
-		playerID, ok = referencedObjectOwner(g, obj, ref)
-	default:
-		return 0, false
-	}
-	if !ok || !isPlayerAlive(g, playerID) {
-		return 0, false
-	}
-	return playerID, true
-}
-
-func targetPlayer(g *game.Game, obj *game.StackObject, targetIndex int) (game.PlayerID, bool) {
-	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
-		return 0, false
-	}
-	target := obj.Targets[targetIndex]
-	if target.Kind != game.TargetPlayer || !isPlayerAlive(g, target.PlayerID) {
-		return 0, false
-	}
-	return target.PlayerID, true
-}
-
-func referencedObjectController(g *game.Game, obj *game.StackObject, ref game.PlayerReference) (game.PlayerID, bool) {
-	if !ref.Object.Exists {
-		return 0, false
-	}
-	resolved, ok := resolveObjectReference(g, obj, ref.Object.Val)
-	if !ok {
-		return 0, false
-	}
-	return resolved.controller(g)
-}
-
-func referencedObjectOwner(g *game.Game, obj *game.StackObject, ref game.PlayerReference) (game.PlayerID, bool) {
-	if !ref.Object.Exists {
-		return 0, false
-	}
-	resolved, ok := resolveObjectReference(g, obj, ref.Object.Val)
-	if !ok {
-		return 0, false
-	}
-	return resolved.owner()
 }

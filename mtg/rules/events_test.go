@@ -151,7 +151,7 @@ func TestDamageEffectEmitsDamageEvent(t *testing.T) {
 	engine := NewEngine(nil)
 	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
 		Amount:    game.Fixed(3),
-		Recipient: game.TargetRecipient(0),
+		Recipient: game.AnyTargetDamageRecipient(0),
 	}, []game.Target{game.PlayerTarget(game.Player2)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -179,7 +179,7 @@ func TestCounteredSpellEmitsStackToGraveyardZoneChangeButNoResolveEvent(t *testi
 	target := addCombatCreaturePermanent(g, game.Player2)
 	sourceID := addEffectSpellToStack(g, game.Player1, game.Damage{
 		Amount:    game.Fixed(3),
-		Recipient: game.TargetRecipient(0),
+		Recipient: game.AnyTargetDamageRecipient(0),
 	}, []game.Target{game.PermanentTarget(target.ObjectID)})
 	card, ok := g.GetCardInstance(sourceID)
 	if !ok {
@@ -212,8 +212,10 @@ func TestMassDamageEffectEmitsDamageEventForEachPermanent(t *testing.T) {
 		Types: []types.Card{types.Artifact}},
 	})
 	addEffectSpellToStack(g, game.Player1, game.Damage{
-		Amount:    game.Fixed(2),
-		Recipient: game.SelectorRecipient(game.EffectSelectorAllCreatures),
+		Amount: game.Fixed(2),
+		Recipient: game.GroupDamageRecipient(
+			game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+		),
 	}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -238,7 +240,7 @@ func TestActivatedAbilityDamageEventUsesPermanentSourceObject(t *testing.T) {
 		ActivatedAbilities: []game.ActivatedAbility{{
 			Content: game.Mode{
 				Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "target player"}},
-				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
+				Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.AnyTargetDamageRecipient(0)}}},
 			}.Ability(),
 		}}},
 	})
@@ -465,7 +467,7 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 			},
 			Content: game.Mode{
 				Sequence: []game.Instruction{
-					{Primitive: game.LoseLife{TargetIndex: game.TargetIndexController, Amount: game.Fixed(3)}},
+					{Primitive: game.LoseLife{Player: game.ControllerReference(), Amount: game.Fixed(3)}},
 				},
 			}.Ability(),
 		}}}},

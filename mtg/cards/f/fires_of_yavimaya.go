@@ -43,8 +43,11 @@ var FiresOfYavimaya = func() *game.CardDef {
 			`,
 		ContinuousEffects: []game.ContinuousEffect{
 			{
-				Layer:    game.LayerAbility,
-				Selector: game.EffectSelectorCreaturesYouControl,
+				Layer: game.LayerAbility,
+				Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+				}),
 				AddKeywords: []game.Keyword{
 					game.Haste,
 				},
@@ -80,7 +83,7 @@ var FiresOfYavimaya = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.ModifyPT{
-							TargetIndex:    0,
+							Object:         game.TargetPermanentReference(0),
 							PowerDelta:     game.Fixed(2),
 							ToughnessDelta: game.Fixed(2),
 							Duration:       game.DurationUntilEndOfTurn,

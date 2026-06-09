@@ -12,7 +12,7 @@ func TestUntilEndOfTurnPTModifierUsesRuntimeContinuousEffect(t *testing.T) {
 	engine := NewEngine(nil)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
-		TargetIndex:    0,
+		Object:         game.TargetPermanentReference(0),
 		PowerDelta:     game.Fixed(3),
 		ToughnessDelta: game.Fixed(3),
 		Duration:       game.DurationUntilEndOfTurn,
@@ -36,8 +36,8 @@ func TestUntilEndOfTurnPTModifierSnapshotsDynamicX(t *testing.T) {
 	engine := NewEngine(nil)
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
-		TargetIndex: 0,
-		Duration:    game.DurationUntilEndOfTurn,
+		Object:   game.TargetPermanentReference(0),
+		Duration: game.DurationUntilEndOfTurn,
 		PowerDelta: game.Dynamic(game.DynamicAmount{
 			Kind: game.DynamicAmountX,
 		}),
@@ -74,11 +74,11 @@ func TestUntilEndOfTurnPTModifierSnapshotsDynamicTargetPower(t *testing.T) {
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 	creature.Counters.Add(counter.PlusOnePlusOne, 1)
 	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
-		TargetIndex: 0,
-		Duration:    game.DurationUntilEndOfTurn,
+		Object:   game.TargetPermanentReference(0),
+		Duration: game.DurationUntilEndOfTurn,
 		PowerDelta: game.Dynamic(game.DynamicAmount{
-			Kind:        game.DynamicAmountTargetPower,
-			TargetIndex: 0,
+			Kind:   game.DynamicAmountTargetPower,
+			Object: game.TargetPermanentReference(0),
 		}),
 	}, []game.Target{game.PermanentTarget(creature.ObjectID)})
 
@@ -106,7 +106,7 @@ func TestCleanupExpiresTemporaryContinuousEffectsButKeepsCountersAndStaticEffect
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	creature.Counters.Add(counter.PlusOnePlusOne, 1)
 	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
-		TargetIndex:    0,
+		Object:         game.TargetPermanentReference(0),
 		PowerDelta:     game.Fixed(3),
 		ToughnessDelta: game.Fixed(3),
 		Duration:       game.DurationUntilEndOfTurn,
@@ -207,7 +207,7 @@ func TestDelayedNextEndStepTriggerFiresOnce(t *testing.T) {
 		Trigger: game.DelayedTriggerDef{
 			Timing: game.DelayedAtBeginningOfNextEndStep,
 			Content: game.Mode{
-				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}}},
+				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
 			}.Ability(),
 		},
 	}, nil)

@@ -111,7 +111,7 @@ func simpleGainLifeInstant(name string) *game.CardDef {
 		Types: []types.Card{types.Instant},
 		SpellAbility: opt.Val(game.Mode{
 			Sequence: []game.Instruction{
-				{Primitive: game.GainLife{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
+				{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}},
 			},
 		}.Ability())},
 	}
@@ -128,7 +128,7 @@ func stormTargetCreatureInstant() *game.CardDef {
 		Types: []types.Card{types.Instant},
 		SpellAbility: opt.Val(game.Mode{
 			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
-			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.TargetRecipient(0)}}},
+			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(1), Recipient: game.AnyTargetDamageRecipient(0)}}},
 		}.Ability()),
 		StaticAbilities: []game.StaticAbility{game.StormStaticBody}},
 	}

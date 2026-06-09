@@ -56,13 +56,13 @@ var DonatelloMutantMechanic = &game.CardDef{
 						{
 							Primitive: game.AddCounter{
 								Amount:      game.Fixed(3),
-								TargetIndex: 0,
+								Object:      game.TargetPermanentReference(0),
 								CounterKind: counter.PlusOnePlusOne,
 							},
 						},
 						{
 							Primitive: game.ApplyContinuous{
-								TargetIndex: 0,
+								Object: opt.Val(game.TargetPermanentReference(0)),
 								ContinuousEffects: []game.ContinuousEffect{
 									{
 										Layer: game.LayerType,
@@ -87,7 +87,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 							},
 							Condition: opt.Val(game.EffectCondition{
 								Text:          "it isn't a creature",
-								TargetIndex:   0,
+								Object:        game.TargetPermanentReference(0),
 								PermanentType: opt.Val(types.Creature),
 								Negate:        true,
 							}),
@@ -128,7 +128,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.MoveCounters{
-								TargetIndex: 0,
+								Object: game.TargetPermanentReference(0),
 								Source: game.CounterSourceSpec{
 									Kind: game.CounterSourceEventPermanent,
 								},

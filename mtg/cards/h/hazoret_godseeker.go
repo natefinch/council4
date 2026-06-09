@@ -69,7 +69,7 @@ var HazoretGodseeker = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.StartEngines{
-							TargetIndex: game.TargetIndexController,
+							Player: game.ControllerReference(),
 						},
 					},
 				},
@@ -107,7 +107,7 @@ var HazoretGodseeker = func() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.ApplyRule{
-							TargetIndex: 0,
+							Object: opt.Val(game.TargetPermanentReference(0)),
 							RuleEffects: []game.RuleEffect{
 								{
 									Kind: game.RuleEffectCantBeBlocked,

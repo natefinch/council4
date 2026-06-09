@@ -15,6 +15,13 @@ func resolveFightTargets(g *game.Game, obj *game.StackObject, firstIndex, second
 	if !firstOK || !secondOK || first.ObjectID == second.ObjectID || !permanentHasType(g, first, types.Creature) || !permanentHasType(g, second, types.Creature) {
 		return
 	}
+	resolveFightPermanents(g, first, second)
+}
+
+func resolveFightPermanents(g *game.Game, first, second *game.Permanent) {
+	if first == nil || second == nil || first.ObjectID == second.ObjectID || !permanentHasType(g, first, types.Creature) || !permanentHasType(g, second, types.Creature) {
+		return
+	}
 	emitFightEvent(g, first, second)
 	emitFightEvent(g, second, first)
 	dealPermanentDamage(g, first.CardInstanceID, first.ObjectID, effectiveController(g, first), second, effectivePower(g, first), false)
@@ -201,7 +208,7 @@ func clueTokenDef() *game.CardDef {
 	}}
 	drawContent := game.Mode{
 		Sequence: []game.Instruction{
-			{Primitive: game.Draw{Amount: game.Fixed(1), TargetIndex: game.TargetIndexController}},
+			{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
 		},
 	}.Ability()
 
