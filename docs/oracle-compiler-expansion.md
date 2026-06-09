@@ -4,7 +4,7 @@ This document is both the rollout checklist and the execution guide for
 expanding executable Oracle-text compilation. An agent should be able to resume
 from this file without relying on conversation history.
 
-**Current corpus support: 2,158 / 37,628 cards**
+**Current corpus support: 2,212 / 38,101 cards**
 
 The expansion plan was established in `7e65c8e` (`compiler expansion plan`).
 Expansion steps 1–7 are complete. Begin with step 8 and do not combine numbered

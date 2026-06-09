@@ -38,6 +38,51 @@ func TestGenerateExecutableCardSourceKeywords(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfCannotBlock(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Reluctant Bear",
+		Layout:     "normal",
+		ManaCost:   "{1}{G}",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't block.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.CantBlockStaticBody") {
+		t.Fatalf("source missing cannot-block static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsConditionalCannotBlock(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Conditional Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't block unless you control an artifact.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostic")
+	}
+}
+
 func TestGenerateExecutableCardSourceTapManaAbility(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

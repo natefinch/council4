@@ -365,6 +365,10 @@ func compileEffects(
 	var effects []CompiledEffect
 	for _, sentence := range sentences {
 		tokens := semanticTokens(sentence.Tokens, reminders, quoted)
+		if effect, ok := compileStaticRuleEffect(sentence, tokens); ok {
+			effects = append(effects, effect)
+			continue
+		}
 		duration := compileDuration(tokens)
 		staticSubject, staticSubjectSpan := compileStaticSubject(tokens)
 		for i, token := range tokens {
@@ -392,6 +396,28 @@ func compileEffects(
 
 	}
 	return effects
+}
+
+func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect, bool) {
+	if sentence.Text != "This creature can't block." {
+		return CompiledEffect{}, false
+	}
+	for _, token := range tokens {
+		if equalWord(token, "block") {
+			return CompiledEffect{
+				Kind:     EffectCantBlock,
+				Span:     sentence.Span,
+				Text:     sentence.Text,
+				VerbSpan: token.Span,
+				Selector: CompiledSelector{
+					Kind: SelectorCreature,
+					Raw:  "this creature",
+				},
+				Negated: true,
+			}, true
+		}
+	}
+	return CompiledEffect{}, false
 }
 
 func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span) {

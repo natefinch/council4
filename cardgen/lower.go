@@ -171,6 +171,9 @@ func lowerExecutableAbility(
 	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
 		return lowered, diagnostic
 	}
+	if lowered, ok, diagnostic := lowerStaticRuleDeclaration(ability); ok {
+		return lowered, diagnostic
+	}
 	if staticBuff, ok, diagnostic := lowerStaticPTBuff(ability, syntax); ok {
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic

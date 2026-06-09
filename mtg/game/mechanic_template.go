@@ -15,6 +15,15 @@ import (
 
 const tapManaChoiceKey = ChoiceKey("oracle-mana-color")
 
+// CantBlockStaticBody is the complete static ability for a creature that cannot block.
+var CantBlockStaticBody = StaticAbility{
+	Text: "This creature can't block.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantBlock,
+		AffectedSource: true,
+	}},
+}
+
 // WardStaticAbility builds the complete static ability for Ward with a mana cost.
 func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	keywordCost := append(cost.Mana(nil), manaCost...)

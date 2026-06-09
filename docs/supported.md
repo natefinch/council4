@@ -1,11 +1,13 @@
 # Supported Cards
 
-Cards supported: 2,158
+Cards supported: 2,212
 
 - +2 Mace
 - A-Eyes of the Beholder
 - A-Jackhammer
 - A-Midnight Assassin
+- A.I.M. Bot
+- A.I.M. Labs
 - Aardvark Sloth
 - Abbey Gargoyles
 - Abbey Griffin
@@ -16,11 +18,13 @@ Cards supported: 2,158
 - Aegis Turtle
 - Aegis of the Heavens
 - Aerial Responder
+- Aesthir Glider
 - Aether Adept
 - Aetherborn
 - Affa Guard Hound
 - Affa Protector
 - Ageless Guardian
+- Agent of Atlas
 - Air Elemental
 - Ajani's Sunstriker
 - Akoum Refuge
@@ -104,8 +108,10 @@ Cards supported: 2,158
 - Arrogant Vampire
 - Artifact Zombie
 - Ascended Lawmage
+- Asgardian Citadel
 - Ashaya, the Awoken World
 - Ashcoat Bear
+- Ashenmoor Gouger
 - Assault Griffin
 - Assault Zeppelid
 - Assembly-Worker
@@ -129,6 +135,7 @@ Cards supported: 2,158
 - Aven Smokeweaver
 - Aven Squire
 - Aven of Enduring Hope
+- Avengers Hangar
 - Axebane Beast
 - Axebane Stag
 - Axegrinder Giant
@@ -182,9 +189,11 @@ Cards supported: 2,158
 - Bird Maiden
 - Bird Soldier
 - Birds of Paradise
+- Birnin Zana Plaza
 - Bishop's Soldier
 - Bitterbow Sharpshooters
 - Black Knight
+- Black Widow, Natasha Romanoff
 - Blackcleave Goblin
 - Blade of the Sixth Pride
 - Blanchwood Treefolk
@@ -332,6 +341,7 @@ Cards supported: 2,158
 - Colossapede
 - Colossodon Yearling
 - Concentrate
+- Concentrated Fire
 - Conclave Equenaut
 - Concordia Pegasus
 - Conifer Strider
@@ -357,6 +367,8 @@ Cards supported: 2,158
 - Cragcrown Pathway // Timbercrown Pathway
 - Crash of Rhinos
 - Craterize
+- Craven Giant
+- Craven Knight
 - Craw Wurm
 - Crazed Skirge
 - Creeping Corrosion
@@ -378,6 +390,7 @@ Cards supported: 2,158
 - Cylian Elf
 - Cystbearer
 - Daggerback Basilisk
+- Daggerclaw Imp
 - Daggerdrome Imp
 - Dakmor Bat
 - Dakmor Scorpion
@@ -579,6 +592,7 @@ Cards supported: 2,158
 - Fell
 - Femeref Scouts
 - Feral Abomination
+- Feral Ferocity
 - Feral Invocation
 - Feral Krushok
 - Feral Maaka
@@ -607,6 +621,7 @@ Cards supported: 2,158
 - Fire Snake
 - First Mate Ragavan
 - Fish
+- Fisk Tower
 - Fists of the Anvil
 - Flame Lash
 - Flame Slash
@@ -622,7 +637,9 @@ Cards supported: 2,158
 - Flying Dolphin-Fish
 - Flying Men
 - Fomori Nomad
+- Foot Disciple
 - Foot Headquarters
+- Foot Skirmisher
 - Foot Soldiers
 - Force of Savagery
 - Forest
@@ -653,6 +670,7 @@ Cards supported: 2,158
 - Frostbridge Guard
 - Fugitive Wizard
 - Fugue
+- Fungus
 - Fungus Beast
 - Fungus Dinosaur
 - Fusion Elemental
@@ -700,6 +718,7 @@ Cards supported: 2,158
 - Glacial Floodplain
 - Glacial Wall
 - Gladecover Scout
+- Glamorous Grapplers
 - Glass Golem
 - Glimmer
 - Glistener Elf
@@ -722,9 +741,11 @@ Cards supported: 2,158
 - Goblin Chariot
 - Goblin Deathraiders
 - Goblin Gardener
+- Goblin Glider
 - Goblin Hero
 - Goblin Outlander
 - Goblin Piker
+- Goblin Raider
 - Goblin Rogue
 - Goblin Roughrider
 - Goblin Settler
@@ -798,6 +819,7 @@ Cards supported: 2,158
 - Halo Hopper
 - Hamster
 - Hand of Silumgar
+- Happy Hogan, Dauntless Driver
 - Hardened-Scale Armor
 - Harmonize
 - Harpy
@@ -808,12 +830,14 @@ Cards supported: 2,158
 - Havenwood Wurm
 - Havoc Devils
 - Hawkeater Moth
+- Hawkeye, Clint Barton
 - Hazerider Drake
 - Headless Horseman
 - Headwater Sentries
 - Healer of the Glade
 - Healer's Flock
 - Healer's Hawk
+- Hell's Kitchen
 - Hellion
 - Helpful Hunter
 - Hengegate Pathway // Mistgate Pathway
@@ -852,12 +876,17 @@ Cards supported: 2,158
 - Hornet Sting
 - Horse
 - Hostile Minotaur
+- Hour of Defeat
 - Hover Barrier
 - Hovermyr
 - Howling Fury
 - Huatli's Snubhorn
+- Hulk, Bruce Banner
 - Hulking Bugbear
+- Hulking Cyclops
 - Hulking Devil
+- Hulking Goblin
+- Hulking Ogre
 - Hullcarver
 - Human // Wolf
 - Human Citizen
@@ -909,6 +938,7 @@ Cards supported: 2,158
 - Iron Myr
 - Iron Tusk Elephant
 - Iron Will
+- Iron-Barb Hellion
 - Ironclad Krovod
 - Ironroot Treefolk
 - Irrigated Farmland
@@ -938,6 +968,7 @@ Cards supported: 2,158
 - Joraga Visionary
 - Jungle Barrier
 - Jungle Hollow
+- Jungle Lion
 - Jungle Shrine
 - Jungle Weaver
 - Juniper Order Druid
@@ -998,8 +1029,10 @@ Cards supported: 2,158
 - Kraken Hatchling
 - Kraul Raider
 - Kraul Stinger
+- Kree Commandos
 - Krovikan Scoundrel
 - Kyoshi Warrior Guard
+- Kyren Glider
 - Laboratory Brute
 - Lady Orca
 - Lagac Lizard
@@ -1048,6 +1081,7 @@ Cards supported: 2,158
 - Lonely Sandbar
 - Looming Altisaur
 - Lorehold Campus
+- Los Diablos Missile Base
 - Lose Hope
 - Lost Leonin
 - Lost in a Labyrinth
@@ -1081,6 +1115,7 @@ Cards supported: 2,158
 - Mana Geode
 - Manakin
 - Manalith
+- Mandroid Squadron
 - Maned Serval
 - Manic Vandal
 - Mantis Rider
@@ -1202,6 +1237,7 @@ Cards supported: 2,158
 - Nightguard Patrol
 - Nightmare Horror
 - Nightshade Dryad
+- Nightshade Stinger
 - Nightveil Predator
 - Nightwind Glider
 - Nimble Birdsticker
@@ -1240,6 +1276,7 @@ Cards supported: 2,158
 - Ogre Berserker
 - Ogre Resister
 - Ogre Sentry
+- Ogre Taskmaster
 - Ogre's Cleaver
 - Oketra's Attendant
 - Oko's Accomplices
@@ -1309,7 +1346,6 @@ Cards supported: 2,158
 - Pincher Beetles
 - Piranha Fly
 - Piranha Marsh
-- Pirate
 - Pitiless Gorgon
 - Plague Myr
 - Plague Stinger
@@ -1329,6 +1365,7 @@ Cards supported: 2,158
 - Pond Prophet
 - Pounce
 - Pouncing Cheetah
+- Power Boost
 - Pradesh Gypsies
 - Prairie Stream
 - Prakhata Club Security
@@ -1351,6 +1388,7 @@ Cards supported: 2,158
 - Purple-Crystal Crab
 - Putrid Goblin
 - Pygmy Razorback
+- Pym Technologies
 - Pyromantic Pilgrim
 - Python
 - Qilin's Blessing
@@ -1359,6 +1397,7 @@ Cards supported: 2,158
 - Quandrix Campus
 - Queen's Bay Soldier
 - Quick Study
+- Quicksilver, Pietro Maximoff
 - Quiet Purity
 - Quilled Slagwurm
 - Rabanastre, Royal City
@@ -1415,6 +1454,7 @@ Cards supported: 2,158
 - Renegade Troops
 - Repentant Blacksmith
 - Replicated Ring
+- Repulsor Rays
 - Rescind
 - Resistance Skywarden
 - Returned Centaur
@@ -1509,10 +1549,12 @@ Cards supported: 2,158
 - Scalebane's Elite
 - Scaled Behemoth
 - Scaled Wurm
+- Scarlet Witch, Wanda Maximoff
 - Scarwood Goblins
 - Scarwood Treefolk
 - Scathe Zombies
 - Scattered Groves
+- Scavenging Scarab
 - Scepter of Dominance
 - Scepter of Insight
 - Scion of Ugin
@@ -1603,6 +1645,7 @@ Cards supported: 2,158
 - Siege Mastodon
 - Siege Wurm
 - Siegecraft
+- Sightless Ghoul
 - Sigiled Behemoth
 - Sigiled Paladin
 - Sigiled Starfish
@@ -1695,6 +1738,7 @@ Cards supported: 2,158
 - Spiked Baloth
 - Spined Karok
 - Spined Wurm
+- Spineless Thug
 - Spinning Wheel
 - Spire Monitor
 - Spirit Warrior
@@ -1715,6 +1759,7 @@ Cards supported: 2,158
 - Stand Firm
 - Standing Troops
 - Stangg Twin
+- Stark Industries
 - Starlight Invoker
 - Starlit Angel
 - Staunch Defenders
@@ -1748,6 +1793,7 @@ Cards supported: 2,158
 - Striped Riverwinder
 - Study
 - Submerged Boneyard
+- Subterranean Cavern
 - Suburban Sanctuary
 - Sulfurous Mire
 - Sultai Scavenger
@@ -1819,9 +1865,11 @@ Cards supported: 2,158
 - Thassa's Bounty
 - Thaumaturge's Familiar
 - The Atropal
+- The Fabulous Frog-Man
 - The Hollow Sentinel
 - The Lady of the Mountain
 - The Terror of Serpent's Pass
+- The Whizzer, Classic Speedster
 - Thermal Glider
 - Third Path Savant
 - Thor Odinson
@@ -1942,8 +1990,10 @@ Cards supported: 2,158
 - Utopia Tree
 - Valeron Outlander
 - Valiant Guard
+- Valkyrior Skyrider
 - Vampire Champion
 - Vampire Demon
+- Vampire Interloper
 - Vampire Knight
 - Vampire Nighthawk
 - Vampire Noble
@@ -1976,6 +2026,7 @@ Cards supported: 2,158
 - Viashino Runner
 - Viashino Spearhunter
 - Viashino Warrior
+- Vibranium Energy Daggers
 - Vigilant Baloth
 - Vindicate
 - Vine Trellis
@@ -2044,6 +2095,7 @@ Cards supported: 2,158
 - Wardscale Crocodile
 - Warlord's Axe
 - Warpath Ghoul
+- Warriors of Wakanda
 - Warship Scout
 - Wary Okapi
 - Wasp
@@ -2126,11 +2178,13 @@ Cards supported: 2,158
 - Yavimaya Barbarian
 - Yavimaya Hollow
 - Yavimaya Wurm
+- Yellow Scarves Troops
 - Yeva's Forcemage
 - Yoked Ox
 - Yoked Plowbeast
 - Yotian Medic
 - Yotian Soldier
+- Young Wei Recruits
 - Young Wolf
 - Youthful Knight
 - Youthful Scholar

@@ -206,6 +206,19 @@ func TestProtectionFromColorsStaticAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestCantBlockStaticBodyBuildsCompleteMechanic(t *testing.T) {
+	if CantBlockStaticBody.Text != "This creature can't block." {
+		t.Fatalf("text = %q", CantBlockStaticBody.Text)
+	}
+	if len(CantBlockStaticBody.RuleEffects) != 1 {
+		t.Fatalf("rule effects = %+v", CantBlockStaticBody.RuleEffects)
+	}
+	effect := CantBlockStaticBody.RuleEffects[0]
+	if effect.Kind != RuleEffectCantBlock || !effect.AffectedSource {
+		t.Fatalf("rule effect = %+v", effect)
+	}
+}
+
 func TestTapManaAbilityBuildsCompleteMechanic(t *testing.T) {
 	ability := TapManaAbility(mana.G)
 

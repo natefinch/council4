@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,158 / 37,628**
+**Cards supported: 2,212 / 38,101**
 
 The pipeline is:
 
@@ -116,7 +116,9 @@ destruction, fixed draw and life changes, fixed controller scry and surveil,
 exact investigate and proliferate, fixed controller or target-player discard
 and mill, one-target tap, untap, and regeneration, exact fights between two
 target creatures, and fixed power/toughness buffs on enchanted creature,
-equipped creature, creatures you control, and other creatures you control. Supported sentence-sized effects may be lowered in Oracle
+equipped creature, creatures you control, and other creatures you control. It
+also lowers exact `This creature can't block.` static declarations to a
+source-scoped rule effect. Supported sentence-sized effects may be lowered in Oracle
 order when at most one clause targets. It also lowers exact supported self-enter
 and self-dies triggers with ordered supported spell-like effects. An exact
 leading `you may` on a single-effect trigger maps to trigger-level optionality;
