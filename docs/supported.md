@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,234
+Cards supported: 2,243
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -218,6 +218,7 @@ Cards supported: 2,234
 - Bloodstone Cameo
 - Blossom Dryad
 - Blossoming Sands
+- Blurred Mongoose
 - Boarding Party
 - Bog Imp
 - Bogardan Rager
@@ -278,6 +279,7 @@ Cards supported: 2,234
 - Capital Guard
 - Captive Flame
 - Caravan Hurda
+- Carnage Tyrant
 - Carnivore
 - Carnivorous Plant
 - Carrion Crow
@@ -794,6 +796,7 @@ Cards supported: 2,234
 - Great Forest Druid
 - Great Furnace
 - Great Hart
+- Great Sable Stag
 - Great-Horn Krushok
 - Greataxe
 - Greater Basilisk
@@ -869,6 +872,7 @@ Cards supported: 2,234
 - Hippo-Cows
 - Hired Blade
 - Hired Poisoner
+- Hit-Monkey
 - Hitchclaw Recluse
 - Hobgoblin Dragoon
 - Hollowhenge Beast
@@ -934,6 +938,7 @@ Cards supported: 2,234
 - Independent Troops
 - Indomitable Ancients
 - Indomitable Will
+- Inescapable Blaze
 - Infectious Host
 - Infernal Grasp
 - Infuriate
@@ -1585,6 +1590,7 @@ Cards supported: 2,234
 - Scour from Existence
 - Scoured Barrens
 - Scourge Servant
+- Scragnoth
 - Screeching Skaab
 - Scrounger of Souls
 - Scrubland
@@ -1701,6 +1707,7 @@ Cards supported: 2,234
 - Skyhunter Patrol
 - Skyhunter Prowler
 - Skyknight Legionnaire
+- Skylasher
 - Skyline Predator
 - Skyraker Giant
 - Skyscanner
@@ -1828,6 +1835,7 @@ Cards supported: 2,234
 - Sunlit Marsh
 - Sunspire Griffin
 - Suntail Hawk
+- Supreme Verdict
 - Surveilling Sprite
 - Survivor
 - Suture Spirit
@@ -1877,6 +1885,7 @@ Cards supported: 2,234
 - Tentacle
 - Tenth District Guard
 - Teroh's Faithful
+- Terra Stomper
 - Terrain Elemental
 - Terrian, World Tyrant
 - Territorial Roc

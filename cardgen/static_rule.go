@@ -8,11 +8,26 @@ import (
 func lowerStaticRuleDeclaration(
 	ability oracle.CompiledAbility,
 ) (abilityLowering, bool, *oracle.Diagnostic) {
-	if len(ability.Effects) != 1 || ability.Effects[0].Kind != oracle.EffectCantBlock {
+	if len(ability.Effects) != 1 {
+		return abilityLowering{}, false, nil
+	}
+	var body game.StaticAbility
+	var varName string
+	var detail string
+	switch ability.Effects[0].Kind {
+	case oracle.EffectCantBlock:
+		body = game.CantBlockStaticBody
+		varName = "game.CantBlockStaticBody"
+		detail = "the executable source backend supports only exact self cannot-block text"
+	case oracle.EffectCantBeCountered:
+		body = game.CantBeCounteredStaticBody
+		varName = "game.CantBeCounteredStaticBody"
+		detail = "the executable source backend supports only exact self uncounterable text"
+	default:
 		return abilityLowering{}, false, nil
 	}
 	if ability.Kind != oracle.AbilityStatic ||
-		ability.Text != game.CantBlockStaticBody.Text ||
+		ability.Text != body.Text ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Modes) != 0 ||
@@ -25,13 +40,13 @@ func lowerStaticRuleDeclaration(
 		return abilityLowering{}, true, executableDiagnostic(
 			ability,
 			"unsupported static rule declaration",
-			"the executable source backend supports only exact self cannot-block text",
+			detail,
 		)
 	}
 	return abilityLowering{
 		staticAbilities: []loweredStaticAbility{{
-			Body:    game.CantBlockStaticBody,
-			VarName: "game.CantBlockStaticBody",
+			Body:    body,
+			VarName: varName,
 		}},
 		consumed: semanticConsumption{
 			effects:    1,

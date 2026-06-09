@@ -124,6 +124,47 @@ func TestGenerateExecutableCardSourceSelfCannotBlock(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfUncounterable(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Certain Doom",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Sorcery",
+		OracleText: "This spell can't be countered.\nDestroy target creature.",
+		Colors:     []string{"B"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.CantBeCounteredStaticBody") {
+		t.Fatalf("source missing uncounterable static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsNoncanonicalSelfUncounterable(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Certain Doom",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Sorcery",
+		OracleText: "Certain Doom can't be countered.\nDestroy target creature.",
+		Colors:     []string{"B"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsConditionalCannotBlock(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

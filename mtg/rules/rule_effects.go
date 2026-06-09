@@ -46,6 +46,7 @@ func activeRuleEffects(g *game.Game) []game.RuleEffect {
 		}
 	}
 	effects = append(effects, staticRuleEffects(g)...)
+	effects = append(effects, stackStaticRuleEffects(g)...)
 	return effects
 }
 
@@ -76,6 +77,40 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 				ruleEffect.SourceCardID = source.CardInstanceID
 				if ruleEffect.AffectedSource {
 					ruleEffect.AffectedObjectID = source.ObjectID
+				}
+				effects = append(effects, ruleEffect)
+			}
+		}
+	}
+	return effects
+}
+
+func stackStaticRuleEffects(g *game.Game) []game.RuleEffect {
+	var effects []game.RuleEffect
+	for _, source := range g.Stack.Objects() {
+		if source.Kind != game.StackSpell {
+			continue
+		}
+		_, sourceDef, ok := cardInstanceFaceDef(g, source.SourceID, source.Face)
+		if !ok {
+			continue
+		}
+		for i := range sourceDef.StaticAbilities {
+			body := &sourceDef.StaticAbilities[i]
+			if body.ZoneOfFunction != zone.Stack {
+				continue
+			}
+			if !conditionSatisfied(g, conditionContext{
+				controller: source.Controller,
+			}, body.Condition) {
+				continue
+			}
+			for _, ruleEffect := range body.RuleEffects {
+				ruleEffect.Controller = source.Controller
+				ruleEffect.SourceObjectID = source.ID
+				ruleEffect.SourceCardID = source.SourceID
+				if ruleEffect.AffectedSource {
+					ruleEffect.AffectedObjectID = source.ID
 				}
 				effects = append(effects, ruleEffect)
 			}
