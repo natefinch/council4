@@ -4,10 +4,10 @@ This document is both the rollout checklist and the execution guide for
 expanding executable Oracle-text compilation. An agent should be able to resume
 from this file without relying on conversation history.
 
-**Current corpus support: 1,992 / 37,628 cards**
+**Current corpus support: 2,010 / 37,628 cards**
 
 The expansion plan was established in `7e65c8e` (`compiler expansion plan`).
-Expansion steps 1–5 are complete. Begin with step 6 and do not combine numbered
+Expansion steps 1–6 are complete. Begin with step 7 and do not combine numbered
 steps into one commit.
 
 ## Goal
@@ -287,7 +287,7 @@ inspected with no false positives.
 
 ### 6. Broader enter and dies triggers
 
-- [ ] Complete and commit step 6.
+- [x] Complete and commit step 6.
 
 **Planning signal:** 9,599 trigger blockers plus 632 related issues.
 
@@ -321,6 +321,13 @@ Reject initially:
   damage triggers;
 - delayed, reflexive, linked-object, and once-per-turn triggers;
 - optional wording whose choice point is not represented exactly.
+
+Completed with ordered supported effect bodies and exact leading `you may` for
+single-effect trigger-level optionality. Partially optional sequences remain
+rejected. The corpus moved from 1,992 to 2,010 generated cards; all 18 newly
+supported cards were inspected with no false positives. Typed `Host` supertype
+support was added so the newly generated host-layout cards preserve their full
+type lines.
 
 ### 7. Conditional enters-tapped replacements
 

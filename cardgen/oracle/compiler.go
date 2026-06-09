@@ -56,6 +56,13 @@ func compileAbility(
 
 	body := abilityBodyTokens(ability)
 	tokens := semanticTokens(body, ability.Reminders, ability.Quoted)
+	if ability.Kind == AbilityTriggered &&
+		len(tokens) >= 2 &&
+		equalWord(tokens[0], "you") &&
+		equalWord(tokens[1], "may") {
+		compiled.Optional = true
+		compiled.OptionalSpan = Span{Start: tokens[0].Span.Start, End: tokens[1].Span.End}
+	}
 	compiled.Keywords = compileKeywords(tokens)
 	compiled.Targets = compileTargets(tokens)
 	conditionTokens := tokens

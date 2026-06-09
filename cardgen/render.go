@@ -672,6 +672,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 		return "", err
 	}
 	fields = append(fields, fmt.Sprintf("Trigger: %s,", trigger))
+	if ability.Optional {
+		fields = append(fields, "Optional: true,")
+	}
 	content, err := r.renderAbilityContent(ctx, ability.Content)
 	if err != nil {
 		return "", err

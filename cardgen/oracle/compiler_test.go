@@ -65,6 +65,20 @@ func TestCompileTriggeredAbility(t *testing.T) {
 	}
 }
 
+func TestCompileOptionalTriggeredAbility(t *testing.T) {
+	t.Parallel()
+	source := "When this creature enters, you may draw a card."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+
+	ability := compilation.Abilities[0]
+	if !ability.Optional || source[ability.OptionalSpan.Start.Offset:ability.OptionalSpan.End.Offset] != "you may" {
+		t.Fatalf("optional ability = %#v", ability)
+	}
+}
+
 func TestCompileReturnToOwnersHand(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile(

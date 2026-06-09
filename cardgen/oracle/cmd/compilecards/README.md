@@ -74,9 +74,9 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported untap spell` | An untap effect was recognized, but it is not exact untapping of one artifact, creature, enchantment, land, or permanent target. |
 | `unsupported mill spell` | A mill effect was recognized, but it is not an exact fixed number of cards milled by the controller or one target player. |
 | `unsupported enter trigger` | A self-enter trigger was recognized, but its event, condition, optionality, structure, or number of effects is outside the exact supported template. |
-| `unsupported enter trigger effect` | The trigger clause is supported, but its single effect does not match a supported complete spell-like effect template. |
+| `unsupported enter trigger effect` | The trigger clause is supported, but its effect sequence does not match supported complete spell-like effect templates. |
 | `unsupported dies trigger` | A self-dies trigger was recognized, but its event, condition, structure, or number of effects is outside the exact supported template. |
-| `unsupported dies trigger effect` | The self-dies trigger clause is supported, but its single effect does not match a supported complete spell-like effect template. |
+| `unsupported dies trigger effect` | The self-dies trigger clause is supported, but its effect sequence does not match supported complete spell-like effect templates. |
 | `unsupported enters-tapped replacement` | Replacement wording was recognized, but it is not an exact unconditional supported self enters-tapped sentence. |
 | `unsupported Cycling ability` | Cycling was recognized, but it is not an exact ordinary Cycling ability with a representable mana cost. |
 | `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but it is neither a supported tap mana ability nor an ordinary battlefield activation with exact mana-only, tap-only, or mana-then-tap costs and a supported effect body. |

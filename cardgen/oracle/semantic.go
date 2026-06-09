@@ -8,18 +8,20 @@ type Compilation struct {
 
 // CompiledAbility is a source-spanned semantic ability.
 type CompiledAbility struct {
-	Kind        AbilityKind
-	Span        Span
-	Text        string
-	AbilityWord string
-	Cost        *CompiledCost
-	Trigger     *CompiledTrigger
-	Modes       []CompiledMode
-	Targets     []CompiledTarget
-	Conditions  []CompiledCondition
-	Effects     []CompiledEffect
-	Keywords    []CompiledKeyword
-	References  []CompiledReference
+	Kind         AbilityKind
+	Span         Span
+	Text         string
+	AbilityWord  string
+	Optional     bool
+	OptionalSpan Span
+	Cost         *CompiledCost
+	Trigger      *CompiledTrigger
+	Modes        []CompiledMode
+	Targets      []CompiledTarget
+	Conditions   []CompiledCondition
+	Effects      []CompiledEffect
+	Keywords     []CompiledKeyword
+	References   []CompiledReference
 }
 
 // CompiledMode is one semantic option in a modal ability.

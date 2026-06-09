@@ -5,10 +5,11 @@ named string types for card definitions and rules predicates. The public API for
 card definitions is this package: use `types.<Name>` constants from
 `mtg/game/types`.
 
-Use `types.Super` for supertypes such as `types.Legendary`, `types.Card` for
-primary card types such as `types.Creature`, and `types.Sub` for subtypes such
-as `types.Angel` or `types.Forest`. The values are strings so they can be logged
-and rendered directly while still giving card definitions type-safe fields.
+Use `types.Super` for supertypes such as `types.Legendary` and `types.Host`,
+`types.Card` for primary card types such as `types.Creature`, and `types.Sub`
+for subtypes such as `types.Angel` or `types.Forest`. The values are strings so
+they can be logged and rendered directly while still giving card definitions
+type-safe fields.
 
 The subtype source lists are organized by card-type family in separate files in
 this directory (`artifact.go`, `creature.go`, `land.go`, and so on). `types.go`

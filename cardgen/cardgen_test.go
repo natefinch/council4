@@ -75,6 +75,13 @@ func TestParseTypeLine(t *testing.T) {
 			[]string{"Enchantment"},
 			nil,
 		},
+		{
+			"host creature",
+			"Host Creature — Beaver",
+			[]string{"Host"},
+			[]string{"Creature"},
+			[]string{"Beaver"},
+		},
 	}
 
 	for _, tt := range tests {

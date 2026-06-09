@@ -10,4 +10,5 @@ const (
 	Snow      Super = "Snow"
 	World     Super = "World"
 	Ongoing   Super = "Ongoing"
+	Host      Super = "Host"
 )

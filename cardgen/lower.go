@@ -61,6 +61,7 @@ type abilityLowering struct {
 type semanticConsumption struct {
 	cost       bool
 	trigger    bool
+	optional   bool
 	modes      int
 	targets    int
 	conditions int
@@ -304,6 +305,7 @@ func lowerExecutableAbility(
 			triggeredAbility: opt.Val(triggeredAbility),
 			consumed: semanticConsumption{
 				trigger:    true,
+				optional:   ability.Optional,
 				targets:    len(ability.Targets),
 				effects:    len(ability.Effects),
 				references: len(ability.References),
@@ -740,6 +742,7 @@ func (lowering *abilityLowering) complete(
 ) bool {
 	if lowering.consumed.cost != (ability.Cost != nil) ||
 		lowering.consumed.trigger != (ability.Trigger != nil) ||
+		lowering.consumed.optional != ability.Optional ||
 		lowering.consumed.modes != len(ability.Modes) ||
 		lowering.consumed.targets != len(ability.Targets) ||
 		lowering.consumed.conditions != len(ability.Conditions) ||
@@ -767,16 +770,16 @@ func lowerEnterTrigger(
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
 	eventKind, supportedEvent := lowerSelfTriggerEvent(ability)
 	summary := "unsupported enter trigger"
-	detail := "the executable source backend supports only exact self-enter triggers with one supported effect"
+	detail := "the executable source backend supports only exact self-enter triggers with supported effects"
 	if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
 		summary = "unsupported dies trigger"
-		detail = "the executable source backend supports only exact self-dies triggers with one supported effect"
+		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
 	if ability.Trigger == nil ||
 		ability.Trigger.Kind != oracle.TriggerWhen ||
 		!supportedEvent ||
 		ability.Trigger.Condition != nil ||
-		len(ability.Effects) != 1 ||
+		len(ability.Effects) == 0 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
@@ -799,13 +802,38 @@ func lowerEnterTrigger(
 	}
 	body := ability
 	body.Kind = oracle.AbilitySpell
-	body.Span = ability.Effects[0].Span
-	body.Text = titleFirst(ability.Effects[0].Text)
+	body.Span = oracle.Span{
+		Start: ability.Effects[0].Span.Start,
+		End:   ability.Effects[len(ability.Effects)-1].Span.End,
+	}
+	body.Text = titleFirst(
+		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+	)
 	body.Trigger = nil
+	body.Optional = false
+	body.OptionalSpan = oracle.Span{}
 	body.References = bodyReferences(ability.References, ability.Trigger.Span)
 	bodySyntax := syntax
 	bodySyntax.Kind = oracle.AbilitySpell
 	bodySyntax.Tokens = syntax.Tokens[comma+1:]
+	if ability.Optional {
+		if len(ability.Effects) != 1 ||
+			len(bodySyntax.Tokens) < 3 ||
+			!equalTokenWord(bodySyntax.Tokens[0], "you") ||
+			!equalTokenWord(bodySyntax.Tokens[1], "may") ||
+			ability.OptionalSpan.Start != ability.Effects[0].Span.Start {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
+		}
+		effect := body.Effects[0]
+		effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
+		effect.Span.Start = effect.VerbSpan.Start
+		body.Effects = []oracle.CompiledEffect{effect}
+		body.Span.Start = effect.Span.Start
+		body.Text = titleFirst(
+			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+		)
+		bodySyntax.Tokens = bodySyntax.Tokens[2:]
+	}
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
 	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
@@ -825,7 +853,8 @@ func lowerEnterTrigger(
 				Source: game.TriggerSourceSelf,
 			},
 		},
-		Content: content,
+		Optional: ability.Optional,
+		Content:  content,
 	}, nil
 }
 

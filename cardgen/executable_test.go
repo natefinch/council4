@@ -1219,6 +1219,82 @@ func TestGenerateExecutableCardSourceEnterDrawTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEnterMultipleEffectTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Resourceful Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature enters, draw a card. You gain 2 life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	draw := strings.Index(source, "Primitive: game.Draw")
+	gain := strings.Index(source, "Primitive: game.GainLife")
+	if draw < 0 || gain < 0 || draw >= gain {
+		t.Fatalf("trigger sequence is not draw then gain life:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceOptionalEnterTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Thoughtful Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature enters, you may draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Optional: true",
+		"Primitive: game.Draw",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceHostCreature(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Eager Beaver",
+		Layout:     "host",
+		TypeLine:   "Host Creature — Beaver",
+		OracleText: "When this creature enters, you may untap target permanent.",
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Supertypes: []types.Super{types.Host}") {
+		t.Fatalf("source does not preserve Host supertype:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceEnterLifeTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -1332,6 +1408,54 @@ func TestGenerateExecutableCardSourceDiesTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceDiesMultipleEffectTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Generous Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature dies, draw a card. You gain 2 life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "g")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	draw := strings.Index(source, "Primitive: game.Draw")
+	gain := strings.Index(source, "Primitive: game.GainLife")
+	if draw < 0 || gain < 0 || draw >= gain {
+		t.Fatalf("trigger sequence is not draw then gain life:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsPartiallyOptionalTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Unclear Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature enters, you may draw a card. You gain 2 life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported enter trigger" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1393,7 +1517,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "reveal mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player reveals and mills three cards."},
 		{name: "compound mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills three cards, then draws a card."},
 		{name: "mass mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Each opponent mills three cards."},
-		{name: "optional enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature enters, you may draw a card."},
 		{name: "intervening enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature enters, if you control an artifact, draw a card."},
 		{name: "other enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature enters, draw a card."},
 		{name: "leave trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature leaves the battlefield, draw a card."},
@@ -1439,7 +1562,7 @@ func TestGenerateExecutableCardSourceRejectsPartialAbility(t *testing.T) {
 	if source != "" || len(diagnostics) == 0 {
 		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
 	}
-	if got := diagnostics[0].Summary; got != "unsupported enter trigger" {
+	if got := diagnostics[0].Summary; got != "unsupported enter trigger effect" {
 		t.Fatalf("summary = %q", got)
 	}
 }

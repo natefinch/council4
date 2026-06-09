@@ -22,6 +22,7 @@ var knownSupertypes = map[string]bool{
 	"Snow":      true,
 	"World":     true,
 	"Ongoing":   true,
+	"Host":      true,
 }
 
 var knownTypes = map[string]bool{
@@ -95,6 +96,8 @@ func SupertypeToLiteral(name string) string {
 		return "types.World"
 	case "Ongoing":
 		return "types.Ongoing"
+	case "Host":
+		return "types.Host"
 	default:
 		return "/* unknown supertype: " + name + " */"
 	}
