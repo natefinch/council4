@@ -38,6 +38,69 @@ func TestGenerateExecutableCardSourceKeywords(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceDevoid(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Colorless Bear",
+		Layout:        "normal",
+		ManaCost:      "{1}{R}",
+		TypeLine:      "Creature — Bear",
+		OracleText:    "Devoid (This card has no color.)",
+		Colors:        []string{"R"},
+		ColorIdentity: []string{"R"},
+		Power:         new("2"),
+		Toughness:     new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DevoidStaticBody",
+		"ColorIdentity: color.NewIdentity(color.Red)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "Colors:") {
+		t.Fatalf("Devoid card face is not colorless:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsNoncanonicalDevoid(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Devoid",
+		"Devoid (This card is colorless.)",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Almost Colorless Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "a")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+			}
+			if got := diagnostics[0].Summary; got != "unsupported Devoid ability" {
+				t.Fatalf("summary = %q", got)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceSelfCannotBlock(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

@@ -18,6 +18,7 @@ func TestSimpleKeywordStaticBodyTemplates(t *testing.T) {
 		body    StaticAbility
 		keyword Keyword
 	}{
+		{name: "DevoidStaticBody", body: DevoidStaticBody, keyword: Devoid},
 		{name: "DeathtouchStaticBody", body: DeathtouchStaticBody, keyword: Deathtouch},
 		{name: "FlashStaticBody", body: FlashStaticBody, keyword: Flash},
 		{name: "FlyingStaticBody", body: FlyingStaticBody, keyword: Flying},

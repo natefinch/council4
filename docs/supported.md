@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,231
+Cards supported: 2,234
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -203,6 +203,7 @@ Cards supported: 2,231
 - Blightstep Pathway // Searstep Pathway
 - Blightwidow
 - Blind Phantasm
+- Blinding Drone
 - Blinding Mage
 - Blinding Souleater
 - Blister Beetle
@@ -1395,6 +1396,7 @@ Cards supported: 2,231
 - Prismari Campus
 - Prized Griffin
 - Prizefighter Construct
+- Prophet of Distortion
 - Proven Combatant
 - Prowling Caracal
 - Pull Under
@@ -2037,6 +2039,7 @@ Cards supported: 2,231
 - Verdigris
 - Vernadi Shieldmate
 - Vernal Fen
+- Vestige of Emrakul
 - Veteran Armorer
 - Veteran Cavalier
 - Veteran's Sidearm

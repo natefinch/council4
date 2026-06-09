@@ -1550,6 +1550,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 	switch kw {
 	case game.KeywordNone:
 		return "game.KeywordNone", nil
+	case game.Devoid:
+		return "game.Devoid", nil
 	case game.Deathtouch:
 		return "game.Deathtouch", nil
 	case game.Defender:
