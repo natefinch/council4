@@ -328,6 +328,90 @@ func TestCompileFixedEffectValues(t *testing.T) {
 	}
 }
 
+func TestCompileStaticPTBuffSubjects(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source          string
+		wantSubject     StaticSubjectKind
+		wantSubjectText string
+		wantPower       CompiledSignedAmount
+		wantToughness   CompiledSignedAmount
+	}{
+		"enchanted creature": {
+			source:          "Enchanted creature gets +2/+2.",
+			wantSubject:     StaticSubjectAttachedObject,
+			wantSubjectText: "Enchanted creature",
+			wantPower:       CompiledSignedAmount{Value: 2, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 2, Known: true},
+		},
+		"equipped creature": {
+			source:          "Equipped creature gets -3/-1.",
+			wantSubject:     StaticSubjectAttachedObject,
+			wantSubjectText: "Equipped creature",
+			wantPower:       CompiledSignedAmount{Value: 3, Known: true, Negative: true},
+			wantToughness:   CompiledSignedAmount{Value: 1, Known: true, Negative: true},
+		},
+		"other creatures you control": {
+			source:          "Other creatures you control get +1/+1.",
+			wantSubject:     StaticSubjectOtherControlledCreatures,
+			wantSubjectText: "Other creatures you control",
+			wantPower:       CompiledSignedAmount{Value: 1, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 1, Known: true},
+		},
+		"creatures you control": {
+			source:          "Creatures you control get +0/+2.",
+			wantSubject:     StaticSubjectControlledCreatures,
+			wantSubjectText: "Creatures you control",
+			wantPower:       CompiledSignedAmount{Value: 0, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 2, Known: true},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(compilation.Abilities) != 1 {
+				t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
+			}
+			ability := compilation.Abilities[0]
+			if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectModifyPT {
+				t.Fatalf("effects = %#v", ability.Effects)
+			}
+			effect := ability.Effects[0]
+			if effect.StaticSubject != test.wantSubject {
+				t.Fatalf("static subject = %v, want %v", effect.StaticSubject, test.wantSubject)
+			}
+			if got := test.source[effect.StaticSubjectSpan.Start.Offset:effect.StaticSubjectSpan.End.Offset]; got != test.wantSubjectText {
+				t.Fatalf("subject span text = %q, want %q", got, test.wantSubjectText)
+			}
+			if effect.PowerDelta != test.wantPower || effect.ToughnessDelta != test.wantToughness {
+				t.Fatalf("PT = %+v / %+v, want %+v / %+v", effect.PowerDelta, effect.ToughnessDelta, test.wantPower, test.wantToughness)
+			}
+		})
+	}
+}
+
+func TestCompileResolvingPTBuffHasNoStaticSubject(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"Target creature gets +2/+2 until end of turn.",
+		ParseContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effect := compilation.Abilities[0].Effects[0]
+	if effect.StaticSubject != StaticSubjectNone {
+		t.Fatalf("static subject = %v, want StaticSubjectNone", effect.StaticSubject)
+	}
+	if effect.StaticSubjectSpan != (Span{}) {
+		t.Fatalf("static subject span = %#v, want zero span", effect.StaticSubjectSpan)
+	}
+}
+
 func TestCompileSurveilEffect(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile("Surveil 2.", ParseContext{InstantOrSorcery: true})

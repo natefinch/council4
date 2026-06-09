@@ -168,68 +168,19 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower modal abilities",
 		)
 	}
-	if enchantAbility, ok, diagnostic := lowerEnchantAbility(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		spans := []oracle.Span{ability.Keywords[0].Span}
-		for _, reminder := range syntax.Reminders {
-			spans = append(spans, reminder.Span)
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: enchantAbility}},
-			consumed: semanticConsumption{
-				keywords: 1,
-			},
-			sourceSpans: spans,
-		}, nil
+	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
+		return lowered, diagnostic
 	}
-	if protectionAbility, ok, diagnostic := lowerProtectionAbility(ability, syntax); ok {
+	if staticBuff, ok, diagnostic := lowerStaticPTBuff(ability, syntax); ok {
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
-		spans := []oracle.Span{ability.Keywords[0].Span}
-		for _, reminder := range syntax.Reminders {
-			spans = append(spans, reminder.Span)
-		}
 		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: protectionAbility}},
+			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
 			consumed: semanticConsumption{
-				keywords: 1,
+				effects: 1,
 			},
-			sourceSpans: spans,
-		}, nil
-	}
-	if equipAbility, ok, diagnostic := lowerEquipAbility(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		spans := []oracle.Span{ability.Keywords[0].Span}
-		for _, reminder := range syntax.Reminders {
-			spans = append(spans, reminder.Span)
-		}
-		return abilityLowering{
-			activatedAbility: opt.Val(equipAbility),
-			consumed: semanticConsumption{
-				keywords: 1,
-			},
-			sourceSpans: spans,
-		}, nil
-	}
-	if cyclingAbility, ok, diagnostic := lowerCyclingAbility(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		spans := []oracle.Span{ability.Keywords[0].Span}
-		for _, reminder := range syntax.Reminders {
-			spans = append(spans, reminder.Span)
-		}
-		return abilityLowering{
-			activatedAbility: opt.Val(cyclingAbility),
-			consumed: semanticConsumption{
-				keywords: 1,
-			},
-			sourceSpans: spans,
+			sourceSpans: []oracle.Span{ability.Effects[0].Span},
 		}, nil
 	}
 	switch ability.Kind {
@@ -553,6 +504,75 @@ func lowerProtectionAbility(
 	return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
 }
 
+// lowerKeywordDispatch tries Enchant, Protection, Equip, and Cycling — the
+// single-keyword special cases that each produce a full abilityLowering.
+// Returns (lowering, true, nil) on success, (lowering, true, diag) on a
+// recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
+func lowerKeywordDispatch(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, bool, *oracle.Diagnostic) {
+	if enchantAbility, ok, diag := lowerEnchantAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&enchantAbility, ability, syntax), true, nil
+	}
+	if protectionAbility, ok, diag := lowerProtectionAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&protectionAbility, ability, syntax), true, nil
+	}
+	if equipAbility, ok, diag := lowerEquipAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&equipAbility, ability, syntax), true, nil
+	}
+	if cyclingAbility, ok, diag := lowerCyclingAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	return abilityLowering{}, false, nil
+}
+
+func keywordStaticLowering(
+	body *game.StaticAbility,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) abilityLowering {
+	spans := keywordSpans(ability, syntax)
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{{Body: *body}},
+		consumed:        semanticConsumption{keywords: 1},
+		sourceSpans:     spans,
+	}
+}
+
+func keywordActivatedLowering(
+	body *game.ActivatedAbility,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) abilityLowering {
+	spans := keywordSpans(ability, syntax)
+	return abilityLowering{
+		activatedAbility: opt.Val(*body),
+		consumed:         semanticConsumption{keywords: 1},
+		sourceSpans:      spans,
+	}
+}
+
+func keywordSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
+	spans := []oracle.Span{ability.Keywords[0].Span}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return spans
+}
+
 func oracleColors(parameter string) ([]color.Color, bool) {
 	names := strings.Split(parameter, ",")
 	colors := make([]color.Color, 0, len(names))
@@ -705,6 +725,143 @@ func lowerCyclingAbility(
 		)
 	}
 	return game.CyclingActivatedAbility(manaCost), true, nil
+}
+
+func lowerStaticPTBuff(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if ability.Kind != oracle.AbilityStatic ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectModifyPT ||
+		ability.Effects[0].Duration != oracle.DurationNone ||
+		!ability.Effects[0].PowerDelta.Known ||
+		!ability.Effects[0].ToughnessDelta.Known ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Effects[0].StaticSubject == oracle.StaticSubjectNone ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, false, nil
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{ability.Effects[0].Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only exact fixed static creature power/toughness buffs",
+		)
+	}
+	effect := ability.Effects[0]
+	if !matchesExactStaticPTBuffSyntax(syntax, effect) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only exact fixed static creature power/toughness buffs",
+		)
+	}
+	group, ok := staticSubjectGroup(effect.StaticSubject)
+	if !ok {
+		return game.StaticAbility{}, false, nil
+	}
+	return game.StaticAbility{
+		Text: ability.Text,
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:          game.LayerPowerToughnessModify,
+			Group:          group,
+			PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
+			ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
+		}},
+	}, true, nil
+}
+
+func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, bool) {
+	switch subject {
+	case oracle.StaticSubjectAttachedObject:
+		return game.AttachedObjectGroup(game.SourcePermanentReference()), true
+	case oracle.StaticSubjectControlledCreatures:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		), true
+	case oracle.StaticSubjectOtherControlledCreatures:
+		return game.ObjectControlledGroupExcluding(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			game.SourcePermanentReference(),
+		), true
+	default:
+		return game.GroupReference{}, false
+	}
+}
+
+func matchesExactStaticPTBuffSyntax(
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	switch effect.StaticSubject {
+	case oracle.StaticSubjectAttachedObject:
+		return len(tokens) == 9 &&
+			(equalTokenWord(tokens[0], "enchanted") || equalTokenWord(tokens[0], "equipped")) &&
+			equalTokenWord(tokens[1], "creature") &&
+			equalTokenWord(tokens[2], "gets") &&
+			tokensMatchSignedAmount(tokens[3], tokens[4], effect.PowerDelta) &&
+			tokens[5].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[6], tokens[7], effect.ToughnessDelta) &&
+			tokens[8].Kind == oracle.Period
+	case oracle.StaticSubjectControlledCreatures:
+		return len(tokens) == 10 &&
+			equalTokenWord(tokens[0], "creatures") &&
+			equalTokenWord(tokens[1], "you") &&
+			equalTokenWord(tokens[2], "control") &&
+			equalTokenWord(tokens[3], "get") &&
+			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
+			tokens[6].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta) &&
+			tokens[9].Kind == oracle.Period
+	case oracle.StaticSubjectOtherControlledCreatures:
+		return len(tokens) == 11 &&
+			equalTokenWord(tokens[0], "other") &&
+			equalTokenWord(tokens[1], "creatures") &&
+			equalTokenWord(tokens[2], "you") &&
+			equalTokenWord(tokens[3], "control") &&
+			equalTokenWord(tokens[4], "get") &&
+			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
+			tokens[7].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta) &&
+			tokens[10].Kind == oracle.Period
+	default:
+		return false
+	}
+}
+
+func syntaxSemanticTokens(syntax oracle.Ability) []oracle.Token {
+	tokens := make([]oracle.Token, 0, len(syntax.Tokens))
+	for _, token := range syntax.Tokens {
+		if spanCoveredByDelimited(token.Span, syntax.Reminders) ||
+			spanCoveredByDelimited(token.Span, syntax.Quoted) {
+			continue
+		}
+		tokens = append(tokens, token)
+	}
+	return tokens
+}
+
+func tokensMatchSignedAmount(sign, amount oracle.Token, want oracle.CompiledSignedAmount) bool {
+	expectedSign := oracle.Plus
+	if want.Negative {
+		expectedSign = oracle.Minus
+	}
+	return sign.Kind == expectedSign &&
+		amount.Kind == oracle.Integer &&
+		amount.Text == strconv.Itoa(want.Value)
 }
 
 // lowerReminderManaAbility handles a parenthesized reminder mana ability such
@@ -1559,8 +1716,8 @@ func lowerFixedModifyPTSpell(
 			{
 				Primitive: game.ModifyPT{
 					Object:         game.TargetPermanentReference(0),
-					PowerDelta:     game.Fixed(effect.PowerDelta.Value),
-					ToughnessDelta: game.Fixed(effect.ToughnessDelta.Value),
+					PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
+					ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
 					Duration:       game.DurationUntilEndOfTurn,
 				},
 			},
@@ -2093,13 +2250,16 @@ func playerTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 
 func signedAmountText(amount oracle.CompiledSignedAmount) string {
 	if amount.Negative {
-		magnitude := amount.Value
-		if magnitude < 0 {
-			magnitude = -magnitude
-		}
-		return fmt.Sprintf("-%d", magnitude)
+		return fmt.Sprintf("-%d", amount.Value)
 	}
 	return fmt.Sprintf("+%d", amount.Value)
+}
+
+func compiledSignedAmountValue(amount oracle.CompiledSignedAmount) int {
+	if amount.Negative {
+		return -amount.Value
+	}
+	return amount.Value
 }
 
 func titleFirst(text string) string {

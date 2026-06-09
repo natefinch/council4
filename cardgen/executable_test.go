@@ -1683,12 +1683,6 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 			summary:    "unsupported activated ability",
 			detail:     "supports only exact mana and tap costs",
 		},
-		"static rules text": {
-			typeLine:   "Enchantment",
-			oracleText: "Creatures you control get +1/+1.",
-			summary:    "unsupported static ability",
-			detail:     "non-keyword static rules text",
-		},
 		"parameterized keyword": {
 			typeLine:   "Creature — Snake",
 			oracleText: "Toxic 1",

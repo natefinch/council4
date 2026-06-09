@@ -15,6 +15,9 @@ func CardNameToVarName(name string) string {
 			capitalize = true
 			continue
 		}
+		if b.Len() == 0 && unicode.IsDigit(r) {
+			_, _ = b.WriteString("Card")
+		}
 		if capitalize {
 			_, _ = b.WriteRune(unicode.ToUpper(r))
 			capitalize = false

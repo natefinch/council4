@@ -1,6 +1,9 @@
 package cardgen
 
 import (
+	"go/parser"
+	"go/token"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -192,6 +195,110 @@ func TestLowerProtectionFromMultipleColors(t *testing.T) {
 	}
 }
 
+func TestLowerEnchantedCreaturePTBuffAlongsideEnchant(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nEnchanted creature gets +2/+2.",
+	})
+	if len(face.StaticAbilities) != 2 {
+		t.Fatalf("got %d static abilities, want 2", len(face.StaticAbilities))
+	}
+	body := face.StaticAbilities[1].Body
+	if len(body.ContinuousEffects) != 1 {
+		t.Fatalf("got %d continuous effects, want 1", len(body.ContinuousEffects))
+	}
+	ce := body.ContinuousEffects[0]
+	if ce.Layer != game.LayerPowerToughnessModify {
+		t.Fatalf("layer = %v, want LayerPowerToughnessModify", ce.Layer)
+	}
+	if ce.Group.Domain() != game.GroupDomainAttachedObject {
+		t.Fatalf("group domain = %v, want GroupDomainAttachedObject", ce.Group.Domain())
+	}
+	if ce.PowerDelta != 2 || ce.ToughnessDelta != 2 {
+		t.Fatalf("PT delta = %d/%d, want 2/2", ce.PowerDelta, ce.ToughnessDelta)
+	}
+}
+
+func TestLowerEquippedCreaturePTBuff(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Equipment",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+0.\nEquip {2}",
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("got %d static abilities, want 1", len(face.StaticAbilities))
+	}
+	body := face.StaticAbilities[0].Body
+	if len(body.ContinuousEffects) != 1 {
+		t.Fatalf("got %d continuous effects, want 1", len(body.ContinuousEffects))
+	}
+	ce := body.ContinuousEffects[0]
+	if ce.Layer != game.LayerPowerToughnessModify {
+		t.Fatalf("layer = %v, want LayerPowerToughnessModify", ce.Layer)
+	}
+	if ce.Group.Domain() != game.GroupDomainAttachedObject {
+		t.Fatalf("group domain = %v, want GroupDomainAttachedObject", ce.Group.Domain())
+	}
+	if ce.PowerDelta != 2 || ce.ToughnessDelta != 0 {
+		t.Fatalf("PT delta = %d/%d, want 2/0", ce.PowerDelta, ce.ToughnessDelta)
+	}
+}
+
+func TestLowerCreaturesYouControlPTBuff(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Anthem",
+		Layout:     "normal",
+		TypeLine:   "Creature — Soldier",
+		OracleText: "Creatures you control get +1/+1.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	body := face.StaticAbilities[0].Body
+	ce := body.ContinuousEffects[0]
+	if ce.Group.Domain() != game.GroupDomainObjectControlled {
+		t.Fatalf("group domain = %v, want GroupDomainObjectControlled", ce.Group.Domain())
+	}
+	selection := ce.Group.Selection()
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v, want creature requirement", selection)
+	}
+	if _, excluded := ce.Group.Exclusion(); excluded {
+		t.Fatal("group exclusion unexpectedly set")
+	}
+	if ce.PowerDelta != 1 || ce.ToughnessDelta != 1 {
+		t.Fatalf("PT delta = %d/%d, want 1/1", ce.PowerDelta, ce.ToughnessDelta)
+	}
+}
+
+func TestLowerOtherCreaturesYouControlPTBuff(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Lord",
+		Layout:     "normal",
+		TypeLine:   "Creature — Soldier",
+		OracleText: "Other creatures you control get +1/+0.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	body := face.StaticAbilities[0].Body
+	ce := body.ContinuousEffects[0]
+	if ce.Group.Domain() != game.GroupDomainObjectControlled {
+		t.Fatalf("group domain = %v, want GroupDomainObjectControlled", ce.Group.Domain())
+	}
+	if _, excluded := ce.Group.Exclusion(); !excluded {
+		t.Fatal("group exclusion missing")
+	}
+	if ce.PowerDelta != 1 || ce.ToughnessDelta != 0 {
+		t.Fatalf("PT delta = %d/%d, want 1/0", ce.PowerDelta, ce.ToughnessDelta)
+	}
+}
+
 func TestLowerTapManaAbilityFixedColor(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -253,6 +360,63 @@ func TestLowerEntersTappedReplacement(t *testing.T) {
 	}
 	if !face.ReplacementAbilities[0].Replacement.EntersTapped {
 		t.Fatal("replacement is not an enters-tapped replacement")
+	}
+}
+
+func TestGenerateEquippedCreaturePTBuff(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Equipment",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+0.\nEquip {2}",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if !strings.Contains(source, "LayerPowerToughnessModify") {
+		t.Fatalf("source does not contain static PT effect:\n%s", source)
+	}
+	if !strings.Contains(source, "AttachedObjectGroup") {
+		t.Fatalf("source does not contain AttachedObjectGroup:\n%s", source)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestRejectResolvingPTBuffAsStatic(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Equipment",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+0 until end of turn.\nEquip {2}",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected rejection of resolving P/T effect, got none")
+	}
+}
+
+func TestRejectVariablePTBuff(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Equipment",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +1/+0 for each Equipment attached to it.\nEquip {2}",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected rejection of variable-amount P/T buff, got none")
 	}
 }
 

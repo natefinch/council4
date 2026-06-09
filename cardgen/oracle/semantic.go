@@ -222,21 +222,34 @@ const (
 	DurationThisCombat
 )
 
+// StaticSubjectKind identifies the group affected by a static continuous effect.
+type StaticSubjectKind uint8
+
+// Recognized static-effect subject kinds.
+const (
+	StaticSubjectNone StaticSubjectKind = iota
+	StaticSubjectAttachedObject
+	StaticSubjectControlledCreatures
+	StaticSubjectOtherControlledCreatures
+)
+
 // CompiledEffect is one recognized instruction verb and the sentence containing
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind           EffectKind
-	Span           Span
-	Text           string
-	VerbSpan       Span
-	Duration       DurationKind
-	Selector       CompiledSelector
-	Amount         CompiledAmount
-	PowerDelta     CompiledSignedAmount
-	ToughnessDelta CompiledSignedAmount
-	Symbol         string
-	Negated        bool
+	Kind              EffectKind
+	Span              Span
+	Text              string
+	VerbSpan          Span
+	Duration          DurationKind
+	Selector          CompiledSelector
+	Amount            CompiledAmount
+	PowerDelta        CompiledSignedAmount
+	ToughnessDelta    CompiledSignedAmount
+	StaticSubject     StaticSubjectKind
+	StaticSubjectSpan Span
+	Symbol            string
+	Negated           bool
 }
 
 // CompiledAmount is a fixed numeric amount recognized in an effect.

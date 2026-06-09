@@ -479,6 +479,21 @@ func TestContinuousEffectObjectControlledGroupUsesEffectiveController(t *testing
 	}
 }
 
+func TestEquippedCreatureStaticPTBuff(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	equipment := addEquipmentWithPTBuff(g, game.Player1, 2, 0)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
+	creature.Attachments = append(creature.Attachments, equipment.ObjectID)
+	equipment.AttachedTo = opt.Val(creature.ObjectID)
+
+	if got := effectivePower(g, creature); got != 3 {
+		t.Fatalf("effective power = %d, want 3", got)
+	}
+	if got := effectivePower(g, equipment); got != 0 {
+		t.Fatalf("equipment effective power = %d, want 0", got)
+	}
+}
+
 func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Anthem Captain",
@@ -502,4 +517,20 @@ func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent 
 			},
 		}},
 	})
+}
+
+func addEquipmentWithPTBuff(g *game.Game, controller game.PlayerID, powerDelta, toughnessDelta int) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Buffing Equipment",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:          game.LayerPowerToughnessModify,
+				Group:          game.AttachedObjectGroup(game.SourcePermanentReference()),
+				PowerDelta:     powerDelta,
+				ToughnessDelta: toughnessDelta,
+			}},
+		}},
+	}})
 }

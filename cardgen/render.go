@@ -518,7 +518,50 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		}
 		fields = append(fields, sliceField("KeywordAbilities", "game.KeywordAbility", elements))
 	}
+	if len(body.ContinuousEffects) > 0 {
+		elements := make([]string, 0, len(body.ContinuousEffects))
+		for i := range body.ContinuousEffects {
+			rendered, err := r.renderContinuousEffect(ctx, &body.ContinuousEffects[i])
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("ContinuousEffects", "game.ContinuousEffect", elements))
+	}
 	return structLit("game.StaticAbility", fields), nil
+}
+
+func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.ContinuousEffect) (string, error) {
+	var fields []string
+	layerLit, err := renderContinuousLayer(effect.Layer)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Layer: %s,", layerLit))
+	if effect.Group.Valid() {
+		groupLit, err := r.renderGroupReference(ctx, effect.Group)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Group: %s,", groupLit))
+	}
+	if effect.PowerDelta != 0 {
+		fields = append(fields, fmt.Sprintf("PowerDelta: %d,", effect.PowerDelta))
+	}
+	if effect.ToughnessDelta != 0 {
+		fields = append(fields, fmt.Sprintf("ToughnessDelta: %d,", effect.ToughnessDelta))
+	}
+	return structLit("game.ContinuousEffect", fields), nil
+}
+
+func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
+	switch layer {
+	case game.LayerPowerToughnessModify:
+		return "game.LayerPowerToughnessModify", nil
+	default:
+		return "", fmt.Errorf("render: unsupported continuous layer %d", layer)
+	}
 }
 
 func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.ActivatedAbility) (string, error) {

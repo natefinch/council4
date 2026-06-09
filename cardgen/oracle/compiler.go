@@ -366,6 +366,7 @@ func compileEffects(
 	for _, sentence := range sentences {
 		tokens := semanticTokens(sentence.Tokens, reminders, quoted)
 		duration := compileDuration(tokens)
+		staticSubject, staticSubjectSpan := compileStaticSubject(tokens)
 		for i, token := range tokens {
 			kind := effectKindAt(tokens, i)
 			if kind == EffectUnknown {
@@ -373,22 +374,49 @@ func compileEffects(
 			}
 			powerDelta, toughnessDelta := compilePTChange(tokens[i+1:])
 			effects = append(effects, CompiledEffect{
-				Kind:           kind,
-				Span:           sentence.Span,
-				Text:           sentence.Text,
-				VerbSpan:       token.Span,
-				Duration:       duration,
-				Selector:       compileSelector(tokens[i+1:]),
-				Amount:         compileEffectAmount(tokens[i+1:]),
-				PowerDelta:     powerDelta,
-				ToughnessDelta: toughnessDelta,
-				Symbol:         firstSymbol(tokens[i+1:]),
-				Negated:        effectNegated(tokens, i),
+				Kind:              kind,
+				Span:              sentence.Span,
+				Text:              sentence.Text,
+				VerbSpan:          token.Span,
+				Duration:          duration,
+				Selector:          compileSelector(tokens[i+1:]),
+				Amount:            compileEffectAmount(tokens[i+1:]),
+				PowerDelta:        powerDelta,
+				ToughnessDelta:    toughnessDelta,
+				StaticSubject:     staticSubject,
+				StaticSubjectSpan: staticSubjectSpan,
+				Symbol:            firstSymbol(tokens[i+1:]),
+				Negated:           effectNegated(tokens, i),
 			})
 		}
 
 	}
 	return effects
+}
+
+func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span) {
+	switch {
+	case len(tokens) >= 3 &&
+		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
+		equalWord(tokens[1], "creature") &&
+		equalWord(tokens[2], "gets"):
+		return StaticSubjectAttachedObject, spanOf(tokens[:2])
+	case len(tokens) >= 5 &&
+		equalWord(tokens[0], "other") &&
+		equalWord(tokens[1], "creatures") &&
+		equalWord(tokens[2], "you") &&
+		equalWord(tokens[3], "control") &&
+		equalWord(tokens[4], "get"):
+		return StaticSubjectOtherControlledCreatures, spanOf(tokens[:4])
+	case len(tokens) >= 4 &&
+		equalWord(tokens[0], "creatures") &&
+		equalWord(tokens[1], "you") &&
+		equalWord(tokens[2], "control") &&
+		equalWord(tokens[3], "get"):
+		return StaticSubjectControlledCreatures, spanOf(tokens[:3])
+	default:
+		return StaticSubjectNone, Span{}
+	}
 }
 
 func compilePTChange(tokens []Token) (power, toughness CompiledSignedAmount) {
@@ -411,9 +439,6 @@ func signedAmount(sign, amount Token) (CompiledSignedAmount, bool) {
 		return CompiledSignedAmount{}, false
 	}
 	negative := sign.Kind == Minus
-	if negative {
-		value = -value
-	}
 	return CompiledSignedAmount{Value: value, Known: true, Negative: negative}, true
 }
 

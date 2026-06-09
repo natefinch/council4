@@ -4,7 +4,7 @@ This document is both the rollout checklist and the execution guide for
 expanding executable Oracle-text compilation. An agent should be able to resume
 from this file without relying on conversation history.
 
-**Current corpus support: 2,080 / 37,628 cards**
+**Current corpus support: 2,158 / 37,628 cards**
 
 The expansion plan was established in `7e65c8e` (`compiler expansion plan`).
 Expansion steps 1–7 are complete. Begin with step 8 and do not combine numbered
@@ -369,7 +369,7 @@ unsupported and are correctly rejected.
 
 ### 8. Common static effects
 
-- [ ] Complete and commit step 8.
+- [x] Complete and commit step 8.
 
 **Planning signal:** 3,609 blockers.
 
@@ -396,6 +396,37 @@ Implementation guidance:
 Reject characteristic-defining abilities, dependency-sensitive layers,
 unbounded durations, choice-dependent text, and restrictions that existing
 rules do not enforce.
+
+Completed with four P/T buff families. The corpus moved from 2,080 to 2,158
+generated cards (+78); all 78 newly supported cards were inspected with no
+false positives.
+
+A new `StaticSubjectKind` enum in `cardgen/oracle` captures the pre-verb
+subject for static declarations: `None`, `AttachedObject`,
+`ControlledCreatures`, and `OtherControlledCreatures`. The lowering recognises
+the exact token sequence for each family and maps it to the appropriate
+`GroupReference` for the runtime `ContinuousEffect`.
+
+**Family A — Enchanted creature gets +X/+Y (~38 cards):** Auras with a simple
+P/T buff on the enchanted creature. Wording: "Enchanted creature gets +N/+N."
+Lowered to a `game.StaticAbility` with a `ContinuousEffect` using
+`AttachedObjectGroup(SourcePermanentReference())` as the group reference and
+`LayerPowerToughnessModify` as the layer.
+
+**Family B — Equipped creature gets +X/+Y (~25 cards):** Equipment with a
+simple P/T buff on the equipped creature. Wording: "Equipped creature gets
++N/+N." Same group-reference pattern as enchanted-creature.
+
+**Family C — Creatures you control get +X/+Y (~9 cards):** Anthem-style
+permanents. Wording: "Creatures you control get +N/+N." Lowered with
+`ObjectControlledGroup(SourcePermanentReference(),
+Selection{RequiredTypes:[Creature]})`.
+
+**Family D — Other creatures you control get +X/+Y (~5 cards):** Lord-style
+permanents that do not buff themselves. Wording: "Other creatures you control
+get +N/+N." Lowered with
+`ObjectControlledGroupExcluding(SourcePermanentReference(),
+Selection{RequiredTypes:[Creature]}, SourcePermanentReference())`.
 
 ### 9. Loyalty and modal abilities
 
