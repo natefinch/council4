@@ -558,6 +558,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
 	}
+	if ability.ZoneOfFunction != zone.None {
+		ctx.need(importZone)
+		zoneLiteral, err := renderZone(ability.ZoneOfFunction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
+	}
 	if len(ability.KeywordAbilities) > 0 {
 		elements := make([]string, 0, len(ability.KeywordAbilities))
 		for _, keyword := range ability.KeywordAbilities {
@@ -1895,6 +1903,8 @@ func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) 
 
 func renderZone(zoneType zone.Type) (string, error) {
 	switch zoneType {
+	case zone.Battlefield:
+		return "zone.Battlefield", nil
 	case zone.Hand:
 		return "zone.Hand", nil
 	default:

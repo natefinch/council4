@@ -79,7 +79,7 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported dies trigger effect` | The self-dies trigger clause is supported, but its single effect does not match a supported complete spell-like effect template. |
 | `unsupported enters-tapped replacement` | Replacement wording was recognized, but it is not an exact unconditional supported self enters-tapped sentence. |
 | `unsupported Cycling ability` | Cycling was recognized, but it is not an exact ordinary Cycling ability with a representable mana cost. |
-| `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but it is not an exact supported single-color tap mana ability. |
+| `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but it is neither a supported tap mana ability nor an ordinary battlefield activation with exact mana-only, tap-only, or mana-then-tap costs and a supported effect body. |
 | `unsupported mana symbol` | A mana effect otherwise matched the supported template, but its output symbol is not one of `{W}`, `{U}`, `{B}`, `{R}`, `{G}`, or `{C}`. |
 | `incomplete executable lowering` | A lowering path did not account for every semantic element or meaningful source token. This internal safety check rejects the whole card rather than emitting a partial implementation. |
 | `unsupported loyalty ability` | The parser recognized a planeswalker loyalty ability, but the executable backend cannot emit it yet. |

@@ -4,10 +4,10 @@ This document is both the rollout checklist and the execution guide for
 expanding executable Oracle-text compilation. An agent should be able to resume
 from this file without relying on conversation history.
 
-**Current corpus support: 1,838 / 37,628 cards**
+**Current corpus support: 1,992 / 37,628 cards**
 
-The current code baseline is `b315744` (`Remove legacy agent card generation`).
-Expansion steps 1–4 are complete. Begin with step 5 and do not combine numbered
+The expansion plan was established in `7e65c8e` (`compiler expansion plan`).
+Expansion steps 1–5 are complete. Begin with step 6 and do not combine numbered
 steps into one commit.
 
 ## Goal
@@ -240,7 +240,7 @@ off or commit the step as complete.
 
 ### 5. Ordinary activated abilities with mana and tap costs
 
-- [ ] Complete and commit step 5.
+- [x] Complete and commit step 5.
 
 **Planning signal:** 5,947 activated-ability blockers plus 690 cost issues.
 
@@ -280,6 +280,10 @@ Reject initially:
 - X-dependent effects, choices, conditional costs, and costs referring to other
   objects;
 - any body not already accepted by shared effect lowering.
+
+Completed with exact mana-only, tap-only, and mana-then-tap costs. The corpus
+moved from 1,838 to 1,992 generated cards; all 154 newly supported cards were
+inspected with no false positives.
 
 ### 6. Broader enter and dies triggers
 

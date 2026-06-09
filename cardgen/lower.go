@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -252,18 +253,7 @@ func lowerExecutableAbility(
 			sourceSpans: spans,
 		}, nil
 	case oracle.AbilityActivated:
-		manaAbility, diagnostic := lowerTapManaAbility(ability, syntax)
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		return abilityLowering{
-			manaAbility: opt.Val(manaAbility),
-			consumed: semanticConsumption{
-				cost:    true,
-				effects: 1,
-			},
-			sourceSpans: []oracle.Span{ability.Cost.Span, ability.Effects[0].Span},
-		}, nil
+		return lowerActivatedAbilityKind(cardName, ability, syntax)
 	case oracle.AbilitySpell:
 		spellAbility, diagnostic := lowerSpell(cardName, ability, syntax)
 		if diagnostic != nil {
@@ -340,6 +330,146 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerActivatedAbilityKind(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	if hasAddManaEffect(ability) {
+		manaAbility, diagnostic := lowerTapManaAbility(ability, syntax)
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return abilityLowering{
+			manaAbility: opt.Val(manaAbility),
+			consumed: semanticConsumption{
+				cost:    true,
+				effects: 1,
+			},
+			sourceSpans: []oracle.Span{ability.Cost.Span, ability.Effects[0].Span},
+		}, nil
+	}
+	activatedAbility, diagnostic := lowerActivatedAbility(cardName, ability, syntax)
+	if diagnostic != nil {
+		return abilityLowering{}, diagnostic
+	}
+	spans := make(
+		[]oracle.Span,
+		0,
+		1+len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
+	)
+	spans = append(spans, ability.Cost.Span)
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	for _, target := range ability.Targets {
+		spans = append(spans, target.Span)
+	}
+	for _, reference := range ability.References {
+		spans = append(spans, reference.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		activatedAbility: opt.Val(activatedAbility),
+		consumed: semanticConsumption{
+			cost:       true,
+			targets:    len(ability.Targets),
+			effects:    len(ability.Effects),
+			references: len(ability.References),
+		},
+		sourceSpans: spans,
+	}, nil
+}
+
+func hasAddManaEffect(ability oracle.CompiledAbility) bool {
+	return slices.ContainsFunc(ability.Effects, func(effect oracle.CompiledEffect) bool {
+		return effect.Kind == oracle.EffectAddMana
+	})
+}
+
+func lowerActivatedAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.ActivatedAbility, *oracle.Diagnostic) {
+	if ability.Cost == nil ||
+		len(ability.Cost.Components) == 0 ||
+		len(ability.Cost.Components) > 2 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
+	var manaCost cost.Mana
+	var additionalCosts []cost.Additional
+	for i, component := range ability.Cost.Components {
+		switch component.Kind {
+		case oracle.CostMana:
+			if i != 0 || manaCost != nil {
+				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			}
+			parsed, err := parseManaCostValue(component.Symbol)
+			if err != nil || len(parsed) == 0 {
+				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			}
+			manaCost = parsed
+		case oracle.CostTap:
+			if i != len(ability.Cost.Components)-1 || len(additionalCosts) != 0 {
+				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			}
+			additionalCosts = cost.Tap
+		default:
+			return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+		}
+	}
+
+	colon := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.Colon
+	})
+	if colon < 0 || colon+1 >= len(syntax.Tokens) {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
+	body := ability
+	body.Kind = oracle.AbilitySpell
+	body.Cost = nil
+	body.Span = oracle.Span{
+		Start: syntax.Tokens[colon+1].Span.Start,
+		End:   syntax.Span.End,
+	}
+	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset:])
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Span = body.Span
+	bodySyntax.Text = body.Text
+	bodySyntax.Tokens = syntax.Tokens[colon+1:]
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
+
+	result := game.ActivatedAbility{
+		Text:            ability.Text,
+		AdditionalCosts: additionalCosts,
+		ZoneOfFunction:  zone.Battlefield,
+		Content:         content,
+	}
+	if manaCost != nil {
+		result.ManaCost = opt.Val(manaCost)
+	}
+	return result, nil
+}
+
+func unsupportedActivatedAbilityDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
+	return executableDiagnostic(
+		ability,
+		"unsupported activated ability",
+		"the executable source backend supports only exact mana and tap costs with a supported effect",
+	)
 }
 
 func lowerEnchantAbility(

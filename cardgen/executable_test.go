@@ -67,6 +67,112 @@ func TestGenerateExecutableCardSourceTapManaAbility(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceManaCostActivatedAbility(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Tome",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{1}: Draw a card.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		"ManaCost:",
+		"opt.Val(cost.Mana{cost.O(1)})",
+		"ZoneOfFunction: zone.Battlefield",
+		"game.Draw",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceTapCostActivatedAbility(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Icy",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Tap target creature.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"AdditionalCosts: cost.Tap",
+		"ZoneOfFunction:",
+		"zone.Battlefield",
+		"game.TargetPermanentReference(0)",
+		"Primitive: game.Tap",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceManaAndTapCostActivatedAbility(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{2}, {T}: Draw a card.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"opt.Val(cost.Mana{cost.O(2)})",
+		"AdditionalCosts: cost.Tap",
+		"game.Draw",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsUnsupportedActivatedCost(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Altar",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Sacrifice a creature: Draw a card.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported activated ability" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceEntersTapped(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -1374,9 +1480,9 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		},
 		"activated": {
 			typeLine:   "Creature — Bear",
-			oracleText: "{1}: Draw a card.",
+			oracleText: "{Q}: Draw a card.",
 			summary:    "unsupported activated ability",
-			detail:     "supports only exact supported tap mana abilities",
+			detail:     "supports only exact mana and tap costs",
 		},
 		"static rules text": {
 			typeLine:   "Enchantment",
