@@ -781,11 +781,7 @@ func removeCastSourceCard(g *game.Game, player *game.Player, cardID id.ID, sourc
 	case zone.Graveyard:
 		return player.Graveyard.Remove(cardID)
 	case zone.Exile:
-		if !player.Exile.Remove(cardID) {
-			return false
-		}
-		delete(g.AdventureCards, cardID)
-		return true
+		return player.Exile.Remove(cardID)
 	default:
 		return false
 	}

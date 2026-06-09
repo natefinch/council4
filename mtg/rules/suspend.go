@@ -143,7 +143,6 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 	if !player.Exile.Remove(cardID) {
 		return false
 	}
-	delete(g.SuspendedCards, cardID)
 	obj := &game.StackObject{
 		ID:           g.IDGen.Next(),
 		Kind:         game.StackSpell,

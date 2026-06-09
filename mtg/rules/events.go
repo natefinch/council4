@@ -1,12 +1,19 @@
 package rules
 
-import "github.com/natefinch/council4/mtg/game"
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
 
 func emitEvent(g *game.Game, event game.Event) {
 	g.AppendEvent(event)
 }
 
 func emitZoneChangeEvent(g *game.Game, event game.Event) {
+	if event.FromZone == zone.Exile && event.ToZone != zone.Exile {
+		delete(g.AdventureCards, event.CardID)
+		delete(g.SuspendedCards, event.CardID)
+	}
 	event.Kind = game.EventZoneChanged
 	emitEvent(g, event)
 }
