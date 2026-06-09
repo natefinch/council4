@@ -113,7 +113,7 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
   than expanding their coordinated costs, zones, targets, keyword metadata,
   choices, and instructions.
   Supported executable mechanics currently include plain keywords, mana-cost
-  Ward and Cycling, supported tap mana choices, unconditional enters-tapped replacements, fixed single-target
+  Ward, Cycling, and Equip, supported tap mana choices, unconditional enters-tapped replacements, fixed single-target
   damage, destruction, exile, return-to-hand, and power/toughness changes,
   narrow mass destruction, fixed draw and life changes, fixed controller scry,
   fixed controller or target-player discard and mill, one-target tap and untap,

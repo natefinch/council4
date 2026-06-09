@@ -165,6 +165,22 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower modal abilities",
 		)
 	}
+	if equipAbility, ok, diagnostic := lowerEquipAbility(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		spans := []oracle.Span{ability.Keywords[0].Span}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
+		}
+		return abilityLowering{
+			activatedAbility: opt.Val(equipAbility),
+			consumed: semanticConsumption{
+				keywords: 1,
+			},
+			sourceSpans: spans,
+		}, nil
+	}
 	if cyclingAbility, ok, diagnostic := lowerCyclingAbility(ability, syntax); ok {
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
@@ -281,6 +297,51 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerEquipAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.ActivatedAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Equip" {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	if keyword.Parameter == "" ||
+		ability.Kind != oracle.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Equip ability",
+			"the executable source backend supports only exact Equip with a mana cost",
+		)
+	}
+	manaCost, err := parseManaCostValue(keyword.Parameter)
+	if err != nil || len(manaCost) == 0 {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Equip ability",
+			"the executable source backend supports only exact Equip with a mana cost",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Equip ability",
+			"the executable source backend supports only exact Equip with a mana cost",
+		)
+	}
+	return game.EquipActivatedAbility(manaCost), true, nil
 }
 
 func lowerCyclingAbility(

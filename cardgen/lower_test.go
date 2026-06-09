@@ -93,6 +93,24 @@ func TestLowerCyclingAbility(t *testing.T) {
 	}
 }
 
+func TestLowerEquipAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Equipment",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equip {2}",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("got %d activated abilities, want 1", len(face.ActivatedAbilities))
+	}
+	ability := face.ActivatedAbilities[0]
+	equipCost, ok := game.ActivatedBodyEquipCost(&ability)
+	if !ok || len(equipCost) != 1 || equipCost[0] != cost.O(2) {
+		t.Fatalf("equip cost = %#v, %v; want {2}", equipCost, ok)
+	}
+}
+
 func TestLowerTapManaAbilityFixedColor(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
