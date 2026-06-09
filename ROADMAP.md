@@ -128,27 +128,23 @@ This phase closes major gameplay-rule gaps that are not Commander-specific befor
 ## Phase 11 — Card data foundation
 
 - [x] `mtg/cards` registry package mapping canonical card names to card definitions.
-- [x] Scryfall data ingestion (per-card API) as the source of truth for card metadata. Bulk ingestion deferred.
-- [x] Generated `CardDef` data for supported cards (mechanical fields via `cardgen` library; abilities via `card-impl` skill).
-- [x] Isolated card-generation tooling under the top-level `cardgen/` directory, including Scryfall fetch/source generation helpers, `gencardlist`, generated-card validation, and batch workflow commands. Agent skills remain under `.agents/skills/`.
+- [x] Scryfall Oracle Cards bulk data as the source of truth for Card Definition metadata and Oracle text.
+- [x] Deterministic Oracle recognition, typed lowering, validation, and Go source rendering in `cardgen`.
+- [x] Isolated Card Generation tooling under `cardgen/`, including the Oracle compiler and `gencardlist`.
 
 See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed card-text feature coverage roadmap that feeds generated card implementation work.
 
 ## Phase 11B — Decklists and broad card implementation rollout
 
-- [x] Isolate non-runtime card-generation tooling in `cardgen/`, including the moved `cardgen/cmd/gencardlist` command. Keep agent skills and runtime `mtg/cards` definitions outside that tooling area.
-- [x] Batch card-list parser and resumable manifest workflow in `cardgen/cmd/cardbatch` for plain text lists, `// Commander` / `COMMANDER:`-style section headers, Scryfall fetch/cache, expected generated source paths, and missing-card worklists.
-- [x] Attempt-then-validate workflow support: `cardbatch worklist` emits small `card-impl` batches without Go code invoking the agent skill, and `cardbatch validate` regenerates card lists when requested and records validation status/issues in the manifest.
-- [x] Generated-card validation suite for static support checks: unexecuted effect types, unsupported/missing `SearchSpec`, target/effect shape mismatches, unregistered implementation IDs when known, missing generated registry entries, validation run failures, and nontrivial oracle text with empty abilities.
-- [x] Unsupported-card reporting with actionable Markdown/JSON output from fetch errors, missing generated files, pending validation, and validation failures.
-- [ ] `mtg/deck` runtime package for Moxfield/MTGO-style decklist parsing used by simulations. `cardbatch` has workflow list parsing, but runtime deck loading still needs a dedicated domain package.
+- [x] Compile the full Scryfall corpus with source-spanned unsupported diagnostics and collision-safe deterministic output.
+- [x] Validate assembled Card Definitions with `game.ValidateCardDef` before rendering and compile generated packages as a corpus gate.
+- [x] Remove the superseded LLM scaffold generator, agent rollout skills, and manifest/worklist/report workflow so Card Generation has one path.
+- [ ] `mtg/deck` runtime package for Moxfield/MTGO-style decklist parsing used by simulations.
 - [ ] Explicit four-deck input model and Commander deck loading path that turns card names into validated `CardDef` references.
-- [ ] Declarative card implementation schema/parser hardening built from effect primitives, so `card-impl` can more reliably fill abilities and avoid unsupported-looking "successful" output.
+- [ ] Continue conservative Oracle parser and typed lowering coverage using the numbered compiler-expansion checklist.
 - [ ] Generated card implementations should target the current keyword/action infrastructure for Kicker, Flashback, Madness, Morph/Disguise, Suspend, Convoke, Delve, Ward, Storm, Cascade, counter, discard, supported search/reveal, proliferate, goad, investigate, and related primitives. Carry-forward: Escape, Foretell, Evoke, copy-on-stack, cast-without-paying, and richer choice-backed variants.
-- [ ] Broaden the supported-card corpus using `cardbatch`: run common Commander staples/test deck lists through `card-impl`, validate, report unsupported cards, and use the report to drive new rules work.
-- [ ] Add smoke fixtures for batch manifests/reports and representative generated card definitions, preferably using cached Scryfall JSON instead of live network calls.
-- [ ] Add runtime smoke validation for generated card implementations, beyond static `cardgen` checks, so sample casts/activations fail if they produce `TurnLog.Unsupported` or illegal-action regressions.
-- [ ] Decide how `cardbatch` validation learns registered `ImplementationID`s from the runtime engine, or keep hand-written implementation validation as an explicit caller-provided check.
+- [ ] Broaden the supported-card corpus through frequency-driven compiler expansion and inspect every newly generated card at each breakpoint.
+- [ ] Add runtime smoke validation for compiled Card Implementations, beyond structural Card Definition validation, so sample casts and activations catch unsupported or illegal behavior.
 
 ## Phase 12 — Agent and observation system
 

@@ -8,9 +8,11 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -28,6 +30,7 @@ type loweredFaceAbilities struct {
 	StaticAbilities      []loweredStaticAbility
 	ActivatedAbilities   []game.ActivatedAbility
 	ManaAbilities        []game.ManaAbility
+	LoyaltyAbilities     []game.LoyaltyAbility
 	TriggeredAbilities   []game.TriggeredAbility
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
@@ -38,6 +41,7 @@ func (f loweredFaceAbilities) empty() bool {
 	return len(f.StaticAbilities) == 0 &&
 		len(f.ActivatedAbilities) == 0 &&
 		len(f.ManaAbilities) == 0 &&
+		len(f.LoyaltyAbilities) == 0 &&
 		len(f.TriggeredAbilities) == 0 &&
 		len(f.ReplacementAbilities) == 0 &&
 		!f.SpellAbility.Exists
@@ -49,6 +53,7 @@ type abilityLowering struct {
 	staticAbilities    []loweredStaticAbility
 	activatedAbility   opt.V[game.ActivatedAbility]
 	manaAbility        opt.V[game.ManaAbility]
+	loyaltyAbility     opt.V[game.LoyaltyAbility]
 	triggeredAbility   opt.V[game.TriggeredAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
@@ -59,6 +64,7 @@ type abilityLowering struct {
 type semanticConsumption struct {
 	cost       bool
 	trigger    bool
+	optional   bool
 	modes      int
 	targets    int
 	conditions int
@@ -83,7 +89,7 @@ func lowerExecutableFaces(card *ScryfallCard) ([]loweredFaceAbilities, []oracle.
 }
 
 func lowerFaceAbilities(
-	face generatedCardFields,
+	face scryfallFaceFields,
 ) (loweredFaceAbilities, []oracle.Diagnostic) {
 	parsedType := ParseTypeLine(face.TypeLine)
 	if len(parsedType.Types) == 0 {
@@ -129,6 +135,9 @@ func lowerFaceAbilities(
 		if lowered.manaAbility.Exists {
 			result.ManaAbilities = append(result.ManaAbilities, lowered.manaAbility.Val)
 		}
+		if lowered.loyaltyAbility.Exists {
+			result.LoyaltyAbilities = append(result.LoyaltyAbilities, lowered.loyaltyAbility.Val)
+		}
 		if lowered.triggeredAbility.Exists {
 			result.TriggeredAbilities = append(result.TriggeredAbilities, lowered.triggeredAbility.Val)
 		}
@@ -159,26 +168,21 @@ func lowerExecutableAbility(
 	syntax oracle.Ability,
 ) (abilityLowering, *oracle.Diagnostic) {
 	if len(ability.Modes) > 0 {
-		return abilityLowering{}, executableDiagnostic(
-			ability,
-			"unsupported modal ability",
-			"the executable source backend does not yet lower modal abilities",
-		)
+		return lowerModalAbility(cardName, ability, syntax)
 	}
-	if cyclingAbility, ok, diagnostic := lowerCyclingAbility(ability, syntax); ok {
+	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
+		return lowered, diagnostic
+	}
+	if staticBuff, ok, diagnostic := lowerStaticPTBuff(ability, syntax); ok {
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
-		spans := []oracle.Span{ability.Keywords[0].Span}
-		for _, reminder := range syntax.Reminders {
-			spans = append(spans, reminder.Span)
-		}
 		return abilityLowering{
-			activatedAbility: opt.Val(cyclingAbility),
+			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
 			consumed: semanticConsumption{
-				keywords: 1,
+				effects: 1,
 			},
-			sourceSpans: spans,
+			sourceSpans: []oracle.Span{ability.Effects[0].Span},
 		}, nil
 	}
 	switch ability.Kind {
@@ -203,35 +207,36 @@ func lowerExecutableAbility(
 			sourceSpans: spans,
 		}, nil
 	case oracle.AbilityActivated:
-		manaAbility, diagnostic := lowerTapManaAbility(ability, syntax)
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		return abilityLowering{
-			manaAbility: opt.Val(manaAbility),
-			consumed: semanticConsumption{
-				cost:    true,
-				effects: 1,
-			},
-			sourceSpans: []oracle.Span{ability.Cost.Span, ability.Effects[0].Span},
-		}, nil
+		return lowerActivatedAbilityKind(cardName, ability, syntax)
+	case oracle.AbilityLoyalty:
+		return lowerLoyaltyAbility(cardName, ability, syntax)
 	case oracle.AbilitySpell:
 		spellAbility, diagnostic := lowerSpell(cardName, ability, syntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
-		spans := []oracle.Span{ability.Effects[0].Span}
+		spans := make(
+			[]oracle.Span,
+			0,
+			len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
+		)
+		for _, effect := range ability.Effects {
+			spans = append(spans, effect.Span)
+		}
 		for _, target := range ability.Targets {
 			spans = append(spans, target.Span)
 		}
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
 		}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
+		}
 		return abilityLowering{
 			spellAbility: opt.Val(spellAbility),
 			consumed: semanticConsumption{
 				targets:    len(ability.Targets),
-				effects:    1,
+				effects:    len(ability.Effects),
 				references: len(ability.References),
 			},
 			sourceSpans: spans,
@@ -255,6 +260,7 @@ func lowerExecutableAbility(
 			triggeredAbility: opt.Val(triggeredAbility),
 			consumed: semanticConsumption{
 				trigger:    true,
+				optional:   ability.Optional,
 				targets:    len(ability.Targets),
 				effects:    len(ability.Effects),
 				references: len(ability.References),
@@ -270,10 +276,13 @@ func lowerExecutableAbility(
 			replacementAbility: opt.Val(replacementAbility),
 			consumed: semanticConsumption{
 				effects:    1,
+				conditions: len(ability.Conditions),
 				references: len(ability.References),
 			},
 			sourceSpans: []oracle.Span{ability.Effects[0].Span},
 		}, nil
+	case oracle.AbilityReminder:
+		return lowerReminderManaAbility(ability)
 	default:
 		return abilityLowering{}, executableDiagnostic(
 			ability,
@@ -281,6 +290,694 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerActivatedAbilityKind(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	if hasAddManaEffect(ability) {
+		manaAbility, diagnostic := lowerTapManaAbility(ability, syntax)
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return abilityLowering{
+			manaAbility: opt.Val(manaAbility),
+			consumed: semanticConsumption{
+				cost:    true,
+				effects: 1,
+			},
+			sourceSpans: []oracle.Span{ability.Cost.Span, ability.Effects[0].Span},
+		}, nil
+	}
+	activatedAbility, diagnostic := lowerActivatedAbility(cardName, ability, syntax)
+	if diagnostic != nil {
+		return abilityLowering{}, diagnostic
+	}
+	spans := make(
+		[]oracle.Span,
+		0,
+		1+len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
+	)
+	spans = append(spans, ability.Cost.Span)
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	for _, target := range ability.Targets {
+		spans = append(spans, target.Span)
+	}
+	for _, reference := range ability.References {
+		spans = append(spans, reference.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		activatedAbility: opt.Val(activatedAbility),
+		consumed: semanticConsumption{
+			cost:       true,
+			targets:    len(ability.Targets),
+			effects:    len(ability.Effects),
+			references: len(ability.References),
+		},
+		sourceSpans: spans,
+	}, nil
+}
+
+func hasAddManaEffect(ability oracle.CompiledAbility) bool {
+	return slices.ContainsFunc(ability.Effects, func(effect oracle.CompiledEffect) bool {
+		return effect.Kind == oracle.EffectAddMana
+	})
+}
+
+// lowerLoyaltyAbility lowers an AbilityLoyalty into a game.LoyaltyAbility.
+// It accepts only exact signed integer loyalty costs and supported single or
+// ordered effect bodies. Variable costs (X) are rejected.
+func lowerLoyaltyAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	const unsupportedDetail = "the executable source backend supports only exact signed loyalty costs with a supported effect body"
+	if ability.Cost == nil ||
+		len(ability.Cost.Components) != 1 ||
+		ability.Cost.Components[0].Kind != oracle.CostLoyalty ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
+	}
+	loyaltyCost, ok := parseLoyaltyCostAmount(ability.Cost.Components[0].Amount)
+	if !ok {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", "the executable source backend supports only fixed integer loyalty costs, not variable costs")
+	}
+
+	colon := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.Colon
+	})
+	if colon < 0 || colon+1 >= len(syntax.Tokens) {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
+	}
+	body := ability
+	body.Kind = oracle.AbilitySpell
+	body.Cost = nil
+	body.Span = oracle.Span{
+		Start: syntax.Tokens[colon+1].Span.Start,
+		End:   syntax.Span.End,
+	}
+	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset:])
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Span = body.Span
+	bodySyntax.Text = body.Text
+	bodySyntax.Tokens = syntax.Tokens[colon+1:]
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", diagnostic.Detail)
+	}
+
+	spans := make(
+		[]oracle.Span,
+		0,
+		1+len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
+	)
+	spans = append(spans, ability.Cost.Span)
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	for _, target := range ability.Targets {
+		spans = append(spans, target.Span)
+	}
+	for _, reference := range ability.References {
+		spans = append(spans, reference.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		loyaltyAbility: opt.Val(game.LoyaltyAbility{
+			Text:        ability.Text,
+			LoyaltyCost: loyaltyCost,
+			Content:     content,
+		}),
+		consumed: semanticConsumption{
+			cost:       true,
+			targets:    len(ability.Targets),
+			effects:    len(ability.Effects),
+			references: len(ability.References),
+		},
+		sourceSpans: spans,
+	}, nil
+}
+
+// parseLoyaltyCostAmount converts a loyalty cost amount string such as "+1",
+// "−2", or "0" into a signed integer. It returns false for variable costs
+// (e.g. "+X") or malformed input.
+func parseLoyaltyCostAmount(amount string) (int, bool) {
+	if amount == "" {
+		return 0, false
+	}
+	rest := amount
+	sign := 1
+	switch {
+	case strings.HasPrefix(rest, "+"):
+		rest = rest[1:]
+	case strings.HasPrefix(rest, "\u2212"):
+		// Unicode minus sign U+2212 (3 bytes in UTF-8)
+		sign = -1
+		rest = rest[len("\u2212"):]
+	case strings.HasPrefix(rest, "-"):
+		sign = -1
+		rest = rest[1:]
+	default:
+		// no sign prefix — treat as positive (e.g., "0")
+	}
+	n, err := strconv.Atoi(rest)
+	if err != nil {
+		return 0, false
+	}
+	return sign * n, true
+}
+
+// lowerModalAbility lowers a modal CompiledAbility into a spell or activated
+// ability with multiple modes. Only "Choose one —" is supported; other
+// cardinalities are rejected. Each mode is lowered independently through the
+// shared spell-effect lowering path.
+func lowerModalAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	if syntax.Modal == nil {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend does not yet lower modal abilities",
+		)
+	}
+	minModes, maxModes, ok := parseChooseHeader(syntax.Modal.Header)
+	if !ok {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend supports only exact fixed-cardinality \"Choose one\" modal abilities",
+		)
+	}
+	if minModes != 1 || maxModes != 1 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend supports only \"Choose one\" modal abilities",
+		)
+	}
+
+	// Top-level semantic fields must be empty for a modal header: the header
+	// "Choose one —" carries no targets, effects, keywords, or conditions of its own.
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		len(ability.Effects) != 0 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend does not support shared targets, costs, or conditions across modes",
+		)
+	}
+	if len(ability.Modes) != len(syntax.Modal.Options) {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"semantic mode count does not match syntax mode count",
+		)
+	}
+
+	modes := make([]game.Mode, 0, len(ability.Modes))
+	for i, compiledMode := range ability.Modes {
+		syntaxMode := syntax.Modal.Options[i]
+		mode, diagnostic := lowerModalMode(cardName, compiledMode, syntaxMode)
+		if diagnostic != nil {
+			return abilityLowering{}, executableDiagnostic(
+				ability,
+				"unsupported modal ability",
+				diagnostic.Detail,
+			)
+		}
+		modes = append(modes, mode)
+	}
+
+	content := game.AbilityContent{
+		Modes:    modes,
+		MinModes: minModes,
+		MaxModes: maxModes,
+	}
+	switch ability.Kind {
+	case oracle.AbilitySpell, oracle.AbilityStatic:
+	default:
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported modal ability",
+			"the executable source backend supports only spell or static modal abilities",
+		)
+	}
+	return abilityLowering{
+		spellAbility: opt.Val(content),
+		consumed: semanticConsumption{
+			modes: len(ability.Modes),
+		},
+		sourceSpans: []oracle.Span{syntax.Modal.Header.Span},
+	}, nil
+}
+
+// parseChooseHeader inspects a modal header phrase and returns (minModes,
+// maxModes, ok). It accepts only "Choose <word> —" where <word> is a cardinal
+// number spelled out as a single word ("one", "two", etc.) and rejects "or
+// both", "or more", "at random", and other multi-word cardinalities.
+func parseChooseHeader(header oracle.Phrase) (minModes, maxModes int, ok bool) {
+	tokens := header.Tokens
+	// Expected: [Word("Choose"), Word(<number>), EmDash]
+	if len(tokens) != 3 ||
+		tokens[0].Kind != oracle.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
+		tokens[1].Kind != oracle.Word ||
+		tokens[2].Kind != oracle.EmDash {
+		return 0, 0, false
+	}
+	n, numOK := parseCardinalWord(tokens[1].Text)
+	if !numOK {
+		return 0, 0, false
+	}
+	return n, n, true
+}
+
+// parseCardinalWord converts a lowercase English cardinal number word ("one",
+// "two", … "ten") to an integer. Returns (0, false) for unrecognized words.
+func parseCardinalWord(word string) (int, bool) {
+	switch strings.ToLower(word) {
+	case "one":
+		return 1, true
+	case "two":
+		return 2, true
+	case "three":
+		return 3, true
+	case "four":
+		return 4, true
+	case "five":
+		return 5, true
+	case "six":
+		return 6, true
+	case "seven":
+		return 7, true
+	case "eight":
+		return 8, true
+	case "nine":
+		return 9, true
+	case "ten":
+		return 10, true
+	default:
+		return 0, false
+	}
+}
+
+// lowerModalMode lowers one compiled mode into a game.Mode by routing through
+// the shared spell-effect lowering path. Mode-local targets, effects, keywords,
+// references, and source spans are all consumed independently.
+func lowerModalMode(
+	cardName string,
+	mode oracle.CompiledMode,
+	syntaxMode oracle.Mode,
+) (game.Mode, *oracle.Diagnostic) {
+	body := oracle.CompiledAbility{
+		Kind:       oracle.AbilitySpell,
+		Span:       mode.Span,
+		Text:       mode.Text,
+		Targets:    mode.Targets,
+		Conditions: mode.Conditions,
+		Effects:    mode.Effects,
+		Keywords:   mode.Keywords,
+		References: mode.References,
+	}
+	bodySyntax := oracle.Ability{
+		Kind:      oracle.AbilitySpell,
+		Span:      syntaxMode.Span,
+		Text:      syntaxMode.Text,
+		Tokens:    syntaxMode.Tokens,
+		Reminders: syntaxMode.Reminders,
+		Quoted:    syntaxMode.Quoted,
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.Mode{}, diagnostic
+	}
+	if content.IsModal() || len(content.Modes) != 1 {
+		return game.Mode{}, &oracle.Diagnostic{
+			Severity: oracle.SeverityWarning,
+			Summary:  "unsupported modal ability",
+			Detail:   "mode lowering produced unexpected modal content",
+			Span:     mode.Span,
+		}
+	}
+	return content.Modes[0], nil
+}
+
+func lowerActivatedAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.ActivatedAbility, *oracle.Diagnostic) {
+	if ability.Cost == nil ||
+		len(ability.Cost.Components) == 0 ||
+		len(ability.Cost.Components) > 2 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
+	var manaCost cost.Mana
+	var additionalCosts []cost.Additional
+	for i, component := range ability.Cost.Components {
+		switch component.Kind {
+		case oracle.CostMana:
+			if i != 0 || manaCost != nil {
+				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			}
+			parsed, err := parseManaCostValue(component.Symbol)
+			if err != nil || len(parsed) == 0 {
+				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			}
+			manaCost = parsed
+		case oracle.CostTap:
+			if i != len(ability.Cost.Components)-1 || len(additionalCosts) != 0 {
+				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			}
+			additionalCosts = cost.Tap
+		default:
+			return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+		}
+	}
+
+	colon := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.Colon
+	})
+	if colon < 0 || colon+1 >= len(syntax.Tokens) {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
+	body := ability
+	body.Kind = oracle.AbilitySpell
+	body.Cost = nil
+	body.Span = oracle.Span{
+		Start: syntax.Tokens[colon+1].Span.Start,
+		End:   syntax.Span.End,
+	}
+	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset:])
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Span = body.Span
+	bodySyntax.Text = body.Text
+	bodySyntax.Tokens = syntax.Tokens[colon+1:]
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
+
+	result := game.ActivatedAbility{
+		Text:            ability.Text,
+		AdditionalCosts: additionalCosts,
+		ZoneOfFunction:  zone.Battlefield,
+		Content:         content,
+	}
+	if manaCost != nil {
+		result.ManaCost = opt.Val(manaCost)
+	}
+	return result, nil
+}
+
+func unsupportedActivatedAbilityDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
+	return executableDiagnostic(
+		ability,
+		"unsupported activated ability",
+		"the executable source backend supports only exact mana and tap costs with a supported effect",
+	)
+}
+
+func lowerEnchantAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Enchant" {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	target, ok := enchantTargetSpec(keyword.Parameter)
+	if !ok ||
+		ability.Kind != oracle.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Enchant ability",
+			"the executable source backend supports only exact Enchant with a supported target kind",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Enchant ability",
+			"the executable source backend supports only exact Enchant with a supported target kind",
+		)
+	}
+	return game.EnchantStaticAbility(&target), true, nil
+}
+
+func lowerProtectionAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Protection" {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	protectedColors, ok := oracleColors(keyword.Parameter)
+	if !ok ||
+		ability.Kind != oracle.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Protection ability",
+			"the executable source backend supports only exact protection from colors",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Protection ability",
+			"the executable source backend supports only exact protection from colors",
+		)
+	}
+	return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
+}
+
+// lowerKeywordDispatch tries Enchant, Protection, Equip, and Cycling — the
+// single-keyword special cases that each produce a full abilityLowering.
+// Returns (lowering, true, nil) on success, (lowering, true, diag) on a
+// recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
+func lowerKeywordDispatch(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, bool, *oracle.Diagnostic) {
+	if enchantAbility, ok, diag := lowerEnchantAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&enchantAbility, ability, syntax), true, nil
+	}
+	if protectionAbility, ok, diag := lowerProtectionAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&protectionAbility, ability, syntax), true, nil
+	}
+	if equipAbility, ok, diag := lowerEquipAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&equipAbility, ability, syntax), true, nil
+	}
+	if cyclingAbility, ok, diag := lowerCyclingAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	return abilityLowering{}, false, nil
+}
+
+func keywordStaticLowering(
+	body *game.StaticAbility,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) abilityLowering {
+	spans := keywordSpans(ability, syntax)
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{{Body: *body}},
+		consumed:        semanticConsumption{keywords: 1},
+		sourceSpans:     spans,
+	}
+}
+
+func keywordActivatedLowering(
+	body *game.ActivatedAbility,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) abilityLowering {
+	spans := keywordSpans(ability, syntax)
+	return abilityLowering{
+		activatedAbility: opt.Val(*body),
+		consumed:         semanticConsumption{keywords: 1},
+		sourceSpans:      spans,
+	}
+}
+
+func keywordSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
+	spans := []oracle.Span{ability.Keywords[0].Span}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return spans
+}
+
+func oracleColors(parameter string) ([]color.Color, bool) {
+	names := strings.Split(parameter, ",")
+	colors := make([]color.Color, 0, len(names))
+	seen := make(map[color.Color]struct{}, len(names))
+	for _, name := range names {
+		oracleColor, ok := oracleColor(name)
+		if !ok {
+			return nil, false
+		}
+		if _, ok := seen[oracleColor]; ok {
+			return nil, false
+		}
+		seen[oracleColor] = struct{}{}
+		colors = append(colors, oracleColor)
+	}
+	return colors, len(colors) > 0
+}
+
+func oracleColor(name string) (color.Color, bool) {
+	switch name {
+	case "white":
+		return color.White, true
+	case "blue":
+		return color.Blue, true
+	case "black":
+		return color.Black, true
+	case "red":
+		return color.Red, true
+	case "green":
+		return color.Green, true
+	default:
+		return "", false
+	}
+}
+
+func enchantTargetSpec(parameter string) (game.TargetSpec, bool) {
+	target := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: parameter,
+	}
+	if parameter == "player" {
+		target.Allow = game.TargetAllowPlayer
+		return target, true
+	}
+	target.Allow = game.TargetAllowPermanent
+	switch parameter {
+	case "artifact":
+		target.Predicate.PermanentTypes = []types.Card{types.Artifact}
+	case "creature":
+		target.Predicate.PermanentTypes = []types.Card{types.Creature}
+	case "enchantment":
+		target.Predicate.PermanentTypes = []types.Card{types.Enchantment}
+	case "land":
+		target.Predicate.PermanentTypes = []types.Card{types.Land}
+	case "permanent":
+	case "planeswalker":
+		target.Predicate.PermanentTypes = []types.Card{types.Planeswalker}
+	default:
+		return game.TargetSpec{}, false
+	}
+	return target, true
+}
+
+func lowerEquipAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.ActivatedAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Equip" {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	if keyword.Parameter == "" ||
+		ability.Kind != oracle.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Equip ability",
+			"the executable source backend supports only exact Equip with a mana cost",
+		)
+	}
+	manaCost, err := parseManaCostValue(keyword.Parameter)
+	if err != nil || len(manaCost) == 0 {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Equip ability",
+			"the executable source backend supports only exact Equip with a mana cost",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Equip ability",
+			"the executable source backend supports only exact Equip with a mana cost",
+		)
+	}
+	return game.EquipActivatedAbility(manaCost), true, nil
 }
 
 func lowerCyclingAbility(
@@ -328,13 +1025,195 @@ func lowerCyclingAbility(
 	return game.CyclingActivatedAbility(manaCost), true, nil
 }
 
+func lowerStaticPTBuff(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if ability.Kind != oracle.AbilityStatic ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectModifyPT ||
+		ability.Effects[0].Duration != oracle.DurationNone ||
+		!ability.Effects[0].PowerDelta.Known ||
+		!ability.Effects[0].ToughnessDelta.Known ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Effects[0].StaticSubject == oracle.StaticSubjectNone ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, false, nil
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{ability.Effects[0].Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only exact fixed static creature power/toughness buffs",
+		)
+	}
+	effect := ability.Effects[0]
+	if !matchesExactStaticPTBuffSyntax(syntax, effect) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only exact fixed static creature power/toughness buffs",
+		)
+	}
+	group, ok := staticSubjectGroup(effect.StaticSubject)
+	if !ok {
+		return game.StaticAbility{}, false, nil
+	}
+	return game.StaticAbility{
+		Text: ability.Text,
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:          game.LayerPowerToughnessModify,
+			Group:          group,
+			PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
+			ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
+		}},
+	}, true, nil
+}
+
+func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, bool) {
+	switch subject {
+	case oracle.StaticSubjectAttachedObject:
+		return game.AttachedObjectGroup(game.SourcePermanentReference()), true
+	case oracle.StaticSubjectControlledCreatures:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		), true
+	case oracle.StaticSubjectOtherControlledCreatures:
+		return game.ObjectControlledGroupExcluding(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			game.SourcePermanentReference(),
+		), true
+	default:
+		return game.GroupReference{}, false
+	}
+}
+
+func matchesExactStaticPTBuffSyntax(
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	switch effect.StaticSubject {
+	case oracle.StaticSubjectAttachedObject:
+		return len(tokens) == 9 &&
+			(equalTokenWord(tokens[0], "enchanted") || equalTokenWord(tokens[0], "equipped")) &&
+			equalTokenWord(tokens[1], "creature") &&
+			equalTokenWord(tokens[2], "gets") &&
+			tokensMatchSignedAmount(tokens[3], tokens[4], effect.PowerDelta) &&
+			tokens[5].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[6], tokens[7], effect.ToughnessDelta) &&
+			tokens[8].Kind == oracle.Period
+	case oracle.StaticSubjectControlledCreatures:
+		return len(tokens) == 10 &&
+			equalTokenWord(tokens[0], "creatures") &&
+			equalTokenWord(tokens[1], "you") &&
+			equalTokenWord(tokens[2], "control") &&
+			equalTokenWord(tokens[3], "get") &&
+			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
+			tokens[6].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta) &&
+			tokens[9].Kind == oracle.Period
+	case oracle.StaticSubjectOtherControlledCreatures:
+		return len(tokens) == 11 &&
+			equalTokenWord(tokens[0], "other") &&
+			equalTokenWord(tokens[1], "creatures") &&
+			equalTokenWord(tokens[2], "you") &&
+			equalTokenWord(tokens[3], "control") &&
+			equalTokenWord(tokens[4], "get") &&
+			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
+			tokens[7].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta) &&
+			tokens[10].Kind == oracle.Period
+	default:
+		return false
+	}
+}
+
+func syntaxSemanticTokens(syntax oracle.Ability) []oracle.Token {
+	tokens := make([]oracle.Token, 0, len(syntax.Tokens))
+	for _, token := range syntax.Tokens {
+		if spanCoveredByDelimited(token.Span, syntax.Reminders) ||
+			spanCoveredByDelimited(token.Span, syntax.Quoted) {
+			continue
+		}
+		tokens = append(tokens, token)
+	}
+	return tokens
+}
+
+func tokensMatchSignedAmount(sign, amount oracle.Token, want oracle.CompiledSignedAmount) bool {
+	expectedSign := oracle.Plus
+	if want.Negative {
+		expectedSign = oracle.Minus
+	}
+	return sign.Kind == expectedSign &&
+		amount.Kind == oracle.Integer &&
+		amount.Text == strconv.Itoa(want.Value)
+}
+
+// lowerReminderManaAbility handles a parenthesized reminder mana ability such
+// as "({T}: Add {R} or {G}.)" — reminder text that describes the tap-for-mana
+// behavior granted by basic-land subtypes. These are compiled with no semantic
+// elements because their content is filtered as parenthesized. We re-compile
+// the inner text and lower it as a mana ability.
+func lowerReminderManaAbility(
+	ability oracle.CompiledAbility,
+) (abilityLowering, *oracle.Diagnostic) {
+	unsupported := func() *oracle.Diagnostic {
+		return executableDiagnostic(
+			ability,
+			"unsupported reminder ability",
+			"the executable source backend does not yet lower reminder abilities",
+		)
+	}
+	if len(ability.Text) < 2 ||
+		ability.Text[0] != '(' ||
+		ability.Text[len(ability.Text)-1] != ')' {
+		return abilityLowering{}, unsupported()
+	}
+	inner := strings.TrimSpace(ability.Text[1 : len(ability.Text)-1])
+	innerComp, innerDiags := oracle.Compile(inner, oracle.ParseContext{})
+	if len(innerDiags) != 0 ||
+		len(innerComp.Abilities) != 1 ||
+		innerComp.Abilities[0].Kind != oracle.AbilityActivated {
+		return abilityLowering{}, unsupported()
+	}
+	innerAbility := innerComp.Abilities[0]
+	innerSyntax := innerComp.Syntax.Abilities[0]
+	if !hasAddManaEffect(innerAbility) {
+		return abilityLowering{}, unsupported()
+	}
+	manaAbility, diagnostic := lowerTapManaAbility(innerAbility, innerSyntax)
+	if diagnostic != nil {
+		return abilityLowering{}, unsupported()
+	}
+	// The compiled reminder ability has no independent semantic elements;
+	// all content is filtered as parenthesized. The consumed counts are all
+	// zero, matching the empty CompiledAbility fields.
+	return abilityLowering{
+		manaAbility: opt.Val(manaAbility),
+		consumed:    semanticConsumption{},
+		sourceSpans: []oracle.Span{ability.Span},
+	}, nil
+}
+
 func lowerEntersTappedReplacement(
 	ability oracle.CompiledAbility,
 ) (game.ReplacementAbility, *oracle.Diagnostic) {
 	if len(ability.Effects) != 1 ||
 		ability.Effects[0].Kind != oracle.EffectEnterTapped ||
 		len(ability.Targets) != 0 ||
-		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		len(ability.References) != 1 ||
@@ -343,6 +1222,16 @@ func lowerEntersTappedReplacement(
 			ability,
 			"unsupported enters-tapped replacement",
 			"the executable source backend supports only exact unconditional self enters-tapped replacements",
+		)
+	}
+	if len(ability.Conditions) == 1 {
+		return lowerConditionalEntersTappedReplacement(ability)
+	}
+	if len(ability.Conditions) != 0 {
+		return game.ReplacementAbility{}, executableDiagnostic(
+			ability,
+			"unsupported enters-tapped replacement",
+			"the executable source backend supports only zero or one condition for self enters-tapped replacements",
 		)
 	}
 	switch ability.Text {
@@ -360,12 +1249,40 @@ func lowerEntersTappedReplacement(
 	return game.EntersTappedReplacement(ability.Text), nil
 }
 
+// lowerConditionalEntersTappedReplacement handles the exact wording family
+// "This land enters tapped unless you control two or more basic lands.".
+func lowerConditionalEntersTappedReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, *oracle.Diagnostic) {
+	condition := ability.Conditions[0]
+	const supportedConditionText = "unless you control two or more basic lands"
+	const supportedAbilityText = "This land enters tapped unless you control two or more basic lands."
+	if condition.Kind != oracle.ConditionUnless ||
+		condition.Text != supportedConditionText ||
+		ability.Text != supportedAbilityText {
+		return game.ReplacementAbility{}, executableDiagnostic(
+			ability,
+			"unsupported conditional enters-tapped replacement",
+			"the executable source backend supports only the exact condition: unless you control two or more basic lands",
+		)
+	}
+	return game.EntersTappedIfReplacement(ability.Text, &game.Condition{
+		Negate: true,
+		ControllerControls: game.PermanentFilter{
+			Types:      []types.Card{types.Land},
+			Supertypes: []types.Super{types.Basic},
+			MinCount:   2,
+		},
+	}), nil
+}
+
 func (lowering *abilityLowering) complete(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) bool {
 	if lowering.consumed.cost != (ability.Cost != nil) ||
 		lowering.consumed.trigger != (ability.Trigger != nil) ||
+		lowering.consumed.optional != ability.Optional ||
 		lowering.consumed.modes != len(ability.Modes) ||
 		lowering.consumed.targets != len(ability.Targets) ||
 		lowering.consumed.conditions != len(ability.Conditions) ||
@@ -393,16 +1310,16 @@ func lowerEnterTrigger(
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
 	eventKind, supportedEvent := lowerSelfTriggerEvent(ability)
 	summary := "unsupported enter trigger"
-	detail := "the executable source backend supports only exact self-enter triggers with one supported effect"
+	detail := "the executable source backend supports only exact self-enter triggers with supported effects"
 	if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
 		summary = "unsupported dies trigger"
-		detail = "the executable source backend supports only exact self-dies triggers with one supported effect"
+		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
 	if ability.Trigger == nil ||
 		ability.Trigger.Kind != oracle.TriggerWhen ||
 		!supportedEvent ||
 		ability.Trigger.Condition != nil ||
-		len(ability.Effects) != 1 ||
+		len(ability.Effects) == 0 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
@@ -425,13 +1342,38 @@ func lowerEnterTrigger(
 	}
 	body := ability
 	body.Kind = oracle.AbilitySpell
-	body.Span = ability.Effects[0].Span
-	body.Text = titleFirst(ability.Effects[0].Text)
+	body.Span = oracle.Span{
+		Start: ability.Effects[0].Span.Start,
+		End:   ability.Effects[len(ability.Effects)-1].Span.End,
+	}
+	body.Text = titleFirst(
+		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+	)
 	body.Trigger = nil
+	body.Optional = false
+	body.OptionalSpan = oracle.Span{}
 	body.References = bodyReferences(ability.References, ability.Trigger.Span)
 	bodySyntax := syntax
 	bodySyntax.Kind = oracle.AbilitySpell
 	bodySyntax.Tokens = syntax.Tokens[comma+1:]
+	if ability.Optional {
+		if len(ability.Effects) != 1 ||
+			len(bodySyntax.Tokens) < 3 ||
+			!equalTokenWord(bodySyntax.Tokens[0], "you") ||
+			!equalTokenWord(bodySyntax.Tokens[1], "may") ||
+			ability.OptionalSpan.Start != ability.Effects[0].Span.Start {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
+		}
+		effect := body.Effects[0]
+		effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
+		effect.Span.Start = effect.VerbSpan.Start
+		body.Effects = []oracle.CompiledEffect{effect}
+		body.Span.Start = effect.Span.Start
+		body.Text = titleFirst(
+			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+		)
+		bodySyntax.Tokens = bodySyntax.Tokens[2:]
+	}
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
 	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
@@ -451,7 +1393,8 @@ func lowerEnterTrigger(
 				Source: game.TriggerSourceSelf,
 			},
 		},
-		Content: content,
+		Optional: ability.Optional,
+		Content:  content,
 	}, nil
 }
 
@@ -533,6 +1476,15 @@ func lowerKeywordAbility(
 				if err == nil && len(manaCost) > 0 {
 					bodies = append(bodies, loweredStaticAbility{
 						Body: game.WardStaticAbility(manaCost),
+					})
+					continue
+				}
+			}
+			if keyword.Name == "Protection" {
+				protectedColors, ok := oracleColors(keyword.Parameter)
+				if ok {
+					bodies = append(bodies, loweredStaticAbility{
+						Body: game.ProtectionFromColorsStaticAbility(protectedColors...),
 					})
 					continue
 				}
@@ -638,8 +1590,8 @@ func lowerTapManaAbility(
 func choiceTapManaAbility(colorNames []string) game.ManaAbility {
 	colors := make([]mana.Color, 0, len(colorNames))
 	for _, name := range colorNames {
-		if color, ok := manaColorValue(name); ok {
-			colors = append(colors, color)
+		if manaColor, ok := manaColorValue(name); ok {
+			colors = append(colors, manaColor)
 		}
 	}
 	return game.TapManaChoiceAbility(colors...)
@@ -650,61 +1602,323 @@ func lowerSpell(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
+	if len(ability.Effects) > 1 {
+		return lowerOrderedEffectSequence(cardName, ability, syntax)
+	}
 	if len(ability.Effects) == 1 {
-		switch ability.Effects[0].Kind {
-		case oracle.EffectDealDamage:
-			return lowerFixedDamageSpell(cardName, ability)
-		case oracle.EffectDraw:
-			return lowerFixedDrawSpell(ability, syntax)
-		case oracle.EffectDestroy:
-			return lowerFixedDestroySpell(ability)
-		case oracle.EffectGain:
-			return lowerFixedLifeSpell(ability, "gain", func(amount int, player game.PlayerReference) game.Primitive {
-				return game.GainLife{Amount: game.Fixed(amount), Player: player}
-			})
-		case oracle.EffectLose:
-			return lowerFixedLifeSpell(ability, "lose", func(amount int, player game.PlayerReference) game.Primitive {
-				return game.LoseLife{Amount: game.Fixed(amount), Player: player}
-			})
-		case oracle.EffectScry:
-			return lowerFixedControllerSpell(ability, syntax, "scry", func(amount int, player game.PlayerReference) game.Primitive {
-				return game.Scry{Amount: game.Fixed(amount), Player: player}
-			})
-		case oracle.EffectDiscard:
-			return lowerFixedCardCountPlayerSpell(
-				ability, syntax, "discard", "discards", func(amount int, player game.PlayerReference) game.Primitive {
-					return game.Discard{Amount: game.Fixed(amount), Player: player}
-				},
-			)
-		case oracle.EffectMill:
-			return lowerFixedCardCountPlayerSpell(
-				ability, syntax, "mill", "mills", func(amount int, player game.PlayerReference) game.Primitive {
-					return game.Mill{Amount: game.Fixed(amount), Player: player}
-				},
-			)
-		case oracle.EffectTap:
-			return lowerFixedPermanentTargetSpell(ability, "Tap", func(object game.ObjectReference) game.Primitive {
-				return game.Tap{Object: object}
-			})
-		case oracle.EffectUntap:
-			return lowerFixedPermanentTargetSpell(ability, "Untap", func(object game.ObjectReference) game.Primitive {
-				return game.Untap{Object: object}
-			})
-		case oracle.EffectExile:
-			return lowerFixedPermanentTargetSpell(ability, "Exile", func(object game.ObjectReference) game.Primitive {
-				return game.Exile{Object: object}
-			})
-		case oracle.EffectReturn:
-			return lowerFixedBounceSpell(ability)
-		case oracle.EffectModifyPT:
-			return lowerFixedModifyPTSpell(ability)
-		default:
-		}
+		return lowerSingleEffectSpell(cardName, ability, syntax)
 	}
 	return game.AbilityContent{}, executableDiagnostic(
 		ability,
 		"unsupported spell ability",
 		"the executable source backend does not yet lower this spell ability",
+	)
+}
+
+func lowerSingleEffectSpell(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	ability.Text = textWithoutDelimited(ability.Text, ability.Span, syntax.Reminders)
+	syntax.Tokens = slices.DeleteFunc(
+		append([]oracle.Token(nil), syntax.Tokens...),
+		func(token oracle.Token) bool {
+			return spanCoveredByDelimited(token.Span, syntax.Reminders)
+		},
+	)
+	switch ability.Effects[0].Kind {
+	case oracle.EffectDealDamage:
+		return lowerFixedDamageSpell(cardName, ability)
+	case oracle.EffectDraw:
+		return lowerFixedDrawSpell(ability, syntax)
+	case oracle.EffectDestroy:
+		return lowerFixedDestroySpell(ability)
+	case oracle.EffectGain:
+		return lowerFixedLifeSpell(ability, "gain", func(amount int, player game.PlayerReference) game.Primitive {
+			return game.GainLife{Amount: game.Fixed(amount), Player: player}
+		})
+	case oracle.EffectLose:
+		return lowerFixedLifeSpell(ability, "lose", func(amount int, player game.PlayerReference) game.Primitive {
+			return game.LoseLife{Amount: game.Fixed(amount), Player: player}
+		})
+	case oracle.EffectScry:
+		return lowerFixedControllerSpell(ability, syntax, "scry", func(amount int, player game.PlayerReference) game.Primitive {
+			return game.Scry{Amount: game.Fixed(amount), Player: player}
+		})
+	case oracle.EffectSurveil:
+		return lowerFixedControllerSpell(ability, syntax, "surveil", func(amount int, player game.PlayerReference) game.Primitive {
+			return game.Surveil{Amount: game.Fixed(amount), Player: player}
+		})
+	case oracle.EffectInvestigate:
+		return lowerInvestigateSpell(ability, syntax)
+	case oracle.EffectProliferate:
+		return lowerExactPrimitiveSpell(ability, syntax, "proliferate", game.Proliferate{})
+	case oracle.EffectRegenerate:
+		return lowerFixedPermanentTargetSpell(ability, "Regenerate", func(object game.ObjectReference) game.Primitive {
+			return game.Regenerate{Object: object}
+		})
+	case oracle.EffectFight:
+		return lowerFightSpell(ability)
+	case oracle.EffectDiscard:
+		return lowerFixedCardCountPlayerSpell(
+			ability, syntax, "discard", "discards", func(amount int, player game.PlayerReference) game.Primitive {
+				return game.Discard{Amount: game.Fixed(amount), Player: player}
+			},
+		)
+	case oracle.EffectMill:
+		return lowerFixedCardCountPlayerSpell(
+			ability, syntax, "mill", "mills", func(amount int, player game.PlayerReference) game.Primitive {
+				return game.Mill{Amount: game.Fixed(amount), Player: player}
+			},
+		)
+	case oracle.EffectTap:
+		return lowerFixedPermanentTargetSpell(ability, "Tap", func(object game.ObjectReference) game.Primitive {
+			return game.Tap{Object: object}
+		})
+	case oracle.EffectUntap:
+		return lowerFixedPermanentTargetSpell(ability, "Untap", func(object game.ObjectReference) game.Primitive {
+			return game.Untap{Object: object}
+		})
+	case oracle.EffectExile:
+		return lowerFixedPermanentTargetSpell(ability, "Exile", func(object game.ObjectReference) game.Primitive {
+			return game.Exile{Object: object}
+		})
+	case oracle.EffectReturn:
+		return lowerFixedBounceSpell(ability)
+	case oracle.EffectModifyPT:
+		return lowerFixedModifyPTSpell(ability)
+	default:
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported spell ability",
+			"the executable source backend does not yet lower this spell ability",
+		)
+	}
+}
+
+func textWithoutDelimited(text string, span oracle.Span, groups []oracle.Delimited) string {
+	var result strings.Builder
+	cursor := span.Start.Offset
+	for _, group := range groups {
+		if group.Span.Start.Offset < cursor ||
+			group.Span.End.Offset > span.End.Offset {
+			continue
+		}
+		start := group.Span.Start.Offset - span.Start.Offset
+		end := cursor - span.Start.Offset
+		_, _ = result.WriteString(text[end:start])
+		cursor = group.Span.End.Offset
+	}
+	_, _ = result.WriteString(text[cursor-span.Start.Offset:])
+	return strings.TrimSpace(result.String())
+}
+
+func lowerFightSpell(ability oracle.CompiledAbility) (game.AbilityContent, *oracle.Diagnostic) {
+	if len(ability.Targets) != 2 ||
+		ability.Targets[0].Cardinality != (oracle.TargetCardinality{Min: 1, Max: 1}) ||
+		ability.Targets[1].Cardinality != (oracle.TargetCardinality{Min: 1, Max: 1}) ||
+		ability.Effects[0].Negated ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Text != titleFirst(ability.Targets[0].Text)+" fights "+ability.Targets[1].Text+"." {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported fight spell",
+			"the executable source backend supports only exact fights between two target creatures",
+		)
+	}
+	first, firstOK := fightCreatureTargetSpec(ability.Targets[0])
+	second, secondOK := fightCreatureTargetSpec(ability.Targets[1])
+	if !firstOK || !secondOK {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported fight spell",
+			"the executable source backend supports only exact fights between two target creatures",
+		)
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{first, second},
+		Sequence: []game.Instruction{{
+			Primitive: game.Fight{
+				Object:        game.TargetPermanentReference(0),
+				RelatedObject: game.TargetPermanentReference(1),
+			},
+		}},
+	}.Ability(), nil
+}
+
+func fightCreatureTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+	if target.Selector.Kind != oracle.SelectorCreature ||
+		target.Selector.Another ||
+		target.Selector.Other ||
+		target.Selector.Attacking ||
+		target.Selector.Blocking ||
+		target.Selector.Tapped ||
+		target.Selector.Untapped {
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: target.Text,
+		Allow:      game.TargetAllowPermanent,
+		Predicate: game.TargetPredicate{
+			PermanentTypes: []types.Card{types.Creature},
+		},
+	}
+	var expected string
+	switch target.Selector.Controller {
+	case oracle.ControllerAny:
+		expected = "target creature"
+	case oracle.ControllerYou:
+		expected = "target creature you control"
+		spec.Predicate.Controller = game.ControllerYou
+	case oracle.ControllerOpponent:
+		expected = "target creature an opponent controls"
+		spec.Predicate.Controller = game.ControllerOpponent
+	case oracle.ControllerNotYou:
+		expected = "target creature you don't control"
+		spec.Predicate.Controller = game.ControllerNotYou
+	default:
+		return game.TargetSpec{}, false
+	}
+	return spec, strings.EqualFold(target.Text, expected)
+}
+
+func lowerInvestigateSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ability,
+		syntax,
+		"investigate",
+		game.Investigate{Amount: game.Fixed(1)},
+	)
+}
+
+func lowerExactPrimitiveSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+	verb string,
+	primitive game.Primitive,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	if ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		len(syntax.Tokens) != 2 ||
+		!equalTokenWord(syntax.Tokens[0], verb) ||
+		syntax.Tokens[1].Kind != oracle.Period {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported "+verb+" spell",
+			"the executable source backend supports only exact "+verb,
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: primitive,
+	}}}.Ability(), nil
+}
+
+func lowerOrderedEffectSequence(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	if len(ability.Conditions) != 0 || len(ability.Keywords) != 0 || len(ability.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+	}
+	var targets []game.TargetSpec
+	var sequence []game.Instruction
+	consumedTargets := 0
+	consumedReferences := 0
+	for _, effect := range ability.Effects {
+		effectAbility := abilityForEffect(ability, effect)
+		consumedTargets += len(effectAbility.Targets)
+		consumedReferences += len(effectAbility.References)
+		content, diagnostic := lowerSingleEffectSpell(
+			cardName,
+			effectAbility,
+			syntaxWithinSpan(syntax, effect.Span),
+		)
+		if diagnostic != nil ||
+			len(content.SharedTargets) != 0 ||
+			content.IsModal() ||
+			len(content.Modes) != 1 {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+		}
+		mode := content.Modes[0]
+		if len(mode.Targets) > 0 {
+			if len(targets) > 0 {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+			}
+			targets = mode.Targets
+		}
+		sequence = append(sequence, mode.Sequence...)
+	}
+	if consumedTargets != len(ability.Targets) ||
+		consumedReferences != len(ability.References) ||
+		len(sequence) != len(ability.Effects) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+	}
+	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func abilityForEffect(
+	ability oracle.CompiledAbility,
+	effect oracle.CompiledEffect,
+) oracle.CompiledAbility {
+	ability.Text = effect.Text
+	ability.Span = effect.Span
+	ability.Effects = []oracle.CompiledEffect{effect}
+	ability.Targets = targetsWithinSpan(ability.Targets, effect.Span)
+	ability.References = referencesWithinSpan(ability.References, effect.Span)
+	return ability
+}
+
+func targetsWithinSpan(targets []oracle.CompiledTarget, span oracle.Span) []oracle.CompiledTarget {
+	var within []oracle.CompiledTarget
+	for _, target := range targets {
+		if spanCovered(target.Span, []oracle.Span{span}) {
+			within = append(within, target)
+		}
+	}
+	return within
+}
+
+func referencesWithinSpan(references []oracle.CompiledReference, span oracle.Span) []oracle.CompiledReference {
+	var within []oracle.CompiledReference
+	for _, reference := range references {
+		if spanCovered(reference.Span, []oracle.Span{span}) {
+			within = append(within, reference)
+		}
+	}
+	return within
+}
+
+func syntaxWithinSpan(syntax oracle.Ability, span oracle.Span) oracle.Ability {
+	syntax.Span = span
+	syntax.Text = ""
+	syntax.Tokens = slices.DeleteFunc(
+		append([]oracle.Token(nil), syntax.Tokens...),
+		func(token oracle.Token) bool {
+			return !spanCovered(token.Span, []oracle.Span{span})
+		},
+	)
+	return syntax
+}
+
+func unsupportedEffectSequenceDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
+	return executableDiagnostic(
+		ability,
+		"unsupported ordered effect sequence",
+		"the executable source backend supports only exact ordered sequences of independently supported effects with at most one targeted clause",
 	)
 }
 
@@ -800,8 +2014,8 @@ func lowerFixedModifyPTSpell(
 			{
 				Primitive: game.ModifyPT{
 					Object:         game.TargetPermanentReference(0),
-					PowerDelta:     game.Fixed(effect.PowerDelta.Value),
-					ToughnessDelta: game.Fixed(effect.ToughnessDelta.Value),
+					PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
+					ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
 					Duration:       game.DurationUntilEndOfTurn,
 				},
 			},
@@ -1334,13 +2548,16 @@ func playerTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 
 func signedAmountText(amount oracle.CompiledSignedAmount) string {
 	if amount.Negative {
-		magnitude := amount.Value
-		if magnitude < 0 {
-			magnitude = -magnitude
-		}
-		return fmt.Sprintf("-%d", magnitude)
+		return fmt.Sprintf("-%d", amount.Value)
 	}
 	return fmt.Sprintf("+%d", amount.Value)
+}
+
+func compiledSignedAmountValue(amount oracle.CompiledSignedAmount) int {
+	if amount.Negative {
+		return -amount.Value
+	}
+	return amount.Value
 }
 
 func titleFirst(text string) string {
@@ -1418,11 +2635,11 @@ func exactChoiceTapManaSyntax(tokens []oracle.Token) ([]string, bool) {
 	var colors []string
 	for i := 3; i < len(tokens)-1; {
 		token := tokens[i]
-		color, ok := manaColorName(token.Text)
+		manaColor, ok := manaColorName(token.Text)
 		if token.Kind != oracle.Symbol || !ok {
 			return nil, false
 		}
-		colors = append(colors, color)
+		colors = append(colors, manaColor)
 		i++
 		if i == len(tokens)-1 {
 			break
@@ -1543,20 +2760,20 @@ func parseManaSymbolValue(sym string) (cost.Symbol, error) {
 	default:
 	}
 	if before, ok := strings.CutSuffix(sym, "/P"); ok {
-		color, ok := manaColorValue(before)
+		manaColor, ok := manaColorValue(before)
 		if !ok {
 			return cost.Symbol{}, fmt.Errorf("unsupported mana symbol: %s", sym)
 		}
-		return cost.PhyrexianMana(color), nil
+		return cost.PhyrexianMana(manaColor), nil
 	}
 	if strings.Contains(sym, "/") {
 		parts := strings.SplitN(sym, "/", 2)
 		if _, err := strconv.Atoi(parts[0]); err == nil {
-			color, ok := manaColorValue(parts[1])
+			manaColor, ok := manaColorValue(parts[1])
 			if !ok {
 				return cost.Symbol{}, fmt.Errorf("unsupported mana symbol: %s", sym)
 			}
-			return cost.Twobrid(color), nil
+			return cost.Twobrid(manaColor), nil
 		}
 		first, ok := manaColorValue(parts[0])
 		second, ok2 := manaColorValue(parts[1])

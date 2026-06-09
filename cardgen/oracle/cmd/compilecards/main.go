@@ -196,7 +196,7 @@ func compileCard(item job) result {
 		}}
 		return compiled
 	}
-	compiled.relative = filepath.Join(letter, safeFileName(card.Name)+".go")
+	compiled.relative = filepath.Join(letter, cardgen.CardNameToSafeFileName(card.Name)+".go")
 	compiled.source, compiled.diagnostics, compiled.err =
 		cardgen.GenerateExecutableCardSource(&card, letter)
 	return compiled
@@ -324,29 +324,6 @@ func diagnosticSeverityName(severity oracle.Severity) string {
 	default:
 		return "unknown"
 	}
-}
-
-func safeFileName(name string) string {
-	base := cardgen.CardNameToFileName(name)
-	if base == "cards" || strings.HasSuffix(base, "_test") {
-		return base + "_card"
-	}
-	parts := strings.Split(base, "_")
-	for _, suffix := range goFileSuffixes {
-		if len(parts) >= len(suffix) && slices.Equal(parts[len(parts)-len(suffix):], suffix) {
-			return base + "_card"
-		}
-	}
-	return base
-}
-
-var goFileSuffixes = [][]string{
-	{"aix"}, {"android"}, {"darwin"}, {"dragonfly"}, {"freebsd"}, {"illumos"},
-	{"ios"}, {"js"}, {"linux"}, {"netbsd"}, {"openbsd"}, {"plan9"}, {"solaris"},
-	{"wasip1"}, {"windows"},
-	{"386"}, {"amd64"}, {"arm"}, {"arm64"}, {"loong64"}, {"mips"}, {"mips64"},
-	{"mips64le"}, {"mipsle"}, {"ppc64"}, {"ppc64le"}, {"riscv64"}, {"s390x"},
-	{"wasm"},
 }
 
 func writeSupported(root string, results []result) error {

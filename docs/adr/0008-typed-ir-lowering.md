@@ -68,9 +68,9 @@ passed in a narrow `faceRenderHints` value. Each hint carries the expected
 CardDef value before the `VarName` is used; a mismatch is a render error
 (divergence), never a silently wrong emission.
 
-The string-building helpers and the `generatedAbilityFields` injection path are
-removed. The non-executable `GenerateCardSource` path (which emits a skeleton
-`CardDef` with empty ability fields for later completion) is unchanged.
+The string-building helpers, the `generatedAbilityFields` injection path, and
+the non-executable skeleton generator are removed. Card Generation has one
+source path: complete recognition, typed lowering, validation, and rendering.
 
 This keeps the layer boundaries crisp: **`mtg/game` owns the typed data and what
 makes it structurally valid, `mtg/rules` owns behavior, and `cardgen` owns
@@ -110,10 +110,9 @@ shape is gofmt-stable.
   values and divergent hints return errors; `roundtrip_test.go` both compiles
   generated source with `go build` and runs a generated semantic test that
   asserts the emitted vars round-trip to the expected typed structure).
-- The handwritten **Card Implementation** escape hatch is preserved unchanged:
-  cards whose mechanics the lowering layer does not recognize fall back to a
-  hand-written `game.CardDef` with an `ImplementationID`. The typed pipeline only
-  owns cards it can fully recognize, assemble, and validate; everything else is
-  reported for human implementation exactly as before.
+- The handwritten **Card Implementation** escape hatch remains available for
+  exceptional mechanics, but it is not a fallback source-generation path.
+  Card Generation emits only cards it can fully recognize, assemble, and
+  validate; everything else is reported as unsupported.
 - Existing generated cards in `mtg/cards/` are unaffected; the change is to how
   new executable source is produced, not to already-committed definitions.

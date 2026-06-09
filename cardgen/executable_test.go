@@ -67,6 +67,112 @@ func TestGenerateExecutableCardSourceTapManaAbility(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceManaCostActivatedAbility(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Tome",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{1}: Draw a card.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		"ManaCost:",
+		"opt.Val(cost.Mana{cost.O(1)})",
+		"ZoneOfFunction: zone.Battlefield",
+		"game.Draw",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceTapCostActivatedAbility(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Icy",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Tap target creature.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"AdditionalCosts: cost.Tap",
+		"ZoneOfFunction:",
+		"zone.Battlefield",
+		"game.TargetPermanentReference(0)",
+		"Primitive: game.Tap",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceManaAndTapCostActivatedAbility(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{2}, {T}: Draw a card.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"opt.Val(cost.Mana{cost.O(2)})",
+		"AdditionalCosts: cost.Tap",
+		"game.Draw",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsUnsupportedActivatedCost(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Altar",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Sacrifice a creature: Draw a card.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported activated ability" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceEntersTapped(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -92,6 +198,102 @@ func TestGenerateExecutableCardSourceEntersTapped(t *testing.T) {
 	}
 	if strings.Count(source, "game.EntersTappedReplacement") != 1 {
 		t.Fatalf("source has duplicate enters-tapped replacements:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceArtifactEntersTapped(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Relic",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "This artifact enters tapped.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, `game.EntersTappedReplacement("This artifact enters tapped.")`) {
+		t.Fatalf("source missing artifact enters-tapped replacement:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceEntersTappedUnlessTwoBasicLands(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Vista",
+		Layout:     "normal",
+		TypeLine:   "Land — Forest Plains",
+		OracleText: "This land enters tapped unless you control two or more basic lands.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// gofmt aligns PermanentFilter fields; check value literals rather than
+	// aligned field assignments to stay resilient to column-width changes.
+	for _, wanted := range []string{
+		"game.EntersTappedIfReplacement",
+		"Negate: true",
+		"[]types.Card{types.Land}",
+		"[]types.Super{types.Basic}",
+		"MinCount:",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped
+// verifies that near-miss conditions outside the supported wording family are
+// rejected. Supported: "unless you control two or more basic lands".
+func TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+	}{
+		{
+			name:       "unless single basic land",
+			oracleText: "This land enters tapped unless you control a basic land.",
+		},
+		{
+			name:       "unless two or more non-basic lands",
+			oracleText: "This land enters tapped unless you control two or more lands.",
+		},
+		{
+			name:       "if instead of unless",
+			oracleText: "This land enters tapped if you control two or more basic lands.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Vista",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: tt.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" {
+				t.Fatalf("source = %q, want no partial card for near-miss wording", source)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected diagnostics for unsupported condition, got none")
+			}
+		})
 	}
 }
 
@@ -248,6 +450,84 @@ func TestGenerateExecutableCardSourceCycling(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEquip(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Equipment",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equip {2}",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		"game.EquipActivatedAbility(cost.Mana{cost.O(2)})",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnchantCreature(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"StaticAbilities: []game.StaticAbility",
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		"PermanentTypes: []types.Card{types.Creature}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceProtectionFromColor(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Protection from red",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"StaticAbilities: []game.StaticAbility",
+		"game.ProtectionFromColorsStaticAbility(color.Red)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -278,6 +558,129 @@ func TestGenerateExecutableCardSourceFixedDamage(t *testing.T) {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
+	}
+}
+
+func TestGenerateExecutableCardSourceOrderedEffects(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target artifact. Draw a card.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	destroy := strings.Index(source, "Primitive: game.Destroy")
+	draw := strings.Index(source, "Primitive: game.Draw")
+	if destroy < 0 || draw < 0 || destroy >= draw {
+		t.Fatalf("instructions are not rendered in Oracle order:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceSurveil(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Surveil",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Surveil 2.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Surveil") {
+		t.Fatalf("source missing Surveil primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceInvestigate(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Investigate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Investigate.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Investigate") {
+		t.Fatalf("source missing Investigate primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceProliferate(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Proliferate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Proliferate.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Proliferate{}") {
+		t.Fatalf("source missing Proliferate primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRegenerate(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Regenerate",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Regenerate target creature.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Regenerate") {
+		t.Fatalf("source missing Regenerate primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceFight(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Fight",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights target creature you don't control. (Each deals damage equal to its power to the other.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(1)") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
 	}
 }
 
@@ -912,6 +1315,82 @@ func TestGenerateExecutableCardSourceEnterDrawTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEnterMultipleEffectTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Resourceful Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature enters, draw a card. You gain 2 life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	draw := strings.Index(source, "Primitive: game.Draw")
+	gain := strings.Index(source, "Primitive: game.GainLife")
+	if draw < 0 || gain < 0 || draw >= gain {
+		t.Fatalf("trigger sequence is not draw then gain life:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceOptionalEnterTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Thoughtful Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature enters, you may draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Optional: true",
+		"Primitive: game.Draw",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceHostCreature(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Eager Beaver",
+		Layout:     "host",
+		TypeLine:   "Host Creature — Beaver",
+		OracleText: "When this creature enters, you may untap target permanent.",
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Supertypes: []types.Super{types.Host}") {
+		t.Fatalf("source does not preserve Host supertype:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceEnterLifeTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -1025,6 +1504,54 @@ func TestGenerateExecutableCardSourceDiesTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceDiesMultipleEffectTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Generous Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature dies, draw a card. You gain 2 life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "g")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	draw := strings.Index(source, "Primitive: game.Draw")
+	gain := strings.Index(source, "Primitive: game.GainLife")
+	if draw < 0 || gain < 0 || draw >= gain {
+		t.Fatalf("trigger sequence is not draw then gain life:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsPartiallyOptionalTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Unclear Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature enters, you may draw a card. You gain 2 life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported enter trigger" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1038,12 +1565,21 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "conditional tapped entry", cardName: "Test Land", typeLine: "Land", oracleText: "This land enters tapped unless you control a Forest."},
 		{name: "nonmana ward", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Ward—Pay 2 life."},
 		{name: "typecycling", cardName: "Test Card", typeLine: "Sorcery", oracleText: "Plainscycling {2}"},
+		{name: "nonmana equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip—Pay {3} or discard a card."},
+		{name: "qualified equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip creature token {1}"},
+		{name: "qualified enchant", cardName: "Test Aura", typeLine: "Enchantment — Aura", oracleText: "Enchant creature you control"},
+		{name: "noncolor protection", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Protection from artifacts"},
 		{name: "variable damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals X damage to any target."},
 		{name: "divided damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage divided as you choose among any number of targets."},
 		{name: "mass damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage to each opponent."},
 		{name: "variable draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "Draw X cards."},
+		{name: "variable surveil", cardName: "Test Surveil", typeLine: "Sorcery", oracleText: "Surveil X."},
+		{name: "repeated investigate", cardName: "Test Investigate", typeLine: "Sorcery", oracleText: "Investigate three times."},
+		{name: "repeated proliferate", cardName: "Test Proliferate", typeLine: "Sorcery", oracleText: "Proliferate X times."},
+		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
 		{name: "conditional draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "If you control a creature, draw two cards."},
 		{name: "compound draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "Draw two cards, then discard a card."},
+		{name: "multiple targeted clauses", cardName: "Test Spell", typeLine: "Sorcery", oracleText: "Destroy target artifact. Tap target creature."},
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
 		{name: "qualified mass destroy", cardName: "Test Doom", typeLine: "Sorcery", oracleText: "Destroy all other creatures."},
 		{name: "regeneration destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. It can't be regenerated."},
@@ -1077,7 +1613,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "reveal mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player reveals and mills three cards."},
 		{name: "compound mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills three cards, then draws a card."},
 		{name: "mass mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Each opponent mills three cards."},
-		{name: "optional enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature enters, you may draw a card."},
 		{name: "intervening enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature enters, if you control an artifact, draw a card."},
 		{name: "other enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature enters, draw a card."},
 		{name: "leave trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature leaves the battlefield, draw a card."},
@@ -1123,7 +1658,7 @@ func TestGenerateExecutableCardSourceRejectsPartialAbility(t *testing.T) {
 	if source != "" || len(diagnostics) == 0 {
 		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
 	}
-	if got := diagnostics[0].Summary; got != "unsupported enter trigger" {
+	if got := diagnostics[0].Summary; got != "unsupported enter trigger effect" {
 		t.Fatalf("summary = %q", got)
 	}
 }
@@ -1164,15 +1699,9 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		},
 		"activated": {
 			typeLine:   "Creature — Bear",
-			oracleText: "{1}: Draw a card.",
+			oracleText: "{Q}: Draw a card.",
 			summary:    "unsupported activated ability",
-			detail:     "supports only exact supported tap mana abilities",
-		},
-		"static rules text": {
-			typeLine:   "Enchantment",
-			oracleText: "Creatures you control get +1/+1.",
-			summary:    "unsupported static ability",
-			detail:     "non-keyword static rules text",
+			detail:     "supports only exact mana and tap costs",
 		},
 		"parameterized keyword": {
 			typeLine:   "Creature — Snake",
@@ -1188,9 +1717,9 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		},
 		"modal": {
 			typeLine:   "Sorcery",
-			oracleText: "Choose one —\n• Draw a card.\n• Destroy target creature.",
+			oracleText: "Choose two —\n• Draw a card.\n• Destroy target creature.\n• You gain 3 life.",
 			summary:    "unsupported modal ability",
-			detail:     "does not yet lower modal abilities",
+			detail:     "supports only \"Choose one\"",
 		},
 	}
 	for name, test := range tests {
@@ -1273,5 +1802,325 @@ func TestGenerateExecutableCardSourceKeepsSameNamedFacesPositional(t *testing.T)
 	if strings.Count(source, "game.FlyingStaticBody") != 1 ||
 		strings.Count(source, "game.HasteStaticBody") != 1 {
 		t.Fatalf("face abilities were not kept positional:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceLoyaltyAbility(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Walker",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Legendary Planeswalker — Test",
+		OracleText: "+1: Draw a card.\n\u22122: You gain 3 life.",
+		Loyalty:    func() *string { s := "3"; return &s }(),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"LoyaltyAbilities: []game.LoyaltyAbility",
+		"LoyaltyCost: 1,",
+		"LoyaltyCost: -2,",
+		"game.Draw",
+		"game.GainLife",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceModalChooseOneSpell(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Charm",
+		Layout:     "normal",
+		ManaCost:   "{G}{W}",
+		TypeLine:   "Instant",
+		OracleText: "Choose one \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"SpellAbility:",
+		"MinModes: 1,",
+		"MaxModes: 1,",
+		"game.Draw",
+		"game.GainLife",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceAdventureFacePreservation(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Pond Guardian // Rippling Insight",
+		Layout:        "adventure",
+		ColorIdentity: []string{"U"},
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:       "Pond Guardian",
+				ManaCost:   "{2}{U}",
+				TypeLine:   "Creature — Merfolk Wizard",
+				OracleText: "Flying",
+				Power:      new("2"),
+				Toughness:  new("3"),
+			},
+			{
+				Name:       "Rippling Insight",
+				ManaCost:   "{1}{U}",
+				TypeLine:   "Instant — Adventure",
+				OracleText: "Draw a card.",
+			},
+		},
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Name: "Pond Guardian",`,
+		"cost.O(2),",
+		"cost.U,",
+		"types.Creature",
+		`Name: "Rippling Insight",`,
+		"cost.O(1),",
+		"types.Instant",
+		"types.Adventure",
+		"Alternate: opt.Val(game.CardFace{",
+		"Layout: game.LayoutAdventure,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceAdventureRejectsWhenAnyFaceUnsupported(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Pond Guardian // Impossible Lesson",
+		Layout:        "adventure",
+		ColorIdentity: []string{"U"},
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:      "Pond Guardian",
+				ManaCost:  "{2}{U}",
+				TypeLine:  "Creature — Merfolk Wizard",
+				Power:     new("2"),
+				Toughness: new("3"),
+			},
+			{
+				Name:       "Impossible Lesson",
+				ManaCost:   "{1}{U}",
+				TypeLine:   "Sorcery — Adventure",
+				OracleText: "Start your engines!",
+			},
+		},
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for unsupported adventure face, got none")
+	}
+}
+
+func TestGenerateExecutableCardSourceAdventureColorsFromManaCost(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Dawn Escort // Guiding Prayer",
+		Layout:        "adventure",
+		ColorIdentity: []string{"W"},
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:       "Dawn Escort",
+				ManaCost:   "{2}{W}",
+				TypeLine:   "Creature — Human Knight",
+				OracleText: "Vigilance",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			},
+			{
+				Name:       "Guiding Prayer",
+				ManaCost:   "{1}{W}",
+				TypeLine:   "Sorcery — Adventure",
+				OracleText: "You gain 3 life.",
+			},
+		},
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if got := strings.Count(source, "[]color.Color{color.White}"); got != 2 {
+		t.Fatalf("white face colors count = %d, want 2:\n%s", got, source)
+	}
+}
+
+func TestGenerateExecutableCardSourceSplit(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Spark // Shelter",
+		Layout:        "split",
+		ColorIdentity: []string{"R", "W"},
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:       "Spark",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: "Spark deals 2 damage to any target.",
+			},
+			{
+				Name:       "Shelter",
+				ManaCost:   "{1}{W}",
+				TypeLine:   "Instant",
+				OracleText: "You gain 3 life.",
+			},
+		},
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Name: "Spark",`,
+		"cost.R,",
+		`Name: "Shelter",`,
+		"cost.O(1),",
+		"cost.W,",
+		"Alternate: opt.Val(game.CardFace{",
+		"Layout: game.LayoutSplit,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSplitRejectsUnsupported(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Spark // Wild Math",
+		Layout:        "split",
+		ColorIdentity: []string{"R", "U"},
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:       "Spark",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: "Spark deals 2 damage to any target.",
+			},
+			{
+				Name:       "Wild Math",
+				ManaCost:   "{X}{U}",
+				TypeLine:   "Sorcery",
+				OracleText: "Draw X cards.",
+			},
+		},
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for unsupported split half, got none")
+	}
+}
+
+func TestGenerateExecutableCardSourcePrepareRejected(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Shieldmate // Ready Formation",
+		Layout:        "prepare",
+		ColorIdentity: []string{"W"},
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:      "Shieldmate",
+				ManaCost:  "{2}{W}",
+				TypeLine:  "Creature — Human Soldier",
+				Power:     new("3"),
+				Toughness: new("3"),
+			},
+			{
+				Name:       "Ready Formation",
+				ManaCost:   "{W}",
+				TypeLine:   "Sorcery",
+				OracleText: "Target creature gets +2/+2 until end of turn.",
+			},
+		},
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported card layout" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsAlternateLayoutsWithMoreThanTwoFaces(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Triple Trouble",
+		Layout:        "split",
+		ColorIdentity: []string{"U", "R", "W"},
+		CardFaces: []ScryfallCardFace{
+			{Name: "First", ManaCost: "{U}", TypeLine: "Instant", OracleText: "Draw a card."},
+			{Name: "Second", ManaCost: "{R}", TypeLine: "Instant", OracleText: "You gain 3 life."},
+			{Name: "Third", ManaCost: "{W}", TypeLine: "Instant", OracleText: "Draw a card."},
+		},
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported card layout" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(diagnostics[0].Detail, `supports at most 2 faces for "split" layout cards, found 3`) {
+		t.Fatalf("diagnostic detail = %q", diagnostics[0].Detail)
 	}
 }

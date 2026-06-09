@@ -396,7 +396,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	if !ok {
 		return false
 	}
-	if !removeCastSourceCard(player, cast.CardID, sourceZone) {
+	if !removeCastSourceCard(g, player, cast.CardID, sourceZone) {
 		panic("cast spell disappeared from source zone after validation")
 	}
 	if sourceZone == zone.Command && player.CommanderInstanceID == cast.CardID {
@@ -706,6 +706,13 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 		if !canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone) {
 			return false
 		}
+	case zone.Exile:
+		if !g.AdventureCards[cardID] {
+			return false
+		}
+		if face != game.FaceFront {
+			return false
+		}
 	default:
 		return false
 	}
@@ -745,6 +752,8 @@ func castSourceContains(player *game.Player, cardID id.ID, sourceZone zone.Type)
 		return player.CommandZone.Contains(cardID)
 	case zone.Graveyard:
 		return player.Graveyard.Contains(cardID)
+	case zone.Exile:
+		return player.Exile.Contains(cardID)
 	default:
 		return false
 	}
@@ -756,12 +765,14 @@ func castSourceZoneCards(player *game.Player, sourceZone zone.Type) []id.ID {
 		return player.Hand.All()
 	case zone.Graveyard:
 		return player.Graveyard.All()
+	case zone.Exile:
+		return player.Exile.All()
 	default:
 		return nil
 	}
 }
 
-func removeCastSourceCard(player *game.Player, cardID id.ID, sourceZone zone.Type) bool {
+func removeCastSourceCard(g *game.Game, player *game.Player, cardID id.ID, sourceZone zone.Type) bool {
 	switch sourceZone {
 	case zone.Hand:
 		return player.Hand.Remove(cardID)
@@ -769,6 +780,12 @@ func removeCastSourceCard(player *game.Player, cardID id.ID, sourceZone zone.Typ
 		return player.CommandZone.Remove(cardID)
 	case zone.Graveyard:
 		return player.Graveyard.Remove(cardID)
+	case zone.Exile:
+		if !player.Exile.Remove(cardID) {
+			return false
+		}
+		delete(g.AdventureCards, cardID)
+		return true
 	default:
 		return false
 	}

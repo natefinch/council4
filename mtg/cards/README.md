@@ -26,21 +26,24 @@ mtg/cards/
 
 Each card is an exported `*game.CardDef` variable in its letter sub-package (e.g., `var LightningBolt = &game.CardDef{...}`). A `go generate` step produces `cards.go` per sub-package listing all cards.
 
-## Adding a card
+## Generating cards
 
-1. Generate the mechanical scaffold:
-   ```bash
-   go run .agents/skills/card-impl/main.go "Card Name"
-   ```
-
-2. Fill in the categorized ability fields on `game.CardFace` (use the `card-impl` Copilot skill or do it manually): `SpellAbility`, `ActivatedAbilities`, `ManaAbilities`, `LoyaltyAbilities`, `TriggeredAbilities`, `ReplacementAbilities`, and `StaticAbilities` as appropriate. For plain non-parameterized keywords, append reusable `StaticAbility` templates such as `game.FlyingStaticBody` or `game.DeathtouchStaticBody`. Front-face data lives in the embedded `game.CardFace` on `CardDef`; for double-faced cards, `Back` holds back-face data. Follow the expanded/raw-string source layout shown in `mtg/cards/k/karplusan_forest.go`.
-
-3. Regenerate the card list:
+1. Run `cardgen/oracle/cmd/compilecards` against a Scryfall Oracle Cards bulk
+   file and a temporary output directory. The compiler emits only complete,
+   validated Card Definitions and reports unsupported cards.
+2. Inspect and validate the generated packages before copying selected files or
+   intentionally targeting `mtg/cards` directly. See
+   [`cardgen/oracle/cmd/compilecards`](../../cardgen/oracle/cmd/compilecards/README.md).
+3. For an exceptional mechanic outside compiler coverage, write a Card
+   Implementation manually and use `ImplementationID` only when declarative
+   Effect Primitives cannot represent the behavior.
+4. Regenerate the Card Registry lists after manual changes:
    ```bash
    go generate ./mtg/cards/...
    ```
 
-4. If this is a new letter directory, add a `doc.go` with the `go:generate` directive:
+5. If this is a new letter directory, add a `README.md` and a `doc.go` with the
+   `go:generate` directive:
    ```go
    package x
    //go:generate go run github.com/natefinch/council4/cardgen/cmd/gencardlist

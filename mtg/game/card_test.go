@@ -54,6 +54,55 @@ func TestTransformFrontLandCanBePlayedAsLand(t *testing.T) {
 	}
 }
 
+func TestCardDefAlternateFaceAdventure(t *testing.T) {
+	card := &CardDef{
+		CardFace: CardFace{Name: "Questing Squire"},
+		Layout:   LayoutAdventure,
+		Alternate: opt.Val(CardFace{
+			Name:     "Seek the Way",
+			ManaCost: opt.Val(cost.Mana{cost.O(1), cost.W}),
+			Types:    []types.Card{types.Sorcery},
+		}),
+	}
+
+	face, ok := card.AlternateFace()
+	if !ok {
+		t.Fatal("AlternateFace() reported absent alternate face")
+	}
+	if face.Name != "Seek the Way" ||
+		!face.ManaCost.Exists ||
+		len(face.Types) != 1 ||
+		face.Types[0] != types.Sorcery {
+		t.Fatalf("alternate face = %+v", face)
+	}
+
+	face, ok = card.Face(FaceAlternate)
+	if !ok || face.Name != "Seek the Way" {
+		t.Fatalf("Face(FaceAlternate) = %+v, %v", face, ok)
+	}
+	def, ok := card.FaceDef(FaceAlternate)
+	if !ok || def.Name != "Seek the Way" {
+		t.Fatalf("FaceDef(FaceAlternate) = %+v, %v", def, ok)
+	}
+	if got := card.FaceIndexes(); len(got) != 2 || got[0] != FaceFront || got[1] != FaceAlternate {
+		t.Fatalf("FaceIndexes() = %v, want [FaceFront FaceAlternate]", got)
+	}
+	if !card.CanChooseCastFace(FaceAlternate) {
+		t.Fatal("adventure alternate face was not castable")
+	}
+	if got := card.LegalCastFaces(); len(got) != 2 || got[0] != FaceFront || got[1] != FaceAlternate {
+		t.Fatalf("LegalCastFaces() = %v, want [FaceFront FaceAlternate]", got)
+	}
+}
+
+func TestCardDefAlternateFaceAbsent(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{Name: "Ordinary Bear"}}
+
+	if _, ok := card.AlternateFace(); ok {
+		t.Fatal("AlternateFace() reported a face for single-faced card")
+	}
+}
+
 func TestCardFaceAbilityCountAndBodyAtUsesCanonicalOrder(t *testing.T) {
 	face := CardFace{
 		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{Primitive: Draw{}}}}.Ability()),

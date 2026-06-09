@@ -56,6 +56,13 @@ func compileAbility(
 
 	body := abilityBodyTokens(ability)
 	tokens := semanticTokens(body, ability.Reminders, ability.Quoted)
+	if ability.Kind == AbilityTriggered &&
+		len(tokens) >= 2 &&
+		equalWord(tokens[0], "you") &&
+		equalWord(tokens[1], "may") {
+		compiled.Optional = true
+		compiled.OptionalSpan = Span{Start: tokens[0].Span.Start, End: tokens[1].Span.End}
+	}
 	compiled.Keywords = compileKeywords(tokens)
 	compiled.Targets = compileTargets(tokens)
 	conditionTokens := tokens
@@ -359,6 +366,7 @@ func compileEffects(
 	for _, sentence := range sentences {
 		tokens := semanticTokens(sentence.Tokens, reminders, quoted)
 		duration := compileDuration(tokens)
+		staticSubject, staticSubjectSpan := compileStaticSubject(tokens)
 		for i, token := range tokens {
 			kind := effectKindAt(tokens, i)
 			if kind == EffectUnknown {
@@ -366,22 +374,49 @@ func compileEffects(
 			}
 			powerDelta, toughnessDelta := compilePTChange(tokens[i+1:])
 			effects = append(effects, CompiledEffect{
-				Kind:           kind,
-				Span:           sentence.Span,
-				Text:           sentence.Text,
-				VerbSpan:       token.Span,
-				Duration:       duration,
-				Selector:       compileSelector(tokens[i+1:]),
-				Amount:         compileEffectAmount(tokens[i+1:]),
-				PowerDelta:     powerDelta,
-				ToughnessDelta: toughnessDelta,
-				Symbol:         firstSymbol(tokens[i+1:]),
-				Negated:        effectNegated(tokens, i),
+				Kind:              kind,
+				Span:              sentence.Span,
+				Text:              sentence.Text,
+				VerbSpan:          token.Span,
+				Duration:          duration,
+				Selector:          compileSelector(tokens[i+1:]),
+				Amount:            compileEffectAmount(tokens[i+1:]),
+				PowerDelta:        powerDelta,
+				ToughnessDelta:    toughnessDelta,
+				StaticSubject:     staticSubject,
+				StaticSubjectSpan: staticSubjectSpan,
+				Symbol:            firstSymbol(tokens[i+1:]),
+				Negated:           effectNegated(tokens, i),
 			})
 		}
 
 	}
 	return effects
+}
+
+func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span) {
+	switch {
+	case len(tokens) >= 3 &&
+		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
+		equalWord(tokens[1], "creature") &&
+		equalWord(tokens[2], "gets"):
+		return StaticSubjectAttachedObject, spanOf(tokens[:2])
+	case len(tokens) >= 5 &&
+		equalWord(tokens[0], "other") &&
+		equalWord(tokens[1], "creatures") &&
+		equalWord(tokens[2], "you") &&
+		equalWord(tokens[3], "control") &&
+		equalWord(tokens[4], "get"):
+		return StaticSubjectOtherControlledCreatures, spanOf(tokens[:4])
+	case len(tokens) >= 4 &&
+		equalWord(tokens[0], "creatures") &&
+		equalWord(tokens[1], "you") &&
+		equalWord(tokens[2], "control") &&
+		equalWord(tokens[3], "get"):
+		return StaticSubjectControlledCreatures, spanOf(tokens[:3])
+	default:
+		return StaticSubjectNone, Span{}
+	}
 }
 
 func compilePTChange(tokens []Token) (power, toughness CompiledSignedAmount) {
@@ -404,9 +439,6 @@ func signedAmount(sign, amount Token) (CompiledSignedAmount, bool) {
 		return CompiledSignedAmount{}, false
 	}
 	negative := sign.Kind == Minus
-	if negative {
-		value = -value
-	}
 	return CompiledSignedAmount{Value: value, Known: true, Negative: negative}, true
 }
 
@@ -533,6 +565,8 @@ func effectKind(token Token) EffectKind {
 		return EffectFight
 	case "gain", "gains":
 		return EffectGain
+	case "investigate", "investigates":
+		return EffectInvestigate
 	case "lose", "loses":
 		return EffectLose
 	case "mill", "mills":
@@ -541,6 +575,10 @@ func effectKind(token Token) EffectKind {
 		return EffectModifyPT
 	case "put", "puts":
 		return EffectPut
+	case "proliferate", "proliferates":
+		return EffectProliferate
+	case "regenerate", "regenerates":
+		return EffectRegenerate
 	case "return", "returns":
 		return EffectReturn
 	case "reveal", "reveals":
@@ -549,6 +587,8 @@ func effectKind(token Token) EffectKind {
 		return EffectSacrifice
 	case "scry", "scries":
 		return EffectScry
+	case "surveil", "surveils":
+		return EffectSurveil
 	case "search", "searches":
 		return EffectSearch
 	case "shuffle", "shuffles":
@@ -616,18 +656,7 @@ func compileKeywords(tokens []Token) []CompiledKeyword {
 				continue
 			}
 			end := i + width
-			parameter := ""
-			if end < len(tokens) && tokens[end].Kind == Symbol {
-				var symbols strings.Builder
-				for end < len(tokens) && tokens[end].Kind == Symbol {
-					_, _ = symbols.WriteString(tokens[end].Text)
-					end++
-				}
-				parameter = symbols.String()
-			} else if end < len(tokens) && tokens[end].Kind == Integer {
-				parameter = tokens[end].Text
-				end++
-			}
+			parameter, end := compileKeywordParameter(tokens, canonical, end)
 			phrase := tokens[i:end]
 			keywords = append(keywords, CompiledKeyword{
 				Name:      canonical,
@@ -640,6 +669,85 @@ func compileKeywords(tokens []Token) []CompiledKeyword {
 		}
 	}
 	return keywords
+}
+
+func compileKeywordParameter(tokens []Token, keyword string, start int) (parameter string, end int) {
+	switch keyword {
+	case "Protection":
+		parameter, end, _ = compileProtectionParameter(tokens, start)
+		return parameter, end
+	case "Enchant":
+		if start < len(tokens) && isEnchantObjectWord(tokens[start]) {
+			return strings.ToLower(tokens[start].Text), start + 1
+		}
+		return "", start
+	}
+	end = start
+	if end < len(tokens) && tokens[end].Kind == Symbol {
+		var symbols strings.Builder
+		for end < len(tokens) && tokens[end].Kind == Symbol {
+			_, _ = symbols.WriteString(tokens[end].Text)
+			end++
+		}
+		return symbols.String(), end
+	}
+	if end < len(tokens) && tokens[end].Kind == Integer {
+		return tokens[end].Text, end + 1
+	}
+	return "", end
+}
+
+func compileProtectionParameter(tokens []Token, start int) (parameter string, end int, ok bool) {
+	if start+1 >= len(tokens) ||
+		!equalWord(tokens[start], "from") ||
+		!isColorWord(tokens[start+1]) {
+		return "", start, false
+	}
+	colors := []string{strings.ToLower(tokens[start+1].Text)}
+	end = start + 2
+	for end < len(tokens) {
+		next := end
+		if tokens[next].Kind == Comma {
+			next++
+		} else if !equalWord(tokens[next], "and") {
+			break
+		}
+		if next < len(tokens) && equalWord(tokens[next], "and") {
+			next++
+		}
+		if next+1 >= len(tokens) ||
+			!equalWord(tokens[next], "from") ||
+			!isColorWord(tokens[next+1]) {
+			break
+		}
+		colors = append(colors, strings.ToLower(tokens[next+1].Text))
+		end = next + 2
+	}
+	return strings.Join(colors, ","), end, true
+}
+
+func isColorWord(token Token) bool {
+	if token.Kind != Word {
+		return false
+	}
+	switch strings.ToLower(token.Text) {
+	case "black", "blue", "green", "red", "white":
+		return true
+	default:
+		return false
+	}
+}
+
+func isEnchantObjectWord(token Token) bool {
+	if token.Kind != Word {
+		return false
+	}
+	switch strings.ToLower(token.Text) {
+	case "artifact", "creature", "enchantment", "land", "permanent", "planeswalker", "player":
+		return true
+	default:
+		return false
+	}
 }
 
 func compileReferences(tokens []Token, cardName string) []CompiledReference {
@@ -884,7 +992,7 @@ func tokenWordsEqual(tokens []Token, words []string) bool {
 
 func objectWord(token Token) bool {
 	switch strings.ToLower(token.Text) {
-	case "card", "creature", "equipment", "land", "permanent", "spell", "token":
+	case "artifact", "card", "creature", "enchantment", "equipment", "land", "permanent", "spell", "token":
 		return token.Kind == Word
 	default:
 		return false

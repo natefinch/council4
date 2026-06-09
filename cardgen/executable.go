@@ -27,6 +27,13 @@ func GenerateExecutableCardSource(
 			Detail:   fmt.Sprintf("the source generator does not support Scryfall layout %q", card.Layout),
 		}}, nil
 	}
+	if layoutEmitsAlternate(card.Layout) && len(card.CardFaces) > 2 {
+		return "", []oracle.Diagnostic{{
+			Severity: oracle.SeverityWarning,
+			Summary:  "unsupported card layout",
+			Detail:   fmt.Sprintf("the source generator supports at most 2 faces for %q layout cards, found %d", card.Layout, len(card.CardFaces)),
+		}}, nil
+	}
 
 	faceAbilities, diagnostics := lowerExecutableFaces(card)
 	if len(diagnostics) > 0 {
@@ -82,19 +89,14 @@ func faceHintsFrom(faceAbilities []loweredFaceAbilities) []faceRenderHints {
 // executableFaces returns the printed fields for each face in the positional
 // order used by the typed lowering: reversible cards expose every face, while
 // other layouts expose the root face followed by any additional emitted faces.
-func executableFaces(card *ScryfallCard) []generatedCardFields {
+func executableFaces(card *ScryfallCard) []scryfallFaceFields {
 	if card.Layout == "reversible_card" && len(card.CardFaces) > 0 {
-		fields := facesFromAllCardFaces(card)
-		for i := range fields {
-			fields[i].EntersTapped = false
-		}
-		return fields
+		return facesFromAllCardFaces(card)
 	}
-	fields := append([]generatedCardFields{rootFields(card)}, generatedFaces(card)...)
-	for i := range fields {
-		fields[i].EntersTapped = false
-	}
-	return fields
+	faces := []scryfallFaceFields{rootFields(card)}
+	faces = append(faces, generatedFaces(card)...)
+	faces = append(faces, alternateFields(card)...)
+	return faces
 }
 
 // assembleCardDefs builds the typed game.CardDef values validated before
@@ -132,16 +134,20 @@ func assembleCardDefs(card *ScryfallCard, faceAbilities []loweredFaceAbilities) 
 		ColorIdentity: identityValue(faces[0].ColorIdentity),
 	}
 	if len(faces) > 1 {
-		backFace, err := buildCardFace(faces[1], faceAbilities[1])
+		otherFace, err := buildCardFace(faces[1], faceAbilities[1])
 		if err != nil {
 			return nil, err
 		}
-		def.Back = opt.Val(backFace)
+		if layoutEmitsAlternate(card.Layout) {
+			def.Alternate = opt.Val(otherFace)
+		} else {
+			def.Back = opt.Val(otherFace)
+		}
 	}
 	return []*game.CardDef{def}, nil
 }
 
-func buildCardFace(fields generatedCardFields, abilities loweredFaceAbilities) (game.CardFace, error) {
+func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (game.CardFace, error) {
 	face := game.CardFace{
 		Name:       fields.Name,
 		OracleText: fields.OracleText,
@@ -191,6 +197,7 @@ func buildCardFace(fields generatedCardFields, abilities loweredFaceAbilities) (
 	}
 	face.ActivatedAbilities = abilities.ActivatedAbilities
 	face.ManaAbilities = abilities.ManaAbilities
+	face.LoyaltyAbilities = abilities.LoyaltyAbilities
 	face.TriggeredAbilities = abilities.TriggeredAbilities
 	face.ReplacementAbilities = abilities.ReplacementAbilities
 	face.SpellAbility = abilities.SpellAbility
@@ -222,6 +229,12 @@ func cardLayoutValue(layout string) game.CardLayout {
 		return game.LayoutDoubleFacedToken
 	case "reversible_card":
 		return game.LayoutReversibleCard
+	case "adventure":
+		return game.LayoutAdventure
+	case "split":
+		return game.LayoutSplit
+	case "prepare":
+		return game.LayoutPrepare
 	default:
 		return game.LayoutNormal
 	}

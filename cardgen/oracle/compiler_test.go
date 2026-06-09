@@ -65,6 +65,20 @@ func TestCompileTriggeredAbility(t *testing.T) {
 	}
 }
 
+func TestCompileOptionalTriggeredAbility(t *testing.T) {
+	t.Parallel()
+	source := "When this creature enters, you may draw a card."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+
+	ability := compilation.Abilities[0]
+	if !ability.Optional || source[ability.OptionalSpan.Start.Offset:ability.OptionalSpan.End.Offset] != "you may" {
+		t.Fatalf("optional ability = %#v", ability)
+	}
+}
+
 func TestCompileReturnToOwnersHand(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile(
@@ -152,6 +166,59 @@ func TestCompileKeywordsAndReminder(t *testing.T) {
 	}
 	if len(equip.Effects) != 0 || len(equip.Targets) != 0 {
 		t.Fatalf("reminder text leaked semantics: %#v", equip)
+	}
+}
+
+func TestCompileEnchantKeywordParameter(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Enchant creature", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	keywords := compilation.Abilities[0].Keywords
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %#v", keywords)
+	}
+	if keywords[0].Name != "Enchant" ||
+		keywords[0].Parameter != "creature" ||
+		keywords[0].Text != "Enchant creature" ||
+		keywords[0].Span.Start.Offset != 0 ||
+		keywords[0].Span.End.Offset != len("Enchant creature") {
+		t.Fatalf("enchant keyword = %#v", keywords[0])
+	}
+}
+
+func TestCompileProtectionKeywordParameter(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Protection from red", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	keywords := compilation.Abilities[0].Keywords
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %#v", keywords)
+	}
+	if keywords[0].Name != "Protection" ||
+		keywords[0].Parameter != "red" ||
+		keywords[0].Text != "Protection from red" ||
+		keywords[0].Span.Start.Offset != 0 ||
+		keywords[0].Span.End.Offset != len("Protection from red") {
+		t.Fatalf("protection keyword = %#v", keywords[0])
+	}
+}
+
+func TestCompileProtectionKeywordMultipleColors(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Protection from black and from red", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	keywords := compilation.Abilities[0].Keywords
+	if len(keywords) != 1 ||
+		keywords[0].Parameter != "black,red" ||
+		keywords[0].Text != "Protection from black and from red" ||
+		keywords[0].Span.End.Offset != len("Protection from black and from red") {
+		t.Fatalf("protection keyword = %#v", keywords)
 	}
 }
 
@@ -261,6 +328,143 @@ func TestCompileFixedEffectValues(t *testing.T) {
 	}
 }
 
+func TestCompileStaticPTBuffSubjects(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source          string
+		wantSubject     StaticSubjectKind
+		wantSubjectText string
+		wantPower       CompiledSignedAmount
+		wantToughness   CompiledSignedAmount
+	}{
+		"enchanted creature": {
+			source:          "Enchanted creature gets +2/+2.",
+			wantSubject:     StaticSubjectAttachedObject,
+			wantSubjectText: "Enchanted creature",
+			wantPower:       CompiledSignedAmount{Value: 2, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 2, Known: true},
+		},
+		"equipped creature": {
+			source:          "Equipped creature gets -3/-1.",
+			wantSubject:     StaticSubjectAttachedObject,
+			wantSubjectText: "Equipped creature",
+			wantPower:       CompiledSignedAmount{Value: 3, Known: true, Negative: true},
+			wantToughness:   CompiledSignedAmount{Value: 1, Known: true, Negative: true},
+		},
+		"other creatures you control": {
+			source:          "Other creatures you control get +1/+1.",
+			wantSubject:     StaticSubjectOtherControlledCreatures,
+			wantSubjectText: "Other creatures you control",
+			wantPower:       CompiledSignedAmount{Value: 1, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 1, Known: true},
+		},
+		"creatures you control": {
+			source:          "Creatures you control get +0/+2.",
+			wantSubject:     StaticSubjectControlledCreatures,
+			wantSubjectText: "Creatures you control",
+			wantPower:       CompiledSignedAmount{Value: 0, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 2, Known: true},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(compilation.Abilities) != 1 {
+				t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
+			}
+			ability := compilation.Abilities[0]
+			if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectModifyPT {
+				t.Fatalf("effects = %#v", ability.Effects)
+			}
+			effect := ability.Effects[0]
+			if effect.StaticSubject != test.wantSubject {
+				t.Fatalf("static subject = %v, want %v", effect.StaticSubject, test.wantSubject)
+			}
+			if got := test.source[effect.StaticSubjectSpan.Start.Offset:effect.StaticSubjectSpan.End.Offset]; got != test.wantSubjectText {
+				t.Fatalf("subject span text = %q, want %q", got, test.wantSubjectText)
+			}
+			if effect.PowerDelta != test.wantPower || effect.ToughnessDelta != test.wantToughness {
+				t.Fatalf("PT = %+v / %+v, want %+v / %+v", effect.PowerDelta, effect.ToughnessDelta, test.wantPower, test.wantToughness)
+			}
+		})
+	}
+}
+
+func TestCompileResolvingPTBuffHasNoStaticSubject(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"Target creature gets +2/+2 until end of turn.",
+		ParseContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effect := compilation.Abilities[0].Effects[0]
+	if effect.StaticSubject != StaticSubjectNone {
+		t.Fatalf("static subject = %v, want StaticSubjectNone", effect.StaticSubject)
+	}
+	if effect.StaticSubjectSpan != (Span{}) {
+		t.Fatalf("static subject span = %#v, want zero span", effect.StaticSubjectSpan)
+	}
+}
+
+func TestCompileSurveilEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Surveil 2.", ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 1 ||
+		effects[0].Kind != EffectSurveil ||
+		effects[0].Amount != (CompiledAmount{Value: 2, Known: true}) {
+		t.Fatalf("effects = %#v, want surveil 2", effects)
+	}
+}
+
+func TestCompileInvestigateEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Investigate.", ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectInvestigate {
+		t.Fatalf("effects = %#v, want investigate", effects)
+	}
+}
+
+func TestCompileProliferateEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Proliferate.", ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectProliferate {
+		t.Fatalf("effects = %#v, want proliferate", effects)
+	}
+}
+
+func TestCompileRegenerateEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"Regenerate target creature.",
+		ParseContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectRegenerate {
+		t.Fatalf("effects = %#v, want regenerate", effects)
+	}
+}
+
 func TestCompileCounterVerbAndNoun(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
@@ -308,6 +512,54 @@ func TestCompileNegatedEffect(t *testing.T) {
 	effects := compilation.Abilities[0].Effects
 	if len(effects) != 1 || effects[0].Kind != EffectGain || !effects[0].Negated {
 		t.Fatalf("effects = %#v", effects)
+	}
+}
+
+func TestCompileEntersTappedUnlessCondition(t *testing.T) {
+	t.Parallel()
+	source := "This land enters tapped unless you control two or more basic lands."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Kind != AbilityReplacement {
+		t.Fatalf("kind = %v, want AbilityReplacement", ability.Kind)
+	}
+	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectEnterTapped {
+		t.Fatalf("effects = %#v", ability.Effects)
+	}
+	if len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != ConditionUnless ||
+		ability.Conditions[0].Text != "unless you control two or more basic lands" {
+		t.Fatalf("conditions = %#v", ability.Conditions)
+	}
+	if len(ability.References) != 1 || ability.References[0].Kind != ReferenceThisObject {
+		t.Fatalf("references = %#v", ability.References)
+	}
+}
+
+func TestCompileArtifactAndEnchantmentEntersTappedReference(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"This artifact enters tapped.",
+		"This enchantment enters tapped.",
+	}
+	for _, source := range tests {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Kind != AbilityReplacement {
+				t.Fatalf("kind = %v, want AbilityReplacement", ability.Kind)
+			}
+			if len(ability.References) != 1 || ability.References[0].Kind != ReferenceThisObject {
+				t.Fatalf("references = %#v", ability.References)
+			}
+		})
 	}
 }
 

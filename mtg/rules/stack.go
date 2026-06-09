@@ -56,7 +56,7 @@ func (e *Engine) resolveStackObjectWithChoices(g *game.Game, obj *game.StackObje
 
 func spellResolved(result string) bool {
 	switch result {
-	case "resolved", "battlefield", "graveyard":
+	case "resolved", "battlefield", "graveyard", "adventure exile":
 		return true
 	default:
 		return false
@@ -290,6 +290,12 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 		if obj.Copy {
 			return "resolved"
 		}
+		if isAdventureAlternateFaceSpell(g, obj) {
+			if !moveAdventureSpellToExile(g, obj, card) {
+				return "invalid owner"
+			}
+			return "adventure exile"
+		}
 		if !moveStackCardToGraveyard(g, obj, card) {
 			return "invalid owner"
 		}
@@ -334,6 +340,58 @@ func counteredSpellResolution(g *game.Game, obj *game.StackObject, card *game.Ca
 		return "invalid owner"
 	}
 	return "countered by rules"
+}
+
+func isAdventureAlternateFaceSpell(g *game.Game, obj *game.StackObject) bool {
+	if obj.Face != game.FaceAlternate {
+		return false
+	}
+	card, ok := g.GetCardInstance(obj.SourceID)
+	if !ok {
+		return false
+	}
+	return card.Def.Layout == game.LayoutAdventure
+}
+
+func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {
+	if _, ok := playerByID(g, card.Owner); !ok {
+		return false
+	}
+	destination := replacementZoneChangeDestination(g, game.Event{
+		Kind:          game.EventZoneChanged,
+		SourceID:      card.ID,
+		StackObjectID: stackObjectID(obj),
+		Controller:    stackObjectController(obj),
+		Player:        card.Owner,
+		CardID:        card.ID,
+		Face:          stackObjectFace(obj),
+		FromZone:      zone.Stack,
+		ToZone:        zone.Exile,
+	})
+	destination = commanderReplacementDestination(g, card.ID, destination)
+	destinationCards, ok := destinationZone(g, card.Owner, destination)
+	if !ok {
+		return false
+	}
+	destinationCards.Add(card.ID)
+	if destination == zone.Exile {
+		if g.AdventureCards == nil {
+			g.AdventureCards = make(map[id.ID]bool)
+		}
+		g.AdventureCards[card.ID] = true
+	}
+	event := game.Event{
+		SourceID:      card.ID,
+		StackObjectID: stackObjectID(obj),
+		Controller:    stackObjectController(obj),
+		Player:        card.Owner,
+		CardID:        card.ID,
+		Face:          stackObjectFace(obj),
+		FromZone:      zone.Stack,
+		ToZone:        destination,
+	}
+	emitZoneChangeEvent(g, event)
+	return true
 }
 
 func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {

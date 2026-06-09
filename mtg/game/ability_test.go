@@ -162,6 +162,50 @@ func TestWardStaticAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestEnchantStaticAbilityBuildsCompleteMechanic(t *testing.T) {
+	target := TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: "creature",
+		Allow:      TargetAllowPermanent,
+		Predicate: TargetPredicate{
+			PermanentTypes: []types.Card{types.Creature},
+		},
+	}
+	ability := EnchantStaticAbility(&target)
+	target.Predicate.PermanentTypes[0] = types.Land
+
+	if ability.Text != "Enchant creature" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Enchant creature")
+	}
+	enchantTarget, ok := StaticBodyEnchantTarget(&ability)
+	if !ok ||
+		enchantTarget.MinTargets != 1 ||
+		enchantTarget.MaxTargets != 1 ||
+		enchantTarget.Allow != TargetAllowPermanent ||
+		!slices.Equal(enchantTarget.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		t.Fatalf("enchant target = %+v, %v; want one creature", enchantTarget, ok)
+	}
+}
+
+func TestProtectionFromColorsStaticAbilityBuildsCompleteMechanic(t *testing.T) {
+	colors := []color.Color{color.Red}
+	ability := ProtectionFromColorsStaticAbility(colors...)
+	colors[0] = color.Blue
+
+	if ability.Text != "Protection from red" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Protection from red")
+	}
+	if protected := StaticBodyProtectionColors(&ability); !slices.Equal(protected, []color.Color{color.Red}) {
+		t.Fatalf("protection colors = %v, want red", protected)
+	}
+
+	multiple := ProtectionFromColorsStaticAbility(color.Black, color.Red)
+	if multiple.Text != "Protection from black and from red" {
+		t.Fatalf("multiple text = %q, want %q", multiple.Text, "Protection from black and from red")
+	}
+}
+
 func TestTapManaAbilityBuildsCompleteMechanic(t *testing.T) {
 	ability := TapManaAbility(mana.G)
 
@@ -213,6 +257,18 @@ func TestTapManaChoiceAbilityBuildsCompleteMechanic(t *testing.T) {
 	add, ok := content.Modes[0].Sequence[1].Primitive.(AddMana)
 	if !ok || add.Amount.Value() != 1 || add.ManaColor != "" || add.ChoiceFrom != choose.PublishChoice {
 		t.Fatalf("second instruction = %+v, want one mana from published choice", content.Modes[0].Sequence[1])
+	}
+}
+
+func TestTapManaChoiceAbilitySupportsColorlessMana(t *testing.T) {
+	ability := TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.C)
+
+	if ability.Text != "{T}: Add {W}, {U}, {B}, or {C}." {
+		t.Fatalf("text = %q, want explicit mana symbols", ability.Text)
+	}
+	choose, ok := ability.Content.Modes[0].Sequence[0].Primitive.(Choose)
+	if !ok || choose.Choice.Prompt != "Choose a type of mana" {
+		t.Fatalf("choice = %+v, want mana-type prompt", choose)
 	}
 }
 

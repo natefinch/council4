@@ -5,6 +5,8 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
+**Cards supported: 2,176 / 37,628**
+
 The pipeline is:
 
 ```text
@@ -105,14 +107,27 @@ its exact source span. Unknown costs receive their own warning. The compiler
 never substitutes guessed executable behavior for unsupported wording.
 
 The strict executable backend currently lowers plain non-parameterized
-keywords, mana-cost Ward and Cycling, supported tap mana choices,
+keywords, mana-cost Ward, Cycling, and Equip, base-type Enchant, color-based
+Protection, supported tap mana choices, ordinary activated abilities with exact
+mana-only, tap-only, or mana-then-tap costs and supported effect bodies,
 unconditional enters-tapped replacements, fixed single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes, narrow mass
-destruction, fixed draw and life changes, fixed controller scry, fixed
-controller or target-player discard and mill, and one-target tap and untap. It
-also lowers exact supported self-enter and self-dies triggers when their body is
-exactly one supported spell-like effect. Every semantic element and meaningful
-source token must be consumed; otherwise the whole card is rejected.
+destruction, fixed draw and life changes, fixed controller scry and surveil,
+exact investigate and proliferate, fixed controller or target-player discard
+and mill, one-target tap, untap, and regeneration, exact fights between two
+target creatures, and fixed power/toughness buffs on enchanted creature,
+equipped creature, creatures you control, and other creatures you control.
+Adventure and split layouts are supported when each printed face is otherwise
+exactly representable; these layouts keep the front face in the root
+`game.CardDef`, emit the second spell face as `Alternate`, and derive per-face
+colors from mana costs when Scryfall omits face colors. Prepare layout cards
+remain rejected until prepared-state runtime semantics exist (see issue #18).
+Supported sentence-sized effects may be lowered in Oracle order when at most one clause
+targets. It also lowers exact supported self-enter and self-dies triggers with
+ordered supported spell-like effects. An exact leading `you may` on a
+single-effect trigger maps to trigger-level optionality; partially optional
+sequences remain unsupported. Every semantic element and meaningful source
+token must be consumed; otherwise the whole card is rejected.
 
 This compiler IR is the recognition stage. The strict backend in `cardgen`
 consumes it and lowers each recognized ability into a second, **typed**
@@ -121,7 +136,7 @@ intermediate representation made of `game.*` values (`game.ActivatedAbility`,
 `game.CardDef`, validates it with `game.ValidateCardDef`, and only then renders
 Go source. This compiler package stays purely about Oracle-text recognition; it
 never constructs runtime `game` values itself. See
-[`cardgen/README.md`](../README.md#executable-lowering-pipeline-typed-intermediate-representation)
+[`cardgen/README.md`](../README.md#compiler-stages)
 and [ADR 0008](../../docs/adr/0008-typed-ir-lowering.md).
 
 ## Testing
@@ -150,3 +165,8 @@ See [`cmd/checkparser/README.md`](cmd/checkparser/README.md).
 generation. It emits only fully executable cards and reports every unsupported
 card without creating a partial definition. See
 [`cmd/compilecards/README.md`](cmd/compilecards/README.md).
+
+`cmd/corpusdelta` orchestrates expansion-corpus compilation, stable-ID report
+comparison, `docs/supported.md` regeneration, generated-package validation, and
+review-manifest generation. See
+[`cmd/corpusdelta/README.md`](cmd/corpusdelta/README.md).

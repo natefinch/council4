@@ -4,19 +4,14 @@
 cards in parallel, and writes deterministic Go definitions for only the cards
 whose complete rules text is supported by the executable backend.
 
-The strict backend supports vanilla faces, plain non-parameterized keywords,
-mana-cost Ward and Cycling, supported tap mana choices, unconditional
-enters-tapped replacements, fixed single-target damage, destruction, exile,
-return-to-hand, and power/toughness changes, narrow mass destruction, fixed draw
-and life changes, fixed controller scry, fixed controller or target-player
-discard and mill, and one-target tap and untap. It also supports exact
-self-enter and self-dies triggers containing one supported effect. Near-miss
-wording such as variable quantities, compound or conditional effects, qualified
-targets, optional triggers, restricted mana, and divided or unsupported mass
+The strict backend supports the mechanic families listed in the package
+[`README`](../../README.md), including ordered spell effects, supported keyword
+templates, mana abilities, fixed quantities and targets, Surveil, Investigate,
+Proliferate, Regenerate, and Fight. Near-miss wording such as variable
+quantities, unsupported conditions or qualifiers, restricted mana, and divided
 effects is rejected. The backend never emits TODOs or partial ability
-implementations. Unsupported cards, unsupported layouts, source-generation
-failures, non-ASCII package names, and filename collisions are written to the
-report.
+implementations. Unsupported cards, layouts, source-generation failures,
+non-ASCII package names, and filename collisions are written to the report.
 
 Writes are serialized after compilation. Existing files at matching generated
 paths are overwritten. Each affected letter package's `cards.go` registry is
@@ -30,6 +25,11 @@ go run ./cardgen/oracle/cmd/compilecards \
   -out .cardwork/generated-cards \
   -report .cardwork/oracle-compile-report.json
 ```
+
+During compiler expansion work, prefer
+[`corpusdelta`](../corpusdelta/README.md), which runs this command and
+automatically prepares the corpus delta, supported-card list, generated-package
+validation, and review manifest.
 
 To overwrite matching repository card files:
 
@@ -69,17 +69,22 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported power/toughness spell` | A power/toughness change was recognized, but it is not an exact fixed signed change to one target creature until end of turn. |
 | `unsupported life spell` | A gain-life or lose-life effect was recognized, but its amount, affected player, or surrounding wording is outside the exact fixed templates. |
 | `unsupported scry spell` | A scry effect was recognized, but it is not an exact fixed amount performed by the controller. |
+| `unsupported surveil spell` | A surveil effect was recognized, but it is not an exact fixed amount performed by the controller. |
+| `unsupported investigate spell` | Investigate was recognized, but the instruction is repeated, qualified, or otherwise outside the exact supported form. |
+| `unsupported proliferate spell` | Proliferate was recognized, but the instruction is repeated, qualified, or otherwise outside the exact supported form. |
+| `unsupported regenerate spell` | Regenerate was recognized, but it does not target exactly one supported permanent. |
+| `unsupported fight spell` | Fight was recognized, but its two creature targets or controller restrictions cannot be represented exactly. |
 | `unsupported discard spell` | A discard effect was recognized, but it is not an exact fixed number of cards discarded by the controller or one target player. |
 | `unsupported tap spell` | A tap effect was recognized, but it is not exact tapping of one artifact, creature, enchantment, land, or permanent target. |
 | `unsupported untap spell` | An untap effect was recognized, but it is not exact untapping of one artifact, creature, enchantment, land, or permanent target. |
 | `unsupported mill spell` | A mill effect was recognized, but it is not an exact fixed number of cards milled by the controller or one target player. |
 | `unsupported enter trigger` | A self-enter trigger was recognized, but its event, condition, optionality, structure, or number of effects is outside the exact supported template. |
-| `unsupported enter trigger effect` | The trigger clause is supported, but its single effect does not match a supported complete spell-like effect template. |
+| `unsupported enter trigger effect` | The trigger clause is supported, but its effect sequence does not match supported complete spell-like effect templates. |
 | `unsupported dies trigger` | A self-dies trigger was recognized, but its event, condition, structure, or number of effects is outside the exact supported template. |
-| `unsupported dies trigger effect` | The self-dies trigger clause is supported, but its single effect does not match a supported complete spell-like effect template. |
+| `unsupported dies trigger effect` | The self-dies trigger clause is supported, but its effect sequence does not match supported complete spell-like effect templates. |
 | `unsupported enters-tapped replacement` | Replacement wording was recognized, but it is not an exact unconditional supported self enters-tapped sentence. |
 | `unsupported Cycling ability` | Cycling was recognized, but it is not an exact ordinary Cycling ability with a representable mana cost. |
-| `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but it is not an exact supported single-color tap mana ability. |
+| `unsupported activated ability` | The parser recognized a cost-and-colon activated ability, but it is neither a supported tap mana ability nor an ordinary battlefield activation with exact mana-only, tap-only, or mana-then-tap costs and a supported effect body. |
 | `unsupported mana symbol` | A mana effect otherwise matched the supported template, but its output symbol is not one of `{W}`, `{U}`, `{B}`, `{R}`, `{G}`, or `{C}`. |
 | `incomplete executable lowering` | A lowering path did not account for every semantic element or meaningful source token. This internal safety check rejects the whole card rather than emitting a partial implementation. |
 | `unsupported loyalty ability` | The parser recognized a planeswalker loyalty ability, but the executable backend cannot emit it yet. |

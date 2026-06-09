@@ -184,7 +184,7 @@ A lookup table (`cards.Registry`) mapping card names to `CardDef` values. Pure d
 _Avoid_: Card database, card store, card catalog
 
 **Card Generation (cardgen)**:
-Isolated tooling that turns Scryfall data and Oracle text into `CardDef` Go source. Its executable backend is a three-stage compiler: **recognition** (Oracle text → conservative semantic IR in `cardgen/oracle`), **lowering** (semantic IR → a typed intermediate representation of `game.*` ability values, then an assembled `game.CardDef` validated by `game.ValidateCardDef`), and **rendering** (typed `CardDef` → deterministic Go source). `mtg/game` owns the typed data and validity; `mtg/rules` owns behavior; `cardgen` owns recognition and rendering. Cards it cannot fully recognize fall back to the hand-written **Card Implementation** escape hatch via `ImplementationID`. See [ADR 0008](docs/adr/0008-typed-ir-lowering.md).
+Isolated tooling that turns Scryfall bulk data and Oracle text into executable `CardDef` Go source. It is a three-stage compiler: **recognition** (Oracle text → conservative semantic IR in `cardgen/oracle`), **lowering** (semantic IR → typed `game.*` ability values and an assembled `game.CardDef` validated by `game.ValidateCardDef`), and **rendering** (typed `CardDef` → deterministic Go source). It emits no partial definitions or TODO scaffolds. `mtg/game` owns typed data and validity; `mtg/rules` owns behavior; `cardgen` owns recognition, lowering, and rendering. Cards it cannot fully recognize are reported as unsupported; exceptional cards may independently use the hand-written **Card Implementation** escape hatch via `ImplementationID`. See [ADR 0008](docs/adr/0008-typed-ir-lowering.md).
 _Avoid_: Card compiler (the package is tooling, not part of the runtime engine)
 
 ## Relationships
@@ -215,8 +215,7 @@ _Avoid_: Card compiler (the package is tooling, not part of the runtime engine)
 - [MTG Glossary](docs/research/MTG-GLOSSARY.md) — canonical definitions of Magic: The Gathering terms
 - [Commander Strategy](docs/research/COMMANDER-STRATEGY.md) — strategy concepts and patterns specific to Commander
 - [Commander Agent Playbook](docs/research/COMMANDER-AGENT-PLAYBOOK.md) — how AI agents should approach Commander decision-making
-- [Card Text Parsing](docs/research/CARD-TEXT-PARSING.md) — how to parse MTG oracle text into structured data, used when generating card implementations
-- [Card Implementation Guide](.agents/skills/card-impl/CARD-IMPLEMENTATION-GUIDE.md) — council4-specific guide for converting oracle text into categorized ability bodies on `CardFace`, used by the `card-impl` skill
+- [Card Text Parsing](docs/research/CARD-TEXT-PARSING.md) — how Card Generation recognizes MTG Oracle text as structured data
 - [MTG General Research](docs/research/MTG-General-Research.md) — broader research on MTG game mechanics
 - Magic Comprehensive Rules — official rules referenced externally; local full-text copies are not committed.
 

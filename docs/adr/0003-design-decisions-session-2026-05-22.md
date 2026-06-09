@@ -14,10 +14,10 @@ Build a playtesting engine for Magic: The Gathering Commander decks. The user pr
 - **ADR:** `docs/adr/0001-hybrid-declarative-card-implementations.md`
 
 ### Card Data Pipeline
-**Decision:** Scryfall bulk JSON → LLM generation at build time.
+**Superseded by ADR 0008:** Scryfall bulk JSON → deterministic Oracle compiler at generation time.
 - Download Scryfall bulk data as the source of truth for card metadata (name, mana cost, types, oracle text, etc.)
-- Use an LLM to generate declarative card implementations from oracle text
-- Generation happens at build time (not on-the-fly), output is committed to the repo
+- Parse and compile Oracle text into validated declarative Card Definitions
+- Generation happens offline (not at runtime), and selected output is committed to the repo
 - The `docs/research/CARD-TEXT-PARSING.md` document guides the oracle text → implementation translation
 - Scryfall data doesn't update often; regenerate periodically as needed
 
