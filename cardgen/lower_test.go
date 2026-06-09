@@ -319,3 +319,27 @@ func TestLowerSpellDamage(t *testing.T) {
 		t.Fatalf("damage amount = %d, want 3", damage.Amount.Value())
 	}
 }
+
+func TestLowerOrderedSpellEffects(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target artifact. Draw a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want one target and two instructions", mode)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Destroy); !ok {
+		t.Fatalf("first primitive = %T, want game.Destroy", mode.Sequence[0].Primitive)
+	}
+	draw, ok := mode.Sequence[1].Primitive.(game.Draw)
+	if !ok || draw.Amount.Value() != 1 {
+		t.Fatalf("second primitive = %+v, want draw one", mode.Sequence[1].Primitive)
+	}
+}

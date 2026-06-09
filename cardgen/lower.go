@@ -269,7 +269,10 @@ func lowerExecutableAbility(
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
-		spans := []oracle.Span{ability.Effects[0].Span}
+		spans := make([]oracle.Span, 0, len(ability.Effects)+len(ability.Targets)+len(ability.References))
+		for _, effect := range ability.Effects {
+			spans = append(spans, effect.Span)
+		}
 		for _, target := range ability.Targets {
 			spans = append(spans, target.Span)
 		}
@@ -280,7 +283,7 @@ func lowerExecutableAbility(
 			spellAbility: opt.Val(spellAbility),
 			consumed: semanticConsumption{
 				targets:    len(ability.Targets),
-				effects:    1,
+				effects:    len(ability.Effects),
 				references: len(ability.References),
 			},
 			sourceSpans: spans,
@@ -893,61 +896,173 @@ func lowerSpell(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
+	if len(ability.Effects) > 1 {
+		return lowerOrderedEffectSequence(cardName, ability, syntax)
+	}
 	if len(ability.Effects) == 1 {
-		switch ability.Effects[0].Kind {
-		case oracle.EffectDealDamage:
-			return lowerFixedDamageSpell(cardName, ability)
-		case oracle.EffectDraw:
-			return lowerFixedDrawSpell(ability, syntax)
-		case oracle.EffectDestroy:
-			return lowerFixedDestroySpell(ability)
-		case oracle.EffectGain:
-			return lowerFixedLifeSpell(ability, "gain", func(amount int, player game.PlayerReference) game.Primitive {
-				return game.GainLife{Amount: game.Fixed(amount), Player: player}
-			})
-		case oracle.EffectLose:
-			return lowerFixedLifeSpell(ability, "lose", func(amount int, player game.PlayerReference) game.Primitive {
-				return game.LoseLife{Amount: game.Fixed(amount), Player: player}
-			})
-		case oracle.EffectScry:
-			return lowerFixedControllerSpell(ability, syntax, "scry", func(amount int, player game.PlayerReference) game.Primitive {
-				return game.Scry{Amount: game.Fixed(amount), Player: player}
-			})
-		case oracle.EffectDiscard:
-			return lowerFixedCardCountPlayerSpell(
-				ability, syntax, "discard", "discards", func(amount int, player game.PlayerReference) game.Primitive {
-					return game.Discard{Amount: game.Fixed(amount), Player: player}
-				},
-			)
-		case oracle.EffectMill:
-			return lowerFixedCardCountPlayerSpell(
-				ability, syntax, "mill", "mills", func(amount int, player game.PlayerReference) game.Primitive {
-					return game.Mill{Amount: game.Fixed(amount), Player: player}
-				},
-			)
-		case oracle.EffectTap:
-			return lowerFixedPermanentTargetSpell(ability, "Tap", func(object game.ObjectReference) game.Primitive {
-				return game.Tap{Object: object}
-			})
-		case oracle.EffectUntap:
-			return lowerFixedPermanentTargetSpell(ability, "Untap", func(object game.ObjectReference) game.Primitive {
-				return game.Untap{Object: object}
-			})
-		case oracle.EffectExile:
-			return lowerFixedPermanentTargetSpell(ability, "Exile", func(object game.ObjectReference) game.Primitive {
-				return game.Exile{Object: object}
-			})
-		case oracle.EffectReturn:
-			return lowerFixedBounceSpell(ability)
-		case oracle.EffectModifyPT:
-			return lowerFixedModifyPTSpell(ability)
-		default:
-		}
+		return lowerSingleEffectSpell(cardName, ability, syntax)
 	}
 	return game.AbilityContent{}, executableDiagnostic(
 		ability,
 		"unsupported spell ability",
 		"the executable source backend does not yet lower this spell ability",
+	)
+}
+
+func lowerSingleEffectSpell(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	switch ability.Effects[0].Kind {
+	case oracle.EffectDealDamage:
+		return lowerFixedDamageSpell(cardName, ability)
+	case oracle.EffectDraw:
+		return lowerFixedDrawSpell(ability, syntax)
+	case oracle.EffectDestroy:
+		return lowerFixedDestroySpell(ability)
+	case oracle.EffectGain:
+		return lowerFixedLifeSpell(ability, "gain", func(amount int, player game.PlayerReference) game.Primitive {
+			return game.GainLife{Amount: game.Fixed(amount), Player: player}
+		})
+	case oracle.EffectLose:
+		return lowerFixedLifeSpell(ability, "lose", func(amount int, player game.PlayerReference) game.Primitive {
+			return game.LoseLife{Amount: game.Fixed(amount), Player: player}
+		})
+	case oracle.EffectScry:
+		return lowerFixedControllerSpell(ability, syntax, "scry", func(amount int, player game.PlayerReference) game.Primitive {
+			return game.Scry{Amount: game.Fixed(amount), Player: player}
+		})
+	case oracle.EffectDiscard:
+		return lowerFixedCardCountPlayerSpell(
+			ability, syntax, "discard", "discards", func(amount int, player game.PlayerReference) game.Primitive {
+				return game.Discard{Amount: game.Fixed(amount), Player: player}
+			},
+		)
+	case oracle.EffectMill:
+		return lowerFixedCardCountPlayerSpell(
+			ability, syntax, "mill", "mills", func(amount int, player game.PlayerReference) game.Primitive {
+				return game.Mill{Amount: game.Fixed(amount), Player: player}
+			},
+		)
+	case oracle.EffectTap:
+		return lowerFixedPermanentTargetSpell(ability, "Tap", func(object game.ObjectReference) game.Primitive {
+			return game.Tap{Object: object}
+		})
+	case oracle.EffectUntap:
+		return lowerFixedPermanentTargetSpell(ability, "Untap", func(object game.ObjectReference) game.Primitive {
+			return game.Untap{Object: object}
+		})
+	case oracle.EffectExile:
+		return lowerFixedPermanentTargetSpell(ability, "Exile", func(object game.ObjectReference) game.Primitive {
+			return game.Exile{Object: object}
+		})
+	case oracle.EffectReturn:
+		return lowerFixedBounceSpell(ability)
+	case oracle.EffectModifyPT:
+		return lowerFixedModifyPTSpell(ability)
+	default:
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported spell ability",
+			"the executable source backend does not yet lower this spell ability",
+		)
+	}
+}
+
+func lowerOrderedEffectSequence(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	if len(ability.Conditions) != 0 || len(ability.Keywords) != 0 || len(ability.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+	}
+	var targets []game.TargetSpec
+	var sequence []game.Instruction
+	consumedTargets := 0
+	consumedReferences := 0
+	for _, effect := range ability.Effects {
+		effectAbility := abilityForEffect(ability, effect)
+		consumedTargets += len(effectAbility.Targets)
+		consumedReferences += len(effectAbility.References)
+		content, diagnostic := lowerSingleEffectSpell(
+			cardName,
+			effectAbility,
+			syntaxWithinSpan(syntax, effect.Span),
+		)
+		if diagnostic != nil ||
+			len(content.SharedTargets) != 0 ||
+			content.IsModal() ||
+			len(content.Modes) != 1 {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+		}
+		mode := content.Modes[0]
+		if len(mode.Targets) > 0 {
+			if len(targets) > 0 {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+			}
+			targets = mode.Targets
+		}
+		sequence = append(sequence, mode.Sequence...)
+	}
+	if consumedTargets != len(ability.Targets) ||
+		consumedReferences != len(ability.References) ||
+		len(sequence) != len(ability.Effects) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+	}
+	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func abilityForEffect(
+	ability oracle.CompiledAbility,
+	effect oracle.CompiledEffect,
+) oracle.CompiledAbility {
+	ability.Text = effect.Text
+	ability.Span = effect.Span
+	ability.Effects = []oracle.CompiledEffect{effect}
+	ability.Targets = targetsWithinSpan(ability.Targets, effect.Span)
+	ability.References = referencesWithinSpan(ability.References, effect.Span)
+	return ability
+}
+
+func targetsWithinSpan(targets []oracle.CompiledTarget, span oracle.Span) []oracle.CompiledTarget {
+	var within []oracle.CompiledTarget
+	for _, target := range targets {
+		if spanCovered(target.Span, []oracle.Span{span}) {
+			within = append(within, target)
+		}
+	}
+	return within
+}
+
+func referencesWithinSpan(references []oracle.CompiledReference, span oracle.Span) []oracle.CompiledReference {
+	var within []oracle.CompiledReference
+	for _, reference := range references {
+		if spanCovered(reference.Span, []oracle.Span{span}) {
+			within = append(within, reference)
+		}
+	}
+	return within
+}
+
+func syntaxWithinSpan(syntax oracle.Ability, span oracle.Span) oracle.Ability {
+	syntax.Span = span
+	syntax.Text = ""
+	syntax.Tokens = slices.DeleteFunc(
+		append([]oracle.Token(nil), syntax.Tokens...),
+		func(token oracle.Token) bool {
+			return !spanCovered(token.Span, []oracle.Span{span})
+		},
+	)
+	return syntax
+}
+
+func unsupportedEffectSequenceDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
+	return executableDiagnostic(
+		ability,
+		"unsupported ordered effect sequence",
+		"the executable source backend supports only exact ordered sequences of independently supported effects with at most one targeted clause",
 	)
 }
 

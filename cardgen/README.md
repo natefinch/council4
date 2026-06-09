@@ -120,7 +120,9 @@ This creates `mtg/cards/l/lightning_bolt.go` with the mechanical fields populate
   narrow mass destruction, fixed draw and life changes, fixed controller scry,
   fixed controller or target-player discard and mill, one-target tap and untap,
   and simple self-enter or self-dies triggers containing exactly one supported
-  effect.
+  effect. Spells may contain an ordered sequence of independently supported
+  sentence-sized effects, with at most one targeted clause until target-index
+  remapping is available.
 - `ValidateCard(card, opts)` / `ValidateCards(cards, opts)` — report static
   support issues in generated `CardDef` values.
 - `ParseCardList`, `NewManifestFromItems`, `FetchManifest`, and
