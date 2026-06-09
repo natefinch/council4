@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -165,6 +166,38 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower modal abilities",
 		)
 	}
+	if enchantAbility, ok, diagnostic := lowerEnchantAbility(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		spans := []oracle.Span{ability.Keywords[0].Span}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: enchantAbility}},
+			consumed: semanticConsumption{
+				keywords: 1,
+			},
+			sourceSpans: spans,
+		}, nil
+	}
+	if protectionAbility, ok, diagnostic := lowerProtectionAbility(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		spans := []oracle.Span{ability.Keywords[0].Span}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: protectionAbility}},
+			consumed: semanticConsumption{
+				keywords: 1,
+			},
+			sourceSpans: spans,
+		}, nil
+	}
 	if equipAbility, ok, diagnostic := lowerEquipAbility(ability, syntax); ok {
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
@@ -297,6 +330,146 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerEnchantAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Enchant" {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	target, ok := enchantTargetSpec(keyword.Parameter)
+	if !ok ||
+		ability.Kind != oracle.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Enchant ability",
+			"the executable source backend supports only exact Enchant with a supported target kind",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Enchant ability",
+			"the executable source backend supports only exact Enchant with a supported target kind",
+		)
+	}
+	return game.EnchantStaticAbility(&target), true, nil
+}
+
+func lowerProtectionAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Protection" {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	protectedColors, ok := oracleColors(keyword.Parameter)
+	if !ok ||
+		ability.Kind != oracle.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Protection ability",
+			"the executable source backend supports only exact protection from colors",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Protection ability",
+			"the executable source backend supports only exact protection from colors",
+		)
+	}
+	return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
+}
+
+func oracleColors(parameter string) ([]color.Color, bool) {
+	names := strings.Split(parameter, ",")
+	colors := make([]color.Color, 0, len(names))
+	seen := make(map[color.Color]struct{}, len(names))
+	for _, name := range names {
+		oracleColor, ok := oracleColor(name)
+		if !ok {
+			return nil, false
+		}
+		if _, ok := seen[oracleColor]; ok {
+			return nil, false
+		}
+		seen[oracleColor] = struct{}{}
+		colors = append(colors, oracleColor)
+	}
+	return colors, len(colors) > 0
+}
+
+func oracleColor(name string) (color.Color, bool) {
+	switch name {
+	case "white":
+		return color.White, true
+	case "blue":
+		return color.Blue, true
+	case "black":
+		return color.Black, true
+	case "red":
+		return color.Red, true
+	case "green":
+		return color.Green, true
+	default:
+		return "", false
+	}
+}
+
+func enchantTargetSpec(parameter string) (game.TargetSpec, bool) {
+	target := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: parameter,
+	}
+	if parameter == "player" {
+		target.Allow = game.TargetAllowPlayer
+		return target, true
+	}
+	target.Allow = game.TargetAllowPermanent
+	switch parameter {
+	case "artifact":
+		target.Predicate.PermanentTypes = []types.Card{types.Artifact}
+	case "creature":
+		target.Predicate.PermanentTypes = []types.Card{types.Creature}
+	case "enchantment":
+		target.Predicate.PermanentTypes = []types.Card{types.Enchantment}
+	case "land":
+		target.Predicate.PermanentTypes = []types.Card{types.Land}
+	case "permanent":
+	case "planeswalker":
+		target.Predicate.PermanentTypes = []types.Card{types.Planeswalker}
+	default:
+		return game.TargetSpec{}, false
+	}
+	return target, true
 }
 
 func lowerEquipAbility(
@@ -598,6 +771,15 @@ func lowerKeywordAbility(
 					continue
 				}
 			}
+			if keyword.Name == "Protection" {
+				protectedColors, ok := oracleColors(keyword.Parameter)
+				if ok {
+					bodies = append(bodies, loweredStaticAbility{
+						Body: game.ProtectionFromColorsStaticAbility(protectedColors...),
+					})
+					continue
+				}
+			}
 			return nil, executableDiagnostic(
 				ability,
 				"unsupported parameterized keyword",
@@ -699,8 +881,8 @@ func lowerTapManaAbility(
 func choiceTapManaAbility(colorNames []string) game.ManaAbility {
 	colors := make([]mana.Color, 0, len(colorNames))
 	for _, name := range colorNames {
-		if color, ok := manaColorValue(name); ok {
-			colors = append(colors, color)
+		if manaColor, ok := manaColorValue(name); ok {
+			colors = append(colors, manaColor)
 		}
 	}
 	return game.TapManaChoiceAbility(colors...)
@@ -1479,11 +1661,11 @@ func exactChoiceTapManaSyntax(tokens []oracle.Token) ([]string, bool) {
 	var colors []string
 	for i := 3; i < len(tokens)-1; {
 		token := tokens[i]
-		color, ok := manaColorName(token.Text)
+		manaColor, ok := manaColorName(token.Text)
 		if token.Kind != oracle.Symbol || !ok {
 			return nil, false
 		}
-		colors = append(colors, color)
+		colors = append(colors, manaColor)
 		i++
 		if i == len(tokens)-1 {
 			break
@@ -1604,20 +1786,20 @@ func parseManaSymbolValue(sym string) (cost.Symbol, error) {
 	default:
 	}
 	if before, ok := strings.CutSuffix(sym, "/P"); ok {
-		color, ok := manaColorValue(before)
+		manaColor, ok := manaColorValue(before)
 		if !ok {
 			return cost.Symbol{}, fmt.Errorf("unsupported mana symbol: %s", sym)
 		}
-		return cost.PhyrexianMana(color), nil
+		return cost.PhyrexianMana(manaColor), nil
 	}
 	if strings.Contains(sym, "/") {
 		parts := strings.SplitN(sym, "/", 2)
 		if _, err := strconv.Atoi(parts[0]); err == nil {
-			color, ok := manaColorValue(parts[1])
+			manaColor, ok := manaColorValue(parts[1])
 			if !ok {
 				return cost.Symbol{}, fmt.Errorf("unsupported mana symbol: %s", sym)
 			}
-			return cost.Twobrid(color), nil
+			return cost.Twobrid(manaColor), nil
 		}
 		first, ok := manaColorValue(parts[0])
 		second, ok2 := manaColorValue(parts[1])

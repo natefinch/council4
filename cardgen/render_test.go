@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -68,6 +69,54 @@ func TestRenderUsesEquipMechanicTemplate(t *testing.T) {
 	}
 	if !strings.Contains(source, "game.EquipActivatedAbility(cost.Mana{cost.O(2)})") {
 		t.Fatalf("source does not use Equip template:\n%s", source)
+	}
+}
+
+func TestRenderUsesEnchantMechanicTemplate(t *testing.T) {
+	target := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: "creature",
+		Allow:      game.TargetAllowPermanent,
+		Predicate: game.TargetPredicate{
+			PermanentTypes: []types.Card{types.Creature},
+		},
+	}
+	card := &ScryfallCard{Name: "Test Aura", Layout: "normal", TypeLine: "Enchantment — Aura"}
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name:            card.Name,
+		Types:           []types.Card{types.Enchantment},
+		Subtypes:        []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{game.EnchantStaticAbility(&target)},
+	}}
+
+	source, err := (Renderer{}).RenderCardSource(card, []*game.CardDef{def}, []faceRenderHints{{}}, "cards")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(source, "game.EnchantStaticAbility(&game.TargetSpec{") {
+		t.Fatalf("source does not use Enchant template:\n%s", source)
+	}
+}
+
+func TestRenderUsesProtectionMechanicTemplate(t *testing.T) {
+	card := &ScryfallCard{Name: "Test Bear", Layout: "normal", TypeLine: "Creature — Bear"}
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name:  card.Name,
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{
+			game.ProtectionFromColorsStaticAbility(color.Black, color.Red),
+		},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}}
+
+	source, err := (Renderer{}).RenderCardSource(card, []*game.CardDef{def}, []faceRenderHints{{}}, "cards")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(source, "game.ProtectionFromColorsStaticAbility(color.Black, color.Red)") {
+		t.Fatalf("source does not use Protection template:\n%s", source)
 	}
 }
 

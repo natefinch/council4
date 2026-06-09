@@ -273,6 +273,59 @@ func TestGenerateExecutableCardSourceEquip(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEnchantCreature(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"StaticAbilities: []game.StaticAbility",
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		"PermanentTypes: []types.Card{types.Creature}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceProtectionFromColor(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Protection from red",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"StaticAbilities: []game.StaticAbility",
+		"game.ProtectionFromColorsStaticAbility(color.Red)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -1065,6 +1118,8 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "typecycling", cardName: "Test Card", typeLine: "Sorcery", oracleText: "Plainscycling {2}"},
 		{name: "nonmana equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip—Pay {3} or discard a card."},
 		{name: "qualified equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip creature token {1}"},
+		{name: "qualified enchant", cardName: "Test Aura", typeLine: "Enchantment — Aura", oracleText: "Enchant creature you control"},
+		{name: "noncolor protection", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Protection from artifacts"},
 		{name: "variable damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals X damage to any target."},
 		{name: "divided damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage divided as you choose among any number of targets."},
 		{name: "mass damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage to each opponent."},

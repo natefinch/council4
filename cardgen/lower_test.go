@@ -4,8 +4,10 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func lowerSingleFace(t *testing.T, card *ScryfallCard) loweredFaceAbilities {
@@ -108,6 +110,85 @@ func TestLowerEquipAbility(t *testing.T) {
 	equipCost, ok := game.ActivatedBodyEquipCost(&ability)
 	if !ok || len(equipCost) != 1 || equipCost[0] != cost.O(2) {
 		t.Fatalf("equip cost = %#v, %v; want {2}", equipCost, ok)
+	}
+}
+
+func TestLowerEnchantCreatureAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature",
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("got %d static abilities, want 1", len(face.StaticAbilities))
+	}
+	target, ok := game.StaticBodyEnchantTarget(&face.StaticAbilities[0].Body)
+	if !ok ||
+		target.MinTargets != 1 ||
+		target.MaxTargets != 1 ||
+		target.Allow != game.TargetAllowPermanent ||
+		len(target.Predicate.PermanentTypes) != 1 ||
+		target.Predicate.PermanentTypes[0] != types.Creature {
+		t.Fatalf("enchant target = %+v, %v; want one creature", target, ok)
+	}
+}
+
+func TestLowerProtectionFromColorAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Protection from red",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("got %d static abilities, want 1", len(face.StaticAbilities))
+	}
+	protected := game.StaticBodyProtectionColors(&face.StaticAbilities[0].Body)
+	if len(protected) != 1 || protected[0] != color.Red {
+		t.Fatalf("protection colors = %v, want red", protected)
+	}
+}
+
+func TestLowerProtectionFromColorWithSimpleKeyword(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Protection from red, haste",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.StaticAbilities) != 2 {
+		t.Fatalf("got %d static abilities, want 2", len(face.StaticAbilities))
+	}
+	protected := game.StaticBodyProtectionColors(&face.StaticAbilities[0].Body)
+	if len(protected) != 1 || protected[0] != color.Red {
+		t.Fatalf("protection colors = %v, want red", protected)
+	}
+	if face.StaticAbilities[1].VarName != "game.HasteStaticBody" {
+		t.Fatalf("second ability = %+v, want haste", face.StaticAbilities[1])
+	}
+}
+
+func TestLowerProtectionFromMultipleColors(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Protection from black and from red",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	protected := game.StaticBodyProtectionColors(&face.StaticAbilities[0].Body)
+	if len(protected) != 2 || protected[0] != color.Black || protected[1] != color.Red {
+		t.Fatalf("protection colors = %v, want black and red", protected)
 	}
 }
 

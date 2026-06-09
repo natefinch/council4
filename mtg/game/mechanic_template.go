@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -22,6 +23,86 @@ func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 		KeywordAbilities: []KeywordAbility{
 			WardKeyword{Cost: keywordCost},
 		},
+	}
+}
+
+// EnchantStaticAbility builds the complete static ability for Enchant.
+func EnchantStaticAbility(target *TargetSpec) StaticAbility {
+	targetCopy := cloneTargetSpec(target)
+	return StaticAbility{
+		Text: "Enchant " + targetCopy.Constraint,
+		KeywordAbilities: []KeywordAbility{
+			EnchantKeyword{Target: targetCopy},
+		},
+	}
+}
+
+func cloneTargetSpec(source *TargetSpec) TargetSpec {
+	target := *source
+	target.Predicate.PermanentTypes = append([]types.Card(nil), target.Predicate.PermanentTypes...)
+	target.Predicate.ExcludedTypes = append([]types.Card(nil), target.Predicate.ExcludedTypes...)
+	target.Predicate.Colors = append([]color.Color(nil), target.Predicate.Colors...)
+	target.Predicate.ExcludedColors = append([]color.Color(nil), target.Predicate.ExcludedColors...)
+	if target.Selection.Exists {
+		selection := target.Selection.Val
+		selection.RequiredTypes = append([]types.Card(nil), selection.RequiredTypes...)
+		selection.RequiredTypesAny = append([]types.Card(nil), selection.RequiredTypesAny...)
+		selection.ExcludedTypes = append([]types.Card(nil), selection.ExcludedTypes...)
+		selection.Supertypes = append([]types.Super(nil), selection.Supertypes...)
+		selection.SubtypesAny = append([]types.Sub(nil), selection.SubtypesAny...)
+		selection.ColorsAny = append([]color.Color(nil), selection.ColorsAny...)
+		selection.ExcludedColors = append([]color.Color(nil), selection.ExcludedColors...)
+		target.Selection = opt.Val(selection)
+	}
+	return target
+}
+
+// ProtectionFromColorsStaticAbility builds the complete static ability for
+// protection from one or more colors.
+func ProtectionFromColorsStaticAbility(colors ...color.Color) StaticAbility {
+	protectedColors := append([]color.Color(nil), colors...)
+	validateProtectionColors(protectedColors)
+	return StaticAbility{
+		Text: protectionFromColorsText(protectedColors),
+		KeywordAbilities: []KeywordAbility{
+			ProtectionKeyword{FromColors: protectedColors},
+		},
+	}
+}
+
+func validateProtectionColors(colors []color.Color) {
+	if len(colors) == 0 {
+		panic("game: protection requires at least one color")
+	}
+	seen := make(map[color.Color]struct{}, len(colors))
+	for _, protectedColor := range colors {
+		switch protectedColor {
+		case color.White, color.Blue, color.Black, color.Red, color.Green:
+		default:
+			panic(fmt.Sprintf("game: invalid protection color %q", protectedColor))
+		}
+		if _, ok := seen[protectedColor]; ok {
+			panic(fmt.Sprintf("game: duplicate protection color %q", protectedColor))
+		}
+		seen[protectedColor] = struct{}{}
+	}
+}
+
+func protectionFromColorsText(colors []color.Color) string {
+	phrases := make([]string, len(colors))
+	for i, protectedColor := range colors {
+		phrases[i] = "from " + strings.ToLower(string(protectedColor))
+	}
+	switch len(phrases) {
+	case 1:
+		return "Protection " + phrases[0]
+	case 2:
+		return "Protection " + phrases[0] + " and " + phrases[1]
+	default:
+		return "Protection " +
+			strings.Join(phrases[:len(phrases)-1], ", ") +
+			", and " +
+			phrases[len(phrases)-1]
 	}
 }
 

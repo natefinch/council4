@@ -155,6 +155,59 @@ func TestCompileKeywordsAndReminder(t *testing.T) {
 	}
 }
 
+func TestCompileEnchantKeywordParameter(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Enchant creature", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	keywords := compilation.Abilities[0].Keywords
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %#v", keywords)
+	}
+	if keywords[0].Name != "Enchant" ||
+		keywords[0].Parameter != "creature" ||
+		keywords[0].Text != "Enchant creature" ||
+		keywords[0].Span.Start.Offset != 0 ||
+		keywords[0].Span.End.Offset != len("Enchant creature") {
+		t.Fatalf("enchant keyword = %#v", keywords[0])
+	}
+}
+
+func TestCompileProtectionKeywordParameter(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Protection from red", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	keywords := compilation.Abilities[0].Keywords
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %#v", keywords)
+	}
+	if keywords[0].Name != "Protection" ||
+		keywords[0].Parameter != "red" ||
+		keywords[0].Text != "Protection from red" ||
+		keywords[0].Span.Start.Offset != 0 ||
+		keywords[0].Span.End.Offset != len("Protection from red") {
+		t.Fatalf("protection keyword = %#v", keywords[0])
+	}
+}
+
+func TestCompileProtectionKeywordMultipleColors(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Protection from black and from red", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	keywords := compilation.Abilities[0].Keywords
+	if len(keywords) != 1 ||
+		keywords[0].Parameter != "black,red" ||
+		keywords[0].Text != "Protection from black and from red" ||
+		keywords[0].Span.End.Offset != len("Protection from black and from red") {
+		t.Fatalf("protection keyword = %#v", keywords)
+	}
+}
+
 func TestCompileTargetsAndReferences(t *testing.T) {
 	t.Parallel()
 	source := "Legolas deals damage to up to one target creature you don't control. It gains trample until end of turn."

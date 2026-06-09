@@ -162,6 +162,50 @@ func TestWardStaticAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestEnchantStaticAbilityBuildsCompleteMechanic(t *testing.T) {
+	target := TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: "creature",
+		Allow:      TargetAllowPermanent,
+		Predicate: TargetPredicate{
+			PermanentTypes: []types.Card{types.Creature},
+		},
+	}
+	ability := EnchantStaticAbility(&target)
+	target.Predicate.PermanentTypes[0] = types.Land
+
+	if ability.Text != "Enchant creature" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Enchant creature")
+	}
+	enchantTarget, ok := StaticBodyEnchantTarget(&ability)
+	if !ok ||
+		enchantTarget.MinTargets != 1 ||
+		enchantTarget.MaxTargets != 1 ||
+		enchantTarget.Allow != TargetAllowPermanent ||
+		!slices.Equal(enchantTarget.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		t.Fatalf("enchant target = %+v, %v; want one creature", enchantTarget, ok)
+	}
+}
+
+func TestProtectionFromColorsStaticAbilityBuildsCompleteMechanic(t *testing.T) {
+	colors := []color.Color{color.Red}
+	ability := ProtectionFromColorsStaticAbility(colors...)
+	colors[0] = color.Blue
+
+	if ability.Text != "Protection from red" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Protection from red")
+	}
+	if protected := StaticBodyProtectionColors(&ability); !slices.Equal(protected, []color.Color{color.Red}) {
+		t.Fatalf("protection colors = %v, want red", protected)
+	}
+
+	multiple := ProtectionFromColorsStaticAbility(color.Black, color.Red)
+	if multiple.Text != "Protection from black and from red" {
+		t.Fatalf("multiple text = %q, want %q", multiple.Text, "Protection from black and from red")
+	}
+}
+
 func TestTapManaAbilityBuildsCompleteMechanic(t *testing.T) {
 	ability := TapManaAbility(mana.G)
 

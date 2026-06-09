@@ -478,6 +478,23 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 	if hint != nil && hint.VarName != "" {
 		return hint.VarName, nil
 	}
+	if protectedColors := game.StaticBodyProtectionColors(body); len(protectedColors) > 0 {
+		renderedColors, err := renderColorArguments(ctx, protectedColors)
+		if err != nil {
+			return "", err
+		}
+		if reflect.DeepEqual(*body, game.ProtectionFromColorsStaticAbility(protectedColors...)) {
+			return fmt.Sprintf("game.ProtectionFromColorsStaticAbility(%s)", renderedColors), nil
+		}
+	}
+	if target, ok := game.StaticBodyEnchantTarget(body); ok &&
+		reflect.DeepEqual(*body, game.EnchantStaticAbility(&target)) {
+		renderedTarget, err := r.renderTargetSpec(ctx, &target)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EnchantStaticAbility(&%s)", renderedTarget), nil
+	}
 	if manaCost, ok := game.StaticBodyWardCost(body); ok &&
 		reflect.DeepEqual(*body, game.WardStaticAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
@@ -1200,6 +1217,24 @@ func renderColorSlice(ctx *renderCtx, colors []color.Color) (string, error) {
 		literals = append(literals, lit)
 	}
 	return "[]color.Color{" + strings.Join(literals, ", ") + "}", nil
+}
+
+func renderColorArguments(ctx *renderCtx, colors []color.Color) (string, error) {
+	ctx.need(importColor)
+	literals := make([]string, 0, len(colors))
+	seen := make(map[color.Color]struct{}, len(colors))
+	for _, c := range colors {
+		if _, ok := seen[c]; ok {
+			return "", fmt.Errorf("render: duplicate color %q", c)
+		}
+		seen[c] = struct{}{}
+		literal, err := colorValueToLiteral(c)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, literal)
+	}
+	return strings.Join(literals, ", "), nil
 }
 
 func renderControllerRelation(cr game.ControllerRelation) (string, error) {

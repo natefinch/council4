@@ -616,18 +616,7 @@ func compileKeywords(tokens []Token) []CompiledKeyword {
 				continue
 			}
 			end := i + width
-			parameter := ""
-			if end < len(tokens) && tokens[end].Kind == Symbol {
-				var symbols strings.Builder
-				for end < len(tokens) && tokens[end].Kind == Symbol {
-					_, _ = symbols.WriteString(tokens[end].Text)
-					end++
-				}
-				parameter = symbols.String()
-			} else if end < len(tokens) && tokens[end].Kind == Integer {
-				parameter = tokens[end].Text
-				end++
-			}
+			parameter, end := compileKeywordParameter(tokens, canonical, end)
 			phrase := tokens[i:end]
 			keywords = append(keywords, CompiledKeyword{
 				Name:      canonical,
@@ -640,6 +629,85 @@ func compileKeywords(tokens []Token) []CompiledKeyword {
 		}
 	}
 	return keywords
+}
+
+func compileKeywordParameter(tokens []Token, keyword string, start int) (parameter string, end int) {
+	switch keyword {
+	case "Protection":
+		parameter, end, _ = compileProtectionParameter(tokens, start)
+		return parameter, end
+	case "Enchant":
+		if start < len(tokens) && isEnchantObjectWord(tokens[start]) {
+			return strings.ToLower(tokens[start].Text), start + 1
+		}
+		return "", start
+	}
+	end = start
+	if end < len(tokens) && tokens[end].Kind == Symbol {
+		var symbols strings.Builder
+		for end < len(tokens) && tokens[end].Kind == Symbol {
+			_, _ = symbols.WriteString(tokens[end].Text)
+			end++
+		}
+		return symbols.String(), end
+	}
+	if end < len(tokens) && tokens[end].Kind == Integer {
+		return tokens[end].Text, end + 1
+	}
+	return "", end
+}
+
+func compileProtectionParameter(tokens []Token, start int) (parameter string, end int, ok bool) {
+	if start+1 >= len(tokens) ||
+		!equalWord(tokens[start], "from") ||
+		!isColorWord(tokens[start+1]) {
+		return "", start, false
+	}
+	colors := []string{strings.ToLower(tokens[start+1].Text)}
+	end = start + 2
+	for end < len(tokens) {
+		next := end
+		if tokens[next].Kind == Comma {
+			next++
+		} else if !equalWord(tokens[next], "and") {
+			break
+		}
+		if next < len(tokens) && equalWord(tokens[next], "and") {
+			next++
+		}
+		if next+1 >= len(tokens) ||
+			!equalWord(tokens[next], "from") ||
+			!isColorWord(tokens[next+1]) {
+			break
+		}
+		colors = append(colors, strings.ToLower(tokens[next+1].Text))
+		end = next + 2
+	}
+	return strings.Join(colors, ","), end, true
+}
+
+func isColorWord(token Token) bool {
+	if token.Kind != Word {
+		return false
+	}
+	switch strings.ToLower(token.Text) {
+	case "black", "blue", "green", "red", "white":
+		return true
+	default:
+		return false
+	}
+}
+
+func isEnchantObjectWord(token Token) bool {
+	if token.Kind != Word {
+		return false
+	}
+	switch strings.ToLower(token.Text) {
+	case "artifact", "creature", "enchantment", "land", "permanent", "planeswalker", "player":
+		return true
+	default:
+		return false
+	}
 }
 
 func compileReferences(tokens []Token, cardName string) []CompiledReference {
