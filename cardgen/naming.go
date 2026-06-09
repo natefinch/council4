@@ -71,6 +71,26 @@ var goFileSuffixes = [][]string{
 	{"wasm"},
 }
 
+// CardDisambiguationSuffix returns a stable Go identifier suffix derived from
+// the card's Oracle identity, falling back to its Scryfall printing identity.
+func CardDisambiguationSuffix(card *ScryfallCard) string {
+	identity := card.OracleID
+	if identity == "" {
+		identity = card.ID
+	}
+	var b strings.Builder
+	_, _ = b.WriteString("Scryfall")
+	for _, r := range identity {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			_, _ = b.WriteRune(r)
+		}
+	}
+	if b.Len() == len("Scryfall") {
+		return ""
+	}
+	return b.String()
+}
+
 // CardNameToPackageLetter returns the lowercase first letter of the card name.
 func CardNameToPackageLetter(name string) string {
 	for _, r := range name {

@@ -1,6 +1,6 @@
 # mtg/cards
 
-Package `cards` provides a registry mapping canonical card names to `game.CardDef` values. Card definitions are organized in letter-based sub-packages (`g/`, `l/`, `s/`, etc.) and aggregated by the `Registry` type.
+Package `cards` provides a registry indexing `game.CardDef` values by canonical card name. Card definitions are organized in letter-based sub-packages (`g/`, `l/`, `s/`, etc.) and aggregated by the `Registry` type.
 
 ## Architecture
 
@@ -61,3 +61,6 @@ import (
 reg := cards.NewRegistry(l.Cards, s.Cards)
 bolt := reg.Lookup("Lightning Bolt")
 ```
+
+`Lookup` returns the first registered definition for a name. Use `LookupAll`
+when distinct Oracle cards share the same printed name.

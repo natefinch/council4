@@ -325,14 +325,11 @@ func buildManifest(
 		}
 		if _, wasUnsupported := baselineUnsupported[id]; wasUnsupported && !unsupported {
 			inspection := inspectCard(card)
-			inspection.GeneratedPath = filepath.Join(
-				generatedRoot,
-				cardgen.CardNameToPackageLetter(card.Name),
-				cardgen.CardNameToSafeFileName(card.Name)+".go",
-			)
+			inspection.GeneratedPath = generatedCardPath(generatedRoot, card)
 			if _, err := os.Stat(inspection.GeneratedPath); err != nil {
 				return Manifest{}, nil, fmt.Errorf("generated source for %s: %w", card.Name, err)
 			}
+
 			manifest.NewlySupported = append(manifest.NewlySupported, inspection)
 		}
 		if _, wasUnsupported := baselineUnsupported[id]; !wasUnsupported && unsupported {
@@ -366,6 +363,20 @@ func buildManifest(
 		)
 	}
 	return manifest, supported, nil
+}
+
+func generatedCardPath(generatedRoot string, card cardgen.ScryfallCard) string {
+	directory := filepath.Join(generatedRoot, cardgen.CardNameToPackageLetter(card.Name))
+	base := cardgen.CardNameToSafeFileName(card.Name)
+	path := filepath.Join(directory, base+".go")
+	suffix := strings.ToLower(cardgen.CardDisambiguationSuffix(&card))
+	if suffix != "" {
+		disambiguated := filepath.Join(directory, base+"_"+suffix+".go")
+		if _, err := os.Stat(disambiguated); err == nil {
+			return disambiguated
+		}
+	}
+	return path
 }
 
 func unsupportedByID(cards []unsupportedReport) map[string]unsupportedReport {

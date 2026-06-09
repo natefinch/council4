@@ -76,10 +76,13 @@ func renderPTValue(pt game.PT) string {
 }
 
 // Renderer renders typed game ability values and complete CardDef values as
-// deterministic Go source. A zero-value Renderer is ready to use. Every method
-// renders from typed values using exported accessors so that repeated calls
-// with identical input produce byte-identical output.
-type Renderer struct{}
+// deterministic Go source. IdentifierSuffix disambiguates distinct cards that
+// share a printed name without changing CardDef.Name. A zero-value Renderer is
+// ready to use. Every method renders from typed values using exported accessors
+// so that repeated calls with identical input produce byte-identical output.
+type Renderer struct {
+	IdentifierSuffix string
+}
 
 // RenderCardSource renders a complete Go source file for executable CardDefs.
 // The validated game.CardDef values in defs are the sole source of every
@@ -206,7 +209,7 @@ func (r Renderer) writeCardDef(
 	layout string,
 	hints []faceRenderHints,
 ) error {
-	varName := CardNameToVarName(def.Name)
+	varName := CardNameToVarName(def.Name) + r.IdentifierSuffix
 	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
@@ -245,7 +248,7 @@ func (r Renderer) writeCardDef(
 }
 
 func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def *game.CardDef, layout string, hints faceRenderHints) error {
-	varName := CardNameToVarName(def.Name)
+	varName := CardNameToVarName(def.Name) + r.IdentifierSuffix
 	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)

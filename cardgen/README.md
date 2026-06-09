@@ -33,6 +33,10 @@ data, or guessed behavior.
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.
 
+The bulk compiler detects distinct Oracle cards that map to the same filename or
+Go identifier and appends a stable Scryfall-derived suffix to both generated
+identities. Printed `CardDef.Name` values remain unchanged.
+
 `mtg/game` owns typed Card Definition data and structural validity;
 `mtg/rules` owns behavior; `cardgen` owns recognition, lowering, and rendering.
 See [ADR 0008](../docs/adr/0008-typed-ir-lowering.md).
@@ -81,6 +85,8 @@ one Card Definition per playable side.
 
 - `GenerateExecutableCardSource(card, pkgName)` recognizes, lowers, validates,
   and renders a card, or returns diagnostics without source.
+- `ExecutableGenerator` configures source identity disambiguation for bulk
+  generation.
 - `Renderer.RenderCardSource(card, defs, hints, pkgName)` renders validated typed
   Card Definitions deterministically.
 - `ParseTypeLine(typeLine)` splits a type line into supertypes, types, and

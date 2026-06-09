@@ -42,6 +42,7 @@ type result struct {
 	index       int
 	card        cardgen.ScryfallCard
 	relative    string
+	superseded  string
 	source      string
 	diagnostics []oracle.Diagnostic
 	err         error
@@ -176,6 +177,7 @@ func compileCorpus(input io.Reader, workers int) ([]result, error) {
 	if err := <-decodeError; err != nil {
 		return nil, err
 	}
+	disambiguateCollisions(all)
 	rejectPathCollisions(all)
 	rejectIdentifierCollisions(all)
 	slices.SortFunc(all, func(a, b result) int {
@@ -200,6 +202,115 @@ func compileCard(item job) result {
 	compiled.source, compiled.diagnostics, compiled.err =
 		cardgen.GenerateExecutableCardSource(&card, letter)
 	return compiled
+}
+
+func disambiguateCollisions(results []result) {
+	parent := make([]int, len(results))
+	for i := range parent {
+		parent[i] = i
+	}
+	var find func(int) int
+	find = func(index int) int {
+		if parent[index] != index {
+			parent[index] = find(parent[index])
+		}
+		return parent[index]
+	}
+	union := func(indexes []int) {
+		if len(indexes) < 2 {
+			return
+		}
+		root := find(indexes[0])
+		for _, index := range indexes[1:] {
+			parent[find(index)] = root
+		}
+	}
+	byPath := make(map[string][]int)
+	byIdentifier := make(map[string][]int)
+	for i := range results {
+		if results[i].err != nil || len(results[i].diagnostics) > 0 {
+			continue
+		}
+		byPath[results[i].relative] = append(byPath[results[i].relative], i)
+		file, err := parser.ParseFile(token.NewFileSet(), results[i].relative, results[i].source, 0)
+		if err != nil {
+			results[i].err = fmt.Errorf("parsing generated source: %w", err)
+			continue
+		}
+		for _, name := range cardDefNames(file) {
+			key := filepath.Dir(results[i].relative) + "\x00" + name
+			byIdentifier[key] = append(byIdentifier[key], i)
+		}
+	}
+	for _, indexes := range byPath {
+		union(indexes)
+	}
+	for _, indexes := range byIdentifier {
+		union(indexes)
+	}
+	components := make(map[int][]int)
+	for i := range results {
+		if results[i].err == nil && len(results[i].diagnostics) == 0 {
+			components[find(i)] = append(components[find(i)], i)
+		}
+	}
+	colliding := make(map[int]bool)
+	for _, indexes := range components {
+		if len(indexes) < 2 {
+			continue
+		}
+		slices.SortFunc(indexes, func(a, b int) int {
+			aKey := cardIdentityKey(&results[a].card)
+			bKey := cardIdentityKey(&results[b].card)
+			if byIdentity := strings.Compare(aKey, bKey); byIdentity != 0 {
+				return byIdentity
+			}
+			return cmp.Compare(results[a].index, results[b].index)
+		})
+		for _, index := range indexes[1:] {
+			colliding[index] = true
+		}
+	}
+	for index := range colliding {
+		card := &results[index].card
+		suffix := cardgen.CardDisambiguationSuffix(card)
+		if suffix == "" {
+			results[index].source = ""
+			results[index].diagnostics = []oracle.Diagnostic{{
+				Severity: oracle.SeverityWarning,
+				Summary:  "generated identity collision",
+				Detail:   "the card has no Oracle or Scryfall ID for deterministic disambiguation",
+			}}
+			continue
+		}
+		original := results[index].relative
+		base := strings.TrimSuffix(results[index].relative, filepath.Ext(results[index].relative))
+		results[index].relative = base + "_" + strings.ToLower(suffix) + ".go"
+		results[index].superseded = original
+		results[index].source, results[index].diagnostics, results[index].err =
+			(cardgen.ExecutableGenerator{IdentifierSuffix: suffix}).GenerateCardSource(
+				card,
+				filepath.Dir(results[index].relative),
+			)
+	}
+	finalPaths := make(map[string]bool)
+	for i := range results {
+		if results[i].err == nil && len(results[i].diagnostics) == 0 {
+			finalPaths[results[i].relative] = true
+		}
+	}
+	for i := range results {
+		if finalPaths[results[i].superseded] {
+			results[i].superseded = ""
+		}
+	}
+}
+
+func cardIdentityKey(card *cardgen.ScryfallCard) string {
+	if card.OracleID != "" {
+		return card.OracleID
+	}
+	return card.ID
 }
 
 func rejectPathCollisions(results []result) {
@@ -328,6 +439,46 @@ func diagnosticSeverityName(severity oracle.Severity) string {
 
 func writeSupported(root string, results []result) error {
 	affected := make(map[string]bool)
+	finalPaths := make(map[string]bool)
+	generatedPrefixes := make(map[string]bool)
+	for _, result := range results {
+		if result.err != nil || len(result.diagnostics) > 0 {
+			continue
+		}
+		finalPaths[result.relative] = true
+		directory := filepath.Dir(result.relative)
+		base := cardgen.CardNameToSafeFileName(result.card.Name)
+		generatedPrefixes[filepath.Join(directory, base+"_scryfall")] = true
+	}
+	for _, result := range results {
+		if result.err != nil || len(result.diagnostics) > 0 || result.superseded == "" {
+			continue
+		}
+		path := filepath.Join(root, result.superseded)
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("removing superseded source for %s: %w", result.card.Name, err)
+		}
+		affected[filepath.Dir(path)] = true
+	}
+	for prefix := range generatedPrefixes {
+		matches, err := filepath.Glob(filepath.Join(root, prefix+"*.go"))
+		if err != nil {
+			return fmt.Errorf("matching generated identity paths for %s: %w", prefix, err)
+		}
+		for _, path := range matches {
+			relative, err := filepath.Rel(root, path)
+			if err != nil {
+				return fmt.Errorf("resolving generated identity path %s: %w", path, err)
+			}
+			if finalPaths[relative] {
+				continue
+			}
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("removing obsolete generated identity path %s: %w", path, err)
+			}
+			affected[filepath.Dir(path)] = true
+		}
+	}
 	for _, result := range results {
 		if result.err != nil || len(result.diagnostics) > 0 {
 			continue

@@ -10,8 +10,10 @@ templates, mana abilities, fixed quantities and targets, Surveil, Investigate,
 Proliferate, Regenerate, and Fight. Near-miss wording such as variable
 quantities, unsupported conditions or qualifiers, restricted mana, and divided
 effects is rejected. The backend never emits TODOs or partial ability
-implementations. Unsupported cards, layouts, source-generation failures,
-non-ASCII package names, and filename collisions are written to the report.
+implementations. Unsupported cards, layouts, source-generation failures, and
+non-ASCII package names are written to the report. Distinct Oracle cards that
+share a generated path or Go identifier receive stable Scryfall-derived suffixes
+without changing their printed names.
 
 Writes are serialized after compilation. Existing files at matching generated
 paths are overwritten. Each affected letter package's `cards.go` registry is
@@ -99,8 +101,9 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported card layout` | The Scryfall layout cannot be represented safely by the current `CardDef` source generator. |
 | `unsupported type line` | The type line contains no card type known to `cardgen`, so emitting a mechanically incomplete `CardFace` would be unsafe. |
 | `unsupported package letter` | The card name does not begin with an ASCII letter and therefore cannot be routed to an `mtg/cards/[a-z]` package. |
-| `generated path collision` | Multiple corpus records map to the same generated filename. All colliding records are rejected to avoid order-dependent overwrites. |
-| `generated identifier collision` | Multiple generated files would declare the same Go `CardDef` variable in one package. All colliding records are rejected. |
+| `generated path collision` | Multiple corpus records still map to the same generated filename after stable identity disambiguation. |
+| `generated identifier collision` | Multiple generated files still declare the same Go `CardDef` variable after stable identity disambiguation. |
+| `generated identity collision` | A colliding card has neither an Oracle ID nor Scryfall ID from which to derive a stable suffix. |
 | `source generation failed` | Semantic support checks passed, but mechanical source formatting or generation failed, commonly because a mana symbol or another mechanical field is unsupported. |
 
 Lexer or parser errors such as `unclosed quote`, `unclosed parenthesis`, and

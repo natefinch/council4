@@ -62,20 +62,93 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	}
 }
 
-func TestCompileCorpusRejectsPathCollisions(t *testing.T) {
+func TestCompileCorpusDisambiguatesPathAndIdentifierCollisions(t *testing.T) {
 	t.Parallel()
 	input := `[
-		{"id":"one","name":"Same Name","layout":"normal","type_line":"Creature"},
-		{"id":"two","name":"Same Name","layout":"normal","type_line":"Creature"}
+		{"id":"one","oracle_id":"oracle-one","name":"Same Name","layout":"normal","type_line":"Creature"},
+		{"id":"two","oracle_id":"oracle-two","name":"Same Name","layout":"normal","type_line":"Creature"}
 	]`
 	results, err := compileCorpus(strings.NewReader(input), 2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	wantedPaths := map[string]bool{
+		filepath.Join("s", "same_name.go"):                   true,
+		filepath.Join("s", "same_name_scryfalloracletwo.go"): true,
+	}
 	for _, result := range results {
-		if len(result.diagnostics) == 0 || result.diagnostics[0].Summary != "generated path collision" {
+		if result.err != nil || len(result.diagnostics) != 0 {
 			t.Fatalf("result = %#v", result)
 		}
+		if !wantedPaths[result.relative] {
+			t.Fatalf("relative path = %q", result.relative)
+		}
+		if result.card.OracleID == "oracle-one" && !strings.Contains(result.source, "var SameName =") {
+			t.Fatalf("canonical source lacks stable identifier:\n%s", result.source)
+		}
+		if result.card.OracleID == "oracle-two" && !strings.Contains(result.source, "var SameNameScryfalloracletwo =") {
+			t.Fatalf("colliding source lacks disambiguated identifier:\n%s", result.source)
+		}
+		if !strings.Contains(result.source, `"Same Name"`) {
+			t.Fatalf("source changed printed name:\n%s", result.source)
+		}
+	}
+}
+
+func TestWriteSupportedRemovesSupersededIdentityPath(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	oldRelative := filepath.Join("s", "same_name.go")
+	oldPath := filepath.Join(root, oldRelative)
+	if err := os.MkdirAll(filepath.Dir(oldPath), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(oldPath, []byte("package s\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	results := []result{{
+		card:       cardgen.ScryfallCard{Name: "Same Name"},
+		relative:   filepath.Join("s", "same_name_scryfalltwo.go"),
+		superseded: oldRelative,
+		source:     "package s\n\nimport \"github.com/natefinch/council4/mtg/game\"\n\nvar SameNameScryfalltwo = &game.CardDef{}\n",
+	}}
+
+	if err := writeSupported(root, results); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+		t.Fatalf("superseded path still exists or stat failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, results[0].relative)); err != nil {
+		t.Fatalf("disambiguated source missing: %v", err)
+	}
+}
+
+func TestWriteSupportedRemovesObsoleteSuffixedIdentityPath(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	directory := filepath.Join(root, "s")
+	if err := os.MkdirAll(directory, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	obsolete := filepath.Join(directory, "same_name_scryfallold.go")
+	if err := os.WriteFile(obsolete, []byte("package s\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	results := []result{{
+		card:     cardgen.ScryfallCard{Name: "Same Name"},
+		relative: filepath.Join("s", "same_name.go"),
+		source:   "package s\n\nimport \"github.com/natefinch/council4/mtg/game\"\n\nvar SameName = &game.CardDef{}\n",
+	}}
+
+	if err := writeSupported(root, results); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(obsolete); !os.IsNotExist(err) {
+		t.Fatalf("obsolete identity path still exists or stat failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, results[0].relative)); err != nil {
+		t.Fatalf("canonical source missing: %v", err)
 	}
 }
 
