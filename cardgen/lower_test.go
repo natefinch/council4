@@ -802,6 +802,126 @@ func TestLowerSpellDamage(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDamageQualifiedTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bolt",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Test Bolt deals 3 damage to target attacking or blocking creature.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if got := mode.Targets[0].Predicate.CombatState; got != game.CombatStateAttackingOrBlocking {
+		t.Fatalf("combat state = %v, want attacking or blocking", got)
+	}
+}
+
+func TestLowerSpellXAmounts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		cardName   string
+		oracleText string
+		quantity   func(game.AbilityContent) game.Quantity
+	}{
+		{
+			name:       "damage",
+			cardName:   "Test Blaze",
+			oracleText: "Test Blaze deals X damage to any target.",
+			quantity: func(content game.AbilityContent) game.Quantity {
+				primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.Damage)
+				if !ok {
+					return game.Fixed(0)
+				}
+				return primitive.Amount
+			},
+		},
+		{
+			name:       "draw",
+			cardName:   "Test Insight",
+			oracleText: "Draw X cards.",
+			quantity: func(content game.AbilityContent) game.Quantity {
+				primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.Draw)
+				if !ok {
+					return game.Fixed(0)
+				}
+				return primitive.Amount
+			},
+		},
+		{
+			name:       "life",
+			cardName:   "Test Life",
+			oracleText: "You gain X life.",
+			quantity: func(content game.AbilityContent) game.Quantity {
+				primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.GainLife)
+				if !ok {
+					return game.Fixed(0)
+				}
+				return primitive.Amount
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       test.cardName,
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			dynamic := test.quantity(face.SpellAbility.Val).DynamicAmount()
+			if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountX {
+				t.Fatalf("dynamic amount = %+v, want X", dynamic)
+			}
+		})
+	}
+}
+
+func TestLowerSpellDestroyQualifiedTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Destroy",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Destroy target tapped creature an opponent controls.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if target.Predicate.Tapped != game.TriTrue ||
+		target.Predicate.Controller != game.ControllerOpponent {
+		t.Fatalf("predicate = %+v, want tapped creature an opponent controls", target.Predicate)
+	}
+}
+
+func TestLowerSpellReturnQualifiedTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Return",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Return target creature you control to its owner's hand.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if target.Predicate.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", target.Predicate.Controller)
+	}
+}
+
+func TestLowerSpellModifyPTQualifiedTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Growth",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Target untapped creature you control gets +2/+2 until end of turn.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if target.Predicate.Tapped != game.TriFalse ||
+		target.Predicate.Controller != game.ControllerYou {
+		t.Fatalf("predicate = %+v, want untapped creature you control", target.Predicate)
+	}
+}
+
 func TestLowerOrderedSpellEffects(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

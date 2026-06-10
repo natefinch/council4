@@ -1926,12 +1926,12 @@ func lowerSingleEffectSpell(
 	case oracle.EffectDestroy:
 		return lowerFixedDestroySpell(ability)
 	case oracle.EffectGain:
-		return lowerFixedLifeSpell(ability, "gain", func(amount int, player game.PlayerReference) game.Primitive {
-			return game.GainLife{Amount: game.Fixed(amount), Player: player}
+		return lowerFixedLifeSpell(ability, "gain", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+			return game.GainLife{Amount: amount, Player: player}
 		})
 	case oracle.EffectLose:
-		return lowerFixedLifeSpell(ability, "lose", func(amount int, player game.PlayerReference) game.Primitive {
-			return game.LoseLife{Amount: game.Fixed(amount), Player: player}
+		return lowerFixedLifeSpell(ability, "lose", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+			return game.LoseLife{Amount: amount, Player: player}
 		})
 	case oracle.EffectScry:
 		return lowerFixedControllerSpell(ability, syntax, "scry", func(amount int, player game.PlayerReference) game.Primitive {
@@ -2217,11 +2217,11 @@ func lowerFixedDamageSpell(
 	cardName string,
 	ability oracle.CompiledAbility,
 ) (game.AbilityContent, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
 	if len(ability.Effects) != 1 ||
-		ability.Effects[0].Kind != oracle.EffectDealDamage ||
-		!ability.Effects[0].Amount.Known ||
-		ability.Effects[0].Amount.Value < 1 ||
-		ability.Effects[0].Negated ||
+		effect.Kind != oracle.EffectDealDamage ||
+		(effect.Amount.Known && effect.Amount.Value < 1) ||
+		effect.Negated ||
 		len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 ||
@@ -2235,12 +2235,18 @@ func lowerFixedDamageSpell(
 			"the executable source backend supports only exact fixed damage to one target",
 		)
 	}
+	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	amountText := "X"
+	if effect.Amount.Known {
+		amount = game.Fixed(effect.Amount.Value)
+		amountText = fmt.Sprint(effect.Amount.Value)
+	}
 	target, ok := damageTargetSpec(ability.Targets[0])
 	if !ok ||
 		ability.Text != fmt.Sprintf(
-			"%s deals %d damage to %s.",
+			"%s deals %s damage to %s.",
 			cardName,
-			ability.Effects[0].Amount.Value,
+			amountText,
 			ability.Targets[0].Text,
 		) {
 		return game.AbilityContent{}, executableDiagnostic(
@@ -2254,7 +2260,7 @@ func lowerFixedDamageSpell(
 		Sequence: []game.Instruction{
 			{
 				Primitive: game.Damage{
-					Amount:    game.Fixed(ability.Effects[0].Amount.Value),
+					Amount:    amount,
 					Recipient: game.AnyTargetDamageRecipient(0),
 				},
 			},
@@ -2279,7 +2285,8 @@ func lowerFixedModifyPTSpell(
 		len(ability.Modes) != 0 ||
 		len(ability.References) != 0 ||
 		ability.Text != fmt.Sprintf(
-			"Target creature gets %s/%s until end of turn.",
+			"%s gets %s/%s until end of turn.",
+			titleFirst(ability.Targets[0].Text),
 			signedAmountText(effect.PowerDelta),
 			signedAmountText(effect.ToughnessDelta),
 		) {
@@ -2289,9 +2296,7 @@ func lowerFixedModifyPTSpell(
 			"the executable source backend supports only exact fixed target-creature power/toughness changes until end of turn",
 		)
 	}
-	target := ability.Targets[0]
-	target.Text = "target creature"
-	targetSpec, ok := permanentTargetSpec(target)
+	targetSpec, ok := permanentTargetSpec(ability.Targets[0])
 	if !ok {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
@@ -2334,17 +2339,9 @@ func lowerFixedBounceSpell(
 		)
 	}
 	target := ability.Targets[0]
-	var targetSpec game.TargetSpec
-	var ok bool
-	for _, noun := range []string{"artifact", "creature", "enchantment", "land", "permanent"} {
-		if ability.Text != "Return target "+noun+" to its owner's hand." {
-			continue
-		}
-		target.Text = "target " + noun
-		targetSpec, ok = permanentTargetSpec(target)
-		break
-	}
-	if !ok {
+	target.Text = strings.TrimSuffix(target.Text, " to its owner's hand")
+	targetSpec, ok := permanentTargetSpec(target)
+	if !ok || ability.Text != "Return "+target.Text+" to its owner's hand." {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported return spell",
@@ -2500,11 +2497,10 @@ func lowerFixedControllerSpell(
 func lowerFixedLifeSpell(
 	ability oracle.CompiledAbility,
 	verb string,
-	primitiveFactory func(amount int, player game.PlayerReference) game.Primitive,
+	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
-	if !effect.Amount.Known ||
-		effect.Amount.Value < 1 ||
+	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
@@ -2516,19 +2512,25 @@ func lowerFixedLifeSpell(
 			"the executable source backend supports only exact fixed life changes",
 		)
 	}
+	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	amountText := "X"
+	if effect.Amount.Known {
+		amount = game.Fixed(effect.Amount.Value)
+		amountText = fmt.Sprint(effect.Amount.Value)
+	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
 	case len(ability.Targets) == 0 &&
-		ability.Text == fmt.Sprintf("You %s %d life.", verb, effect.Amount.Value):
+		ability.Text == fmt.Sprintf("You %s %s life.", verb, amountText):
 	case len(ability.Targets) == 1:
 		targetSpec, ok := playerTargetSpec(ability.Targets[0])
 		if !ok ||
 			ability.Text != fmt.Sprintf(
-				"%s %ss %d life.",
+				"%s %ss %s life.",
 				titleFirst(ability.Targets[0].Text),
 				verb,
-				effect.Amount.Value,
+				amountText,
 			) {
 			return game.AbilityContent{}, executableDiagnostic(
 				ability,
@@ -2547,11 +2549,9 @@ func lowerFixedLifeSpell(
 	}
 	return game.Mode{
 		Targets: targets,
-		Sequence: []game.Instruction{
-			{
-				Primitive: primitiveFactory(effect.Amount.Value, playerRef),
-			},
-		},
+		Sequence: []game.Instruction{{
+			Primitive: primitiveFactory(amount, playerRef),
+		}},
 	}.Ability(), nil
 }
 
@@ -2629,8 +2629,7 @@ func lowerFixedDrawSpell(
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
-	if !effect.Amount.Known ||
-		effect.Amount.Value < 1 ||
+	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
@@ -2642,13 +2641,19 @@ func lowerFixedDrawSpell(
 			"the executable source backend supports only exact fixed card draw",
 		)
 	}
+	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	if effect.Amount.Known {
+		amount = game.Fixed(effect.Amount.Value)
+	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
 	case len(ability.Targets) == 0 &&
-		exactControllerDrawSyntax(syntax.Tokens, effect.Amount.Value):
+		(exactControllerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
+			(!effect.Amount.Known && exactXControllerDrawSyntax(syntax.Tokens))):
 	case len(ability.Targets) == 1 &&
-		exactTargetPlayerDrawSyntax(syntax.Tokens, effect.Amount.Value) &&
+		(exactTargetPlayerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
+			(!effect.Amount.Known && exactXTargetPlayerDrawSyntax(syntax.Tokens))) &&
 		ability.Targets[0].Cardinality.Min == 1 &&
 		ability.Targets[0].Cardinality.Max == 1 &&
 		ability.Targets[0].Selector.Kind == oracle.SelectorPlayer:
@@ -2673,12 +2678,30 @@ func lowerFixedDrawSpell(
 		Sequence: []game.Instruction{
 			{
 				Primitive: game.Draw{
-					Amount: game.Fixed(effect.Amount.Value),
+					Amount: amount,
 					Player: playerRef,
 				},
 			},
 		},
 	}.Ability(), nil
+}
+
+func exactXControllerDrawSyntax(tokens []oracle.Token) bool {
+	return len(tokens) == 4 &&
+		equalTokenWord(tokens[0], "draw") &&
+		equalTokenWord(tokens[1], "X") &&
+		equalTokenWord(tokens[2], "cards") &&
+		tokens[3].Kind == oracle.Period
+}
+
+func exactXTargetPlayerDrawSyntax(tokens []oracle.Token) bool {
+	return len(tokens) == 6 &&
+		equalTokenWord(tokens[0], "target") &&
+		equalTokenWord(tokens[1], "player") &&
+		equalTokenWord(tokens[2], "draws") &&
+		equalTokenWord(tokens[3], "X") &&
+		equalTokenWord(tokens[4], "cards") &&
+		tokens[5].Kind == oracle.Period
 }
 
 func exactControllerDrawSyntax(tokens []oracle.Token, amount int) bool {
@@ -2753,18 +2776,12 @@ func damageTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 			return game.TargetSpec{}, false
 		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
-	case oracle.SelectorCreature:
-		if target.Text != "target creature" {
+	case oracle.SelectorCreature, oracle.SelectorPlaneswalker, oracle.SelectorBattle:
+		permanent, ok := permanentTargetSpec(target)
+		if !ok {
 			return game.TargetSpec{}, false
 		}
-		spec.Allow = game.TargetAllowPermanent
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}}
-	case oracle.SelectorPlaneswalker:
-		if target.Text != "target planeswalker" {
-			return game.TargetSpec{}, false
-		}
-		spec.Allow = game.TargetAllowPermanent
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
+		return permanent, true
 	case oracle.SelectorPlayer:
 		if target.Text != "target player" {
 			return game.TargetSpec{}, false
@@ -2804,13 +2821,60 @@ func permanentTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Land}}
 	case oracle.SelectorPermanent:
 		noun = "permanent"
+	case oracle.SelectorPlaneswalker:
+		noun = "planeswalker"
+		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
+	case oracle.SelectorBattle:
+		noun = "battle"
+		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Battle}}
 	default:
 		return game.TargetSpec{}, false
 	}
-	if target.Text != "target "+noun {
+	if target.Selector.Another || target.Selector.Other ||
+		(target.Selector.Tapped && target.Selector.Untapped) ||
+		((target.Selector.Tapped || target.Selector.Untapped) &&
+			(target.Selector.Attacking || target.Selector.Blocking)) {
 		return game.TargetSpec{}, false
 	}
-	spec.Constraint = target.Text
+
+	expected := "target "
+	switch {
+	case target.Selector.Attacking && target.Selector.Blocking:
+		expected += "attacking or blocking "
+		spec.Predicate.CombatState = game.CombatStateAttackingOrBlocking
+	case target.Selector.Attacking:
+		expected += "attacking "
+		spec.Predicate.CombatState = game.CombatStateAttacking
+	case target.Selector.Blocking:
+		expected += "blocking "
+		spec.Predicate.CombatState = game.CombatStateBlocking
+	case target.Selector.Tapped:
+		expected += "tapped "
+		spec.Predicate.Tapped = game.TriTrue
+	case target.Selector.Untapped:
+		expected += "untapped "
+		spec.Predicate.Tapped = game.TriFalse
+	default:
+	}
+	expected += noun
+	switch target.Selector.Controller {
+	case oracle.ControllerAny:
+	case oracle.ControllerYou:
+		expected += " you control"
+		spec.Predicate.Controller = game.ControllerYou
+	case oracle.ControllerOpponent:
+		expected += " an opponent controls"
+		spec.Predicate.Controller = game.ControllerOpponent
+	case oracle.ControllerNotYou:
+		expected += " you don't control"
+		spec.Predicate.Controller = game.ControllerNotYou
+	default:
+		return game.TargetSpec{}, false
+	}
+	if !strings.EqualFold(target.Text, expected) {
+		return game.TargetSpec{}, false
+	}
+	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
 }
 
@@ -2856,6 +2920,13 @@ func titleFirst(text string) string {
 		return ""
 	}
 	return strings.ToUpper(text[:1]) + text[1:]
+}
+
+func lowerFirst(text string) string {
+	if text == "" {
+		return ""
+	}
+	return strings.ToLower(text[:1]) + text[1:]
 }
 
 func manaColorName(symbol string) (string, bool) {

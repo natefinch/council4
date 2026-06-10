@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,713 / 31,834**
+**Cards supported: 2,804 / 31,834**
 
 The pipeline is:
 
@@ -101,7 +101,7 @@ records:
 - modes and inclusive target cardinalities;
 - conservative selectors and controller constraints;
 - keyword abilities and parameters;
-- instruction verbs, fixed amounts, mana symbols, negation, and common
+- instruction verbs, fixed and exact `X` amounts, mana symbols, negation, and common
   durations;
 - card-name, `this`-object, `that`-object, and pronoun references.
 
@@ -117,9 +117,10 @@ keywords, exact `Devoid (This card has no color.)`, positive-integer Toxic, and
 mana-cost Kicker, Madness, Morph, Disguise, Ward, Cycling, and Equip. It also
 lowers base-type Enchant, color-based Protection, supported tap mana choices, ordinary activated abilities with exact
 mana-only, tap-only, or mana-then-tap costs and supported effect bodies,
-unconditional enters-tapped replacements, fixed single-target damage,
-destruction, exile, return-to-hand, and power/toughness changes, narrow mass
-destruction, fixed draw and life changes, fixed controller scry and surveil,
+unconditional enters-tapped replacements, fixed or `X` single-target damage,
+destruction, exile, return-to-hand, and power/toughness changes with common
+controller, tapped-state, and combat-state target restrictions, narrow mass
+destruction, fixed or `X` draw and life changes, fixed controller scry and surveil,
 exact investigate and proliferate, fixed controller or target-player discard
 and mill, one-target tap, untap, and regeneration, exact fights between two
 target creatures, and fixed power/toughness buffs on enchanted creature, equipped creature,
