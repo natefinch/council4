@@ -136,6 +136,21 @@ func EntersWithCountersReplacement(text string, placements ...CounterPlacement) 
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// TokenCreationReplacement creates a persistent replacement that multiplies
+// token creation events matching controller.
+func TokenCreationReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:      text,
+			MatchEvent:       EventTokenCreated,
+			ControllerFilter: filter,
+			TokenMultiplier:  multiplier,
+			Duration:         DurationPermanent,
+		},
+	}
+}
+
 func etbReplacement(text string) ReplacementEffect {
 	return ReplacementEffect{
 		Description: text,

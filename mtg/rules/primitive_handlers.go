@@ -418,14 +418,12 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
-	for range res.amount {
-		token, ok := r.typedTokenDefinition(prim.Source)
-		if !ok {
-			return res
-		}
-		if _, ok := createTokenPermanentWithChoices(r.engine, r.game, recipient, token, r.agents, r.log); !ok {
-			return res
-		}
+	token, ok := r.typedTokenDefinition(prim.Source)
+	if !ok {
+		return res
+	}
+	if !createTokenPermanentsWithChoices(r.engine, r.game, recipient, token, res.amount, r.agents, r.log) {
+		return res
 	}
 	res.succeeded = res.amount > 0
 	return res
@@ -683,10 +681,8 @@ func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved 
 	if !ok {
 		return res
 	}
-	for range res.amount {
-		if _, ok := createTokenPermanentWithChoices(r.engine, r.game, recipient, clueTokenDef(), r.agents, r.log); !ok {
-			return res
-		}
+	if !createTokenPermanentsWithChoices(r.engine, r.game, recipient, clueTokenDef(), res.amount, r.agents, r.log) {
+		return res
 	}
 	res.succeeded = true
 	return res

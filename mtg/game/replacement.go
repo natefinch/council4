@@ -134,6 +134,7 @@ type ReplacementEffect struct {
 	ReplaceToZone      zone.Type
 	ShuffleIntoLibrary bool
 	RevealSource       bool
+	TokenMultiplier    int
 	EntersTapped       bool
 	EntersWithCounters []CounterPlacement
 }
