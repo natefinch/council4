@@ -50,6 +50,7 @@ const (
 	RuleEffectCantBeCountered
 	RuleEffectCantBeBlocked
 	RuleEffectMustBeBlocked
+	RuleEffectMustAttack
 )
 
 // RuleEffect models static or runtime effects that change game rules rather

@@ -198,6 +198,7 @@ const (
 	EffectLose
 	EffectMill
 	EffectModifyPT
+	EffectMustAttack
 	EffectPut
 	EffectProliferate
 	EffectRegenerate

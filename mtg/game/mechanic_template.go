@@ -33,6 +33,15 @@ var CantBeBlockedStaticBody = StaticAbility{
 	}},
 }
 
+// MustAttackStaticBody is the complete static ability for a creature that must attack.
+var MustAttackStaticBody = StaticAbility{
+	Text: "This creature attacks each combat if able.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectMustAttack,
+		AffectedSource: true,
+	}},
+}
+
 // CantBeCounteredStaticBody is the complete static ability for an uncounterable spell.
 var CantBeCounteredStaticBody = StaticAbility{
 	Text:           "This spell can't be countered.",
