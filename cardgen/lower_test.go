@@ -1132,6 +1132,79 @@ func TestLowerCommonConditionalEntersTappedReplacements(t *testing.T) {
 	}
 }
 
+func TestLowerLifeAndOpponentConditionalEntersTappedReplacements(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		condition string
+		assert    func(*testing.T, game.Condition)
+	}{
+		{
+			name:      "controller life",
+			condition: "unless you have 10 or more life",
+			assert: func(t *testing.T, condition game.Condition) {
+				if condition.ControllerLifeAtLeast != 10 {
+					t.Fatalf("ControllerLifeAtLeast = %d, want 10", condition.ControllerLifeAtLeast)
+				}
+			},
+		},
+		{
+			name:      "any player life",
+			condition: "unless a player has 13 or less life",
+			assert: func(t *testing.T, condition game.Condition) {
+				if condition.AnyPlayerLifeAtMost != 13 {
+					t.Fatalf("AnyPlayerLifeAtMost = %d, want 13", condition.AnyPlayerLifeAtMost)
+				}
+			},
+		},
+		{
+			name:      "opponent count",
+			condition: "unless you have two or more opponents",
+			assert: func(t *testing.T, condition game.Condition) {
+				if condition.OpponentCountAtLeast != 2 {
+					t.Fatalf("OpponentCountAtLeast = %d, want 2", condition.OpponentCountAtLeast)
+				}
+			},
+		},
+		{
+			name:      "one opponent land count",
+			condition: "unless an opponent controls two or more lands",
+			assert: func(t *testing.T, condition game.Condition) {
+				if !condition.AnyOpponentControls.Exists ||
+					condition.AnyOpponentControls.Val.MinCount != 2 {
+					t.Fatalf("AnyOpponentControls = %+v, want two lands", condition.AnyOpponentControls)
+				}
+			},
+		},
+		{
+			name:      "collective opponent land count",
+			condition: "unless your opponents control eight or more lands",
+			assert: func(t *testing.T, condition game.Condition) {
+				if !condition.OpponentsControl.Exists ||
+					condition.OpponentsControl.Val.MinCount != 8 {
+					t.Fatalf("OpponentsControl = %+v, want eight lands", condition.OpponentsControl)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Land",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: "This land enters tapped " + test.condition + ".",
+			})
+			condition := face.ReplacementAbilities[0].Replacement.Condition.Val
+			if !condition.Negate {
+				t.Fatal("unless condition was not negated")
+			}
+			test.assert(t, condition)
+		})
+	}
+}
+
 func TestLowerReminderManaAbilitySingleColor(t *testing.T) {
 	t.Parallel()
 	// Basic lands express their mana ability as a parenthesized reminder.

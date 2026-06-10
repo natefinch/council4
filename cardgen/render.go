@@ -981,6 +981,11 @@ func (r Renderer) renderStaticAbilityCondition(ctx *renderCtx, cond *game.Condit
 }
 
 func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.Condition, context string) (string, error) {
+	if cond.ControllerLifeAtLeast < 0 ||
+		cond.AnyPlayerLifeAtMost < 0 ||
+		cond.OpponentCountAtLeast < 0 {
+		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
+	}
 	// Reject unsupported condition fields.
 	if cond.ControlsMatching.Exists ||
 		cond.Object.Exists ||
@@ -994,20 +999,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		cond.CastFromZone.Exists {
 		return "", fmt.Errorf("render: unsupported condition shape for %s", context)
 	}
-	filter := cond.ControllerControls
-	if filter.Empty() {
-		return "", fmt.Errorf("render: %s condition has no ControllerControls filter", context)
-	}
-	// Reject unsupported PermanentFilter fields.
-	if filter.Power.Exists ||
-		filter.Toughness.Exists ||
-		filter.TotalPower.Exists {
-		return "", fmt.Errorf("render: unsupported PermanentFilter shape for %s condition", context)
-	}
-	filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
-	if err != nil {
-		return "", err
-	}
 	var fields []string
 	if cond.Text != "" {
 		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(cond.Text)))
@@ -1015,11 +1006,77 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	if cond.Negate {
 		fields = append(fields, "Negate: true,")
 	}
-	fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
+	if !cond.ControllerControls.Empty() {
+		filter := cond.ControllerControls
+		if filter.Power.Exists ||
+			filter.Toughness.Exists ||
+			filter.TotalPower.Exists {
+			return "", fmt.Errorf("render: unsupported PermanentFilter shape for %s condition", context)
+		}
+		filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
+	}
+	if cond.ControllerLifeAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
+	}
+	if cond.AnyPlayerLifeAtMost > 0 {
+		fields = append(fields, fmt.Sprintf("AnyPlayerLifeAtMost: %d,", cond.AnyPlayerLifeAtMost))
+	}
+	if cond.OpponentCountAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("OpponentCountAtLeast: %d,", cond.OpponentCountAtLeast))
+	}
+	if cond.AnyOpponentControls.Exists {
+		rendered, err := r.renderSelectionCountForCondition(ctx, cond.AnyOpponentControls.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("AnyOpponentControls: opt.Val(%s),", rendered))
+	}
+	if cond.OpponentsControl.Exists {
+		rendered, err := r.renderSelectionCountForCondition(ctx, cond.OpponentsControl.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("OpponentsControl: opt.Val(%s),", rendered))
+	}
+	if len(fields) == 0 || len(fields) == 1 && cond.Negate {
+		return "", fmt.Errorf("render: %s condition has no supported predicate", context)
+	}
 	return structLit("game.Condition", fields), nil
 }
 
+func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.SelectionCount) (string, error) {
+	if count.MinCount < 0 {
+		return "", errors.New("render: condition permanent-count threshold cannot be negative")
+	}
+	selection, err := r.renderSelection(ctx, count.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Selection: %s,", selection)}
+	if count.MinCount != 0 {
+		fields = append(fields, fmt.Sprintf("MinCount: %d,", count.MinCount))
+	}
+	if count.TotalPower.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, count.TotalPower.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("TotalPower: opt.Val(%s),", cmp))
+	}
+	return structLit("game.SelectionCount", fields), nil
+}
+
 func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {
+	if filter.MinCount < 0 {
+		return "", errors.New("render: condition permanent-count threshold cannot be negative")
+	}
 	var fields []string
 	if len(filter.Types) > 0 {
 		lits, err := renderTypesCardSlice(ctx, filter.Types)

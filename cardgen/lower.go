@@ -335,7 +335,7 @@ func lowerExecutableAbility(
 		return abilityLowering{
 			replacementAbility: opt.Val(replacementAbility),
 			consumed: semanticConsumption{
-				effects:    1,
+				effects:    len(ability.Effects),
 				conditions: len(ability.Conditions),
 				references: len(ability.References),
 			},
@@ -2176,7 +2176,7 @@ func lowerReminderManaAbility(
 func lowerEntersTappedReplacement(
 	ability oracle.CompiledAbility,
 ) (game.ReplacementAbility, *oracle.Diagnostic) {
-	if len(ability.Effects) != 1 ||
+	if !entersTappedReplacementEffectsSupported(ability) ||
 		ability.Effects[0].Kind != oracle.EffectEnterTapped ||
 		len(ability.Targets) != 0 ||
 		len(ability.Keywords) != 0 ||
@@ -2214,6 +2214,25 @@ func lowerEntersTappedReplacement(
 	return game.EntersTappedReplacement(ability.Text), nil
 }
 
+func entersTappedReplacementEffectsSupported(ability oracle.CompiledAbility) bool {
+	if len(ability.Effects) == 0 {
+		return false
+	}
+	if len(ability.Effects) == 1 {
+		return true
+	}
+	if len(ability.Conditions) != 1 {
+		return false
+	}
+	conditionSpans := []oracle.Span{ability.Conditions[0].Span}
+	for _, effect := range ability.Effects[1:] {
+		if !spanCovered(effect.VerbSpan, conditionSpans) {
+			return false
+		}
+	}
+	return true
+}
+
 func lowerConditionalEntersTappedReplacement(
 	ability oracle.CompiledAbility,
 ) (game.ReplacementAbility, *oracle.Diagnostic) {
@@ -2228,6 +2247,30 @@ func lowerConditionalEntersTappedReplacement(
 	}
 	var replacementCondition game.Condition
 	switch condition.Text {
+	case "unless you have 10 or more life":
+		replacementCondition.Negate = true
+		replacementCondition.ControllerLifeAtLeast = 10
+	case "unless you have 20 or more life":
+		replacementCondition.Negate = true
+		replacementCondition.ControllerLifeAtLeast = 20
+	case "unless a player has 13 or less life":
+		replacementCondition.Negate = true
+		replacementCondition.AnyPlayerLifeAtMost = 13
+	case "unless you have two or more opponents":
+		replacementCondition.Negate = true
+		replacementCondition.OpponentCountAtLeast = 2
+	case "unless an opponent controls two or more lands":
+		replacementCondition.Negate = true
+		replacementCondition.AnyOpponentControls = opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+			MinCount:  2,
+		})
+	case "unless your opponents control eight or more lands":
+		replacementCondition.Negate = true
+		replacementCondition.OpponentsControl = opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+			MinCount:  8,
+		})
 	case "unless you control two or more basic lands":
 		replacementCondition.Negate = true
 		replacementCondition.ControllerControls = game.PermanentFilter{
