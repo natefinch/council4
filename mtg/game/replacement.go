@@ -131,10 +131,15 @@ type ReplacementEffect struct {
 	// Condition gates this replacement against the in-flight event.
 	Condition opt.V[Condition]
 
-	ReplaceToZone      zone.Type
-	ShuffleIntoLibrary bool
-	RevealSource       bool
-	TokenMultiplier    int
-	EntersTapped       bool
-	EntersWithCounters []CounterPlacement
+	ReplaceToZone                 zone.Type
+	ShuffleIntoLibrary            bool
+	RevealSource                  bool
+	TokenMultiplier               int
+	CounterMultiplier             int
+	MatchCounterKind              bool
+	CounterKindFilter             counter.Kind
+	CounterRecipientTypes         []types.Card
+	CounterUseRecipientController bool
+	EntersTapped                  bool
+	EntersWithCounters            []CounterPlacement
 }

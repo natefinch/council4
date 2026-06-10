@@ -1042,6 +1042,50 @@ func TestLowerTokenCreationReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name             string
+		oracleText       string
+		matchCounterKind bool
+		counterKind      counter.Kind
+	}{
+		{
+			name:             "specific plus one counters",
+			oracleText:       "If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
+			matchCounterKind: true,
+			counterKind:      counter.PlusOnePlusOne,
+		},
+		{
+			name:       "any counters",
+			oracleText: "If you would put one or more counters on a permanent or player, put twice that many of each of those kinds of counters on that permanent or player instead.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Counter Doubler",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.MatchEvent != game.EventCountersAdded ||
+				replacement.ControllerFilter != game.TriggerControllerYou ||
+				replacement.CounterMultiplier != 2 ||
+				replacement.MatchCounterKind != test.matchCounterKind ||
+				replacement.CounterKindFilter != test.counterKind ||
+				replacement.Duration != game.DurationPermanent {
+				t.Fatalf("replacement = %+v, want counter placement doubler", replacement)
+			}
+		})
+	}
+}
+
 func TestGenerateTokenCreationReplacementSource(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -1058,6 +1102,34 @@ func TestGenerateTokenCreationReplacementSource(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"game.TokenCreationReplacement",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateCounterPlacementReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Branching Evolution",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
+	}, "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.CounterPlacementReplacement",
+		"counter.PlusOnePlusOne",
 		"game.TriggerControllerYou",
 	} {
 		if !strings.Contains(source, wanted) {
