@@ -84,6 +84,10 @@ type Event struct {
 	// paid. It is false for permanents that did not enter from a kicked spell.
 	KickerPaid bool
 
+	// EnterWasCast records whether a permanent entered from resolving a cast,
+	// non-copy spell.
+	EnterWasCast bool
+
 	// CardTypes records the relevant card types at event time for spell-cast
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).

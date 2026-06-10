@@ -16,6 +16,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // Import paths that the renderer may emit. The game package is always needed.
@@ -786,7 +787,7 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if ability.Text != "" {
 		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
 	}
-	trigger, err := r.renderTriggerCondition(&ability.Trigger)
+	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)
 	if err != nil {
 		return "", err
 	}
@@ -828,7 +829,7 @@ func (r Renderer) renderLoyaltyAbility(ctx *renderCtx, ability *game.LoyaltyAbil
 	return structLit("game.LoyaltyAbility", fields), nil
 }
 
-func (r Renderer) renderTriggerCondition(trigger *game.TriggerCondition) (string, error) {
+func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCondition) (string, error) {
 	triggerType, err := renderTriggerType(trigger.Type)
 	if err != nil {
 		return "", err
@@ -844,10 +845,50 @@ func (r Renderer) renderTriggerCondition(trigger *game.TriggerCondition) (string
 	if trigger.InterveningIf != "" {
 		fields = append(fields, fmt.Sprintf("InterveningIf: %q,", trigger.InterveningIf))
 	}
+	if trigger.InterveningCondition.Exists {
+		condition, err := r.renderControlledPermanentInterveningCondition(ctx, &trigger.InterveningCondition.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("InterveningCondition: opt.Val(%s),", condition))
+	}
 	if trigger.InterveningIfEventPermanentWasKicked {
 		fields = append(fields, "InterveningIfEventPermanentWasKicked: true,")
 	}
+	if trigger.InterveningIfEventPermanentWasCast {
+		fields = append(fields, "InterveningIfEventPermanentWasCast: true,")
+	}
+	if trigger.InterveningIfEventPermanentAttackedThisTurn {
+		fields = append(fields, "InterveningIfEventPermanentAttackedThisTurn: true,")
+	}
 	return structLit("game.TriggerCondition", fields), nil
+}
+
+func (r Renderer) renderControlledPermanentInterveningCondition(ctx *renderCtx, condition *game.Condition) (string, error) {
+	if condition == nil || !condition.ControlsMatching.Exists {
+		return "", errors.New("render: unsupported trigger intervening condition")
+	}
+	unsupported := *condition
+	unsupported.Text = ""
+	unsupported.ControlsMatching = opt.V[game.SelectionCount]{}
+	if !unsupported.Empty() || unsupported.Negate {
+		return "", errors.New("render: unsupported trigger intervening condition")
+	}
+	count := condition.ControlsMatching.Val
+	if count.Selection.Empty() || count.MinCount != 0 || count.TotalPower.Exists {
+		return "", errors.New("render: unsupported trigger intervening controls condition")
+	}
+	selection, err := r.renderSelection(ctx, count.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Text: %q,", condition.Text),
+		fmt.Sprintf("ControlsMatching: opt.Val(game.SelectionCount{Selection: %s}),", selection),
+	}
+	ctx.need(importOpt)
+	return structLit("game.Condition", fields), nil
 }
 
 func (Renderer) renderTriggerPattern(pattern *game.TriggerPattern) (string, error) {

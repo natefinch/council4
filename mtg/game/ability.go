@@ -201,6 +201,14 @@ type TriggerCondition struct {
 	// choice for both trigger-time and resolution-time checks.
 	InterveningIfEventPermanentWasKicked bool
 
+	// InterveningIfEventPermanentWasCast is true for "if it was cast" and "if
+	// you cast it" on enter triggers.
+	InterveningIfEventPermanentWasCast bool
+
+	// InterveningIfEventPermanentAttackedThisTurn is true for "if this creature
+	// attacked this turn" on enter triggers.
+	InterveningIfEventPermanentAttackedThisTurn bool
+
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
 	State opt.V[StateTriggerCondition]

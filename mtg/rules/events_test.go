@@ -309,6 +309,7 @@ func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
 	etbIndex := eventIndex(g.Events, game.EventPermanentEnteredBattlefield, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID &&
 			event.TokenName == token.Name &&
+			!event.EnterWasCast &&
 			event.FromZone == zone.None &&
 			event.ToZone == zone.Battlefield
 	})

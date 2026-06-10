@@ -1195,6 +1195,125 @@ func TestKickedInterveningIfChecksEnterEvent(t *testing.T) {
 	}
 }
 
+func TestWasCastInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
+	t.Run("not put on stack when permanent was not cast", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
+			InterveningIfEventPermanentWasCast: true,
+		})
+		emitEvent(g, game.Event{
+			Kind:        game.EventPermanentEnteredBattlefield,
+			CardID:      source.CardInstanceID,
+			PermanentID: source.ObjectID,
+		})
+		if engine.putTriggeredAbilitiesOnStack(g) {
+			t.Fatal("non-cast permanent enter trigger was put on stack")
+		}
+	})
+
+	t.Run("cast fact is rechecked on resolution", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
+			InterveningIfEventPermanentWasCast: true,
+		})
+		emitEvent(g, game.Event{
+			Kind:         game.EventPermanentEnteredBattlefield,
+			CardID:       source.CardInstanceID,
+			PermanentID:  source.ObjectID,
+			EnterWasCast: true,
+		})
+		if !engine.putTriggeredAbilitiesOnStack(g) {
+			t.Fatal("cast permanent enter trigger was not put on stack")
+		}
+		obj, ok := g.Stack.Peek()
+		if !ok {
+			t.Fatal("missing triggered ability")
+		}
+		obj.TriggerEvent.EnterWasCast = false
+		log := TurnLog{}
+		engine.resolveTopOfStack(g, &log)
+		if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+			t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+		}
+	})
+}
+
+func TestAttackedThisTurnInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.TurnNumber = 1
+	g.EventTurnStarts = []int{0}
+	engine := NewEngine(nil)
+	source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
+		InterveningIfEventPermanentAttackedThisTurn: true,
+	})
+	enter := game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		CardID:      source.CardInstanceID,
+		PermanentID: source.ObjectID,
+	}
+	emitEvent(g, enter)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("nonattacking permanent enter trigger was put on stack")
+	}
+
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, PermanentID: source.ObjectID})
+	emitEvent(g, enter)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("attacked-this-turn enter trigger was not put on stack")
+	}
+	g.Events = g.Events[:1]
+	log := TurnLog{}
+	engine.resolveTopOfStack(g, &log)
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+		t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+	}
+}
+
+func TestControlsPermanentInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
+		InterveningCondition: opt.Val(game.Condition{
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+			}),
+		}),
+	})
+	enter := game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		CardID:      source.CardInstanceID,
+		PermanentID: source.ObjectID,
+	}
+	emitEvent(g, enter)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("controls-artifact enter trigger was put on stack without an artifact")
+	}
+
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Relic",
+		Types: []types.Card{types.Artifact},
+	}})
+	artifact.PhasedOut = true
+	emitEvent(g, enter)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("controls-artifact enter trigger counted a phased-out artifact")
+	}
+
+	artifact.PhasedOut = false
+	emitEvent(g, enter)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("controls-artifact enter trigger was not put on stack")
+	}
+	artifact.PhasedOut = true
+	log := TurnLog{}
+	engine.resolveTopOfStack(g, &log)
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+		t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+	}
+}
+
 func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -1301,6 +1420,24 @@ func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, 
 		panic("triggered permanent card instance not found")
 	}
 	card.Def.TriggeredAbilities[0].Trigger.InterveningIfControllerLifeAtLeast = lifeAtLeast
+	return permanent
+}
+
+func addSelfEnterInterveningTrigger(g *game.Game, condition *game.TriggerCondition) *game.Permanent {
+	permanent := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventPermanentEnteredBattlefield,
+		Source: game.TriggerSourceSelf,
+	}, nil, nil)
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok {
+		panic("triggered permanent card instance not found")
+	}
+	condition.Type = game.TriggerWhen
+	condition.Pattern = game.TriggerPattern{
+		Event:  game.EventPermanentEnteredBattlefield,
+		Source: game.TriggerSourceSelf,
+	}
+	card.Def.TriggeredAbilities[0].Trigger = *condition
 	return permanent
 }
 

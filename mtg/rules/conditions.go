@@ -103,6 +103,9 @@ func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, con
 	totalPower := 0
 	sel := control.Selection
 	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
 		if ctx.useBaseCharacteristics {
 			if permanent.Controller != ctx.controller {
 				continue

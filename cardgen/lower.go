@@ -1885,18 +1885,28 @@ func lowerEnterTrigger(
 		summary = "unsupported dies trigger"
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
-	kickedCondition := ability.Trigger != nil &&
-		ability.Trigger.Condition != nil &&
-		ability.Trigger.Condition.Kind == oracle.ConditionIf &&
-		ability.Trigger.Condition.Intervening &&
-		ability.Trigger.Condition.Text == "if it was kicked"
+	intervening, supportedCondition := lowerEnterInterveningCondition(ability.Trigger)
+	hasInterveningCondition := ability.Trigger != nil && ability.Trigger.Condition != nil
+	if hasInterveningCondition && eventKind != game.EventPermanentEnteredBattlefield {
+		supportedCondition = false
+	}
+	resolvingEffects := ability.Effects
+	if hasInterveningCondition {
+		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
+		resolvingEffects = slices.DeleteFunc(
+			append([]oracle.CompiledEffect(nil), ability.Effects...),
+			func(effect oracle.CompiledEffect) bool {
+				return spanCovered(effect.VerbSpan, conditionSpan)
+			},
+		)
+	}
 	if ability.Trigger == nil ||
 		ability.Trigger.Kind != oracle.TriggerWhen ||
 		!supportedEvent ||
-		(ability.Trigger.Condition != nil && !kickedCondition) ||
-		len(ability.Effects) == 0 ||
-		(len(ability.Conditions) != 0 && !kickedCondition) ||
-		(kickedCondition && (len(ability.Conditions) != 1 ||
+		!supportedCondition ||
+		len(resolvingEffects) == 0 ||
+		(len(ability.Conditions) != 0 && !hasInterveningCondition) ||
+		(hasInterveningCondition && (len(ability.Conditions) != 1 ||
 			ability.Conditions[0] != *ability.Trigger.Condition ||
 			ability.Optional)) ||
 		len(ability.Keywords) != 0 ||
@@ -1909,10 +1919,11 @@ func lowerEnterTrigger(
 		)
 	}
 	body := ability
+	body.Effects = resolvingEffects
 	body.Kind = oracle.AbilitySpell
 	body.Span = oracle.Span{
-		Start: ability.Effects[0].Span.Start,
-		End:   ability.Effects[len(ability.Effects)-1].Span.End,
+		Start: resolvingEffects[0].Span.Start,
+		End:   resolvingEffects[len(resolvingEffects)-1].Span.End,
 	}
 	body.Text = titleFirst(
 		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
@@ -1921,7 +1932,7 @@ func lowerEnterTrigger(
 	body.Optional = false
 	body.OptionalSpan = oracle.Span{}
 	excludedReferenceSpans := []oracle.Span{ability.Trigger.Span}
-	if kickedCondition {
+	if hasInterveningCondition {
 		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
 		body.Conditions = nil
 		bodyStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
@@ -2000,12 +2011,71 @@ func lowerEnterTrigger(
 				Event:  eventKind,
 				Source: game.TriggerSourceSelf,
 			},
-			InterveningIf:                        interveningIfText(ability.Trigger),
-			InterveningIfEventPermanentWasKicked: kickedCondition,
+			InterveningIf:                               interveningIfText(ability.Trigger),
+			InterveningCondition:                        intervening.condition,
+			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:          intervening.wasCast,
+			InterveningIfEventPermanentAttackedThisTurn: intervening.attackedThisTurn,
 		},
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
+}
+
+type enterInterveningCondition struct {
+	condition        opt.V[game.Condition]
+	wasKicked        bool
+	wasCast          bool
+	attackedThisTurn bool
+}
+
+func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
+	if trigger == nil || trigger.Condition == nil {
+		return enterInterveningCondition{}, true
+	}
+	condition := trigger.Condition
+	if condition.Kind != oracle.ConditionIf || !condition.Intervening {
+		return enterInterveningCondition{}, false
+	}
+	switch condition.Text {
+	case "if it was kicked":
+		return enterInterveningCondition{wasKicked: true}, true
+	case "if it was cast", "if you cast it":
+		return enterInterveningCondition{wasCast: true}, true
+	case "if this creature attacked this turn":
+		return enterInterveningCondition{attackedThisTurn: true}, true
+	}
+	cardType, ok := controlledPermanentConditionType(condition.Text)
+	if !ok {
+		return enterInterveningCondition{}, false
+	}
+	return enterInterveningCondition{
+		condition: opt.Val(game.Condition{
+			Text: condition.Text,
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{RequiredTypes: []types.Card{cardType}},
+			}),
+		}),
+	}, true
+}
+
+func controlledPermanentConditionType(text string) (types.Card, bool) {
+	switch text {
+	case "if you control a battle":
+		return types.Battle, true
+	case "if you control a creature":
+		return types.Creature, true
+	case "if you control an artifact":
+		return types.Artifact, true
+	case "if you control an enchantment":
+		return types.Enchantment, true
+	case "if you control a land":
+		return types.Land, true
+	case "if you control a planeswalker":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
 }
 
 func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbility) bool {

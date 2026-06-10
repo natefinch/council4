@@ -90,6 +90,26 @@ func TestConditionControllerControlsPermanentFilterCanExcludeSource(t *testing.T
 	}
 }
 
+func TestConditionControlsMatchingIgnoresPhasedOutPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Relic",
+		Types: []types.Card{types.Artifact},
+	}})
+	condition := opt.Val(game.Condition{
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+		}),
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not count in-phase artifact")
+	}
+	artifact.PhasedOut = true
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition counted phased-out artifact")
+	}
+}
+
 func TestConditionTargetEnteredThisTurn(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "New Creature",

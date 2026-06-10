@@ -549,6 +549,12 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 	if trigger.InterveningIfEventPermanentWasKicked && (event == nil || !event.KickerPaid) {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentWasCast && (event == nil || !event.EnterWasCast) {
+		return false
+	}
+	if trigger.InterveningIfEventPermanentAttackedThisTurn && !eventPermanentAttackedThisTurn(g, event) {
+		return false
+	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
 		source:     source,
@@ -557,6 +563,18 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 		return false
 	}
 	return true
+}
+
+func eventPermanentAttackedThisTurn(g *game.Game, event *game.Event) bool {
+	if event == nil || event.PermanentID == 0 {
+		return false
+	}
+	for _, turnEvent := range g.EventsThisTurn() {
+		if turnEvent.Kind == game.EventAttackerDeclared && turnEvent.PermanentID == event.PermanentID {
+			return true
+		}
+	}
+	return false
 }
 
 func triggerControllerMatches(sourceController game.PlayerID, filter game.TriggerControllerFilter, eventController game.PlayerID) bool {
