@@ -779,6 +779,29 @@ func TestLowerDiesTrigger(t *testing.T) {
 	}
 }
 
+func TestLowerSelfDiesDamageTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Devil",
+		Layout:     "normal",
+		TypeLine:   "Creature — Devil",
+		OracleText: "When this creature dies, it deals 3 damage to any target.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("got %d targets, want 1", len(mode.Targets))
+	}
+	damage, ok := mode.Sequence[0].Primitive.(game.Damage)
+	if !ok ||
+		damage.Amount.Value() != 3 ||
+		!damage.DamageSource.Exists ||
+		damage.DamageSource.Val != game.EventPermanentReference() {
+		t.Fatalf("primitive = %+v, want damage from event permanent", mode.Sequence[0].Primitive)
+	}
+}
+
 func TestLowerManaParameterizedKeywords(t *testing.T) {
 	t.Parallel()
 

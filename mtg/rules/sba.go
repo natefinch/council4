@@ -77,6 +77,7 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentD
 	type pendingDeath struct {
 		objectID id.ID
 		reason   PermanentDeathReason
+		snapshot game.ObjectSnapshot
 	}
 	var pending []pendingDeath
 	for _, permanent := range g.Battlefield {
@@ -85,6 +86,7 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentD
 			pending = append(pending, pendingDeath{
 				objectID: permanent.ObjectID,
 				reason:   reason,
+				snapshot: snapshotPermanent(g, permanent, zone.Battlefield),
 			})
 		}
 	}
@@ -102,6 +104,7 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentD
 			if !ok || !movePermanentToZone(g, permanent, zone.Graveyard) {
 				continue
 			}
+			rememberLastKnown(g, &death.snapshot)
 			if replacedToCommand {
 				continue
 			}
@@ -109,8 +112,12 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game) (bool, []PermanentD
 			var ok bool
 			permanent, ok = destroyPermanent(g, death.objectID)
 			if !ok {
+				if _, remains := permanentByObjectID(g, death.objectID); !remains {
+					rememberLastKnown(g, &death.snapshot)
+				}
 				continue
 			}
+			rememberLastKnown(g, &death.snapshot)
 		}
 		deaths = append(deaths, PermanentDeathLog{
 			Permanent:  permanent.ObjectID,

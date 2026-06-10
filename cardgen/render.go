@@ -1081,10 +1081,19 @@ func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.Damage", []string{
+	fields := []string{
 		fmt.Sprintf("Amount: %s,", renderQuantity(value.Amount)),
 		fmt.Sprintf("Recipient: %s,", recipient),
-	}), nil
+	}
+	if value.DamageSource.Exists {
+		source, err := r.renderObjectReference(value.DamageSource.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DamageSource: opt.Val(%s),", source))
+		ctx.need(importOpt)
+	}
+	return structLit("game.Damage", fields), nil
 }
 
 func (r Renderer) renderPlayerAmountPrimitive(primitive game.Primitive) (string, error) {
