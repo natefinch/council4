@@ -110,6 +110,18 @@ func TestSuspendCastsMultipleReadyCardsInIDOrder(t *testing.T) {
 	}
 }
 
+func TestSuspendStateClearsWhenCardLeavesExile(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(2, cost.Mana{cost.O(1)}), 2)
+
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Exile, zone.Graveyard) {
+		t.Fatal("moving suspended card from exile to graveyard failed")
+	}
+	if _, ok := g.SuspendedCards[cardID]; ok {
+		t.Fatal("suspended state remained after card left exile")
+	}
+}
+
 func TestSuspendedCreatureEntersWithSuspendHaste(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -73,6 +73,14 @@ func ObjectControlledGroupExcluding(anchor ObjectReference, selection Selection,
 // Domain reports the candidate domain the group draws from.
 func (r GroupReference) Domain() GroupReferenceDomain { return r.domain }
 
+// Empty reports whether this is the omitted zero-value group.
+func (r GroupReference) Empty() bool {
+	return r.domain == groupDomainNone &&
+		r.selection.Empty() &&
+		!r.anchor.Exists &&
+		!r.exclude.Exists
+}
+
 // Selection returns the characteristic predicate that narrows the domain.
 func (r GroupReference) Selection() Selection { return r.selection }
 

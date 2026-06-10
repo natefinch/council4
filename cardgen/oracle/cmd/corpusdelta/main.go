@@ -376,14 +376,15 @@ func buildManifest(
 		}
 		if _, wasUnsupported := baselineUnsupported[id]; (wasUnsupported || wasExcluded) && !unsupported {
 			inspection := inspectCard(card)
-			inspection.GeneratedPath = filepath.Join(
-				generatedRoot,
-				cardgen.CardNameToPackageLetter(card.Name),
-				cardgen.CardNameToSafeFileName(card.Name)+".go",
-			)
+			generatedPath, err := generatedCardPath(generatedRoot, card)
+			if err != nil {
+				return Manifest{}, nil, err
+			}
+			inspection.GeneratedPath = generatedPath
 			if _, err := os.Stat(inspection.GeneratedPath); err != nil {
 				return Manifest{}, nil, fmt.Errorf("generated source for %s: %w", card.Name, err)
 			}
+
 			manifest.NewlySupported = append(manifest.NewlySupported, inspection)
 		}
 		if _, wasUnsupported := baselineUnsupported[id]; !wasUnsupported && !wasExcluded && unsupported {
@@ -419,6 +420,25 @@ func buildManifest(
 		)
 	}
 	return manifest, supported, nil
+}
+
+func generatedCardPath(generatedRoot string, card cardgen.ScryfallCard) (string, error) {
+	identity, err := cardgen.GeneratedIdentity(&card, false)
+	if err != nil {
+		return "", fmt.Errorf("generated identity for %s: %w", card.Name, err)
+	}
+	path := filepath.Join(generatedRoot, identity.RelativePath)
+	if card.Layout == "token" || card.Layout == "double_faced_token" {
+		return path, nil
+	}
+	disambiguated, err := cardgen.GeneratedIdentity(&card, true)
+	if err == nil {
+		disambiguatedPath := filepath.Join(generatedRoot, disambiguated.RelativePath)
+		if _, err := os.Stat(disambiguatedPath); err == nil {
+			return disambiguatedPath, nil
+		}
+	}
+	return path, nil
 }
 
 func unsupportedByID(cards []unsupportedReport) map[string]unsupportedReport {
