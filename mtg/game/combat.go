@@ -54,6 +54,10 @@ type CombatState struct {
 	// Blockers lists all declared blockers and which attacker they block.
 	Blockers []BlockDeclaration
 
+	// BlockedAttackers preserves which attackers became blocked even if all of
+	// their blockers later leave combat.
+	BlockedAttackers map[id.ID]bool
+
 	// BlockerOrder maps each attacker's ObjectID to the ordered list of
 	// its blockers for damage assignment (CR 510.1c). The attacking
 	// player chooses this order.

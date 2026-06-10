@@ -115,7 +115,7 @@ never substitutes guessed executable behavior for unsupported wording.
 
 The strict executable backend currently lowers plain non-parameterized
 keywords, exact `Devoid (This card has no color.)`, positive-integer Toxic, and
-mana-cost Kicker, Madness, Morph, Disguise, Ward, Cycling, and Equip. It also
+mana-cost Kicker, Madness, Morph, Disguise, Ward, Cycling, Ninjutsu, and Equip. It also
 lowers base-type Enchant, color-based Protection, supported tap and untap mana
 choices, ordinary activated abilities with exact typed costs and supported
 effect bodies, and exact trailing activation timing restrictions,

@@ -231,6 +231,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateTargetSpec(faceName, appendPath(path, "Target"), &keyword.Target)
 	case CyclingKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case NinjutsuKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case KickerKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 		if len(keyword.BonusContent.Modes) > 0 {

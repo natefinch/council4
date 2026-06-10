@@ -83,6 +83,39 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		return "missing source"
 	}
 	activatedBody, activatedOK := body.(game.ActivatedAbility)
+	if activatedOK && obj.Ninjutsu && game.BodyHasKeyword(activatedBody, game.Ninjutsu) {
+		player, ok := playerByID(g, obj.Controller)
+		if !ok || !player.Hand.Contains(obj.SourceCardID) {
+			return "resolved"
+		}
+		card, ok := g.GetCardInstance(obj.SourceCardID)
+		if !ok || !player.Hand.Remove(obj.SourceCardID) {
+			return "missing source"
+		}
+		ninja, ok := createCardPermanentFaceWithOptions(
+			e,
+			g,
+			card,
+			obj.Controller,
+			zone.Hand,
+			game.FaceFront,
+			nil,
+			permanentCreationOptions{ForceTapped: true},
+			agents,
+			log,
+		)
+		if !ok {
+			player.Hand.Add(obj.SourceCardID)
+			return "missing source"
+		}
+		if g.Combat != nil && ninjutsuAttackTargetValid(g, obj.NinjutsuAttackTarget) {
+			g.Combat.Attackers = append(g.Combat.Attackers, game.AttackDeclaration{
+				Attacker: ninja.ObjectID,
+				Target:   obj.NinjutsuAttackTarget,
+			})
+		}
+		return "resolved"
+	}
 	if permanentOK && activatedOK && isEquipmentPermanent(g, permanent) && game.BodyHasKeyword(activatedBody, game.Equip) {
 		sourceObjectID := obj.SourceID
 		if !permanentOK {
@@ -100,6 +133,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		}
 		return "resolved"
 	}
+
 	if activatedOK {
 		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, activatedBody, obj) {
 			return "countered by rules"
@@ -121,6 +155,17 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		return "resolved"
 	}
 	return "resolved"
+}
+
+func ninjutsuAttackTargetValid(g *game.Game, target game.AttackTarget) bool {
+	if !isPlayerAlive(g, target.Player) {
+		return false
+	}
+	if target.IsPlayerAttack() {
+		return true
+	}
+	permanent, ok := attackTargetPermanent(g, target)
+	return ok && !permanent.PhasedOut
 }
 
 func (e *Engine) resolveTriggeredAbility(g *game.Game, obj *game.StackObject, log *TurnLog) string {

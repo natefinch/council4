@@ -27,6 +27,7 @@ const (
 	AdditionalExileSource
 	AdditionalUntap
 	AdditionalRemoveCounter
+	AdditionalReturnUnblockedAttacker
 )
 
 // Additional describes a typed non-mana cost printed on a spell, ability, or
