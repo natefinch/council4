@@ -13,8 +13,8 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 		return false
 	}
 	for _, tap := range plan.manaTaps {
-		if !tapForMana(s, tap.permanent, tap.color, tap.amount, tap.snow) {
-			panic("payment plan became invalid while tapping mana sources")
+		if !activateManaForPayment(s, playerID, tap) {
+			panic("payment plan became invalid while activating mana sources")
 		}
 	}
 	for _, permanent := range plan.convokeTaps {
@@ -53,25 +53,33 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 	return true
 }
 
-// tapForMana taps a permanent to produce mana and adds it to the controller's pool.
-func tapForMana(s State, permanent *game.Permanent, color mana.Color, amount int, snow bool) bool {
-	if permanent.Tapped {
+func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap) bool {
+	permanent := activation.permanent
+	if permanent.Tapped != activation.untap || s.EffectiveController(permanent) != playerID {
 		return false
 	}
-	controllerID := s.EffectiveController(permanent)
-	player, ok := s.Player(controllerID)
+	player, ok := s.Player(playerID)
 	if !ok {
 		return false
 	}
 	output, ok := permanentManaOutput(s, permanent)
-	if !ok || output.color != color || output.amount != amount || output.snow != snow {
+	if !ok ||
+		output.color != activation.color ||
+		output.amount != activation.amount ||
+		output.snow != activation.snow ||
+		output.untap != activation.untap ||
+		output.abilityIndex != activation.abilityIndex ||
+		output.timing != activation.timing {
 		return false
 	}
-	s.SetTapped(permanent, true)
+	s.SetTapped(permanent, !activation.untap)
+	if activation.abilityIndex >= 0 {
+		s.RecordManaAbilityUse(permanent, activation.abilityIndex, activation.timing)
+	}
 	if output.snow {
-		player.ManaPool.AddSnow(color, amount)
+		player.ManaPool.AddSnow(activation.color, activation.amount)
 	} else {
-		player.ManaPool.Add(color, amount)
+		player.ManaPool.Add(activation.color, activation.amount)
 	}
 	return true
 }
@@ -93,7 +101,7 @@ func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana
 		return true
 	}
 	if source, ok := takeNonSnowManaSource(sources, color); ok {
-		plan.manaTaps = append(plan.manaTaps, manaTap{permanent: source.permanent, color: source.color, amount: source.amount, snow: source.snow})
+		plan.manaTaps = append(plan.manaTaps, manaTap(source))
 		pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
 		return paySpecificMana(plan, pool, sources, color)
 	}
@@ -104,7 +112,7 @@ func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana
 	if !ok {
 		return false
 	}
-	plan.manaTaps = append(plan.manaTaps, manaTap{permanent: source.permanent, color: source.color, amount: source.amount, snow: source.snow})
+	plan.manaTaps = append(plan.manaTaps, manaTap(source))
 	pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
 	return paySpecificMana(plan, pool, sources, color)
 }
@@ -135,7 +143,7 @@ func payGenericMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.
 		if !ok {
 			return false
 		}
-		plan.manaTaps = append(plan.manaTaps, manaTap{permanent: source.permanent, color: source.color, amount: source.amount, snow: source.snow})
+		plan.manaTaps = append(plan.manaTaps, manaTap(source))
 		pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
 	}
 	return true
@@ -183,7 +191,7 @@ func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Col
 	if !ok {
 		return false
 	}
-	plan.manaTaps = append(plan.manaTaps, manaTap{permanent: source.permanent, color: source.color, amount: source.amount, snow: source.snow})
+	plan.manaTaps = append(plan.manaTaps, manaTap(source))
 	pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
 	return spendAnySnowUnitFromSnapshot(plan, pool)
 }

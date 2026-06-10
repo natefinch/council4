@@ -21,6 +21,8 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalDiscard:
 			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
+		case cost.AdditionalExile:
+			prefs.ExileChoices = append(prefs.ExileChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
 		default:
 		}
 	}
@@ -129,7 +131,7 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
-	candidates := candidateDiscardCards(g, playerID, addCost)
+	candidates := candidateAdditionalCostCards(g, playerID, addCost)
 	if len(candidates) <= amount {
 		return candidates
 	}
@@ -175,13 +177,34 @@ func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent
 	return true
 }
 
-func candidateDiscardCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional) []id.ID {
+func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
 	}
+	source := addCost.Source
+	if source == zone.None {
+		if addCost.Kind == cost.AdditionalExile {
+			source = zone.Graveyard
+		} else {
+			source = zone.Hand
+		}
+	}
+	var cardIDs []id.ID
+	switch source {
+	case zone.Hand:
+		cardIDs = player.Hand.All()
+	case zone.Graveyard:
+		cardIDs = player.Graveyard.All()
+	case zone.Exile:
+		cardIDs = player.Exile.All()
+	case zone.Command:
+		cardIDs = player.CommandZone.All()
+	default:
+		return nil
+	}
 	var candidates []id.ID
-	for _, cardID := range player.Hand.All() {
+	for _, cardID := range cardIDs {
 		card, ok := g.GetCardInstance(cardID)
 		if ok && localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), addCost) {
 			candidates = append(candidates, cardID)

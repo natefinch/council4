@@ -15,10 +15,12 @@ func TestCompileActivatedAbility(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
+
 	ability := compilation.Abilities[0]
 	if ability.Cost == nil || len(ability.Cost.Components) != 2 {
 		t.Fatalf("cost = %#v", ability.Cost)
 	}
+
 	if ability.Cost.Components[0].Kind != CostMana ||
 		ability.Cost.Components[0].Symbol != "{1}{G}" ||
 		ability.Cost.Components[1].Kind != CostTap {
@@ -41,6 +43,47 @@ func TestCompileActivatedAbility(t *testing.T) {
 	if ability.Effects[0].PowerDelta != (CompiledSignedAmount{Value: 2, Known: true}) ||
 		ability.Effects[0].ToughnessDelta != (CompiledSignedAmount{Value: 2, Known: true}) {
 		t.Fatalf("power/toughness change = %#v", ability.Effects[0])
+	}
+}
+
+func TestCompileActivatedAbilityTiming(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+		want ActivationTimingKind
+	}{
+		{"sorcery", "{1}: Draw a card. Activate only as a sorcery.", ActivationTimingSorcery},
+		{"once per turn", "{1}: Draw a card. Activate only once each turn.", ActivationTimingOncePerTurn},
+		{"combat", "{1}: Draw a card. Activate only during combat.", ActivationTimingDuringCombat},
+		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", ActivationTimingDuringUpkeep},
+		{
+			"sorcery once per turn",
+			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
+			ActivationTimingSorceryOncePerTurn,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.text, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.ActivationTiming != test.want {
+				t.Fatalf("activation timing = %v, want %v", ability.ActivationTiming, test.want)
+			}
+			if got := test.text[ability.ActivationTimingSpan.Start.Offset:ability.ActivationTimingSpan.End.Offset]; got == "" {
+				t.Fatal("activation timing span is empty")
+			}
+			if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
+				t.Fatalf("effects = %#v, want one draw effect", ability.Effects)
+			}
+			if len(ability.References) != 0 {
+				t.Fatalf("references = %#v, want timing references excluded", ability.References)
+			}
+		})
 	}
 }
 
