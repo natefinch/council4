@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"math/rand/v2"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -591,6 +592,115 @@ func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.PermanentID == target.ObjectID && event.ToZone == zone.Exile
 	})
+}
+
+func TestStaticSelfZoneReplacementMovesPermanentToLibrary(t *testing.T) {
+	g := game.NewGameWithRand([game.NumPlayers]game.PlayerConfig{}, rand.New(rand.NewPCG(1, 2)))
+	bottomID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Library Card"}})
+	target := addCombatPermanent(g, game.Player1, selfLibraryReplacementCardDef())
+
+	if !movePermanentToZone(g, target, zone.Graveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
+		t.Fatal("self replacement did not redirect away from graveyard")
+	}
+	if !g.Players[game.Player1].Library.Contains(target.CardInstanceID) {
+		t.Fatal("self replacement did not move card to library")
+	}
+	if top, ok := g.Players[game.Player1].Library.Top(); !ok || top != bottomID {
+		t.Fatalf("library top = %v, %v; want existing card on top after deterministic shuffle", top, ok)
+	}
+	assertEvent(t, g.Events, game.EventCardRevealed, func(event game.Event) bool {
+		return event.CardID == target.CardInstanceID &&
+			event.PermanentID == target.ObjectID
+	})
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
+		return event.CardID == target.CardInstanceID &&
+			event.PermanentID == target.ObjectID &&
+			event.FromZone == zone.Battlefield &&
+			event.ToZone == zone.Library
+	})
+}
+
+func TestStaticSelfZoneReplacementDoesNotApplyFaceDownPermanentAbilities(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	target := addFaceDownPermanent(g, game.Player1, selfLibraryReplacementCardDef(), game.FaceDownMorph)
+
+	if !movePermanentToZone(g, target, zone.Graveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+	if g.Players[game.Player1].Library.Contains(target.CardInstanceID) {
+		t.Fatal("face-down permanent used its hidden self zone replacement")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
+		t.Fatal("face-down permanent did not move to graveyard")
+	}
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
+		return event.CardID == target.CardInstanceID &&
+			event.PermanentID == target.ObjectID &&
+			event.ToZone == zone.Graveyard
+	})
+}
+
+func TestStaticSelfZoneReplacementAppliesWhenDiscardedFromHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardToHand(g, game.Player1, selfLibraryReplacementCardDef())
+
+	if !discardCardFromHand(g, game.Player1, cardID) {
+		t.Fatal("discardCardFromHand() = false, want true")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("self replacement did not redirect discarded card away from graveyard")
+	}
+	if !g.Players[game.Player1].Library.Contains(cardID) {
+		t.Fatal("self replacement did not move discarded card to library")
+	}
+	assertEvent(t, g.Events, game.EventCardRevealed, func(event game.Event) bool {
+		return event.CardID == cardID && event.Player == game.Player1
+	})
+	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.Event) bool {
+		return event.CardID == cardID &&
+			event.FromZone == zone.Hand &&
+			event.ToZone == zone.Library
+	})
+}
+
+func TestStaticSelfZoneReplacementAppliesToGenericZoneMove(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardToHand(g, game.Player1, selfLibraryReplacementCardDef())
+
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Hand, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones() = false, want true")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("self replacement did not redirect generic zone move away from graveyard")
+	}
+	if !g.Players[game.Player1].Library.Contains(cardID) {
+		t.Fatal("self replacement did not move generic zone move to library")
+	}
+	assertEvent(t, g.Events, game.EventCardRevealed, func(event game.Event) bool {
+		return event.CardID == cardID && event.Player == game.Player1
+	})
+}
+
+func selfLibraryReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Darksteel Colossus",
+		Types: []types.Card{types.Artifact, types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{{
+			Text: "If Darksteel Colossus would be put into a graveyard from anywhere, reveal Darksteel Colossus and shuffle it into its owner's library instead.",
+			Replacement: game.ReplacementEffect{
+				MatchEvent:         game.EventZoneChanged,
+				MatchToZone:        true,
+				ToZone:             zone.Graveyard,
+				ReplaceToZone:      zone.Library,
+				ShuffleIntoLibrary: true,
+				RevealSource:       true,
+				Duration:           game.DurationPermanent,
+			},
+		}},
+	}}
 }
 
 func payLifeETBModalLand() *game.CardDef {

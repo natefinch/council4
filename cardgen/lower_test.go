@@ -836,6 +836,98 @@ func TestLowerEntersWithCountersRejectsUnsupportedForms(t *testing.T) {
 	}
 }
 
+func TestLowerSelfZoneDestinationReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		cardName      string
+		typeLine      string
+		oracleText    string
+		matchFromZone bool
+		fromZone      zone.Type
+		replaceToZone zone.Type
+	}{
+		{
+			name:          "from anywhere into library",
+			cardName:      "Darksteel Colossus",
+			typeLine:      "Artifact Creature — Golem",
+			oracleText:    "If Darksteel Colossus would be put into a graveyard from anywhere, reveal Darksteel Colossus and shuffle it into its owner's library instead.",
+			replaceToZone: zone.Library,
+		},
+		{
+			name:          "dies into exile",
+			cardName:      "Test Phoenix",
+			typeLine:      "Creature — Phoenix",
+			oracleText:    "If this creature would die, exile it instead.",
+			matchFromZone: true,
+			fromZone:      zone.Battlefield,
+			replaceToZone: zone.Exile,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       test.cardName,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("11"),
+				Toughness:  new("11"),
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.MatchEvent != game.EventZoneChanged ||
+				replacement.MatchFromZone != test.matchFromZone ||
+				replacement.FromZone != test.fromZone ||
+				!replacement.MatchToZone ||
+				replacement.ToZone != zone.Graveyard ||
+				replacement.ReplaceToZone != test.replaceToZone ||
+				replacement.ShuffleIntoLibrary != (test.replaceToZone == zone.Library) ||
+				replacement.RevealSource != (test.replaceToZone == zone.Library) {
+				t.Fatalf("replacement = %+v, want self zone-destination replacement", replacement)
+			}
+		})
+	}
+}
+
+func TestGenerateSelfZoneDestinationReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Darksteel Colossus",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Golem",
+		OracleText: "If Darksteel Colossus would be put into a graveyard from anywhere, reveal Darksteel Colossus and shuffle it into its owner's library instead.",
+		Power:      new("11"),
+		Toughness:  new("11"),
+	}, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventZoneChanged",
+		"MatchToZone:",
+		"ToZone:",
+		"zone.Graveyard",
+		"ReplaceToZone:",
+		"zone.Library",
+		"ShuffleIntoLibrary:",
+		"RevealSource:",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestGenerateEquippedCreaturePTBuff(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

@@ -343,6 +343,20 @@ func lowerExecutableAbility(
 	case oracle.AbilityChapter:
 		return lowerChapterAbility(cardName, ability, syntax)
 	case oracle.AbilityReplacement:
+		if replacementAbility, handled, diagnostic := lowerSelfZoneDestinationReplacement(ability); handled || diagnostic != nil {
+			if diagnostic != nil {
+				return abilityLowering{}, diagnostic
+			}
+			return abilityLowering{
+				replacementAbility: opt.Val(replacementAbility),
+				consumed: semanticConsumption{
+					effects:    len(ability.Effects),
+					conditions: len(ability.Conditions),
+					references: len(ability.References),
+				},
+				sourceSpans: replacementSourceSpans(ability),
+			}, nil
+		}
 		if replacementAbility, handled, diagnostic := lowerEntersWithCountersReplacement(ability); handled || diagnostic != nil {
 			if diagnostic != nil {
 				return abilityLowering{}, diagnostic
@@ -2448,6 +2462,109 @@ func lowerEntersTappedReplacement(
 		)
 	}
 	return game.EntersTappedReplacement(ability.Text), nil
+}
+
+func lowerSelfZoneDestinationReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	event, eventOK := selfZoneDestinationReplacedEvent(ability)
+	if !eventOK {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported self zone-destination replacement",
+			detail,
+		)
+	}
+	if len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		!selfZoneDestinationReferencesSupported(ability) {
+		return unsupported("the executable source backend supports only exact self graveyard-destination replacements")
+	}
+	destination, ok := selfZoneReplacementDestination(ability.Text)
+	if !ok {
+		return unsupported("the executable source backend supports only exile or shuffle-into-library self zone-destination replacements")
+	}
+	return game.ReplacementAbility{
+		Text: ability.Text,
+		Replacement: game.ReplacementEffect{
+			MatchEvent:         game.EventZoneChanged,
+			MatchFromZone:      event.matchFromZone,
+			FromZone:           event.fromZone,
+			MatchToZone:        true,
+			ToZone:             zone.Graveyard,
+			ReplaceToZone:      destination,
+			ShuffleIntoLibrary: destination == zone.Library,
+			RevealSource:       destination == zone.Library,
+			Duration:           game.DurationPermanent,
+		},
+	}, true, nil
+}
+
+type selfZoneDestinationEvent struct {
+	fromZone      zone.Type
+	matchFromZone bool
+}
+
+func selfZoneDestinationReplacedEvent(ability oracle.CompiledAbility) (selfZoneDestinationEvent, bool) {
+	if len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != oracle.ConditionIf {
+		return selfZoneDestinationEvent{}, false
+	}
+	condition := ability.Conditions[0].Text
+	subject, ok := strings.CutPrefix(condition, "If ")
+	if !ok {
+		return selfZoneDestinationEvent{}, false
+	}
+	subject, ok = strings.CutSuffix(subject, " would be put into a graveyard from anywhere")
+	if ok && selfReferenceSubjectSupported(ability.References, subject) {
+		return selfZoneDestinationEvent{}, true
+	}
+	subject, ok = strings.CutSuffix(strings.TrimPrefix(condition, "If "), " would die")
+	if ok && selfReferenceSubjectSupported(ability.References, subject) {
+		return selfZoneDestinationEvent{fromZone: zone.Battlefield, matchFromZone: true}, true
+	}
+	return selfZoneDestinationEvent{}, false
+}
+
+func selfReferenceSubjectSupported(references []oracle.CompiledReference, subject string) bool {
+	for _, reference := range references {
+		if reference.Kind != oracle.ReferenceThisObject &&
+			reference.Kind != oracle.ReferenceSelfName {
+			continue
+		}
+		if strings.EqualFold(reference.Text, subject) {
+			return true
+		}
+	}
+	return false
+}
+
+func selfZoneDestinationReferencesSupported(ability oracle.CompiledAbility) bool {
+	for _, reference := range ability.References {
+		switch reference.Kind {
+		case oracle.ReferenceThisObject, oracle.ReferenceSelfName, oracle.ReferencePronoun:
+		default:
+			return false
+		}
+	}
+	return len(ability.References) > 0
+}
+
+func selfZoneReplacementDestination(text string) (zone.Type, bool) {
+	if strings.Contains(text, " exile it instead.") {
+		return zone.Exile, true
+	}
+	if strings.Contains(text, " shuffle it into its owner's library instead.") {
+		return zone.Library, true
+	}
+	return zone.None, false
 }
 
 func lowerEntersWithCountersReplacement(

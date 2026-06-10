@@ -1096,7 +1096,63 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return fmt.Sprintf("game.EntersTappedIfReplacement(%q, %s)", ability.Text, condStr), nil
 	}
+	if ability.Replacement.ReplaceToZone != zone.None {
+		replacement, err := renderZoneDestinationReplacement(ctx, ability)
+		if err != nil {
+			return "", err
+		}
+		return replacement, nil
+	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists ||
+		replacement.MatchEvent != game.EventZoneChanged ||
+		!replacement.MatchToZone ||
+		replacement.ToZone == zone.None {
+		return "", errors.New("render: unsupported zone-destination replacement shape")
+	}
+	toZone, err := renderZone(replacement.ToZone)
+	if err != nil {
+		return "", err
+	}
+	replaceToZone, err := renderZone(replacement.ReplaceToZone)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		"MatchEvent: game.EventZoneChanged,",
+		"MatchToZone: true,",
+		fmt.Sprintf("ToZone: %s,", toZone),
+		fmt.Sprintf("ReplaceToZone: %s,", replaceToZone),
+		"Duration: game.DurationPermanent,",
+	}
+	if replacement.ShuffleIntoLibrary {
+		if replacement.ReplaceToZone != zone.Library {
+			return "", errors.New("render: shuffle-into-library replacement must replace to library")
+		}
+		fields = append(fields, "ShuffleIntoLibrary: true,")
+	}
+	if replacement.RevealSource {
+		fields = append(fields, "RevealSource: true,")
+	}
+	if replacement.MatchFromZone {
+		fromZone, err := renderZone(replacement.FromZone)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, "MatchFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
+	}
+	ctx.need(importZone)
+	return fmt.Sprintf("game.ReplacementAbility{Text: %q, Replacement: %s}",
+		ability.Text,
+		structLit("game.ReplacementEffect", fields),
+	), nil
 }
 
 func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
@@ -3121,6 +3177,10 @@ func renderZone(zoneType zone.Type) (string, error) {
 		return "zone.Hand", nil
 	case zone.Graveyard:
 		return "zone.Graveyard", nil
+	case zone.Library:
+		return "zone.Library", nil
+	case zone.Exile:
+		return "zone.Exile", nil
 	default:
 		return "", fmt.Errorf("render: unsupported zone %d", zoneType)
 	}

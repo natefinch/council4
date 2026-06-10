@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -153,6 +154,42 @@ func TestRenderReplacementAbilityRejectsMixedETBCounters(t *testing.T) {
 	}}
 	if _, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability); err == nil {
 		t.Fatal("expected mixed ETB counter replacement to fail closed")
+	}
+}
+
+func TestRenderZoneDestinationReplacement(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	ability := game.ReplacementAbility{
+		Text: "If Darksteel Colossus would be put into a graveyard from anywhere, reveal Darksteel Colossus and shuffle it into its owner's library instead.",
+		Replacement: game.ReplacementEffect{
+			MatchEvent:         game.EventZoneChanged,
+			MatchToZone:        true,
+			ToZone:             zone.Graveyard,
+			ReplaceToZone:      zone.Library,
+			ShuffleIntoLibrary: true,
+			RevealSource:       true,
+			Duration:           game.DurationPermanent,
+		},
+	}
+	rendered, err := (Renderer{}).renderReplacementAbility(ctx, &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.ReplacementAbility",
+		"game.EventZoneChanged",
+		"ToZone: zone.Graveyard",
+		"ReplaceToZone: zone.Library",
+		"ShuffleIntoLibrary: true",
+		"RevealSource: true",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importZone]; !ok {
+		t.Fatal("zone-destination replacement did not request zone import")
 	}
 }
 

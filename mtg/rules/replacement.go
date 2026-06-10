@@ -112,14 +112,24 @@ func recordReplacementDecision(g *game.Game, player game.PlayerID, options []str
 	})
 }
 
+type zoneChangeReplacementResult struct {
+	destination        zone.Type
+	shuffleIntoLibrary bool
+	revealSource       bool
+}
+
 func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type {
-	destination := event.ToZone
+	return replacementZoneChange(g, event).destination
+}
+
+func replacementZoneChange(g *game.Game, event game.Event) zoneChangeReplacementResult {
+	result := zoneChangeReplacementResult{destination: event.ToZone}
 	applied := make(map[id.ID]bool)
 	for {
-		event.ToZone = destination
+		event.ToZone = result.destination
 		matches := matchingZoneReplacementEffects(g, event, applied)
 		if len(matches) == 0 {
-			return destination
+			return result
 		}
 		if len(matches) > 1 {
 			recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
@@ -129,8 +139,26 @@ func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type 
 		// After a replacement changes the event, the replacement process checks
 		// the modified event again; the same effect cannot apply twice to one
 		// event (CR 614.5, CR 616.1e).
-		destination = replacement.ReplaceToZone
+		result.destination = replacement.ReplaceToZone
+		result.shuffleIntoLibrary = replacement.ShuffleIntoLibrary && result.destination == zone.Library
+		result.revealSource = result.revealSource || replacement.RevealSource
 	}
+}
+
+func revealZoneReplacementSource(g *game.Game, event game.Event, reveal bool) {
+	if !reveal || event.CardID == 0 {
+		return
+	}
+	emitEvent(g, game.Event{
+		Kind:        game.EventCardRevealed,
+		Controller:  event.Controller,
+		Player:      event.Player,
+		CardID:      event.CardID,
+		Face:        event.Face,
+		PermanentID: event.PermanentID,
+		TokenName:   event.TokenName,
+		TokenDef:    event.TokenDef,
+	})
 }
 
 func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone zone.Type) {
@@ -221,6 +249,38 @@ func matchingZoneReplacementEffects(g *game.Game, event game.Event, applied map[
 			continue
 		}
 		matches = append(matches, *replacement)
+	}
+	matches = append(matches, matchingStaticSelfZoneReplacementEffects(g, event, applied)...)
+	return matches
+}
+
+func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {
+	if event.CardID == 0 || event.FaceDown {
+		return nil
+	}
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok || card.Def == nil {
+		return nil
+	}
+	def := cardFaceOrDefault(card, event.Face)
+	var matches []game.ReplacementEffect
+	for i := range def.ReplacementAbilities {
+		ability := &def.ReplacementAbilities[i]
+		replacement := ability.Replacement
+		if replacement.ReplaceToZone == zone.None {
+			continue
+		}
+		replacement.ID = event.CardID
+		replacement.Controller = event.Controller
+		replacement.SourceCardID = event.CardID
+		replacement.SourceObjectID = 0
+		if replacement.Description == "" {
+			replacement.Description = ability.Text
+		}
+		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, &replacement, event) {
+			continue
+		}
+		matches = append(matches, replacement)
 	}
 	return matches
 }
