@@ -41,8 +41,9 @@ Vanguard cards are excluded with explicit report reasons.
    their corresponding sealed `game.KeywordAbility` values; unsupported
    parameter forms remain fail-closed. Exact static power/toughness bonuses may
    also grant supported keywords through separate layer-6 and layer-7
-   continuous effects. Standalone keyword grants to supported controlled and
-   attached permanent groups lower to layer-6 continuous effects. Exact
+   continuous effects. Standalone keyword grants to supported controlled,
+   creature-subtype-filtered, and attached permanent groups lower to layer-6
+   continuous effects. Exact
    source-relative keyword grants gated by controlling supported permanent
    types, subtypes, colors, or colorless permanents use condition-gated layer-6
    effects. Exact `X` quantities and common target
