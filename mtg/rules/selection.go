@@ -176,6 +176,9 @@ func (s *selectionSubject) hasColor(c color.Color) bool {
 	if s.kind == subjectPermanent {
 		return slices.Contains(s.values.colors, c)
 	}
+	if s.kind == subjectCastSpell {
+		return slices.Contains(s.event.Colors, c)
+	}
 	return false
 }
 

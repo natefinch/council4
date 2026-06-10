@@ -250,7 +250,7 @@ func compileTrigger(ability Ability) CompiledTrigger {
 			tokens = tokens[dash+1:]
 		}
 	}
-	end := topLevelIndex(tokens, Comma)
+	end := triggerBodyComma(tokens)
 	if end < 0 {
 		end = len(tokens)
 	}
@@ -1180,7 +1180,7 @@ func abilityBodyTokens(ability Ability) []Token {
 			return tokens[colon+1:]
 		}
 	case AbilityTriggered:
-		if comma := topLevelIndex(tokens, Comma); comma >= 0 {
+		if comma := triggerBodyComma(tokens); comma >= 0 {
 			return tokens[comma+1:]
 		}
 	default:
@@ -1649,8 +1649,23 @@ func numberWord(token Token) int {
 }
 
 func isInterveningIf(tokens []Token, index int) bool {
-	comma := topLevelIndex(tokens, Comma)
+	comma := triggerBodyComma(tokens)
 	return comma >= 0 && index == comma+1
+}
+
+func triggerBodyComma(tokens []Token) int {
+	comma := topLevelIndex(tokens, Comma)
+	for comma > 0 &&
+		comma+1 < len(tokens) &&
+		strings.EqualFold(tokens[comma-1].Text, "noncreature") &&
+		strings.EqualFold(tokens[comma+1].Text, "nonland") {
+		next := topLevelIndex(tokens[comma+1:], Comma)
+		if next < 0 {
+			return -1
+		}
+		comma += next + 1
+	}
+	return comma
 }
 
 func containsNoun(words []string, singular string) bool {

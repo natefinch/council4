@@ -166,6 +166,7 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 		Controller:    playerID,
 		CardID:        cardID,
 		CardTypes:     cardTypes(spellDef),
+		Colors:        spellColors(spellDef),
 		FromZone:      zone.Exile,
 		ToZone:        zone.Stack,
 	})
