@@ -21,6 +21,12 @@ type permanentManaOutputResult struct {
 	timing       game.TimingRestriction
 }
 
+type simpleManaAbilityResult struct {
+	index int
+	body  *game.ManaAbility
+	untap bool
+}
+
 // permanentManaOutput derives the mana output of a permanent by checking
 // basic land types and simple tap mana abilities.
 func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutputResult, bool) {
@@ -33,11 +39,11 @@ func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutpu
 		}, true
 	}
 	controller := s.EffectiveController(permanent)
-	abilityIndex, ability, untap, ok := simpleManaAbility(s, controller, permanent)
+	ability, ok := simpleManaAbility(s, controller, permanent)
 	if !ok {
 		return permanentManaOutputResult{}, false
 	}
-	addMana, ok := simpleAddMana(ability)
+	addMana, ok := simpleAddMana(ability.body)
 	if !ok {
 		return permanentManaOutputResult{}, false
 	}
@@ -49,9 +55,9 @@ func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutpu
 		color:        addMana.ManaColor,
 		amount:       amount,
 		snow:         s.PermanentHasSupertype(permanent, types.Snow),
-		untap:        untap,
-		abilityIndex: abilityIndex,
-		timing:       ability.Timing,
+		untap:        ability.untap,
+		abilityIndex: ability.index,
+		timing:       ability.body.Timing,
 	}, true
 }
 
@@ -79,10 +85,10 @@ var basicLandTypes = []struct {
 	{subtype: types.Forest, color: mana.G},
 }
 
-func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.ManaAbility, bool, bool) {
+func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (simpleManaAbilityResult, bool) {
 	card, ok := s.PermanentCardDef(permanent)
 	if !ok {
-		return 0, nil, false, false
+		return simpleManaAbilityResult{}, false
 	}
 	face := &card.CardFace
 	offset := 0
@@ -109,12 +115,16 @@ func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanen
 		if !s.ManaAbilityTimingAllowed(playerID, permanent, abilityIndex, body.Timing) {
 			continue
 		}
-		return abilityIndex, body, untap, true
+		return simpleManaAbilityResult{
+			index: abilityIndex,
+			body:  body,
+			untap: untap,
+		}, true
 	}
-	return 0, nil, false, false
+	return simpleManaAbilityResult{}, false
 }
 
-func simpleManaAbilityTapState(costs []cost.Additional) (untap bool, ok bool) {
+func simpleManaAbilityTapState(costs []cost.Additional) (untap, ok bool) {
 	if len(costs) != 1 {
 		return false, false
 	}
