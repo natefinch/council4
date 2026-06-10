@@ -38,6 +38,7 @@ const (
 	EventFight
 	EventPermanentMutated
 	EventAttackerBecameBlocked
+	EventTokenCreated
 )
 
 // DamageRecipientKind identifies what received damage.

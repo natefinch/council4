@@ -684,6 +684,133 @@ func TestStaticSelfZoneReplacementAppliesToGenericZoneMove(t *testing.T) {
 	})
 }
 
+func TestTokenCreationReplacementDoublesTokens(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 2, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 4 {
+		t.Fatalf("created tokens = %d, want 4", got)
+	}
+}
+
+func TestTokenCreationReplacementExpiresWhenSourceLeaves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
+	if !movePermanentToZone(g, source, zone.Graveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 1 {
+		t.Fatalf("created tokens after source leaves = %d, want 1", got)
+	}
+}
+
+func TestTokenCreationReplacementStacksAndRecordsOrdering(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
+	addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 4 {
+		t.Fatalf("created tokens = %d, want 4", got)
+	}
+	if len(g.ReplacementDecisions) != 1 {
+		t.Fatalf("replacement decisions = %d, want 1", len(g.ReplacementDecisions))
+	}
+	if got := g.ReplacementDecisions[0].Player; got != game.Player1 {
+		t.Fatalf("replacement decision player = %v, want Player1", got)
+	}
+}
+
+func TestTokenCreationReplacementDoesNotAffectOpponentTokens(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player2, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 1 {
+		t.Fatalf("opponent-created tokens = %d, want 1", got)
+	}
+}
+
+func TestTokenCreationReplacementUsesCurrentController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               g.IDGen.Next(),
+		AffectedObjectID: source.ObjectID,
+		Layer:            game.LayerControl,
+		NewController:    opt.Val(game.Player2),
+		Duration:         game.DurationPermanent,
+	})
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices(Player1) = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 1 {
+		t.Fatalf("old controller tokens = %d, want 1", got)
+	}
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player2, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices(Player2) = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 3 {
+		t.Fatalf("tokens after new controller creates one = %d, want 3", got)
+	}
+}
+
+func TestReplacementRegistrationSkipsETBReplacementEffects(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name:                 "Tapped Bear",
+		Types:                []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{game.EntersTappedReplacement("This creature enters tapped.")},
+	}}
+
+	permanent := addReplacementPermanent(t, g, game.Player1, def)
+	if !permanent.Tapped {
+		t.Fatal("ETB replacement did not tap entering permanent")
+	}
+	if len(g.ReplacementEffects) != 0 {
+		t.Fatalf("registered replacement effects = %d, want 0", len(g.ReplacementEffects))
+	}
+}
+
+func TestReplacementRegistrationSkipsSelfZoneReplacementEffects(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, selfLibraryReplacementCardDef())
+	other := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Other Creature",
+		Types: []types.Card{types.Creature},
+	}})
+
+	if len(g.ReplacementEffects) != 0 {
+		t.Fatalf("registered replacement effects = %d, want 0", len(g.ReplacementEffects))
+	}
+	if !movePermanentToZone(g, other, zone.Graveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(other.CardInstanceID) {
+		t.Fatal("other permanent was not put into graveyard")
+	}
+	if g.Players[game.Player1].Library.Contains(other.CardInstanceID) {
+		t.Fatal("self-zone replacement affected a different permanent")
+	}
+}
+
 func selfLibraryReplacementCardDef() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{
 		Name:  "Darksteel Colossus",
@@ -701,6 +828,45 @@ func selfLibraryReplacementCardDef() *game.CardDef {
 			},
 		}},
 	}}
+}
+
+func tokenDoublingReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Anointed Procession",
+		Types: []types.Card{types.Enchantment},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.TokenCreationReplacement(
+				"If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+				2,
+				game.TriggerControllerYou,
+			),
+		},
+	}}
+}
+
+func addReplacementPermanent(t *testing.T, g *game.Game, controller game.PlayerID, def *game.CardDef) *game.Permanent {
+	t.Helper()
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID:    cardID,
+		Def:   def,
+		Owner: controller,
+	}
+	permanent, ok := createCardPermanent(g, g.CardInstances[cardID], controller, zone.Hand)
+	if !ok {
+		t.Fatal("createCardPermanent() = false, want true")
+	}
+	return permanent
+}
+
+func countTokenPermanentsNamed(g *game.Game, name string) int {
+	count := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.Token && permanentTokenName(permanent) == name {
+			count++
+		}
+	}
+	return count
 }
 
 func payLifeETBModalLand() *game.CardDef {
