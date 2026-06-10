@@ -361,6 +361,9 @@ func lowerExecutableAbility(
 }
 
 func lowerReplacementAbility(ability oracle.CompiledAbility) (abilityLowering, *oracle.Diagnostic) {
+	if replacementAbility, handled, diagnostic := lowerDamageReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerCounterPlacementReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -2540,6 +2543,67 @@ func lowerCounterPlacementReplacement(
 	default:
 		return unsupported("the executable source backend supports only controlled-creature +1/+1 or broad permanent/player counter-doubling replacements")
 	}
+}
+
+func lowerDamageReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	if !damageReplacementCandidate(ability) {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported damage replacement",
+			detail,
+		)
+	}
+	if len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != oracle.ConditionIf ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact additive or multiplicative damage replacements")
+	}
+	condition := ability.Conditions[0].Text
+	raw := damageReplacementRawEffects(ability.Effects)
+	switch condition {
+	case "If another red source you control would deal damage to a permanent or player",
+		"If a red source you control would deal damage to a permanent or player":
+		if !strings.Contains(raw, "that much damage plus 1 to that permanent or player instead.") {
+			return unsupported("the executable source backend supports only +1 red-source damage replacements")
+		}
+		if strings.Contains(condition, "another red source") {
+			return game.DamageReplacementExcludingSource(ability.Text, 0, 1, []color.Color{color.Red}, game.TriggerControllerYou), true, nil
+		}
+		return game.DamageReplacement(ability.Text, 0, 1, []color.Color{color.Red}, game.TriggerControllerYou), true, nil
+	case "If a source you control would deal damage to a permanent or player":
+		if !strings.Contains(raw, "double that damage to that permanent or player instead.") &&
+			!strings.Contains(raw, "twice that damage to that permanent or player instead.") {
+			return unsupported("the executable source backend supports only double-damage replacements")
+		}
+		return game.DamageReplacement(ability.Text, 2, 0, nil, game.TriggerControllerYou), true, nil
+	default:
+		return unsupported("the executable source backend supports only controlled-source red +1 damage or controlled-source double-damage replacements")
+	}
+}
+
+func damageReplacementCandidate(ability oracle.CompiledAbility) bool {
+	if ability.Kind != oracle.AbilityReplacement || len(ability.Conditions) == 0 {
+		return false
+	}
+	return strings.Contains(ability.Conditions[0].Text, "would deal damage")
+}
+
+func damageReplacementRawEffects(effects []oracle.CompiledEffect) string {
+	raw := make([]string, 0, len(effects))
+	for i := range effects {
+		raw = append(raw, effects[i].Selector.Raw)
+	}
+	return strings.Join(raw, " ")
 }
 
 func counterPlacementReplacementCandidate(ability oracle.CompiledAbility) bool {
