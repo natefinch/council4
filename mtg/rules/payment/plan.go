@@ -147,6 +147,9 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	for _, sacrifice := range additional.sacrifices {
 		excluded[sacrifice.ObjectID] = true
 	}
+	for _, permanent := range additional.exilePermanents {
+		excluded[permanent.ObjectID] = true
+	}
 	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, excluded, req.Prefs)
 	if !ok {
 		return plan, false

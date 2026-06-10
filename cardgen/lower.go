@@ -820,7 +820,6 @@ func lowerActivatedAbility(
 ) (game.ActivatedAbility, *oracle.Diagnostic) {
 	if ability.Cost == nil ||
 		len(ability.Cost.Components) == 0 ||
-		len(ability.Cost.Components) > 2 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
@@ -841,12 +840,18 @@ func lowerActivatedAbility(
 			}
 			manaCost = parsed
 		case oracle.CostTap:
-			if i != len(ability.Cost.Components)-1 || len(additionalCosts) != 0 {
+			if slices.ContainsFunc(additionalCosts, func(additional cost.Additional) bool {
+				return additional.Kind == cost.AdditionalTap
+			}) {
 				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
 			}
-			additionalCosts = cost.Tap
+			additionalCosts = append(additionalCosts, cost.T)
 		default:
-			return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			additional, ok := lowerActivatedAdditionalCost(cardName, component)
+			if !ok {
+				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			}
+			additionalCosts = append(additionalCosts, additional)
 		}
 	}
 
@@ -859,6 +864,7 @@ func lowerActivatedAbility(
 	body := ability
 	body.Kind = oracle.AbilitySpell
 	body.Cost = nil
+	body.References = bodyReferences(ability.References, ability.Cost.Span)
 	body.Span = oracle.Span{
 		Start: syntax.Tokens[colon+1].Span.Start,
 		End:   syntax.Span.End,
@@ -886,11 +892,154 @@ func lowerActivatedAbility(
 	return result, nil
 }
 
+func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
+	switch component.Kind {
+	case oracle.CostSacrifice:
+		return lowerSacrificeCost(cardName, component)
+	case oracle.CostDiscard:
+		return lowerDiscardCost(component)
+	case oracle.CostPayLife:
+		amount, err := strconv.Atoi(component.Amount)
+		if err != nil || amount <= 0 {
+			return cost.Additional{}, false
+		}
+		return cost.Additional{
+			Kind:   cost.AdditionalPayLife,
+			Text:   component.Text,
+			Amount: amount,
+		}, true
+	case oracle.CostExile:
+		if !isSelfCostObject(cardName, component.Object) {
+			return cost.Additional{}, false
+		}
+		return cost.Additional{
+			Kind:   cost.AdditionalExileSource,
+			Text:   component.Text,
+			Amount: 1,
+			Source: zone.Battlefield,
+		}, true
+	default:
+		return cost.Additional{}, false
+	}
+}
+
+func lowerSacrificeCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
+	if isSelfCostObject(cardName, component.Object) {
+		return cost.Additional{
+			Kind:   cost.AdditionalSacrificeSource,
+			Text:   component.Text,
+			Amount: 1,
+		}, true
+	}
+	spec, ok := exactCostObject(component.Object, false)
+	if !ok {
+		return cost.Additional{}, false
+	}
+	return cost.Additional{
+		Kind:               cost.AdditionalSacrifice,
+		Text:               component.Text,
+		Amount:             spec.amount,
+		MatchPermanentType: spec.matchesType,
+		PermanentType:      spec.objectType,
+	}, true
+}
+
+func lowerDiscardCost(component oracle.CostComponent) (cost.Additional, bool) {
+	spec, ok := exactCostObject(component.Object, true)
+	if !ok {
+		return cost.Additional{}, false
+	}
+	return cost.Additional{
+		Kind:          cost.AdditionalDiscard,
+		Text:          component.Text,
+		Amount:        spec.amount,
+		MatchCardType: spec.matchesType,
+		CardType:      spec.objectType,
+		Source:        zone.Hand,
+	}, true
+}
+
+func isSelfCostObject(cardName, object string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(object))
+	switch normalized {
+	case "this artifact", "this creature", "this enchantment", "this land", "this permanent", "this token":
+		return true
+	default:
+		return strings.EqualFold(strings.TrimSpace(object), cardName)
+	}
+}
+
+type costObjectSpec struct {
+	amount      int
+	objectType  types.Card
+	matchesType bool
+}
+
+func exactCostObject(object string, cardObject bool) (costObjectSpec, bool) {
+	words := strings.Fields(strings.ToLower(strings.TrimSpace(object)))
+	if cardObject {
+		if len(words) < 2 || words[len(words)-1] != "card" && words[len(words)-1] != "cards" {
+			return costObjectSpec{}, false
+		}
+		words = words[:len(words)-1]
+	}
+	if len(words) == 4 {
+		if words[2] != "you" || words[3] != "control" {
+			return costObjectSpec{}, false
+		}
+		words = words[:2]
+	}
+	if cardObject && len(words) == 1 {
+		parsedAmount, valid := exactCostAmount(words[0])
+		return costObjectSpec{amount: parsedAmount}, valid
+	}
+	if len(words) != 2 {
+		return costObjectSpec{}, false
+	}
+	parsedAmount, valid := exactCostAmount(words[0])
+	if !valid {
+		return costObjectSpec{}, false
+	}
+	spec := costObjectSpec{amount: parsedAmount, matchesType: true}
+	noun := strings.TrimSuffix(words[1], "s")
+	switch noun {
+	case "permanent":
+		if cardObject {
+			return costObjectSpec{}, false
+		}
+		spec.matchesType = false
+	case "artifact":
+		spec.objectType = types.Artifact
+	case "creature":
+		spec.objectType = types.Creature
+	case "enchantment":
+		spec.objectType = types.Enchantment
+	case "land":
+		spec.objectType = types.Land
+	default:
+		return costObjectSpec{}, false
+	}
+	return spec, true
+}
+
+func exactCostAmount(word string) (int, bool) {
+	switch word {
+	case "a", "an", "one":
+		return 1, true
+	default:
+		if amount, ok := parseCardinalWord(word); ok {
+			return amount, true
+		}
+		amount, err := strconv.Atoi(word)
+		return amount, err == nil && amount > 0
+	}
+}
+
 func unsupportedActivatedAbilityDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
 	return executableDiagnostic(
 		ability,
 		"unsupported activated ability",
-		"the executable source backend supports only exact mana and tap costs with a supported effect",
+		"the executable source backend supports only exact typed costs with a supported effect",
 	)
 }
 

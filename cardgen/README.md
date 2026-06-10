@@ -45,7 +45,9 @@ Vanguard cards are excluded with explicit report reasons.
    `game.AddCounter` instructions. Exact `if it was kicked` self-enter triggers
    preserve the kicker choice as a typed intervening-if predicate. Exact
    self-dies fixed-damage triggers preserve the departed permanent as the
-   damage source through an event reference.
+   damage source through an event reference. Ordinary battlefield activations
+   lower exact mana, tap, sacrifice, discard, pay-life, and source-exile costs
+   into typed payment data.
    Common enters-tapped land-count and basic-land-subtype conditions lower into
    typed replacement predicates.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated

@@ -11,12 +11,13 @@ import (
 )
 
 type additionalCostPlan struct {
-	player     game.PlayerID
-	paid       []string
-	sacrifices []*game.Permanent
-	discards   []id.ID
-	exiles     []cardZoneSelection
-	lifePaid   int
+	player          game.PlayerID
+	paid            []string
+	sacrifices      []*game.Permanent
+	exilePermanents []*game.Permanent
+	discards        []id.ID
+	exiles          []cardZoneSelection
+	lifePaid        int
 }
 
 type cardZoneSelection struct {
@@ -71,6 +72,17 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.exiles = append(plan.exiles, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalExileSource:
+			if sourceZone == zone.Battlefield {
+				if amount != 1 ||
+					source == nil ||
+					s.EffectiveController(source) != playerID ||
+					!additionalCostMatchesPermanent(s, source, additional) {
+					return plan, false
+				}
+				plan.exilePermanents = append(plan.exilePermanents, source)
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
 			if amount != 1 || sourceCardID == 0 || sourceZone == zone.None || !zoneContainsCard(s, playerID, sourceZone, sourceCardID) {
 				return plan, false
 			}
@@ -311,6 +323,12 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 			return false
 		}
 	}
+	for _, permanent := range plan.exilePermanents {
+		current, ok := s.PermanentByObjectID(permanent.ObjectID)
+		if !ok || s.EffectiveController(current) != player.ID || current != permanent {
+			return false
+		}
+	}
 	for _, cardID := range plan.discards {
 		if !player.Hand.Contains(cardID) {
 			return false
@@ -330,6 +348,11 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 	for _, sacrifice := range plan.sacrifices {
 		if !s.MovePermanentToZone(sacrifice, zone.Graveyard) {
+			return false
+		}
+	}
+	for _, permanent := range plan.exilePermanents {
+		if !s.MovePermanentToZone(permanent, zone.Exile) {
 			return false
 		}
 	}

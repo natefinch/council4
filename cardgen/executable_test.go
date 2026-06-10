@@ -387,24 +387,74 @@ func TestGenerateExecutableCardSourceManaAndTapCostActivatedAbility(t *testing.T
 	}
 }
 
-func TestGenerateExecutableCardSourceRejectsUnsupportedActivatedCost(t *testing.T) {
+func TestGenerateExecutableCardSourceNonManaActivatedCosts(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
-		Name:       "Test Altar",
-		Layout:     "normal",
-		TypeLine:   "Artifact",
-		OracleText: "Sacrifice a creature: Draw a card.",
+		Name:     "Test Engine",
+		Layout:   "normal",
+		TypeLine: "Artifact",
+		OracleText: "{2}, {T}, Sacrifice a creature: Draw a card.\n" +
+			"Discard two creature cards: Draw a card.\n" +
+			"Pay 2 life: Draw a card.\n" +
+			"Exile this artifact: Draw a card.",
 	}
-
 	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if source != "" {
-		t.Fatalf("source = %q, want no partial card", source)
-	}
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported activated ability" {
+	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"cost.AdditionalSacrifice",
+		"MatchPermanentType: true",
+		"PermanentType:",
+		"cost.AdditionalDiscard",
+		"Amount: 2",
+		"MatchCardType: true",
+		"CardType:",
+		"types.Creature",
+		"zone.Hand",
+		"cost.AdditionalPayLife",
+		"cost.AdditionalExileSource",
+		"zone.Battlefield",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsUnsupportedActivatedCost(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Remove a +1/+1 counter from this artifact: Draw a card.",
+		"Sacrifice a nontoken creature: Draw a card.",
+		"Discard a nonblack card: Draw a card.",
+		"Discard a permanent card: Draw a card.",
+		"Exile a card from your graveyard: Draw a card.",
+		"{Q}: Draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Altar",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: oracleText,
+			}
+
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" {
+				t.Fatalf("source = %q, want no partial card", source)
+			}
+			if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported activated ability" {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+		})
 	}
 }
 
@@ -2095,7 +2145,7 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 			typeLine:   "Creature — Bear",
 			oracleText: "{Q}: Draw a card.",
 			summary:    "unsupported activated ability",
-			detail:     "supports only exact mana and tap costs",
+			detail:     "supports only exact typed costs",
 		},
 		"parameterized keyword": {
 			typeLine:   "Creature — Snake",
