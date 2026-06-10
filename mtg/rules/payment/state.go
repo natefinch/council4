@@ -66,6 +66,10 @@ type stateAbilityQueries interface {
 	// non-timing activation restriction is satisfied.
 	ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool
 
+	// ManaAbilityTimingAllowed reports whether timing and per-turn restrictions
+	// allow the mana ability to be activated.
+	ManaAbilityTimingAllowed(playerID game.PlayerID, permanent *game.Permanent, abilityIndex int, timing game.TimingRestriction) bool
+
 	// CostModifiersForSpell returns all applicable cost modifiers for a spell
 	// being cast by the given player from the given zone. This includes global
 	// game modifiers, commander tax, and static rule-effect modifiers.
@@ -76,6 +80,9 @@ type stateMutations interface {
 	// SetTapped sets the tapped state of a permanent and emits the appropriate
 	// tapped/untapped event.
 	SetTapped(p *game.Permanent, tapped bool)
+
+	// RecordManaAbilityUse records a restricted mana ability activation.
+	RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction)
 
 	// RemoveCounters removes exactly amount counters of kind from a permanent.
 	RemoveCounters(p *game.Permanent, kind counter.Kind, amount int) bool

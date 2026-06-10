@@ -1424,6 +1424,27 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("Player: %s,", pr))
 	}
+	if predicate.Controller != game.ControllerAny {
+		cr, err := renderControllerRelation(predicate.Controller)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Controller: %s,", cr))
+	}
+	if predicate.Tapped != game.TriAny {
+		ts, err := renderTriState(predicate.Tapped)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Tapped: %s,", ts))
+	}
+	if predicate.CombatState != game.CombatStateAny {
+		cs, err := renderCombatStateFilter(predicate.CombatState)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("CombatState: %s,", cs))
+	}
 	if len(fields) == 0 {
 		return "", false, nil
 	}

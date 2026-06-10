@@ -951,6 +951,31 @@ func TestActivatedAbilityUntapsSourceAsCost(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityUntapCostRespectsSummoningSickness(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalUntap, Text: "{Q}"}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	source.Tapped = true
+	source.SummoningSick = true
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap activated ability was legal while source creature was summoning sick")
+	}
+	source.SummoningSick = false
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap activated ability was not legal after summoning sickness ended")
+	}
+}
+
 func TestActivatedAbilityRemovesSourceCounterAsCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -1044,6 +1069,33 @@ func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	g.Turn.Step = game.StepNone
 	if !containsAction(engine.legalActions(g, game.Player1), act) {
 		t.Fatal("once-per-turn ability was not legal after turn reset")
+	}
+}
+
+func TestDuringUpkeepActivatedAbilityRequiresControllersUpkeep(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		Timing: game.DuringUpkeep,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhaseBeginning
+	g.Turn.Step = game.StepUpkeep
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player1
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("during-your-upkeep ability was legal during an opponent's upkeep")
+	}
+	g.Turn.ActivePlayer = game.Player1
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("during-your-upkeep ability was not legal during controller's upkeep")
 	}
 }
 

@@ -50,7 +50,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			if amount != 1 ||
 				source == nil ||
 				s.EffectiveController(source) != playerID ||
-				!source.Tapped ||
+				!canUntapForAbility(s, source) ||
 				plan.untapSource != nil {
 				return plan, false
 			}
@@ -364,7 +364,7 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 		if !ok ||
 			current != plan.untapSource ||
 			s.EffectiveController(current) != player.ID ||
-			!current.Tapped {
+			!canUntapForAbility(s, current) {
 			return false
 		}
 	}

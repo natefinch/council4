@@ -52,6 +52,11 @@ func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID,
 	return activationConditionSatisfied(s.g, playerID, permanent, condition)
 }
 
+func (s *rulesPaymentState) ManaAbilityTimingAllowed(playerID game.PlayerID, permanent *game.Permanent, abilityIndex int, timing game.TimingRestriction) bool {
+	return activatedAbilityTimingAllows(s.g, playerID, timing) &&
+		!activatedAbilityUsedThisTurn(s.g, permanent.ObjectID, abilityIndex, timing)
+}
+
 func (s *rulesPaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent, bool) {
 	return permanentByObjectID(s.g, objectID)
 }
@@ -90,6 +95,10 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 
 func (s *rulesPaymentState) SetTapped(p *game.Permanent, tapped bool) {
 	setPermanentTapped(s.g, p, tapped)
+}
+
+func (s *rulesPaymentState) RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction) {
+	recordActivatedAbilityUse(s.g, p.ObjectID, abilityIndex, timing)
 }
 
 func (*rulesPaymentState) RemoveCounters(p *game.Permanent, kind counter.Kind, amount int) bool {

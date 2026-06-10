@@ -99,6 +99,31 @@ func TestRenderUsesEnchantMechanicTemplate(t *testing.T) {
 	}
 }
 
+func TestRenderTargetPredicateQualifiers(t *testing.T) {
+	ctx := newRenderCtx()
+	lit, ok, err := (Renderer{}).renderTargetPredicate(ctx, game.TargetPredicate{
+		PermanentTypes: []types.Card{types.Creature},
+		Controller:     game.ControllerYou,
+		Tapped:         game.TriTrue,
+		CombatState:    game.CombatStateAttacking,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("renderTargetPredicate() did not render qualified predicate")
+	}
+	for _, want := range []string{
+		"Controller: game.ControllerYou",
+		"Tapped: game.TriTrue",
+		"CombatState: game.CombatStateAttacking",
+	} {
+		if !strings.Contains(lit, want) {
+			t.Fatalf("predicate literal %q does not contain %q", lit, want)
+		}
+	}
+}
+
 func TestRenderUsesProtectionMechanicTemplate(t *testing.T) {
 	card := &ScryfallCard{Name: "Test Bear", Layout: "normal", TypeLine: "Creature — Bear"}
 	def := &game.CardDef{CardFace: game.CardFace{
