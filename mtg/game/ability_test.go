@@ -120,6 +120,34 @@ func TestCyclingActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestNinjutsuActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
+	manaCost := cost.Mana{cost.O(2), cost.U}
+	ability := NinjutsuActivatedAbility(manaCost)
+	manaCost[0] = cost.O(9)
+
+	if ability.Text != "Ninjutsu {2}{U}" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Ninjutsu {2}{U}")
+	}
+	if ability.ZoneOfFunction != zone.Hand || ability.Timing != DuringCombat {
+		t.Fatalf("zone/timing = %v/%v, want hand/during combat", ability.ZoneOfFunction, ability.Timing)
+	}
+	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, []cost.Symbol{cost.O(2), cost.U}) {
+		t.Fatalf("mana cost = %+v, want copied Ninjutsu cost", ability.ManaCost)
+	}
+	if len(ability.AdditionalCosts) != 1 ||
+		ability.AdditionalCosts[0].Kind != cost.AdditionalReturnUnblockedAttacker ||
+		ability.AdditionalCosts[0].Amount != 1 {
+		t.Fatalf("additional costs = %+v, want return one unblocked attacker", ability.AdditionalCosts)
+	}
+	keywordCost, ok := ActivatedBodyNinjutsuCost(&ability)
+	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(2), cost.U}) {
+		t.Fatalf("Ninjutsu keyword cost = %v, %v; want copied {2}{U}", keywordCost, ok)
+	}
+	if content := BodyContent(ability); content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 0 {
+		t.Fatalf("content = %+v, want one empty non-modal mode", content)
+	}
+}
+
 func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	manaCost := cost.Mana{cost.O(2), cost.R}
 	ability := EquipActivatedAbility(manaCost)

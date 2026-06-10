@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,330
+Cards supported: 3,338
 
 - +2 Mace
 - Aang, Air Nomad
@@ -285,6 +285,7 @@ Cards supported: 3,330
 - Blackcleave Cliffs
 - Blackcleave Goblin
 - Blade of the Sixth Pride
+- Blade-Blizzard Kitsune
 - Bladed Pinions
 - Blanchwood Treefolk
 - Blasted Landscape
@@ -726,6 +727,7 @@ Cards supported: 3,330
 - Djinn of the Lamp
 - Dog
 - Dog
+- Dokuchi Shadow-Walker
 - Doom Whisperer
 - Douser of Lights
 - Dragon
@@ -854,6 +856,7 @@ Cards supported: 3,330
 - Embereth Shieldbreaker // Battle Display
 - Embraal Bruiser
 - Enatu Golem
+- Endless Cockroaches
 - Enforcer Griffin
 - Engulfing Eruption
 - Enlightened Ascetic
@@ -1365,6 +1368,7 @@ Cards supported: 3,330
 - Illvoi Galeblade
 - Immolating Glare
 - Immolation
+- Immortal Phoenix
 - Impale
 - Impeccable Timing
 - Imperial Lancer
@@ -1785,6 +1789,7 @@ Cards supported: 3,330
 - Morgue Thrull
 - Moriok Reaver
 - Morphic Pool
+- Mortus Strider
 - Moss Diamond
 - Moss Kami
 - Moss Monster
@@ -1804,6 +1809,7 @@ Cards supported: 3,330
 - Mox Sapphire
 - Muck Rats
 - Mudbutton Torchrunner
+- Mukotai Ambusher
 - Murasa Brute
 - Murder
 - Murky Sewer
@@ -1876,6 +1882,7 @@ Cards supported: 3,330
 - Ninja
 - Ninja
 - Ninja Turtle Spirit
+- Ninja of the New Moon
 - Nip Gwyllion
 - Nivix Barrier
 - No-Dachi
@@ -1969,7 +1976,6 @@ Cards supported: 3,330
 - Overgrown Tomb
 - Overkill
 - Oversoul of Dusk
-- Ox
 - Ox
 - Ox
 - Oxidda Scrapmelter
@@ -2450,6 +2456,7 @@ Cards supported: 3,330
 - Shipwreck Marsh
 - Shivan Branch-Burner
 - Shivan Oasis
+- Shivan Phoenix
 - Shivan Zombie
 - Shock
 - Shore Keeper
@@ -3189,6 +3196,7 @@ Cards supported: 3,330
 - Wayward Giant
 - Weakness
 - Weatherseed Faeries
+- Weatherseed Treefolk
 - Weave Fate
 - Wei Infantry
 - Weight of Memory

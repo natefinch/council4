@@ -101,6 +101,57 @@ func TestLowerCyclingAbility(t *testing.T) {
 	}
 }
 
+func TestLowerNinjutsuAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Ninja",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Ninja",
+		OracleText: "Ninjutsu {1}{U} ({1}{U}, Return an unblocked attacker you control to hand: Put this card onto the battlefield from your hand tapped and attacking.)",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("got %d activated abilities, want 1", len(face.ActivatedAbilities))
+	}
+	ability := face.ActivatedAbilities[0]
+	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, cost.Mana{cost.O(1), cost.U}) {
+		t.Fatalf("mana cost = %#v, want {1}{U}", ability.ManaCost)
+	}
+	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0].Kind != cost.AdditionalReturnUnblockedAttacker {
+		t.Fatalf("additional costs = %#v, want return unblocked attacker", ability.AdditionalCosts)
+	}
+	if len(ability.KeywordAbilities) != 1 {
+		t.Fatalf("got %d keyword abilities, want 1", len(ability.KeywordAbilities))
+	}
+	if _, ok := ability.KeywordAbilities[0].(game.NinjutsuKeyword); !ok {
+		t.Fatalf("keyword ability = %T, want game.NinjutsuKeyword", ability.KeywordAbilities[0])
+	}
+}
+
+func TestLowerNinjutsuAbilityRejectsMalformedForms(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Ninjutsu",
+		"Ninjutsu {1}{U} extra text",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Malformed Ninja",
+				Layout:     "normal",
+				TypeLine:   "Creature — Ninja",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected malformed Ninjutsu diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerActivatedNonManaCosts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
