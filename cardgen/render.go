@@ -948,14 +948,12 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
-	if pattern.Subject != game.TriggerSubjectDefault ||
-		!pattern.SubjectSelection.Empty() ||
+	if !pattern.SubjectSelection.Empty() ||
 		len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
 		pattern.MatchFromZone ||
 		pattern.MatchToZone ||
 		pattern.MatchStackObjectKind ||
-		pattern.DamageRecipient != game.DamageRecipientNone ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		pattern.SpellTargetsSource ||
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
@@ -1001,6 +999,13 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		}
 		fields = append(fields, fmt.Sprintf("Step: %s,", step))
 	}
+	if pattern.Subject != game.TriggerSubjectDefault {
+		subject, err := renderTriggerSubject(pattern.Subject)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Subject: %s,", subject))
+	}
 	if pattern.ExcludeSelf {
 		fields = append(fields, "ExcludeSelf: true,")
 	}
@@ -1031,6 +1036,23 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		}
 		fields = append(fields, fmt.Sprintf("Player: %s,", player))
 	}
+	if pattern.DamageRecipient != game.DamageRecipientNone {
+		recipient, err := renderDamageRecipient(pattern.DamageRecipient)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DamageRecipient: %s,", recipient))
+	}
+	if len(pattern.DamageRecipientTypes) > 0 {
+		recipientTypes, err := renderTypesCardSlice(ctx, pattern.DamageRecipientTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DamageRecipientTypes: %s,", recipientTypes))
+	}
+	if pattern.RequireCombatDamage {
+		fields = append(fields, "RequireCombatDamage: true,")
+	}
 	if !pattern.CardSelection.Empty() {
 		sel, err := (Renderer{}).renderSelection(ctx, pattern.CardSelection)
 		if err != nil {
@@ -1042,6 +1064,18 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 }
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if len(ability.Replacement.EntersWithCounters) > 0 {
+		if ability.Replacement.EntersTapped ||
+			ability.UnlessPaid.Exists ||
+			ability.Replacement.Condition.Exists {
+			return "", errors.New("render: ETB counter replacement cannot also tap, require payment, or have a condition")
+		}
+		placements, err := renderCounterPlacements(ctx, ability.Replacement.EntersWithCounters)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EntersWithCountersReplacement(%q, %s)", ability.Text, strings.Join(placements, ", ")), nil
+	}
 	if ability.Replacement.EntersTapped && ability.UnlessPaid.Exists {
 		if ability.Replacement.Condition.Exists {
 			return "", errors.New("render: paid ETB replacement cannot also have a condition")
@@ -1062,7 +1096,79 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return fmt.Sprintf("game.EntersTappedIfReplacement(%q, %s)", ability.Text, condStr), nil
 	}
+	if ability.Replacement.ReplaceToZone != zone.None {
+		replacement, err := renderZoneDestinationReplacement(ctx, ability)
+		if err != nil {
+			return "", err
+		}
+		return replacement, nil
+	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists ||
+		replacement.MatchEvent != game.EventZoneChanged ||
+		!replacement.MatchToZone ||
+		replacement.ToZone == zone.None {
+		return "", errors.New("render: unsupported zone-destination replacement shape")
+	}
+	toZone, err := renderZone(replacement.ToZone)
+	if err != nil {
+		return "", err
+	}
+	replaceToZone, err := renderZone(replacement.ReplaceToZone)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		"MatchEvent: game.EventZoneChanged,",
+		"MatchToZone: true,",
+		fmt.Sprintf("ToZone: %s,", toZone),
+		fmt.Sprintf("ReplaceToZone: %s,", replaceToZone),
+		"Duration: game.DurationPermanent,",
+	}
+	if replacement.ShuffleIntoLibrary {
+		if replacement.ReplaceToZone != zone.Library {
+			return "", errors.New("render: shuffle-into-library replacement must replace to library")
+		}
+		fields = append(fields, "ShuffleIntoLibrary: true,")
+	}
+	if replacement.RevealSource {
+		fields = append(fields, "RevealSource: true,")
+	}
+	if replacement.MatchFromZone {
+		fromZone, err := renderZone(replacement.FromZone)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, "MatchFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
+	}
+	ctx.need(importZone)
+	return fmt.Sprintf("game.ReplacementAbility{Text: %q, Replacement: %s}",
+		ability.Text,
+		structLit("game.ReplacementEffect", fields),
+	), nil
+}
+
+func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
+	rendered := make([]string, 0, len(placements))
+	for _, placement := range placements {
+		if placement.Amount <= 0 {
+			return nil, fmt.Errorf("render: invalid ETB counter amount %d", placement.Amount)
+		}
+		kind, err := renderCounterKind(placement.Kind)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importCounter)
+		rendered = append(rendered, fmt.Sprintf("game.CounterPlacement{Kind: %s, Amount: %d}", kind, placement.Amount))
+	}
+	return rendered, nil
 }
 
 func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.ResolutionPayment) (string, error) {
@@ -1438,7 +1544,7 @@ func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlef
 		if err != nil {
 			return "", err
 		}
-		fields = append(fields, fmt.Sprintf("EntryCounters: %s,", counters))
+		fields = append(fields, fmt.Sprintf("EntryCounters: []game.CounterPlacement{%s},", strings.Join(counters, ", ")))
 	}
 	return structLit("game.PutOnBattlefield", fields), nil
 }
@@ -1455,19 +1561,6 @@ func renderBattlefieldSource(source game.BattlefieldSource) (string, error) {
 		return fmt.Sprintf("game.LinkedBattlefieldSource(game.LinkedKey(%q))", string(key)), nil
 	}
 	return "", errors.New("render: unsupported battlefield source")
-}
-
-func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) (string, error) {
-	ctx.need(importCounter)
-	elements := make([]string, 0, len(placements))
-	for _, placement := range placements {
-		kind, err := renderCounterKind(placement.Kind)
-		if err != nil {
-			return "", err
-		}
-		elements = append(elements, fmt.Sprintf("{Kind: %s, Amount: %d}", kind, placement.Amount))
-	}
-	return "[]game.CounterPlacement{" + strings.Join(elements, ", ") + "}", nil
 }
 
 func (Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, error) {
@@ -3053,6 +3146,19 @@ func renderTriggerSource(source game.TriggerSourceFilter) (string, error) {
 	}
 }
 
+func renderTriggerSubject(subject game.TriggerSubjectObject) (string, error) {
+	switch subject {
+	case game.TriggerSubjectPermanent:
+		return "game.TriggerSubjectPermanent", nil
+	case game.TriggerSubjectBlockedAttacker:
+		return "game.TriggerSubjectBlockedAttacker", nil
+	case game.TriggerSubjectDamageSource:
+		return "game.TriggerSubjectDamageSource", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger subject %d", subject)
+	}
+}
+
 func renderTriggerController(controller game.TriggerControllerFilter) (string, error) {
 	switch controller {
 	case game.TriggerControllerYou:
@@ -3077,8 +3183,20 @@ func renderTriggerPlayer(player game.TriggerPlayerFilter) (string, error) {
 
 func renderEventKind(event game.EventKind) (string, error) {
 	switch event {
+	case game.EventDamageDealt:
+		return "game.EventDamageDealt", nil
+	case game.EventAttackerBecameBlocked:
+		return "game.EventAttackerBecameBlocked", nil
+	case game.EventAttackerDeclared:
+		return "game.EventAttackerDeclared", nil
+	case game.EventBlockerDeclared:
+		return "game.EventBlockerDeclared", nil
 	case game.EventSpellCast:
 		return "game.EventSpellCast", nil
+	case game.EventLifeGained:
+		return "game.EventLifeGained", nil
+	case game.EventLifeLost:
+		return "game.EventLifeLost", nil
 	case game.EventPermanentEnteredBattlefield:
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
@@ -3089,6 +3207,17 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventBeginningOfStep", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
+	}
+}
+
+func renderDamageRecipient(recipient game.DamageRecipientKind) (string, error) {
+	switch recipient {
+	case game.DamageRecipientPlayer:
+		return "game.DamageRecipientPlayer", nil
+	case game.DamageRecipientPermanent:
+		return "game.DamageRecipientPermanent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported damage recipient %d", recipient)
 	}
 }
 
@@ -3128,6 +3257,8 @@ func renderZone(zoneType zone.Type) (string, error) {
 		return "zone.Graveyard", nil
 	case zone.Library:
 		return "zone.Library", nil
+	case zone.Exile:
+		return "zone.Exile", nil
 	default:
 		return "", fmt.Errorf("render: unsupported zone %d", zoneType)
 	}

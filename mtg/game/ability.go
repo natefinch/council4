@@ -258,6 +258,7 @@ const (
 	TriggerSubjectDefault TriggerSubjectObject = iota
 	TriggerSubjectPermanent
 	TriggerSubjectBlockedAttacker
+	TriggerSubjectDamageSource
 )
 
 // TriggerPlayerFilter constrains a trigger by the affected player recorded on an event.
@@ -313,6 +314,10 @@ type TriggerPattern struct {
 
 	DamageRecipient            DamageRecipientKind
 	DamageRecipientCombatState CombatStateFilter
+	DamageRecipientTypes       []types.Card
+
+	// RequireCombatDamage restricts damage triggers to combat damage events.
+	RequireCombatDamage bool
 
 	SpellTargetsSource bool
 	SpellTargetAllow   TargetAllow

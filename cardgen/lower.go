@@ -343,6 +343,34 @@ func lowerExecutableAbility(
 	case oracle.AbilityChapter:
 		return lowerChapterAbility(cardName, ability, syntax)
 	case oracle.AbilityReplacement:
+		if replacementAbility, handled, diagnostic := lowerSelfZoneDestinationReplacement(ability); handled || diagnostic != nil {
+			if diagnostic != nil {
+				return abilityLowering{}, diagnostic
+			}
+			return abilityLowering{
+				replacementAbility: opt.Val(replacementAbility),
+				consumed: semanticConsumption{
+					effects:    len(ability.Effects),
+					conditions: len(ability.Conditions),
+					references: len(ability.References),
+				},
+				sourceSpans: replacementSourceSpans(ability),
+			}, nil
+		}
+		if replacementAbility, handled, diagnostic := lowerEntersWithCountersReplacement(ability); handled || diagnostic != nil {
+			if diagnostic != nil {
+				return abilityLowering{}, diagnostic
+			}
+			return abilityLowering{
+				replacementAbility: opt.Val(replacementAbility),
+				consumed: semanticConsumption{
+					effects:    len(ability.Effects),
+					conditions: len(ability.Conditions),
+					references: len(ability.References),
+				},
+				sourceSpans: replacementSourceSpans(ability),
+			}, nil
+		}
 		replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
@@ -2436,6 +2464,172 @@ func lowerEntersTappedReplacement(
 	return game.EntersTappedReplacement(ability.Text), nil
 }
 
+func lowerSelfZoneDestinationReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	event, eventOK := selfZoneDestinationReplacedEvent(ability)
+	if !eventOK {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported self zone-destination replacement",
+			detail,
+		)
+	}
+	if len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		!selfZoneDestinationReferencesSupported(ability) {
+		return unsupported("the executable source backend supports only exact self graveyard-destination replacements")
+	}
+	destination, ok := selfZoneReplacementDestination(ability.Text)
+	if !ok {
+		return unsupported("the executable source backend supports only exile or shuffle-into-library self zone-destination replacements")
+	}
+	return game.ReplacementAbility{
+		Text: ability.Text,
+		Replacement: game.ReplacementEffect{
+			MatchEvent:         game.EventZoneChanged,
+			MatchFromZone:      event.matchFromZone,
+			FromZone:           event.fromZone,
+			MatchToZone:        true,
+			ToZone:             zone.Graveyard,
+			ReplaceToZone:      destination,
+			ShuffleIntoLibrary: destination == zone.Library,
+			RevealSource:       destination == zone.Library,
+			Duration:           game.DurationPermanent,
+		},
+	}, true, nil
+}
+
+type selfZoneDestinationEvent struct {
+	fromZone      zone.Type
+	matchFromZone bool
+}
+
+func selfZoneDestinationReplacedEvent(ability oracle.CompiledAbility) (selfZoneDestinationEvent, bool) {
+	if len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != oracle.ConditionIf {
+		return selfZoneDestinationEvent{}, false
+	}
+	condition := ability.Conditions[0].Text
+	subject, ok := strings.CutPrefix(condition, "If ")
+	if !ok {
+		return selfZoneDestinationEvent{}, false
+	}
+	subject, ok = strings.CutSuffix(subject, " would be put into a graveyard from anywhere")
+	if ok && selfReferenceSubjectSupported(ability.References, subject) {
+		return selfZoneDestinationEvent{}, true
+	}
+	subject, ok = strings.CutSuffix(strings.TrimPrefix(condition, "If "), " would die")
+	if ok && selfReferenceSubjectSupported(ability.References, subject) {
+		return selfZoneDestinationEvent{fromZone: zone.Battlefield, matchFromZone: true}, true
+	}
+	return selfZoneDestinationEvent{}, false
+}
+
+func selfReferenceSubjectSupported(references []oracle.CompiledReference, subject string) bool {
+	for _, reference := range references {
+		if reference.Kind != oracle.ReferenceThisObject &&
+			reference.Kind != oracle.ReferenceSelfName {
+			continue
+		}
+		if strings.EqualFold(reference.Text, subject) {
+			return true
+		}
+	}
+	return false
+}
+
+func selfZoneDestinationReferencesSupported(ability oracle.CompiledAbility) bool {
+	for _, reference := range ability.References {
+		switch reference.Kind {
+		case oracle.ReferenceThisObject, oracle.ReferenceSelfName, oracle.ReferencePronoun:
+		default:
+			return false
+		}
+	}
+	return len(ability.References) > 0
+}
+
+func selfZoneReplacementDestination(text string) (zone.Type, bool) {
+	if strings.Contains(text, " exile it instead.") {
+		return zone.Exile, true
+	}
+	if strings.Contains(text, " shuffle it into its owner's library instead.") {
+		return zone.Library, true
+	}
+	return zone.None, false
+}
+
+func lowerEntersWithCountersReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	if !isEntersWithCountersReplacement(ability) {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported enters-with-counters replacement",
+			detail,
+		)
+	}
+	if len(ability.Conditions) != 0 {
+		return unsupported("the executable source backend does not yet support conditional enters-with-counters replacements")
+	}
+	if len(ability.Effects) != 1 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		!selfEntersWithCountersReferences(ability.References) {
+		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
+	}
+	effect := ability.Effects[0]
+	if effect.Duration != oracle.DurationNone || effect.Negated {
+		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
+	}
+	if strings.Contains(effect.Selector.Raw, " X ") ||
+		strings.Contains(effect.Selector.Raw, " for each ") ||
+		!effect.Amount.Known ||
+		effect.Amount.Value <= 0 {
+		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
+	}
+	if !effect.CounterKindKnown {
+		return unsupported("the executable source backend does not support this enters-with-counters counter kind")
+	}
+	return game.EntersWithCountersReplacement(ability.Text, game.CounterPlacement{
+		Kind:   effect.CounterKind,
+		Amount: effect.Amount.Value,
+	}), true, nil
+}
+
+func isEntersWithCountersReplacement(ability oracle.CompiledAbility) bool {
+	if len(ability.Effects) == 0 ||
+		ability.Effects[0].Kind != oracle.EffectEnterTapped {
+		return false
+	}
+	raw := ability.Effects[0].Selector.Raw
+	return strings.HasPrefix(raw, "with ") &&
+		strings.Contains(raw, " counter") &&
+		strings.HasSuffix(raw, " on it.")
+}
+
+func selfEntersWithCountersReferences(references []oracle.CompiledReference) bool {
+	return len(references) == 2 &&
+		references[0].Kind == oracle.ReferenceThisObject &&
+		references[1].Kind == oracle.ReferencePronoun &&
+		strings.EqualFold(references[1].Text, "it")
+}
+
 func lowerOptionalEntryPayment(ability oracle.CompiledAbility) (game.ReplacementAbility, bool) {
 	if len(ability.Conditions) != 1 ||
 		ability.Conditions[0].Kind != oracle.ConditionIf ||
@@ -2719,6 +2913,9 @@ func lowerTriggeredAbility(
 	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
+	if triggeredAbility, ok := lowerLifeDamageTrigger(cardName, ability, syntax); ok {
+		return triggeredAbility, nil
+	}
 	triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
 	if diagnostic == nil ||
 		ability.Trigger == nil ||
@@ -2816,9 +3013,10 @@ func lowerEnterTrigger(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
-	eventKind, supportedEvent := lowerSelfTriggerEvent(cardName, ability)
+	pattern, supportedEvent := lowerSelfTriggerPattern(cardName, ability)
+	eventKind := pattern.Event
 	summary := "unsupported triggered ability"
-	detail := "the executable source backend supports only exact self-enter, self-dies, and self-mutate triggers with supported effects"
+	detail := "the executable source backend supports only exact self-enter, self-dies, self-mutate, and simple combat triggers with supported effects"
 	if ability.Trigger != nil && strings.Contains(ability.Trigger.Event, " enters") {
 		summary = "unsupported enter trigger"
 		detail = "the executable source backend supports only exact self-enter triggers with supported effects"
@@ -2869,11 +3067,8 @@ func lowerEnterTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type: triggerType,
-			Pattern: game.TriggerPattern{
-				Event:  eventKind,
-				Source: game.TriggerSourceSelf,
-			},
+			Type:                 triggerType,
+			Pattern:              pattern,
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening.condition,
 			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
@@ -2883,6 +3078,92 @@ func lowerEnterTrigger(
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
+}
+
+func lowerLifeDamageTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, bool) {
+	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, false
+	}
+	pattern, ok := lowerLifeDamageTriggerPattern(ability)
+	if !ok ||
+		ability.Trigger.Condition != nil ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return game.TriggeredAbility{}, false
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, false
+	}
+	content, diagnostic := lowerSelfTriggerBody(cardName, pattern.Event, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, false
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:    game.TriggerWhenever,
+			Pattern: pattern,
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, true
+}
+
+func lowerLifeDamageTriggerPattern(ability oracle.CompiledAbility) (game.TriggerPattern, bool) {
+	if ability.Trigger == nil {
+		return game.TriggerPattern{}, false
+	}
+	switch ability.Trigger.Event {
+	case "you gain life":
+		return game.TriggerPattern{
+			Event:  game.EventLifeGained,
+			Player: game.TriggerPlayerYou,
+		}, true
+	case "an opponent gains life":
+		return game.TriggerPattern{
+			Event:  game.EventLifeGained,
+			Player: game.TriggerPlayerOpponent,
+		}, true
+	case "you lose life":
+		return game.TriggerPattern{
+			Event:  game.EventLifeLost,
+			Player: game.TriggerPlayerYou,
+		}, true
+	case "an opponent loses life":
+		return game.TriggerPattern{
+			Event:  game.EventLifeLost,
+			Player: game.TriggerPlayerOpponent,
+		}, true
+	case "this creature is dealt damage",
+		"this permanent is dealt damage":
+		return game.TriggerPattern{
+			Event:           game.EventDamageDealt,
+			Source:          game.TriggerSourceSelf,
+			Subject:         game.TriggerSubjectPermanent,
+			DamageRecipient: game.DamageRecipientPermanent,
+		}, true
+	case "enchanted creature is dealt damage",
+		"enchanted permanent is dealt damage",
+		"equipped creature is dealt damage":
+		return game.TriggerPattern{
+			Event:           game.EventDamageDealt,
+			Source:          game.TriggerSourceAttachedPermanent,
+			DamageRecipient: game.DamageRecipientPermanent,
+		}, true
+	case "you're dealt damage", "you are dealt damage":
+		return game.TriggerPattern{
+			Event:           game.EventDamageDealt,
+			Player:          game.TriggerPlayerYou,
+			DamageRecipient: game.DamageRecipientPlayer,
+		}, true
+	default:
+		return game.TriggerPattern{}, false
+	}
 }
 
 func lowerSelfTriggerBody(
@@ -2974,10 +3255,16 @@ func lowerSelfInterveningCondition(
 }
 
 func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind) bool {
-	if eventKind == game.EventPermanentMutated {
+	switch eventKind {
+	case game.EventPermanentMutated,
+		game.EventAttackerBecameBlocked,
+		game.EventAttackerDeclared,
+		game.EventBlockerDeclared,
+		game.EventDamageDealt:
 		return kind == oracle.TriggerWhenever
+	default:
+		return kind == oracle.TriggerWhen
 	}
-	return kind == oracle.TriggerWhen
 }
 
 func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
@@ -3069,9 +3356,9 @@ func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbili
 	return true
 }
 
-func lowerSelfTriggerEvent(cardName string, ability oracle.CompiledAbility) (game.EventKind, bool) {
+func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (game.TriggerPattern, bool) {
 	if ability.Trigger == nil {
-		return 0, false
+		return game.TriggerPattern{}, false
 	}
 	switch ability.Trigger.Event {
 	case "this creature enters",
@@ -3082,16 +3369,60 @@ func lowerSelfTriggerEvent(cardName string, ability oracle.CompiledAbility) (gam
 		"this land enters",
 		"this vehicle enters",
 		"this enchantment enters":
-		return game.EventPermanentEnteredBattlefield, true
+		return game.TriggerPattern{
+			Event:  game.EventPermanentEnteredBattlefield,
+			Source: game.TriggerSourceSelf,
+		}, true
 	case "this creature dies", "this permanent dies":
-		return game.EventPermanentDied, true
+		return game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceSelf,
+		}, true
 	case "this creature mutates":
-		return game.EventPermanentMutated, true
+		return game.TriggerPattern{
+			Event:  game.EventPermanentMutated,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature attacks":
+		return game.TriggerPattern{
+			Event:  game.EventAttackerDeclared,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature blocks":
+		return game.TriggerPattern{
+			Event:  game.EventBlockerDeclared,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature becomes blocked":
+		return game.TriggerPattern{
+			Event:  game.EventAttackerBecameBlocked,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature deals combat damage to a player":
+		return game.TriggerPattern{
+			Event:               game.EventDamageDealt,
+			Source:              game.TriggerSourceSelf,
+			Subject:             game.TriggerSubjectDamageSource,
+			DamageRecipient:     game.DamageRecipientPlayer,
+			RequireCombatDamage: true,
+		}, true
+	case "this creature deals combat damage to a creature":
+		return game.TriggerPattern{
+			Event:                game.EventDamageDealt,
+			Source:               game.TriggerSourceSelf,
+			Subject:              game.TriggerSubjectDamageSource,
+			DamageRecipient:      game.DamageRecipientPermanent,
+			DamageRecipientTypes: []types.Card{types.Creature},
+			RequireCombatDamage:  true,
+		}, true
 	default:
 		if strings.EqualFold(ability.Trigger.Event, cardName+" dies") {
-			return game.EventPermanentDied, true
+			return game.TriggerPattern{
+				Event:  game.EventPermanentDied,
+				Source: game.TriggerSourceSelf,
+			}, true
 		}
-		return 0, false
+		return game.TriggerPattern{}, false
 	}
 }
 

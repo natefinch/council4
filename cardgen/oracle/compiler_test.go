@@ -673,6 +673,25 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 	}
 }
 
+func TestCompileEntersWithCounterKind(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"This creature enters with three +1/+1 counters on it.",
+		ParseContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effect := compilation.Abilities[0].Effects[0]
+	if effect.Kind != EffectEnterTapped ||
+		!effect.CounterKindKnown ||
+		effect.CounterKind != counter.PlusOnePlusOne ||
+		!effect.Amount.Known ||
+		effect.Amount.Value != 3 {
+		t.Fatalf("effect = %#v, want fixed +1/+1 ETB counters", effect)
+	}
+}
+
 func TestCompileNamedCounterKindsRejectsMissingRuntimeMechanics(t *testing.T) {
 	t.Parallel()
 	for _, name := range []string{"stun", "finality"} {
