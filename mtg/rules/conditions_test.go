@@ -366,6 +366,17 @@ func TestNegativeConditionThresholdsFailClosed(t *testing.T) {
 		if conditionSatisfied(g, ctx, opt.Val(condition)) {
 			t.Fatalf("conditionSatisfied(%+v) = true, want false", condition)
 		}
+		countConditions := []game.Condition{
+			{Negate: true, ControllerControls: game.PermanentFilter{MinCount: -1}},
+			{Negate: true, ControlsMatching: opt.Val(game.SelectionCount{MinCount: -1})},
+			{Negate: true, AnyOpponentControls: opt.Val(game.SelectionCount{MinCount: -1})},
+			{Negate: true, OpponentsControl: opt.Val(game.SelectionCount{MinCount: -1})},
+		}
+		for _, condition := range countConditions {
+			if conditionSatisfied(g, ctx, opt.Val(condition)) {
+				t.Fatalf("conditionSatisfied(%+v) = true, want false", condition)
+			}
+		}
 	}
 }
 

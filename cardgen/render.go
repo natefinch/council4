@@ -984,6 +984,9 @@ func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Co
 }
 
 func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.SelectionCount) (string, error) {
+	if count.MinCount < 0 {
+		return "", errors.New("render: condition permanent-count threshold cannot be negative")
+	}
 	selection, err := r.renderSelection(ctx, count.Selection)
 	if err != nil {
 		return "", err
@@ -1004,6 +1007,9 @@ func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.Se
 }
 
 func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {
+	if filter.MinCount < 0 {
+		return "", errors.New("render: condition permanent-count threshold cannot be negative")
+	}
 	var fields []string
 	if len(filter.Types) > 0 {
 		lits, err := renderTypesCardSlice(ctx, filter.Types)

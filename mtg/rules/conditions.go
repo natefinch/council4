@@ -23,7 +23,11 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	cond := condition.Val
 	if cond.ControllerLifeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
-		cond.OpponentCountAtLeast < 0 {
+		cond.OpponentCountAtLeast < 0 ||
+		cond.ControllerControls.MinCount < 0 ||
+		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
+		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
+		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 {
 		return false
 	}
 	matches := true
@@ -129,6 +133,9 @@ func anyOpponentControlsMatchingSelection(g *game.Game, ctx conditionContext, co
 }
 
 func playersControlMatchingSelection(g *game.Game, ctx conditionContext, controllers []game.PlayerID, control game.SelectionCount) bool {
+	if control.MinCount < 0 {
+		return false
+	}
 	want := control.MinCount
 	if want <= 0 {
 		want = 1

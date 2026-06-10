@@ -29,6 +29,27 @@ func TestRenderConditionForETBReplacementRejectsNegativeThresholds(t *testing.T)
 	}
 }
 
+func TestRenderConditionForETBReplacementRejectsNegativePermanentCount(t *testing.T) {
+	tests := map[string]game.Condition{
+		"controller": {
+			ControllerControls: game.PermanentFilter{MinCount: -1},
+		},
+		"one opponent": {
+			AnyOpponentControls: opt.Val(game.SelectionCount{MinCount: -1}),
+		},
+		"all opponents": {
+			OpponentsControl: opt.Val(game.SelectionCount{MinCount: -1}),
+		},
+	}
+	for name, condition := range tests {
+		t.Run(name, func(t *testing.T) {
+			if _, err := (Renderer{}).renderConditionForETBReplacement(&renderCtx{}, &condition); err == nil {
+				t.Fatal("expected negative permanent-count threshold error")
+			}
+		})
+	}
+}
+
 // renderTestCards are representative cards exercising every lowered ability
 // category through the full typed pipeline and deterministic renderer.
 var renderTestCards = []*ScryfallCard{

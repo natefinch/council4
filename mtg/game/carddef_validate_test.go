@@ -719,6 +719,43 @@ func TestValidateCardDefReportsNegativeConditionThresholds(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefReportsNegativeConditionPermanentCount(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Invalid Permanent Count",
+		OracleText: "Invalid condition.",
+		StaticAbilities: []StaticAbility{{
+			Condition: opt.Val(Condition{
+				AnyOpponentControls: opt.Val(SelectionCount{MinCount: -1}),
+			}),
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
+func TestValidateCardDefChecksInstructionSharedCondition(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Invalid Instruction Condition",
+		OracleText: "Draw a card.",
+		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+			Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
+			Condition: opt.Val(EffectCondition{Condition: opt.Val(Condition{
+				ControllerLifeAtLeast: -1,
+			})}),
+		}}}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
 func TestValidateCardDefReportsTriggerPatternDualSpecification(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Dual Trigger Pattern",

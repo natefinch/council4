@@ -266,6 +266,22 @@ func (v *cardDefValidator) validateInstructionSequence(faceName, path string, se
 	if err := ValidateInstructionSequence(seq, targets...); err != nil {
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, err.Error())
 	}
+	var targetSpecs []TargetSpec
+	if len(targets) > 0 {
+		targetSpecs = targets[0]
+	}
+	for i := range seq {
+		effectCondition := seq[i].Condition
+		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
+			condition := effectCondition.Val.Condition.Val
+			v.validateCondition(
+				faceName,
+				appendPath(path, fmt.Sprintf("Instructions[%d].Condition.Condition", i)),
+				&condition,
+				targetSpecs,
+			)
+		}
+	}
 }
 
 func (v *cardDefValidator) validateManaKeywordCost(faceName, path string, manaCost cost.Mana) {
@@ -408,6 +424,9 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.OpponentCountAtLeast < 0 {
 		v.add(faceName, appendPath(path, "OpponentCountAtLeast"), CardDefIssueInvalidCondition, "opponent-count threshold cannot be negative")
 	}
+	if condition.ControllerControls.MinCount < 0 {
+		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
+	}
 	if condition.ControlsMatching.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "ControlsMatching"), condition.ControlsMatching.Val)
 		if !condition.ControllerControls.Empty() {
@@ -426,6 +445,9 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 }
 
 func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string, count SelectionCount) {
+	if count.MinCount < 0 {
+		v.add(faceName, appendPath(path, "MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
+	}
 	selection := count.Selection
 	v.validateSelection(faceName, appendPath(path, "Selection"), selection)
 	if selection.Player != PlayerAny {
