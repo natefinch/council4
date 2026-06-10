@@ -831,6 +831,45 @@ func TestGeneralActivatedAbilityTapCostRespectsSummoningSickness(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityExilesSourceAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalExileSource,
+			Text:   "Exile this artifact",
+			Amount: 1,
+			Source: zone.Battlefield,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("source-exile activated ability was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(source-exile ability) = false, want true")
+	}
+	if _, ok := permanentByObjectID(g, source.ObjectID); ok {
+		t.Fatal("source remained on battlefield after paying exile cost")
+	}
+	if !g.Players[game.Player1].Exile.Contains(source.CardInstanceID) {
+		t.Fatal("source was not put into exile")
+	}
+	if g.Stack.Size() != 1 {
+		t.Fatalf("stack size = %d, want 1", g.Stack.Size())
+	}
+	engine.resolveTopOfStack(g, nil)
+	if got := g.Players[game.Player1].Life; got != 41 {
+		t.Fatalf("player 1 life = %d, want 41", got)
+	}
+}
+
 func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

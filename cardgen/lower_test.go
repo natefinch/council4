@@ -13,6 +13,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func lowerSingleFace(t *testing.T, card *ScryfallCard) loweredFaceAbilities {
@@ -97,6 +98,92 @@ func TestLowerCyclingAbility(t *testing.T) {
 	}
 	if _, ok := ability.KeywordAbilities[0].(game.CyclingKeyword); !ok {
 		t.Fatalf("keyword ability = %T, want game.CyclingKeyword", ability.KeywordAbilities[0])
+	}
+}
+
+func TestLowerActivatedNonManaCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		check      func(*testing.T, []cost.Additional)
+	}{
+		{
+			name:       "sacrifice source",
+			oracleText: "Sacrifice this artifact: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 || costs[0].Kind != cost.AdditionalSacrificeSource {
+					t.Fatalf("additional costs = %#v, want source sacrifice", costs)
+				}
+			},
+		},
+		{
+			name:       "typed sacrifice after mana and tap",
+			oracleText: "{2}, {T}, Sacrifice a creature: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 2 ||
+					costs[0].Kind != cost.AdditionalTap ||
+					costs[1].Kind != cost.AdditionalSacrifice ||
+					!costs[1].MatchPermanentType ||
+					costs[1].PermanentType != types.Creature {
+					t.Fatalf("additional costs = %#v, want tap and creature sacrifice", costs)
+				}
+			},
+		},
+		{
+			name:       "typed discard",
+			oracleText: "Discard two creature cards: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalDiscard ||
+					costs[0].Amount != 2 ||
+					!costs[0].MatchCardType ||
+					costs[0].CardType != types.Creature ||
+					costs[0].Source != zone.Hand {
+					t.Fatalf("additional costs = %#v, want two creature cards discarded", costs)
+				}
+			},
+		},
+		{
+			name:       "pay life",
+			oracleText: "Pay 2 life: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 || costs[0].Kind != cost.AdditionalPayLife || costs[0].Amount != 2 {
+					t.Fatalf("additional costs = %#v, want 2 life", costs)
+				}
+			},
+		},
+		{
+			name:       "exile source",
+			oracleText: "Exile this artifact: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalExileSource ||
+					costs[0].Source != zone.Battlefield {
+					t.Fatalf("additional costs = %#v, want battlefield source exile", costs)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			test.check(t, face.ActivatedAbilities[0].AdditionalCosts)
+		})
 	}
 }
 

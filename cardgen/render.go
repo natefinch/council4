@@ -1981,6 +1981,28 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		}
 		fields = append(fields, fmt.Sprintf("Source: %s,", zoneLiteral))
 	}
+	if additional.MatchPermanentType {
+		cardType, err := cardTypeLiteral(additional.PermanentType)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		fields = append(fields,
+			"MatchPermanentType: true,",
+			fmt.Sprintf("PermanentType: %s,", cardType),
+		)
+	}
+	if additional.MatchCardType {
+		cardType, err := cardTypeLiteral(additional.CardType)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		fields = append(fields,
+			"MatchCardType: true,",
+			fmt.Sprintf("CardType: %s,", cardType),
+		)
+	}
 	return structLit("", fields), nil
 }
 
@@ -2120,10 +2142,18 @@ func supertypeLiteral(st types.Super) (string, error) {
 
 func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 	switch kind {
+	case cost.AdditionalSacrifice:
+		return "cost.AdditionalSacrifice", nil
+	case cost.AdditionalSacrificeSource:
+		return "cost.AdditionalSacrificeSource", nil
 	case cost.AdditionalDiscard:
 		return "cost.AdditionalDiscard", nil
+	case cost.AdditionalPayLife:
+		return "cost.AdditionalPayLife", nil
 	case cost.AdditionalTap:
 		return "cost.AdditionalTap", nil
+	case cost.AdditionalExileSource:
+		return "cost.AdditionalExileSource", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
 	}
