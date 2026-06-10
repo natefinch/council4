@@ -11,7 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
-func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
+func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
 	prefs := &payment.Preferences{}
 	prefs.PhyrexianLifeChoices = e.phyrexianPaymentChoices(g, playerID, manaCost, agents, log)
 	for _, additionalCost := range additionalCosts {
@@ -19,6 +19,8 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 		switch additionalCost.Kind {
 		case cost.AdditionalSacrifice:
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
+		case cost.AdditionalTapPermanents:
+			prefs.TapChoices = append(prefs.TapChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log, tapExclusions...)...)
 		case cost.AdditionalDiscard:
 			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalExile:
@@ -110,8 +112,8 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, m
 	return choices
 }
 
-func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
-	candidates := candidateSacrificePermanents(g, playerID, addCost)
+func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedTapIDs ...id.ID) []id.ID {
+	candidates := candidateSacrificePermanents(g, playerID, addCost, excludedTapIDs)
 	if len(candidates) <= amount {
 		return paymentPermanentIDs(candidates)
 	}
@@ -162,18 +164,39 @@ func firstChoiceIndices(amount int) []int {
 	return selected
 }
 
-func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost cost.Additional) []*game.Permanent {
+func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedTapIDs []id.ID) []*game.Permanent {
+	excluded := map[id.ID]bool{}
+	if addCost.Kind == cost.AdditionalTapPermanents {
+		for _, permanentID := range excludedTapIDs {
+			excluded[permanentID] = true
+		}
+	}
 	var candidates []*game.Permanent
 	for _, permanent := range g.Battlefield {
-		if permanent.Controller == playerID && localAdditionalCostMatchesPermanent(g, permanent, addCost) {
-			candidates = append(candidates, permanent)
+		if permanent.Controller != playerID || !localAdditionalCostMatchesPermanent(g, permanent, addCost) {
+			continue
 		}
+		if excluded[permanent.ObjectID] {
+			continue
+		}
+		if addCost.Kind == cost.AdditionalTapPermanents && permanent.Tapped {
+			continue
+		}
+		candidates = append(candidates, permanent)
 	}
 	return candidates
 }
 
 func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, addCost cost.Additional) bool {
 	if addCost.MatchPermanentType && !permanentHasType(g, permanent, addCost.PermanentType) {
+		return false
+	}
+	if addCost.SubtypesAny != (cost.SubtypeSet{}) {
+		for _, subtype := range addCost.SubtypesAny {
+			if subtype != "" && permanentHasSubtype(g, permanent, subtype) {
+				return true
+			}
+		}
 		return false
 	}
 	return true

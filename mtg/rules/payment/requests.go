@@ -55,6 +55,7 @@ type Preferences struct {
 	PhyrexianLifeChoices []bool
 	phyrexianIndex       int
 	SacrificeChoices     []id.ID
+	TapChoices           []id.ID
 	DiscardChoices       []id.ID
 	ExileChoices         []id.ID
 	RevealChoices        []id.ID
@@ -78,4 +79,20 @@ func (p *Preferences) NextPhyrexianLifeChoice() bool {
 	choice := p.PhyrexianLifeChoices[p.phyrexianIndex]
 	p.phyrexianIndex++
 	return choice
+}
+
+func clonePreferences(prefs *Preferences) *Preferences {
+	if prefs == nil {
+		return nil
+	}
+	return &Preferences{
+		AlternativeIndex:     prefs.AlternativeIndex,
+		PhyrexianLifeChoices: append([]bool(nil), prefs.PhyrexianLifeChoices...),
+		phyrexianIndex:       prefs.phyrexianIndex,
+		SacrificeChoices:     append([]id.ID(nil), prefs.SacrificeChoices...),
+		TapChoices:           append([]id.ID(nil), prefs.TapChoices...),
+		DiscardChoices:       append([]id.ID(nil), prefs.DiscardChoices...),
+		ExileChoices:         append([]id.ID(nil), prefs.ExileChoices...),
+		RevealChoices:        append([]id.ID(nil), prefs.RevealChoices...),
+	}
 }

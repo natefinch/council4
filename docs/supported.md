@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,651
+Cards supported: 3,672
 
 - +2 Mace
 - Aang, Air Nomad
@@ -80,6 +80,7 @@ Cards supported: 3,651
 - Ambush Viper
 - Amphin Cutthroat
 - Anaba Bodyguard
+- Ancestor's Prophet
 - Ancestral Recall
 - Anchovy & Banana Pizza
 - Ancient Amphitheater
@@ -116,6 +117,7 @@ Cards supported: 3,651
 - Anvilwrought Raptor
 - Ape
 - Apex Devastator
+- Aphetto Grifter
 - Appendage Amalgam
 - Applied Biomancy
 - Aquus Steed
@@ -210,6 +212,7 @@ Cards supported: 3,651
 - Axebane Beast
 - Axebane Stag
 - Axegrinder Giant
+- Azami, Lady of Scrolls
 - Azorius Cluestone
 - Azorius Guildgate
 - Azorius Knight-Arbiter
@@ -403,6 +406,7 @@ Cards supported: 3,651
 - Brainiac
 - Brambleweft Behemoth
 - Branchblight Stalker
+- Branching Evolution
 - Branchloft Pathway // Boulderloft Pathway
 - Branchsnap Lorian
 - Brass Secretary
@@ -486,6 +490,7 @@ Cards supported: 3,651
 - Cat Warrior
 - Catacomb Crocodile
 - Catacomb Slug
+- Catapult Master
 - Cathar's Shield
 - Cathartic Adept
 - Cathedral Sanctifier
@@ -545,6 +550,7 @@ Cards supported: 3,651
 - Clinging Darkness
 - Cloak of the Bat
 - Cloaked Siren
+- Clock of Omens
 - Clockwork Drawbridge
 - Cloud Crusader
 - Cloud Manta
@@ -609,6 +615,7 @@ Cards supported: 3,651
 - Core Prowler
 - Coretapper
 - Corpse Hauler
+- Corpsejack Menace
 - Cosmium Blast
 - Council of Advisors
 - Counsel of the Soratami
@@ -712,6 +719,7 @@ Cards supported: 3,651
 - Deathcap Glade
 - Deathcap Marionette
 - Deathgaze Cockatrice
+- Deathless Ancient
 - Debilitating Injury
 - Dedicated Martyr
 - Deduce
@@ -784,6 +792,7 @@ Cards supported: 3,651
 - Dispersal Technician
 - Dispersing Orb
 - Dissenter's Deliverance
+- Diversionary Tactics
 - Divination
 - Divine Arrow
 - Divine Transformation
@@ -837,6 +846,7 @@ Cards supported: 3,651
 - Drown in Shapelessness
 - Drowned Catacomb
 - Drowned Secrets
+- Drowner of Secrets
 - Drownyard Explorers
 - Drownyard Temple
 - Druid Lyrist
@@ -856,6 +866,7 @@ Cards supported: 3,651
 - Dwarf
 - Dwarf Berserker
 - Dwarf Token
+- Dwarven Bloodboiler
 - Dwarven Priest
 - Dwarven Trader
 - Dwarven Weaponsmith
@@ -1133,6 +1144,7 @@ Cards supported: 3,651
 - Gallant Citizen
 - Galvanic Key
 - Game Trail
+- Gangrenous Goliath
 - Garenbrig Carver // Shield's Might
 - Gargoyle
 - Garrison Sergeant
@@ -1335,6 +1347,7 @@ Cards supported: 3,651
 - Guul Draz Mucklord
 - Haazda Officer
 - Hagra Sharpshooter
+- Hair-Strung Koto
 - Halberdier
 - Halfling
 - Hall
@@ -1633,6 +1646,7 @@ Cards supported: 3,651
 - Keening Apparition
 - Keening Banshee
 - Keep Out
+- Keeper of the Nine Gales
 - Keepers of the Faith
 - Keldon Arsonist
 - Keldon Necropolis
@@ -1718,6 +1732,7 @@ Cards supported: 3,651
 - Land Leeches
 - Landscape Painter // Vibrant Idea
 - Lantern Kami
+- Larder Zombie
 - Laserbeak
 - Lash of Malice
 - Lash of the Whip
@@ -2311,6 +2326,7 @@ Cards supported: 3,651
 - Pteron Ghost
 - Pull Under
 - Punk Frogs
+- Purple Pentapus
 - Purple-Crystal Crab
 - Putrid Goblin
 - Pygmy Razorback
@@ -2422,6 +2438,7 @@ Cards supported: 3,651
 - Retrofitted Transmogrant
 - Return to Battle
 - Returned Centaur
+- Revelsong Horn
 - Reviving Melody
 - Revolutionist
 - Reya Dawnbringer
@@ -2544,6 +2561,7 @@ Cards supported: 3,651
 - Sandbar Merfolk
 - Sandbar Serpent
 - Sandblast
+- Sandsower
 - Sandsteppe Citadel
 - Sangrite Backlash
 - Sanguinary Mage
@@ -2759,6 +2777,7 @@ Cards supported: 3,651
 - Sir Shandlar of Eberyn
 - Sisters of the Flame
 - Sivitri Scarzam
+- Skaab Wrangler
 - Skeletal Crocodile
 - Skeletal Snake
 - Skeleton
@@ -3201,6 +3220,7 @@ Cards supported: 3,651
 - Toxic Iguanar
 - Toy
 - Trade Routes
+- Tradewind Rider
 - Tragic Poet
 - Trail of Evidence
 - Trained Armodon
@@ -3415,6 +3435,7 @@ Cards supported: 3,651
 - Volcanic Hammer
 - Volcanic Island
 - Volcanic Upheaval
+- Volrath's Gardens
 - Volrath's Stronghold
 - Volt Charge
 - Voltaic Key
