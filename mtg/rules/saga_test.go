@@ -149,7 +149,7 @@ func TestReadAheadChoosesEntryChapterAndSkipsEarlierChapters(t *testing.T) {
 		sagaNamedChapter(3),
 		sagaNamedChapter(4),
 	})
-	card.Def.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	card.Def.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
 	agent := &choiceOnlyAgent{choices: [][]int{{3}}}
 	agents := [game.NumPlayers]PlayerAgent{game.Player2: agent}
 	log := &TurnLog{}
@@ -198,7 +198,7 @@ func TestReadAheadFallbackChoosesFirstChapter(t *testing.T) {
 		sagaNamedChapter(1),
 		sagaNamedChapter(2),
 	})
-	card.Def.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	card.Def.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
 	log := &TurnLog{}
 
 	permanent, ok := createCardPermanentFaceWithChoices(engine, g, card, game.Player1, zone.Stack, game.FaceFront, [game.NumPlayers]PlayerAgent{}, log)
@@ -224,7 +224,7 @@ func TestReadAheadSingleChapterWaitsForPendingTriggerBeforeSacrifice(t *testing.
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	card := addSagaCardInstance(g, game.Player1, []game.ChapterAbility{sagaNamedChapter(1)})
-	card.Def.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	card.Def.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
 
 	permanent, ok := createCardPermanentFace(g, card, game.Player1, zone.Stack, game.FaceFront)
 	if !ok {
@@ -259,7 +259,7 @@ func TestReadAheadSkippedChaptersRemainSkippedAfterLoreCountersAreRemoved(t *tes
 		sagaNamedChapter(2),
 		sagaNamedChapter(3),
 	})
-	card.Def.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	card.Def.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
 	agent := &choiceOnlyAgent{choices: [][]int{{3}}}
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
 
@@ -331,7 +331,7 @@ func TestReadAheadSagaTokenChoosesEntryChapter(t *testing.T) {
 		sagaNamedChapter(2),
 		sagaNamedChapter(3),
 	})
-	token.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	token.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
 	agent := &choiceOnlyAgent{choices: [][]int{{3}}}
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
 
