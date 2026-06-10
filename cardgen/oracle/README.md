@@ -152,8 +152,12 @@ Supported sentence-sized effects may be lowered in Oracle order with independent
 targets for each supported clause. It also lowers exact supported self-enter and self-dies triggers with
 ordered supported spell-like effects. Self-enter triggers may use exact
 intervening conditions for `if it was kicked`, cast entry, or controlling a
-permanent of a named permanent card type. Exact fixed-damage self-dies triggers
-using `it` preserve the departed permanent as the damage source. An exact
+permanent of a named permanent card type. Self-dies triggers support exact
+absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
+triggers using `it` preserve the departed permanent as the damage source.
+Exact self-dies event-card references support returning the card from its
+owner's graveyard to hand and granting its Adventure face graveyard-cast
+permission through the end of the controller's next turn. An exact
 leading `you may` on a single-effect trigger maps to trigger-level optionality;
 partially optional sequences remain unsupported. Exact ordinary battlefield
 activations may combine mana, tap, and untap costs with typed sacrifice,

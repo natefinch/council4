@@ -544,4 +544,8 @@ type CardInstance struct {
 	// Owner is the player who owns this card (the player whose deck it
 	// started in). Owner never changes during a game (CR 108.3).
 	Owner PlayerID
+
+	// ZoneVersion increments whenever this card changes zones. Event-card
+	// references use it to avoid following a card to a new object.
+	ZoneVersion uint64
 }

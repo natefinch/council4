@@ -236,6 +236,12 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 		if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.CardID == 0 {
 			return 0, zone.None, false
 		}
+		card, ok := g.GetCardInstance(obj.TriggerEvent.CardID)
+		if !ok ||
+			obj.TriggerEvent.CardZoneVersion == 0 ||
+			card.ZoneVersion != obj.TriggerEvent.CardZoneVersion {
+			return 0, zone.None, false
+		}
 		eventZone, ok := cardZone(g, obj.TriggerEvent.CardID)
 		return obj.TriggerEvent.CardID, eventZone, ok
 	case game.CardReferenceLinked:

@@ -74,6 +74,10 @@ type Event struct {
 	// CardID identifies the card that moved, was drawn, discarded, or became a permanent.
 	CardID id.ID
 
+	// CardZoneVersion identifies the incarnation of CardID involved in this
+	// zone-change event.
+	CardZoneVersion uint64
+
 	// Face records the visible/chosen face at the time this event happened.
 	// If a card moved to a non-stack, non-battlefield zone, that destination
 	// card still uses front-face characteristics even when this records the

@@ -1572,6 +1572,186 @@ func TestLowerDiesTrigger(t *testing.T) {
 	}
 }
 
+func TestLowerDiesTriggerHadNoPlusPlusCounters(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Undying Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature dies, if it had no +1/+1 counters, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.InterveningIf != "if it had no +1/+1 counters" ||
+		!trigger.InterveningIfEventPermanentHadNoCounterKind.Exists ||
+		trigger.InterveningIfEventPermanentHadNoCounterKind.Val != counter.PlusOnePlusOne {
+		t.Fatalf("trigger = %+v, want no +1/+1 counters intervening-if", trigger)
+	}
+}
+
+func TestLowerDiesTriggerHadNoMinusMinusCounters(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Persist Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature dies, if it had no -1/-1 counters on it, it deals 3 damage to any target.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	ability := face.TriggeredAbilities[0]
+	trigger := ability.Trigger
+	if trigger.InterveningIf != "if it had no -1/-1 counters on it" ||
+		!trigger.InterveningIfEventPermanentHadNoCounterKind.Exists ||
+		trigger.InterveningIfEventPermanentHadNoCounterKind.Val != counter.MinusOneMinusOne {
+		t.Fatalf("trigger = %+v, want no -1/-1 counters intervening-if", trigger)
+	}
+	damage, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.Damage)
+	if !ok || !damage.DamageSource.Exists ||
+		damage.DamageSource.Val != game.EventPermanentReference() {
+		t.Fatalf("primitive = %+v, want damage from event permanent", ability.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerDiesTriggerOptional(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature dies, you may draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	ability := face.TriggeredAbilities[0]
+	if !ability.Optional {
+		t.Fatal("dies trigger is not optional")
+	}
+	if _, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("primitive = %T, want game.Draw", ability.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerDiesTriggerRejectsAmbiguousCounterAbsence(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"if it had no counters on it",
+		"if it had no charge counters on it",
+		"if it didn't have a +1/+1 counter on it",
+	} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "When this creature dies, " + condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("ambiguous or unsupported condition %q unexpectedly lowered", condition)
+			}
+		})
+	}
+}
+
+func TestLowerDiesTriggerReturnsEventCardToOwnersHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature dies, return it to its owner's hand.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	primitive := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive
+	move, ok := primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard", primitive)
+	}
+	if move.Card.Kind != game.CardReferenceEvent ||
+		move.FromZone != zone.Graveyard ||
+		move.Destination != zone.Hand {
+		t.Fatalf("move = %+v, want event card from graveyard to hand", move)
+	}
+}
+
+func TestLowerDiesTriggerGrantsAdventureCastFromGraveyard(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:   "Test Dreadknight // Test Whispers",
+		Layout: "adventure",
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:       "Test Dreadknight",
+				ManaCost:   "{1}{G}",
+				TypeLine:   "Creature — Human Knight",
+				OracleText: "When Test Dreadknight dies, you may cast it from your graveyard as an Adventure until the end of your next turn.",
+				Power:      new("2"),
+				Toughness:  new("1"),
+			},
+			{
+				Name:       "Test Whispers",
+				ManaCost:   "{1}{B}",
+				TypeLine:   "Sorcery — Adventure",
+				OracleText: "Draw a card.",
+			},
+		},
+	})
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	ability := faces[0].TriggeredAbilities[0]
+	if !ability.Optional {
+		t.Fatal("cast-permission dies trigger is not optional")
+	}
+	primitive := ability.Content.Modes[0].Sequence[0].Primitive
+	permission, ok := primitive.(game.GrantCastPermission)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.GrantCastPermission", primitive)
+	}
+	if permission.Card.Kind != game.CardReferenceEvent ||
+		permission.FromZone != zone.Graveyard ||
+		permission.Face != game.FaceAlternate ||
+		permission.Duration != game.DurationUntilEndOfYourNextTurn {
+		t.Fatalf("permission = %+v, want event Adventure cast through next turn", permission)
+	}
+}
+
+func TestLowerDiesTriggerRejectsAmbiguousEventCardReference(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"When this creature dies, return it to the battlefield.",
+		"When this creature dies, cast it.",
+		"When this creature dies, you may cast it from your graveyard.",
+		"When this creature dies, return it to its owner's hand or the battlefield.",
+	} {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("ambiguous event-card reference unexpectedly lowered: %q", text)
+			}
+		})
+	}
+}
+
 func TestLowerDiesTriggerRejectsEnterOnlyInterveningConditions(t *testing.T) {
 	t.Parallel()
 	for _, condition := range []string{
