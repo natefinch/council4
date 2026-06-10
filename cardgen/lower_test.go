@@ -1606,6 +1606,22 @@ func TestLowerReadAheadSaga(t *testing.T) {
 	}
 }
 
+func TestLowerReadAheadRejectsNoncanonicalReminder(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Malformed Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose whichever chapter you want.)\nI — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("noncanonical Read ahead reminder unexpectedly lowered")
+	}
+}
+
 func TestLowerChapterShapedTextRequiresSagaSubtype(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

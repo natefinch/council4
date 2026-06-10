@@ -279,6 +279,50 @@ func TestReadAheadSkippedChaptersRemainSkippedAfterLoreCountersAreRemoved(t *tes
 	}
 }
 
+func TestReadAheadUsesEffectiveEntryCharacteristics(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	card := &game.CardInstance{
+		ID:    g.IDGen.Next(),
+		Owner: game.Player1,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Copying Permanent",
+			Types: []types.Card{types.Enchantment},
+		}},
+	}
+	g.CardInstances[card.ID] = card
+	chapters := []game.Ability{
+		sagaNamedChapter(1),
+		sagaNamedChapter(2),
+		sagaNamedChapter(3),
+	}
+	continuous := []game.ContinuousEffect{
+		{
+			Layer:       game.LayerType,
+			AddSubtypes: []types.Sub{types.Saga},
+		},
+		{
+			Layer:        game.LayerAbility,
+			AddKeywords:  []game.Keyword{game.ReadAhead},
+			AddAbilities: chapters,
+		},
+	}
+	agent := &choiceOnlyAgent{choices: [][]int{{3}}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
+
+	permanent, ok := createCardPermanentFaceWithContinuous(engine, g, card, game.Player1, zone.Stack, game.FaceFront, continuous, agents, &TurnLog{})
+	if !ok {
+		t.Fatal("create effective Read ahead Saga failed")
+	}
+	if got := permanent.Counters.Get(counter.Lore); got != 3 {
+		t.Fatalf("lore counters = %d, want 3", got)
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("effective chosen chapter was not put on the stack")
+	}
+	assertSagaChapterOnTop(t, g, "Chapter 3")
+}
+
 func addSagaCardInstance(g *game.Game, owner game.PlayerID, chapters []game.ChapterAbility) *game.CardInstance {
 	card := &game.CardInstance{
 		ID:    g.IDGen.Next(),

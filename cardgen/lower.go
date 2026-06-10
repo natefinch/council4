@@ -2964,6 +2964,13 @@ func lowerKeywordAbility(
 				"the executable source backend supports only exact \"Devoid (This card has no color.)\" abilities",
 			)
 		}
+		if keyword.Name == "Read ahead" && !isReadAheadAbility(ability.Text) {
+			return nil, executableDiagnostic(
+				ability,
+				"unsupported Read ahead ability",
+				"the executable source backend supports only the canonical Read ahead ability and reminder text",
+			)
+		}
 	}
 	if len(ability.Modes) > 0 {
 		return nil, executableDiagnostic(
@@ -3049,6 +3056,28 @@ func lowerKeywordAbility(
 		return nil, mixedKeywordDiagnostic(ability)
 	}
 	return bodies, nil
+}
+
+func isReadAheadAbility(text string) bool {
+	const prefix = "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger."
+	remainder, ok := strings.CutPrefix(text, prefix)
+	if !ok {
+		return false
+	}
+	if remainder == ")" {
+		return true
+	}
+	chapter, ok := strings.CutPrefix(remainder, " Sacrifice after ")
+	if !ok || !strings.HasSuffix(chapter, ".)") {
+		return false
+	}
+	chapter = strings.TrimSuffix(chapter, ".)")
+	switch chapter {
+	case "I", "II", "III", "IV", "V", "VI":
+		return true
+	default:
+		return false
+	}
 }
 
 func lowerParameterizedStaticKeyword(keyword oracle.CompiledKeyword) (game.StaticAbility, bool) {

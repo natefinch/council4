@@ -34,7 +34,8 @@ func initializeReadAhead(e *Engine, g *game.Game, permanent *game.Permanent, age
 		DefaultSelection: []int{1},
 	}, log)[0]
 	permanent.SagaEntryChapter = chosen
-	permanent.Counters.Add(counter.Lore, chosen-1)
+	permanent.Counters.Remove(counter.Lore, permanent.Counters.Get(counter.Lore))
+	permanent.Counters.Add(counter.Lore, chosen)
 }
 
 func addCountersToPermanent(g *game.Game, permanent *game.Permanent, kind counter.Kind, amount int) bool {
