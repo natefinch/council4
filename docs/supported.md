@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,388
+Cards supported: 3,402
 
 - +2 Mace
 - Aang, Air Nomad
@@ -163,6 +163,7 @@ Cards supported: 3,388
 - Assembly-Worker
 - Astartes Warrior
 - Astartes Warrior
+- Atraxa, Praetors' Voice
 - Auger Spree
 - Augury Owl
 - Auntie's Hovel
@@ -453,6 +454,7 @@ Cards supported: 3,388
 - Cathedral Sanctifier
 - Cathedral of War
 - Caustic Rain
+- Celestial Force
 - Cemetery Gate
 - Centaur
 - Centaur
@@ -799,6 +801,7 @@ Cards supported: 3,388
 - Ebony Rhino
 - Eclipsed Steppe
 - Egg
+- Eidolon of Inspiration
 - Eidolon of Philosophy
 - Ekundu Griffin
 - Elder of Laurels
@@ -1013,6 +1016,7 @@ Cards supported: 3,388
 - Foul Imp
 - Foul Orchard
 - Foundry Assembler
+- Fountain of Renewal
 - Fountain of Youth
 - Fox
 - Fractal
@@ -1055,6 +1059,7 @@ Cards supported: 3,388
 - Garruk's Companion
 - Garruk's Gorehorn
 - Gavony Trapper
+- Geist of the Archives
 - Geist of the Moors
 - Generous Stray
 - Geothermal Bog
@@ -1216,6 +1221,7 @@ Cards supported: 3,388
 - Grim Backwoods
 - Grim Bauble
 - Grim Physician
+- Grinning Demon
 - Grizzled Leotau
 - Grizzled Outrider
 - Grizzly Bears
@@ -1252,6 +1258,7 @@ Cards supported: 3,388
 - Hardened-Scale Armor
 - Harmonize
 - Harpy
+- Harrier Griffin
 - Harrier Naga
 - Harvest Gwyllion
 - Haunted Cloak
@@ -1682,6 +1689,7 @@ Cards supported: 3,388
 - Lumengrid Gargoyle
 - Lumengrid Sentinel
 - Lumengrid Warden
+- Luminarch Aspirant
 - Lumithread Field
 - Lurching Rotbeast
 - Lush Portico
@@ -1821,6 +1829,7 @@ Cards supported: 3,388
 - Moorish Cavalry
 - Morgue Thrull
 - Moriok Reaver
+- Moroii
 - Morphic Pool
 - Mortus Strider
 - Moss Diamond
@@ -1932,6 +1941,7 @@ Cards supported: 3,388
 - Noxious Groodion
 - Noxious Newt
 - Nylea's Forerunner
+- Nyx-Fleece Ram
 - Nyxborn Brute
 - Nyxborn Colossus
 - Nyxborn Courser
@@ -2299,6 +2309,7 @@ Cards supported: 3,388
 - Rotting Fensnake
 - Rotting Legion
 - Rotting Mastodon
+- Rotting Regisaur
 - Roving Harper
 - Rowan Treefolk
 - Royal Assassin
@@ -2779,6 +2790,7 @@ Cards supported: 3,388
 - Sudden Strike
 - Sulfur Falls
 - Sulfurous Mire
+- Sultai Ascendancy
 - Sultai Banner
 - Sultai Scavenger
 - Sultai Skullkeeper
@@ -2896,6 +2908,7 @@ Cards supported: 3,388
 - The Terror of Serpent's Pass
 - Thermal Glider
 - Thicket Crasher
+- Think Tank
 - Third Path Savant
 - Thopter
 - Thopter
@@ -3166,6 +3179,7 @@ Cards supported: 3,388
 - Volcanic Upheaval
 - Volt Charge
 - Voltaic Key
+- Voltaic Servant
 - Volunteer Militia
 - Vorapede
 - Vorstclaw

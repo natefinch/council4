@@ -567,10 +567,123 @@ func TestRenderTriggerPlayerRejectsUnknown(t *testing.T) {
 func TestRenderTriggerPatternRejectsUnsupportedFields(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{
-		Event: game.EventBeginningOfStep,
-		Step:  game.StepUpkeep,
+		Event:         game.EventPermanentEnteredBattlefield,
+		MatchFromZone: true,
 	}
 	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
 		t.Fatal("expected unsupported trigger pattern field error")
+	}
+}
+
+func TestRenderTriggerPatternBeginningOfStep(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	pattern := game.TriggerPattern{
+		Event:      game.EventBeginningOfStep,
+		Controller: game.TriggerControllerYou,
+		Step:       game.StepUpkeep,
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.EventBeginningOfStep",
+		"Controller: game.TriggerControllerYou",
+		"Step: game.StepUpkeep",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered pattern missing %q:\n%s", want, rendered)
+		}
+	}
+	src := "package p\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered pattern is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+func TestRenderStepHelperAcceptsKnownSteps(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		step game.Step
+		want string
+	}{
+		{game.StepUpkeep, "game.StepUpkeep"},
+		{game.StepDraw, "game.StepDraw"},
+		{game.StepBeginningOfCombat, "game.StepBeginningOfCombat"},
+		{game.StepEnd, "game.StepEnd"},
+	}
+	for _, tc := range tests {
+		got, err := renderStep(tc.step)
+		if err != nil {
+			t.Errorf("renderStep(%d): unexpected error: %v", tc.step, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("renderStep(%d) = %q, want %q", tc.step, got, tc.want)
+		}
+	}
+}
+
+func TestRenderStepHelperRejectsUnknownStep(t *testing.T) {
+	t.Parallel()
+	if _, err := renderStep(game.Step(99)); err == nil {
+		t.Fatal("expected error for unknown step")
+	}
+}
+
+func TestRenderTriggerPatternAllSteps(t *testing.T) {
+	t.Parallel()
+	steps := []struct {
+		step game.Step
+		want string
+	}{
+		{game.StepUpkeep, "game.StepUpkeep"},
+		{game.StepDraw, "game.StepDraw"},
+		{game.StepBeginningOfCombat, "game.StepBeginningOfCombat"},
+		{game.StepEnd, "game.StepEnd"},
+	}
+	for _, tc := range steps {
+		ctx := newRenderCtx()
+		pattern := game.TriggerPattern{
+			Event: game.EventBeginningOfStep,
+			Step:  tc.step,
+		}
+		rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+		if err != nil {
+			t.Errorf("step %d: unexpected error: %v", tc.step, err)
+			continue
+		}
+		if !strings.Contains(rendered, tc.want) {
+			t.Errorf("step %d: rendered pattern missing %q:\n%s", tc.step, tc.want, rendered)
+		}
+		src := "package p\nvar _ = " + rendered
+		if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+			t.Errorf("step %d: rendered pattern is not valid Go: %v\n%s", tc.step, err, rendered)
+		}
+	}
+}
+
+func TestRenderTriggerPatternUnknownStepErrors(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.Step(99),
+	}
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		t.Fatal("expected error for unknown step in trigger pattern")
+	}
+}
+
+func TestRenderTriggerPatternRejectsMismatchedStepEvent(t *testing.T) {
+	t.Parallel()
+	tests := []game.TriggerPattern{
+		{Event: game.EventPermanentEnteredBattlefield, Step: game.StepUpkeep},
+		{Event: game.EventBeginningOfStep},
+	}
+	for _, pattern := range tests {
+		if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+			t.Fatalf("expected mismatched pattern error for %+v", pattern)
+		}
 	}
 }
