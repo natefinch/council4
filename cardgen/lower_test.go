@@ -691,6 +691,87 @@ func TestGenerateControlledCreaturesPTBuffWithKeyword(t *testing.T) {
 	}
 }
 
+func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		domain     game.GroupReferenceDomain
+		excluded   bool
+		keywords   []game.Keyword
+	}{
+		"controlled creatures": {
+			oracleText: "Creatures you control have haste and vigilance.",
+			domain:     game.GroupDomainObjectControlled,
+			keywords:   []game.Keyword{game.Haste, game.Vigilance},
+		},
+		"other controlled creatures": {
+			oracleText: "Other creatures you control have flying.",
+			domain:     game.GroupDomainObjectControlled,
+			excluded:   true,
+			keywords:   []game.Keyword{game.Flying},
+		},
+		"controlled artifacts": {
+			oracleText: "Artifacts you control have indestructible.",
+			domain:     game.GroupDomainObjectControlled,
+			keywords:   []game.Keyword{game.Indestructible},
+		},
+		"equipped creature": {
+			oracleText: "Equipped creature has shroud and wither.",
+			domain:     game.GroupDomainAttachedObject,
+			keywords:   []game.Keyword{game.Shroud, game.Wither},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Grant",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+			}
+			effects := face.StaticAbilities[0].Body.ContinuousEffects
+			if len(effects) != 1 {
+				t.Fatalf("continuous effects = %#v, want 1", effects)
+			}
+			effect := effects[0]
+			if effect.Layer != game.LayerAbility || effect.Group.Domain() != test.domain {
+				t.Fatalf("continuous effect = %#v", effect)
+			}
+			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
+				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
+			}
+			if !slices.Equal(effect.AddKeywords, test.keywords) {
+				t.Fatalf("keywords = %v, want %v", effect.AddKeywords, test.keywords)
+			}
+		})
+	}
+}
+
+func TestRejectMalformedStandaloneStaticKeywordGrants(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Creatures you control have flying or haste.",
+		"Creatures you control have and flying.",
+		"Creatures you control have flying and.",
+		"Creatures you control have flying haste.",
+		"Creatures you control have infect.",
+	} {
+		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+			Name:       "Test Grant",
+			Layout:     "normal",
+			TypeLine:   "Enchantment",
+			OracleText: oracleText,
+		})
+		if len(diagnostics) == 0 {
+			t.Fatalf("%q lowered without diagnostics", oracleText)
+		}
+	}
+}
+
 func TestRejectStaticPTBuffWithUnsupportedKeywordText(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
@@ -698,8 +779,6 @@ func TestRejectStaticPTBuffWithUnsupportedKeywordText(t *testing.T) {
 		"Equipped creature gets +2/+2 and has and trample.\nEquip {3}",
 		"Equipped creature gets +2/+2 and has trample and.\nEquip {3}",
 		"Equipped creature gets +2/+2 and has flying lifelink.\nEquip {3}",
-		"Equipped creature gets +2/+2 and has shroud.\nEquip {3}",
-		"Equipped creature gets +2/+2 and has wither.\nEquip {3}",
 	} {
 		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Equipment",

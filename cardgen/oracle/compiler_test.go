@@ -590,6 +590,80 @@ func TestCompileStaticPTBuffSubjects(t *testing.T) {
 	}
 }
 
+func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source      string
+		wantSubject StaticSubjectKind
+		keywords    []string
+	}{
+		"enchanted creature": {
+			source:      "Enchanted creature has menace.",
+			wantSubject: StaticSubjectAttachedObject,
+			keywords:    []string{"Menace"},
+		},
+		"equipped creature": {
+			source:      "Equipped creature has flying and first strike.",
+			wantSubject: StaticSubjectAttachedObject,
+			keywords:    []string{"Flying", "First strike"},
+		},
+		"other creatures": {
+			source:      "Other creatures you control have flying.",
+			wantSubject: StaticSubjectOtherControlledCreatures,
+			keywords:    []string{"Flying"},
+		},
+		"controlled creatures": {
+			source:      "Creatures you control have haste.",
+			wantSubject: StaticSubjectControlledCreatures,
+			keywords:    []string{"Haste"},
+		},
+		"controlled artifacts": {
+			source:      "Artifacts you control have indestructible.",
+			wantSubject: StaticSubjectControlledArtifacts,
+			keywords:    []string{"Indestructible"},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectGrantKeyword {
+				t.Fatalf("effects = %#v", ability.Effects)
+			}
+			if got := ability.Effects[0].StaticSubject; got != test.wantSubject {
+				t.Fatalf("static subject = %v, want %v", got, test.wantSubject)
+			}
+			if len(ability.Keywords) != len(test.keywords) {
+				t.Fatalf("keywords = %#v, want %v", ability.Keywords, test.keywords)
+			}
+			for i, keyword := range ability.Keywords {
+				if keyword.Name != test.keywords[i] {
+					t.Fatalf("keyword %d = %q, want %q", i, keyword.Name, test.keywords[i])
+				}
+			}
+		})
+	}
+}
+
+func TestCompileStaticPTBuffWithKeywordHasOneEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"Creatures you control get +1/+1 and have vigilance.",
+		ParseContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectModifyPT {
+		t.Fatalf("effects = %#v", ability.Effects)
+	}
+}
+
 func TestCompileResolvingPTBuffHasNoStaticSubject(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile(

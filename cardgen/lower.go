@@ -210,6 +210,19 @@ func lowerExecutableAbility(
 			sourceSpans: staticPTBuffSourceSpans(ability, syntax),
 		}, nil
 	}
+	if keywordGrant, ok, diagnostic := lowerStaticKeywordGrant(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
+			consumed: semanticConsumption{
+				effects:  1,
+				keywords: len(ability.Keywords),
+			},
+			sourceSpans: staticKeywordGrantSourceSpans(ability, syntax),
+		}, nil
+	}
 	switch ability.Kind {
 	case oracle.AbilityStatic:
 		bodies, diagnostic := lowerKeywordAbility(ability, syntax)
@@ -1520,6 +1533,58 @@ func staticPTBuffSourceSpans(ability oracle.CompiledAbility, syntax oracle.Abili
 	return spans
 }
 
+func lowerStaticKeywordGrant(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if ability.Kind != oracle.AbilityStatic ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectGrantKeyword ||
+		ability.Effects[0].Duration != oracle.DurationNone ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Effects[0].StaticSubject == oracle.StaticSubjectNone ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, false, nil
+	}
+	effect := ability.Effects[0]
+	keywords, keywordsOK := mixedStaticKeywords(ability.Keywords)
+	if !keywordsOK || len(keywords) == 0 || !matchesExactStaticKeywordGrantSyntax(syntax, effect, ability.Keywords) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only exact standalone grants of runtime-supported keywords",
+		)
+	}
+	group, ok := staticSubjectGroup(effect.StaticSubject)
+	if !ok {
+		return game.StaticAbility{}, false, nil
+	}
+	return game.StaticAbility{
+		Text: ability.Text,
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:       game.LayerAbility,
+			Group:       group,
+			AddKeywords: keywords,
+		}},
+	}, true, nil
+}
+
+func staticKeywordGrantSourceSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
+	spans := make([]oracle.Span, 0, 1+len(ability.Keywords)+len(syntax.Reminders))
+	spans = append(spans, ability.Effects[0].Span)
+	for _, keyword := range ability.Keywords {
+		spans = append(spans, keyword.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return spans
+}
+
 func mixedStaticKeywords(keywords []oracle.CompiledKeyword) ([]game.Keyword, bool) {
 	result := make([]game.Keyword, 0, len(keywords))
 	for _, keyword := range keywords {
@@ -1552,8 +1617,10 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Lifelink,
 		game.Menace,
 		game.Reach,
+		game.Shroud,
 		game.Trample,
-		game.Vigilance:
+		game.Vigilance,
+		game.Wither:
 		return true
 	default:
 		return false
@@ -1598,6 +1665,25 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 	default:
 		return game.GroupReference{}, false
 	}
+}
+
+func matchesExactStaticKeywordGrantSyntax(
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	subjectLength := 0
+	for subjectLength < len(tokens) && spanCovered(tokens[subjectLength].Span, []oracle.Span{effect.StaticSubjectSpan}) {
+		subjectLength++
+	}
+	if subjectLength == 0 ||
+		len(tokens) < subjectLength+3 ||
+		(!equalTokenWord(tokens[subjectLength], "has") && !equalTokenWord(tokens[subjectLength], "have")) ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return false
+	}
+	return matchesExactKeywordList(tokens[subjectLength+1:len(tokens)-1], keywords)
 }
 
 func matchesExactStaticPTBuffSyntax(

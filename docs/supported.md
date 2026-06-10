@@ -1,8 +1,9 @@
 # Supported Cards
 
-Cards supported: 3,169
+Cards supported: 3,214
 
 - +2 Mace
+- Aang, Air Nomad
 - Aardvark Sloth
 - Abbey Gargoyles
 - Abbey Griffin
@@ -27,6 +28,7 @@ Cards supported: 3,169
 - Affa Protector
 - Ageless Guardian
 - Agent of Shauku
+- Aggressive Mammoth
 - Ainok Tracker
 - Air Elemental
 - Airship Engine Room
@@ -44,6 +46,7 @@ Cards supported: 3,169
 - Alaborn Trooper
 - Alchemist's Apprentice
 - Alert Shu Infantry
+- Alexi's Cloak
 - Aliban's Tower
 - Alien
 - Alien
@@ -134,6 +137,8 @@ Cards supported: 3,169
 - Artful Takedown
 - Artifact Zombie
 - Ascended Lawmage
+- Asceticism
+- Asha's Favor
 - Ashaya, the Awoken World
 - Ashcoat Bear
 - Ashen Monstrosity
@@ -210,6 +215,7 @@ Cards supported: 3,169
 - Barrier of Bones
 - Barrin, Master Wizard
 - Bartizan Bats
+- Basilisk Collar
 - Bassara Tower Archer
 - Bastion Enforcer
 - Bastion Inventor
@@ -269,11 +275,13 @@ Cards supported: 3,169
 - Blackcleave Cliffs
 - Blackcleave Goblin
 - Blade of the Sixth Pride
+- Bladed Pinions
 - Blanchwood Treefolk
 - Blasted Landscape
 - Blaze
 - Blessed Orator
 - Blight Rot
+- Blight Sickle
 - Blightbelly Rat
 - Blighted Agent
 - Blighted Cataract
@@ -367,6 +375,7 @@ Cards supported: 3,169
 - Bull Cerodon
 - Bull Rush
 - Bulwark Giant
+- Buoyancy
 - Burrog Befuddler
 - Burrowing Razormaw
 - Burst of Energy
@@ -440,6 +449,7 @@ Cards supported: 3,169
 - Charging Monstrosaur
 - Charging Slateback
 - Charging Strifeknight
+- Chariot of Victory
 - Charity Extractor
 - Checkpoint Officer
 - Cherubael
@@ -464,6 +474,7 @@ Cards supported: 3,169
 - Cliffhaven Sell-Sword
 - Clifftop Retreat
 - Clinging Darkness
+- Cloak of the Bat
 - Cloaked Siren
 - Clockwork Drawbridge
 - Cloud Crusader
@@ -478,6 +489,7 @@ Cards supported: 3,169
 - Coastal Peak
 - Coastal Tower
 - Cobblebrute
+- Cobbled Wings
 - Cogwork Wrestler
 - Coiled Tinviper
 - Cold Case Cracker
@@ -558,6 +570,7 @@ Cards supported: 3,169
 - Cursebreak
 - Cursed Minotaur
 - Custodian of the Trove
+- Cyclops of Eternal Fury
 - Cyclops of One-Eyed Pass
 - Cylian Elf
 - Cystbearer
@@ -580,10 +593,12 @@ Cards supported: 3,169
 - Darkstar
 - Darksteel Axe
 - Darksteel Citadel
+- Darksteel Forge
 - Darksteel Gargoyle
 - Darksteel Ingot
 - Darksteel Myr
 - Darksteel Pendant
+- Darksteel Plate
 - Darksteel Relic
 - Darksteel Sentinel
 - Darkwatch Elves
@@ -669,6 +684,7 @@ Cards supported: 3,169
 - Dinosaur Dragon
 - Dinosaur Egg
 - Dinosaur Soldier
+- Diplomatic Immunity
 - Diregraf Ghoul
 - Disciple of Grace
 - Disciple of Law
@@ -825,6 +841,7 @@ Cards supported: 3,169
 - Eriette's Lullaby
 - Esper Charm
 - Esper Cormorants
+- Eternal Warrior
 - Ethercaste Knight
 - Etherium Astrolabe
 - Eviscerate
@@ -876,6 +893,7 @@ Cards supported: 3,169
 - Feral Shadow
 - Ferocious Charge
 - Ferocious Zheng
+- Fervor
 - Festering Goblin
 - Festering Mummy
 - Festering Thicket
@@ -898,6 +916,7 @@ Cards supported: 3,169
 - Fire Nation Soldier
 - Fire Nation's Conquest
 - Fire Snake
+- Fires of Yavimaya
 - First Mate Ragavan
 - Fish
 - Fish
@@ -908,8 +927,10 @@ Cards supported: 3,169
 - Flameborn Viron
 - Flaming Sword
 - Flatten
+- Fleetfeather Sandals
 - Fleetfoot Dancer
 - Flensermite
+- Flight
 - Flight of Equenauts
 - Floodhound
 - Flowstone Infusion
@@ -1068,6 +1089,7 @@ Cards supported: 3,169
 - Goblin Soldier
 - Goblin Striker
 - Goblin Trailblazer
+- Goblin War Drums
 - Goblin War Paint
 - Goblin Warrior
 - Goblin Wizard
@@ -1102,6 +1124,7 @@ Cards supported: 3,169
 - Goobbue Gardener
 - Gore Swine
 - Gorgon Flail
+- Gorgon's Head
 - Gorilla Warrior
 - Grandmother Sengir
 - Granitic Titan
@@ -1143,6 +1166,7 @@ Cards supported: 3,169
 - Gruul Locket
 - Gryff Vanguard
 - Guadosalam, Farplane Gateway
+- Guard Duty
 - Guardian Automaton
 - Guardian Lions
 - Guardian of Pilgrims
@@ -1170,6 +1194,7 @@ Cards supported: 3,169
 - Harpy
 - Harrier Naga
 - Harvest Gwyllion
+- Haunted Cloak
 - Haunted Guardian
 - Haunted Mire
 - Haunted Ridge
@@ -1305,6 +1330,7 @@ Cards supported: 3,169
 - Impervious Greatwurm
 - Impetuous Sunchaser
 - Imposing Vantasaur
+- Imposing Visage
 - Improvised Armor
 - Incorrigible Youths
 - Incurable Ogre
@@ -1428,6 +1454,7 @@ Cards supported: 3,169
 - Ketria Crystal
 - Ketria Triome
 - Khalni Ambush // Khalni Territory
+- Khenra Charioteer
 - Kill Shot
 - Kindercatch
 - Kindly Customer
@@ -1462,6 +1489,7 @@ Cards supported: 3,169
 - Knight of the Keep
 - Knight of the Tusk
 - Knight's Pledge
+- Knighthood
 - Koala-Sheep
 - Kobolds of Kher Keep
 - Kobolds of Kher Keep
@@ -1493,6 +1521,7 @@ Cards supported: 3,169
 - Lady Caleria
 - Lady Orca
 - Lagac Lizard
+- Lance
 - Land Leeches
 - Landscape Painter // Vibrant Idea
 - Lantern Kami
@@ -1510,11 +1539,13 @@ Cards supported: 3,169
 - Leaf Gilder
 - Leatherback Baloth
 - Ledev Guardian
+- Leonin Abunas
 - Leonin Scimitar
 - Leonin Skyhunter
 - Leonin Snarecaster
 - Leopard-Spotted Jiao
 - Letter of Acceptance
+- Levitation
 - Ley Druid
 - Leyline Prowler
 - Library
@@ -1526,6 +1557,7 @@ Cards supported: 3,169
 - Lightning Blast
 - Lightning Bolt
 - Lightning Elemental
+- Lightning Greaves
 - Lightning Hounds
 - Lightning Javelin
 - Lightning Stormkin
@@ -1573,7 +1605,9 @@ Cards supported: 3,169
 - Macetail Hystrodon
 - Mad Prophet
 - Madcap Skills
+- Madrush Cyclops
 - Maelstrom Colossus
+- Maelstrom Wanderer
 - Mage-Ring Bully
 - Magefire Wings
 - Mageta's Boon
@@ -1638,6 +1672,7 @@ Cards supported: 3,169
 - Mesa Unicorn
 - Messenger Drake
 - Messenger Falcons
+- Messenger's Speed
 - Metallic Sliver
 - Metallic Sliver
 - Metallurgeon
@@ -1757,6 +1792,7 @@ Cards supported: 3,169
 - Nether Horror
 - Nettle Swine
 - Network Disruptor
+- Neurok Hoversail
 - Neurok Replica
 - New Benalia
 - Nezumi Bone-Reader
@@ -1794,6 +1830,7 @@ Cards supported: 3,169
 - Novice Inspector
 - Noxious Groodion
 - Noxious Newt
+- Nylea's Forerunner
 - Nyxborn Brute
 - Nyxborn Colossus
 - Nyxborn Courser
@@ -1873,7 +1910,6 @@ Cards supported: 3,169
 - Oversoul of Dusk
 - Ox
 - Ox
-- Ox
 - Oxidda Scrapmelter
 - Pain // Suffering
 - Palace Familiar
@@ -1894,6 +1930,7 @@ Cards supported: 3,169
 - Pensive Minotaur
 - Pentavite
 - Peregrine Griffin
+- Peregrine Mask
 - Perilous Myr
 - Pest
 - Pestilent Syphoner
@@ -1980,7 +2017,9 @@ Cards supported: 3,169
 - Prey Upon
 - Priest of Iroas
 - Priests of Norn
+- Primal Frenzy
 - Primal Huntbeast
+- Primal Rage
 - Primal Visitation
 - Primo, the Indivisible
 - Primoc Escapee
@@ -2293,7 +2332,9 @@ Cards supported: 3,169
 - Serra Angel
 - Serra Sphinx
 - Serra Zealot
+- Serra's Blessing
 - Serra's Embrace
+- Serra's Guardian
 - Serum Visions
 - Servant of Nefarox
 - Servo
@@ -2630,6 +2671,7 @@ Cards supported: 3,169
 - Sweatworks Brawler
 - Swift Response
 - Swift Spinner
+- Swiftfoot Boots
 - Swiftwater Cliffs
 - Swooping Lookout
 - Sword Dancer
@@ -2811,6 +2853,7 @@ Cards supported: 3,169
 - Trusty Machete
 - Tuinvale Treefolk // Oaken Boon
 - Tuknir Deathlock
+- Tuktuk Rubblefort
 - Tundra
 - Tundra Wall
 - Tundra Wolves
@@ -3140,7 +3183,9 @@ Cards supported: 3,169
 - Zarichi Tiger
 - Zealous Guardian
 - Zephid
+- Zephid's Embrace
 - Zephyr Falcon
+- Zephyr Net
 - Zephyr Sprite
 - Zephyrim
 - Zhalfirin Void
