@@ -323,6 +323,31 @@ func TestReadAheadUsesEffectiveEntryCharacteristics(t *testing.T) {
 	assertSagaChapterOnTop(t, g, "Chapter 3")
 }
 
+func TestReadAheadSagaTokenChoosesEntryChapter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	token := sagaCard([]game.ChapterAbility{
+		sagaNamedChapter(1),
+		sagaNamedChapter(2),
+		sagaNamedChapter(3),
+	})
+	token.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	agent := &choiceOnlyAgent{choices: [][]int{{3}}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
+
+	permanent, ok := createTokenPermanentWithChoices(engine, g, game.Player1, token, agents, &TurnLog{})
+	if !ok {
+		t.Fatal("create Read ahead Saga token failed")
+	}
+	if got := permanent.Counters.Get(counter.Lore); got != 3 {
+		t.Fatalf("lore counters = %d, want 3", got)
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("token's chosen chapter was not put on the stack")
+	}
+	assertSagaChapterOnTop(t, g, "Chapter 3")
+}
+
 func addSagaCardInstance(g *game.Game, owner game.PlayerID, chapters []game.ChapterAbility) *game.CardInstance {
 	card := &game.CardInstance{
 		ID:    g.IDGen.Next(),

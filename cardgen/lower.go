@@ -196,6 +196,30 @@ func lowerFaceAbilities(
 			result.SpellAbility = lowered.spellAbility
 		}
 	}
+	for _, ability := range compilation.Abilities {
+		for _, keyword := range ability.Keywords {
+			if keyword.Name != "Read ahead" {
+				continue
+			}
+			sacrificeChapter, ok := readAheadSacrificeChapter(ability.Text)
+			if !ok || sacrificeChapter == 0 {
+				continue
+			}
+			finalChapter := 0
+			for _, chapter := range result.ChapterAbilities {
+				for _, number := range chapter.Chapters {
+					finalChapter = max(finalChapter, number)
+				}
+			}
+			if sacrificeChapter != finalChapter {
+				unsupported = append(unsupported, *executableDiagnostic(
+					ability,
+					"unsupported Read ahead ability",
+					fmt.Sprintf("the reminder sacrifice chapter %d does not match final chapter %d", sacrificeChapter, finalChapter),
+				))
+			}
+		}
+	}
 	if len(unsupported) > 0 {
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
@@ -3059,24 +3083,39 @@ func lowerKeywordAbility(
 }
 
 func isReadAheadAbility(text string) bool {
+	_, ok := readAheadSacrificeChapter(text)
+	return ok
+}
+
+func readAheadSacrificeChapter(text string) (int, bool) {
 	const prefix = "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger."
 	remainder, ok := strings.CutPrefix(text, prefix)
 	if !ok {
-		return false
+		return 0, false
 	}
 	if remainder == ")" {
-		return true
+		return 0, true
 	}
 	chapter, ok := strings.CutPrefix(remainder, " Sacrifice after ")
 	if !ok || !strings.HasSuffix(chapter, ".)") {
-		return false
+		return 0, false
 	}
 	chapter = strings.TrimSuffix(chapter, ".)")
 	switch chapter {
-	case "I", "II", "III", "IV", "V", "VI":
-		return true
+	case "I":
+		return 1, true
+	case "II":
+		return 2, true
+	case "III":
+		return 3, true
+	case "IV":
+		return 4, true
+	case "V":
+		return 5, true
+	case "VI":
+		return 6, true
 	default:
-		return false
+		return 0, false
 	}
 }
 

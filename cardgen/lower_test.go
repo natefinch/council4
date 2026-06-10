@@ -1622,6 +1622,22 @@ func TestLowerReadAheadRejectsNoncanonicalReminder(t *testing.T) {
 	}
 }
 
+func TestLowerReadAheadRejectsMismatchedSacrificeChapter(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Mismatched Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger. Sacrifice after IV.)\nI — Draw a card.\nII — Draw a card.\nIII — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("mismatched Read ahead sacrifice chapter unexpectedly lowered")
+	}
+}
+
 func TestLowerChapterShapedTextRequiresSagaSubtype(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
