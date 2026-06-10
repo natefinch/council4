@@ -223,6 +223,18 @@ func lowerExecutableAbility(
 			sourceSpans: staticKeywordGrantSourceSpans(ability, syntax),
 		}, nil
 	}
+	if keywordGrant, ok := lowerSourceConditionalKeywordGrant(ability, syntax); ok {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
+			consumed: semanticConsumption{
+				conditions: 1,
+				effects:    1,
+				keywords:   len(ability.Keywords),
+				references: 1,
+			},
+			sourceSpans: sourceConditionalKeywordGrantSpans(ability, syntax),
+		}, nil
+	}
 	switch ability.Kind {
 	case oracle.AbilityStatic:
 		bodies, diagnostic := lowerKeywordAbility(ability, syntax)
@@ -1585,6 +1597,237 @@ func lowerStaticKeywordGrant(
 func staticKeywordGrantSourceSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
 	spans := make([]oracle.Span, 0, 1+len(ability.Keywords)+len(syntax.Reminders))
 	spans = append(spans, ability.Effects[0].Span)
+	for _, keyword := range ability.Keywords {
+		spans = append(spans, keyword.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return spans
+}
+
+func lowerSourceConditionalKeywordGrant(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool) {
+	if ability.Kind != oracle.AbilityStatic ||
+		len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != oracle.ConditionAsLongAs ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectGrantKeyword ||
+		ability.Effects[0].Duration != oracle.DurationNone ||
+		ability.Effects[0].StaticSubject != oracle.StaticSubjectNone ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferenceThisObject ||
+		len(ability.Targets) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, false
+	}
+	condition, ok := lowerSourceAsLongAsCondition(ability.Conditions[0])
+	if !ok {
+		return game.StaticAbility{}, false
+	}
+	keywords, ok := mixedStaticKeywords(ability.Keywords)
+	if !ok || len(keywords) == 0 ||
+		!matchesExactSourceConditionalKeywordGrantSyntax(syntax, ability.Conditions[0], ability.Keywords) {
+		return game.StaticAbility{}, false
+	}
+	return game.StaticAbility{
+		Text:      ability.Text,
+		Condition: opt.Val(condition),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:          game.LayerAbility,
+			AffectedSource: true,
+			AddKeywords:    keywords,
+		}},
+	}, true
+}
+
+func lowerSourceAsLongAsCondition(condition oracle.CompiledCondition) (game.Condition, bool) {
+	const (
+		aPrefix       = "as long as you control a "
+		anPrefix      = "as long as you control an "
+		anotherPrefix = "as long as you control another "
+	)
+	text := strings.ToLower(condition.Text)
+	var noun string
+	excludeSource := false
+	switch {
+	case strings.HasPrefix(text, aPrefix):
+		noun = condition.Text[len(aPrefix):]
+	case strings.HasPrefix(text, anPrefix):
+		noun = condition.Text[len(anPrefix):]
+	case strings.HasPrefix(text, anotherPrefix):
+		noun = condition.Text[len(anotherPrefix):]
+		excludeSource = true
+	default:
+		return game.Condition{}, false
+	}
+	if noun == "" || strings.TrimSpace(noun) != noun {
+		return game.Condition{}, false
+	}
+	filter := game.PermanentFilter{ExcludeSource: excludeSource}
+	switch strings.ToLower(noun) {
+	case "artifact":
+		filter.Types = []types.Card{types.Artifact}
+	case "artifact creature":
+		filter.Types = []types.Card{types.Artifact, types.Creature}
+	case "battle":
+		filter.Types = []types.Card{types.Battle}
+	case "creature":
+		filter.Types = []types.Card{types.Creature}
+	case "enchantment":
+		filter.Types = []types.Card{types.Enchantment}
+	case "land":
+		filter.Types = []types.Card{types.Land}
+	case "planeswalker":
+		filter.Types = []types.Card{types.Planeswalker}
+	case "snow land":
+		filter.Types = []types.Card{types.Land}
+		filter.Supertypes = []types.Super{types.Snow}
+	default:
+		if lowerColorQualifiedPermanentFilter(noun, &filter) {
+			break
+		}
+		subtype := types.Sub(noun)
+		switch {
+		case types.KnownSubtypeForType(types.Creature, subtype),
+			types.KnownSubtypeForType(types.Land, subtype):
+			filter.SubtypesAny = []types.Sub{subtype}
+		case strings.HasSuffix(noun, " planeswalker"):
+			subtype = types.Sub(strings.TrimSuffix(noun, " planeswalker"))
+			if !types.KnownSubtypeForType(types.Planeswalker, subtype) {
+				return game.Condition{}, false
+			}
+			filter.Types = []types.Card{types.Planeswalker}
+			filter.SubtypesAny = []types.Sub{subtype}
+		default:
+			return game.Condition{}, false
+		}
+	}
+	return game.Condition{
+		Text:               condition.Text,
+		ControllerControls: filter,
+	}, true
+}
+
+func lowerColorQualifiedPermanentFilter(noun string, filter *game.PermanentFilter) bool {
+	const (
+		creatureSuffix  = " creature"
+		permanentSuffix = " permanent"
+	)
+	var colorsText string
+	switch {
+	case strings.HasSuffix(noun, creatureSuffix):
+		filter.Types = []types.Card{types.Creature}
+		colorsText = strings.TrimSuffix(noun, creatureSuffix)
+	case strings.HasSuffix(noun, permanentSuffix):
+		colorsText = strings.TrimSuffix(noun, permanentSuffix)
+	default:
+		return false
+	}
+	if colorsText == "colorless" {
+		filter.ExcludedColors = []color.Color{
+			color.White,
+			color.Blue,
+			color.Black,
+			color.Red,
+			color.Green,
+		}
+		return true
+	}
+	parts := strings.Split(colorsText, " or ")
+	filter.ColorsAny = make([]color.Color, 0, len(parts))
+	for _, part := range parts {
+		switch part {
+		case "white":
+			filter.ColorsAny = append(filter.ColorsAny, color.White)
+		case "blue":
+			filter.ColorsAny = append(filter.ColorsAny, color.Blue)
+		case "black":
+			filter.ColorsAny = append(filter.ColorsAny, color.Black)
+		case "red":
+			filter.ColorsAny = append(filter.ColorsAny, color.Red)
+		case "green":
+			filter.ColorsAny = append(filter.ColorsAny, color.Green)
+		default:
+			filter.Types = nil
+			filter.ColorsAny = nil
+			return false
+		}
+	}
+	return len(filter.ColorsAny) > 0
+}
+
+func matchesExactSourceConditionalKeywordGrantSyntax(
+	syntax oracle.Ability,
+	condition oracle.CompiledCondition,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	return matchesPrefixSourceConditionalKeywordGrant(tokens, condition, keywords) ||
+		matchesPostfixSourceConditionalKeywordGrant(tokens, condition, keywords)
+}
+
+func matchesPrefixSourceConditionalKeywordGrant(
+	tokens []oracle.Token,
+	condition oracle.CompiledCondition,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	conditionLength := 0
+	for conditionLength < len(tokens) &&
+		spanCovered(tokens[conditionLength].Span, []oracle.Span{condition.Span}) {
+		conditionLength++
+	}
+	if conditionLength == 0 ||
+		len(tokens) < conditionLength+6 ||
+		tokens[conditionLength].Kind != oracle.Comma ||
+		!equalTokenWord(tokens[conditionLength+1], "this") ||
+		!equalTokenWord(tokens[conditionLength+2], "creature") ||
+		!equalTokenWord(tokens[conditionLength+3], "has") ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return false
+	}
+	return matchesExactKeywordList(tokens[conditionLength+4:len(tokens)-1], keywords)
+}
+
+func matchesPostfixSourceConditionalKeywordGrant(
+	tokens []oracle.Token,
+	condition oracle.CompiledCondition,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	if len(tokens) < 8 ||
+		!equalTokenWord(tokens[0], "this") ||
+		!equalTokenWord(tokens[1], "creature") ||
+		!equalTokenWord(tokens[2], "has") ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return false
+	}
+	conditionStart := slices.IndexFunc(tokens, func(token oracle.Token) bool {
+		return spanCovered(token.Span, []oracle.Span{condition.Span})
+	})
+	if conditionStart <= 3 {
+		return false
+	}
+	for _, token := range tokens[conditionStart : len(tokens)-1] {
+		if !spanCovered(token.Span, []oracle.Span{condition.Span}) {
+			return false
+		}
+	}
+	return matchesExactKeywordList(tokens[3:conditionStart], keywords)
+}
+
+func sourceConditionalKeywordGrantSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
+	spans := make([]oracle.Span, 0, 3+len(ability.Keywords)+len(syntax.Reminders))
+	spans = append(
+		spans,
+		ability.Conditions[0].Span,
+		ability.Effects[0].Span,
+		ability.References[0].Span,
+	)
 	for _, keyword := range ability.Keywords {
 		spans = append(spans, keyword.Span)
 	}

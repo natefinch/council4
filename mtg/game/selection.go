@@ -148,12 +148,14 @@ func (p TargetPredicate) Selection() Selection {
 // Selection. The result shares the filter's backing slices.
 func (f PermanentFilter) Selection() Selection {
 	return Selection{
-		RequiredTypes: f.Types,
-		Supertypes:    f.Supertypes,
-		SubtypesAny:   f.SubtypesAny,
-		Power:         f.Power,
-		Toughness:     f.Toughness,
-		ExcludeSource: f.ExcludeSource,
+		RequiredTypes:  f.Types,
+		Supertypes:     f.Supertypes,
+		SubtypesAny:    f.SubtypesAny,
+		ColorsAny:      f.ColorsAny,
+		ExcludedColors: f.ExcludedColors,
+		Power:          f.Power,
+		Toughness:      f.Toughness,
+		ExcludeSource:  f.ExcludeSource,
 	}
 }
 

@@ -607,6 +607,11 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 			wantSubject: StaticSubjectAttachedObject,
 			keywords:    []string{"Flying", "First strike"},
 		},
+		"double strike": {
+			source:      "Equipped creature has double strike.",
+			wantSubject: StaticSubjectAttachedObject,
+			keywords:    []string{"Double strike"},
+		},
 		"other creatures": {
 			source:      "Other creatures you control have flying.",
 			wantSubject: StaticSubjectOtherControlledCreatures,

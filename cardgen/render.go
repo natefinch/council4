@@ -568,6 +568,14 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		}
 		fields = append(fields, sliceField("KeywordAbilities", "game.KeywordAbility", elements))
 	}
+	if body.Condition.Exists {
+		rendered, err := r.renderStaticAbilityCondition(ctx, &body.Condition.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Condition: opt.Val(%s),", rendered))
+	}
 	if len(body.ContinuousEffects) > 0 {
 		elements := make([]string, 0, len(body.ContinuousEffects))
 		for i := range body.ContinuousEffects {
@@ -587,6 +595,9 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 	if len(effect.RemoveKeywords) > 0 || len(effect.AddAbilities) > 0 {
 		return "", errors.New("render: unsupported ability-layer continuous effect fields")
 	}
+	if effect.AffectedSource && !effect.Group.Empty() {
+		return "", errors.New("render: continuous effect cannot set both AffectedSource and Group")
+	}
 	switch effect.Layer {
 	case game.LayerAbility:
 		if effect.PowerDelta != 0 || effect.ToughnessDelta != 0 {
@@ -603,6 +614,9 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		return "", err
 	}
 	fields = append(fields, fmt.Sprintf("Layer: %s,", layerLit))
+	if effect.AffectedSource {
+		fields = append(fields, "AffectedSource: true,")
+	}
 	if effect.Group.Valid() {
 		groupLit, err := r.renderGroupReference(ctx, effect.Group)
 		if err != nil {
@@ -995,10 +1009,22 @@ func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.Resolutio
 // conditional enters-tapped replacement. Only the exact supported shape is
 // accepted; any other combination returns an error.
 func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Condition) (string, error) {
+	rendered, err := r.renderControllerControlsCondition(ctx, cond, "ETB replacement")
+	if err != nil {
+		return "", err
+	}
+	return "&" + rendered, nil
+}
+
+func (r Renderer) renderStaticAbilityCondition(ctx *renderCtx, cond *game.Condition) (string, error) {
+	return r.renderControllerControlsCondition(ctx, cond, "static ability")
+}
+
+func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.Condition, context string) (string, error) {
 	if cond.ControllerLifeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
 		cond.OpponentCountAtLeast < 0 {
-		return "", errors.New("render: ETB replacement condition has a negative threshold")
+		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
 	if cond.ControlsMatching.Exists ||
@@ -1011,33 +1037,41 @@ func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Co
 		cond.ControllerHasMaxSpeed ||
 		cond.TargetEnteredThisTurn.Exists ||
 		cond.CastFromZone.Exists {
-		return "", errors.New("render: unsupported condition shape for ETB replacement")
+		return "", fmt.Errorf("render: unsupported condition shape for %s", context)
 	}
 	var fields []string
+	if cond.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(cond.Text)))
+	}
 	if cond.Negate {
 		fields = append(fields, "Negate: true,")
 	}
+	hasPredicate := false
 	if !cond.ControllerControls.Empty() {
 		filter := cond.ControllerControls
 		if filter.Power.Exists ||
 			filter.Toughness.Exists ||
 			filter.TotalPower.Exists {
-			return "", errors.New("render: unsupported PermanentFilter shape for ETB replacement condition")
+			return "", fmt.Errorf("render: unsupported PermanentFilter shape for %s condition", context)
 		}
 		filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
 		if err != nil {
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
+		hasPredicate = true
 	}
 	if cond.ControllerLifeAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
+		hasPredicate = true
 	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		fields = append(fields, fmt.Sprintf("AnyPlayerLifeAtMost: %d,", cond.AnyPlayerLifeAtMost))
+		hasPredicate = true
 	}
 	if cond.OpponentCountAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("OpponentCountAtLeast: %d,", cond.OpponentCountAtLeast))
+		hasPredicate = true
 	}
 	if cond.AnyOpponentControls.Exists {
 		rendered, err := r.renderSelectionCountForCondition(ctx, cond.AnyOpponentControls.Val)
@@ -1046,6 +1080,7 @@ func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Co
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("AnyOpponentControls: opt.Val(%s),", rendered))
+		hasPredicate = true
 	}
 	if cond.OpponentsControl.Exists {
 		rendered, err := r.renderSelectionCountForCondition(ctx, cond.OpponentsControl.Val)
@@ -1054,11 +1089,12 @@ func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Co
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("OpponentsControl: opt.Val(%s),", rendered))
+		hasPredicate = true
 	}
-	if len(fields) == 0 || len(fields) == 1 && cond.Negate {
-		return "", errors.New("render: ETB replacement condition has no supported predicate")
+	if !hasPredicate {
+		return "", fmt.Errorf("render: %s condition has no supported predicate", context)
 	}
-	return "&" + structLit("game.Condition", fields), nil
+	return structLit("game.Condition", fields), nil
 }
 
 func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.SelectionCount) (string, error) {
@@ -1111,10 +1147,28 @@ func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.Pe
 	if len(filter.SubtypesAny) > 0 {
 		ctx.need(importTypes)
 		literals := make([]string, 0, len(filter.SubtypesAny))
+		cardTypes := make([]string, 0, len(filter.Types))
+		for _, cardType := range filter.Types {
+			cardTypes = append(cardTypes, string(cardType))
+		}
 		for _, subtype := range filter.SubtypesAny {
-			literals = append(literals, SubtypeToLiteral(string(subtype), []string{"Land"}))
+			literals = append(literals, SubtypeToLiteral(string(subtype), cardTypes))
 		}
 		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
+	if len(filter.ColorsAny) > 0 {
+		literals, err := renderColorSlice(ctx, filter.ColorsAny)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ColorsAny: %s,", literals))
+	}
+	if len(filter.ExcludedColors) > 0 {
+		literals, err := renderColorSlice(ctx, filter.ExcludedColors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", literals))
 	}
 	if filter.MinCount != 0 {
 		fields = append(fields, fmt.Sprintf("MinCount: %d,", filter.MinCount))

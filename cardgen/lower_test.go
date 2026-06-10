@@ -772,6 +772,177 @@ func TestRejectMalformedStandaloneStaticKeywordGrants(t *testing.T) {
 	}
 }
 
+func TestLowerSourceConditionalKeywordGrant(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Climber",
+		Layout:     "normal",
+		TypeLine:   "Creature — Ape",
+		OracleText: "As long as you control a Mountain, this creature has menace and vigilance.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+	}
+	ability := face.StaticAbilities[0].Body
+	if !ability.Condition.Exists {
+		t.Fatal("static ability has no condition")
+	}
+	condition := ability.Condition.Val
+	if condition.Text != "As long as you control a Mountain" ||
+		!slices.Equal(condition.ControllerControls.SubtypesAny, []types.Sub{types.Mountain}) {
+		t.Fatalf("condition = %+v", condition)
+	}
+	if len(ability.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %#v", ability.ContinuousEffects)
+	}
+	effect := ability.ContinuousEffects[0]
+	if effect.Layer != game.LayerAbility ||
+		!effect.AffectedSource ||
+		!slices.Equal(effect.AddKeywords, []game.Keyword{game.Menace, game.Vigilance}) {
+		t.Fatalf("continuous effect = %+v", effect)
+	}
+}
+
+func TestLowerPostfixSourceConditionalKeywordGrant(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Healer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Cleric",
+		OracleText: "This creature has lifelink as long as you control another Cleric.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	ability := face.StaticAbilities[0].Body
+	condition := ability.Condition.Val
+	if !condition.ControllerControls.ExcludeSource ||
+		!slices.Equal(condition.ControllerControls.SubtypesAny, []types.Sub{types.Cleric}) {
+		t.Fatalf("condition = %+v", condition)
+	}
+	effect := ability.ContinuousEffects[0]
+	if !effect.AffectedSource || !slices.Equal(effect.AddKeywords, []game.Keyword{game.Lifelink}) {
+		t.Fatalf("continuous effect = %+v", effect)
+	}
+}
+
+func TestLowerPostfixLandSubtypeConditionalKeywordGrant(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sergeant",
+		Layout:     "normal",
+		TypeLine:   "Creature — Soldier",
+		OracleText: "This creature has double strike as long as you control a Gate.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	})
+	condition := face.StaticAbilities[0].Body.Condition.Val
+	if !slices.Equal(condition.ControllerControls.SubtypesAny, []types.Sub{types.Gate}) {
+		t.Fatalf("condition = %+v", condition)
+	}
+}
+
+func TestLowerColorQualifiedSourceConditionalKeywordGrants(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText     string
+		types          []types.Card
+		colors         []color.Color
+		excludedColors []color.Color
+	}{
+		"one color": {
+			oracleText: "This creature has haste as long as you control a red creature.",
+			types:      []types.Card{types.Creature},
+			colors:     []color.Color{color.Red},
+		},
+		"either color": {
+			oracleText: "This creature has lifelink as long as you control a white or black permanent.",
+			colors:     []color.Color{color.White, color.Black},
+		},
+		"colorless": {
+			oracleText: "This creature has haste as long as you control another colorless creature.",
+			types:      []types.Card{types.Creature},
+			excludedColors: []color.Color{
+				color.White,
+				color.Blue,
+				color.Black,
+				color.Red,
+				color.Green,
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Creature",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			filter := face.StaticAbilities[0].Body.Condition.Val.ControllerControls
+			if !slices.Equal(filter.Types, test.types) ||
+				!slices.Equal(filter.ColorsAny, test.colors) ||
+				!slices.Equal(filter.ExcludedColors, test.excludedColors) {
+				t.Fatalf("filter = %+v", filter)
+			}
+		})
+	}
+}
+
+func TestGenerateSourceConditionalKeywordGrant(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Flier",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "As long as you control an artifact, this creature has flying.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		`Condition: opt.Val(game.Condition{`,
+		`Text: "As long as you control an artifact"`,
+		`Types: []types.Card{types.Artifact}`,
+		`AffectedSource: true`,
+		`game.Flying`,
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestRejectUnsupportedSourceConditionalKeywordGrant(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Attacker",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "As long as it's attacking, this creature has flying.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("unexpected source:\n%s", source)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported conditional keyword diagnostic")
+	}
+}
+
 func TestRejectStaticPTBuffWithUnsupportedKeywordText(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{

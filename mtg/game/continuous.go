@@ -81,6 +81,7 @@ type ContinuousEffect struct {
 	ExpiresFor     PlayerID
 
 	AffectedObjectID id.ID
+	AffectedSource   bool
 	Group            GroupReference
 
 	Layer ContinuousLayer
