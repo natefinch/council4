@@ -4315,6 +4315,8 @@ func lowerSingleEffectSpell(
 		return lowerExactPrimitiveSpell(ability, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
 			return game.Proliferate{Amount: amount}
 		})
+	case oracle.EffectExplore:
+		return lowerExploreSpell(ability, syntax)
 	case oracle.EffectRegenerate:
 		return lowerFixedPermanentTargetSpell(ability, "Regenerate", func(object game.ObjectReference) game.Primitive {
 			return game.Regenerate{Object: object}
@@ -4926,6 +4928,33 @@ func lowerInvestigateSpell(
 			return game.Investigate{Amount: amount}
 		},
 	)
+}
+
+func lowerExploreSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	tokens := syntax.Tokens
+	if ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(tokens) != 3 ||
+		!equalTokenWord(tokens[0], "it") ||
+		!equalTokenWord(tokens[1], "explores") ||
+		tokens[2].Kind != oracle.Period ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferencePronoun {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported explore spell",
+			"the executable source backend supports only the source permanent pattern \"it explores\"",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Explore{Creature: game.SourcePermanentReference()},
+	}}}.Ability(), nil
 }
 
 func lowerExactPrimitiveSpell(

@@ -702,6 +702,19 @@ func handleProliferate(r *effectResolver, prim game.Proliferate) effectResolved 
 	return res
 }
 
+func handleExplore(r *effectResolver, prim game.Explore) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Creature)
+	if !ok {
+		return res
+	}
+	controller := effectiveController(r.game, permanent)
+	if r.engine.exploreCreature(r.game, r.obj, r.agents, r.log, controller, permanent) {
+		res.succeeded = true
+	}
+	return res
+}
+
 func handleGoad(r *effectResolver, prim game.Goad) effectResolved {
 	res := effectResolved{accepted: true}
 	if permanent, ok := r.resolveObject(prim.Object); ok && permanentHasType(r.game, permanent, types.Creature) {
