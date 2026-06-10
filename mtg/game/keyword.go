@@ -41,6 +41,11 @@ type NinjutsuKeyword struct {
 	Cost cost.Mana
 }
 
+// MutateKeyword parameterizes Mutate alternative casting costs.
+type MutateKeyword struct {
+	Cost cost.Mana
+}
+
 // KickerKeyword parameterizes Kicker additional costs and bonus instructions.
 type KickerKeyword struct {
 	Cost         cost.Mana
@@ -85,6 +90,7 @@ func (EquipKeyword) isKeywordAbility()      {}
 func (EnchantKeyword) isKeywordAbility()    {}
 func (CyclingKeyword) isKeywordAbility()    {}
 func (NinjutsuKeyword) isKeywordAbility()   {}
+func (MutateKeyword) isKeywordAbility()     {}
 func (KickerKeyword) isKeywordAbility()     {}
 func (MadnessKeyword) isKeywordAbility()    {}
 func (MorphKeyword) isKeywordAbility()      {}
@@ -99,6 +105,7 @@ func (EquipKeyword) keyword() Keyword          { return Equip }
 func (EnchantKeyword) keyword() Keyword        { return Enchant }
 func (CyclingKeyword) keyword() Keyword        { return Cycling }
 func (NinjutsuKeyword) keyword() Keyword       { return Ninjutsu }
+func (MutateKeyword) keyword() Keyword         { return Mutate }
 func (KickerKeyword) keyword() Keyword         { return Kicker }
 func (MadnessKeyword) keyword() Keyword        { return Madness }
 func (MorphKeyword) keyword() Keyword          { return Morph }
@@ -239,6 +246,19 @@ func ActivatedBodyNinjutsuCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return append(cost.Mana(nil), ninjutsu.Cost...), true
+}
+
+// StaticBodyMutateCost returns the Mutate cost from a static ability.
+func StaticBodyMutateCost(body *StaticAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Mutate)
+	if !ok {
+		return nil, false
+	}
+	mutate, ok := ka.(MutateKeyword)
+	if !ok {
+		return nil, false
+	}
+	return append(cost.Mana(nil), mutate.Cost...), true
 }
 
 // ActivatedBodyEquipCost returns the Equip cost from an activated ability.

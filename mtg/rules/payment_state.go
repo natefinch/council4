@@ -36,6 +36,10 @@ func (s *rulesPaymentState) PermanentCardDef(p *game.Permanent) (*game.CardDef, 
 	return permanentCardDef(s.g, p)
 }
 
+func (s *rulesPaymentState) PermanentEffectiveAbilities(p *game.Permanent) []game.Ability {
+	return permanentEffectiveAbilities(s.g, p)
+}
+
 func (s *rulesPaymentState) PermanentHasType(p *game.Permanent, t types.Card) bool {
 	return permanentHasType(s.g, p, t)
 }

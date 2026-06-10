@@ -32,6 +32,8 @@ func createStormCopies(g *game.Game, original *game.StackObject, count int) {
 			KickerPaid:          original.KickerPaid,
 			Flashback:           original.Flashback,
 			Suspend:             original.Suspend,
+			Mutate:              original.Mutate,
+			MutateTargetID:      original.MutateTargetID,
 			Copy:                true,
 			SourceZone:          original.SourceZone,
 			AdditionalCostsPaid: append([]string(nil), original.AdditionalCostsPaid...),

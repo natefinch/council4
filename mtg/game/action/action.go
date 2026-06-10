@@ -50,13 +50,15 @@ type PlayLandAction struct {
 
 // CastSpellAction is the payload for casting a spell.
 type CastSpellAction struct {
-	CardID      id.ID
-	SourceZone  zone.Type
-	Face        game.FaceIndex
-	Targets     []game.Target
-	XValue      int
-	ChosenModes []int
-	KickerPaid  bool
+	CardID         id.ID
+	SourceZone     zone.Type
+	Face           game.FaceIndex
+	Targets        []game.Target
+	XValue         int
+	ChosenModes    []int
+	KickerPaid     bool
+	Mutate         bool
+	MutateTargetID id.ID
 }
 
 // ActivateAbilityAction is the payload for activating an ability.
@@ -163,6 +165,20 @@ func CastKickedSpellFromZone(cardID id.ID, sourceZone zone.Type, targets []game.
 func CastKickedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
 	action := CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, chosenModes)
 	action.castSpell.KickerPaid = true
+	return action
+}
+
+// CastMutateSpell creates an action to cast a creature for its Mutate cost.
+func CastMutateSpell(cardID, targetID id.ID) Action {
+	return CastMutateSpellFromZone(cardID, zone.Hand, targetID)
+}
+
+// CastMutateSpellFromZone creates an action to cast a creature for its Mutate
+// cost from a specific zone.
+func CastMutateSpellFromZone(cardID id.ID, sourceZone zone.Type, targetID id.ID) Action {
+	action := CastSpellFromZone(cardID, sourceZone, nil, 0, nil)
+	action.castSpell.Mutate = true
+	action.castSpell.MutateTargetID = targetID
 	return action
 }
 
@@ -333,6 +349,12 @@ func (a Action) Validate() error {
 		}
 		if a.castSpell.XValue < 0 {
 			return errors.New("cast spell action has negative X value")
+		}
+		if a.castSpell.Mutate && a.castSpell.MutateTargetID == 0 {
+			return errors.New("mutate cast action missing target permanent ID")
+		}
+		if !a.castSpell.Mutate && a.castSpell.MutateTargetID != 0 {
+			return errors.New("non-mutate cast action has mutate fields")
 		}
 	case ActionActivateAbility:
 		if a.activateAbility.SourceID == 0 {

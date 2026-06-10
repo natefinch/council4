@@ -86,18 +86,12 @@ var basicLandTypes = []struct {
 }
 
 func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (simpleManaAbilityResult, bool) {
-	card, ok := s.PermanentCardDef(permanent)
-	if !ok {
-		return simpleManaAbilityResult{}, false
-	}
-	face := &card.CardFace
-	offset := 0
-	if face.SpellAbility.Exists {
-		offset++
-	}
-	offset += len(face.ActivatedAbilities)
-	for i := range face.ManaAbilities {
-		body := &face.ManaAbilities[i]
+	for abilityIndex, ability := range s.PermanentEffectiveAbilities(permanent) {
+		bodyValue, ok := ability.(game.ManaAbility)
+		if !ok {
+			continue
+		}
+		body := &bodyValue
 		untap, ok := simpleManaAbilityTapState(body.AdditionalCosts)
 		if !ok || body.ManaCost.Exists || !isSimpleAddMana(body) {
 			continue
@@ -111,7 +105,6 @@ func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanen
 		if !s.ActivationConditionSatisfied(playerID, permanent, body.ActivationCondition) {
 			continue
 		}
-		abilityIndex := offset + i
 		if !s.ManaAbilityTimingAllowed(playerID, permanent, abilityIndex, body.Timing) {
 			continue
 		}

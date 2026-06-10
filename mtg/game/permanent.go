@@ -32,6 +32,10 @@ type Permanent struct {
 	// Zero for tokens (use TokenDef instead).
 	CardInstanceID id.ID
 
+	// MergedCards lists the card components below CardInstanceID from top to
+	// bottom for a permanent created by Mutate.
+	MergedCards []MergedCard
+
 	// Owner is the player who owns the underlying card. For tokens, this is
 	// the player who created the token (CR 111.2).
 	Owner PlayerID
@@ -135,6 +139,17 @@ type Permanent struct {
 	// TokenDef holds the card definition for tokens. Nil for non-tokens.
 	// Tokens use this instead of CardInstanceID.
 	TokenDef *CardDef
+}
+
+// MergedCard identifies one lower card component of a mutated permanent.
+type MergedCard struct {
+	CardInstanceID id.ID
+	Face           FaceIndex
+	FaceDown       bool
+	FaceDownFace   FaceIndex
+	FaceDownKind   FaceDownKind
+	TokenDef       *CardDef
+	Owner          PlayerID
 }
 
 // Timestamp returns the permanent's timestamp for continuous-effect ordering.

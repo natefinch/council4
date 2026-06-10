@@ -152,6 +152,54 @@ func TestLowerNinjutsuAbilityRejectsMalformedForms(t *testing.T) {
 	}
 }
 
+func TestLowerMutateAbilityAndTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mutator",
+		Layout:     "normal",
+		TypeLine:   "Creature — Beast",
+		OracleText: "Mutate {1}{G}\nWhenever this creature mutates, draw a card.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want one Mutate ability", len(face.StaticAbilities))
+	}
+	mutateCost, ok := game.StaticBodyMutateCost(&face.StaticAbilities[0].Body)
+	if !ok || !slices.Equal(mutateCost, cost.Mana{cost.O(1), cost.G}) {
+		t.Fatalf("Mutate cost = %#v, want {1}{G}", mutateCost)
+	}
+	if len(face.TriggeredAbilities) != 1 ||
+		face.TriggeredAbilities[0].Trigger.Type != game.TriggerWhenever ||
+		face.TriggeredAbilities[0].Trigger.Pattern.Event != game.EventPermanentMutated ||
+		face.TriggeredAbilities[0].Trigger.Pattern.Source != game.TriggerSourceSelf {
+		t.Fatalf("Mutate trigger = %#v", face.TriggeredAbilities)
+	}
+}
+
+func TestLowerMutateAbilityRejectsMalformedForms(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Mutate",
+		"Mutate {1}{G} extra text",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Malformed Mutator",
+				Layout:     "normal",
+				TypeLine:   "Creature — Beast",
+				OracleText: oracleText,
+				Power:      new("3"),
+				Toughness:  new("3"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected malformed Mutate diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerActivatedNonManaCosts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

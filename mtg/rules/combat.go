@@ -168,8 +168,8 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 	defender := g.Players[defendingPlayer]
 	sourceController := effectiveController(g, source)
 	dealt := dealPlayerDamage(g, source.CardInstanceID, source.ObjectID, sourceController, defendingPlayer, damage, true)
-	if sourceIsCommander(g, source) {
-		defender.CommanderDamage[source.CardInstanceID] += dealt
+	for _, commanderID := range sourceCommanderIDs(g, source) {
+		defender.CommanderDamage[commanderID] += dealt
 	}
 	applyToxic(g, source, defendingPlayer, dealt)
 	applyLifelink(g, source, dealt)
@@ -304,19 +304,29 @@ func applyLifelink(g *game.Game, source *game.Permanent, damage int) {
 	gainLife(g, controllerID, damage)
 }
 
-func sourceIsCommander(g *game.Game, source *game.Permanent) bool {
-	if source.CardInstanceID == 0 {
-		return false
+func sourceCommanderIDs(g *game.Game, source *game.Permanent) []id.ID {
+	cardIDs := make([]id.ID, 0, len(source.MergedCards)+1)
+	cardIDs = append(cardIDs, source.CardInstanceID)
+	for _, component := range source.MergedCards {
+		cardIDs = append(cardIDs, component.CardInstanceID)
 	}
-	if g.CommanderIDs[source.CardInstanceID] {
-		return true
-	}
-	for _, player := range g.Players {
-		if player.CommanderInstanceID == source.CardInstanceID {
-			return true
+	var commanders []id.ID
+	for _, cardID := range cardIDs {
+		if cardID == 0 {
+			continue
+		}
+		if g.CommanderIDs[cardID] {
+			commanders = append(commanders, cardID)
+			continue
+		}
+		for _, player := range g.Players {
+			if player.CommanderInstanceID == cardID {
+				commanders = append(commanders, cardID)
+				break
+			}
 		}
 	}
-	return false
+	return commanders
 }
 
 func combatHasFirstStrikeDamage(g *game.Game) bool {

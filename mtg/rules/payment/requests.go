@@ -10,13 +10,14 @@ import (
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.
 type SpellRequest struct {
-	PlayerID   game.PlayerID
-	CardID     id.ID
-	SourceZone zone.Type
-	Card       *game.CardDef
-	XValue     int
-	KickerPaid bool
-	Prefs      *Preferences
+	PlayerID    game.PlayerID
+	CardID      id.ID
+	SourceZone  zone.Type
+	Card        *game.CardDef
+	XValue      int
+	KickerPaid  bool
+	Alternative opt.V[cost.Alternative]
+	Prefs       *Preferences
 }
 
 // AbilityRequest bundles all parameters needed to check or pay activated

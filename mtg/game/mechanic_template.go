@@ -192,6 +192,18 @@ func NinjutsuActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	}
 }
 
+// MutateStaticAbility builds the hand-zone keyword ability for Mutate.
+func MutateStaticAbility(manaCost cost.Mana) StaticAbility {
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	return StaticAbility{
+		Text:           "Mutate " + manaCost.String(),
+		ZoneOfFunction: zone.Hand,
+		KeywordAbilities: []KeywordAbility{
+			MutateKeyword{Cost: keywordCost},
+		},
+	}
+}
+
 // EquipActivatedAbility builds the complete activated ability for Equip with a
 // mana cost.
 func EquipActivatedAbility(manaCost cost.Mana) ActivatedAbility {

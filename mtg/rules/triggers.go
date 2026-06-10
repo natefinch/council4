@@ -389,7 +389,8 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permane
 		return nil, false
 	}
 	if event.CardID != 0 {
-		if _, ok := g.GetCardInstance(event.CardID); !ok {
+		snapshot, ok := lastKnownObject(g, event.PermanentID)
+		if !ok {
 			return nil, false
 		}
 		return &game.Permanent{
@@ -398,18 +399,30 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permane
 			Owner:          event.Player,
 			Controller:     event.Controller,
 			Face:           event.Face,
+			FaceDown:       snapshot.FaceDown,
+			FaceDownFace:   snapshot.FaceDownFace,
+			FaceDownKind:   snapshot.FaceDownKind,
+			MergedCards:    append([]game.MergedCard(nil), snapshot.MergedCards...),
 		}, true
 	}
 	if event.TokenDef == nil {
 		return nil, false
 	}
+	snapshot, ok := lastKnownObject(g, event.PermanentID)
+	if !ok {
+		return nil, false
+	}
 	return &game.Permanent{
-		ObjectID:   event.PermanentID,
-		Owner:      event.Player,
-		Controller: event.Controller,
-		Face:       event.Face,
-		Token:      true,
-		TokenDef:   event.TokenDef,
+		ObjectID:     event.PermanentID,
+		Owner:        event.Player,
+		Controller:   event.Controller,
+		Face:         event.Face,
+		FaceDown:     snapshot.FaceDown,
+		FaceDownFace: snapshot.FaceDownFace,
+		FaceDownKind: snapshot.FaceDownKind,
+		MergedCards:  append([]game.MergedCard(nil), snapshot.MergedCards...),
+		Token:        true,
+		TokenDef:     event.TokenDef,
 	}, true
 }
 

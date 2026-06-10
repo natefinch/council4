@@ -424,6 +424,16 @@ func (f *CardFace) KickerKeyword() (KickerKeyword, bool) {
 	return KickerKeyword{}, false
 }
 
+// MutateCost returns the first Mutate cost on this face.
+func (f *CardFace) MutateCost() (cost.Mana, bool) {
+	for i := range f.StaticAbilities {
+		if mutateCost, ok := StaticBodyMutateCost(&f.StaticAbilities[i]); ok {
+			return mutateCost, true
+		}
+	}
+	return nil, false
+}
+
 // WardKeywords returns all WardKeyword variants on this face.
 func (f *CardFace) WardKeywords() []WardKeyword {
 	var wards []WardKeyword
