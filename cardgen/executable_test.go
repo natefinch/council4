@@ -38,6 +38,27 @@ func TestGenerateExecutableCardSourceKeywords(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceReadAhead(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Read Ahead Saga",
+		Layout:     "saga",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger.)\nI — Draw a card.\nII — Draw a card.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.ReadAheadStaticBody") {
+		t.Fatalf("source missing Read ahead static body:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceDevoid(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

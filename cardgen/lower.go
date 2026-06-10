@@ -196,6 +196,30 @@ func lowerFaceAbilities(
 			result.SpellAbility = lowered.spellAbility
 		}
 	}
+	for _, ability := range compilation.Abilities {
+		for _, keyword := range ability.Keywords {
+			if keyword.Name != "Read ahead" {
+				continue
+			}
+			sacrificeChapter, ok := readAheadSacrificeChapter(ability.Text)
+			if !ok || sacrificeChapter == 0 {
+				continue
+			}
+			finalChapter := 0
+			for _, chapter := range result.ChapterAbilities {
+				for _, number := range chapter.Chapters {
+					finalChapter = max(finalChapter, number)
+				}
+			}
+			if sacrificeChapter != finalChapter {
+				unsupported = append(unsupported, *executableDiagnostic(
+					ability,
+					"unsupported Read ahead ability",
+					fmt.Sprintf("the reminder sacrifice chapter %d does not match final chapter %d", sacrificeChapter, finalChapter),
+				))
+			}
+		}
+	}
 	if len(unsupported) > 0 {
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
@@ -2964,6 +2988,13 @@ func lowerKeywordAbility(
 				"the executable source backend supports only exact \"Devoid (This card has no color.)\" abilities",
 			)
 		}
+		if keyword.Name == "Read ahead" && !isReadAheadAbility(ability.Text) {
+			return nil, executableDiagnostic(
+				ability,
+				"unsupported Read ahead ability",
+				"the executable source backend supports only the canonical Read ahead ability and reminder text",
+			)
+		}
 	}
 	if len(ability.Modes) > 0 {
 		return nil, executableDiagnostic(
@@ -3049,6 +3080,43 @@ func lowerKeywordAbility(
 		return nil, mixedKeywordDiagnostic(ability)
 	}
 	return bodies, nil
+}
+
+func isReadAheadAbility(text string) bool {
+	_, ok := readAheadSacrificeChapter(text)
+	return ok
+}
+
+func readAheadSacrificeChapter(text string) (int, bool) {
+	const prefix = "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger."
+	remainder, ok := strings.CutPrefix(text, prefix)
+	if !ok {
+		return 0, false
+	}
+	if remainder == ")" {
+		return 0, true
+	}
+	chapter, ok := strings.CutPrefix(remainder, " Sacrifice after ")
+	if !ok || !strings.HasSuffix(chapter, ".)") {
+		return 0, false
+	}
+	chapter = strings.TrimSuffix(chapter, ".)")
+	switch chapter {
+	case "I":
+		return 1, true
+	case "II":
+		return 2, true
+	case "III":
+		return 3, true
+	case "IV":
+		return 4, true
+	case "V":
+		return 5, true
+	case "VI":
+		return 6, true
+	default:
+		return 0, false
+	}
 }
 
 func lowerParameterizedStaticKeyword(keyword oracle.CompiledKeyword) (game.StaticAbility, bool) {
@@ -4741,6 +4809,7 @@ var keywordStaticBodies = map[string]loweredStaticAbility{
 	"Menace":         {Body: game.MenaceStaticBody, VarName: "game.MenaceStaticBody"},
 	"Persist":        {Body: game.PersistStaticBody, VarName: "game.PersistStaticBody"},
 	"Prowess":        {Body: game.ProwessStaticBody, VarName: "game.ProwessStaticBody"},
+	"Read ahead":     {Body: game.ReadAheadStaticBody, VarName: "game.ReadAheadStaticBody"},
 	"Reach":          {Body: game.ReachStaticBody, VarName: "game.ReachStaticBody"},
 	"Shroud":         {Body: game.ShroudStaticBody, VarName: "game.ShroudStaticBody"},
 	"Split second":   {Body: game.SplitSecondStaticBody, VarName: "game.SplitSecondStaticBody"},

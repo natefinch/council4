@@ -777,6 +777,10 @@ func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, l
 }
 
 func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.CardDef) (*game.Permanent, bool) {
+	return createTokenPermanentWithChoices(NewEngine(nil), g, controller, token, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	if token == nil {
 		return nil, false
 	}
@@ -791,8 +795,16 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 		TokenDef:      token,
 	}
 	initializePermanentCounters(permanent, token)
-	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{}, g, permanent, zone.None)
+	initializeReadAhead(e, g, permanent, agents, log)
+	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
+		engine: e,
+		agents: agents,
+		log:    log,
+	}, g, permanent, zone.None)
 	g.Battlefield = append(g.Battlefield, permanent)
+	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
+		emitCounterAddedEvent(g, permanent, counter.Lore, 0, lore)
+	}
 	event := game.Event{
 		Controller:  controller,
 		Player:      controller,

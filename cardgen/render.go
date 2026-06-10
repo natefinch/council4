@@ -2163,6 +2163,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Annihilator", nil
 	case game.Exalted:
 		return "game.Exalted", nil
+	case game.ReadAhead:
+		return "game.ReadAhead", nil
 	default:
 		return "", fmt.Errorf("render: unsupported keyword %d", kw)
 	}

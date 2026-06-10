@@ -84,6 +84,11 @@ type Permanent struct {
 	// Counters tracks all counters on this permanent.
 	Counters counter.Set
 
+	// SagaEntryChapter is the chapter chosen as this Saga entered with read
+	// ahead. Chapters below this number remain skipped if lore counters are
+	// later removed and added again. Zero identifies an ordinary Saga entry.
+	SagaEntryChapter int
+
 	// MarkedDamage is the amount of damage currently marked on this
 	// permanent. Cleared during the cleanup step (CR 120.3).
 	MarkedDamage int
