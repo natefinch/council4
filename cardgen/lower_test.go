@@ -477,6 +477,80 @@ func TestGenerateEquippedCreaturePTBuff(t *testing.T) {
 	}
 }
 
+func TestGenerateEquippedCreaturePTBuffWithKeywords(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Equipment",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+2 and has trample and lifelink.\nEquip {3}",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.LayerPowerToughnessModify",
+		"game.LayerAbility",
+		"AddKeywords: []game.Keyword",
+		"game.Trample",
+		"game.Lifelink",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateControlledCreaturesPTBuffWithKeyword(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Anthem",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Creatures you control get +1/+1 and have vigilance.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.Vigilance") {
+		t.Fatalf("source missing vigilance:\n%s", source)
+	}
+}
+
+func TestRejectStaticPTBuffWithUnsupportedKeywordText(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Equipped creature gets +2/+2 and has trample or lifelink.\nEquip {3}",
+		"Equipped creature gets +2/+2 and has and trample.\nEquip {3}",
+		"Equipped creature gets +2/+2 and has trample and.\nEquip {3}",
+		"Equipped creature gets +2/+2 and has flying lifelink.\nEquip {3}",
+		"Equipped creature gets +2/+2 and has shroud.\nEquip {3}",
+		"Equipped creature gets +2/+2 and has wither.\nEquip {3}",
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Equipment",
+			Layout:     "normal",
+			TypeLine:   "Artifact — Equipment",
+			OracleText: oracleText,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if source != "" {
+			t.Fatalf("unexpected source for %q:\n%s", oracleText, source)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("expected unsupported diagnostic for %q", oracleText)
+		}
+	}
+}
+
 func TestRejectResolvingPTBuffAsStatic(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

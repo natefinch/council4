@@ -583,6 +583,20 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 
 func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.ContinuousEffect) (string, error) {
 	var fields []string
+	if len(effect.RemoveKeywords) > 0 || len(effect.AddAbilities) > 0 {
+		return "", errors.New("render: unsupported ability-layer continuous effect fields")
+	}
+	switch effect.Layer {
+	case game.LayerAbility:
+		if effect.PowerDelta != 0 || effect.ToughnessDelta != 0 {
+			return "", errors.New("render: power/toughness fields require a power/toughness layer")
+		}
+	case game.LayerPowerToughnessModify:
+		if len(effect.AddKeywords) > 0 {
+			return "", errors.New("render: keyword fields require the ability layer")
+		}
+	default:
+	}
 	layerLit, err := renderContinuousLayer(effect.Layer)
 	if err != nil {
 		return "", err
@@ -601,11 +615,24 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 	if effect.ToughnessDelta != 0 {
 		fields = append(fields, fmt.Sprintf("ToughnessDelta: %d,", effect.ToughnessDelta))
 	}
+	if len(effect.AddKeywords) > 0 {
+		elements := make([]string, 0, len(effect.AddKeywords))
+		for _, keyword := range effect.AddKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, literal+",")
+		}
+		fields = append(fields, sliceField("AddKeywords", "game.Keyword", elements))
+	}
 	return structLit("game.ContinuousEffect", fields), nil
 }
 
 func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
 	switch layer {
+	case game.LayerAbility:
+		return "game.LayerAbility", nil
 	case game.LayerPowerToughnessModify:
 		return "game.LayerPowerToughnessModify", nil
 	default:
