@@ -948,15 +948,13 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
-	if pattern.Subject != game.TriggerSubjectDefault ||
-		!pattern.SubjectSelection.Empty() ||
+	if !pattern.SubjectSelection.Empty() ||
 		len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
 		!pattern.CardSelection.Empty() ||
 		pattern.MatchFromZone ||
 		pattern.MatchToZone ||
 		pattern.MatchStackObjectKind ||
-		pattern.DamageRecipient != game.DamageRecipientNone ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		pattern.SpellTargetsSource ||
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
@@ -989,6 +987,13 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		}
 		fields = append(fields, fmt.Sprintf("Step: %s,", step))
 	}
+	if pattern.Subject != game.TriggerSubjectDefault {
+		subject, err := renderTriggerSubject(pattern.Subject)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Subject: %s,", subject))
+	}
 	if pattern.ExcludeSelf {
 		fields = append(fields, "ExcludeSelf: true,")
 	}
@@ -1018,6 +1023,23 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Player: %s,", player))
+	}
+	if pattern.DamageRecipient != game.DamageRecipientNone {
+		recipient, err := renderDamageRecipient(pattern.DamageRecipient)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DamageRecipient: %s,", recipient))
+	}
+	if len(pattern.DamageRecipientTypes) > 0 {
+		types, err := renderTypesCardSlice(ctx, pattern.DamageRecipientTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DamageRecipientTypes: %s,", types))
+	}
+	if pattern.RequireCombatDamage {
+		fields = append(fields, "RequireCombatDamage: true,")
 	}
 	return structLit("game.TriggerPattern", fields), nil
 }
@@ -2943,6 +2965,19 @@ func renderTriggerSource(source game.TriggerSourceFilter) (string, error) {
 	}
 }
 
+func renderTriggerSubject(subject game.TriggerSubjectObject) (string, error) {
+	switch subject {
+	case game.TriggerSubjectPermanent:
+		return "game.TriggerSubjectPermanent", nil
+	case game.TriggerSubjectBlockedAttacker:
+		return "game.TriggerSubjectBlockedAttacker", nil
+	case game.TriggerSubjectDamageSource:
+		return "game.TriggerSubjectDamageSource", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger subject %d", subject)
+	}
+}
+
 func renderTriggerController(controller game.TriggerControllerFilter) (string, error) {
 	switch controller {
 	case game.TriggerControllerYou:
@@ -2967,6 +3002,14 @@ func renderTriggerPlayer(player game.TriggerPlayerFilter) (string, error) {
 
 func renderEventKind(event game.EventKind) (string, error) {
 	switch event {
+	case game.EventDamageDealt:
+		return "game.EventDamageDealt", nil
+	case game.EventAttackerBecameBlocked:
+		return "game.EventAttackerBecameBlocked", nil
+	case game.EventAttackerDeclared:
+		return "game.EventAttackerDeclared", nil
+	case game.EventBlockerDeclared:
+		return "game.EventBlockerDeclared", nil
 	case game.EventPermanentEnteredBattlefield:
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
@@ -2977,6 +3020,17 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventBeginningOfStep", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
+	}
+}
+
+func renderDamageRecipient(recipient game.DamageRecipientKind) (string, error) {
+	switch recipient {
+	case game.DamageRecipientPlayer:
+		return "game.DamageRecipientPlayer", nil
+	case game.DamageRecipientPermanent:
+		return "game.DamageRecipientPermanent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported damage recipient %d", recipient)
 	}
 }
 

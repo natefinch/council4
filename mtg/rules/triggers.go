@@ -109,6 +109,9 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []p
 		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
 			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
+		if source, ok := damageSourceTriggerSource(g, event); ok {
+			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+		}
 	}
 	return filterPendingTriggeredAbilities(g, pending)
 }
@@ -425,6 +428,36 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permane
 	}, true
 }
 
+func damageSourceTriggerSource(g *game.Game, event game.Event) (*game.Permanent, bool) {
+	if event.Kind != game.EventDamageDealt || event.SourceObjectID == 0 {
+		return nil, false
+	}
+	if _, ok := permanentByObjectID(g, event.SourceObjectID); ok {
+		return nil, false
+	}
+	snapshot, ok := lastKnownObject(g, event.SourceObjectID)
+	if !ok {
+		return nil, false
+	}
+	sourceCardID := event.SourceID
+	if sourceCardID == 0 {
+		sourceCardID = snapshot.CardID
+	}
+	return &game.Permanent{
+		ObjectID:       event.SourceObjectID,
+		CardInstanceID: sourceCardID,
+		Owner:          snapshot.Owner,
+		Controller:     event.Controller,
+		Face:           snapshot.Face,
+		FaceDown:       snapshot.FaceDown,
+		FaceDownFace:   snapshot.FaceDownFace,
+		FaceDownKind:   snapshot.FaceDownKind,
+		MergedCards:    append([]game.MergedCard(nil), snapshot.MergedCards...),
+		Token:          snapshot.TokenDef != nil || snapshot.CardID == 0,
+		TokenDef:       snapshot.TokenDef,
+	}, true
+}
+
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
 	result := targetChoicesForBodyFromSourceObject(g, controller, source, sourceObjectID, *ability)
 	switch result.kind {
@@ -475,6 +508,19 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	}
 	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient != event.DamageRecipient {
 		return false
+	}
+	if pattern.RequireCombatDamage && !event.CombatDamage {
+		return false
+	}
+	if len(pattern.DamageRecipientTypes) != 0 {
+		if event.DamageRecipient != game.DamageRecipientPermanent {
+			return false
+		}
+		for _, cardType := range pattern.DamageRecipientTypes {
+			if !eventPermanentHasType(g, event, cardType) {
+				return false
+			}
+		}
 	}
 	if pattern.DamageRecipientCombatState != game.CombatStateAny {
 		if event.DamageRecipient != game.DamageRecipientPermanent {
@@ -598,6 +644,10 @@ func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.Trig
 	if filter != game.TriggerSourceSelf {
 		return true
 	}
+	if subject == game.TriggerSubjectDamageSource {
+		return (source.ObjectID != 0 && event.SourceObjectID == source.ObjectID) ||
+			(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID)
+	}
 	subjectID := triggerSubjectObjectID(event, subject)
 	return (source.ObjectID != 0 && event.SourceObjectID == source.ObjectID) ||
 		(source.ObjectID != 0 && subjectID == source.ObjectID) ||
@@ -627,6 +677,8 @@ func triggerSubjectObjectID(event game.Event, subject game.TriggerSubjectObject)
 	switch subject {
 	case game.TriggerSubjectBlockedAttacker:
 		return event.BlockedAttackerID
+	case game.TriggerSubjectDamageSource:
+		return event.SourceObjectID
 	default:
 		return event.PermanentID
 	}
