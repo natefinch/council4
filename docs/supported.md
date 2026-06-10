@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,147
+Cards supported: 2,216
 
 - +2 Mace
 - Aardvark Sloth
@@ -20,7 +20,6 @@ Cards supported: 2,147
 - Affa Guard Hound
 - Affa Protector
 - Ageless Guardian
-- Agent of Atlas
 - Air Elemental
 - Ajani's Sunstriker
 - Akoum Refuge
@@ -103,7 +102,6 @@ Cards supported: 2,147
 - Arrogant Vampire
 - Artifact Zombie
 - Ascended Lawmage
-- Asgardian Citadel
 - Ashaya, the Awoken World
 - Ashcoat Bear
 - Ashen Monstrosity
@@ -131,7 +129,6 @@ Cards supported: 2,147
 - Aven Smokeweaver
 - Aven Squire
 - Aven of Enduring Hope
-- Avengers Hangar
 - Axebane Beast
 - Axebane Stag
 - Axegrinder Giant
@@ -186,11 +183,9 @@ Cards supported: 2,147
 - Bird Maiden
 - Bird Soldier
 - Birds of Paradise
-- Birnin Zana Plaza
 - Bishop's Soldier
 - Bitterbow Sharpshooters
 - Black Knight
-- Black Widow, Natasha Romanoff
 - Blackcleave Goblin
 - Blade of the Sixth Pride
 - Blanchwood Treefolk
@@ -342,7 +337,6 @@ Cards supported: 2,147
 - Colossapede
 - Colossodon Yearling
 - Concentrate
-- Concentrated Fire
 - Conclave Equenaut
 - Concordia Pegasus
 - Conifer Strider
@@ -592,7 +586,6 @@ Cards supported: 2,147
 - Fell
 - Femeref Scouts
 - Feral Abomination
-- Feral Ferocity
 - Feral Invocation
 - Feral Krushok
 - Feral Maaka
@@ -621,7 +614,6 @@ Cards supported: 2,147
 - Fire Nation's Conquest
 - Fire Snake
 - First Mate Ragavan
-- Fisk Tower
 - Fists of the Anvil
 - Flame Lash
 - Flame Slash
@@ -721,7 +713,6 @@ Cards supported: 2,147
 - Glacial Floodplain
 - Glacial Wall
 - Gladecover Scout
-- Glamorous Grapplers
 - Glass Golem
 - Glimmer
 - Glistener Elf
@@ -823,7 +814,6 @@ Cards supported: 2,147
 - Halo Hopper
 - Hamster
 - Hand of Silumgar
-- Happy Hogan, Dauntless Driver
 - Hardened-Scale Armor
 - Harmonize
 - Harpy
@@ -834,14 +824,12 @@ Cards supported: 2,147
 - Havenwood Wurm
 - Havoc Devils
 - Hawkeater Moth
-- Hawkeye, Clint Barton
 - Hazerider Drake
 - Headless Horseman
 - Headwater Sentries
 - Healer of the Glade
 - Healer's Flock
 - Healer's Hawk
-- Hell's Kitchen
 - Hellion
 - Helpful Hunter
 - Hengegate Pathway // Mistgate Pathway
@@ -864,7 +852,6 @@ Cards supported: 2,147
 - Hippo-Cows
 - Hired Blade
 - Hired Poisoner
-- Hit-Monkey
 - Hitchclaw Recluse
 - Hobgoblin Dragoon
 - Hollowhenge Beast
@@ -881,12 +868,10 @@ Cards supported: 2,147
 - Hornet Sting
 - Horse
 - Hostile Minotaur
-- Hour of Defeat
 - Hover Barrier
 - Hovermyr
 - Howling Fury
 - Huatli's Snubhorn
-- Hulk, Bruce Banner
 - Hulking Bugbear
 - Hulking Cyclops
 - Hulking Devil
@@ -1038,7 +1023,6 @@ Cards supported: 2,147
 - Kraken Hatchling
 - Kraul Raider
 - Kraul Stinger
-- Kree Commandos
 - Krovikan Scoundrel
 - Kyoshi Warrior Guard
 - Kyren Glider
@@ -1090,7 +1074,6 @@ Cards supported: 2,147
 - Lonely Sandbar
 - Looming Altisaur
 - Lorehold Campus
-- Los Diablos Missile Base
 - Lose Hope
 - Lost Leonin
 - Lost in a Labyrinth
@@ -1125,7 +1108,6 @@ Cards supported: 2,147
 - Mana Geode
 - Manakin
 - Manalith
-- Mandroid Squadron
 - Maned Serval
 - Manic Vandal
 - Mantis Rider
@@ -1385,7 +1367,6 @@ Cards supported: 2,147
 - Pond Prophet
 - Pounce
 - Pouncing Cheetah
-- Power Boost
 - Pradesh Gypsies
 - Prairie Stream
 - Prakhata Club Security
@@ -1409,7 +1390,6 @@ Cards supported: 2,147
 - Purple-Crystal Crab
 - Putrid Goblin
 - Pygmy Razorback
-- Pym Technologies
 - Pyromantic Pilgrim
 - Python
 - Qilin's Blessing
@@ -1418,7 +1398,6 @@ Cards supported: 2,147
 - Quandrix Campus
 - Queen's Bay Soldier
 - Quick Study
-- Quicksilver, Pietro Maximoff
 - Quiet Purity
 - Quilled Slagwurm
 - Rabanastre, Royal City
@@ -1476,7 +1455,6 @@ Cards supported: 2,147
 - Renegade Troops
 - Repentant Blacksmith
 - Replicated Ring
-- Repulsor Rays
 - Rescind
 - Resistance Skywarden
 - Returned Centaur
@@ -1573,7 +1551,6 @@ Cards supported: 2,147
 - Scalebane's Elite
 - Scaled Behemoth
 - Scaled Wurm
-- Scarlet Witch, Wanda Maximoff
 - Scarwood Goblins
 - Scarwood Treefolk
 - Scathe Zombies
@@ -1784,7 +1761,6 @@ Cards supported: 2,147
 - Stand Firm
 - Standing Troops
 - Stangg Twin
-- Stark Industries
 - Starlight Invoker
 - Starlit Angel
 - Start from Scratch
@@ -1820,7 +1796,6 @@ Cards supported: 2,147
 - Striped Riverwinder
 - Study
 - Submerged Boneyard
-- Subterranean Cavern
 - Suburban Sanctuary
 - Sulfurous Mire
 - Sultai Scavenger
@@ -1895,11 +1870,9 @@ Cards supported: 2,147
 - Thassa's Bounty
 - Thaumaturge's Familiar
 - The Atropal
-- The Fabulous Frog-Man
 - The Hollow Sentinel
 - The Lady of the Mountain
 - The Terror of Serpent's Pass
-- The Whizzer, Classic Speedster
 - Thermal Glider
 - Third Path Savant
 - Thornglint Bridge
@@ -2022,7 +1995,6 @@ Cards supported: 2,147
 - Utvara Scalper
 - Valeron Outlander
 - Valiant Guard
-- Valkyrior Skyrider
 - Valley Dasher
 - Vampire Champion
 - Vampire Demon
@@ -2060,7 +2032,6 @@ Cards supported: 2,147
 - Viashino Runner
 - Viashino Spearhunter
 - Viashino Warrior
-- Vibranium Energy Daggers
 - Vigilant Baloth
 - Vindicate
 - Vine Trellis
@@ -2129,7 +2100,6 @@ Cards supported: 2,147
 - Wardscale Crocodile
 - Warlord's Axe
 - Warpath Ghoul
-- Warriors of Wakanda
 - Warship Scout
 - Wary Okapi
 - Wasp
