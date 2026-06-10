@@ -1092,7 +1092,8 @@ func TestGenerateExecutableCardSourceProliferate(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "Primitive: game.Proliferate{}") {
+	if !strings.Contains(source, "Primitive: game.Proliferate{") ||
+		!strings.Contains(source, "Amount: game.Fixed(1)") {
 		t.Fatalf("source missing Proliferate primitive:\n%s", source)
 	}
 }
@@ -2758,7 +2759,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "divided damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage divided as you choose among any number of targets."},
 		{name: "mass damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage to each opponent."},
 		{name: "variable surveil", cardName: "Test Surveil", typeLine: "Sorcery", oracleText: "Surveil X."},
-		{name: "repeated investigate", cardName: "Test Investigate", typeLine: "Sorcery", oracleText: "Investigate three times."},
 		{name: "repeated proliferate", cardName: "Test Proliferate", typeLine: "Sorcery", oracleText: "Proliferate X times."},
 		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
 		{name: "conditional draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "If you control a creature, draw two cards."},
@@ -2790,7 +2790,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "unsupported tap qualifier", cardName: "Test Sleep", typeLine: "Instant", oracleText: "Tap target creature with flying."},
 		{name: "freeze tap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "Tap target creature. It doesn't untap during its controller's next untap step."},
 		{name: "conditional untap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "If it is tapped, untap target creature."},
-		{name: "variable mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills X cards."},
 		{name: "until mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills cards until they mill a land card."},
 		{name: "reveal mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player reveals and mills three cards."},
 		{name: "compound mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills three cards, then draws a card."},

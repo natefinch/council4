@@ -3109,6 +3109,21 @@ func TestLowerInvestigateSpell(t *testing.T) {
 	}
 }
 
+func TestLowerInvestigateTwiceSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Investigate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Investigate twice.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	investigate, ok := mode.Sequence[0].Primitive.(game.Investigate)
+	if !ok || investigate.Amount.Value() != 2 {
+		t.Fatalf("primitive = %+v, want investigate twice", mode.Sequence[0].Primitive)
+	}
+}
+
 func TestLowerProliferateSpell(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -3120,6 +3135,94 @@ func TestLowerProliferateSpell(t *testing.T) {
 	mode := face.SpellAbility.Val.Modes[0]
 	if _, ok := mode.Sequence[0].Primitive.(game.Proliferate); !ok {
 		t.Fatalf("primitive = %T, want game.Proliferate", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerProliferateTwiceSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Proliferate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Proliferate twice.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	proliferate, ok := mode.Sequence[0].Primitive.(game.Proliferate)
+	if !ok || proliferate.Amount.Value() != 2 {
+		t.Fatalf("primitive = %+v, want proliferate twice", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		text      string
+		primitive any
+	}{
+		{
+			name:      "scry",
+			text:      "When this creature enters, if you control an artifact, scry 2.",
+			primitive: game.Scry{Amount: game.Fixed(2), Player: game.ControllerReference()},
+		},
+		{
+			name:      "investigate",
+			text:      "When this creature enters, if you control an artifact, investigate.",
+			primitive: game.Investigate{Amount: game.Fixed(1)},
+		},
+		{
+			name:      "proliferate",
+			text:      "When this creature enters, if you control an artifact, proliferate.",
+			primitive: game.Proliferate{Amount: game.Fixed(1)},
+		},
+		{
+			name:      "mill",
+			text:      "When this creature enters, if you control an artifact, mill two cards.",
+			primitive: game.Mill{Amount: game.Fixed(2), Player: game.ControllerReference()},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Utility",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Wizard",
+				OracleText: tc.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			got := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive
+			if !reflect.DeepEqual(got, tc.primitive) {
+				t.Fatalf("primitive = %+v, want %+v", got, tc.primitive)
+			}
+		})
+	}
+}
+
+func TestLowerVariableMillSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mill",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Mill X cards, where X is the number of creatures you control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Mill", mode.Sequence[0].Primitive)
+	}
+	dynamic := mill.Amount.DynamicAmount()
+	if !dynamic.Exists {
+		t.Fatalf("mill amount = %+v, want dynamic controlled creature count", mill.Amount)
+	}
+	selection := dynamic.Val.Group.Selection()
+	if dynamic.Val.Kind != game.DynamicAmountCountSelector ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("mill amount = %+v, want dynamic controlled creature count", mill.Amount)
 	}
 }
 

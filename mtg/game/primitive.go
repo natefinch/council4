@@ -587,7 +587,9 @@ type Investigate struct {
 
 // Proliferate lets the controller add a counter of an existing kind to each
 // chosen permanent or player.
-type Proliferate struct{}
+type Proliferate struct {
+	Amount Quantity
+}
 
 // Goad goads the referenced creature.
 type Goad struct {
@@ -906,7 +908,7 @@ func (p Mill) instructionRefs() primitiveRefs        { return quantityRefs(p.Amo
 func (p Scry) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
 func (p Surveil) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
 func (p Investigate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (Proliferate) instructionRefs() primitiveRefs   { return primitiveRefs{} }
+func (p Proliferate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (Goad) instructionRefs() primitiveRefs          { return primitiveRefs{} }
 
 func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }

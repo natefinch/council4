@@ -1225,6 +1225,27 @@ func TestProliferateAddsOneChosenCounterKind(t *testing.T) {
 	}
 }
 
+func TestProliferateTwiceRepeatsAction(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	permanent.Counters.Add(counter.PlusOnePlusOne, 1)
+	addEffectSpellToStack(g, game.Player1, game.Proliferate{Amount: game.Fixed(2)}, nil)
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {0}}},
+	}
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want proliferate twice", got)
+	}
+	if len(log.Choices) != 2 {
+		t.Fatalf("choices = %d, want one proliferate choice per repetition", len(log.Choices))
+	}
+}
+
 func TestGoadEffectExpiresOnGoadingPlayersNextTurn(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
