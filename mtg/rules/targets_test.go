@@ -733,6 +733,45 @@ func TestMoveCardCanPutTargetOnBottomOfLibrary(t *testing.T) {
 	}
 }
 
+func TestPutOnBattlefieldCanUseTargetedGraveyardCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	targetID := addCardToGraveyard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Opponent Graveyard Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	sourceID := addEffectSpellToStack(g, game.Player1, game.PutOnBattlefield{
+		Source:    game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
+		Recipient: opt.Val(game.ControllerReference()),
+	}, []game.Target{currentCardTarget(t, g, targetID)})
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowCard,
+		TargetZone: zone.Graveyard,
+		Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+	}}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if g.Players[game.Player2].Graveyard.Contains(targetID) {
+		t.Fatal("target card remained in graveyard")
+	}
+	permanent := permanentByCardID(g, targetID)
+	if permanent == nil {
+		t.Fatal("target card was not put onto the battlefield")
+	}
+	if permanent.Controller != game.Player1 {
+		t.Fatalf("permanent controller = %v, want Player1", permanent.Controller)
+	}
+}
+
 func TestPutOnBattlefieldEntryOptionsAreAtomic(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
