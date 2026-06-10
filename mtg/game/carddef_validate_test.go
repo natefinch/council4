@@ -449,6 +449,11 @@ func TestValidateCardDefChecksKeywordAbilities(t *testing.T) {
 			ability: SuspendKeyword{Cost: cost.Mana{cost.G}},
 			code:    CardDefIssueInvalidKeywordAbility,
 		},
+		{
+			name:    "toxic amount",
+			ability: ToxicKeyword{},
+			code:    CardDefIssueInvalidKeywordAbility,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

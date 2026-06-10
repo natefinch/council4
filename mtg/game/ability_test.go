@@ -426,6 +426,7 @@ func TestKeywordBodyHelpers(t *testing.T) {
 		KeywordAbilities: []KeywordAbility{
 			EnchantKeyword{Target: TargetSpec{Constraint: "creature"}},
 			ProtectionKeyword{FromColors: []color.Color{color.Black, color.Red}},
+			ToxicKeyword{Amount: 2},
 		},
 	}
 	target, ok := StaticBodyEnchantTarget(staticBody)
@@ -434,5 +435,8 @@ func TestKeywordBodyHelpers(t *testing.T) {
 	}
 	if colors := StaticBodyProtectionColors(staticBody); !slices.Equal(colors, []color.Color{color.Black, color.Red}) {
 		t.Fatalf("StaticBodyProtectionColors = %+v, want black/red", colors)
+	}
+	if amount, ok := BodyToxicAmount(staticBody); !ok || amount != 2 {
+		t.Fatalf("BodyToxicAmount = %d/%v, want 2/true", amount, ok)
 	}
 }

@@ -165,6 +165,7 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 	if sourceIsCommander(g, source) {
 		defender.CommanderDamage[source.CardInstanceID] += dealt
 	}
+	applyToxic(g, source, defendingPlayer, dealt)
 	applyLifelink(g, source, dealt)
 	if dealt <= 0 {
 		return
@@ -176,6 +177,21 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 		DefendingPlayer: defendingPlayer,
 		Damage:          dealt,
 	})
+}
+
+func applyToxic(g *game.Game, source *game.Permanent, defendingPlayer game.PlayerID, dealt int) {
+	if dealt <= 0 {
+		return
+	}
+	total := 0
+	for _, body := range permanentEffectiveAbilities(g, source) {
+		amount, ok := game.BodyToxicAmount(body)
+		if !ok {
+			continue
+		}
+		total += amount
+	}
+	g.Players[defendingPlayer].PoisonCounters += total
 }
 
 func markPermanentDamage(g *game.Game, permanent *game.Permanent, damage int) {

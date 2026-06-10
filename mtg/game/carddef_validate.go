@@ -250,6 +250,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if len(keyword.FromColors) == 0 {
 			v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility, "protection needs at least one protected color")
 		}
+	case ToxicKeyword:
+		if keyword.Amount <= 0 {
+			v.add(faceName, appendPath(path, "Amount"), CardDefIssueInvalidKeywordAbility, "toxic amount must be positive")
+		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")
 	default:

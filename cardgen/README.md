@@ -37,6 +37,9 @@ Vanguard cards are excluded with explicit report reasons.
    `game.ChapterAbility` values for ordinary Sagas. `assembleCardDefs` combines
    those values with printed Scryfall fields and calls
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
+   Parameterized Kicker, Madness, Morph, Disguise, and Toxic lines lower into
+   their corresponding sealed `game.KeywordAbility` values; unsupported
+   parameter forms remain fail-closed.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

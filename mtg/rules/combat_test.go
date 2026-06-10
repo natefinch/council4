@@ -1476,6 +1476,29 @@ func TestCombatDamageUsesPowerCounters(t *testing.T) {
 	}
 }
 
+func TestToxicAddsPoisonAfterCombatDamageToPlayer(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Toxic Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{
+			{KeywordAbilities: []game.KeywordAbility{game.ToxicKeyword{Amount: 1}}},
+			{KeywordAbilities: []game.KeywordAbility{game.ToxicKeyword{Amount: 2}}},
+		},
+	}})
+
+	markPlayerCombatDamage(g, source, game.Player2, 2, &TurnLog{})
+
+	if got := g.Players[game.Player2].Life; got != 38 {
+		t.Fatalf("life = %d, want 38", got)
+	}
+	if got := g.Players[game.Player2].PoisonCounters; got != 3 {
+		t.Fatalf("poison counters = %d, want 3", got)
+	}
+}
+
 func TestBlockedCombatDamageMarksCreaturesAndPreventsPlayerDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)

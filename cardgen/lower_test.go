@@ -703,6 +703,81 @@ func TestLowerDiesTrigger(t *testing.T) {
 	}
 }
 
+func TestLowerManaParameterizedKeywords(t *testing.T) {
+	t.Parallel()
+
+	kicker := lowerKeywordForTest(t, "Kicker {1}{G}", game.Kicker)
+	kickerKeyword, ok := kicker.(game.KickerKeyword)
+	if !ok || kickerKeyword.Cost.String() != "{1}{G}" {
+		t.Fatalf("Kicker keyword = %#v, want {1}{G}", kicker)
+	}
+
+	madness := lowerKeywordForTest(t, "Madness {2}{B}", game.Madness)
+	madnessKeyword, ok := madness.(game.MadnessKeyword)
+	if !ok || madnessKeyword.Cost.String() != "{2}{B}" {
+		t.Fatalf("Madness keyword = %#v, want {2}{B}", madness)
+	}
+
+	morph := lowerKeywordForTest(t, "Morph {3}{U}", game.Morph)
+	morphKeyword, ok := morph.(game.MorphKeyword)
+	if !ok || morphKeyword.Cost.String() != "{3}{U}" {
+		t.Fatalf("Morph keyword = %#v, want {3}{U}", morph)
+	}
+
+	disguise := lowerKeywordForTest(t, "Disguise {4}{W}", game.Disguise)
+	disguiseKeyword, ok := disguise.(game.DisguiseKeyword)
+	if !ok || disguiseKeyword.Cost.String() != "{4}{W}" {
+		t.Fatalf("Disguise keyword = %#v, want {4}{W}", disguise)
+	}
+}
+
+func TestLowerToxicKeyword(t *testing.T) {
+	t.Parallel()
+	keyword := lowerKeywordForTest(t, "Toxic 2", game.Toxic)
+	toxic, ok := keyword.(game.ToxicKeyword)
+	if !ok || toxic.Amount != 2 {
+		t.Fatalf("Toxic keyword = %#v, want amount 2", keyword)
+	}
+}
+
+func TestLowerParameterizedKeywordRejectsVariableCost(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Variable Morph",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: "Morph {X}{U}",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "v")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 || diagnostics[0].Summary != "unsupported parameterized keyword" {
+		t.Fatalf("diagnostics = %#v, want unsupported parameterized keyword", diagnostics)
+	}
+}
+
+func lowerKeywordForTest(t *testing.T, oracleText string, kind game.Keyword) game.KeywordAbility {
+	t.Helper()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Parameterized Creature",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: oracleText,
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+	}
+	keyword, ok := game.BodyKeywordAbility(face.StaticAbilities[0].Body, kind)
+	if !ok {
+		t.Fatalf("%v keyword not found in %#v", kind, face.StaticAbilities[0].Body)
+	}
+	return keyword
+}
+
 func TestLowerSpellDamage(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
