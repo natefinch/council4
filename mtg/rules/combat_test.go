@@ -1294,6 +1294,134 @@ func TestLifelinkGainsLifeFromCombatDamageToCreatures(t *testing.T) {
 	}
 }
 
+func TestWitherDamageAddsMinusOneMinusOneCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Wither)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	g.Combat = blockedCombat(attacker, blocker)
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if got := blocker.Counters.Get(counter.MinusOneMinusOne); got != 3 {
+		t.Fatalf("blocker -1/-1 counters = %d, want 3", got)
+	}
+	if blocker.MarkedDamage != 0 {
+		t.Fatalf("blocker marked damage = %d, want 0", blocker.MarkedDamage)
+	}
+}
+
+func TestWitherDamageKillsWhenToughnessReachesZero(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Wither)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = blockedCombat(attacker, blocker)
+	engine := NewEngine(nil)
+
+	engine.resolveCombatDamage(g, &TurnLog{})
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if _, ok := permanentByObjectID(g, blocker.ObjectID); ok {
+		t.Fatal("creature with toughness reduced to 0 remained on battlefield")
+	}
+	if _, ok := permanentByObjectID(g, attacker.ObjectID); ok {
+		t.Fatal("Wither attacker survived simultaneous lethal blocker damage")
+	}
+	if !slices.ContainsFunc(deaths, func(death PermanentDeathLog) bool {
+		return death.Permanent == blocker.ObjectID && death.Reason == PermanentDeathReasonZeroToughness
+	}) {
+		t.Fatalf("deaths = %+v, want blocker death from 0 toughness", deaths)
+	}
+	if !slices.ContainsFunc(deaths, func(death PermanentDeathLog) bool {
+		return death.Permanent == attacker.ObjectID && death.Reason == PermanentDeathReasonLethalDamage
+	}) {
+		t.Fatalf("deaths = %+v, want attacker death from lethal damage", deaths)
+	}
+}
+
+func TestWitherDamageCountersCancelWithPlusOnePlusOne(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Wither)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	blocker.Counters.Add(counter.PlusOnePlusOne, 2)
+	g.Combat = blockedCombat(attacker, blocker)
+	engine := NewEngine(nil)
+
+	engine.resolveCombatDamage(g, &TurnLog{})
+	engine.applyStateBasedActions(g)
+
+	if got := blocker.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("blocker +1/+1 counters = %d, want 0", got)
+	}
+	if got := blocker.Counters.Get(counter.MinusOneMinusOne); got != 0 {
+		t.Fatalf("blocker -1/-1 counters = %d, want 0", got)
+	}
+	if blocker.MarkedDamage != 0 {
+		t.Fatalf("blocker marked damage = %d, want 0", blocker.MarkedDamage)
+	}
+}
+
+func TestNonWitherDamageStillUsesMarkedDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	g.Combat = blockedCombat(attacker, blocker)
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if blocker.MarkedDamage != 3 {
+		t.Fatalf("blocker marked damage = %d, want 3", blocker.MarkedDamage)
+	}
+	if got := blocker.Counters.Get(counter.MinusOneMinusOne); got != 0 {
+		t.Fatalf("blocker -1/-1 counters = %d, want 0", got)
+	}
+}
+
+func TestWitherGrantedByContinuousEffectApplies(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Wither Granter",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.ObjectControlledGroup(
+					game.SourcePermanentReference(),
+					game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				),
+				AddKeywords: []game.Keyword{game.Wither},
+			}},
+		}},
+	}})
+	g.Combat = blockedCombat(attacker, blocker)
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if got := blocker.Counters.Get(counter.MinusOneMinusOne); got != 3 {
+		t.Fatalf("blocker -1/-1 counters = %d, want 3", got)
+	}
+	if blocker.MarkedDamage != 0 {
+		t.Fatalf("blocker marked damage = %d, want 0", blocker.MarkedDamage)
+	}
+}
+
+func TestInfectDamageToCreatureAddsMinusOneMinusOneCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Infect)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	g.Combat = blockedCombat(attacker, blocker)
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if got := blocker.Counters.Get(counter.MinusOneMinusOne); got != 3 {
+		t.Fatalf("blocker -1/-1 counters = %d, want 3", got)
+	}
+	if blocker.MarkedDamage != 0 {
+		t.Fatalf("blocker marked damage = %d, want 0", blocker.MarkedDamage)
+	}
+}
+
 func TestCombatDamageToPlaneswalkerRemovesLoyaltyAndSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
@@ -2031,6 +2159,17 @@ func addCombatCreaturePermanentWithPower(g *game.Game, controller game.PlayerID,
 			KeywordAbilities: game.SimpleKeywords(keywords...),
 		}}},
 	})
+}
+
+func blockedCombat(attacker, blocker *game.Permanent) *game.CombatState {
+	return &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: blocker.Controller}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
+		},
+	}
 }
 
 func addCombatPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef) *game.Permanent {
