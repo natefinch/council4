@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,882
+Cards supported: 2,890
 
 - +2 Mace
 - Aardvark Sloth
@@ -283,6 +283,7 @@ Cards supported: 2,882
 - Boar
 - Boarding Party
 - Bog Imp
+- Bogardan Firefiend
 - Bogardan Rager
 - Boggart Brute
 - Boggart Ram-Gang
@@ -589,6 +590,7 @@ Cards supported: 2,882
 - Deserted Temple
 - Desperate Bloodseeker
 - Detective
+- Devil
 - Devilthorn Fox
 - Devoted Hero
 - Devotee of Strength
@@ -844,6 +846,7 @@ Cards supported: 2,882
 - Foot Headquarters
 - Foot Skirmisher
 - Foot Soldiers
+- Footlight Fiend
 - Force of Savagery
 - Forest
 - Forest Bear
@@ -1560,6 +1563,7 @@ Cards supported: 2,882
 - Mox Ruby
 - Mox Sapphire
 - Muck Rats
+- Mudbutton Torchrunner
 - Murasa Brute
 - Murder
 - Murmuring Phantasm
@@ -1718,6 +1722,7 @@ Cards supported: 2,882
 - Pensive Minotaur
 - Pentavite
 - Peregrine Griffin
+- Perilous Myr
 - Pest
 - Pestilent Syphoner
 - Phantom Monster
@@ -1762,6 +1767,7 @@ Cards supported: 2,882
 - Piranha Marsh
 - Pirate
 - Pirate
+- Pitchburn Devils
 - Pitiless Gorgon
 - Plague Myr
 - Plague Stinger
@@ -1809,6 +1815,7 @@ Cards supported: 2,882
 - Purple-Crystal Crab
 - Putrid Goblin
 - Pygmy Razorback
+- Pyre Spawn
 - Pyromantic Pilgrim
 - Python
 - Qilin's Blessing
@@ -2080,6 +2087,7 @@ Cards supported: 2,882
 - Sewn-Eye Drake
 - Shadow Glider
 - Shadowy Backstreet
+- Shady Informant
 - Shaman of Spring
 - Shambling Attendants
 - Shambling Ghoul

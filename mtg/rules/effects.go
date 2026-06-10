@@ -690,16 +690,28 @@ type effectDamageSource struct {
 	sourceObjectID id.ID
 	controller     game.PlayerID
 	permanent      *game.Permanent
+	deathtouch     bool
+	lifelink       bool
 }
 
-func applyDamageSourceKeywordEffects(g *game.Game, source, damaged *game.Permanent, damage int) {
-	if source == nil || damage <= 0 {
+func applyDamageSourceKeywordEffects(g *game.Game, source effectDamageSource, damaged *game.Permanent, damage int) {
+	if damage <= 0 {
 		return
 	}
-	if hasKeyword(g, source, game.Deathtouch) {
+	if source.deathtouch {
 		damaged.MarkedDeathtouchDamage = true
 	}
-	applyLifelink(g, source, damage)
+	applyDamageSourceLifelink(g, source, damage)
+}
+
+func applyDamageSourceLifelink(g *game.Game, source effectDamageSource, damage int) {
+	if damage <= 0 || !source.lifelink {
+		return
+	}
+	if source.controller < 0 || int(source.controller) >= len(g.Players) {
+		return
+	}
+	gainLife(g, source.controller, damage)
 }
 
 // countPermanentsMatchingGroup counts battlefield permanents in a GroupReference.

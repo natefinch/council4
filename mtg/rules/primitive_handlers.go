@@ -1,8 +1,11 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -77,6 +80,8 @@ func (r *effectResolver) damageSource(source game.ObjectReference) (effectDamage
 			sourceID:       resolved.snapshot.CardID,
 			sourceObjectID: resolved.snapshot.ObjectID,
 			controller:     resolved.snapshot.Controller,
+			deathtouch:     slices.Contains(resolved.snapshot.Keywords, game.Deathtouch),
+			lifelink:       slices.Contains(resolved.snapshot.Keywords, game.Lifelink),
 		}, true
 	}
 	return effectDamageSource{
@@ -84,6 +89,8 @@ func (r *effectResolver) damageSource(source game.ObjectReference) (effectDamage
 		sourceObjectID: resolved.permanent.ObjectID,
 		controller:     effectiveController(r.game, resolved.permanent),
 		permanent:      resolved.permanent,
+		deathtouch:     hasKeyword(r.game, resolved.permanent, game.Deathtouch),
+		lifelink:       hasKeyword(r.game, resolved.permanent, game.Lifelink),
 	}, true
 }
 
@@ -109,9 +116,7 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 	if player, ok := prim.Recipient.AnyTargetPlayerReference(); ok {
 		if resolvedPlayer, playerOK := r.resolvePlayer(player); playerOK {
 			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, resolvedPlayer, res.amount, false)
-			if source.permanent != nil {
-				applyLifelink(r.game, source.permanent, dealt)
-			}
+			applyDamageSourceLifelink(r.game, source, dealt)
 			res.amount = typedDamageResultAmount(prim.ResultAmountKind, dealt, 0)
 			res.succeeded = dealt > 0
 			return res
@@ -126,9 +131,7 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 	if group, ok := prim.Recipient.PlayerGroupReference(); ok {
 		for _, playerID := range r.playerGroupMembers(group) {
 			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
-			if source.permanent != nil {
-				applyLifelink(r.game, source.permanent, dealt)
-			}
+			applyDamageSourceLifelink(r.game, source, dealt)
 			res.succeeded = dealt > 0 || res.succeeded
 		}
 	}
@@ -141,9 +144,7 @@ func (r *effectResolver) damageReferencedPlayer(res effectResolved, source effec
 		return res
 	}
 	dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
-	if source.permanent != nil {
-		applyLifelink(r.game, source.permanent, dealt)
-	}
+	applyDamageSourceLifelink(r.game, source, dealt)
 	res.amount = typedDamageResultAmount(resultKind, dealt, 0)
 	res.succeeded = dealt > 0
 	return res
@@ -155,11 +156,16 @@ func (r *effectResolver) damageReferencedPermanent(res effectResolved, source ef
 		return res
 	}
 	lethalRemaining := lethalDamageRemaining(r.game, permanent)
-	if source.permanent != nil {
+	if source.deathtouch {
+		lethalRemaining = 1
+		if permanent.MarkedDeathtouchDamage {
+			lethalRemaining = 0
+		}
+	} else if source.permanent != nil {
 		lethalRemaining = lethalDamageRemainingFromSource(r.game, source.permanent, permanent)
 	}
 	dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
-	applyDamageSourceKeywordEffects(r.game, source.permanent, permanent, dealt)
+	applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
 	res.excessDamage = max(0, dealt-lethalRemaining)
 	res.amount = typedDamageResultAmount(resultKind, dealt, res.excessDamage)
 	res.succeeded = dealt > 0 && (resultKind != game.EffectResultAmountExcessDamage || res.excessDamage > 0)
@@ -169,7 +175,7 @@ func (r *effectResolver) damageReferencedPermanent(res effectResolved, source ef
 func (r *effectResolver) damageSelectedPermanents(res effectResolved, source effectDamageSource, group game.GroupReference) effectResolved {
 	for _, permanent := range r.groupPermanentsWithSource(group, source.permanent) {
 		dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
-		applyDamageSourceKeywordEffects(r.game, source.permanent, permanent, dealt)
+		applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
 		res.succeeded = dealt > 0 || res.succeeded
 	}
 	return res
@@ -206,8 +212,17 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.Group.Valid() {
-		for _, permanent := range r.groupPermanents(prim.Group) {
+		permanents := r.groupPermanents(prim.Group)
+		snapshots := make(map[id.ID]game.ObjectSnapshot, len(permanents))
+		for _, permanent := range permanents {
+			snapshots[permanent.ObjectID] = snapshotPermanent(r.game, permanent, zone.Battlefield)
+		}
+		for _, permanent := range permanents {
 			_, destroyed := destroyPermanent(r.game, permanent.ObjectID)
+			if _, remains := permanentByObjectID(r.game, permanent.ObjectID); !remains {
+				snapshot := snapshots[permanent.ObjectID]
+				rememberLastKnown(r.game, &snapshot)
+			}
 			res.succeeded = destroyed || res.succeeded
 		}
 		return res

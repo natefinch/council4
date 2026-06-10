@@ -26,6 +26,7 @@ type ObjectSnapshot struct {
 	Subtypes       []types.Sub
 	Power          opt.V[int]
 	Toughness      opt.V[int]
+	Keywords       []Keyword
 	Counters       counter.Set
 	MarkedDamage   int
 	Attachments    []id.ID

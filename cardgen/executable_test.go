@@ -1799,6 +1799,56 @@ func TestGenerateExecutableCardSourceDiesTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfDiesDamageTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Devil",
+		Layout:     "normal",
+		TypeLine:   "Creature — Devil",
+		OracleText: "When this creature dies, it deals 3 damage to any target.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentDied",
+		"Primitive: game.Damage",
+		"DamageSource: opt.Val(game.EventPermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsDynamicSelfDiesDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Devil",
+		Layout:     "normal",
+		TypeLine:   "Creature — Devil",
+		OracleText: "When this creature dies, it deals damage equal to its power to any target.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("source = %q, diagnostics = %#v, want rejection", source, diagnostics)
+	}
+	if got := diagnostics[0].Summary; got != "unsupported dies trigger effect" {
+		t.Fatalf("summary = %q, want unsupported dies trigger effect", got)
+	}
+}
+
 func TestGenerateExecutableCardSourceDiesMultipleEffectTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

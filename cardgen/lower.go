@@ -1648,6 +1648,8 @@ func lowerEnterTrigger(
 		)
 	}
 	body.References = bodyReferences(ability.References, excludedReferenceSpans...)
+	selfDamage := eventKind == game.EventPermanentDied &&
+		normalizeSelfDamageReference(cardName, &body)
 	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
 		return token.Span.Start.Offset >= body.Span.Start.Offset
 	})
@@ -1689,6 +1691,14 @@ func lowerEnterTrigger(
 			diagnostic.Detail,
 		)
 	}
+	if selfDamage {
+		damage, ok := content.Modes[0].Sequence[0].Primitive.(game.Damage)
+		if !ok {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
+		}
+		damage.DamageSource = opt.Val(game.EventPermanentReference())
+		content.Modes[0].Sequence[0].Primitive = damage
+	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
@@ -1703,6 +1713,23 @@ func lowerEnterTrigger(
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
+}
+
+func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbility) bool {
+	if ability == nil ||
+		len(ability.Effects) != 1 ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferencePronoun ||
+		!strings.EqualFold(ability.References[0].Text, "it") ||
+		!strings.HasPrefix(ability.Text, "It deals ") ||
+		!strings.HasPrefix(strings.ToLower(ability.Effects[0].Text), "it deals ") {
+		return false
+	}
+	ability.Text = cardName + ability.Text[len("It"):]
+	ability.Effects[0].Text = cardName + ability.Effects[0].Text[len("It"):]
+	ability.References[0].Kind = oracle.ReferenceSelfName
+	ability.References[0].Text = cardName
+	return true
 }
 
 func lowerSelfTriggerEvent(ability oracle.CompiledAbility) (game.EventKind, bool) {

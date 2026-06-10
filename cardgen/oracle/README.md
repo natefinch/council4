@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,882 / 31,834**
+**Cards supported: 2,890 / 31,834**
 
 The pipeline is:
 
@@ -144,10 +144,11 @@ other effects that prepare or unprepare permanents remain deferred.
 Supported sentence-sized effects may be lowered in Oracle order when at most one clause
 targets. It also lowers exact supported self-enter and self-dies triggers with
 ordered supported spell-like effects. Self-enter triggers may use the exact
-intervening condition `if it was kicked`. An exact leading `you may` on a
-single-effect trigger maps to trigger-level optionality; partially optional
-sequences remain unsupported. Every semantic element and meaningful source
-token must be consumed; otherwise the whole card is rejected.
+intervening condition `if it was kicked`. Exact fixed-damage self-dies triggers
+using `it` preserve the departed permanent as the damage source. An exact
+leading `you may` on a single-effect trigger maps to trigger-level optionality;
+partially optional sequences remain unsupported. Every semantic element and
+meaningful source token must be consumed; otherwise the whole card is rejected.
 
 This compiler IR is the recognition stage. The strict backend in `cardgen`
 consumes it and lowers each recognized ability into a second, **typed**

@@ -92,6 +92,182 @@ func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 	}
 }
 
+func TestEventPermanentDamageSourceUsesLastKnownKeywords(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Dying Devil",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: game.SimpleKeywords(game.Deathtouch, game.Lifelink),
+		}},
+	}})
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Large Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 5}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+	}})
+	sourceID := source.ObjectID
+	source.MarkedDamage = 2
+	engine.applyStateBasedActions(g)
+	if _, ok := permanentByObjectID(g, sourceID); ok {
+		t.Fatal("damage source remained on battlefield")
+	}
+	obj := &game.StackObject{
+		Controller:      game.Player1,
+		HasTriggerEvent: true,
+		TriggerEvent:    game.Event{PermanentID: sourceID},
+		Targets:         []game.Target{game.PermanentTarget(target.ObjectID)},
+	}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient:    game.AnyTargetDamageRecipient(0),
+		DamageSource: opt.Val(game.EventPermanentReference()),
+		Amount:       game.Fixed(2),
+	}, &log)
+
+	if got := target.MarkedDamage; got != 2 {
+		t.Fatalf("marked damage = %d, want 2", got)
+	}
+	if !target.MarkedDeathtouchDamage {
+		t.Fatal("target was not marked with last-known deathtouch damage")
+	}
+	if got := g.Players[game.Player1].Life; got != 42 {
+		t.Fatalf("Player1 life = %d, want 42 from last-known lifelink", got)
+	}
+}
+
+func TestEventPermanentDamageSourceUsesKeywordsFromSimultaneousDeath(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	granter := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Dying Mentor",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+				}),
+				AddKeywords: []game.Keyword{game.Deathtouch, game.Lifelink},
+			}},
+		}},
+	}})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Dying Devil",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Large Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 5}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+	}})
+	granter.MarkedDamage = 1
+	source.MarkedDamage = 1
+	sourceID := source.ObjectID
+
+	engine.applyStateBasedActions(g)
+
+	if _, ok := permanentByObjectID(g, sourceID); ok {
+		t.Fatal("damage source remained on battlefield")
+	}
+	obj := &game.StackObject{
+		Controller:      game.Player1,
+		HasTriggerEvent: true,
+		TriggerEvent:    game.Event{PermanentID: sourceID},
+		Targets:         []game.Target{game.PermanentTarget(target.ObjectID)},
+	}
+	log := TurnLog{}
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient:    game.AnyTargetDamageRecipient(0),
+		DamageSource: opt.Val(game.EventPermanentReference()),
+		Amount:       game.Fixed(2),
+	}, &log)
+
+	if !target.MarkedDeathtouchDamage {
+		t.Fatal("target was not marked with simultaneously granted deathtouch damage")
+	}
+	if got := g.Players[game.Player1].Life; got != 42 {
+		t.Fatalf("Player1 life = %d, want 42 from simultaneously granted lifelink", got)
+	}
+}
+
+func TestEventPermanentDamageSourceUsesKeywordsFromGroupDestroy(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	granter := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Dying Mentor",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+				}),
+				AddKeywords: []game.Keyword{game.Deathtouch, game.Lifelink},
+			}},
+		}},
+	}})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Dying Devil",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Large Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 5}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+	}})
+	sourceID := source.ObjectID
+	log := TurnLog{}
+	resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.Destroy{
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+		}),
+	}, &log)
+
+	if _, ok := permanentByObjectID(g, granter.ObjectID); ok {
+		t.Fatal("keyword granter remained on battlefield")
+	}
+	if _, ok := permanentByObjectID(g, sourceID); ok {
+		t.Fatal("damage source remained on battlefield")
+	}
+	obj := &game.StackObject{
+		Controller:      game.Player1,
+		HasTriggerEvent: true,
+		TriggerEvent:    game.Event{PermanentID: sourceID},
+		Targets:         []game.Target{game.PermanentTarget(target.ObjectID)},
+	}
+	resolveInstruction(engine, g, obj, game.Damage{
+		Recipient:    game.AnyTargetDamageRecipient(0),
+		DamageSource: opt.Val(game.EventPermanentReference()),
+		Amount:       game.Fixed(2),
+	}, &log)
+
+	if !target.MarkedDeathtouchDamage {
+		t.Fatal("target was not marked with group-destroyed source's deathtouch damage")
+	}
+	if got := g.Players[game.Player1].Life; got != 42 {
+		t.Fatalf("Player1 life = %d, want 42 from group-destroyed source's lifelink", got)
+	}
+}
+
 func TestLegacyTokenCreationStillUsesSpellController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

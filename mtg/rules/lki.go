@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -35,6 +37,7 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 		Subtypes:       append([]types.Sub(nil), values.subtypes...),
 		Power:          optionalInt(values.power, values.powerOK),
 		Toughness:      optionalInt(values.toughness, values.toughnessOK),
+		Keywords:       effectiveKeywords(values),
 		MarkedDamage:   permanent.MarkedDamage,
 		Attachments:    append([]id.ID(nil), permanent.Attachments...),
 		AttachedTo:     permanent.AttachedTo,
@@ -42,6 +45,17 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 	}
 	snapshot.Counters = cloneCounters(permanent.Counters)
 	return snapshot
+}
+
+func effectiveKeywords(values permanentEffectiveValues) []game.Keyword {
+	keywords := make([]game.Keyword, 0, len(values.keywords))
+	for keyword, present := range values.keywords {
+		if present {
+			keywords = append(keywords, keyword)
+		}
+	}
+	slices.Sort(keywords)
+	return keywords
 }
 
 func cloneCounters(counters counter.Set) counter.Set {

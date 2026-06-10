@@ -43,7 +43,9 @@ Vanguard cards are excluded with explicit report reasons.
    restrictions lower into runtime quantities and structured target predicates.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
    `game.AddCounter` instructions. Exact `if it was kicked` self-enter triggers
-   preserve the kicker choice as a typed intervening-if predicate.
+   preserve the kicker choice as a typed intervening-if predicate. Exact
+   self-dies fixed-damage triggers preserve the departed permanent as the
+   damage source through an event reference.
    Common enters-tapped land-count and basic-land-subtype conditions lower into
    typed replacement predicates.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
