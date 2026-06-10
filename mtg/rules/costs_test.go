@@ -550,6 +550,107 @@ func TestPayCostAutoActivatesNonSummoningSickManaDork(t *testing.T) {
 	}
 }
 
+func TestPayCostAutoActivatesUntapManaAbility(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Untap Mana Engine",
+		Types: []types.Card{types.Artifact},
+	}}, mana.G, 1)
+	source.Tapped = true
+	card, ok := permanentCardDef(g, source)
+	if !ok {
+		t.Fatal("mana source card definition not found")
+	}
+	card.ManaAbilities[0].AdditionalCosts = []cost.Additional{{Kind: cost.AdditionalUntap, Text: "{Q}"}}
+	manaCost := cost.Mana{cost.G}
+
+	if !payTestGenericCost(g, game.Player1, &manaCost) {
+		t.Fatal("payCost() = false with untap mana ability, want true")
+	}
+	if source.Tapped {
+		t.Fatal("mana source remained tapped after automatic untap activation")
+	}
+}
+
+func TestPayCostChoosesManaAbilityMatchingTapState(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		tapped     bool
+		firstCost  cost.Additional
+		secondCost cost.Additional
+	}{
+		{
+			name:       "untapped source skips untap ability",
+			firstCost:  cost.Additional{Kind: cost.AdditionalUntap, Text: "{Q}"},
+			secondCost: cost.T,
+		},
+		{
+			name:       "tapped source skips tap ability",
+			tapped:     true,
+			firstCost:  cost.T,
+			secondCost: cost.Additional{Kind: cost.AdditionalUntap, Text: "{Q}"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			source := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+				Name:  "Modal Mana Engine",
+				Types: []types.Card{types.Artifact},
+			}}, mana.G, 1)
+			card, ok := permanentCardDef(g, source)
+			if !ok {
+				t.Fatal("mana source card definition not found")
+			}
+			first := card.ManaAbilities[0]
+			first.AdditionalCosts = []cost.Additional{test.firstCost}
+			second := first
+			second.AdditionalCosts = []cost.Additional{test.secondCost}
+			card.ManaAbilities = []game.ManaAbility{first, second}
+			source.Tapped = test.tapped
+			manaCost := cost.Mana{cost.G}
+
+			if !payTestGenericCost(g, game.Player1, &manaCost) {
+				t.Fatal("payCost() = false with a mana ability matching source tap state")
+			}
+			if source.Tapped == test.tapped {
+				t.Fatal("automatic mana ability did not change source tap state")
+			}
+		})
+	}
+}
+
+func TestPayCostRespectsManaAbilityTimingAndUsage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Restricted Mana Engine",
+		Types: []types.Card{types.Artifact},
+	}}, mana.G, 1)
+	card, ok := permanentCardDef(g, source)
+	if !ok {
+		t.Fatal("mana source card definition not found")
+	}
+	card.ManaAbilities[0].Timing = game.SorceryOncePerTurn
+	manaCost := cost.Mana{cost.G}
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhaseBeginning
+	g.Turn.Step = game.StepUpkeep
+
+	if canPayCost(g, game.Player1, &manaCost) {
+		t.Fatal("canPayCost() = true outside restricted mana ability timing")
+	}
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	if !payTestGenericCost(g, game.Player1, &manaCost) {
+		t.Fatal("payCost() = false during restricted mana ability timing")
+	}
+	source.Tapped = false
+	if canPayCost(g, game.Player1, &manaCost) {
+		t.Fatal("canPayCost() = true after once-per-turn mana ability was used")
+	}
+}
+
 func addBasicLandPermanent(g *game.Game, controller game.PlayerID, subtype types.Sub) *game.Permanent {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{

@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -96,6 +97,61 @@ func TestRenderUsesEnchantMechanicTemplate(t *testing.T) {
 	}
 	if !strings.Contains(source, "game.EnchantStaticAbility(&game.TargetSpec{") {
 		t.Fatalf("source does not use Enchant template:\n%s", source)
+	}
+}
+
+func TestRenderTargetPredicateQualifiers(t *testing.T) {
+	ctx := newRenderCtx()
+	lit, ok, err := (Renderer{}).renderTargetPredicate(ctx, game.TargetPredicate{
+		PermanentTypes:  []types.Card{types.Creature},
+		ExcludedTypes:   []types.Card{types.Artifact},
+		Colors:          []color.Color{color.Green},
+		ExcludedColors:  []color.Color{color.Blue},
+		Controller:      game.ControllerYou,
+		Tapped:          game.TriTrue,
+		CombatState:     game.CombatStateAttacking,
+		Keyword:         game.Flying,
+		ExcludedKeyword: game.Deathtouch,
+		ManaValue: opt.Val(compare.Int{
+			Op:    compare.LessOrEqual,
+			Value: 3,
+		}),
+		Power: opt.Val(compare.Int{
+			Op:    compare.GreaterThan,
+			Value: 1,
+		}),
+		Toughness: opt.Val(compare.Int{
+			Op:    compare.Equal,
+			Value: 2,
+		}),
+		Another: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("renderTargetPredicate() did not render qualified predicate")
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("renderTargetPredicate() did not request opt import")
+	}
+	for _, want := range []string{
+		"ExcludedTypes: []types.Card{types.Artifact}",
+		"Colors: []color.Color{color.Green}",
+		"ExcludedColors: []color.Color{color.Blue}",
+		"Controller: game.ControllerYou",
+		"Tapped: game.TriTrue",
+		"CombatState: game.CombatStateAttacking",
+		"Keyword: game.Flying",
+		"ExcludedKeyword: game.Deathtouch",
+		"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
+		"Power: opt.Val(compare.Int{Op: compare.GreaterThan, Value: 1})",
+		"Toughness: opt.Val(compare.Int{Op: compare.Equal, Value: 2})",
+		"Another: true",
+	} {
+		if !strings.Contains(lit, want) {
+			t.Fatalf("predicate literal %q does not contain %q", lit, want)
+		}
 	}
 }
 

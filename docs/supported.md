@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,149
+Cards supported: 3,169
 
 - +2 Mace
 - Aardvark Sloth
@@ -345,6 +345,7 @@ Cards supported: 3,149
 - Branchloft Pathway // Boulderloft Pathway
 - Branchsnap Lorian
 - Brass Secretary
+- Brave-Kin Duo
 - Brawler's Plate
 - Brazen Scourge
 - Breakneck Berserker
@@ -374,6 +375,7 @@ Cards supported: 3,149
 - Buzz Bots
 - Byway Courier
 - Cabal Evangel
+- Cabal Patriarch
 - Cabal Trainee
 - Cackling Imp
 - Caelorna, Coral Tyrant
@@ -406,6 +408,7 @@ Cards supported: 3,149
 - Cat
 - Cat Beast
 - Cat Bird
+- Cat Burglar
 - Cat Dragon
 - Cat Soldier
 - Cat Warrior
@@ -710,6 +713,7 @@ Cards supported: 3,149
 - Drakewing Krasis
 - Dramatic Rescue
 - Dread Reaper
+- Dread Rider
 - Dreamroot Cascade
 - Dreg Reaver
 - Drifting Meadow
@@ -735,6 +739,7 @@ Cards supported: 3,149
 - Dwarf Berserker
 - Dwarf Token
 - Dwarven Trader
+- Dwarven Weaponsmith
 - Eager Cadet
 - Eagle of the Watch
 - Earth Elemental
@@ -1102,6 +1107,7 @@ Cards supported: 3,149
 - Granitic Titan
 - Grappler Spider
 - Grasp of Darkness
+- Grasping Dunes
 - Grasping Longneck
 - Graveborn
 - Gravelgill Axeshark
@@ -1615,6 +1621,7 @@ Cards supported: 3,149
 - Mending Touch
 - Meng Huo's Horde
 - Mental Discipline
+- Mercenary
 - Merchant of Secrets
 - Merfolk
 - Merfolk
@@ -1625,6 +1632,7 @@ Cards supported: 3,149
 - Merfolk Wizard
 - Merfolk of the Depths
 - Merfolk of the Pearl Trident
+- Merrow Grimeblotter
 - Merrow Witsniper
 - Mesa Cavalier
 - Mesa Unicorn
@@ -1709,6 +1717,7 @@ Cards supported: 3,149
 - Murder
 - Murmuring Phantasm
 - Muse Drake
+- Mutagen
 - Mutant
 - Mutant
 - Mutant Town
@@ -1750,6 +1759,7 @@ Cards supported: 3,149
 - Network Disruptor
 - Neurok Replica
 - New Benalia
+- Nezumi Bone-Reader
 - Niall Silvain
 - Niblis of Dusk
 - Niblis of the Mist
@@ -1861,6 +1871,7 @@ Cards supported: 3,149
 - Overgrown Farmland
 - Overkill
 - Oversoul of Dusk
+- Ox
 - Ox
 - Ox
 - Oxidda Scrapmelter
@@ -2166,6 +2177,7 @@ Cards supported: 3,149
 - Sacred Nectar
 - Sacred Peaks
 - Sacred Wolf
+- Sadistic Hypnotist
 - Safehold Elite
 - Sage of Lat-Nam
 - Sage's Row Savant
@@ -2346,6 +2358,7 @@ Cards supported: 3,149
 - Silent Artisan
 - Silent Attendant
 - Silent Observer
+- Silkbind Faerie
 - Silver Erne
 - Silver Knight
 - Silver Myr
@@ -2453,6 +2466,7 @@ Cards supported: 3,149
 - Somnomancer
 - Sootfeather Flock
 - Soothing Balm
+- Soul Shepherd
 - Soul of the Rapids
 - Soulbound Guardians
 - Soulmender
@@ -2604,6 +2618,7 @@ Cards supported: 3,149
 - Supply Drop
 - Supply-Line Cranes
 - Supreme Verdict
+- Surgical Skullbomb
 - Surrakar Banisher
 - Surveilling Sprite
 - Survivor
@@ -2771,6 +2786,7 @@ Cards supported: 3,149
 - Tranquil Thicket
 - Tranquility
 - Trapjaw Kelpie
+- Traveling Minister
 - Traveling Philosopher
 - Treasure Trove
 - Tree Monkey
@@ -2780,6 +2796,7 @@ Cards supported: 3,149
 - Treefolk Shaman
 - Treespring Lorian
 - Treetop Sentinel
+- Treetop Snarespinner
 - Treno, Dark City
 - Tresserhorn Sinks
 - Triangle of War
@@ -2918,6 +2935,7 @@ Cards supported: 3,149
 - Vivisurgeon's Insight
 - Vizkopa Vampire
 - Vizzerdrix
+- Vodalian Hypnotist
 - Vodalian Soldiers
 - Vodalian Zombie
 - Voice of Duty
@@ -2963,6 +2981,7 @@ Cards supported: 3,149
 - Wall of Air
 - Wall of Blossoms
 - Wall of Denial
+- Wall of Distortion
 - Wall of Earth
 - Wall of Granite
 - Wall of Heat
@@ -3149,5 +3168,6 @@ Cards supported: 3,149
 - Zombie Rogue
 - Zombie Warrior
 - Zombie Wizard
+- Zookeeper Mechan
 - Zuko's Offense
 - Zuran Orb

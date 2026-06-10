@@ -40,18 +40,24 @@ type abilityCostPlan struct {
 
 // manaTap records a planned tap of a mana-producing permanent.
 type manaTap struct {
-	permanent *game.Permanent
-	color     mana.Color
-	amount    int
-	snow      bool
+	permanent    *game.Permanent
+	color        mana.Color
+	amount       int
+	snow         bool
+	untap        bool
+	abilityIndex int
+	timing       game.TimingRestriction
 }
 
 // manaSource is a candidate mana-producing permanent used during plan building.
 type manaSource struct {
-	permanent *game.Permanent
-	color     mana.Color
-	amount    int
-	snow      bool
+	permanent    *game.Permanent
+	color        mana.Color
+	amount       int
+	snow         bool
+	untap        bool
+	abilityIndex int
+	timing       game.TimingRestriction
 }
 
 // paymentColors is the deterministic ordering used when spending mana. Callers
@@ -372,11 +378,17 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool {
 	tappedMana := make(map[mana.Unit]int)
 	for _, tap := range plan.manaTaps {
-		if tap.permanent.Tapped || s.EffectiveController(tap.permanent) != player.ID {
+		if tap.permanent.Tapped != tap.untap || s.EffectiveController(tap.permanent) != player.ID {
 			return false
 		}
 		output, ok := permanentManaOutput(s, tap.permanent)
-		if !ok || output.color != tap.color || output.amount != tap.amount || output.snow != tap.snow {
+		if !ok ||
+			output.color != tap.color ||
+			output.amount != tap.amount ||
+			output.snow != tap.snow ||
+			output.untap != tap.untap ||
+			output.abilityIndex != tap.abilityIndex ||
+			output.timing != tap.timing {
 			return false
 		}
 		tappedMana[mana.Unit{Color: tap.color, Snow: tap.snow}] += tap.amount
@@ -512,6 +524,13 @@ func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
 // canTapForAbility reports whether the permanent can be tapped as an ability cost.
 func canTapForAbility(s State, p *game.Permanent) bool {
 	if p.Tapped {
+		return false
+	}
+	return !s.PermanentHasType(p, types.Creature) || !p.SummoningSick
+}
+
+func canUntapForAbility(s State, p *game.Permanent) bool {
+	if !p.Tapped {
 		return false
 	}
 	return !s.PermanentHasType(p, types.Creature) || !p.SummoningSick

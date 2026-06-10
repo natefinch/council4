@@ -4,8 +4,8 @@
 is separate from `mtg/game/mana`, which models produced mana and mana pools.
 
 Use this package for mana costs such as `{2}{W}`, `{X}{R}`, `{W/U}`, `{2/G}`,
-`{W/P}`, `{C}`, or `{S}`, and for non-mana costs such as tapping, sacrificing,
-discarding, paying life, or exiling cards.
+`{W/P}`, `{C}`, or `{S}`, and for non-mana costs such as tapping, untapping,
+sacrificing, discarding, paying life, removing counters, or exiling cards.
 
 ## Main types
 
@@ -77,6 +77,18 @@ cost.Additional{
 ```
 
 `Source` uses the shared `zone.Type` vocabulary directly.
+
+`AdditionalUntap` represents `{Q}` and always untaps the source permanent.
+`AdditionalRemoveCounter` removes `Amount` counters of `CounterKind` from the
+source permanent:
+
+```go
+cost.Additional{
+	Kind:        cost.AdditionalRemoveCounter,
+	Amount:      1,
+	CounterKind: counter.Charge,
+}
+```
 
 ### Alternative
 

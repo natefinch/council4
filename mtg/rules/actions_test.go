@@ -870,6 +870,178 @@ func TestActivatedAbilityExilesSourceAsCost(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityExilesMatchingGraveyardCardAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:          cost.AdditionalExile,
+			Text:          "Exile a creature card from your graveyard",
+			Amount:        1,
+			MatchCardType: true,
+			CardType:      types.Creature,
+			Source:        zone.Graveyard,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("graveyard-exile ability was legal without a matching card")
+	}
+	instantID := addCardToHand(g, game.Player1, greenInstant())
+	g.Players[game.Player1].Hand.Remove(instantID)
+	g.Players[game.Player1].Graveyard.Add(instantID)
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("graveyard-exile ability was legal with only a nonmatching card")
+	}
+	creatureID := addCardToHand(g, game.Player1, greenCreature())
+	g.Players[game.Player1].Hand.Remove(creatureID)
+	g.Players[game.Player1].Graveyard.Add(creatureID)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("graveyard-exile ability was not legal with a matching card")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(graveyard-exile ability) = false, want true")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(creatureID) ||
+		!g.Players[game.Player1].Exile.Contains(creatureID) {
+		t.Fatal("matching creature card was not moved from graveyard to exile")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(instantID) {
+		t.Fatal("nonmatching instant card left the graveyard")
+	}
+}
+
+func TestActivatedAbilityUntapsSourceAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalUntap, Text: "{Q}"}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap-cost ability was legal while source was untapped")
+	}
+	source.Tapped = true
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap-cost ability was not legal while source was tapped")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(untap-cost ability) = false, want true")
+	}
+	if source.Tapped {
+		t.Fatal("source remained tapped after paying untap cost")
+	}
+}
+
+func TestActivatedAbilityUntapCostRespectsSummoningSickness(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalUntap, Text: "{Q}"}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	source.Tapped = true
+	source.SummoningSick = true
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap activated ability was legal while source creature was summoning sick")
+	}
+	source.SummoningSick = false
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap activated ability was not legal after summoning sickness ended")
+	}
+}
+
+func TestActivatedAbilityRemovesSourceCounterAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalRemoveCounter,
+			Text:        "Remove a charge counter from this creature",
+			Amount:      1,
+			CounterKind: counter.Charge,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("counter-removal ability was legal without a counter")
+	}
+	source.Counters.Add(counter.Charge, 2)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("counter-removal ability was not legal with a counter")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(counter-removal ability) = false, want true")
+	}
+	if got := source.Counters.Get(counter.Charge); got != 1 {
+		t.Fatalf("charge counters = %d, want 1 after payment", got)
+	}
+}
+
+func TestManaAbilityUntapsSourceAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	body := game.TapManaAbility(mana.G)
+	body.Text = "{Q}: Add {G}."
+	body.AdditionalCosts = []cost.Additional{{Kind: cost.AdditionalUntap, Text: "{Q}"}}
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:          "Untap Mana Engine",
+		Types:         []types.Card{types.Artifact},
+		ManaAbilities: []game.ManaAbility{body},
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap-cost mana ability was legal while source was untapped")
+	}
+	source.Tapped = true
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap-cost mana ability was not legal while source was tapped")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(untap-cost mana ability) = false, want true")
+	}
+	if source.Tapped {
+		t.Fatal("mana source remained tapped after paying untap cost")
+	}
+}
+
 func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -897,6 +1069,33 @@ func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	g.Turn.Step = game.StepNone
 	if !containsAction(engine.legalActions(g, game.Player1), act) {
 		t.Fatal("once-per-turn ability was not legal after turn reset")
+	}
+}
+
+func TestDuringUpkeepActivatedAbilityRequiresControllersUpkeep(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		Timing: game.DuringUpkeep,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhaseBeginning
+	g.Turn.Step = game.StepUpkeep
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player1
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("during-your-upkeep ability was legal during an opponent's upkeep")
+	}
+	g.Turn.ActivePlayer = game.Player1
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("during-your-upkeep ability was not legal during controller's upkeep")
 	}
 }
 
