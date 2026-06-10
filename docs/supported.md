@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,327
+Cards supported: 3,328
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1968,6 +1968,7 @@ Cards supported: 3,327
 - Overgrown Tomb
 - Overkill
 - Oversoul of Dusk
+- Ox
 - Ox
 - Ox
 - Oxidda Scrapmelter
