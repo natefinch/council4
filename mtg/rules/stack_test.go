@@ -83,6 +83,13 @@ func TestResolveCreatureSpellMovesCardToBattlefield(t *testing.T) {
 	if !permanent.SummoningSick {
 		t.Fatal("creature permanent was not summoning sick")
 	}
+	if len(g.Events) < 2 {
+		t.Fatal("missing permanent-enter event")
+	}
+	enter := g.Events[len(g.Events)-2]
+	if enter.Kind != game.EventPermanentEnteredBattlefield || !enter.EnterWasCast {
+		t.Fatalf("enter event = %+v, want cast permanent enter", enter)
+	}
 	if len(log.Resolves) != 1 {
 		t.Fatalf("resolve logs = %d, want 1", len(log.Resolves))
 	}

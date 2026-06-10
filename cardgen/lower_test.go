@@ -1094,6 +1094,85 @@ func TestLowerKickedEnterTrigger(t *testing.T) {
 	}
 }
 
+func TestLowerWasCastEnterTriggers(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{"if it was cast", "if you cast it"} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Construct",
+				Layout:     "normal",
+				TypeLine:   "Artifact Creature — Construct",
+				OracleText: "When this creature enters, " + condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.InterveningIf != condition || !trigger.InterveningIfEventPermanentWasCast {
+				t.Fatalf("trigger = %+v, want was-cast intervening-if", trigger)
+			}
+		})
+	}
+}
+
+func TestLowerAttackedThisTurnEnterTriggerFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Warrior",
+		Layout:     "normal",
+		TypeLine:   "Creature — Warrior",
+		OracleText: "When this creature enters, if this creature attacked this turn, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("attacked-this-turn self-enter condition unexpectedly lowered")
+	}
+}
+
+func TestLowerControlsPermanentEnterTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Artificer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Artificer",
+		OracleText: "When this creature enters, if you control an artifact, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.InterveningIf != "if you control an artifact" ||
+		!trigger.InterveningCondition.Exists {
+		t.Fatalf("trigger = %+v, want controls-artifact intervening-if", trigger)
+	}
+	selection := trigger.InterveningCondition.Val.ControlsMatching
+	if !selection.Exists ||
+		!slices.Equal(selection.Val.Selection.RequiredTypes, []types.Card{types.Artifact}) {
+		t.Fatalf("condition = %+v, want controls an artifact", trigger.InterveningCondition.Val)
+	}
+}
+
+func TestLowerEnterTriggerRejectsUnsupportedInterveningWording(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Handler",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elf",
+		OracleText: "When this creature enters, if you control an Elf, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("unsupported subtype condition unexpectedly lowered")
+	}
+}
+
 func TestLowerSagaChapterAbilities(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -1184,6 +1263,35 @@ func TestLowerDiesTrigger(t *testing.T) {
 	}
 	if face.TriggeredAbilities[0].Trigger.Pattern.Event != game.EventPermanentDied {
 		t.Fatalf("event = %v, want EventPermanentDied", face.TriggeredAbilities[0].Trigger.Pattern.Event)
+	}
+}
+
+func TestLowerDiesTriggerRejectsEnterOnlyInterveningConditions(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"if it was kicked",
+		"if it was cast",
+		"if you cast it",
+		"if this creature attacked this turn",
+		"if you control an artifact",
+	} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "When this creature dies, " + condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("self-dies trigger unexpectedly lowered with %q", condition)
+			}
+		})
 	}
 }
 

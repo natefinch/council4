@@ -167,7 +167,7 @@ func disguiseCreature(manaCost cost.Mana) *game.CardDef {
 func addFaceDownPermanent(g *game.Game, controller game.PlayerID, def *game.CardDef, kind game.FaceDownKind) *game.Permanent {
 	cardID := addCardToHand(g, controller, def)
 	card, _ := g.GetCardInstance(cardID)
-	permanent, ok := createCardPermanentFaceDown(g, card, controller, zone.Stack, game.FaceFront, kind)
+	permanent, ok := createCardPermanentFaceDown(g, card, controller, zone.Stack, game.FaceFront, kind, true)
 	if !ok {
 		panic("test failed to create face-down permanent")
 	}

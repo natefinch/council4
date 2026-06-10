@@ -1692,6 +1692,50 @@ func TestGenerateExecutableCardSourceKickedEnterTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceAdditionalEnterConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		condition string
+		wants     []string
+	}{
+		{
+			name:      "was cast",
+			condition: "if it was cast",
+			wants:     []string{"InterveningIfEventPermanentWasCast: true"},
+		},
+		{
+			name:      "controls artifact",
+			condition: "if you control an artifact",
+			wants:     []string{"InterveningCondition: opt.Val", "RequiredTypes: []types.Card{types.Artifact}"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Conditional Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "When this creature enters, " + test.condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "c")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceEnterMultipleEffectTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -2059,7 +2103,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "reveal mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player reveals and mills three cards."},
 		{name: "compound mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills three cards, then draws a card."},
 		{name: "mass mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Each opponent mills three cards."},
-		{name: "intervening enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature enters, if you control an artifact, draw a card."},
 		{name: "other enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature enters, draw a card."},
 		{name: "leave trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature leaves the battlefield, draw a card."},
 		{name: "cast trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When you cast this spell, draw a card."},

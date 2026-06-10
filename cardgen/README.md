@@ -47,8 +47,9 @@ Vanguard cards are excluded with explicit report reasons.
    restrictions lower into runtime quantities and structured target predicates.
    Ordered effect clauses retain independent target specifications and references.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
-   `game.AddCounter` instructions. Exact `if it was kicked` self-enter triggers
-   preserve the kicker choice as a typed intervening-if predicate. Exact
+   `game.AddCounter` instructions. Self-enter triggers support exact intervening
+   conditions for kicked or cast entry and controlling one
+   permanent of a named permanent card type. Exact
    self-dies fixed-damage triggers preserve the departed permanent as the
    damage source through an event reference. Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,

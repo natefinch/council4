@@ -328,7 +328,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		return "resolved"
 	}
 	if obj.FaceDown {
-		_, ok := createCardPermanentFaceDown(g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind)
+		_, ok := createCardPermanentFaceDown(g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, !obj.Copy)
 		if !ok {
 			return "invalid face-down"
 		}
@@ -342,7 +342,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		zone.Stack,
 		obj.Face,
 		nil,
-		permanentCreationOptions{KickerPaid: obj.KickerPaid},
+		permanentCreationOptions{KickerPaid: obj.KickerPaid, WasCast: !obj.Copy},
 		agents,
 		log,
 	)
