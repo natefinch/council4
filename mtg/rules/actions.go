@@ -570,6 +570,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		CardID:        cast.CardID,
 		Face:          game.FaceFront,
 		CardTypes:     cardTypes(spellDef),
+		Colors:        spellColors(spellDef),
 		FromZone:      sourceZone,
 		ToZone:        zone.Stack,
 	})
