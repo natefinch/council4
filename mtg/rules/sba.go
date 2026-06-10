@@ -279,6 +279,14 @@ func permanentTokenName(permanent *game.Permanent) string {
 }
 
 func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDeathReason, bool) {
+	if permanentHasSubtype(g, permanent, types.Saga) {
+		final := finalSagaChapter(g, permanent)
+		if final > 0 &&
+			permanent.Counters.Get(counter.Lore) >= final &&
+			!sagaAwaitingChapterAbility(g, permanent, final) {
+			return PermanentDeathReasonSagaComplete, true
+		}
+	}
 	if permanentHasType(g, permanent, types.Planeswalker) && permanent.Counters.Get(counter.Loyalty) <= 0 {
 		return PermanentDeathReasonZeroLoyalty, true
 	}
@@ -311,7 +319,7 @@ func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDea
 
 func permanentDeathBypassesDestroy(reason PermanentDeathReason) bool {
 	switch reason {
-	case PermanentDeathReasonZeroToughness, PermanentDeathReasonZeroLoyalty, PermanentDeathReasonZeroDefense, PermanentDeathReasonIllegalAura:
+	case PermanentDeathReasonZeroToughness, PermanentDeathReasonZeroLoyalty, PermanentDeathReasonZeroDefense, PermanentDeathReasonIllegalAura, PermanentDeathReasonSagaComplete:
 		return true
 	default:
 		return false

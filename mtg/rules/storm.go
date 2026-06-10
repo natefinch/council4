@@ -22,6 +22,8 @@ func createStormCopies(g *game.Game, original *game.StackObject, count int) {
 			Kind:                game.StackSpell,
 			SourceID:            original.SourceID,
 			Face:                original.Face,
+			SourceCardID:        original.SourceCardID,
+			SourceTokenDef:      original.SourceTokenDef,
 			Controller:          original.Controller,
 			Targets:             append([]game.Target(nil), original.Targets...),
 			TargetCounts:        append([]int(nil), original.TargetCounts...),
@@ -31,6 +33,7 @@ func createStormCopies(g *game.Game, original *game.StackObject, count int) {
 			Flashback:           original.Flashback,
 			Suspend:             original.Suspend,
 			Copy:                true,
+			SourceZone:          original.SourceZone,
 			AdditionalCostsPaid: append([]string(nil), original.AdditionalCostsPaid...),
 		})
 	}

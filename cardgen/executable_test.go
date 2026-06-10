@@ -1979,12 +1979,6 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 			summary:    "unsupported keyword ability",
 			detail:     "no reusable game template for Ward",
 		},
-		"modal": {
-			typeLine:   "Sorcery",
-			oracleText: "Choose two —\n• Draw a card.\n• Destroy target creature.\n• You gain 3 life.",
-			summary:    "unsupported modal ability",
-			detail:     "supports only \"Choose one\"",
-		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -2009,6 +2003,28 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 				t.Fatalf("detail = %q, want substring %q", got, test.detail)
 			}
 		})
+	}
+}
+
+func TestGenerateExecutableCardSourceChooseTwo(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Command",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose two —\n• Draw a card.\n• Destroy target creature.\n• You gain 3 life.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{"MinModes: 2,", "MaxModes: 2,"} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
 	}
 }
 
@@ -2326,7 +2342,7 @@ func TestGenerateExecutableCardSourceSplitRejectsUnsupported(t *testing.T) {
 	}
 }
 
-func TestGenerateExecutableCardSourcePrepareRejected(t *testing.T) {
+func TestGenerateExecutableCardSourcePrepare(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
 		Name:          "Shieldmate // Ready Formation",
@@ -2334,11 +2350,12 @@ func TestGenerateExecutableCardSourcePrepareRejected(t *testing.T) {
 		ColorIdentity: []string{"W"},
 		CardFaces: []ScryfallCardFace{
 			{
-				Name:      "Shieldmate",
-				ManaCost:  "{2}{W}",
-				TypeLine:  "Creature — Human Soldier",
-				Power:     new("3"),
-				Toughness: new("3"),
+				Name:       "Shieldmate",
+				ManaCost:   "{2}{W}",
+				TypeLine:   "Creature — Human Soldier",
+				Power:      new("3"),
+				Toughness:  new("3"),
+				OracleText: "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
 			},
 			{
 				Name:       "Ready Formation",
@@ -2353,11 +2370,17 @@ func TestGenerateExecutableCardSourcePrepareRejected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if source != "" {
-		t.Fatalf("source = %q, want no partial card", source)
-	}
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported card layout" {
+	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layout: game.LayoutPrepare,",
+		"EntersPrepared: true,",
+		"Alternate: opt.Val(game.CardFace{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
 	}
 }
 

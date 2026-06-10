@@ -136,6 +136,7 @@ const (
 	PermanentDeathReasonZeroDefense   PermanentDeathReason = "0 defense"
 	PermanentDeathReasonIllegalAura   PermanentDeathReason = "illegal aura"
 	PermanentDeathReasonLegendaryRule PermanentDeathReason = "legendary rule"
+	PermanentDeathReasonSagaComplete  PermanentDeathReason = "Saga final chapter complete"
 )
 
 // PermanentDeathLog records a permanent leaving the battlefield due to rules.

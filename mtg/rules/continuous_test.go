@@ -494,6 +494,56 @@ func TestEquippedCreatureStaticPTBuff(t *testing.T) {
 	}
 }
 
+func TestStaticPTBuffSelectionSupportsTokensAndOpponents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Selective Anthem",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{
+				{
+					Layer: game.LayerPowerToughnessModify,
+					Group: game.ObjectControlledGroup(
+						game.SourcePermanentReference(),
+						game.Selection{TokenOnly: true},
+					),
+					PowerDelta:     1,
+					ToughnessDelta: 1,
+				},
+				{
+					Layer: game.LayerPowerToughnessModify,
+					Group: game.BattlefieldGroup(game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+						Controller:    game.ControllerOpponent,
+					}),
+					PowerDelta: -1,
+				},
+			},
+		}},
+	}})
+	token, _ := createTokenPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Creature Token",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	nontoken := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	opponent := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	if got := effectivePower(g, token); got != 3 {
+		t.Fatalf("token effective power = %d, want 3", got)
+	}
+	if got := effectivePower(g, nontoken); got != 2 {
+		t.Fatalf("nontoken effective power = %d, want 2", got)
+	}
+	if got := effectivePower(g, opponent); got != 1 {
+		t.Fatalf("opponent creature effective power = %d, want 1", got)
+	}
+	if got := effectivePower(g, source); got != 0 {
+		t.Fatalf("source effective power = %d, want 0", got)
+	}
+}
+
 func addAnthemPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Anthem Captain",

@@ -80,19 +80,63 @@ func parseAbility(
 	}
 	body := tokens
 	if dash := topLevelIndex(tokens, EmDash); dash > 0 && !isModalHeader(tokens) {
-		phrase := phraseFromTokens(source, tokens[:dash])
-		ability.AbilityWord = &phrase
+		if chapters, ok := parseChapterHeading(tokens[:dash]); context.Saga && ok {
+			ability.Chapters = chapters
+			ability.ChapterSpan = spanOf(tokens[:dash])
+		} else {
+			phrase := phraseFromTokens(source, tokens[:dash])
+			ability.AbilityWord = &phrase
+		}
 		body = tokens[dash+1:]
 	}
 	if colon := topLevelIndex(body, Colon); colon >= 0 {
 		phrase := phraseFromTokens(source, body[:colon])
 		ability.Cost = &phrase
 	}
-	ability.Kind = classifyAbility(body, context)
+	if len(ability.Chapters) > 0 {
+		ability.Kind = AbilityChapter
+	} else {
+		ability.Kind = classifyAbility(body, context)
+	}
 	ability.Sentences = parseSentences(source, body)
 	var diagnostics []Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
 	return ability, diagnostics
+}
+
+func parseChapterHeading(tokens []Token) ([]int, bool) {
+	parts := splitTopLevel(tokens, Comma)
+	chapters := make([]int, 0, len(parts))
+	for _, part := range parts {
+		if len(part) != 1 || part[0].Kind != Word {
+			return nil, false
+		}
+		chapter, ok := romanChapter(part[0].Text)
+		if !ok {
+			return nil, false
+		}
+		chapters = append(chapters, chapter)
+	}
+	return chapters, len(chapters) > 0
+}
+
+func romanChapter(text string) (int, bool) {
+	switch strings.ToUpper(text) {
+	case "I":
+		return 1, true
+	case "II":
+		return 2, true
+	case "III":
+		return 3, true
+	case "IV":
+		return 4, true
+	case "V":
+		return 5, true
+	case "VI":
+		return 6, true
+	default:
+		return 0, false
+	}
 }
 
 func parseMode(source string, tokens []Token) (Mode, []Diagnostic) {

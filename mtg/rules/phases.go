@@ -72,6 +72,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 			CardID: cardID,
 			Failed: !ok,
 		})
+		advanceSagas(g, g.Turn.ActivePlayer)
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 		e.runPriorityLoop(g, agents, log)
 		if g.IsGameOver() {

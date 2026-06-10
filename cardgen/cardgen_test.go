@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -205,6 +206,55 @@ func TestCardNameToPackageLetter(t *testing.T) {
 				t.Errorf("CardNameToPackageLetter(%q) = %q, want %q", tt.name, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestGeneratedIdentityCategorizesTokens(t *testing.T) {
+	t.Parallel()
+	const oracleID = "12345678-90ab-cdef-1234-567890abcdef"
+	tests := map[string]ScryfallCard{
+		"token": {
+			Name:     "Bear",
+			Layout:   "token",
+			OracleID: oracleID,
+		},
+		"double-faced token": {
+			Name:     "Bear",
+			Layout:   "double_faced_token",
+			OracleID: oracleID,
+		},
+	}
+	for name, card := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			identity, err := GeneratedIdentity(&card, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			const normalized = "1234567890abcdef1234567890abcdef"
+			if got, want := identity.RelativePath, filepath.Join("tokens", "b", "bear_"+normalized+".go"); got != want {
+				t.Fatalf("relative path = %q, want %q", got, want)
+			}
+			if got, want := identity.PackageName, "b"; got != want {
+				t.Fatalf("package name = %q, want %q", got, want)
+			}
+			if got, want := identity.VariableName, "BearToken"+normalized; got != want {
+				t.Fatalf("variable name = %q, want %q", got, want)
+			}
+			if got, want := identity.SupersededPath, filepath.Join("b", "bear.go"); got != want {
+				t.Fatalf("superseded path = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestGeneratedIdentityRejectsInvalidTokenOracleID(t *testing.T) {
+	t.Parallel()
+	for _, oracleID := range []string{"", "not-a-uuid", "12345678-90ab-cdef-1234-567890abcdeg"} {
+		card := ScryfallCard{Name: "Bear", Layout: "token", OracleID: oracleID}
+		if _, err := GeneratedIdentity(&card, false); err == nil {
+			t.Fatalf("GeneratedIdentity accepted Oracle ID %q", oracleID)
+		}
 	}
 }
 

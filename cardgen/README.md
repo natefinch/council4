@@ -31,10 +31,11 @@ Vanguard cards are excluded with explicit report reasons.
 
 1. **Recognition (`cardgen/oracle`).** The lexer and parser preserve exact source
    spans. The semantic compiler recognizes costs, targets, triggers, keywords,
-   references, and ordered effects conservatively.
+   Saga chapter headings, references, and ordered effects conservatively.
 2. **Typed lowering (`lower.go` and `executable.go`).** Recognized semantics
-   become typed `game.*` ability values. `assembleCardDefs` combines those values
-   with printed Scryfall fields and calls
+   become typed `game.*` ability values, including chapter-numbered
+   `game.ChapterAbility` values for ordinary Sagas. `assembleCardDefs` combines
+   those values with printed Scryfall fields and calls
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
    Parameterized Kicker, Madness, Morph, Disguise, and Toxic lines lower into
    their corresponding sealed `game.KeywordAbility` values; unsupported
@@ -42,6 +43,12 @@ Vanguard cards are excluded with explicit report reasons.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.
+
+The bulk compiler detects distinct Oracle cards that map to the same filename or
+Go identifier and appends a stable Scryfall-derived suffix to both generated
+identities. Playable tokens always use `mtg/cards/tokens/<letter>` and include
+their complete normalized Oracle UUID in both filename and Go identifier.
+Printed `CardDef.Name` values remain unchanged.
 
 `mtg/game` owns typed Card Definition data and structural validity;
 `mtg/rules` owns behavior; `cardgen` owns recognition, lowering, and rendering.
@@ -93,12 +100,20 @@ one Card Definition per playable side.
 
 - `GenerateExecutableCardSource(card, pkgName)` recognizes, lowers, validates,
   and renders a card, or returns diagnostics without source.
+- `ExecutableGenerator` configures source identity disambiguation for bulk
+  generation.
 - `Renderer.RenderCardSource(card, defs, hints, pkgName)` renders validated typed
   Card Definitions deterministically.
 - `ParseTypeLine(typeLine)` splits a type line into supertypes, types, and
   subtypes.
-- `CardNameToVarName`, `CardNameToFileName`, and `CardNameToPackageLetter`
-  provide deterministic source and package names.
+- `GeneratedIdentity` selects a generated card's category, package, filename,
+  variable name, and migration path. `CardNameToVarName`,
+  `CardNameToFileName`, and `CardNameToPackageLetter` provide its component
+  naming rules.
+
+Prepare layouts use `CardFace.EntersPrepared` on the creature face and
+`CardDef.Alternate` for the spell face. The generator accepts them only when
+both faces and the exact enters-prepared ability are fully lowerable.
 
 Current executable mechanic coverage and the corpus support count live in
 [`oracle/README.md`](oracle/README.md). The numbered expansion checklist lives

@@ -717,6 +717,25 @@ func TestValidateCardDefReportsTriggerPatternDualSpecification(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsTokenOnlyTriggerSubject(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Token Watcher",
+		OracleText: "Whenever a token dies, draw a card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:            EventPermanentDied,
+				SubjectSelection: Selection{TokenOnly: true},
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want token-only trigger selection accepted", issues)
+	}
+}
+
 func TestValidateCardDefAllowsSelectionOnlyTargetSpec(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Selection Target Spec",
@@ -771,6 +790,17 @@ func TestValidateCardDefRejectsSelectionFieldsUnavailableInContext(t *testing.T)
 					MaxTargets: 1,
 					Allow:      TargetAllowPlayer,
 					Selection:  opt.Val(Selection{RequiredTypes: []types.Card{types.Creature}}),
+				}},
+			}.Ability())},
+		},
+		{
+			name: "player target with token predicate",
+			face: CardFace{SpellAbility: opt.Val(Mode{
+				Targets: []TargetSpec{{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Allow:      TargetAllowPlayer,
+					Selection:  opt.Val(Selection{TokenOnly: true}),
 				}},
 			}.Ability())},
 		},
@@ -851,6 +881,17 @@ func TestValidateCardDefGroupReferenceValidation(t *testing.T) {
 		issues := ValidateCardDef(def)
 		if len(issues) != 0 {
 			t.Fatalf("expected no issues, got %+v", issues)
+		}
+	})
+
+	t.Run("group with contradictory token selection", func(t *testing.T) {
+		def := makeStaticWithContinuous(BattlefieldGroup(Selection{
+			NonToken:  true,
+			TokenOnly: true,
+		}))
+		issues := ValidateCardDef(def)
+		if !hasCardDefIssue(issues, CardDefIssueInvalidReference) {
+			t.Fatalf("expected %s for contradictory token selection, got %+v", CardDefIssueInvalidReference, issues)
 		}
 	})
 

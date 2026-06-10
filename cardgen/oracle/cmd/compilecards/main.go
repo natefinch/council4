@@ -42,6 +42,7 @@ type result struct {
 	index       int
 	card        cardgen.ScryfallCard
 	relative    string
+	superseded  string
 	source      string
 	exclusion   cardgen.CorpusExclusionReason
 	diagnostics []oracle.Diagnostic
@@ -188,6 +189,7 @@ func compileCorpus(input io.Reader, workers int) ([]result, error) {
 	if err := <-decodeError; err != nil {
 		return nil, err
 	}
+	disambiguateCollisions(all)
 	rejectPathCollisions(all)
 	rejectIdentifierCollisions(all)
 	slices.SortFunc(all, func(a, b result) int {
@@ -203,7 +205,16 @@ func compileCard(item job) result {
 		compiled.exclusion = reason
 		return compiled
 	}
-	letter := cardgen.CardNameToPackageLetter(card.Name)
+	identity, err := cardgen.GeneratedIdentity(&card, false)
+	if err != nil {
+		compiled.diagnostics = []oracle.Diagnostic{{
+			Severity: oracle.SeverityWarning,
+			Summary:  "invalid generated identity",
+			Detail:   err.Error(),
+		}}
+		return compiled
+	}
+	letter := identity.PackageName
 	if len(letter) != 1 || letter[0] < 'a' || letter[0] > 'z' {
 		compiled.diagnostics = []oracle.Diagnostic{{
 			Severity: oracle.SeverityWarning,
@@ -212,10 +223,119 @@ func compileCard(item job) result {
 		}}
 		return compiled
 	}
-	compiled.relative = filepath.Join(letter, cardgen.CardNameToSafeFileName(card.Name)+".go")
+	compiled.relative = identity.RelativePath
+	compiled.superseded = identity.SupersededPath
 	compiled.source, compiled.diagnostics, compiled.err =
-		cardgen.GenerateExecutableCardSource(&card, letter)
+		(cardgen.ExecutableGenerator{IdentifierSuffix: identity.IdentifierSuffix}).
+			GenerateCardSource(&card, identity.PackageName)
 	return compiled
+}
+
+func disambiguateCollisions(results []result) {
+	parent := make([]int, len(results))
+	for i := range parent {
+		parent[i] = i
+	}
+	var find func(int) int
+	find = func(index int) int {
+		if parent[index] != index {
+			parent[index] = find(parent[index])
+		}
+		return parent[index]
+	}
+	union := func(indexes []int) {
+		if len(indexes) < 2 {
+			return
+		}
+		root := find(indexes[0])
+		for _, index := range indexes[1:] {
+			parent[find(index)] = root
+		}
+	}
+	byPath := make(map[string][]int)
+	byIdentifier := make(map[string][]int)
+	for i := range results {
+		if results[i].err != nil || len(results[i].diagnostics) > 0 {
+			continue
+		}
+		byPath[results[i].relative] = append(byPath[results[i].relative], i)
+		file, err := parser.ParseFile(token.NewFileSet(), results[i].relative, results[i].source, 0)
+		if err != nil {
+			results[i].err = fmt.Errorf("parsing generated source: %w", err)
+			continue
+		}
+		for _, name := range cardDefNames(file) {
+			key := filepath.Dir(results[i].relative) + "\x00" + name
+			byIdentifier[key] = append(byIdentifier[key], i)
+		}
+	}
+	for _, indexes := range byPath {
+		union(indexes)
+	}
+	for _, indexes := range byIdentifier {
+		union(indexes)
+	}
+	components := make(map[int][]int)
+	for i := range results {
+		if results[i].err == nil && len(results[i].diagnostics) == 0 {
+			components[find(i)] = append(components[find(i)], i)
+		}
+	}
+	colliding := make(map[int]bool)
+	for _, indexes := range components {
+		if len(indexes) < 2 {
+			continue
+		}
+		slices.SortFunc(indexes, func(a, b int) int {
+			aKey := cardIdentityKey(&results[a].card)
+			bKey := cardIdentityKey(&results[b].card)
+			if byIdentity := strings.Compare(aKey, bKey); byIdentity != 0 {
+				return byIdentity
+			}
+			return cmp.Compare(results[a].index, results[b].index)
+		})
+		for _, index := range indexes[1:] {
+			colliding[index] = true
+		}
+	}
+	for index := range colliding {
+		card := &results[index].card
+		identity, err := cardgen.GeneratedIdentity(card, true)
+		if err != nil {
+			results[index].source = ""
+			results[index].diagnostics = []oracle.Diagnostic{{
+				Severity: oracle.SeverityWarning,
+				Summary:  "generated identity collision",
+				Detail:   err.Error(),
+			}}
+			continue
+		}
+		results[index].relative = identity.RelativePath
+		results[index].superseded = identity.SupersededPath
+		results[index].source, results[index].diagnostics, results[index].err =
+			(cardgen.ExecutableGenerator{IdentifierSuffix: identity.IdentifierSuffix}).GenerateCardSource(
+				card,
+				identity.PackageName,
+			)
+	}
+	finalPaths := make(map[string]bool)
+	for i := range results {
+		if results[i].err == nil && len(results[i].diagnostics) == 0 {
+			finalPaths[results[i].relative] = true
+		}
+	}
+	for i := range results {
+		if finalPaths[results[i].superseded] {
+			results[i].superseded = ""
+		}
+	}
+}
+
+func cardIdentityKey(card *cardgen.ScryfallCard) string {
+	if card.OracleID != "" {
+		return card.OracleID
+	}
+	return card.ID
 }
 
 func rejectPathCollisions(results []result) {
@@ -356,6 +476,76 @@ func diagnosticSeverityName(severity oracle.Severity) string {
 
 func writeSupported(root string, results []result) error {
 	affected := make(map[string]bool)
+	finalPaths := make(map[string]bool)
+	generatedPrefixes := make(map[string]bool)
+	tokenPrefixes := make(map[string]bool)
+	for _, result := range results {
+		if result.err != nil || len(result.diagnostics) > 0 {
+			continue
+		}
+		finalPaths[result.relative] = true
+		directory := filepath.Dir(result.relative)
+		base := cardgen.CardNameToSafeFileName(result.card.Name)
+		if result.card.Layout == "token" || result.card.Layout == "double_faced_token" {
+			tokenPrefixes[filepath.Join(directory, base+"_")] = true
+		} else {
+			generatedPrefixes[filepath.Join(directory, base+"_scryfall")] = true
+		}
+	}
+	for _, result := range results {
+		if result.err != nil || len(result.diagnostics) > 0 || result.superseded == "" {
+			continue
+		}
+		path := filepath.Join(root, result.superseded)
+		err := os.Remove(path)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("removing superseded source for %s: %w", result.card.Name, err)
+		}
+		if err == nil {
+			affected[filepath.Dir(path)] = true
+		}
+	}
+	for prefix := range generatedPrefixes {
+		matches, err := filepath.Glob(filepath.Join(root, prefix+"*.go"))
+		if err != nil {
+			return fmt.Errorf("matching generated identity paths for %s: %w", prefix, err)
+		}
+		for _, path := range matches {
+			relative, err := filepath.Rel(root, path)
+			if err != nil {
+				return fmt.Errorf("resolving generated identity path %s: %w", path, err)
+			}
+			if finalPaths[relative] {
+				continue
+			}
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("removing obsolete generated identity path %s: %w", path, err)
+			}
+			affected[filepath.Dir(path)] = true
+		}
+	}
+	for prefix := range tokenPrefixes {
+		matches, err := filepath.Glob(filepath.Join(root, prefix+"*.go"))
+		if err != nil {
+			return fmt.Errorf("matching generated token identity paths for %s: %w", prefix, err)
+		}
+		for _, path := range matches {
+			if !isTokenIdentityPath(path, filepath.Join(root, prefix)) {
+				continue
+			}
+			relative, err := filepath.Rel(root, path)
+			if err != nil {
+				return fmt.Errorf("resolving generated token identity path %s: %w", path, err)
+			}
+			if finalPaths[relative] {
+				continue
+			}
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("removing obsolete generated token identity path %s: %w", path, err)
+			}
+			affected[filepath.Dir(path)] = true
+		}
+	}
 	for _, result := range results {
 		if result.exclusion != "" || result.err != nil || len(result.diagnostics) > 0 {
 			continue
@@ -379,7 +569,113 @@ func writeSupported(root string, results []result) error {
 			return err
 		}
 	}
+	return writeTokenPackages(root, results)
+}
+
+func isTokenIdentityPath(path, prefix string) bool {
+	suffix := strings.TrimSuffix(strings.TrimPrefix(path, prefix), ".go")
+	if len(suffix) != 32 {
+		return false
+	}
+	for _, r := range suffix {
+		if !strings.ContainsRune("0123456789abcdef", r) {
+			return false
+		}
+	}
+	return true
+}
+
+func writeTokenPackages(root string, results []result) error {
+	letters := make(map[string]bool)
+	for _, result := range results {
+		if result.err != nil || len(result.diagnostics) > 0 ||
+			(result.card.Layout != "token" && result.card.Layout != "double_faced_token") {
+			continue
+		}
+		letters[filepath.Base(filepath.Dir(result.relative))] = true
+	}
+	if len(letters) == 0 {
+		return nil
+	}
+	tokenRoot := filepath.Join(root, "tokens")
+	if err := os.MkdirAll(tokenRoot, 0o750); err != nil {
+		return fmt.Errorf("creating token package: %w", err)
+	}
+	rootReadme := "# Tokens\n\n" +
+		"Package `tokens` collects generated definitions for playable paper tokens. " +
+		"Token definitions live in letter subpackages and use their complete Oracle ID " +
+		"in filenames and Go identifiers so same-name tokens remain distinct.\n\n" +
+		"Tokens are not included in `cards.Registry`. In the repository tree, use " +
+		"`tokens.Cards` when all token definitions are needed.\n"
+	if err := os.WriteFile(filepath.Join(tokenRoot, "README.md"), []byte(rootReadme), 0o600); err != nil {
+		return fmt.Errorf("writing token package README: %w", err)
+	}
+	ordered := make([]string, 0, len(letters))
+	for letter := range letters {
+		ordered = append(ordered, letter)
+	}
+	slices.Sort(ordered)
+	for _, letter := range ordered {
+		doc := fmt.Sprintf(
+			"// Package %s contains generated playable token definitions.\npackage %s\n\n"+
+				"//go:generate go run github.com/natefinch/council4/cardgen/cmd/gencardlist\n",
+			letter,
+			letter,
+		)
+		docPath := filepath.Join(tokenRoot, letter, "doc.go")
+		if err := os.WriteFile(docPath, []byte(doc), 0o600); err != nil {
+			return fmt.Errorf("writing token letter package documentation: %w", err)
+		}
+		readme := fmt.Sprintf(
+			"# %s tokens\n\nPackage `%s` contains generated playable token definitions whose names begin with %s. "+
+				"Use `Cards` to iterate over every token definition in this package.\n",
+			strings.ToUpper(letter), letter, strings.ToUpper(letter),
+		)
+		path := filepath.Join(tokenRoot, letter, "README.md")
+		if err := os.WriteFile(path, []byte(readme), 0o600); err != nil {
+			return fmt.Errorf("writing token letter package README: %w", err)
+		}
+	}
+	if !isRepositoryCardsRoot(root) {
+		return nil
+	}
+
+	var builder strings.Builder
+	_, _ = builder.WriteString("// Code generated by compilecards; DO NOT EDIT.\n\n")
+	_, _ = builder.WriteString("// Package tokens provides playable token definitions.\n")
+	_, _ = builder.WriteString("package tokens\n\n")
+	_, _ = builder.WriteString("import (\n\t\"slices\"\n\n")
+	for _, letter := range ordered {
+		_, _ = fmt.Fprintf(
+			&builder,
+			"\t\"github.com/natefinch/council4/mtg/cards/tokens/%s\"\n",
+			letter,
+		)
+	}
+	_, _ = builder.WriteString(")\n\n")
+	_, _ = builder.WriteString("// Cards lists all generated playable token definitions.\n")
+	_, _ = builder.WriteString("var Cards = slices.Concat(\n")
+	for _, letter := range ordered {
+		_, _ = fmt.Fprintf(&builder, "\t%s.Cards,\n", letter)
+	}
+	_, _ = builder.WriteString(")\n")
+	formatted, err := format.Source([]byte(builder.String()))
+	if err != nil {
+		return fmt.Errorf("formatting token package: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(tokenRoot, "cards.go"), formatted, 0o600); err != nil {
+		return fmt.Errorf("writing token package: %w", err)
+	}
 	return nil
+}
+
+func isRepositoryCardsRoot(root string) bool {
+	absoluteRoot, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	repositoryRoot, err := filepath.Abs(filepath.Join("mtg", "cards"))
+	return err == nil && absoluteRoot == repositoryRoot
 }
 
 func writeCardList(directory string) error {

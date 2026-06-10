@@ -6,7 +6,7 @@ Oracle compiler expansion. It:
 1. runs `compilecards` into a clean `.cardwork` output directory;
 2. compares the previous and current reports by stable Scryfall card ID;
 3. verifies input, eligible, excluded, generated, and unsupported report counts
-   and every newly generated source path;
+   and every newly generated source path, including categorized token paths;
 4. regenerates `docs/supported.md`;
 5. writes a deterministic JSON inspection manifest containing Oracle text,
    generated source paths, regressions, and diagnostic-count changes; and

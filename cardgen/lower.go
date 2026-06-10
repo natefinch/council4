@@ -32,8 +32,10 @@ type loweredFaceAbilities struct {
 	ManaAbilities        []game.ManaAbility
 	LoyaltyAbilities     []game.LoyaltyAbility
 	TriggeredAbilities   []game.TriggeredAbility
+	ChapterAbilities     []game.ChapterAbility
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
+	EntersPrepared       bool
 }
 
 // empty reports whether the face produced no abilities.
@@ -43,8 +45,10 @@ func (f loweredFaceAbilities) empty() bool {
 		len(f.ManaAbilities) == 0 &&
 		len(f.LoyaltyAbilities) == 0 &&
 		len(f.TriggeredAbilities) == 0 &&
+		len(f.ChapterAbilities) == 0 &&
 		len(f.ReplacementAbilities) == 0 &&
-		!f.SpellAbility.Exists
+		!f.SpellAbility.Exists &&
+		!f.EntersPrepared
 }
 
 // abilityLowering holds the typed result of lowering one CompiledAbility.
@@ -55,8 +59,10 @@ type abilityLowering struct {
 	manaAbility        opt.V[game.ManaAbility]
 	loyaltyAbility     opt.V[game.LoyaltyAbility]
 	triggeredAbility   opt.V[game.TriggeredAbility]
+	chapterAbility     opt.V[game.ChapterAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
+	entersPrepared     bool
 	consumed           semanticConsumption
 	sourceSpans        []oracle.Span
 }
@@ -106,6 +112,7 @@ func lowerFaceAbilities(
 		CardName:         face.Name,
 		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
+		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
 	})
 	if len(diagnostics) > 0 {
 		return loweredFaceAbilities{}, diagnostics
@@ -115,7 +122,12 @@ func lowerFaceAbilities(
 	var unsupported []oracle.Diagnostic
 	for i, ability := range compilation.Abilities {
 		syntax := compilation.Syntax.Abilities[i]
-		lowered, diagnostic := lowerExecutableAbility(face.Name, ability, syntax)
+		lowered, diagnostic := lowerExecutableAbility(
+			face.Name,
+			slices.Contains(parsedType.Subtypes, "Saga"),
+			ability,
+			syntax,
+		)
 		if diagnostic != nil {
 			unsupported = append(unsupported, *diagnostic)
 			continue
@@ -141,9 +153,13 @@ func lowerFaceAbilities(
 		if lowered.triggeredAbility.Exists {
 			result.TriggeredAbilities = append(result.TriggeredAbilities, lowered.triggeredAbility.Val)
 		}
+		if lowered.chapterAbility.Exists {
+			result.ChapterAbilities = append(result.ChapterAbilities, lowered.chapterAbility.Val)
+		}
 		if lowered.replacementAbility.Exists {
 			result.ReplacementAbilities = append(result.ReplacementAbilities, lowered.replacementAbility.Val)
 		}
+		result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
 				unsupported = append(unsupported, *executableDiagnostic(
@@ -164,11 +180,15 @@ func lowerFaceAbilities(
 
 func lowerExecutableAbility(
 	cardName string,
+	saga bool,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (abilityLowering, *oracle.Diagnostic) {
 	if len(ability.Modes) > 0 {
 		return lowerModalAbility(cardName, ability, syntax)
+	}
+	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
+		return lowered, nil
 	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
 		return lowered, diagnostic
@@ -259,6 +279,9 @@ func lowerExecutableAbility(
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
 		}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
+		}
 		return abilityLowering{
 			triggeredAbility: opt.Val(triggeredAbility),
 			consumed: semanticConsumption{
@@ -270,11 +293,14 @@ func lowerExecutableAbility(
 			},
 			sourceSpans: spans,
 		}, nil
+	case oracle.AbilityChapter:
+		return lowerChapterAbility(cardName, ability, syntax)
 	case oracle.AbilityReplacement:
 		replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
+
 		return abilityLowering{
 			replacementAbility: opt.Val(replacementAbility),
 			consumed: semanticConsumption{
@@ -285,6 +311,9 @@ func lowerExecutableAbility(
 			sourceSpans: []oracle.Span{ability.Effects[0].Span},
 		}, nil
 	case oracle.AbilityReminder:
+		if saga && isOrdinarySagaReminder(ability.Text) {
+			return abilityLowering{sourceSpans: []oracle.Span{ability.Span}}, nil
+		}
 		return lowerReminderManaAbility(ability)
 	default:
 		return abilityLowering{}, executableDiagnostic(
@@ -293,6 +322,128 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func isOrdinarySagaReminder(text string) bool {
+	const (
+		withComma    = "(As this Saga enters and after your draw step, add a lore counter."
+		withoutComma = "(As this Saga enters and after your draw step add a lore counter."
+	)
+	remainder, ok := strings.CutPrefix(text, withComma)
+	if !ok {
+		remainder, ok = strings.CutPrefix(text, withoutComma)
+	}
+	if !ok {
+		return false
+	}
+	if remainder == ")" {
+		return true
+	}
+	const sacrificePrefix = " Sacrifice after "
+	chapter, ok := strings.CutPrefix(remainder, sacrificePrefix)
+	if !ok || !strings.HasSuffix(chapter, ".)") {
+		return false
+	}
+	chapter = strings.TrimSuffix(chapter, ".)")
+	switch chapter {
+	case "I", "II", "III", "IV", "V", "VI":
+		return true
+	default:
+		return false
+	}
+}
+
+func lowerChapterAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	if len(ability.Chapters) == 0 || ability.ChapterSpan == (oracle.Span{}) {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported Saga chapter ability",
+			"the executable source backend requires one or more chapter numbers",
+		)
+	}
+	bodyAbility := ability
+	bodyAbility.Kind = oracle.AbilitySpell
+	bodyAbility.Chapters = nil
+	bodyAbility.ChapterSpan = oracle.Span{}
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Chapters = nil
+	bodySyntax.ChapterSpan = oracle.Span{}
+	dash := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.EmDash
+	})
+	if dash < 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported Saga chapter ability",
+			"the executable source backend requires an em dash after the chapter numbers",
+		)
+	}
+	bodySyntax.Tokens = slices.Clone(syntax.Tokens[dash+1:])
+	content, diagnostic := lowerSpell(cardName, bodyAbility, bodySyntax)
+	if diagnostic != nil {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported Saga chapter ability",
+			diagnostic.Detail,
+		)
+	}
+	spans := []oracle.Span{ability.ChapterSpan, syntax.Tokens[dash].Span}
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	for _, target := range ability.Targets {
+		spans = append(spans, target.Span)
+	}
+	for _, reference := range ability.References {
+		spans = append(spans, reference.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		chapterAbility: opt.Val(game.ChapterAbility{
+			Text:     ability.Text,
+			Chapters: slices.Clone(ability.Chapters),
+			Content:  content,
+		}),
+		consumed: semanticConsumption{
+			targets:    len(ability.Targets),
+			effects:    len(ability.Effects),
+			references: len(ability.References),
+		},
+		sourceSpans: spans,
+	}, nil
+}
+
+func lowerEntersPrepared(ability oracle.CompiledAbility, syntax oracle.Ability) (abilityLowering, bool) {
+	const text = "This creature enters prepared."
+	if ability.Kind != oracle.AbilityStatic ||
+		(ability.Text != text && !strings.HasPrefix(ability.Text, text+" (")) ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectEnterPrepared ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferenceThisObject ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil {
+		return abilityLowering{}, false
+	}
+	return abilityLowering{
+		entersPrepared: true,
+		consumed: semanticConsumption{
+			effects:    1,
+			references: 1,
+		},
+		sourceSpans: []oracle.Span{syntax.Span},
+	}, true
 }
 
 func lowerActivatedAbilityKind(
@@ -485,14 +636,15 @@ func lowerModalAbility(
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported modal ability",
-			"the executable source backend supports only exact fixed-cardinality \"Choose one\" modal abilities",
+			"the executable source backend supports only exact \"Choose N\" and \"Choose one or both\" modal abilities",
 		)
 	}
-	if minModes != 1 || maxModes != 1 {
+	if minModes < 1 || maxModes < minModes || maxModes > len(ability.Modes) ||
+		(minModes == 1 && maxModes == 2 && len(ability.Modes) != 2) {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported modal ability",
-			"the executable source backend supports only \"Choose one\" modal abilities",
+			"the modal choice range does not match the number of modes",
 		)
 	}
 
@@ -559,11 +711,19 @@ func lowerModalAbility(
 }
 
 // parseChooseHeader inspects a modal header phrase and returns (minModes,
-// maxModes, ok). It accepts only "Choose <word> —" where <word> is a cardinal
-// number spelled out as a single word ("one", "two", etc.) and rejects "or
-// both", "or more", "at random", and other multi-word cardinalities.
+// maxModes, ok). It accepts "Choose <word> —" where <word> is a cardinal
+// number spelled out as a single word ("one", "two", etc.), plus exact
+// "Choose one or both —" headers.
 func parseChooseHeader(header oracle.Phrase) (minModes, maxModes int, ok bool) {
 	tokens := header.Tokens
+	if len(tokens) == 5 &&
+		tokens[0].Kind == oracle.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == oracle.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == oracle.Word && strings.EqualFold(tokens[2].Text, "or") &&
+		tokens[3].Kind == oracle.Word && strings.EqualFold(tokens[3].Text, "both") &&
+		tokens[4].Kind == oracle.EmDash {
+		return 1, 2, true
+	}
 	// Expected: [Word("Choose"), Word(<number>), EmDash]
 	if len(tokens) != 3 ||
 		tokens[0].Kind != oracle.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
@@ -1097,6 +1257,26 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 			game.Selection{RequiredTypes: []types.Card{types.Creature}},
 			game.SourcePermanentReference(),
 		), true
+	case oracle.StaticSubjectControlledWalls:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{types.Wall}},
+		), true
+	case oracle.StaticSubjectControlledArtifacts:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+		), true
+	case oracle.StaticSubjectControlledTokens:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{TokenOnly: true},
+		), true
+	case oracle.StaticSubjectOpponentControlledCreatures:
+		return game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerOpponent,
+		}), true
 	default:
 		return game.GroupReference{}, false
 	}
@@ -1132,6 +1312,49 @@ func matchesExactStaticPTBuffSyntax(
 			equalTokenWord(tokens[0], "other") &&
 			equalTokenWord(tokens[1], "creatures") &&
 			equalTokenWord(tokens[2], "you") &&
+			equalTokenWord(tokens[3], "control") &&
+			equalTokenWord(tokens[4], "get") &&
+			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
+			tokens[7].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta) &&
+			tokens[10].Kind == oracle.Period
+	case oracle.StaticSubjectControlledWalls:
+		offset := 0
+		noun := "walls"
+		verb := "get"
+		if len(tokens) == 11 && equalTokenWord(tokens[0], "each") {
+			offset = 1
+			noun = "wall"
+			verb = "gets"
+		}
+		return len(tokens) == 10+offset &&
+			equalTokenWord(tokens[offset], noun) &&
+			equalTokenWord(tokens[offset+1], "you") &&
+			equalTokenWord(tokens[offset+2], "control") &&
+			equalTokenWord(tokens[offset+3], verb) &&
+			tokensMatchSignedAmount(tokens[offset+4], tokens[offset+5], effect.PowerDelta) &&
+			tokens[offset+6].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[offset+7], tokens[offset+8], effect.ToughnessDelta) &&
+			tokens[offset+9].Kind == oracle.Period
+	case oracle.StaticSubjectControlledArtifacts, oracle.StaticSubjectControlledTokens:
+		noun := "artifacts"
+		if effect.StaticSubject == oracle.StaticSubjectControlledTokens {
+			noun = "tokens"
+		}
+		return len(tokens) == 10 &&
+			equalTokenWord(tokens[0], noun) &&
+			equalTokenWord(tokens[1], "you") &&
+			equalTokenWord(tokens[2], "control") &&
+			equalTokenWord(tokens[3], "get") &&
+			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
+			tokens[6].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta) &&
+			tokens[9].Kind == oracle.Period
+	case oracle.StaticSubjectOpponentControlledCreatures:
+		return len(tokens) == 11 &&
+			equalTokenWord(tokens[0], "creatures") &&
+			equalTokenWord(tokens[1], "your") &&
+			equalTokenWord(tokens[2], "opponents") &&
 			equalTokenWord(tokens[3], "control") &&
 			equalTokenWord(tokens[4], "get") &&
 			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&

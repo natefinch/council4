@@ -1,5 +1,5 @@
-// Package cards provides a registry mapping canonical card names to CardDef
-// values. Card definitions live in letter-based sub-packages (a/, b/, ..., z/)
+// Package cards provides a registry indexing CardDef values by canonical card
+// name. Card definitions live in letter-based sub-packages (a/, b/, ..., z/)
 // and are aggregated here.
 //
 // # Adding a card
@@ -17,34 +17,42 @@
 //
 // Each letter sub-package exports a var Cards []*game.CardDef containing all
 // cards in that package. The Registry in this package combines them into a
-// single name→CardDef lookup.
+// name lookup.
 package cards
 
 import "github.com/natefinch/council4/mtg/game"
 
-// Registry maps canonical card names to their CardDef values.
+// Registry indexes CardDef values by canonical card name.
 type Registry struct {
-	cards map[string]*game.CardDef
+	cards map[string][]*game.CardDef
+	count int
 }
 
 // NewRegistry creates a Registry from the given card slices.
-// Duplicate card names cause a panic.
+// Distinct definitions may share a printed card name.
 func NewRegistry(cardSets ...[]*game.CardDef) *Registry {
-	r := &Registry{cards: make(map[string]*game.CardDef)}
+	r := &Registry{cards: make(map[string][]*game.CardDef)}
 	for _, set := range cardSets {
 		for _, card := range set {
-			if _, exists := r.cards[card.Name]; exists {
-				panic("cards: duplicate card name: " + card.Name)
-			}
-			r.cards[card.Name] = card
+			r.cards[card.Name] = append(r.cards[card.Name], card)
+			r.count++
 		}
 	}
 	return r
 }
 
-// Lookup returns the CardDef for the given card name, or nil if not found.
+// Lookup returns the first CardDef for the given card name, or nil if not found.
 func (r *Registry) Lookup(name string) *game.CardDef {
-	return r.cards[name]
+	matches := r.cards[name]
+	if len(matches) == 0 {
+		return nil
+	}
+	return matches[0]
+}
+
+// LookupAll returns every CardDef with the given printed card name.
+func (r *Registry) LookupAll(name string) []*game.CardDef {
+	return append([]*game.CardDef(nil), r.cards[name]...)
 }
 
 // All returns all registered card names.
@@ -58,5 +66,5 @@ func (r *Registry) All() []string {
 
 // Len returns the number of registered cards.
 func (r *Registry) Len() int {
-	return len(r.cards)
+	return r.count
 }

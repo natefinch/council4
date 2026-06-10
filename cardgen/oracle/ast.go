@@ -9,6 +9,7 @@ const (
 	AbilitySpell
 	AbilityActivated
 	AbilityLoyalty
+	AbilityChapter
 	AbilityTriggered
 	AbilityReplacement
 	AbilityStatic
@@ -20,6 +21,7 @@ var abilityKindNames = [...]string{
 	AbilitySpell:       "spell",
 	AbilityActivated:   "activated",
 	AbilityLoyalty:     "loyalty",
+	AbilityChapter:     "chapter",
 	AbilityTriggered:   "triggered",
 	AbilityReplacement: "replacement",
 	AbilityStatic:      "static",
@@ -38,6 +40,7 @@ type ParseContext struct {
 	CardName         string
 	InstantOrSorcery bool
 	Planeswalker     bool
+	Saga             bool
 }
 
 // Document is a lossless syntax tree for one card face's Oracle text.
@@ -54,6 +57,8 @@ type Ability struct {
 	Text        string
 	Tokens      []Token
 	AbilityWord *Phrase
+	Chapters    []int
+	ChapterSpan Span
 	Cost        *Phrase
 	Sentences   []Sentence
 	Reminders   []Delimited

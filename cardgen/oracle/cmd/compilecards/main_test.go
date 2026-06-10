@@ -70,7 +70,7 @@ func TestRunExcludesCardsOutsideCorpusPolicy(t *testing.T) {
 	corpus := `[
 		{"id":"paper","name":"Paper Card","layout":"normal","games":["paper"],"legalities":{"legacy":"banned"},"type_line":"Creature","power":"1","toughness":"1"},
 		{"id":"funny","name":"Legal Funny Card","layout":"normal","set_type":"funny","games":["paper"],"legalities":{"legacy":"legal"},"type_line":"Creature","power":"1","toughness":"1"},
-		{"id":"token","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Creature — Bear","power":"2","toughness":"2"},
+		{"id":"token","oracle_id":"11111111-1111-1111-1111-111111111111","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Creature — Bear","power":"2","toughness":"2"},
 		{"id":"digital-print","name":"Paper Identity Digital Printing","layout":"normal","set_type":"masters","games":["mtgo"],"digital":true,"legalities":{"legacy":"legal"},"type_line":"Creature","power":"1","toughness":"1"},
 		{"id":"alchemy","name":"Alchemy Card","layout":"normal","set_type":"alchemy","games":["arena"],"legalities":{"legacy":"legal"},"type_line":"Creature","power":"1","toughness":"1"},
 		{"id":"digital","name":"Digital Card","layout":"normal","set_type":"expansion","games":["arena"],"legalities":{"historic":"legal"},"type_line":"Creature","power":"1","toughness":"1"},
@@ -136,20 +136,190 @@ func TestWriteTextReportListsEachExclusionOnce(t *testing.T) {
 	}
 }
 
-func TestCompileCorpusRejectsPathCollisions(t *testing.T) {
+func TestCompileCorpusDisambiguatesPathAndIdentifierCollisions(t *testing.T) {
 	t.Parallel()
 	input := `[
-		{"id":"one","name":"Same Name","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature"},
-		{"id":"two","name":"Same Name","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature"}
+		{"id":"one","oracle_id":"oracle-one","name":"Same Name","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature"},
+		{"id":"two","oracle_id":"oracle-two","name":"Same Name","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature"}
 	]`
 	results, err := compileCorpus(strings.NewReader(input), 2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	wantedPaths := map[string]bool{
+		filepath.Join("s", "same_name.go"):                   true,
+		filepath.Join("s", "same_name_scryfalloracletwo.go"): true,
+	}
 	for _, result := range results {
-		if len(result.diagnostics) == 0 || result.diagnostics[0].Summary != "generated path collision" {
+		if result.err != nil || len(result.diagnostics) != 0 {
 			t.Fatalf("result = %#v", result)
 		}
+		if !wantedPaths[result.relative] {
+			t.Fatalf("relative path = %q", result.relative)
+		}
+		if result.card.OracleID == "oracle-one" && !strings.Contains(result.source, "var SameName =") {
+			t.Fatalf("canonical source lacks stable identifier:\n%s", result.source)
+		}
+		if result.card.OracleID == "oracle-two" && !strings.Contains(result.source, "var SameNameScryfalloracletwo =") {
+			t.Fatalf("colliding source lacks disambiguated identifier:\n%s", result.source)
+		}
+		if !strings.Contains(result.source, `"Same Name"`) {
+			t.Fatalf("source changed printed name:\n%s", result.source)
+		}
+	}
+}
+
+func TestCompileCorpusCategorizesTokensByOracleIdentity(t *testing.T) {
+	t.Parallel()
+	input := `[
+		{"id":"card","oracle_id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","name":"Bear","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature — Bear","power":"2","toughness":"2"},
+		{"id":"token-one","oracle_id":"11111111-1111-1111-1111-111111111111","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Token Creature — Bear","power":"2","toughness":"2"},
+		{"id":"token-two","oracle_id":"22222222-2222-2222-2222-222222222222","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Token Creature — Bear","power":"1","toughness":"1"}
+	]`
+	results, err := compileCorpus(strings.NewReader(input), 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := map[string]string{
+		filepath.Join("b", "bear.go"):                                            "var Bear =",
+		filepath.Join("tokens", "b", "bear_11111111111111111111111111111111.go"): "var BearToken11111111111111111111111111111111 =",
+		filepath.Join("tokens", "b", "bear_22222222222222222222222222222222.go"): "var BearToken22222222222222222222222222222222 =",
+	}
+	for _, result := range results {
+		if result.err != nil || len(result.diagnostics) != 0 {
+			t.Fatalf("result = %#v", result)
+		}
+		variable, ok := wanted[result.relative]
+		if !ok {
+			t.Fatalf("unexpected relative path %q", result.relative)
+		}
+		if !strings.Contains(result.source, "package b") || !strings.Contains(result.source, variable) {
+			t.Fatalf("source for %s:\n%s", result.relative, result.source)
+		}
+		delete(wanted, result.relative)
+	}
+	if len(wanted) != 0 {
+		t.Fatalf("missing generated paths: %v", wanted)
+	}
+}
+
+func TestCompileCorpusRejectsInvalidTokenOracleID(t *testing.T) {
+	t.Parallel()
+	input := `[
+		{"id":"token","oracle_id":"invalid","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Token Creature — Bear","power":"2","toughness":"2"}
+	]`
+	results, err := compileCorpus(strings.NewReader(input), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 || len(results[0].diagnostics) != 1 ||
+		results[0].diagnostics[0].Summary != "invalid generated identity" {
+		t.Fatalf("results = %#v", results)
+	}
+}
+
+func TestWriteSupportedMigratesAndReconcilesTokenPaths(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	ordinaryPath := filepath.Join(root, "b", "bear.go")
+	obsoleteTokenPath := filepath.Join(root, "tokens", "b", "bear_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.go")
+	for _, path := range []string{ordinaryPath, obsoleteTokenPath} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("package b\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	input := `[
+		{"id":"token","oracle_id":"11111111-1111-1111-1111-111111111111","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Token Creature — Bear","power":"2","toughness":"2"}
+	]`
+	results, err := compileCorpus(strings.NewReader(input), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeSupported(root, results); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{ordinaryPath, obsoleteTokenPath} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("obsolete path %s still exists or stat failed: %v", path, err)
+		}
+	}
+	finalPath := filepath.Join(
+		root,
+		"tokens",
+		"b",
+		"bear_11111111111111111111111111111111.go",
+	)
+	if _, err := os.Stat(finalPath); err != nil {
+		t.Fatalf("generated token source missing: %v", err)
+	}
+	for _, path := range []string{
+		filepath.Join(root, "tokens", "README.md"),
+		filepath.Join(root, "tokens", "b", "README.md"),
+		filepath.Join(root, "tokens", "b", "cards.go"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("token package file %s missing: %v", path, err)
+		}
+	}
+}
+
+func TestWriteSupportedRemovesSupersededIdentityPath(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	oldRelative := filepath.Join("s", "same_name.go")
+	oldPath := filepath.Join(root, oldRelative)
+	if err := os.MkdirAll(filepath.Dir(oldPath), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(oldPath, []byte("package s\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	results := []result{{
+		card:       cardgen.ScryfallCard{Name: "Same Name"},
+		relative:   filepath.Join("s", "same_name_scryfalltwo.go"),
+		superseded: oldRelative,
+		source:     "package s\n\nimport \"github.com/natefinch/council4/mtg/game\"\n\nvar SameNameScryfalltwo = &game.CardDef{}\n",
+	}}
+
+	if err := writeSupported(root, results); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+		t.Fatalf("superseded path still exists or stat failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, results[0].relative)); err != nil {
+		t.Fatalf("disambiguated source missing: %v", err)
+	}
+}
+
+func TestWriteSupportedRemovesObsoleteSuffixedIdentityPath(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	directory := filepath.Join(root, "s")
+	if err := os.MkdirAll(directory, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	obsolete := filepath.Join(directory, "same_name_scryfallold.go")
+	if err := os.WriteFile(obsolete, []byte("package s\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	results := []result{{
+		card:     cardgen.ScryfallCard{Name: "Same Name"},
+		relative: filepath.Join("s", "same_name.go"),
+		source:   "package s\n\nimport \"github.com/natefinch/council4/mtg/game\"\n\nvar SameName = &game.CardDef{}\n",
+	}}
+
+	if err := writeSupported(root, results); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(obsolete); !os.IsNotExist(err) {
+		t.Fatalf("obsolete identity path still exists or stat failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, results[0].relative)); err != nil {
+		t.Fatalf("canonical source missing: %v", err)
 	}
 }
 

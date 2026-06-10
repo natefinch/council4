@@ -38,6 +38,7 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 
 	actions := e.legalLandActions(g, playerID)
 	actions = append(actions, e.legalCastActions(g, playerID)...)
+	actions = append(actions, legalPreparedSpellActions(g, playerID)...)
 	actions = append(actions, e.legalFaceDownCastActions(g, playerID)...)
 	actions = append(actions, e.legalCommanderCastActions(g, playerID)...)
 	actions = append(actions, e.legalActivateAbilityActions(g, playerID)...)
@@ -45,6 +46,40 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 	actions = append(actions, e.legalSuspendActions(g, playerID)...)
 	actions = append(actions, e.legalTurnFaceUpActions(g, playerID)...)
 	actions = append(actions, actionBuild.pass())
+	return actions
+}
+
+func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return nil
+	}
+	var actions []action.Action
+	for _, permanent := range g.Battlefield {
+		if !permanent.Prepared || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
+			continue
+		}
+		sourceID, sourceDef, ok := preparedSpellSource(g, permanent)
+		if !ok {
+			continue
+		}
+		spellDef, ok := sourceDef.FaceDef(game.FaceAlternate)
+		if !ok {
+			continue
+		}
+		for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
+			for _, modes := range modeChoicesForSpell(spellDef) {
+				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
+				if targetResult.kind == targetInvalidSpec {
+					continue
+				}
+				for _, targets := range targetResult.choices {
+					if canCastPreparedCopy(g, playerID, permanent, targets, xValue, modes) {
+						actions = append(actions, actionBuild.castSpell(sourceID, zone.Battlefield, game.FaceAlternate, targets, xValue, modes))
+					}
+				}
+			}
+		}
+	}
 	return actions
 }
 
@@ -372,6 +407,9 @@ func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast actio
 
 func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	sourceZone := normalizedCastSourceZone(cast)
+	if sourceZone == zone.Battlefield {
+		return e.applyPreparedCopyWithChoices(g, playerID, cast, agents, log)
+	}
 	if !e.canCastSpellFaceFromZoneWithKicker(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, cast.KickerPaid) {
 		return false
 	}
@@ -431,6 +469,145 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
+}
+
+func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, targets []game.Target, xValue int, chosenModes []int) bool {
+	if !canAct(g, playerID) ||
+		playerID != g.Turn.PriorityPlayer ||
+		permanent == nil ||
+		!permanent.Prepared ||
+		permanent.PhasedOut ||
+		effectiveController(g, permanent) != playerID ||
+		xValue < 0 {
+		return false
+	}
+	sourceID, sourceDef, ok := preparedSpellSource(g, permanent)
+	if !ok {
+		return false
+	}
+	spellDef, ok := sourceDef.FaceDef(game.FaceAlternate)
+	if !ok {
+		return false
+	}
+	if xValue != 0 && !costHasVariableMana(manaCostPtr(spellDef.ManaCost)) {
+		return false
+	}
+	if !modesValidForSpell(spellDef, chosenModes) ||
+		!isSupportedSpell(spellDef) ||
+		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
+		!targetsValidForSpell(g, playerID, spellDef, chosenModes, targets) ||
+		!canCastAtCurrentTiming(g, playerID, spellDef) {
+		return false
+	}
+	return paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
+		PlayerID:   playerID,
+		CardID:     sourceID,
+		SourceZone: zone.Battlefield,
+		Card:       spellDef,
+		XValue:     xValue,
+	})
+}
+
+func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if cast.Face != game.FaceAlternate || cast.KickerPaid {
+		return false
+	}
+	permanent := preparedSourcePermanent(g, cast.CardID)
+	if !canCastPreparedCopy(g, playerID, permanent, cast.Targets, cast.XValue, cast.ChosenModes) {
+		return false
+	}
+	sourceID, sourceDef, ok := preparedSpellSource(g, permanent)
+	if !ok {
+		return false
+	}
+	spellDef, ok := sourceDef.FaceDef(game.FaceAlternate)
+	if !ok {
+		return false
+	}
+	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log)
+	if !ok || !canCastPreparedCopy(g, playerID, permanent, completedTargets, cast.XValue, cast.ChosenModes) {
+		return false
+	}
+	cast.Targets = completedTargets
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets)
+	if !ok {
+		panic("validated prepared spell targets could not be segmented")
+	}
+	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, spellDef, cast.XValue, agents, log)
+	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
+		PlayerID:   playerID,
+		CardID:     sourceID,
+		SourceZone: zone.Battlefield,
+		Card:       spellDef,
+		XValue:     cast.XValue,
+		Prefs:      prefs,
+	})
+	if !ok {
+		return false
+	}
+	permanent.Prepared = false
+	obj := &game.StackObject{
+		ID:                  g.IDGen.Next(),
+		Kind:                game.StackSpell,
+		SourceID:            sourceID,
+		Face:                game.FaceAlternate,
+		SourceCardID:        permanent.CardInstanceID,
+		SourceTokenDef:      permanent.TokenDef,
+		Controller:          playerID,
+		Targets:             append([]game.Target(nil), cast.Targets...),
+		TargetCounts:        targetCounts,
+		ChosenModes:         append([]int(nil), cast.ChosenModes...),
+		XValue:              cast.XValue,
+		Copy:                true,
+		AdditionalCostsPaid: additionalCostsPaid,
+		SourceZone:          zone.Battlefield,
+	}
+	stormCopies := stormCopyCount(g, spellDef)
+	g.Stack.Push(obj)
+	emitTargetEvents(g, obj)
+	emitEvent(g, game.Event{
+		Kind:          game.EventSpellCast,
+		SourceID:      sourceID,
+		StackObjectID: obj.ID,
+		Controller:    playerID,
+		CardID:        permanent.CardInstanceID,
+		Face:          game.FaceAlternate,
+		PermanentID:   permanent.ObjectID,
+		TokenDef:      permanent.TokenDef,
+		CardTypes:     cardTypes(spellDef),
+	})
+	createStormCopies(g, obj, stormCopies)
+	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
+	return true
+}
+
+func preparedSourcePermanent(g *game.Game, sourceID id.ID) *game.Permanent {
+	for _, permanent := range g.Battlefield {
+		if permanent != nil &&
+			(permanent.CardInstanceID == sourceID || permanent.Token && permanent.ObjectID == sourceID) {
+			return permanent
+		}
+	}
+	return nil
+}
+
+func preparedSpellSource(g *game.Game, permanent *game.Permanent) (id.ID, *game.CardDef, bool) {
+	if permanent == nil {
+		return 0, nil, false
+	}
+	if permanent.CardInstanceID != 0 {
+		card, ok := g.GetCardInstance(permanent.CardInstanceID)
+		if !ok || card.Def.Layout != game.LayoutPrepare || !card.Def.Alternate.Exists {
+			return 0, nil, false
+		}
+		return permanent.CardInstanceID, card.Def, true
+	}
+	if !permanent.Token || permanent.TokenDef == nil ||
+		permanent.TokenDef.Layout != game.LayoutPrepare ||
+		!permanent.TokenDef.Alternate.Exists {
+		return 0, nil, false
+	}
+	return permanent.ObjectID, permanent.TokenDef, true
 }
 
 func (e *Engine) applyActivateAbility(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) bool {
@@ -781,11 +958,7 @@ func removeCastSourceCard(g *game.Game, player *game.Player, cardID id.ID, sourc
 	case zone.Graveyard:
 		return player.Graveyard.Remove(cardID)
 	case zone.Exile:
-		if !player.Exile.Remove(cardID) {
-			return false
-		}
-		delete(g.AdventureCards, cardID)
-		return true
+		return player.Exile.Remove(cardID)
 	default:
 		return false
 	}

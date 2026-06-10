@@ -12,6 +12,8 @@ type CompiledAbility struct {
 	Span         Span
 	Text         string
 	AbilityWord  string
+	Chapters     []int
+	ChapterSpan  Span
 	Optional     bool
 	OptionalSpan Span
 	Cost         *CompiledCost
@@ -191,6 +193,7 @@ const (
 	EffectDouble
 	EffectDraw
 	EffectEnterTapped
+	EffectEnterPrepared
 	EffectExile
 	EffectFight
 	EffectGain
@@ -235,6 +238,10 @@ const (
 	StaticSubjectAttachedObject
 	StaticSubjectControlledCreatures
 	StaticSubjectOtherControlledCreatures
+	StaticSubjectControlledWalls
+	StaticSubjectControlledArtifacts
+	StaticSubjectControlledTokens
+	StaticSubjectOpponentControlledCreatures
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing

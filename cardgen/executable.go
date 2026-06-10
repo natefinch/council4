@@ -20,6 +20,19 @@ func GenerateExecutableCardSource(
 	card *ScryfallCard,
 	pkgName string,
 ) (string, []oracle.Diagnostic, error) {
+	return ExecutableGenerator{}.GenerateCardSource(card, pkgName)
+}
+
+// ExecutableGenerator configures executable CardDef source generation.
+type ExecutableGenerator struct {
+	IdentifierSuffix string
+}
+
+// GenerateCardSource generates one executable card source file.
+func (g ExecutableGenerator) GenerateCardSource(
+	card *ScryfallCard,
+	pkgName string,
+) (string, []oracle.Diagnostic, error) {
 	if !supportedLayouts[card.Layout] {
 		return "", []oracle.Diagnostic{{
 			Severity: oracle.SeverityWarning,
@@ -58,7 +71,7 @@ func GenerateExecutableCardSource(
 		return "", validationDiagnostics, nil
 	}
 
-	source, err := Renderer{}.RenderCardSource(card, defs, faceHintsFrom(faceAbilities), pkgName)
+	source, err := (Renderer{IdentifierSuffix: g.IdentifierSuffix}).RenderCardSource(card, defs, faceHintsFrom(faceAbilities), pkgName)
 	if err != nil {
 		return "", nil, err
 	}
@@ -192,6 +205,7 @@ func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (g
 			face.Defense = opt.Val(n)
 		}
 	}
+	face.EntersPrepared = abilities.EntersPrepared
 	for i := range abilities.StaticAbilities {
 		face.StaticAbilities = append(face.StaticAbilities, abilities.StaticAbilities[i].Body)
 	}
@@ -202,6 +216,7 @@ func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (g
 	face.ManaAbilities = abilities.ManaAbilities
 	face.LoyaltyAbilities = abilities.LoyaltyAbilities
 	face.TriggeredAbilities = abilities.TriggeredAbilities
+	face.ChapterAbilities = abilities.ChapterAbilities
 	face.ReplacementAbilities = abilities.ReplacementAbilities
 	face.SpellAbility = abilities.SpellAbility
 	return face, nil

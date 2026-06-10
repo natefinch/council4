@@ -76,10 +76,13 @@ func renderPTValue(pt game.PT) string {
 }
 
 // Renderer renders typed game ability values and complete CardDef values as
-// deterministic Go source. A zero-value Renderer is ready to use. Every method
-// renders from typed values using exported accessors so that repeated calls
-// with identical input produce byte-identical output.
-type Renderer struct{}
+// deterministic Go source. IdentifierSuffix disambiguates distinct cards that
+// share a printed name without changing CardDef.Name. A zero-value Renderer is
+// ready to use. Every method renders from typed values using exported accessors
+// so that repeated calls with identical input produce byte-identical output.
+type Renderer struct {
+	IdentifierSuffix string
+}
 
 // RenderCardSource renders a complete Go source file for executable CardDefs.
 // The validated game.CardDef values in defs are the sole source of every
@@ -206,8 +209,11 @@ func (r Renderer) writeCardDef(
 	layout string,
 	hints []faceRenderHints,
 ) error {
-	varName := CardNameToVarName(def.Name)
-	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
+	varName := CardNameToVarName(def.Name) + r.IdentifierSuffix
+	if r.IdentifierSuffix != "" {
+		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
+	}
+	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -245,8 +251,11 @@ func (r Renderer) writeCardDef(
 }
 
 func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def *game.CardDef, layout string, hints faceRenderHints) error {
-	varName := CardNameToVarName(def.Name)
-	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
+	varName := CardNameToVarName(def.Name) + r.IdentifierSuffix
+	if r.IdentifierSuffix != "" {
+		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
+	}
+	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -307,6 +316,9 @@ func (Renderer) writeFaceScalarFields(b *strings.Builder, ctx *renderCtx, face *
 			return err
 		}
 		_, _ = fmt.Fprintf(b, "%sColors: []color.Color{%s},\n", indent, colorLits)
+	}
+	if face.EntersPrepared {
+		_, _ = fmt.Fprintf(b, "%sEntersPrepared: true,\n", indent)
 	}
 	if len(face.Supertypes) > 0 {
 		ctx.need(importTypes)
@@ -452,6 +464,18 @@ func (r Renderer) renderFaceAbilityFields(ctx *renderCtx, face *game.CardFace, h
 			elements = append(elements, rendered+",")
 		}
 		fields = append(fields, sliceField("TriggeredAbilities", "game.TriggeredAbility", elements))
+	}
+
+	if len(face.ChapterAbilities) > 0 {
+		elements := make([]string, 0, len(face.ChapterAbilities))
+		for i := range face.ChapterAbilities {
+			rendered, err := r.renderChapterAbility(ctx, &face.ChapterAbilities[i])
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("ChapterAbilities", "game.ChapterAbility", elements))
 	}
 
 	if len(face.LoyaltyAbilities) > 0 {
@@ -747,6 +771,18 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	}
 	fields = append(fields, fmt.Sprintf("Content: %s,", content))
 	return structLit("game.TriggeredAbility", fields), nil
+}
+
+func (r Renderer) renderChapterAbility(ctx *renderCtx, ability *game.ChapterAbility) (string, error) {
+	content, err := r.renderAbilityContent(ctx, ability.Content)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ChapterAbility", []string{
+		fmt.Sprintf("Text: %s,", renderText(ability.Text)),
+		fmt.Sprintf("Chapters: %#v,", ability.Chapters),
+		fmt.Sprintf("Content: %s,", content),
+	}), nil
 }
 
 func (r Renderer) renderLoyaltyAbility(ctx *renderCtx, ability *game.LoyaltyAbility) (string, error) {
@@ -1468,7 +1504,13 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.NonToken {
 		fields = append(fields, "NonToken: true,")
 	}
+	if selection.TokenOnly {
+		fields = append(fields, "TokenOnly: true,")
+	}
 
+	for i := range fields {
+		fields[i] = strings.TrimSuffix(fields[i], ",")
+	}
 	return compactStructLit("game.Selection", fields), nil
 }
 

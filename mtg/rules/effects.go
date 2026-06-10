@@ -19,10 +19,19 @@ func (e *Engine) resolveSpellEffects(g *game.Game, obj *game.StackObject, card *
 }
 
 func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObject, card *game.CardInstance, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	if e.resolveCardImplementationSpell(g, obj, card, log) {
+	if card != nil && e.resolveCardImplementationSpell(g, obj, card, log) {
 		return
 	}
-	spellDef := cardFaceOrDefault(card, obj.Face)
+	var spellDef *game.CardDef
+	if card != nil {
+		spellDef = cardFaceOrDefault(card, obj.Face)
+	} else {
+		var ok bool
+		spellDef, ok = obj.SourceTokenDef.FaceDef(obj.Face)
+		if !ok {
+			return
+		}
+	}
 	ability, ok := firstSpellAbility(spellDef)
 	if !ok {
 		return
@@ -759,6 +768,7 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 		Owner:         controller,
 		Controller:    controller,
 		SummoningSick: entersSummoningSick(token),
+		Prepared:      token.EntersPrepared,
 		Token:         true,
 		TokenDef:      token,
 	}
