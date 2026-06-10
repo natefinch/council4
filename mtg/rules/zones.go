@@ -104,6 +104,10 @@ func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, cont
 }
 
 func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, kind game.FaceDownKind, wasCast bool) (*game.Permanent, bool) {
+	return createCardPermanentFaceDownWithChoices(NewEngine(nil), g, card, controller, fromZone, face, kind, wasCast, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, kind game.FaceDownKind, wasCast bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	if _, ok := cardFaceDef(card, face); !ok || kind == game.FaceDownNone {
 		return nil, false
 	}
@@ -119,6 +123,11 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 		FaceDownKind:   kind,
 		SummoningSick:  true,
 	}
+	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
+		engine: e,
+		agents: agents,
+		log:    log,
+	}, g, permanent, fromZone)
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.Event{
 		SourceID:     card.ID,

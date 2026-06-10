@@ -169,7 +169,11 @@ func TestLowerSelfCardGraveyardReturnToHand(t *testing.T) {
 	if len(face.ActivatedAbilities) != 1 {
 		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
 	}
-	sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
+	ability := face.ActivatedAbilities[0]
+	if ability.ZoneOfFunction != zone.Graveyard {
+		t.Fatalf("zone of function = %v, want graveyard", ability.ZoneOfFunction)
+	}
+	sequence := ability.Content.Modes[0].Sequence
 	move, ok := sequence[0].Primitive.(game.MoveCard)
 	if !ok {
 		t.Fatalf("primitive = %T, want game.MoveCard", sequence[0].Primitive)
@@ -189,6 +193,9 @@ func TestLowerSelfCardGraveyardReturnToBattlefieldTapped(t *testing.T) {
 		Power:      new("2"),
 		Toughness:  new("2"),
 	})
+	if face.ActivatedAbilities[0].ZoneOfFunction != zone.Graveyard {
+		t.Fatalf("zone of function = %v, want graveyard", face.ActivatedAbilities[0].ZoneOfFunction)
+	}
 	sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
 	if len(sequence) != 1 {
 		t.Fatalf("sequence length = %d, want 1", len(sequence))
@@ -216,6 +223,9 @@ func TestLowerSelfCardGraveyardReturnToBattlefieldWithCounters(t *testing.T) {
 		Power:      new("2"),
 		Toughness:  new("2"),
 	})
+	if face.ActivatedAbilities[0].ZoneOfFunction != zone.Graveyard {
+		t.Fatalf("zone of function = %v, want graveyard", face.ActivatedAbilities[0].ZoneOfFunction)
+	}
 	sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
 	if len(sequence) != 1 {
 		t.Fatalf("sequence length = %d, want 1", len(sequence))
@@ -653,6 +663,104 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 			}
 			test.check(t, face.ActivatedAbilities[0].AdditionalCosts)
 		})
+	}
+}
+
+func TestLowerActivatedTapPermanentsCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		check      func(*testing.T, cost.Additional)
+	}{
+		{
+			name:       "tap two artifacts",
+			oracleText: "Tap two untapped artifacts you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 2 ||
+					!additional.MatchPermanentType ||
+					additional.PermanentType != types.Artifact {
+					t.Fatalf("additional cost = %#v, want tap two artifacts", additional)
+				}
+			},
+		},
+		{
+			name:       "tap subtype permanent",
+			oracleText: "Tap an untapped Merfolk you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 1 ||
+					additional.MatchPermanentType ||
+					additional.SubtypesAny[0] != types.Merfolk ||
+					additional.SubtypesAny[1] != "" {
+					t.Fatalf("additional cost = %#v, want tap one Merfolk", additional)
+				}
+			},
+		},
+		{
+			name:       "tap elves",
+			oracleText: "Tap two untapped Elves you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 2 ||
+					additional.SubtypesAny[0] != types.Elf ||
+					additional.SubtypesAny[1] != "" {
+					t.Fatalf("additional cost = %#v, want tap two Elves", additional)
+				}
+			},
+		},
+		{
+			name:       "tap dwarves",
+			oracleText: "Tap two untapped Dwarves you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 2 ||
+					additional.SubtypesAny[0] != types.Dwarf ||
+					additional.SubtypesAny[1] != "" {
+					t.Fatalf("additional cost = %#v, want tap two Dwarves", additional)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			costs := face.ActivatedAbilities[0].AdditionalCosts
+			if len(costs) != 1 {
+				t.Fatalf("additional costs = %#v, want one", costs)
+			}
+			test.check(t, costs[0])
+		})
+	}
+}
+
+func TestLowerActivatedAbilityRejectsVariableTapPermanentsCost(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Tap X untapped Soldiers you control: Draw a card.",
+	})
+	if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+		t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostic")
 	}
 }
 
@@ -3363,6 +3471,33 @@ func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
 	}
 }
 
+func TestLowerManifestSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Manifest",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Manifest the top card of your library.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if _, ok := mode.Sequence[0].Primitive.(game.Manifest); !ok {
+		t.Fatalf("primitive = %T, want game.Manifest", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerManifestRejectsUnsupportedPatterns(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Manifest",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Manifest a card from your hand.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported manifest diagnostic")
+	}
+}
+
 func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -3389,6 +3524,11 @@ func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
 			name:      "explore",
 			text:      "When this creature enters, if you control an artifact, it explores.",
 			primitive: game.Explore{Creature: game.SourcePermanentReference()},
+		},
+		{
+			name:      "manifest",
+			text:      "When this creature enters, if you control an artifact, manifest the top card of your library.",
+			primitive: game.Manifest{},
 		},
 		{
 			name:      "mill",

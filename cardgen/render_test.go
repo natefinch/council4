@@ -147,6 +147,17 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderManifestPrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Manifest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rendered != "game.Manifest{}" {
+		t.Fatalf("rendered manifest = %q, want game.Manifest{}", rendered)
+	}
+}
+
 func TestRenderEveryRecognizedCounterKind(t *testing.T) {
 	t.Parallel()
 	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {

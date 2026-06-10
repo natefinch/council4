@@ -21,6 +21,7 @@ import (
 // Implementations in mtg/rules wrap *game.Game and the relevant rules helpers.
 type State interface {
 	stateQueries
+	statePermanentQueries
 	stateAbilityQueries
 	stateMutations
 }
@@ -40,16 +41,6 @@ type stateQueries interface {
 	// PermanentCardDef returns the card definition for a permanent.
 	PermanentCardDef(p *game.Permanent) (*game.CardDef, bool)
 
-	// PermanentHasType reports whether the permanent currently has the given
-	// card type, accounting for continuous type-changing effects.
-	PermanentHasType(p *game.Permanent, t types.Card) bool
-
-	// PermanentHasSupertype reports whether the permanent has the given supertype.
-	PermanentHasSupertype(p *game.Permanent, s types.Super) bool
-
-	// PermanentEffectiveColors returns the effective colors of the permanent.
-	PermanentEffectiveColors(p *game.Permanent) []color.Color
-
 	// PermanentByObjectID looks up a permanent by its object ID.
 	PermanentByObjectID(objectID id.ID) (*game.Permanent, bool)
 
@@ -59,6 +50,21 @@ type stateQueries interface {
 	// CardFace returns the requested face of a card instance, falling back to
 	// the base definition when the face does not exist.
 	CardFace(card *game.CardInstance, face game.FaceIndex) *game.CardDef
+}
+
+type statePermanentQueries interface {
+	// PermanentHasType reports whether the permanent currently has the given
+	// card type, accounting for continuous type-changing effects.
+	PermanentHasType(p *game.Permanent, t types.Card) bool
+
+	// PermanentHasSupertype reports whether the permanent has the given supertype.
+	PermanentHasSupertype(p *game.Permanent, s types.Super) bool
+
+	// PermanentHasSubtype reports whether the permanent currently has the given subtype.
+	PermanentHasSubtype(p *game.Permanent, s types.Sub) bool
+
+	// PermanentEffectiveColors returns the effective colors of the permanent.
+	PermanentEffectiveColors(p *game.Permanent) []color.Color
 }
 
 type stateAbilityQueries interface {

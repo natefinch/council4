@@ -142,28 +142,82 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 		sourceCardID = req.Source.CardInstanceID
 		sourceZone = zone.Battlefield
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.Prefs, req.Source, sourceCardID, sourceZone)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, clonePreferences(req.Prefs), req.Source, sourceCardID, sourceZone)
 	if !ok {
 		return plan, false
 	}
-	excluded := make(map[id.ID]bool)
-	if tapSource && req.Source != nil {
-		excluded[req.Source.ObjectID] = true
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, abilityManaExclusions(additional, tapSource, req.Source, true), clonePreferences(req.Prefs))
+	if !ok {
+		additional, manaPlan, ok = retryAbilityCostPlanAvoidingManaTapConflict(s, req, sourceCardID, sourceZone, tapSource, additional)
+		if !ok {
+			return plan, false
+		}
 	}
+	plan.mana = manaPlan
+	plan.additional = additional
+	plan.tapSource = tapSource
+	return plan, true
+}
+
+func retryAbilityCostPlanAvoidingManaTapConflict(s State, req AbilityRequest, sourceCardID id.ID, sourceZone zone.Type, tapSource bool, previous additionalCostPlan) (additionalCostPlan, paymentPlan, bool) {
+	if len(previous.permanentsToTap) == 0 {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, abilityManaExclusions(previous, tapSource, req.Source, false), clonePreferences(req.Prefs))
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, tapRetryPreferences(req.Prefs), req.Source, sourceCardID, sourceZone, paymentPlanTappedPermanents(manaPlan)...)
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	manaPlan, ok = buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, abilityManaExclusions(additional, tapSource, req.Source, true), clonePreferences(req.Prefs))
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	return additional, manaPlan, true
+}
+
+func abilityManaExclusions(additional additionalCostPlan, tapSource bool, source *game.Permanent, includeTapPermanents bool) map[id.ID]bool {
+	excluded := additionalManaExclusions(nil, additional, includeTapPermanents)
+	if tapSource && source != nil {
+		excluded[source.ObjectID] = true
+	}
+	return excluded
+}
+
+func additionalManaExclusions(base map[id.ID]bool, additional additionalCostPlan, includeTapPermanents bool) map[id.ID]bool {
+	excluded := make(map[id.ID]bool)
+	maps.Copy(excluded, base)
 	for _, sacrifice := range additional.sacrifices {
 		excluded[sacrifice.ObjectID] = true
 	}
 	for _, permanent := range additional.exilePermanents {
 		excluded[permanent.ObjectID] = true
 	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, excluded, req.Prefs)
-	if !ok {
-		return plan, false
+	if includeTapPermanents {
+		for _, permanent := range additional.permanentsToTap {
+			excluded[permanent.ObjectID] = true
+		}
 	}
-	plan.mana = manaPlan
-	plan.additional = additional
-	plan.tapSource = tapSource
-	return plan, true
+	return excluded
+}
+
+func tapRetryPreferences(prefs *Preferences) *Preferences {
+	cloned := clonePreferences(prefs)
+	if cloned != nil {
+		cloned.TapChoices = nil
+	}
+	return cloned
+}
+
+func paymentPlanTappedPermanents(plan paymentPlan) []*game.Permanent {
+	permanents := make([]*game.Permanent, 0, len(plan.manaTaps)+len(plan.convokeTaps))
+	for _, tap := range plan.manaTaps {
+		permanents = append(permanents, tap.permanent)
+	}
+	permanents = append(permanents, plan.convokeTaps...)
+	return permanents
 }
 
 func payAbilityCosts(s State, req AbilityRequest) (abilityCostPlan, bool) {
@@ -234,58 +288,13 @@ func payGenericCost(s State, req GenericRequest) bool {
 
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.Prefs, nil, req.SourceCardID, zone.None)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, clonePreferences(req.Prefs), nil, req.SourceCardID, zone.None)
 	if !ok {
 		return plan, false
 	}
-	excluded := make(map[id.ID]bool)
-	maps.Copy(excluded, req.Exclude)
-	for _, sacrifice := range additional.sacrifices {
-		excluded[sacrifice.ObjectID] = true
-	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, excluded, req.Prefs)
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaExclusions(req.Exclude, additional, true), clonePreferences(req.Prefs))
 	if !ok {
-		return plan, false
-	}
-	plan.additional = additional
-	plan.mana = manaPlan
-	return plan, true
-}
-
-func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, prefs *Preferences) (spellCostPlan, bool) {
-	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, option: option})
-	plan := spellCostPlan{option: option}
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, prefs, nil, cardID, sourceZone)
-	if !ok {
-		return plan, false
-	}
-	excluded := make(map[id.ID]bool)
-	for _, sacrifice := range additional.sacrifices {
-		excluded[sacrifice.ObjectID] = true
-	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, playerID, option.manaCost, xValue, excluded, prefs)
-	if !ok {
-		convokeTaps, convokedCost, convokeOK := convokePayment(s, playerID, option.manaCost, xValue, excluded)
-		if option.card.HasKeyword(game.Convoke) && convokeOK {
-			for _, permanent := range convokeTaps {
-				excluded[permanent.ObjectID] = true
-			}
-			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, convokedCost, xValue, excluded, prefs)
-			if ok {
-				manaPlan.convokeTaps = convokeTaps
-			}
-		}
-		if !ok && option.card.HasKeyword(game.Delve) {
-			delveExiles, generic, delveOK := delveCandidates(s, playerID, option.manaCost, xValue, cardID, sourceZone)
-			for exiledCount := 1; delveOK && exiledCount <= min(generic, len(delveExiles)); exiledCount++ {
-				delvedCost := costWithGenericRequirement(option.manaCost, generic-exiledCount)
-				manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, delvedCost, 0, excluded, prefs)
-				if ok {
-					manaPlan.delveExiles = append([]id.ID(nil), delveExiles[:exiledCount]...)
-					break
-				}
-			}
-		}
+		additional, manaPlan, ok = retryGenericCostPlanAvoidingManaTapConflict(s, req, additional)
 		if !ok {
 			return plan, false
 		}
@@ -293,6 +302,94 @@ func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 	plan.additional = additional
 	plan.mana = manaPlan
 	return plan, true
+}
+
+func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, previous additionalCostPlan) (additionalCostPlan, paymentPlan, bool) {
+	if len(previous.permanentsToTap) == 0 {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaExclusions(req.Exclude, previous, false), clonePreferences(req.Prefs))
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, tapRetryPreferences(req.Prefs), nil, req.SourceCardID, zone.None, paymentPlanTappedPermanents(manaPlan)...)
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	manaPlan, ok = buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaExclusions(req.Exclude, additional, true), clonePreferences(req.Prefs))
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	return additional, manaPlan, true
+}
+
+func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, prefs *Preferences) (spellCostPlan, bool) {
+	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, option: option})
+	plan := spellCostPlan{option: option}
+	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, clonePreferences(prefs), nil, cardID, sourceZone)
+	if !ok {
+		return plan, false
+	}
+	manaPlan, ok := buildSpellManaPlanForOption(s, playerID, cardID, sourceZone, option, xValue, additionalManaExclusions(nil, additional, true), clonePreferences(prefs))
+	if !ok {
+		additional, manaPlan, ok = retrySpellCostPlanAvoidingManaTapConflict(s, playerID, cardID, sourceZone, option, xValue, prefs, additional)
+		if !ok {
+			return plan, false
+		}
+	}
+	plan.additional = additional
+	plan.mana = manaPlan
+	return plan, true
+}
+
+func retrySpellCostPlanAvoidingManaTapConflict(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, prefs *Preferences, previous additionalCostPlan) (additionalCostPlan, paymentPlan, bool) {
+	if len(previous.permanentsToTap) == 0 {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	manaPlan, ok := buildSpellManaPlanForOption(s, playerID, cardID, sourceZone, option, xValue, additionalManaExclusions(nil, previous, false), clonePreferences(prefs))
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, tapRetryPreferences(prefs), nil, cardID, sourceZone, paymentPlanTappedPermanents(manaPlan)...)
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	manaPlan, ok = buildSpellManaPlanForOption(s, playerID, cardID, sourceZone, option, xValue, additionalManaExclusions(nil, additional, true), clonePreferences(prefs))
+	if !ok {
+		return additionalCostPlan{}, paymentPlan{}, false
+	}
+	return additional, manaPlan, true
+}
+
+func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, excluded map[id.ID]bool, prefs *Preferences) (paymentPlan, bool) {
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, playerID, option.manaCost, xValue, excluded, prefs)
+	if ok {
+		return manaPlan, true
+	}
+	convokeTaps, convokedCost, convokeOK := convokePayment(s, playerID, option.manaCost, xValue, excluded)
+	if option.card.HasKeyword(game.Convoke) && convokeOK {
+		convokeExcluded := maps.Clone(excluded)
+		for _, permanent := range convokeTaps {
+			convokeExcluded[permanent.ObjectID] = true
+		}
+		manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, convokedCost, xValue, convokeExcluded, prefs)
+		if ok {
+			manaPlan.convokeTaps = convokeTaps
+			return manaPlan, true
+		}
+	}
+	if option.card.HasKeyword(game.Delve) {
+		delveExiles, generic, delveOK := delveCandidates(s, playerID, option.manaCost, xValue, cardID, sourceZone)
+		for exiledCount := 1; delveOK && exiledCount <= min(generic, len(delveExiles)); exiledCount++ {
+			delvedCost := costWithGenericRequirement(option.manaCost, generic-exiledCount)
+			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, delvedCost, 0, excluded, prefs)
+			if ok {
+				manaPlan.delveExiles = append([]id.ID(nil), delveExiles[:exiledCount]...)
+				return manaPlan, true
+			}
+		}
+	}
+	return paymentPlan{}, false
 }
 
 func buildPaymentPlan(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool) (paymentPlan, bool) {

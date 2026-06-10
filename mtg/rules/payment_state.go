@@ -48,6 +48,10 @@ func (s *rulesPaymentState) PermanentHasSupertype(p *game.Permanent, supertype t
 	return permanentHasSupertype(s.g, p, supertype)
 }
 
+func (s *rulesPaymentState) PermanentHasSubtype(p *game.Permanent, subtype types.Sub) bool {
+	return permanentHasSubtype(s.g, p, subtype)
+}
+
 func (s *rulesPaymentState) PermanentEffectiveColors(p *game.Permanent) []color.Color {
 	return permanentEffectiveColors(s.g, p)
 }

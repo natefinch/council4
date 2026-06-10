@@ -1033,7 +1033,7 @@ func lowerActivatedAbility(
 	result := game.ActivatedAbility{
 		Text:            ability.Text,
 		AdditionalCosts: additionalCosts,
-		ZoneOfFunction:  zone.Battlefield,
+		ZoneOfFunction:  lowerActivatedAbilityZoneOfFunction(body),
 		Timing:          lowerActivationTiming(ability.ActivationTiming),
 		Content:         content,
 	}
@@ -1041,6 +1041,14 @@ func lowerActivatedAbility(
 		result.ManaCost = opt.Val(manaCost)
 	}
 	return result, nil
+}
+
+func lowerActivatedAbilityZoneOfFunction(body oracle.CompiledAbility) zone.Type {
+	if selfCardGraveyardReturnReferences(body.References) &&
+		strings.HasPrefix(body.Text, "Return this card from your graveyard ") {
+		return zone.Graveyard
+	}
+	return zone.Battlefield
 }
 
 func lowerActivationTiming(timing oracle.ActivationTimingKind) game.TimingRestriction {
@@ -1090,8 +1098,96 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 		return lowerExileCost(component)
 	case oracle.CostRemoveCounter:
 		return lowerRemoveCounterCost(cardName, component)
+	case oracle.CostTapPermanents:
+		return lowerTapPermanentsCost(component)
 	default:
 		return cost.Additional{}, false
+	}
+}
+
+func lowerTapPermanentsCost(component oracle.CostComponent) (cost.Additional, bool) {
+	words := strings.Fields(component.Object)
+	if len(words) < 5 {
+		return cost.Additional{}, false
+	}
+	amount, ok := exactCostAmount(strings.ToLower(words[0]))
+	if !ok {
+		return cost.Additional{}, false
+	}
+	if !strings.EqualFold(words[1], "untapped") ||
+		!strings.EqualFold(words[len(words)-2], "you") ||
+		!strings.EqualFold(words[len(words)-1], "control") {
+		return cost.Additional{}, false
+	}
+	object := strings.Join(words[2:len(words)-2], " ")
+	additional := cost.Additional{
+		Kind:   cost.AdditionalTapPermanents,
+		Text:   component.Text,
+		Amount: amount,
+	}
+	if lowerTapPermanentsObject(object, &additional) {
+		return additional, true
+	}
+	return cost.Additional{}, false
+}
+
+func lowerTapPermanentsObject(object string, additional *cost.Additional) bool {
+	normalized := strings.ToLower(strings.TrimSpace(object))
+	switch strings.TrimSuffix(normalized, "s") {
+	case "permanent":
+		return true
+	case "artifact":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Artifact
+		return true
+	case "creature":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Creature
+		return true
+	case "enchantment":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Enchantment
+		return true
+	case "land":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Land
+		return true
+	default:
+	}
+	subtype, ok := tapPermanentsSubtype(object)
+	if !ok {
+		return false
+	}
+	additional.SubtypesAny = cost.SubtypeSet{subtype}
+	return true
+}
+
+func tapPermanentsSubtype(object string) (types.Sub, bool) {
+	candidates := []string{
+		strings.TrimSpace(object),
+		singularCostNoun(object),
+	}
+	for _, candidate := range candidates {
+		subtype := types.Sub(candidate)
+		if types.KnownSubtypeForType(types.Creature, subtype) ||
+			types.KnownSubtypeForType(types.Artifact, subtype) {
+			return subtype, true
+		}
+	}
+	return "", false
+}
+
+func singularCostNoun(noun string) string {
+	noun = strings.TrimSpace(noun)
+	switch {
+	case strings.HasSuffix(noun, "ies") && len(noun) > 3:
+		return noun[:len(noun)-3] + "y"
+	case strings.HasSuffix(noun, "ves") && len(noun) > 3:
+		return noun[:len(noun)-3] + "f"
+	case strings.HasSuffix(noun, "s") && len(noun) > 1:
+		return noun[:len(noun)-1]
+	default:
+		return noun
 	}
 }
 
@@ -4497,6 +4593,8 @@ func lowerSingleEffectSpell(
 		})
 	case oracle.EffectExplore:
 		return lowerExploreSpell(ability, syntax)
+	case oracle.EffectManifest:
+		return lowerManifestSpell(ability, syntax)
 	case oracle.EffectRegenerate:
 		return lowerFixedPermanentTargetSpell(ability, "Regenerate", func(object game.ObjectReference) game.Primitive {
 			return game.Regenerate{Object: object}
@@ -5135,6 +5233,41 @@ func lowerExploreSpell(
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Explore{Creature: game.SourcePermanentReference()},
 	}}}.Ability(), nil
+}
+
+func lowerManifestSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	tokens := syntax.Tokens
+	if ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		!exactManifestTopLibraryPattern(tokens) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported manifest spell",
+			"the executable source backend supports only \"manifest the top card of your library\"",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Manifest{},
+	}}}.Ability(), nil
+}
+
+func exactManifestTopLibraryPattern(tokens []oracle.Token) bool {
+	return len(tokens) == 8 &&
+		equalTokenWord(tokens[0], "manifest") &&
+		equalTokenWord(tokens[1], "the") &&
+		equalTokenWord(tokens[2], "top") &&
+		equalTokenWord(tokens[3], "card") &&
+		equalTokenWord(tokens[4], "of") &&
+		equalTokenWord(tokens[5], "your") &&
+		equalTokenWord(tokens[6], "library") &&
+		tokens[7].Kind == oracle.Period
 }
 
 func lowerExactPrimitiveSpell(

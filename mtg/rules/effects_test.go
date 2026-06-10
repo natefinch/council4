@@ -1393,6 +1393,94 @@ func TestExploreAllowsNoncreaturePermanent(t *testing.T) {
 	}
 }
 
+func TestManifestPutsTopLibraryCardOntoBattlefieldFaceDown(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Hidden Bear",
+		Types:     []types.Card{types.Creature},
+		ManaCost:  opt.Val(cost.Mana{cost.G}),
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Manifest{}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if g.Players[game.Player1].Library.Contains(cardID) {
+		t.Fatal("manifested card remained in library")
+	}
+	var manifested *game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == cardID {
+			manifested = permanent
+			break
+		}
+	}
+	if manifested == nil {
+		t.Fatal("manifested permanent not found on battlefield")
+	}
+	if !manifested.FaceDown || manifested.FaceDownKind != game.FaceDownManifest || manifested.FaceDownFace != game.FaceFront {
+		t.Fatalf("manifest face-down state = %+v", manifested)
+	}
+	if !permanentHasType(g, manifested, types.Creature) || effectivePower(g, manifested) != 2 {
+		t.Fatalf("manifest effective characteristics typeCreature=%t power=%d", permanentHasType(g, manifested, types.Creature), effectivePower(g, manifested))
+	}
+	if permanentEffectiveName(g, manifested) != "" || len(permanentEffectiveAbilities(g, manifested)) != 0 {
+		t.Fatalf("manifest visible name/abilities = %q/%d, want hidden/no abilities", permanentEffectiveName(g, manifested), len(permanentEffectiveAbilities(g, manifested)))
+	}
+	assertEvent(t, g.Events, game.EventPermanentEnteredBattlefield, func(event game.Event) bool {
+		return event.CardID == cardID &&
+			event.PermanentID == manifested.ObjectID &&
+			event.FromZone == zone.Library &&
+			event.ToZone == zone.Battlefield
+	})
+}
+
+func TestManifestAppliesGlobalETBReplacementEffects(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.ReplacementEffects = append(g.ReplacementEffects, game.ReplacementEffect{
+		ID:           g.IDGen.Next(),
+		Controller:   game.Player1,
+		Description:  "Creatures enter tapped with a +1/+1 counter.",
+		MatchEvent:   game.EventPermanentEnteredBattlefield,
+		MatchToZone:  true,
+		ToZone:       zone.Battlefield,
+		EntersTapped: true,
+		EntersWithCounters: []game.CounterPlacement{{
+			Kind:   counter.PlusOnePlusOne,
+			Amount: 1,
+		}},
+	})
+	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Hidden Spell",
+		Types: []types.Card{types.Instant},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Manifest{}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	var manifested *game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == cardID {
+			manifested = permanent
+			break
+		}
+	}
+	if manifested == nil {
+		t.Fatal("manifested permanent not found on battlefield")
+	}
+	if !manifested.Tapped {
+		t.Fatal("global ETB replacement did not tap manifested permanent")
+	}
+	if got := manifested.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("+1/+1 counters = %d, want global ETB replacement counter", got)
+	}
+}
+
 func TestDestroyEffectMovesPermanentToGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

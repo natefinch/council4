@@ -72,6 +72,7 @@ const (
 	CostPayLife
 	CostExile
 	CostRemoveCounter
+	CostTapPermanents
 	CostLoyalty
 )
 
@@ -222,6 +223,7 @@ const (
 	EffectInvestigate
 	EffectExplore
 	EffectLose
+	EffectManifest
 	EffectMill
 	EffectModifyPT
 	EffectMustAttack

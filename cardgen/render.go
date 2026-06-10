@@ -1581,7 +1581,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
 		game.PrimitiveLoseLife:
 		return r.renderPlayerAmountPrimitive(ctx, primitive)
-	case game.PrimitiveInvestigate, game.PrimitiveProliferate:
+	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
 		return r.renderStandalonePrimitive(ctx, primitive)
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
 		game.PrimitiveExile:
@@ -1913,6 +1913,11 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 			return "", err
 		}
 		return structLit("game.Proliferate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
+	case game.PrimitiveManifest:
+		if _, ok := primitive.(game.Manifest); !ok {
+			return "", errors.New("render: internal error: Manifest kind has unexpected concrete type")
+		}
+		return structLit("game.Manifest", nil), nil
 	default:
 		return "", fmt.Errorf("render: unsupported standalone primitive kind %d", primitive.Kind())
 	}
@@ -3141,6 +3146,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalRemoveCounter", nil
 	case cost.AdditionalReturnUnblockedAttacker:
 		return "cost.AdditionalReturnUnblockedAttacker", nil
+	case cost.AdditionalTapPermanents:
+		return "cost.AdditionalTapPermanents", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
 	}
