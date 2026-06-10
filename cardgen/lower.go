@@ -141,9 +141,6 @@ func lowerFaceAbilities(
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
 		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
 	})
-	if len(diagnostics) > 0 {
-		return loweredFaceAbilities{}, diagnostics
-	}
 
 	var result loweredFaceAbilities
 	var unsupported []oracle.Diagnostic
@@ -2587,9 +2584,12 @@ func lowerEnterTrigger(
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
 	eventKind, supportedEvent := lowerSelfTriggerEvent(cardName, ability)
-	summary := "unsupported enter trigger"
-	detail := "the executable source backend supports only exact self-enter triggers with supported effects"
-	if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
+	summary := "unsupported triggered ability"
+	detail := "the executable source backend supports only exact self-enter and self-dies triggers with supported effects"
+	if ability.Trigger != nil && strings.Contains(ability.Trigger.Event, " enters") {
+		summary = "unsupported enter trigger"
+		detail = "the executable source backend supports only exact self-enter triggers with supported effects"
+	} else if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
 		summary = "unsupported dies trigger"
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}

@@ -75,7 +75,10 @@ without silently dropping them.
 
 Each unsupported card has one or more source-spanned diagnostics. A card can
 have several diagnostics when it has several unsupported abilities or when the
-semantic compiler and executable backend both identify limitations.
+semantic compiler and executable backend both identify limitations. The backend
+still inspects the compiler's partial semantic result after compiler diagnostics,
+so one report run exposes every independently discoverable blocker while the
+card remains rejected as a whole.
 
 | Summary | Meaning |
 | --- | --- |
@@ -100,6 +103,7 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported tap spell` | A tap effect was recognized, but it is not exact tapping of one artifact, creature, enchantment, land, or permanent target. |
 | `unsupported untap spell` | An untap effect was recognized, but it is not exact untapping of one artifact, creature, enchantment, land, or permanent target. |
 | `unsupported mill spell` | A mill effect was recognized, but it is not an exact fixed number of cards milled by the controller or one target player. |
+| `unsupported triggered ability` | A triggered ability outside the supported self-enter and self-dies families was recognized. |
 | `unsupported enter trigger` | A self-enter trigger was recognized, but its event, condition, optionality, structure, or number of effects is outside the exact supported template. |
 | `unsupported enter trigger effect` | The trigger clause is supported, but its effect sequence does not match supported complete spell-like effect templates. |
 | `unsupported dies trigger` | A self-dies trigger was recognized, but its event, condition, structure, or number of effects is outside the exact supported template. |
