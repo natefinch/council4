@@ -1029,7 +1029,7 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 			ability.Replacement.Condition.Exists {
 			return "", errors.New("render: ETB counter replacement cannot also tap, require payment, or have a condition")
 		}
-		placements, err := r.renderCounterPlacements(ctx, ability.Replacement.EntersWithCounters)
+		placements, err := renderCounterPlacements(ctx, ability.Replacement.EntersWithCounters)
 		if err != nil {
 			return "", err
 		}
@@ -1058,7 +1058,7 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
 }
 
-func (r Renderer) renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
+func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
 	rendered := make([]string, 0, len(placements))
 	for _, placement := range placements {
 		if placement.Amount <= 0 {
