@@ -1932,6 +1932,14 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 }
 
 func renderQuantity(quantity game.Quantity) string {
+	if dynamic := quantity.DynamicAmount(); dynamic.Exists &&
+		dynamic.Val.Kind == game.DynamicAmountX {
+		fields := []string{"Kind: game.DynamicAmountX,"}
+		if dynamic.Val.Multiplier != 0 {
+			fields = append(fields, fmt.Sprintf("Multiplier: %d,", dynamic.Val.Multiplier))
+		}
+		return fmt.Sprintf("game.Dynamic(%s)", structLit("game.DynamicAmount", fields))
+	}
 	return fmt.Sprintf("game.Fixed(%d)", quantity.Value())
 }
 

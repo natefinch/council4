@@ -39,7 +39,8 @@ Vanguard cards are excluded with explicit report reasons.
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
    Parameterized Kicker, Madness, Morph, Disguise, and Toxic lines lower into
    their corresponding sealed `game.KeywordAbility` values; unsupported
-   parameter forms remain fail-closed.
+   parameter forms remain fail-closed. Exact `X` quantities and common target
+   restrictions lower into runtime quantities and structured target predicates.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.
