@@ -452,7 +452,7 @@ func compileEffects(
 				StaticSubjectSubtype: staticSubjectSubtype,
 				Symbol:               firstSymbol(clauseTokens),
 				CounterKind:          counterKind,
-				CounterKindKnown:     kind == EffectPut && counterKindKnown,
+				CounterKindKnown:     (kind == EffectPut || kind == EffectEnterTapped) && counterKindKnown,
 				Negated:              effectNegated(tokens, tokenIndex),
 			})
 		}
@@ -474,7 +474,7 @@ func counterKindWord(tokens []Token) (counter.Kind, bool) {
 	if counterIndex <= 0 {
 		return 0, false
 	}
-	prefix := strings.ToLower(joinedSourceText(tokens[:counterIndex]))
+	prefix := strings.TrimPrefix(strings.ToLower(joinedSourceText(tokens[:counterIndex])), "with ")
 	names := []counter.Kind{
 		counter.PlusOnePlusOne,
 		counter.MinusOneMinusOne,

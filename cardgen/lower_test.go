@@ -721,6 +721,120 @@ func TestLowerEntersTappedReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerEntersWithCountersReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		kind       counter.Kind
+		amount     int
+	}{
+		{
+			name:       "plus one counters",
+			typeLine:   "Creature — Shapeshifter",
+			oracleText: "This creature enters with three +1/+1 counters on it.",
+			kind:       counter.PlusOnePlusOne,
+			amount:     3,
+		},
+		{
+			name:       "shield counter",
+			typeLine:   "Creature — Human Knight",
+			oracleText: "This creature enters with a shield counter on it.",
+			kind:       counter.Shield,
+			amount:     1,
+		},
+		{
+			name:       "charge counters",
+			typeLine:   "Artifact",
+			oracleText: "This artifact enters with two charge counters on it.",
+			kind:       counter.Charge,
+			amount:     2,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Permanent",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.EntersTapped {
+				t.Fatal("replacement unexpectedly enters tapped")
+			}
+			if len(replacement.EntersWithCounters) != 1 {
+				t.Fatalf("counter placements = %#v, want one", replacement.EntersWithCounters)
+			}
+			placement := replacement.EntersWithCounters[0]
+			if placement.Kind != test.kind || placement.Amount != test.amount {
+				t.Fatalf("placement = %#v, want %v x%d", placement, test.kind, test.amount)
+			}
+		})
+	}
+}
+
+func TestGenerateEntersWithCountersReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Creature",
+		Layout:     "normal",
+		TypeLine:   "Creature — Shapeshifter",
+		OracleText: "This creature enters with three +1/+1 counters on it.",
+		Power:      new("0"),
+		Toughness:  new("0"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`game.EntersWithCountersReplacement("This creature enters with three +1/+1 counters on it."`,
+		"game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 3}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestLowerEntersWithCountersRejectsUnsupportedForms(t *testing.T) {
+	t.Parallel()
+	tests := map[string]string{
+		"conditional": "If a creature died this turn, this creature enters with a +1/+1 counter on it.",
+		"dynamic":     "This creature enters with X +1/+1 counters on it.",
+	}
+	for name, oracleText := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Creature",
+				Layout:     "normal",
+				TypeLine:   "Creature",
+				OracleText: oracleText,
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected diagnostic")
+			}
+			if diagnostics[0].Summary != "unsupported enters-with-counters replacement" {
+				t.Fatalf("summary = %q, want unsupported enters-with-counters replacement", diagnostics[0].Summary)
+			}
+		})
+	}
+}
+
 func TestGenerateEquippedCreaturePTBuff(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

@@ -1023,6 +1023,18 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 }
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if len(ability.Replacement.EntersWithCounters) > 0 {
+		if ability.Replacement.EntersTapped ||
+			ability.UnlessPaid.Exists ||
+			ability.Replacement.Condition.Exists {
+			return "", errors.New("render: ETB counter replacement cannot also tap, require payment, or have a condition")
+		}
+		placements, err := r.renderCounterPlacements(ctx, ability.Replacement.EntersWithCounters)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EntersWithCountersReplacement(%q, %s)", ability.Text, strings.Join(placements, ", ")), nil
+	}
 	if ability.Replacement.EntersTapped && ability.UnlessPaid.Exists {
 		if ability.Replacement.Condition.Exists {
 			return "", errors.New("render: paid ETB replacement cannot also have a condition")
@@ -1044,6 +1056,22 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return fmt.Sprintf("game.EntersTappedIfReplacement(%q, %s)", ability.Text, condStr), nil
 	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func (r Renderer) renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
+	rendered := make([]string, 0, len(placements))
+	for _, placement := range placements {
+		if placement.Amount <= 0 {
+			return nil, fmt.Errorf("render: invalid ETB counter amount %d", placement.Amount)
+		}
+		kind, err := renderCounterKind(placement.Kind)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importCounter)
+		rendered = append(rendered, fmt.Sprintf("game.CounterPlacement{Kind: %s, Amount: %d}", kind, placement.Amount))
+	}
+	return rendered, nil
 }
 
 func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.ResolutionPayment) (string, error) {
