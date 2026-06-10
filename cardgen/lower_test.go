@@ -4583,3 +4583,76 @@ func TestLowerCyclingTriggers(t *testing.T) {
 		})
 	}
 }
+
+func TestLowerHandCyclingGrants(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		oracle    string
+		wantTypes []types.Card
+		wantCost  cost.Mana
+	}{
+		{
+			name:      "land cards",
+			oracle:    "Each land card in your hand has cycling {R}.",
+			wantTypes: []types.Card{types.Land},
+			wantCost:  cost.Mana{cost.R},
+		},
+		{
+			name:      "creature cards",
+			oracle:    "Each creature card in your hand has cycling {1}{U}. ({1}{U}, Discard that card: Draw a card.)",
+			wantTypes: []types.Card{types.Creature},
+			wantCost:  cost.Mana{cost.O(1), cost.U},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Grant",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("got %d static abilities, want 1", len(face.StaticAbilities))
+			}
+			body := face.StaticAbilities[0].Body
+			if len(body.RuleEffects) != 1 {
+				t.Fatalf("rule effects = %+v, want one", body.RuleEffects)
+			}
+			effect := body.RuleEffects[0]
+			if effect.Kind != game.RuleEffectGrantHandCardAbility {
+				t.Fatalf("rule effect kind = %v, want RuleEffectGrantHandCardAbility", effect.Kind)
+			}
+			if effect.AffectedPlayer != game.PlayerYou {
+				t.Fatalf("affected player = %v, want PlayerYou", effect.AffectedPlayer)
+			}
+			if !slices.Equal(effect.CardSelection.RequiredTypes, tc.wantTypes) {
+				t.Fatalf("required types = %v, want %v", effect.CardSelection.RequiredTypes, tc.wantTypes)
+			}
+			gotCost, ok := game.ActivatedBodyCyclingCost(&effect.GrantedAbility)
+			if !ok || !slices.Equal(gotCost, tc.wantCost) {
+				t.Fatalf("cycling cost = %v, %v; want %v", gotCost, ok, tc.wantCost)
+			}
+		})
+	}
+}
+
+func TestLowerHandCyclingGrantRejectsHistoric(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Jo Grant",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human",
+		OracleText: "Each historic card in your hand has cycling {2}{W}. ({2}{W}, Discard that card: Draw a card.)",
+		Power:      new("3"),
+		Toughness:  new("4"),
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for unsupported historic hand cycling grant")
+	}
+	if !strings.Contains(diagnostics[0].Detail, "historic card predicates are not supported") {
+		t.Fatalf("diagnostic = %#v, want historic predicate detail", diagnostics[0])
+	}
+}

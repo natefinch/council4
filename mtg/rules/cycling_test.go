@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -149,12 +150,168 @@ func TestCycleOrDiscardTriggerFiresForCyclingAndOrdinaryDiscard(t *testing.T) {
 	}
 }
 
+func TestHandCyclingGrantEnablesMatchingCardsOnly(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addHandCyclingGrantPermanent(g, game.Player1, game.Selection{RequiredTypes: []types.Card{types.Land}}, cost.Mana{cost.R})
+	drawnID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
+	landID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Cycling Land", Types: []types.Card{types.Land}}})
+	creatureID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Not a Land", Types: []types.Card{types.Creature}}})
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	g.Turn.PriorityPlayer = game.Player1
+
+	legal := engine.legalActions(g, game.Player1)
+	if !actionsContain(legal, action.ActivateAbility(landID, 0, nil, 0)) {
+		t.Fatalf("legal actions = %+v, want granted land cycling", legal)
+	}
+	if actionsContain(legal, action.ActivateAbility(creatureID, 0, nil, 0)) {
+		t.Fatalf("legal actions = %+v, want no cycling for nonmatching creature", legal)
+	}
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(landID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want true for granted cycling")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != landID || obj.SourceCardID != landID || obj.AbilityIndex != 0 {
+		t.Fatalf("cycling stack object = %+v, want cycled card source", obj)
+	}
+	assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.Event) bool {
+		return event.Player == game.Player1 && event.CardID == landID
+	})
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !g.Players[game.Player1].Hand.Contains(drawnID) {
+		t.Fatal("resolved granted cycling did not draw a card")
+	}
+}
+
+func TestHandCyclingGrantForCreatureCardsUsesGrantedCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addHandCyclingGrantPermanent(g, game.Player1, game.Selection{RequiredTypes: []types.Card{types.Creature}}, cost.Mana{cost.O(1), cost.U})
+	creatureID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Cycling Creature", Types: []types.Card{types.Creature}}})
+	addBasicLandPermanent(g, game.Player1, types.Island)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(creatureID, 0, nil, 0)) {
+		t.Fatal("granted creature cycling was not legal with {1}{U} available")
+	}
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(creatureID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want true for granted creature cycling")
+	}
+}
+
+func TestHandCyclingGrantTracksSourceStateAndController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addHandCyclingGrantPermanent(g, game.Player1, game.Selection{RequiredTypes: []types.Card{types.Land}}, cost.Mana{cost.R})
+	landID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Cycling Land", Types: []types.Card{types.Land}}})
+	opponentLandID := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Opponent Land", Types: []types.Card{types.Land}}})
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player2, types.Mountain)
+
+	g.Turn.PriorityPlayer = game.Player1
+	source.PhasedOut = true
+	if actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(landID, 0, nil, 0)) {
+		t.Fatal("phased-out grant source still granted cycling")
+	}
+	source.PhasedOut = false
+	source.Controller = game.Player2
+	if actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(landID, 0, nil, 0)) {
+		t.Fatal("grant still affected previous controller's hand")
+	}
+	g.Turn.PriorityPlayer = game.Player2
+	if !actionsContain(engine.legalActions(g, game.Player2), action.ActivateAbility(opponentLandID, 0, nil, 0)) {
+		t.Fatal("grant did not move to new controller's hand")
+	}
+	g.Battlefield = nil
+	if actionsContain(engine.legalActions(g, game.Player2), action.ActivateAbility(opponentLandID, 0, nil, 0)) {
+		t.Fatal("removed grant source still granted cycling")
+	}
+}
+
+func TestHandCyclingGrantDoesNotDuplicatePrintedCycling(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addHandCyclingGrantPermanent(g, game.Player1, game.Selection{RequiredTypes: []types.Card{types.Creature}}, cost.Mana{cost.R})
+	cyclingID := addCardToHand(g, game.Player1, typedCyclingCard(types.Creature, cost.Mana{cost.R}))
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	if countActivationActionsForSource(engine.legalActions(g, game.Player1), cyclingID) != 1 {
+		t.Fatalf("legal actions = %+v, want one same-cost cycling action", engine.legalActions(g, game.Player1))
+	}
+}
+
+func TestHandCyclingGrantAddsDifferentCostToPrintedCycling(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addHandCyclingGrantPermanent(g, game.Player1, game.Selection{RequiredTypes: []types.Card{types.Creature}}, cost.Mana{cost.R})
+	cyclingID := addCardToHand(g, game.Player1, typedCyclingCard(types.Creature, cost.Mana{cost.O(1)}))
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	legal := engine.legalActions(g, game.Player1)
+	if countActivationActionsForSource(legal, cyclingID) != 2 {
+		t.Fatalf("legal actions = %+v, want printed and granted cycling actions", legal)
+	}
+}
+
 func cyclingCard() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cycling Test Card",
 		ActivatedAbilities: []game.ActivatedAbility{
 			game.CyclingActivatedAbility(cost.Mana{cost.O(1)}),
 		}},
 	}
+}
+
+func typedCyclingCard(cardType types.Card, manaCost cost.Mana) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Typed Cycling Test Card",
+		Types: []types.Card{cardType},
+		ActivatedAbilities: []game.ActivatedAbility{
+			game.CyclingActivatedAbility(manaCost),
+		}},
+	}
+}
+
+func countActivationActionsForSource(actions []action.Action, sourceID id.ID) int {
+	count := 0
+	for _, legal := range actions {
+		if activate, ok := legal.ActivateAbilityPayload(); ok && activate.SourceID == sourceID {
+			count++
+		}
+	}
+	return count
+}
+
+func addHandCyclingGrantPermanent(g *game.Game, controller game.PlayerID, selection game.Selection, manaCost cost.Mana) *game.Permanent {
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID: cardID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Cycling Granter",
+			Types: []types.Card{types.Enchantment},
+			StaticAbilities: []game.StaticAbility{{
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectGrantHandCardAbility,
+					AffectedPlayer: game.PlayerYou,
+					CardSelection:  selection,
+					GrantedAbility: game.CyclingActivatedAbility(manaCost),
+				}},
+			}},
+		}},
+		Owner: controller,
+	}
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: cardID,
+		Owner:          controller,
+		Controller:     controller,
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
 }
 
 func actionsContain(actions []action.Action, want action.Action) bool {

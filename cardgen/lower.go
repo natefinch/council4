@@ -239,6 +239,19 @@ func lowerExecutableAbility(
 	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
 		return lowered, nil
 	}
+	if handGrant, ok, diagnostic := lowerHandCyclingGrant(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: handGrant}},
+			consumed: semanticConsumption{
+				effects:  1,
+				keywords: len(ability.Keywords),
+			},
+			sourceSpans: handCyclingGrantSourceSpans(ability, syntax),
+		}, nil
+	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
 		return lowered, diagnostic
 	}
@@ -1574,6 +1587,104 @@ func lowerCyclingAbility(
 		)
 	}
 	return game.CyclingActivatedAbility(manaCost), true, nil
+}
+
+func lowerHandCyclingGrant(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if ability.Kind != oracle.AbilityStatic ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectGrantKeyword ||
+		ability.Effects[0].Duration != oracle.DurationNone ||
+		len(ability.Keywords) != 1 ||
+		ability.Keywords[0].Name != "Cycling" ||
+		ability.Keywords[0].Parameter == "" ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	manaCost, err := parseManaCostValue(keyword.Parameter)
+	if err != nil || len(manaCost) == 0 {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported hand Cycling grant",
+			"the executable source backend supports only exact hand-card Cycling grants with a mana cost",
+		)
+	}
+	semanticText := abilityTextWithoutReminders(syntax)
+	selection, ok := handCyclingGrantSelection(semanticText, keyword.Parameter)
+	if !ok {
+		if semanticText == fmt.Sprintf("Each historic card in your hand has cycling %s.", keyword.Parameter) {
+			return game.StaticAbility{}, true, executableDiagnostic(
+				ability,
+				"unsupported hand Cycling grant",
+				"historic card predicates are not supported by the executable source backend",
+			)
+		}
+		return game.StaticAbility{}, false, nil
+	}
+	return game.StaticAbility{
+		Text: semanticText,
+		RuleEffects: []game.RuleEffect{{
+			Kind:           game.RuleEffectGrantHandCardAbility,
+			AffectedPlayer: game.PlayerYou,
+			CardSelection:  selection,
+			GrantedAbility: game.CyclingActivatedAbility(manaCost),
+		}},
+	}, true, nil
+}
+
+func handCyclingGrantSelection(text, parameter string) (game.Selection, bool) {
+	switch text {
+	case fmt.Sprintf("Each land card in your hand has cycling %s.", parameter):
+		return game.Selection{RequiredTypes: []types.Card{types.Land}}, true
+	case fmt.Sprintf("Each creature card in your hand has cycling %s.", parameter):
+		return game.Selection{RequiredTypes: []types.Card{types.Creature}}, true
+	default:
+		return game.Selection{}, false
+	}
+}
+
+func abilityTextWithoutReminders(syntax oracle.Ability) string {
+	var b strings.Builder
+	prev := ""
+	for _, token := range syntax.Tokens {
+		if spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		text := token.Text
+		if text == "." || text == "," || text == ";" || text == ":" {
+			b.WriteString(text)
+			prev = text
+			continue
+		}
+		if b.Len() > 0 && !(strings.HasPrefix(prev, "{") && strings.HasPrefix(text, "{")) {
+			b.WriteByte(' ')
+		}
+		b.WriteString(text)
+		prev = text
+	}
+	return b.String()
+}
+
+func handCyclingGrantSourceSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
+	spans := make([]oracle.Span, 0, 1+len(ability.Keywords)+len(syntax.Reminders))
+	if len(ability.Effects) > 0 {
+		spans = append(spans, ability.Effects[0].Span)
+	}
+	for _, keyword := range ability.Keywords {
+		spans = append(spans, keyword.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return spans
 }
 
 func lowerNinjutsuAbility(

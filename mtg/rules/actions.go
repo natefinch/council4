@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -374,12 +375,9 @@ func (*Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []actio
 		if !ok {
 			continue
 		}
-		frontDef := cardFaceOrDefault(card, game.FaceFront)
-		for i := range frontDef.ActivatedAbilities {
-			body := &frontDef.ActivatedAbilities[i]
-			idx := frontDef.ActivatedAbilityIndex(i)
-			if canActivateCyclingAbility(g, playerID, cardID, body, idx, nil, 0) {
-				actions = append(actions, actionBuild.activateAbility(cardID, idx, nil, 0))
+		for _, effective := range effectiveHandActivatedAbilities(g, playerID, card) {
+			if canActivateCyclingAbility(g, playerID, cardID, &effective.body, effective.index, nil, 0) {
+				actions = append(actions, actionBuild.activateAbility(cardID, effective.index, nil, 0))
 			}
 		}
 	}
@@ -1039,6 +1037,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 		Targets:             append([]game.Target(nil), activate.Targets...),
 		XValue:              activate.XValue,
 		AdditionalCostsPaid: []string{"Discard this card"},
+		InlineActivated:     &ability,
 	}
 	pushAbilityToStack(g, obj)
 	return true
@@ -1366,12 +1365,70 @@ func handActivatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID i
 	if !ok {
 		return nil, game.ActivatedAbility{}, false
 	}
-	frontDef := cardFaceOrDefault(card, game.FaceFront)
-	body, ok := frontDef.BodyAt(abilityIndex).(game.ActivatedAbility)
-	if !ok {
-		return nil, game.ActivatedAbility{}, false
+	for _, effective := range effectiveHandActivatedAbilities(g, playerID, card) {
+		if effective.index == abilityIndex {
+			return card, effective.body, true
+		}
 	}
-	return card, body, true
+	return nil, game.ActivatedAbility{}, false
+}
+
+type indexedHandActivatedAbility struct {
+	index int
+	body  game.ActivatedAbility
+}
+
+func effectiveHandActivatedAbilities(g *game.Game, playerID game.PlayerID, card *game.CardInstance) []indexedHandActivatedAbility {
+	if card == nil {
+		return nil
+	}
+	frontDef := cardFaceOrDefault(card, game.FaceFront)
+	abilities := make([]indexedHandActivatedAbility, 0, len(frontDef.ActivatedAbilities))
+	seenCyclingCosts := []cost.Mana{}
+	for i := range frontDef.ActivatedAbilities {
+		body := frontDef.ActivatedAbilities[i]
+		if cyclingCost, ok := game.ActivatedBodyCyclingCost(&body); ok {
+			seenCyclingCosts = append(seenCyclingCosts, append(cost.Mana(nil), cyclingCost...))
+		}
+		abilities = append(abilities, indexedHandActivatedAbility{
+			index: frontDef.ActivatedAbilityIndex(i),
+			body:  body,
+		})
+	}
+
+	nextIndex := frontDef.AbilityCount()
+	for _, effect := range activeRuleEffects(g) {
+		if effect.Kind != game.RuleEffectGrantHandCardAbility ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
+			!handCardMatchesSelection(g, card, effect.CardSelection, effect.Controller) {
+			continue
+		}
+		cyclingCost, ok := game.ActivatedBodyCyclingCost(&effect.GrantedAbility)
+		if !ok || slices.ContainsFunc(seenCyclingCosts, func(existing cost.Mana) bool {
+			return slices.Equal(existing, cyclingCost)
+		}) {
+			continue
+		}
+		seenCyclingCosts = append(seenCyclingCosts, append(cost.Mana(nil), cyclingCost...))
+		abilities = append(abilities, indexedHandActivatedAbility{
+			index: nextIndex,
+			body:  effect.GrantedAbility,
+		})
+		nextIndex++
+	}
+	return abilities
+}
+
+func handCardMatchesSelection(g *game.Game, card *game.CardInstance, selection game.Selection, viewer game.PlayerID) bool {
+	if card == nil || card.Def == nil {
+		return false
+	}
+	return matchSelection(&selectionSubject{
+		kind:   subjectCard,
+		g:      g,
+		card:   card,
+		viewer: viewer,
+	}, &selection)
 }
 
 func graveyardAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbility, bool) {
