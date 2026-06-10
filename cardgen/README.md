@@ -20,6 +20,13 @@ semantic element, and meaningful source token is supported. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
+Before compilation, `CorpusPolicy` limits the working corpus to cards that are
+legal, restricted, or banned in Standard, Pioneer, Modern, Legacy, Pauper,
+Vintage, or Commander. Playable paper token definitions are retained as a
+special exception. Alchemy, digital-only identities, memorabilia, illegal
+Un-set cards, minigames, art-series records, emblems, planes, schemes, and
+Vanguard cards are excluded with explicit report reasons.
+
 ## Compiler stages
 
 1. **Recognition (`cardgen/oracle`).** The lexer and parser preserve exact source
@@ -67,10 +74,12 @@ an `ImplementationID`; that escape hatch is independent of this compiler.
 
 ## Supported layouts
 
-Card Generation accepts Scryfall `normal`, `token`, `leveler`, `saga`, `class`,
-`case`, `prototype`, `host`, `augment`, `emblem`, `mutate`, `planar`, `scheme`,
-`vanguard`, `transform`, `modal_dfc`, `meld`, `double_faced_token`, and
-`reversible_card` layouts.
+The source generator can represent Scryfall `normal`, `token`, `leveler`,
+`saga`, `class`, `case`, `prototype`, `host`, `augment`, `emblem`, `mutate`,
+`planar`, `scheme`, `vanguard`, `transform`, `modal_dfc`, `meld`,
+`double_faced_token`, and `reversible_card` layouts. Corpus policy is narrower:
+it excludes nonstandard game objects such as emblems, planes, schemes, and
+Vanguard cards before source generation.
 
 Transform, modal DFC, and double-faced token cards emit front-face fields on
 `CardDef` and an optional `Back` face. Meld cards emit their front card with
