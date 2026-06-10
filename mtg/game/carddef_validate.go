@@ -521,8 +521,11 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.RequiredTypes = nil
 		unsupported.RequiredTypesAny = nil
 		unsupported.ExcludedTypes = nil
+		if pattern.Event == EventSpellCast {
+			unsupported.ColorsAny = nil
+		}
 		if !unsupported.Empty() {
-			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "trigger card Selection supports only card-type predicates")
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "trigger card Selection uses predicates unavailable from event data")
 		}
 		if len(pattern.RequireCardTypes) > 0 || len(pattern.ExcludeCardTypes) > 0 {
 			v.add(faceName, path, CardDefIssueInvalidSelection, "TriggerPattern sets both card-type filters and CardSelection")

@@ -3327,3 +3327,190 @@ func TestLowerAtTriggerPhraseVariants(t *testing.T) {
 		})
 	}
 }
+
+func TestLowerCastTriggerAcceptsPlayerPhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase     string
+		controller game.TriggerControllerFilter
+	}{
+		{"you cast", game.TriggerControllerYou},
+		{"a player casts", game.TriggerControllerAny},
+		{"an opponent casts", game.TriggerControllerOpponent},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever " + tc.phrase + " a spell, draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			ta := face.TriggeredAbilities[0]
+			if ta.Trigger.Pattern.Event != game.EventSpellCast {
+				t.Errorf("event = %v, want EventSpellCast", ta.Trigger.Pattern.Event)
+			}
+			if ta.Trigger.Pattern.Controller != tc.controller {
+				t.Errorf("controller = %v, want %v", ta.Trigger.Pattern.Controller, tc.controller)
+			}
+			if !ta.Trigger.Pattern.CardSelection.Empty() {
+				t.Errorf("CardSelection = %+v, want empty for 'a spell'", ta.Trigger.Pattern.CardSelection)
+			}
+		})
+	}
+}
+
+func TestLowerCastTriggerAcceptsSpellTypePhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase    string
+		wantTypes []types.Card
+		wantAny   []types.Card
+		wantExcl  []types.Card
+	}{
+		{"a creature spell", []types.Card{types.Creature}, nil, nil},
+		{"a noncreature spell", nil, nil, []types.Card{types.Creature}},
+		{"an instant or sorcery spell", nil, []types.Card{types.Instant, types.Sorcery}, nil},
+		{"an instant spell", []types.Card{types.Instant}, nil, nil},
+		{"an instant", []types.Card{types.Instant}, nil, nil},
+		{"a sorcery spell", []types.Card{types.Sorcery}, nil, nil},
+		{"an artifact spell", []types.Card{types.Artifact}, nil, nil},
+		{"an enchantment spell", []types.Card{types.Enchantment}, nil, nil},
+		{"a land spell", []types.Card{types.Land}, nil, nil},
+		{"a planeswalker spell", []types.Card{types.Planeswalker}, nil, nil},
+		{"a noncreature, nonland spell", nil, nil, []types.Card{types.Creature, types.Land}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever you cast " + tc.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			sel := face.TriggeredAbilities[0].Trigger.Pattern.CardSelection
+			if !slices.Equal(sel.RequiredTypes, tc.wantTypes) {
+				t.Errorf("RequiredTypes = %v, want %v", sel.RequiredTypes, tc.wantTypes)
+			}
+			if !slices.Equal(sel.RequiredTypesAny, tc.wantAny) {
+				t.Errorf("RequiredTypesAny = %v, want %v", sel.RequiredTypesAny, tc.wantAny)
+			}
+			if !slices.Equal(sel.ExcludedTypes, tc.wantExcl) {
+				t.Errorf("ExcludedTypes = %v, want %v", sel.ExcludedTypes, tc.wantExcl)
+			}
+		})
+	}
+}
+
+func TestLowerCastTriggerAcceptsColorPhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase    string
+		wantColor color.Color
+	}{
+		{"a white spell", color.White},
+		{"a blue spell", color.Blue},
+		{"a black spell", color.Black},
+		{"a red spell", color.Red},
+		{"a green spell", color.Green},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever you cast " + tc.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			sel := face.TriggeredAbilities[0].Trigger.Pattern.CardSelection
+			if len(sel.ColorsAny) != 1 || sel.ColorsAny[0] != tc.wantColor {
+				t.Errorf("ColorsAny = %v, want [%v]", sel.ColorsAny, tc.wantColor)
+			}
+		})
+	}
+}
+
+func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{"self-cast TriggerWhen", "When you cast this spell, draw a card."},
+		{"general TriggerWhen", "When you cast a spell, draw a card."},
+		{"unrecognized player", "Whenever each player casts a spell, draw a card."},
+		{"spell copy", "Whenever you cast or copy an instant or sorcery spell, draw a card."},
+		{"ordinal spell", "Whenever you cast your second spell each turn, draw a card."},
+		{"subtype spell", "Whenever you cast a Spirit or Arcane spell, draw a card."},
+		{"historic spell", "Whenever you cast a historic spell, draw a card."},
+		{"mana value spell", "Whenever you cast a spell with mana value 5 or greater, draw a card."},
+		{"multicolored spell", "Whenever you cast a multicolored spell, draw a card."},
+		{"colorless spell", "Whenever you cast a colorless spell, draw a card."},
+		{"kicked spell", "Whenever you cast a kicked spell, draw a card."},
+		{"zone-filtered spell", "Whenever you cast a spell from your graveyard, draw a card."},
+		{"intervening if", "Whenever you cast a spell, if you control an artifact, draw a card."},
+		{"ability word", "Spellcraft — Whenever you cast a spell, draw a card."},
+		{"unsupported body", "Whenever you cast a spell, counter target spell."},
+		{"partially optional body", "Whenever you cast a spell, draw a card. You may gain 1 life."},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}
+			faces, diagnostics := lowerExecutableFaces(card)
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected unsupported diagnostic for %q", tc.oracle)
+			}
+			if len(faces) > 0 && len(faces[0].TriggeredAbilities) > 0 {
+				t.Fatalf("unexpected triggered ability for unsupported form %q", tc.oracle)
+			}
+		})
+	}
+}
+
+func TestLowerCastTriggerOptionalBody(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Whenever you cast a creature spell, you may draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Event != game.EventSpellCast {
+		t.Errorf("event = %v, want EventSpellCast", ta.Trigger.Pattern.Event)
+	}
+	if !ta.Optional {
+		t.Error("expected optional triggered ability")
+	}
+}

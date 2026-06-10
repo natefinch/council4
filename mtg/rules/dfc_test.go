@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -47,6 +48,11 @@ func TestModalDFCBackPermanentFaceCanBeCastAndResolve(t *testing.T) {
 	if !ok || obj.Face != game.FaceBack {
 		t.Fatalf("stack object = %+v, want back face", obj)
 	}
+	assertEvent(t, g.Events, game.EventSpellCast, func(event game.Event) bool {
+		return event.Face == game.FaceBack &&
+			len(event.Colors) == 1 &&
+			event.Colors[0] == color.Red
+	})
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if len(g.Battlefield) != 1 || g.Battlefield[0].Face != game.FaceBack || !permanentHasType(g, g.Battlefield[0], types.Artifact) {
 		t.Fatalf("battlefield = %+v, want one back-face artifact", g.Battlefield)
@@ -155,11 +161,12 @@ func modalDFCSpellLand() *game.CardDef {
 func modalDFCArtifactBack() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Creature Front",
 
+		Colors:    []color.Color{color.Green},
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1})}, Layout: game.LayoutModalDFC,
 
-		Back: opt.Val(game.CardFace{Name: "Artifact Back", Types: []types.Card{types.Artifact}}),
+		Back: opt.Val(game.CardFace{Name: "Artifact Back", Colors: []color.Color{color.Red}, Types: []types.Card{types.Artifact}}),
 	}
 }
 
