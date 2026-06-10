@@ -1,9 +1,10 @@
 # Supported Cards
 
-Cards supported: 3,169
+Cards supported: 3,194
 
 - +2 Mace
 - Aardvark Sloth
+- Abandoned Campground
 - Abbey Gargoyles
 - Abbey Griffin
 - Abrade
@@ -272,6 +273,7 @@ Cards supported: 3,169
 - Blanchwood Treefolk
 - Blasted Landscape
 - Blaze
+- Bleeding Woods
 - Blessed Orator
 - Blight Rot
 - Blightbelly Rat
@@ -337,6 +339,7 @@ Cards supported: 3,169
 - Botanical Sanctum
 - Bottle Gnomes
 - Bounding Wolf
+- Bountiful Promenade
 - Braidwood Cup
 - Braingeyser
 - Brainiac
@@ -825,6 +828,7 @@ Cards supported: 3,169
 - Eriette's Lullaby
 - Esper Charm
 - Esper Cormorants
+- Etched Cornfield
 - Ethercaste Knight
 - Etherium Astrolabe
 - Eviscerate
@@ -1493,6 +1497,7 @@ Cards supported: 3,169
 - Lady Caleria
 - Lady Orca
 - Lagac Lizard
+- Lakeside Shack
 - Land Leeches
 - Landscape Painter // Vibrant Idea
 - Lantern Kami
@@ -1570,6 +1575,7 @@ Cards supported: 3,169
 - Lumithread Field
 - Lurching Rotbeast
 - Lush Portico
+- Luxury Suite
 - Macetail Hystrodon
 - Mad Prophet
 - Madcap Skills
@@ -1694,6 +1700,7 @@ Cards supported: 3,169
 - Moorish Cavalry
 - Morgue Thrull
 - Moriok Reaver
+- Morphic Pool
 - Moss Diamond
 - Moss Kami
 - Moss Monster
@@ -1715,6 +1722,7 @@ Cards supported: 3,169
 - Mudbutton Torchrunner
 - Murasa Brute
 - Murder
+- Murky Sewer
 - Murmuring Phantasm
 - Muse Drake
 - Mutagen
@@ -1749,6 +1757,7 @@ Cards supported: 3,169
 - Needleshot Gourna
 - Needlethorn Drake
 - Needleverge Pathway // Pillarverge Pathway
+- Neglected Manor
 - Nema Siltlurker
 - Nephalia Drownyard
 - Nephalia Seakite
@@ -1885,6 +1894,7 @@ Cards supported: 3,169
 - Peace Strider
 - Peace of Mind
 - Pearled Unicorn
+- Peculiar Lighthouse
 - Pegasus
 - Pegasus
 - Pegasus Charger
@@ -2049,6 +2059,7 @@ Cards supported: 3,169
 - Rat Rogue
 - Rath's Edge
 - Rathi Trapper
+- Raucous Carnival
 - Raucous Theater
 - Raugrin Crystal
 - Raugrin Triome
@@ -2062,6 +2073,7 @@ Cards supported: 3,169
 - Razorfield Thresher
 - Razorfoot Griffin
 - Razortide Bridge
+- Razortrap Gorge
 - Razorverge Thicket
 - Reach Through Mists
 - Rearing Embermare
@@ -2077,6 +2089,7 @@ Cards supported: 3,169
 - Regathan Firecat
 - Regress
 - Rejuvenate
+- Rejuvenating Springs
 - Reknit
 - Relic Barrier
 - Relic Sloth
@@ -2253,6 +2266,7 @@ Cards supported: 3,169
 - Scuzzback Scrapper
 - Sea Eagle
 - Sea Sprite
+- Sea of Clouds
 - Seachrome Coast
 - Seacoast Drake
 - Seagraf Skaab
@@ -2480,6 +2494,7 @@ Cards supported: 3,169
 - Sparring Mummy
 - Spawn
 - Spectacle Summit
+- Spectator Seating
 - Spectral Flight
 - Spectral Sailor
 - Sphinx
@@ -2503,6 +2518,7 @@ Cards supported: 3,169
 - Spined Wurm
 - Spineless Thug
 - Spinning Wheel
+- Spire Garden
 - Spire Monitor
 - Spirebluff Canal
 - Spirit
@@ -2580,6 +2596,7 @@ Cards supported: 3,169
 - Stormrider Spirit
 - Stormscape Apprentice
 - Story Seeker
+- Strangled Cemetery
 - Strangleroot Geist
 - Strangling Spores
 - Straw Soldiers
@@ -2780,6 +2797,7 @@ Cards supported: 3,169
 - Trained Caracal
 - Trained Jackal
 - Trained Orgg
+- Training Center
 - Tramway Station
 - Tranquil Cove
 - Tranquil Expanse
@@ -2814,6 +2832,11 @@ Cards supported: 3,169
 - Tundra
 - Tundra Wall
 - Tundra Wolves
+- Turbulent Fen
+- Turbulent Moor
+- Turbulent Springs
+- Turbulent Steppe
+- Turbulent Wilderness
 - Turntimber Ascetic
 - Turntimber Grove
 - Turtle-Seals
@@ -2844,6 +2867,7 @@ Cards supported: 3,169
 - Underdark Basilisk
 - Underground Mortuary
 - Underground Sea
+- Undergrowth Stadium
 - Undersea Invader
 - Unflinching Courage
 - Unfriendly Fire
@@ -2896,6 +2920,7 @@ Cards supported: 3,169
 - Vassal Soul
 - Vastwood Fortification // Vastwood Thicket
 - Vastwood Gorger
+- Vault of Champions
 - Vault of Whispers
 - Vecna
 - Vector, Imperial Capital

@@ -320,6 +320,95 @@ func TestConditionalEntersTappedCondition(t *testing.T) {
 	}
 }
 
+func TestLifeAndOpponentConditions(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+
+	g.Players[game.Player1].Life = 10
+	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{ControllerLifeAtLeast: 10})) {
+		t.Fatal("controller life-at-least condition failed at threshold")
+	}
+	g.Players[game.Player1].Life = 9
+	if conditionSatisfied(g, ctx, opt.Val(game.Condition{ControllerLifeAtLeast: 10})) {
+		t.Fatal("controller life-at-least condition passed below threshold")
+	}
+
+	g.Players[game.Player2].Life = 13
+	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{AnyPlayerLifeAtMost: 13})) {
+		t.Fatal("any-player life condition failed at threshold")
+	}
+	g.Players[game.Player1].Life = 14
+	g.Players[game.Player2].Life = 14
+	if conditionSatisfied(g, ctx, opt.Val(game.Condition{AnyPlayerLifeAtMost: 13})) {
+		t.Fatal("any-player life condition passed with all players above threshold")
+	}
+
+	g.Players[game.Player3].Eliminated = true
+	g.Players[game.Player4].Eliminated = true
+	if conditionSatisfied(g, ctx, opt.Val(game.Condition{OpponentCountAtLeast: 2})) {
+		t.Fatal("opponent-count condition included eliminated players")
+	}
+	g.Players[game.Player3].Eliminated = false
+	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{OpponentCountAtLeast: 2})) {
+		t.Fatal("opponent-count condition failed with two alive opponents")
+	}
+}
+
+func TestOpponentPermanentCountConditions(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+	count := game.SelectionCount{
+		Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+		MinCount:  2,
+	}
+	addBasicLandPermanent(g, game.Player2, types.Forest)
+	addBasicLandPermanent(g, game.Player3, types.Island)
+
+	if conditionSatisfied(g, ctx, opt.Val(game.Condition{AnyOpponentControls: opt.Val(count)})) {
+		t.Fatal("any-opponent condition combined permanents across opponents")
+	}
+	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{OpponentsControl: opt.Val(count)})) {
+		t.Fatal("collective opponents condition did not combine permanents")
+	}
+	addBasicLandPermanent(g, game.Player2, types.Mountain)
+	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{AnyOpponentControls: opt.Val(count)})) {
+		t.Fatal("any-opponent condition failed for one opponent with enough permanents")
+	}
+}
+
+func TestLifeConditionalEntersTappedReplacement(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		life       int
+		wantTapped bool
+	}{
+		{name: "below threshold", life: 9, wantTapped: true},
+		{name: "at threshold", life: 10, wantTapped: false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			g.Players[game.Player1].Life = test.life
+			setSorcerySpeedTurn(g, game.Player1)
+			cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+				Name:  "Life Land",
+				Types: []types.Card{types.Land},
+				ReplacementAbilities: []game.ReplacementAbility{
+					game.EntersTappedIfReplacement("This land enters tapped unless you have 10 or more life.", &game.Condition{
+						Negate:                true,
+						ControllerLifeAtLeast: 10,
+					}),
+				},
+			}})
+			if !NewEngine(nil).applyPlayLand(g, game.Player1, cardID) {
+				t.Fatal("applyPlayLand() = false")
+			}
+			if got := g.Battlefield[len(g.Battlefield)-1].Tapped; got != test.wantTapped {
+				t.Fatalf("Tapped = %v, want %v", got, test.wantTapped)
+			}
+		})
+	}
+}
+
 func setSorcerySpeedTurn(g *game.Game, playerID game.PlayerID) {
 	g.Turn.ActivePlayer = playerID
 	g.Turn.PriorityPlayer = playerID

@@ -1899,6 +1899,30 @@ func lowerConditionalEntersTappedReplacement(
 	}
 	var replacementCondition game.Condition
 	switch condition.Text {
+	case "unless you have 10 or more life":
+		replacementCondition.Negate = true
+		replacementCondition.ControllerLifeAtLeast = 10
+	case "unless you have 20 or more life":
+		replacementCondition.Negate = true
+		replacementCondition.ControllerLifeAtLeast = 20
+	case "unless a player has 13 or less life":
+		replacementCondition.Negate = true
+		replacementCondition.AnyPlayerLifeAtMost = 13
+	case "unless you have two or more opponents":
+		replacementCondition.Negate = true
+		replacementCondition.OpponentCountAtLeast = 2
+	case "unless an opponent controls two or more lands":
+		replacementCondition.Negate = true
+		replacementCondition.AnyOpponentControls = opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+			MinCount:  2,
+		})
+	case "unless your opponents control eight or more lands":
+		replacementCondition.Negate = true
+		replacementCondition.OpponentsControl = opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+			MinCount:  8,
+		})
 	case "unless you control two or more basic lands":
 		replacementCondition.Negate = true
 		replacementCondition.ControllerControls = game.PermanentFilter{

@@ -930,26 +930,72 @@ func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Co
 		cond.CastFromZone.Exists {
 		return "", errors.New("render: unsupported condition shape for ETB replacement")
 	}
-	filter := cond.ControllerControls
-	if filter.Empty() {
-		return "", errors.New("render: ETB replacement condition has no ControllerControls filter")
-	}
-	// Reject unsupported PermanentFilter fields.
-	if filter.Power.Exists ||
-		filter.Toughness.Exists ||
-		filter.TotalPower.Exists {
-		return "", errors.New("render: unsupported PermanentFilter shape for ETB replacement condition")
-	}
-	filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
-	if err != nil {
-		return "", err
-	}
 	var fields []string
 	if cond.Negate {
 		fields = append(fields, "Negate: true,")
 	}
-	fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
+	if !cond.ControllerControls.Empty() {
+		filter := cond.ControllerControls
+		if filter.Power.Exists ||
+			filter.Toughness.Exists ||
+			filter.TotalPower.Exists {
+			return "", errors.New("render: unsupported PermanentFilter shape for ETB replacement condition")
+		}
+		filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
+	}
+	if cond.ControllerLifeAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
+	}
+	if cond.AnyPlayerLifeAtMost > 0 {
+		fields = append(fields, fmt.Sprintf("AnyPlayerLifeAtMost: %d,", cond.AnyPlayerLifeAtMost))
+	}
+	if cond.OpponentCountAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("OpponentCountAtLeast: %d,", cond.OpponentCountAtLeast))
+	}
+	if cond.AnyOpponentControls.Exists {
+		rendered, err := r.renderSelectionCountForCondition(ctx, cond.AnyOpponentControls.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("AnyOpponentControls: opt.Val(%s),", rendered))
+	}
+	if cond.OpponentsControl.Exists {
+		rendered, err := r.renderSelectionCountForCondition(ctx, cond.OpponentsControl.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("OpponentsControl: opt.Val(%s),", rendered))
+	}
+	if len(fields) == 0 || len(fields) == 1 && cond.Negate {
+		return "", errors.New("render: ETB replacement condition has no supported predicate")
+	}
 	return "&" + structLit("game.Condition", fields), nil
+}
+
+func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.SelectionCount) (string, error) {
+	selection, err := r.renderSelection(ctx, count.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Selection: %s,", selection)}
+	if count.MinCount != 0 {
+		fields = append(fields, fmt.Sprintf("MinCount: %d,", count.MinCount))
+	}
+	if count.TotalPower.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, count.TotalPower.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("TotalPower: opt.Val(%s),", cmp))
+	}
+	return structLit("game.SelectionCount", fields), nil
 }
 
 func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {

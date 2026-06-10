@@ -29,6 +29,20 @@ type Condition struct {
 	// not both be specified.
 	ControlsMatching opt.V[SelectionCount]
 
+	// ControllerLifeAtLeast requires the context controller's current life total
+	// to meet the threshold. AnyPlayerLifeAtMost checks every non-eliminated
+	// player. Zero values disable these predicates.
+	ControllerLifeAtLeast int
+	AnyPlayerLifeAtMost   int
+
+	// OpponentCountAtLeast requires this many non-eliminated opponents.
+	OpponentCountAtLeast int
+
+	// AnyOpponentControls checks each opponent independently. OpponentsControl
+	// counts matching permanents controlled by all opponents collectively.
+	AnyOpponentControls opt.V[SelectionCount]
+	OpponentsControl    opt.V[SelectionCount]
+
 	// Object tests a referenced object in the current condition context, such as
 	// a triggering event permanent. It may use last-known information.
 	Object                                                       opt.V[ObjectReference]
@@ -78,6 +92,11 @@ func (f PermanentFilter) Empty() bool {
 func (c *Condition) Empty() bool {
 	return c.ControllerControls.Empty() &&
 		!c.ControlsMatching.Exists &&
+		c.ControllerLifeAtLeast == 0 &&
+		c.AnyPlayerLifeAtMost == 0 &&
+		c.OpponentCountAtLeast == 0 &&
+		!c.AnyOpponentControls.Exists &&
+		!c.OpponentsControl.Exists &&
 		!c.Object.Exists &&
 		len(c.Types) == 0 &&
 		!c.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures &&

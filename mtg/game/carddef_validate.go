@@ -399,17 +399,27 @@ func (v *cardDefValidator) validateTargetIndex(faceName, path string, targetInde
 
 func (v *cardDefValidator) validateCondition(faceName, path string, condition *Condition, targets []TargetSpec) {
 	if condition.ControlsMatching.Exists {
-		selection := condition.ControlsMatching.Val.Selection
-		v.validateSelection(faceName, appendPath(path, "ControlsMatching.Selection"), selection)
-		if selection.Player != PlayerAny {
-			v.add(faceName, appendPath(path, "ControlsMatching.Selection.Player"), CardDefIssueInvalidSelection, "controlled-permanent Selection cannot use a player relation")
-		}
+		v.validateConditionSelectionCount(faceName, appendPath(path, "ControlsMatching"), condition.ControlsMatching.Val)
 		if !condition.ControllerControls.Empty() {
 			v.add(faceName, path, CardDefIssueInvalidSelection, "Condition sets both ControllerControls and ControlsMatching")
 		}
 	}
+	if condition.AnyOpponentControls.Exists {
+		v.validateConditionSelectionCount(faceName, appendPath(path, "AnyOpponentControls"), condition.AnyOpponentControls.Val)
+	}
+	if condition.OpponentsControl.Exists {
+		v.validateConditionSelectionCount(faceName, appendPath(path, "OpponentsControl"), condition.OpponentsControl.Val)
+	}
 	if condition.Object.Exists {
 		v.validateObjectRef(faceName, appendPath(path, "Object"), condition.Object.Val, targets)
+	}
+}
+
+func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string, count SelectionCount) {
+	selection := count.Selection
+	v.validateSelection(faceName, appendPath(path, "Selection"), selection)
+	if selection.Player != PlayerAny {
+		v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "controlled-permanent Selection cannot use a player relation")
 	}
 }
 
