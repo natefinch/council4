@@ -56,7 +56,7 @@ func (e *Engine) resolveStackObjectWithChoices(g *game.Game, obj *game.StackObje
 
 func spellResolved(result string) bool {
 	switch result {
-	case "resolved", "battlefield", "graveyard", "adventure exile":
+	case "resolved", "battlefield", "graveyard", "adventure exile", "mutated":
 		return true
 	default:
 		return false
@@ -78,7 +78,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	if !defOK {
 		return "missing source"
 	}
-	body := def.BodyAt(obj.AbilityIndex)
+	body := stackObjectActivatedBody(def, obj)
 	if body == nil {
 		return "missing source"
 	}
@@ -88,6 +88,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		if !ok || !player.Hand.Contains(obj.SourceCardID) {
 			return "resolved"
 		}
+
 		card, ok := g.GetCardInstance(obj.SourceCardID)
 		if !ok || card.ZoneVersion != obj.SourceZoneVersion || !player.Hand.Remove(obj.SourceCardID) {
 			return "missing source"
@@ -155,6 +156,16 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		return "resolved"
 	}
 	return "resolved"
+}
+
+func stackObjectActivatedBody(def *game.CardDef, obj *game.StackObject) game.Ability {
+	if obj.InlineActivated != nil {
+		return *obj.InlineActivated
+	}
+	if obj.InlineLoyalty != nil {
+		return *obj.InlineLoyalty
+	}
+	return def.BodyAt(obj.AbilityIndex)
 }
 
 func ninjutsuAttackTargetValid(g *game.Game, target game.AttackTarget) bool {
@@ -366,6 +377,9 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 }
 
 func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackObject, card *game.CardInstance, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	if obj.Mutate {
+		return e.resolveMutateSpell(g, obj, card, spellDef, agents, log)
+	}
 	if !spellHasAnyLegalTargets(g, spellDef, obj) {
 		return counteredSpellResolution(g, obj, card)
 	}
@@ -379,6 +393,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		}
 		return "battlefield"
 	}
+
 	permanent, ok := createCardPermanentFaceWithOptions(
 		e,
 		g,
@@ -402,6 +417,147 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		}
 	}
 	return "battlefield"
+}
+
+func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *game.CardInstance, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	if card == nil && !obj.Copy {
+		return "missing source"
+	}
+	owner := obj.Controller
+	if card != nil && !obj.Copy {
+		owner = card.Owner
+	}
+	if !mutateTargetLegal(g, obj.Controller, owner, spellDef, obj.MutateTargetID) {
+		if obj.Copy {
+			if _, ok := createTokenPermanent(g, obj.Controller, copyCardDef(spellDef)); !ok {
+				return "invalid copy"
+			}
+			return "battlefield"
+		}
+		_, ok := createCardPermanentFaceWithOptions(
+			e,
+			g,
+			card,
+			obj.Controller,
+			zone.Stack,
+			obj.Face,
+			nil,
+			permanentCreationOptions{WasCast: true},
+			agents,
+			log,
+		)
+		if !ok {
+			return "invalid owner"
+		}
+		return "battlefield"
+	}
+	target, ok := permanentByObjectID(g, obj.MutateTargetID)
+	if !ok {
+		return "missing target"
+	}
+	onTop := mutateSpellOnTop(e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:   game.ChoiceResolution,
+		Player: obj.Controller,
+		Prompt: "Put the mutating creature spell over or under the target creature.",
+		Options: []game.ChoiceOption{
+			{Index: 0, Label: "Over"},
+			{Index: 1, Label: "Under"},
+		},
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, log))
+	if onTop {
+		shiftPermanentAbilityUseIndexes(g, target.ObjectID, spellDef.AbilityCount())
+		lower := game.MergedCard{
+			CardInstanceID: target.CardInstanceID,
+			Face:           target.Face,
+			FaceDown:       target.FaceDown,
+			FaceDownFace:   target.FaceDownFace,
+			FaceDownKind:   target.FaceDownKind,
+			TokenDef:       target.TokenDef,
+			Owner:          target.Owner,
+		}
+		target.MergedCards = append([]game.MergedCard{lower}, target.MergedCards...)
+		target.Face = obj.Face
+		target.Owner = owner
+		if obj.Copy {
+			target.CardInstanceID = 0
+			target.Token = true
+			target.TokenDef = copyCardDef(spellDef)
+		} else {
+			target.CardInstanceID = card.ID
+			target.Token = false
+			target.TokenDef = nil
+		}
+		target.FaceDown = false
+		target.FaceDownFace = game.FaceFront
+		target.FaceDownKind = game.FaceDownNone
+		target.Flipped = false
+		target.Transformed = false
+	} else {
+		lower := game.MergedCard{Face: obj.Face, Owner: owner}
+		if obj.Copy {
+			lower.TokenDef = copyCardDef(spellDef)
+		} else {
+			lower.CardInstanceID = card.ID
+		}
+		target.MergedCards = append(target.MergedCards, lower)
+	}
+	zoneEvent := game.Event{
+		Controller:  effectiveController(g, target),
+		Player:      owner,
+		Face:        obj.Face,
+		PermanentID: target.ObjectID,
+		FromZone:    zone.Stack,
+		ToZone:      zone.Battlefield,
+	}
+	if obj.Copy {
+		zoneEvent.TokenDef = copyCardDef(spellDef)
+		zoneEvent.TokenName = spellDef.Name
+	} else {
+		zoneEvent.CardID = card.ID
+	}
+	emitZoneChangeEvent(g, zoneEvent)
+	emitEvent(g, game.Event{
+		Kind:           game.EventPermanentMutated,
+		SourceID:       zoneEvent.CardID,
+		SourceObjectID: target.ObjectID,
+		StackObjectID:  obj.ID,
+		Controller:     effectiveController(g, target),
+		CardID:         zoneEvent.CardID,
+		Face:           obj.Face,
+		PermanentID:    target.ObjectID,
+		TokenName:      zoneEvent.TokenName,
+		TokenDef:       zoneEvent.TokenDef,
+	})
+	return "mutated"
+}
+
+func mutateSpellOnTop(selection []int) bool {
+	return len(selection) == 1 && selection[0] == 0
+}
+
+func shiftPermanentAbilityUseIndexes(g *game.Game, sourceID id.ID, offset int) {
+	if offset <= 0 {
+		return
+	}
+	activated := make(map[game.ActivatedAbilityUse]bool, len(g.ActivatedAbilitiesThisTurn))
+	for use, used := range g.ActivatedAbilitiesThisTurn {
+		if use.SourceID == sourceID && use.AbilityIndex >= 0 {
+			use.AbilityIndex += offset
+		}
+		activated[use] = used
+	}
+	g.ActivatedAbilitiesThisTurn = activated
+	triggered := make(map[game.TriggeredAbilityUse]int, len(g.TriggeredAbilitiesThisTurn))
+	for use, count := range g.TriggeredAbilitiesThisTurn {
+		if use.SourceID == sourceID && use.AbilityIndex >= 0 {
+			use.AbilityIndex += offset
+		}
+		triggered[use] = count
+	}
+	g.TriggeredAbilitiesThisTurn = triggered
 }
 
 func counteredSpellResolution(g *game.Game, obj *game.StackObject, card *game.CardInstance) string {

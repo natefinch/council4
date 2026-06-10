@@ -135,6 +135,7 @@ func TestConstructedActionsValidate(t *testing.T) {
 		Pass(),
 		PlayLand(id.ID(1)),
 		CastSpell(id.ID(2), nil, 0, nil),
+		CastMutateSpell(id.ID(2), id.ID(8)),
 		ActivateAbility(id.ID(3), 0, nil, 0),
 		SuspendCard(id.ID(4)),
 		DeclareAttackers([]game.AttackDeclaration{{Attacker: id.ID(5), Target: game.AttackTarget{Player: game.Player2}}}),

@@ -1320,7 +1320,8 @@ func lowerProtectionAbility(
 	return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
 }
 
-// lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, and Ninjutsu — the
+// lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, Ninjutsu, and
+// Mutate — the
 // single-keyword special cases that each produce a full abilityLowering.
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
@@ -1357,6 +1358,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&ninjutsuAbility, ability, syntax), true, nil
+	}
+	if mutateAbility, ok, diag := lowerMutateAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&mutateAbility, ability, syntax), true, nil
 	}
 	return abilityLowering{}, false, nil
 }
@@ -1592,6 +1599,51 @@ func lowerNinjutsuAbility(
 		)
 	}
 	return game.NinjutsuActivatedAbility(manaCost), true, nil
+}
+
+func lowerMutateAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Mutate" {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	if keyword.Parameter == "" ||
+		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Mutate ability",
+			"the executable source backend supports only exact Mutate with a mana cost",
+		)
+	}
+	manaCost, err := parseManaCostValue(keyword.Parameter)
+	if err != nil || len(manaCost) == 0 {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Mutate ability",
+			"the executable source backend supports only exact Mutate with a mana cost",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Mutate ability",
+			"the executable source backend supports only exact Mutate with a mana cost",
+		)
+	}
+	return game.MutateStaticAbility(manaCost), true, nil
 }
 
 func lowerStaticPTBuff(
@@ -2761,7 +2813,7 @@ func lowerEnterTrigger(
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
 	eventKind, supportedEvent := lowerSelfTriggerEvent(cardName, ability)
 	summary := "unsupported triggered ability"
-	detail := "the executable source backend supports only exact self-enter and self-dies triggers with supported effects"
+	detail := "the executable source backend supports only exact self-enter, self-dies, and self-mutate triggers with supported effects"
 	if ability.Trigger != nil && strings.Contains(ability.Trigger.Event, " enters") {
 		summary = "unsupported enter trigger"
 		detail = "the executable source backend supports only exact self-enter triggers with supported effects"
@@ -2771,7 +2823,7 @@ func lowerEnterTrigger(
 	}
 	intervening, supportedCondition := lowerSelfInterveningCondition(eventKind, ability.Trigger)
 	if ability.Trigger == nil ||
-		ability.Trigger.Kind != oracle.TriggerWhen ||
+		!supportedSelfTriggerKind(eventKind, ability.Trigger.Kind) ||
 		!supportedEvent ||
 		!supportedCondition ||
 		len(ability.Modes) != 0 ||
@@ -2805,10 +2857,14 @@ func lowerEnterTrigger(
 		}
 		content.Modes[0].Sequence[0].Primitive = damage
 	}
+	triggerType := game.TriggerWhen
+	if ability.Trigger.Kind == oracle.TriggerWhenever {
+		triggerType = game.TriggerWhenever
+	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type: game.TriggerWhen,
+			Type: triggerType,
 			Pattern: game.TriggerPattern{
 				Event:  eventKind,
 				Source: game.TriggerSourceSelf,
@@ -2910,6 +2966,13 @@ func lowerSelfInterveningCondition(
 	default:
 		return enterInterveningCondition{}, trigger == nil || trigger.Condition == nil
 	}
+}
+
+func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind) bool {
+	if eventKind == game.EventPermanentMutated {
+		return kind == oracle.TriggerWhenever
+	}
+	return kind == oracle.TriggerWhen
 }
 
 func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
@@ -3017,6 +3080,8 @@ func lowerSelfTriggerEvent(cardName string, ability oracle.CompiledAbility) (gam
 		return game.EventPermanentEnteredBattlefield, true
 	case "this creature dies", "this permanent dies":
 		return game.EventPermanentDied, true
+	case "this creature mutates":
+		return game.EventPermanentMutated, true
 	default:
 		if strings.EqualFold(ability.Trigger.Event, cardName+" dies") {
 			return game.EventPermanentDied, true

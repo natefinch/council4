@@ -77,7 +77,7 @@ func canPayCostWithX(s State, playerID game.PlayerID, manaCost *cost.Mana, xValu
 }
 
 func canPaySpellCosts(s State, req SpellRequest) bool {
-	for _, option := range spellCostOptionsForZoneAndKicker(req.Card, req.SourceZone, req.KickerPaid) {
+	for _, option := range spellCostOptionsForRequest(req) {
 		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
 			return true
 		}
@@ -104,7 +104,7 @@ func paySpellCosts(s State, req SpellRequest) ([]string, bool) {
 }
 
 func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {
-	options := spellCostOptionsForZoneAndKicker(req.Card, req.SourceZone, req.KickerPaid)
+	options := spellCostOptionsForRequest(req)
 	if len(options) == 0 {
 		return spellCostPlan{}, false
 	}

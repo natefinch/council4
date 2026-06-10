@@ -2414,6 +2414,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.NinjutsuKeyword{Cost: %s}", ninjutsuCost), nil
 	}
+	if mutate, ok := keyword.(game.MutateKeyword); ok {
+		mutateCost, err := r.renderManaCost(ctx, mutate.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.MutateKeyword{Cost: %s}", mutateCost), nil
+	}
 	if kicker, ok := keyword.(game.KickerKeyword); ok {
 		kickerCost, err := r.renderManaCost(ctx, kicker.Cost)
 		if err != nil {
@@ -2964,6 +2971,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
 		return "game.EventPermanentDied", nil
+	case game.EventPermanentMutated:
+		return "game.EventPermanentMutated", nil
 	case game.EventBeginningOfStep:
 		return "game.EventBeginningOfStep", nil
 	default:

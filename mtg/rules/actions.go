@@ -140,6 +140,15 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 			}
 			for _, face := range legalCastFacesForZone(g, playerID, card, sourceZone) {
 				spellDef := cardFaceOrDefault(card, face)
+				if face == game.FaceFront && (sourceZone == zone.Hand || sourceZone == zone.Exile) {
+					if _, ok := spellDef.MutateCost(); ok {
+						for _, target := range legalMutateTargets(g, playerID, card.Owner, spellDef) {
+							if canCastMutateSpell(g, playerID, cardID, sourceZone, target.ObjectID) {
+								actions = append(actions, actionBuild.castMutateSpell(cardID, sourceZone, target.ObjectID))
+							}
+						}
+					}
+				}
 				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
 					for _, modes := range modeChoicesForSpell(spellDef) {
 						targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
@@ -177,6 +186,15 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 	var actions []action.Action
 	for _, face := range card.Def.LegalCastFaces() {
 		spellDef := cardFaceOrDefault(card, face)
+		if face == game.FaceFront {
+			if _, ok := spellDef.MutateCost(); ok {
+				for _, target := range legalMutateTargets(g, playerID, card.Owner, spellDef) {
+					if canCastMutateSpell(g, playerID, card.ID, zone.Command, target.ObjectID) {
+						actions = append(actions, actionBuild.castMutateSpell(card.ID, zone.Command, target.ObjectID))
+					}
+				}
+			}
+		}
 		for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
 			for _, modes := range modeChoicesForSpell(spellDef) {
 				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
@@ -251,38 +269,38 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 		if !ok {
 			continue
 		}
-		for i := range card.ManaAbilities {
-			body := &card.ManaAbilities[i]
-			idx := card.ManaAbilityIndex(i)
-			if canActivateManaAbility(g, playerID, permanent, body, idx) {
-				actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
-			}
-		}
-		for i := range card.ActivatedAbilities {
-			body := &card.ActivatedAbilities[i]
-			idx := card.ActivatedAbilityIndex(i)
-			for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(body.ManaCost)) {
-				targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, body)
-				if targetResult.kind == targetInvalidSpec {
-					continue
+		for idx, ability := range permanentEffectiveAbilities(g, permanent) {
+			if body, ok := ability.(game.ManaAbility); ok {
+				if canActivateManaAbility(g, playerID, permanent, &body, idx) {
+					actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
 				}
-				for _, targets := range targetResult.choices {
-					if canActivateEquipAbility(g, playerID, permanent, body, idx, targets, xValue) ||
-						canActivateGeneralAbility(g, playerID, permanent, body, idx, targets, xValue) {
-						actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, append([]game.Target(nil), targets...), xValue))
+				continue
+			}
+			if body, ok := ability.(game.ActivatedAbility); ok {
+				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(body.ManaCost)) {
+					targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, &body)
+					if targetResult.kind == targetInvalidSpec {
+						continue
+					}
+					for _, targets := range targetResult.choices {
+						if canActivateEquipAbility(g, playerID, permanent, &body, idx, targets, xValue) ||
+							canActivateGeneralAbility(g, playerID, permanent, &body, idx, targets, xValue) {
+							actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, append([]game.Target(nil), targets...), xValue))
+						}
 					}
 				}
+				continue
 			}
-		}
-		for i := range card.LoyaltyAbilities {
-			body := &card.LoyaltyAbilities[i]
-			idx := card.LoyaltyAbilityIndex(i)
-			targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, body)
+			body, ok := ability.(game.LoyaltyAbility)
+			if !ok {
+				continue
+			}
+			targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, &body)
 			if targetResult.kind == targetInvalidSpec {
 				continue
 			}
 			for _, targets := range targetResult.choices {
-				if canActivateLoyaltyAbility(g, playerID, permanent, body, idx, targets, 0) {
+				if canActivateLoyaltyAbility(g, playerID, permanent, &body, idx, targets, 0) {
 					actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, append([]game.Target(nil), targets...), 0))
 				}
 			}
@@ -332,14 +350,9 @@ func (*Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []a
 		if permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 			continue
 		}
-		card, ok := permanentCardDef(g, permanent)
-		if !ok {
-			continue
-		}
-		for i := range card.ManaAbilities {
-			body := &card.ManaAbilities[i]
-			idx := card.ManaAbilityIndex(i)
-			if canActivateManaAbility(g, playerID, permanent, body, idx) {
+		for idx, ability := range permanentEffectiveAbilities(g, permanent) {
+			body, ok := ability.(game.ManaAbility)
+			if ok && canActivateManaAbility(g, playerID, permanent, &body, idx) {
 				actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
 			}
 		}
@@ -433,10 +446,14 @@ func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast actio
 }
 
 func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if cast.Mutate {
+		return e.applyMutateCastWithChoices(g, playerID, cast, agents, log)
+	}
 	sourceZone := normalizedCastSourceZone(cast)
 	if sourceZone == zone.Battlefield {
 		return e.applyPreparedCopyWithChoices(g, playerID, cast, agents, log)
 	}
+
 	if !e.canCastSpellFaceFromZoneWithKicker(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, cast.KickerPaid) {
 		return false
 	}
@@ -496,6 +513,133 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
+}
+
+func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	sourceZone := normalizedCastSourceZone(cast)
+	if !canCastMutateSpell(g, playerID, cast.CardID, sourceZone, cast.MutateTargetID) {
+		return false
+	}
+	player := g.Players[playerID]
+	card, ok := g.GetCardInstance(cast.CardID)
+	if !ok {
+		return false
+	}
+	spellDef := cardFaceOrDefault(card, game.FaceFront)
+	mutateCost, ok := spellDef.MutateCost()
+	if !ok {
+		return false
+	}
+	alternative := mutateAlternativeCost(mutateCost)
+	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, 0, agents, log)
+	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
+		PlayerID:    playerID,
+		CardID:      card.ID,
+		SourceZone:  sourceZone,
+		Card:        spellDef,
+		Alternative: opt.Val(alternative),
+		Prefs:       prefs,
+	})
+	if !ok {
+		return false
+	}
+	if !removeCastSourceCard(g, player, cast.CardID, sourceZone) {
+		panic("mutate spell disappeared from source zone after validation")
+	}
+	if sourceZone == zone.Command && player.CommanderInstanceID == cast.CardID {
+		player.CommanderCastCount++
+	}
+	obj := &game.StackObject{
+		ID:                  g.IDGen.Next(),
+		Kind:                game.StackSpell,
+		SourceID:            cast.CardID,
+		Face:                game.FaceFront,
+		Controller:          playerID,
+		Targets:             []game.Target{game.PermanentTarget(cast.MutateTargetID)},
+		TargetCounts:        []int{1},
+		Mutate:              true,
+		MutateTargetID:      cast.MutateTargetID,
+		AdditionalCostsPaid: additionalCostsPaid,
+		SourceZone:          sourceZone,
+	}
+	pushSpellToStack(g, obj, game.Event{
+		SourceID:      cast.CardID,
+		StackObjectID: obj.ID,
+		Controller:    playerID,
+		CardID:        cast.CardID,
+		Face:          game.FaceFront,
+		CardTypes:     cardTypes(spellDef),
+		FromZone:      sourceZone,
+		ToZone:        zone.Stack,
+	})
+	return true
+}
+
+func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, targetID id.ID) bool {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return false
+	}
+	player := g.Players[playerID]
+	card, ok := g.GetCardInstance(cardID)
+	if !ok || !castSourceContains(player, cardID, sourceZone) {
+		return false
+	}
+	switch sourceZone {
+	case zone.Hand:
+	case zone.Command:
+		if player.CommanderInstanceID != cardID {
+			return false
+		}
+	case zone.Exile:
+		if !g.AdventureCards[cardID] {
+			return false
+		}
+	default:
+		return false
+	}
+	spellDef := cardFaceOrDefault(card, game.FaceFront)
+	mutateCost, ok := spellDef.MutateCost()
+	if !ok ||
+		!spellDef.HasType(types.Creature) ||
+		!isSupportedSpell(spellDef) ||
+		!canCastAtCurrentTiming(g, playerID, spellDef) ||
+		!mutateTargetLegal(g, playerID, card.Owner, spellDef, targetID) {
+		return false
+	}
+	return paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
+		PlayerID:    playerID,
+		CardID:      cardID,
+		SourceZone:  sourceZone,
+		Card:        spellDef,
+		Alternative: opt.Val(mutateAlternativeCost(mutateCost)),
+	})
+}
+
+func legalMutateTargets(g *game.Game, playerID, owner game.PlayerID, spellDef *game.CardDef) []*game.Permanent {
+	var targets []*game.Permanent
+	for _, permanent := range g.Battlefield {
+		if mutateTargetLegal(g, playerID, owner, spellDef, permanent.ObjectID) {
+			targets = append(targets, permanent)
+		}
+	}
+	return targets
+}
+
+func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellDef *game.CardDef, targetID id.ID) bool {
+	target, ok := permanentByObjectID(g, targetID)
+	return ok &&
+		!target.PhasedOut &&
+		target.Owner == owner &&
+		permanentHasType(g, target, types.Creature) &&
+		!permanentHasSubtype(g, target, types.Human) &&
+		!targetProtectedFromSource(g, playerID, spellDef, game.PermanentTarget(targetID))
+}
+
+func mutateAlternativeCost(manaCost cost.Mana) cost.Alternative {
+	return cost.Alternative{
+		Label:    "Mutate",
+		ManaCost: opt.Val(append(cost.Mana(nil), manaCost...)),
+	}
 }
 
 func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, targets []game.Target, xValue int, chosenModes []int) bool {
@@ -763,6 +907,12 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		Targets:        append([]game.Target(nil), activate.Targets...),
 		TargetCounts:   targetCounts,
 		XValue:         activate.XValue,
+	}
+	if activatedOK {
+		obj.InlineActivated = &activatedBody
+	}
+	if loyaltyOK {
+		obj.InlineLoyalty = &loyaltyBody
 	}
 	pushAbilityToStack(g, obj)
 	recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, timing)
@@ -1101,6 +1251,8 @@ func castSourceZoneCards(player *game.Player, sourceZone zone.Type) []id.ID {
 	switch sourceZone {
 	case zone.Hand:
 		return player.Hand.All()
+	case zone.Command:
+		return player.CommandZone.All()
 	case zone.Graveyard:
 		return player.Graveyard.All()
 	case zone.Exile:
@@ -1178,15 +1330,11 @@ func activatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 	if !ok || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return nil, nil, false
 	}
-	card, ok := permanentCardDef(g, permanent)
-	if !ok {
+	abilities := permanentEffectiveAbilities(g, permanent)
+	if abilityIndex >= len(abilities) {
 		return nil, nil, false
 	}
-	body := card.BodyAt(abilityIndex)
-	if body == nil {
-		return nil, nil, false
-	}
-	return permanent, body, true
+	return permanent, abilities[abilityIndex], true
 }
 
 func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbility, bool) {

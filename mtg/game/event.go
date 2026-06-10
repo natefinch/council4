@@ -35,6 +35,7 @@ const (
 	EventCardRevealed
 	EventPermanentTurnedFaceUp
 	EventFight
+	EventPermanentMutated
 )
 
 // DamageRecipientKind identifies what received damage.

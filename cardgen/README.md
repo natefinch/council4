@@ -38,9 +38,10 @@ Vanguard cards are excluded with explicit report reasons.
    template. `assembleCardDefs` combines
    those values with printed Scryfall fields and calls
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
-   Parameterized Kicker, Madness, Morph, Disguise, and Toxic lines lower into
-   their corresponding sealed `game.KeywordAbility` values; unsupported
-   parameter forms remain fail-closed. Exact static power/toughness bonuses may
+   Parameterized Kicker, Madness, Morph, Disguise, Mutate, and Toxic lines lower
+   into their corresponding sealed `game.KeywordAbility` values; unsupported
+   parameter forms remain fail-closed. Exact "Whenever this creature mutates"
+   triggers lower to `game.EventPermanentMutated`. Exact static power/toughness bonuses may
    also grant supported keywords through separate layer-6 and layer-7
    continuous effects. Standalone keyword grants to supported controlled,
    creature-subtype-filtered, and attached permanent groups lower to layer-6

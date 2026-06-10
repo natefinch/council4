@@ -298,7 +298,7 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 		switch {
 		case resolved.permanent != nil:
 			var ok bool
-			source, ok = permanentCardDef(g, resolved.permanent)
+			source, ok = permanentCopyDef(g, resolved.permanent)
 			if !ok {
 				return nil, false
 			}
@@ -344,6 +344,59 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 		clearCardFaceAbilities(&token.CardFace)
 	}
 	return token, true
+}
+
+func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, bool) {
+	if permanent.FaceDown {
+		pt := opt.Val(game.PT{Value: 2})
+		def := &game.CardDef{CardFace: game.CardFace{
+			Types:     []types.Card{types.Creature},
+			Power:     pt,
+			Toughness: pt,
+		}}
+		if permanent.FaceDownKind == game.FaceDownDisguise {
+			def.StaticAbilities = []game.StaticAbility{faceDownDisguiseWardBody()}
+		}
+		return def, true
+	}
+	top, ok := permanentCardDef(g, permanent)
+	if !ok {
+		return nil, false
+	}
+	copied := copyCardDef(top)
+	for _, component := range permanent.MergedCards {
+		if component.FaceDown {
+			if component.FaceDownKind == game.FaceDownDisguise {
+				copied.StaticAbilities = append(copied.StaticAbilities, faceDownDisguiseWardBody())
+			}
+			continue
+		}
+		var def *game.CardDef
+		if component.TokenDef != nil {
+			def, ok = component.TokenDef.FaceDef(component.Face)
+		} else {
+			var card *game.CardInstance
+			card, ok = g.GetCardInstance(component.CardInstanceID)
+			if ok {
+				def, ok = cardFaceDef(card, component.Face)
+			}
+		}
+		if !ok {
+			continue
+		}
+		appendCardFaceAbilities(&copied.CardFace, &def.CardFace)
+	}
+	return copied, true
+}
+
+func appendCardFaceAbilities(dst, src *game.CardFace) {
+	dst.ActivatedAbilities = append(dst.ActivatedAbilities, src.ActivatedAbilities...)
+	dst.ManaAbilities = append(dst.ManaAbilities, src.ManaAbilities...)
+	dst.LoyaltyAbilities = append(dst.LoyaltyAbilities, src.LoyaltyAbilities...)
+	dst.TriggeredAbilities = append(dst.TriggeredAbilities, src.TriggeredAbilities...)
+	dst.ChapterAbilities = append(dst.ChapterAbilities, src.ChapterAbilities...)
+	dst.ReplacementAbilities = append(dst.ReplacementAbilities, src.ReplacementAbilities...)
+	dst.StaticAbilities = append(dst.StaticAbilities, src.StaticAbilities...)
 }
 
 func copyCardDef(source *game.CardDef) *game.CardDef {

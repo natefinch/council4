@@ -48,6 +48,10 @@ func (b actionBuilderType) castKickedSpell(cardID id.ID, sourceZone zone.Type, f
 	return b.mustBuild(action.CastKickedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
 }
 
+func (b actionBuilderType) castMutateSpell(cardID id.ID, sourceZone zone.Type, targetID id.ID) action.Action {
+	return b.mustBuild(action.CastMutateSpellFromZone(cardID, sourceZone, targetID))
+}
+
 func (b actionBuilderType) activateAbility(sourceID id.ID, abilityIndex int, targets []game.Target, xValue int) action.Action {
 	return b.mustBuild(action.ActivateAbility(sourceID, abilityIndex, targets, xValue))
 }

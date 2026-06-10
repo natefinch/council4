@@ -56,29 +56,27 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 		if source.PhasedOut {
 			continue
 		}
-		sourceDef, ok := permanentCardDef(g, source)
-		if !ok {
-			continue
-		}
-		for i := range sourceDef.StaticAbilities {
-			body := sourceDef.StaticAbilities[i]
-			if !bodyFunctionsOnBattlefield(body) {
-				continue
-			}
-			if !conditionSatisfied(g, conditionContext{
-				controller: effectiveController(g, source),
-				source:     source,
-			}, body.Condition) {
-				continue
-			}
-			for _, ruleEffect := range body.RuleEffects {
-				ruleEffect.Controller = effectiveController(g, source)
-				ruleEffect.SourceObjectID = source.ObjectID
-				ruleEffect.SourceCardID = source.CardInstanceID
-				if ruleEffect.AffectedSource {
-					ruleEffect.AffectedObjectID = source.ObjectID
+		for _, component := range permanentStaticAbilityComponents(g, source) {
+			for i := range component.card.StaticAbilities {
+				body := component.card.StaticAbilities[i]
+				if !bodyFunctionsOnBattlefield(body) {
+					continue
 				}
-				effects = append(effects, ruleEffect)
+				if !conditionSatisfied(g, conditionContext{
+					controller: effectiveController(g, source),
+					source:     source,
+				}, body.Condition) {
+					continue
+				}
+				for _, ruleEffect := range body.RuleEffects {
+					ruleEffect.Controller = effectiveController(g, source)
+					ruleEffect.SourceObjectID = source.ObjectID
+					ruleEffect.SourceCardID = component.cardID
+					if ruleEffect.AffectedSource {
+						ruleEffect.AffectedObjectID = source.ObjectID
+					}
+					effects = append(effects, ruleEffect)
+				}
 			}
 		}
 	}

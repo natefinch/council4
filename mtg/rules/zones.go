@@ -177,9 +177,14 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zo
 		FromZone:    zone.Battlefield,
 		ToZone:      destination,
 	}
-	actualDestination := replacementZoneChangeDestination(g, event)
+	replacedDestination := replacementZoneChangeDestination(g, event)
+	actualDestination := replacedDestination
 	if !permanent.Token {
 		actualDestination = commanderReplacementDestination(g, permanent.CardInstanceID, actualDestination)
+	}
+	componentMoves, ok := mergedComponentZoneMoves(g, permanent, replacedDestination)
+	if !ok {
+		return false
 	}
 	if permanent.FaceDown {
 		emitFaceDownRevealEvent(g, permanent)
@@ -197,12 +202,100 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zo
 	if removed.Token {
 		destinationCards.Add(removed.ObjectID)
 		emitPermanentLeaveEvents(g, removed, actualDestination)
-		return true
+	} else {
+		destinationCards.Add(removed.CardInstanceID)
+		emitPermanentLeaveEvents(g, removed, actualDestination)
 	}
-
-	destinationCards.Add(removed.CardInstanceID)
-	emitPermanentLeaveEvents(g, removed, actualDestination)
+	for _, move := range componentMoves {
+		if move.faceDown {
+			emitEvent(g, game.Event{
+				Kind:       game.EventCardRevealed,
+				Controller: event.Controller,
+				Player:     move.owner,
+				CardID:     move.cardID,
+				Face:       move.faceDownFace,
+				TokenName:  permanentTokenDefName(move.tokenDef),
+				TokenDef:   move.tokenDef,
+			})
+		}
+		if move.tokenDef != nil {
+			emitZoneChangeEvent(g, game.Event{
+				Controller: event.Controller,
+				Player:     move.owner,
+				Face:       move.face,
+				TokenDef:   move.tokenDef,
+				TokenName:  move.tokenDef.Name,
+				FromZone:   zone.Battlefield,
+				ToZone:     move.destination,
+			})
+			continue
+		}
+		cards, ok := destinationZone(g, move.owner, move.destination)
+		if !ok {
+			panic("validated merged-card destination disappeared")
+		}
+		cards.Add(move.cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Controller: event.Controller,
+			Player:     move.owner,
+			CardID:     move.cardID,
+			Face:       move.face,
+			FromZone:   zone.Battlefield,
+			ToZone:     move.destination,
+		})
+	}
 	return true
+}
+
+type mergedCardZoneMove struct {
+	cardID       id.ID
+	face         game.FaceIndex
+	faceDown     bool
+	faceDownFace game.FaceIndex
+	owner        game.PlayerID
+	destination  zone.Type
+	tokenDef     *game.CardDef
+}
+
+func mergedComponentZoneMoves(g *game.Game, permanent *game.Permanent, destination zone.Type) ([]mergedCardZoneMove, bool) {
+	moves := make([]mergedCardZoneMove, 0, len(permanent.MergedCards))
+	for _, component := range permanent.MergedCards {
+		if component.TokenDef != nil {
+			moves = append(moves, mergedCardZoneMove{
+				face:         component.Face,
+				faceDown:     component.FaceDown,
+				faceDownFace: component.FaceDownFace,
+				owner:        component.Owner,
+				destination:  destination,
+				tokenDef:     component.TokenDef,
+			})
+			continue
+		}
+		card, ok := g.GetCardInstance(component.CardInstanceID)
+		if !ok {
+			return nil, false
+		}
+		actualDestination := commanderReplacementDestination(g, card.ID, destination)
+		if _, ok := destinationZone(g, card.Owner, actualDestination); !ok {
+			return nil, false
+		}
+		moves = append(moves, mergedCardZoneMove{
+			cardID:       card.ID,
+			face:         component.Face,
+			faceDown:     component.FaceDown,
+			faceDownFace: component.FaceDownFace,
+			owner:        card.Owner,
+			destination:  actualDestination,
+		})
+	}
+	return moves, true
+}
+
+func permanentTokenDefName(def *game.CardDef) string {
+	if def == nil {
+		return ""
+	}
+	return def.Name
 }
 
 func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type) bool {

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,402
+Cards supported: 3,406
 
 - +2 Mace
 - Aang, Air Nomad
@@ -767,6 +767,7 @@ Cards supported: 3,402
 - Dread Reaper
 - Dread Rider
 - Dreamroot Cascade
+- Dreamtail Heron
 - Dreg Reaver
 - Drifting Meadow
 - Drill-Skimmer
@@ -1708,6 +1709,7 @@ Cards supported: 3,402
 - Magnifying Glass
 - Magnigoth Sentry
 - Mahamoti Djinn
+- Majestic Auricorn
 - Makindi Aeronaut
 - Makindi Griffin
 - Makindi Ox
@@ -2128,6 +2130,7 @@ Cards supported: 3,402
 - Potion of Healing
 - Pounce
 - Pouncing Cheetah
+- Pouncing Shoreshark
 - Pradesh Gypsies
 - Prairie Stream
 - Prakhata Club Security
@@ -3366,6 +3369,7 @@ Cards supported: 3,402
 - Youthful Knight
 - Youthful Scholar
 - Zagoth Crystal
+- Zagoth Mamba
 - Zagoth Triome
 - Zarichi Tiger
 - Zealous Guardian

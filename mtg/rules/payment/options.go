@@ -67,6 +67,30 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 	return options
 }
 
+func spellCostOptionsForRequest(req SpellRequest) []spellCostOption {
+	if !req.Alternative.Exists {
+		return spellCostOptionsForZoneAndKicker(req.Card, req.SourceZone, req.KickerPaid)
+	}
+	if req.Card == nil {
+		return nil
+	}
+	alternative := req.Alternative.Val
+	kicker, kickerOK := spellKicker(req.Card)
+	additional := append([]cost.Additional(nil), req.Card.AdditionalCosts...)
+	additional = append(additional, alternative.AdditionalCosts...)
+	label := alternative.Label
+	if label == "" {
+		label = "Alternative cost"
+	}
+	return []spellCostOption{{
+		index:           0,
+		label:           label,
+		card:            req.Card,
+		manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid),
+		additionalCosts: additional,
+	}}
+}
+
 func isFlashbackAlternative(alternative cost.Alternative) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
 }
@@ -93,7 +117,7 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 // payableSpellOptionsFromState returns all spell cost options that can currently be paid.
 func payableSpellOptionsFromState(s State, req SpellRequest) []SpellOptionSummary {
 	var result []SpellOptionSummary
-	for _, option := range spellCostOptionsForZoneAndKicker(req.Card, req.SourceZone, req.KickerPaid) {
+	for _, option := range spellCostOptionsForRequest(req) {
 		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
 			result = append(result, SpellOptionSummary{
 				Index:           option.index,

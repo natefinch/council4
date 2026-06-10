@@ -180,6 +180,23 @@ func TestCardFaceCloneClonesSpellCosts(t *testing.T) {
 	}
 }
 
+func TestMutateStaticAbilityCopiesCost(t *testing.T) {
+	manaCost := cost.Mana{cost.O(1), cost.G}
+	ability := MutateStaticAbility(manaCost)
+	face := CardFace{StaticAbilities: []StaticAbility{ability}}
+
+	manaCost[0] = cost.O(9)
+	got, ok := face.MutateCost()
+	if !ok || got[0] != cost.O(1) || got[1] != cost.G {
+		t.Fatalf("MutateCost() = %#v, %v, want copied {1}{G}", got, ok)
+	}
+	got[0] = cost.O(7)
+	again, _ := face.MutateCost()
+	if again[0] != cost.O(1) {
+		t.Fatalf("MutateCost() returned aliased cost: %#v", again)
+	}
+}
+
 func TestClearAbilitiesRemovesCategorizedAbilities(t *testing.T) {
 	face := CardFace{
 		SpellAbility:         opt.Val(AbilityContent{}),

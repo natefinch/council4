@@ -223,6 +223,16 @@ var renderTestCards = []*ScryfallCard{
 		Power:      new("2"),
 		Toughness:  new("2"),
 	},
+	{
+		Name:       "Render Mutator",
+		Layout:     "normal",
+		TypeLine:   "Creature — Beast",
+		ManaCost:   "{3}{G}",
+		Colors:     []string{"G"},
+		OracleText: "Mutate {1}{G}\nWhenever this creature mutates, draw a card.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	},
 }
 
 func generateExecutable(t *testing.T, card *ScryfallCard) string {

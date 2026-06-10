@@ -62,6 +62,10 @@ type stateQueries interface {
 }
 
 type stateAbilityQueries interface {
+	// PermanentEffectiveAbilities returns the permanent's abilities in canonical
+	// index order, including abilities from merged components.
+	PermanentEffectiveAbilities(p *game.Permanent) []game.Ability
+
 	// ActivationConditionSatisfied reports whether an activated ability's
 	// non-timing activation restriction is satisfied.
 	ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool
