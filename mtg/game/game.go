@@ -163,6 +163,10 @@ type Game struct {
 
 	// IDGen generates unique IDs for game objects.
 	IDGen id.Generator
+
+	// RNG is consumed by runtime rules that require randomization after setup,
+	// such as replacement effects that shuffle a card into a library.
+	RNG *rand.Rand
 }
 
 // ActivatedAbilityUse identifies one activated ability on one source object.
@@ -220,6 +224,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 			PriorityPlayer:       Player1,
 			LandsAllowedThisTurn: 1,
 		},
+		RNG: rng,
 	}
 
 	for i, cfg := range configs {

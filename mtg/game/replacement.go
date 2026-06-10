@@ -132,6 +132,8 @@ type ReplacementEffect struct {
 	Condition opt.V[Condition]
 
 	ReplaceToZone      zone.Type
+	ShuffleIntoLibrary bool
+	RevealSource       bool
 	EntersTapped       bool
 	EntersWithCounters []CounterPlacement
 }
