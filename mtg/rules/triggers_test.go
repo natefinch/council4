@@ -886,6 +886,59 @@ func TestDamageSourceSubjectDoesNotMatchDamageRecipient(t *testing.T) {
 	}
 }
 
+func TestDamageRecipientSubjectDoesNotMatchDamageSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	recipient := addCombatCreaturePermanent(g, game.Player1)
+	source := addCombatCreaturePermanent(g, game.Player2)
+	pattern := &game.TriggerPattern{
+		Event:           game.EventDamageDealt,
+		Source:          game.TriggerSourceSelf,
+		Subject:         game.TriggerSubjectPermanent,
+		DamageRecipient: game.DamageRecipientPermanent,
+	}
+	event := game.Event{
+		Kind:            game.EventDamageDealt,
+		SourceID:        source.CardInstanceID,
+		SourceObjectID:  source.ObjectID,
+		Controller:      game.Player2,
+		CardID:          recipient.CardInstanceID,
+		PermanentID:     recipient.ObjectID,
+		DamageRecipient: game.DamageRecipientPermanent,
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("damage-recipient trigger matched the damage source")
+	}
+	if !triggerMatchesEvent(g, recipient, pattern, event) {
+		t.Fatal("damage-recipient trigger did not match the damage recipient")
+	}
+}
+
+func TestDamageRecipientTriggerUsesLKIAfterRecipientDies(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	recipient := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:           game.EventDamageDealt,
+		Source:          game.TriggerSourceSelf,
+		Subject:         game.TriggerSubjectPermanent,
+		DamageRecipient: game.DamageRecipientPermanent,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	source := addCombatCreaturePermanent(g, game.Player2)
+
+	dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, game.Player2, recipient, 1, false)
+	engine.applyStateBasedActions(g)
+	if _, ok := permanentByObjectID(g, recipient.ObjectID); ok {
+		t.Fatal("recipient survived damage; test requires LKI trigger source")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("damage-recipient trigger from dead recipient was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want dead recipient trigger to draw one card", got)
+	}
+}
+
 func TestCombatDamageSourceTriggerUsesLKIAfterSourceDies(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

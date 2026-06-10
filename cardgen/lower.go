@@ -2796,6 +2796,9 @@ func lowerTriggeredAbility(
 	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
+	if triggeredAbility, ok := lowerLifeDamageTrigger(cardName, ability, syntax); ok {
+		return triggeredAbility, nil
+	}
 	triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
 	if diagnostic == nil ||
 		ability.Trigger == nil ||
@@ -2958,6 +2961,92 @@ func lowerEnterTrigger(
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
+}
+
+func lowerLifeDamageTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, bool) {
+	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, false
+	}
+	pattern, ok := lowerLifeDamageTriggerPattern(ability)
+	if !ok ||
+		ability.Trigger.Condition != nil ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return game.TriggeredAbility{}, false
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, false
+	}
+	content, diagnostic := lowerSelfTriggerBody(cardName, pattern.Event, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, false
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:    game.TriggerWhenever,
+			Pattern: pattern,
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, true
+}
+
+func lowerLifeDamageTriggerPattern(ability oracle.CompiledAbility) (game.TriggerPattern, bool) {
+	if ability.Trigger == nil {
+		return game.TriggerPattern{}, false
+	}
+	switch ability.Trigger.Event {
+	case "you gain life":
+		return game.TriggerPattern{
+			Event:  game.EventLifeGained,
+			Player: game.TriggerPlayerYou,
+		}, true
+	case "an opponent gains life":
+		return game.TriggerPattern{
+			Event:  game.EventLifeGained,
+			Player: game.TriggerPlayerOpponent,
+		}, true
+	case "you lose life":
+		return game.TriggerPattern{
+			Event:  game.EventLifeLost,
+			Player: game.TriggerPlayerYou,
+		}, true
+	case "an opponent loses life":
+		return game.TriggerPattern{
+			Event:  game.EventLifeLost,
+			Player: game.TriggerPlayerOpponent,
+		}, true
+	case "this creature is dealt damage",
+		"this permanent is dealt damage":
+		return game.TriggerPattern{
+			Event:           game.EventDamageDealt,
+			Source:          game.TriggerSourceSelf,
+			Subject:         game.TriggerSubjectPermanent,
+			DamageRecipient: game.DamageRecipientPermanent,
+		}, true
+	case "enchanted creature is dealt damage",
+		"enchanted permanent is dealt damage",
+		"equipped creature is dealt damage":
+		return game.TriggerPattern{
+			Event:           game.EventDamageDealt,
+			Source:          game.TriggerSourceAttachedPermanent,
+			DamageRecipient: game.DamageRecipientPermanent,
+		}, true
+	case "you're dealt damage", "you are dealt damage":
+		return game.TriggerPattern{
+			Event:           game.EventDamageDealt,
+			Player:          game.TriggerPlayerYou,
+			DamageRecipient: game.DamageRecipientPlayer,
+		}, true
+	default:
+		return game.TriggerPattern{}, false
+	}
 }
 
 func lowerSelfTriggerBody(

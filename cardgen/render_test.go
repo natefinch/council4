@@ -386,6 +386,25 @@ func TestRenderCombatTriggerPattern(t *testing.T) {
 	}
 }
 
+func TestRenderLifeTriggerPattern(t *testing.T) {
+	ctx := newRenderCtx()
+	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+		Event:  game.EventLifeGained,
+		Player: game.TriggerPlayerOpponent,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Event: game.EventLifeGained",
+		"Player: game.TriggerPlayerOpponent",
+	} {
+		if !strings.Contains(lit, want) {
+			t.Fatalf("trigger pattern literal %q does not contain %q", lit, want)
+		}
+	}
+}
+
 func TestRenderUsesProtectionMechanicTemplate(t *testing.T) {
 	card := &ScryfallCard{Name: "Test Bear", Layout: "normal", TypeLine: "Creature — Bear"}
 	def := &game.CardDef{CardFace: game.CardFace{

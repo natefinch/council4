@@ -1745,6 +1745,137 @@ func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
 	}
 }
 
+func TestLowerLifeDamageReceivedTriggers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+		want game.TriggerPattern
+	}{
+		{
+			name: "you gain life",
+			text: "Whenever you gain life, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventLifeGained,
+				Player: game.TriggerPlayerYou,
+			},
+		},
+		{
+			name: "you lose life",
+			text: "Whenever you lose life, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventLifeLost,
+				Player: game.TriggerPlayerYou,
+			},
+		},
+		{
+			name: "opponent gains life",
+			text: "Whenever an opponent gains life, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventLifeGained,
+				Player: game.TriggerPlayerOpponent,
+			},
+		},
+		{
+			name: "opponent loses life",
+			text: "Whenever an opponent loses life, you gain 1 life.",
+			want: game.TriggerPattern{
+				Event:  game.EventLifeLost,
+				Player: game.TriggerPlayerOpponent,
+			},
+		},
+		{
+			name: "self dealt damage",
+			text: "Whenever this creature is dealt damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceSelf,
+				Subject:         game.TriggerSubjectPermanent,
+				DamageRecipient: game.DamageRecipientPermanent,
+			},
+		},
+		{
+			name: "enchanted creature dealt damage",
+			text: "Whenever enchanted creature is dealt damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceAttachedPermanent,
+				DamageRecipient: game.DamageRecipientPermanent,
+			},
+		},
+		{
+			name: "equipped creature dealt damage",
+			text: "Whenever equipped creature is dealt damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceAttachedPermanent,
+				DamageRecipient: game.DamageRecipientPermanent,
+			},
+		},
+		{
+			name: "you are dealt damage",
+			text: "Whenever you're dealt damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Player:          game.TriggerPlayerYou,
+				DamageRecipient: game.DamageRecipientPlayer,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Cleric",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Cleric",
+				OracleText: tc.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Type != game.TriggerWhenever {
+				t.Fatalf("trigger type = %v, want TriggerWhenever", trigger.Type)
+			}
+			if !reflect.DeepEqual(trigger.Pattern, tc.want) {
+				t.Fatalf("pattern = %+v, want %+v", trigger.Pattern, tc.want)
+			}
+		})
+	}
+}
+
+func TestLowerLifeDamageReceivedTriggersFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Whenever you gain or lose life, draw a card.",
+		"Whenever you gain life for the first time each turn, draw a card.",
+		"Whenever this creature is dealt combat damage, draw a card.",
+		"Whenever this creature deals damage to a player, draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Cleric",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Cleric",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("unsupported life/damage trigger unexpectedly lowered")
+			}
+		})
+	}
+}
+
 func TestLowerKickedEnterTrigger(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

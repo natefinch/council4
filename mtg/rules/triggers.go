@@ -112,6 +112,9 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []p
 		if source, ok := damageSourceTriggerSource(g, event); ok {
 			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
+		if source, ok := damageRecipientTriggerSource(g, event); ok {
+			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+		}
 	}
 	return filterPendingTriggeredAbilities(g, pending)
 }
@@ -458,6 +461,36 @@ func damageSourceTriggerSource(g *game.Game, event game.Event) (*game.Permanent,
 	}, true
 }
 
+func damageRecipientTriggerSource(g *game.Game, event game.Event) (*game.Permanent, bool) {
+	if event.Kind != game.EventDamageDealt || event.PermanentID == 0 || event.PermanentID == event.SourceObjectID {
+		return nil, false
+	}
+	if _, ok := permanentByObjectID(g, event.PermanentID); ok {
+		return nil, false
+	}
+	snapshot, ok := lastKnownObject(g, event.PermanentID)
+	if !ok {
+		return nil, false
+	}
+	sourceCardID := event.CardID
+	if sourceCardID == 0 {
+		sourceCardID = snapshot.CardID
+	}
+	return &game.Permanent{
+		ObjectID:       event.PermanentID,
+		CardInstanceID: sourceCardID,
+		Owner:          snapshot.Owner,
+		Controller:     snapshot.Controller,
+		Face:           snapshot.Face,
+		FaceDown:       snapshot.FaceDown,
+		FaceDownFace:   snapshot.FaceDownFace,
+		FaceDownKind:   snapshot.FaceDownKind,
+		MergedCards:    append([]game.MergedCard(nil), snapshot.MergedCards...),
+		Token:          snapshot.TokenDef != nil || snapshot.CardID == 0,
+		TokenDef:       snapshot.TokenDef,
+	}, true
+}
+
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
 	result := targetChoicesForBodyFromSourceObject(g, controller, source, sourceObjectID, *ability)
 	switch result.kind {
@@ -647,6 +680,10 @@ func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.Trig
 	if subject == game.TriggerSubjectDamageSource {
 		return (source.ObjectID != 0 && event.SourceObjectID == source.ObjectID) ||
 			(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID)
+	}
+	if subject == game.TriggerSubjectPermanent {
+		return (source.ObjectID != 0 && event.PermanentID == source.ObjectID) ||
+			(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
 	}
 	subjectID := triggerSubjectObjectID(event, subject)
 	return (source.ObjectID != 0 && event.SourceObjectID == source.ObjectID) ||

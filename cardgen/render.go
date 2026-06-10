@@ -3059,6 +3059,10 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventBlockerDeclared", nil
 	case game.EventSpellCast:
 		return "game.EventSpellCast", nil
+	case game.EventLifeGained:
+		return "game.EventLifeGained", nil
+	case game.EventLifeLost:
+		return "game.EventLifeLost", nil
 	case game.EventPermanentEnteredBattlefield:
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
