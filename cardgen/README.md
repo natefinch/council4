@@ -34,7 +34,8 @@ Vanguard cards are excluded with explicit report reasons.
    Saga chapter headings, references, and ordered effects conservatively.
 2. **Typed lowering (`lower.go` and `executable.go`).** Recognized semantics
    become typed `game.*` ability values, including chapter-numbered
-   `game.ChapterAbility` values for ordinary Sagas. `assembleCardDefs` combines
+   `game.ChapterAbility` values and the `game.ReadAheadStaticBody` Saga keyword
+   template. `assembleCardDefs` combines
    those values with printed Scryfall fields and calls
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
    Parameterized Kicker, Madness, Morph, Disguise, Mutate, and Toxic lines lower
@@ -47,13 +48,24 @@ Vanguard cards are excluded with explicit report reasons.
    continuous effects. Exact
    source-relative keyword grants gated by controlling supported permanent
    types, subtypes, colors, or colorless permanents use condition-gated layer-6
-   effects. Exact `X` quantities and common target
+   effects. Exact `X` quantities, supported count/life/opponent/source-power
+   formulas, and common target
    restrictions lower into runtime quantities and structured target predicates.
    Ordered effect clauses retain independent target specifications and references.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
    `game.AddCounter` instructions. Self-enter triggers support exact intervening
    conditions for kicked or cast entry and controlling one
-   permanent of a named permanent card type. Exact
+   permanent of a named permanent card type. Non-self permanent
+   enters-the-battlefield triggers lower for exact single-subject
+   (`a`/`an`/`another`, optional `nontoken` qualifier) and `one or more`
+   subject forms, with optional permanent type filter (creature, artifact,
+   enchantment, land, planeswalker, or unfiltered) and optional you-control or
+   opponent-controls controller constraints. Phase and step triggered abilities
+   using `At the beginning of …` lower for the ten exact step-trigger phrases:
+   your upkeep, each upkeep, each player's upkeep, each opponent's upkeep, your
+   end step, each end step, each player's end step, combat on your turn, each
+   combat, and your draw step. All other step-trigger phrases and all
+   intervening-if conditions on step triggers are fail-closed. Exact
    self-dies triggers support exact `if it had no +1/+1 counters` and
    `if it had no -1/-1 counters` conditions using the departed permanent's
    last-known information. Fixed-damage bodies preserve that permanent as the

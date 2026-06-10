@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,342
+Cards supported: 3,406
 
 - +2 Mace
 - Aang, Air Nomad
@@ -37,6 +37,7 @@ Cards supported: 3,342
 - Air Elemental
 - Airship Engine Room
 - Ajani's Sunstriker
+- Ajani's Welcome
 - Akoum Refuge
 - Akoum Warrior // Akoum Teeth
 - Akrasan Squire
@@ -89,6 +90,7 @@ Cards supported: 3,342
 - Angel of Despair
 - Angel of Light
 - Angel of Mercy
+- Angel of Renewal
 - Angel of Retribution
 - Angel of the God-Pharaoh
 - Angel's Mercy
@@ -161,6 +163,7 @@ Cards supported: 3,342
 - Assembly-Worker
 - Astartes Warrior
 - Astartes Warrior
+- Atraxa, Praetors' Voice
 - Auger Spree
 - Augury Owl
 - Auntie's Hovel
@@ -298,6 +301,7 @@ Cards supported: 3,342
 - Blightbelly Rat
 - Blighted Agent
 - Blighted Cataract
+- Blighted Steppe
 - Blightstep Pathway // Searstep Pathway
 - Blightwidow
 - Blind Phantasm
@@ -337,6 +341,7 @@ Cards supported: 3,342
 - Boldwyr Aggressor
 - Bolrac-Clan Basher
 - Bolt of Keranos
+- Boltwing Marauder
 - Bombard
 - Bond Beetle
 - Bone Pit Brute
@@ -362,6 +367,7 @@ Cards supported: 3,342
 - Botanical Sanctum
 - Bottle Gnomes
 - Bounding Wolf
+- Bountiful Harvest
 - Bountiful Promenade
 - Braidwood Cup
 - Braingeyser
@@ -416,6 +422,7 @@ Cards supported: 3,342
 - Canyon Minotaur
 - Canyon Slough
 - Capital Guard
+- Captivating Unicorn
 - Captive Flame
 - Caravan Hurda
 - Carnage Altar
@@ -447,6 +454,7 @@ Cards supported: 3,342
 - Cathedral Sanctifier
 - Cathedral of War
 - Caustic Rain
+- Celestial Force
 - Cemetery Gate
 - Centaur
 - Centaur
@@ -516,6 +524,7 @@ Cards supported: 3,342
 - Cold Case Cracker
 - Cold-Water Snapper
 - Collective Blessing
+- Collective Unconscious
 - Colorful Feiyi Sparrow
 - Colossadactyl
 - Colossal Dreadmaw
@@ -526,7 +535,9 @@ Cards supported: 3,342
 - Concealed Courtyard
 - Concentrate
 - Conclave Equenaut
+- Conclave Phalanx
 - Concordia Pegasus
+- Congregate
 - Conifer Strider
 - Conservatory
 - Constricting Tendrils
@@ -543,6 +554,7 @@ Cards supported: 3,342
 - Contagious Nim
 - Contaminated Aquifer
 - Contingency Plan
+- Contraband Kingpin
 - Copper Host Crusher
 - Copper Longlegs
 - Copper Myr
@@ -634,6 +646,7 @@ Cards supported: 3,342
 - Daybreak Chaplain
 - Daybreak Charger
 - Daybreak Combatants
+- Dazzling Angel
 - Dazzling Ramparts
 - Dead // Gone
 - Dead Weight
@@ -779,6 +792,7 @@ Cards supported: 3,342
 - Dwarf
 - Dwarf Berserker
 - Dwarf Token
+- Dwarven Priest
 - Dwarven Trader
 - Dwarven Weaponsmith
 - Eager Cadet
@@ -788,8 +802,10 @@ Cards supported: 3,342
 - Ebony Rhino
 - Eclipsed Steppe
 - Egg
+- Eidolon of Inspiration
 - Eidolon of Philosophy
 - Ekundu Griffin
+- Elder of Laurels
 - Eldrazi
 - Eldrazi Aggressor
 - Eldrazi Angel
@@ -869,12 +885,15 @@ Cards supported: 3,342
 - Eriette's Lullaby
 - Esper Charm
 - Esper Cormorants
+- Essence Warden
 - Etched Cornfield
 - Eternal Warrior
 - Ethercaste Knight
 - Etherium Astrolabe
+- Eumidian Terrabotanist
 - Eviscerate
 - Eviscerator
+- Evolution Sage
 - Excavated Wall
 - Excavation Mole
 - Exclusion Mage
@@ -929,6 +948,7 @@ Cards supported: 3,342
 - Festering Goblin
 - Festering Mummy
 - Festering Thicket
+- Festival of Trokin
 - Fetid Pools
 - Fevered Convulsions
 - Field Creeper
@@ -936,6 +956,7 @@ Cards supported: 3,342
 - Fiery Finish
 - Fiery Intervention
 - Fighting Drake
+- Filigree Angel
 - Filigree Familiar
 - Filigree Sages
 - Fill with Fright
@@ -996,6 +1017,7 @@ Cards supported: 3,342
 - Foul Imp
 - Foul Orchard
 - Foundry Assembler
+- Fountain of Renewal
 - Fountain of Youth
 - Fox
 - Fractal
@@ -1038,6 +1060,7 @@ Cards supported: 3,342
 - Garruk's Companion
 - Garruk's Gorehorn
 - Gavony Trapper
+- Geist of the Archives
 - Geist of the Moors
 - Generous Stray
 - Geothermal Bog
@@ -1199,6 +1222,7 @@ Cards supported: 3,342
 - Grim Backwoods
 - Grim Bauble
 - Grim Physician
+- Grinning Demon
 - Grizzled Leotau
 - Grizzled Outrider
 - Grizzly Bears
@@ -1235,6 +1259,7 @@ Cards supported: 3,342
 - Hardened-Scale Armor
 - Harmonize
 - Harpy
+- Harrier Griffin
 - Harrier Naga
 - Harvest Gwyllion
 - Haunted Cloak
@@ -1250,6 +1275,7 @@ Cards supported: 3,342
 - Headstrong Brute
 - Headwater Sentries
 - Healer of the Glade
+- Healer of the Pride
 - Healer's Flock
 - Healer's Hawk
 - Heart Warden
@@ -1258,6 +1284,7 @@ Cards supported: 3,342
 - Heat Ray
 - Heavy Infantry
 - Hedge Maze
+- Hedron Crab
 - Hellion
 - Helpful Hunter
 - Hengegate Pathway // Mistgate Pathway
@@ -1280,6 +1307,7 @@ Cards supported: 3,342
 - Hill Giant
 - Hill Giant Herdgorger
 - Hinterland Harbor
+- Hinterland Sanctifier
 - Hippo
 - Hippo-Cows
 - Hired Blade
@@ -1342,6 +1370,7 @@ Cards supported: 3,342
 - Humbling Elder
 - Humongulus
 - Hundroog
+- Hunger of the Nim
 - Hurloon Minotaur
 - Hush
 - Hussar Patrol
@@ -1371,6 +1400,7 @@ Cards supported: 3,342
 - Immolation
 - Immortal Phoenix
 - Impale
+- Impassioned Orator
 - Impeccable Timing
 - Imperial Lancer
 - Imperial Outrider
@@ -1432,6 +1462,7 @@ Cards supported: 3,342
 - Ironpaw Aspirant
 - Ironroot Treefolk
 - Ironshell Beetle
+- Irradiate
 - Irrigated Farmland
 - Isamaru, Hound of Konda
 - Island
@@ -1442,6 +1473,7 @@ Cards supported: 3,342
 - Izzet Locket
 - Jace's Ingenuity
 - Jackhammer
+- Jaddi Offshoot
 - Jadecraft Artisan
 - Jagwasp Swarm
 - Jandor's Saddlebags
@@ -1466,6 +1498,7 @@ Cards supported: 3,342
 - Jibbirik Omnivore
 - Joraga Visionary
 - Joust Through
+- Joyous Respite
 - Jungle Barrier
 - Jungle Hollow
 - Jungle Lion
@@ -1490,6 +1523,7 @@ Cards supported: 3,342
 - Karox Bladewing
 - Kasimir the Lone Wolf
 - Kavu Climber
+- Kazandu Nectarpot
 - Kazandu Refuge
 - Kederekt Creeper
 - Keen-Eyed Archers
@@ -1606,6 +1640,7 @@ Cards supported: 3,342
 - Library
 - Lich's Caress
 - Lieutenant Kirtar
+- Lifecreed Duo
 - Lifespring Druid
 - Light of Hope
 - Lightning Angel
@@ -1653,7 +1688,9 @@ Cards supported: 3,342
 - Loxodon Wayfarer
 - Lucent Liminid
 - Lumengrid Gargoyle
+- Lumengrid Sentinel
 - Lumengrid Warden
+- Luminarch Aspirant
 - Lumithread Field
 - Lurching Rotbeast
 - Lush Portico
@@ -1675,6 +1712,7 @@ Cards supported: 3,342
 - Majestic Auricorn
 - Makindi Aeronaut
 - Makindi Griffin
+- Makindi Ox
 - Malcator's Watcher
 - Mammoth Spider
 - Man-o'-War
@@ -1735,11 +1773,13 @@ Cards supported: 3,342
 - Metallic Sliver
 - Metallic Sliver
 - Metallurgeon
+- Metastatic Evangel
 - Metathran Soldier
 - Meteoric Mace
 - Meticulous Archive
 - Midnight Assassin
 - Might of Oaks
+- Might of the Masses
 - Migrating Ketradon
 - Millennial Gargoyle
 - Millstone
@@ -1764,6 +1804,7 @@ Cards supported: 3,342
 - Mistral Singer
 - Mistvault Bridge
 - Misty Palms Oasis
+- Mm'menon, Uthros Exile
 - Moaning Spirit
 - Moaning Wall
 - Moat Piranhas
@@ -1790,6 +1831,7 @@ Cards supported: 3,342
 - Moorish Cavalry
 - Morgue Thrull
 - Moriok Reaver
+- Moroii
 - Morphic Pool
 - Mortus Strider
 - Moss Diamond
@@ -1862,6 +1904,7 @@ Cards supported: 3,342
 - Neurok Hoversail
 - Neurok Replica
 - New Benalia
+- Nexus Wardens
 - Nezumi Bladeblesser
 - Nezumi Bone-Reader
 - Niall Silvain
@@ -1900,6 +1943,7 @@ Cards supported: 3,342
 - Noxious Groodion
 - Noxious Newt
 - Nylea's Forerunner
+- Nyx-Fleece Ram
 - Nyxborn Brute
 - Nyxborn Colossus
 - Nyxborn Courser
@@ -1957,6 +2001,7 @@ Cards supported: 3,342
 - Orazca Frillback
 - Orazca Raptor
 - Orc Army
+- Orc Sureshot
 - Order of the Sacred Bell
 - Oread of Mountain's Blaze
 - Oreskos Swiftclaw
@@ -1980,6 +2025,7 @@ Cards supported: 3,342
 - Oversoul of Dusk
 - Ox
 - Ox
+- Ox
 - Oxidda Scrapmelter
 - Pain // Suffering
 - Palace Familiar
@@ -1990,6 +2036,7 @@ Cards supported: 3,342
 - Pardic Wanderer
 - Peace Strider
 - Peace of Mind
+- Peach Garden Oath
 - Pearled Unicorn
 - Peculiar Lighthouse
 - Pegasus
@@ -2049,6 +2096,7 @@ Cards supported: 3,342
 - Pillarfield Ox
 - Pin to the Earth
 - Pincher Beetles
+- Pious Wayfarer
 - Piranha Fly
 - Piranha Marsh
 - Pirate
@@ -2222,6 +2270,7 @@ Cards supported: 3,342
 - Riftburst Hellion
 - Righteous Blow
 - Righteousness
+- Rimefur Reindeer
 - Rimeshield Frost Giant
 - Rimewood Falls
 - Rimrock Knight // Boulder Rush
@@ -2263,6 +2312,7 @@ Cards supported: 3,342
 - Rotting Fensnake
 - Rotting Legion
 - Rotting Mastodon
+- Rotting Regisaur
 - Roving Harper
 - Rowan Treefolk
 - Royal Assassin
@@ -2301,6 +2351,7 @@ Cards supported: 3,342
 - Sadistic Hypnotist
 - Safehold Elite
 - Sage of Lat-Nam
+- Sage of Mysteries
 - Sage's Row Savant
 - Sage-Eye Harrier
 - Sagu Archer
@@ -2579,6 +2630,7 @@ Cards supported: 3,342
 - Snowfield Sinkhole
 - Snowhorn Rider
 - Soaring Drake
+- Social Climber
 - Sodden Verdure
 - Sokka, Wolf Cove's Protector
 - Soldier
@@ -2601,6 +2653,8 @@ Cards supported: 3,342
 - Sootfeather Flock
 - Soothing Balm
 - Soul Shepherd
+- Soul Warden
+- Soul of the Harvest
 - Soul of the Rapids
 - Soulbound Guardians
 - Soulmender
@@ -2726,6 +2780,7 @@ Cards supported: 3,342
 - Straw Soldiers
 - Stream of Life
 - Streetbreaker Wurm
+- Strength of Cedars
 - Strider Harness
 - Strip Mine
 - Striped Bears
@@ -2738,6 +2793,7 @@ Cards supported: 3,342
 - Sudden Strike
 - Sulfur Falls
 - Sulfurous Mire
+- Sultai Ascendancy
 - Sultai Banner
 - Sultai Scavenger
 - Sultai Skullkeeper
@@ -2761,6 +2817,7 @@ Cards supported: 3,342
 - Supply Drop
 - Supply-Line Cranes
 - Supreme Verdict
+- Surge Conductor
 - Surgical Skullbomb
 - Surrakar Banisher
 - Surveilling Sprite
@@ -2854,6 +2911,7 @@ Cards supported: 3,342
 - The Terror of Serpent's Pass
 - Thermal Glider
 - Thicket Crasher
+- Think Tank
 - Third Path Savant
 - Thopter
 - Thopter
@@ -2884,6 +2942,7 @@ Cards supported: 3,342
 - Tidehollow Strix
 - Tidepool Turtle
 - Tidings
+- Tidy Conclusion
 - Tiger Claws
 - Tigereye Cameo
 - Timber Gorge
@@ -3093,7 +3152,9 @@ Cards supported: 3,342
 - Viral Drake
 - Viridian Claw
 - Viridian Corrupter
+- Viridian Lorebearers
 - Viridian Shaman
+- Virulent Emissary
 - Viscera Seer
 - Vithian Renegades
 - Vivisurgeon's Insight
@@ -3121,6 +3182,7 @@ Cards supported: 3,342
 - Volcanic Upheaval
 - Volt Charge
 - Voltaic Key
+- Voltaic Servant
 - Volunteer Militia
 - Vorapede
 - Vorstclaw
@@ -3276,6 +3338,7 @@ Cards supported: 3,342
 - Wraith
 - Wreckage Wickerfolk
 - Wrecking Crew
+- Wretched Anurid
 - Wretched Doll
 - Wring Flesh
 - Wu Infantry
@@ -3298,6 +3361,7 @@ Cards supported: 3,342
 - Yeva's Forcemage
 - Yoked Ox
 - Yoked Plowbeast
+- Yotian Dissident
 - Yotian Medic
 - Yotian Soldier
 - Young Wei Recruits

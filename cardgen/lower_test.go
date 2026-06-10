@@ -1638,6 +1638,54 @@ func TestLowerSagaChapterAbilities(t *testing.T) {
 	}
 }
 
+func TestLowerReadAheadSaga(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger.)\nI — Draw a card.\nII — Draw a card.",
+	})
+	if len(face.StaticAbilities) != 1 || !game.BodyHasKeyword(face.StaticAbilities[0].Body, game.ReadAhead) {
+		t.Fatalf("static abilities = %#v, want ReadAheadStaticBody", face.StaticAbilities)
+	}
+	if len(face.ChapterAbilities) != 2 {
+		t.Fatalf("chapter abilities = %#v, want two", face.ChapterAbilities)
+	}
+}
+
+func TestLowerReadAheadRejectsNoncanonicalReminder(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Malformed Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose whichever chapter you want.)\nI — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("noncanonical Read ahead reminder unexpectedly lowered")
+	}
+}
+
+func TestLowerReadAheadRejectsMismatchedSacrificeChapter(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Mismatched Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger. Sacrifice after IV.)\nI — Draw a card.\nII — Draw a card.\nIII — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("mismatched Read ahead sacrifice chapter unexpectedly lowered")
+	}
+}
+
 func TestLowerChapterShapedTextRequiresSagaSubtype(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -2069,6 +2117,7 @@ func TestLowerSpellXAmounts(t *testing.T) {
 				if !ok {
 					return game.Fixed(0)
 				}
+
 				return primitive.Amount
 			},
 		},
@@ -2109,6 +2158,101 @@ func TestLowerSpellXAmounts(t *testing.T) {
 			dynamic := test.quantity(face.SpellAbility.Val).DynamicAmount()
 			if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountX {
 				t.Fatalf("dynamic amount = %+v, want X", dynamic)
+			}
+		})
+	}
+}
+
+func TestLowerDynamicEffectAmounts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		quantity   func(game.AbilityContent) game.Quantity
+		kind       game.DynamicAmountKind
+		multiplier int
+		cardType   types.Card
+		controller game.ControllerRelation
+	}{
+		{"controlled creatures damage", "Test Swarm deals damage equal to the number of creatures you control to any target.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.Damage)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountCountSelector, 1, types.Creature, game.ControllerYou},
+		{"twice battlefield lands damage", "Test Swarm deals damage equal to twice the number of lands on the battlefield to any target.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.Damage)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountCountSelector, 2, types.Land, game.ControllerAny},
+		{"life for opponents", "You gain 2 life for each opponent you have.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.GainLife)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountOpponentCount, 2, "", game.ControllerAny},
+		{"controller life", "You gain life equal to your life total.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.GainLife)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountControllerLife, 1, "", game.ControllerAny},
+		{"draw for controlled lands", "Draw a card for each land you control.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.Draw)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountCountSelector, 1, types.Land, game.ControllerYou},
+		{"power for opponents", "Target creature gets +1/+0 for each opponent you have until end of turn.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.ModifyPT)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.PowerDelta
+		}, game.DynamicAmountOpponentCount, 1, "", game.ControllerAny},
+		{"power after duration", "Target creature gets +1/+0 until end of turn for each opponent you have.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.ModifyPT)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.PowerDelta
+		}, game.DynamicAmountOpponentCount, 1, "", game.ControllerAny},
+		{"counters for controlled lands", "Put X +1/+1 counters on target creature, where X is the number of lands you control.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.AddCounter)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountCountSelector, 1, types.Land, game.ControllerYou},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Swarm",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			dynamic := test.quantity(face.SpellAbility.Val).DynamicAmount()
+			if !dynamic.Exists ||
+				dynamic.Val.Kind != test.kind ||
+				dynamic.Val.Multiplier != test.multiplier {
+				t.Fatalf("dynamic amount = %+v", dynamic)
+			}
+			if test.cardType != "" {
+				selection := dynamic.Val.Group.Selection()
+				if len(selection.RequiredTypes) != 1 ||
+					selection.RequiredTypes[0] != test.cardType ||
+					selection.Controller != test.controller {
+					t.Fatalf("selection = %+v", selection)
+				}
 			}
 		})
 	}
@@ -2554,5 +2698,267 @@ func TestLowerModalUnsupportedModeBodyRejected(t *testing.T) {
 	})
 	if len(diagnostics) == 0 {
 		t.Fatal("expected diagnostics for unsupported mode body, got none")
+	}
+}
+
+func TestLowerAtTriggerYourUpkeepDrawCard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "At the beginning of your upkeep, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Type != game.TriggerAt {
+		t.Fatalf("trigger type = %v, want TriggerAt", ta.Trigger.Type)
+	}
+	if ta.Trigger.Pattern.Event != game.EventBeginningOfStep {
+		t.Fatalf("event = %v, want EventBeginningOfStep", ta.Trigger.Pattern.Event)
+	}
+	if ta.Trigger.Pattern.Step != game.StepUpkeep {
+		t.Fatalf("step = %v, want StepUpkeep", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", ta.Trigger.Pattern.Controller)
+	}
+	draw, ok := ta.Content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok || draw.Amount != game.Fixed(1) {
+		t.Fatalf("primitive = %+v, want Draw{Amount: Fixed(1)}", ta.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerAtTriggerEachOpponentUpkeepDamage(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pinger",
+		Layout:     "normal",
+		TypeLine:   "Creature — Goblin",
+		OracleText: "At the beginning of each opponent's upkeep, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Type != game.TriggerAt {
+		t.Fatalf("trigger type = %v, want TriggerAt", ta.Trigger.Type)
+	}
+	if ta.Trigger.Pattern.Event != game.EventBeginningOfStep {
+		t.Fatalf("event = %v, want EventBeginningOfStep", ta.Trigger.Pattern.Event)
+	}
+	if ta.Trigger.Pattern.Step != game.StepUpkeep {
+		t.Fatalf("step = %v, want StepUpkeep", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerOpponent {
+		t.Fatalf("controller = %v, want TriggerControllerOpponent", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerEachUpkeepAny(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Watcher",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "At the beginning of each upkeep, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerAny {
+		t.Fatalf("controller = %v, want TriggerControllerAny", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerYourEndStep(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mystic",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "At the beginning of your end step, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Step != game.StepEnd {
+		t.Fatalf("step = %v, want StepEnd", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerBeginningOfCombatYourTurn(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Fighter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Warrior",
+		OracleText: "At the beginning of combat on your turn, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Step != game.StepBeginningOfCombat {
+		t.Fatalf("step = %v, want StepBeginningOfCombat", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerYourDrawStep(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scholar",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "At the beginning of your draw step, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Step != game.StepDraw {
+		t.Fatalf("step = %v, want StepDraw", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerEachCombat(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Battler",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Soldier",
+		OracleText: "At the beginning of each combat, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Step != game.StepBeginningOfCombat {
+		t.Fatalf("step = %v, want StepBeginningOfCombat", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerAny {
+		t.Fatalf("controller = %v, want TriggerControllerAny", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerOptional(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sage",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "At the beginning of your upkeep, you may draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if !ta.Optional {
+		t.Fatal("expected Optional = true for 'you may' trigger")
+	}
+	if ta.Trigger.Pattern.Step != game.StepUpkeep {
+		t.Fatalf("step = %v, want StepUpkeep", ta.Trigger.Pattern.Step)
+	}
+}
+
+func TestLowerAtTriggerPrecombatMainPhaseFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Planeswalker",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "At the beginning of your precombat main phase, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for precombat main phase trigger, got none")
+	}
+	found := false
+	for _, d := range diagnostics {
+		if strings.Contains(d.Summary, "unsupported phase/step trigger phrase") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected 'unsupported phase/step trigger phrase' diagnostic, got: %v", diagnostics)
+	}
+}
+
+func TestLowerAtTriggerInterveningIfFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "At the beginning of your upkeep, if you control a creature, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for intervening-if on at-trigger, got none")
+	}
+}
+
+func TestLowerAtTriggerPhraseVariants(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase     string
+		step       game.Step
+		controller game.TriggerControllerFilter
+	}{
+		{"each upkeep", game.StepUpkeep, game.TriggerControllerAny},
+		{"each player's upkeep", game.StepUpkeep, game.TriggerControllerAny},
+		{"each opponent's upkeep", game.StepUpkeep, game.TriggerControllerOpponent},
+		{"each end step", game.StepEnd, game.TriggerControllerAny},
+		{"each player's end step", game.StepEnd, game.TriggerControllerAny},
+		{"each combat", game.StepBeginningOfCombat, game.TriggerControllerAny},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Card",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: "At the beginning of " + tc.phrase + ", draw a card.",
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			ta := face.TriggeredAbilities[0]
+			if ta.Trigger.Pattern.Step != tc.step {
+				t.Errorf("step = %v, want %v", ta.Trigger.Pattern.Step, tc.step)
+			}
+			if ta.Trigger.Pattern.Controller != tc.controller {
+				t.Errorf("controller = %v, want %v", ta.Trigger.Pattern.Controller, tc.controller)
+			}
+		})
 	}
 }

@@ -196,6 +196,30 @@ func lowerFaceAbilities(
 			result.SpellAbility = lowered.spellAbility
 		}
 	}
+	for _, ability := range compilation.Abilities {
+		for _, keyword := range ability.Keywords {
+			if keyword.Name != "Read ahead" {
+				continue
+			}
+			sacrificeChapter, ok := readAheadSacrificeChapter(ability.Text)
+			if !ok || sacrificeChapter == 0 {
+				continue
+			}
+			finalChapter := 0
+			for _, chapter := range result.ChapterAbilities {
+				for _, number := range chapter.Chapters {
+					finalChapter = max(finalChapter, number)
+				}
+			}
+			if sacrificeChapter != finalChapter {
+				unsupported = append(unsupported, *executableDiagnostic(
+					ability,
+					"unsupported Read ahead ability",
+					fmt.Sprintf("the reminder sacrifice chapter %d does not match final chapter %d", sacrificeChapter, finalChapter),
+				))
+			}
+		}
+	}
 	if len(unsupported) > 0 {
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
@@ -315,38 +339,7 @@ func lowerExecutableAbility(
 			sourceSpans: spans,
 		}, nil
 	case oracle.AbilityTriggered:
-		triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		spans := []oracle.Span{ability.Trigger.Span}
-		for _, effect := range ability.Effects {
-			spans = append(spans, effect.Span)
-		}
-		for _, target := range ability.Targets {
-			spans = append(spans, target.Span)
-		}
-		for _, condition := range ability.Conditions {
-			spans = append(spans, condition.Span)
-		}
-		for _, reference := range ability.References {
-			spans = append(spans, reference.Span)
-		}
-		for _, reminder := range syntax.Reminders {
-			spans = append(spans, reminder.Span)
-		}
-		return abilityLowering{
-			triggeredAbility: opt.Val(triggeredAbility),
-			consumed: semanticConsumption{
-				trigger:    true,
-				optional:   ability.Optional,
-				targets:    len(ability.Targets),
-				conditions: len(ability.Conditions),
-				effects:    len(ability.Effects),
-				references: len(ability.References),
-			},
-			sourceSpans: spans,
-		}, nil
+		return lowerTriggeredAbilityKind(cardName, ability, syntax)
 	case oracle.AbilityChapter:
 		return lowerChapterAbility(cardName, ability, syntax)
 	case oracle.AbilityReplacement:
@@ -2603,6 +2596,149 @@ func entersTappedLandSubtypes(condition string) ([]types.Sub, bool) {
 	return subtypes, len(subtypes) > 0
 }
 
+type atTriggerParams struct {
+	step       game.Step
+	controller game.TriggerControllerFilter
+}
+
+var atTriggerPhrases = map[string]atTriggerParams{
+	"the beginning of your upkeep":            {game.StepUpkeep, game.TriggerControllerYou},
+	"the beginning of each upkeep":            {game.StepUpkeep, game.TriggerControllerAny},
+	"the beginning of each player's upkeep":   {game.StepUpkeep, game.TriggerControllerAny},
+	"the beginning of each opponent's upkeep": {game.StepUpkeep, game.TriggerControllerOpponent},
+	"the beginning of your end step":          {game.StepEnd, game.TriggerControllerYou},
+	"the beginning of each end step":          {game.StepEnd, game.TriggerControllerAny},
+	"the beginning of each player's end step": {game.StepEnd, game.TriggerControllerAny},
+	"the beginning of combat on your turn":    {game.StepBeginningOfCombat, game.TriggerControllerYou},
+	"the beginning of each combat":            {game.StepBeginningOfCombat, game.TriggerControllerAny},
+	"the beginning of your draw step":         {game.StepDraw, game.TriggerControllerYou},
+}
+
+func lowerAtTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	const summary = "unsupported phase/step trigger phrase"
+	params, ok := atTriggerPhrases[ability.Trigger.Event]
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			fmt.Sprintf("the executable source backend does not support step trigger phrase %q", ability.Trigger.Event),
+		)
+	}
+	if ability.Trigger.Condition != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"intervening-if conditions are not supported for phase/step triggers",
+		)
+	}
+	if len(ability.Keywords) != 0 || len(ability.Modes) != 0 || ability.AbilityWord != "" {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"modes, keywords, and ability words are not supported in phase/step triggers",
+		)
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend does not support this phase/step trigger body",
+		)
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary+" effect",
+			diagnostic.Detail,
+		)
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerAt,
+			Pattern: game.TriggerPattern{
+				Event:      game.EventBeginningOfStep,
+				Controller: params.controller,
+				Step:       params.step,
+			},
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, nil
+}
+
+func lowerTriggeredAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerAt {
+		return lowerAtTrigger(cardName, ability, syntax)
+	}
+	triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
+	if diagnostic == nil ||
+		ability.Trigger == nil ||
+		!strings.Contains(ability.Trigger.Event, " enter") {
+		return triggeredAbility, diagnostic
+	}
+	nonSelf, ok := lowerNonSelfEnterTrigger(cardName, ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, diagnostic
+	}
+	return nonSelf, nil
+}
+
+func lowerTriggeredAbilityKind(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	triggeredAbility, diagnostic := lowerTriggeredAbility(cardName, ability, syntax)
+	if diagnostic != nil {
+		return abilityLowering{}, diagnostic
+	}
+	spans := []oracle.Span{ability.Trigger.Span}
+	if syntax.AbilityWord != nil {
+		spans = append(spans, oracle.Span{
+			Start: ability.Span.Start,
+			End:   ability.Trigger.Span.Start,
+		})
+	}
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	for _, target := range ability.Targets {
+		spans = append(spans, target.Span)
+	}
+	for _, condition := range ability.Conditions {
+		spans = append(spans, condition.Span)
+	}
+	for _, reference := range ability.References {
+		spans = append(spans, reference.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		triggeredAbility: opt.Val(triggeredAbility),
+		consumed: semanticConsumption{
+			trigger:    true,
+			optional:   ability.Optional,
+			targets:    len(ability.Targets),
+			conditions: len(ability.Conditions),
+			effects:    len(ability.Effects),
+			references: len(ability.References),
+		},
+		sourceSpans: spans,
+	}, nil
+}
+
 func (lowering *abilityLowering) complete(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
@@ -2646,104 +2782,21 @@ func lowerEnterTrigger(
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
 	intervening, supportedCondition := lowerSelfInterveningCondition(eventKind, ability.Trigger)
-	hasInterveningCondition := ability.Trigger != nil && ability.Trigger.Condition != nil
-	resolvingEffects := ability.Effects
-	if hasInterveningCondition {
-		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
-		resolvingEffects = slices.DeleteFunc(
-			append([]oracle.CompiledEffect(nil), ability.Effects...),
-			func(effect oracle.CompiledEffect) bool {
-				return spanCovered(effect.VerbSpan, conditionSpan)
-			},
-		)
-	}
 	if ability.Trigger == nil ||
 		!supportedSelfTriggerKind(eventKind, ability.Trigger.Kind) ||
 		!supportedEvent ||
 		!supportedCondition ||
-		len(resolvingEffects) == 0 ||
-		(len(ability.Conditions) != 0 && !hasInterveningCondition) ||
-		(hasInterveningCondition && (len(ability.Conditions) != 1 ||
-			ability.Conditions[0] != *ability.Trigger.Condition ||
-			ability.Optional)) ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		ability.AbilityWord != "" {
-		return game.TriggeredAbility{}, executableDiagnostic(
-			ability,
-			summary,
-			detail,
-		)
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
-	body := ability
-	body.Effects = resolvingEffects
-	body.Kind = oracle.AbilitySpell
-	body.Span = oracle.Span{
-		Start: resolvingEffects[0].Span.Start,
-		End:   resolvingEffects[len(resolvingEffects)-1].Span.End,
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
-	body.Text = titleFirst(
-		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
-	)
-	body.Trigger = nil
-	body.Optional = false
-	body.OptionalSpan = oracle.Span{}
-	excludedReferenceSpans := []oracle.Span{ability.Trigger.Span}
-	if hasInterveningCondition {
-		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
-		body.Conditions = nil
-		bodyStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-			return token.Kind != oracle.Comma &&
-				token.Span.Start.Offset >= ability.Trigger.Condition.Span.End.Offset
-		})
-		if bodyStart < 0 {
-			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
-		}
-		effect := body.Effects[0]
-		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
-		effect.Text = ability.Text[effect.Span.Start.Offset-ability.Span.Start.Offset : effect.Span.End.Offset-ability.Span.Start.Offset]
-		body.Effects[0] = effect
-		body.Span.Start = effect.Span.Start
-		body.Text = titleFirst(
-			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
-		)
-	}
-	body.References = bodyReferences(ability.References, excludedReferenceSpans...)
 	selfDamage := eventKind == game.EventPermanentDied &&
 		normalizeSelfDamageReference(cardName, &body)
-	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-		return token.Span.Start.Offset >= body.Span.Start.Offset
-	})
-	if bodyTokenStart < 0 {
-		return game.TriggeredAbility{}, executableDiagnostic(
-			ability,
-			summary,
-			detail,
-		)
-	}
-	bodySyntax := syntax
-	bodySyntax.Kind = oracle.AbilitySpell
-	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
-	if ability.Optional {
-		if len(ability.Effects) != 1 ||
-			len(bodySyntax.Tokens) < 3 ||
-			!equalTokenWord(bodySyntax.Tokens[0], "you") ||
-			!equalTokenWord(bodySyntax.Tokens[1], "may") ||
-			ability.OptionalSpan.Start != ability.Effects[0].Span.Start {
-			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
-		}
-		effect := body.Effects[0]
-		effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
-		effect.Span.Start = effect.VerbSpan.Start
-		body.Effects = []oracle.CompiledEffect{effect}
-		body.Span.Start = effect.Span.Start
-		body.Text = titleFirst(
-			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
-		)
-		bodySyntax.Tokens = bodySyntax.Tokens[2:]
-	}
-	bodySyntax.Span = body.Span
-	bodySyntax.Text = body.Text
 	content, diagnostic := lowerSelfTriggerBody(cardName, eventKind, body, bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
@@ -2758,6 +2811,11 @@ func lowerEnterTrigger(
 			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 		}
 		damage.DamageSource = opt.Val(game.EventPermanentReference())
+		if dynamic := damage.Amount.DynamicAmount(); dynamic.Exists &&
+			dynamic.Val.Kind == game.DynamicAmountObjectPower {
+			dynamic.Val.Object = game.EventPermanentReference()
+			damage.Amount = game.Dynamic(dynamic.Val)
+		}
 		content.Modes[0].Sequence[0].Primitive = damage
 	}
 	triggerType := game.TriggerWhen
@@ -2946,11 +3004,18 @@ func controlledPermanentConditionType(text string) (types.Card, bool) {
 func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbility) bool {
 	if ability == nil ||
 		len(ability.Effects) != 1 ||
-		len(ability.References) != 1 ||
+		(len(ability.References) != 1 && len(ability.References) != 2) ||
 		ability.References[0].Kind != oracle.ReferencePronoun ||
 		!strings.EqualFold(ability.References[0].Text, "it") ||
 		!strings.HasPrefix(ability.Text, "It deals ") ||
 		!strings.HasPrefix(strings.ToLower(ability.Effects[0].Text), "it deals ") {
+		return false
+	}
+	if len(ability.References) == 2 &&
+		(ability.Effects[0].Amount.DynamicKind != oracle.DynamicAmountSourcePower ||
+			ability.References[1].Kind != oracle.ReferencePronoun ||
+			!strings.EqualFold(ability.References[1].Text, "its") ||
+			ability.References[1].Span != ability.Effects[0].Amount.ReferenceSpan) {
 		return false
 	}
 	ability.Text = cardName + ability.Text[len("It"):]
@@ -3007,6 +3072,304 @@ func interveningIfText(trigger *oracle.CompiledTrigger) string {
 	return trigger.Condition.Text
 }
 
+// prepareTriggerBody builds the body CompiledAbility and syntax for a
+// supported triggered ability. It handles condition consistency, effect
+// filtering for intervening conditions, body span/text construction, reference
+// exclusion, and optional "you may" stripping. Callers must have already
+// verified that ability.Trigger is non-nil.
+func prepareTriggerBody(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (oracle.CompiledAbility, oracle.Ability, bool) {
+	if ability.Trigger == nil {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	hasInterveningCondition := ability.Trigger.Condition != nil
+	if (len(ability.Conditions) != 0 && !hasInterveningCondition) ||
+		(hasInterveningCondition && (len(ability.Conditions) != 1 ||
+			ability.Conditions[0] != *ability.Trigger.Condition ||
+			ability.Optional)) {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	resolvingEffects := ability.Effects
+	if hasInterveningCondition {
+		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
+		resolvingEffects = slices.DeleteFunc(
+			append([]oracle.CompiledEffect(nil), ability.Effects...),
+			func(effect oracle.CompiledEffect) bool {
+				return spanCovered(effect.VerbSpan, conditionSpan)
+			},
+		)
+	}
+	if len(resolvingEffects) == 0 {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	body := ability
+	body.Effects = resolvingEffects
+	body.Kind = oracle.AbilitySpell
+	body.Span = oracle.Span{
+		Start: resolvingEffects[0].Span.Start,
+		End:   resolvingEffects[len(resolvingEffects)-1].Span.End,
+	}
+	body.Text = titleFirst(
+		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+	)
+	body.Trigger = nil
+	body.Optional = false
+	body.OptionalSpan = oracle.Span{}
+	excludedReferenceSpans := []oracle.Span{ability.Trigger.Span}
+	if hasInterveningCondition {
+		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
+		body.Conditions = nil
+		bodyStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+			return token.Kind != oracle.Comma &&
+				token.Span.Start.Offset >= ability.Trigger.Condition.Span.End.Offset
+		})
+		if bodyStart < 0 {
+			return oracle.CompiledAbility{}, oracle.Ability{}, false
+		}
+		effect := body.Effects[0]
+		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
+		effect.Text = ability.Text[effect.Span.Start.Offset-ability.Span.Start.Offset : effect.Span.End.Offset-ability.Span.Start.Offset]
+		body.Effects[0] = effect
+		body.Span.Start = effect.Span.Start
+		body.Text = titleFirst(
+			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+		)
+	}
+	body.References = bodyReferences(ability.References, excludedReferenceSpans...)
+	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Span.Start.Offset >= body.Span.Start.Offset
+	})
+	if bodyTokenStart < 0 {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
+	if ability.Optional {
+		if len(ability.Effects) != 1 ||
+			len(bodySyntax.Tokens) < 3 ||
+			!equalTokenWord(bodySyntax.Tokens[0], "you") ||
+			!equalTokenWord(bodySyntax.Tokens[1], "may") ||
+			ability.OptionalSpan.Start != ability.Effects[0].Span.Start {
+			return oracle.CompiledAbility{}, oracle.Ability{}, false
+		}
+		effect := body.Effects[0]
+		effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
+		effect.Span.Start = effect.VerbSpan.Start
+		body.Effects = []oracle.CompiledEffect{effect}
+		body.Span.Start = effect.Span.Start
+		body.Text = titleFirst(
+			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+		)
+		bodySyntax.Tokens = bodySyntax.Tokens[2:]
+	}
+	bodySyntax.Span = body.Span
+	bodySyntax.Text = body.Text
+	return body, bodySyntax, true
+}
+
+func lowerNonSelfEnterTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, bool) {
+	if ability.Trigger == nil ||
+		ability.Trigger.Kind != oracle.TriggerWhenever ||
+		len(ability.Effects) == 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 {
+		return game.TriggeredAbility{}, false
+	}
+
+	event := ability.Trigger.Event
+	pattern := game.TriggerPattern{
+		Event: game.EventPermanentEnteredBattlefield,
+	}
+
+	if strings.HasPrefix(event, "one or more ") {
+		pattern.OneOrMore = true
+		rest := strings.TrimPrefix(event, "one or more ")
+		cardType, controller, ok := parseOneOrMoreEnterSuffix(rest)
+		if !ok {
+			return game.TriggeredAbility{}, false
+		}
+		if cardType != "" {
+			pattern.RequirePermanentTypes = []types.Card{cardType}
+		}
+		pattern.Controller = controller
+	} else {
+		switch {
+		case strings.HasPrefix(event, "another "):
+			pattern.ExcludeSelf = true
+			event = strings.TrimPrefix(event, "another ")
+		case strings.HasPrefix(event, "a "):
+			event = strings.TrimPrefix(event, "a ")
+		case strings.HasPrefix(event, "an "):
+			event = strings.TrimPrefix(event, "an ")
+		default:
+			return game.TriggeredAbility{}, false
+		}
+		if strings.HasPrefix(event, "nontoken ") {
+			pattern.RequireNonToken = true
+			event = strings.TrimPrefix(event, "nontoken ")
+		}
+		cardType, controller, ok := parseSingleEnterSuffix(event)
+		if !ok {
+			return game.TriggeredAbility{}, false
+		}
+		if cardType != "" {
+			pattern.RequirePermanentTypes = []types.Card{cardType}
+		}
+		pattern.Controller = controller
+	}
+
+	intervening, supportedCondition := lowerEnterInterveningCondition(ability.Trigger)
+	if !supportedCondition ||
+		(ability.Trigger.Condition != nil && ability.Trigger.Condition.Text == "if you cast it") {
+		return game.TriggeredAbility{}, false
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, false
+	}
+	content, contentOK := lowerEventPermanentModifyPTBody(body)
+	if !contentOK {
+		var diagnostic *oracle.Diagnostic
+		content, diagnostic = lowerSelfTriggerBody(cardName, game.EventPermanentEnteredBattlefield, body, bodySyntax)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, false
+		}
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:                                 game.TriggerWhenever,
+			Pattern:                              pattern,
+			InterveningIf:                        interveningIfText(ability.Trigger),
+			InterveningCondition:                 intervening.condition,
+			InterveningIfEventPermanentWasKicked: intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:   intervening.wasCast,
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, true
+}
+
+// lowerEventPermanentModifyPTBody handles the narrow case of a triggered body
+// that modifies the entering permanent via the pronoun "it", e.g.
+// "It gets +2/+0 until end of turn." The pronoun resolves to
+// game.EventPermanentReference(), which identifies the permanent named by the
+// triggering event. Only exact fixed static P/T changes until end of turn are
+// accepted.
+func lowerEventPermanentModifyPTBody(body oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(body.Effects) != 1 ||
+		body.Effects[0].Kind != oracle.EffectModifyPT ||
+		len(body.Targets) != 0 ||
+		len(body.References) != 1 ||
+		body.References[0].Kind != oracle.ReferencePronoun ||
+		!strings.EqualFold(body.References[0].Text, "it") ||
+		len(body.Conditions) != 0 ||
+		len(body.Keywords) != 0 ||
+		len(body.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := body.Effects[0]
+	if !effect.PowerDelta.Known ||
+		!effect.ToughnessDelta.Known ||
+		effect.Negated ||
+		effect.Duration != oracle.DurationUntilEndOfTurn {
+		return game.AbilityContent{}, false
+	}
+	want := fmt.Sprintf("It gets %s/%s until end of turn.",
+		signedAmountText(effect.PowerDelta),
+		signedAmountText(effect.ToughnessDelta))
+	if body.Text != want {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ModifyPT{
+				Object:         game.EventPermanentReference(),
+				PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
+				ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
+				Duration:       game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), true
+}
+
+// parseSingleEnterSuffix parses "{type} {controller?} enters" from the event
+// fragment after an article and optional "nontoken" have been stripped.
+// An empty card type return signals "permanent" (no type filter).
+func parseSingleEnterSuffix(event string) (types.Card, game.TriggerControllerFilter, bool) {
+	controller := game.TriggerControllerAny
+	if s, ok := strings.CutSuffix(event, " you control enters"); ok {
+		event = s + " enters"
+		controller = game.TriggerControllerYou
+	} else if s, ok := strings.CutSuffix(event, " an opponent controls enters"); ok {
+		event = s + " enters"
+		controller = game.TriggerControllerOpponent
+	}
+	cardType, ok := permanentEnterTypeWord(event)
+	return cardType, controller, ok
+}
+
+// parseOneOrMoreEnterSuffix parses "{type_plural} {controller?} enter" from
+// the fragment after "one or more " has been stripped.
+// An empty card type return signals "permanents" (no type filter).
+func parseOneOrMoreEnterSuffix(event string) (types.Card, game.TriggerControllerFilter, bool) {
+	controller := game.TriggerControllerAny
+	if s, ok := strings.CutSuffix(event, " you control enter"); ok {
+		event = s + " enter"
+		controller = game.TriggerControllerYou
+	} else if s, ok := strings.CutSuffix(event, " an opponent controls enter"); ok {
+		event = s + " enter"
+		controller = game.TriggerControllerOpponent
+	}
+	cardType, ok := permanentEnterTypePlural(event)
+	return cardType, controller, ok
+}
+
+func permanentEnterTypeWord(event string) (types.Card, bool) {
+	switch event {
+	case "creature enters":
+		return types.Creature, true
+	case "artifact enters":
+		return types.Artifact, true
+	case "enchantment enters":
+		return types.Enchantment, true
+	case "land enters":
+		return types.Land, true
+	case "permanent enters":
+		return "", true
+	case "planeswalker enters":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
+}
+
+func permanentEnterTypePlural(event string) (types.Card, bool) {
+	switch event {
+	case "creatures enter":
+		return types.Creature, true
+	case "artifacts enter":
+		return types.Artifact, true
+	case "enchantments enter":
+		return types.Enchantment, true
+	case "lands enter":
+		return types.Land, true
+	case "permanents enter":
+		return "", true
+	case "planeswalkers enter":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
+}
+
 func spanCovered(span oracle.Span, covering []oracle.Span) bool {
 	for _, candidate := range covering {
 		if candidate.Start.Offset <= span.Start.Offset &&
@@ -3027,6 +3390,13 @@ func lowerKeywordAbility(
 				ability,
 				"unsupported Devoid ability",
 				"the executable source backend supports only exact \"Devoid (This card has no color.)\" abilities",
+			)
+		}
+		if keyword.Name == "Read ahead" && !isReadAheadAbility(ability.Text) {
+			return nil, executableDiagnostic(
+				ability,
+				"unsupported Read ahead ability",
+				"the executable source backend supports only the canonical Read ahead ability and reminder text",
 			)
 		}
 	}
@@ -3114,6 +3484,43 @@ func lowerKeywordAbility(
 		return nil, mixedKeywordDiagnostic(ability)
 	}
 	return bodies, nil
+}
+
+func isReadAheadAbility(text string) bool {
+	_, ok := readAheadSacrificeChapter(text)
+	return ok
+}
+
+func readAheadSacrificeChapter(text string) (int, bool) {
+	const prefix = "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger."
+	remainder, ok := strings.CutPrefix(text, prefix)
+	if !ok {
+		return 0, false
+	}
+	if remainder == ")" {
+		return 0, true
+	}
+	chapter, ok := strings.CutPrefix(remainder, " Sacrifice after ")
+	if !ok || !strings.HasSuffix(chapter, ".)") {
+		return 0, false
+	}
+	chapter = strings.TrimSuffix(chapter, ".)")
+	switch chapter {
+	case "I":
+		return 1, true
+	case "II":
+		return 2, true
+	case "III":
+		return 3, true
+	case "IV":
+		return 4, true
+	case "V":
+		return 5, true
+	case "VI":
+		return 6, true
+	default:
+		return 0, false
+	}
 }
 
 func lowerParameterizedStaticKeyword(keyword oracle.CompiledKeyword) (game.StaticAbility, bool) {
@@ -3375,13 +3782,14 @@ func lowerFixedCounterSpell(
 	if len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 ||
-		!effect.Amount.Known ||
-		effect.Amount.Value <= 0 ||
+		(!effect.Amount.Known &&
+			(effect.Amount.DynamicKind == oracle.DynamicAmountNone ||
+				effect.Amount.DynamicForm != oracle.DynamicAmountWhereX)) ||
+		(effect.Amount.Known && effect.Amount.Value <= 0) ||
 		effect.Negated ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
-		len(ability.Modes) != 0 ||
-		len(ability.References) != 0 {
+		len(ability.Modes) != 0 {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported spell ability",
@@ -3413,12 +3821,28 @@ func lowerFixedCounterSpell(
 			"the executable source backend does not yet lower this spell ability",
 		)
 	}
-	if !isExactPutCounterText(
+	amount := game.Fixed(effect.Amount.Value)
+	exactText := isExactPutCounterText(
 		ability.Text,
 		ability.Targets[0].Text,
 		effect.Amount.Value,
 		counterName,
-	) {
+	) && len(ability.References) == 0
+	if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+		dynamic, supported := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !supported ||
+			!exactDynamicCounterText(ability, counterName) ||
+			!exactDynamicAmountReference(effect.Amount, ability.References) {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported spell ability",
+				"the executable source backend does not yet lower this spell ability",
+			)
+		}
+		amount = game.Dynamic(dynamic)
+		exactText = true
+	}
+	if !exactText {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported spell ability",
@@ -3429,12 +3853,41 @@ func lowerFixedCounterSpell(
 		Targets: []game.TargetSpec{target},
 		Sequence: []game.Instruction{{
 			Primitive: game.AddCounter{
-				Amount:      game.Fixed(effect.Amount.Value),
+				Amount:      amount,
 				Object:      game.TargetPermanentReference(0),
 				CounterKind: kind,
 			},
 		}},
 	}.Ability(), nil
+}
+
+func exactDynamicCounterText(ability oracle.CompiledAbility, counterName string) bool {
+	amount := ability.Effects[0].Amount
+	return amount.DynamicForm == oracle.DynamicAmountWhereX &&
+		ability.Text == fmt.Sprintf(
+			"Put X %s counters on %s, %s.",
+			counterName,
+			ability.Targets[0].Text,
+			amount.Text,
+		)
+}
+
+func exactDynamicAmountReference(
+	amount oracle.CompiledAmount,
+	references []oracle.CompiledReference,
+) bool {
+	if amount.DynamicKind != oracle.DynamicAmountSourcePower {
+		return len(references) == 0
+	}
+	if len(references) != 1 || references[0].Span != amount.ReferenceSpan {
+		return false
+	}
+	switch references[0].Kind {
+	case oracle.ReferenceSelfName, oracle.ReferenceThisObject:
+		return true
+	default:
+		return false
+	}
 }
 
 func isExactPutCounterText(text, targetText string, amount int, counterName string) bool {
@@ -3862,12 +4315,11 @@ func lowerFixedDamageSpell(
 		ability.Targets[0].Cardinality.Max != 1 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
-		len(ability.Modes) != 0 ||
-		!singleSelfReference(ability.References) {
+		len(ability.Modes) != 0 {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported damage spell",
-			"the executable source backend supports only exact fixed damage to one target",
+			"the executable source backend supports only exact supported damage amounts to one target",
 		)
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
@@ -3875,29 +4327,39 @@ func lowerFixedDamageSpell(
 	if effect.Amount.Known {
 		amount = game.Fixed(effect.Amount.Value)
 		amountText = fmt.Sprint(effect.Amount.Value)
+	} else if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported damage spell",
+				"the executable source backend supports only exact supported damage amounts to one target",
+			)
+		}
+		amount = game.Dynamic(dynamic)
 	}
 	target, ok := damageTargetSpec(ability.Targets[0])
 	if !ok ||
-		ability.Text != fmt.Sprintf(
-			"%s deals %s damage to %s.",
-			cardName,
-			amountText,
-			ability.Targets[0].Text,
-		) {
+		!exactDamageAmountSyntax(cardName, ability, effect.Amount, amountText) ||
+		!exactDamageAmountReferences(effect.Amount, ability.References) {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported damage spell",
-			"the executable source backend supports only exact fixed damage to one target",
+			"the executable source backend supports only exact supported damage amounts to one target",
 		)
+	}
+	damage := game.Damage{
+		Amount:    amount,
+		Recipient: game.AnyTargetDamageRecipient(0),
+	}
+	if effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{target},
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.Damage{
-					Amount:    amount,
-					Recipient: game.AnyTargetDamageRecipient(0),
-				},
+				Primitive: damage,
 			},
 		},
 	}.Ability(), nil
@@ -3907,28 +4369,22 @@ func lowerFixedModifyPTSpell(
 	ability oracle.CompiledAbility,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
+	dynamicPT := effect.Amount.DynamicKind != oracle.DynamicAmountNone
 	if len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 ||
 		ability.Targets[0].Selector.Kind != oracle.SelectorCreature ||
-		!effect.PowerDelta.Known ||
-		!effect.ToughnessDelta.Known ||
+		(!dynamicPT && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) ||
 		effect.Negated ||
 		effect.Duration != oracle.DurationUntilEndOfTurn ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
-		len(ability.References) != 0 ||
-		ability.Text != fmt.Sprintf(
-			"%s gets %s/%s until end of turn.",
-			titleFirst(ability.Targets[0].Text),
-			signedAmountText(effect.PowerDelta),
-			signedAmountText(effect.ToughnessDelta),
-		) {
+		!exactModifyPTAmountSyntax(ability, effect) {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported power/toughness spell",
-			"the executable source backend supports only exact fixed target-creature power/toughness changes until end of turn",
+			"the executable source backend supports only exact supported target-creature power/toughness changes until end of turn",
 		)
 	}
 	targetSpec, ok := permanentTargetSpec(ability.Targets[0])
@@ -3936,8 +4392,34 @@ func lowerFixedModifyPTSpell(
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported power/toughness spell",
-			"the executable source backend supports only exact fixed target-creature power/toughness changes until end of turn",
+			"the executable source backend supports only exact supported target-creature power/toughness changes until end of turn",
 		)
+	}
+	powerDelta := game.Fixed(compiledSignedAmountValue(effect.PowerDelta))
+	toughnessDelta := game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta))
+	if dynamicPT {
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported power/toughness spell",
+				"the executable source backend supports only exact supported target-creature power/toughness changes until end of turn",
+			)
+		}
+		switch effect.Amount.DynamicForm {
+		case oracle.DynamicAmountWhereX:
+			powerDelta = game.Dynamic(dynamic)
+			toughnessDelta = game.Dynamic(dynamic)
+		case oracle.DynamicAmountForEach:
+			powerDelta = dynamicSignedQuantity(dynamic, effect.PowerDelta)
+			toughnessDelta = dynamicSignedQuantity(dynamic, effect.ToughnessDelta)
+		default:
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported power/toughness spell",
+				"the executable source backend supports only exact supported target-creature power/toughness changes until end of turn",
+			)
+		}
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
@@ -3945,8 +4427,8 @@ func lowerFixedModifyPTSpell(
 			{
 				Primitive: game.ModifyPT{
 					Object:         game.TargetPermanentReference(0),
-					PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
-					ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
+					PowerDelta:     powerDelta,
+					ToughnessDelta: toughnessDelta,
 					Duration:       game.DurationUntilEndOfTurn,
 				},
 			},
@@ -4139,8 +4621,7 @@ func lowerFixedLifeSpell(
 		effect.Negated ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
-		len(ability.Modes) != 0 ||
-		len(ability.References) != 0 {
+		len(ability.Modes) != 0 {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported life spell",
@@ -4149,22 +4630,42 @@ func lowerFixedLifeSpell(
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	amountText := "X"
-	if effect.Amount.Known {
+	switch {
+	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
 		amountText = fmt.Sprint(effect.Amount.Value)
+	case effect.Amount.DynamicKind != oracle.DynamicAmountNone:
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower ||
+			len(ability.References) != 0 {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported life spell",
+				"the executable source backend supports only exact supported life changes",
+			)
+		}
+		amount = game.Dynamic(dynamic)
+	case len(ability.References) != 0:
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported life spell",
+			"the executable source backend supports only exact supported life changes",
+		)
+	default:
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
 	case len(ability.Targets) == 0 &&
-		ability.Text == fmt.Sprintf("You %s %s life.", verb, amountText):
+		exactLifeAmountSyntax("You", verb, ability.Text, effect.Amount, amountText):
 	case len(ability.Targets) == 1:
 		targetSpec, ok := playerTargetSpec(ability.Targets[0])
 		if !ok ||
-			ability.Text != fmt.Sprintf(
-				"%s %ss %s life.",
+			!exactLifeAmountSyntax(
 				titleFirst(ability.Targets[0].Text),
-				verb,
+				verb+"s",
+				ability.Text,
+				effect.Amount,
 				amountText,
 			) {
 			return game.AbilityContent{}, executableDiagnostic(
@@ -4279,16 +4780,32 @@ func lowerFixedDrawSpell(
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	if effect.Amount.Known {
 		amount = game.Fixed(effect.Amount.Value)
+	} else if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported draw spell",
+				"the executable source backend supports only exact supported card draw",
+			)
+		}
+		amount = game.Dynamic(dynamic)
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
 	case len(ability.Targets) == 0 &&
 		(exactControllerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
-			(!effect.Amount.Known && exactXControllerDrawSyntax(syntax.Tokens))):
+			(!effect.Amount.Known &&
+				effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
+				exactXControllerDrawSyntax(syntax.Tokens)) ||
+			exactDynamicDrawSyntax(ability.Text, "", effect.Amount)):
 	case len(ability.Targets) == 1 &&
 		(exactTargetPlayerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
-			(!effect.Amount.Known && exactXTargetPlayerDrawSyntax(syntax.Tokens))) &&
+			(!effect.Amount.Known &&
+				effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
+				exactXTargetPlayerDrawSyntax(syntax.Tokens)) ||
+			exactDynamicDrawSyntax(ability.Text, titleFirst(ability.Targets[0].Text), effect.Amount)) &&
 		ability.Targets[0].Cardinality.Min == 1 &&
 		ability.Targets[0].Cardinality.Max == 1 &&
 		ability.Targets[0].Selector.Kind == oracle.SelectorPlayer:
@@ -4319,6 +4836,228 @@ func lowerFixedDrawSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+func lowerDynamicAmount(amount oracle.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
+	if amount.Multiplier < 1 {
+		return game.DynamicAmount{}, false
+	}
+	dynamic := game.DynamicAmount{Multiplier: amount.Multiplier}
+	switch amount.DynamicKind {
+	case oracle.DynamicAmountCount:
+		selection, ok := dynamicAmountSelection(amount.Selector)
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountCountSelector
+		dynamic.Group = game.BattlefieldGroup(selection)
+	case oracle.DynamicAmountControllerLife:
+		dynamic.Kind = game.DynamicAmountControllerLife
+	case oracle.DynamicAmountOpponentCount:
+		dynamic.Kind = game.DynamicAmountOpponentCount
+	case oracle.DynamicAmountSourcePower:
+		if len(object.Validate()) != 0 {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountObjectPower
+		dynamic.Object = object
+	default:
+		return game.DynamicAmount{}, false
+	}
+	return dynamic, true
+}
+
+func dynamicAmountSelection(selector oracle.CompiledSelector) (game.Selection, bool) {
+	var requiredType types.Card
+	switch selector.Kind {
+	case oracle.SelectorArtifact:
+		requiredType = types.Artifact
+	case oracle.SelectorCreature:
+		requiredType = types.Creature
+	case oracle.SelectorEnchantment:
+		requiredType = types.Enchantment
+	case oracle.SelectorLand:
+		requiredType = types.Land
+	case oracle.SelectorPermanent:
+	default:
+		return game.Selection{}, false
+	}
+	var controller game.ControllerRelation
+	switch selector.Controller {
+	case oracle.ControllerAny:
+	case oracle.ControllerYou:
+		controller = game.ControllerYou
+	case oracle.ControllerOpponent:
+		controller = game.ControllerOpponent
+	default:
+		return game.Selection{}, false
+	}
+	selection := game.Selection{Controller: controller}
+	if requiredType != "" {
+		selection.RequiredTypes = []types.Card{requiredType}
+	}
+	return selection, true
+}
+
+func exactDamageAmountSyntax(
+	cardName string,
+	ability oracle.CompiledAbility,
+	amount oracle.CompiledAmount,
+	fixedText string,
+) bool {
+	target := ability.Targets[0].Text
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountFormNone:
+		return ability.Text == fmt.Sprintf("%s deals %s damage to %s.", cardName, fixedText, target)
+	case oracle.DynamicAmountEqual:
+		return ability.Text == fmt.Sprintf("%s deals damage %s to %s.", cardName, amount.Text, target)
+	case oracle.DynamicAmountForEach:
+		return ability.Text == fmt.Sprintf(
+			"%s deals %d damage %s to %s.",
+			cardName,
+			amount.Multiplier,
+			amount.Text,
+			target,
+		)
+	case oracle.DynamicAmountWhereX:
+		return ability.Text == fmt.Sprintf(
+			"%s deals X damage to %s, %s.",
+			cardName,
+			target,
+			amount.Text,
+		)
+	default:
+		return false
+	}
+}
+
+func exactDamageAmountReferences(amount oracle.CompiledAmount, references []oracle.CompiledReference) bool {
+	if amount.DynamicKind != oracle.DynamicAmountSourcePower {
+		return singleSelfReference(references)
+	}
+	if len(references) != 2 ||
+		references[0].Kind != oracle.ReferenceSelfName ||
+		references[1].Span != amount.ReferenceSpan {
+		return false
+	}
+	switch references[1].Kind {
+	case oracle.ReferenceSelfName, oracle.ReferenceThisObject:
+		return true
+	case oracle.ReferencePronoun:
+		return strings.EqualFold(references[1].Text, "its")
+	default:
+		return false
+	}
+}
+
+func exactLifeAmountSyntax(
+	subject, verb, text string,
+	amount oracle.CompiledAmount,
+	fixedText string,
+) bool {
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountFormNone:
+		return text == fmt.Sprintf("%s %s %s life.", subject, verb, fixedText)
+	case oracle.DynamicAmountEqual:
+		return text == fmt.Sprintf("%s %s life %s.", subject, verb, amount.Text)
+	case oracle.DynamicAmountForEach:
+		return text == fmt.Sprintf("%s %s %d life %s.", subject, verb, amount.Multiplier, amount.Text)
+	case oracle.DynamicAmountWhereX:
+		return text == fmt.Sprintf("%s %s X life, %s.", subject, verb, amount.Text)
+	default:
+		return false
+	}
+}
+
+func exactDynamicDrawSyntax(text, subject string, amount oracle.CompiledAmount) bool {
+	if amount.DynamicKind == oracle.DynamicAmountNone {
+		return false
+	}
+	prefix := "Draw"
+	if subject != "" {
+		prefix = subject + " draws"
+	}
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountEqual:
+		return text == fmt.Sprintf("%s cards %s.", prefix, amount.Text)
+	case oracle.DynamicAmountForEach:
+		noun := "cards"
+		if amount.Multiplier == 1 {
+			return text == fmt.Sprintf("%s 1 card %s.", prefix, amount.Text) ||
+				text == fmt.Sprintf("%s a card %s.", prefix, amount.Text)
+		}
+		return text == fmt.Sprintf("%s %d %s %s.", prefix, amount.Multiplier, noun, amount.Text)
+	case oracle.DynamicAmountWhereX:
+		return text == fmt.Sprintf("%s X cards, %s.", prefix, amount.Text)
+	default:
+		return false
+	}
+}
+
+func exactModifyPTAmountSyntax(ability oracle.CompiledAbility, effect oracle.CompiledEffect) bool {
+	subject := titleFirst(ability.Targets[0].Text)
+	amount := effect.Amount
+	if amount.DynamicKind == oracle.DynamicAmountNone {
+		return len(ability.References) == 0 &&
+			ability.Text == fmt.Sprintf(
+				"%s gets %s/%s until end of turn.",
+				subject,
+				signedAmountText(effect.PowerDelta),
+				signedAmountText(effect.ToughnessDelta),
+			)
+	}
+	if len(ability.References) != 0 || amount.DynamicKind == oracle.DynamicAmountSourcePower {
+		return false
+	}
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountForEach:
+		if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known ||
+			!dynamicPTMultiplierMatches(amount.Multiplier, effect.PowerDelta, effect.ToughnessDelta) {
+			return false
+		}
+		return ability.Text == fmt.Sprintf(
+			"%s gets %s/%s %s until end of turn.",
+			subject,
+			signedAmountText(effect.PowerDelta),
+			signedAmountText(effect.ToughnessDelta),
+			amount.Text,
+		) || ability.Text == fmt.Sprintf(
+			"%s gets %s/%s until end of turn %s.",
+			subject,
+			signedAmountText(effect.PowerDelta),
+			signedAmountText(effect.ToughnessDelta),
+			amount.Text,
+		)
+	case oracle.DynamicAmountWhereX:
+		return !effect.PowerDelta.Known &&
+			!effect.ToughnessDelta.Known &&
+			ability.Text == fmt.Sprintf("%s gets +X/+X until end of turn, %s.", subject, amount.Text)
+	default:
+		return false
+	}
+}
+
+func dynamicPTMultiplierMatches(
+	multiplier int,
+	power, toughness oracle.CompiledSignedAmount,
+) bool {
+	matches := func(amount oracle.CompiledSignedAmount) bool {
+		return amount.Value == 0 || amount.Value == multiplier
+	}
+	return multiplier > 0 && matches(power) && matches(toughness)
+}
+
+func dynamicSignedQuantity(
+	dynamic game.DynamicAmount,
+	amount oracle.CompiledSignedAmount,
+) game.Quantity {
+	if amount.Value == 0 {
+		return game.Fixed(0)
+	}
+	if amount.Negative {
+		dynamic.Multiplier = -dynamic.Multiplier
+	}
+	return game.Dynamic(dynamic)
 }
 
 func exactXControllerDrawSyntax(tokens []oracle.Token) bool {
@@ -4806,6 +5545,7 @@ var keywordStaticBodies = map[string]loweredStaticAbility{
 	"Menace":         {Body: game.MenaceStaticBody, VarName: "game.MenaceStaticBody"},
 	"Persist":        {Body: game.PersistStaticBody, VarName: "game.PersistStaticBody"},
 	"Prowess":        {Body: game.ProwessStaticBody, VarName: "game.ProwessStaticBody"},
+	"Read ahead":     {Body: game.ReadAheadStaticBody, VarName: "game.ReadAheadStaticBody"},
 	"Reach":          {Body: game.ReachStaticBody, VarName: "game.ReachStaticBody"},
 	"Shroud":         {Body: game.ShroudStaticBody, VarName: "game.ShroudStaticBody"},
 	"Split second":   {Body: game.SplitSecondStaticBody, VarName: "game.SplitSecondStaticBody"},

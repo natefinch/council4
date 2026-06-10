@@ -407,7 +407,7 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		if !ok {
 			return res
 		}
-		if _, ok := createTokenPermanent(r.game, recipient, token); !ok {
+		if _, ok := createTokenPermanentWithChoices(r.engine, r.game, recipient, token, r.agents, r.log); !ok {
 			return res
 		}
 	}
@@ -668,7 +668,7 @@ func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved 
 		return res
 	}
 	for range res.amount {
-		if _, ok := createTokenPermanent(r.game, recipient, clueTokenDef()); !ok {
+		if _, ok := createTokenPermanentWithChoices(r.engine, r.game, recipient, clueTokenDef(), r.agents, r.log); !ok {
 			return res
 		}
 	}

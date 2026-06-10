@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -27,6 +28,55 @@ func TestRenderConditionForETBReplacementRejectsNegativeThresholds(t *testing.T)
 				t.Fatal("expected negative threshold error")
 			}
 		})
+	}
+}
+
+func TestRenderDynamicQuantityFieldsAndImports(t *testing.T) {
+	renderer := Renderer{}
+	ctx := newRenderCtx()
+	rendered, err := renderer.renderQuantity(ctx, game.Dynamic(game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 2,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+		}),
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountCountSelector",
+		"Multiplier: 2",
+		"game.BattlefieldGroup",
+		"types.Creature",
+		"game.ControllerYou",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("quantity missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importTypes]; !ok {
+		t.Fatal("dynamic group did not request types import")
+	}
+	if _, ok := ctx.imports[importCounter]; ok {
+		t.Fatal("dynamic group requested unused counter import")
+	}
+
+	ctx = newRenderCtx()
+	rendered, err = renderer.renderQuantity(ctx, game.Dynamic(game.DynamicAmount{
+		Kind:        game.DynamicAmountTargetCounters,
+		CounterKind: counter.PlusOnePlusOne,
+		Object:      game.TargetPermanentReference(0),
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "counter.PlusOnePlusOne") {
+		t.Fatalf("counter quantity = %s", rendered)
+	}
+	if _, ok := ctx.imports[importCounter]; !ok {
+		t.Fatal("counter quantity did not request counter import")
 	}
 }
 
@@ -424,5 +474,226 @@ func TestRenderHintDivergenceErrors(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "divergence") {
 		t.Fatalf("error should mention 'divergence', got: %v", err)
+	}
+}
+
+func TestRenderTriggerPatternNonSelfFields(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	pattern := game.TriggerPattern{
+		Event:                 game.EventPermanentEnteredBattlefield,
+		Controller:            game.TriggerControllerYou,
+		ExcludeSelf:           true,
+		Player:                game.TriggerPlayerOpponent,
+		RequirePermanentTypes: []types.Card{types.Creature},
+		ExcludePermanentTypes: []types.Card{types.Artifact},
+		RequireNonToken:       true,
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"Controller: game.TriggerControllerYou",
+		"ExcludeSelf: true",
+		"Player: game.TriggerPlayerOpponent",
+		"RequirePermanentTypes: []types.Card{types.Creature}",
+		"ExcludePermanentTypes: []types.Card{types.Artifact}",
+		"RequireNonToken: true",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered pattern missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importTypes]; !ok {
+		t.Fatal("renderTriggerPattern with RequirePermanentTypes did not request types import")
+	}
+	src := "package p\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered pattern is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+func TestRenderTriggerPatternOneOrMore(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	pattern := game.TriggerPattern{
+		Event:                 game.EventPermanentEnteredBattlefield,
+		OneOrMore:             true,
+		RequirePermanentTypes: []types.Card{types.Artifact},
+		Controller:            game.TriggerControllerYou,
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"OneOrMore: true",
+		"RequirePermanentTypes: []types.Card{types.Artifact}",
+		"Controller: game.TriggerControllerYou",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered pattern missing %q:\n%s", want, rendered)
+		}
+	}
+	src := "package p\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered pattern is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+func TestRenderTriggerPatternOpponentController(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	pattern := game.TriggerPattern{
+		Event:                 game.EventPermanentEnteredBattlefield,
+		Controller:            game.TriggerControllerOpponent,
+		RequirePermanentTypes: []types.Card{types.Land},
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "Controller: game.TriggerControllerOpponent") {
+		t.Fatalf("rendered pattern missing opponent controller:\n%s", rendered)
+	}
+}
+
+func TestRenderTriggerControllerRejectsUnknown(t *testing.T) {
+	t.Parallel()
+	if _, err := renderTriggerController(game.TriggerControllerFilter(99)); err == nil {
+		t.Fatal("expected error for unknown controller filter")
+	}
+}
+
+func TestRenderTriggerPlayerRejectsUnknown(t *testing.T) {
+	t.Parallel()
+	if _, err := renderTriggerPlayer(game.TriggerPlayerFilter(99)); err == nil {
+		t.Fatal("expected error for unknown player filter")
+	}
+}
+
+func TestRenderTriggerPatternRejectsUnsupportedFields(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event:         game.EventPermanentEnteredBattlefield,
+		MatchFromZone: true,
+	}
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		t.Fatal("expected unsupported trigger pattern field error")
+	}
+}
+
+func TestRenderTriggerPatternBeginningOfStep(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	pattern := game.TriggerPattern{
+		Event:      game.EventBeginningOfStep,
+		Controller: game.TriggerControllerYou,
+		Step:       game.StepUpkeep,
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.EventBeginningOfStep",
+		"Controller: game.TriggerControllerYou",
+		"Step: game.StepUpkeep",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered pattern missing %q:\n%s", want, rendered)
+		}
+	}
+	src := "package p\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered pattern is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+func TestRenderStepHelperAcceptsKnownSteps(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		step game.Step
+		want string
+	}{
+		{game.StepUpkeep, "game.StepUpkeep"},
+		{game.StepDraw, "game.StepDraw"},
+		{game.StepBeginningOfCombat, "game.StepBeginningOfCombat"},
+		{game.StepEnd, "game.StepEnd"},
+	}
+	for _, tc := range tests {
+		got, err := renderStep(tc.step)
+		if err != nil {
+			t.Errorf("renderStep(%d): unexpected error: %v", tc.step, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("renderStep(%d) = %q, want %q", tc.step, got, tc.want)
+		}
+	}
+}
+
+func TestRenderStepHelperRejectsUnknownStep(t *testing.T) {
+	t.Parallel()
+	if _, err := renderStep(game.Step(99)); err == nil {
+		t.Fatal("expected error for unknown step")
+	}
+}
+
+func TestRenderTriggerPatternAllSteps(t *testing.T) {
+	t.Parallel()
+	steps := []struct {
+		step game.Step
+		want string
+	}{
+		{game.StepUpkeep, "game.StepUpkeep"},
+		{game.StepDraw, "game.StepDraw"},
+		{game.StepBeginningOfCombat, "game.StepBeginningOfCombat"},
+		{game.StepEnd, "game.StepEnd"},
+	}
+	for _, tc := range steps {
+		ctx := newRenderCtx()
+		pattern := game.TriggerPattern{
+			Event: game.EventBeginningOfStep,
+			Step:  tc.step,
+		}
+		rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+		if err != nil {
+			t.Errorf("step %d: unexpected error: %v", tc.step, err)
+			continue
+		}
+		if !strings.Contains(rendered, tc.want) {
+			t.Errorf("step %d: rendered pattern missing %q:\n%s", tc.step, tc.want, rendered)
+		}
+		src := "package p\nvar _ = " + rendered
+		if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+			t.Errorf("step %d: rendered pattern is not valid Go: %v\n%s", tc.step, err, rendered)
+		}
+	}
+}
+
+func TestRenderTriggerPatternUnknownStepErrors(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.Step(99),
+	}
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		t.Fatal("expected error for unknown step in trigger pattern")
+	}
+}
+
+func TestRenderTriggerPatternRejectsMismatchedStepEvent(t *testing.T) {
+	t.Parallel()
+	tests := []game.TriggerPattern{
+		{Event: game.EventPermanentEnteredBattlefield, Step: game.StepUpkeep},
+		{Event: game.EventBeginningOfStep},
+	}
+	for _, pattern := range tests {
+		if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+			t.Fatalf("expected mismatched pattern error for %+v", pattern)
+		}
 	}
 }

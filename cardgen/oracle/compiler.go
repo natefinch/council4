@@ -86,6 +86,7 @@ func compileAbility(
 		parseSentences(source, body),
 		ability.Reminders,
 		ability.Quoted,
+		context.CardName,
 	)
 	referenceTokens := semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 	if timing != ActivationTimingNone {
@@ -182,6 +183,7 @@ func compileMode(
 			parseSentences(source, mode.Tokens),
 			mode.Reminders,
 			mode.Quoted,
+			context.CardName,
 		),
 		Keywords:   compileKeywords(tokens),
 		References: compileReferences(tokens, context.CardName),
@@ -384,21 +386,11 @@ func compileSelector(tokens []Token) CompiledSelector {
 func compileConditions(tokens []Token, triggered bool) []CompiledCondition {
 	var conditions []CompiledCondition
 	for i := 0; i < len(tokens); i++ {
-		var kind ConditionKind
-		start := i
-		switch {
-		case equalWord(tokens[i], "if"):
-			kind = ConditionIf
-		case equalWord(tokens[i], "unless"):
-			kind = ConditionUnless
-		case i+1 < len(tokens) && equalWord(tokens[i], "only") && equalWord(tokens[i+1], "if"):
-			kind = ConditionOnlyIf
-		case i+2 < len(tokens) && equalWord(tokens[i], "as") &&
-			equalWord(tokens[i+1], "long") && equalWord(tokens[i+2], "as"):
-			kind = ConditionAsLongAs
-		default:
+		kind := conditionKindAt(tokens, i)
+		if kind == ConditionUnknown {
 			continue
 		}
+		start := i
 		end := conditionEnd(tokens, i)
 		phrase := tokens[start:end]
 		conditions = append(conditions, CompiledCondition{
@@ -424,6 +416,7 @@ func conditionEnd(tokens []Token, start int) int {
 func compileEffects(
 	sentences []Sentence,
 	reminders, quoted []Delimited,
+	cardName string,
 ) []CompiledEffect {
 	var effects []CompiledEffect
 	for _, sentence := range sentences {
@@ -434,32 +427,108 @@ func compileEffects(
 		}
 		duration := compileDuration(tokens)
 		staticSubject, staticSubjectSpan, staticSubjectSubtype := compileStaticSubject(tokens)
-		for i, token := range tokens {
-			kind := effectKindAt(tokens, i)
-			if kind == EffectUnknown {
-				continue
-			}
-			powerDelta, toughnessDelta := compilePTChange(tokens[i+1:])
+		effectIndices := effectTokenIndices(tokens, cardName)
+		for effectIndex, tokenIndex := range effectIndices {
+			token := tokens[tokenIndex]
+			kind := effectKindAt(tokens, tokenIndex)
+			clauseEnd := effectClauseEnd(tokens, effectIndices, effectIndex)
+			clauseTokens := tokens[tokenIndex+1 : clauseEnd]
+			powerDelta, toughnessDelta := compilePTChange(clauseTokens)
 			effects = append(effects, CompiledEffect{
 				Kind:                 kind,
 				Span:                 sentence.Span,
 				Text:                 sentence.Text,
 				VerbSpan:             token.Span,
 				Duration:             duration,
-				Selector:             compileSelector(tokens[i+1:]),
-				Amount:               compileEffectAmount(tokens[i+1:]),
+				Selector:             compileSelector(clauseTokens),
+				Amount:               compileEffectAmount(clauseTokens, cardName),
 				PowerDelta:           powerDelta,
 				ToughnessDelta:       toughnessDelta,
 				StaticSubject:        staticSubject,
 				StaticSubjectSpan:    staticSubjectSpan,
 				StaticSubjectSubtype: staticSubjectSubtype,
-				Symbol:               firstSymbol(tokens[i+1:]),
-				Negated:              effectNegated(tokens, i),
+				Symbol:               firstSymbol(clauseTokens),
+				Negated:              effectNegated(tokens, tokenIndex),
 			})
 		}
 
 	}
 	return effects
+}
+
+func effectTokenIndices(tokens []Token, cardName string) []int {
+	var indices []int
+	for index := range tokens {
+		if effectKindAt(tokens, index) != EffectUnknown &&
+			!tokenInCardName(tokens, index, cardName) {
+			indices = append(indices, index)
+		}
+	}
+	return indices
+}
+
+func effectClauseEnd(tokens []Token, effectIndices []int, effectIndex int) int {
+	start := effectIndices[effectIndex] + 1
+	end := len(tokens)
+	for _, nextEffect := range effectIndices[effectIndex+1:] {
+		if coordination := effectCoordinationStart(tokens, start, nextEffect); coordination >= 0 {
+			end = coordination
+			break
+		}
+	}
+	for index := start; index < end; index++ {
+		if conditionKindAt(tokens, index) != ConditionUnknown {
+			return index
+		}
+	}
+	return end
+}
+
+func effectCoordinationStart(tokens []Token, start, effectIndex int) int {
+	for index := effectIndex - 1; index >= start; index-- {
+		if tokens[index].Kind == Comma || tokens[index].Kind == Semicolon {
+			return -1
+		}
+		if equalWord(tokens[index], "then") || equalWord(tokens[index], "and") {
+			return index
+		}
+	}
+	return -1
+}
+
+func tokenInCardName(tokens []Token, index int, cardName string) bool {
+	nameWords := strings.Fields(cardName)
+	for start := 0; start <= index; start++ {
+		end := start + len(nameWords)
+		if index >= end {
+			continue
+		}
+		if wordsAt(tokens, start, nameWords...) ||
+			possessiveNameAt(tokens, start, nameWords) {
+			return true
+		}
+	}
+	return false
+}
+
+func conditionKindAt(tokens []Token, index int) ConditionKind {
+	switch {
+	case equalWord(tokens[index], "if"):
+		return ConditionIf
+	case equalWord(tokens[index], "unless"):
+		return ConditionUnless
+	case index+1 < len(tokens) &&
+		equalWord(tokens[index], "only") &&
+		equalWord(tokens[index+1], "if"):
+		return ConditionOnlyIf
+	case index+2 < len(tokens) &&
+		equalWord(tokens[index], "as") &&
+		equalWord(tokens[index+1], "long") &&
+		equalWord(tokens[index+2], "as"):
+		return ConditionAsLongAs
+	default:
+		return ConditionUnknown
+	}
 }
 
 func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect, bool) {
@@ -603,7 +672,14 @@ func signedAmount(sign, amount Token) (CompiledSignedAmount, bool) {
 	return CompiledSignedAmount{Value: value, Known: true, Negative: negative}, true
 }
 
-func compileEffectAmount(tokens []Token) CompiledAmount {
+func compileEffectAmount(tokens []Token, cardName string) CompiledAmount {
+	dynamic := compileDynamicEffectAmount(tokens, cardName)
+	if dynamic.matched {
+		return dynamic.amount
+	}
+	if dynamic.attempted {
+		return CompiledAmount{}
+	}
 	for _, token := range tokens {
 		if value := numberWord(token); value > 0 {
 			return CompiledAmount{Value: value, Known: true}
@@ -620,6 +696,335 @@ func compileEffectAmount(tokens []Token) CompiledAmount {
 	return CompiledAmount{}
 }
 
+type compiledDynamicAmount struct {
+	amount    CompiledAmount
+	matched   bool
+	attempted bool
+}
+
+func compileDynamicEffectAmount(tokens []Token, cardName string) compiledDynamicAmount {
+	var matches []CompiledAmount
+	attempted := false
+	for i := range tokens {
+		prefix, ok := dynamicAmountPrefix(tokens, i)
+		if !ok {
+			continue
+		}
+		attempted = true
+		if subject, matched := dynamicAmountSubject(tokens, prefix.subjectStart, cardName); matched {
+			if !prefix.allows(subject) {
+				continue
+			}
+			amount := subject.amount
+			amount.DynamicForm = prefix.form
+			if amount.Multiplier == 0 {
+				amount.Multiplier = prefix.multiplier
+			}
+			amount.Text = joinedSourceText(tokens[i:subject.end])
+			matches = append(matches, amount)
+		}
+	}
+	if len(matches) != 1 {
+		return compiledDynamicAmount{attempted: attempted}
+	}
+	return compiledDynamicAmount{
+		amount:    matches[0],
+		matched:   true,
+		attempted: true,
+	}
+}
+
+type dynamicAmountPrefixMatch struct {
+	form          DynamicAmountForm
+	subjectStart  int
+	multiplier    int
+	subjectClass  dynamicAmountSubjectClass
+	subjectNumber dynamicSubjectNumber
+}
+
+type dynamicAmountSubjectClass uint8
+
+const (
+	dynamicAmountCountSubject dynamicAmountSubjectClass = iota
+	dynamicAmountValueSubject
+)
+
+type dynamicSubjectNumber uint8
+
+const (
+	dynamicSubjectNumberNone dynamicSubjectNumber = iota
+	dynamicSubjectSingular
+	dynamicSubjectPlural
+	dynamicSubjectInvariant
+)
+
+type dynamicAmountSubjectMatch struct {
+	amount CompiledAmount
+	end    int
+	number dynamicSubjectNumber
+}
+
+func (m dynamicAmountPrefixMatch) allows(subject dynamicAmountSubjectMatch) bool {
+	switch m.subjectClass {
+	case dynamicAmountCountSubject:
+		if subject.amount.DynamicKind != DynamicAmountCount &&
+			subject.amount.DynamicKind != DynamicAmountOpponentCount {
+			return false
+		}
+		return subject.number == dynamicSubjectInvariant || subject.number == m.subjectNumber
+	case dynamicAmountValueSubject:
+		return subject.number == dynamicSubjectNumberNone &&
+			(subject.amount.DynamicKind == DynamicAmountControllerLife ||
+				subject.amount.DynamicKind == DynamicAmountSourcePower)
+	default:
+		return false
+	}
+}
+
+func dynamicAmountPrefix(tokens []Token, index int) (dynamicAmountPrefixMatch, bool) {
+	switch {
+	case wordsAt(tokens, index, "equal", "to", "twice", "the", "number", "of"):
+		return dynamicAmountPrefixMatch{DynamicAmountEqual, index + 6, 2, dynamicAmountCountSubject, dynamicSubjectPlural}, true
+	case wordsAt(tokens, index, "equal", "to", "the", "number", "of"):
+		return dynamicAmountPrefixMatch{DynamicAmountEqual, index + 5, 1, dynamicAmountCountSubject, dynamicSubjectPlural}, true
+	case wordsAt(tokens, index, "for", "each"):
+		multiplier := precedingAmountMultiplier(tokens[:index])
+		return dynamicAmountPrefixMatch{DynamicAmountForEach, index + 2, multiplier, dynamicAmountCountSubject, dynamicSubjectSingular}, multiplier > 0
+	case wordsAt(tokens, index, "equal", "to"):
+		return dynamicAmountPrefixMatch{DynamicAmountEqual, index + 2, 1, dynamicAmountValueSubject, dynamicSubjectNumberNone}, true
+	case wordsAt(tokens, index, "where", "X", "is", "twice", "the", "number", "of"):
+		return dynamicAmountPrefixMatch{DynamicAmountWhereX, index + 7, 2, dynamicAmountCountSubject, dynamicSubjectPlural}, true
+	case wordsAt(tokens, index, "where", "X", "is", "the", "number", "of"):
+		return dynamicAmountPrefixMatch{DynamicAmountWhereX, index + 6, 1, dynamicAmountCountSubject, dynamicSubjectPlural}, true
+	case wordsAt(tokens, index, "where", "X", "is"):
+		return dynamicAmountPrefixMatch{DynamicAmountWhereX, index + 3, 1, dynamicAmountValueSubject, dynamicSubjectNumberNone}, true
+	default:
+		return dynamicAmountPrefixMatch{}, false
+	}
+}
+
+type dynamicCountNoun struct {
+	singular  string
+	plural    string
+	invariant string
+	kind      DynamicAmountKind
+	selector  SelectorKind
+}
+
+var dynamicCountNouns = []dynamicCountNoun{
+	{singular: "creature", plural: "creatures", kind: DynamicAmountCount, selector: SelectorCreature},
+	{singular: "artifact", plural: "artifacts", kind: DynamicAmountCount, selector: SelectorArtifact},
+	{singular: "enchantment", plural: "enchantments", kind: DynamicAmountCount, selector: SelectorEnchantment},
+	{singular: "land", plural: "lands", kind: DynamicAmountCount, selector: SelectorLand},
+	{singular: "permanent", plural: "permanents", kind: DynamicAmountCount, selector: SelectorPermanent},
+	{singular: "opponent", plural: "opponents", kind: DynamicAmountOpponentCount},
+}
+
+func (n dynamicCountNoun) numberAt(tokens []Token, start int) (dynamicSubjectNumber, bool) {
+	switch {
+	case equalWord(tokens[start], n.singular):
+		return dynamicSubjectSingular, true
+	case equalWord(tokens[start], n.plural):
+		return dynamicSubjectPlural, true
+	case n.invariant != "" && equalWord(tokens[start], n.invariant):
+		return dynamicSubjectInvariant, true
+	default:
+		return dynamicSubjectNumberNone, false
+	}
+}
+
+func dynamicAmountSubject(tokens []Token, start int, cardName string) (dynamicAmountSubjectMatch, bool) {
+	if start >= len(tokens) {
+		return dynamicAmountSubjectMatch{}, false
+	}
+	if subject, ok := dynamicCountAmountSubject(tokens, start); ok {
+		return subject, true
+	}
+	switch {
+	case wordsAt(tokens, start, "your", "life", "total") &&
+		dynamicSubjectBoundary(tokens, start+3):
+		return dynamicAmountSubjectMatch{
+			amount: CompiledAmount{DynamicKind: DynamicAmountControllerLife},
+			end:    start + 3,
+		}, true
+	case wordsAt(tokens, start, "its", "power") &&
+		dynamicSubjectBoundary(tokens, start+2):
+		return dynamicAmountSubjectMatch{
+			amount: CompiledAmount{
+				DynamicKind:   DynamicAmountSourcePower,
+				ReferenceSpan: tokens[start].Span,
+			},
+			end: start + 2,
+		}, true
+	case wordsAt(tokens, start, "this", "creature") &&
+		start+4 < len(tokens) &&
+		tokens[start+2].Kind == Apostrophe &&
+		equalWord(tokens[start+3], "s") &&
+		equalWord(tokens[start+4], "power") &&
+		dynamicSubjectBoundary(tokens, start+5):
+		return dynamicAmountSubjectMatch{
+			amount: CompiledAmount{
+				DynamicKind:   DynamicAmountSourcePower,
+				ReferenceSpan: spanOf(tokens[start : start+2]),
+			},
+			end: start + 5,
+		}, true
+	case start+2 < len(tokens) &&
+		equalWord(tokens[start], "this") &&
+		strings.EqualFold(tokens[start+1].Text, "creature's") &&
+		equalWord(tokens[start+2], "power") &&
+		dynamicSubjectBoundary(tokens, start+3):
+		return dynamicAmountSubjectMatch{
+			amount: CompiledAmount{
+				DynamicKind:   DynamicAmountSourcePower,
+				ReferenceSpan: spanOf(tokens[start : start+2]),
+			},
+			end: start + 3,
+		}, true
+	default:
+		nameWords := strings.Fields(cardName)
+		if possessiveNameAt(tokens, start, nameWords) {
+			end := start + len(nameWords)
+			if end < len(tokens) &&
+				equalWord(tokens[end], "power") &&
+				dynamicSubjectBoundary(tokens, end+1) {
+				return dynamicAmountSubjectMatch{
+					amount: CompiledAmount{
+						DynamicKind:   DynamicAmountSourcePower,
+						ReferenceSpan: spanOf(tokens[start:end]),
+					},
+					end: end + 1,
+				}, true
+			}
+		}
+		if len(nameWords) > 0 &&
+			wordsAt(tokens, start, nameWords...) {
+			possessive := start + len(nameWords)
+			if possessive+2 < len(tokens) &&
+				tokens[possessive].Kind == Apostrophe &&
+				equalWord(tokens[possessive+1], "s") &&
+				equalWord(tokens[possessive+2], "power") &&
+				dynamicSubjectBoundary(tokens, possessive+3) {
+				return dynamicAmountSubjectMatch{
+					amount: CompiledAmount{
+						DynamicKind:   DynamicAmountSourcePower,
+						ReferenceSpan: spanOf(tokens[start:possessive]),
+					},
+					end: possessive + 3,
+				}, true
+			}
+
+		}
+		return dynamicAmountSubjectMatch{}, false
+	}
+}
+
+func dynamicCountAmountSubject(tokens []Token, start int) (dynamicAmountSubjectMatch, bool) {
+	suffixes := []struct {
+		words      []string
+		controller ControllerKind
+	}{
+		{words: []string{"you", "control"}, controller: ControllerYou},
+		{words: []string{"your", "opponents", "control"}, controller: ControllerOpponent},
+		{words: []string{"on", "the", "battlefield"}, controller: ControllerAny},
+	}
+	for _, noun := range dynamicCountNouns {
+		number, ok := noun.numberAt(tokens, start)
+		if !ok {
+			continue
+		}
+		end := start + 1
+		if noun.kind == DynamicAmountOpponentCount {
+			if wordsAt(tokens, end, "you", "have") {
+				end += 2
+			}
+			if dynamicSubjectBoundary(tokens, end) {
+				return dynamicAmountSubjectMatch{
+					amount: CompiledAmount{DynamicKind: noun.kind},
+					end:    end,
+					number: number,
+				}, true
+			}
+			continue
+		}
+		for _, suffix := range suffixes {
+			subjectEnd := end + len(suffix.words)
+			if !wordsAt(tokens, end, suffix.words...) ||
+				!dynamicSubjectBoundary(tokens, subjectEnd) {
+				continue
+			}
+			return dynamicAmountSubjectMatch{
+				amount: CompiledAmount{
+					DynamicKind: noun.kind,
+					Selector: CompiledSelector{
+						Kind:       noun.selector,
+						Controller: suffix.controller,
+						Raw:        joinedSourceText(tokens[start:subjectEnd]),
+					},
+				},
+				end:    subjectEnd,
+				number: number,
+			}, true
+		}
+	}
+	return dynamicAmountSubjectMatch{}, false
+}
+
+func dynamicSubjectBoundary(tokens []Token, end int) bool {
+	if end >= len(tokens) {
+		return true
+	}
+	switch tokens[end].Kind {
+	case Comma, Period:
+		return true
+	default:
+		return equalWord(tokens[end], "to") || equalWord(tokens[end], "until")
+	}
+}
+
+func precedingAmountMultiplier(tokens []Token) int {
+	multiplier := 0
+	for _, token := range tokens {
+		value := numberWord(token)
+		if value == 0 {
+			continue
+		}
+		if multiplier != 0 && multiplier != value {
+			return 0
+		}
+		multiplier = value
+	}
+	if multiplier == 0 {
+		return 1
+	}
+	return multiplier
+}
+
+func wordsAt(tokens []Token, start int, words ...string) bool {
+	if start < 0 || start+len(words) > len(tokens) {
+		return false
+	}
+	for i, word := range words {
+		if !equalWord(tokens[start+i], word) {
+			return false
+		}
+	}
+	return true
+}
+
+func possessiveNameAt(tokens []Token, start int, nameWords []string) bool {
+	if len(nameWords) == 0 || start < 0 || start+len(nameWords) > len(tokens) {
+		return false
+	}
+	last := len(nameWords) - 1
+	for i := range last {
+		if !equalWord(tokens[start+i], nameWords[i]) {
+			return false
+		}
+	}
+	return strings.EqualFold(tokens[start+last].Text, nameWords[last]+"'s")
+}
+
 func firstSymbol(tokens []Token) string {
 	for _, token := range tokens {
 		if token.Kind == Symbol {
@@ -631,6 +1036,12 @@ func firstSymbol(tokens []Token) string {
 
 func effectKindAt(tokens []Token, index int) EffectKind {
 	kind := effectKind(tokens[index])
+	if kind == EffectGrantKeyword &&
+		index >= 2 &&
+		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
+		equalWord(tokens[index-1], "you") {
+		return EffectUnknown
+	}
 	if kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared") {
 		return EffectEnterPrepared
 	}
@@ -820,7 +1231,7 @@ var keywordNames = map[string]string{
 	"kicker": "Kicker", "lifelink": "Lifelink", "madness": "Madness",
 	"menace": "Menace", "morph": "Morph", "mutate": "Mutate",
 	"ninjutsu": "Ninjutsu", "persist": "Persist", "protection": "Protection",
-	"prowess": "Prowess", "reach": "Reach", "shroud": "Shroud",
+	"prowess": "Prowess", "read ahead": "Read ahead", "reach": "Reach", "shroud": "Shroud",
 	"split second": "Split second", "storm": "Storm", "suspend": "Suspend",
 	"toxic": "Toxic", "trample": "Trample", "undying": "Undying",
 	"vigilance": "Vigilance", "ward": "Ward", "wither": "Wither",
@@ -938,6 +1349,16 @@ func compileReferences(tokens []Token, cardName string) []CompiledReference {
 	if cardName != "" {
 		nameWords := strings.Fields(strings.ToLower(cardName))
 		for i := 0; i+len(nameWords) <= len(tokens); i++ {
+			if possessiveNameAt(tokens, i, nameWords) {
+				phrase := tokens[i : i+len(nameWords)]
+				references = append(references, CompiledReference{
+					Kind: ReferenceSelfName,
+					Span: spanOf(phrase),
+					Text: joinedSourceText(phrase),
+				})
+				i += len(nameWords) - 1
+				continue
+			}
 			if tokenWordsEqual(tokens[i:i+len(nameWords)], nameWords) {
 				phrase := tokens[i : i+len(nameWords)]
 				references = append(references, CompiledReference{
@@ -951,6 +1372,16 @@ func compileReferences(tokens []Token, cardName string) []CompiledReference {
 	}
 	for i := 0; i < len(tokens); i++ {
 		switch {
+		case i+1 < len(tokens) &&
+			equalWord(tokens[i], "this") &&
+			strings.EqualFold(tokens[i+1].Text, "creature's"):
+			phrase := tokens[i : i+2]
+			references = append(references, CompiledReference{
+				Kind: ReferenceThisObject,
+				Span: spanOf(phrase),
+				Text: joinedSourceText(phrase),
+			})
+			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "this") && objectWord(tokens[i+1]):
 			phrase := tokens[i : i+2]
 			references = append(references, CompiledReference{

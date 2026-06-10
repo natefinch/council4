@@ -38,6 +38,27 @@ func TestGenerateExecutableCardSourceKeywords(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceReadAhead(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Read Ahead Saga",
+		Layout:     "saga",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger.)\nI — Draw a card.\nII — Draw a card.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.ReadAheadStaticBody") {
+		t.Fatalf("source missing Read ahead static body:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceDevoid(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -1981,6 +2002,248 @@ func TestGenerateExecutableCardSourceLandEnterTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceNonSelfEnterTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		cardName   string
+		typeLine   string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "another creature any controller",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever another creature enters, draw a card.",
+			wants: []string{
+				"game.TriggerWhenever",
+				"game.EventPermanentEnteredBattlefield",
+				"ExcludeSelf:",
+				"RequirePermanentTypes: []types.Card{types.Creature}",
+				"Primitive: game.Draw",
+			},
+		},
+		{
+			name:       "a creature any controller",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever a creature enters, draw a card.",
+			wants: []string{
+				"game.TriggerWhenever",
+				"game.EventPermanentEnteredBattlefield",
+				"RequirePermanentTypes: []types.Card{types.Creature}",
+			},
+		},
+		{
+			name:       "another creature you control",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever another creature you control enters, draw a card.",
+			wants: []string{
+				"ExcludeSelf:",
+				"game.TriggerControllerYou",
+				"RequirePermanentTypes: []types.Card{types.Creature}",
+			},
+		},
+		{
+			name:       "another creature opponent controls",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever another creature an opponent controls enters, draw a card.",
+			wants: []string{
+				"ExcludeSelf:",
+				"game.TriggerControllerOpponent",
+				"RequirePermanentTypes: []types.Card{types.Creature}",
+			},
+		},
+		{
+			name:       "another land enters",
+			cardName:   "Test Shaman",
+			typeLine:   "Creature — Human Shaman",
+			oracleText: "Whenever another land enters, you gain 1 life.",
+			wants: []string{
+				"ExcludeSelf:",
+				"RequirePermanentTypes: []types.Card{types.Land}",
+				"Primitive: game.GainLife",
+			},
+		},
+		{
+			name:       "a land you control enters",
+			cardName:   "Test Shaman",
+			typeLine:   "Creature — Human Shaman",
+			oracleText: "Whenever a land you control enters, draw a card.",
+			wants: []string{
+				"game.TriggerControllerYou",
+				"RequirePermanentTypes: []types.Card{types.Land}",
+			},
+		},
+		{
+			name:       "another artifact enters",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever another artifact enters, draw a card.",
+			wants:      []string{"RequirePermanentTypes: []types.Card{types.Artifact}"},
+		},
+		{
+			name:       "another enchantment enters",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever another enchantment enters, draw a card.",
+			wants:      []string{"RequirePermanentTypes: []types.Card{types.Enchantment}"},
+		},
+		{
+			name:       "another planeswalker enters",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever another planeswalker enters, draw a card.",
+			wants:      []string{"RequirePermanentTypes: []types.Card{types.Planeswalker}"},
+		},
+		{
+			name:       "another permanent enters any type",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever another permanent enters, draw a card.",
+			wants: []string{
+				"ExcludeSelf:",
+				"game.EventPermanentEnteredBattlefield",
+			},
+		},
+		{
+			name:       "a nontoken creature enters",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever a nontoken creature enters, draw a card.",
+			wants: []string{
+				"RequireNonToken:",
+				"RequirePermanentTypes: []types.Card{types.Creature}",
+			},
+		},
+		{
+			name:       "another nontoken creature you control enters",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever another nontoken creature you control enters, draw a card.",
+			wants: []string{
+				"ExcludeSelf:",
+				"game.TriggerControllerYou",
+				"RequireNonToken:",
+				"RequirePermanentTypes: []types.Card{types.Creature}",
+			},
+		},
+		{
+			name:       "one or more artifacts you control enter",
+			cardName:   "Test Bear",
+			typeLine:   "Creature — Bear",
+			oracleText: "Whenever one or more artifacts you control enter, draw a card.",
+			wants: []string{
+				"game.TriggerWhenever",
+				"OneOrMore:",
+				"RequirePermanentTypes: []types.Card{types.Artifact}",
+				"game.TriggerControllerYou",
+			},
+		},
+		{
+			name:       "ability word is ignored",
+			cardName:   "Test Shaman",
+			typeLine:   "Creature — Human Shaman",
+			oracleText: "Landfall — Whenever a land you control enters, draw a card.",
+			wants: []string{
+				"RequirePermanentTypes: []types.Card{types.Land}",
+				"game.TriggerControllerYou",
+			},
+		},
+		{
+			name:       "optional trigger",
+			cardName:   "Test Shaman",
+			typeLine:   "Creature — Human Shaman",
+			oracleText: "Whenever a creature you control enters, you may draw a card.",
+			wants: []string{
+				"Optional: true",
+				"game.TriggerControllerYou",
+				"RequirePermanentTypes: []types.Card{types.Creature}",
+			},
+		},
+		{
+			name:       "event permanent pronoun gets buff",
+			cardName:   "Test Druid",
+			typeLine:   "Creature — Elf Druid",
+			oracleText: "Whenever another creature you control enters, it gets +2/+0 until end of turn.",
+			wants: []string{
+				"game.EventPermanentReference()",
+				"game.ModifyPT{",
+				"ExcludeSelf:",
+				"game.TriggerControllerYou",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       test.cardName,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsUnsupportedNonSelfEnterTriggers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		cardName   string
+		typeLine   string
+		oracleText string
+	}{
+		{name: "subtype filter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another zombie enters, draw a card."},
+		{name: "power filter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever a creature with power 2 or less enters, draw a card."},
+		{name: "compound type", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature or artifact enters, draw a card."},
+		{name: "missing article", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever creature enters, draw a card."},
+		{name: "unknown suffix", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature that you control enters, draw a card."},
+		{name: "caster-relative condition", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever a creature enters, if you cast it, draw a card."},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       test.cardName,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" {
+				t.Fatalf("unexpected source:\n%s", source)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported diagnostic")
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceDiesTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -2135,7 +2398,7 @@ func TestGenerateExecutableCardSourceSelfDiesAdventurePermission(t *testing.T) {
 	}
 }
 
-func TestGenerateExecutableCardSourceRejectsDynamicSelfDiesDamage(t *testing.T) {
+func TestGenerateExecutableCardSourceDynamicSelfDiesDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
 		Name:       "Test Devil",
@@ -2149,11 +2412,176 @@ func TestGenerateExecutableCardSourceRejectsDynamicSelfDiesDamage(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountObjectPower",
+		"Object:     game.EventPermanentReference()",
+		"DamageSource: opt.Val(game.EventPermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceDynamicCountDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Swarm",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Test Swarm deals damage equal to twice the number of creatures you control to any target.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountCountSelector",
+		"Multiplier: 2",
+		"game.BattlefieldGroup",
+		"types.Creature",
+		"Controller: game.ControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "/counter\"") {
+		t.Fatalf("source has unused counter import:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceDynamicSourcePowerCounters(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Druid",
+		Layout:     "normal",
+		TypeLine:   "Creature — Druid",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "{T}: Put X +1/+1 counters on target creature, where X is Test Druid's power.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountObjectPower",
+		"Object:     game.SourcePermanentReference()",
+		"CounterKind: counter.PlusOnePlusOne",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceDynamicSourcePowerDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Devil",
+		Layout:     "normal",
+		TypeLine:   "Creature — Devil",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "{T}: Test Devil deals damage equal to Test Devil's power to any target.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountObjectPower",
+		"Object:     game.SourcePermanentReference()",
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsAmbiguousDynamicAmount(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Test Swarm deals damage equal to the number of creatures you control plus one to any target.",
+		"Test Swarm deals damage equal to creatures you control to any target.",
+		"You gain X life, where X is opponent.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Swarm",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			}
+
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v, want rejection", source, diagnostics)
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsDynamicAmountNumberDisagreement(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Draw a card for each creatures you control.",
+		"Test Swarm deals damage equal to the number of creature you control to any target.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Swarm",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			}
+
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v, want rejection", source, diagnostics)
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsAmbiguousDynamicPowerReference(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Druid",
+		Layout:     "normal",
+		TypeLine:   "Creature — Druid",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "{T}: Put X +1/+1 counters on target creature, where X is its power.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if source != "" || len(diagnostics) == 0 {
 		t.Fatalf("source = %q, diagnostics = %#v, want rejection", source, diagnostics)
-	}
-	if got := diagnostics[0].Summary; got != "unsupported dies trigger effect" {
-		t.Fatalf("summary = %q, want unsupported dies trigger effect", got)
 	}
 }
 
@@ -2285,7 +2713,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "reveal mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player reveals and mills three cards."},
 		{name: "compound mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills three cards, then draws a card."},
 		{name: "mass mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Each opponent mills three cards."},
-		{name: "other enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature enters, draw a card."},
 		{name: "leave trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature leaves the battlefield, draw a card."},
 		{name: "cast trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When you cast this spell, draw a card."},
 		{name: "compound enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature enters, draw a card, then discard a card."},
