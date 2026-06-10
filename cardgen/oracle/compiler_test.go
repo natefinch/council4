@@ -111,6 +111,25 @@ func TestCompileTriggeredAbility(t *testing.T) {
 	}
 }
 
+func TestCompileTriggeredAbilityWithInternalEventComma(t *testing.T) {
+	t.Parallel()
+	source := "Whenever you cast a noncreature, nonland spell, draw a card."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+
+	ability := compilation.Abilities[0]
+	if ability.Trigger == nil ||
+		ability.Trigger.Kind != TriggerWhenever ||
+		ability.Trigger.Event != "you cast a noncreature, nonland spell" {
+		t.Fatalf("trigger = %#v", ability.Trigger)
+	}
+	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
+		t.Fatalf("effects = %#v", ability.Effects)
+	}
+}
+
 func TestCompileSagaChapterAbility(t *testing.T) {
 	t.Parallel()
 	source := "II, III — Draw a card."

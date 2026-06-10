@@ -72,6 +72,9 @@ func TestCastFaceDownResolvesAsTwoTwoCreatureWithHiddenIdentity(t *testing.T) {
 	if !obj.FaceDown || obj.FaceDownKind != game.FaceDownMorph || obj.FaceDownFace != game.FaceFront {
 		t.Fatalf("stack object face-down state = %+v", obj)
 	}
+	assertEvent(t, g.Events, game.EventSpellCast, func(event game.Event) bool {
+		return event.CardID == cardID && len(event.Colors) == 0
+	})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 

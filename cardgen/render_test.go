@@ -773,3 +773,105 @@ func TestRenderTriggerPatternRejectsMismatchedStepEvent(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		pattern   game.TriggerPattern
+		wantParts []string
+	}{
+		{
+			name: "unrestricted spell",
+			pattern: game.TriggerPattern{
+				Event:      game.EventSpellCast,
+				Controller: game.TriggerControllerYou,
+			},
+			wantParts: []string{"game.EventSpellCast", "Controller: game.TriggerControllerYou"},
+		},
+		{
+			name: "creature spell",
+			pattern: game.TriggerPattern{
+				Event:         game.EventSpellCast,
+				Controller:    game.TriggerControllerYou,
+				CardSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+			wantParts: []string{
+				"game.EventSpellCast",
+				"Controller: game.TriggerControllerYou",
+				"CardSelection:",
+				"types.Creature",
+			},
+		},
+		{
+			name: "noncreature spell",
+			pattern: game.TriggerPattern{
+				Event:         game.EventSpellCast,
+				Controller:    game.TriggerControllerAny,
+				CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Creature}},
+			},
+			wantParts: []string{"ExcludedTypes:", "types.Creature"},
+		},
+		{
+			name: "instant or sorcery",
+			pattern: game.TriggerPattern{
+				Event:         game.EventSpellCast,
+				Controller:    game.TriggerControllerOpponent,
+				CardSelection: game.Selection{RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}},
+			},
+			wantParts: []string{"RequiredTypesAny:", "types.Instant", "types.Sorcery"},
+		},
+		{
+			name: "blue spell",
+			pattern: game.TriggerPattern{
+				Event:         game.EventSpellCast,
+				Controller:    game.TriggerControllerYou,
+				CardSelection: game.Selection{ColorsAny: []color.Color{color.Blue}},
+			},
+			wantParts: []string{"CardSelection:", "ColorsAny:", "color.Blue"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := newRenderCtx()
+			rendered, err := (Renderer{}).renderTriggerPattern(ctx, &tc.pattern)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			for _, want := range tc.wantParts {
+				if !strings.Contains(rendered, want) {
+					t.Errorf("rendered pattern missing %q:\n%s", want, rendered)
+				}
+			}
+			src := "package p\nvar _ = " + rendered
+			if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+				t.Fatalf("rendered pattern is not valid Go: %v\n%s", err, rendered)
+			}
+		})
+	}
+}
+
+func TestRenderTriggerPatternRejectsCardSelectionOnNonCastEvent(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event:         game.EventPermanentEnteredBattlefield,
+		CardSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+	}
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		t.Fatal("expected error: CardSelection only allowed on EventSpellCast patterns")
+	}
+}
+
+func TestRenderTriggerPatternRejectsUnsupportedCardSelectionFields(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event: game.EventSpellCast,
+		CardSelection: game.Selection{
+			Supertypes: []types.Super{types.Legendary},
+		},
+	}
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		t.Fatal("expected error: Supertypes is unsupported in CardSelection")
+	}
+}

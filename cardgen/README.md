@@ -79,7 +79,16 @@ Vanguard cards are excluded with explicit report reasons.
    damage source through an event reference. Exact event-card references can
    return the departed card from its owner's graveyard to hand or grant its
    Adventure face a graveyard-cast permission through the end of its
-   controller's next turn. Ordinary battlefield activations
+   controller's next turn. Spell-cast triggered abilities using `Whenever ...
+   casts ...` lower for three exact player prefixes (`you cast`,
+   `a player casts`, `an opponent casts`) and seventeen exact spell phrases:
+   `a spell` (wildcard), `a noncreature spell`, `a creature spell`,
+   `an instant or sorcery spell`, `an instant spell`/`an instant`,
+   `a sorcery spell`, `an artifact spell`, `an enchantment spell`,
+   `a land spell`, `a planeswalker spell`, `a noncreature, nonland spell`, and single-color forms
+   `a white/blue/black/red/green spell`. Self-cast (`when you cast this spell`),
+   `TriggerWhen`, intervening-if conditions, ability words, modes, and all other
+   spell-phrase forms are fail-closed. Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
    Exact trailing activation restrictions lower to typed sorcery, combat,

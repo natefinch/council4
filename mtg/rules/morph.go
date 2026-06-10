@@ -150,6 +150,7 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 		CardID:        cast.CardID,
 		Face:          cast.Face,
 		CardTypes:     []types.Card{types.Creature},
+		Colors:        nil, // Face-down spells are colorless (CR 708.2b).
 		FromZone:      zone.Hand,
 		ToZone:        zone.Stack,
 	})

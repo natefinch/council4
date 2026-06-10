@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -36,6 +37,11 @@ func TestLegalActionsIncludesMutateCast(t *testing.T) {
 	if fixture.game.Players[game.Player1].Hand.Contains(fixture.mutatorID) {
 		t.Fatal("Mutate spell remained in hand after casting")
 	}
+	assertEvent(t, fixture.game.Events, game.EventSpellCast, func(event game.Event) bool {
+		return event.CardID == fixture.mutatorID &&
+			len(event.Colors) == 1 &&
+			event.Colors[0] == color.Green
+	})
 }
 
 func TestMutateRequiresOwnedNonHumanCreatureTarget(t *testing.T) {
@@ -696,6 +702,7 @@ func mutateCard() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{
 		Name:     "Mutating Beast",
 		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
+		Colors:   []color.Color{color.Green},
 		Types:    []types.Card{types.Creature},
 		StaticAbilities: []game.StaticAbility{
 			game.MutateStaticAbility(cost.Mana{cost.G}),

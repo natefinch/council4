@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,406
+Cards supported: 3,433
 
 - +2 Mace
 - Aang, Air Nomad
@@ -128,6 +128,7 @@ Cards supported: 3,406
 - Arctic Treeline
 - Ardent Militia
 - Ardent Plea
+- Argothian Enchantress
 - Argothian Swine
 - Arisen Gorgon
 - Ark of Blight
@@ -254,6 +255,7 @@ Cards supported: 3,406
 - Beast
 - Beast
 - Beast
+- Beast Whisperer
 - Bee Sting
 - Beeble
 - Behemoth Sledge
@@ -391,6 +393,7 @@ Cards supported: 3,406
 - Brindle Boar
 - Brinebarrow Intruder
 - Brittle Effigy
+- Brokers Veteran
 - Bronze Sable
 - Bronze Sword
 - Bronze Walrus
@@ -553,6 +556,7 @@ Cards supported: 3,406
 - Contagion Clasp
 - Contagious Nim
 - Contaminated Aquifer
+- Contemplation
 - Contingency Plan
 - Contraband Kingpin
 - Copper Host Crusher
@@ -564,6 +568,7 @@ Cards supported: 3,406
 - Coral Merfolk
 - Cordyceps Infected
 - Core Prowler
+- Coretapper
 - Cosmium Blast
 - Council of Advisors
 - Counsel of the Soratami
@@ -591,6 +596,7 @@ Cards supported: 3,406
 - Crookshank Kobolds
 - Crude Rampart
 - Cruel Finality
+- Cruel Witness
 - Crumbling Necropolis
 - Crush Contraband
 - Crystacean
@@ -639,6 +645,7 @@ Cards supported: 3,406
 - Dauntless Survivor
 - Dawn Gryff
 - Dawn's Light Archer
+- Dawnhart Geist
 - Dawnhart Rejuvenator
 - Dawning Angel
 - Dawnstrike Paladin
@@ -777,6 +784,7 @@ Cards supported: 3,406
 - Drown in Ichor
 - Drown in Shapelessness
 - Drowned Catacomb
+- Drowned Secrets
 - Drownyard Explorers
 - Druid Lyrist
 - Druid of the Anima
@@ -799,6 +807,7 @@ Cards supported: 3,406
 - Eagle of the Watch
 - Earth Elemental
 - Earthshaking Si
+- Ebon Drake
 - Ebony Rhino
 - Eclipsed Steppe
 - Egg
@@ -873,6 +882,7 @@ Cards supported: 3,406
 - Embereth Shieldbreaker // Battle Display
 - Embraal Bruiser
 - Enatu Golem
+- Enchantress's Presence
 - Endless Cockroaches
 - Enforcer Griffin
 - Engulfing Eruption
@@ -990,6 +1000,7 @@ Cards supported: 3,406
 - Flowstone Infusion
 - Flowstone Overseer
 - Flowstone Surge
+- Flux Channeler
 - Flying Dolphin-Fish
 - Flying Men
 - Foggy Bottom Swamp
@@ -1063,6 +1074,7 @@ Cards supported: 3,406
 - Geist of the Archives
 - Geist of the Moors
 - Generous Stray
+- Generous Visitor
 - Geothermal Bog
 - Geralf's Messenger
 - Germ
@@ -1418,6 +1430,7 @@ Cards supported: 3,406
 - Indomitable Ancients
 - Indomitable Will
 - Inescapable Blaze
+- Inexorable Tide
 - Infantry Veteran
 - Infectious Host
 - Infernal Grasp
@@ -1766,6 +1779,7 @@ Cards supported: 3,406
 - Merrow Grimeblotter
 - Merrow Witsniper
 - Mesa Cavalier
+- Mesa Enchantress
 - Mesa Unicorn
 - Messenger Drake
 - Messenger Falcons
@@ -1796,6 +1810,7 @@ Cards supported: 3,406
 - Minotaur Warrior
 - Mire's Grasp
 - Mirran Crusader
+- Mirran Spy
 - Misshapen Fiend
 - Mist Leopard
 - Mist Raven
@@ -1984,6 +1999,7 @@ Cards supported: 3,406
 - Ominous Asylum
 - Onakke Ogre
 - One With the Wind
+- Onslaught
 - Onulet
 - Onyx Goblet
 - Oona's Gatewarden
@@ -2135,6 +2151,7 @@ Cards supported: 3,406
 - Prairie Stream
 - Prakhata Club Security
 - Precision Bolt
+- Prescient Chimera
 - Prey Upon
 - Priest of Iroas
 - Priests of Norn
@@ -2145,6 +2162,7 @@ Cards supported: 3,406
 - Primo, the Indivisible
 - Primoc Escapee
 - Primordial Pachyderm
+- Primordial Sage
 - Primordial Wurm
 - Princess Lucrezia
 - Prismari Campus
@@ -2376,6 +2394,7 @@ Cards supported: 3,406
 - Satyr
 - Satyr
 - Satyr
+- Satyr Enchanter
 - Satyr Grovedancer
 - Satyr Rambler
 - Savage Gorilla
@@ -2786,6 +2805,7 @@ Cards supported: 3,406
 - Striped Bears
 - Striped Riverwinder
 - Stroke of Genius
+- Student of Ojutai
 - Study
 - Submerged Boneyard
 - Subtle Strike
@@ -2941,6 +2961,7 @@ Cards supported: 3,406
 - Tidal Kraken
 - Tidehollow Strix
 - Tidepool Turtle
+- Tidespout Tyrant
 - Tidings
 - Tidy Conclusion
 - Tiger Claws
@@ -2985,6 +3006,7 @@ Cards supported: 3,406
 - Toxic Iguanar
 - Toy
 - Trade Routes
+- Trail of Evidence
 - Trained Armodon
 - Trained Caracal
 - Trained Jackal
@@ -3121,8 +3143,10 @@ Cards supported: 3,406
 - Vault of Whispers
 - Vecna
 - Vector, Imperial Capital
+- Vedalken Archmage
 - Vedalken Blademaster
 - Vedalken Entrancer
+- Vedalken Infuser
 - Vedalken Mastermind
 - Vedalken Outlander
 - Venerable Lammasu
@@ -3134,6 +3158,7 @@ Cards supported: 3,406
 - Venomthrope
 - Venser's Sliver
 - Verdigris
+- Verduran Enchantress
 - Vernadi Shieldmate
 - Vernal Fen
 - Vessel of Paramnesia
@@ -3235,6 +3260,7 @@ Cards supported: 3,406
 - Warclamp Mastiff
 - Wardscale Crocodile
 - Warlord's Axe
+- Warmth
 - Warpath Ghoul
 - Warrior
 - Warrior
@@ -3275,6 +3301,7 @@ Cards supported: 3,406
 - Whipcorder
 - Whiptail Wurm
 - Whirlwind Adept
+- Whirlwind of Thought
 - Whisper Agent
 - Whisper of the Dross
 - White Knight
