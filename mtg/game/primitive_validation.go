@@ -128,9 +128,9 @@ func validateCardReference(ref CardReference) error {
 		if ref.LinkID == "" {
 			return errors.New("linked card reference requires LinkID")
 		}
-	case CardReferenceSource, CardReferenceEvent:
+	case CardReferenceSource, CardReferenceEvent, CardReferenceTarget:
 		if ref.LinkID != "" {
-			return errors.New("source/event card reference must not set LinkID")
+			return errors.New("source/event/target card reference must not set LinkID")
 		}
 	case CardReferenceNone:
 		return errors.New("card reference has no kind")
@@ -383,7 +383,14 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 		return errors.New("put on battlefield requires a valid source")
 	}
 	if p.Recipient.Exists {
-		return validatePlayerReference(p.Recipient.Val, targets, checkTargets)
+		if err := validatePlayerReference(p.Recipient.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	for _, placement := range p.EntryCounters {
+		if placement.Amount <= 0 {
+			return errors.New("put on battlefield entry counters require a positive amount")
+		}
 	}
 	return nil
 }
@@ -465,9 +472,24 @@ func (p Bounce) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
-func (p MoveCard) validatePrimitive([]TargetSpec, bool) error {
+func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateCardReference(p.Card); err != nil {
 		return err
+	}
+	if p.Card.Kind == CardReferenceTarget {
+		if !checkTargets || len(targets) == 0 {
+			return errors.New("target card reference requires a target specification")
+		}
+		found := false
+		for i := range targets {
+			if targetSpecAllowedKinds(&targets[i])&TargetAllowCard != 0 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.New("target card reference requires a card target specification")
+		}
 	}
 	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack {
 		return errors.New("move card requires a non-battlefield source zone")
@@ -477,6 +499,9 @@ func (p MoveCard) validatePrimitive([]TargetSpec, bool) error {
 	}
 	if p.FromZone == p.Destination {
 		return errors.New("move card requires different source and destination zones")
+	}
+	if p.DestinationBottom && p.Destination != zone.Library {
+		return errors.New("bottom placement requires library as destination zone")
 	}
 	return nil
 }

@@ -1390,6 +1390,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: Choose kind has unexpected concrete type")
 		}
 		return r.renderChoose(ctx, value)
+	case game.PrimitivePutOnBattlefield:
+		value, ok := primitive.(game.PutOnBattlefield)
+		if !ok {
+			return "", errors.New("render: internal error: PutOnBattlefield kind has unexpected concrete type")
+		}
+		return r.renderPutOnBattlefield(ctx, value)
 	case game.PrimitiveMoveCard:
 		value, ok := primitive.(game.MoveCard)
 		if !ok {
@@ -1407,6 +1413,63 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	}
 }
 
+func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlefield) (string, error) {
+	source, err := renderBattlefieldSource(value.Source)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Source: %s,", source)}
+	if value.Recipient.Exists {
+		recipient, err := r.renderPlayerReference(value.Recipient.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Recipient: opt.Val(%s),", recipient))
+	}
+	if len(value.ContinuousEffects) > 0 {
+		return "", errors.New("render: unsupported PutOnBattlefield continuous effects")
+	}
+	if value.EntryTapped {
+		fields = append(fields, "EntryTapped: true,")
+	}
+	if len(value.EntryCounters) > 0 {
+		counters, err := renderCounterPlacements(ctx, value.EntryCounters)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("EntryCounters: %s,", counters))
+	}
+	return structLit("game.PutOnBattlefield", fields), nil
+}
+
+func renderBattlefieldSource(source game.BattlefieldSource) (string, error) {
+	if ref, ok := source.CardRef(); ok {
+		rendered, err := renderCardReference(ref)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.CardBattlefieldSource(%s)", rendered), nil
+	}
+	if key, ok := source.LinkedKey(); ok {
+		return fmt.Sprintf("game.LinkedBattlefieldSource(game.LinkedKey(%q))", string(key)), nil
+	}
+	return "", errors.New("render: unsupported battlefield source")
+}
+
+func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) (string, error) {
+	ctx.need(importCounter)
+	elements := make([]string, 0, len(placements))
+	for _, placement := range placements {
+		kind, err := renderCounterKind(placement.Kind)
+		if err != nil {
+			return "", err
+		}
+		elements = append(elements, fmt.Sprintf("{Kind: %s, Amount: %d}", kind, placement.Amount))
+	}
+	return "[]game.CounterPlacement{" + strings.Join(elements, ", ") + "}", nil
+}
+
 func (Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, error) {
 	card, err := renderCardReference(value.Card)
 	if err != nil {
@@ -1421,11 +1484,15 @@ func (Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, err
 		return "", err
 	}
 	ctx.need(importZone)
-	return structLit("game.MoveCard", []string{
+	fields := []string{
 		fmt.Sprintf("Card: %s,", card),
 		fmt.Sprintf("FromZone: %s,", fromZone),
 		fmt.Sprintf("Destination: %s,", destination),
-	}), nil
+	}
+	if value.DestinationBottom {
+		fields = append(fields, "DestinationBottom: true,")
+	}
+	return structLit("game.MoveCard", fields), nil
 }
 
 func (Renderer) renderGrantCastPermission(ctx *renderCtx, value game.GrantCastPermission) (string, error) {
@@ -1465,6 +1532,11 @@ func renderCardReference(reference game.CardReference) (string, error) {
 			return "", errors.New("render: source card reference has LinkID")
 		}
 		return "game.CardReference{Kind: game.CardReferenceSource}", nil
+	case game.CardReferenceTarget:
+		if reference.LinkID != "" {
+			return "", errors.New("render: target card reference has LinkID")
+		}
+		return "game.CardReference{Kind: game.CardReferenceTarget}", nil
 	case game.CardReferenceLinked:
 		if reference.LinkID == "" {
 			return "", errors.New("render: linked card reference has no LinkID")
@@ -1815,6 +1887,22 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 	}
 	if spec.Allow != game.TargetAllowUnspecified {
 		fields = append(fields, fmt.Sprintf("Allow: %s,", renderTargetAllow(spec.Allow)))
+	}
+	if spec.TargetZone != zone.None {
+		targetZone, err := renderZone(spec.TargetZone)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		fields = append(fields, fmt.Sprintf("TargetZone: %s,", targetZone))
+	}
+	if spec.Selection.Exists {
+		selection, err := r.renderSelection(ctx, spec.Selection.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Selection: opt.Val(%s),", selection))
 	}
 	if predicate, ok, err := r.renderTargetPredicate(ctx, spec.Predicate); err != nil {
 		return "", err
@@ -2900,6 +2988,9 @@ func renderTargetAllow(allow game.TargetAllow) string {
 	if allow&game.TargetAllowStackObject != 0 {
 		parts = append(parts, "game.TargetAllowStackObject")
 	}
+	if allow&game.TargetAllowCard != 0 {
+		parts = append(parts, "game.TargetAllowCard")
+	}
 	if len(parts) == 0 {
 		return "game.TargetAllowUnspecified"
 	}
@@ -3035,6 +3126,8 @@ func renderZone(zoneType zone.Type) (string, error) {
 		return "zone.Hand", nil
 	case zone.Graveyard:
 		return "zone.Graveyard", nil
+	case zone.Library:
+		return "zone.Library", nil
 	default:
 		return "", fmt.Errorf("render: unsupported zone %d", zoneType)
 	}

@@ -393,11 +393,11 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 		recipient = prim.Recipient.Val
 	}
 	if card, ok := prim.Source.CardRef(); ok {
-		res.succeeded = r.putReferencedCardOnBattlefieldValue(card, recipient, prim.ContinuousEffects)
+		res.succeeded = r.putReferencedCardOnBattlefieldValue(card, recipient, prim.ContinuousEffects, battlefieldEntryOptions(prim))
 		return res
 	}
 	if key, ok := prim.Source.LinkedKey(); ok {
-		res.succeeded = r.putLinkedCardOnBattlefieldValue(key, recipient)
+		res.succeeded = r.putLinkedCardOnBattlefieldValue(key, recipient, battlefieldEntryOptions(prim))
 		if !res.succeeded {
 			res.succeeded = returnLinkedExiledObjects(r.engine, r.game, r.obj, string(key), r.agents, r.log)
 		}
@@ -569,7 +569,7 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 	if !ok {
 		return res
 	}
-	res.succeeded = moveCardBetweenZones(r.game, card.Owner, cardID, fromZone, prim.Destination)
+	res.succeeded = moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
 	return res
 }
 
@@ -824,7 +824,14 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 	return applied
 }
 
-func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKey, recipientRef game.PlayerReference) bool {
+func battlefieldEntryOptions(prim game.PutOnBattlefield) permanentCreationOptions {
+	return permanentCreationOptions{
+		ForceTapped: prim.EntryTapped,
+		Counters:    prim.EntryCounters,
+	}
+}
+
+func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKey, recipientRef game.PlayerReference, options permanentCreationOptions) bool {
 	key := linkedObjectSourceKey(r.game, r.obj, string(linkedKey))
 	refs := linkedObjects(r.game, key)
 	if len(refs) == 0 {
@@ -847,7 +854,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 		if !ok || !owner.Library.Remove(card.ID) {
 			continue
 		}
-		if _, ok := createCardPermanentWithChoices(r.engine, r.game, card, controller, zone.Library, r.agents, r.log); ok {
+		if _, ok := createCardPermanentFaceWithOptions(r.engine, r.game, card, controller, zone.Library, game.FaceFront, nil, options, r.agents, r.log); ok {
 			clearLinkedObjects(r.game, key)
 			return true
 		}
@@ -856,7 +863,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 	return false
 }
 
-func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardReference, recipientRef game.PlayerReference, continuousEffects []game.ContinuousEffect) bool {
+func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardReference, recipientRef game.PlayerReference, continuousEffects []game.ContinuousEffect, options permanentCreationOptions) bool {
 	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, ref)
 	if !ok || fromZone == zone.None {
 		return false
@@ -877,7 +884,7 @@ func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardRefere
 	if !removeCardFromZone(r.game, card.Owner, cardID, fromZone) {
 		return false
 	}
-	permanent, ok := createCardPermanentFaceWithContinuous(
+	permanent, ok := createCardPermanentFaceWithOptions(
 		r.engine,
 		r.game,
 		card,
@@ -885,6 +892,7 @@ func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardRefere
 		fromZone,
 		game.FaceFront,
 		continuousEffects,
+		options,
 		r.agents,
 		r.log,
 	)
