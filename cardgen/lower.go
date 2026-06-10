@@ -1501,6 +1501,10 @@ func lowerKeywordAbility(
 					continue
 				}
 			}
+			if body, ok := lowerParameterizedStaticKeyword(keyword); ok {
+				bodies = append(bodies, loweredStaticAbility{Body: body})
+				continue
+			}
 			return nil, executableDiagnostic(
 				ability,
 				"unsupported parameterized keyword",
@@ -1539,6 +1543,58 @@ func lowerKeywordAbility(
 		return nil, mixedKeywordDiagnostic(ability)
 	}
 	return bodies, nil
+}
+
+func lowerParameterizedStaticKeyword(keyword oracle.CompiledKeyword) (game.StaticAbility, bool) {
+	body := game.StaticAbility{Text: keyword.Name + " " + keyword.Parameter}
+	switch keyword.Name {
+	case "Kicker":
+		manaCost, ok := parseFixedKeywordManaCost(keyword.Parameter)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{Cost: manaCost}}
+	case "Madness":
+		manaCost, ok := parseFixedKeywordManaCost(keyword.Parameter)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.MadnessKeyword{Cost: manaCost}}
+	case "Morph":
+		manaCost, ok := parseFixedKeywordManaCost(keyword.Parameter)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.MorphKeyword{Cost: manaCost}}
+	case "Disguise":
+		manaCost, ok := parseFixedKeywordManaCost(keyword.Parameter)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.DisguiseKeyword{Cost: manaCost}}
+	case "Toxic":
+		amount, err := strconv.Atoi(keyword.Parameter)
+		if err != nil || amount <= 0 {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.ToxicKeyword{Amount: amount}}
+	default:
+		return game.StaticAbility{}, false
+	}
+	return body, true
+}
+
+func parseFixedKeywordManaCost(parameter string) (cost.Mana, bool) {
+	manaCost, err := parseManaCostValue(parameter)
+	if err != nil || len(manaCost) == 0 {
+		return nil, false
+	}
+	for _, symbol := range manaCost {
+		if symbol.Kind == cost.VariableSymbol {
+			return nil, false
+		}
+	}
+	return manaCost, true
 }
 
 func lowerTapManaAbility(

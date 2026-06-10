@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,216
+Cards supported: 2,266
 
 - +2 Mace
 - Aardvark Sloth
@@ -8,6 +8,7 @@ Cards supported: 2,216
 - Abbey Griffin
 - Abrade
 - Abyssal Horror
+- Abzan Guide
 - Acolyte of Xathrid
 - Adult Gold Dragon
 - Adventurer's Inn
@@ -20,6 +21,7 @@ Cards supported: 2,216
 - Affa Guard Hound
 - Affa Protector
 - Ageless Guardian
+- Ainok Tracker
 - Air Elemental
 - Ajani's Sunstriker
 - Akoum Refuge
@@ -100,6 +102,7 @@ Cards supported: 2,216
 - Armored Wolf-Rider
 - Armorer Guildmage
 - Arrogant Vampire
+- Arrogant Wurm
 - Artifact Zombie
 - Ascended Lawmage
 - Ashaya, the Awoken World
@@ -164,6 +167,7 @@ Cards supported: 2,216
 - Bastion Inventor
 - Bathe in Dragonfire
 - Batterhorn
+- Battering Craghorn
 - Battle Hurda
 - Battlefield Raptor
 - Battlewise Valor
@@ -178,6 +182,7 @@ Cards supported: 2,216
 - Benalish Trapper
 - Benthic Giant
 - Berserkers of Blood Ridge
+- Bilious Skulldweller
 - Billiard Room
 - Bird Illusion
 - Bird Maiden
@@ -238,7 +243,9 @@ Cards supported: 2,216
 - Braidwood Cup
 - Brainiac
 - Brambleweft Behemoth
+- Branchblight Stalker
 - Branchloft Pathway // Boulderloft Pathway
+- Branchsnap Lorian
 - Brazen Scourge
 - Breakneck Berserker
 - Breath of Fire
@@ -266,6 +273,7 @@ Cards supported: 2,216
 - Canopy Gorger
 - Canopy Spider
 - Canopy Vista
+- Canyon Lurkers
 - Canyon Minotaur
 - Canyon Slough
 - Capital Guard
@@ -303,6 +311,7 @@ Cards supported: 2,216
 - Chardalyn Dragon
 - Charging Badger
 - Charging Monstrosaur
+- Charging Slateback
 - Charity Extractor
 - Checkpoint Officer
 - Cherubael
@@ -374,6 +383,7 @@ Cards supported: 2,216
 - Crimson Kobolds
 - Crooked Custodian
 - Crookshank Kobolds
+- Crude Rampart
 - Cruel Finality
 - Crumbling Necropolis
 - Crystacean
@@ -409,6 +419,7 @@ Cards supported: 2,216
 - Darksteel Relic
 - Darksteel Sentinel
 - Darkwatch Elves
+- Daru Lancer
 - Dawn Gryff
 - Dawn's Light Archer
 - Dawnhart Rejuvenator
@@ -431,6 +442,7 @@ Cards supported: 2,216
 - Deer-Dog
 - Defender of Chaos
 - Defender of Law
+- Defenestrated Phantom
 - Defensive Stance
 - Defiant Elf
 - Defiant Khenra
@@ -711,6 +723,7 @@ Cards supported: 2,216
 - Gilacorn
 - Gilded Sentinel
 - Glacial Floodplain
+- Glacial Stalker
 - Glacial Wall
 - Gladecover Scout
 - Glass Golem
@@ -896,6 +909,7 @@ Cards supported: 2,216
 - Icatian Priest
 - Ice Storm
 - Ice Tunnel
+- Ichorspit Basilisk
 - Icy Manalith
 - Idyllic Beachfront
 - Ignoble Hierarch
@@ -910,6 +924,7 @@ Cards supported: 2,216
 - Impetuous Sunchaser
 - Imposing Vantasaur
 - Improvised Armor
+- Incorrigible Youths
 - Incurable Ogre
 - Indatha Crystal
 - Indatha Triome
@@ -921,6 +936,7 @@ Cards supported: 2,216
 - Infernal Grasp
 - Infuriate
 - Inordinate Rage
+- Insatiable Gorgers
 - Insatiable Harpy
 - Insect Warrior
 - Insomnia, Crown City
@@ -999,6 +1015,7 @@ Cards supported: 2,216
 - Kinsbaile Skirmisher
 - Kitchen
 - Kitchen Finks
+- Kitchen Imp
 - Kite Shield
 - Kitesail Scout
 - Kithkin
@@ -1023,7 +1040,9 @@ Cards supported: 2,216
 - Kraken Hatchling
 - Kraul Raider
 - Kraul Stinger
+- Krosan Colossus
 - Krovikan Scoundrel
+- Krumar Bond-Kin
 - Kyoshi Warrior Guard
 - Kyren Glider
 - Laboratory Brute
@@ -1090,6 +1109,7 @@ Cards supported: 2,216
 - Lucent Liminid
 - Lumengrid Gargoyle
 - Lumengrid Warden
+- Lumithread Field
 - Lurching Rotbeast
 - Macetail Hystrodon
 - Maelstrom Colossus
@@ -1166,6 +1186,7 @@ Cards supported: 2,216
 - Molten Tributary
 - Moment of Craving
 - Moment of Triumph
+- Monastery Flock
 - Monastery Swiftspear
 - Monk Realist
 - Monoist Sentry
@@ -1205,6 +1226,7 @@ Cards supported: 2,216
 - Mutant Town
 - Mystic Archaeologist
 - Mystic Monastery
+- Mystic of the Hidden Way
 - Nacatl Outlander
 - Naga Eternal
 - Nantuko Disciple
@@ -1231,6 +1253,7 @@ Cards supported: 2,216
 - Niall Silvain
 - Niblis of Dusk
 - Niblis of the Mist
+- Nightdrinker Moroii
 - Nightguard Patrol
 - Nightmare Horror
 - Nightshade Dryad
@@ -1320,6 +1343,7 @@ Cards supported: 2,216
 - Pentavite
 - Peregrine Griffin
 - Pest
+- Pestilent Syphoner
 - Phantom Monster
 - Phantom Ninja
 - Phantom Warrior
@@ -1327,7 +1351,6 @@ Cards supported: 2,216
 - Pheres-Band Centaurs
 - Phobos
 - Phyrexian
-- Phyrexian Beast
 - Phyrexian Crusader
 - Phyrexian Digester
 - Phyrexian Germ
@@ -1336,6 +1359,7 @@ Cards supported: 2,216
 - Phyrexian Hulk
 - Phyrexian Insect
 - Phyrexian Juggernaut
+- Phyrexian Mite
 - Phyrexian Saproling
 - Phyrexian Walker
 - Phytoburst
@@ -1440,6 +1464,7 @@ Cards supported: 2,216
 - Rearing Embermare
 - Rebel
 - Reckless Brute
+- Reckless Wurm
 - Redwood Treefolk
 - Reflection
 - Regal Unicorn
@@ -1467,6 +1492,7 @@ Cards supported: 2,216
 - Rhox War Monk
 - Rib Cage Spider
 - Ridge Rannet
+- Riftburst Hellion
 - Rimeshield Frost Giant
 - Rimewood Falls
 - Rimrock Knight // Boulder Rush
@@ -1528,6 +1554,9 @@ Cards supported: 2,216
 - Sacred Wolf
 - Safehold Elite
 - Sage's Row Savant
+- Sage-Eye Harrier
+- Sagu Archer
+- Sagu Mauler
 - Salamander Warrior
 - Salt Marsh
 - Saltfield Recluse
@@ -1564,6 +1593,7 @@ Cards supported: 2,216
 - Scorching Shot
 - Scorching Spear
 - Scoria Elemental
+- Scornful Egotist
 - Scorpion Dragon
 - Scorpion's Sting
 - Scour from Existence
@@ -1594,6 +1624,7 @@ Cards supported: 2,216
 - Sejiri Refuge
 - Selesnya Guildgate
 - Senate Griffin
+- Senseless Rage
 - Sensory Deprivation
 - Sentinel Spider
 - Sentinels of Glen Elendra
@@ -1620,6 +1651,7 @@ Cards supported: 2,216
 - Shatterskull Giant
 - Shatterskull Recruit
 - Sheltered Thicket
+- Sheoldred's Headcleaver
 - Shepherd of the Lost
 - Shimmering Barrier
 - Shimmerscale Drake
@@ -1641,6 +1673,7 @@ Cards supported: 2,216
 - Shuko
 - Sicken
 - Sickle Ripper
+- Sidisi's Pet
 - Siege Mastodon
 - Siege Wurm
 - Siegecraft
@@ -1716,12 +1749,14 @@ Cards supported: 2,216
 - Snow-Covered Swamp
 - Snow-Covered Wastes
 - Snowfield Sinkhole
+- Snowhorn Rider
 - Soaring Drake
 - Sodden Verdure
 - Sokka, Wolf Cove's Protector
 - Soldier Ally
 - Soldier of the Grey Host
 - Somnomancer
+- Sootfeather Flock
 - Soothing Balm
 - Soul of the Rapids
 - Soulbound Guardians
@@ -1738,6 +1773,7 @@ Cards supported: 2,216
 - Spider-Rex, Daring Dino
 - Spike Jester
 - Spiked Baloth
+- Spined Basher
 - Spined Karok
 - Spined Wurm
 - Spineless Thug
@@ -1746,6 +1782,7 @@ Cards supported: 2,216
 - Spirit Warrior
 - Spirited Companion
 - Spiritual Guardian
+- Spitting Gourna
 - Spore Crawler
 - Sporecap Spider
 - Spotted Griffin
@@ -1902,6 +1939,7 @@ Cards supported: 2,216
 - Tireless Missionaries
 - Titan's Grave
 - Titan's Strength
+- Titanic Bulvox
 - Titanic Growth
 - Tobias Andrion
 - Tocasia's Dig Site
@@ -1920,6 +1958,7 @@ Cards supported: 2,216
 - Tower of Champions
 - Tower of Eons
 - Tower of Fortunes
+- Towering Baloth
 - Towering Indrik
 - Toxic Abomination
 - Toy
@@ -1937,6 +1976,7 @@ Cards supported: 2,216
 - Tree Monkey
 - Tree of Tales
 - Treefolk Shaman
+- Treespring Lorian
 - Treetop Sentinel
 - Treno, Dark City
 - Tresserhorn Sinks
@@ -1957,6 +1997,7 @@ Cards supported: 2,216
 - Turntimber Grove
 - Turtle-Seals
 - Tusked Colossodon
+- Twins of Maurer Estate
 - Twisted Experiment
 - Two-Headed Zombie
 - Typhoid Rats
@@ -1964,6 +2005,8 @@ Cards supported: 2,216
 - Tyranid Warrior
 - Tyrant's Machine
 - Tyrox, Saurid Tyrant
+- Tyrranax Atrocity
+- Tyrranax Rex
 - Uktabi Orangutan
 - Ukud Cobra
 - Ulcerate
@@ -2094,6 +2137,7 @@ Cards supported: 2,216
 - Wander Off
 - Wandering Ones
 - Wandering Tombshell
+- War Behemoth
 - War Mammoth
 - War Priest of Thune
 - Warclamp Mastiff
@@ -2119,7 +2163,10 @@ Cards supported: 2,216
 - Wei Infantry
 - Weight of Memory
 - Weight of the Underworld
+- Weirded Vampire
 - Wetland Sambar
+- Whip-Spine Drake
+- Whipcorder
 - Whiptail Wurm
 - Whirlwind Adept
 - Whisper of the Dross
@@ -2160,6 +2207,7 @@ Cards supported: 2,216
 - Witch's Familiar
 - Witherbloom Campus
 - Witness of Tomorrows
+- Witness of the Ages
 - Wizard
 - Wolf Cove Villager
 - Wooded Ridgeline
@@ -2168,6 +2216,7 @@ Cards supported: 2,216
 - Woodland Mystic
 - Woodland Patrol
 - Woodland Stream
+- Woolly Loxodon
 - Woolly Thoctar
 - Worm
 - Wraith
@@ -2203,6 +2252,7 @@ Cards supported: 2,216
 - Zephyrim
 - Zhao, the Seething Flame
 - Ziatora's Proving Ground
+- Zoetic Cavern
 - Zombie // Zombie
 - Zombie Army
 - Zombie Berserker

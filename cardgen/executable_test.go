@@ -1918,6 +1918,35 @@ func TestGenerateExecutableCardSourceRejectsPartiallyRecognizedKeywordLine(t *te
 	}
 }
 
+func TestGenerateExecutableCardSourceRendersParameterizedKeywords(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Kicker {1}{G}",
+		"Madness {2}{B}",
+		"Morph {3}{U}",
+		"Disguise {4}{W}",
+		"Toxic 2",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Parameterized Creature",
+				Layout:     "normal",
+				TypeLine:   "Creature — Test",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "p")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 || source == "" {
+				t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
@@ -1940,9 +1969,9 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		},
 		"parameterized keyword": {
 			typeLine:   "Creature — Snake",
-			oracleText: "Toxic 1",
+			oracleText: "Annihilator 1",
 			summary:    "unsupported parameterized keyword",
-			detail:     `Toxic with parameter "1"`,
+			detail:     `Annihilator with parameter "1"`,
 		},
 		"keyword without template": {
 			typeLine:   "Creature — Dinosaur",

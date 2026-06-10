@@ -1774,6 +1774,40 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.CyclingKeyword{Cost: %s}", cyclingCost), nil
 	}
+	if kicker, ok := keyword.(game.KickerKeyword); ok {
+		kickerCost, err := r.renderManaCost(ctx, kicker.Cost)
+		if err != nil {
+			return "", err
+		}
+		if len(kicker.BonusContent.Modes) != 0 {
+			return "", errors.New("render: Kicker bonus content must be rendered by its owning ability")
+		}
+		return fmt.Sprintf("game.KickerKeyword{Cost: %s}", kickerCost), nil
+	}
+	if madness, ok := keyword.(game.MadnessKeyword); ok {
+		madnessCost, err := r.renderManaCost(ctx, madness.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.MadnessKeyword{Cost: %s}", madnessCost), nil
+	}
+	if morph, ok := keyword.(game.MorphKeyword); ok {
+		morphCost, err := r.renderManaCost(ctx, morph.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.MorphKeyword{Cost: %s}", morphCost), nil
+	}
+	if disguise, ok := keyword.(game.DisguiseKeyword); ok {
+		disguiseCost, err := r.renderManaCost(ctx, disguise.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.DisguiseKeyword{Cost: %s}", disguiseCost), nil
+	}
+	if toxic, ok := keyword.(game.ToxicKeyword); ok {
+		return fmt.Sprintf("game.ToxicKeyword{Amount: %d}", toxic.Amount), nil
+	}
 	return "", fmt.Errorf("render: unsupported keyword ability %T", keyword)
 }
 

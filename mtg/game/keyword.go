@@ -68,6 +68,12 @@ type ProtectionKeyword struct {
 	FromColors []color.Color
 }
 
+// ToxicKeyword parameterizes the number of poison counters given after combat
+// damage to a player.
+type ToxicKeyword struct {
+	Amount int
+}
+
 func (SimpleKeyword) isKeywordAbility()     {}
 func (WardKeyword) isKeywordAbility()       {}
 func (EquipKeyword) isKeywordAbility()      {}
@@ -79,6 +85,7 @@ func (MorphKeyword) isKeywordAbility()      {}
 func (DisguiseKeyword) isKeywordAbility()   {}
 func (SuspendKeyword) isKeywordAbility()    {}
 func (ProtectionKeyword) isKeywordAbility() {}
+func (ToxicKeyword) isKeywordAbility()      {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
 func (WardKeyword) keyword() Keyword           { return Ward }
@@ -91,6 +98,7 @@ func (MorphKeyword) keyword() Keyword          { return Morph }
 func (DisguiseKeyword) keyword() Keyword       { return Disguise }
 func (SuspendKeyword) keyword() Keyword        { return Suspend }
 func (ProtectionKeyword) keyword() Keyword     { return Protection }
+func (ToxicKeyword) keyword() Keyword          { return Toxic }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
@@ -99,6 +107,19 @@ func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
 		abilities = append(abilities, SimpleKeyword{Kind: keyword})
 	}
 	return abilities
+}
+
+// BodyToxicAmount returns the Toxic value carried by an ability body.
+func BodyToxicAmount(body Ability) (int, bool) {
+	ability, ok := BodyKeywordAbility(body, Toxic)
+	if !ok {
+		return 0, false
+	}
+	toxic, ok := ability.(ToxicKeyword)
+	if !ok || toxic.Amount <= 0 {
+		return 0, false
+	}
+	return toxic.Amount, true
 }
 
 // KeywordAbilityKind returns the Keyword represented by a sealed keyword variant.
