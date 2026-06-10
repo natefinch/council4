@@ -61,6 +61,12 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 			event.FromZone == zone.Hand &&
 			event.ToZone == zone.Graveyard
 	})
+	assertEvent(t, g.Events, game.EventCycled, func(event game.Event) bool {
+		return event.Controller == game.Player1 &&
+			event.Player == game.Player1 &&
+			event.CardID == cyclingID &&
+			event.SourceID == cyclingID
+	})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -69,6 +75,77 @@ func TestCyclingDiscardsCardAndDrawsOnResolution(t *testing.T) {
 	}
 	if g.Stack.Size() != 0 {
 		t.Fatalf("stack size after resolution = %d, want 0", g.Stack.Size())
+	}
+}
+
+func TestCyclingEventTriggerFiresOnlyOnCycling(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Cycling Trigger Drawn"}})
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCycled,
+		Player: game.TriggerPlayerYou,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	discardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Discarded"}})
+	cyclingID := addCardToHand(g, game.Player1, cyclingCard())
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !discardCardFromHand(g, game.Player1, discardID) {
+		t.Fatal("discardCardFromHand() = false")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("cycling trigger fired for ordinary discard")
+	}
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want true for cycling")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("cycling trigger did not fire for cycling")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.Kind != game.StackTriggeredAbility {
+		t.Fatalf("top of stack = %+v, want cycling triggered ability", obj)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want cycling trigger to draw one card", got)
+	}
+}
+
+func TestCycleOrDiscardTriggerFiresForCyclingAndOrdinaryDiscard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn 1"}})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn 2"}})
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDiscarded,
+		Player: game.TriggerPlayerYou,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	discardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Discarded"}})
+	cyclingID := addCardToHand(g, game.Player1, cyclingCard())
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !discardCardFromHand(g, game.Player1, discardID) {
+		t.Fatal("discardCardFromHand() = false")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("cycle-or-discard trigger did not fire for ordinary discard")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want true for cycling")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("cycle-or-discard trigger did not fire for cycling discard")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 2 {
+		t.Fatalf("hand size = %d, want two trigger draws", got)
 	}
 }
 

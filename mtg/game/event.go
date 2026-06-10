@@ -25,6 +25,7 @@ const (
 	EventAttackerDeclared
 	EventBlockerDeclared
 	EventCardDiscarded
+	EventCycled
 	EventDamagePrevented
 	EventDestroyReplaced
 	EventBeginningOfStep

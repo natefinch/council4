@@ -879,6 +879,37 @@ func TestGenerateExecutableCardSourceCycling(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceCyclingTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Cycler",
+		Layout:     "normal",
+		TypeLine:   "Creature — Fox",
+		ManaCost:   "{W}",
+		Colors:     []string{"W"},
+		OracleText: "Whenever you cycle another card, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"TriggeredAbilities: []game.TriggeredAbility",
+		"game.EventCycled",
+		"game.TriggerPlayerYou",
+		"ExcludeSelf: true",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEquip(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
