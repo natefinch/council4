@@ -177,7 +177,7 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 		if replacement.Description == "" {
 			replacement.Description = ability.Text
 		}
-		if ability.UnlessPaid.Exists && enterBattlefieldPaymentPaid(ctx, g, event.Controller, ability.UnlessPaid.Val) {
+		if ability.UnlessPaid.Exists && enterBattlefieldPaymentPaid(ctx, g, event.Controller, event.CardID, ability.UnlessPaid.Val) {
 			continue
 		}
 		if replacementEffectMatchesEvent(g, &replacement, event) {
@@ -187,7 +187,7 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 	return replacements
 }
 
-func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, res game.ResolutionPayment) bool {
+func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, sourceCardID id.ID, res game.ResolutionPayment) bool {
 	if !canPayResolutionPayment(g, playerID, &res) {
 		return false
 	}
@@ -205,6 +205,7 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 	prefs := engine.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, ctx.agents, ctx.log)
 	return paymentOrch.payGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
+		SourceCardID:    sourceCardID,
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,
 		AdditionalCosts: res.AdditionalCosts,

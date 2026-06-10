@@ -38,6 +38,7 @@ type AbilityRequest struct {
 // that do not have a full card context.
 type GenericRequest struct {
 	PlayerID        game.PlayerID
+	SourceCardID    id.ID
 	Cost            *cost.Mana
 	XValue          int
 	Exclude         map[id.ID]bool

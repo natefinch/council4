@@ -13,6 +13,7 @@ import (
 
 type additionalCostPlan struct {
 	player          game.PlayerID
+	sourceCardID    id.ID
 	paid            []string
 	sacrifices      []*game.Permanent
 	exilePermanents []*game.Permanent
@@ -36,7 +37,7 @@ type cardZoneSelection struct {
 }
 
 func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type) (additionalCostPlan, bool) {
-	plan := additionalCostPlan{player: playerID}
+	plan := additionalCostPlan{player: playerID, sourceCardID: sourceCardID}
 	for _, additional := range costs {
 		amount := AdditionalCostAmount(additional)
 		switch additional.Kind {
@@ -494,7 +495,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 		}
 	}
 	for _, reveal := range plan.reveals {
-		s.EmitCardReveal(plan.player, reveal.cardID, reveal.zone)
+		s.EmitCardReveal(plan.player, plan.sourceCardID, reveal.cardID, reveal.zone)
 	}
 	if plan.lifePaid > 0 {
 		player, ok := s.Player(plan.player)

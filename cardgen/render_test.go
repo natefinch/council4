@@ -20,12 +20,21 @@ func TestRenderConditionForETBReplacementRejectsNegativeThresholds(t *testing.T)
 		"any player life": {AnyPlayerLifeAtMost: -1},
 		"opponent count":  {OpponentCountAtLeast: -1},
 	}
+
 	for name, condition := range tests {
 		t.Run(name, func(t *testing.T) {
 			if _, err := (Renderer{}).renderConditionForETBReplacement(&renderCtx{}, &condition); err == nil {
 				t.Fatal("expected negative threshold error")
 			}
 		})
+	}
+}
+
+func TestRenderResolutionPaymentRejectsPromptWithoutCost(t *testing.T) {
+	if _, err := (Renderer{}).renderResolutionPayment(&renderCtx{}, game.ResolutionPayment{
+		Prompt: "Pay?",
+	}); err == nil {
+		t.Fatal("expected prompt-only payment error")
 	}
 }
 

@@ -963,6 +963,10 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 
 func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.ResolutionPayment) (string, error) {
 	var fields []string
+	hasCost := payment.ManaCost.Exists || len(payment.AdditionalCosts) > 0
+	if !hasCost {
+		return "", errors.New("render: resolution payment has no cost")
+	}
 	if payment.Prompt != "" {
 		fields = append(fields, fmt.Sprintf("Prompt: %q,", payment.Prompt))
 	}
@@ -983,9 +987,6 @@ func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.Resolutio
 	}
 	if payment.XValue != 0 {
 		fields = append(fields, fmt.Sprintf("XValue: %d,", payment.XValue))
-	}
-	if len(fields) == 0 {
-		return "", errors.New("render: resolution payment has no cost")
 	}
 	return structLit("game.ResolutionPayment", fields), nil
 }

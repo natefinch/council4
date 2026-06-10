@@ -477,16 +477,16 @@ func TestEntersTappedUnlessPaidCannotPayEntersTapped(t *testing.T) {
 
 func TestEntersTappedUnlessRevealMatchingCard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	setSorcerySpeedTurn(g, game.Player1)
-	forestID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+	setSorcerySpeedTurn(g, game.Player2)
+	forestID := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
 		Name:     "Forest",
 		Types:    []types.Card{types.Land},
 		Subtypes: []types.Sub{types.Forest},
 	}})
-	cardID := addCardToHand(g, game.Player1, revealETBLand())
+	cardID := addCardToHand(g, game.Player2, revealETBLand())
 	engine := NewEngine(nil)
 
-	if !engine.applyPlayLand(g, game.Player1, cardID) {
+	if !engine.applyPlayLand(g, game.Player2, cardID) {
 		t.Fatal("applyPlayLand() = false")
 	}
 
@@ -494,17 +494,22 @@ func TestEntersTappedUnlessRevealMatchingCard(t *testing.T) {
 	if permanent.Tapped {
 		t.Fatalf("permanent = %+v, want untapped after revealing Forest", permanent)
 	}
-	if !g.Players[game.Player1].Hand.Contains(forestID) {
+	if !g.Players[game.Player2].Hand.Contains(forestID) {
 		t.Fatal("revealed Forest left its owner's hand")
 	}
-	if !eventRevealedCardFromZone(g, forestID, zone.Hand) {
+	if !eventRevealedCardFromZone(g, game.Player2, cardID, forestID, zone.Hand) {
 		t.Fatal("revealing Forest did not emit a reveal event")
 	}
 }
 
-func eventRevealedCardFromZone(g *game.Game, cardID id.ID, from zone.Type) bool {
+func eventRevealedCardFromZone(g *game.Game, player game.PlayerID, sourceID, cardID id.ID, from zone.Type) bool {
 	for _, event := range g.Events {
-		if event.Kind == game.EventCardRevealed && event.CardID == cardID && event.FromZone == from {
+		if event.Kind == game.EventCardRevealed &&
+			event.Controller == player &&
+			event.Player == player &&
+			event.SourceID == sourceID &&
+			event.CardID == cardID &&
+			event.FromZone == from {
 			return true
 		}
 	}

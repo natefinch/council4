@@ -113,13 +113,15 @@ func (s *rulesPaymentState) EmitZoneChange(event game.Event) {
 	emitZoneChangeEvent(s.g, event)
 }
 
-func (s *rulesPaymentState) EmitCardReveal(playerID game.PlayerID, cardID id.ID, from zone.Type) {
+func (s *rulesPaymentState) EmitCardReveal(playerID game.PlayerID, sourceCardID, cardID id.ID, from zone.Type) {
 	emitEvent(s.g, game.Event{
-		Kind:     game.EventCardRevealed,
-		Player:   playerID,
-		CardID:   cardID,
-		FromZone: from,
-		Amount:   1,
+		Kind:       game.EventCardRevealed,
+		SourceID:   sourceCardID,
+		Controller: playerID,
+		Player:     playerID,
+		CardID:     cardID,
+		FromZone:   from,
+		Amount:     1,
 	})
 }
 
