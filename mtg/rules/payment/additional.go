@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -16,6 +17,7 @@ type additionalCostPlan struct {
 	sourceCardID    id.ID
 	paid            []string
 	sacrifices      []*game.Permanent
+	permanentsToTap []*game.Permanent
 	exilePermanents []*game.Permanent
 	discards        []id.ID
 	exiles          []cardZoneSelection
@@ -36,8 +38,13 @@ type cardZoneSelection struct {
 	zone   zone.Type
 }
 
-func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type) (additionalCostPlan, bool) {
+//nolint:maintidx // Centralized cost dispatch keeps cross-cost reservation checks in one place.
+func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, tapReservations ...*game.Permanent) (additionalCostPlan, bool) {
 	plan := additionalCostPlan{player: playerID, sourceCardID: sourceCardID}
+	reservedTapPermanents := append([]*game.Permanent(nil), tapReservations...)
+	if source != nil && hasTapCostOf(costs) {
+		reservedTapPermanents = append(reservedTapPermanents, source)
+	}
 	for _, additional := range costs {
 		amount := AdditionalCostAmount(additional)
 		switch additional.Kind {
@@ -78,14 +85,32 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			})
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalSacrifice:
-			chosen := preferredSacrificePermanents(s, playerID, additional, amount, plan.sacrifices, prefs)
+			chosen := preferredSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs)
+			if len(chosen) != amount && prefs != nil && len(prefs.SacrificeChoices) > 0 {
+				chosen = chooseSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan))
+			}
 			if len(chosen) != amount {
 				return plan, false
 			}
 			plan.sacrifices = append(plan.sacrifices, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalTapPermanents:
+			chosen := preferredTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), prefs)
+			if len(chosen) != amount && prefs != nil && len(prefs.TapChoices) > 0 {
+				chosen = chooseTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...))
+			}
+			if len(chosen) != amount {
+				return plan, false
+			}
+			plan.permanentsToTap = append(plan.permanentsToTap, chosen...)
+			reservedTapPermanents = append(reservedTapPermanents, chosen...)
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalSacrificeSource:
-			if amount != 1 || source == nil || s.EffectiveController(source) != playerID || !additionalCostMatchesPermanent(s, source, additional) {
+			if amount != 1 ||
+				source == nil ||
+				permanentsInclude(plan.permanentsToTap, source) ||
+				s.EffectiveController(source) != playerID ||
+				!additionalCostMatchesPermanent(s, source, additional) {
 				return plan, false
 			}
 			plan.sacrifices = append(plan.sacrifices, source)
@@ -122,6 +147,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			if sourceZone == zone.Battlefield {
 				if amount != 1 ||
 					source == nil ||
+					permanentsInclude(plan.permanentsToTap, source) ||
 					s.EffectiveController(source) != playerID ||
 					!additionalCostMatchesPermanent(s, source, additional) {
 					return plan, false
@@ -145,6 +171,18 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 	}
 
 	return plan, true
+}
+
+func plannedBattlefieldCosts(plan additionalCostPlan) []*game.Permanent {
+	permanents := make([]*game.Permanent, 0, len(plan.sacrifices)+len(plan.permanentsToTap)+len(plan.exilePermanents))
+	permanents = append(permanents, plan.sacrifices...)
+	permanents = append(permanents, plan.permanentsToTap...)
+	permanents = append(permanents, plan.exilePermanents...)
+	return permanents
+}
+
+func permanentsInclude(permanents []*game.Permanent, target *game.Permanent) bool {
+	return slices.Contains(permanents, target)
 }
 
 func chooseExileCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []cardZoneSelection) []cardZoneSelection {
@@ -288,6 +326,56 @@ func preferredSacrificePermanents(s State, playerID game.PlayerID, additional co
 	return nil
 }
 
+func chooseTapPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
+	chosenIDs := make(map[id.ID]bool)
+	for _, permanent := range alreadyChosen {
+		chosenIDs[permanent.ObjectID] = true
+	}
+	var chosen []*game.Permanent
+	for _, permanent := range s.Battlefield() {
+		if permanent.Tapped || s.EffectiveController(permanent) != playerID || chosenIDs[permanent.ObjectID] {
+			continue
+		}
+		if additionalCostMatchesPermanent(s, permanent, additional) {
+			chosen = append(chosen, permanent)
+			if len(chosen) == amount {
+				return chosen
+			}
+		}
+	}
+	return chosen
+}
+
+func preferredTapPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences) []*game.Permanent {
+	if prefs == nil || len(prefs.TapChoices) == 0 {
+		return chooseTapPermanents(s, playerID, additional, amount, alreadyChosen)
+	}
+	chosenIDs := make(map[id.ID]bool)
+	for _, permanent := range alreadyChosen {
+		chosenIDs[permanent.ObjectID] = true
+	}
+	var chosen []*game.Permanent
+	var consumed int
+	for _, permanentID := range prefs.TapChoices {
+		permanent, ok := s.PermanentByObjectID(permanentID)
+		if !ok ||
+			permanent.Tapped ||
+			s.EffectiveController(permanent) != playerID ||
+			chosenIDs[permanentID] ||
+			!additionalCostMatchesPermanent(s, permanent, additional) {
+			return nil
+		}
+		chosen = append(chosen, permanent)
+		chosenIDs[permanentID] = true
+		consumed++
+		if len(chosen) == amount {
+			prefs.TapChoices = prefs.TapChoices[consumed:]
+			return chosen
+		}
+	}
+	return nil
+}
+
 func chooseDiscardCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []id.ID) []id.ID {
 	player, ok := s.Player(playerID)
 	if !ok {
@@ -348,6 +436,14 @@ func additionalCostMatchesPermanent(s State, permanent *game.Permanent, addition
 	if additional.MatchPermanentType && !s.PermanentHasType(permanent, additional.PermanentType) {
 		return false
 	}
+	if additional.SubtypesAny != (cost.SubtypeSet{}) {
+		for _, subtype := range additional.SubtypesAny {
+			if subtype != "" && s.PermanentHasSubtype(permanent, subtype) {
+				return true
+			}
+		}
+		return false
+	}
 	return true
 }
 
@@ -399,6 +495,8 @@ func AdditionalCostText(additional cost.Additional) string {
 		return "Reveal a card"
 	case cost.AdditionalTap:
 		return "{T}"
+	case cost.AdditionalTapPermanents:
+		return fmt.Sprintf("Tap %d permanents", AdditionalCostAmount(additional))
 	case cost.AdditionalUntap:
 		return "{Q}"
 	case cost.AdditionalRemoveCounter:
@@ -435,6 +533,15 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 	for _, sacrifice := range plan.sacrifices {
 		permanent, ok := s.PermanentByObjectID(sacrifice.ObjectID)
 		if !ok || s.EffectiveController(permanent) != player.ID || permanent != sacrifice {
+			return false
+		}
+	}
+	for _, permanentToTap := range plan.permanentsToTap {
+		permanent, ok := s.PermanentByObjectID(permanentToTap.ObjectID)
+		if !ok ||
+			s.EffectiveController(permanent) != player.ID ||
+			permanent != permanentToTap ||
+			permanent.Tapped {
 			return false
 		}
 	}
@@ -478,6 +585,9 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 		if !s.MovePermanentToZone(sacrifice, zone.Graveyard) {
 			return false
 		}
+	}
+	for _, permanentToTap := range plan.permanentsToTap {
+		s.SetTapped(permanentToTap, true)
 	}
 	for _, permanent := range plan.exilePermanents {
 		if !s.MovePermanentToZone(permanent, zone.Exile) {

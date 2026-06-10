@@ -883,7 +883,11 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		alternativeCosts = append([]cost.Alternative(nil), activatedBody.AlternativeCosts...)
 		timing = activatedBody.Timing
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaCost), additionalCosts, agents, log)
+	var tapExclusions []id.ID
+	if hasTapCostOf(additionalCosts) {
+		tapExclusions = append(tapExclusions, permanent.ObjectID)
+	}
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaCost), additionalCosts, agents, log, tapExclusions...)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,

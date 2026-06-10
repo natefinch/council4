@@ -72,6 +72,7 @@ const (
 	CostPayLife
 	CostExile
 	CostRemoveCounter
+	CostTapPermanents
 	CostLoyalty
 )
 

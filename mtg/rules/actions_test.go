@@ -308,6 +308,106 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	}
 }
 
+func TestCastSpellTapPermanentsCostRetriesAroundManaSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Tap Offering",
+		ManaCost: opt.Val(cost.Mana{cost.G}),
+		Types:    []types.Card{types.Sorcery},
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalTapPermanents,
+			Text:               "Tap an untapped creature you control",
+			Amount:             1,
+			MatchPermanentType: true,
+			PermanentType:      types.Creature,
+		}},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	})
+	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Elvish Mystic",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}}, mana.G, 1)
+	dork.SummoningSick = false
+	bear := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	setSorcerySpeedTurn(g, game.Player1)
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast with tap-permanents cost) = false, want retry to use Bear for tap cost")
+	}
+	if !dork.Tapped {
+		t.Fatal("mana creature was not tapped for mana")
+	}
+	if !bear.Tapped {
+		t.Fatal("alternate creature was not tapped for tap-permanents cost")
+	}
+}
+
+func TestCastSpellCannotReusePermanentForTapAndSacrificeCosts(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spell := &game.CardDef{CardFace: game.CardFace{Name: "Double Offering",
+		Types: []types.Card{types.Sorcery},
+		AdditionalCosts: []cost.Additional{
+			{Kind: cost.AdditionalTapPermanents, Text: "Tap an untapped creature you control", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+			{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+		},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	}
+	spellID := addCardToHand(g, game.Player1, spell)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Only Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	setSorcerySpeedTurn(g, game.Player1)
+	act := action.CastSpell(spellID, nil, 0, nil)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("spell was legal by reusing one creature for tap and sacrifice costs")
+	}
+	if engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(cast with one tap-and-sacrifice creature) = true, want false")
+	}
+
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine = NewEngine(nil)
+	spellID = addCardToHand(g, game.Player1, spell)
+	onlyCreature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Only Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	setSorcerySpeedTurn(g, game.Player1)
+	act = action.CastSpell(spellID, nil, 0, nil)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("spell with separate tap and sacrifice creatures was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(cast with separate tap and sacrifice creatures) = false, want true")
+	}
+	_, firstStillPresent := permanentByObjectID(g, onlyCreature.ObjectID)
+	_, secondStillPresent := permanentByObjectID(g, second.ObjectID)
+	if firstStillPresent == secondStillPresent {
+		t.Fatalf("battlefield presence first/second = %v/%v, want one sacrificed and one tapped", firstStillPresent, secondStillPresent)
+	}
+	if firstStillPresent && !onlyCreature.Tapped {
+		t.Fatal("remaining first creature was not tapped")
+	}
+	if secondStillPresent && !second.Tapped {
+		t.Fatal("remaining second creature was not tapped")
+	}
+}
+
 func TestCastSpellRevealCostAttributesSource(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -367,6 +467,275 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 	}
 	if _, ok := permanentByObjectID(g, second.ObjectID); ok {
 		t.Fatal("chosen second creature remained on battlefield")
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoicePayment || log.Choices[0].Selected[0] != 1 {
+		t.Fatalf("payment choice log = %+v, want selected payment option 1", log.Choices)
+	}
+}
+
+func TestActivatedAbilityTapPermanentsCostRequiresUntappedMatches(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Aether Grid",
+		Types: []types.Card{types.Enchantment},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{
+				Kind:               cost.AdditionalTapPermanents,
+				Text:               "Tap two untapped artifacts you control",
+				Amount:             2,
+				MatchPermanentType: true,
+				PermanentType:      types.Artifact,
+			}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Untapped Artifact", Types: []types.Card{types.Artifact}}})
+	tapped := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Tapped Artifact", Types: []types.Card{types.Artifact}}})
+	tapped.Tapped = true
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("tap-permanents activated ability was legal with too few untapped matching permanents")
+	}
+	if engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(tap-permanents ability) = true, want false with too few untapped artifacts")
+	}
+}
+
+func TestActivatedAbilityTapPermanentsCostTapsRequiredMatches(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "School Summoner",
+		Types: []types.Card{types.Enchantment},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{
+				Kind:        cost.AdditionalTapPermanents,
+				Text:        "Tap two untapped Merfolk you control",
+				Amount:      2,
+				SubtypesAny: cost.SubtypeSet{types.Merfolk},
+			}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Merfolk",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Merfolk},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Merfolk",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Merfolk},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	soldier := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Soldier",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Soldier},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(source.ObjectID, 0, nil, 0)) {
+		t.Fatal("applyAction(tap Merfolk ability) = false, want true")
+	}
+	if !first.Tapped || !second.Tapped {
+		t.Fatalf("Merfolk tapped = %v/%v, want both true", first.Tapped, second.Tapped)
+	}
+	if soldier.Tapped {
+		t.Fatal("non-Merfolk creature was tapped")
+	}
+}
+
+func TestActivatedAbilityTapPermanentsCostCannotReuseTapSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Bird Keeper",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Bird, types.Wizard},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{
+				{Kind: cost.AdditionalTap},
+				{
+					Kind:        cost.AdditionalTapPermanents,
+					Text:        "Tap two untapped Birds you control",
+					Amount:      2,
+					SubtypesAny: cost.SubtypeSet{types.Bird},
+				},
+			},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Bird",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Bird},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("tap-source plus tap-two-Birds ability was legal with only one other untapped Bird")
+	}
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Bird",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Bird},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(tap source plus tap Birds ability) = false, want true with two other Birds")
+	}
+	if !source.Tapped || !first.Tapped || !second.Tapped {
+		t.Fatalf("tapped source/first/second = %v/%v/%v, want all true", source.Tapped, first.Tapped, second.Tapped)
+	}
+}
+
+func TestActivatedAbilityTapPermanentsCostExcludesManaTappedPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mana Grid",
+		Types: []types.Card{types.Enchantment},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			ManaCost: opt.Val(cost.Mana{cost.G}),
+			AdditionalCosts: []cost.Additional{{
+				Kind:               cost.AdditionalTapPermanents,
+				Text:               "Tap an untapped creature you control",
+				Amount:             1,
+				MatchPermanentType: true,
+				PermanentType:      types.Creature,
+			}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Elvish Mystic",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}}, mana.G, 1)
+	dork.SummoningSick = false
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("tap-permanents ability was legal by reusing the only creature as a mana source")
+	}
+	if engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(tap-permanents mana ability) = true, want false when only creature is needed for mana")
+	}
+	if dork.Tapped {
+		t.Fatal("mana creature was tapped while rejected activation was applied")
+	}
+}
+
+func TestActivatedAbilityTapPermanentsCostRetriesAroundManaSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mana Grid",
+		Types: []types.Card{types.Enchantment},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			ManaCost: opt.Val(cost.Mana{cost.G}),
+			AdditionalCosts: []cost.Additional{{
+				Kind:               cost.AdditionalTapPermanents,
+				Text:               "Tap an untapped creature you control",
+				Amount:             1,
+				MatchPermanentType: true,
+				PermanentType:      types.Creature,
+			}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	dork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Elvish Mystic",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}}, mana.G, 1)
+	dork.SummoningSick = false
+	bear := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(tap-permanents mana ability) = false, want retry to use Bear for tap cost")
+	}
+	if !dork.Tapped {
+		t.Fatal("mana creature was not tapped for mana")
+	}
+	if !bear.Tapped {
+		t.Fatal("alternate creature was not tapped for tap-permanents cost")
+	}
+}
+
+func TestPaymentChoiceSelectsTapPermanentsAdditionalCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Apothecary",
+		Types: []types.Card{types.Enchantment},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{
+				Kind:               cost.AdditionalTapPermanents,
+				Text:               "Tap an untapped creature you control",
+				Amount:             1,
+				MatchPermanentType: true,
+				PermanentType:      types.Creature,
+			}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+	log := TurnLog{}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.ActivateAbility(source.ObjectID, 0, nil, 0), agents, &log) {
+		t.Fatal("applyActionWithChoices(activate with tap choice) = false, want true")
+	}
+	if first.Tapped {
+		t.Fatal("first creature was tapped, want chosen second creature")
+	}
+	if !second.Tapped {
+		t.Fatal("chosen second creature was not tapped")
 	}
 	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoicePayment || log.Choices[0].Selected[0] != 1 {
 		t.Fatalf("payment choice log = %+v, want selected payment option 1", log.Choices)

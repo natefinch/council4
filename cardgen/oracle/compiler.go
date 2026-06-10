@@ -233,6 +233,9 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 			case startsWords(words, "remove") && containsWord(words, "counter"):
 				component.Kind = CostRemoveCounter
 				component.Object = wordsAfterFirst(part)
+			case startsWords(words, "tap"):
+				component.Kind = CostTapPermanents
+				component.Object = wordsAfterFirst(part)
 			case allSymbols(part):
 				component.Kind = CostMana
 				component.Symbol = joinedTokenText(part)

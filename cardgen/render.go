@@ -3093,6 +3093,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalRemoveCounter", nil
 	case cost.AdditionalReturnUnblockedAttacker:
 		return "cost.AdditionalReturnUnblockedAttacker", nil
+	case cost.AdditionalTapPermanents:
+		return "cost.AdditionalTapPermanents", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
 	}
