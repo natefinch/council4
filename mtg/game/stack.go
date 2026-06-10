@@ -119,6 +119,10 @@ type StackObject struct {
 	// ability was put on the stack.
 	SourceZone zone.Type
 
+	// SourceZoneVersion identifies the source card incarnation that created
+	// this stack object.
+	SourceZoneVersion uint64
+
 	// Ninjutsu marks a hand activation that puts its source onto the battlefield
 	// tapped and attacking NinjutsuAttackTarget as it resolves.
 	Ninjutsu             bool

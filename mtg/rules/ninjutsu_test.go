@@ -81,6 +81,27 @@ func TestNinjutsuSourceLeavingHandBeforeResolutionDoesNotEnter(t *testing.T) {
 	}
 }
 
+func TestNinjutsuSourceLeavingAndReturningToHandDoesNotEnter(t *testing.T) {
+	fixture := newNinjutsuFixture(t)
+	g, engine, ninjaID := fixture.game, fixture.engine, fixture.ninjaID
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(ninjaID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want true for Ninjutsu")
+	}
+	if !moveCardBetweenZones(g, game.Player1, ninjaID, zone.Hand, zone.Graveyard) ||
+		!moveCardBetweenZones(g, game.Player1, ninjaID, zone.Graveyard, zone.Hand) {
+		t.Fatal("failed to move Ninjutsu source out of and back into hand")
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if permanentWithCardID(g, ninjaID) != nil {
+		t.Fatal("new incarnation of Ninjutsu source entered from hand")
+	}
+	if !g.Players[game.Player1].Hand.Contains(ninjaID) {
+		t.Fatal("Ninjutsu resolution moved the new source incarnation")
+	}
+}
+
 func TestNinjutsuRequiresLegalTimingResourcesAndAttacker(t *testing.T) {
 	tests := []struct {
 		name   string

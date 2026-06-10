@@ -89,7 +89,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 			return "resolved"
 		}
 		card, ok := g.GetCardInstance(obj.SourceCardID)
-		if !ok || !player.Hand.Remove(obj.SourceCardID) {
+		if !ok || card.ZoneVersion != obj.SourceZoneVersion || !player.Hand.Remove(obj.SourceCardID) {
 			return "missing source"
 		}
 		ninja, ok := createCardPermanentFaceWithOptions(

@@ -909,6 +909,7 @@ func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.Pla
 		SourceID:             card.ID,
 		SourceCardID:         card.ID,
 		SourceZone:           zone.Hand,
+		SourceZoneVersion:    card.ZoneVersion,
 		AbilityIndex:         activate.AbilityIndex,
 		Controller:           playerID,
 		Ninjutsu:             true,
