@@ -18,6 +18,7 @@ const (
 	TargetAllowPermanent   TargetAllow = 1 << 0
 	TargetAllowPlayer      TargetAllow = 1 << 1
 	TargetAllowStackObject TargetAllow = 1 << 2
+	TargetAllowCard        TargetAllow = 1 << 3
 )
 
 // ControllerRelation constrains a permanent by its controller relative to the

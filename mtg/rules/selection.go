@@ -23,6 +23,8 @@ const (
 	subjectEventPermanent
 	// subjectCastSpell reads a cast spell's card types from the event.
 	subjectCastSpell
+	// subjectCard reads printed characteristics from a card in a non-battlefield zone.
+	subjectCard
 )
 
 // selectionSubject is the context a Selection is matched against. It captures
@@ -57,6 +59,7 @@ type selectionSubject struct {
 	// event and cardTypes back the event-permanent and cast-spell subjects.
 	event     game.Event
 	cardTypes []types.Card
+	card      *game.CardInstance
 }
 
 // matchSelection reports whether the subject satisfies every active predicate in
@@ -144,6 +147,11 @@ func (s *selectionSubject) hasType(cardType types.Card) bool {
 		return eventPermanentHasType(s.g, s.event, cardType)
 	case subjectCastSpell:
 		return slices.Contains(s.cardTypes, cardType)
+	case subjectCard:
+		if s.card == nil || s.card.Def == nil {
+			return false
+		}
+		return slices.Contains(s.card.Def.DefaultFace().Types, cardType)
 	default:
 		return false
 	}
@@ -157,16 +165,25 @@ func (s *selectionSubject) hasSupertype(supertype types.Super) bool {
 	if s.kind == subjectPermanent {
 		return slices.Contains(s.values.supertypes, supertype)
 	}
+	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
+		return slices.Contains(s.card.Def.DefaultFace().Supertypes, supertype)
+	}
 	return false
 }
 
 func (s *selectionSubject) hasAnySubtype(subtypes []types.Sub) bool {
-	if s.kind != subjectPermanent {
-		return false
+	if s.kind == subjectPermanent {
+		for _, subtype := range subtypes {
+			if slices.Contains(s.values.subtypes, subtype) {
+				return true
+			}
+		}
 	}
-	for _, subtype := range subtypes {
-		if slices.Contains(s.values.subtypes, subtype) {
-			return true
+	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
+		for _, subtype := range subtypes {
+			if slices.Contains(s.card.Def.DefaultFace().Subtypes, subtype) {
+				return true
+			}
 		}
 	}
 	return false
@@ -178,6 +195,9 @@ func (s *selectionSubject) hasColor(c color.Color) bool {
 	}
 	if s.kind == subjectCastSpell {
 		return slices.Contains(s.event.Colors, c)
+	}
+	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
+		return slices.Contains(s.card.Def.DefaultFace().Colors, c)
 	}
 	return false
 }
@@ -208,6 +228,9 @@ func (s *selectionSubject) combatStateMatches(filter game.CombatStateFilter) boo
 }
 
 func (s *selectionSubject) manaValue() (int, bool) {
+	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
+		return s.card.Def.ManaValue(), true
+	}
 	if s.kind != subjectPermanent {
 		return 0, false
 	}

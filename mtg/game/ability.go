@@ -506,6 +506,10 @@ type TargetSpec struct {
 	// Selection by the rules matcher when Selection is absent.
 	Selection opt.V[Selection]
 
+	// TargetZone restricts card targets to one zone. It is meaningful only when
+	// Allow includes TargetAllowCard.
+	TargetZone zone.Type
+
 	// Chooser identifies who chooses this target slot during announcement. The
 	// default controller chooser preserves normal targeting. For non-controller
 	// choosers, structured "you" predicates are evaluated relative to the

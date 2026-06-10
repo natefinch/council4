@@ -231,6 +231,12 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 			return 0, zone.None, false
 		}
 		sourceZone, ok := cardZone(g, obj.SourceCardID)
+		if ok && obj.SourceZone != zone.None {
+			card, cardOK := g.GetCardInstance(obj.SourceCardID)
+			if !cardOK || sourceZone != obj.SourceZone || card.ZoneVersion != obj.SourceZoneVersion {
+				return 0, zone.None, false
+			}
+		}
 		return obj.SourceCardID, sourceZone, ok
 	case game.CardReferenceEvent:
 		if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.CardID == 0 {
@@ -252,6 +258,24 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 			if linkedZone, ok := cardZone(g, linked.CardID); ok {
 				return linked.CardID, linkedZone, true
 			}
+		}
+		return 0, zone.None, false
+	case game.CardReferenceTarget:
+		if obj == nil {
+			return 0, zone.None, false
+		}
+		for _, target := range obj.Targets {
+			if target.Kind != game.TargetCard || target.CardID == 0 {
+				continue
+			}
+			card, ok := g.GetCardInstance(target.CardID)
+			if !ok ||
+				!target.CardZoneVersionSet ||
+				card.ZoneVersion != target.CardZoneVersion {
+				return 0, zone.None, false
+			}
+			targetZone, ok := cardZone(g, target.CardID)
+			return target.CardID, targetZone, ok
 		}
 		return 0, zone.None, false
 	default:
@@ -807,7 +831,19 @@ func effectPermanentAt(g *game.Game, obj *game.StackObject, targetIndex int) (*g
 }
 
 func sourcePermanent(g *game.Game, obj *game.StackObject) (*game.Permanent, bool) {
-	return permanentByObjectID(g, obj.SourceID)
+	if permanent, ok := permanentByObjectID(g, obj.SourceID); ok {
+		return permanent, true
+	}
+	sourceCardID := obj.SourceCardID
+	if sourceCardID == 0 {
+		sourceCardID = obj.SourceID
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == sourceCardID {
+			return permanent, true
+		}
+	}
+	return nil, false
 }
 
 func firstPermanentControlledBy(g *game.Game, controller game.PlayerID) (*game.Permanent, bool) {

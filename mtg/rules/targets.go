@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // targetChoiceKind distinguishes the four outcomes of target enumeration so
@@ -146,6 +147,14 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 		for _, permanent := range g.Battlefield {
 			target := game.PermanentTarget(permanent.ObjectID)
 			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, target) {
+				candidates = append(candidates, target)
+			}
+		}
+	}
+	if targetSpecAllowsCards(spec) {
+		for _, card := range g.CardInstances {
+			target := game.CardTargetWithZoneVersion(card.ID, card.ZoneVersion)
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -372,7 +381,7 @@ func (e *Engine) completeAbilityAnnouncementTargets(g *game.Game, controller gam
 
 func (e *Engine) completeAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
 	if !targetSpecsUseExternalChooser(specs) {
-		return append([]game.Target(nil), targets...), true
+		return bindCardTargetZoneVersions(g, targets)
 	}
 	if !targetSpecsUseFixedSlots(specs) || len(targets) != len(specs) {
 		return nil, false
@@ -389,7 +398,28 @@ func (e *Engine) completeAnnouncementTargets(g *game.Game, controller game.Playe
 		}
 		completed[i] = target
 	}
+	var ok bool
+	completed, ok = bindCardTargetZoneVersions(g, completed)
+	if !ok {
+		return nil, false
+	}
 	return completed, targetsValidForSpecs(g, controller, source, sourceObjectID, specs, completed)
+}
+
+func bindCardTargetZoneVersions(g *game.Game, targets []game.Target) ([]game.Target, bool) {
+	bound := append([]game.Target(nil), targets...)
+	for i := range bound {
+		if bound[i].Kind != game.TargetCard || bound[i].CardZoneVersionSet {
+			continue
+		}
+		card, ok := g.GetCardInstance(bound[i].CardID)
+		if !ok {
+			return nil, false
+		}
+		bound[i].CardZoneVersion = card.ZoneVersion
+		bound[i].CardZoneVersionSet = true
+	}
+	return bound, true
 }
 
 func targetSpecsUseExternalChooser(specs []game.TargetSpec) bool {
@@ -724,15 +754,60 @@ func targetSpecAllowsPermanents(spec *game.TargetSpec) bool {
 	return false
 }
 
+func targetSpecAllowsCards(spec *game.TargetSpec) bool {
+	if spec.Allow != game.TargetAllowUnspecified {
+		return spec.Allow&game.TargetAllowCard != 0
+	}
+	normalized := normalizedTargetConstraint(spec)
+	return strings.Contains(normalized, "card") &&
+		(strings.Contains(normalized, "graveyard") || strings.Contains(normalized, "library") || strings.Contains(normalized, "hand"))
+}
+
 func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
 	switch target.Kind {
 	case game.TargetPlayer:
 		return playerTargetMatchesSpec(g, controller, spec, target.PlayerID)
 	case game.TargetPermanent:
 		return permanentTargetMatchesSpec(g, controller, sourceObjectID, spec, target.PermanentID)
+	case game.TargetCard:
+		return cardTargetMatchesSpec(g, controller, spec, target)
 	default:
 		return false
 	}
+}
+
+func cardTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, target game.Target) bool {
+	if !targetSpecAllowsCards(spec) {
+		return false
+	}
+	cardID := target.CardID
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	if target.CardZoneVersionSet && card.ZoneVersion != target.CardZoneVersion {
+		return false
+	}
+	if spec.TargetZone != zone.None {
+		actualZone, ok := cardZone(g, cardID)
+		if !ok || actualZone != spec.TargetZone {
+			return false
+		}
+	}
+	sel := targetSelection(spec)
+	if !sel.Empty() {
+		subject := selectionSubject{
+			kind:       subjectCard,
+			g:          g,
+			card:       card,
+			controller: card.Owner,
+			viewer:     controller,
+		}
+		if !matchSelection(&subject, &sel) {
+			return false
+		}
+	}
+	return true
 }
 
 func playerTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, playerID game.PlayerID) bool {

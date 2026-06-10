@@ -930,6 +930,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	if !ok || !canActivateGraveyardAbility(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
 	}
+	sourceZoneVersion := card.ZoneVersion
 	def := cardFaceOrDefault(card, game.FaceFront)
 	completedTargets, ok := e.completeAbilityAnnouncementTargets(g, playerID, def, 0, &ability, activate.Targets, agents, log)
 	if !ok || !canActivateGraveyardAbility(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue) {
@@ -953,16 +954,17 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		return false
 	}
 	obj := &game.StackObject{
-		ID:           g.IDGen.Next(),
-		Kind:         game.StackActivatedAbility,
-		SourceID:     card.ID,
-		SourceCardID: card.ID,
-		SourceZone:   zone.Graveyard,
-		AbilityIndex: activate.AbilityIndex,
-		Controller:   playerID,
-		Targets:      append([]game.Target(nil), completedTargets...),
-		TargetCounts: targetCounts,
-		XValue:       activate.XValue,
+		ID:                g.IDGen.Next(),
+		Kind:              game.StackActivatedAbility,
+		SourceID:          card.ID,
+		SourceCardID:      card.ID,
+		SourceZone:        zone.Graveyard,
+		SourceZoneVersion: sourceZoneVersion,
+		AbilityIndex:      activate.AbilityIndex,
+		Controller:        playerID,
+		Targets:           append([]game.Target(nil), completedTargets...),
+		TargetCounts:      targetCounts,
+		XValue:            activate.XValue,
 	}
 	pushAbilityToStack(g, obj)
 	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // Compile parses and semantically lowers one card face's Oracle text.
@@ -453,12 +454,83 @@ func compileEffects(
 				Symbol:               firstSymbol(clauseTokens),
 				CounterKind:          counterKind,
 				CounterKindKnown:     (kind == EffectPut || kind == EffectEnterTapped) && counterKindKnown,
+				FromZone:             compileFromZone(clauseTokens),
+				ToZone:               compileToZone(clauseTokens),
 				Negated:              effectNegated(tokens, tokenIndex),
 			})
 		}
 
 	}
 	return effects
+}
+
+func compileFromZone(tokens []Token) zone.Type {
+	for i := 0; i+2 < len(tokens); i++ {
+		if !equalWord(tokens[i], "from") {
+			continue
+		}
+		if graveyardZonePhrase(tokens[i+1:]) {
+			return zone.Graveyard
+		}
+	}
+	return zone.None
+}
+
+func compileToZone(tokens []Token) zone.Type {
+	for i := range len(tokens) {
+		switch {
+		case equalWord(tokens[i], "to") && i+2 < len(tokens) && handZonePhrase(tokens[i+1:]):
+			return zone.Hand
+		case equalWord(tokens[i], "to") && i+2 < len(tokens) && battlefieldZonePhrase(tokens[i+1:]):
+			return zone.Battlefield
+		case equalWord(tokens[i], "onto") && i+2 < len(tokens) && battlefieldZonePhrase(tokens[i+1:]):
+			return zone.Battlefield
+		case equalWord(tokens[i], "on") && i+4 < len(tokens) &&
+			(equalWord(tokens[i+1], "top") || equalWord(tokens[i+1], "bottom")) &&
+			equalWord(tokens[i+2], "of") &&
+			libraryZonePhrase(tokens[i+3:]):
+			return zone.Library
+		case equalWord(tokens[i], "on") && i+5 < len(tokens) &&
+			equalWord(tokens[i+1], "the") &&
+			(equalWord(tokens[i+2], "top") || equalWord(tokens[i+2], "bottom")) &&
+			equalWord(tokens[i+3], "of") &&
+			libraryZonePhrase(tokens[i+4:]):
+			return zone.Library
+		case equalWord(tokens[i], "into") && i+2 < len(tokens) && libraryZonePhrase(tokens[i+1:]):
+			return zone.Library
+		}
+	}
+	return zone.None
+}
+
+func graveyardZonePhrase(tokens []Token) bool {
+	switch {
+	case len(tokens) >= 2 &&
+		(equalWord(tokens[0], "your") || equalWord(tokens[0], "a") || equalWord(tokens[0], "an")) &&
+		equalWord(tokens[1], "graveyard"):
+		return true
+	case len(tokens) >= 3 &&
+		equalWord(tokens[0], "an") &&
+		strings.EqualFold(tokens[1].Text, "opponent's") &&
+		equalWord(tokens[2], "graveyard"):
+		return true
+	default:
+		return false
+	}
+}
+
+func handZonePhrase(tokens []Token) bool {
+	return len(tokens) >= 2 &&
+		(equalWord(tokens[0], "your") || equalWord(tokens[0], "their")) &&
+		equalWord(tokens[1], "hand")
+}
+
+func battlefieldZonePhrase(tokens []Token) bool {
+	return len(tokens) >= 2 && equalWord(tokens[0], "the") && equalWord(tokens[1], "battlefield")
+}
+
+func libraryZonePhrase(tokens []Token) bool {
+	return len(tokens) >= 2 && equalWord(tokens[0], "your") && equalWord(tokens[1], "library")
 }
 
 func counterKindWord(tokens []Token) (counter.Kind, bool) {

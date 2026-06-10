@@ -448,6 +448,8 @@ type PutOnBattlefield struct {
 	Source            BattlefieldSource
 	Recipient         opt.V[PlayerReference]
 	ContinuousEffects []ContinuousEffect
+	EntryTapped       bool
+	EntryCounters     []CounterPlacement
 }
 
 // CreateToken creates one or more tokens.
@@ -526,9 +528,10 @@ type Bounce struct {
 
 // MoveCard moves a referenced card between two non-battlefield zones.
 type MoveCard struct {
-	Card        CardReference
-	FromZone    zone.Type
-	Destination zone.Type
+	Card              CardReference
+	FromZone          zone.Type
+	Destination       zone.Type
+	DestinationBottom bool
 }
 
 // GrantCastPermission allows a referenced card to be cast from a specific zone

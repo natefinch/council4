@@ -243,6 +243,7 @@ const (
 	CardReferenceLinked
 	CardReferenceSource
 	CardReferenceEvent
+	CardReferenceTarget
 )
 
 // CardReference describes how a rules effect finds a card at resolution.

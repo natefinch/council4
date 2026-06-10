@@ -4268,8 +4268,17 @@ func lowerSingleEffectSpell(
 			return game.Exile{Object: object}
 		})
 	case oracle.EffectReturn:
+		if content, ok := lowerSelfCardGraveyardReturn(ability); ok {
+			return content, nil
+		}
+		if content, ok := lowerTargetedGraveyardReturn(ability); ok {
+			return content, nil
+		}
 		return lowerFixedBounceSpell(ability)
 	case oracle.EffectPut:
+		if content, ok := lowerTargetedGraveyardReturn(ability); ok {
+			return content, nil
+		}
 		return lowerCounterPlacementSpell(ability)
 	case oracle.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ability)
@@ -4280,6 +4289,224 @@ func lowerSingleEffectSpell(
 			"the executable source backend does not yet lower this spell ability",
 		)
 	}
+}
+
+func lowerSelfCardGraveyardReturn(ability oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectReturn ||
+		len(ability.Targets) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.Conditions) != 0 ||
+		!selfCardGraveyardReturnReferences(ability.References) {
+		return game.AbilityContent{}, false
+	}
+	sourceCard := game.CardReference{Kind: game.CardReferenceSource}
+	switch {
+	case ability.Text == "Return this card from your graveyard to your hand.":
+		return game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
+			Card:        sourceCard,
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}}}}.Ability(), true
+	case ability.Text == "Return this card from your graveyard to the battlefield.":
+		return game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
+			Source: game.CardBattlefieldSource(sourceCard),
+		}}}}.Ability(), true
+	case strings.HasPrefix(ability.Text, "Return this card from your graveyard to the battlefield"):
+		tapped, counters, ok := selfCardBattlefieldReturnModifiers(ability.Text)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		put := game.PutOnBattlefield{
+			Source:      game.CardBattlefieldSource(sourceCard),
+			EntryTapped: tapped,
+		}
+		if counters > 0 {
+			put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: counters}}
+		}
+		return game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
+	default:
+		return game.AbilityContent{}, false
+	}
+}
+
+func selfCardGraveyardReturnReferences(references []oracle.CompiledReference) bool {
+	if len(references) == 0 || references[0].Kind != oracle.ReferenceThisObject {
+		return false
+	}
+	for _, reference := range references[1:] {
+		if reference.Kind != oracle.ReferencePronoun || reference.Text != "it" {
+			return false
+		}
+	}
+	return true
+}
+
+func selfCardBattlefieldReturnModifiers(text string) (tapped bool, counters int, ok bool) {
+	const prefix = "Return this card from your graveyard to the battlefield"
+	suffix := strings.TrimPrefix(text, prefix)
+	switch suffix {
+	case ".":
+		return false, 0, true
+	case " tapped.":
+		return true, 0, true
+	default:
+	}
+	if strings.HasPrefix(suffix, " tapped with ") {
+		tapped = true
+		suffix = strings.TrimPrefix(suffix, " tapped")
+	}
+	if strings.HasPrefix(suffix, " with ") && strings.HasSuffix(suffix, " +1/+1 counters on it.") {
+		word := strings.TrimSuffix(strings.TrimPrefix(suffix, " with "), " +1/+1 counters on it.")
+		amount, amountOK := smallNumberWord(word)
+		return tapped, amount, amountOK
+	}
+	return false, 0, false
+}
+
+func smallNumberWord(word string) (int, bool) {
+	switch word {
+	case "one", "a", "an":
+		return 1, true
+	case "two":
+		return 2, true
+	case "three":
+		return 3, true
+	case "four":
+		return 4, true
+	case "five":
+		return 5, true
+	default:
+		return 0, false
+	}
+}
+
+func lowerTargetedGraveyardReturn(ability oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(ability.Targets) != 1 ||
+		len(ability.Effects) != 1 ||
+		len(ability.Modes) != 0 ||
+		len(ability.Conditions) != 0 ||
+		ability.Effects[0].FromZone != zone.Graveyard {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := cardInZoneTargetSpec(ability.Targets[0], zone.Graveyard)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	targetCard := game.CardReference{Kind: game.CardReferenceTarget}
+	switch ability.Effects[0].ToZone {
+	case zone.Hand:
+		return game.Mode{
+			Targets: []game.TargetSpec{targetSpec},
+			Sequence: []game.Instruction{{Primitive: game.MoveCard{
+				Card:        targetCard,
+				FromZone:    zone.Graveyard,
+				Destination: zone.Hand,
+			}}},
+		}.Ability(), true
+	case zone.Library:
+		destinationBottom, ok := graveyardReturnLibraryBottom(ability.Targets[0].Text)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{
+			Targets: []game.TargetSpec{targetSpec},
+			Sequence: []game.Instruction{{Primitive: game.MoveCard{
+				Card:              targetCard,
+				FromZone:          zone.Graveyard,
+				Destination:       zone.Library,
+				DestinationBottom: destinationBottom,
+			}}},
+		}.Ability(), true
+	default:
+		return game.AbilityContent{}, false
+	}
+}
+
+func graveyardReturnLibraryBottom(text string) (destinationBottom, recognized bool) {
+	switch {
+	case strings.HasSuffix(text, " on top of your library") ||
+		strings.HasSuffix(text, " on the top of your library"):
+		return false, true
+	case strings.HasSuffix(text, " on bottom of your library") ||
+		strings.HasSuffix(text, " on the bottom of your library"):
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+func cardInZoneTargetSpec(target oracle.CompiledTarget, targetZone zone.Type) (game.TargetSpec, bool) {
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 ||
+		target.Selector.Another || target.Selector.Other ||
+		target.Selector.Attacking || target.Selector.Blocking ||
+		target.Selector.Tapped || target.Selector.Untapped {
+		return game.TargetSpec{}, false
+	}
+	targetText := graveyardCardTargetText(target.Text)
+	const targetPrefix = "target "
+	if !strings.HasPrefix(strings.ToLower(targetText), targetPrefix) {
+		return game.TargetSpec{}, false
+	}
+	targetBody := targetText[len(targetPrefix):]
+	controller := game.ControllerAny
+	switch {
+	case strings.HasSuffix(targetBody, " from your graveyard"):
+		targetBody = strings.TrimSuffix(targetBody, " from your graveyard")
+		controller = game.ControllerYou
+	case strings.HasSuffix(targetBody, " from a graveyard"):
+		targetBody = strings.TrimSuffix(targetBody, " from a graveyard")
+	case strings.HasSuffix(targetBody, " from an opponent's graveyard"):
+		targetBody = strings.TrimSuffix(targetBody, " from an opponent's graveyard")
+		controller = game.ControllerOpponent
+	default:
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: lowerFirst(targetText),
+		Allow:      game.TargetAllowCard,
+		TargetZone: targetZone,
+	}
+	var selection game.Selection
+	switch targetBody {
+	case "card":
+	case "instant or sorcery card":
+		selection.RequiredTypesAny = []types.Card{types.Instant, types.Sorcery}
+	case "artifact card":
+		selection.RequiredTypes = []types.Card{types.Artifact}
+	case "creature card":
+		selection.RequiredTypes = []types.Card{types.Creature}
+	case "enchantment card":
+		selection.RequiredTypes = []types.Card{types.Enchantment}
+	case "land card":
+		selection.RequiredTypes = []types.Card{types.Land}
+	case "planeswalker card":
+		selection.RequiredTypes = []types.Card{types.Planeswalker}
+	default:
+		return game.TargetSpec{}, false
+	}
+	selection.Controller = controller
+	spec.Selection = opt.Val(selection)
+	return spec, true
+}
+
+func graveyardCardTargetText(text string) string {
+	for _, suffix := range []string{
+		" to your hand",
+		" to their hand",
+		" on top of your library",
+		" on the top of your library",
+		" on bottom of your library",
+		" on the bottom of your library",
+		" into your library",
+	} {
+		if trimmed, ok := strings.CutSuffix(text, suffix); ok {
+			return trimmed
+		}
+	}
+	return text
 }
 
 func lowerCounterPlacementSpell(

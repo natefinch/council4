@@ -32,6 +32,7 @@ type permanentCreationOptions struct {
 	ForceTapped bool
 	KickerPaid  bool
 	WasCast     bool
+	Counters    []game.CounterPlacement
 }
 
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -60,6 +61,9 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true
+	}
+	for _, placement := range options.Counters {
+		permanent.Counters.Add(placement.Kind, placement.Amount)
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
 	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
@@ -304,6 +308,10 @@ func permanentTokenDefName(def *game.CardDef) string {
 }
 
 func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type) bool {
+	return moveCardBetweenZonesWithPlacement(g, playerID, cardID, fromZone, toZone, false)
+}
+
+func moveCardBetweenZonesWithPlacement(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type, bottom bool) bool {
 	replacement := zoneChangeReplacementResult{destination: toZone}
 	card, cardOK := g.GetCardInstance(cardID)
 	event := game.Event{}
@@ -336,7 +344,11 @@ func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fr
 		return false
 	}
 	revealZoneReplacementSource(g, event, replacement.revealSource)
-	to.Add(cardID)
+	if bottom && destination == zone.Library {
+		to.AddToBottom(cardID)
+	} else {
+		to.Add(cardID)
+	}
 	shuffleLibraryIfRequested(g, to, destination, replacement.shuffleIntoLibrary)
 	emitZoneChangeEvent(g, game.Event{
 		Player:   playerID,
