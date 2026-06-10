@@ -43,15 +43,19 @@ type result struct {
 	card        cardgen.ScryfallCard
 	relative    string
 	source      string
+	exclusion   cardgen.CorpusExclusionReason
 	diagnostics []oracle.Diagnostic
 	err         error
 }
 
 type report struct {
 	CardCount        int           `json:"card_count"`
+	EligibleCount    int           `json:"eligible_count"`
 	GeneratedCount   int           `json:"generated_count"`
 	UnsupportedCount int           `json:"unsupported_count"`
+	ExcludedCount    int           `json:"excluded_count"`
 	Unsupported      []unsupported `json:"unsupported"`
+	Excluded         []excluded    `json:"excluded"`
 }
 
 type unsupported struct {
@@ -60,6 +64,14 @@ type unsupported struct {
 	Name        string             `json:"name"`
 	Layout      string             `json:"layout,omitempty"`
 	Diagnostics []reportDiagnostic `json:"diagnostics"`
+}
+
+type excluded struct {
+	ID       string                        `json:"id,omitempty"`
+	OracleID string                        `json:"oracle_id,omitempty"`
+	Name     string                        `json:"name"`
+	Layout   string                        `json:"layout,omitempty"`
+	Reason   cardgen.CorpusExclusionReason `json:"reason"`
 }
 
 type reportDiagnostic struct {
@@ -186,8 +198,12 @@ func compileCorpus(input io.Reader, workers int) ([]result, error) {
 
 func compileCard(item job) result {
 	card := item.card
-	letter := cardgen.CardNameToPackageLetter(card.Name)
 	compiled := result{index: item.index, card: card}
+	if reason, excluded := (cardgen.CorpusPolicy{}).Exclusion(card); excluded {
+		compiled.exclusion = reason
+		return compiled
+	}
+	letter := cardgen.CardNameToPackageLetter(card.Name)
 	if len(letter) != 1 || letter[0] < 'a' || letter[0] > 'z' {
 		compiled.diagnostics = []oracle.Diagnostic{{
 			Severity: oracle.SeverityWarning,
@@ -205,7 +221,7 @@ func compileCard(item job) result {
 func rejectPathCollisions(results []result) {
 	byPath := make(map[string][]int)
 	for i := range results {
-		if results[i].err == nil && len(results[i].diagnostics) == 0 {
+		if results[i].exclusion == "" && results[i].err == nil && len(results[i].diagnostics) == 0 {
 			byPath[results[i].relative] = append(byPath[results[i].relative], i)
 		}
 	}
@@ -227,7 +243,7 @@ func rejectPathCollisions(results []result) {
 func rejectIdentifierCollisions(results []result) {
 	byName := make(map[string][]int)
 	for i := range results {
-		if results[i].err != nil || len(results[i].diagnostics) > 0 {
+		if results[i].exclusion != "" || results[i].err != nil || len(results[i].diagnostics) > 0 {
 			continue
 		}
 		file, err := parser.ParseFile(
@@ -278,6 +294,17 @@ func rejectIdentifierCollisions(results []result) {
 func buildReport(results []result) report {
 	output := report{CardCount: len(results)}
 	for _, result := range results {
+		if result.exclusion != "" {
+			output.Excluded = append(output.Excluded, excluded{
+				ID:       result.card.ID,
+				OracleID: result.card.OracleID,
+				Name:     result.card.Name,
+				Layout:   result.card.Layout,
+				Reason:   result.exclusion,
+			})
+			continue
+		}
+		output.EligibleCount++
 		if result.err == nil && len(result.diagnostics) == 0 {
 			output.GeneratedCount++
 			continue
@@ -299,6 +326,7 @@ func buildReport(results []result) report {
 		})
 	}
 	output.UnsupportedCount = len(output.Unsupported)
+	output.ExcludedCount = len(output.Excluded)
 	return output
 }
 
@@ -329,7 +357,7 @@ func diagnosticSeverityName(severity oracle.Severity) string {
 func writeSupported(root string, results []result) error {
 	affected := make(map[string]bool)
 	for _, result := range results {
-		if result.err != nil || len(result.diagnostics) > 0 {
+		if result.exclusion != "" || result.err != nil || len(result.diagnostics) > 0 {
 			continue
 		}
 		path := filepath.Join(root, result.relative)
@@ -462,10 +490,12 @@ func writeReport(path, reportFormat string, output report) error {
 	case "text":
 		if _, err := fmt.Fprintf(
 			writer,
-			"cards: %d\ngenerated: %d\nunsupported: %d\n",
+			"cards: %d\neligible: %d\ngenerated: %d\nunsupported: %d\nexcluded: %d\n",
 			output.CardCount,
+			output.EligibleCount,
 			output.GeneratedCount,
 			output.UnsupportedCount,
+			output.ExcludedCount,
 		); err != nil {
 			return fmt.Errorf("writing text report summary: %w", err)
 		}
@@ -480,6 +510,11 @@ func writeReport(path, reportFormat string, output report) error {
 				); err != nil {
 					return fmt.Errorf("writing text report: %w", err)
 				}
+			}
+		}
+		for _, card := range output.Excluded {
+			if _, err := fmt.Fprintf(writer, "%s\texcluded\t%s\n", card.Name, card.Reason); err != nil {
+				return fmt.Errorf("writing text report exclusion: %w", err)
 			}
 		}
 	default:

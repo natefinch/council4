@@ -1,8 +1,9 @@
 # compilecards
 
-`compilecards` stream-decodes a Scryfall Oracle Cards bulk-data array, compiles
-cards in parallel, and writes deterministic Go definitions for only the cards
-whose complete rules text is supported by the executable backend.
+`compilecards` stream-decodes a Scryfall Oracle Cards bulk-data array, applies
+the repository corpus-eligibility policy, compiles eligible cards in parallel,
+and writes deterministic Go definitions for only the cards whose complete rules
+text is supported by the executable backend.
 
 The strict backend supports the mechanic families listed in the package
 [`README`](../../README.md), including ordered spell effects, supported keyword
@@ -12,6 +13,12 @@ quantities, unsupported conditions or qualifiers, restricted mana, and divided
 effects is rejected. The backend never emits TODOs or partial ability
 implementations. Unsupported cards, layouts, source-generation failures,
 non-ASCII package names, and filename collisions are written to the report.
+
+The eligible corpus contains cards that are legal, restricted, or banned in
+Standard, Pioneer, Modern, Legacy, Pauper, Vintage, or Commander, plus playable
+paper token definitions. The report explicitly excludes Alchemy, digital-only
+identities, memorabilia, cards with no qualifying paper legality, minigames,
+art-series records, emblems, planes, schemes, and Vanguard cards.
 
 Writes are serialized after compilation. Existing files at matching generated
 paths are overwritten. Each affected letter package's `cards.go` registry is
@@ -50,6 +57,12 @@ Flags:
   `runtime.NumCPU()`.
 
 ## Report diagnostics
+
+The report keeps `card_count` as the total input count and separates it into
+`eligible_count` and `excluded_count`. Eligible cards are then partitioned into
+`generated_count` and `unsupported_count`. Each excluded record includes a
+stable reason. This keeps non-playable objects out of compiler-support metrics
+without silently dropping them.
 
 Each unsupported card has one or more source-spanned diagnostics. A card can
 have several diagnostics when it has several unsupported abilities or when the

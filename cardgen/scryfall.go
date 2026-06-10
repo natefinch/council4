@@ -8,6 +8,10 @@ type ScryfallCard struct {
 	OracleID      string             `json:"oracle_id"`
 	Name          string             `json:"name"`
 	Layout        string             `json:"layout"`
+	SetType       string             `json:"set_type"`
+	Games         []string           `json:"games"`
+	Digital       bool               `json:"digital"`
+	Legalities    map[string]string  `json:"legalities"`
 	ManaCost      string             `json:"mana_cost"`
 	TypeLine      string             `json:"type_line"`
 	OracleText    string             `json:"oracle_text"`

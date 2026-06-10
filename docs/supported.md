@@ -1,13 +1,8 @@
 # Supported Cards
 
-Cards supported: 2,277
+Cards supported: 2,216
 
 - +2 Mace
-- A-Eyes of the Beholder
-- A-Jackhammer
-- A-Midnight Assassin
-- A.I.M. Bot
-- A.I.M. Labs
 - Aardvark Sloth
 - Abbey Gargoyles
 - Abbey Griffin
@@ -25,7 +20,6 @@ Cards supported: 2,277
 - Affa Guard Hound
 - Affa Protector
 - Ageless Guardian
-- Agent of Atlas
 - Air Elemental
 - Ajani's Sunstriker
 - Akoum Refuge
@@ -62,7 +56,6 @@ Cards supported: 2,277
 - Ancient Carp
 - Ancient Crab
 - Ancient Den
-- Angel // Demon
 - Angel of Despair
 - Angel of Light
 - Angel of Mercy
@@ -109,7 +102,6 @@ Cards supported: 2,277
 - Arrogant Vampire
 - Artifact Zombie
 - Ascended Lawmage
-- Asgardian Citadel
 - Ashaya, the Awoken World
 - Ashcoat Bear
 - Ashen Monstrosity
@@ -137,7 +129,6 @@ Cards supported: 2,277
 - Aven Smokeweaver
 - Aven Squire
 - Aven of Enduring Hope
-- Avengers Hangar
 - Axebane Beast
 - Axebane Stag
 - Axegrinder Giant
@@ -167,7 +158,6 @@ Cards supported: 2,277
 - Barony Vampire
 - Barren Moor
 - Barricade Breaker
-- Barry's Land
 - Bartizan Bats
 - Bassara Tower Archer
 - Bastion Enforcer
@@ -180,7 +170,6 @@ Cards supported: 2,277
 - Bay Falcon
 - Bayou
 - Bear Cub
-- Beast in Show
 - Bee Sting
 - Beeble
 - Benalish Heralds
@@ -194,11 +183,9 @@ Cards supported: 2,277
 - Bird Maiden
 - Bird Soldier
 - Birds of Paradise
-- Birnin Zana Plaza
 - Bishop's Soldier
 - Bitterbow Sharpshooters
 - Black Knight
-- Black Widow, Natasha Romanoff
 - Blackcleave Goblin
 - Blade of the Sixth Pride
 - Blanchwood Treefolk
@@ -268,7 +255,6 @@ Cards supported: 2,277
 - Bull Cerodon
 - Bull Rush
 - Bulwark Giant
-- Bumbling Pangolin
 - Burst of Energy
 - Butcher Ghoul
 - Butterfly
@@ -348,11 +334,9 @@ Cards supported: 2,277
 - Colorful Feiyi Sparrow
 - Colossadactyl
 - Colossal Dreadmaw
-- Colossal Dreadmaw and Storm Crow
 - Colossapede
 - Colossodon Yearling
 - Concentrate
-- Concentrated Fire
 - Conclave Equenaut
 - Concordia Pegasus
 - Conifer Strider
@@ -396,7 +380,6 @@ Cards supported: 2,277
 - Crystal Ball
 - Cultist's Staff
 - Curio Vendor
-- Curious Killbot
 - Cursebreak
 - Cursed Minotaur
 - Custodian of the Trove
@@ -411,7 +394,6 @@ Cards supported: 2,277
 - Dalek
 - Dancing Scimitar
 - Daring Thunder-Thief
-- Dark Deed
 - Dark Nourishment
 - Dark Remedy
 - Darkbore Pathway // Slitherbore Pathway
@@ -454,7 +436,6 @@ Cards supported: 2,277
 - Defiant Khenra
 - Deft Duelist
 - Dega Disciple
-- Delighted Killbot
 - Demon Berserker
 - Demon's Grasp
 - Demystify
@@ -468,7 +449,6 @@ Cards supported: 2,277
 - Desert of the Mindful
 - Desert of the True
 - Deserted Temple
-- Despondent Killbot
 - Detective
 - Devilthorn Fox
 - Devoted Hero
@@ -532,7 +512,6 @@ Cards supported: 2,277
 - Dwarf Berserker
 - Dwarf Token
 - Dwarven Trader
-- Eager Beaver
 - Eager Cadet
 - Eagle of the Watch
 - Earth Elemental
@@ -573,7 +552,6 @@ Cards supported: 2,277
 - Enlisted Wurm
 - Enormous Baloth
 - Enraged Giant
-- Enraged Killbot
 - Erase
 - Esper Charm
 - Esper Cormorants
@@ -608,12 +586,10 @@ Cards supported: 2,277
 - Fell
 - Femeref Scouts
 - Feral Abomination
-- Feral Ferocity
 - Feral Invocation
 - Feral Krushok
 - Feral Maaka
 - Feral Prowler
-- Feral Roar
 - Feral Shadow
 - Ferocious Charge
 - Ferocious Zheng
@@ -638,7 +614,6 @@ Cards supported: 2,277
 - Fire Nation's Conquest
 - Fire Snake
 - First Mate Ragavan
-- Fisk Tower
 - Fists of the Anvil
 - Flame Lash
 - Flame Slash
@@ -738,7 +713,6 @@ Cards supported: 2,277
 - Glacial Floodplain
 - Glacial Wall
 - Gladecover Scout
-- Glamorous Grapplers
 - Glass Golem
 - Glimmer
 - Glistener Elf
@@ -783,7 +757,6 @@ Cards supported: 2,277
 - Golden-Tail Disciple
 - Goldmeadow Harrier
 - Goldmire Bridge
-- Golgari Death Swarm
 - Golgari Guildgate
 - Golgari Longlegs
 - Goliath Beetle
@@ -841,7 +814,6 @@ Cards supported: 2,277
 - Halo Hopper
 - Hamster
 - Hand of Silumgar
-- Happy Hogan, Dauntless Driver
 - Hardened-Scale Armor
 - Harmonize
 - Harpy
@@ -852,14 +824,12 @@ Cards supported: 2,277
 - Havenwood Wurm
 - Havoc Devils
 - Hawkeater Moth
-- Hawkeye, Clint Barton
 - Hazerider Drake
 - Headless Horseman
 - Headwater Sentries
 - Healer of the Glade
 - Healer's Flock
 - Healer's Hawk
-- Hell's Kitchen
 - Hellion
 - Helpful Hunter
 - Hengegate Pathway // Mistgate Pathway
@@ -882,7 +852,6 @@ Cards supported: 2,277
 - Hippo-Cows
 - Hired Blade
 - Hired Poisoner
-- Hit-Monkey
 - Hitchclaw Recluse
 - Hobgoblin Dragoon
 - Hollowhenge Beast
@@ -899,12 +868,10 @@ Cards supported: 2,277
 - Hornet Sting
 - Horse
 - Hostile Minotaur
-- Hour of Defeat
 - Hover Barrier
 - Hovermyr
 - Howling Fury
 - Huatli's Snubhorn
-- Hulk, Bruce Banner
 - Hulking Bugbear
 - Hulking Cyclops
 - Hulking Devil
@@ -1056,7 +1023,6 @@ Cards supported: 2,277
 - Kraken Hatchling
 - Kraul Raider
 - Kraul Stinger
-- Kree Commandos
 - Krovikan Scoundrel
 - Kyoshi Warrior Guard
 - Kyren Glider
@@ -1097,7 +1063,6 @@ Cards supported: 2,277
 - Lightning Strike
 - Lightning Visionary
 - Lightshield Parry
-- Literal Delver of Secrets
 - Living Tempest
 - Lizard Warrior
 - Llanowar Dead
@@ -1109,7 +1074,6 @@ Cards supported: 2,277
 - Lonely Sandbar
 - Looming Altisaur
 - Lorehold Campus
-- Los Diablos Missile Base
 - Lose Hope
 - Lost Leonin
 - Lost in a Labyrinth
@@ -1144,13 +1108,11 @@ Cards supported: 2,277
 - Mana Geode
 - Manakin
 - Manalith
-- Mandroid Squadron
 - Maned Serval
 - Manic Vandal
 - Mantis Rider
 - Maraleaf Pixie
 - Marauder's Axe
-- Maraxus
 - Marble Chalice
 - Marble Diamond
 - Marit Lage
@@ -1164,7 +1126,6 @@ Cards supported: 2,277
 - Memnite
 - Mending Touch
 - Meng Huo's Horde
-- Mer Man
 - Merchant of Secrets
 - Merfolk Mesmerist
 - Merfolk Secretkeeper // Venture Deeper
@@ -1278,7 +1239,6 @@ Cards supported: 2,277
 - Nightwind Glider
 - Nimble Birdsticker
 - Nimble Innovator
-- Nimble Pilferer
 - Nimble-Blade Khenra
 - Nimbus of the Isles
 - Ninja Turtle Spirit
@@ -1407,7 +1367,6 @@ Cards supported: 2,277
 - Pond Prophet
 - Pounce
 - Pouncing Cheetah
-- Power Boost
 - Pradesh Gypsies
 - Prairie Stream
 - Prakhata Club Security
@@ -1431,7 +1390,6 @@ Cards supported: 2,277
 - Purple-Crystal Crab
 - Putrid Goblin
 - Pygmy Razorback
-- Pym Technologies
 - Pyromantic Pilgrim
 - Python
 - Qilin's Blessing
@@ -1440,7 +1398,6 @@ Cards supported: 2,277
 - Quandrix Campus
 - Queen's Bay Soldier
 - Quick Study
-- Quicksilver, Pietro Maximoff
 - Quiet Purity
 - Quilled Slagwurm
 - Rabanastre, Royal City
@@ -1498,7 +1455,6 @@ Cards supported: 2,277
 - Renegade Troops
 - Repentant Blacksmith
 - Replicated Ring
-- Repulsor Rays
 - Rescind
 - Resistance Skywarden
 - Returned Centaur
@@ -1526,7 +1482,6 @@ Cards supported: 2,277
 - Rishadan Port
 - Riven Turnbull
 - River Kaijin
-- River's Favor
 - Riverglide Pathway // Lavaglide Pathway
 - Riverwheel Aerialists
 - Robot Warrior
@@ -1596,7 +1551,6 @@ Cards supported: 2,277
 - Scalebane's Elite
 - Scaled Behemoth
 - Scaled Wurm
-- Scarlet Witch, Wanda Maximoff
 - Scarwood Goblins
 - Scarwood Treefolk
 - Scathe Zombies
@@ -1649,7 +1603,6 @@ Cards supported: 2,277
 - Seraph of the Suns
 - Serf
 - Serpent Warrior
-- Serra
 - Serra Angel
 - Serra Sphinx
 - Serra Zealot
@@ -1680,7 +1633,6 @@ Cards supported: 2,277
 - Show of Valor
 - Shriek Raptor
 - Shrine
-- Shrine Keeper
 - Shrink
 - Shu Elite Infantry
 - Shu Foot Soldiers
@@ -1689,7 +1641,6 @@ Cards supported: 2,277
 - Shuko
 - Sicken
 - Sickle Ripper
-- Sidar Kondo
 - Siege Mastodon
 - Siege Wurm
 - Siegecraft
@@ -1810,7 +1761,6 @@ Cards supported: 2,277
 - Stand Firm
 - Standing Troops
 - Stangg Twin
-- Stark Industries
 - Starlight Invoker
 - Starlit Angel
 - Start from Scratch
@@ -1846,7 +1796,6 @@ Cards supported: 2,277
 - Striped Riverwinder
 - Study
 - Submerged Boneyard
-- Subterranean Cavern
 - Suburban Sanctuary
 - Sulfurous Mire
 - Sultai Scavenger
@@ -1899,7 +1848,6 @@ Cards supported: 2,277
 - Taoist Hermit
 - Tar Snare
 - Tarfire
-- Target Minotaur
 - Tarpan
 - Tasseled Dromedary
 - Tattermunge Maniac
@@ -1922,14 +1870,11 @@ Cards supported: 2,277
 - Thassa's Bounty
 - Thaumaturge's Familiar
 - The Atropal
-- The Fabulous Frog-Man
 - The Hollow Sentinel
 - The Lady of the Mountain
 - The Terror of Serpent's Pass
-- The Whizzer, Classic Speedster
 - Thermal Glider
 - Third Path Savant
-- Thor Odinson
 - Thornglint Bridge
 - Thornhide Wolves
 - Thornweald Archer
@@ -1993,7 +1938,6 @@ Cards supported: 2,277
 - Tree of Tales
 - Treefolk Shaman
 - Treetop Sentinel
-- Treetop Warden
 - Treno, Dark City
 - Tresserhorn Sinks
 - Trip Noose
@@ -2046,13 +1990,11 @@ Cards supported: 2,277
 - Urborg Elf
 - Urborg Volcano
 - Ursapine
-- Urza
 - Urzan Automaton
 - Utopia Tree
 - Utvara Scalper
 - Valeron Outlander
 - Valiant Guard
-- Valkyrior Skyrider
 - Valley Dasher
 - Vampire Champion
 - Vampire Demon
@@ -2090,7 +2032,6 @@ Cards supported: 2,277
 - Viashino Runner
 - Viashino Spearhunter
 - Viashino Warrior
-- Vibranium Energy Daggers
 - Vigilant Baloth
 - Vindicate
 - Vine Trellis
@@ -2159,7 +2100,6 @@ Cards supported: 2,277
 - Wardscale Crocodile
 - Warlord's Axe
 - Warpath Ghoul
-- Warriors of Wakanda
 - Warship Scout
 - Wary Okapi
 - Wasp
@@ -2259,7 +2199,6 @@ Cards supported: 2,277
 - Zealous Guardian
 - Zephid
 - Zephyr Falcon
-- Zephyr Gull
 - Zephyr Sprite
 - Zephyrim
 - Zhao, the Seething Flame

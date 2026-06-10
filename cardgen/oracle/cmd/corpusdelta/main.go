@@ -38,11 +38,15 @@ type Engine struct {
 // Manifest is the deterministic review packet emitted by Engine.
 type Manifest struct {
 	CardCount              int                    `json:"card_count"`
+	EligibleCount          int                    `json:"eligible_count"`
+	ExcludedCount          int                    `json:"excluded_count"`
 	BaselineGeneratedCount int                    `json:"baseline_generated_count"`
 	CurrentGeneratedCount  int                    `json:"current_generated_count"`
 	GeneratedDelta         int                    `json:"generated_delta"`
 	NewlySupported         []InspectionCard       `json:"newly_supported"`
 	NewlyUnsupported       []InspectionCard       `json:"newly_unsupported"`
+	NewlyExcluded          []InspectionCard       `json:"newly_excluded"`
+	NoLongerExcluded       []InspectionCard       `json:"no_longer_excluded"`
 	ChangedDiagnostics     []DiagnosticChangeCard `json:"changed_diagnostics"`
 	DiagnosticChanges      []DiagnosticChange     `json:"diagnostic_changes"`
 	GeneratedValidated     bool                   `json:"generated_validated"`
@@ -50,15 +54,16 @@ type Manifest struct {
 
 // InspectionCard contains the corpus and source details needed to review a delta.
 type InspectionCard struct {
-	ID            string             `json:"id"`
-	OracleID      string             `json:"oracle_id,omitempty"`
-	Name          string             `json:"name"`
-	Layout        string             `json:"layout,omitempty"`
-	TypeLine      string             `json:"type_line,omitempty"`
-	OracleText    string             `json:"oracle_text,omitempty"`
-	Faces         []InspectionFace   `json:"faces,omitempty"`
-	GeneratedPath string             `json:"generated_path,omitempty"`
-	Diagnostics   []ReportDiagnostic `json:"diagnostics,omitempty"`
+	ID              string             `json:"id"`
+	OracleID        string             `json:"oracle_id,omitempty"`
+	Name            string             `json:"name"`
+	Layout          string             `json:"layout,omitempty"`
+	TypeLine        string             `json:"type_line,omitempty"`
+	OracleText      string             `json:"oracle_text,omitempty"`
+	Faces           []InspectionFace   `json:"faces,omitempty"`
+	GeneratedPath   string             `json:"generated_path,omitempty"`
+	ExclusionReason string             `json:"exclusion_reason,omitempty"`
+	Diagnostics     []ReportDiagnostic `json:"diagnostics,omitempty"`
 }
 
 // InspectionFace preserves review-relevant fields from a multi-face card.
@@ -86,9 +91,18 @@ type DiagnosticChangeCard struct {
 
 type compileReport struct {
 	CardCount        int                 `json:"card_count"`
+	EligibleCount    int                 `json:"eligible_count"`
 	GeneratedCount   int                 `json:"generated_count"`
 	UnsupportedCount int                 `json:"unsupported_count"`
+	ExcludedCount    int                 `json:"excluded_count"`
 	Unsupported      []unsupportedReport `json:"unsupported"`
+	Excluded         []excludedReport    `json:"excluded"`
+}
+
+type excludedReport struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
 }
 
 type unsupportedReport struct {
@@ -205,7 +219,7 @@ func (e *Engine) Run() error {
 		os.Stdout,
 		"Cards supported: %s / %s (%+d)\nNewly supported: %d\nNewly unsupported: %d\nManifest: %s\n",
 		formatCount(current.GeneratedCount),
-		formatCount(current.CardCount),
+		formatCount(reportEligibleCount(current)),
 		manifest.GeneratedDelta,
 		len(manifest.NewlySupported),
 		len(manifest.NewlyUnsupported),
@@ -286,7 +300,9 @@ func validateInputs(cards map[string]cardgen.ScryfallCard, baseline, current com
 	}
 	for name, report := range map[string]compileReport{"baseline": baseline, "current": current} {
 		if report.UnsupportedCount != len(report.Unsupported) ||
-			report.GeneratedCount+report.UnsupportedCount != report.CardCount {
+			report.ExcludedCount != len(report.Excluded) ||
+			report.GeneratedCount+report.UnsupportedCount != reportEligibleCount(report) ||
+			reportEligibleCount(report)+report.ExcludedCount != report.CardCount {
 			return fmt.Errorf("%s report counts are inconsistent", name)
 		}
 		seen := make(map[string]bool)
@@ -299,8 +315,24 @@ func validateInputs(cards map[string]cardgen.ScryfallCard, baseline, current com
 			}
 			seen[card.ID] = true
 		}
+		for _, card := range report.Excluded {
+			if _, ok := cards[card.ID]; !ok {
+				return fmt.Errorf("%s report contains unknown excluded stable ID %q", name, card.ID)
+			}
+			if seen[card.ID] {
+				return fmt.Errorf("%s report repeats stable ID %q", name, card.ID)
+			}
+			seen[card.ID] = true
+		}
 	}
 	return nil
+}
+
+func reportEligibleCount(report compileReport) int {
+	if report.EligibleCount != 0 || report.ExcludedCount != 0 {
+		return report.EligibleCount
+	}
+	return report.CardCount
 }
 
 func buildManifest(
@@ -310,8 +342,12 @@ func buildManifest(
 ) (Manifest, []cardgen.ScryfallCard, error) {
 	baselineUnsupported := unsupportedByID(baseline.Unsupported)
 	currentUnsupported := unsupportedByID(current.Unsupported)
+	baselineExcluded := excludedByID(baseline.Excluded)
+	currentExcluded := excludedByID(current.Excluded)
 	manifest := Manifest{
 		CardCount:              current.CardCount,
+		EligibleCount:          reportEligibleCount(current),
+		ExcludedCount:          current.ExcludedCount,
 		BaselineGeneratedCount: baseline.GeneratedCount,
 		CurrentGeneratedCount:  current.GeneratedCount,
 		GeneratedDelta:         current.GeneratedCount - baseline.GeneratedCount,
@@ -319,11 +355,26 @@ func buildManifest(
 	}
 	supported := make([]cardgen.ScryfallCard, 0, current.GeneratedCount)
 	for id, card := range cards {
+		currentExclusion, excluded := currentExcluded[id]
+		baselineExclusion, wasExcluded := baselineExcluded[id]
+		if excluded {
+			if !wasExcluded {
+				inspection := inspectCard(card)
+				inspection.ExclusionReason = currentExclusion.Reason
+				manifest.NewlyExcluded = append(manifest.NewlyExcluded, inspection)
+			}
+			continue
+		}
+		if wasExcluded {
+			inspection := inspectCard(card)
+			inspection.ExclusionReason = baselineExclusion.Reason
+			manifest.NoLongerExcluded = append(manifest.NoLongerExcluded, inspection)
+		}
 		currentFailure, unsupported := currentUnsupported[id]
 		if !unsupported {
 			supported = append(supported, card)
 		}
-		if _, wasUnsupported := baselineUnsupported[id]; wasUnsupported && !unsupported {
+		if _, wasUnsupported := baselineUnsupported[id]; (wasUnsupported || wasExcluded) && !unsupported {
 			inspection := inspectCard(card)
 			inspection.GeneratedPath = filepath.Join(
 				generatedRoot,
@@ -335,7 +386,7 @@ func buildManifest(
 			}
 			manifest.NewlySupported = append(manifest.NewlySupported, inspection)
 		}
-		if _, wasUnsupported := baselineUnsupported[id]; !wasUnsupported && unsupported {
+		if _, wasUnsupported := baselineUnsupported[id]; !wasUnsupported && !wasExcluded && unsupported {
 			inspection := inspectCard(card)
 			inspection.Diagnostics = currentFailure.Diagnostics
 			manifest.NewlyUnsupported = append(manifest.NewlyUnsupported, inspection)
@@ -353,6 +404,8 @@ func buildManifest(
 	sortCards(supported)
 	slices.SortFunc(manifest.NewlySupported, compareInspectionCards)
 	slices.SortFunc(manifest.NewlyUnsupported, compareInspectionCards)
+	slices.SortFunc(manifest.NewlyExcluded, compareInspectionCards)
+	slices.SortFunc(manifest.NoLongerExcluded, compareInspectionCards)
 	slices.SortFunc(manifest.ChangedDiagnostics, func(a, b DiagnosticChangeCard) int {
 		if byName := strings.Compare(a.Name, b.Name); byName != 0 {
 			return byName
@@ -370,6 +423,14 @@ func buildManifest(
 
 func unsupportedByID(cards []unsupportedReport) map[string]unsupportedReport {
 	output := make(map[string]unsupportedReport, len(cards))
+	for _, card := range cards {
+		output[card.ID] = card
+	}
+	return output
+}
+
+func excludedByID(cards []excludedReport) map[string]excludedReport {
+	output := make(map[string]excludedReport, len(cards))
 	for _, card := range cards {
 		output[card.ID] = card
 	}
