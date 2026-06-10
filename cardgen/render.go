@@ -3290,6 +3290,10 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
 		return "game.EventPermanentDied", nil
+	case game.EventCardDiscarded:
+		return "game.EventCardDiscarded", nil
+	case game.EventCycled:
+		return "game.EventCycled", nil
 	case game.EventPermanentMutated:
 		return "game.EventPermanentMutated", nil
 	case game.EventBeginningOfStep:
