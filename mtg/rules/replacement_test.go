@@ -152,6 +152,50 @@ func TestHexproofPreventsOpponentTargetsButAllowsControllerTargets(t *testing.T)
 	}
 }
 
+func TestShroudPreventsAllTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	shroud := addShroudPermanent(g, game.Player2)
+	opponentSpell := addCardToHand(g, game.Player1, targetCreatureInstant())
+	controllerSpell := addCardToHand(g, game.Player2, targetCreatureInstant())
+
+	g.Turn.PriorityPlayer = game.Player1
+	if engine.canCastSpell(g, game.Player1, opponentSpell, []game.Target{game.PermanentTarget(shroud.ObjectID)}, 0, nil) {
+		t.Fatal("opponent spell could target shroud permanent")
+	}
+
+	g.Turn.PriorityPlayer = game.Player2
+	if engine.canCastSpell(g, game.Player2, controllerSpell, []game.Target{game.PermanentTarget(shroud.ObjectID)}, 0, nil) {
+		t.Fatal("controller spell could target own shroud permanent")
+	}
+}
+
+func TestShroudGrantedByContinuousEffectPreventsTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanent(g, game.Player2)
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Shroud Granter",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.ObjectControlledGroup(
+					game.SourcePermanentReference(),
+					game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				),
+				AddKeywords: []game.Keyword{game.Shroud},
+			}},
+		}},
+	}})
+	spellID := addCardToHand(g, game.Player2, targetCreatureInstant())
+	g.Turn.PriorityPlayer = game.Player2
+
+	if engine.canCastSpell(g, game.Player2, spellID, []game.Target{game.PermanentTarget(target.ObjectID)}, 0, nil) {
+		t.Fatal("controller spell could target permanent granted shroud")
+	}
+}
+
 func TestLegalActionsOmitOpponentHexproofTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -642,6 +686,16 @@ func addHexproofPermanent(g *game.Game, controller game.PlayerID) *game.Permanen
 		Power:           opt.Val(pt),
 		Toughness:       opt.Val(pt),
 		StaticAbilities: []game.StaticAbility{game.HexproofStaticBody}},
+	})
+}
+
+func addShroudPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	pt := game.PT{Value: 2}
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Shroud Creature",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ShroudStaticBody}},
 	})
 }
 

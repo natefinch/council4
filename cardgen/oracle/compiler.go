@@ -514,52 +514,52 @@ func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span) {
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
 		equalWord(tokens[1], "creature") &&
-		equalWord(tokens[2], "gets"):
+		(equalWord(tokens[2], "gets") || equalWord(tokens[2], "has")):
 		return StaticSubjectAttachedObject, spanOf(tokens[:2])
 	case len(tokens) >= 5 &&
 		equalWord(tokens[0], "other") &&
 		equalWord(tokens[1], "creatures") &&
 		equalWord(tokens[2], "you") &&
 		equalWord(tokens[3], "control") &&
-		equalWord(tokens[4], "get"):
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return StaticSubjectOtherControlledCreatures, spanOf(tokens[:4])
 	case len(tokens) >= 4 &&
 		equalWord(tokens[0], "creatures") &&
 		equalWord(tokens[1], "you") &&
 		equalWord(tokens[2], "control") &&
-		equalWord(tokens[3], "get"):
+		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
 		return StaticSubjectControlledCreatures, spanOf(tokens[:3])
 	case len(tokens) >= 6 &&
 		equalWord(tokens[0], "creatures") &&
 		equalWord(tokens[1], "your") &&
 		equalWord(tokens[2], "opponents") &&
 		equalWord(tokens[3], "control") &&
-		equalWord(tokens[4], "get"):
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return StaticSubjectOpponentControlledCreatures, spanOf(tokens[:4])
 	case len(tokens) >= 5 &&
 		equalWord(tokens[0], "each") &&
 		equalWord(tokens[1], "wall") &&
 		equalWord(tokens[2], "you") &&
 		equalWord(tokens[3], "control") &&
-		equalWord(tokens[4], "gets"):
+		(equalWord(tokens[4], "gets") || equalWord(tokens[4], "has")):
 		return StaticSubjectControlledWalls, spanOf(tokens[:4])
 	case len(tokens) >= 4 &&
 		equalWord(tokens[0], "walls") &&
 		equalWord(tokens[1], "you") &&
 		equalWord(tokens[2], "control") &&
-		equalWord(tokens[3], "get"):
+		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
 		return StaticSubjectControlledWalls, spanOf(tokens[:3])
 	case len(tokens) >= 4 &&
 		equalWord(tokens[0], "artifacts") &&
 		equalWord(tokens[1], "you") &&
 		equalWord(tokens[2], "control") &&
-		equalWord(tokens[3], "get"):
+		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
 		return StaticSubjectControlledArtifacts, spanOf(tokens[:3])
 	case len(tokens) >= 4 &&
 		equalWord(tokens[0], "tokens") &&
 		equalWord(tokens[1], "you") &&
 		equalWord(tokens[2], "control") &&
-		equalWord(tokens[3], "get"):
+		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
 		return StaticSubjectControlledTokens, spanOf(tokens[:3])
 	default:
 		return StaticSubjectNone, Span{}
@@ -627,7 +627,21 @@ func effectKindAt(tokens []Token, index int) EffectKind {
 	if kind == EffectCounter && !counterIsVerb(tokens, index) {
 		return EffectUnknown
 	}
+	if kind == EffectGrantKeyword && keywordGrantContinuesPTBuff(tokens, index) {
+		return EffectUnknown
+	}
 	return kind
+}
+
+func keywordGrantContinuesPTBuff(tokens []Token, index int) bool {
+	for i := range index {
+		if !equalWord(tokens[i], "get") && !equalWord(tokens[i], "gets") {
+			continue
+		}
+		power, toughness := compilePTChange(tokens[i+1 : index])
+		return power.Known && toughness.Known
+	}
+	return false
 }
 
 func counterIsVerb(tokens []Token, index int) bool {
@@ -715,6 +729,8 @@ func effectKind(token Token) EffectKind {
 		return EffectFight
 	case "gain", "gains":
 		return EffectGain
+	case "has", "have":
+		return EffectGrantKeyword
 	case "investigate", "investigates":
 		return EffectInvestigate
 	case "lose", "loses":

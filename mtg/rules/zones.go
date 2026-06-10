@@ -31,6 +31,7 @@ func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.C
 type permanentCreationOptions struct {
 	ForceTapped bool
 	KickerPaid  bool
+	WasCast     bool
 }
 
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -63,15 +64,16 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		emitCounterAddedEvent(g, permanent, counter.Lore, 0, lore)
 	}
 	event := game.Event{
-		SourceID:    card.ID,
-		Controller:  controller,
-		Player:      card.Owner,
-		CardID:      card.ID,
-		Face:        face,
-		KickerPaid:  options.KickerPaid,
-		PermanentID: objectID,
-		FromZone:    fromZone,
-		ToZone:      zone.Battlefield,
+		SourceID:     card.ID,
+		Controller:   controller,
+		Player:       card.Owner,
+		CardID:       card.ID,
+		Face:         face,
+		KickerPaid:   options.KickerPaid,
+		EnterWasCast: options.WasCast,
+		PermanentID:  objectID,
+		FromZone:     fromZone,
+		ToZone:       zone.Battlefield,
 	}
 	emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
@@ -95,7 +97,7 @@ func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, cont
 	}
 }
 
-func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, kind game.FaceDownKind) (*game.Permanent, bool) {
+func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, kind game.FaceDownKind, wasCast bool) (*game.Permanent, bool) {
 	if _, ok := cardFaceDef(card, face); !ok || kind == game.FaceDownNone {
 		return nil, false
 	}
@@ -113,15 +115,16 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.Event{
-		SourceID:    card.ID,
-		Controller:  controller,
-		Player:      card.Owner,
-		CardID:      card.ID,
-		Face:        face,
-		PermanentID: objectID,
-		CardTypes:   []types.Card{types.Creature},
-		FromZone:    fromZone,
-		ToZone:      zone.Battlefield,
+		SourceID:     card.ID,
+		Controller:   controller,
+		Player:       card.Owner,
+		CardID:       card.ID,
+		Face:         face,
+		EnterWasCast: wasCast,
+		PermanentID:  objectID,
+		CardTypes:    []types.Card{types.Creature},
+		FromZone:     fromZone,
+		ToZone:       zone.Battlefield,
 	}
 	emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield

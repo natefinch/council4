@@ -691,6 +691,87 @@ func TestGenerateControlledCreaturesPTBuffWithKeyword(t *testing.T) {
 	}
 }
 
+func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		domain     game.GroupReferenceDomain
+		excluded   bool
+		keywords   []game.Keyword
+	}{
+		"controlled creatures": {
+			oracleText: "Creatures you control have haste and vigilance.",
+			domain:     game.GroupDomainObjectControlled,
+			keywords:   []game.Keyword{game.Haste, game.Vigilance},
+		},
+		"other controlled creatures": {
+			oracleText: "Other creatures you control have flying.",
+			domain:     game.GroupDomainObjectControlled,
+			excluded:   true,
+			keywords:   []game.Keyword{game.Flying},
+		},
+		"controlled artifacts": {
+			oracleText: "Artifacts you control have indestructible.",
+			domain:     game.GroupDomainObjectControlled,
+			keywords:   []game.Keyword{game.Indestructible},
+		},
+		"equipped creature": {
+			oracleText: "Equipped creature has shroud and wither.",
+			domain:     game.GroupDomainAttachedObject,
+			keywords:   []game.Keyword{game.Shroud, game.Wither},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Grant",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+			}
+			effects := face.StaticAbilities[0].Body.ContinuousEffects
+			if len(effects) != 1 {
+				t.Fatalf("continuous effects = %#v, want 1", effects)
+			}
+			effect := effects[0]
+			if effect.Layer != game.LayerAbility || effect.Group.Domain() != test.domain {
+				t.Fatalf("continuous effect = %#v", effect)
+			}
+			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
+				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
+			}
+			if !slices.Equal(effect.AddKeywords, test.keywords) {
+				t.Fatalf("keywords = %v, want %v", effect.AddKeywords, test.keywords)
+			}
+		})
+	}
+}
+
+func TestRejectMalformedStandaloneStaticKeywordGrants(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Creatures you control have flying or haste.",
+		"Creatures you control have and flying.",
+		"Creatures you control have flying and.",
+		"Creatures you control have flying haste.",
+		"Creatures you control have infect.",
+	} {
+		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+			Name:       "Test Grant",
+			Layout:     "normal",
+			TypeLine:   "Enchantment",
+			OracleText: oracleText,
+		})
+		if len(diagnostics) == 0 {
+			t.Fatalf("%q lowered without diagnostics", oracleText)
+		}
+	}
+}
+
 func TestRejectStaticPTBuffWithUnsupportedKeywordText(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
@@ -698,8 +779,6 @@ func TestRejectStaticPTBuffWithUnsupportedKeywordText(t *testing.T) {
 		"Equipped creature gets +2/+2 and has and trample.\nEquip {3}",
 		"Equipped creature gets +2/+2 and has trample and.\nEquip {3}",
 		"Equipped creature gets +2/+2 and has flying lifelink.\nEquip {3}",
-		"Equipped creature gets +2/+2 and has shroud.\nEquip {3}",
-		"Equipped creature gets +2/+2 and has wither.\nEquip {3}",
 	} {
 		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Equipment",
@@ -1088,6 +1167,85 @@ func TestLowerKickedEnterTrigger(t *testing.T) {
 	}
 }
 
+func TestLowerWasCastEnterTriggers(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{"if it was cast", "if you cast it"} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Construct",
+				Layout:     "normal",
+				TypeLine:   "Artifact Creature — Construct",
+				OracleText: "When this creature enters, " + condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.InterveningIf != condition || !trigger.InterveningIfEventPermanentWasCast {
+				t.Fatalf("trigger = %+v, want was-cast intervening-if", trigger)
+			}
+		})
+	}
+}
+
+func TestLowerAttackedThisTurnEnterTriggerFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Warrior",
+		Layout:     "normal",
+		TypeLine:   "Creature — Warrior",
+		OracleText: "When this creature enters, if this creature attacked this turn, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("attacked-this-turn self-enter condition unexpectedly lowered")
+	}
+}
+
+func TestLowerControlsPermanentEnterTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Artificer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Artificer",
+		OracleText: "When this creature enters, if you control an artifact, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.InterveningIf != "if you control an artifact" ||
+		!trigger.InterveningCondition.Exists {
+		t.Fatalf("trigger = %+v, want controls-artifact intervening-if", trigger)
+	}
+	selection := trigger.InterveningCondition.Val.ControlsMatching
+	if !selection.Exists ||
+		!slices.Equal(selection.Val.Selection.RequiredTypes, []types.Card{types.Artifact}) {
+		t.Fatalf("condition = %+v, want controls an artifact", trigger.InterveningCondition.Val)
+	}
+}
+
+func TestLowerEnterTriggerRejectsUnsupportedInterveningWording(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Handler",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elf",
+		OracleText: "When this creature enters, if you control an Elf, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("unsupported subtype condition unexpectedly lowered")
+	}
+}
+
 func TestLowerSagaChapterAbilities(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -1178,6 +1336,35 @@ func TestLowerDiesTrigger(t *testing.T) {
 	}
 	if face.TriggeredAbilities[0].Trigger.Pattern.Event != game.EventPermanentDied {
 		t.Fatalf("event = %v, want EventPermanentDied", face.TriggeredAbilities[0].Trigger.Pattern.Event)
+	}
+}
+
+func TestLowerDiesTriggerRejectsEnterOnlyInterveningConditions(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"if it was kicked",
+		"if it was cast",
+		"if you cast it",
+		"if this creature attacked this turn",
+		"if you control an artifact",
+	} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "When this creature dies, " + condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("self-dies trigger unexpectedly lowered with %q", condition)
+			}
+		})
 	}
 }
 

@@ -88,7 +88,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		if !permanentOK {
 			sourceObjectID = 0
 		}
-		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, sourceObjectID, activatedBody, obj.Controller, obj.Targets) {
+		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, sourceObjectID, activatedBody, obj) {
 			return "countered by rules"
 		}
 		if len(obj.Targets) != 1 || obj.Targets[0].Kind != game.TargetPermanent {
@@ -101,7 +101,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		return "resolved"
 	}
 	if activatedOK {
-		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, activatedBody, obj.Controller, obj.Targets) {
+		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, activatedBody, obj) {
 			return "countered by rules"
 		}
 		if len(activatedBody.Content.Modes) > 0 {
@@ -113,7 +113,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	if !loyaltyOK {
 		return "missing source"
 	}
-	if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, loyaltyBody, obj.Controller, obj.Targets) {
+	if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, loyaltyBody, obj) {
 		return "countered by rules"
 	}
 	if len(loyaltyBody.Content.Modes) > 0 {
@@ -161,7 +161,7 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 	if !triggerInterveningIf(g, sourcePermanent, obj.Controller, &body.Trigger, event) {
 		return "intervening if false"
 	}
-	if !bodyHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, *body, obj.Controller, obj.Targets) {
+	if !bodyHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, *body, obj) {
 		return "countered by rules"
 	}
 	if body.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
@@ -299,7 +299,7 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 		return e.resolvePermanentSpellWithChoices(g, obj, card, spellDef, agents, log)
 	}
 	if spellDef.HasType(types.Instant) || spellDef.HasType(types.Sorcery) {
-		if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
+		if !spellHasAnyLegalTargets(g, spellDef, obj) {
 			return counteredSpellResolution(g, obj, card)
 		}
 		e.resolveSpellEffectsWithChoices(g, obj, card, agents, log)
@@ -321,14 +321,14 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 }
 
 func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackObject, card *game.CardInstance, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
-	if !spellHasAnyLegalTargets(g, spellDef, obj.Controller, obj.ChosenModes, obj.Targets) {
+	if !spellHasAnyLegalTargets(g, spellDef, obj) {
 		return counteredSpellResolution(g, obj, card)
 	}
 	if obj.Copy {
 		return "resolved"
 	}
 	if obj.FaceDown {
-		_, ok := createCardPermanentFaceDown(g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind)
+		_, ok := createCardPermanentFaceDown(g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, !obj.Copy)
 		if !ok {
 			return "invalid face-down"
 		}
@@ -342,7 +342,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		zone.Stack,
 		obj.Face,
 		nil,
-		permanentCreationOptions{KickerPaid: obj.KickerPaid},
+		permanentCreationOptions{KickerPaid: obj.KickerPaid, WasCast: !obj.Copy},
 		agents,
 		log,
 	)

@@ -210,6 +210,19 @@ func lowerExecutableAbility(
 			sourceSpans: staticPTBuffSourceSpans(ability, syntax),
 		}, nil
 	}
+	if keywordGrant, ok, diagnostic := lowerStaticKeywordGrant(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
+			consumed: semanticConsumption{
+				effects:  1,
+				keywords: len(ability.Keywords),
+			},
+			sourceSpans: staticKeywordGrantSourceSpans(ability, syntax),
+		}, nil
+	}
 	switch ability.Kind {
 	case oracle.AbilityStatic:
 		bodies, diagnostic := lowerKeywordAbility(ability, syntax)
@@ -1520,6 +1533,58 @@ func staticPTBuffSourceSpans(ability oracle.CompiledAbility, syntax oracle.Abili
 	return spans
 }
 
+func lowerStaticKeywordGrant(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if ability.Kind != oracle.AbilityStatic ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectGrantKeyword ||
+		ability.Effects[0].Duration != oracle.DurationNone ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.References) != 0 ||
+		ability.Effects[0].StaticSubject == oracle.StaticSubjectNone ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, false, nil
+	}
+	effect := ability.Effects[0]
+	keywords, keywordsOK := mixedStaticKeywords(ability.Keywords)
+	if !keywordsOK || len(keywords) == 0 || !matchesExactStaticKeywordGrantSyntax(syntax, effect, ability.Keywords) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only exact standalone grants of runtime-supported keywords",
+		)
+	}
+	group, ok := staticSubjectGroup(effect.StaticSubject)
+	if !ok {
+		return game.StaticAbility{}, false, nil
+	}
+	return game.StaticAbility{
+		Text: ability.Text,
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:       game.LayerAbility,
+			Group:       group,
+			AddKeywords: keywords,
+		}},
+	}, true, nil
+}
+
+func staticKeywordGrantSourceSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
+	spans := make([]oracle.Span, 0, 1+len(ability.Keywords)+len(syntax.Reminders))
+	spans = append(spans, ability.Effects[0].Span)
+	for _, keyword := range ability.Keywords {
+		spans = append(spans, keyword.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return spans
+}
+
 func mixedStaticKeywords(keywords []oracle.CompiledKeyword) ([]game.Keyword, bool) {
 	result := make([]game.Keyword, 0, len(keywords))
 	for _, keyword := range keywords {
@@ -1552,8 +1617,10 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Lifelink,
 		game.Menace,
 		game.Reach,
+		game.Shroud,
 		game.Trample,
-		game.Vigilance:
+		game.Vigilance,
+		game.Wither:
 		return true
 	default:
 		return false
@@ -1598,6 +1665,25 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 	default:
 		return game.GroupReference{}, false
 	}
+}
+
+func matchesExactStaticKeywordGrantSyntax(
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	subjectLength := 0
+	for subjectLength < len(tokens) && spanCovered(tokens[subjectLength].Span, []oracle.Span{effect.StaticSubjectSpan}) {
+		subjectLength++
+	}
+	if subjectLength == 0 ||
+		len(tokens) < subjectLength+3 ||
+		(!equalTokenWord(tokens[subjectLength], "has") && !equalTokenWord(tokens[subjectLength], "have")) ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return false
+	}
+	return matchesExactKeywordList(tokens[subjectLength+1:len(tokens)-1], keywords)
 }
 
 func matchesExactStaticPTBuffSyntax(
@@ -2021,18 +2107,28 @@ func lowerEnterTrigger(
 		summary = "unsupported dies trigger"
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
-	kickedCondition := ability.Trigger != nil &&
-		ability.Trigger.Condition != nil &&
-		ability.Trigger.Condition.Kind == oracle.ConditionIf &&
-		ability.Trigger.Condition.Intervening &&
-		ability.Trigger.Condition.Text == "if it was kicked"
+	intervening, supportedCondition := lowerEnterInterveningCondition(ability.Trigger)
+	hasInterveningCondition := ability.Trigger != nil && ability.Trigger.Condition != nil
+	if hasInterveningCondition && eventKind != game.EventPermanentEnteredBattlefield {
+		supportedCondition = false
+	}
+	resolvingEffects := ability.Effects
+	if hasInterveningCondition {
+		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
+		resolvingEffects = slices.DeleteFunc(
+			append([]oracle.CompiledEffect(nil), ability.Effects...),
+			func(effect oracle.CompiledEffect) bool {
+				return spanCovered(effect.VerbSpan, conditionSpan)
+			},
+		)
+	}
 	if ability.Trigger == nil ||
 		ability.Trigger.Kind != oracle.TriggerWhen ||
 		!supportedEvent ||
-		(ability.Trigger.Condition != nil && !kickedCondition) ||
-		len(ability.Effects) == 0 ||
-		(len(ability.Conditions) != 0 && !kickedCondition) ||
-		(kickedCondition && (len(ability.Conditions) != 1 ||
+		!supportedCondition ||
+		len(resolvingEffects) == 0 ||
+		(len(ability.Conditions) != 0 && !hasInterveningCondition) ||
+		(hasInterveningCondition && (len(ability.Conditions) != 1 ||
 			ability.Conditions[0] != *ability.Trigger.Condition ||
 			ability.Optional)) ||
 		len(ability.Keywords) != 0 ||
@@ -2045,10 +2141,11 @@ func lowerEnterTrigger(
 		)
 	}
 	body := ability
+	body.Effects = resolvingEffects
 	body.Kind = oracle.AbilitySpell
 	body.Span = oracle.Span{
-		Start: ability.Effects[0].Span.Start,
-		End:   ability.Effects[len(ability.Effects)-1].Span.End,
+		Start: resolvingEffects[0].Span.Start,
+		End:   resolvingEffects[len(resolvingEffects)-1].Span.End,
 	}
 	body.Text = titleFirst(
 		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
@@ -2057,7 +2154,7 @@ func lowerEnterTrigger(
 	body.Optional = false
 	body.OptionalSpan = oracle.Span{}
 	excludedReferenceSpans := []oracle.Span{ability.Trigger.Span}
-	if kickedCondition {
+	if hasInterveningCondition {
 		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
 		body.Conditions = nil
 		bodyStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
@@ -2137,11 +2234,66 @@ func lowerEnterTrigger(
 				Source: game.TriggerSourceSelf,
 			},
 			InterveningIf:                        interveningIfText(ability.Trigger),
-			InterveningIfEventPermanentWasKicked: kickedCondition,
+			InterveningCondition:                 intervening.condition,
+			InterveningIfEventPermanentWasKicked: intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:   intervening.wasCast,
 		},
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
+}
+
+type enterInterveningCondition struct {
+	condition opt.V[game.Condition]
+	wasKicked bool
+	wasCast   bool
+}
+
+func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
+	if trigger == nil || trigger.Condition == nil {
+		return enterInterveningCondition{}, true
+	}
+	condition := trigger.Condition
+	if condition.Kind != oracle.ConditionIf || !condition.Intervening {
+		return enterInterveningCondition{}, false
+	}
+	switch condition.Text {
+	case "if it was kicked":
+		return enterInterveningCondition{wasKicked: true}, true
+	case "if it was cast", "if you cast it":
+		return enterInterveningCondition{wasCast: true}, true
+	}
+	cardType, ok := controlledPermanentConditionType(condition.Text)
+	if !ok {
+		return enterInterveningCondition{}, false
+	}
+	return enterInterveningCondition{
+		condition: opt.Val(game.Condition{
+			Text: condition.Text,
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{RequiredTypes: []types.Card{cardType}},
+			}),
+		}),
+	}, true
+}
+
+func controlledPermanentConditionType(text string) (types.Card, bool) {
+	switch text {
+	case "if you control a battle":
+		return types.Battle, true
+	case "if you control a creature":
+		return types.Creature, true
+	case "if you control an artifact":
+		return types.Artifact, true
+	case "if you control an enchantment":
+		return types.Enchantment, true
+	case "if you control a land":
+		return types.Land, true
+	case "if you control a planeswalker":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
 }
 
 func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbility) bool {

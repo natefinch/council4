@@ -681,6 +681,10 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		return false
 	}
 	activate.Targets = completedTargets
+	targetCounts, ok := bodyTargetCounts(g, playerID, card, permanent.ObjectID, body, activate.Targets)
+	if !ok {
+		panic("validated ability targets could not be segmented")
+	}
 	if activatedOK &&
 		!canActivateEquipAbility(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue) &&
 		!canActivateGeneralAbility(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue) &&
@@ -727,6 +731,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		AbilityIndex:   activate.AbilityIndex,
 		Controller:     playerID,
 		Targets:        append([]game.Target(nil), activate.Targets...),
+		TargetCounts:   targetCounts,
 		XValue:         activate.XValue,
 	}
 	pushAbilityToStack(g, obj)
@@ -746,6 +751,10 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	completedTargets, ok := e.completeAbilityAnnouncementTargets(g, playerID, def, 0, &ability, activate.Targets, agents, log)
 	if !ok || !canActivateGraveyardAbility(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue) {
 		return false
+	}
+	targetCounts, ok := bodyTargetCounts(g, playerID, def, 0, &ability, completedTargets)
+	if !ok {
+		panic("validated graveyard ability targets could not be segmented")
 	}
 	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), agents, log)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
@@ -769,6 +778,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		AbilityIndex: activate.AbilityIndex,
 		Controller:   playerID,
 		Targets:      append([]game.Target(nil), completedTargets...),
+		TargetCounts: targetCounts,
 		XValue:       activate.XValue,
 	}
 	pushAbilityToStack(g, obj)

@@ -41,12 +41,15 @@ Vanguard cards are excluded with explicit report reasons.
    their corresponding sealed `game.KeywordAbility` values; unsupported
    parameter forms remain fail-closed. Exact static power/toughness bonuses may
    also grant supported keywords through separate layer-6 and layer-7
-   continuous effects. Exact `X` quantities and common target
+   continuous effects. Standalone keyword grants to supported controlled and
+   attached permanent groups lower to layer-6 continuous effects. Exact `X`
+   quantities and common target
    restrictions lower into runtime quantities and structured target predicates.
    Ordered effect clauses retain independent target specifications and references.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
-   `game.AddCounter` instructions. Exact `if it was kicked` self-enter triggers
-   preserve the kicker choice as a typed intervening-if predicate. Exact
+   `game.AddCounter` instructions. Self-enter triggers support exact intervening
+   conditions for kicked or cast entry and controlling one
+   permanent of a named permanent card type. Exact
    self-dies fixed-damage triggers preserve the departed permanent as the
    damage source through an event reference. Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
