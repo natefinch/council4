@@ -2544,11 +2544,91 @@ func entersTappedLandSubtypes(condition string) ([]types.Sub, bool) {
 	return subtypes, len(subtypes) > 0
 }
 
+type atTriggerParams struct {
+	step       game.Step
+	controller game.TriggerControllerFilter
+}
+
+var atTriggerPhrases = map[string]atTriggerParams{
+	"the beginning of your upkeep":            {game.StepUpkeep, game.TriggerControllerYou},
+	"the beginning of each upkeep":            {game.StepUpkeep, game.TriggerControllerAny},
+	"the beginning of each player's upkeep":   {game.StepUpkeep, game.TriggerControllerAny},
+	"the beginning of each opponent's upkeep": {game.StepUpkeep, game.TriggerControllerOpponent},
+	"the beginning of your end step":          {game.StepEnd, game.TriggerControllerYou},
+	"the beginning of each end step":          {game.StepEnd, game.TriggerControllerAny},
+	"the beginning of each player's end step": {game.StepEnd, game.TriggerControllerAny},
+	"the beginning of combat on your turn":    {game.StepBeginningOfCombat, game.TriggerControllerYou},
+	"the beginning of each combat":            {game.StepBeginningOfCombat, game.TriggerControllerAny},
+	"the beginning of your draw step":         {game.StepDraw, game.TriggerControllerYou},
+}
+
+func lowerAtTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	const summary = "unsupported phase/step trigger phrase"
+	params, ok := atTriggerPhrases[ability.Trigger.Event]
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			fmt.Sprintf("the executable source backend does not support step trigger phrase %q", ability.Trigger.Event),
+		)
+	}
+	if ability.Trigger.Condition != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"intervening-if conditions are not supported for phase/step triggers",
+		)
+	}
+	if len(ability.Keywords) != 0 || len(ability.Modes) != 0 || ability.AbilityWord != "" {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"modes, keywords, and ability words are not supported in phase/step triggers",
+		)
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend does not support this phase/step trigger body",
+		)
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary+" effect",
+			diagnostic.Detail,
+		)
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerAt,
+			Pattern: game.TriggerPattern{
+				Event:      game.EventBeginningOfStep,
+				Controller: params.controller,
+				Step:       params.step,
+			},
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, nil
+}
+
 func lowerTriggeredAbility(
 	cardName string,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
+	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerAt {
+		return lowerAtTrigger(cardName, ability, syntax)
+	}
 	triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
 	if diagnostic == nil ||
 		ability.Trigger == nil ||
@@ -2659,7 +2739,7 @@ func lowerEnterTrigger(
 		ability.AbilityWord != "" {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
-	body, bodySyntax, ok := prepareEnterTriggerBody(ability, syntax)
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
@@ -2927,12 +3007,12 @@ func interveningIfText(trigger *oracle.CompiledTrigger) string {
 	return trigger.Condition.Text
 }
 
-// prepareEnterTriggerBody builds the body CompiledAbility and syntax for a
-// supported enter triggered ability. It handles condition consistency, effect
+// prepareTriggerBody builds the body CompiledAbility and syntax for a
+// supported triggered ability. It handles condition consistency, effect
 // filtering for intervening conditions, body span/text construction, reference
 // exclusion, and optional "you may" stripping. Callers must have already
 // verified that ability.Trigger is non-nil.
-func prepareEnterTriggerBody(
+func prepareTriggerBody(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (oracle.CompiledAbility, oracle.Ability, bool) {
@@ -3085,7 +3165,7 @@ func lowerNonSelfEnterTrigger(
 		(ability.Trigger.Condition != nil && ability.Trigger.Condition.Text == "if you cast it") {
 		return game.TriggeredAbility{}, false
 	}
-	body, bodySyntax, ok := prepareEnterTriggerBody(ability, syntax)
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, false
 	}

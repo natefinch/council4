@@ -59,7 +59,12 @@ Vanguard cards are excluded with explicit report reasons.
    (`a`/`an`/`another`, optional `nontoken` qualifier) and `one or more`
    subject forms, with optional permanent type filter (creature, artifact,
    enchantment, land, planeswalker, or unfiltered) and optional you-control or
-   opponent-controls controller constraints. Exact
+   opponent-controls controller constraints. Phase and step triggered abilities
+   using `At the beginning of …` lower for the ten exact step-trigger phrases:
+   your upkeep, each upkeep, each player's upkeep, each opponent's upkeep, your
+   end step, each end step, each player's end step, combat on your turn, each
+   combat, and your draw step. All other step-trigger phrases and all
+   intervening-if conditions on step triggers are fail-closed. Exact
    self-dies triggers support exact `if it had no +1/+1 counters` and
    `if it had no -1/-1 counters` conditions using the departed permanent's
    last-known information. Fixed-damage bodies preserve that permanent as the

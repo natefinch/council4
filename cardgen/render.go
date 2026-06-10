@@ -945,6 +945,9 @@ func (r Renderer) renderControlledPermanentInterveningCondition(ctx *renderCtx, 
 }
 
 func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {
+	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
+		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
+	}
 	if pattern.Subject != game.TriggerSubjectDefault ||
 		!pattern.SubjectSelection.Empty() ||
 		len(pattern.RequireCardTypes) != 0 ||
@@ -957,8 +960,7 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		pattern.SpellTargetsSource ||
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
-		pattern.SpellTargetPattern.Exists ||
-		pattern.Step != game.StepNone {
+		pattern.SpellTargetPattern.Exists {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
 	event, err := renderEventKind(pattern.Event)
@@ -979,6 +981,13 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Controller: %s,", controller))
+	}
+	if pattern.Step != game.StepNone {
+		step, err := renderStep(pattern.Step)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Step: %s,", step))
 	}
 	if pattern.ExcludeSelf {
 		fields = append(fields, "ExcludeSelf: true,")
@@ -2828,6 +2837,21 @@ func renderTriggerType(triggerType game.TriggerType) (string, error) {
 	}
 }
 
+func renderStep(step game.Step) (string, error) {
+	switch step {
+	case game.StepUpkeep:
+		return "game.StepUpkeep", nil
+	case game.StepDraw:
+		return "game.StepDraw", nil
+	case game.StepBeginningOfCombat:
+		return "game.StepBeginningOfCombat", nil
+	case game.StepEnd:
+		return "game.StepEnd", nil
+	default:
+		return "", fmt.Errorf("render: unsupported step %d", step)
+	}
+}
+
 func renderTriggerSource(source game.TriggerSourceFilter) (string, error) {
 	switch source {
 	case game.TriggerSourceSelf:
@@ -2867,6 +2891,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
 		return "game.EventPermanentDied", nil
+	case game.EventBeginningOfStep:
+		return "game.EventBeginningOfStep", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
 	}

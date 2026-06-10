@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 3,388 / 31,835**
+**Cards supported: 3,402 / 31,835**
 
 The pipeline is:
 
@@ -159,6 +159,11 @@ enters-the-battlefield triggers lower for single-subject (`a`/`an`/`another`,
 optional `nontoken` qualifier) and `one or more` subject forms, with optional
 permanent type filter (creature, artifact, enchantment, land, planeswalker, or
 unfiltered) and optional you-control or opponent-controls controller constraints.
+Phase and step triggered abilities with `At the beginning of …` lower for ten
+exact step-trigger phrases: your upkeep, each upkeep, each player's upkeep, each
+opponent's upkeep, your end step, each end step, each player's end step, combat
+on your turn, each combat, and your draw step. Intervening-if conditions on step
+triggers are always rejected fail-closed.
 Self-dies triggers support exact
 absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.
