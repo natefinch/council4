@@ -257,8 +257,14 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		ToZone:      zone.Battlefield,
 	}
 	var staticMatches []game.ReplacementEffect
-	if def, ok := permanentCardDef(g, permanent); ok {
-		staticMatches = staticETBReplacementEffects(ctx, g, permanent, def, event)
+	if !permanent.FaceDown {
+		def, ok := permanentCardDef(g, permanent)
+		if !ok {
+			def = nil
+		}
+		if def != nil {
+			staticMatches = staticETBReplacementEffects(ctx, g, permanent, def, event)
+		}
 	}
 	matches := matchingETBReplacementEffects(g, event)
 	matches = append(matches, staticMatches...)

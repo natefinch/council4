@@ -143,6 +143,99 @@ func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 	}
 }
 
+func TestManifestTurnFaceUpRequiresCreatureCard(t *testing.T) {
+	t.Run("creature can turn face up for mana cost", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		permanent := addFaceDownPermanent(g, game.Player1, manifestCreature(cost.Mana{cost.G}), game.FaceDownManifest)
+		g.Players[game.Player1].ManaPool.Add(mana.G, 1)
+		g.Turn.PriorityPlayer = game.Player1
+
+		if !engine.applyAction(g, game.Player1, actionBuild.turnFaceUp(permanent.ObjectID)) {
+			t.Fatal("manifest creature turn face-up action failed")
+		}
+
+		if permanent.FaceDown {
+			t.Fatal("manifest creature remained face-down")
+		}
+		if permanentEffectiveName(g, permanent) != "Manifest Bear" || effectivePower(g, permanent) != 3 {
+			t.Fatalf("face-up manifest characteristics name=%q power=%d, want Manifest Bear/3", permanentEffectiveName(g, permanent), effectivePower(g, permanent))
+		}
+	})
+	t.Run("noncreature cannot turn face up", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		permanent := addFaceDownPermanent(g, game.Player1, manifestNoncreature(cost.Mana{cost.G}), game.FaceDownManifest)
+		g.Players[game.Player1].ManaPool.Add(mana.G, 1)
+		g.Turn.PriorityPlayer = game.Player1
+
+		if engine.canTurnFaceUp(g, game.Player1, permanent.ObjectID) {
+			t.Fatal("manifest noncreature was allowed to turn face up")
+		}
+		if engine.applyAction(g, game.Player1, actionBuild.turnFaceUp(permanent.ObjectID)) {
+			t.Fatal("manifest noncreature turn face-up action succeeded")
+		}
+		if !permanent.FaceDown {
+			t.Fatal("manifest noncreature stopped being face-down")
+		}
+	})
+	t.Run("creature can turn face up for morph cost when mana cost is not payable", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		permanent := addFaceDownPermanent(g, game.Player1, manifestMorphCreature(cost.Mana{cost.W}, cost.Mana{cost.G}), game.FaceDownManifest)
+		g.Players[game.Player1].ManaPool.Add(mana.G, 1)
+		g.Turn.PriorityPlayer = game.Player1
+
+		if !engine.applyAction(g, game.Player1, actionBuild.turnFaceUp(permanent.ObjectID)) {
+			t.Fatal("manifested morph creature did not turn face up for morph cost")
+		}
+		if permanent.FaceDown || permanentEffectiveName(g, permanent) != "Manifest Morph Bear" {
+			t.Fatalf("manifested morph creature state name=%q faceDown=%t", permanentEffectiveName(g, permanent), permanent.FaceDown)
+		}
+	})
+	t.Run("noncreature with morph can turn face up for morph cost", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		permanent := addFaceDownPermanent(g, game.Player1, manifestMorphNoncreature(cost.Mana{cost.G}), game.FaceDownManifest)
+		g.Players[game.Player1].ManaPool.Add(mana.G, 1)
+		g.Turn.PriorityPlayer = game.Player1
+
+		if !engine.applyAction(g, game.Player1, actionBuild.turnFaceUp(permanent.ObjectID)) {
+			t.Fatal("manifested noncreature with morph did not turn face up for morph cost")
+		}
+		if permanent.FaceDown || permanentEffectiveName(g, permanent) != "Manifest Morph Land" {
+			t.Fatalf("manifested morph noncreature state name=%q faceDown=%t", permanentEffectiveName(g, permanent), permanent.FaceDown)
+		}
+	})
+	t.Run("creature chooses between mana cost and morph cost", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		permanent := addFaceDownPermanent(g, game.Player1, manifestMorphCreature(cost.Mana{cost.W}, cost.Mana{cost.G}), game.FaceDownManifest)
+		g.Players[game.Player1].ManaPool.Add(mana.W, 1)
+		g.Players[game.Player1].ManaPool.Add(mana.G, 1)
+		g.Turn.PriorityPlayer = game.Player1
+		agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+		log := TurnLog{}
+
+		if !engine.applyActionWithChoices(g, game.Player1, actionBuild.turnFaceUp(permanent.ObjectID), agents, &log) {
+			t.Fatal("manifested morph creature did not turn face up with chosen morph cost")
+		}
+
+		if permanent.FaceDown {
+			t.Fatal("manifested morph creature remained face-down")
+		}
+		if got := g.Players[game.Player1].ManaPool.Amount(mana.W); got != 1 {
+			t.Fatalf("white mana = %d, want selected morph route to leave white mana unspent", got)
+		}
+		if got := g.Players[game.Player1].ManaPool.Amount(mana.G); got != 0 {
+			t.Fatalf("green mana = %d, want selected morph route to spend green mana", got)
+		}
+		if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoicePayment || log.Choices[0].Selected[0] != 1 {
+			t.Fatalf("turn face-up choice log = %+v, want selected morph cost route", log.Choices)
+		}
+	})
+}
+
 func morphCreature(manaCost cost.Mana) *game.CardDef {
 	pt := game.PT{Value: 3}
 	return &game.CardDef{CardFace: game.CardFace{Name: "Mystery Bear",
@@ -151,6 +244,45 @@ func morphCreature(manaCost cost.Mana) *game.CardDef {
 		Toughness: opt.Val(pt),
 		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.MorphKeyword{Cost: manaCost}},
+		}}},
+	}
+}
+
+func manifestCreature(manaCost cost.Mana) *game.CardDef {
+	pt := game.PT{Value: 3}
+	return &game.CardDef{CardFace: game.CardFace{Name: "Manifest Bear",
+		ManaCost:  opt.Val(manaCost),
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt)},
+	}
+}
+
+func manifestNoncreature(manaCost cost.Mana) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Manifest Spell",
+		ManaCost: opt.Val(manaCost),
+		Types:    []types.Card{types.Instant}},
+	}
+}
+
+func manifestMorphCreature(manaCost, morphCost cost.Mana) *game.CardDef {
+	pt := game.PT{Value: 3}
+	return &game.CardDef{CardFace: game.CardFace{Name: "Manifest Morph Bear",
+		ManaCost:  opt.Val(manaCost),
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.MorphKeyword{Cost: morphCost}},
+		}}},
+	}
+}
+
+func manifestMorphNoncreature(morphCost cost.Mana) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Manifest Morph Land",
+		Types: []types.Card{types.Land},
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.MorphKeyword{Cost: morphCost}},
 		}}},
 	}
 }

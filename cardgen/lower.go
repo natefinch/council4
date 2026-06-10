@@ -4386,6 +4386,8 @@ func lowerSingleEffectSpell(
 		})
 	case oracle.EffectExplore:
 		return lowerExploreSpell(ability, syntax)
+	case oracle.EffectManifest:
+		return lowerManifestSpell(ability, syntax)
 	case oracle.EffectRegenerate:
 		return lowerFixedPermanentTargetSpell(ability, "Regenerate", func(object game.ObjectReference) game.Primitive {
 			return game.Regenerate{Object: object}
@@ -5024,6 +5026,41 @@ func lowerExploreSpell(
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Explore{Creature: game.SourcePermanentReference()},
 	}}}.Ability(), nil
+}
+
+func lowerManifestSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	tokens := syntax.Tokens
+	if ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 ||
+		!exactManifestTopLibraryPattern(tokens) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported manifest spell",
+			"the executable source backend supports only \"manifest the top card of your library\"",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Manifest{},
+	}}}.Ability(), nil
+}
+
+func exactManifestTopLibraryPattern(tokens []oracle.Token) bool {
+	return len(tokens) == 8 &&
+		equalTokenWord(tokens[0], "manifest") &&
+		equalTokenWord(tokens[1], "the") &&
+		equalTokenWord(tokens[2], "top") &&
+		equalTokenWord(tokens[3], "card") &&
+		equalTokenWord(tokens[4], "of") &&
+		equalTokenWord(tokens[5], "your") &&
+		equalTokenWord(tokens[6], "library") &&
+		tokens[7].Kind == oracle.Period
 }
 
 func lowerExactPrimitiveSpell(

@@ -222,6 +222,7 @@ const (
 	EffectInvestigate
 	EffectExplore
 	EffectLose
+	EffectManifest
 	EffectMill
 	EffectModifyPT
 	EffectMustAttack

@@ -590,6 +590,10 @@ func (p Explore) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 	return validateObjectReference(p.Creature, targets, checkTargets)
 }
 
+func (Manifest) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return nil
+}
+
 func (p Goad) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateObjectReference(p.Object, targets, checkTargets)
 }

@@ -16,6 +16,7 @@ const (
 	FaceDownNone FaceDownKind = iota
 	FaceDownMorph
 	FaceDownDisguise
+	FaceDownManifest
 )
 
 // Permanent represents a card (or token) on the battlefield with all its
