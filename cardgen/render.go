@@ -601,11 +601,24 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 	if effect.ToughnessDelta != 0 {
 		fields = append(fields, fmt.Sprintf("ToughnessDelta: %d,", effect.ToughnessDelta))
 	}
+	if len(effect.AddKeywords) > 0 {
+		keywords := make([]string, 0, len(effect.AddKeywords))
+		for _, keyword := range effect.AddKeywords {
+			rendered, err := renderKeyword(keyword)
+			if err != nil {
+				return "", err
+			}
+			keywords = append(keywords, rendered+",")
+		}
+		fields = append(fields, sliceField("AddKeywords", "game.Keyword", keywords))
+	}
 	return structLit("game.ContinuousEffect", fields), nil
 }
 
 func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
 	switch layer {
+	case game.LayerAbility:
+		return "game.LayerAbility", nil
 	case game.LayerPowerToughnessModify:
 		return "game.LayerPowerToughnessModify", nil
 	default:

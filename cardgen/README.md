@@ -55,6 +55,10 @@ Vanguard cards are excluded with explicit report reasons.
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.
 
+Static continuous effects retain their rules-layer separation during lowering
+and rendering. For example, an Equipment that gives a creature power/toughness
+and keywords emits distinct ability-layer and power/toughness-layer effects.
+
 The bulk compiler detects distinct Oracle cards that map to the same filename or
 Go identifier and appends a stable Scryfall-derived suffix to both generated
 identities. Playable tokens always use `mtg/cards/tokens/<letter>` and include

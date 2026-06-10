@@ -477,6 +477,51 @@ func TestGenerateEquippedCreaturePTBuff(t *testing.T) {
 	}
 }
 
+func TestGenerateStaticPTBuffWithKeywordGrants(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Behemoth Sledge",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+2 and has trample and lifelink.\nEquip {3}",
+	}, "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer: game.LayerAbility",
+		"AddKeywords: []game.Keyword{",
+		"game.Trample",
+		"game.Lifelink",
+		"game.LayerPowerToughnessModify",
+		"PowerDelta:",
+		"ToughnessDelta:",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestRejectStaticPTBuffWithUnconsumedKeywordSuffix(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Conditional Sledge",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+2 and has trample while attacking.\nEquip {3}",
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+	}
+}
+
 func TestRejectResolvingPTBuffAsStatic(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

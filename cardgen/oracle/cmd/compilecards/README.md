@@ -117,7 +117,7 @@ semantic compiler and executable backend both identify limitations.
 | `unsupported ability word` | The ability has a prefix such as landfall or threshold. The semantic text is preserved, but the backend does not yet lower ability-word abilities. |
 | `unsupported keyword ability` | The keyword was recognized, but `mtg/game` has no reusable static-ability template for it. |
 | `unsupported parameterized keyword` | The keyword requires a value, cost, selector, or other parameter, such as `Toxic 1`; the strict backend currently emits only non-parameterized keyword templates. |
-| `unsupported mixed keyword ability` | One or more supported keywords were recognized, but the same ability also contains additional rules text. The backend rejects the whole ability rather than emitting only the keyword portion. |
+| `unsupported mixed keyword ability` | One or more supported keywords were recognized, but the same ability contains additional rules text outside supported complete mixed families. Exact fixed attached-creature power/toughness buffs may also grant supported simple keywords; other mixed forms reject the whole ability rather than emitting only the keyword portion. |
 | `unsupported card layout` | The Scryfall layout cannot be represented safely by the current `CardDef` source generator. |
 | `unsupported type line` | The type line contains no card type known to `cardgen`, so emitting a mechanically incomplete `CardFace` would be unsafe. |
 | `unsupported package letter` | The card name does not begin with an ASCII letter and therefore cannot be routed to an `mtg/cards/[a-z]` package. |

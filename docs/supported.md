@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,092
+Cards supported: 3,132
 
 - +2 Mace
 - Aardvark Sloth
@@ -17,6 +17,7 @@ Cards supported: 3,092
 - Aegis Turtle
 - Aegis of the Heavens
 - Aerial Responder
+- Aeronaut's Wings
 - Aesthir Glider
 - Aether Adept
 - Aether Spellbomb
@@ -103,6 +104,7 @@ Cards supported: 3,092
 - Arborback Stomper
 - Arboretum Elemental
 - Arcane Encyclopedia
+- Arcane Flight
 - Arcane Sanctum
 - Archangel
 - Archers of Qarsi
@@ -233,6 +235,7 @@ Cards supported: 3,092
 - Beast
 - Bee Sting
 - Beeble
+- Behemoth Sledge
 - Benalish Emissary
 - Benalish Heralds
 - Benalish Knight
@@ -319,6 +322,7 @@ Cards supported: 3,092
 - Boomerang
 - Boon of Emrakul
 - Boon of the Wish-Giver
+- Boots of Speed
 - Border Guard
 - Border Patrol
 - Borderland Minotaur
@@ -371,6 +375,7 @@ Cards supported: 3,092
 - Cackling Imp
 - Caelorna, Coral Tyrant
 - Canal Monitor
+- Candlelight Vigil
 - Canopy Gorger
 - Canopy Spider
 - Canopy Vista
@@ -403,6 +408,7 @@ Cards supported: 3,092
 - Cat Warrior
 - Catacomb Crocodile
 - Catacomb Slug
+- Cathar's Shield
 - Cathartic Adept
 - Cathedral Sanctifier
 - Cathedral of War
@@ -536,6 +542,7 @@ Cards supported: 3,092
 - Crush Contraband
 - Crystacean
 - Crystal Ball
+- Crystal Slipper
 - Cultbrand Cinder
 - Cultist's Staff
 - Cumber Stone
@@ -803,6 +810,7 @@ Cards supported: 3,092
 - Enlisted Wurm
 - Enormous Baloth
 - Enraged Giant
+- Epic Proportions
 - Erase
 - Eriette's Lullaby
 - Esper Charm
@@ -888,6 +896,7 @@ Cards supported: 3,092
 - Flame Slash
 - Flameborn Hellion
 - Flameborn Viron
+- Flaming Sword
 - Flatten
 - Fleetfoot Dancer
 - Flensermite
@@ -924,6 +933,7 @@ Cards supported: 3,092
 - Fountain of Youth
 - Fox
 - Fractal
+- Frantic Strength
 - Freewind Falcon
 - Frenzied Raptor
 - Fresh Volunteers
@@ -976,6 +986,7 @@ Cards supported: 3,092
 - Giant Mantis
 - Giant Octopus
 - Giant Scorpion
+- Giant Spectacle
 - Giant Spider
 - Giant Strength
 - Giant Teddy Bear
@@ -986,6 +997,7 @@ Cards supported: 3,092
 - Gideon's Lawkeeper
 - Gideon's Reproach
 - Gift of Granite
+- Gift of Orzhova
 - Gifted Aetherborn
 - Gigantosaurus
 - Gilacorn
@@ -996,6 +1008,7 @@ Cards supported: 3,092
 - Glacial Wall
 - Gladecover Scout
 - Glass Golem
+- Glasswing Grace // Age-Graced Chapel
 - Glider Kids
 - Glimmer
 - Glistener Elf
@@ -1044,6 +1057,7 @@ Cards supported: 3,092
 - Goblin Soldier
 - Goblin Striker
 - Goblin Trailblazer
+- Goblin War Paint
 - Goblin Warrior
 - Goblin Wizard
 - Gohn, Town of Ruin
@@ -1413,6 +1427,7 @@ Cards supported: 3,092
 - Kitchen Finks
 - Kitchen Imp
 - Kite Shield
+- Kitesail
 - Kitesail Scout
 - Kithkin
 - Kithkin Daggerdare
@@ -1442,6 +1457,7 @@ Cards supported: 3,092
 - Komodo Rhino
 - Kongming, "Sleeping Dragon"
 - Kor Ally
+- Kor Halberd
 - Kor Soldier
 - Kor Warrior
 - Kraken
@@ -1532,6 +1548,7 @@ Cards supported: 3,092
 - Loxodon Mender
 - Loxodon Mystic
 - Loxodon Restorer
+- Loxodon Warhammer
 - Loxodon Wayfarer
 - Lucent Liminid
 - Lumengrid Gargoyle
@@ -1541,8 +1558,10 @@ Cards supported: 3,092
 - Lush Portico
 - Macetail Hystrodon
 - Mad Prophet
+- Madcap Skills
 - Maelstrom Colossus
 - Mage-Ring Bully
+- Magefire Wings
 - Mageta's Boon
 - Maggot Therapy
 - Magma Jet
@@ -1567,6 +1586,7 @@ Cards supported: 3,092
 - Mardu Banner
 - Marit Lage
 - Maritime Guard
+- Mark of the Vampire
 - Marker Beetles
 - Markov Patrician
 - Martyr for the Cause
@@ -1603,6 +1623,7 @@ Cards supported: 3,092
 - Metallic Sliver
 - Metallurgeon
 - Metathran Soldier
+- Meteoric Mace
 - Meticulous Archive
 - Midnight Assassin
 - Might of Oaks
@@ -1686,6 +1707,7 @@ Cards supported: 3,092
 - Mystic Archaeologist
 - Mystic Monastery
 - Mystic of the Hidden Way
+- Mythic Proportions
 - Nacatl Outlander
 - Naga Eternal
 - Naga Oracle
@@ -1731,6 +1753,7 @@ Cards supported: 3,092
 - Nimble Birdsticker
 - Nimble Innovator
 - Nimble-Blade Khenra
+- Nimbus Wings
 - Nimbus of the Isles
 - Ninja
 - Ninja
@@ -1738,6 +1761,7 @@ Cards supported: 3,092
 - Ninja Turtle Spirit
 - Nip Gwyllion
 - Nivix Barrier
+- No-Dachi
 - Noble Hierarch
 - Nomad Outpost
 - North Pole Gates
@@ -1787,6 +1811,7 @@ Cards supported: 3,092
 - Omenspeaker
 - Ominous Asylum
 - Onakke Ogre
+- One With the Wind
 - Onulet
 - Onyx Goblet
 - Oona's Gatewarden
@@ -1824,6 +1849,7 @@ Cards supported: 3,092
 - Overgrown Farmland
 - Overkill
 - Oversoul of Dusk
+- Ox
 - Ox
 - Ox
 - Oxidda Scrapmelter
@@ -1933,6 +1959,7 @@ Cards supported: 3,092
 - Priest of Iroas
 - Priests of Norn
 - Primal Huntbeast
+- Primal Visitation
 - Primo, the Indivisible
 - Primoc Escapee
 - Primordial Pachyderm
@@ -1941,6 +1968,7 @@ Cards supported: 3,092
 - Prismari Campus
 - Prized Griffin
 - Prizefighter Construct
+- Prodigious Growth
 - Prophet of Distortion
 - Prophet of the Peak
 - Proven Combatant
@@ -1989,7 +2017,9 @@ Cards supported: 3,092
 - Rakdos Ragemutt
 - Rakdos Shred-Freak
 - Ramirez DePietro
+- Ramosian Greatsword
 - Rampaging Hippo
+- Ranger's Longbow
 - Raptor Companion
 - Rat
 - Rat
@@ -2153,6 +2183,7 @@ Cards supported: 3,092
 - Satyr Grovedancer
 - Satyr Rambler
 - Savage Gorilla
+- Savage Hunger
 - Savage Lands
 - Savage Mansion
 - Savai Crystal
@@ -2279,6 +2310,7 @@ Cards supported: 3,092
 - Shore Keeper
 - Shore Lurker
 - Shorecomber Crab
+- Short Bow
 - Short Sword
 - Show of Valor
 - Shriek Raptor
@@ -2422,6 +2454,7 @@ Cards supported: 3,092
 - Sparring Mummy
 - Spawn
 - Spectacle Summit
+- Spectral Flight
 - Spectral Sailor
 - Sphinx
 - Sphinx
@@ -2466,6 +2499,7 @@ Cards supported: 3,092
 - Spirit Warrior
 - Spirited Companion
 - Spiritual Guardian
+- Spiteful Motives
 - Spitting Gourna
 - Splatter Goblin
 - Spore Crawler
@@ -2523,6 +2557,7 @@ Cards supported: 3,092
 - Straw Soldiers
 - Stream of Life
 - Streetbreaker Wurm
+- Strider Harness
 - Strip Mine
 - Striped Bears
 - Striped Riverwinder
@@ -2562,6 +2597,7 @@ Cards supported: 3,092
 - Suture Spirit
 - Swab Goblin
 - Swamp
+- Swashbuckling
 - Sweatworks Brawler
 - Swift Response
 - Swift Spinner
@@ -2669,6 +2705,7 @@ Cards supported: 3,092
 - Tidehollow Strix
 - Tidepool Turtle
 - Tidings
+- Tiger Claws
 - Tigereye Cameo
 - Timber Gorge
 - Timberland Guide
@@ -2856,6 +2893,7 @@ Cards supported: 3,092
 - Vindicate
 - Vine Trellis
 - Viral Drake
+- Viridian Claw
 - Viridian Corrupter
 - Viridian Shaman
 - Viscera Seer
@@ -3001,6 +3039,8 @@ Cards supported: 3,092
 - Wing Commando
 - Winged Coatl
 - Winged Shepherd
+- Wings of Aesthir
+- Wings of Hope
 - Winter's Grasp
 - Winter's Intervention
 - Winterflame

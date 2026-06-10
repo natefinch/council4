@@ -201,12 +201,17 @@ func lowerExecutableAbility(
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
+		spans := []oracle.Span{ability.Effects[0].Span}
+		for _, keyword := range ability.Keywords {
+			spans = append(spans, keyword.Span)
+		}
 		return abilityLowering{
 			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
 			consumed: semanticConsumption{
-				effects: 1,
+				effects:  1,
+				keywords: len(ability.Keywords),
 			},
-			sourceSpans: []oracle.Span{ability.Effects[0].Span},
+			sourceSpans: spans,
 		}, nil
 	}
 	switch ability.Kind {
@@ -1352,7 +1357,6 @@ func lowerStaticPTBuff(
 		ability.Effects[0].Duration != oracle.DurationNone ||
 		!ability.Effects[0].PowerDelta.Known ||
 		!ability.Effects[0].ToughnessDelta.Known ||
-		len(ability.Keywords) != 0 ||
 		len(ability.Targets) != 0 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.References) != 0 ||
@@ -1374,7 +1378,11 @@ func lowerStaticPTBuff(
 		)
 	}
 	effect := ability.Effects[0]
-	if !matchesExactStaticPTBuffSyntax(syntax, effect) {
+	keywords, ok := staticKeywordGrantKinds(ability.Keywords)
+	if !ok {
+		return game.StaticAbility{}, true, mixedKeywordDiagnostic(ability)
+	}
+	if !matchesExactStaticPTBuffSyntax(syntax, effect, ability.Keywords) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported static ability",
@@ -1385,15 +1393,38 @@ func lowerStaticPTBuff(
 	if !ok {
 		return game.StaticAbility{}, false, nil
 	}
+	effects := []game.ContinuousEffect{{
+		Layer:          game.LayerPowerToughnessModify,
+		Group:          group,
+		PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
+		ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
+	}}
+	if len(keywords) > 0 {
+		effects = append([]game.ContinuousEffect{{
+			Layer:       game.LayerAbility,
+			Group:       group,
+			AddKeywords: keywords,
+		}}, effects...)
+	}
 	return game.StaticAbility{
-		Text: ability.Text,
-		ContinuousEffects: []game.ContinuousEffect{{
-			Layer:          game.LayerPowerToughnessModify,
-			Group:          group,
-			PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
-			ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
-		}},
+		Text:              ability.Text,
+		ContinuousEffects: effects,
 	}, true, nil
+}
+
+func staticKeywordGrantKinds(keywords []oracle.CompiledKeyword) ([]game.Keyword, bool) {
+	kinds := make([]game.Keyword, 0, len(keywords))
+	for _, keyword := range keywords {
+		if keyword.Parameter != "" {
+			return nil, false
+		}
+		kind, ok := staticGrantKeywords[keyword.Name]
+		if !ok {
+			return nil, false
+		}
+		kinds = append(kinds, kind)
+	}
+	return kinds, true
 }
 
 func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, bool) {
@@ -1439,8 +1470,14 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 func matchesExactStaticPTBuffSyntax(
 	syntax oracle.Ability,
 	effect oracle.CompiledEffect,
+	keywords []oracle.CompiledKeyword,
 ) bool {
 	tokens := syntaxSemanticTokens(syntax)
+	var ok bool
+	tokens, ok = stripStaticKeywordGrantSuffix(tokens, keywords)
+	if !ok {
+		return false
+	}
 	switch effect.StaticSubject {
 	case oracle.StaticSubjectAttachedObject:
 		return len(tokens) == 9 &&
@@ -1518,6 +1555,38 @@ func matchesExactStaticPTBuffSyntax(
 	default:
 		return false
 	}
+}
+
+func stripStaticKeywordGrantSuffix(
+	tokens []oracle.Token,
+	keywords []oracle.CompiledKeyword,
+) ([]oracle.Token, bool) {
+	if len(keywords) == 0 {
+		return tokens, true
+	}
+	firstKeyword := -1
+	for index, token := range tokens {
+		if spanCoveredByKeyword(token.Span, keywords) {
+			firstKeyword = index
+			break
+		}
+	}
+	if firstKeyword < 2 ||
+		!equalTokenWord(tokens[firstKeyword-2], "and") ||
+		!equalTokenWord(tokens[firstKeyword-1], "has") ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return nil, false
+	}
+	for _, token := range tokens[firstKeyword : len(tokens)-1] {
+		if spanCoveredByKeyword(token.Span, keywords) || equalTokenWord(token, "and") {
+			continue
+		}
+		return nil, false
+	}
+	stripped := make([]oracle.Token, 0, firstKeyword-1)
+	stripped = append(stripped, tokens[:firstKeyword-2]...)
+	stripped = append(stripped, tokens[len(tokens)-1])
+	return stripped, true
 }
 
 func syntaxSemanticTokens(syntax oracle.Ability) []oracle.Token {
@@ -3702,4 +3771,23 @@ var keywordStaticBodies = map[string]loweredStaticAbility{
 	"Wither":         {Body: game.WitherStaticBody, VarName: "game.WitherStaticBody"},
 	"Cascade":        {Body: game.CascadeStaticBody, VarName: "game.CascadeStaticBody"},
 	"Convoke":        {Body: game.ConvokeStaticBody, VarName: "game.ConvokeStaticBody"},
+}
+
+var staticGrantKeywords = map[string]game.Keyword{
+	"Deathtouch":     game.Deathtouch,
+	"Defender":       game.Defender,
+	"Double strike":  game.DoubleStrike,
+	"First strike":   game.FirstStrike,
+	"Flying":         game.Flying,
+	"Haste":          game.Haste,
+	"Hexproof":       game.Hexproof,
+	"Indestructible": game.Indestructible,
+	"Infect":         game.Infect,
+	"Lifelink":       game.Lifelink,
+	"Menace":         game.Menace,
+	"Reach":          game.Reach,
+	"Shroud":         game.Shroud,
+	"Trample":        game.Trample,
+	"Vigilance":      game.Vigilance,
+	"Wither":         game.Wither,
 }
