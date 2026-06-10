@@ -37,6 +37,7 @@ const (
 	EventPermanentTurnedFaceUp
 	EventFight
 	EventPermanentMutated
+	EventAttackerBecameBlocked
 )
 
 // DamageRecipientKind identifies what received damage.

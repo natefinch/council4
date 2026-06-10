@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -818,6 +819,144 @@ func TestDamageTriggerGoesOnStack(t *testing.T) {
 
 	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
 		t.Fatalf("hand size = %d, want damage trigger to draw one card", got)
+	}
+}
+
+func TestCombatDamageTriggerRequiresCombatDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:               game.EventDamageDealt,
+		Source:              game.TriggerSourceSelf,
+		Subject:             game.TriggerSubjectDamageSource,
+		DamageRecipient:     game.DamageRecipientPlayer,
+		RequireCombatDamage: true,
+	}
+	event := game.Event{
+		Kind:            game.EventDamageDealt,
+		SourceObjectID:  source.ObjectID,
+		Controller:      game.Player1,
+		Player:          game.Player2,
+		DamageRecipient: game.DamageRecipientPlayer,
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("combat-damage trigger matched non-combat damage")
+	}
+	event.CombatDamage = true
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("combat-damage trigger did not match combat damage")
+	}
+}
+
+func TestDamageSourceSubjectDoesNotMatchDamageRecipient(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	recipient := addCombatCreaturePermanent(g, game.Player1)
+	source := addCombatCreaturePermanent(g, game.Player2)
+	pattern := &game.TriggerPattern{
+		Event:                game.EventDamageDealt,
+		Source:               game.TriggerSourceSelf,
+		Subject:              game.TriggerSubjectDamageSource,
+		DamageRecipient:      game.DamageRecipientPermanent,
+		DamageRecipientTypes: []types.Card{types.Creature},
+		RequireCombatDamage:  true,
+	}
+	event := game.Event{
+		Kind:            game.EventDamageDealt,
+		SourceID:        source.CardInstanceID,
+		SourceObjectID:  source.ObjectID,
+		Controller:      game.Player2,
+		CardID:          recipient.CardInstanceID,
+		PermanentID:     recipient.ObjectID,
+		DamageRecipient: game.DamageRecipientPermanent,
+		CombatDamage:    true,
+	}
+	if triggerMatchesEvent(g, recipient, pattern, event) {
+		t.Fatal("damage-source trigger matched the damage recipient")
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("damage-source trigger did not match the damage source")
+	}
+	nonCreature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Attacked Battle",
+		Types: []types.Card{types.Battle},
+	}})
+	event.PermanentID = nonCreature.ObjectID
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("damage-to-creature trigger matched a noncreature permanent recipient")
+	}
+}
+
+func TestCombatDamageSourceTriggerUsesLKIAfterSourceDies(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	attacker := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                game.EventDamageDealt,
+		Source:               game.TriggerSourceSelf,
+		Subject:              game.TriggerSubjectDamageSource,
+		DamageRecipient:      game.DamageRecipientPermanent,
+		DamageRecipientTypes: []types.Card{types.Creature},
+		RequireCombatDamage:  true,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 1)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{
+			Attacker: attacker.ObjectID,
+			Target:   game.AttackTarget{Player: game.Player2},
+		}},
+		Blockers: []game.BlockDeclaration{{
+			Blocker:  blocker.ObjectID,
+			Blocking: attacker.ObjectID,
+		}},
+		BlockedAttackers: map[id.ID]bool{attacker.ObjectID: true},
+		BlockerOrder:     map[id.ID][]id.ID{attacker.ObjectID: {blocker.ObjectID}},
+	}
+
+	combatEngine{}.resolveDamagePass(g, normalCombatDamage, &TurnLog{})
+	engine.applyStateBasedActions(g)
+	if _, ok := permanentByObjectID(g, attacker.ObjectID); ok {
+		t.Fatal("attacker survived combat damage; test requires LKI trigger source")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("combat-damage trigger from dead source was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want dead source trigger to draw one card", got)
+	}
+}
+
+func TestBecomesBlockedTriggerFiresOnceForMultipleBlockers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	attacker := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventAttackerBecameBlocked,
+		Source: game.TriggerSourceSelf,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	firstBlocker := addCombatCreaturePermanent(g, game.Player2)
+	secondBlocker := addCombatCreaturePermanent(g, game.Player2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{
+			Attacker: attacker.ObjectID,
+			Target:   game.AttackTarget{Player: game.Player2},
+		}},
+	}
+	declare := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: firstBlocker.ObjectID, Blocking: attacker.ObjectID},
+		{Blocker: secondBlocker.ObjectID, Blocking: attacker.ObjectID},
+	}))
+
+	if !engine.applyDeclareBlockers(g, game.Player2, declare) {
+		t.Fatal("applyDeclareBlockers() = false, want true")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("becomes-blocked trigger was not put on stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want one becomes-blocked trigger", got)
 	}
 }
 

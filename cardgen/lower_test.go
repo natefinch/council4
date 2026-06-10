@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -1626,6 +1627,121 @@ func TestLowerEnterTrigger(t *testing.T) {
 	}
 	if trigger.Pattern.Source != game.TriggerSourceSelf {
 		t.Fatalf("source = %v, want TriggerSourceSelf", trigger.Pattern.Source)
+	}
+}
+
+func TestLowerCombatEventTriggers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		text    string
+		want    game.TriggerPattern
+		wantTyp game.TriggerType
+	}{
+		{
+			name: "attacks",
+			text: "Whenever this creature attacks, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventAttackerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "blocks",
+			text: "Whenever this creature blocks, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventBlockerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "becomes blocked",
+			text: "Whenever this creature becomes blocked, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventAttackerBecameBlocked,
+				Source: game.TriggerSourceSelf,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "combat damage to player",
+			text: "Whenever this creature deals combat damage to a player, draw a card.",
+			want: game.TriggerPattern{
+				Event:               game.EventDamageDealt,
+				Source:              game.TriggerSourceSelf,
+				Subject:             game.TriggerSubjectDamageSource,
+				DamageRecipient:     game.DamageRecipientPlayer,
+				RequireCombatDamage: true,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "combat damage to creature",
+			text: "Whenever this creature deals combat damage to a creature, draw a card.",
+			want: game.TriggerPattern{
+				Event:                game.EventDamageDealt,
+				Source:               game.TriggerSourceSelf,
+				Subject:              game.TriggerSubjectDamageSource,
+				DamageRecipient:      game.DamageRecipientPermanent,
+				DamageRecipientTypes: []types.Card{types.Creature},
+				RequireCombatDamage:  true,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Fighter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Warrior",
+				OracleText: tc.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Type != tc.wantTyp {
+				t.Fatalf("trigger type = %v, want %v", trigger.Type, tc.wantTyp)
+			}
+			if !reflect.DeepEqual(trigger.Pattern, tc.want) {
+				t.Fatalf("pattern = %+v, want %+v", trigger.Pattern, tc.want)
+			}
+		})
+	}
+}
+
+func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Whenever this creature attacks alone, draw a card.",
+		"Whenever this creature attacks and isn't blocked, draw a card.",
+		"Whenever this creature attacks a player, draw a card.",
+		"Whenever this creature attacks or blocks, draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Fighter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Warrior",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("unsupported combat trigger unexpectedly lowered")
+			}
+		})
 	}
 }
 

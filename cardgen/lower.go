@@ -2893,9 +2893,10 @@ func lowerEnterTrigger(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
-	eventKind, supportedEvent := lowerSelfTriggerEvent(cardName, ability)
+	pattern, supportedEvent := lowerSelfTriggerPattern(cardName, ability)
+	eventKind := pattern.Event
 	summary := "unsupported triggered ability"
-	detail := "the executable source backend supports only exact self-enter, self-dies, and self-mutate triggers with supported effects"
+	detail := "the executable source backend supports only exact self-enter, self-dies, self-mutate, and simple combat triggers with supported effects"
 	if ability.Trigger != nil && strings.Contains(ability.Trigger.Event, " enters") {
 		summary = "unsupported enter trigger"
 		detail = "the executable source backend supports only exact self-enter triggers with supported effects"
@@ -2946,11 +2947,8 @@ func lowerEnterTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type: triggerType,
-			Pattern: game.TriggerPattern{
-				Event:  eventKind,
-				Source: game.TriggerSourceSelf,
-			},
+			Type:                 triggerType,
+			Pattern:              pattern,
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening.condition,
 			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
@@ -3051,10 +3049,16 @@ func lowerSelfInterveningCondition(
 }
 
 func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind) bool {
-	if eventKind == game.EventPermanentMutated {
+	switch eventKind {
+	case game.EventPermanentMutated,
+		game.EventAttackerBecameBlocked,
+		game.EventAttackerDeclared,
+		game.EventBlockerDeclared,
+		game.EventDamageDealt:
 		return kind == oracle.TriggerWhenever
+	default:
+		return kind == oracle.TriggerWhen
 	}
-	return kind == oracle.TriggerWhen
 }
 
 func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
@@ -3146,9 +3150,9 @@ func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbili
 	return true
 }
 
-func lowerSelfTriggerEvent(cardName string, ability oracle.CompiledAbility) (game.EventKind, bool) {
+func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (game.TriggerPattern, bool) {
 	if ability.Trigger == nil {
-		return 0, false
+		return game.TriggerPattern{}, false
 	}
 	switch ability.Trigger.Event {
 	case "this creature enters",
@@ -3159,16 +3163,60 @@ func lowerSelfTriggerEvent(cardName string, ability oracle.CompiledAbility) (gam
 		"this land enters",
 		"this vehicle enters",
 		"this enchantment enters":
-		return game.EventPermanentEnteredBattlefield, true
+		return game.TriggerPattern{
+			Event:  game.EventPermanentEnteredBattlefield,
+			Source: game.TriggerSourceSelf,
+		}, true
 	case "this creature dies", "this permanent dies":
-		return game.EventPermanentDied, true
+		return game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceSelf,
+		}, true
 	case "this creature mutates":
-		return game.EventPermanentMutated, true
+		return game.TriggerPattern{
+			Event:  game.EventPermanentMutated,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature attacks":
+		return game.TriggerPattern{
+			Event:  game.EventAttackerDeclared,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature blocks":
+		return game.TriggerPattern{
+			Event:  game.EventBlockerDeclared,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature becomes blocked":
+		return game.TriggerPattern{
+			Event:  game.EventAttackerBecameBlocked,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature deals combat damage to a player":
+		return game.TriggerPattern{
+			Event:               game.EventDamageDealt,
+			Source:              game.TriggerSourceSelf,
+			Subject:             game.TriggerSubjectDamageSource,
+			DamageRecipient:     game.DamageRecipientPlayer,
+			RequireCombatDamage: true,
+		}, true
+	case "this creature deals combat damage to a creature":
+		return game.TriggerPattern{
+			Event:                game.EventDamageDealt,
+			Source:               game.TriggerSourceSelf,
+			Subject:              game.TriggerSubjectDamageSource,
+			DamageRecipient:      game.DamageRecipientPermanent,
+			DamageRecipientTypes: []types.Card{types.Creature},
+			RequireCombatDamage:  true,
+		}, true
 	default:
 		if strings.EqualFold(ability.Trigger.Event, cardName+" dies") {
-			return game.EventPermanentDied, true
+			return game.TriggerPattern{
+				Event:  game.EventPermanentDied,
+				Source: game.TriggerSourceSelf,
+			}, true
 		}
-		return 0, false
+		return game.TriggerPattern{}, false
 	}
 }
 

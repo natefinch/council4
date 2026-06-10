@@ -406,8 +406,20 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 		g.Combat.BlockerOrder = make(map[id.ID][]id.ID)
 	}
 	for _, block := range declare.Blockers {
+		attackerBecameBlocked := !g.Combat.BlockedAttackers[block.Blocking]
 		g.Combat.BlockedAttackers[block.Blocking] = true
 		g.Combat.BlockerOrder[block.Blocking] = append(g.Combat.BlockerOrder[block.Blocking], block.Blocker)
+		if attackerBecameBlocked {
+			if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
+				emitEvent(g, game.Event{
+					Kind:           game.EventAttackerBecameBlocked,
+					SourceID:       attacker.CardInstanceID,
+					SourceObjectID: attacker.ObjectID,
+					Controller:     effectiveController(g, attacker),
+					PermanentID:    attacker.ObjectID,
+				})
+			}
+		}
 		blocker := eligibleByID[block.Blocker]
 		if blocker == nil {
 			continue
