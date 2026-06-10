@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -27,6 +28,55 @@ func TestRenderConditionForETBReplacementRejectsNegativeThresholds(t *testing.T)
 				t.Fatal("expected negative threshold error")
 			}
 		})
+	}
+}
+
+func TestRenderDynamicQuantityFieldsAndImports(t *testing.T) {
+	renderer := Renderer{}
+	ctx := newRenderCtx()
+	rendered, err := renderer.renderQuantity(ctx, game.Dynamic(game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 2,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+		}),
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountCountSelector",
+		"Multiplier: 2",
+		"game.BattlefieldGroup",
+		"types.Creature",
+		"game.ControllerYou",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("quantity missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importTypes]; !ok {
+		t.Fatal("dynamic group did not request types import")
+	}
+	if _, ok := ctx.imports[importCounter]; ok {
+		t.Fatal("dynamic group requested unused counter import")
+	}
+
+	ctx = newRenderCtx()
+	rendered, err = renderer.renderQuantity(ctx, game.Dynamic(game.DynamicAmount{
+		Kind:        game.DynamicAmountTargetCounters,
+		CounterKind: counter.PlusOnePlusOne,
+		Object:      game.TargetPermanentReference(0),
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "counter.PlusOnePlusOne") {
+		t.Fatalf("counter quantity = %s", rendered)
+	}
+	if _, ok := ctx.imports[importCounter]; !ok {
+		t.Fatal("counter quantity did not request counter import")
 	}
 }
 

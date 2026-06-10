@@ -2730,6 +2730,11 @@ func lowerEnterTrigger(
 			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 		}
 		damage.DamageSource = opt.Val(game.EventPermanentReference())
+		if dynamic := damage.Amount.DynamicAmount(); dynamic.Exists &&
+			dynamic.Val.Kind == game.DynamicAmountObjectPower {
+			dynamic.Val.Object = game.EventPermanentReference()
+			damage.Amount = game.Dynamic(dynamic.Val)
+		}
 		content.Modes[0].Sequence[0].Primitive = damage
 	}
 	return game.TriggeredAbility{
@@ -2907,11 +2912,18 @@ func controlledPermanentConditionType(text string) (types.Card, bool) {
 func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbility) bool {
 	if ability == nil ||
 		len(ability.Effects) != 1 ||
-		len(ability.References) != 1 ||
+		(len(ability.References) != 1 && len(ability.References) != 2) ||
 		ability.References[0].Kind != oracle.ReferencePronoun ||
 		!strings.EqualFold(ability.References[0].Text, "it") ||
 		!strings.HasPrefix(ability.Text, "It deals ") ||
 		!strings.HasPrefix(strings.ToLower(ability.Effects[0].Text), "it deals ") {
+		return false
+	}
+	if len(ability.References) == 2 &&
+		(ability.Effects[0].Amount.DynamicKind != oracle.DynamicAmountSourcePower ||
+			ability.References[1].Kind != oracle.ReferencePronoun ||
+			!strings.EqualFold(ability.References[1].Text, "its") ||
+			ability.References[1].Span != ability.Effects[0].Amount.ReferenceSpan) {
 		return false
 	}
 	ability.Text = cardName + ability.Text[len("It"):]
@@ -3378,13 +3390,14 @@ func lowerFixedCounterSpell(
 	if len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 ||
-		!effect.Amount.Known ||
-		effect.Amount.Value <= 0 ||
+		(!effect.Amount.Known &&
+			(effect.Amount.DynamicKind == oracle.DynamicAmountNone ||
+				effect.Amount.DynamicForm != oracle.DynamicAmountWhereX)) ||
+		(effect.Amount.Known && effect.Amount.Value <= 0) ||
 		effect.Negated ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
-		len(ability.Modes) != 0 ||
-		len(ability.References) != 0 {
+		len(ability.Modes) != 0 {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported spell ability",
@@ -3416,12 +3429,28 @@ func lowerFixedCounterSpell(
 			"the executable source backend does not yet lower this spell ability",
 		)
 	}
-	if !isExactPutCounterText(
+	amount := game.Fixed(effect.Amount.Value)
+	exactText := isExactPutCounterText(
 		ability.Text,
 		ability.Targets[0].Text,
 		effect.Amount.Value,
 		counterName,
-	) {
+	) && len(ability.References) == 0
+	if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+		dynamic, supported := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !supported ||
+			!exactDynamicCounterText(ability, counterName) ||
+			!exactDynamicAmountReference(effect.Amount, ability.References) {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported spell ability",
+				"the executable source backend does not yet lower this spell ability",
+			)
+		}
+		amount = game.Dynamic(dynamic)
+		exactText = true
+	}
+	if !exactText {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported spell ability",
@@ -3432,12 +3461,41 @@ func lowerFixedCounterSpell(
 		Targets: []game.TargetSpec{target},
 		Sequence: []game.Instruction{{
 			Primitive: game.AddCounter{
-				Amount:      game.Fixed(effect.Amount.Value),
+				Amount:      amount,
 				Object:      game.TargetPermanentReference(0),
 				CounterKind: kind,
 			},
 		}},
 	}.Ability(), nil
+}
+
+func exactDynamicCounterText(ability oracle.CompiledAbility, counterName string) bool {
+	amount := ability.Effects[0].Amount
+	return amount.DynamicForm == oracle.DynamicAmountWhereX &&
+		ability.Text == fmt.Sprintf(
+			"Put X %s counters on %s, %s.",
+			counterName,
+			ability.Targets[0].Text,
+			amount.Text,
+		)
+}
+
+func exactDynamicAmountReference(
+	amount oracle.CompiledAmount,
+	references []oracle.CompiledReference,
+) bool {
+	if amount.DynamicKind != oracle.DynamicAmountSourcePower {
+		return len(references) == 0
+	}
+	if len(references) != 1 || references[0].Span != amount.ReferenceSpan {
+		return false
+	}
+	switch references[0].Kind {
+	case oracle.ReferenceSelfName, oracle.ReferenceThisObject:
+		return true
+	default:
+		return false
+	}
 }
 
 func isExactPutCounterText(text, targetText string, amount int, counterName string) bool {
@@ -3865,12 +3923,11 @@ func lowerFixedDamageSpell(
 		ability.Targets[0].Cardinality.Max != 1 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
-		len(ability.Modes) != 0 ||
-		!singleSelfReference(ability.References) {
+		len(ability.Modes) != 0 {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported damage spell",
-			"the executable source backend supports only exact fixed damage to one target",
+			"the executable source backend supports only exact supported damage amounts to one target",
 		)
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
@@ -3878,29 +3935,39 @@ func lowerFixedDamageSpell(
 	if effect.Amount.Known {
 		amount = game.Fixed(effect.Amount.Value)
 		amountText = fmt.Sprint(effect.Amount.Value)
+	} else if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported damage spell",
+				"the executable source backend supports only exact supported damage amounts to one target",
+			)
+		}
+		amount = game.Dynamic(dynamic)
 	}
 	target, ok := damageTargetSpec(ability.Targets[0])
 	if !ok ||
-		ability.Text != fmt.Sprintf(
-			"%s deals %s damage to %s.",
-			cardName,
-			amountText,
-			ability.Targets[0].Text,
-		) {
+		!exactDamageAmountSyntax(cardName, ability, effect.Amount, amountText) ||
+		!exactDamageAmountReferences(effect.Amount, ability.References) {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported damage spell",
-			"the executable source backend supports only exact fixed damage to one target",
+			"the executable source backend supports only exact supported damage amounts to one target",
 		)
+	}
+	damage := game.Damage{
+		Amount:    amount,
+		Recipient: game.AnyTargetDamageRecipient(0),
+	}
+	if effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{target},
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.Damage{
-					Amount:    amount,
-					Recipient: game.AnyTargetDamageRecipient(0),
-				},
+				Primitive: damage,
 			},
 		},
 	}.Ability(), nil
@@ -3910,28 +3977,22 @@ func lowerFixedModifyPTSpell(
 	ability oracle.CompiledAbility,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
+	dynamicPT := effect.Amount.DynamicKind != oracle.DynamicAmountNone
 	if len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 ||
 		ability.Targets[0].Selector.Kind != oracle.SelectorCreature ||
-		!effect.PowerDelta.Known ||
-		!effect.ToughnessDelta.Known ||
+		(!dynamicPT && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) ||
 		effect.Negated ||
 		effect.Duration != oracle.DurationUntilEndOfTurn ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
-		len(ability.References) != 0 ||
-		ability.Text != fmt.Sprintf(
-			"%s gets %s/%s until end of turn.",
-			titleFirst(ability.Targets[0].Text),
-			signedAmountText(effect.PowerDelta),
-			signedAmountText(effect.ToughnessDelta),
-		) {
+		!exactModifyPTAmountSyntax(ability, effect) {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported power/toughness spell",
-			"the executable source backend supports only exact fixed target-creature power/toughness changes until end of turn",
+			"the executable source backend supports only exact supported target-creature power/toughness changes until end of turn",
 		)
 	}
 	targetSpec, ok := permanentTargetSpec(ability.Targets[0])
@@ -3939,8 +4000,34 @@ func lowerFixedModifyPTSpell(
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported power/toughness spell",
-			"the executable source backend supports only exact fixed target-creature power/toughness changes until end of turn",
+			"the executable source backend supports only exact supported target-creature power/toughness changes until end of turn",
 		)
+	}
+	powerDelta := game.Fixed(compiledSignedAmountValue(effect.PowerDelta))
+	toughnessDelta := game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta))
+	if dynamicPT {
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported power/toughness spell",
+				"the executable source backend supports only exact supported target-creature power/toughness changes until end of turn",
+			)
+		}
+		switch effect.Amount.DynamicForm {
+		case oracle.DynamicAmountWhereX:
+			powerDelta = game.Dynamic(dynamic)
+			toughnessDelta = game.Dynamic(dynamic)
+		case oracle.DynamicAmountForEach:
+			powerDelta = dynamicSignedQuantity(dynamic, effect.PowerDelta)
+			toughnessDelta = dynamicSignedQuantity(dynamic, effect.ToughnessDelta)
+		default:
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported power/toughness spell",
+				"the executable source backend supports only exact supported target-creature power/toughness changes until end of turn",
+			)
+		}
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
@@ -3948,8 +4035,8 @@ func lowerFixedModifyPTSpell(
 			{
 				Primitive: game.ModifyPT{
 					Object:         game.TargetPermanentReference(0),
-					PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
-					ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
+					PowerDelta:     powerDelta,
+					ToughnessDelta: toughnessDelta,
 					Duration:       game.DurationUntilEndOfTurn,
 				},
 			},
@@ -4142,8 +4229,7 @@ func lowerFixedLifeSpell(
 		effect.Negated ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
-		len(ability.Modes) != 0 ||
-		len(ability.References) != 0 {
+		len(ability.Modes) != 0 {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported life spell",
@@ -4152,22 +4238,42 @@ func lowerFixedLifeSpell(
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	amountText := "X"
-	if effect.Amount.Known {
+	switch {
+	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
 		amountText = fmt.Sprint(effect.Amount.Value)
+	case effect.Amount.DynamicKind != oracle.DynamicAmountNone:
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower ||
+			len(ability.References) != 0 {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported life spell",
+				"the executable source backend supports only exact supported life changes",
+			)
+		}
+		amount = game.Dynamic(dynamic)
+	case len(ability.References) != 0:
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported life spell",
+			"the executable source backend supports only exact supported life changes",
+		)
+	default:
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
 	case len(ability.Targets) == 0 &&
-		ability.Text == fmt.Sprintf("You %s %s life.", verb, amountText):
+		exactLifeAmountSyntax("You", verb, ability.Text, effect.Amount, amountText):
 	case len(ability.Targets) == 1:
 		targetSpec, ok := playerTargetSpec(ability.Targets[0])
 		if !ok ||
-			ability.Text != fmt.Sprintf(
-				"%s %ss %s life.",
+			!exactLifeAmountSyntax(
 				titleFirst(ability.Targets[0].Text),
-				verb,
+				verb+"s",
+				ability.Text,
+				effect.Amount,
 				amountText,
 			) {
 			return game.AbilityContent{}, executableDiagnostic(
@@ -4282,16 +4388,32 @@ func lowerFixedDrawSpell(
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	if effect.Amount.Known {
 		amount = game.Fixed(effect.Amount.Value)
+	} else if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported draw spell",
+				"the executable source backend supports only exact supported card draw",
+			)
+		}
+		amount = game.Dynamic(dynamic)
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
 	case len(ability.Targets) == 0 &&
 		(exactControllerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
-			(!effect.Amount.Known && exactXControllerDrawSyntax(syntax.Tokens))):
+			(!effect.Amount.Known &&
+				effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
+				exactXControllerDrawSyntax(syntax.Tokens)) ||
+			exactDynamicDrawSyntax(ability.Text, "", effect.Amount)):
 	case len(ability.Targets) == 1 &&
 		(exactTargetPlayerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
-			(!effect.Amount.Known && exactXTargetPlayerDrawSyntax(syntax.Tokens))) &&
+			(!effect.Amount.Known &&
+				effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
+				exactXTargetPlayerDrawSyntax(syntax.Tokens)) ||
+			exactDynamicDrawSyntax(ability.Text, titleFirst(ability.Targets[0].Text), effect.Amount)) &&
 		ability.Targets[0].Cardinality.Min == 1 &&
 		ability.Targets[0].Cardinality.Max == 1 &&
 		ability.Targets[0].Selector.Kind == oracle.SelectorPlayer:
@@ -4322,6 +4444,228 @@ func lowerFixedDrawSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+func lowerDynamicAmount(amount oracle.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
+	if amount.Multiplier < 1 {
+		return game.DynamicAmount{}, false
+	}
+	dynamic := game.DynamicAmount{Multiplier: amount.Multiplier}
+	switch amount.DynamicKind {
+	case oracle.DynamicAmountCount:
+		selection, ok := dynamicAmountSelection(amount.Selector)
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountCountSelector
+		dynamic.Group = game.BattlefieldGroup(selection)
+	case oracle.DynamicAmountControllerLife:
+		dynamic.Kind = game.DynamicAmountControllerLife
+	case oracle.DynamicAmountOpponentCount:
+		dynamic.Kind = game.DynamicAmountOpponentCount
+	case oracle.DynamicAmountSourcePower:
+		if len(object.Validate()) != 0 {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountObjectPower
+		dynamic.Object = object
+	default:
+		return game.DynamicAmount{}, false
+	}
+	return dynamic, true
+}
+
+func dynamicAmountSelection(selector oracle.CompiledSelector) (game.Selection, bool) {
+	var requiredType types.Card
+	switch selector.Kind {
+	case oracle.SelectorArtifact:
+		requiredType = types.Artifact
+	case oracle.SelectorCreature:
+		requiredType = types.Creature
+	case oracle.SelectorEnchantment:
+		requiredType = types.Enchantment
+	case oracle.SelectorLand:
+		requiredType = types.Land
+	case oracle.SelectorPermanent:
+	default:
+		return game.Selection{}, false
+	}
+	var controller game.ControllerRelation
+	switch selector.Controller {
+	case oracle.ControllerAny:
+	case oracle.ControllerYou:
+		controller = game.ControllerYou
+	case oracle.ControllerOpponent:
+		controller = game.ControllerOpponent
+	default:
+		return game.Selection{}, false
+	}
+	selection := game.Selection{Controller: controller}
+	if requiredType != "" {
+		selection.RequiredTypes = []types.Card{requiredType}
+	}
+	return selection, true
+}
+
+func exactDamageAmountSyntax(
+	cardName string,
+	ability oracle.CompiledAbility,
+	amount oracle.CompiledAmount,
+	fixedText string,
+) bool {
+	target := ability.Targets[0].Text
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountFormNone:
+		return ability.Text == fmt.Sprintf("%s deals %s damage to %s.", cardName, fixedText, target)
+	case oracle.DynamicAmountEqual:
+		return ability.Text == fmt.Sprintf("%s deals damage %s to %s.", cardName, amount.Text, target)
+	case oracle.DynamicAmountForEach:
+		return ability.Text == fmt.Sprintf(
+			"%s deals %d damage %s to %s.",
+			cardName,
+			amount.Multiplier,
+			amount.Text,
+			target,
+		)
+	case oracle.DynamicAmountWhereX:
+		return ability.Text == fmt.Sprintf(
+			"%s deals X damage to %s, %s.",
+			cardName,
+			target,
+			amount.Text,
+		)
+	default:
+		return false
+	}
+}
+
+func exactDamageAmountReferences(amount oracle.CompiledAmount, references []oracle.CompiledReference) bool {
+	if amount.DynamicKind != oracle.DynamicAmountSourcePower {
+		return singleSelfReference(references)
+	}
+	if len(references) != 2 ||
+		references[0].Kind != oracle.ReferenceSelfName ||
+		references[1].Span != amount.ReferenceSpan {
+		return false
+	}
+	switch references[1].Kind {
+	case oracle.ReferenceSelfName, oracle.ReferenceThisObject:
+		return true
+	case oracle.ReferencePronoun:
+		return strings.EqualFold(references[1].Text, "its")
+	default:
+		return false
+	}
+}
+
+func exactLifeAmountSyntax(
+	subject, verb, text string,
+	amount oracle.CompiledAmount,
+	fixedText string,
+) bool {
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountFormNone:
+		return text == fmt.Sprintf("%s %s %s life.", subject, verb, fixedText)
+	case oracle.DynamicAmountEqual:
+		return text == fmt.Sprintf("%s %s life %s.", subject, verb, amount.Text)
+	case oracle.DynamicAmountForEach:
+		return text == fmt.Sprintf("%s %s %d life %s.", subject, verb, amount.Multiplier, amount.Text)
+	case oracle.DynamicAmountWhereX:
+		return text == fmt.Sprintf("%s %s X life, %s.", subject, verb, amount.Text)
+	default:
+		return false
+	}
+}
+
+func exactDynamicDrawSyntax(text, subject string, amount oracle.CompiledAmount) bool {
+	if amount.DynamicKind == oracle.DynamicAmountNone {
+		return false
+	}
+	prefix := "Draw"
+	if subject != "" {
+		prefix = subject + " draws"
+	}
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountEqual:
+		return text == fmt.Sprintf("%s cards %s.", prefix, amount.Text)
+	case oracle.DynamicAmountForEach:
+		noun := "cards"
+		if amount.Multiplier == 1 {
+			return text == fmt.Sprintf("%s 1 card %s.", prefix, amount.Text) ||
+				text == fmt.Sprintf("%s a card %s.", prefix, amount.Text)
+		}
+		return text == fmt.Sprintf("%s %d %s %s.", prefix, amount.Multiplier, noun, amount.Text)
+	case oracle.DynamicAmountWhereX:
+		return text == fmt.Sprintf("%s X cards, %s.", prefix, amount.Text)
+	default:
+		return false
+	}
+}
+
+func exactModifyPTAmountSyntax(ability oracle.CompiledAbility, effect oracle.CompiledEffect) bool {
+	subject := titleFirst(ability.Targets[0].Text)
+	amount := effect.Amount
+	if amount.DynamicKind == oracle.DynamicAmountNone {
+		return len(ability.References) == 0 &&
+			ability.Text == fmt.Sprintf(
+				"%s gets %s/%s until end of turn.",
+				subject,
+				signedAmountText(effect.PowerDelta),
+				signedAmountText(effect.ToughnessDelta),
+			)
+	}
+	if len(ability.References) != 0 || amount.DynamicKind == oracle.DynamicAmountSourcePower {
+		return false
+	}
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountForEach:
+		if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known ||
+			!dynamicPTMultiplierMatches(amount.Multiplier, effect.PowerDelta, effect.ToughnessDelta) {
+			return false
+		}
+		return ability.Text == fmt.Sprintf(
+			"%s gets %s/%s %s until end of turn.",
+			subject,
+			signedAmountText(effect.PowerDelta),
+			signedAmountText(effect.ToughnessDelta),
+			amount.Text,
+		) || ability.Text == fmt.Sprintf(
+			"%s gets %s/%s until end of turn %s.",
+			subject,
+			signedAmountText(effect.PowerDelta),
+			signedAmountText(effect.ToughnessDelta),
+			amount.Text,
+		)
+	case oracle.DynamicAmountWhereX:
+		return !effect.PowerDelta.Known &&
+			!effect.ToughnessDelta.Known &&
+			ability.Text == fmt.Sprintf("%s gets +X/+X until end of turn, %s.", subject, amount.Text)
+	default:
+		return false
+	}
+}
+
+func dynamicPTMultiplierMatches(
+	multiplier int,
+	power, toughness oracle.CompiledSignedAmount,
+) bool {
+	matches := func(amount oracle.CompiledSignedAmount) bool {
+		return amount.Value == 0 || amount.Value == multiplier
+	}
+	return multiplier > 0 && matches(power) && matches(toughness)
+}
+
+func dynamicSignedQuantity(
+	dynamic game.DynamicAmount,
+	amount oracle.CompiledSignedAmount,
+) game.Quantity {
+	if amount.Value == 0 {
+		return game.Fixed(0)
+	}
+	if amount.Negative {
+		dynamic.Multiplier = -dynamic.Multiplier
+	}
+	return game.Dynamic(dynamic)
 }
 
 func exactXControllerDrawSyntax(tokens []oracle.Token) bool {

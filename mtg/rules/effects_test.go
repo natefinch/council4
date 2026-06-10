@@ -57,6 +57,58 @@ func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 	if g.Players[game.Player2].Life != 43 {
 		t.Fatalf("player 2 life = %d, want 43", g.Players[game.Player2].Life)
 	}
+
+}
+
+func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "First Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Second Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Opponent Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	obj := &game.StackObject{Controller: game.Player1}
+
+	count := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 2,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+		}),
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, count); got != 4 {
+		t.Fatalf("twice controlled creature count = %d, want 4", got)
+	}
+	count.Group = game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Land},
+		Controller:    game.ControllerYou,
+	})
+	if got := dynamicAmountValue(g, obj, game.Player1, count); got != 0 {
+		t.Fatalf("zero matching lands = %d, want 0", got)
+	}
+
+	g.Players[game.Player1].Life = 17
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind: game.DynamicAmountControllerLife,
+	}); got != 17 {
+		t.Fatalf("controller life = %d, want 17", got)
+	}
+
+	g.Players[game.Player4].Eliminated = true
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:       game.DynamicAmountOpponentCount,
+		Multiplier: 2,
+	}); got != 4 {
+		t.Fatalf("twice alive opponent count = %d, want 4", got)
+	}
 }
 
 func TestModalResolutionUsesEachModesOwnTargets(t *testing.T) {

@@ -102,8 +102,8 @@ records:
 - modes and inclusive target cardinalities;
 - conservative selectors and controller constraints;
 - keyword abilities and parameters;
-- instruction verbs, fixed and exact `X` amounts, mana symbols, negation, and common
-  durations;
+- instruction verbs, fixed, exact `X`, and typed dynamic amounts, mana symbols,
+  negation, and common durations;
 - card-name, `this`-object, `that`-object, and pronoun references.
 
 Recognition is deliberately conservative. Reminder and quoted text do not leak
@@ -120,10 +120,12 @@ lowers base-type Enchant, color-based Protection, supported tap and untap mana
 choices, ordinary activated abilities with exact typed costs and supported
 effect bodies, and exact trailing activation timing restrictions,
 unconditional enters-tapped replacements and common land-count or basic-land-subtype
-conditions, fixed or `X` single-target damage,
+conditions, fixed, `X`, or supported typed dynamic single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes with common
 controller, tapped-state, and combat-state target restrictions, narrow mass
-destruction, fixed or `X` draw and life changes, fixed controller scry and surveil,
+destruction, fixed, `X`, or supported typed dynamic draw and life changes,
+dynamic target-creature P/T changes for exact `for each` and `where X` formulas,
+fixed controller scry and surveil,
 exact investigate and proliferate, fixed controller or target-player discard
 and mill, fixed +1/+1 and -1/-1 counter placement on one target permanent,
 one-target tap, untap, and regeneration, exact fights between two
@@ -164,6 +166,13 @@ activations may combine mana, tap, and untap costs with typed sacrifice,
 discard, pay-life, source-exile, graveyard-exile, and source-counter-removal
 costs. Every semantic element and meaningful source token must be consumed;
 otherwise the whole card is rejected.
+
+Supported dynamic effect amounts are deliberately closed: exact creature,
+artifact, enchantment, land, or permanent counts (controlled by you, controlled
+by opponents, or on the battlefield), opponent count, controller life, and an
+exactly referenced source object's power. Count and opponent formulas may use
+their printed integer multiplier or “twice.” Arithmetic offsets, mixed groups,
+zone counts, and ambiguous pronouns remain unsupported.
 
 This compiler IR is the recognition stage. The strict backend in `cardgen`
 consumes it and lowers each recognized ability into a second, **typed**

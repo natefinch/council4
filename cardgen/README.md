@@ -47,7 +47,8 @@ Vanguard cards are excluded with explicit report reasons.
    continuous effects. Exact
    source-relative keyword grants gated by controlling supported permanent
    types, subtypes, colors, or colorless permanents use condition-gated layer-6
-   effects. Exact `X` quantities and common target
+   effects. Exact `X` quantities, supported count/life/opponent/source-power
+   formulas, and common target
    restrictions lower into runtime quantities and structured target predicates.
    Ordered effect clauses retain independent target specifications and references.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed

@@ -2156,7 +2156,7 @@ func TestGenerateExecutableCardSourceSelfDiesAdventurePermission(t *testing.T) {
 	}
 }
 
-func TestGenerateExecutableCardSourceRejectsDynamicSelfDiesDamage(t *testing.T) {
+func TestGenerateExecutableCardSourceDynamicSelfDiesDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
 		Name:       "Test Devil",
@@ -2170,11 +2170,176 @@ func TestGenerateExecutableCardSourceRejectsDynamicSelfDiesDamage(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountObjectPower",
+		"Object:     game.EventPermanentReference()",
+		"DamageSource: opt.Val(game.EventPermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceDynamicCountDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Swarm",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Test Swarm deals damage equal to twice the number of creatures you control to any target.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountCountSelector",
+		"Multiplier: 2",
+		"game.BattlefieldGroup",
+		"types.Creature",
+		"Controller: game.ControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "/counter\"") {
+		t.Fatalf("source has unused counter import:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceDynamicSourcePowerCounters(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Druid",
+		Layout:     "normal",
+		TypeLine:   "Creature — Druid",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "{T}: Put X +1/+1 counters on target creature, where X is Test Druid's power.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountObjectPower",
+		"Object:     game.SourcePermanentReference()",
+		"CounterKind: counter.PlusOnePlusOne",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceDynamicSourcePowerDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Devil",
+		Layout:     "normal",
+		TypeLine:   "Creature — Devil",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "{T}: Test Devil deals damage equal to Test Devil's power to any target.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountObjectPower",
+		"Object:     game.SourcePermanentReference()",
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsAmbiguousDynamicAmount(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Test Swarm deals damage equal to the number of creatures you control plus one to any target.",
+		"Test Swarm deals damage equal to creatures you control to any target.",
+		"You gain X life, where X is opponent.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Swarm",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			}
+
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v, want rejection", source, diagnostics)
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsDynamicAmountNumberDisagreement(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Draw a card for each creatures you control.",
+		"Test Swarm deals damage equal to the number of creature you control to any target.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Swarm",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			}
+
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v, want rejection", source, diagnostics)
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsAmbiguousDynamicPowerReference(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Druid",
+		Layout:     "normal",
+		TypeLine:   "Creature — Druid",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "{T}: Put X +1/+1 counters on target creature, where X is its power.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if source != "" || len(diagnostics) == 0 {
 		t.Fatalf("source = %q, diagnostics = %#v, want rejection", source, diagnostics)
-	}
-	if got := diagnostics[0].Summary; got != "unsupported dies trigger effect" {
-		t.Fatalf("summary = %q, want unsupported dies trigger effect", got)
 	}
 }
 
