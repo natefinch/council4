@@ -104,6 +104,7 @@ type CardFace struct {
 	ManaAbilities        []ManaAbility
 	LoyaltyAbilities     []LoyaltyAbility
 	TriggeredAbilities   []TriggeredAbility
+	ChapterAbilities     []ChapterAbility
 	ReplacementAbilities []ReplacementAbility
 	StaticAbilities      []StaticAbility
 
@@ -327,13 +328,14 @@ func (f *CardFace) HasKeyword(kw Keyword) bool {
 }
 
 // AbilityCount returns the number of abilities on this face in the canonical
-// index order (Spell, Activated, Mana, Loyalty, Triggered, Replacement, Static).
+// index order (Spell, Activated, Mana, Loyalty, Triggered, Chapter,
+// Replacement, Static).
 func (f *CardFace) AbilityCount() int {
 	n := 0
 	if f.SpellAbility.Exists {
 		n++
 	}
-	return n + len(f.ActivatedAbilities) + len(f.ManaAbilities) + len(f.LoyaltyAbilities) + len(f.TriggeredAbilities) + len(f.ReplacementAbilities) + len(f.StaticAbilities)
+	return n + len(f.ActivatedAbilities) + len(f.ManaAbilities) + len(f.LoyaltyAbilities) + len(f.TriggeredAbilities) + len(f.ChapterAbilities) + len(f.ReplacementAbilities) + len(f.StaticAbilities)
 }
 
 // ActivatedAbilityIndex returns the canonical index of an activated ability.
@@ -360,7 +362,7 @@ func (f *CardFace) TriggeredAbilityIndex(index int) int {
 }
 
 // BodyAt returns the ability body at the given canonical index. The canonical
-// order is: Spell (if present), Activated, Mana, Loyalty, Triggered,
+// order is: Spell (if present), Activated, Mana, Loyalty, Triggered, Chapter,
 // Replacement, Static. Returns nil for out-of-range indexes.
 func (f *CardFace) BodyAt(index int) Ability {
 	if index < 0 {
@@ -389,6 +391,10 @@ func (f *CardFace) BodyAt(index int) Ability {
 		return f.TriggeredAbilities[i]
 	}
 	i -= len(f.TriggeredAbilities)
+	if i < len(f.ChapterAbilities) {
+		return f.ChapterAbilities[i]
+	}
+	i -= len(f.ChapterAbilities)
 	if i < len(f.ReplacementAbilities) {
 		return f.ReplacementAbilities[i]
 	}
@@ -448,6 +454,7 @@ func (f *CardFace) ClearAbilities() {
 	f.ManaAbilities = nil
 	f.LoyaltyAbilities = nil
 	f.TriggeredAbilities = nil
+	f.ChapterAbilities = nil
 	f.ReplacementAbilities = nil
 	f.StaticAbilities = nil
 }
@@ -501,6 +508,7 @@ func (f *CardFace) clone() CardFace {
 		ManaAbilities:        append([]ManaAbility(nil), f.ManaAbilities...),
 		LoyaltyAbilities:     append([]LoyaltyAbility(nil), f.LoyaltyAbilities...),
 		TriggeredAbilities:   append([]TriggeredAbility(nil), f.TriggeredAbilities...),
+		ChapterAbilities:     append([]ChapterAbility(nil), f.ChapterAbilities...),
 		ReplacementAbilities: append([]ReplacementAbility(nil), f.ReplacementAbilities...),
 		StaticAbilities:      append([]StaticAbility(nil), f.StaticAbilities...),
 		ImplementationID:     f.ImplementationID,

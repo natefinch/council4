@@ -454,6 +454,18 @@ func (r Renderer) renderFaceAbilityFields(ctx *renderCtx, face *game.CardFace, h
 		fields = append(fields, sliceField("TriggeredAbilities", "game.TriggeredAbility", elements))
 	}
 
+	if len(face.ChapterAbilities) > 0 {
+		elements := make([]string, 0, len(face.ChapterAbilities))
+		for i := range face.ChapterAbilities {
+			rendered, err := r.renderChapterAbility(ctx, &face.ChapterAbilities[i])
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("ChapterAbilities", "game.ChapterAbility", elements))
+	}
+
 	if len(face.LoyaltyAbilities) > 0 {
 		elements := make([]string, 0, len(face.LoyaltyAbilities))
 		for i := range face.LoyaltyAbilities {
@@ -747,6 +759,18 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	}
 	fields = append(fields, fmt.Sprintf("Content: %s,", content))
 	return structLit("game.TriggeredAbility", fields), nil
+}
+
+func (r Renderer) renderChapterAbility(ctx *renderCtx, ability *game.ChapterAbility) (string, error) {
+	content, err := r.renderAbilityContent(ctx, ability.Content)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ChapterAbility", []string{
+		fmt.Sprintf("Text: %s,", renderText(ability.Text)),
+		fmt.Sprintf("Chapters: %#v,", ability.Chapters),
+		fmt.Sprintf("Content: %s,", content),
+	}), nil
 }
 
 func (r Renderer) renderLoyaltyAbility(ctx *renderCtx, ability *game.LoyaltyAbility) (string, error) {

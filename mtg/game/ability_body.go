@@ -77,6 +77,14 @@ type TriggeredAbility struct {
 	Content          AbilityContent
 }
 
+// ChapterAbility is a Saga chapter ability associated with one or more lore
+// counter numbers.
+type ChapterAbility struct {
+	Text     string
+	Chapters []int
+	Content  AbilityContent
+}
+
 // StaticAbility is a static ability that functions from a zone.
 type StaticAbility struct {
 	Text              string
@@ -143,6 +151,7 @@ func (ActivatedAbility) isAbility()   {}
 func (ManaAbility) isAbility()        {}
 func (LoyaltyAbility) isAbility()     {}
 func (TriggeredAbility) isAbility()   {}
+func (ChapterAbility) isAbility()     {}
 func (ReplacementAbility) isAbility() {}
 func (StaticAbility) isAbility()      {}
 
@@ -180,6 +189,13 @@ func BodyContent(body Ability) AbilityContent {
 	case TriggeredAbility:
 		return b.Content
 	case *TriggeredAbility:
+		if b == nil {
+			return AbilityContent{}
+		}
+		return b.Content
+	case ChapterAbility:
+		return b.Content
+	case *ChapterAbility:
 		if b == nil {
 			return AbilityContent{}
 		}

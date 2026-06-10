@@ -38,6 +38,8 @@ func compileAbility(
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Text
 	}
+	compiled.Chapters = append([]int(nil), ability.Chapters...)
+	compiled.ChapterSpan = ability.ChapterSpan
 	if ability.Cost != nil {
 		cost := compileCost(*ability.Cost, ability.Kind)
 		compiled.Cost = &cost
@@ -181,7 +183,7 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 
 func compileTrigger(ability Ability) CompiledTrigger {
 	tokens := ability.Tokens
-	if ability.AbilityWord != nil {
+	if ability.AbilityWord != nil || len(ability.Chapters) > 0 {
 		if dash := topLevelIndex(tokens, EmDash); dash >= 0 {
 			tokens = tokens[dash+1:]
 		}

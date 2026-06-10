@@ -31,10 +31,11 @@ Vanguard cards are excluded with explicit report reasons.
 
 1. **Recognition (`cardgen/oracle`).** The lexer and parser preserve exact source
    spans. The semantic compiler recognizes costs, targets, triggers, keywords,
-   references, and ordered effects conservatively.
+   Saga chapter headings, references, and ordered effects conservatively.
 2. **Typed lowering (`lower.go` and `executable.go`).** Recognized semantics
-   become typed `game.*` ability values. `assembleCardDefs` combines those values
-   with printed Scryfall fields and calls
+   become typed `game.*` ability values, including chapter-numbered
+   `game.ChapterAbility` values for ordinary Sagas. `assembleCardDefs` combines
+   those values with printed Scryfall fields and calls
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,

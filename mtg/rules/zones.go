@@ -57,6 +57,9 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		permanent.Tapped = true
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
+	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
+		emitCounterAddedEvent(g, permanent, counter.Lore, 0, lore)
+	}
 	event := game.Event{
 		SourceID:    card.ID,
 		Controller:  controller,
@@ -132,6 +135,9 @@ func initializePermanentCounters(permanent *game.Permanent, def *game.CardDef) {
 	}
 	if def.Defense.Exists {
 		permanent.Counters.Add(counter.Defense, def.Defense.Val)
+	}
+	if def.HasSubtype(types.Saga) {
+		permanent.Counters.Add(counter.Lore, 1)
 	}
 }
 
