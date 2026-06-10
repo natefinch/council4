@@ -187,6 +187,58 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedAbilityTiming(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       game.TimingRestriction
+	}{
+		{"sorcery", "{1}: Draw a card. Activate only as a sorcery.", game.SorceryOnly},
+		{"once per turn", "{1}: Draw a card. Activate only once each turn.", game.OncePerTurn},
+		{"combat", "{1}: Draw a card. Activate only during combat.", game.DuringCombat},
+		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", game.DuringUpkeep},
+		{
+			"sorcery once per turn",
+			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
+			game.SorceryOncePerTurn,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			if got := face.ActivatedAbilities[0].Timing; got != test.want {
+				t.Fatalf("timing = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestLowerManaAbilityTiming(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Add {G}. Activate only during combat.",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("mana abilities = %d, want 1", len(face.ManaAbilities))
+	}
+	if got := face.ManaAbilities[0].Timing; got != game.DuringCombat {
+		t.Fatalf("timing = %v, want %v", got, game.DuringCombat)
+	}
+}
+
 func TestLowerEquipAbility(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

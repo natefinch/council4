@@ -685,6 +685,13 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
 	}
+	if ability.Timing != game.NoTimingRestriction {
+		timing, err := renderTimingRestriction(ability.Timing)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Timing: %s,", timing))
+	}
 	if len(ability.KeywordAbilities) > 0 {
 		elements := make([]string, 0, len(ability.KeywordAbilities))
 		for _, keyword := range ability.KeywordAbilities {
@@ -749,12 +756,38 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
 	}
+	if ability.Timing != game.NoTimingRestriction {
+		timing, err := renderTimingRestriction(ability.Timing)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Timing: %s,", timing))
+	}
 	content, err := r.renderAbilityContent(ctx, ability.Content)
 	if err != nil {
 		return "", err
 	}
 	fields = append(fields, fmt.Sprintf("Content: %s,", content))
 	return structLit("game.ManaAbility", fields), nil
+}
+
+func renderTimingRestriction(timing game.TimingRestriction) (string, error) {
+	switch timing {
+	case game.NoTimingRestriction:
+		return "game.NoTimingRestriction", nil
+	case game.SorceryOnly:
+		return "game.SorceryOnly", nil
+	case game.OncePerTurn:
+		return "game.OncePerTurn", nil
+	case game.SorceryOncePerTurn:
+		return "game.SorceryOncePerTurn", nil
+	case game.DuringCombat:
+		return "game.DuringCombat", nil
+	case game.DuringUpkeep:
+		return "game.DuringUpkeep", nil
+	default:
+		return "", fmt.Errorf("unsupported timing restriction %d", timing)
+	}
 }
 
 func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {

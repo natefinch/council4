@@ -1,6 +1,7 @@
 package oracle
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -57,6 +58,12 @@ func compileAbility(
 	}
 
 	body := abilityBodyTokens(ability)
+	timing, timingSpan := compileActivationTiming(ability.Kind, parseSentences(source, body))
+	if timing != ActivationTimingNone {
+		body = tokensOutsideSpan(body, timingSpan)
+		compiled.ActivationTiming = timing
+		compiled.ActivationTimingSpan = timingSpan
+	}
 	tokens := semanticTokens(body, ability.Reminders, ability.Quoted)
 	if ability.Kind == AbilityTriggered &&
 		len(tokens) >= 2 &&
@@ -80,8 +87,12 @@ func compileAbility(
 		ability.Reminders,
 		ability.Quoted,
 	)
+	referenceTokens := semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
+	if timing != ActivationTimingNone {
+		referenceTokens = tokensOutsideSpan(referenceTokens, timingSpan)
+	}
 	compiled.References = compileReferences(
-		semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted),
+		referenceTokens,
 		context.CardName,
 	)
 
@@ -107,6 +118,53 @@ func compileAbility(
 		}
 	}
 	return compiled, diagnostics
+}
+
+func compileActivationTiming(kind AbilityKind, sentences []Sentence) (ActivationTimingKind, Span) {
+	if kind != AbilityActivated || len(sentences) == 0 {
+		return ActivationTimingNone, Span{}
+	}
+	last := len(sentences) - 1
+	lastKind := activationTimingSentence(sentences[last].Text)
+	if lastKind == ActivationTimingNone {
+		return ActivationTimingNone, Span{}
+	}
+	if last > 0 {
+		previousKind := activationTimingSentence(sentences[last-1].Text)
+		if previousKind != ActivationTimingNone {
+			if (previousKind == ActivationTimingSorcery && lastKind == ActivationTimingOncePerTurn) ||
+				(previousKind == ActivationTimingOncePerTurn && lastKind == ActivationTimingSorcery) {
+				return ActivationTimingSorceryOncePerTurn, Span{
+					Start: sentences[last-1].Span.Start,
+					End:   sentences[last].Span.End,
+				}
+			}
+			return ActivationTimingNone, Span{}
+		}
+	}
+	return lastKind, sentences[last].Span
+}
+
+func activationTimingSentence(text string) ActivationTimingKind {
+	switch text {
+	case "Activate only as a sorcery.":
+		return ActivationTimingSorcery
+	case "Activate only once each turn.":
+		return ActivationTimingOncePerTurn
+	case "Activate only during combat.":
+		return ActivationTimingDuringCombat
+	case "Activate only during your upkeep.":
+		return ActivationTimingDuringUpkeep
+	default:
+		return ActivationTimingNone
+	}
+}
+
+func tokensOutsideSpan(tokens []Token, span Span) []Token {
+	return slices.DeleteFunc(append([]Token(nil), tokens...), func(token Token) bool {
+		return span.Start.Offset <= token.Span.Start.Offset &&
+			span.End.Offset >= token.Span.End.Offset
+	})
 }
 
 func compileMode(

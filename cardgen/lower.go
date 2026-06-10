@@ -462,13 +462,17 @@ func lowerActivatedAbilityKind(
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
+		spans := []oracle.Span{ability.Cost.Span, ability.Effects[0].Span}
+		if ability.ActivationTiming != oracle.ActivationTimingNone {
+			spans = append(spans, ability.ActivationTimingSpan)
+		}
 		return abilityLowering{
 			manaAbility: opt.Val(manaAbility),
 			consumed: semanticConsumption{
 				cost:    true,
 				effects: 1,
 			},
-			sourceSpans: []oracle.Span{ability.Cost.Span, ability.Effects[0].Span},
+			sourceSpans: spans,
 		}, nil
 	}
 	activatedAbility, diagnostic := lowerActivatedAbility(cardName, ability, syntax)
@@ -481,6 +485,9 @@ func lowerActivatedAbilityKind(
 		1+len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
 	)
 	spans = append(spans, ability.Cost.Span)
+	if ability.ActivationTiming != oracle.ActivationTimingNone {
+		spans = append(spans, ability.ActivationTimingSpan)
+	}
 	for _, effect := range ability.Effects {
 		spans = append(spans, effect.Span)
 	}
@@ -862,20 +869,31 @@ func lowerActivatedAbility(
 	if colon < 0 || colon+1 >= len(syntax.Tokens) {
 		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
 	}
+	bodyTokens := append([]oracle.Token(nil), syntax.Tokens[colon+1:]...)
+	if ability.ActivationTiming != oracle.ActivationTimingNone {
+		bodyTokens = slices.DeleteFunc(bodyTokens, func(token oracle.Token) bool {
+			return spanCovered(token.Span, []oracle.Span{ability.ActivationTimingSpan})
+		})
+	}
+	if len(bodyTokens) == 0 {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
 	body := ability
 	body.Kind = oracle.AbilitySpell
 	body.Cost = nil
+	body.ActivationTiming = oracle.ActivationTimingNone
+	body.ActivationTimingSpan = oracle.Span{}
 	body.References = bodyReferences(ability.References, ability.Cost.Span)
 	body.Span = oracle.Span{
-		Start: syntax.Tokens[colon+1].Span.Start,
-		End:   syntax.Span.End,
+		Start: bodyTokens[0].Span.Start,
+		End:   bodyTokens[len(bodyTokens)-1].Span.End,
 	}
-	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset:])
+	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset])
 	bodySyntax := syntax
 	bodySyntax.Kind = oracle.AbilitySpell
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
-	bodySyntax.Tokens = syntax.Tokens[colon+1:]
+	bodySyntax.Tokens = bodyTokens
 	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
 	if diagnostic != nil {
 		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
@@ -885,12 +903,32 @@ func lowerActivatedAbility(
 		Text:            ability.Text,
 		AdditionalCosts: additionalCosts,
 		ZoneOfFunction:  zone.Battlefield,
+		Timing:          lowerActivationTiming(ability.ActivationTiming),
 		Content:         content,
 	}
 	if manaCost != nil {
 		result.ManaCost = opt.Val(manaCost)
 	}
 	return result, nil
+}
+
+func lowerActivationTiming(timing oracle.ActivationTimingKind) game.TimingRestriction {
+	switch timing {
+	case oracle.ActivationTimingNone:
+		return game.NoTimingRestriction
+	case oracle.ActivationTimingSorcery:
+		return game.SorceryOnly
+	case oracle.ActivationTimingOncePerTurn:
+		return game.OncePerTurn
+	case oracle.ActivationTimingSorceryOncePerTurn:
+		return game.SorceryOncePerTurn
+	case oracle.ActivationTimingDuringCombat:
+		return game.DuringCombat
+	case oracle.ActivationTimingDuringUpkeep:
+		return game.DuringUpkeep
+	default:
+		panic(fmt.Sprintf("unknown activation timing %d", timing))
+	}
 }
 
 func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
@@ -2252,13 +2290,21 @@ func lowerTapManaAbility(
 			"the executable source backend supports only exact supported tap mana abilities",
 		)
 	}
+	if ability.ActivationTiming != oracle.ActivationTimingNone {
+		syntax.Tokens = slices.DeleteFunc(
+			append([]oracle.Token(nil), syntax.Tokens...),
+			func(token oracle.Token) bool {
+				return spanCovered(token.Span, []oracle.Span{ability.ActivationTimingSpan})
+			},
+		)
+	}
 	if exactAnyColorTapManaSyntax(syntax.Tokens) {
-		return choiceTapManaAbility(
+		return manaAbilityWithTiming(choiceTapManaAbility(
 			[]string{"W", "U", "B", "R", "G"},
-		), nil
+		), ability.ActivationTiming), nil
 	}
 	if colors, ok := exactChoiceTapManaSyntax(syntax.Tokens); ok {
-		return choiceTapManaAbility(colors), nil
+		return manaAbilityWithTiming(choiceTapManaAbility(colors), ability.ActivationTiming), nil
 	}
 	if !exactTapManaSyntax(syntax.Tokens) {
 		return game.ManaAbility{}, executableDiagnostic(
@@ -2283,7 +2329,15 @@ func lowerTapManaAbility(
 			fmt.Sprintf("the executable source backend cannot emit mana symbol %q", ability.Effects[0].Symbol),
 		)
 	}
-	return game.TapManaAbility(manaColor), nil
+	return manaAbilityWithTiming(game.TapManaAbility(manaColor), ability.ActivationTiming), nil
+}
+
+func manaAbilityWithTiming(
+	ability game.ManaAbility,
+	timing oracle.ActivationTimingKind,
+) game.ManaAbility {
+	ability.Timing = lowerActivationTiming(timing)
+	return ability
 }
 
 func choiceTapManaAbility(colorNames []string) game.ManaAbility {
