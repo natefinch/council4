@@ -1,6 +1,9 @@
 package oracle
 
-import "github.com/natefinch/council4/mtg/game/counter"
+import (
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
 
 // Compilation is the semantic result for one card face.
 type Compilation struct {
@@ -217,6 +220,7 @@ const (
 	EffectGain
 	EffectGrantKeyword
 	EffectInvestigate
+	EffectExplore
 	EffectLose
 	EffectMill
 	EffectModifyPT
@@ -286,6 +290,8 @@ type CompiledEffect struct {
 	Symbol               string
 	CounterKind          counter.Kind
 	CounterKindKnown     bool
+	FromZone             zone.Type
+	ToZone               zone.Type
 	Negated              bool
 }
 

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestCompileActivatedAbility(t *testing.T) {
@@ -280,6 +281,58 @@ func TestCompileReturnToOwnersHand(t *testing.T) {
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 {
 		t.Fatalf("ability = %#v", ability)
+	}
+}
+
+func TestCompileGraveyardReturnZones(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		text     string
+		fromZone zone.Type
+		toZone   zone.Type
+	}{
+		{
+			name:     "target card to hand",
+			text:     "Return target instant or sorcery card from your graveyard to your hand.",
+			fromZone: zone.Graveyard,
+			toZone:   zone.Hand,
+		},
+		{
+			name:     "target card to library",
+			text:     "Put target card from your graveyard on the bottom of your library.",
+			fromZone: zone.Graveyard,
+			toZone:   zone.Library,
+		},
+		{
+			name:     "opponents graveyard",
+			text:     "Return target creature card from an opponent's graveyard to your hand.",
+			fromZone: zone.Graveyard,
+			toZone:   zone.Hand,
+		},
+		{
+			name:     "self to battlefield",
+			text:     "Return this card from your graveyard to the battlefield tapped.",
+			fromZone: zone.Graveyard,
+			toZone:   zone.Battlefield,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(tc.text, ParseContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if len(ability.Effects) != 1 {
+				t.Fatalf("effects = %#v", ability.Effects)
+			}
+			effect := ability.Effects[0]
+			if effect.FromZone != tc.fromZone || effect.ToZone != tc.toZone {
+				t.Fatalf("zones = %v -> %v, want %v -> %v", effect.FromZone, effect.ToZone, tc.fromZone, tc.toZone)
+			}
+		})
 	}
 }
 
@@ -617,6 +670,25 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 	}
 	if compilation.Abilities[0].Effects[0].CounterKindKnown {
 		t.Fatal("unknown counter kind was recognized")
+	}
+}
+
+func TestCompileEntersWithCounterKind(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"This creature enters with three +1/+1 counters on it.",
+		ParseContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effect := compilation.Abilities[0].Effects[0]
+	if effect.Kind != EffectEnterTapped ||
+		!effect.CounterKindKnown ||
+		effect.CounterKind != counter.PlusOnePlusOne ||
+		!effect.Amount.Known ||
+		effect.Amount.Value != 3 {
+		t.Fatalf("effect = %#v, want fixed +1/+1 ETB counters", effect)
 	}
 }
 

@@ -38,6 +38,8 @@ const (
 	EventPermanentTurnedFaceUp
 	EventFight
 	EventPermanentMutated
+	EventAttackerBecameBlocked
+	EventTokenCreated
 )
 
 // DamageRecipientKind identifies what received damage.
@@ -87,6 +89,11 @@ type Event struct {
 	// card still uses front-face characteristics even when this records the
 	// face it had while leaving the stack or battlefield.
 	Face FaceIndex
+
+	// FaceDown records whether the moving object had hidden face-down
+	// characteristics at event time. Printed abilities do not apply while this
+	// is true.
+	FaceDown bool
 
 	// KickerPaid records whether the entering permanent spell's kicker cost was
 	// paid. It is false for permanents that did not enter from a kicked spell.

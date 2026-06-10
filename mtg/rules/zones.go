@@ -32,6 +32,7 @@ type permanentCreationOptions struct {
 	ForceTapped bool
 	KickerPaid  bool
 	WasCast     bool
+	Counters    []game.CounterPlacement
 }
 
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -51,6 +52,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	}
 	initializePermanentCounters(permanent, faceDef)
 	applyInitialContinuousEffects(g, permanent, continuous)
+	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine: e,
@@ -60,9 +62,12 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	if options.ForceTapped {
 		permanent.Tapped = true
 	}
+	for _, placement := range options.Counters {
+		permanent.Counters.Add(placement.Kind, placement.Amount)
+	}
 	g.Battlefield = append(g.Battlefield, permanent)
 	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
-		emitCounterAddedEvent(g, permanent, counter.Lore, 0, lore)
+		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 	}
 	event := game.Event{
 		SourceID:     card.ID,
@@ -171,13 +176,15 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zo
 		Player:      permanent.Owner,
 		CardID:      permanent.CardInstanceID,
 		Face:        permanent.Face,
+		FaceDown:    permanent.FaceDown,
 		PermanentID: permanent.ObjectID,
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,
 		FromZone:    zone.Battlefield,
 		ToZone:      destination,
 	}
-	replacedDestination := replacementZoneChangeDestination(g, event)
+	replacement := replacementZoneChange(g, event)
+	replacedDestination := replacement.destination
 	actualDestination := replacedDestination
 	if !permanent.Token {
 		actualDestination = commanderReplacementDestination(g, permanent.CardInstanceID, actualDestination)
@@ -186,6 +193,7 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zo
 	if !ok {
 		return false
 	}
+	revealZoneReplacementSource(g, event, replacement.revealSource)
 	if permanent.FaceDown {
 		emitFaceDownRevealEvent(g, permanent)
 	}
@@ -204,6 +212,7 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zo
 		emitPermanentLeaveEvents(g, removed, actualDestination)
 	} else {
 		destinationCards.Add(removed.CardInstanceID)
+		shuffleLibraryIfRequested(g, destinationCards, actualDestination, replacement.shuffleIntoLibrary)
 		emitPermanentLeaveEvents(g, removed, actualDestination)
 	}
 	for _, move := range componentMoves {
@@ -299,21 +308,53 @@ func permanentTokenDefName(def *game.CardDef) string {
 }
 
 func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type) bool {
+	return moveCardBetweenZonesWithPlacement(g, playerID, cardID, fromZone, toZone, false)
+}
+
+func moveCardBetweenZonesWithPlacement(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type, bottom bool) bool {
+	replacement := zoneChangeReplacementResult{destination: toZone}
+	card, cardOK := g.GetCardInstance(cardID)
+	event := game.Event{}
+	if cardOK {
+		event = game.Event{
+			Kind:       game.EventZoneChanged,
+			Controller: playerID,
+			Player:     playerID,
+			CardID:     cardID,
+			FromZone:   fromZone,
+			ToZone:     toZone,
+		}
+		replacement = replacementZoneChange(g, event)
+		destination := replacement.destination
+		destination = commanderReplacementDestination(g, card.ID, destination)
+		replacement.destination = destination
+	}
+	destination := replacement.destination
 	from, ok := destinationZone(g, playerID, fromZone)
 	if !ok || !from.Remove(cardID) {
 		return false
 	}
-	to, ok := destinationZone(g, playerID, toZone)
+	zoneOwner := playerID
+	if destination == zone.Command && cardOK {
+		zoneOwner = card.Owner
+	}
+	to, ok := destinationZone(g, zoneOwner, destination)
 	if !ok {
 		from.Add(cardID)
 		return false
 	}
-	to.Add(cardID)
+	revealZoneReplacementSource(g, event, replacement.revealSource)
+	if bottom && destination == zone.Library {
+		to.AddToBottom(cardID)
+	} else {
+		to.Add(cardID)
+	}
+	shuffleLibraryIfRequested(g, to, destination, replacement.shuffleIntoLibrary)
 	emitZoneChangeEvent(g, game.Event{
 		Player:   playerID,
 		CardID:   cardID,
 		FromZone: fromZone,
-		ToZone:   toZone,
+		ToZone:   destination,
 	})
 	return true
 }
@@ -330,19 +371,26 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	}
 	card, cardOK := g.GetCardInstance(cardID)
 	destination := zone.Graveyard
+	shuffleIntoLibrary := false
+	revealSource := false
+	event := game.Event{}
 	if cardOK {
 		if _, ok := madnessCostForCard(cardFaceOrDefault(card, game.FaceFront)); ok {
 			destination = zone.Exile
 		}
-		destination = replacementZoneChangeDestination(g, game.Event{
+		event = game.Event{
 			Kind:       game.EventZoneChanged,
 			Controller: playerID,
 			Player:     playerID,
 			CardID:     cardID,
 			FromZone:   zone.Hand,
 			ToZone:     destination,
-		})
+		}
+		replacement := replacementZoneChange(g, event)
+		destination = replacement.destination
 		destination = commanderReplacementDestination(g, card.ID, destination)
+		shuffleIntoLibrary = replacement.shuffleIntoLibrary
+		revealSource = replacement.revealSource
 	}
 	zoneOwner := playerID
 	if destination == zone.Command && cardOK {
@@ -352,8 +400,10 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	if !ok {
 		return false
 	}
+	revealZoneReplacementSource(g, event, revealSource)
 	destinationCards.Add(cardID)
-	event := game.Event{
+	shuffleLibraryIfRequested(g, destinationCards, destination, shuffleIntoLibrary)
+	event = game.Event{
 		Player:   playerID,
 		CardID:   cardID,
 		FromZone: zone.Hand,
@@ -365,6 +415,12 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	event.Kind = game.EventCardDiscarded
 	emitEvent(g, event)
 	return true
+}
+
+func shuffleLibraryIfRequested(g *game.Game, cards *zone.Zone, destination zone.Type, shuffle bool) {
+	if shuffle && destination == zone.Library {
+		cards.Shuffle(g.RNG)
+	}
 }
 
 func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destination zone.Type) {

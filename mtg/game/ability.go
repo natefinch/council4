@@ -258,6 +258,7 @@ const (
 	TriggerSubjectDefault TriggerSubjectObject = iota
 	TriggerSubjectPermanent
 	TriggerSubjectBlockedAttacker
+	TriggerSubjectDamageSource
 )
 
 // TriggerPlayerFilter constrains a trigger by the affected player recorded on an event.
@@ -313,6 +314,10 @@ type TriggerPattern struct {
 
 	DamageRecipient            DamageRecipientKind
 	DamageRecipientCombatState CombatStateFilter
+	DamageRecipientTypes       []types.Card
+
+	// RequireCombatDamage restricts damage triggers to combat damage events.
+	RequireCombatDamage bool
 
 	SpellTargetsSource bool
 	SpellTargetAllow   TargetAllow
@@ -500,6 +505,10 @@ type TargetSpec struct {
 	// specified. Predicate remains for existing cards and is adapted to a
 	// Selection by the rules matcher when Selection is absent.
 	Selection opt.V[Selection]
+
+	// TargetZone restricts card targets to one zone. It is meaningful only when
+	// Allow includes TargetAllowCard.
+	TargetZone zone.Type
 
 	// Chooser identifies who chooses this target slot during announcement. The
 	// default controller chooser preserves normal targeting. For non-controller

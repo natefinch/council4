@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -151,6 +153,305 @@ func TestLowerNinjutsuAbilityRejectsMalformedForms(t *testing.T) {
 				t.Fatal("expected malformed Ninjutsu diagnostic")
 			}
 		})
+	}
+}
+
+func TestLowerSelfCardGraveyardReturnToHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Dragon",
+		Layout:     "normal",
+		TypeLine:   "Creature — Dragon",
+		OracleText: "{3}{W}{W}: Return this card from your graveyard to your hand.",
+		Power:      new("5"),
+		Toughness:  new("5"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
+	move, ok := sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard", sequence[0].Primitive)
+	}
+	if move.Card.Kind != game.CardReferenceSource || move.FromZone != zone.Graveyard || move.Destination != zone.Hand {
+		t.Fatalf("move = %#v", move)
+	}
+}
+
+func TestLowerSelfCardGraveyardReturnToBattlefieldTapped(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Zombie",
+		Layout:     "normal",
+		TypeLine:   "Creature — Zombie",
+		OracleText: "{1}{B}, Discard two cards: Return this card from your graveyard to the battlefield tapped.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 1 {
+		t.Fatalf("sequence length = %d, want 1", len(sequence))
+	}
+	put, ok := sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("first primitive = %T, want game.PutOnBattlefield", sequence[0].Primitive)
+	}
+	cardRef, ok := put.Source.CardRef()
+	if !ok || cardRef.Kind != game.CardReferenceSource {
+		t.Fatalf("source = %#v", put.Source)
+	}
+	if !put.EntryTapped {
+		t.Fatalf("put = %#v, want EntryTapped", put)
+	}
+}
+
+func TestLowerSelfCardGraveyardReturnToBattlefieldWithCounters(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Construct",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "{3}{B}: Return this card from your graveyard to the battlefield tapped with two +1/+1 counters on it.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 1 {
+		t.Fatalf("sequence length = %d, want 1", len(sequence))
+	}
+	put, ok := sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", sequence[0].Primitive)
+	}
+	if !put.EntryTapped ||
+		len(put.EntryCounters) != 1 ||
+		put.EntryCounters[0].Kind != counter.PlusOnePlusOne ||
+		put.EntryCounters[0].Amount != 2 {
+		t.Fatalf("put = %#v", put)
+	}
+}
+
+func TestLowerTargetedGraveyardReturnToHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sage",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target instant or sorcery card from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		!slices.Equal(target.Selection.Val.RequiredTypesAny, []types.Card{types.Instant, types.Sorcery}) {
+		t.Fatalf("target = %#v", target)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard", mode.Sequence[0].Primitive)
+	}
+	if move.Card.Kind != game.CardReferenceTarget || move.FromZone != zone.Graveyard || move.Destination != zone.Hand {
+		t.Fatalf("move = %#v", move)
+	}
+}
+
+func TestLowerTargetedGraveyardReturnToLibrary(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Shaman",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put target card from your graveyard on the bottom of your library.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard", mode.Sequence[0].Primitive)
+	}
+	if mode.Targets[0].Allow != game.TargetAllowCard || move.Destination != zone.Library || !move.DestinationBottom {
+		t.Fatalf("mode = %#v move = %#v", mode, move)
+	}
+}
+
+func TestLowerTargetedGraveyardReturnToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bishop",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target creature card with mana value 3 or less from your graveyard to the battlefield tapped.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard {
+		t.Fatalf("target = %#v", target)
+	}
+	selection := target.Selection.Val
+	if !slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
+		selection.Controller != game.ControllerYou ||
+		!selection.ManaValue.Exists ||
+		selection.ManaValue.Val.Op != compare.LessOrEqual ||
+		selection.ManaValue.Val.Value != 3 {
+		t.Fatalf("selection = %#v", selection)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	cardRef, ok := put.Source.CardRef()
+	if !ok || cardRef.Kind != game.CardReferenceTarget || !put.EntryTapped {
+		t.Fatalf("put = %#v", put)
+	}
+}
+
+func TestLowerTargetedGraveyardPutOntoBattlefieldUnderYourControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reanimator",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put target creature card from a graveyard onto the battlefield under your control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard {
+		t.Fatalf("target = %#v", target)
+	}
+	if target.Selection.Val.Controller != game.ControllerAny {
+		t.Fatalf("selection controller = %v, want any", target.Selection.Val.Controller)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	if !put.Recipient.Exists || put.Recipient.Val != game.ControllerReference() {
+		t.Fatalf("recipient = %#v, want controller", put.Recipient)
+	}
+}
+
+func TestLowerTargetedGraveyardVehicleReturnToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pilot",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target Vehicle card from your graveyard to the battlefield.",
+	})
+	selection := face.SpellAbility.Val.Modes[0].Targets[0].Selection.Val
+	if !slices.Equal(selection.SubtypesAny, []types.Sub{types.Vehicle}) ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", selection)
+	}
+}
+
+func TestGenerateExecutableCardSourceTargetedGraveyardReturnRendersCardTargetConstraints(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Shaman",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put target instant or sorcery card from your graveyard on the bottom of your library.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_shaman.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"Allow:",
+		"game.TargetAllowCard",
+		"TargetZone:",
+		"zone.Graveyard",
+		"Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}, Controller: game.ControllerYou})",
+		"Card:",
+		"game.CardReference{Kind: game.CardReferenceTarget}",
+		"Destination:",
+		"zone.Library",
+		"DestinationBottom:",
+		"true",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceTargetedGraveyardReanimationRendersPutOnBattlefield(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Reanimator",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put target Vehicle card from a graveyard onto the battlefield under your control.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_reanimator.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"Allow:",
+		"game.TargetAllowCard",
+		"TargetZone:",
+		"zone.Graveyard",
+		`SubtypesAny: []types.Sub{types.Sub("Vehicle")}`,
+		"game.PutOnBattlefield",
+		"game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget})",
+		"Recipient: opt.Val(game.ControllerReference())",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfGraveyardReturnUsesEntryOptions(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Construct",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "{3}{B}: Return this card from your graveyard to the battlefield tapped with two +1/+1 counters on it.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_construct.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.PutOnBattlefield",
+		"EntryTapped:",
+		"true",
+		"EntryCounters: []game.CounterPlacement{game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 2}}",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+	for _, unwanted := range []string{"game.Tap{", "game.AddCounter{"} {
+		if strings.Contains(source, unwanted) {
+			t.Fatalf("generated source contains follow-up primitive %q:\n%s", unwanted, source)
+		}
 	}
 }
 
@@ -718,6 +1019,331 @@ func TestLowerEntersTappedReplacement(t *testing.T) {
 	}
 	if !face.ReplacementAbilities[0].Replacement.EntersTapped {
 		t.Fatal("replacement is not an enters-tapped replacement")
+	}
+}
+
+func TestLowerTokenCreationReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Anointed Procession",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if replacement.MatchEvent != game.EventTokenCreated ||
+		replacement.ControllerFilter != game.TriggerControllerYou ||
+		replacement.TokenMultiplier != 2 ||
+		replacement.Duration != game.DurationPermanent {
+		t.Fatalf("replacement = %+v, want token creation doubler", replacement)
+	}
+}
+
+func TestLowerCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name             string
+		oracleText       string
+		matchCounterKind bool
+		counterKind      counter.Kind
+	}{
+		{
+			name:             "specific plus one counters",
+			oracleText:       "If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
+			matchCounterKind: true,
+			counterKind:      counter.PlusOnePlusOne,
+		},
+		{
+			name:       "any counters",
+			oracleText: "If you would put one or more counters on a permanent or player, put twice that many of each of those kinds of counters on that permanent or player instead.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Counter Doubler",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.MatchEvent != game.EventCountersAdded ||
+				replacement.ControllerFilter != game.TriggerControllerYou ||
+				replacement.CounterMultiplier != 2 ||
+				replacement.MatchCounterKind != test.matchCounterKind ||
+				replacement.CounterKindFilter != test.counterKind ||
+				replacement.Duration != game.DurationPermanent {
+				t.Fatalf("replacement = %+v, want counter placement doubler", replacement)
+			}
+		})
+	}
+}
+
+func TestGenerateTokenCreationReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Parallel Lives",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+	}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.TokenCreationReplacement",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateCounterPlacementReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Branching Evolution",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
+	}, "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.CounterPlacementReplacement",
+		"counter.PlusOnePlusOne",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestLowerEntersWithCountersReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		kind       counter.Kind
+		amount     int
+	}{
+		{
+			name:       "plus one counters",
+			typeLine:   "Creature — Shapeshifter",
+			oracleText: "This creature enters with three +1/+1 counters on it.",
+			kind:       counter.PlusOnePlusOne,
+			amount:     3,
+		},
+		{
+			name:       "shield counter",
+			typeLine:   "Creature — Human Knight",
+			oracleText: "This creature enters with a shield counter on it.",
+			kind:       counter.Shield,
+			amount:     1,
+		},
+		{
+			name:       "charge counters",
+			typeLine:   "Artifact",
+			oracleText: "This artifact enters with two charge counters on it.",
+			kind:       counter.Charge,
+			amount:     2,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Permanent",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.EntersTapped {
+				t.Fatal("replacement unexpectedly enters tapped")
+			}
+			if len(replacement.EntersWithCounters) != 1 {
+				t.Fatalf("counter placements = %#v, want one", replacement.EntersWithCounters)
+			}
+			placement := replacement.EntersWithCounters[0]
+			if placement.Kind != test.kind || placement.Amount != test.amount {
+				t.Fatalf("placement = %#v, want %v x%d", placement, test.kind, test.amount)
+			}
+		})
+	}
+}
+
+func TestGenerateEntersWithCountersReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Creature",
+		Layout:     "normal",
+		TypeLine:   "Creature — Shapeshifter",
+		OracleText: "This creature enters with three +1/+1 counters on it.",
+		Power:      new("0"),
+		Toughness:  new("0"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`game.EntersWithCountersReplacement("This creature enters with three +1/+1 counters on it."`,
+		"game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 3}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestLowerEntersWithCountersRejectsUnsupportedForms(t *testing.T) {
+	t.Parallel()
+	tests := map[string]string{
+		"conditional": "If a creature died this turn, this creature enters with a +1/+1 counter on it.",
+		"dynamic":     "This creature enters with X +1/+1 counters on it.",
+	}
+	for name, oracleText := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Creature",
+				Layout:     "normal",
+				TypeLine:   "Creature",
+				OracleText: oracleText,
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected diagnostic")
+			}
+			if diagnostics[0].Summary != "unsupported enters-with-counters replacement" {
+				t.Fatalf("summary = %q, want unsupported enters-with-counters replacement", diagnostics[0].Summary)
+			}
+		})
+	}
+}
+
+func TestLowerSelfZoneDestinationReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		cardName      string
+		typeLine      string
+		oracleText    string
+		matchFromZone bool
+		fromZone      zone.Type
+		replaceToZone zone.Type
+	}{
+		{
+			name:          "from anywhere into library",
+			cardName:      "Darksteel Colossus",
+			typeLine:      "Artifact Creature — Golem",
+			oracleText:    "If Darksteel Colossus would be put into a graveyard from anywhere, reveal Darksteel Colossus and shuffle it into its owner's library instead.",
+			replaceToZone: zone.Library,
+		},
+		{
+			name:          "dies into exile",
+			cardName:      "Test Phoenix",
+			typeLine:      "Creature — Phoenix",
+			oracleText:    "If this creature would die, exile it instead.",
+			matchFromZone: true,
+			fromZone:      zone.Battlefield,
+			replaceToZone: zone.Exile,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       test.cardName,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("11"),
+				Toughness:  new("11"),
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.MatchEvent != game.EventZoneChanged ||
+				replacement.MatchFromZone != test.matchFromZone ||
+				replacement.FromZone != test.fromZone ||
+				!replacement.MatchToZone ||
+				replacement.ToZone != zone.Graveyard ||
+				replacement.ReplaceToZone != test.replaceToZone ||
+				replacement.ShuffleIntoLibrary != (test.replaceToZone == zone.Library) ||
+				replacement.RevealSource != (test.replaceToZone == zone.Library) {
+				t.Fatalf("replacement = %+v, want self zone-destination replacement", replacement)
+			}
+		})
+	}
+}
+
+func TestGenerateSelfZoneDestinationReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Darksteel Colossus",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Golem",
+		OracleText: "If Darksteel Colossus would be put into a graveyard from anywhere, reveal Darksteel Colossus and shuffle it into its owner's library instead.",
+		Power:      new("11"),
+		Toughness:  new("11"),
+	}, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventZoneChanged",
+		"MatchToZone:",
+		"ToZone:",
+		"zone.Graveyard",
+		"ReplaceToZone:",
+		"zone.Library",
+		"ShuffleIntoLibrary:",
+		"RevealSource:",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 }
 
@@ -1512,6 +2138,252 @@ func TestLowerEnterTrigger(t *testing.T) {
 	}
 	if trigger.Pattern.Source != game.TriggerSourceSelf {
 		t.Fatalf("source = %v, want TriggerSourceSelf", trigger.Pattern.Source)
+	}
+}
+
+func TestLowerCombatEventTriggers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		text    string
+		want    game.TriggerPattern
+		wantTyp game.TriggerType
+	}{
+		{
+			name: "attacks",
+			text: "Whenever this creature attacks, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventAttackerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "blocks",
+			text: "Whenever this creature blocks, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventBlockerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "becomes blocked",
+			text: "Whenever this creature becomes blocked, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventAttackerBecameBlocked,
+				Source: game.TriggerSourceSelf,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "combat damage to player",
+			text: "Whenever this creature deals combat damage to a player, draw a card.",
+			want: game.TriggerPattern{
+				Event:               game.EventDamageDealt,
+				Source:              game.TriggerSourceSelf,
+				Subject:             game.TriggerSubjectDamageSource,
+				DamageRecipient:     game.DamageRecipientPlayer,
+				RequireCombatDamage: true,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "combat damage to creature",
+			text: "Whenever this creature deals combat damage to a creature, draw a card.",
+			want: game.TriggerPattern{
+				Event:                game.EventDamageDealt,
+				Source:               game.TriggerSourceSelf,
+				Subject:              game.TriggerSubjectDamageSource,
+				DamageRecipient:      game.DamageRecipientPermanent,
+				DamageRecipientTypes: []types.Card{types.Creature},
+				RequireCombatDamage:  true,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Fighter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Warrior",
+				OracleText: tc.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Type != tc.wantTyp {
+				t.Fatalf("trigger type = %v, want %v", trigger.Type, tc.wantTyp)
+			}
+			if !reflect.DeepEqual(trigger.Pattern, tc.want) {
+				t.Fatalf("pattern = %+v, want %+v", trigger.Pattern, tc.want)
+			}
+		})
+	}
+}
+
+func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Whenever this creature attacks alone, draw a card.",
+		"Whenever this creature attacks and isn't blocked, draw a card.",
+		"Whenever this creature attacks a player, draw a card.",
+		"Whenever this creature attacks or blocks, draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Fighter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Warrior",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("unsupported combat trigger unexpectedly lowered")
+			}
+		})
+	}
+}
+
+func TestLowerLifeDamageReceivedTriggers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+		want game.TriggerPattern
+	}{
+		{
+			name: "you gain life",
+			text: "Whenever you gain life, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventLifeGained,
+				Player: game.TriggerPlayerYou,
+			},
+		},
+		{
+			name: "you lose life",
+			text: "Whenever you lose life, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventLifeLost,
+				Player: game.TriggerPlayerYou,
+			},
+		},
+		{
+			name: "opponent gains life",
+			text: "Whenever an opponent gains life, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventLifeGained,
+				Player: game.TriggerPlayerOpponent,
+			},
+		},
+		{
+			name: "opponent loses life",
+			text: "Whenever an opponent loses life, you gain 1 life.",
+			want: game.TriggerPattern{
+				Event:  game.EventLifeLost,
+				Player: game.TriggerPlayerOpponent,
+			},
+		},
+		{
+			name: "self dealt damage",
+			text: "Whenever this creature is dealt damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceSelf,
+				Subject:         game.TriggerSubjectPermanent,
+				DamageRecipient: game.DamageRecipientPermanent,
+			},
+		},
+		{
+			name: "enchanted creature dealt damage",
+			text: "Whenever enchanted creature is dealt damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceAttachedPermanent,
+				DamageRecipient: game.DamageRecipientPermanent,
+			},
+		},
+		{
+			name: "equipped creature dealt damage",
+			text: "Whenever equipped creature is dealt damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceAttachedPermanent,
+				DamageRecipient: game.DamageRecipientPermanent,
+			},
+		},
+		{
+			name: "you are dealt damage",
+			text: "Whenever you're dealt damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Player:          game.TriggerPlayerYou,
+				DamageRecipient: game.DamageRecipientPlayer,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Cleric",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Cleric",
+				OracleText: tc.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Type != game.TriggerWhenever {
+				t.Fatalf("trigger type = %v, want TriggerWhenever", trigger.Type)
+			}
+			if !reflect.DeepEqual(trigger.Pattern, tc.want) {
+				t.Fatalf("pattern = %+v, want %+v", trigger.Pattern, tc.want)
+			}
+		})
+	}
+}
+
+func TestLowerLifeDamageReceivedTriggersFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Whenever you gain or lose life, draw a card.",
+		"Whenever you gain life for the first time each turn, draw a card.",
+		"Whenever this creature is dealt combat damage, draw a card.",
+		"Whenever this creature deals damage to a player, draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Cleric",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Cleric",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("unsupported life/damage trigger unexpectedly lowered")
+			}
+		})
 	}
 }
 
@@ -2417,6 +3289,21 @@ func TestLowerInvestigateSpell(t *testing.T) {
 	}
 }
 
+func TestLowerInvestigateTwiceSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Investigate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Investigate twice.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	investigate, ok := mode.Sequence[0].Primitive.(game.Investigate)
+	if !ok || investigate.Amount.Value() != 2 {
+		t.Fatalf("primitive = %+v, want investigate twice", mode.Sequence[0].Primitive)
+	}
+}
+
 func TestLowerProliferateSpell(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -2428,6 +3315,129 @@ func TestLowerProliferateSpell(t *testing.T) {
 	mode := face.SpellAbility.Val.Modes[0]
 	if _, ok := mode.Sequence[0].Primitive.(game.Proliferate); !ok {
 		t.Fatalf("primitive = %T, want game.Proliferate", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerProliferateTwiceSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Proliferate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Proliferate twice.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	proliferate, ok := mode.Sequence[0].Primitive.(game.Proliferate)
+	if !ok || proliferate.Amount.Value() != 2 {
+		t.Fatalf("primitive = %+v, want proliferate twice", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerExploreSourcePermanentTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scout",
+		Layout:     "normal",
+		TypeLine:   "Creature — Merfolk Scout",
+		OracleText: "When this creature enters, it explores.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	explore, ok := mode.Sequence[0].Primitive.(game.Explore)
+	if !ok || explore.Creature.Kind() != game.ObjectReferenceSourcePermanent {
+		t.Fatalf("primitive = %+v, want source permanent explores", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Explore",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature explores.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported explore diagnostic")
+	}
+}
+
+func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		text      string
+		primitive any
+	}{
+		{
+			name:      "scry",
+			text:      "When this creature enters, if you control an artifact, scry 2.",
+			primitive: game.Scry{Amount: game.Fixed(2), Player: game.ControllerReference()},
+		},
+		{
+			name:      "investigate",
+			text:      "When this creature enters, if you control an artifact, investigate.",
+			primitive: game.Investigate{Amount: game.Fixed(1)},
+		},
+		{
+			name:      "proliferate",
+			text:      "When this creature enters, if you control an artifact, proliferate.",
+			primitive: game.Proliferate{Amount: game.Fixed(1)},
+		},
+		{
+			name:      "explore",
+			text:      "When this creature enters, if you control an artifact, it explores.",
+			primitive: game.Explore{Creature: game.SourcePermanentReference()},
+		},
+		{
+			name:      "mill",
+			text:      "When this creature enters, if you control an artifact, mill two cards.",
+			primitive: game.Mill{Amount: game.Fixed(2), Player: game.ControllerReference()},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Utility",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Wizard",
+				OracleText: tc.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			got := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive
+			if !reflect.DeepEqual(got, tc.primitive) {
+				t.Fatalf("primitive = %+v, want %+v", got, tc.primitive)
+			}
+		})
+	}
+}
+
+func TestLowerVariableMillSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mill",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Mill X cards, where X is the number of creatures you control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Mill", mode.Sequence[0].Primitive)
+	}
+	dynamic := mill.Amount.DynamicAmount()
+	if !dynamic.Exists {
+		t.Fatalf("mill amount = %+v, want dynamic controlled creature count", mill.Amount)
+	}
+	selection := dynamic.Val.Group.Selection()
+	if dynamic.Val.Kind != game.DynamicAmountCountSelector ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("mill amount = %+v, want dynamic controlled creature count", mill.Amount)
 	}
 }
 

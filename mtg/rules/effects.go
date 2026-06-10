@@ -231,6 +231,12 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 			return 0, zone.None, false
 		}
 		sourceZone, ok := cardZone(g, obj.SourceCardID)
+		if ok && obj.SourceZone != zone.None {
+			card, cardOK := g.GetCardInstance(obj.SourceCardID)
+			if !cardOK || sourceZone != obj.SourceZone || card.ZoneVersion != obj.SourceZoneVersion {
+				return 0, zone.None, false
+			}
+		}
 		return obj.SourceCardID, sourceZone, ok
 	case game.CardReferenceEvent:
 		if obj == nil || !obj.HasTriggerEvent || obj.TriggerEvent.CardID == 0 {
@@ -252,6 +258,24 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 			if linkedZone, ok := cardZone(g, linked.CardID); ok {
 				return linked.CardID, linkedZone, true
 			}
+		}
+		return 0, zone.None, false
+	case game.CardReferenceTarget:
+		if obj == nil {
+			return 0, zone.None, false
+		}
+		for _, target := range obj.Targets {
+			if target.Kind != game.TargetCard || target.CardID == 0 {
+				continue
+			}
+			card, ok := g.GetCardInstance(target.CardID)
+			if !ok ||
+				!target.CardZoneVersionSet ||
+				card.ZoneVersion != target.CardZoneVersion {
+				return 0, zone.None, false
+			}
+			targetZone, ok := cardZone(g, target.CardID)
+			return target.CardID, targetZone, ok
 		}
 		return 0, zone.None, false
 	default:
@@ -773,6 +797,26 @@ func applyDamageSourceLifelink(g *game.Game, source effectDamageSource, damage i
 	gainLife(g, source.controller, damage)
 }
 
+func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent) {
+	def, ok := permanentCardDef(g, permanent)
+	if !ok {
+		return
+	}
+	for i := range def.ReplacementAbilities {
+		replacement := def.ReplacementAbilities[i].Replacement
+		if replacement.TokenMultiplier <= 1 && replacement.CounterMultiplier <= 1 {
+			continue
+		}
+		replacement.ID = g.IDGen.Next()
+		replacement.SourceObjectID = permanent.ObjectID
+		replacement.SourceCardID = permanent.CardInstanceID
+		replacement.Controller = effectiveController(g, permanent)
+		replacement.Duration = game.DurationPermanent
+		replacement.CreatedTurn = g.Turn.TurnNumber
+		g.ReplacementEffects = append(g.ReplacementEffects, replacement)
+	}
+}
+
 // countPermanentsMatchingGroup counts battlefield permanents in a GroupReference.
 func countPermanentsMatchingGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference) int {
 	resolverObj := obj
@@ -787,7 +831,19 @@ func effectPermanentAt(g *game.Game, obj *game.StackObject, targetIndex int) (*g
 }
 
 func sourcePermanent(g *game.Game, obj *game.StackObject) (*game.Permanent, bool) {
-	return permanentByObjectID(g, obj.SourceID)
+	if permanent, ok := permanentByObjectID(g, obj.SourceID); ok {
+		return permanent, true
+	}
+	sourceCardID := obj.SourceCardID
+	if sourceCardID == 0 {
+		sourceCardID = obj.SourceID
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == sourceCardID {
+			return permanent, true
+		}
+	}
+	return nil, false
 }
 
 func firstPermanentControlledBy(g *game.Game, controller game.PlayerID) (*game.Permanent, bool) {
@@ -830,7 +886,31 @@ func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, l
 }
 
 func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.CardDef) (*game.Permanent, bool) {
-	return createTokenPermanentWithChoices(NewEngine(nil), g, controller, token, [game.NumPlayers]PlayerAgent{}, nil)
+	amount := replacementTokenCreationAmount(g, controller, 1)
+	var first *game.Permanent
+	for range amount {
+		permanent, ok := createTokenPermanentWithChoices(NewEngine(nil), g, controller, token, [game.NumPlayers]PlayerAgent{}, nil)
+		if !ok {
+			return nil, false
+		}
+		if first == nil {
+			first = permanent
+		}
+	}
+	return first, first != nil
+}
+
+func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	amount = replacementTokenCreationAmount(g, controller, amount)
+	if amount <= 0 {
+		return false
+	}
+	for range amount {
+		if _, ok := createTokenPermanentWithChoices(e, g, controller, token, agents, log); !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -848,6 +928,7 @@ func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.Pl
 		TokenDef:      token,
 	}
 	initializePermanentCounters(permanent, token)
+	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine: e,
@@ -856,7 +937,7 @@ func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.Pl
 	}, g, permanent, zone.None)
 	g.Battlefield = append(g.Battlefield, permanent)
 	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
-		emitCounterAddedEvent(g, permanent, counter.Lore, 0, lore)
+		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 	}
 	event := game.Event{
 		Controller:  controller,

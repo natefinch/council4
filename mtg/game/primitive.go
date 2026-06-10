@@ -61,10 +61,11 @@ const (
 	PrimitivePreventDamage
 	PrimitiveMoveCard
 	PrimitiveGrantCastPermission
+	PrimitiveExplore
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveGrantCastPermission) + 1
+const primitiveKindCount = int(PrimitiveExplore) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -448,6 +449,8 @@ type PutOnBattlefield struct {
 	Source            BattlefieldSource
 	Recipient         opt.V[PlayerReference]
 	ContinuousEffects []ContinuousEffect
+	EntryTapped       bool
+	EntryCounters     []CounterPlacement
 }
 
 // CreateToken creates one or more tokens.
@@ -526,9 +529,10 @@ type Bounce struct {
 
 // MoveCard moves a referenced card between two non-battlefield zones.
 type MoveCard struct {
-	Card        CardReference
-	FromZone    zone.Type
-	Destination zone.Type
+	Card              CardReference
+	FromZone          zone.Type
+	Destination       zone.Type
+	DestinationBottom bool
 }
 
 // GrantCastPermission allows a referenced card to be cast from a specific zone
@@ -584,7 +588,14 @@ type Investigate struct {
 
 // Proliferate lets the controller add a counter of an existing kind to each
 // chosen permanent or player.
-type Proliferate struct{}
+type Proliferate struct {
+	Amount Quantity
+}
+
+// Explore resolves the explore keyword action for a referenced creature.
+type Explore struct {
+	Creature ObjectReference
+}
 
 // Goad goads the referenced creature.
 type Goad struct {
@@ -752,6 +763,9 @@ func (Investigate) Kind() PrimitiveKind { return PrimitiveInvestigate }
 // Kind implements Primitive for Proliferate.
 func (Proliferate) Kind() PrimitiveKind { return PrimitiveProliferate }
 
+// Kind implements Primitive for Explore.
+func (Explore) Kind() PrimitiveKind { return PrimitiveExplore }
+
 // Kind implements Primitive for Goad.
 func (Goad) Kind() PrimitiveKind { return PrimitiveGoad }
 
@@ -824,6 +838,7 @@ func (Scry) isPrimitive()                        {}
 func (Surveil) isPrimitive()                     {}
 func (Investigate) isPrimitive()                 {}
 func (Proliferate) isPrimitive()                 {}
+func (Explore) isPrimitive()                     {}
 func (Goad) isPrimitive()                        {}
 func (RemoveCounter) isPrimitive()               {}
 func (Transform) isPrimitive()                   {}
@@ -903,7 +918,8 @@ func (p Mill) instructionRefs() primitiveRefs        { return quantityRefs(p.Amo
 func (p Scry) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
 func (p Surveil) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
 func (p Investigate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (Proliferate) instructionRefs() primitiveRefs   { return primitiveRefs{} }
+func (p Proliferate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (Explore) instructionRefs() primitiveRefs       { return primitiveRefs{} }
 func (Goad) instructionRefs() primitiveRefs          { return primitiveRefs{} }
 
 func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }

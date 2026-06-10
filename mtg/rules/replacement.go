@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -112,14 +113,24 @@ func recordReplacementDecision(g *game.Game, player game.PlayerID, options []str
 	})
 }
 
+type zoneChangeReplacementResult struct {
+	destination        zone.Type
+	shuffleIntoLibrary bool
+	revealSource       bool
+}
+
 func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type {
-	destination := event.ToZone
+	return replacementZoneChange(g, event).destination
+}
+
+func replacementZoneChange(g *game.Game, event game.Event) zoneChangeReplacementResult {
+	result := zoneChangeReplacementResult{destination: event.ToZone}
 	applied := make(map[id.ID]bool)
 	for {
-		event.ToZone = destination
+		event.ToZone = result.destination
 		matches := matchingZoneReplacementEffects(g, event, applied)
 		if len(matches) == 0 {
-			return destination
+			return result
 		}
 		if len(matches) > 1 {
 			recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
@@ -129,8 +140,108 @@ func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type 
 		// After a replacement changes the event, the replacement process checks
 		// the modified event again; the same effect cannot apply twice to one
 		// event (CR 614.5, CR 616.1e).
-		destination = replacement.ReplaceToZone
+		result.destination = replacement.ReplaceToZone
+		result.shuffleIntoLibrary = replacement.ShuffleIntoLibrary && result.destination == zone.Library
+		result.revealSource = result.revealSource || replacement.RevealSource
 	}
+}
+
+func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, amount int) int {
+	if amount <= 0 {
+		return amount
+	}
+	event := game.Event{
+		Kind:       game.EventTokenCreated,
+		Controller: controller,
+		Player:     controller,
+		Amount:     amount,
+	}
+	applied := make(map[id.ID]bool)
+	for {
+		event.Amount = amount
+		matches := matchingTokenCreationReplacementEffects(g, event, applied)
+		if len(matches) == 0 {
+			return amount
+		}
+		if len(matches) > 1 {
+			recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
+		}
+		replacement := matches[0]
+		applied[replacement.ID] = true
+		amount *= replacement.TokenMultiplier
+	}
+}
+
+func replacementPermanentCounterPlacementAmount(g *game.Game, placementController game.PlayerID, permanent *game.Permanent, kind counter.Kind, amount int) int {
+	if permanent == nil || amount <= 0 {
+		return amount
+	}
+	event := game.Event{
+		Kind:        game.EventCountersAdded,
+		Controller:  placementController,
+		Player:      permanent.Owner,
+		CardID:      permanent.CardInstanceID,
+		PermanentID: permanent.ObjectID,
+		CounterKind: kind,
+		Amount:      amount,
+	}
+	applied := make(map[id.ID]bool)
+	for {
+		event.Amount = amount
+		matches := matchingCounterPlacementReplacementEffects(g, event, permanent, applied)
+		if len(matches) == 0 {
+			return amount
+		}
+		if len(matches) > 1 {
+			recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
+		}
+		replacement := matches[0]
+		applied[replacement.ID] = true
+		amount *= replacement.CounterMultiplier
+	}
+}
+
+func replacementPlayerCounterPlacementAmount(g *game.Game, placementController, player game.PlayerID, kind counter.Kind, amount int) int {
+	if amount <= 0 {
+		return amount
+	}
+	event := game.Event{
+		Kind:        game.EventCountersAdded,
+		Controller:  placementController,
+		Player:      player,
+		CounterKind: kind,
+		Amount:      amount,
+	}
+	applied := make(map[id.ID]bool)
+	for {
+		event.Amount = amount
+		matches := matchingCounterPlacementReplacementEffects(g, event, nil, applied)
+		if len(matches) == 0 {
+			return amount
+		}
+		if len(matches) > 1 {
+			recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
+		}
+		replacement := matches[0]
+		applied[replacement.ID] = true
+		amount *= replacement.CounterMultiplier
+	}
+}
+
+func revealZoneReplacementSource(g *game.Game, event game.Event, reveal bool) {
+	if !reveal || event.CardID == 0 {
+		return
+	}
+	emitEvent(g, game.Event{
+		Kind:        game.EventCardRevealed,
+		Controller:  event.Controller,
+		Player:      event.Player,
+		CardID:      event.CardID,
+		Face:        event.Face,
+		PermanentID: event.PermanentID,
+		TokenName:   event.TokenName,
+		TokenDef:    event.TokenDef,
+	})
 }
 
 func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone zone.Type) {
@@ -160,7 +271,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			setPermanentTapped(g, permanent, true)
 		}
 		for _, placement := range replacement.EntersWithCounters {
-			permanent.Counters.Add(placement.Kind, placement.Amount)
+			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
 		}
 	}
 }
@@ -222,6 +333,38 @@ func matchingZoneReplacementEffects(g *game.Game, event game.Event, applied map[
 		}
 		matches = append(matches, *replacement)
 	}
+	matches = append(matches, matchingStaticSelfZoneReplacementEffects(g, event, applied)...)
+	return matches
+}
+
+func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {
+	if event.CardID == 0 || event.FaceDown {
+		return nil
+	}
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok || card.Def == nil {
+		return nil
+	}
+	def := cardFaceOrDefault(card, event.Face)
+	var matches []game.ReplacementEffect
+	for i := range def.ReplacementAbilities {
+		ability := &def.ReplacementAbilities[i]
+		replacement := ability.Replacement
+		if replacement.ReplaceToZone == zone.None {
+			continue
+		}
+		replacement.ID = event.CardID
+		replacement.Controller = event.Controller
+		replacement.SourceCardID = event.CardID
+		replacement.SourceObjectID = 0
+		if replacement.Description == "" {
+			replacement.Description = ability.Text
+		}
+		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, &replacement, event) {
+			continue
+		}
+		matches = append(matches, replacement)
+	}
 	return matches
 }
 
@@ -240,6 +383,85 @@ func matchingETBReplacementEffects(g *game.Game, event game.Event) []game.Replac
 	return matches
 }
 
+func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {
+	var matches []game.ReplacementEffect
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if replacement.TokenMultiplier <= 1 {
+			continue
+		}
+		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, event) {
+			continue
+		}
+		matches = append(matches, *replacement)
+	}
+	return matches
+}
+
+func counterPlacementMatchEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event, recipient *game.Permanent) game.Event {
+	if !replacement.CounterUseRecipientController {
+		return event
+	}
+	event.Controller = counterRecipientController(g, event, recipient)
+	return event
+}
+
+func counterRecipientController(g *game.Game, event game.Event, recipient *game.Permanent) game.PlayerID {
+	if recipient != nil {
+		return effectiveController(g, recipient)
+	}
+	if event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
+			return effectiveController(g, permanent)
+		}
+	}
+	if event.Player >= 0 && event.Player < game.NumPlayers {
+		return event.Player
+	}
+	return event.Controller
+}
+
+func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, recipient *game.Permanent, applied map[id.ID]bool) []game.ReplacementEffect {
+	var matches []game.ReplacementEffect
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if replacement.CounterMultiplier <= 1 {
+			continue
+		}
+		if replacement.MatchCounterKind && replacement.CounterKindFilter != event.CounterKind {
+			continue
+		}
+		if len(replacement.CounterRecipientTypes) > 0 && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, replacement.CounterRecipientTypes) {
+			continue
+		}
+		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)
+		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, matchEvent) {
+			continue
+		}
+		matches = append(matches, *replacement)
+	}
+	return matches
+}
+
+func counterRecipientPermanentMatches(g *game.Game, permanentID id.ID, permanent *game.Permanent, requiredTypes []types.Card) bool {
+	if permanent == nil {
+		if permanentID == 0 {
+			return false
+		}
+		var ok bool
+		permanent, ok = permanentByObjectID(g, permanentID)
+		if !ok {
+			return false
+		}
+	}
+	for _, cardType := range requiredTypes {
+		if !permanentHasType(g, permanent, cardType) {
+			return false
+		}
+	}
+	return true
+}
+
 func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event) bool {
 	if !replacementSourceStillApplies(g, replacement) {
 		return false
@@ -247,7 +469,8 @@ func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEf
 	if replacement.MatchEvent != game.EventUnknown && replacement.MatchEvent != event.Kind {
 		return false
 	}
-	if replacement.ControllerFilter != game.TriggerControllerAny && !triggerControllerMatches(replacement.Controller, replacement.ControllerFilter, event.Controller) {
+	controller := replacementCurrentController(g, replacement)
+	if replacement.ControllerFilter != game.TriggerControllerAny && !triggerControllerMatches(controller, replacement.ControllerFilter, event.Controller) {
 		return false
 	}
 	if replacement.MatchFromZone && replacement.FromZone != event.FromZone {
@@ -257,12 +480,21 @@ func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEf
 		return false
 	}
 	if !conditionSatisfied(g, conditionContext{
-		controller: replacement.Controller,
+		controller: controller,
 		event:      &event,
 	}, replacement.Condition) {
 		return false
 	}
 	return true
+}
+
+func replacementCurrentController(g *game.Game, replacement *game.ReplacementEffect) game.PlayerID {
+	if replacement.SourceObjectID != 0 {
+		if permanent, ok := permanentByObjectID(g, replacement.SourceObjectID); ok {
+			return effectiveController(g, permanent)
+		}
+	}
+	return replacement.Controller
 }
 
 func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEffect) bool {

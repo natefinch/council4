@@ -339,14 +339,15 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 		}
 		allowsPermanents := target.Allow&TargetAllowPermanent != 0
 		allowsPlayers := target.Allow&TargetAllowPlayer != 0
+		allowsCards := target.Allow&TargetAllowCard != 0
 		if allowsPlayers && selectionHasPermanentPredicates(selection) {
 			v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidSelection, "player targets cannot use permanent Selection predicates")
 		}
 		if !allowsPlayers && selection.Player != PlayerAny {
 			v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "non-player targets cannot use a player relation")
 		}
-		if !allowsPermanents && !allowsPlayers && !selection.Empty() {
-			v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidSelection, "Selection requires permanent or player targets")
+		if !allowsPermanents && !allowsPlayers && !allowsCards && !selection.Empty() {
+			v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidSelection, "Selection requires permanent, card, or player targets")
 		}
 	}
 	switch target.Chooser {
@@ -582,9 +583,9 @@ func (v *cardDefValidator) validateCardRef(faceName, path string, ref CardRefere
 			v.add(faceName, path, CardDefIssueInvalidReference, "linked card reference requires LinkID")
 			return false
 		}
-	case CardReferenceSource, CardReferenceEvent:
+	case CardReferenceSource, CardReferenceEvent, CardReferenceTarget:
 		if ref.LinkID != "" {
-			v.add(faceName, path, CardDefIssueInvalidReference, "source/event card reference must not set LinkID")
+			v.add(faceName, path, CardDefIssueInvalidReference, "source/event/target card reference must not set LinkID")
 			return false
 		}
 	case CardReferenceNone:

@@ -585,7 +585,7 @@ func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.C
 	if _, ok := playerByID(g, card.Owner); !ok {
 		return false
 	}
-	destination := replacementZoneChangeDestination(g, game.Event{
+	event := game.Event{
 		Kind:          game.EventZoneChanged,
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
@@ -593,22 +593,27 @@ func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.C
 		Player:        card.Owner,
 		CardID:        card.ID,
 		Face:          stackObjectFace(obj),
+		FaceDown:      obj != nil && obj.FaceDown,
 		FromZone:      zone.Stack,
 		ToZone:        zone.Exile,
-	})
+	}
+	replacement := replacementZoneChange(g, event)
+	destination := replacement.destination
 	destination = commanderReplacementDestination(g, card.ID, destination)
 	destinationCards, ok := destinationZone(g, card.Owner, destination)
 	if !ok {
 		return false
 	}
+	revealZoneReplacementSource(g, event, replacement.revealSource)
 	destinationCards.Add(card.ID)
+	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary)
 	if destination == zone.Exile {
 		if g.AdventureCards == nil {
 			g.AdventureCards = make(map[id.ID]bool)
 		}
 		g.AdventureCards[card.ID] = true
 	}
-	event := game.Event{
+	event = game.Event{
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
 		Controller:    stackObjectController(obj),
@@ -632,7 +637,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		// after the spell was cast from a graveyard (CR 702.34a, CR 702.34c).
 		intendedDestination = zone.Exile
 	}
-	destination := replacementZoneChangeDestination(g, game.Event{
+	event := game.Event{
 		Kind:          game.EventZoneChanged,
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
@@ -640,16 +645,21 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		Player:        card.Owner,
 		CardID:        card.ID,
 		Face:          stackObjectFace(obj),
+		FaceDown:      obj != nil && obj.FaceDown,
 		FromZone:      zone.Stack,
 		ToZone:        intendedDestination,
-	})
+	}
+	replacement := replacementZoneChange(g, event)
+	destination := replacement.destination
 	destination = commanderReplacementDestination(g, card.ID, destination)
 	destinationCards, ok := destinationZone(g, card.Owner, destination)
 	if !ok {
 		return false
 	}
+	revealZoneReplacementSource(g, event, replacement.revealSource)
 	destinationCards.Add(card.ID)
-	event := game.Event{
+	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary)
+	event = game.Event{
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
 		Controller:    stackObjectController(obj),
