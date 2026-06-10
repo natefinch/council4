@@ -55,6 +55,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleDestroy)
 	registerPrimitiveHandler(reg, handleAddMana)
 	registerPrimitiveHandler(reg, handleAddCounter)
+	registerPrimitiveHandler(reg, handleAddPlayerCounter)
 	registerPrimitiveHandler(reg, handleMoveCounters)
 	registerPrimitiveHandler(reg, handleApplyContinuous)
 	registerPrimitiveHandler(reg, handleApplyRule)

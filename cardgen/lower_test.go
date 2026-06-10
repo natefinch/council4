@@ -1,12 +1,14 @@
 package cardgen
 
 import (
+	"fmt"
 	"go/parser"
 	"go/token"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -2447,6 +2449,369 @@ func TestLowerFixedCounterSpell(t *testing.T) {
 		add.CounterKind != counter.PlusOnePlusOne ||
 		add.Object != game.TargetPermanentReference(0) {
 		t.Fatalf("primitive = %+v, want two +1/+1 counters on target 0", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerNamedCounterPlacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		text string
+		kind counter.Kind
+	}{
+		{"Put a charge counter on target artifact.", counter.Charge},
+		{"Put two shield counters on target creature you control.", counter.Shield},
+		{"Put a first strike counter on target creature.", counter.FirstStrike},
+	}
+	for _, test := range tests {
+		t.Run(test.text, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.text,
+			})
+			add, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.AddCounter)
+			if !ok || add.CounterKind != test.kind {
+				t.Fatalf("primitive = %+v", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+			}
+		})
+	}
+}
+
+func TestLowerKeywordNamedCounterPlacementAbilityShapes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		card    *ScryfallCard
+		content func(loweredFaceAbilities) (game.AbilityContent, bool)
+		kind    counter.Kind
+	}{
+		{
+			name: "activated",
+			card: &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: "{T}: Put a flying counter on target creature.",
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if len(face.ActivatedAbilities) != 1 {
+					return game.AbilityContent{}, false
+				}
+				return face.ActivatedAbilities[0].Content, true
+			},
+			kind: counter.Flying,
+		},
+		{
+			name: "loyalty",
+			card: &ScryfallCard{
+				Name:       "Test Walker",
+				Layout:     "normal",
+				TypeLine:   "Legendary Planeswalker — Test",
+				OracleText: "+1: Put a lifelink counter on target creature.",
+				Loyalty:    func() *string { loyalty := "3"; return &loyalty }(),
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if len(face.LoyaltyAbilities) != 1 {
+					return game.AbilityContent{}, false
+				}
+				return face.LoyaltyAbilities[0].Content, true
+			},
+			kind: counter.Lifelink,
+		},
+		{
+			name: "triggered",
+			card: &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Test",
+				OracleText: "When this creature enters, put a first strike counter on target creature.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if len(face.TriggeredAbilities) != 1 {
+					return game.AbilityContent{}, false
+				}
+				return face.TriggeredAbilities[0].Content, true
+			},
+			kind: counter.FirstStrike,
+		},
+		{
+			name: "phase triggered",
+			card: &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: "At the beginning of your upkeep, put a flying counter on target creature.",
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if len(face.TriggeredAbilities) != 1 {
+					return game.AbilityContent{}, false
+				}
+				return face.TriggeredAbilities[0].Content, true
+			},
+			kind: counter.Flying,
+		},
+		{
+			name: "non-self enter triggered",
+			card: &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: "Whenever another creature enters, put a lifelink counter on target creature.",
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if len(face.TriggeredAbilities) != 1 {
+					return game.AbilityContent{}, false
+				}
+				return face.TriggeredAbilities[0].Content, true
+			},
+			kind: counter.Lifelink,
+		},
+		{
+			name: "ordered effects",
+			card: &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: "Put a flying counter on target creature. Draw a card.",
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if !face.SpellAbility.Exists {
+					return game.AbilityContent{}, false
+				}
+				return face.SpellAbility.Val, true
+			},
+			kind: counter.Flying,
+		},
+		{
+			name: "Saga chapter",
+			card: &ScryfallCard{
+				Name:       "Test Saga",
+				Layout:     "saga",
+				TypeLine:   "Enchantment — Saga",
+				OracleText: "I — Put a lifelink counter on target creature.",
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if len(face.ChapterAbilities) != 1 {
+					return game.AbilityContent{}, false
+				}
+				return face.ChapterAbilities[0].Content, true
+			},
+			kind: counter.Lifelink,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, test.card)
+			content, ok := test.content(face)
+			if !ok ||
+				len(content.Modes) != 1 ||
+				len(content.Modes[0].Sequence) == 0 {
+				t.Fatalf("face = %+v, want lowered counter placement", face)
+			}
+			add, ok := content.Modes[0].Sequence[0].Primitive.(game.AddCounter)
+			if !ok || add.CounterKind != test.kind {
+				t.Fatalf("primitive = %+v, want %s counter placement", content.Modes[0].Sequence[0].Primitive, test.kind)
+			}
+		})
+	}
+}
+
+func TestLowerPlayerCounterPlacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		text string
+		kind counter.Kind
+	}{
+		{"Put an energy counter on target player.", counter.Energy},
+		{"Put two experience counters on target player.", counter.Experience},
+		{"Put three poison counters on target opponent.", counter.Poison},
+	}
+	for _, test := range tests {
+		t.Run(test.text, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.text,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			add, ok := mode.Sequence[0].Primitive.(game.AddPlayerCounter)
+			if !ok ||
+				add.CounterKind != test.kind ||
+				add.Player != game.TargetPlayerReference(0) ||
+				mode.Targets[0].Allow != game.TargetAllowPlayer {
+				t.Fatalf("mode = %+v", mode)
+			}
+		})
+	}
+}
+
+func TestLowerEveryRecognizedCounterKindOnItsValidTarget(t *testing.T) {
+	t.Parallel()
+	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {
+		if kind == counter.Stun || kind == counter.Finality {
+			continue
+		}
+		if !oracle.CounterKindPlacementSupported(kind) {
+			t.Fatalf("%s unexpectedly excluded from named placement", kind)
+		}
+		name := kind.String()
+		article := "a"
+		if strings.ContainsRune("aeiou", rune(name[0])) {
+			article = "an"
+		}
+		target := "target permanent"
+		if kind.PlayerOnly() {
+			target = "target player"
+		}
+		oracleText := fmt.Sprintf("Put %s %s counter on %s.", article, name, target)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			})
+			primitive := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive
+			if kind.PlayerOnly() {
+				add, ok := primitive.(game.AddPlayerCounter)
+				if !ok || add.CounterKind != kind {
+					t.Fatalf("primitive = %+v", primitive)
+				}
+				return
+			}
+			add, ok := primitive.(game.AddCounter)
+			if !ok || add.CounterKind != kind {
+				t.Fatalf("primitive = %+v", primitive)
+			}
+		})
+	}
+}
+
+func TestLowerCounterPlacementRejectsMissingRuntimeMechanics(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name string
+		kind counter.Kind
+	}{
+		{"stun", counter.Stun},
+		{"finality", counter.Finality},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ability := oracle.CompiledAbility{
+				Text: "Put a " + test.name + " counter on target creature.",
+				Targets: []oracle.CompiledTarget{{
+					Text:        "target creature",
+					Cardinality: oracle.TargetCardinality{Min: 1, Max: 1},
+					Selector:    oracle.CompiledSelector{Kind: oracle.SelectorCreature},
+				}},
+				Effects: []oracle.CompiledEffect{{
+					Kind:             oracle.EffectPut,
+					Amount:           oracle.CompiledAmount{Value: 1, Known: true},
+					CounterKind:      test.kind,
+					CounterKindKnown: true,
+				}},
+			}
+			if _, diagnostic := lowerCounterPlacementSpell(ability); diagnostic == nil {
+				t.Fatal("lowering accepted counter kind without runtime mechanics")
+			}
+		})
+	}
+}
+
+func TestLowerDynamicNamedCounterPlacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		text string
+		kind game.DynamicAmountKind
+	}{
+		{"Put X charge counters on target artifact.", game.DynamicAmountX},
+		{"Put X poison counters on target player, where X is the number of lands you control.", game.DynamicAmountCountSelector},
+		{"Put X energy counters on target player, where X is Test Counter's power.", game.DynamicAmountObjectPower},
+	}
+	for _, test := range tests {
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Test Counter",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: test.text,
+		})
+		primitive := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive
+		amount, ok := counterPlacementAmount(primitive)
+		if !ok {
+			t.Fatalf("%q primitive = %T", test.text, primitive)
+		}
+		dynamic := amount.DynamicAmount()
+		if !dynamic.Exists || dynamic.Val.Kind != test.kind {
+			t.Fatalf("%q amount = %+v", test.text, dynamic)
+		}
+		if test.kind == game.DynamicAmountObjectPower &&
+			dynamic.Val.Object != game.SourcePermanentReference() {
+			t.Fatalf("%q source reference = %+v", test.text, dynamic.Val.Object)
+		}
+	}
+
+}
+
+func counterPlacementAmount(primitive game.Primitive) (game.Quantity, bool) {
+	switch primitive.Kind() {
+	case game.PrimitiveAddCounter:
+		add, ok := primitive.(game.AddCounter)
+		return add.Amount, ok
+	case game.PrimitiveAddPlayerCounter:
+		add, ok := primitive.(game.AddPlayerCounter)
+		return add.Amount, ok
+	default:
+		return game.Quantity{}, false
+	}
+}
+
+func TestRebaseAddPlayerCounterTargetReference(t *testing.T) {
+	t.Parallel()
+	primitive, ok := rebaseTargetedPrimitive(game.AddPlayerCounter{
+		Amount:      game.Fixed(1),
+		Player:      game.TargetPlayerReference(0),
+		CounterKind: counter.Poison,
+	}, 2)
+	if !ok {
+		t.Fatal("AddPlayerCounter target was not rebased")
+	}
+	add, ok := primitive.(game.AddPlayerCounter)
+	if !ok || add.Player != game.TargetPlayerReference(2) {
+		t.Fatalf("rebased primitive = %+v", primitive)
+	}
+}
+
+func TestLowerCounterPlacementRejectsUnsupportedForms(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Put a quest counter on target permanent.",
+		"Put an energy counter on target creature.",
+		"Put a charge counter on target player.",
+		"Put a charge counter on any target.",
+		"Put a +1/+1 counter on each creature you control.",
+		"Put a charge and time counter on target artifact.",
+		"Put 0 charge counters on target artifact.",
+		"Put -1 charge counters on target artifact.",
+		"Put a charge counter on target artifact for each land you control.",
+	} {
+		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+			Name:       "Test Counter",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: oracleText,
+		})
+		if len(diagnostics) == 0 {
+			t.Fatalf("%q lowered without diagnostics", oracleText)
+		}
 	}
 }
 

@@ -1,5 +1,7 @@
 package oracle
 
+import "github.com/natefinch/council4/mtg/game/counter"
+
 // Compilation is the semantic result for one card face.
 type Compilation struct {
 	Syntax    Document
@@ -282,7 +284,20 @@ type CompiledEffect struct {
 	// validation and canonicalization by the executable lowering stage.
 	StaticSubjectSubtype string
 	Symbol               string
+	CounterKind          counter.Kind
+	CounterKindKnown     bool
 	Negated              bool
+}
+
+// CounterKindPlacementSupported reports whether named placement of kind has
+// complete runtime semantics in the executable backend.
+func CounterKindPlacementSupported(kind counter.Kind) bool {
+	switch kind {
+	case counter.Stun, counter.Finality:
+		return false
+	default:
+		return kind.Valid()
+	}
 }
 
 // DynamicAmountKind identifies a rules-derived effect amount.

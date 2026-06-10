@@ -127,7 +127,9 @@ destruction, fixed, `X`, or supported typed dynamic draw and life changes,
 dynamic target-creature P/T changes for exact `for each` and `where X` formulas,
 fixed controller scry and surveil,
 exact investigate and proliferate, fixed controller or target-player discard
-and mill, fixed +1/+1 and -1/-1 counter placement on one target permanent,
+and mill, fixed, `X`, and supported dynamic recognized named-counter placement
+on one valid target permanent or player, excluding Stun and Finality counters
+until their mandatory runtime mechanics are implemented (#222 and #223),
 one-target tap, untap, and regeneration, exact fights between two
 target creatures, and fixed power/toughness buffs on enchanted creature, equipped creature,
 creatures you control, other creatures you control, Walls, artifacts, tokens,

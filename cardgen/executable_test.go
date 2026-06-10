@@ -1094,6 +1094,57 @@ func TestGenerateExecutableCardSourceFixedCounterSpell(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceNamedPlayerCounterSpell(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Counter",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put X poison counters on target player, where X is the number of lands you control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.AddPlayerCounter",
+		"game.DynamicAmountCountSelector",
+		"game.TargetPlayerReference(0)",
+		"CounterKind: counter.Poison",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsCountersWithoutRuntimeMechanics(t *testing.T) {
+	t.Parallel()
+	for _, name := range []string{"stun", "finality"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: "Put a " + name + " counter on target creature.",
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("%s placement generated without diagnostics:\n%s", name, source)
+			}
+			if source != "" {
+				t.Fatalf("%s placement generated source:\n%s", name, source)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceRegenerate(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

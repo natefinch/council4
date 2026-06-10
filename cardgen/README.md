@@ -52,8 +52,15 @@ Vanguard cards are excluded with explicit report reasons.
    formulas, and common target
    restrictions lower into runtime quantities and structured target predicates.
    Ordered effect clauses retain independent target specifications and references.
-   Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
-   `game.AddCounter` instructions. Self-enter triggers support exact intervening
+   Exact fixed, `X`, and supported dynamic placement of recognized named
+   counters lowers from supported spell, activated, loyalty, triggered,
+   ordered-effect, and Saga chapter bodies into typed `game.AddCounter`
+   permanent instructions or `game.AddPlayerCounter` instructions for poison,
+   energy, and experience. Counter kinds and target domains are checked
+   strictly. Stun and finality placement remain fail-closed until their
+   mandatory runtime mechanics are
+   implemented ([#222](https://github.com/natefinch/council4/issues/222),
+   [#223](https://github.com/natefinch/council4/issues/223)). Self-enter triggers support exact intervening
    conditions for kicked or cast entry and controlling one
    permanent of a named permanent card type. Non-self permanent
    enters-the-battlefield triggers lower for exact single-subject

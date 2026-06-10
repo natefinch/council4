@@ -43,6 +43,21 @@ const (
 	Experience                   // Experience counter (on players)
 )
 
+// Valid reports whether k is a recognized counter kind.
+func (k Kind) Valid() bool {
+	return k >= PlusOnePlusOne && k <= Experience
+}
+
+// PlayerOnly reports whether k may be placed only on players.
+func (k Kind) PlayerOnly() bool {
+	switch k {
+	case Poison, Energy, Experience:
+		return true
+	default:
+		return false
+	}
+}
+
 // String returns the human-readable name of the counter kind.
 func (k Kind) String() string {
 	switch k {
