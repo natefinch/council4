@@ -1,10 +1,11 @@
 # Supported Cards
 
-Cards supported: 3,214
+Cards supported: 3,242
 
 - +2 Mace
 - Aang, Air Nomad
 - Aardvark Sloth
+- Abandoned Campground
 - Abbey Gargoyles
 - Abbey Griffin
 - Abrade
@@ -279,6 +280,7 @@ Cards supported: 3,214
 - Blanchwood Treefolk
 - Blasted Landscape
 - Blaze
+- Bleeding Woods
 - Blessed Orator
 - Blight Rot
 - Blight Sickle
@@ -345,6 +347,7 @@ Cards supported: 3,214
 - Botanical Sanctum
 - Bottle Gnomes
 - Bounding Wolf
+- Bountiful Promenade
 - Braidwood Cup
 - Braingeyser
 - Brainiac
@@ -841,6 +844,7 @@ Cards supported: 3,214
 - Eriette's Lullaby
 - Esper Charm
 - Esper Cormorants
+- Etched Cornfield
 - Eternal Warrior
 - Ethercaste Knight
 - Etherium Astrolabe
@@ -1521,6 +1525,8 @@ Cards supported: 3,214
 - Lady Caleria
 - Lady Orca
 - Lagac Lizard
+- Lagonna-Band Elder
+- Lakeside Shack
 - Lance
 - Land Leeches
 - Landscape Painter // Vibrant Idea
@@ -1602,6 +1608,7 @@ Cards supported: 3,214
 - Lumithread Field
 - Lurching Rotbeast
 - Lush Portico
+- Luxury Suite
 - Macetail Hystrodon
 - Mad Prophet
 - Madcap Skills
@@ -1729,6 +1736,7 @@ Cards supported: 3,214
 - Moorish Cavalry
 - Morgue Thrull
 - Moriok Reaver
+- Morphic Pool
 - Moss Diamond
 - Moss Kami
 - Moss Monster
@@ -1750,6 +1758,7 @@ Cards supported: 3,214
 - Mudbutton Torchrunner
 - Murasa Brute
 - Murder
+- Murky Sewer
 - Murmuring Phantasm
 - Muse Drake
 - Mutagen
@@ -1784,6 +1793,7 @@ Cards supported: 3,214
 - Needleshot Gourna
 - Needlethorn Drake
 - Needleverge Pathway // Pillarverge Pathway
+- Neglected Manor
 - Nema Siltlurker
 - Nephalia Drownyard
 - Nephalia Seakite
@@ -1910,6 +1920,7 @@ Cards supported: 3,214
 - Oversoul of Dusk
 - Ox
 - Ox
+- Ox
 - Oxidda Scrapmelter
 - Pain // Suffering
 - Palace Familiar
@@ -1921,6 +1932,7 @@ Cards supported: 3,214
 - Peace Strider
 - Peace of Mind
 - Pearled Unicorn
+- Peculiar Lighthouse
 - Pegasus
 - Pegasus
 - Pegasus Charger
@@ -2088,6 +2100,7 @@ Cards supported: 3,214
 - Rat Rogue
 - Rath's Edge
 - Rathi Trapper
+- Raucous Carnival
 - Raucous Theater
 - Raugrin Crystal
 - Raugrin Triome
@@ -2101,6 +2114,7 @@ Cards supported: 3,214
 - Razorfield Thresher
 - Razorfoot Griffin
 - Razortide Bridge
+- Razortrap Gorge
 - Razorverge Thicket
 - Reach Through Mists
 - Rearing Embermare
@@ -2116,6 +2130,7 @@ Cards supported: 3,214
 - Regathan Firecat
 - Regress
 - Rejuvenate
+- Rejuvenating Springs
 - Reknit
 - Relic Barrier
 - Relic Sloth
@@ -2269,6 +2284,7 @@ Cards supported: 3,214
 - Scavenging Scarab
 - Scepter of Dominance
 - Scepter of Insight
+- Scholar of Stars
 - Scion of Ugin
 - Scion of the Deep
 - Scorched Geyser
@@ -2292,6 +2308,7 @@ Cards supported: 3,214
 - Scuzzback Scrapper
 - Sea Eagle
 - Sea Sprite
+- Sea of Clouds
 - Seachrome Coast
 - Seacoast Drake
 - Seagraf Skaab
@@ -2521,6 +2538,7 @@ Cards supported: 3,214
 - Sparring Mummy
 - Spawn
 - Spectacle Summit
+- Spectator Seating
 - Spectral Flight
 - Spectral Sailor
 - Sphinx
@@ -2544,6 +2562,7 @@ Cards supported: 3,214
 - Spined Wurm
 - Spineless Thug
 - Spinning Wheel
+- Spire Garden
 - Spire Monitor
 - Spirebluff Canal
 - Spirit
@@ -2621,6 +2640,7 @@ Cards supported: 3,214
 - Stormrider Spirit
 - Stormscape Apprentice
 - Story Seeker
+- Strangled Cemetery
 - Strangleroot Geist
 - Strangling Spores
 - Straw Soldiers
@@ -2822,6 +2842,7 @@ Cards supported: 3,214
 - Trained Caracal
 - Trained Jackal
 - Trained Orgg
+- Training Center
 - Tramway Station
 - Tranquil Cove
 - Tranquil Expanse
@@ -2857,6 +2878,11 @@ Cards supported: 3,214
 - Tundra
 - Tundra Wall
 - Tundra Wolves
+- Turbulent Fen
+- Turbulent Moor
+- Turbulent Springs
+- Turbulent Steppe
+- Turbulent Wilderness
 - Turntimber Ascetic
 - Turntimber Grove
 - Turtle-Seals
@@ -2887,6 +2913,7 @@ Cards supported: 3,214
 - Underdark Basilisk
 - Underground Mortuary
 - Underground Sea
+- Undergrowth Stadium
 - Undersea Invader
 - Unflinching Courage
 - Unfriendly Fire
@@ -2939,6 +2966,7 @@ Cards supported: 3,214
 - Vassal Soul
 - Vastwood Fortification // Vastwood Thicket
 - Vastwood Gorger
+- Vault of Champions
 - Vault of Whispers
 - Vecna
 - Vector, Imperial Capital

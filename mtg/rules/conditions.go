@@ -21,11 +21,36 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		return true
 	}
 	cond := condition.Val
+	if cond.ControllerLifeAtLeast < 0 ||
+		cond.AnyPlayerLifeAtMost < 0 ||
+		cond.OpponentCountAtLeast < 0 ||
+		cond.ControllerControls.MinCount < 0 ||
+		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
+		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
+		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 {
+		return false
+	}
 	matches := true
 	if cond.ControlsMatching.Exists {
 		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
 	} else if !cond.ControllerControls.Empty() {
 		matches = matches && controllerControlsMatchingSelection(g, ctx, controlSelectionFromFilter(cond.ControllerControls))
+	}
+	if cond.ControllerLifeAtLeast > 0 {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.Life >= cond.ControllerLifeAtLeast
+	}
+	if cond.AnyPlayerLifeAtMost > 0 {
+		matches = matches && anyPlayerLifeAtMost(g, cond.AnyPlayerLifeAtMost)
+	}
+	if cond.OpponentCountAtLeast > 0 {
+		matches = matches && len(aliveOpponents(g, ctx.controller)) >= cond.OpponentCountAtLeast
+	}
+	if cond.AnyOpponentControls.Exists {
+		matches = matches && anyOpponentControlsMatchingSelection(g, ctx, cond.AnyOpponentControls.Val)
+	}
+	if cond.OpponentsControl.Exists {
+		matches = matches && playersControlMatchingSelection(g, ctx, aliveOpponents(g, ctx.controller), cond.OpponentsControl.Val)
 	}
 	if cond.Object.Exists || len(cond.Types) > 0 {
 		matches = matches && conditionObjectMatches(g, ctx, &cond)
@@ -95,9 +120,29 @@ func controlSelectionFromFilter(filter game.PermanentFilter) game.SelectionCount
 }
 
 func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, control game.SelectionCount) bool {
+	return playersControlMatchingSelection(g, ctx, []game.PlayerID{ctx.controller}, control)
+}
+
+func anyOpponentControlsMatchingSelection(g *game.Game, ctx conditionContext, control game.SelectionCount) bool {
+	for _, opponent := range aliveOpponents(g, ctx.controller) {
+		if playersControlMatchingSelection(g, ctx, []game.PlayerID{opponent}, control) {
+			return true
+		}
+	}
+	return false
+}
+
+func playersControlMatchingSelection(g *game.Game, ctx conditionContext, controllers []game.PlayerID, control game.SelectionCount) bool {
+	if control.MinCount < 0 {
+		return false
+	}
 	want := control.MinCount
 	if want <= 0 {
 		want = 1
+	}
+	allowed := make(map[game.PlayerID]bool, len(controllers))
+	for _, controller := range controllers {
+		allowed[controller] = true
 	}
 	count := 0
 	totalPower := 0
@@ -107,10 +152,10 @@ func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, con
 			continue
 		}
 		if ctx.useBaseCharacteristics {
-			if permanent.Controller != ctx.controller {
+			if !allowed[permanent.Controller] {
 				continue
 			}
-		} else if effectiveController(g, permanent) != ctx.controller {
+		} else if !allowed[effectiveController(g, permanent)] {
 			continue
 		}
 		var values permanentEffectiveValues
@@ -159,6 +204,16 @@ func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, con
 	}
 	if control.TotalPower.Exists {
 		return count >= want && control.TotalPower.Val.Matches(totalPower)
+	}
+	return false
+}
+
+func anyPlayerLifeAtMost(g *game.Game, maximum int) bool {
+	for playerID := range game.PlayerID(game.NumPlayers) {
+		player, ok := playerByID(g, playerID)
+		if ok && !player.Eliminated && player.Life <= maximum {
+			return true
+		}
 	}
 	return false
 }

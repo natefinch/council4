@@ -199,6 +199,96 @@ func TestValidateCardDefChecksDelayedTriggerContent(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefChecksDelayedTriggerInstructionCondition(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Delayed Trigger Condition",
+		OracleText: "At the beginning of the next end step, draw a card.",
+		SpellAbility: opt.Val(Mode{
+			Sequence: []Instruction{{
+				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Timing: DelayedAtBeginningOfNextEndStep,
+					Content: Mode{
+						Sequence: []Instruction{{
+							Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
+							Condition: opt.Val(EffectCondition{Condition: opt.Val(Condition{
+								ControllerLifeAtLeast: -1,
+							})}),
+						}},
+					}.Ability(),
+				}},
+			}},
+		}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
+func TestValidateCardDefRejectsDelayedTriggerConditionUsingEnclosingTarget(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Unavailable Delayed Trigger Target",
+		OracleText: "Target creature gets +1/+1. At the beginning of the next end step, draw a card.",
+		SpellAbility: opt.Val(Mode{
+			Targets: []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
+			Sequence: []Instruction{{
+				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Timing: DelayedAtBeginningOfNextEndStep,
+					Content: Mode{
+						Sequence: []Instruction{{
+							Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
+							Condition: opt.Val(EffectCondition{Condition: opt.Val(Condition{
+								Object: opt.Val(TargetPermanentReference(0)),
+							})}),
+						}},
+					}.Ability(),
+				}},
+			}},
+		}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueTargetIndexOutOfRange) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueTargetIndexOutOfRange)
+	}
+}
+
+func TestValidateCardDefChecksNestedEmblemAbility(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Emblem",
+		OracleText: "You get an emblem.",
+		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+			Primitive: CreateEmblem{EmblemAbilities: []Ability{StaticAbility{
+				Condition: opt.Val(Condition{ControllerLifeAtLeast: -1}),
+			}}},
+		}}}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
+func TestValidateCardDefChecksNestedReplacementCondition(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Replacement",
+		OracleText: "Create a replacement effect.",
+		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+			Primitive: CreateReplacement{Replacement: &ReplacementEffect{
+				MatchEvent: EventPermanentEnteredBattlefield,
+				Condition:  opt.Val(Condition{ControllerLifeAtLeast: -1}),
+			}},
+		}}}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
 func TestValidateCardDefReportsInvalidTargetSpec(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Target Spec",
@@ -691,6 +781,68 @@ func TestValidateCardDefReportsConditionDualSpecification(t *testing.T) {
 
 	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
 		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
+	}
+}
+
+func TestValidateCardDefReportsNegativeConditionThresholds(t *testing.T) {
+	tests := map[string]Condition{
+		"controller life": {ControllerLifeAtLeast: -1},
+		"any player life": {AnyPlayerLifeAtMost: -1},
+		"opponent count":  {OpponentCountAtLeast: -1},
+	}
+	for name, condition := range tests {
+		t.Run(name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Invalid Condition",
+				OracleText: "Invalid condition.",
+				StaticAbilities: []StaticAbility{{
+					Condition: opt.Val(condition),
+				}},
+			}}
+
+			issues := ValidateCardDef(card)
+
+			if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+			}
+		})
+	}
+}
+
+func TestValidateCardDefReportsNegativeConditionPermanentCount(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Invalid Permanent Count",
+		OracleText: "Invalid condition.",
+		StaticAbilities: []StaticAbility{{
+			Condition: opt.Val(Condition{
+				AnyOpponentControls: opt.Val(SelectionCount{MinCount: -1}),
+			}),
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
+func TestValidateCardDefChecksInstructionSharedCondition(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Invalid Instruction Condition",
+		OracleText: "Draw a card.",
+		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+			Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
+			Condition: opt.Val(EffectCondition{Condition: opt.Val(Condition{
+				ControllerLifeAtLeast: -1,
+			})}),
+		}}}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
 	}
 }
 

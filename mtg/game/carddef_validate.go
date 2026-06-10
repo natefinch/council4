@@ -22,6 +22,7 @@ const (
 	CardDefIssueInvalidKeywordAbility  CardDefIssueCode = "invalid-keyword-ability"
 	CardDefIssueInvalidAbilityBody     CardDefIssueCode = "invalid-ability-body"
 	CardDefIssueInvalidSelection       CardDefIssueCode = "invalid-selection"
+	CardDefIssueInvalidCondition       CardDefIssueCode = "invalid-condition"
 )
 
 // CardDefIssue describes one structural problem found in a CardDef.
@@ -265,6 +266,48 @@ func (v *cardDefValidator) validateInstructionSequence(faceName, path string, se
 	if err := ValidateInstructionSequence(seq, targets...); err != nil {
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, err.Error())
 	}
+	var targetSpecs []TargetSpec
+	if len(targets) > 0 {
+		targetSpecs = targets[0]
+	}
+	for i := range seq {
+		instructionPath := appendPath(path, fmt.Sprintf("Instructions[%d]", i))
+		effectCondition := seq[i].Condition
+		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
+			condition := effectCondition.Val.Condition.Val
+			v.validateCondition(
+				faceName,
+				appendPath(instructionPath, "Condition.Condition"),
+				&condition,
+				targetSpecs,
+			)
+		}
+		if delayed, ok := seq[i].Primitive.(CreateDelayedTrigger); ok {
+			v.validateAbilityContent(
+				faceName,
+				appendPath(instructionPath, "Primitive.Trigger.Content"),
+				delayed.Trigger.Content,
+				nil,
+			)
+		}
+		if emblem, ok := seq[i].Primitive.(CreateEmblem); ok {
+			for j, ability := range emblem.EmblemAbilities {
+				v.validateAbilityBody(
+					faceName,
+					appendPath(instructionPath, fmt.Sprintf("Primitive.EmblemAbilities[%d]", j)),
+					ability,
+					nil,
+				)
+			}
+		}
+		if replacement, ok := seq[i].Primitive.(CreateReplacement); ok && replacement.Replacement != nil {
+			v.validateReplacementEffect(
+				faceName,
+				appendPath(instructionPath, "Primitive.Replacement"),
+				replacement.Replacement,
+			)
+		}
+	}
 }
 
 func (v *cardDefValidator) validateManaKeywordCost(faceName, path string, manaCost cost.Mana) {
@@ -398,18 +441,50 @@ func (v *cardDefValidator) validateTargetIndex(faceName, path string, targetInde
 }
 
 func (v *cardDefValidator) validateCondition(faceName, path string, condition *Condition, targets []TargetSpec) {
+	if condition.ControllerLifeAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerLifeAtLeast"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	}
+	if condition.AnyPlayerLifeAtMost < 0 {
+		v.add(faceName, appendPath(path, "AnyPlayerLifeAtMost"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	}
+	if condition.OpponentCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "OpponentCountAtLeast"), CardDefIssueInvalidCondition, "opponent-count threshold cannot be negative")
+	}
+	if condition.ControllerControls.MinCount < 0 {
+		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
+	}
 	if condition.ControlsMatching.Exists {
-		selection := condition.ControlsMatching.Val.Selection
-		v.validateSelection(faceName, appendPath(path, "ControlsMatching.Selection"), selection)
-		if selection.Player != PlayerAny {
-			v.add(faceName, appendPath(path, "ControlsMatching.Selection.Player"), CardDefIssueInvalidSelection, "controlled-permanent Selection cannot use a player relation")
-		}
+		v.validateConditionSelectionCount(faceName, appendPath(path, "ControlsMatching"), condition.ControlsMatching.Val)
 		if !condition.ControllerControls.Empty() {
 			v.add(faceName, path, CardDefIssueInvalidSelection, "Condition sets both ControllerControls and ControlsMatching")
 		}
 	}
+	if condition.AnyOpponentControls.Exists {
+		v.validateConditionSelectionCount(faceName, appendPath(path, "AnyOpponentControls"), condition.AnyOpponentControls.Val)
+	}
+	if condition.OpponentsControl.Exists {
+		v.validateConditionSelectionCount(faceName, appendPath(path, "OpponentsControl"), condition.OpponentsControl.Val)
+	}
 	if condition.Object.Exists {
 		v.validateObjectRef(faceName, appendPath(path, "Object"), condition.Object.Val, targets)
+	}
+}
+
+func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string, count SelectionCount) {
+	if count.MinCount < 0 {
+		v.add(faceName, appendPath(path, "MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
+	}
+	selection := count.Selection
+	v.validateSelection(faceName, appendPath(path, "Selection"), selection)
+	if selection.Player != PlayerAny {
+		v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "controlled-permanent Selection cannot use a player relation")
+	}
+}
+
+func (v *cardDefValidator) validateReplacementEffect(faceName, path string, replacement *ReplacementEffect) {
+	if replacement.Condition.Exists {
+		condition := replacement.Condition.Val
+		v.validateCondition(faceName, appendPath(path, "Condition"), &condition, nil)
 	}
 }
 

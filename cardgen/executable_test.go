@@ -544,6 +544,40 @@ func TestGenerateExecutableCardSourceEntersTappedUnlessTwoBasicLands(t *testing.
 	}
 }
 
+func TestGenerateExecutableCardSourceLifeAndOpponentEntersTappedConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		condition string
+		want      string
+	}{
+		{condition: "unless you have 10 or more life", want: "ControllerLifeAtLeast: 10"},
+		{condition: "unless a player has 13 or less life", want: "AnyPlayerLifeAtMost: 13"},
+		{condition: "unless you have two or more opponents", want: "OpponentCountAtLeast: 2"},
+		{condition: "unless an opponent controls two or more lands", want: "AnyOpponentControls: opt.Val(game.SelectionCount{"},
+		{condition: "unless your opponents control eight or more lands", want: "OpponentsControl: opt.Val(game.SelectionCount{"},
+	}
+	for _, test := range tests {
+		t.Run(test.condition, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Land",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: "This land enters tapped " + test.condition + ".",
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, test.want) {
+				t.Fatalf("source missing %q:\n%s", test.want, source)
+			}
+		})
+	}
+}
+
 // TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped
 // verifies that near-miss conditions outside the supported wording family are
 // rejected. Supported: "unless you control two or more basic lands".

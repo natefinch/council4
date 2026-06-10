@@ -56,8 +56,8 @@ Vanguard cards are excluded with explicit report reasons.
    graveyard-exile, and source-counter-removal costs into typed payment data.
    Exact trailing activation restrictions lower to typed sorcery, combat,
    upkeep, and once-per-turn timing checks.
-   Common enters-tapped land-count and basic-land-subtype conditions lower into
-   typed replacement predicates.
+   Common enters-tapped life, opponent-count, land-count, and
+   basic-land-subtype conditions lower into typed replacement predicates.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.
