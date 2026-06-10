@@ -1044,11 +1044,11 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		fields = append(fields, fmt.Sprintf("DamageRecipient: %s,", recipient))
 	}
 	if len(pattern.DamageRecipientTypes) > 0 {
-		types, err := renderTypesCardSlice(ctx, pattern.DamageRecipientTypes)
+		recipientTypes, err := renderTypesCardSlice(ctx, pattern.DamageRecipientTypes)
 		if err != nil {
 			return "", err
 		}
-		fields = append(fields, fmt.Sprintf("DamageRecipientTypes: %s,", types))
+		fields = append(fields, fmt.Sprintf("DamageRecipientTypes: %s,", recipientTypes))
 	}
 	if pattern.RequireCombatDamage {
 		fields = append(fields, "RequireCombatDamage: true,")
