@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -4418,8 +4419,39 @@ func lowerTargetedGraveyardReturn(ability oracle.CompiledAbility) (game.AbilityC
 				DestinationBottom: destinationBottom,
 			}}},
 		}.Ability(), true
+	case zone.Battlefield:
+		put, ok := targetedGraveyardBattlefieldPut(ability.Text, targetCard)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{
+			Targets:  []game.TargetSpec{targetSpec},
+			Sequence: []game.Instruction{{Primitive: put}},
+		}.Ability(), true
 	default:
 		return game.AbilityContent{}, false
+	}
+}
+
+func targetedGraveyardBattlefieldPut(text string, targetCard game.CardReference) (game.PutOnBattlefield, bool) {
+	put := game.PutOnBattlefield{
+		Source: game.CardBattlefieldSource(targetCard),
+	}
+	text = strings.TrimSuffix(text, ".")
+	for {
+		switch {
+		case strings.HasSuffix(text, " under your control"):
+			text = strings.TrimSuffix(text, " under your control")
+			put.Recipient = opt.Val(game.ControllerReference())
+		case strings.HasSuffix(text, " tapped"):
+			text = strings.TrimSuffix(text, " tapped")
+			put.EntryTapped = true
+		default:
+			if strings.HasSuffix(text, " to the battlefield") || strings.HasSuffix(text, " onto the battlefield") {
+				return put, true
+			}
+			return game.PutOnBattlefield{}, false
+		}
 	}
 }
 
@@ -4439,8 +4471,7 @@ func graveyardReturnLibraryBottom(text string) (destinationBottom, recognized bo
 func cardInZoneTargetSpec(target oracle.CompiledTarget, targetZone zone.Type) (game.TargetSpec, bool) {
 	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 ||
 		target.Selector.Another || target.Selector.Other ||
-		target.Selector.Attacking || target.Selector.Blocking ||
-		target.Selector.Tapped || target.Selector.Untapped {
+		target.Selector.Attacking || target.Selector.Blocking {
 		return game.TargetSpec{}, false
 	}
 	targetText := graveyardCardTargetText(target.Text)
@@ -4462,6 +4493,7 @@ func cardInZoneTargetSpec(target oracle.CompiledTarget, targetZone zone.Type) (g
 	default:
 		return game.TargetSpec{}, false
 	}
+	targetBody = strings.ToLower(targetBody)
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
@@ -4484,18 +4516,73 @@ func cardInZoneTargetSpec(target oracle.CompiledTarget, targetZone zone.Type) (g
 		selection.RequiredTypes = []types.Card{types.Land}
 	case "planeswalker card":
 		selection.RequiredTypes = []types.Card{types.Planeswalker}
+	case "vehicle card":
+		selection.SubtypesAny = []types.Sub{types.Vehicle}
 	default:
-		return game.TargetSpec{}, false
+		if !lowerCardTargetManaValuePredicate(targetBody, &selection) {
+			return game.TargetSpec{}, false
+		}
 	}
 	selection.Controller = controller
 	spec.Selection = opt.Val(selection)
 	return spec, true
 }
 
+func lowerCardTargetManaValuePredicate(targetBody string, selection *game.Selection) bool {
+	const predicate = " with mana value "
+	cardType, comparisonText, ok := strings.Cut(targetBody, predicate)
+	if !ok {
+		return false
+	}
+	switch cardType {
+	case "artifact card":
+		selection.RequiredTypes = []types.Card{types.Artifact}
+	case "creature card":
+		selection.RequiredTypes = []types.Card{types.Creature}
+	case "enchantment card":
+		selection.RequiredTypes = []types.Card{types.Enchantment}
+	case "instant or sorcery card":
+		selection.RequiredTypesAny = []types.Card{types.Instant, types.Sorcery}
+	case "land card":
+		selection.RequiredTypes = []types.Card{types.Land}
+	case "planeswalker card":
+		selection.RequiredTypes = []types.Card{types.Planeswalker}
+	case "vehicle card":
+		selection.SubtypesAny = []types.Sub{types.Vehicle}
+	default:
+		return false
+	}
+	parts := strings.Fields(comparisonText)
+	if len(parts) != 3 {
+		return false
+	}
+	value, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return false
+	}
+	switch strings.Join(parts[1:], " ") {
+	case "or less":
+		selection.ManaValue = opt.Val(compare.Int{Op: compare.LessOrEqual, Value: value})
+	case "or greater", "or more":
+		selection.ManaValue = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: value})
+	default:
+		return false
+	}
+	return true
+}
+
 func graveyardCardTargetText(text string) string {
 	for _, suffix := range []string{
 		" to your hand",
 		" to their hand",
+		" to the battlefield under your control",
+		" onto the battlefield under your control",
+		" to the battlefield tapped under your control",
+		" onto the battlefield tapped under your control",
+		" to the battlefield tapped",
+		" onto the battlefield tapped",
+		" to the battlefield",
+		" onto the battlefield",
 		" on top of your library",
 		" on the top of your library",
 		" on bottom of your library",

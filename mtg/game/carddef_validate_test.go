@@ -72,6 +72,53 @@ func TestValidateCardDefReportsTypedInstructionTargetIndexOutOfRange(t *testing.
 	}
 }
 
+func TestValidateCardDefReportsPutOnBattlefieldTargetCardWithoutCardTargetSpec(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Reanimation",
+		OracleText: "Return target creature card from your graveyard to the battlefield.",
+		SpellAbility: opt.Val(Mode{
+			Sequence: []Instruction{{
+				Primitive: PutOnBattlefield{
+					Source: CardBattlefieldSource(CardReference{Kind: CardReferenceTarget}),
+				},
+			}},
+		}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+}
+
+func TestValidateCardDefAllowsPutOnBattlefieldTargetCardWithCardTargetSpec(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Good Reanimation",
+		OracleText: "Return target creature card from your graveyard to the battlefield.",
+		SpellAbility: opt.Val(Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowCard,
+				TargetZone: zone.Graveyard,
+				Selection:  opt.Val(Selection{RequiredTypes: []types.Card{types.Creature}, Controller: ControllerYou}),
+			}},
+			Sequence: []Instruction{{
+				Primitive: PutOnBattlefield{
+					Source: CardBattlefieldSource(CardReference{Kind: CardReferenceTarget}),
+				},
+			}},
+		}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("issues = %+v, want no %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+}
+
 func TestValidateInstructionSequenceAttachedPermanentReferenceBounds(t *testing.T) {
 	targets := []TargetSpec{{MinTargets: 1, MaxTargets: 1}}
 
