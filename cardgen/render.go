@@ -2210,6 +2210,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalDiscard", nil
 	case cost.AdditionalPayLife:
 		return "cost.AdditionalPayLife", nil
+	case cost.AdditionalExile:
+		return "cost.AdditionalExile", nil
 	case cost.AdditionalTap:
 		return "cost.AdditionalTap", nil
 	case cost.AdditionalExileSource:
@@ -2318,6 +2320,8 @@ func renderZone(zoneType zone.Type) (string, error) {
 		return "zone.Battlefield", nil
 	case zone.Hand:
 		return "zone.Hand", nil
+	case zone.Graveyard:
+		return "zone.Graveyard", nil
 	default:
 		return "", fmt.Errorf("render: unsupported zone %d", zoneType)
 	}

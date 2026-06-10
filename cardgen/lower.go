@@ -948,15 +948,45 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 			Amount: amount,
 		}, true
 	case oracle.CostExile:
-		if !isSelfCostObject(cardName, component.Object) {
-			return cost.Additional{}, false
+		if isSelfCostObject(cardName, component.Object) {
+			return cost.Additional{
+				Kind:   cost.AdditionalExileSource,
+				Text:   component.Text,
+				Amount: 1,
+				Source: zone.Battlefield,
+			}, true
 		}
-		return cost.Additional{
-			Kind:   cost.AdditionalExileSource,
-			Text:   component.Text,
-			Amount: 1,
-			Source: zone.Battlefield,
-		}, true
+		return lowerExileCost(component)
+	default:
+		return cost.Additional{}, false
+	}
+}
+
+func lowerExileCost(component oracle.CostComponent) (cost.Additional, bool) {
+	additional := cost.Additional{
+		Kind:   cost.AdditionalExile,
+		Text:   component.Text,
+		Amount: 1,
+		Source: zone.Graveyard,
+	}
+	switch strings.ToLower(strings.TrimSpace(component.Object)) {
+	case "a card from your graveyard":
+		return additional, true
+	case "a creature card from your graveyard":
+		additional.MatchCardType = true
+		additional.CardType = types.Creature
+		return additional, true
+	case "an artifact card from your graveyard":
+		additional.MatchCardType = true
+		additional.CardType = types.Artifact
+		return additional, true
+	case "a land card from your graveyard":
+		additional.MatchCardType = true
+		additional.CardType = types.Land
+		return additional, true
+	case "two cards from your graveyard":
+		additional.Amount = 2
+		return additional, true
 	default:
 		return cost.Additional{}, false
 	}

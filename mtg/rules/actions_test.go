@@ -870,6 +870,56 @@ func TestActivatedAbilityExilesSourceAsCost(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityExilesMatchingGraveyardCardAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:          cost.AdditionalExile,
+			Text:          "Exile a creature card from your graveyard",
+			Amount:        1,
+			MatchCardType: true,
+			CardType:      types.Creature,
+			Source:        zone.Graveyard,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("graveyard-exile ability was legal without a matching card")
+	}
+	instantID := addCardToHand(g, game.Player1, greenInstant())
+	g.Players[game.Player1].Hand.Remove(instantID)
+	g.Players[game.Player1].Graveyard.Add(instantID)
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("graveyard-exile ability was legal with only a nonmatching card")
+	}
+	creatureID := addCardToHand(g, game.Player1, greenCreature())
+	g.Players[game.Player1].Hand.Remove(creatureID)
+	g.Players[game.Player1].Graveyard.Add(creatureID)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("graveyard-exile ability was not legal with a matching card")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(graveyard-exile ability) = false, want true")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(creatureID) ||
+		!g.Players[game.Player1].Exile.Contains(creatureID) {
+		t.Fatal("matching creature card was not moved from graveyard to exile")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(instantID) {
+		t.Fatal("nonmatching instant card left the graveyard")
+	}
+}
+
 func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -396,7 +396,8 @@ func TestGenerateExecutableCardSourceNonManaActivatedCosts(t *testing.T) {
 		OracleText: "{2}, {T}, Sacrifice a creature: Draw a card.\n" +
 			"Discard two creature cards: Draw a card.\n" +
 			"Pay 2 life: Draw a card.\n" +
-			"Exile this artifact: Draw a card.",
+			"Exile this artifact: Draw a card.\n" +
+			"Exile a creature card from your graveyard: Draw a card.",
 	}
 	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
 	if err != nil {
@@ -418,6 +419,8 @@ func TestGenerateExecutableCardSourceNonManaActivatedCosts(t *testing.T) {
 		"cost.AdditionalPayLife",
 		"cost.AdditionalExileSource",
 		"zone.Battlefield",
+		"cost.AdditionalExile",
+		"zone.Graveyard",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -432,7 +435,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedActivatedCost(t *testing.
 		"Sacrifice a nontoken creature: Draw a card.",
 		"Discard a nonblack card: Draw a card.",
 		"Discard a permanent card: Draw a card.",
-		"Exile a card from your graveyard: Draw a card.",
+		"Exile a card: Draw a card.",
 		"{Q}: Draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {

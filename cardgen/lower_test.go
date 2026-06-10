@@ -169,6 +169,48 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:       "exile graveyard card",
+			oracleText: "Exile a card from your graveyard: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalExile ||
+					costs[0].Amount != 1 ||
+					costs[0].Source != zone.Graveyard ||
+					costs[0].MatchCardType {
+					t.Fatalf("additional costs = %#v, want one graveyard card exile", costs)
+				}
+			},
+		},
+		{
+			name:       "exile typed graveyard card",
+			oracleText: "Exile a creature card from your graveyard: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalExile ||
+					costs[0].Amount != 1 ||
+					costs[0].Source != zone.Graveyard ||
+					!costs[0].MatchCardType ||
+					costs[0].CardType != types.Creature {
+					t.Fatalf("additional costs = %#v, want one graveyard creature card exile", costs)
+				}
+			},
+		},
+		{
+			name:       "exile two graveyard cards",
+			oracleText: "Exile two cards from your graveyard: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalExile ||
+					costs[0].Amount != 2 ||
+					costs[0].Source != zone.Graveyard {
+					t.Fatalf("additional costs = %#v, want two graveyard card exiles", costs)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -184,6 +226,22 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 			}
 			test.check(t, face.ActivatedAbilities[0].AdditionalCosts)
 		})
+	}
+}
+
+func TestLowerActivatedAbilityRejectsAmbiguousExileCost(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Exile a card: Draw a card.",
+	})
+	if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+		t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostic")
 	}
 }
 
