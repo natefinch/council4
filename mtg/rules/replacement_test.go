@@ -549,7 +549,7 @@ func revealETBLand() *game.CardDef {
 					Prompt: "Reveal a matching card?",
 					AdditionalCosts: []cost.Additional{{
 						Kind:        cost.AdditionalReveal,
-						SubtypesAny: []types.Sub{types.Forest, types.Mountain},
+						SubtypesAny: cost.SubtypeSet{types.Forest, types.Mountain},
 						Source:      zone.Hand,
 					}},
 				},

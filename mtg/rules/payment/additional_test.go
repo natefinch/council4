@@ -36,7 +36,7 @@ func TestAdditionalCostSourceZone(t *testing.T) {
 func TestAdditionalCostMatchesAnyCardSubtype(t *testing.T) {
 	additional := cost.Additional{
 		Kind:        cost.AdditionalReveal,
-		SubtypesAny: []types.Sub{types.Forest, types.Mountain},
+		SubtypesAny: cost.SubtypeSet{types.Forest, types.Mountain},
 	}
 	forest := &game.CardDef{CardFace: game.CardFace{
 		Types:    []types.Card{types.Land},

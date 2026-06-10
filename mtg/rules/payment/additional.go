@@ -357,7 +357,12 @@ func additionalCostMatchesCard(card *game.CardDef, additional cost.Additional) b
 	if additional.MatchCardType && !card.HasType(additional.CardType) {
 		return false
 	}
-	if len(additional.SubtypesAny) > 0 && !card.HasAnySubtype(additional.SubtypesAny...) {
+	if additional.SubtypesAny != (cost.SubtypeSet{}) {
+		for _, subtype := range additional.SubtypesAny {
+			if subtype != "" && card.HasSubtype(subtype) {
+				return true
+			}
+		}
 		return false
 	}
 	return true

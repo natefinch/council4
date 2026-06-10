@@ -10,6 +10,10 @@ import (
 // AdditionalKind classifies a non-mana cost component.
 type AdditionalKind int
 
+// SubtypeSet holds the one or two alternative subtypes supported by a card
+// cost. Empty entries are ignored.
+type SubtypeSet [2]types.Sub
+
 // Additional cost kinds identify supported non-mana costs.
 const (
 	AdditionalUnknown AdditionalKind = iota
@@ -48,8 +52,9 @@ type Additional struct {
 	CardType      types.Card
 
 	// SubtypesAny constrains card costs to cards with at least one listed
-	// subtype. It is independent of MatchCardType.
-	SubtypesAny []types.Sub
+	// subtype. It is independent of MatchCardType and remains bounded so
+	// Additional values are comparable.
+	SubtypesAny SubtypeSet
 
 	// Source identifies the zone cards are chosen from for card costs.
 	// zone.None delegates to the rules-defined default for the cost kind.

@@ -222,7 +222,12 @@ func localAdditionalCostMatchesCard(face *game.CardDef, addCost cost.Additional)
 	if addCost.MatchCardType && !face.HasType(addCost.CardType) {
 		return false
 	}
-	if len(addCost.SubtypesAny) > 0 && !face.HasAnySubtype(addCost.SubtypesAny...) {
+	if addCost.SubtypesAny != (cost.SubtypeSet{}) {
+		for _, subtype := range addCost.SubtypesAny {
+			if subtype != "" && face.HasSubtype(subtype) {
+				return true
+			}
+		}
 		return false
 	}
 	return true

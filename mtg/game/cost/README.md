@@ -69,7 +69,7 @@ cost.Additional{
 	Kind:        cost.AdditionalReveal,
 	Amount:      1,
 	Source:      zone.Hand,
-	SubtypesAny: []types.Sub{types.Forest, types.Island},
+	SubtypesAny: cost.SubtypeSet{types.Forest, types.Island},
 }
 ```
 

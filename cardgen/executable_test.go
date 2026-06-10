@@ -603,7 +603,7 @@ func TestGenerateExecutableCardSourceOptionalEntryPayments(t *testing.T) {
 			wants: []string{
 				"game.EntersTappedUnlessPaidReplacement",
 				"cost.AdditionalReveal",
-				"SubtypesAny: []types.Sub{types.Mountain, types.Forest}",
+				"SubtypesAny: cost.SubtypeSet{types.Mountain, types.Forest}",
 				"zone.Hand",
 			},
 		},

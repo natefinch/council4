@@ -1062,7 +1062,7 @@ func TestLowerOptionalEntryPayments(t *testing.T) {
 				additional := payment.AdditionalCosts[0]
 				if additional.Kind != cost.AdditionalReveal ||
 					additional.Source != zone.Hand ||
-					!slices.Equal(additional.SubtypesAny, []types.Sub{types.Mountain, types.Forest}) {
+					additional.SubtypesAny != (cost.SubtypeSet{types.Mountain, types.Forest}) {
 					t.Fatalf("additional cost = %+v, want Mountain-or-Forest reveal from hand", additional)
 				}
 			},
@@ -1072,7 +1072,7 @@ func TestLowerOptionalEntryPayments(t *testing.T) {
 			oracleText: "As this land enters, you may reveal a Giant card from your hand. If you don't, this land enters tapped.",
 			assert: func(t *testing.T, payment game.ResolutionPayment) {
 				if len(payment.AdditionalCosts) != 1 ||
-					!slices.Equal(payment.AdditionalCosts[0].SubtypesAny, []types.Sub{types.Giant}) {
+					payment.AdditionalCosts[0].SubtypesAny != (cost.SubtypeSet{types.Giant}) {
 					t.Fatalf("payment = %+v, want Giant reveal", payment)
 				}
 			},

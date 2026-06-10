@@ -2275,13 +2275,16 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fmt.Sprintf("CardType: %s,", cardType),
 		)
 	}
-	if len(additional.SubtypesAny) > 0 {
+	if additional.SubtypesAny != (cost.SubtypeSet{}) {
 		ctx.need(importTypes)
 		literals := make([]string, 0, len(additional.SubtypesAny))
 		for _, subtype := range additional.SubtypesAny {
+			if subtype == "" {
+				continue
+			}
 			literals = append(literals, SubtypeToLiteral(string(subtype), []string{"Land", "Creature"}))
 		}
-		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
+		fields = append(fields, fmt.Sprintf("SubtypesAny: cost.SubtypeSet{%s},", strings.Join(literals, ", ")))
 	}
 	if additional.Kind == cost.AdditionalRemoveCounter {
 		counterKind, err := renderCounterKind(additional.CounterKind)

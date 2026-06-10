@@ -2030,12 +2030,14 @@ func lowerOptionalEntryPayment(ability oracle.CompiledAbility) (game.Replacement
 		ability.References[1].Kind != oracle.ReferenceThisObject {
 		return game.ReplacementAbility{}, false
 	}
+	var subtypeSet cost.SubtypeSet
+	copy(subtypeSet[:], subtypes)
 	return game.EntersTappedUnlessPaidReplacement(ability.Text, game.ResolutionPayment{
 		Prompt: "Reveal a matching card?",
 		AdditionalCosts: []cost.Additional{{
 			Kind:        cost.AdditionalReveal,
 			Amount:      1,
-			SubtypesAny: subtypes,
+			SubtypesAny: subtypeSet,
 			Source:      zone.Hand,
 		}},
 	}), true
