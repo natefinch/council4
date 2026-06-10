@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -52,6 +53,13 @@ func TestParseAbilityKinds(t *testing.T) {
 			source: "Formidable — Whenever you attack, draw a card.",
 			want:   AbilityTriggered,
 		},
+		"saga chapter": {
+			source: "I, II — Draw a card.",
+			context: ParseContext{
+				Saga: true,
+			},
+			want: AbilityChapter,
+		},
 		"replacement": {
 			source: "This land enters tapped.",
 			want:   AbilityReplacement,
@@ -79,6 +87,35 @@ func TestParseAbilityKinds(t *testing.T) {
 				t.Fatalf("kind = %s, want %s", got, test.want)
 			}
 		})
+	}
+}
+
+func TestParseSagaChapterHeading(t *testing.T) {
+	t.Parallel()
+	source := "I, II, III — Draw a card."
+	document, diagnostics := Parse(source, ParseContext{Saga: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.AbilityWord != nil {
+		t.Fatalf("ability word = %#v, want nil", ability.AbilityWord)
+	}
+	if !slices.Equal(ability.Chapters, []int{1, 2, 3}) {
+		t.Fatalf("chapters = %v, want [1 2 3]", ability.Chapters)
+	}
+	assertTextSpan(t, "chapter heading", source, ability.ChapterSpan, "I, II, III")
+}
+
+func TestParseDoesNotTreatRomanNumeralsAsChaptersOutsideSagaContext(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse("I — Draw a card.", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Kind == AbilityChapter || ability.AbilityWord == nil || ability.AbilityWord.Text != "I" {
+		t.Fatalf("ability = %#v, want ordinary ability-word syntax", ability)
 	}
 }
 

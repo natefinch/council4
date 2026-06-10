@@ -245,7 +245,7 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok && res.amount > 0 {
-		permanent.Counters.Add(prim.CounterKind, res.amount)
+		addCountersToPermanent(r.game, permanent, prim.CounterKind, res.amount)
 		res.succeeded = true
 	}
 	return res
@@ -262,7 +262,7 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 		return res
 	}
 	for kind, amount := range counters.All() {
-		destination.Counters.Add(kind, amount)
+		addCountersToPermanent(r.game, destination, kind, amount)
 		if source != nil {
 			source.Counters.Remove(kind, amount)
 		}

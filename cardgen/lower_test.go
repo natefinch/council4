@@ -3,6 +3,7 @@ package cardgen
 import (
 	"go/parser"
 	"go/token"
+	"slices"
 	"strings"
 	"testing"
 
@@ -606,6 +607,81 @@ func TestLowerEnterTrigger(t *testing.T) {
 	}
 	if trigger.Pattern.Source != game.TriggerSourceSelf {
 		t.Fatalf("source = %v, want TriggerSourceSelf", trigger.Pattern.Source)
+	}
+}
+
+func TestLowerSagaChapterAbilities(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "I — Draw a card.\nII, III — Draw two cards.",
+	})
+	if len(face.ChapterAbilities) != 2 {
+		t.Fatalf("got %d chapter abilities, want 2", len(face.ChapterAbilities))
+	}
+	if !slices.Equal(face.ChapterAbilities[0].Chapters, []int{1}) ||
+		!slices.Equal(face.ChapterAbilities[1].Chapters, []int{2, 3}) {
+		t.Fatalf("chapter numbers = %v, %v", face.ChapterAbilities[0].Chapters, face.ChapterAbilities[1].Chapters)
+	}
+	draw, ok := face.ChapterAbilities[1].Content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Draw", face.ChapterAbilities[1].Content.Modes[0].Sequence[0].Primitive)
+	}
+	if got := draw.Amount; got != game.Fixed(2) {
+		t.Fatalf("draw amount = %#v, want 2", got)
+	}
+}
+
+func TestLowerChapterShapedTextRequiresSagaSubtype(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Not a Saga",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "I — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected non-Saga chapter-shaped text to be rejected")
+	}
+}
+
+func TestOrdinarySagaReminder(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"(As this Saga enters and after your draw step, add a lore counter.)",
+		"(As this Saga enters and after your draw step, add a lore counter. Sacrifice after I.)",
+		"(As this Saga enters and after your draw step add a lore counter. Sacrifice after III.)",
+	} {
+		if !isOrdinarySagaReminder(text) {
+			t.Errorf("isOrdinarySagaReminder(%q) = false", text)
+		}
+	}
+	for _, text := range []string{
+		"Read ahead (Choose a chapter and start with that many lore counters.)",
+		"(As this Saga enters and after your draw step, add a lore counter. Sacrifice after VII.)",
+		"(As this Saga enters, add a lore counter.)",
+	} {
+		if isOrdinarySagaReminder(text) {
+			t.Errorf("isOrdinarySagaReminder(%q) = true", text)
+		}
+	}
+}
+
+func TestLowerSagaChapterConsumesInlineReminderText(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "I — Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+	})
+	if len(face.ChapterAbilities) != 1 {
+		t.Fatalf("got %d chapter abilities, want 1", len(face.ChapterAbilities))
 	}
 }
 

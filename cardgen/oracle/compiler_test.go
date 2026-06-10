@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -59,6 +60,25 @@ func TestCompileTriggeredAbility(t *testing.T) {
 	}
 	if ability.Trigger.Condition == nil || !ability.Trigger.Condition.Intervening {
 		t.Fatalf("intervening condition = %#v", ability.Trigger.Condition)
+	}
+	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
+		t.Fatalf("effects = %#v", ability.Effects)
+	}
+}
+
+func TestCompileSagaChapterAbility(t *testing.T) {
+	t.Parallel()
+	source := "II, III — Draw a card."
+	compilation, diagnostics := Compile(source, ParseContext{Saga: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Kind != AbilityChapter || !slices.Equal(ability.Chapters, []int{2, 3}) {
+		t.Fatalf("ability = %#v", ability)
+	}
+	if ability.AbilityWord != "" {
+		t.Fatalf("ability word = %q, want empty", ability.AbilityWord)
 	}
 	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
 		t.Fatalf("effects = %#v", ability.Effects)

@@ -32,6 +32,7 @@ type loweredFaceAbilities struct {
 	ManaAbilities        []game.ManaAbility
 	LoyaltyAbilities     []game.LoyaltyAbility
 	TriggeredAbilities   []game.TriggeredAbility
+	ChapterAbilities     []game.ChapterAbility
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
 	EntersPrepared       bool
@@ -44,6 +45,7 @@ func (f loweredFaceAbilities) empty() bool {
 		len(f.ManaAbilities) == 0 &&
 		len(f.LoyaltyAbilities) == 0 &&
 		len(f.TriggeredAbilities) == 0 &&
+		len(f.ChapterAbilities) == 0 &&
 		len(f.ReplacementAbilities) == 0 &&
 		!f.SpellAbility.Exists &&
 		!f.EntersPrepared
@@ -57,6 +59,7 @@ type abilityLowering struct {
 	manaAbility        opt.V[game.ManaAbility]
 	loyaltyAbility     opt.V[game.LoyaltyAbility]
 	triggeredAbility   opt.V[game.TriggeredAbility]
+	chapterAbility     opt.V[game.ChapterAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
 	entersPrepared     bool
@@ -109,6 +112,7 @@ func lowerFaceAbilities(
 		CardName:         face.Name,
 		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
+		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
 	})
 	if len(diagnostics) > 0 {
 		return loweredFaceAbilities{}, diagnostics
@@ -118,7 +122,12 @@ func lowerFaceAbilities(
 	var unsupported []oracle.Diagnostic
 	for i, ability := range compilation.Abilities {
 		syntax := compilation.Syntax.Abilities[i]
-		lowered, diagnostic := lowerExecutableAbility(face.Name, ability, syntax)
+		lowered, diagnostic := lowerExecutableAbility(
+			face.Name,
+			slices.Contains(parsedType.Subtypes, "Saga"),
+			ability,
+			syntax,
+		)
 		if diagnostic != nil {
 			unsupported = append(unsupported, *diagnostic)
 			continue
@@ -144,6 +153,9 @@ func lowerFaceAbilities(
 		if lowered.triggeredAbility.Exists {
 			result.TriggeredAbilities = append(result.TriggeredAbilities, lowered.triggeredAbility.Val)
 		}
+		if lowered.chapterAbility.Exists {
+			result.ChapterAbilities = append(result.ChapterAbilities, lowered.chapterAbility.Val)
+		}
 		if lowered.replacementAbility.Exists {
 			result.ReplacementAbilities = append(result.ReplacementAbilities, lowered.replacementAbility.Val)
 		}
@@ -168,6 +180,7 @@ func lowerFaceAbilities(
 
 func lowerExecutableAbility(
 	cardName string,
+	saga bool,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (abilityLowering, *oracle.Diagnostic) {
@@ -266,6 +279,9 @@ func lowerExecutableAbility(
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
 		}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
+		}
 		return abilityLowering{
 			triggeredAbility: opt.Val(triggeredAbility),
 			consumed: semanticConsumption{
@@ -277,11 +293,14 @@ func lowerExecutableAbility(
 			},
 			sourceSpans: spans,
 		}, nil
+	case oracle.AbilityChapter:
+		return lowerChapterAbility(cardName, ability, syntax)
 	case oracle.AbilityReplacement:
 		replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
+
 		return abilityLowering{
 			replacementAbility: opt.Val(replacementAbility),
 			consumed: semanticConsumption{
@@ -292,6 +311,9 @@ func lowerExecutableAbility(
 			sourceSpans: []oracle.Span{ability.Effects[0].Span},
 		}, nil
 	case oracle.AbilityReminder:
+		if saga && isOrdinarySagaReminder(ability.Text) {
+			return abilityLowering{sourceSpans: []oracle.Span{ability.Span}}, nil
+		}
 		return lowerReminderManaAbility(ability)
 	default:
 		return abilityLowering{}, executableDiagnostic(
@@ -300,6 +322,102 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func isOrdinarySagaReminder(text string) bool {
+	const (
+		withComma    = "(As this Saga enters and after your draw step, add a lore counter."
+		withoutComma = "(As this Saga enters and after your draw step add a lore counter."
+	)
+	remainder, ok := strings.CutPrefix(text, withComma)
+	if !ok {
+		remainder, ok = strings.CutPrefix(text, withoutComma)
+	}
+	if !ok {
+		return false
+	}
+	if remainder == ")" {
+		return true
+	}
+	const sacrificePrefix = " Sacrifice after "
+	chapter, ok := strings.CutPrefix(remainder, sacrificePrefix)
+	if !ok || !strings.HasSuffix(chapter, ".)") {
+		return false
+	}
+	chapter = strings.TrimSuffix(chapter, ".)")
+	switch chapter {
+	case "I", "II", "III", "IV", "V", "VI":
+		return true
+	default:
+		return false
+	}
+}
+
+func lowerChapterAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	if len(ability.Chapters) == 0 || ability.ChapterSpan == (oracle.Span{}) {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported Saga chapter ability",
+			"the executable source backend requires one or more chapter numbers",
+		)
+	}
+	bodyAbility := ability
+	bodyAbility.Kind = oracle.AbilitySpell
+	bodyAbility.Chapters = nil
+	bodyAbility.ChapterSpan = oracle.Span{}
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Chapters = nil
+	bodySyntax.ChapterSpan = oracle.Span{}
+	dash := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.EmDash
+	})
+	if dash < 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported Saga chapter ability",
+			"the executable source backend requires an em dash after the chapter numbers",
+		)
+	}
+	bodySyntax.Tokens = slices.Clone(syntax.Tokens[dash+1:])
+	content, diagnostic := lowerSpell(cardName, bodyAbility, bodySyntax)
+	if diagnostic != nil {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported Saga chapter ability",
+			diagnostic.Detail,
+		)
+	}
+	spans := []oracle.Span{ability.ChapterSpan, syntax.Tokens[dash].Span}
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	for _, target := range ability.Targets {
+		spans = append(spans, target.Span)
+	}
+	for _, reference := range ability.References {
+		spans = append(spans, reference.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		chapterAbility: opt.Val(game.ChapterAbility{
+			Text:     ability.Text,
+			Chapters: slices.Clone(ability.Chapters),
+			Content:  content,
+		}),
+		consumed: semanticConsumption{
+			targets:    len(ability.Targets),
+			effects:    len(ability.Effects),
+			references: len(ability.References),
+		},
+		sourceSpans: spans,
+	}, nil
 }
 
 func lowerEntersPrepared(ability oracle.CompiledAbility, syntax oracle.Ability) (abilityLowering, bool) {

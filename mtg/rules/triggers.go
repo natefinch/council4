@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -22,6 +23,7 @@ type pendingTriggeredAbility struct {
 	event        game.Event
 	hasEvent     bool
 	inline       *game.TriggeredAbility
+	sagaChapter  bool
 	wardTargetID id.ID
 }
 
@@ -56,6 +58,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			TriggerEvent:            trigger.event,
 			HasTriggerEvent:         trigger.hasEvent,
 			InlineTrigger:           trigger.inline,
+			SagaChapter:             trigger.sagaChapter,
 			WardTargetStackObjectID: trigger.wardTargetID,
 			Controller:              trigger.controller,
 			Targets:                 append([]game.Target(nil), trigger.targets...),
@@ -158,6 +161,36 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 	var pending []pendingTriggeredAbility
 	controller := effectiveController(g, permanent)
 	for i, body := range permanentEffectiveAbilities(g, permanent) {
+		if chapter, ok := body.(game.ChapterAbility); ok {
+			if event.Kind != game.EventCountersAdded ||
+				event.PermanentID != permanent.ObjectID ||
+				event.CounterKind != counter.Lore {
+				continue
+			}
+			for _, number := range chapter.Chapters {
+				if event.PreviousCounterAmount >= number ||
+					event.PreviousCounterAmount+event.Amount < number {
+					continue
+				}
+				pending = append(pending, pendingTriggeredAbility{
+					controller:   controller,
+					sourceID:     permanent.ObjectID,
+					sourceCardID: permanent.CardInstanceID,
+					sourceToken:  permanent.TokenDef,
+					face:         permanent.Face,
+					abilityIndex: i,
+					inline: &game.TriggeredAbility{
+						Text:    chapter.Text,
+						Content: chapter.Content,
+					},
+					sagaChapter: true,
+					event:       event,
+					hasEvent:    true,
+				})
+				break
+			}
+			continue
+		}
 		if triggered, ok := body.(game.TriggeredAbility); ok {
 			trigger := &triggered.Trigger
 			if !triggerMatchesEvent(g, permanent, &trigger.Pattern, event) || !triggerInterveningIf(g, permanent, controller, trigger, &event) {

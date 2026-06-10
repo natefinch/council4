@@ -12,6 +12,8 @@ type CompiledAbility struct {
 	Span         Span
 	Text         string
 	AbilityWord  string
+	Chapters     []int
+	ChapterSpan  Span
 	Optional     bool
 	OptionalSpan Span
 	Cost         *CompiledCost

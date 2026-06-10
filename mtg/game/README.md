@@ -144,7 +144,7 @@ Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-play
 
 ### Abilities
 
-`CardFace` exposes abilities through seven categorized fields: `SpellAbility opt.V[AbilityContent]`, `ActivatedAbilities []ActivatedAbility`, `ManaAbilities []ManaAbility`, `LoyaltyAbilities []LoyaltyAbility`, `TriggeredAbilities []TriggeredAbility`, `ReplacementAbilities []ReplacementAbility`, and `StaticAbilities []StaticAbility`. A spell's rules text is already stored in `CardFace.OracleText`, so its resolving content needs no additional wrapper. Card source files populate these fields directly using typed struct literals. Every resolving ability uses `AbilityContent`: ordinary abilities use `game.Mode{...}.Ability()`, while modal abilities define `Modes`, `MinModes`, and `MaxModes` explicitly.
+`CardFace` exposes abilities through eight categorized fields: `SpellAbility opt.V[AbilityContent]`, `ActivatedAbilities []ActivatedAbility`, `ManaAbilities []ManaAbility`, `LoyaltyAbilities []LoyaltyAbility`, `TriggeredAbilities []TriggeredAbility`, `ChapterAbilities []ChapterAbility`, `ReplacementAbilities []ReplacementAbility`, and `StaticAbilities []StaticAbility`. A spell's rules text is already stored in `CardFace.OracleText`, so its resolving content needs no additional wrapper. Card source files populate these fields directly using typed struct literals. Every resolving ability uses `AbilityContent`: ordinary abilities use `game.Mode{...}.Ability()`, while modal abilities define `Modes`, `MinModes`, and `MaxModes` explicitly. Saga chapter abilities additionally record the lore-counter numbers that trigger their content.
 
 Resolving spells and abilities store ordered `Instruction` values in `Mode.Sequence`. `AbilityContent.IsModal()` distinguishes a real mode choice from ordinary content containing one required mode. An `Instruction` combines one sealed, data-only `Primitive` variant with shared sequencing data: conditions, optionality, result publication, result gates, and diagnostics. Primitive structs expose only fields valid for that operation. For example, `Damage` accepts one `DamageRecipient`; `CreateToken` accepts one `TokenSource`; and `PutOnBattlefield` accepts one `BattlefieldSource`. `Quantity` represents either a fixed integer or a resolution-time `DynamicAmount`, preventing both forms from being configured simultaneously.
 
@@ -152,7 +152,7 @@ Resolution data uses separate key namespaces. `ResultKey` identifies instruction
 
 Static abilities do not resolve, so they do not use Instructions for continuous or rule-changing behavior. `StaticAbility.ContinuousEffects` and `StaticAbility.RuleEffects` declare that data directly; `mtg/rules` derives the active runtime effects while the static ability functions. The rules engine executes typed primitives directly.
 
-When a card's oracle-text order differs from struct-field order (e.g. static keywords printed before triggered/activated abilities), use an immediately-invoked initializer function and `append` each ability to the appropriate field in oracle order — see `mtg/cards/k/karplusan_forest.go` for the canonical pattern. When consuming abilities in rules or tests, iterate the categorized fields directly or use `CardFace.AbilityCount()` and `CardFace.BodyAt()` for the stable canonical index order: Spell, Activated, Mana, Loyalty, Triggered, Replacement, Static. Nested abilities granted by `ContinuousEffect.AddAbilities` also use typed `Ability` values.
+When a card's oracle-text order differs from struct-field order (e.g. static keywords printed before triggered/activated abilities), use an immediately-invoked initializer function and `append` each ability to the appropriate field in oracle order — see `mtg/cards/k/karplusan_forest.go` for the canonical pattern. When consuming abilities in rules or tests, iterate the categorized fields directly or use `CardFace.AbilityCount()` and `CardFace.BodyAt()` for the stable canonical index order: Spell, Activated, Mana, Loyalty, Triggered, Chapter, Replacement, Static. Nested abilities granted by `ContinuousEffect.AddAbilities` also use typed `Ability` values.
 
 | Kind | Categorized field | Marker | Example |
 |------|------------------|--------|---------|
@@ -161,6 +161,7 @@ When a card's oracle-text order differs from struct-field order (e.g. static key
 | Mana | `ManaAbilities []ManaAbility` | `[Cost]: Add {X}` (no targets) | "{T}: Add {G}." |
 | Loyalty | `LoyaltyAbilities []LoyaltyAbility` | `[+N]/[−N]/[0]:` | "+1: …" |
 | Triggered | `TriggeredAbilities []TriggeredAbility` | `When` / `Whenever` / `At` | "When this enters the battlefield…" |
+| Chapter | `ChapterAbilities []ChapterAbility` | Roman numeral followed by `—` | "II, III — Draw a card." |
 | Replacement | `ReplacementAbilities []ReplacementAbility` | "If … would … instead …" | "If ~ would die, instead …" |
 | Static | `StaticAbilities []StaticAbility` | declarative | "Creatures you control get +1/+1." |
 

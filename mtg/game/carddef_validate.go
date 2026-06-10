@@ -90,6 +90,7 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		len(face.ManaAbilities) > 0 ||
 		len(face.LoyaltyAbilities) > 0 ||
 		len(face.TriggeredAbilities) > 0 ||
+		len(face.ChapterAbilities) > 0 ||
 		len(face.ReplacementAbilities) > 0 ||
 		len(face.StaticAbilities) > 0
 	if strings.TrimSpace(face.OracleText) != "" && !hasAbilities && face.ImplementationID == "" {
@@ -109,6 +110,18 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	}
 	for i := range face.TriggeredAbilities {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("TriggeredAbilities[%d]", i)), face.TriggeredAbilities[i], nil)
+	}
+	for i := range face.ChapterAbilities {
+		chapterPath := appendPath(path, fmt.Sprintf("ChapterAbilities[%d]", i))
+		if len(face.ChapterAbilities[i].Chapters) == 0 {
+			v.add(faceName, appendPath(chapterPath, "Chapters"), CardDefIssueInvalidAbilityBody, "chapter ability has no chapter numbers")
+		}
+		for j, chapter := range face.ChapterAbilities[i].Chapters {
+			if chapter <= 0 {
+				v.add(faceName, appendPath(chapterPath, fmt.Sprintf("Chapters[%d]", j)), CardDefIssueInvalidAbilityBody, "chapter number must be positive")
+			}
+		}
+		v.validateAbilityBody(faceName, chapterPath, face.ChapterAbilities[i], nil)
 	}
 	for i := range face.ReplacementAbilities {
 		v.validateReplacementAbility(faceName, appendPath(path, fmt.Sprintf("ReplacementAbilities[%d]", i)), &face.ReplacementAbilities[i])
@@ -150,6 +163,8 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 		for i := range abilityBody.KeywordAbilities {
 			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
 		}
+		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
+	case ChapterAbility:
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 	case StaticAbility:
 		if abilityBody.Condition.Exists {

@@ -68,15 +68,16 @@ for {
 `Parse(source, context)` returns a lossless `Document` plus diagnostics. Card
 context identifies instant and sorcery faces because otherwise identical text
 can be a spell ability or a static ability. It also identifies planeswalker
-faces so loyalty costs are not confused with ordinary activated abilities.
+faces so loyalty costs are not confused with ordinary activated abilities, and
+Saga faces so Roman-numeral chapter headings are not confused with ability words.
 
 The syntax tree preserves ordered abilities and exact source spans. It
 represents ability-word prefixes, top-level activation costs, sentences,
-parenthesized reminder text, quoted granted abilities, and modal choose headers
-with bullet options. Mode spans exclude the bullet marker. Delimiters inside
+parenthesized reminder text, quoted granted abilities, Saga chapter numbers, and
+modal choose headers with bullet options. Mode spans exclude the bullet marker. Delimiters inside
 quotes or reminder text remain owned by that enclosing construct rather than
 creating overlapping sibling nodes. The parser classifies spell, activated, loyalty, triggered,
-replacement, static, and reminder paragraphs. This classification is syntactic;
+chapter, replacement, static, and reminder paragraphs. This classification is syntactic;
 lowering English phrases into executable game primitives is a separate compiler
 stage.
 

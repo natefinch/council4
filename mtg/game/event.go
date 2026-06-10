@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -16,6 +17,7 @@ const (
 	EventSpellResolved
 	EventPermanentEnteredBattlefield
 	EventPermanentDied
+	EventCountersAdded
 	EventDamageDealt
 	EventCardDrawn
 	EventZoneChanged
@@ -103,8 +105,13 @@ type Event struct {
 	FromZone zone.Type
 	ToZone   zone.Type
 
-	// Amount is the number of damage dealt, cards drawn, or cards discarded.
+	// Amount is the number of damage dealt, cards drawn, cards discarded, or
+	// counters added.
 	Amount int
+
+	// CounterKind and PreviousCounterAmount describe EventCountersAdded.
+	CounterKind           counter.Kind
+	PreviousCounterAmount int
 
 	// DamageRecipient describes whether damage was dealt to a player or permanent.
 	DamageRecipient DamageRecipientKind

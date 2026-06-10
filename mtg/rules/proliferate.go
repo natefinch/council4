@@ -118,8 +118,7 @@ func addProliferatedCounter(g *game.Game, target proliferateTarget, kind counter
 		if !ok {
 			return false
 		}
-		permanent.Counters.Add(kind, 1)
-		return true
+		return addCountersToPermanent(g, permanent, kind, 1)
 	}
 	player, ok := playerByID(g, target.player)
 	if !ok {
