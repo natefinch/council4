@@ -45,6 +45,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		Controller:     controller,
 		Face:           face,
 		SummoningSick:  entersSummoningSick(faceDef),
+		Prepared:       faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)
 	applyInitialContinuousEffects(g, permanent, continuous)

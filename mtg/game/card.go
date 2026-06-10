@@ -96,6 +96,7 @@ type CardFace struct {
 	DynamicToughness opt.V[DynamicValue]
 	Loyalty          opt.V[int]
 	Defense          opt.V[int]
+	EntersPrepared   bool
 
 	// SpellAbility is the resolving content of this face when cast as a spell.
 	// Its rules text is OracleText.
@@ -212,7 +213,8 @@ func (c *CardDef) FaceIndexes() []FaceIndex {
 
 // CanChooseCastFace reports whether this face can be chosen while casting the
 // card as a spell. Modal DFCs may choose any non-land printed face they expose;
-// adventure, split, and prepare cards may choose their alternate spell face.
+// adventure and split cards may choose their alternate spell face. Prepare
+// cards cast copies of their spell face from prepared battlefield permanents.
 // Other layouts cast only their front face.
 func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
 	face, ok := c.Face(index)
@@ -224,7 +226,7 @@ func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
 			return false
 		}
 		switch c.Layout {
-		case LayoutAdventure, LayoutSplit, LayoutPrepare:
+		case LayoutAdventure, LayoutSplit:
 			return true
 		default:
 			return false
@@ -496,6 +498,7 @@ func (f *CardFace) clone() CardFace {
 		DynamicToughness:     f.DynamicToughness,
 		Loyalty:              f.Loyalty,
 		Defense:              f.Defense,
+		EntersPrepared:       f.EntersPrepared,
 		SpellAbility:         f.SpellAbility,
 		ActivatedAbilities:   append([]ActivatedAbility(nil), f.ActivatedAbilities...),
 		ManaAbilities:        append([]ManaAbility(nil), f.ManaAbilities...),

@@ -56,4 +56,5 @@ var supportedLayouts = map[string]bool{
 	"reversible_card":    true,
 	"adventure":          true,
 	"split":              true,
+	"prepare":            true,
 }

@@ -28,9 +28,9 @@ type StackObject struct {
 	// Kind classifies this as a spell, activated ability, or triggered ability.
 	Kind StackObjectKind
 
-	// SourceID is the CardInstance ID for spells and hand-zone activated
-	// abilities, or the Permanent's ObjectID for battlefield activated/triggered
-	// abilities.
+	// SourceID is the CardInstance ID for card-backed spells and hand-zone
+	// activated abilities, or the Permanent's ObjectID for battlefield
+	// activated/triggered abilities and spells copied from token permanents.
 	SourceID id.ID
 
 	// Face is the selected spell face or the source face captured when an

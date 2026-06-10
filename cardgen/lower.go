@@ -34,6 +34,7 @@ type loweredFaceAbilities struct {
 	TriggeredAbilities   []game.TriggeredAbility
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
+	EntersPrepared       bool
 }
 
 // empty reports whether the face produced no abilities.
@@ -44,7 +45,8 @@ func (f loweredFaceAbilities) empty() bool {
 		len(f.LoyaltyAbilities) == 0 &&
 		len(f.TriggeredAbilities) == 0 &&
 		len(f.ReplacementAbilities) == 0 &&
-		!f.SpellAbility.Exists
+		!f.SpellAbility.Exists &&
+		!f.EntersPrepared
 }
 
 // abilityLowering holds the typed result of lowering one CompiledAbility.
@@ -57,6 +59,7 @@ type abilityLowering struct {
 	triggeredAbility   opt.V[game.TriggeredAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
+	entersPrepared     bool
 	consumed           semanticConsumption
 	sourceSpans        []oracle.Span
 }
@@ -144,6 +147,7 @@ func lowerFaceAbilities(
 		if lowered.replacementAbility.Exists {
 			result.ReplacementAbilities = append(result.ReplacementAbilities, lowered.replacementAbility.Val)
 		}
+		result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
 				unsupported = append(unsupported, *executableDiagnostic(
@@ -170,9 +174,13 @@ func lowerExecutableAbility(
 	if len(ability.Modes) > 0 {
 		return lowerModalAbility(cardName, ability, syntax)
 	}
+	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
+		return lowered, nil
+	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
 		return lowered, diagnostic
 	}
+
 	if staticBuff, ok, diagnostic := lowerStaticPTBuff(ability, syntax); ok {
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
@@ -290,6 +298,32 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerEntersPrepared(ability oracle.CompiledAbility, syntax oracle.Ability) (abilityLowering, bool) {
+	const text = "This creature enters prepared."
+	if ability.Kind != oracle.AbilityStatic ||
+		(ability.Text != text && !strings.HasPrefix(ability.Text, text+" (")) ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectEnterPrepared ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferenceThisObject ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil {
+		return abilityLowering{}, false
+	}
+	return abilityLowering{
+		entersPrepared: true,
+		consumed: semanticConsumption{
+			effects:    1,
+			references: 1,
+		},
+		sourceSpans: []oracle.Span{syntax.Span},
+	}, true
 }
 
 func lowerActivatedAbilityKind(

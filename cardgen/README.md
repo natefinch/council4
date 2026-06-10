@@ -94,6 +94,10 @@ one Card Definition per playable side.
 - `CardNameToVarName`, `CardNameToFileName`, and `CardNameToPackageLetter`
   provide deterministic source and package names.
 
+Prepare layouts use `CardFace.EntersPrepared` on the creature face and
+`CardDef.Alternate` for the spell face. The generator accepts them only when
+both faces and the exact enters-prepared ability are fully lowerable.
+
 Current executable mechanic coverage and the corpus support count live in
 [`oracle/README.md`](oracle/README.md). The numbered expansion checklist lives
 in [`../docs/oracle-compiler-expansion.md`](../docs/oracle-compiler-expansion.md).

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,537
+Cards supported: 2,538
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -1200,6 +1200,7 @@ Cards supported: 2,537
 - Lady Orca
 - Lagac Lizard
 - Land Leeches
+- Landscape Painter // Vibrant Idea
 - Lantern Kami
 - Laserbeak
 - Lash of Malice

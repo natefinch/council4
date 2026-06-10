@@ -470,6 +470,9 @@ func firstSymbol(tokens []Token) string {
 
 func effectKindAt(tokens []Token, index int) EffectKind {
 	kind := effectKind(tokens[index])
+	if kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared") {
+		return EffectEnterPrepared
+	}
 	if kind == EffectCast && index > 0 &&
 		(equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")) {
 		return EffectUnknown

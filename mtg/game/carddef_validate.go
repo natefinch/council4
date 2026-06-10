@@ -85,6 +85,7 @@ func (v *cardDefValidator) validate() {
 
 func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	hasAbilities := face.SpellAbility.Exists ||
+		face.EntersPrepared ||
 		len(face.ActivatedAbilities) > 0 ||
 		len(face.ManaAbilities) > 0 ||
 		len(face.LoyaltyAbilities) > 0 ||

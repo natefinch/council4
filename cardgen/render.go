@@ -311,6 +311,9 @@ func (Renderer) writeFaceScalarFields(b *strings.Builder, ctx *renderCtx, face *
 		}
 		_, _ = fmt.Fprintf(b, "%sColors: []color.Color{%s},\n", indent, colorLits)
 	}
+	if face.EntersPrepared {
+		_, _ = fmt.Fprintf(b, "%sEntersPrepared: true,\n", indent)
+	}
 	if len(face.Supertypes) > 0 {
 		ctx.need(importTypes)
 		literals := make([]string, 0, len(face.Supertypes))

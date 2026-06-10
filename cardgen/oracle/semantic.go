@@ -188,6 +188,7 @@ const (
 	EffectDouble
 	EffectDraw
 	EffectEnterTapped
+	EffectEnterPrepared
 	EffectExile
 	EffectFight
 	EffectGain

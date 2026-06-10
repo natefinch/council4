@@ -205,6 +205,7 @@ func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (g
 			face.Defense = opt.Val(n)
 		}
 	}
+	face.EntersPrepared = abilities.EntersPrepared
 	for i := range abilities.StaticAbilities {
 		face.StaticAbilities = append(face.StaticAbilities, abilities.StaticAbilities[i].Body)
 	}

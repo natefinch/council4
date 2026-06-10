@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,537 / 37,628**
+**Cards supported: 2,538 / 37,628**
 
 The pipeline is:
 
@@ -119,11 +119,12 @@ target creatures, and fixed power/toughness buffs on enchanted creature,
 equipped creature, creatures you control, and other creatures you control.
 Exact `Choose N` and `Choose one or both` modal headers lower to runtime-enforced
 minimum and maximum mode counts when every mode is otherwise supported.
-Adventure and split layouts are supported when each printed face is otherwise
-exactly representable; these layouts keep the front face in the root
+Adventure, split, and exact enters-prepared layouts are supported when each
+printed face is otherwise exactly representable; these layouts keep the front face in the root
 `game.CardDef`, emit the second spell face as `Alternate`, and derive per-face
-colors from mana costs when Scryfall omits face colors. Prepare layout cards
-remain rejected until prepared-state runtime semantics exist (see issue #18).
+colors from mana costs when Scryfall omits face colors. An exact
+`This creature enters prepared.` ability lowers to `CardFace.EntersPrepared`;
+other effects that prepare or unprepare permanents remain deferred.
 Supported sentence-sized effects may be lowered in Oracle order when at most one clause
 targets. It also lowers exact supported self-enter and self-dies triggers with
 ordered supported spell-like effects. An exact leading `you may` on a
