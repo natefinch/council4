@@ -572,6 +572,53 @@ func TestPayCostAutoActivatesUntapManaAbility(t *testing.T) {
 	}
 }
 
+func TestPayCostChoosesManaAbilityMatchingTapState(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		tapped     bool
+		firstCost  cost.Additional
+		secondCost cost.Additional
+	}{
+		{
+			name:       "untapped source skips untap ability",
+			firstCost:  cost.Additional{Kind: cost.AdditionalUntap, Text: "{Q}"},
+			secondCost: cost.T,
+		},
+		{
+			name:       "tapped source skips tap ability",
+			tapped:     true,
+			firstCost:  cost.T,
+			secondCost: cost.Additional{Kind: cost.AdditionalUntap, Text: "{Q}"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			source := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+				Name:  "Modal Mana Engine",
+				Types: []types.Card{types.Artifact},
+			}}, mana.G, 1)
+			card, ok := permanentCardDef(g, source)
+			if !ok {
+				t.Fatal("mana source card definition not found")
+			}
+			first := card.ManaAbilities[0]
+			first.AdditionalCosts = []cost.Additional{test.firstCost}
+			second := first
+			second.AdditionalCosts = []cost.Additional{test.secondCost}
+			card.ManaAbilities = []game.ManaAbility{first, second}
+			source.Tapped = test.tapped
+			manaCost := cost.Mana{cost.G}
+
+			if !payTestGenericCost(g, game.Player1, &manaCost) {
+				t.Fatal("payCost() = false with a mana ability matching source tap state")
+			}
+			if source.Tapped == test.tapped {
+				t.Fatal("automatic mana ability did not change source tap state")
+			}
+		})
+	}
+}
+
 func TestPayCostRespectsManaAbilityTimingAndUsage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

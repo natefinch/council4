@@ -1417,6 +1417,27 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", lits))
 	}
+	if len(predicate.ExcludedTypes) > 0 {
+		lits, err := renderTypesCardSlice(ctx, predicate.ExcludedTypes)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
+	}
+	if len(predicate.Colors) > 0 {
+		colors, err := renderColorSlice(ctx, predicate.Colors)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Colors: %s,", colors))
+	}
+	if len(predicate.ExcludedColors) > 0 {
+		colors, err := renderColorSlice(ctx, predicate.ExcludedColors)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", colors))
+	}
 	if predicate.Player != game.PlayerAny {
 		pr, err := renderPlayerRelation(predicate.Player)
 		if err != nil {
@@ -1444,6 +1465,44 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 			return "", false, err
 		}
 		fields = append(fields, fmt.Sprintf("CombatState: %s,", cs))
+	}
+	if predicate.Keyword != game.KeywordNone {
+		kw, err := renderKeyword(predicate.Keyword)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Keyword: %s,", kw))
+	}
+	if predicate.ExcludedKeyword != game.KeywordNone {
+		kw, err := renderKeyword(predicate.ExcludedKeyword)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedKeyword: %s,", kw))
+	}
+	if predicate.ManaValue.Exists {
+		cmp, err := renderCompareInt(ctx, predicate.ManaValue.Val)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ManaValue: opt.Val(%s),", cmp))
+	}
+	if predicate.Power.Exists {
+		cmp, err := renderCompareInt(ctx, predicate.Power.Val)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Power: opt.Val(%s),", cmp))
+	}
+	if predicate.Toughness.Exists {
+		cmp, err := renderCompareInt(ctx, predicate.Toughness.Val)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Toughness: opt.Val(%s),", cmp))
+	}
+	if predicate.Another {
+		fields = append(fields, "Another: true,")
 	}
 	if len(fields) == 0 {
 		return "", false, nil

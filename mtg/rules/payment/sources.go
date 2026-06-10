@@ -96,6 +96,9 @@ func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanen
 		if !ok || body.ManaCost.Exists || !isSimpleAddMana(body) {
 			continue
 		}
+		if permanent.Tapped != untap {
+			continue
+		}
 		if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick {
 			continue
 		}
