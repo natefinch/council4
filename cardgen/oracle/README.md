@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 3,090 / 31,834**
+**Cards supported: 3,092 / 31,834**
 
 The pipeline is:
 
@@ -141,8 +141,8 @@ exactly representable; these layouts keep the front face in the root
 colors from mana costs when Scryfall omits face colors. An exact
 `This creature enters prepared.` ability lowers to `CardFace.EntersPrepared`;
 other effects that prepare or unprepare permanents remain deferred.
-Supported sentence-sized effects may be lowered in Oracle order when at most one clause
-targets. It also lowers exact supported self-enter and self-dies triggers with
+Supported sentence-sized effects may be lowered in Oracle order with independent
+targets for each supported clause. It also lowers exact supported self-enter and self-dies triggers with
 ordered supported spell-like effects. Self-enter triggers may use the exact
 intervening condition `if it was kicked`. Exact fixed-damage self-dies triggers
 using `it` preserve the departed permanent as the damage source. An exact

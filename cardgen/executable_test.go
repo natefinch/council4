@@ -868,6 +868,31 @@ func TestGenerateExecutableCardSourceOrderedEffects(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceOrderedEffectsWithMultipleTargets(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target artifact. Test Spell deals 2 damage to any target.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Object: game.TargetPermanentReference(0)",
+		"Recipient: game.AnyTargetDamageRecipient(1)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceSurveil(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -1995,7 +2020,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
 		{name: "conditional draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "If you control a creature, draw two cards."},
 		{name: "compound draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "Draw two cards, then discard a card."},
-		{name: "multiple targeted clauses", cardName: "Test Spell", typeLine: "Sorcery", oracleText: "Destroy target artifact. Tap target creature."},
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
 		{name: "qualified mass destroy", cardName: "Test Doom", typeLine: "Sorcery", oracleText: "Destroy all other creatures."},
 		{name: "regeneration destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. It can't be regenerated."},
