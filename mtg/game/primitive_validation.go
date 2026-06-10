@@ -382,6 +382,14 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 	if !p.Source.Valid() {
 		return errors.New("put on battlefield requires a valid source")
 	}
+	if ref, ok := p.Source.CardRef(); ok {
+		if err := validateCardReference(ref); err != nil {
+			return err
+		}
+		if err := validateTargetCardReference(ref, targets, checkTargets); err != nil {
+			return err
+		}
+	}
 	if p.Recipient.Exists {
 		if err := validatePlayerReference(p.Recipient.Val, targets, checkTargets); err != nil {
 			return err
@@ -476,20 +484,8 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if err := validateCardReference(p.Card); err != nil {
 		return err
 	}
-	if p.Card.Kind == CardReferenceTarget {
-		if !checkTargets || len(targets) == 0 {
-			return errors.New("target card reference requires a target specification")
-		}
-		found := false
-		for i := range targets {
-			if targetSpecAllowedKinds(&targets[i])&TargetAllowCard != 0 {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return errors.New("target card reference requires a card target specification")
-		}
+	if err := validateTargetCardReference(p.Card, targets, checkTargets); err != nil {
+		return err
 	}
 	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack {
 		return errors.New("move card requires a non-battlefield source zone")
@@ -504,6 +500,21 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 		return errors.New("bottom placement requires library as destination zone")
 	}
 	return nil
+}
+
+func validateTargetCardReference(ref CardReference, targets []TargetSpec, checkTargets bool) error {
+	if ref.Kind != CardReferenceTarget {
+		return nil
+	}
+	if !checkTargets || len(targets) == 0 {
+		return errors.New("target card reference requires a target specification")
+	}
+	for i := range targets {
+		if targetSpecAllowedKinds(&targets[i])&TargetAllowCard != 0 {
+			return nil
+		}
+	}
+	return errors.New("target card reference requires a card target specification")
 }
 
 func (p GrantCastPermission) validatePrimitive([]TargetSpec, bool) error {

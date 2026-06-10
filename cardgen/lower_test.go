@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -275,6 +276,80 @@ func TestLowerTargetedGraveyardReturnToLibrary(t *testing.T) {
 	}
 }
 
+func TestLowerTargetedGraveyardReturnToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bishop",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target creature card with mana value 3 or less from your graveyard to the battlefield tapped.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard {
+		t.Fatalf("target = %#v", target)
+	}
+	selection := target.Selection.Val
+	if !slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
+		selection.Controller != game.ControllerYou ||
+		!selection.ManaValue.Exists ||
+		selection.ManaValue.Val.Op != compare.LessOrEqual ||
+		selection.ManaValue.Val.Value != 3 {
+		t.Fatalf("selection = %#v", selection)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	cardRef, ok := put.Source.CardRef()
+	if !ok || cardRef.Kind != game.CardReferenceTarget || !put.EntryTapped {
+		t.Fatalf("put = %#v", put)
+	}
+}
+
+func TestLowerTargetedGraveyardPutOntoBattlefieldUnderYourControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reanimator",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put target creature card from a graveyard onto the battlefield under your control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard {
+		t.Fatalf("target = %#v", target)
+	}
+	if target.Selection.Val.Controller != game.ControllerAny {
+		t.Fatalf("selection controller = %v, want any", target.Selection.Val.Controller)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	if !put.Recipient.Exists || put.Recipient.Val != game.ControllerReference() {
+		t.Fatalf("recipient = %#v, want controller", put.Recipient)
+	}
+}
+
+func TestLowerTargetedGraveyardVehicleReturnToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pilot",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target Vehicle card from your graveyard to the battlefield.",
+	})
+	selection := face.SpellAbility.Val.Modes[0].Targets[0].Selection.Val
+	if !slices.Equal(selection.SubtypesAny, []types.Sub{types.Vehicle}) ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", selection)
+	}
+}
+
 func TestGenerateExecutableCardSourceTargetedGraveyardReturnRendersCardTargetConstraints(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -304,6 +379,39 @@ func TestGenerateExecutableCardSourceTargetedGraveyardReturnRendersCardTargetCon
 		"zone.Library",
 		"DestinationBottom:",
 		"true",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceTargetedGraveyardReanimationRendersPutOnBattlefield(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Reanimator",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put target Vehicle card from a graveyard onto the battlefield under your control.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_reanimator.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"Allow:",
+		"game.TargetAllowCard",
+		"TargetZone:",
+		"zone.Graveyard",
+		`SubtypesAny: []types.Sub{types.Sub("Vehicle")}`,
+		"game.PutOnBattlefield",
+		"game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget})",
+		"Recipient: opt.Val(game.ControllerReference())",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
