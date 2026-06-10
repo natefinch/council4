@@ -1545,7 +1545,7 @@ func lowerStaticPTBuff(
 			"the executable source backend supports only exact fixed static creature power/toughness buffs, optionally granting supported keywords",
 		)
 	}
-	group, ok := staticSubjectGroup(effect.StaticSubject)
+	group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
 	if !ok {
 		return game.StaticAbility{}, false, nil
 	}
@@ -1606,9 +1606,13 @@ func lowerStaticKeywordGrant(
 			"the executable source backend supports only exact standalone grants of runtime-supported keywords",
 		)
 	}
-	group, ok := staticSubjectGroup(effect.StaticSubject)
+	group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
 	if !ok {
-		return game.StaticAbility{}, false, nil
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only known creature subtypes in standalone keyword grants",
+		)
 	}
 	return game.StaticAbility{
 		Text: ability.Text,
@@ -1905,7 +1909,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	}
 }
 
-func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, bool) {
+func staticSubjectGroup(subject oracle.StaticSubjectKind, subtypeText string) (game.GroupReference, bool) {
 	switch subject {
 	case oracle.StaticSubjectAttachedObject:
 		return game.AttachedObjectGroup(game.SourcePermanentReference()), true
@@ -1940,9 +1944,58 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 			RequiredTypes: []types.Card{types.Creature},
 			Controller:    game.ControllerOpponent,
 		}), true
+	case oracle.StaticSubjectControlledCreatureSubtype:
+		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{subtype}},
+		), true
+	case oracle.StaticSubjectOtherControlledCreatureSubtype:
+		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		return game.ObjectControlledGroupExcluding(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{subtype}},
+			game.SourcePermanentReference(),
+		), true
 	default:
 		return game.GroupReference{}, false
 	}
+}
+
+func knownCreatureSubtypeFromPlural(text string) (types.Sub, bool) {
+	candidates := []string{text}
+	if singular, ok := strings.CutSuffix(text, "s"); ok {
+		candidates = append(candidates, singular)
+	}
+	if stem, ok := strings.CutSuffix(text, "ies"); ok {
+		candidates = append(candidates, stem+"y")
+	}
+	if stem, ok := strings.CutSuffix(text, "ves"); ok {
+		candidates = append(candidates, stem+"f", stem+"fe")
+	}
+	if singular, ok := strings.CutSuffix(text, "es"); ok {
+		candidates = append(candidates, singular)
+	}
+	switch text {
+	case "Children":
+		candidates = append(candidates, "Child")
+	case "Mice":
+		candidates = append(candidates, "Mouse")
+	default:
+	}
+	for _, candidate := range candidates {
+		subtype := types.Sub(candidate)
+		if types.KnownSubtypeForType(types.Creature, subtype) {
+			return subtype, true
+		}
+	}
+	return "", false
 }
 
 func matchesExactStaticKeywordGrantSyntax(

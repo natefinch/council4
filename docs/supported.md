@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,328
+Cards supported: 3,330
 
 - +2 Mace
 - Aang, Air Nomad
@@ -333,6 +333,7 @@ Cards supported: 3,328
 - Boggart Ram-Gang
 - Bogstomper
 - Boiling Rock Prison
+- Boldwyr Aggressor
 - Bolrac-Clan Basher
 - Bolt of Keranos
 - Bombard
@@ -2842,6 +2843,7 @@ Cards supported: 3,328
 - The Surgical Bay
 - The Terror of Serpent's Pass
 - Thermal Glider
+- Thicket Crasher
 - Third Path Savant
 - Thopter
 - Thopter

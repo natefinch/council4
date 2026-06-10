@@ -697,6 +697,7 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 		oracleText string
 		domain     game.GroupReferenceDomain
 		excluded   bool
+		subtypes   []types.Sub
 		keywords   []game.Keyword
 	}{
 		"controlled creatures": {
@@ -719,6 +720,25 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			oracleText: "Equipped creature has shroud and wither.",
 			domain:     game.GroupDomainAttachedObject,
 			keywords:   []game.Keyword{game.Shroud, game.Wither},
+		},
+		"controlled subtype": {
+			oracleText: "Zombies you control have flying.",
+			domain:     game.GroupDomainObjectControlled,
+			subtypes:   []types.Sub{types.Zombie},
+			keywords:   []game.Keyword{game.Flying},
+		},
+		"other controlled subtype": {
+			oracleText: "Other Dinosaurs you control have haste.",
+			domain:     game.GroupDomainObjectControlled,
+			excluded:   true,
+			subtypes:   []types.Sub{types.Dinosaur},
+			keywords:   []game.Keyword{game.Haste},
+		},
+		"irregular plural subtype": {
+			oracleText: "Elves you control have vigilance.",
+			domain:     game.GroupDomainObjectControlled,
+			subtypes:   []types.Sub{types.Elf},
+			keywords:   []game.Keyword{game.Vigilance},
 		},
 	}
 	for name, test := range tests {
@@ -744,10 +764,26 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
 				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
 			}
+			if got := effect.Group.Selection().SubtypesAny; !slices.Equal(got, test.subtypes) {
+				t.Fatalf("subtypes = %v, want %v", got, test.subtypes)
+			}
 			if !slices.Equal(effect.AddKeywords, test.keywords) {
 				t.Fatalf("keywords = %v, want %v", effect.AddKeywords, test.keywords)
 			}
 		})
+	}
+}
+
+func TestRejectUnknownSubtypeStaticKeywordGrant(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Grant",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Splorps you control have haste.",
+	})
+	if len(diagnostics) == 0 || diagnostics[0].Summary != "unsupported static ability" {
+		t.Fatalf("diagnostics = %#v, want unsupported static ability", diagnostics)
 	}
 }
 
