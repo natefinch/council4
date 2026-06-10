@@ -170,8 +170,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 				continue
 			}
 			for _, number := range chapter.Chapters {
-				if event.PreviousCounterAmount >= number ||
-					event.PreviousCounterAmount+event.Amount < number {
+				if !sagaChapterTriggeredByEvent(permanent, event, number) {
 					continue
 				}
 				pending = append(pending, pendingTriggeredAbility{

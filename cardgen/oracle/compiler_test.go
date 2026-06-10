@@ -337,6 +337,27 @@ func TestCompileDevoidAndReminder(t *testing.T) {
 	}
 }
 
+func TestCompileReadAheadAndReminder(t *testing.T) {
+	t.Parallel()
+	source := "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger.)"
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(compilation.Abilities) != 1 {
+		t.Fatalf("abilities = %#v, want one", compilation.Abilities)
+	}
+	ability := compilation.Abilities[0]
+	if len(ability.Keywords) != 1 ||
+		ability.Keywords[0].Name != "Read ahead" ||
+		ability.Keywords[0].Text != "Read ahead" {
+		t.Fatalf("keywords = %#v", ability.Keywords)
+	}
+	if len(ability.Effects) != 0 || len(ability.References) != 0 {
+		t.Fatalf("reminder text leaked semantics: %#v", ability)
+	}
+}
+
 func TestCompileEnchantKeywordParameter(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile("Enchant creature", ParseContext{})

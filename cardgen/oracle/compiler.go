@@ -806,7 +806,7 @@ var keywordNames = map[string]string{
 	"kicker": "Kicker", "lifelink": "Lifelink", "madness": "Madness",
 	"menace": "Menace", "morph": "Morph", "mutate": "Mutate",
 	"ninjutsu": "Ninjutsu", "persist": "Persist", "protection": "Protection",
-	"prowess": "Prowess", "reach": "Reach", "shroud": "Shroud",
+	"prowess": "Prowess", "read ahead": "Read ahead", "reach": "Reach", "shroud": "Shroud",
 	"split second": "Split second", "storm": "Storm", "suspend": "Suspend",
 	"toxic": "Toxic", "trample": "Trample", "undying": "Undying",
 	"vigilance": "Vigilance", "ward": "Ward", "wither": "Wither",

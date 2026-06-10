@@ -1,12 +1,41 @@
 package rules
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
+
+func initializeReadAhead(e *Engine, g *game.Game, permanent *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	if !permanentHasSubtype(g, permanent, types.Saga) || !hasKeyword(g, permanent, game.ReadAhead) {
+		return
+	}
+	final := finalSagaChapter(g, permanent)
+	if final <= 0 {
+		return
+	}
+	options := make([]game.ChoiceOption, final)
+	for chapter := 1; chapter <= final; chapter++ {
+		options[chapter-1] = game.ChoiceOption{
+			Index: chapter,
+			Label: fmt.Sprintf("Chapter %d", chapter),
+		}
+	}
+	chosen := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           effectiveController(g, permanent),
+		Prompt:           "Choose a chapter for read ahead.",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{1},
+	}, log)[0]
+	permanent.SagaEntryChapter = chosen
+	permanent.Counters.Add(counter.Lore, chosen-1)
+}
 
 func addCountersToPermanent(g *game.Game, permanent *game.Permanent, kind counter.Kind, amount int) bool {
 	if permanent == nil || amount <= 0 {
@@ -70,13 +99,18 @@ func sagaAwaitingChapterAbility(g *game.Game, permanent *game.Permanent, final i
 	}
 	start := min(max(g.TriggerEventCursor, 0), len(g.Events))
 	for _, event := range g.Events[start:] {
-		if event.Kind == game.EventCountersAdded &&
-			event.PermanentID == permanent.ObjectID &&
-			event.CounterKind == counter.Lore &&
-			event.PreviousCounterAmount < final &&
-			event.PreviousCounterAmount+event.Amount >= final {
+		if sagaChapterTriggeredByEvent(permanent, event, final) {
 			return true
 		}
 	}
 	return false
+}
+
+func sagaChapterTriggeredByEvent(permanent *game.Permanent, event game.Event, chapter int) bool {
+	return event.Kind == game.EventCountersAdded &&
+		event.PermanentID == permanent.ObjectID &&
+		event.CounterKind == counter.Lore &&
+		event.PreviousCounterAmount < chapter &&
+		event.PreviousCounterAmount+event.Amount >= chapter &&
+		(permanent.SagaEntryChapter == 0 || chapter >= permanent.SagaEntryChapter)
 }

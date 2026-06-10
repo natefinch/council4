@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -139,6 +140,117 @@ func TestAdvanceSagasAddsLoreOnlyToActivePlayersSagas(t *testing.T) {
 	}
 }
 
+func TestReadAheadChoosesEntryChapterAndSkipsEarlierChapters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	card := addSagaCardInstance(g, game.Player2, []game.ChapterAbility{
+		sagaNamedChapter(1),
+		sagaNamedChapter(2),
+		sagaNamedChapter(3),
+		sagaNamedChapter(4),
+	})
+	card.Def.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	agent := &choiceOnlyAgent{choices: [][]int{{3}}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player2: agent}
+	log := &TurnLog{}
+
+	permanent, ok := createCardPermanentFaceWithChoices(engine, g, card, game.Player2, zone.Stack, game.FaceFront, agents, log)
+	if !ok {
+		t.Fatal("create Read ahead Saga failed")
+	}
+	if got := permanent.Counters.Get(counter.Lore); got != 3 {
+		t.Fatalf("lore counters = %d, want 3", got)
+	}
+	if got := permanent.SagaEntryChapter; got != 3 {
+		t.Fatalf("SagaEntryChapter = %d, want 3", got)
+	}
+	if len(log.Choices) != 1 {
+		t.Fatalf("choices = %+v, want one Read ahead choice", log.Choices)
+	}
+	choice := log.Choices[0]
+	if choice.Request.Player != game.Player2 ||
+		choice.Request.Kind != game.ChoiceResolution ||
+		len(choice.Request.Options) != 4 ||
+		choice.Request.DefaultSelection[0] != 1 ||
+		len(choice.Selected) != 1 ||
+		choice.Selected[0] != 3 ||
+		choice.UsedFallback {
+		t.Fatalf("choice = %+v, want Player 2 choosing chapter 3", choice)
+	}
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("chosen chapter was not put on the stack")
+	}
+	assertSagaChapterOnTop(t, g, "Chapter 3")
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	advanceSagas(g, game.Player2)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("next chapter was not put on the stack")
+	}
+	assertSagaChapterOnTop(t, g, "Chapter 4")
+}
+
+func TestReadAheadFallbackChoosesFirstChapter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	card := addSagaCardInstance(g, game.Player1, []game.ChapterAbility{
+		sagaNamedChapter(1),
+		sagaNamedChapter(2),
+	})
+	card.Def.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	log := &TurnLog{}
+
+	permanent, ok := createCardPermanentFaceWithChoices(engine, g, card, game.Player1, zone.Stack, game.FaceFront, [game.NumPlayers]PlayerAgent{}, log)
+	if !ok {
+		t.Fatal("create Read ahead Saga failed")
+	}
+	if got := permanent.Counters.Get(counter.Lore); got != 1 {
+		t.Fatalf("lore counters = %d, want 1", got)
+	}
+	if got := permanent.SagaEntryChapter; got != 1 {
+		t.Fatalf("SagaEntryChapter = %d, want 1", got)
+	}
+	if len(log.Choices) != 1 || !log.Choices[0].UsedFallback || log.Choices[0].Selected[0] != 1 {
+		t.Fatalf("choices = %+v, want chapter 1 fallback", log.Choices)
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("first chapter was not put on the stack")
+	}
+	assertSagaChapterOnTop(t, g, "Chapter 1")
+}
+
+func TestReadAheadSingleChapterWaitsForPendingTriggerBeforeSacrifice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	card := addSagaCardInstance(g, game.Player1, []game.ChapterAbility{sagaNamedChapter(1)})
+	card.Def.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+
+	permanent, ok := createCardPermanentFace(g, card, game.Player1, zone.Stack, game.FaceFront)
+	if !ok {
+		t.Fatal("create Read ahead Saga failed")
+	}
+	if permanent.SagaEntryChapter != 1 {
+		t.Fatalf("SagaEntryChapter = %d, want 1", permanent.SagaEntryChapter)
+	}
+	engine.applyStateBasedActions(g)
+	if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
+		t.Fatal("Saga was sacrificed before its chapter trigger reached the stack")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("final chapter was not put on the stack")
+	}
+	engine.applyStateBasedActions(g)
+	if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
+		t.Fatal("Saga was sacrificed while its final chapter was on the stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	engine.applyStateBasedActions(g)
+	if _, ok := permanentByObjectID(g, permanent.ObjectID); ok {
+		t.Fatal("Saga remained after its final chapter left the stack")
+	}
+}
+
 func addSagaCardInstance(g *game.Game, owner game.PlayerID, chapters []game.ChapterAbility) *game.CardInstance {
 	card := &game.CardInstance{
 		ID:    g.IDGen.Next(),
@@ -165,5 +277,19 @@ func sagaDrawChapter(number int) game.ChapterAbility {
 		Content: game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
 		}}}.Ability(),
+	}
+}
+
+func sagaNamedChapter(number int) game.ChapterAbility {
+	chapter := sagaDrawChapter(number)
+	chapter.Text = fmt.Sprintf("Chapter %d", number)
+	return chapter
+}
+
+func assertSagaChapterOnTop(t *testing.T, g *game.Game, text string) {
+	t.Helper()
+	object, ok := g.Stack.Peek()
+	if !ok || !object.SagaChapter || object.InlineTrigger == nil || object.InlineTrigger.Text != text {
+		t.Fatalf("stack object = %+v, want Saga chapter %q", object, text)
 	}
 }

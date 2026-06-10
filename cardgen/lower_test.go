@@ -1503,6 +1503,22 @@ func TestLowerSagaChapterAbilities(t *testing.T) {
 	}
 }
 
+func TestLowerReadAheadSaga(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger.)\nI — Draw a card.\nII — Draw a card.",
+	})
+	if len(face.StaticAbilities) != 1 || !game.BodyHasKeyword(face.StaticAbilities[0].Body, game.ReadAhead) {
+		t.Fatalf("static abilities = %#v, want ReadAheadStaticBody", face.StaticAbilities)
+	}
+	if len(face.ChapterAbilities) != 2 {
+		t.Fatalf("chapter abilities = %#v, want two", face.ChapterAbilities)
+	}
+}
+
 func TestLowerChapterShapedTextRequiresSagaSubtype(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

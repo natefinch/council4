@@ -4510,6 +4510,7 @@ var keywordStaticBodies = map[string]loweredStaticAbility{
 	"Menace":         {Body: game.MenaceStaticBody, VarName: "game.MenaceStaticBody"},
 	"Persist":        {Body: game.PersistStaticBody, VarName: "game.PersistStaticBody"},
 	"Prowess":        {Body: game.ProwessStaticBody, VarName: "game.ProwessStaticBody"},
+	"Read ahead":     {Body: game.ReadAheadStaticBody, VarName: "game.ReadAheadStaticBody"},
 	"Reach":          {Body: game.ReachStaticBody, VarName: "game.ReachStaticBody"},
 	"Shroud":         {Body: game.ShroudStaticBody, VarName: "game.ShroudStaticBody"},
 	"Split second":   {Body: game.SplitSecondStaticBody, VarName: "game.SplitSecondStaticBody"},

@@ -65,6 +65,7 @@ const (
 	Toxic
 	Annihilator
 	Exalted
+	ReadAhead
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -154,6 +155,9 @@ var (
 
 	// ExaltedStaticBody is the reusable StaticAbilityBody for exalted.
 	ExaltedStaticBody = simpleKeywordStaticBody("Exalted", Exalted)
+
+	// ReadAheadStaticBody is the reusable StaticAbilityBody for read ahead.
+	ReadAheadStaticBody = simpleKeywordStaticBody("Read ahead", ReadAhead)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
