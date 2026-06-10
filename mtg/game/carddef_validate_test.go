@@ -694,6 +694,26 @@ func TestValidateCardDefReportsConditionDualSpecification(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefReportsInvalidControllerControlsSelection(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name: "Invalid Condition",
+		StaticAbilities: []StaticAbility{{
+			Condition: opt.Val(Condition{
+				ControllerControls: PermanentFilter{
+					ColorsAny:      []color.Color{color.Red},
+					ExcludedColors: []color.Color{color.Red},
+				},
+			}),
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
+	}
+}
+
 func TestValidateCardDefReportsTriggerPatternDualSpecification(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Dual Trigger Pattern",

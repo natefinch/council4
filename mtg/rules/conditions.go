@@ -14,6 +14,7 @@ type conditionContext struct {
 	event                  *game.Event
 	obj                    *game.StackObject
 	useBaseCharacteristics bool
+	characteristicsBefore  game.ContinuousLayer
 }
 
 func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
@@ -110,14 +111,18 @@ func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, con
 			if permanent.Controller != ctx.controller {
 				continue
 			}
-		} else if effectiveController(g, permanent) != ctx.controller {
-			continue
 		}
 		var values permanentEffectiveValues
-		if ctx.useBaseCharacteristics {
+		switch {
+		case ctx.useBaseCharacteristics:
 			values = basePermanentValues(g, permanent)
-		} else {
+		case ctx.characteristicsBefore != 0:
+			values = permanentValuesBeforeLayer(g, permanent, ctx.characteristicsBefore)
+		default:
 			values = effectivePermanentValues(g, permanent)
+		}
+		if !ctx.useBaseCharacteristics && values.controller != ctx.controller {
+			continue
 		}
 		subject := selectionSubject{
 			kind:      subjectPermanent,
@@ -131,7 +136,7 @@ func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, con
 			if ctx.useBaseCharacteristics {
 				subject.controller = permanent.Controller
 			} else {
-				subject.controller = effectiveController(g, permanent)
+				subject.controller = values.controller
 			}
 		}
 		if ctx.source != nil {

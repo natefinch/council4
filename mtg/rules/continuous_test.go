@@ -3,6 +3,7 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -31,6 +32,117 @@ func TestStaticPTEffectAffectsCombatDamage(t *testing.T) {
 	}
 	if g.Players[game.Player1].Life != 38 {
 		t.Fatalf("defending Player1 life = %d, want 38", g.Players[game.Player1].Life)
+	}
+}
+
+func TestConditionalSourceKeywordEffectTracksCondition(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name:      "Conditional Flier",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{
+				ControllerControls: game.PermanentFilter{
+					SubtypesAny: []types.Sub{types.Mountain},
+				},
+			}),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:          game.LayerAbility,
+				AffectedSource: true,
+				AddKeywords:    []game.Keyword{game.Flying},
+			}},
+		}},
+	}}
+	source := addCombatPermanent(g, game.Player1, def)
+	otherControllerSource := addCombatPermanent(g, game.Player2, def)
+	mountain := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Mountain",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Mountain},
+	}})
+
+	if !hasKeyword(g, source, game.Flying) {
+		t.Fatal("source did not gain flying while its controller controlled a Mountain")
+	}
+	if hasKeyword(g, otherControllerSource, game.Flying) {
+		t.Fatal("same card definition gained flying for a controller without a Mountain")
+	}
+
+	movePermanentToZone(g, mountain, zone.Graveyard)
+	if hasKeyword(g, source, game.Flying) {
+		t.Fatal("source retained flying after its controller lost the Mountain")
+	}
+}
+
+func TestConditionalSourceKeywordEffectUsesEffectiveCharacteristics(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Conditional Flier",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{
+				ControllerControls: game.PermanentFilter{
+					Types:     []types.Card{types.Creature},
+					ColorsAny: []color.Color{color.Red},
+				},
+			}),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:          game.LayerAbility,
+				AffectedSource: true,
+				AddKeywords:    []game.Keyword{game.Flying},
+			}},
+		}},
+	}})
+	qualifier := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Changed Creature",
+		Types: []types.Card{types.Creature},
+	}})
+
+	if hasKeyword(g, source, game.Flying) {
+		t.Fatal("source gained flying from a creature with the wrong controller and color")
+	}
+	g.ContinuousEffects = append(g.ContinuousEffects,
+		game.ContinuousEffect{
+			AffectedObjectID: qualifier.ObjectID,
+			Layer:            game.LayerControl,
+			NewController:    opt.Val(game.Player1),
+		},
+		game.ContinuousEffect{
+			AffectedObjectID: qualifier.ObjectID,
+			Layer:            game.LayerColor,
+			AddColors:        []color.Color{color.Red},
+		},
+	)
+	if !hasKeyword(g, source, game.Flying) {
+		t.Fatal("source did not gain flying from an effectively controlled red creature")
+	}
+}
+
+func TestSourceContinuousEffectWithGroupDoesNotApply(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Invalid Granter",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:          game.LayerAbility,
+				AffectedSource: true,
+				Group: game.ObjectControlledGroup(
+					game.SourcePermanentReference(),
+					game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				),
+				AddKeywords: []game.Keyword{game.Flying},
+			}},
+		}},
+	}})
+
+	if hasKeyword(g, source, game.Flying) {
+		t.Fatal("invalid source-and-group continuous effect applied")
 	}
 }
 

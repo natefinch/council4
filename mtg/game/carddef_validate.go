@@ -355,6 +355,9 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 	for i := range continuous.AddAbilities {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("AddAbilities[%d]", i)), continuous.AddAbilities[i], nil)
 	}
+	if continuous.AffectedSource && !continuous.Group.Empty() {
+		v.add(faceName, path, CardDefIssueInvalidReference, "continuous effect sets both AffectedSource and Group")
+	}
 	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
 	}
@@ -398,6 +401,9 @@ func (v *cardDefValidator) validateTargetIndex(faceName, path string, targetInde
 }
 
 func (v *cardDefValidator) validateCondition(faceName, path string, condition *Condition, targets []TargetSpec) {
+	if !condition.ControllerControls.Empty() {
+		v.validateSelection(faceName, appendPath(path, "ControllerControls"), condition.ControllerControls.Selection())
+	}
 	if condition.ControlsMatching.Exists {
 		selection := condition.ControlsMatching.Val.Selection
 		v.validateSelection(faceName, appendPath(path, "ControlsMatching.Selection"), selection)

@@ -289,6 +289,12 @@ func TestRenderUnsupportedAbilityLayerFieldsErrors(t *testing.T) {
 			Group:       game.BattlefieldGroup(game.Selection{}),
 			AddKeywords: []game.Keyword{game.Flying},
 		},
+		"source and group recipients": {
+			Layer:          game.LayerAbility,
+			AffectedSource: true,
+			Group:          game.BattlefieldGroup(game.Selection{}),
+			AddKeywords:    []game.Keyword{game.Flying},
+		},
 	}
 	for name, effect := range tests {
 		t.Run(name, func(t *testing.T) {
