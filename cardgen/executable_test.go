@@ -1705,11 +1705,6 @@ func TestGenerateExecutableCardSourceAdditionalEnterConditions(t *testing.T) {
 			wants:     []string{"InterveningIfEventPermanentWasCast: true"},
 		},
 		{
-			name:      "attacked this turn",
-			condition: "if this creature attacked this turn",
-			wants:     []string{"InterveningIfEventPermanentAttackedThisTurn: true"},
-		},
-		{
 			name:      "controls artifact",
 			condition: "if you control an artifact",
 			wants:     []string{"InterveningCondition: opt.Val", "RequiredTypes: []types.Card{types.Artifact}"},

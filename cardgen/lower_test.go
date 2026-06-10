@@ -1036,20 +1036,21 @@ func TestLowerWasCastEnterTriggers(t *testing.T) {
 	}
 }
 
-func TestLowerAttackedThisTurnEnterTrigger(t *testing.T) {
+func TestLowerAttackedThisTurnEnterTriggerFailsClosed(t *testing.T) {
 	t.Parallel()
-	face := lowerSingleFace(t, &ScryfallCard{
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Test Warrior",
 		Layout:     "normal",
 		TypeLine:   "Creature — Warrior",
 		OracleText: "When this creature enters, if this creature attacked this turn, draw a card.",
 		Power:      new("2"),
 		Toughness:  new("2"),
-	})
-	trigger := face.TriggeredAbilities[0].Trigger
-	if trigger.InterveningIf != "if this creature attacked this turn" ||
-		!trigger.InterveningIfEventPermanentAttackedThisTurn {
-		t.Fatalf("trigger = %+v, want attacked-this-turn intervening-if", trigger)
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("attacked-this-turn self-enter condition unexpectedly lowered")
 	}
 }
 

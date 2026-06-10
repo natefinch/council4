@@ -2123,11 +2123,10 @@ func lowerEnterTrigger(
 				Event:  eventKind,
 				Source: game.TriggerSourceSelf,
 			},
-			InterveningIf:                               interveningIfText(ability.Trigger),
-			InterveningCondition:                        intervening.condition,
-			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
-			InterveningIfEventPermanentWasCast:          intervening.wasCast,
-			InterveningIfEventPermanentAttackedThisTurn: intervening.attackedThisTurn,
+			InterveningIf:                        interveningIfText(ability.Trigger),
+			InterveningCondition:                 intervening.condition,
+			InterveningIfEventPermanentWasKicked: intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:   intervening.wasCast,
 		},
 		Optional: ability.Optional,
 		Content:  content,
@@ -2135,10 +2134,9 @@ func lowerEnterTrigger(
 }
 
 type enterInterveningCondition struct {
-	condition        opt.V[game.Condition]
-	wasKicked        bool
-	wasCast          bool
-	attackedThisTurn bool
+	condition opt.V[game.Condition]
+	wasKicked bool
+	wasCast   bool
 }
 
 func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
@@ -2154,8 +2152,6 @@ func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInter
 		return enterInterveningCondition{wasKicked: true}, true
 	case "if it was cast", "if you cast it":
 		return enterInterveningCondition{wasCast: true}, true
-	case "if this creature attacked this turn":
-		return enterInterveningCondition{attackedThisTurn: true}, true
 	}
 	cardType, ok := controlledPermanentConditionType(condition.Text)
 	if !ok {

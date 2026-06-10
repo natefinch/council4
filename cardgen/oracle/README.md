@@ -147,8 +147,8 @@ other effects that prepare or unprepare permanents remain deferred.
 Supported sentence-sized effects may be lowered in Oracle order with independent
 targets for each supported clause. It also lowers exact supported self-enter and self-dies triggers with
 ordered supported spell-like effects. Self-enter triggers may use exact
-intervening conditions for `if it was kicked`, cast entry, attacking this turn,
-or controlling a permanent of a named permanent card type. Exact fixed-damage self-dies triggers
+intervening conditions for `if it was kicked`, cast entry, or controlling a
+permanent of a named permanent card type. Exact fixed-damage self-dies triggers
 using `it` preserve the departed permanent as the damage source. An exact
 leading `you may` on a single-effect trigger maps to trigger-level optionality;
 partially optional sequences remain unsupported. Exact ordinary battlefield

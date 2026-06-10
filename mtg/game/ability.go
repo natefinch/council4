@@ -205,10 +205,6 @@ type TriggerCondition struct {
 	// you cast it" on enter triggers.
 	InterveningIfEventPermanentWasCast bool
 
-	// InterveningIfEventPermanentAttackedThisTurn is true for "if this creature
-	// attacked this turn" on enter triggers.
-	InterveningIfEventPermanentAttackedThisTurn bool
-
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
 	State opt.V[StateTriggerCondition]

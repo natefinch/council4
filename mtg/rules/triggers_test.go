@@ -1240,37 +1240,6 @@ func TestWasCastInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 	})
 }
 
-func TestAttackedThisTurnInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
-	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	g.Turn.TurnNumber = 1
-	g.EventTurnStarts = []int{0}
-	engine := NewEngine(nil)
-	source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
-		InterveningIfEventPermanentAttackedThisTurn: true,
-	})
-	enter := game.Event{
-		Kind:        game.EventPermanentEnteredBattlefield,
-		CardID:      source.CardInstanceID,
-		PermanentID: source.ObjectID,
-	}
-	emitEvent(g, enter)
-	if engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("nonattacking permanent enter trigger was put on stack")
-	}
-
-	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, PermanentID: source.ObjectID})
-	emitEvent(g, enter)
-	if !engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("attacked-this-turn enter trigger was not put on stack")
-	}
-	g.Events = g.Events[:1]
-	log := TurnLog{}
-	engine.resolveTopOfStack(g, &log)
-	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
-		t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
-	}
-}
-
 func TestControlsPermanentInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
