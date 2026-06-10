@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -21,35 +23,47 @@ func faceDownDisguiseWardBody() game.StaticAbility {
 }
 
 func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (cost.Mana, bool) {
+	costs := faceDownCostsForCard(card, kind)
+	if len(costs) == 0 {
+		return nil, false
+	}
+	return costs[0], true
+}
+
+func faceDownCostsForCard(card *game.CardDef, kind game.FaceDownKind) []cost.Mana {
+	var costs []cost.Mana
+	if kind == game.FaceDownManifest {
+		if card.HasType(types.Creature) && card.ManaCost.Exists {
+			costs = append(costs, card.ManaCost.Val)
+		}
+	}
 	for i := range card.ActivatedAbilities {
 		ability := &card.ActivatedAbilities[i]
-		switch kind {
-		case game.FaceDownMorph:
+		if kind == game.FaceDownMorph || kind == game.FaceDownManifest {
 			if manaCost, ok := game.ActivatedBodyMorphCost(ability); ok {
-				return manaCost, true
+				costs = append(costs, manaCost)
 			}
-		case game.FaceDownDisguise:
+		}
+		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest {
 			if manaCost, ok := game.ActivatedBodyDisguiseCost(ability); ok {
-				return manaCost, true
+				costs = append(costs, manaCost)
 			}
-		default:
 		}
 	}
 	for i := range card.StaticAbilities {
 		ability := &card.StaticAbilities[i]
-		switch kind {
-		case game.FaceDownMorph:
+		if kind == game.FaceDownMorph || kind == game.FaceDownManifest {
 			if manaCost, ok := game.StaticBodyMorphCost(ability); ok {
-				return manaCost, true
+				costs = append(costs, manaCost)
 			}
-		case game.FaceDownDisguise:
+		}
+		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest {
 			if manaCost, ok := game.StaticBodyDisguiseCost(ability); ok {
-				return manaCost, true
+				costs = append(costs, manaCost)
 			}
-		default:
 		}
 	}
-	return nil, false
+	return costs
 }
 
 func faceDownKindsForCard(card *game.CardDef) []game.FaceDownKind {
@@ -186,11 +200,7 @@ func (*Engine) canTurnFaceUp(g *game.Game, playerID game.PlayerID, permanentID i
 	if !ok {
 		return false
 	}
-	manaCost, ok := faceDownCostForCard(face, permanent.FaceDownKind)
-	if !ok {
-		return false
-	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost})
+	return len(payableFaceDownCosts(g, playerID, face, permanent.FaceDownKind)) > 0
 }
 
 func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID, permanentID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -200,7 +210,10 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 	permanent, _ := permanentByObjectID(g, permanentID)
 	card, _ := physicalPermanentDef(g, permanent)
 	face, _ := card.FaceDef(permanent.FaceDownFace)
-	manaCost, _ := faceDownCostForCard(face, permanent.FaceDownKind)
+	manaCost, ok := e.chooseFaceDownCost(g, playerID, face, permanent.FaceDownKind, agents, log)
+	if !ok {
+		return false
+	}
 	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
@@ -222,6 +235,47 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 		PermanentID: permanent.ObjectID,
 	})
 	return true
+}
+
+func payableFaceDownCosts(g *game.Game, playerID game.PlayerID, face *game.CardDef, kind game.FaceDownKind) []cost.Mana {
+	var costs []cost.Mana
+	for _, manaCost := range faceDownCostsForCard(face, kind) {
+		if paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost}) {
+			costs = append(costs, manaCost)
+		}
+	}
+	return costs
+}
+
+func (e *Engine) chooseFaceDownCost(g *game.Game, playerID game.PlayerID, face *game.CardDef, kind game.FaceDownKind, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (cost.Mana, bool) {
+	costs := payableFaceDownCosts(g, playerID, face, kind)
+	if len(costs) == 0 {
+		return nil, false
+	}
+	if len(costs) == 1 {
+		return costs[0], true
+	}
+	options := make([]game.ChoiceOption, 0, len(costs))
+	for i, manaCost := range costs {
+		options = append(options, game.ChoiceOption{
+			Index: i,
+			Label: fmt.Sprintf("Pay %s", manaCost),
+		})
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoicePayment,
+		Player:           playerID,
+		Prompt:           "Choose turn face-up cost",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(costs) {
+		return costs[selected[0]], true
+	}
+	return costs[0], true
 }
 
 func emitFaceDownRevealEvent(g *game.Game, permanent *game.Permanent) {

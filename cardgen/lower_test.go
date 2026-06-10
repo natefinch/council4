@@ -3363,6 +3363,33 @@ func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
 	}
 }
 
+func TestLowerManifestSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Manifest",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Manifest the top card of your library.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if _, ok := mode.Sequence[0].Primitive.(game.Manifest); !ok {
+		t.Fatalf("primitive = %T, want game.Manifest", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerManifestRejectsUnsupportedPatterns(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Manifest",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Manifest a card from your hand.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported manifest diagnostic")
+	}
+}
+
 func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -3389,6 +3416,11 @@ func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
 			name:      "explore",
 			text:      "When this creature enters, if you control an artifact, it explores.",
 			primitive: game.Explore{Creature: game.SourcePermanentReference()},
+		},
+		{
+			name:      "manifest",
+			text:      "When this creature enters, if you control an artifact, manifest the top card of your library.",
+			primitive: game.Manifest{},
 		},
 		{
 			name:      "mill",

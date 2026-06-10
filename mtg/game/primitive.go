@@ -62,10 +62,11 @@ const (
 	PrimitiveMoveCard
 	PrimitiveGrantCastPermission
 	PrimitiveExplore
+	PrimitiveManifest
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExplore) + 1
+const primitiveKindCount = int(PrimitiveManifest) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -597,6 +598,9 @@ type Explore struct {
 	Creature ObjectReference
 }
 
+// Manifest puts the top card of the controller's library onto the battlefield face down.
+type Manifest struct{}
+
 // Goad goads the referenced creature.
 type Goad struct {
 	Object ObjectReference
@@ -766,6 +770,9 @@ func (Proliferate) Kind() PrimitiveKind { return PrimitiveProliferate }
 // Kind implements Primitive for Explore.
 func (Explore) Kind() PrimitiveKind { return PrimitiveExplore }
 
+// Kind implements Primitive for Manifest.
+func (Manifest) Kind() PrimitiveKind { return PrimitiveManifest }
+
 // Kind implements Primitive for Goad.
 func (Goad) Kind() PrimitiveKind { return PrimitiveGoad }
 
@@ -839,6 +846,7 @@ func (Surveil) isPrimitive()                     {}
 func (Investigate) isPrimitive()                 {}
 func (Proliferate) isPrimitive()                 {}
 func (Explore) isPrimitive()                     {}
+func (Manifest) isPrimitive()                    {}
 func (Goad) isPrimitive()                        {}
 func (RemoveCounter) isPrimitive()               {}
 func (Transform) isPrimitive()                   {}
@@ -920,6 +928,7 @@ func (p Surveil) instructionRefs() primitiveRefs     { return quantityRefs(p.Amo
 func (p Investigate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (Explore) instructionRefs() primitiveRefs       { return primitiveRefs{} }
+func (Manifest) instructionRefs() primitiveRefs      { return primitiveRefs{} }
 func (Goad) instructionRefs() primitiveRefs          { return primitiveRefs{} }
 
 func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
