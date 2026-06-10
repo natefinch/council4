@@ -271,13 +271,22 @@ func (v *cardDefValidator) validateInstructionSequence(faceName, path string, se
 		targetSpecs = targets[0]
 	}
 	for i := range seq {
+		instructionPath := appendPath(path, fmt.Sprintf("Instructions[%d]", i))
 		effectCondition := seq[i].Condition
 		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
 			condition := effectCondition.Val.Condition.Val
 			v.validateCondition(
 				faceName,
-				appendPath(path, fmt.Sprintf("Instructions[%d].Condition.Condition", i)),
+				appendPath(instructionPath, "Condition.Condition"),
 				&condition,
+				targetSpecs,
+			)
+		}
+		if delayed, ok := seq[i].Primitive.(CreateDelayedTrigger); ok {
+			v.validateAbilityContent(
+				faceName,
+				appendPath(instructionPath, "Primitive.Trigger.Content"),
+				delayed.Trigger.Content,
 				targetSpecs,
 			)
 		}

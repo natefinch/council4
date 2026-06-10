@@ -199,6 +199,33 @@ func TestValidateCardDefChecksDelayedTriggerContent(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefChecksDelayedTriggerInstructionCondition(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Delayed Trigger Condition",
+		OracleText: "At the beginning of the next end step, draw a card.",
+		SpellAbility: opt.Val(Mode{
+			Sequence: []Instruction{{
+				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Timing: DelayedAtBeginningOfNextEndStep,
+					Content: Mode{
+						Sequence: []Instruction{{
+							Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
+							Condition: opt.Val(EffectCondition{Condition: opt.Val(Condition{
+								ControllerLifeAtLeast: -1,
+							})}),
+						}},
+					}.Ability(),
+				}},
+			}},
+		}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
 func TestValidateCardDefReportsInvalidTargetSpec(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Target Spec",
