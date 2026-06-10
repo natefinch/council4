@@ -267,6 +267,22 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	return res
 }
 
+func handleAddPlayerCounter(r *effectResolver, prim game.AddPlayerCounter) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok || res.amount <= 0 {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok || player.Eliminated {
+		return res
+	}
+	if addCountersToPlayer(r.game, player, prim.CounterKind, res.amount) {
+		res.succeeded = true
+	}
+	return res
+}
+
 func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	destination, ok := r.resolveObject(prim.Object)

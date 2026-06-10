@@ -1289,6 +1289,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: AddCounter kind has unexpected concrete type")
 		}
 		return r.renderAddCounter(ctx, &value)
+	case game.PrimitiveAddPlayerCounter:
+		value, ok := primitive.(game.AddPlayerCounter)
+		if !ok {
+			return "", errors.New("render: internal error: AddPlayerCounter kind has unexpected concrete type")
+		}
+		return r.renderAddPlayerCounter(ctx, &value)
 	case game.PrimitiveModifyPT:
 		value, ok := primitive.(game.ModifyPT)
 		if !ok {
@@ -1405,6 +1411,27 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	return structLit("game.AddCounter", []string{
 		fmt.Sprintf("Amount: %s,", amount),
 		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("CounterKind: %s,", kind),
+	}), nil
+}
+
+func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCounter) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	kind, err := renderCounterKind(value.CounterKind)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCounter)
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.AddPlayerCounter", []string{
+		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("CounterKind: %s,", kind),
 	}), nil
 }
@@ -2723,6 +2750,52 @@ func renderCounterKind(kind counter.Kind) (string, error) {
 		return "counter.Charge", nil
 	case counter.Loyalty:
 		return "counter.Loyalty", nil
+	case counter.Time:
+		return "counter.Time", nil
+	case counter.Defense:
+		return "counter.Defense", nil
+	case counter.Poison:
+		return "counter.Poison", nil
+	case counter.Lore:
+		return "counter.Lore", nil
+	case counter.Verse:
+		return "counter.Verse", nil
+	case counter.Shield:
+		return "counter.Shield", nil
+	case counter.Stun:
+		return "counter.Stun", nil
+	case counter.Finality:
+		return "counter.Finality", nil
+	case counter.Brick:
+		return "counter.Brick", nil
+	case counter.Page:
+		return "counter.Page", nil
+	case counter.Enlightened:
+		return "counter.Enlightened", nil
+	case counter.Indestructible:
+		return "counter.Indestructible", nil
+	case counter.Deathtouch:
+		return "counter.Deathtouch", nil
+	case counter.Flying:
+		return "counter.Flying", nil
+	case counter.FirstStrike:
+		return "counter.FirstStrike", nil
+	case counter.Hexproof:
+		return "counter.Hexproof", nil
+	case counter.Lifelink:
+		return "counter.Lifelink", nil
+	case counter.Menace:
+		return "counter.Menace", nil
+	case counter.Reach:
+		return "counter.Reach", nil
+	case counter.Trample:
+		return "counter.Trample", nil
+	case counter.Vigilance:
+		return "counter.Vigilance", nil
+	case counter.Energy:
+		return "counter.Energy", nil
+	case counter.Experience:
+		return "counter.Experience", nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}

@@ -62,6 +62,35 @@ func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, kind counter
 	})
 }
 
+func addCountersToPlayer(g *game.Game, player *game.Player, kind counter.Kind, amount int) bool {
+	if player == nil || amount <= 0 {
+		return false
+	}
+	previous := 0
+	switch kind {
+	case counter.Poison:
+		previous = player.PoisonCounters
+		player.PoisonCounters += amount
+	case counter.Energy:
+		previous = player.EnergyCounters
+		player.EnergyCounters += amount
+	case counter.Experience:
+		previous = player.ExperienceCounters
+		player.ExperienceCounters += amount
+	default:
+		return false
+	}
+	emitEvent(g, game.Event{
+		Kind:                  game.EventCountersAdded,
+		Controller:            player.ID,
+		Player:                player.ID,
+		CounterKind:           kind,
+		PreviousCounterAmount: previous,
+		Amount:                amount,
+	})
+	return true
+}
+
 func advanceSagas(g *game.Game, controller game.PlayerID) {
 	for _, permanent := range slices.Clone(g.Battlefield) {
 		if effectiveController(g, permanent) != controller {

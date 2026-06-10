@@ -124,15 +124,5 @@ func addProliferatedCounter(g *game.Game, target proliferateTarget, kind counter
 	if !ok {
 		return false
 	}
-	switch kind {
-	case counter.Poison:
-		player.PoisonCounters++
-	case counter.Energy:
-		player.EnergyCounters++
-	case counter.Experience:
-		player.ExperienceCounters++
-	default:
-		return false
-	}
-	return true
+	return addCountersToPlayer(g, player, kind, 1)
 }

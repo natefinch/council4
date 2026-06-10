@@ -290,9 +290,7 @@ func lowerExecutableAbility(
 		}
 
 		spans := make([]oracle.Span, 0, len(ability.Keywords)+len(syntax.Reminders))
-		for _, keyword := range ability.Keywords {
-			spans = append(spans, keyword.Span)
-		}
+		spans = appendKeywordSpans(spans, ability.Keywords)
 		for _, reminder := range syntax.Reminders {
 			spans = append(spans, reminder.Span)
 		}
@@ -326,6 +324,7 @@ func lowerExecutableAbility(
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
 		}
+		spans = appendKeywordSpans(spans, ability.Keywords)
 		for _, reminder := range syntax.Reminders {
 			spans = append(spans, reminder.Span)
 		}
@@ -334,6 +333,7 @@ func lowerExecutableAbility(
 			consumed: semanticConsumption{
 				targets:    len(ability.Targets),
 				effects:    len(ability.Effects),
+				keywords:   len(ability.Keywords),
 				references: len(ability.References),
 			},
 			sourceSpans: spans,
@@ -356,9 +356,11 @@ func lowerExecutableAbility(
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
 		}
+		spans = appendKeywordSpans(spans, ability.Keywords)
 		for _, reminder := range syntax.Reminders {
 			spans = append(spans, reminder.Span)
 		}
+
 		return abilityLowering{
 			triggeredAbility: opt.Val(triggeredAbility),
 			consumed: semanticConsumption{
@@ -367,6 +369,7 @@ func lowerExecutableAbility(
 				targets:    len(ability.Targets),
 				conditions: len(ability.Conditions),
 				effects:    len(ability.Effects),
+				keywords:   len(ability.Keywords),
 				references: len(ability.References),
 			},
 			sourceSpans: spans,
@@ -401,6 +404,13 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func appendKeywordSpans(spans []oracle.Span, keywords []oracle.CompiledKeyword) []oracle.Span {
+	for _, keyword := range keywords {
+		spans = append(spans, keyword.Span)
+	}
+	return spans
 }
 
 func replacementSourceSpans(ability oracle.CompiledAbility) []oracle.Span {
@@ -463,13 +473,30 @@ func lowerChapterAbility(
 	dash := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
 		return token.Kind == oracle.EmDash
 	})
-	if dash < 0 {
+	if dash < 0 || dash+1 >= len(syntax.Tokens) {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported Saga chapter ability",
 			"the executable source backend requires an em dash after the chapter numbers",
 		)
 	}
+	bodyAbility.Span = oracle.Span{
+		Start: syntax.Tokens[dash+1].Span.Start,
+		End:   syntax.Span.End,
+	}
+	bodyAbility.Text = strings.TrimSpace(
+		ability.Text[bodyAbility.Span.Start.Offset-ability.Span.Start.Offset:],
+	)
+	bodyAbility.Keywords = keywordsWithinSpan(ability.Keywords, bodyAbility.Span)
+	if len(bodyAbility.Keywords) != len(ability.Keywords) {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported Saga chapter ability",
+			"the executable source backend requires chapter keywords to belong to a supported effect",
+		)
+	}
+	bodySyntax.Span = bodyAbility.Span
+	bodySyntax.Text = bodyAbility.Text
 	bodySyntax.Tokens = slices.Clone(syntax.Tokens[dash+1:])
 	content, diagnostic := lowerSpell(cardName, bodyAbility, bodySyntax)
 	if diagnostic != nil {
@@ -489,6 +516,9 @@ func lowerChapterAbility(
 	for _, reference := range ability.References {
 		spans = append(spans, reference.Span)
 	}
+	for _, keyword := range ability.Keywords {
+		spans = append(spans, keyword.Span)
+	}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
@@ -501,6 +531,7 @@ func lowerChapterAbility(
 		consumed: semanticConsumption{
 			targets:    len(ability.Targets),
 			effects:    len(ability.Effects),
+			keywords:   len(ability.Keywords),
 			references: len(ability.References),
 		},
 		sourceSpans: spans,
@@ -578,6 +609,7 @@ func lowerActivatedAbilityKind(
 	for _, reference := range ability.References {
 		spans = append(spans, reference.Span)
 	}
+	spans = appendKeywordSpans(spans, ability.Keywords)
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
@@ -587,6 +619,7 @@ func lowerActivatedAbilityKind(
 			cost:       true,
 			targets:    len(ability.Targets),
 			effects:    len(ability.Effects),
+			keywords:   len(ability.Keywords),
 			references: len(ability.References),
 		},
 		sourceSpans: spans,
@@ -612,7 +645,6 @@ func lowerLoyaltyAbility(
 		len(ability.Cost.Components) != 1 ||
 		ability.Cost.Components[0].Kind != oracle.CostLoyalty ||
 		len(ability.Conditions) != 0 ||
-		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		ability.AbilityWord != "" {
 		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
@@ -636,6 +668,10 @@ func lowerLoyaltyAbility(
 		End:   syntax.Span.End,
 	}
 	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset:])
+	body.Keywords = keywordsWithinSpan(ability.Keywords, body.Span)
+	if len(body.Keywords) != len(ability.Keywords) {
+		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
+	}
 	bodySyntax := syntax
 	bodySyntax.Kind = oracle.AbilitySpell
 	bodySyntax.Span = body.Span
@@ -661,6 +697,7 @@ func lowerLoyaltyAbility(
 	for _, reference := range ability.References {
 		spans = append(spans, reference.Span)
 	}
+	spans = appendKeywordSpans(spans, ability.Keywords)
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
@@ -674,6 +711,7 @@ func lowerLoyaltyAbility(
 			cost:       true,
 			targets:    len(ability.Targets),
 			effects:    len(ability.Effects),
+			keywords:   len(ability.Keywords),
 			references: len(ability.References),
 		},
 		sourceSpans: spans,
@@ -910,7 +948,6 @@ func lowerActivatedAbility(
 	if ability.Cost == nil ||
 		len(ability.Cost.Components) == 0 ||
 		len(ability.Conditions) != 0 ||
-		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		ability.AbilityWord != "" {
 		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
@@ -980,6 +1017,10 @@ func lowerActivatedAbility(
 		End:   bodyTokens[len(bodyTokens)-1].Span.End,
 	}
 	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset])
+	body.Keywords = keywordsWithinSpan(ability.Keywords, body.Span)
+	if len(body.Keywords) != len(ability.Keywords) {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
 	bodySyntax := syntax
 	bodySyntax.Kind = oracle.AbilitySpell
 	bodySyntax.Span = body.Span
@@ -2638,7 +2679,6 @@ func lowerEnterTrigger(
 		(hasInterveningCondition && (len(ability.Conditions) != 1 ||
 			ability.Conditions[0] != *ability.Trigger.Condition ||
 			ability.Optional)) ||
-		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		ability.AbilityWord != "" {
 		return game.TriggeredAbility{}, executableDiagnostic(
@@ -2713,6 +2753,10 @@ func lowerEnterTrigger(
 			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
 		)
 		bodySyntax.Tokens = bodySyntax.Tokens[2:]
+	}
+	body.Keywords = keywordsWithinSpan(ability.Keywords, body.Span)
+	if len(body.Keywords) != len(ability.Keywords) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
@@ -3371,7 +3415,7 @@ func lowerSingleEffectSpell(
 	case oracle.EffectReturn:
 		return lowerFixedBounceSpell(ability)
 	case oracle.EffectPut:
-		return lowerFixedCounterSpell(ability)
+		return lowerCounterPlacementSpell(ability)
 	case oracle.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ability)
 	default:
@@ -3383,90 +3427,98 @@ func lowerSingleEffectSpell(
 	}
 }
 
-func lowerFixedCounterSpell(
+func lowerCounterPlacementSpell(
 	ability oracle.CompiledAbility,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
 	if len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 ||
-		(!effect.Amount.Known &&
-			(effect.Amount.DynamicKind == oracle.DynamicAmountNone ||
-				effect.Amount.DynamicForm != oracle.DynamicAmountWhereX)) ||
 		(effect.Amount.Known && effect.Amount.Value <= 0) ||
+		!effect.CounterKindKnown ||
+		!oracle.CounterKindPlacementSupported(effect.CounterKind) ||
 		effect.Negated ||
 		len(ability.Conditions) != 0 ||
-		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 {
-		return game.AbilityContent{}, executableDiagnostic(
-			ability,
-			"unsupported spell ability",
-			"the executable source backend does not yet lower this spell ability",
-		)
-	}
-	target, ok := permanentTargetSpec(ability.Targets[0])
-	if !ok {
-		return game.AbilityContent{}, executableDiagnostic(
-			ability,
-			"unsupported spell ability",
-			"the executable source backend does not yet lower this spell ability",
-		)
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ability)
 	}
 
-	var kind counter.Kind
-	var counterName string
-	switch {
-	case strings.Contains(effect.Text, "+1/+1 counter"):
-		kind = counter.PlusOnePlusOne
-		counterName = "+1/+1"
-	case strings.Contains(effect.Text, "-1/-1 counter"):
-		kind = counter.MinusOneMinusOne
-		counterName = "-1/-1"
-	default:
-		return game.AbilityContent{}, executableDiagnostic(
-			ability,
-			"unsupported spell ability",
-			"the executable source backend does not yet lower this spell ability",
-		)
+	kind := effect.CounterKind
+	counterName := kind.String()
+	var target game.TargetSpec
+	var primitive game.Primitive
+	if kind.PlayerOnly() {
+		var ok bool
+		target, ok = playerTargetSpec(ability.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ability)
+		}
+	} else {
+		var ok bool
+		target, ok = permanentTargetSpec(ability.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ability)
+		}
 	}
-	amount := game.Fixed(effect.Amount.Value)
-	exactText := isExactPutCounterText(
-		ability.Text,
-		ability.Targets[0].Text,
-		effect.Amount.Value,
-		counterName,
-	) && len(ability.References) == 0
-	if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+
+	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	exactText := exactXCounterText(ability, counterName) && len(ability.References) == 0
+	if effect.Amount.Known {
+		amount = game.Fixed(effect.Amount.Value)
+		exactText = isExactPutCounterText(
+			ability.Text,
+			ability.Targets[0].Text,
+			effect.Amount.Value,
+			counterName,
+		) && len(ability.References) == 0
+	} else if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
 		dynamic, supported := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		if !supported ||
 			!exactDynamicCounterText(ability, counterName) ||
 			!exactDynamicAmountReference(effect.Amount, ability.References) {
-			return game.AbilityContent{}, executableDiagnostic(
-				ability,
-				"unsupported spell ability",
-				"the executable source backend does not yet lower this spell ability",
-			)
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ability)
 		}
 		amount = game.Dynamic(dynamic)
 		exactText = true
 	}
 	if !exactText {
-		return game.AbilityContent{}, executableDiagnostic(
-			ability,
-			"unsupported spell ability",
-			"the executable source backend does not yet lower this spell ability",
-		)
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ability)
+	}
+	if kind.PlayerOnly() {
+		primitive = game.AddPlayerCounter{
+			Amount:      amount,
+			Player:      game.TargetPlayerReference(0),
+			CounterKind: kind,
+		}
+	} else {
+		primitive = game.AddCounter{
+			Amount:      amount,
+			Object:      game.TargetPermanentReference(0),
+			CounterKind: kind,
+		}
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{target},
 		Sequence: []game.Instruction{{
-			Primitive: game.AddCounter{
-				Amount:      amount,
-				Object:      game.TargetPermanentReference(0),
-				CounterKind: kind,
-			},
+			Primitive: primitive,
 		}},
 	}.Ability(), nil
+}
+
+func unsupportedCounterPlacementDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
+	return executableDiagnostic(
+		ability,
+		"unsupported counter placement",
+		"the executable source backend supports exact recognized counter placement on one valid target",
+	)
+}
+
+func exactXCounterText(ability oracle.CompiledAbility, counterName string) bool {
+	return ability.Text == fmt.Sprintf(
+		"Put X %s counters on %s.",
+		counterName,
+		ability.Targets[0].Text,
+	)
 }
 
 func exactDynamicCounterText(ability oracle.CompiledAbility, counterName string) bool {
@@ -3502,7 +3554,7 @@ func isExactPutCounterText(text, targetText string, amount int, counterName stri
 	amountWords := []string{strconv.Itoa(amount)}
 	switch amount {
 	case 1:
-		amountWords = append(amountWords, "a", "one")
+		amountWords = append(amountWords, "a", "an", "one")
 	case 2:
 		amountWords = append(amountWords, "two")
 	case 3:
@@ -3659,16 +3711,18 @@ func lowerOrderedEffectSequence(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
-	if len(ability.Conditions) != 0 || len(ability.Keywords) != 0 || len(ability.Modes) != 0 {
+	if len(ability.Conditions) != 0 || len(ability.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
 	consumedTargets := 0
+	consumedKeywords := 0
 	consumedReferences := 0
 	for _, effect := range ability.Effects {
 		effectAbility := abilityForEffect(ability, effect)
 		consumedTargets += len(effectAbility.Targets)
+		consumedKeywords += len(effectAbility.Keywords)
 		consumedReferences += len(effectAbility.References)
 		content, diagnostic := lowerSingleEffectSpell(
 			cardName,
@@ -3691,6 +3745,7 @@ func lowerOrderedEffectSequence(
 		sequence = append(sequence, mode.Sequence...)
 	}
 	if consumedTargets != len(ability.Targets) ||
+		consumedKeywords != len(ability.Keywords) ||
 		consumedReferences != len(ability.References) ||
 		len(sequence) != len(ability.Effects) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
@@ -3736,6 +3791,10 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primiti
 	}
 	if value, ok := primitive.(game.AddCounter); ok {
 		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.AddPlayerCounter); ok {
+		value.Player, ok = rebasePlayerReference(value.Player, offset)
 		return value, ok
 	}
 	if value, ok := primitive.(game.ModifyPT); ok {
@@ -3865,6 +3924,7 @@ func abilityForEffect(
 	ability.Span = effect.Span
 	ability.Effects = []oracle.CompiledEffect{effect}
 	ability.Targets = targetsWithinSpan(ability.Targets, effect.Span)
+	ability.Keywords = keywordsWithinSpan(ability.Keywords, effect.Span)
 	ability.References = referencesWithinSpan(ability.References, effect.Span)
 	return ability
 }
@@ -3874,6 +3934,16 @@ func targetsWithinSpan(targets []oracle.CompiledTarget, span oracle.Span) []orac
 	for _, target := range targets {
 		if spanCovered(target.Span, []oracle.Span{span}) {
 			within = append(within, target)
+		}
+	}
+	return within
+}
+
+func keywordsWithinSpan(keywords []oracle.CompiledKeyword, span oracle.Span) []oracle.CompiledKeyword {
+	var within []oracle.CompiledKeyword
+	for _, keyword := range keywords {
+		if spanCovered(keyword.Span, []oracle.Span{span}) {
+			within = append(within, keyword)
 		}
 	}
 	return within
