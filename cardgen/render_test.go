@@ -50,6 +50,19 @@ func TestRenderConditionForETBReplacementRejectsNegativePermanentCount(t *testin
 	}
 }
 
+func TestRenderConditionRejectsTextWithoutPredicate(t *testing.T) {
+	condition := game.Condition{Text: "some condition", Negate: true}
+	renderer := Renderer{}
+	ctx := &renderCtx{}
+
+	if _, err := renderer.renderConditionForETBReplacement(ctx, &condition); err == nil {
+		t.Fatal("expected ETB replacement condition without predicate to fail")
+	}
+	if _, err := renderer.renderStaticAbilityCondition(ctx, &condition); err == nil {
+		t.Fatal("expected static ability condition without predicate to fail")
+	}
+}
+
 // renderTestCards are representative cards exercising every lowered ability
 // category through the full typed pipeline and deterministic renderer.
 var renderTestCards = []*ScryfallCard{

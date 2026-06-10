@@ -1006,6 +1006,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	if cond.Negate {
 		fields = append(fields, "Negate: true,")
 	}
+	hasPredicate := false
 	if !cond.ControllerControls.Empty() {
 		filter := cond.ControllerControls
 		if filter.Power.Exists ||
@@ -1018,15 +1019,19 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
+		hasPredicate = true
 	}
 	if cond.ControllerLifeAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
+		hasPredicate = true
 	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		fields = append(fields, fmt.Sprintf("AnyPlayerLifeAtMost: %d,", cond.AnyPlayerLifeAtMost))
+		hasPredicate = true
 	}
 	if cond.OpponentCountAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("OpponentCountAtLeast: %d,", cond.OpponentCountAtLeast))
+		hasPredicate = true
 	}
 	if cond.AnyOpponentControls.Exists {
 		rendered, err := r.renderSelectionCountForCondition(ctx, cond.AnyOpponentControls.Val)
@@ -1035,6 +1040,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("AnyOpponentControls: opt.Val(%s),", rendered))
+		hasPredicate = true
 	}
 	if cond.OpponentsControl.Exists {
 		rendered, err := r.renderSelectionCountForCondition(ctx, cond.OpponentsControl.Val)
@@ -1043,8 +1049,9 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("OpponentsControl: opt.Val(%s),", rendered))
+		hasPredicate = true
 	}
-	if len(fields) == 0 || len(fields) == 1 && cond.Negate {
+	if !hasPredicate {
 		return "", fmt.Errorf("render: %s condition has no supported predicate", context)
 	}
 	return structLit("game.Condition", fields), nil
