@@ -1103,7 +1103,36 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
+	if ability.Replacement.TokenMultiplier > 0 {
+		replacement, err := renderTokenCreationReplacement(ability)
+		if err != nil {
+			return "", err
+		}
+		return replacement, nil
+	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func renderTokenCreationReplacement(ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists ||
+		replacement.MatchEvent != game.EventTokenCreated ||
+		replacement.ControllerFilter == game.TriggerControllerAny ||
+		replacement.TokenMultiplier <= 1 {
+		return "", errors.New("render: unsupported token-creation replacement shape")
+	}
+	controller, err := renderTriggerController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("game.TokenCreationReplacement(%q, %d, %s)",
+		ability.Text,
+		replacement.TokenMultiplier,
+		controller,
+	), nil
 }
 
 func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {

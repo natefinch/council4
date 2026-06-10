@@ -193,6 +193,28 @@ func TestRenderZoneDestinationReplacement(t *testing.T) {
 	}
 }
 
+func TestRenderTokenCreationReplacement(t *testing.T) {
+	t.Parallel()
+	ability := game.TokenCreationReplacement(
+		"If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+		2,
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.TokenCreationReplacement",
+		"2",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+}
+
 func TestRenderResolutionPaymentRejectsPromptWithoutCost(t *testing.T) {
 	if _, err := (Renderer{}).renderResolutionPayment(&renderCtx{}, game.ResolutionPayment{
 		Prompt: "Pay?",

@@ -914,6 +914,53 @@ func TestLowerEntersTappedReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerTokenCreationReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Anointed Procession",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if replacement.MatchEvent != game.EventTokenCreated ||
+		replacement.ControllerFilter != game.TriggerControllerYou ||
+		replacement.TokenMultiplier != 2 ||
+		replacement.Duration != game.DurationPermanent {
+		t.Fatalf("replacement = %+v, want token creation doubler", replacement)
+	}
+}
+
+func TestGenerateTokenCreationReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Parallel Lives",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+	}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.TokenCreationReplacement",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestLowerEntersWithCountersReplacement(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

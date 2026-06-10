@@ -52,6 +52,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	}
 	initializePermanentCounters(permanent, faceDef)
 	applyInitialContinuousEffects(g, permanent, continuous)
+	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine: e,

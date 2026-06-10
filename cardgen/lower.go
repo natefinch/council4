@@ -343,48 +343,7 @@ func lowerExecutableAbility(
 	case oracle.AbilityChapter:
 		return lowerChapterAbility(cardName, ability, syntax)
 	case oracle.AbilityReplacement:
-		if replacementAbility, handled, diagnostic := lowerSelfZoneDestinationReplacement(ability); handled || diagnostic != nil {
-			if diagnostic != nil {
-				return abilityLowering{}, diagnostic
-			}
-			return abilityLowering{
-				replacementAbility: opt.Val(replacementAbility),
-				consumed: semanticConsumption{
-					effects:    len(ability.Effects),
-					conditions: len(ability.Conditions),
-					references: len(ability.References),
-				},
-				sourceSpans: replacementSourceSpans(ability),
-			}, nil
-		}
-		if replacementAbility, handled, diagnostic := lowerEntersWithCountersReplacement(ability); handled || diagnostic != nil {
-			if diagnostic != nil {
-				return abilityLowering{}, diagnostic
-			}
-			return abilityLowering{
-				replacementAbility: opt.Val(replacementAbility),
-				consumed: semanticConsumption{
-					effects:    len(ability.Effects),
-					conditions: len(ability.Conditions),
-					references: len(ability.References),
-				},
-				sourceSpans: replacementSourceSpans(ability),
-			}, nil
-		}
-		replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-
-		return abilityLowering{
-			replacementAbility: opt.Val(replacementAbility),
-			consumed: semanticConsumption{
-				effects:    len(ability.Effects),
-				conditions: len(ability.Conditions),
-				references: len(ability.References),
-			},
-			sourceSpans: replacementSourceSpans(ability),
-		}, nil
+		return lowerReplacementAbility(ability)
 	case oracle.AbilityReminder:
 		if saga && isOrdinarySagaReminder(ability.Text) {
 			return abilityLowering{sourceSpans: []oracle.Span{ability.Span}}, nil
@@ -398,6 +357,35 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerReplacementAbility(ability oracle.CompiledAbility) (abilityLowering, *oracle.Diagnostic) {
+	if replacementAbility, handled, diagnostic := lowerTokenCreationReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
+	if replacementAbility, handled, diagnostic := lowerSelfZoneDestinationReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
+	if replacementAbility, handled, diagnostic := lowerEntersWithCountersReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
+	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
+	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+}
+
+func replacementAbilityLowering(ability oracle.CompiledAbility, replacementAbility *game.ReplacementAbility, diagnostic *oracle.Diagnostic) (abilityLowering, *oracle.Diagnostic) {
+	if diagnostic != nil {
+		return abilityLowering{}, diagnostic
+	}
+	return abilityLowering{
+		replacementAbility: opt.Val(*replacementAbility),
+		consumed: semanticConsumption{
+			effects:    len(ability.Effects),
+			conditions: len(ability.Conditions),
+			references: len(ability.References),
+		},
+		sourceSpans: replacementSourceSpans(ability),
+	}, nil
 }
 
 func appendKeywordSpans(spans []oracle.Span, keywords []oracle.CompiledKeyword) []oracle.Span {
@@ -2505,6 +2493,49 @@ func lowerSelfZoneDestinationReplacement(
 			Duration:           game.DurationPermanent,
 		},
 	}, true, nil
+}
+
+func lowerTokenCreationReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	if !tokenCreationReplacementCandidate(ability) {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported token-creation replacement",
+			detail,
+		)
+	}
+	if len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != oracle.ConditionIf ||
+		ability.Conditions[0].Text != "If an effect would create one or more tokens under your control" ||
+		len(ability.Effects) != 2 ||
+		ability.Effects[0].Kind != oracle.EffectCreate ||
+		ability.Effects[1].Kind != oracle.EffectCreate ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact token-doubling replacements under your control")
+	}
+	switch ability.Effects[1].Selector.Raw {
+	case "twice that many of those tokens instead.", "twice that many tokens instead.":
+	default:
+		return unsupported("the executable source backend supports only token-doubling replacement amounts")
+	}
+	return game.TokenCreationReplacement(ability.Text, 2, game.TriggerControllerYou), true, nil
+}
+
+func tokenCreationReplacementCandidate(ability oracle.CompiledAbility) bool {
+	if ability.Kind != oracle.AbilityReplacement || len(ability.Conditions) == 0 {
+		return false
+	}
+	condition := ability.Conditions[0].Text
+	return strings.Contains(condition, "would create") && strings.Contains(condition, "tokens")
 }
 
 type selfZoneDestinationEvent struct {
