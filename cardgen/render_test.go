@@ -1016,6 +1016,51 @@ func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
 	}
 }
 
+func TestRenderTriggerPatternCyclingEvents(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		pattern game.TriggerPattern
+		want    []string
+	}{
+		{
+			name: "cycled",
+			pattern: game.TriggerPattern{
+				Event:  game.EventCycled,
+				Player: game.TriggerPlayerYou,
+			},
+			want: []string{"game.EventCycled", "Player: game.TriggerPlayerYou"},
+		},
+		{
+			name: "cycle or discard",
+			pattern: game.TriggerPattern{
+				Event:       game.EventCardDiscarded,
+				Player:      game.TriggerPlayerYou,
+				ExcludeSelf: true,
+			},
+			want: []string{"game.EventCardDiscarded", "Player: game.TriggerPlayerYou", "ExcludeSelf: true"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			rendered, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &tc.pattern)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(rendered, want) {
+					t.Fatalf("rendered pattern missing %q:\n%s", want, rendered)
+				}
+			}
+			src := "package p\nvar _ = " + rendered
+			if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+				t.Fatalf("rendered pattern is not valid Go: %v\n%s", err, rendered)
+			}
+		})
+	}
+}
+
 func TestRenderTriggerPatternRejectsCardSelectionOnNonCastEvent(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{

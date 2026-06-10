@@ -4524,3 +4524,62 @@ func TestLowerCastTriggerOptionalBody(t *testing.T) {
 		t.Error("expected optional triggered ability")
 	}
 }
+
+func TestLowerCyclingTriggers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracle      string
+		wantEvent   game.EventKind
+		excludeSelf bool
+	}{
+		{
+			name:      "cycle a card",
+			oracle:    "Whenever you cycle a card, draw a card.",
+			wantEvent: game.EventCycled,
+		},
+		{
+			name:        "cycle another card",
+			oracle:      "Whenever you cycle another card, draw a card.",
+			wantEvent:   game.EventCycled,
+			excludeSelf: true,
+		},
+		{
+			name:      "cycle or discard",
+			oracle:    "Whenever you cycle or discard a card, draw a card.",
+			wantEvent: game.EventCardDiscarded,
+		},
+		{
+			name:        "cycle or discard another",
+			oracle:      "Whenever you cycle or discard another card, draw a card.",
+			wantEvent:   game.EventCardDiscarded,
+			excludeSelf: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			pattern := face.TriggeredAbilities[0].Trigger.Pattern
+			if pattern.Event != tc.wantEvent {
+				t.Errorf("event = %v, want %v", pattern.Event, tc.wantEvent)
+			}
+			if pattern.Player != game.TriggerPlayerYou {
+				t.Errorf("player = %v, want TriggerPlayerYou", pattern.Player)
+			}
+			if pattern.ExcludeSelf != tc.excludeSelf {
+				t.Errorf("ExcludeSelf = %v, want %v", pattern.ExcludeSelf, tc.excludeSelf)
+			}
+		})
+	}
+}

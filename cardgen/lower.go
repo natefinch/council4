@@ -3020,6 +3020,9 @@ func lowerTriggeredAbility(
 	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
+	if cyclingAbility, ok, diagnostic := lowerCyclingTrigger(cardName, ability, syntax); ok {
+		return cyclingAbility, diagnostic
+	}
 	if triggeredAbility, ok := lowerLifeDamageTrigger(cardName, ability, syntax); ok {
 		return triggeredAbility, nil
 	}
@@ -3039,6 +3042,72 @@ func lowerTriggeredAbility(
 		return game.TriggeredAbility{}, diagnostic
 	}
 	return nonSelf, nil
+}
+
+type cyclingTriggerPattern struct {
+	event       game.EventKind
+	excludeSelf bool
+}
+
+var cyclingTriggerPhrases = map[string]cyclingTriggerPattern{
+	"you cycle a card":                  {event: game.EventCycled},
+	"you cycle another card":            {event: game.EventCycled, excludeSelf: true},
+	"you cycle or discard a card":       {event: game.EventCardDiscarded},
+	"you cycle or discard another card": {event: game.EventCardDiscarded, excludeSelf: true},
+}
+
+func lowerCyclingTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, bool, *oracle.Diagnostic) {
+	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, false, nil
+	}
+	params, ok := cyclingTriggerPhrases[ability.Trigger.Event]
+	if !ok {
+		return game.TriggeredAbility{}, false, nil
+	}
+	const summary = "unsupported cycling trigger"
+	if ability.Trigger.Condition != nil ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend supports only exact cycling trigger phrases without modes, ability words, or intervening conditions",
+		)
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend does not support this cycling trigger body",
+		)
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			summary+" effect",
+			diagnostic.Detail,
+		)
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhenever,
+			Pattern: game.TriggerPattern{
+				Event:       params.event,
+				Player:      game.TriggerPlayerYou,
+				ExcludeSelf: params.excludeSelf,
+			},
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, true, nil
 }
 
 func lowerTriggeredAbilityKind(
