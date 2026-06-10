@@ -213,6 +213,7 @@ const (
 	EffectExile
 	EffectFight
 	EffectGain
+	EffectGrantKeyword
 	EffectInvestigate
 	EffectLose
 	EffectMill
