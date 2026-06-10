@@ -500,6 +500,58 @@ func TestLowerConditionalEntersTappedReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerCommonConditionalEntersTappedReplacements(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		oracleText    string
+		negate        bool
+		minCount      int
+		excludeSource bool
+		subtypes      []types.Sub
+	}{
+		{
+			name:          "two or more other lands",
+			oracleText:    "This land enters tapped unless you control two or more other lands.",
+			negate:        true,
+			minCount:      2,
+			excludeSource: true,
+		},
+		{
+			name:          "two or fewer other lands",
+			oracleText:    "This land enters tapped unless you control two or fewer other lands.",
+			minCount:      3,
+			excludeSource: true,
+		},
+		{
+			name:       "basic land subtype pair",
+			oracleText: "This land enters tapped unless you control a Plains or an Island.",
+			subtypes:   []types.Sub{types.Plains, types.Island},
+			negate:     true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Land",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: test.oracleText,
+			})
+			condition := face.ReplacementAbilities[0].Replacement.Condition.Val
+			filter := condition.ControllerControls
+			if condition.Negate != test.negate ||
+				filter.MinCount != test.minCount ||
+				filter.ExcludeSource != test.excludeSource ||
+				!slices.Equal(filter.SubtypesAny, test.subtypes) {
+				t.Fatalf("condition = %+v, want negate=%v min=%d exclude=%v subtypes=%v",
+					condition, test.negate, test.minCount, test.excludeSource, test.subtypes)
+			}
+		})
+	}
+}
+
 func TestLowerReminderManaAbilitySingleColor(t *testing.T) {
 	t.Parallel()
 	// Basic lands express their mana ability as a parenthesized reminder.

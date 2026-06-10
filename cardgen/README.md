@@ -41,6 +41,8 @@ Vanguard cards are excluded with explicit report reasons.
    their corresponding sealed `game.KeywordAbility` values; unsupported
    parameter forms remain fail-closed. Exact `X` quantities and common target
    restrictions lower into runtime quantities and structured target predicates.
+   Common enters-tapped land-count and basic-land-subtype conditions lower into
+   typed replacement predicates.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

@@ -1475,31 +1475,77 @@ func lowerEntersTappedReplacement(
 	return game.EntersTappedReplacement(ability.Text), nil
 }
 
-// lowerConditionalEntersTappedReplacement handles the exact wording family
-// "This land enters tapped unless you control two or more basic lands.".
 func lowerConditionalEntersTappedReplacement(
 	ability oracle.CompiledAbility,
 ) (game.ReplacementAbility, *oracle.Diagnostic) {
 	condition := ability.Conditions[0]
-	const supportedConditionText = "unless you control two or more basic lands"
-	const supportedAbilityText = "This land enters tapped unless you control two or more basic lands."
 	if condition.Kind != oracle.ConditionUnless ||
-		condition.Text != supportedConditionText ||
-		ability.Text != supportedAbilityText {
+		ability.Text != "This land enters tapped "+condition.Text+"." {
 		return game.ReplacementAbility{}, executableDiagnostic(
 			ability,
 			"unsupported conditional enters-tapped replacement",
-			"the executable source backend supports only the exact condition: unless you control two or more basic lands",
+			"the executable source backend does not support this enters-tapped condition",
 		)
 	}
-	return game.EntersTappedIfReplacement(ability.Text, &game.Condition{
-		Negate: true,
-		ControllerControls: game.PermanentFilter{
+	var replacementCondition game.Condition
+	switch condition.Text {
+	case "unless you control two or more basic lands":
+		replacementCondition.Negate = true
+		replacementCondition.ControllerControls = game.PermanentFilter{
 			Types:      []types.Card{types.Land},
 			Supertypes: []types.Super{types.Basic},
 			MinCount:   2,
-		},
-	}), nil
+		}
+	case "unless you control two or more other lands":
+		replacementCondition.Negate = true
+		replacementCondition.ControllerControls = game.PermanentFilter{
+			Types:         []types.Card{types.Land},
+			MinCount:      2,
+			ExcludeSource: true,
+		}
+	case "unless you control two or fewer other lands":
+		replacementCondition.ControllerControls = game.PermanentFilter{
+			Types:         []types.Card{types.Land},
+			MinCount:      3,
+			ExcludeSource: true,
+		}
+	default:
+		subtypes, ok := entersTappedLandSubtypes(condition.Text)
+		if !ok {
+			return game.ReplacementAbility{}, executableDiagnostic(
+				ability,
+				"unsupported conditional enters-tapped replacement",
+				"the executable source backend does not support this enters-tapped condition",
+			)
+		}
+		replacementCondition.Negate = true
+		replacementCondition.ControllerControls = game.PermanentFilter{
+			Types:       []types.Card{types.Land},
+			SubtypesAny: subtypes,
+		}
+	}
+	return game.EntersTappedIfReplacement(ability.Text, &replacementCondition), nil
+}
+
+func entersTappedLandSubtypes(condition string) ([]types.Sub, bool) {
+	const prefix = "unless you control "
+	if !strings.HasPrefix(condition, prefix) {
+		return nil, false
+	}
+	parts := strings.Split(strings.TrimPrefix(condition, prefix), " or ")
+	if len(parts) > 2 {
+		return nil, false
+	}
+	subtypes := make([]types.Sub, 0, len(parts))
+	for _, part := range parts {
+		name := strings.TrimPrefix(strings.TrimPrefix(part, "a "), "an ")
+		subtype := types.Sub(name)
+		if !types.KnownSubtypeForType(types.Land, subtype) {
+			return nil, false
+		}
+		subtypes = append(subtypes, subtype)
+	}
+	return subtypes, len(subtypes) > 0
 }
 
 func (lowering *abilityLowering) complete(
