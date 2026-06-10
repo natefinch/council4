@@ -1026,6 +1026,13 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	if !discardCardFromHand(g, playerID, card.ID) {
 		panic("cycling card disappeared from hand after validation")
 	}
+	emitEvent(g, game.Event{
+		Kind:       game.EventCycled,
+		SourceID:   card.ID,
+		Controller: playerID,
+		Player:     playerID,
+		CardID:     card.ID,
+	})
 	obj := &game.StackObject{
 		ID:                  g.IDGen.Next(),
 		Kind:                game.StackActivatedAbility,

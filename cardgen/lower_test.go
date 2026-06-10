@@ -3397,6 +3397,21 @@ func TestLowerInvestigateSpell(t *testing.T) {
 	}
 }
 
+func TestLowerInvestigateTwiceSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Investigate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Investigate twice.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	investigate, ok := mode.Sequence[0].Primitive.(game.Investigate)
+	if !ok || investigate.Amount.Value() != 2 {
+		t.Fatalf("primitive = %+v, want investigate twice", mode.Sequence[0].Primitive)
+	}
+}
+
 func TestLowerProliferateSpell(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -3408,6 +3423,129 @@ func TestLowerProliferateSpell(t *testing.T) {
 	mode := face.SpellAbility.Val.Modes[0]
 	if _, ok := mode.Sequence[0].Primitive.(game.Proliferate); !ok {
 		t.Fatalf("primitive = %T, want game.Proliferate", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerProliferateTwiceSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Proliferate",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Proliferate twice.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	proliferate, ok := mode.Sequence[0].Primitive.(game.Proliferate)
+	if !ok || proliferate.Amount.Value() != 2 {
+		t.Fatalf("primitive = %+v, want proliferate twice", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerExploreSourcePermanentTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scout",
+		Layout:     "normal",
+		TypeLine:   "Creature — Merfolk Scout",
+		OracleText: "When this creature enters, it explores.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	explore, ok := mode.Sequence[0].Primitive.(game.Explore)
+	if !ok || explore.Creature.Kind() != game.ObjectReferenceSourcePermanent {
+		t.Fatalf("primitive = %+v, want source permanent explores", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Explore",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature explores.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported explore diagnostic")
+	}
+}
+
+func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		text      string
+		primitive any
+	}{
+		{
+			name:      "scry",
+			text:      "When this creature enters, if you control an artifact, scry 2.",
+			primitive: game.Scry{Amount: game.Fixed(2), Player: game.ControllerReference()},
+		},
+		{
+			name:      "investigate",
+			text:      "When this creature enters, if you control an artifact, investigate.",
+			primitive: game.Investigate{Amount: game.Fixed(1)},
+		},
+		{
+			name:      "proliferate",
+			text:      "When this creature enters, if you control an artifact, proliferate.",
+			primitive: game.Proliferate{Amount: game.Fixed(1)},
+		},
+		{
+			name:      "explore",
+			text:      "When this creature enters, if you control an artifact, it explores.",
+			primitive: game.Explore{Creature: game.SourcePermanentReference()},
+		},
+		{
+			name:      "mill",
+			text:      "When this creature enters, if you control an artifact, mill two cards.",
+			primitive: game.Mill{Amount: game.Fixed(2), Player: game.ControllerReference()},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Utility",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Wizard",
+				OracleText: tc.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			got := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive
+			if !reflect.DeepEqual(got, tc.primitive) {
+				t.Fatalf("primitive = %+v, want %+v", got, tc.primitive)
+			}
+		})
+	}
+}
+
+func TestLowerVariableMillSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mill",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Mill X cards, where X is the number of creatures you control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Mill", mode.Sequence[0].Primitive)
+	}
+	dynamic := mill.Amount.DynamicAmount()
+	if !dynamic.Exists {
+		t.Fatalf("mill amount = %+v, want dynamic controlled creature count", mill.Amount)
+	}
+	selection := dynamic.Val.Group.Selection()
+	if dynamic.Val.Kind != game.DynamicAmountCountSelector ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("mill amount = %+v, want dynamic controlled creature count", mill.Amount)
 	}
 }
 
@@ -4492,5 +4630,64 @@ func TestLowerCastTriggerOptionalBody(t *testing.T) {
 	}
 	if !ta.Optional {
 		t.Error("expected optional triggered ability")
+	}
+}
+
+func TestLowerCyclingTriggers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracle      string
+		wantEvent   game.EventKind
+		excludeSelf bool
+	}{
+		{
+			name:      "cycle a card",
+			oracle:    "Whenever you cycle a card, draw a card.",
+			wantEvent: game.EventCycled,
+		},
+		{
+			name:        "cycle another card",
+			oracle:      "Whenever you cycle another card, draw a card.",
+			wantEvent:   game.EventCycled,
+			excludeSelf: true,
+		},
+		{
+			name:      "cycle or discard",
+			oracle:    "Whenever you cycle or discard a card, draw a card.",
+			wantEvent: game.EventCardDiscarded,
+		},
+		{
+			name:        "cycle or discard another",
+			oracle:      "Whenever you cycle or discard another card, draw a card.",
+			wantEvent:   game.EventCardDiscarded,
+			excludeSelf: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			pattern := face.TriggeredAbilities[0].Trigger.Pattern
+			if pattern.Event != tc.wantEvent {
+				t.Errorf("event = %v, want %v", pattern.Event, tc.wantEvent)
+			}
+			if pattern.Player != game.TriggerPlayerYou {
+				t.Errorf("player = %v, want TriggerPlayerYou", pattern.Player)
+			}
+			if pattern.ExcludeSelf != tc.excludeSelf {
+				t.Errorf("ExcludeSelf = %v, want %v", pattern.ExcludeSelf, tc.excludeSelf)
+			}
+		})
 	}
 }

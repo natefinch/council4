@@ -1302,6 +1302,8 @@ func effectKind(token Token) EffectKind {
 		return EffectGrantKeyword
 	case "investigate", "investigates":
 		return EffectInvestigate
+	case "explore", "explores":
+		return EffectExplore
 	case "lose", "loses":
 		return EffectLose
 	case "mill", "mills":

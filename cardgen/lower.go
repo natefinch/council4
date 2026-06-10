@@ -3116,6 +3116,9 @@ func lowerTriggeredAbility(
 	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
+	if cyclingAbility, ok, diagnostic := lowerCyclingTrigger(cardName, ability, syntax); ok {
+		return cyclingAbility, diagnostic
+	}
 	if triggeredAbility, ok := lowerLifeDamageTrigger(cardName, ability, syntax); ok {
 		return triggeredAbility, nil
 	}
@@ -3135,6 +3138,72 @@ func lowerTriggeredAbility(
 		return game.TriggeredAbility{}, diagnostic
 	}
 	return nonSelf, nil
+}
+
+type cyclingTriggerPattern struct {
+	event       game.EventKind
+	excludeSelf bool
+}
+
+var cyclingTriggerPhrases = map[string]cyclingTriggerPattern{
+	"you cycle a card":                  {event: game.EventCycled},
+	"you cycle another card":            {event: game.EventCycled, excludeSelf: true},
+	"you cycle or discard a card":       {event: game.EventCardDiscarded},
+	"you cycle or discard another card": {event: game.EventCardDiscarded, excludeSelf: true},
+}
+
+func lowerCyclingTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, bool, *oracle.Diagnostic) {
+	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, false, nil
+	}
+	params, ok := cyclingTriggerPhrases[ability.Trigger.Event]
+	if !ok {
+		return game.TriggeredAbility{}, false, nil
+	}
+	const summary = "unsupported cycling trigger"
+	if ability.Trigger.Condition != nil ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend supports only exact cycling trigger phrases without modes, ability words, or intervening conditions",
+		)
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend does not support this cycling trigger body",
+		)
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			summary+" effect",
+			diagnostic.Detail,
+		)
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhenever,
+			Pattern: game.TriggerPattern{
+				Event:       params.event,
+				Player:      game.TriggerPlayerYou,
+				ExcludeSelf: params.excludeSelf,
+			},
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, true, nil
 }
 
 func lowerTriggeredAbilityKind(
@@ -4398,17 +4467,21 @@ func lowerSingleEffectSpell(
 			return game.LoseLife{Amount: amount, Player: player}
 		})
 	case oracle.EffectScry:
-		return lowerFixedControllerSpell(ability, syntax, "scry", func(amount int, player game.PlayerReference) game.Primitive {
-			return game.Scry{Amount: game.Fixed(amount), Player: player}
+		return lowerFixedControllerSpell(ability, syntax, "scry", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+			return game.Scry{Amount: amount, Player: player}
 		})
 	case oracle.EffectSurveil:
-		return lowerFixedControllerSpell(ability, syntax, "surveil", func(amount int, player game.PlayerReference) game.Primitive {
-			return game.Surveil{Amount: game.Fixed(amount), Player: player}
+		return lowerFixedControllerSpell(ability, syntax, "surveil", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+			return game.Surveil{Amount: amount, Player: player}
 		})
 	case oracle.EffectInvestigate:
 		return lowerInvestigateSpell(ability, syntax)
 	case oracle.EffectProliferate:
-		return lowerExactPrimitiveSpell(ability, syntax, "proliferate", game.Proliferate{})
+		return lowerExactPrimitiveSpell(ability, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
+			return game.Proliferate{Amount: amount}
+		})
+	case oracle.EffectExplore:
+		return lowerExploreSpell(ability, syntax)
 	case oracle.EffectRegenerate:
 		return lowerFixedPermanentTargetSpell(ability, "Regenerate", func(object game.ObjectReference) game.Primitive {
 			return game.Regenerate{Object: object}
@@ -4417,14 +4490,14 @@ func lowerSingleEffectSpell(
 		return lowerFightSpell(ability)
 	case oracle.EffectDiscard:
 		return lowerFixedCardCountPlayerSpell(
-			ability, syntax, "discard", "discards", func(amount int, player game.PlayerReference) game.Primitive {
-				return game.Discard{Amount: game.Fixed(amount), Player: player}
+			ability, syntax, "discard", "discards", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+				return game.Discard{Amount: amount, Player: player}
 			},
 		)
 	case oracle.EffectMill:
 		return lowerFixedCardCountPlayerSpell(
-			ability, syntax, "mill", "mills", func(amount int, player game.PlayerReference) game.Primitive {
-				return game.Mill{Amount: game.Fixed(amount), Player: player}
+			ability, syntax, "mill", "mills", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+				return game.Mill{Amount: amount, Player: player}
 			},
 		)
 	case oracle.EffectTap:
@@ -5016,25 +5089,53 @@ func lowerInvestigateSpell(
 		ability,
 		syntax,
 		"investigate",
-		game.Investigate{Amount: game.Fixed(1)},
+		func(amount game.Quantity) game.Primitive {
+			return game.Investigate{Amount: amount}
+		},
 	)
+}
+
+func lowerExploreSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	tokens := syntax.Tokens
+	if ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(tokens) != 3 ||
+		!equalTokenWord(tokens[0], "it") ||
+		!equalTokenWord(tokens[1], "explores") ||
+		tokens[2].Kind != oracle.Period ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferencePronoun {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported explore spell",
+			"the executable source backend supports only the source permanent pattern \"it explores\"",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Explore{Creature: game.SourcePermanentReference()},
+	}}}.Ability(), nil
 }
 
 func lowerExactPrimitiveSpell(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 	verb string,
-	primitive game.Primitive,
+	primitiveFactory func(game.Quantity) game.Primitive,
 ) (game.AbilityContent, *oracle.Diagnostic) {
+	amount, ok := standaloneActionAmount(syntax.Tokens, verb)
 	if ability.Effects[0].Negated ||
 		len(ability.Targets) != 0 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		len(ability.References) != 0 ||
-		len(syntax.Tokens) != 2 ||
-		!equalTokenWord(syntax.Tokens[0], verb) ||
-		syntax.Tokens[1].Kind != oracle.Period {
+		!ok {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported "+verb+" spell",
@@ -5042,8 +5143,37 @@ func lowerExactPrimitiveSpell(
 		)
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: primitive,
+		Primitive: primitiveFactory(game.Fixed(amount)),
 	}}}.Ability(), nil
+}
+
+func standaloneActionAmount(tokens []oracle.Token, verb string) (int, bool) {
+	if len(tokens) == 2 &&
+		equalTokenWord(tokens[0], verb) &&
+		tokens[1].Kind == oracle.Period {
+		return 1, true
+	}
+	if len(tokens) == 3 &&
+		equalTokenWord(tokens[0], verb) &&
+		tokens[2].Kind == oracle.Period {
+		switch strings.ToLower(tokens[1].Text) {
+		case "twice":
+			return 2, true
+		case "thrice":
+			return 3, true
+		}
+	}
+	if len(tokens) == 4 &&
+		equalTokenWord(tokens[0], verb) &&
+		equalTokenWord(tokens[2], "times") &&
+		tokens[3].Kind == oracle.Period {
+		for amount := 1; amount <= 4; amount++ {
+			if fixedNumberToken(tokens[1], amount) {
+				return amount, true
+			}
+		}
+	}
+	return 0, false
 }
 
 func lowerOrderedEffectSequence(
@@ -5537,11 +5667,11 @@ func lowerFixedCardCountPlayerSpell(
 	syntax oracle.Ability,
 	controllerVerb string,
 	targetVerb string,
-	primitiveFactory func(amount int, player game.PlayerReference) game.Primitive,
+	allowDynamic bool,
+	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
-	if !effect.Amount.Known ||
-		effect.Amount.Value < 1 ||
+	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
@@ -5553,21 +5683,25 @@ func lowerFixedCardCountPlayerSpell(
 			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
 		)
 	}
+	amount, ok := cardCountQuantity(effect.Amount, allowDynamic)
+	if !ok {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported "+controllerVerb+" spell",
+			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
+		)
+	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
 	case len(ability.Targets) == 0 &&
-		len(syntax.Tokens) == 4 &&
-		strings.EqualFold(syntax.Tokens[0].Text, controllerVerb) &&
-		fixedCardCountSyntax(syntax.Tokens[1], syntax.Tokens[2], effect.Amount.Value) &&
-		syntax.Tokens[3].Kind == oracle.Period:
+		(exactCardCountPlayerSyntax(syntax.Tokens, controllerVerb, effect.Amount) ||
+			exactDynamicCardCountPlayerText(ability.Text, "", controllerVerb, effect.Amount)):
 	case len(ability.Targets) == 1 &&
-		len(syntax.Tokens) == 6 &&
+		(exactTargetCardCountPlayerSyntax(syntax.Tokens, targetVerb, effect.Amount) ||
+			exactDynamicCardCountPlayerText(ability.Text, titleFirst(ability.Targets[0].Text), targetVerb, effect.Amount)) &&
 		strings.EqualFold(syntax.Tokens[0].Text, "target") &&
-		strings.EqualFold(syntax.Tokens[1].Text, "player") &&
-		strings.EqualFold(syntax.Tokens[2].Text, targetVerb) &&
-		fixedCardCountSyntax(syntax.Tokens[3], syntax.Tokens[4], effect.Amount.Value) &&
-		syntax.Tokens[5].Kind == oracle.Period:
+		strings.EqualFold(syntax.Tokens[1].Text, "player"):
 		targetSpec, ok := playerTargetSpec(ability.Targets[0])
 		if !ok {
 			return game.AbilityContent{}, executableDiagnostic(
@@ -5589,7 +5723,7 @@ func lowerFixedCardCountPlayerSpell(
 		Targets: targets,
 		Sequence: []game.Instruction{
 			{
-				Primitive: primitiveFactory(effect.Amount.Value, playerRef),
+				Primitive: primitiveFactory(amount, playerRef),
 			},
 		},
 	}.Ability(), nil
@@ -5599,21 +5733,25 @@ func lowerFixedControllerSpell(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 	verb string,
-	primitiveFactory func(amount int, player game.PlayerReference) game.Primitive,
+	allowDynamic bool,
+	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
-	if !effect.Amount.Known ||
-		effect.Amount.Value < 1 ||
+	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ability.Targets) != 0 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
-		len(ability.References) != 0 ||
-		len(syntax.Tokens) != 3 ||
-		!strings.EqualFold(syntax.Tokens[0].Text, verb) ||
-		!fixedNumberToken(syntax.Tokens[1], effect.Amount.Value) ||
-		syntax.Tokens[2].Kind != oracle.Period {
+		len(ability.References) != 0 {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported "+verb+" spell",
+			"the executable source backend supports only exact fixed controller "+verb,
+		)
+	}
+	amount, ok := controllerActionQuantity(effect.Amount, allowDynamic)
+	if !ok || !exactControllerAmountSyntax(syntax.Tokens, ability.Text, verb, effect.Amount) {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported "+verb+" spell",
@@ -5623,10 +5761,44 @@ func lowerFixedControllerSpell(
 	return game.Mode{
 		Sequence: []game.Instruction{
 			{
-				Primitive: primitiveFactory(effect.Amount.Value, game.ControllerReference()),
+				Primitive: primitiveFactory(amount, game.ControllerReference()),
 			},
 		},
 	}.Ability(), nil
+}
+
+func cardCountQuantity(amount oracle.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
+	if amount.Known {
+		return game.Fixed(amount.Value), amount.Value > 0
+	}
+	if !allowDynamic {
+		return game.Quantity{}, false
+	}
+	if amount.DynamicKind == oracle.DynamicAmountNone {
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	}
+	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
+	if !ok || amount.DynamicKind == oracle.DynamicAmountSourcePower {
+		return game.Quantity{}, false
+	}
+	return game.Dynamic(dynamic), true
+}
+
+func controllerActionQuantity(amount oracle.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
+	if amount.Known {
+		return game.Fixed(amount.Value), amount.Value > 0
+	}
+	if !allowDynamic {
+		return game.Quantity{}, false
+	}
+	if amount.DynamicKind == oracle.DynamicAmountNone {
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	}
+	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
+	if !ok || amount.DynamicKind == oracle.DynamicAmountSourcePower {
+		return game.Quantity{}, false
+	}
+	return game.Dynamic(dynamic), true
 }
 
 func lowerFixedLifeSpell(
@@ -6135,6 +6307,79 @@ func fixedCardCountSyntax(amountToken, cardToken oracle.Token, amount int) bool 
 	}
 	return fixedNumberToken(amountToken, amount) &&
 		strings.EqualFold(cardToken.Text, "cards")
+}
+
+func exactCardCountPlayerSyntax(tokens []oracle.Token, verb string, amount oracle.CompiledAmount) bool {
+	if len(tokens) != 4 ||
+		!equalTokenWord(tokens[0], verb) ||
+		tokens[3].Kind != oracle.Period {
+		return false
+	}
+	return cardCountAmountSyntax(tokens[1], tokens[2], amount)
+}
+
+func exactTargetCardCountPlayerSyntax(tokens []oracle.Token, verb string, amount oracle.CompiledAmount) bool {
+	if len(tokens) != 6 ||
+		!equalTokenWord(tokens[0], "target") ||
+		!equalTokenWord(tokens[1], "player") ||
+		!equalTokenWord(tokens[2], verb) ||
+		tokens[5].Kind != oracle.Period {
+		return false
+	}
+	return cardCountAmountSyntax(tokens[3], tokens[4], amount)
+}
+
+func cardCountAmountSyntax(amountToken, cardToken oracle.Token, amount oracle.CompiledAmount) bool {
+	if amount.Known {
+		return fixedCardCountSyntax(amountToken, cardToken, amount.Value)
+	}
+	return equalTokenWord(amountToken, "X") &&
+		strings.EqualFold(cardToken.Text, "cards")
+}
+
+func exactDynamicCardCountPlayerText(text, subject, verb string, amount oracle.CompiledAmount) bool {
+	if amount.DynamicKind == oracle.DynamicAmountNone {
+		return false
+	}
+	prefix := titleFirst(verb)
+	if subject != "" {
+		prefix = subject + " " + verb
+	}
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountForEach:
+		if amount.Multiplier == 1 {
+			return text == fmt.Sprintf("%s 1 card %s.", prefix, amount.Text) ||
+				text == fmt.Sprintf("%s a card %s.", prefix, amount.Text)
+		}
+		return text == fmt.Sprintf("%s %d cards %s.", prefix, amount.Multiplier, amount.Text)
+	case oracle.DynamicAmountWhereX:
+		return text == fmt.Sprintf("%s X cards, %s.", prefix, amount.Text)
+	default:
+		return false
+	}
+}
+
+func exactControllerAmountSyntax(tokens []oracle.Token, text, verb string, amount oracle.CompiledAmount) bool {
+	if amount.Known {
+		return len(tokens) == 3 &&
+			equalTokenWord(tokens[0], verb) &&
+			fixedNumberToken(tokens[1], amount.Value) &&
+			tokens[2].Kind == oracle.Period
+	}
+	if amount.DynamicKind == oracle.DynamicAmountNone {
+		return len(tokens) == 3 &&
+			equalTokenWord(tokens[0], verb) &&
+			equalTokenWord(tokens[1], "X") &&
+			tokens[2].Kind == oracle.Period
+	}
+	switch amount.DynamicForm {
+	case oracle.DynamicAmountForEach:
+		return text == fmt.Sprintf("%s %d %s.", titleFirst(verb), amount.Multiplier, amount.Text)
+	case oracle.DynamicAmountWhereX:
+		return text == fmt.Sprintf("%s X, %s.", titleFirst(verb), amount.Text)
+	default:
+		return false
+	}
 }
 
 func fixedNumberToken(token oracle.Token, amount int) bool {

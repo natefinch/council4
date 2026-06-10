@@ -582,8 +582,12 @@ func (p Investigate) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	return nil
 }
 
-func (Proliferate) validatePrimitive([]TargetSpec, bool) error {
-	return nil
+func (p Proliferate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Explore) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Creature, targets, checkTargets)
 }
 
 func (p Goad) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

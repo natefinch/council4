@@ -688,8 +688,31 @@ func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved 
 	return res
 }
 
-func handleProliferate(r *effectResolver, _ game.Proliferate) effectResolved {
-	return effectResolved{accepted: true, succeeded: r.engine.resolveProliferate(r.game, r.obj, r.agents, r.log)}
+func handleProliferate(r *effectResolver, prim game.Proliferate) effectResolved {
+	amount := r.quantity(prim.Amount)
+	if amount <= 0 {
+		amount = 1
+	}
+	res := effectResolved{accepted: true, amount: amount}
+	for range amount {
+		if r.engine.resolveProliferate(r.game, r.obj, r.agents, r.log) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
+
+func handleExplore(r *effectResolver, prim game.Explore) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Creature)
+	if !ok {
+		return res
+	}
+	controller := effectiveController(r.game, permanent)
+	if r.engine.exploreCreature(r.game, r.obj, r.agents, r.log, controller, permanent) {
+		res.succeeded = true
+	}
+	return res
 }
 
 func handleGoad(r *effectResolver, prim game.Goad) effectResolved {

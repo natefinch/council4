@@ -1225,6 +1225,27 @@ func TestProliferateAddsOneChosenCounterKind(t *testing.T) {
 	}
 }
 
+func TestProliferateTwiceRepeatsAction(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	permanent.Counters.Add(counter.PlusOnePlusOne, 1)
+	addEffectSpellToStack(g, game.Player1, game.Proliferate{Amount: game.Fixed(2)}, nil)
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {0}}},
+	}
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want proliferate twice", got)
+	}
+	if len(log.Choices) != 2 {
+		t.Fatalf("choices = %d, want one proliferate choice per repetition", len(log.Choices))
+	}
+}
+
 func TestGoadEffectExpiresOnGoadingPlayersNextTurn(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -1280,6 +1301,96 @@ func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
 			t.Fatalf("choices = %+v, want non-fallback surveil choice", log.Choices)
 		}
 	})
+}
+
+func TestExploreMovesRevealedLandToHand(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	land := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Forest",
+		Types: []types.Card{types.Land},
+	}})
+	obj := &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.Explore{Creature: game.SourcePermanentReference()}, &TurnLog{})
+
+	if !g.Players[game.Player1].Hand.Contains(land) || g.Players[game.Player1].Library.Contains(land) {
+		t.Fatal("explore did not move revealed land to hand")
+	}
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("+1/+1 counters = %d, want none for revealed land", got)
+	}
+	assertEvent(t, g.Events, game.EventCardRevealed, func(event game.Event) bool {
+		return event.CardID == land && event.FromZone == zone.Library
+	})
+}
+
+func TestExplorePutsCounterAndMayMoveNonlandToGraveyard(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	nonland := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Bear Cub",
+		Types: []types.Card{types.Creature},
+	}})
+	obj := &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{
+		Primitive: game.Explore{Creature: game.SourcePermanentReference()},
+	}, agents, &TurnLog{})
+
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("+1/+1 counters = %d, want one for revealed nonland", got)
+	}
+	if g.Players[game.Player1].Library.Contains(nonland) || !g.Players[game.Player1].Graveyard.Contains(nonland) {
+		t.Fatal("explore choice did not move nonland to graveyard")
+	}
+	assertEvent(t, g.Events, game.EventCardRevealed, func(event game.Event) bool {
+		return event.CardID == nonland && event.FromZone == zone.Library
+	})
+}
+
+func TestExploreAllowsNoncreaturePermanent(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Map",
+		Types: []types.Card{types.Artifact},
+	}})
+	nonland := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Spell",
+		Types: []types.Card{types.Instant},
+	}})
+	obj := &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.Explore{Creature: game.SourcePermanentReference()}, &TurnLog{})
+
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("+1/+1 counters = %d, want noncreature permanent to explore", got)
+	}
+	if !g.Players[game.Player1].Library.Contains(nonland) {
+		t.Fatal("default explore choice should leave nonland on top")
+	}
 }
 
 func TestDestroyEffectMovesPermanentToGraveyard(t *testing.T) {

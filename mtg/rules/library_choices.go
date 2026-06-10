@@ -1,8 +1,12 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -79,6 +83,64 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 			})
 		}
 	}
+}
+
+func (e *Engine) exploreCreature(
+	g *game.Game,
+	obj *game.StackObject,
+	agents [game.NumPlayers]PlayerAgent,
+	log *TurnLog,
+	playerID game.PlayerID,
+	creature *game.Permanent,
+) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok || creature == nil {
+		return false
+	}
+	cardID, ok := player.Library.Top()
+	if !ok {
+		return false
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+	if slices.Contains(cardFaceOrDefault(card, game.FaceFront).Types, types.Land) {
+		player.Library.Remove(cardID)
+		player.Hand.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   zone.Hand,
+			Amount:   1,
+		})
+		return true
+	}
+
+	addCountersToPermanentControlledBy(g, playerID, creature, counter.PlusOnePlusOne, 1)
+	selected := e.chooseChoice(g, agents, libraryChoiceRequest(game.ChoiceExplore, playerID, "Explore: choose where to put revealed nonland card.", []string{"top", "graveyard"}), log)
+	if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
+		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
+		zoneOwner := playerID
+		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
+			zoneOwner = card.Owner
+		}
+		destinationCards, ok := destinationZone(g, zoneOwner, destination)
+		if !ok {
+			return true
+		}
+		destinationCards.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   destination,
+			Amount:   1,
+		})
+	}
+	return true
 }
 
 func peekLibrary(player *game.Player, amount int) []id.ID {

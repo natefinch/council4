@@ -221,6 +221,7 @@ const (
 	EffectGain
 	EffectGrantKeyword
 	EffectInvestigate
+	EffectExplore
 	EffectLose
 	EffectMill
 	EffectModifyPT

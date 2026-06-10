@@ -1533,7 +1533,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
 		game.PrimitiveExile:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
-	case game.PrimitiveTap, game.PrimitiveRegenerate:
+	case game.PrimitiveTap, game.PrimitiveRegenerate, game.PrimitiveExplore:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
@@ -1851,10 +1851,15 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 		}
 		return structLit("game.Investigate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	case game.PrimitiveProliferate:
-		if _, ok := primitive.(game.Proliferate); !ok {
+		value, ok := primitive.(game.Proliferate)
+		if !ok {
 			return "", errors.New("render: internal error: Proliferate kind has unexpected concrete type")
 		}
-		return "game.Proliferate{}", nil
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Proliferate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	default:
 		return "", fmt.Errorf("render: unsupported standalone primitive kind %d", primitive.Kind())
 	}
@@ -1893,6 +1898,7 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 
 func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error) {
 	var typeName string
+	fieldName := "Object"
 	var object game.ObjectReference
 	switch primitive.Kind() {
 	case game.PrimitiveTap:
@@ -1907,6 +1913,13 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", errors.New("render: internal error: Regenerate kind has unexpected concrete type")
 		}
 		typeName, object = "game.Regenerate", value.Object
+	case game.PrimitiveExplore:
+		value, ok := primitive.(game.Explore)
+		if !ok {
+			return "", errors.New("render: internal error: Explore kind has unexpected concrete type")
+		}
+		fieldName = "Creature"
+		typeName, object = "game.Explore", value.Creature
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}
@@ -1914,7 +1927,7 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 	if err != nil {
 		return "", err
 	}
-	return structLit(typeName, []string{fmt.Sprintf("Object: %s,", rendered)}), nil
+	return structLit(typeName, []string{fmt.Sprintf("%s: %s,", fieldName, rendered)}), nil
 }
 
 func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error) {
@@ -3274,6 +3287,10 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
 		return "game.EventPermanentDied", nil
+	case game.EventCardDiscarded:
+		return "game.EventCardDiscarded", nil
+	case game.EventCycled:
+		return "game.EventCycled", nil
 	case game.EventPermanentMutated:
 		return "game.EventPermanentMutated", nil
 	case game.EventBeginningOfStep:
