@@ -94,6 +94,8 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleCreateDelayedTrigger)
 	registerPrimitiveHandler(reg, handleCreateReplacement)
 	registerPrimitiveHandler(reg, handlePreventDamage)
+	registerPrimitiveHandler(reg, handleMoveCard)
+	registerPrimitiveHandler(reg, handleGrantCastPermission)
 	return reg
 }
 

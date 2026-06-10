@@ -133,6 +133,11 @@ func expireRuleEffects(g *game.Game) {
 	}
 	kept := g.RuleEffects[:0]
 	for _, effect := range g.RuleEffects {
+		if effect.Duration == game.DurationUntilEndOfYourNextTurn &&
+			effect.ExpiresFor == g.Turn.ActivePlayer &&
+			effect.CreatedTurn < g.Turn.TurnNumber {
+			continue
+		}
 		if effect.Duration == game.DurationUntilEndOfTurn || effect.Duration == game.DurationThisTurn {
 			continue
 		}
@@ -330,9 +335,9 @@ func staticCostModifiersForContext(g *game.Game, card *game.CardDef) []game.Cost
 	return modifiers
 }
 
-func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
+func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
 	card, cardOK := g.GetCardInstance(cardID)
-	if sourceZone == zone.Graveyard && cardOK && cardHasFlashbackAlternative(card) {
+	if sourceZone == zone.Graveyard && face == game.FaceFront && cardOK && cardHasFlashbackAlternative(card) {
 		return true
 	}
 	for _, effect := range activeRuleEffects(g) {
@@ -340,6 +345,16 @@ func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id
 			continue
 		}
 		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
+		}
+		if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
+			continue
+		}
+		if effect.CastFace.Exists {
+			if effect.CastFace.Val != face {
+				continue
+			}
+		} else if face != game.FaceFront {
 			continue
 		}
 		return true
@@ -351,7 +366,14 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 	zones := []zone.Type{zone.Hand}
 	if player, ok := playerByID(g, playerID); ok {
 		for _, cardID := range player.Graveyard.All() {
-			if canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Graveyard) {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			for _, face := range card.Def.LegalCastFaces() {
+				if !canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Graveyard, face) {
+					continue
+				}
 				zones = append(zones, zone.Graveyard)
 				break
 			}

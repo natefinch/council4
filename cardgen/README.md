@@ -50,8 +50,13 @@ Vanguard cards are excluded with explicit report reasons.
    `game.AddCounter` instructions. Self-enter triggers support exact intervening
    conditions for kicked or cast entry and controlling one
    permanent of a named permanent card type. Exact
-   self-dies fixed-damage triggers preserve the departed permanent as the
-   damage source through an event reference. Ordinary battlefield activations
+   self-dies triggers support exact `if it had no +1/+1 counters` and
+   `if it had no -1/-1 counters` conditions using the departed permanent's
+   last-known information. Fixed-damage bodies preserve that permanent as the
+   damage source through an event reference. Exact event-card references can
+   return the departed card from its owner's graveyard to hand or grant its
+   Adventure face a graveyard-cast permission through the end of its
+   controller's next turn. Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
    Exact trailing activation restrictions lower to typed sorcery, combat,

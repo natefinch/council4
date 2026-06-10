@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -195,6 +196,11 @@ type TriggerCondition struct {
 	// such as "if it had counters on it" on zone-change triggers. mtg/rules
 	// checks the event permanent's current object or last-known information.
 	InterveningIfEventPermanentHadCounters bool
+
+	// InterveningIfEventPermanentHadNoCounterKind identifies a counter kind that
+	// must be absent from the event permanent's current object or last-known
+	// information.
+	InterveningIfEventPermanentHadNoCounterKind opt.V[counter.Kind]
 
 	// InterveningIfEventPermanentWasKicked is true for "if it was kicked" on
 	// enter triggers. The entering permanent event preserves the spell's kicker
