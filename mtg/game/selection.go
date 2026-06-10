@@ -62,8 +62,10 @@ type Selection struct {
 	// "another" target restrictions and "other ..." mass effects.
 	ExcludeSource bool
 
-	// NonToken requires the matched object to not be a token.
-	NonToken bool
+	// NonToken requires the matched object to not be a token. TokenOnly requires
+	// the matched object to be a token.
+	NonToken  bool
+	TokenOnly bool
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -86,7 +88,8 @@ func (s Selection) Empty() bool {
 		!s.Power.Exists &&
 		!s.Toughness.Exists &&
 		!s.ExcludeSource &&
-		!s.NonToken
+		!s.NonToken &&
+		!s.TokenOnly
 }
 
 // Validate reports structural contradictions in the Selection that represent
@@ -111,6 +114,9 @@ func (s Selection) Validate() []string {
 	}
 	if s.Keyword != KeywordNone && s.Keyword == s.ExcludedKeyword {
 		problems = append(problems, fmt.Sprintf("keyword %v is both required and excluded", s.Keyword))
+	}
+	if s.NonToken && s.TokenOnly {
+		problems = append(problems, "selection cannot require both token and non-token objects")
 	}
 	return problems
 }

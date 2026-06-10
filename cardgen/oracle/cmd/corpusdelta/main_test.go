@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/natefinch/council4/cardgen"
 )
 
 func TestEngineWritesSupportedListAndInspectionManifest(t *testing.T) {
@@ -107,6 +109,24 @@ func TestEngineRejectsMissingGeneratedSource(t *testing.T) {
 	}}).Run()
 	if err == nil || !strings.Contains(err.Error(), "generated source for Alpha") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestGeneratedCardPathUsesTokenNamespace(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	card := cardgen.ScryfallCard{
+		Name:     "Bear",
+		Layout:   "token",
+		OracleID: "12345678-90ab-cdef-1234-567890abcdef",
+	}
+	got, err := generatedCardPath(root, card)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, "tokens", "b", "bear_1234567890abcdef1234567890abcdef.go")
+	if got != want {
+		t.Fatalf("generated path = %q, want %q", got, want)
 	}
 }
 

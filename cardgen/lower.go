@@ -35,6 +35,7 @@ type loweredFaceAbilities struct {
 	ChapterAbilities     []game.ChapterAbility
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
+	EntersPrepared       bool
 }
 
 // empty reports whether the face produced no abilities.
@@ -46,7 +47,8 @@ func (f loweredFaceAbilities) empty() bool {
 		len(f.TriggeredAbilities) == 0 &&
 		len(f.ChapterAbilities) == 0 &&
 		len(f.ReplacementAbilities) == 0 &&
-		!f.SpellAbility.Exists
+		!f.SpellAbility.Exists &&
+		!f.EntersPrepared
 }
 
 // abilityLowering holds the typed result of lowering one CompiledAbility.
@@ -60,6 +62,7 @@ type abilityLowering struct {
 	chapterAbility     opt.V[game.ChapterAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
+	entersPrepared     bool
 	consumed           semanticConsumption
 	sourceSpans        []oracle.Span
 }
@@ -156,6 +159,7 @@ func lowerFaceAbilities(
 		if lowered.replacementAbility.Exists {
 			result.ReplacementAbilities = append(result.ReplacementAbilities, lowered.replacementAbility.Val)
 		}
+		result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
 				unsupported = append(unsupported, *executableDiagnostic(
@@ -182,6 +186,9 @@ func lowerExecutableAbility(
 ) (abilityLowering, *oracle.Diagnostic) {
 	if len(ability.Modes) > 0 {
 		return lowerModalAbility(cardName, ability, syntax)
+	}
+	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
+		return lowered, nil
 	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
 		return lowered, diagnostic
@@ -413,6 +420,32 @@ func lowerChapterAbility(
 	}, nil
 }
 
+func lowerEntersPrepared(ability oracle.CompiledAbility, syntax oracle.Ability) (abilityLowering, bool) {
+	const text = "This creature enters prepared."
+	if ability.Kind != oracle.AbilityStatic ||
+		(ability.Text != text && !strings.HasPrefix(ability.Text, text+" (")) ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectEnterPrepared ||
+		len(ability.References) != 1 ||
+		ability.References[0].Kind != oracle.ReferenceThisObject ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil {
+		return abilityLowering{}, false
+	}
+	return abilityLowering{
+		entersPrepared: true,
+		consumed: semanticConsumption{
+			effects:    1,
+			references: 1,
+		},
+		sourceSpans: []oracle.Span{syntax.Span},
+	}, true
+}
+
 func lowerActivatedAbilityKind(
 	cardName string,
 	ability oracle.CompiledAbility,
@@ -603,14 +636,15 @@ func lowerModalAbility(
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported modal ability",
-			"the executable source backend supports only exact fixed-cardinality \"Choose one\" modal abilities",
+			"the executable source backend supports only exact \"Choose N\" and \"Choose one or both\" modal abilities",
 		)
 	}
-	if minModes != 1 || maxModes != 1 {
+	if minModes < 1 || maxModes < minModes || maxModes > len(ability.Modes) ||
+		(minModes == 1 && maxModes == 2 && len(ability.Modes) != 2) {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported modal ability",
-			"the executable source backend supports only \"Choose one\" modal abilities",
+			"the modal choice range does not match the number of modes",
 		)
 	}
 
@@ -677,11 +711,19 @@ func lowerModalAbility(
 }
 
 // parseChooseHeader inspects a modal header phrase and returns (minModes,
-// maxModes, ok). It accepts only "Choose <word> —" where <word> is a cardinal
-// number spelled out as a single word ("one", "two", etc.) and rejects "or
-// both", "or more", "at random", and other multi-word cardinalities.
+// maxModes, ok). It accepts "Choose <word> —" where <word> is a cardinal
+// number spelled out as a single word ("one", "two", etc.), plus exact
+// "Choose one or both —" headers.
 func parseChooseHeader(header oracle.Phrase) (minModes, maxModes int, ok bool) {
 	tokens := header.Tokens
+	if len(tokens) == 5 &&
+		tokens[0].Kind == oracle.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == oracle.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == oracle.Word && strings.EqualFold(tokens[2].Text, "or") &&
+		tokens[3].Kind == oracle.Word && strings.EqualFold(tokens[3].Text, "both") &&
+		tokens[4].Kind == oracle.EmDash {
+		return 1, 2, true
+	}
 	// Expected: [Word("Choose"), Word(<number>), EmDash]
 	if len(tokens) != 3 ||
 		tokens[0].Kind != oracle.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
@@ -1215,6 +1257,26 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 			game.Selection{RequiredTypes: []types.Card{types.Creature}},
 			game.SourcePermanentReference(),
 		), true
+	case oracle.StaticSubjectControlledWalls:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{types.Wall}},
+		), true
+	case oracle.StaticSubjectControlledArtifacts:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+		), true
+	case oracle.StaticSubjectControlledTokens:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{TokenOnly: true},
+		), true
+	case oracle.StaticSubjectOpponentControlledCreatures:
+		return game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerOpponent,
+		}), true
 	default:
 		return game.GroupReference{}, false
 	}
@@ -1250,6 +1312,49 @@ func matchesExactStaticPTBuffSyntax(
 			equalTokenWord(tokens[0], "other") &&
 			equalTokenWord(tokens[1], "creatures") &&
 			equalTokenWord(tokens[2], "you") &&
+			equalTokenWord(tokens[3], "control") &&
+			equalTokenWord(tokens[4], "get") &&
+			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
+			tokens[7].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta) &&
+			tokens[10].Kind == oracle.Period
+	case oracle.StaticSubjectControlledWalls:
+		offset := 0
+		noun := "walls"
+		verb := "get"
+		if len(tokens) == 11 && equalTokenWord(tokens[0], "each") {
+			offset = 1
+			noun = "wall"
+			verb = "gets"
+		}
+		return len(tokens) == 10+offset &&
+			equalTokenWord(tokens[offset], noun) &&
+			equalTokenWord(tokens[offset+1], "you") &&
+			equalTokenWord(tokens[offset+2], "control") &&
+			equalTokenWord(tokens[offset+3], verb) &&
+			tokensMatchSignedAmount(tokens[offset+4], tokens[offset+5], effect.PowerDelta) &&
+			tokens[offset+6].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[offset+7], tokens[offset+8], effect.ToughnessDelta) &&
+			tokens[offset+9].Kind == oracle.Period
+	case oracle.StaticSubjectControlledArtifacts, oracle.StaticSubjectControlledTokens:
+		noun := "artifacts"
+		if effect.StaticSubject == oracle.StaticSubjectControlledTokens {
+			noun = "tokens"
+		}
+		return len(tokens) == 10 &&
+			equalTokenWord(tokens[0], noun) &&
+			equalTokenWord(tokens[1], "you") &&
+			equalTokenWord(tokens[2], "control") &&
+			equalTokenWord(tokens[3], "get") &&
+			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
+			tokens[6].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta) &&
+			tokens[9].Kind == oracle.Period
+	case oracle.StaticSubjectOpponentControlledCreatures:
+		return len(tokens) == 11 &&
+			equalTokenWord(tokens[0], "creatures") &&
+			equalTokenWord(tokens[1], "your") &&
+			equalTokenWord(tokens[2], "opponents") &&
 			equalTokenWord(tokens[3], "control") &&
 			equalTokenWord(tokens[4], "get") &&
 			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&

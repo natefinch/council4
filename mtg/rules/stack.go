@@ -242,7 +242,13 @@ func counterStackObject(g *game.Game, objectID id.ID) bool {
 }
 
 func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
-	_, spellDef, ok := cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	var spellDef *game.CardDef
+	var ok bool
+	if obj.SourceTokenDef != nil {
+		spellDef, ok = obj.SourceTokenDef.FaceDef(obj.Face)
+	} else {
+		_, spellDef, ok = cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	}
 	if !ok {
 		return true
 	}
@@ -278,7 +284,14 @@ func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog)
 }
 
 func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
-	card, spellDef, ok := cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	var card *game.CardInstance
+	var spellDef *game.CardDef
+	var ok bool
+	if obj.SourceTokenDef != nil {
+		spellDef, ok = obj.SourceTokenDef.FaceDef(obj.Face)
+	} else {
+		card, spellDef, ok = cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	}
 	if !ok {
 		return "missing source"
 	}

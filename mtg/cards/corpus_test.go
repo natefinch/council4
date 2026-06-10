@@ -22,6 +22,7 @@ import (
 	"github.com/natefinch/council4/mtg/cards/p"
 	"github.com/natefinch/council4/mtg/cards/r"
 	"github.com/natefinch/council4/mtg/cards/s"
+	"github.com/natefinch/council4/mtg/cards/tokens"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -34,6 +35,26 @@ func TestRegisteredCardsValidate(t *testing.T) {
 		t.Run(card.Name, func(t *testing.T) {
 			issues := game.ValidateCardDef(card)
 			if len(issues) != 0 {
+				t.Fatalf("validation issues:\n%s", formatValidationIssues(issues))
+			}
+		})
+	}
+}
+
+func TestTokenCardsValidateOutsideRegistry(t *testing.T) {
+	registered := make(map[*game.CardDef]bool)
+	for _, card := range registeredCards() {
+		registered[card] = true
+	}
+	if len(tokens.Cards) == 0 {
+		t.Fatal("token catalog has no cards")
+	}
+	for _, card := range tokens.Cards {
+		t.Run(card.Name, func(t *testing.T) {
+			if registered[card] {
+				t.Fatal("token definition is included in the ordinary card registry")
+			}
+			if issues := game.ValidateCardDef(card); len(issues) != 0 {
 				t.Fatalf("validation issues:\n%s", formatValidationIssues(issues))
 			}
 		})

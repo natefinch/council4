@@ -102,6 +102,7 @@ type Permanent struct {
 	RegenerationShields int
 	Monstrous           bool
 	ClassLevel          int
+	Prepared            bool
 
 	// --- Attachments ---
 

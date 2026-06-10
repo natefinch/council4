@@ -192,6 +192,27 @@ func TestAdventureCreatureFaceNotLegalFromOrdinaryExile(t *testing.T) {
 	}
 }
 
+func TestAdventurePermissionClearsWhenCardLeavesExile(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := resolveAdventureToExile(t, g, engine, adventureCreatureCard())
+
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Exile, zone.Graveyard) {
+		t.Fatal("moving Adventure card from exile to graveyard failed")
+	}
+	if g.AdventureCards[cardID] {
+		t.Fatal("Adventure permission remained after card left exile")
+	}
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Graveyard, zone.Exile) {
+		t.Fatal("re-exiling Adventure card failed")
+	}
+
+	legal := engine.legalActions(g, game.Player1)
+	if actionsContain(legal, action.CastSpellFaceFromZone(cardID, zone.Exile, game.FaceFront, nil, 0, nil)) {
+		t.Fatalf("legal actions = %+v, did not want Adventure cast after ordinary re-exile", legal)
+	}
+}
+
 func resolveAdventureToExile(t *testing.T, g *game.Game, engine *Engine, def *game.CardDef) game.ObjectID {
 	t.Helper()
 	cardID := addCardToHand(g, game.Player1, def)

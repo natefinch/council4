@@ -490,6 +490,34 @@ func TestCompileStaticPTBuffSubjects(t *testing.T) {
 			wantPower:       CompiledSignedAmount{Value: 0, Known: true},
 			wantToughness:   CompiledSignedAmount{Value: 2, Known: true},
 		},
+		"each wall you control": {
+			source:          "Each Wall you control gets +0/+2.",
+			wantSubject:     StaticSubjectControlledWalls,
+			wantSubjectText: "Each Wall you control",
+			wantPower:       CompiledSignedAmount{Value: 0, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 2, Known: true},
+		},
+		"artifacts you control": {
+			source:          "Artifacts you control get +1/+1.",
+			wantSubject:     StaticSubjectControlledArtifacts,
+			wantSubjectText: "Artifacts you control",
+			wantPower:       CompiledSignedAmount{Value: 1, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 1, Known: true},
+		},
+		"tokens you control": {
+			source:          "Tokens you control get +1/+1.",
+			wantSubject:     StaticSubjectControlledTokens,
+			wantSubjectText: "Tokens you control",
+			wantPower:       CompiledSignedAmount{Value: 1, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 1, Known: true},
+		},
+		"creatures your opponents control": {
+			source:          "Creatures your opponents control get -1/-0.",
+			wantSubject:     StaticSubjectOpponentControlledCreatures,
+			wantSubjectText: "Creatures your opponents control",
+			wantPower:       CompiledSignedAmount{Value: 1, Known: true, Negative: true},
+			wantToughness:   CompiledSignedAmount{Value: 0, Known: true, Negative: true},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

@@ -421,6 +421,51 @@ func TestRejectVariablePTBuff(t *testing.T) {
 	}
 }
 
+func TestGenerateExtendedStaticPTBuffSubjects(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		want       string
+	}{
+		"walls": {
+			oracleText: "Each Wall you control gets +0/+2.",
+			want:       `SubtypesAny: []types.Sub{types.Sub("Wall")}`,
+		},
+		"artifacts": {
+			oracleText: "Artifacts you control get +1/+1.",
+			want:       "RequiredTypes: []types.Card{types.Artifact}",
+		},
+		"tokens": {
+			oracleText: "Tokens you control get +1/+1.",
+			want:       "TokenOnly: true",
+		},
+		"opponents' creatures": {
+			oracleText: "Creatures your opponents control get -1/-0.",
+			want:       "Controller: game.ControllerOpponent",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Anthem",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, test.want) {
+				t.Fatalf("source missing %q:\n%s", test.want, source)
+			}
+		})
+	}
+}
+
 func TestLowerConditionalEntersTappedReplacement(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -943,29 +988,50 @@ func TestLowerModalChooseOneWithTarget(t *testing.T) {
 	}
 }
 
-func TestLowerModalChooseOneOrBothRejected(t *testing.T) {
+func TestLowerModalChooseTwoSpell(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Command",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose two \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.\n\u2022 Proliferate.",
+	})
+	content := face.SpellAbility.Val
+	if content.MinModes != 2 || content.MaxModes != 2 {
+		t.Fatalf("MinModes=%d MaxModes=%d, want both 2", content.MinModes, content.MaxModes)
+	}
+	if len(content.Modes) != 3 {
+		t.Fatalf("got %d modes, want 3", len(content.Modes))
+	}
+}
+
+func TestLowerModalChooseOneOrBoth(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Charm",
 		Layout:     "normal",
 		TypeLine:   "Instant",
 		OracleText: "Choose one or both \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for choose one or both, got none")
+	content := face.SpellAbility.Val
+	if content.MinModes != 1 || content.MaxModes != 2 {
+		t.Fatalf("MinModes=%d MaxModes=%d, want 1 and 2", content.MinModes, content.MaxModes)
+	}
+	if len(content.Modes) != 2 {
+		t.Fatalf("got %d modes, want 2", len(content.Modes))
 	}
 }
 
-func TestLowerModalChooseTwoRejected(t *testing.T) {
+func TestLowerModalChoiceCountExceedsModesRejected(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Test Charm",
+		Name:       "Test Command",
 		Layout:     "normal",
-		TypeLine:   "Instant",
-		OracleText: "Choose two \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.\n\u2022 Scry 1.",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose three \u2014\n\u2022 Draw a card.\n\u2022 You gain 3 life.",
 	})
 	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for choose two, got none")
+		t.Fatal("expected diagnostics when choice count exceeds modes, got none")
 	}
 }
 
