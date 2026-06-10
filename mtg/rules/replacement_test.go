@@ -135,6 +135,109 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 	}
 }
 
+func TestDamageAddendReplacementIncreasesMatchingSourceDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	replacementSource := addReplacementPermanent(t, g, game.Player1, damageAddendReplacementCardDef())
+	redSourceID := addColoredSourceCard(g, game.Player1, color.Red)
+	blueSourceID := addColoredSourceCard(g, game.Player1, color.Blue)
+
+	if dealt := dealPlayerDamage(g, redSourceID, 0, game.Player1, game.Player2, 2, false); dealt != 3 {
+		t.Fatalf("red source damage = %d, want 3", dealt)
+	}
+	if dealt := dealPlayerDamage(g, blueSourceID, 0, game.Player1, game.Player2, 2, false); dealt != 2 {
+		t.Fatalf("blue source damage = %d, want 2", dealt)
+	}
+	if dealt := dealPlayerDamage(g, redSourceID, 0, game.Player2, game.Player1, 2, false); dealt != 2 {
+		t.Fatalf("opponent-controlled red source damage = %d, want 2", dealt)
+	}
+	if dealt := dealPlayerDamage(g, replacementSource.CardInstanceID, replacementSource.ObjectID, game.Player1, game.Player2, 2, false); dealt != 2 {
+		t.Fatalf("replacement source's own red damage = %d, want 2", dealt)
+	}
+}
+
+func TestDamageMultiplierReplacementDoublesPermanentDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, damageMultiplierReplacementCardDef())
+	sourceID := addColoredSourceCard(g, game.Player1, color.Green)
+	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+
+	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, target, 2, false)
+	if dealt != 4 {
+		t.Fatalf("damage dealt = %d, want 4", dealt)
+	}
+	if target.MarkedDamage != 4 {
+		t.Fatalf("marked damage = %d, want 4", target.MarkedDamage)
+	}
+}
+
+func TestDamageReplacementEffectsUseFallbackOrderingWhenNoChoiceIsAvailable(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, damageAddendReplacementCardDef())
+	addReplacementPermanent(t, g, game.Player1, damageMultiplierReplacementCardDef())
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+
+	dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, 2, false)
+	if dealt != 6 {
+		t.Fatalf("stacked damage replacements dealt = %d, want deterministic add-then-double result 6", dealt)
+	}
+	if len(g.ReplacementDecisions) != 1 {
+		t.Fatalf("replacement decisions = %d, want 1", len(g.ReplacementDecisions))
+	}
+	if got := g.ReplacementDecisions[0].Player; got != game.Player2 {
+		t.Fatalf("replacement decision player = %v, want damaged player", got)
+	}
+	decision := g.ReplacementDecisions[0]
+	if !decision.UsedFallback || len(decision.Selected) != 2 || decision.Selected[0] != 0 || decision.Selected[1] != 1 {
+		t.Fatalf("replacement decision = %+v, want deterministic fallback order", decision)
+	}
+}
+
+func TestSelectedReplacementEffectUsesRecordedOrder(t *testing.T) {
+	first := game.ReplacementEffect{ID: 1, Description: "first"}
+	second := game.ReplacementEffect{ID: 2, Description: "second"}
+
+	selected := selectedReplacementEffect([]game.ReplacementEffect{first, second}, game.ReplacementDecision{Selected: []int{1, 0}})
+
+	if selected.ID != second.ID {
+		t.Fatalf("selected replacement = %+v, want second replacement", selected)
+	}
+}
+
+func TestDamageReplacementExpiresWhenSourceLeaves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addReplacementPermanent(t, g, game.Player1, damageMultiplierReplacementCardDef())
+	if !movePermanentToZone(g, source, zone.Graveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+	damageSourceID := addColoredSourceCard(g, game.Player1, color.Red)
+
+	dealt := dealPlayerDamage(g, damageSourceID, 0, game.Player1, game.Player2, 2, false)
+	if dealt != 2 {
+		t.Fatalf("damage after replacement source leaves = %d, want 2", dealt)
+	}
+}
+
+func TestDamageReplacementAppliesAfterPrevention(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, damageMultiplierReplacementCardDef())
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+	g.PreventionShields = append(g.PreventionShields, game.PreventionShield{
+		ID:         g.IDGen.Next(),
+		Controller: game.Player2,
+		Player:     game.Player2,
+		Amount:     1,
+		Duration:   game.DurationUntilEndOfTurn,
+	})
+
+	dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, 3, false)
+	if dealt != 4 {
+		t.Fatalf("damage after prevention then replacement = %d, want 4", dealt)
+	}
+	assertEvent(t, g.Events, game.EventDamagePrevented, func(event game.Event) bool {
+		return event.Player == game.Player2 && event.Amount == 1
+	})
+}
+
 func TestHexproofPreventsOpponentTargetsButAllowsControllerTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -1113,6 +1216,39 @@ func tokenDoublingReplacementCardDef() *game.CardDef {
 			game.TokenCreationReplacement(
 				"If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
 				2,
+				game.TriggerControllerYou,
+			),
+		},
+	}}
+}
+
+func damageAddendReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:   "Embermaw Hellion",
+		Types:  []types.Card{types.Creature},
+		Colors: []color.Color{color.Red},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.DamageReplacementExcludingSource(
+				"If another red source you control would deal damage to a permanent or player, it deals that much damage plus 1 to that permanent or player instead.",
+				0,
+				1,
+				[]color.Color{color.Red},
+				game.TriggerControllerYou,
+			),
+		},
+	}}
+}
+
+func damageMultiplierReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Angrath's Marauders",
+		Types: []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.DamageReplacement(
+				"If a source you control would deal damage to a permanent or player, it deals double that damage to that permanent or player instead.",
+				2,
+				0,
+				nil,
 				game.TriggerControllerYou,
 			),
 		},

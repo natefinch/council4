@@ -1150,6 +1150,55 @@ func TestLowerTokenCreationReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerDamageReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		oracleText   string
+		multiplier   int
+		addend       int
+		sourceColors []color.Color
+	}{
+		{
+			name:         "red additive damage",
+			oracleText:   "If another red source you control would deal damage to a permanent or player, it deals that much damage plus 1 to that permanent or player instead.",
+			addend:       1,
+			sourceColors: []color.Color{color.Red},
+		},
+		{
+			name:       "double damage",
+			oracleText: "If a source you control would deal damage to a permanent or player, it deals double that damage to that permanent or player instead.",
+			multiplier: 2,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Damage Replacer",
+				Layout:     "normal",
+				TypeLine:   "Creature",
+				OracleText: test.oracleText,
+				Power:      new("4"),
+				Toughness:  new("5"),
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.MatchEvent != game.EventDamageDealt ||
+				replacement.ControllerFilter != game.TriggerControllerYou ||
+				replacement.DamageMultiplier != test.multiplier ||
+				replacement.DamageAddend != test.addend ||
+				!slices.Equal(replacement.DamageSourceColors, test.sourceColors) ||
+				replacement.DamageExcludeSource != (test.name == "red additive damage") ||
+				replacement.Duration != game.DurationPermanent {
+				t.Fatalf("replacement = %+v, want damage replacement", replacement)
+			}
+		})
+	}
+}
+
 func TestLowerCounterPlacementReplacement(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1210,6 +1259,36 @@ func TestGenerateTokenCreationReplacementSource(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"game.TokenCreationReplacement",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateDamageReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Embermaw Hellion",
+		Layout:     "normal",
+		TypeLine:   "Creature — Hellion",
+		OracleText: "If another red source you control would deal damage to a permanent or player, it deals that much damage plus 1 to that permanent or player instead.",
+		Power:      new("4"),
+		Toughness:  new("5"),
+	}, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DamageReplacementExcludingSource",
+		"color.Red",
 		"game.TriggerControllerYou",
 	} {
 		if !strings.Contains(source, wanted) {

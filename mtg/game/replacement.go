@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -140,6 +141,10 @@ type ReplacementEffect struct {
 	CounterKindFilter             counter.Kind
 	CounterRecipientTypes         []types.Card
 	CounterUseRecipientController bool
+	DamageMultiplier              int
+	DamageAddend                  int
+	DamageSourceColors            []color.Color
+	DamageExcludeSource           bool
 	EntersTapped                  bool
 	EntersWithCounters            []CounterPlacement
 }

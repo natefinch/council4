@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -177,6 +178,31 @@ func AnyCounterPlacementReplacement(text string, multiplier int, filter TriggerC
 			Duration:          DurationPermanent,
 		},
 	}
+}
+
+// DamageReplacement creates a persistent replacement that modifies damage from
+// matching sources before it is dealt.
+func DamageReplacement(text string, multiplier, addend int, sourceColors []color.Color, filter TriggerControllerFilter) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:        text,
+			MatchEvent:         EventDamageDealt,
+			ControllerFilter:   filter,
+			DamageMultiplier:   multiplier,
+			DamageAddend:       addend,
+			DamageSourceColors: append([]color.Color(nil), sourceColors...),
+			Duration:           DurationPermanent,
+		},
+	}
+}
+
+// DamageReplacementExcludingSource creates a damage replacement that does not
+// apply to damage from the permanent carrying the replacement ability.
+func DamageReplacementExcludingSource(text string, multiplier, addend int, sourceColors []color.Color, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := DamageReplacement(text, multiplier, addend, sourceColors, filter)
+	replacement.Replacement.DamageExcludeSource = true
+	return replacement
 }
 
 func etbReplacement(text string) ReplacementEffect {

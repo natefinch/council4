@@ -1110,6 +1110,13 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
+	if ability.Replacement.DamageMultiplier > 0 || ability.Replacement.DamageAddend != 0 {
+		replacement, err := renderDamageReplacement(ctx, ability)
+		if err != nil {
+			return "", err
+		}
+		return replacement, nil
+	}
 	if ability.Replacement.CounterMultiplier > 0 {
 		replacement, err := renderCounterPlacementReplacement(ctx, ability)
 		if err != nil {
@@ -1118,6 +1125,42 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return replacement, nil
 	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func renderDamageReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists ||
+		replacement.MatchEvent != game.EventDamageDealt ||
+		replacement.ControllerFilter == game.TriggerControllerAny ||
+		(replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0) {
+		return "", errors.New("render: unsupported damage replacement shape")
+	}
+	controller, err := renderTriggerController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	colors := "nil"
+	if len(replacement.DamageSourceColors) > 0 {
+		colors, err = renderColorSlice(ctx, replacement.DamageSourceColors)
+		if err != nil {
+			return "", err
+		}
+	}
+	constructor := "game.DamageReplacement"
+	if replacement.DamageExcludeSource {
+		constructor = "game.DamageReplacementExcludingSource"
+	}
+	return fmt.Sprintf("%s(%q, %d, %d, %s, %s)",
+		constructor,
+		ability.Text,
+		replacement.DamageMultiplier,
+		replacement.DamageAddend,
+		colors,
+		controller,
+	), nil
 }
 
 func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
