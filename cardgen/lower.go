@@ -339,38 +339,7 @@ func lowerExecutableAbility(
 			sourceSpans: spans,
 		}, nil
 	case oracle.AbilityTriggered:
-		triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		spans := []oracle.Span{ability.Trigger.Span}
-		for _, effect := range ability.Effects {
-			spans = append(spans, effect.Span)
-		}
-		for _, target := range ability.Targets {
-			spans = append(spans, target.Span)
-		}
-		for _, condition := range ability.Conditions {
-			spans = append(spans, condition.Span)
-		}
-		for _, reference := range ability.References {
-			spans = append(spans, reference.Span)
-		}
-		for _, reminder := range syntax.Reminders {
-			spans = append(spans, reminder.Span)
-		}
-		return abilityLowering{
-			triggeredAbility: opt.Val(triggeredAbility),
-			consumed: semanticConsumption{
-				trigger:    true,
-				optional:   ability.Optional,
-				targets:    len(ability.Targets),
-				conditions: len(ability.Conditions),
-				effects:    len(ability.Effects),
-				references: len(ability.References),
-			},
-			sourceSpans: spans,
-		}, nil
+		return lowerTriggeredAbilityKind(cardName, ability, syntax)
 	case oracle.AbilityChapter:
 		return lowerChapterAbility(cardName, ability, syntax)
 	case oracle.AbilityReplacement:
@@ -2575,6 +2544,69 @@ func entersTappedLandSubtypes(condition string) ([]types.Sub, bool) {
 	return subtypes, len(subtypes) > 0
 }
 
+func lowerTriggeredAbility(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
+	if diagnostic == nil ||
+		ability.Trigger == nil ||
+		!strings.Contains(ability.Trigger.Event, " enter") {
+		return triggeredAbility, diagnostic
+	}
+	nonSelf, ok := lowerNonSelfEnterTrigger(cardName, ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, diagnostic
+	}
+	return nonSelf, nil
+}
+
+func lowerTriggeredAbilityKind(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, *oracle.Diagnostic) {
+	triggeredAbility, diagnostic := lowerTriggeredAbility(cardName, ability, syntax)
+	if diagnostic != nil {
+		return abilityLowering{}, diagnostic
+	}
+	spans := []oracle.Span{ability.Trigger.Span}
+	if syntax.AbilityWord != nil {
+		spans = append(spans, oracle.Span{
+			Start: ability.Span.Start,
+			End:   ability.Trigger.Span.Start,
+		})
+	}
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	for _, target := range ability.Targets {
+		spans = append(spans, target.Span)
+	}
+	for _, condition := range ability.Conditions {
+		spans = append(spans, condition.Span)
+	}
+	for _, reference := range ability.References {
+		spans = append(spans, reference.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		triggeredAbility: opt.Val(triggeredAbility),
+		consumed: semanticConsumption{
+			trigger:    true,
+			optional:   ability.Optional,
+			targets:    len(ability.Targets),
+			conditions: len(ability.Conditions),
+			effects:    len(ability.Effects),
+			references: len(ability.References),
+		},
+		sourceSpans: spans,
+	}, nil
+}
+
 func (lowering *abilityLowering) complete(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
@@ -2618,104 +2650,21 @@ func lowerEnterTrigger(
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
 	intervening, supportedCondition := lowerSelfInterveningCondition(eventKind, ability.Trigger)
-	hasInterveningCondition := ability.Trigger != nil && ability.Trigger.Condition != nil
-	resolvingEffects := ability.Effects
-	if hasInterveningCondition {
-		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
-		resolvingEffects = slices.DeleteFunc(
-			append([]oracle.CompiledEffect(nil), ability.Effects...),
-			func(effect oracle.CompiledEffect) bool {
-				return spanCovered(effect.VerbSpan, conditionSpan)
-			},
-		)
-	}
 	if ability.Trigger == nil ||
 		ability.Trigger.Kind != oracle.TriggerWhen ||
 		!supportedEvent ||
 		!supportedCondition ||
-		len(resolvingEffects) == 0 ||
-		(len(ability.Conditions) != 0 && !hasInterveningCondition) ||
-		(hasInterveningCondition && (len(ability.Conditions) != 1 ||
-			ability.Conditions[0] != *ability.Trigger.Condition ||
-			ability.Optional)) ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		ability.AbilityWord != "" {
-		return game.TriggeredAbility{}, executableDiagnostic(
-			ability,
-			summary,
-			detail,
-		)
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
-	body := ability
-	body.Effects = resolvingEffects
-	body.Kind = oracle.AbilitySpell
-	body.Span = oracle.Span{
-		Start: resolvingEffects[0].Span.Start,
-		End:   resolvingEffects[len(resolvingEffects)-1].Span.End,
+	body, bodySyntax, ok := prepareEnterTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
-	body.Text = titleFirst(
-		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
-	)
-	body.Trigger = nil
-	body.Optional = false
-	body.OptionalSpan = oracle.Span{}
-	excludedReferenceSpans := []oracle.Span{ability.Trigger.Span}
-	if hasInterveningCondition {
-		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
-		body.Conditions = nil
-		bodyStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-			return token.Kind != oracle.Comma &&
-				token.Span.Start.Offset >= ability.Trigger.Condition.Span.End.Offset
-		})
-		if bodyStart < 0 {
-			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
-		}
-		effect := body.Effects[0]
-		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
-		effect.Text = ability.Text[effect.Span.Start.Offset-ability.Span.Start.Offset : effect.Span.End.Offset-ability.Span.Start.Offset]
-		body.Effects[0] = effect
-		body.Span.Start = effect.Span.Start
-		body.Text = titleFirst(
-			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
-		)
-	}
-	body.References = bodyReferences(ability.References, excludedReferenceSpans...)
 	selfDamage := eventKind == game.EventPermanentDied &&
 		normalizeSelfDamageReference(cardName, &body)
-	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-		return token.Span.Start.Offset >= body.Span.Start.Offset
-	})
-	if bodyTokenStart < 0 {
-		return game.TriggeredAbility{}, executableDiagnostic(
-			ability,
-			summary,
-			detail,
-		)
-	}
-	bodySyntax := syntax
-	bodySyntax.Kind = oracle.AbilitySpell
-	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
-	if ability.Optional {
-		if len(ability.Effects) != 1 ||
-			len(bodySyntax.Tokens) < 3 ||
-			!equalTokenWord(bodySyntax.Tokens[0], "you") ||
-			!equalTokenWord(bodySyntax.Tokens[1], "may") ||
-			ability.OptionalSpan.Start != ability.Effects[0].Span.Start {
-			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
-		}
-		effect := body.Effects[0]
-		effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
-		effect.Span.Start = effect.VerbSpan.Start
-		body.Effects = []oracle.CompiledEffect{effect}
-		body.Span.Start = effect.Span.Start
-		body.Text = titleFirst(
-			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
-		)
-		bodySyntax.Tokens = bodySyntax.Tokens[2:]
-	}
-	bodySyntax.Span = body.Span
-	bodySyntax.Text = body.Text
 	content, diagnostic := lowerSelfTriggerBody(cardName, eventKind, body, bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
@@ -2976,6 +2925,304 @@ func interveningIfText(trigger *oracle.CompiledTrigger) string {
 		return ""
 	}
 	return trigger.Condition.Text
+}
+
+// prepareEnterTriggerBody builds the body CompiledAbility and syntax for a
+// supported enter triggered ability. It handles condition consistency, effect
+// filtering for intervening conditions, body span/text construction, reference
+// exclusion, and optional "you may" stripping. Callers must have already
+// verified that ability.Trigger is non-nil.
+func prepareEnterTriggerBody(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (oracle.CompiledAbility, oracle.Ability, bool) {
+	if ability.Trigger == nil {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	hasInterveningCondition := ability.Trigger.Condition != nil
+	if (len(ability.Conditions) != 0 && !hasInterveningCondition) ||
+		(hasInterveningCondition && (len(ability.Conditions) != 1 ||
+			ability.Conditions[0] != *ability.Trigger.Condition ||
+			ability.Optional)) {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	resolvingEffects := ability.Effects
+	if hasInterveningCondition {
+		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
+		resolvingEffects = slices.DeleteFunc(
+			append([]oracle.CompiledEffect(nil), ability.Effects...),
+			func(effect oracle.CompiledEffect) bool {
+				return spanCovered(effect.VerbSpan, conditionSpan)
+			},
+		)
+	}
+	if len(resolvingEffects) == 0 {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	body := ability
+	body.Effects = resolvingEffects
+	body.Kind = oracle.AbilitySpell
+	body.Span = oracle.Span{
+		Start: resolvingEffects[0].Span.Start,
+		End:   resolvingEffects[len(resolvingEffects)-1].Span.End,
+	}
+	body.Text = titleFirst(
+		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+	)
+	body.Trigger = nil
+	body.Optional = false
+	body.OptionalSpan = oracle.Span{}
+	excludedReferenceSpans := []oracle.Span{ability.Trigger.Span}
+	if hasInterveningCondition {
+		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
+		body.Conditions = nil
+		bodyStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+			return token.Kind != oracle.Comma &&
+				token.Span.Start.Offset >= ability.Trigger.Condition.Span.End.Offset
+		})
+		if bodyStart < 0 {
+			return oracle.CompiledAbility{}, oracle.Ability{}, false
+		}
+		effect := body.Effects[0]
+		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
+		effect.Text = ability.Text[effect.Span.Start.Offset-ability.Span.Start.Offset : effect.Span.End.Offset-ability.Span.Start.Offset]
+		body.Effects[0] = effect
+		body.Span.Start = effect.Span.Start
+		body.Text = titleFirst(
+			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+		)
+	}
+	body.References = bodyReferences(ability.References, excludedReferenceSpans...)
+	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Span.Start.Offset >= body.Span.Start.Offset
+	})
+	if bodyTokenStart < 0 {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	bodySyntax := syntax
+	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
+	if ability.Optional {
+		if len(ability.Effects) != 1 ||
+			len(bodySyntax.Tokens) < 3 ||
+			!equalTokenWord(bodySyntax.Tokens[0], "you") ||
+			!equalTokenWord(bodySyntax.Tokens[1], "may") ||
+			ability.OptionalSpan.Start != ability.Effects[0].Span.Start {
+			return oracle.CompiledAbility{}, oracle.Ability{}, false
+		}
+		effect := body.Effects[0]
+		effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
+		effect.Span.Start = effect.VerbSpan.Start
+		body.Effects = []oracle.CompiledEffect{effect}
+		body.Span.Start = effect.Span.Start
+		body.Text = titleFirst(
+			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+		)
+		bodySyntax.Tokens = bodySyntax.Tokens[2:]
+	}
+	bodySyntax.Span = body.Span
+	bodySyntax.Text = body.Text
+	return body, bodySyntax, true
+}
+
+func lowerNonSelfEnterTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, bool) {
+	if ability.Trigger == nil ||
+		ability.Trigger.Kind != oracle.TriggerWhenever ||
+		len(ability.Effects) == 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 {
+		return game.TriggeredAbility{}, false
+	}
+
+	event := ability.Trigger.Event
+	pattern := game.TriggerPattern{
+		Event: game.EventPermanentEnteredBattlefield,
+	}
+
+	if strings.HasPrefix(event, "one or more ") {
+		pattern.OneOrMore = true
+		rest := strings.TrimPrefix(event, "one or more ")
+		cardType, controller, ok := parseOneOrMoreEnterSuffix(rest)
+		if !ok {
+			return game.TriggeredAbility{}, false
+		}
+		if cardType != "" {
+			pattern.RequirePermanentTypes = []types.Card{cardType}
+		}
+		pattern.Controller = controller
+	} else {
+		switch {
+		case strings.HasPrefix(event, "another "):
+			pattern.ExcludeSelf = true
+			event = strings.TrimPrefix(event, "another ")
+		case strings.HasPrefix(event, "a "):
+			event = strings.TrimPrefix(event, "a ")
+		case strings.HasPrefix(event, "an "):
+			event = strings.TrimPrefix(event, "an ")
+		default:
+			return game.TriggeredAbility{}, false
+		}
+		if strings.HasPrefix(event, "nontoken ") {
+			pattern.RequireNonToken = true
+			event = strings.TrimPrefix(event, "nontoken ")
+		}
+		cardType, controller, ok := parseSingleEnterSuffix(event)
+		if !ok {
+			return game.TriggeredAbility{}, false
+		}
+		if cardType != "" {
+			pattern.RequirePermanentTypes = []types.Card{cardType}
+		}
+		pattern.Controller = controller
+	}
+
+	intervening, supportedCondition := lowerEnterInterveningCondition(ability.Trigger)
+	if !supportedCondition ||
+		(ability.Trigger.Condition != nil && ability.Trigger.Condition.Text == "if you cast it") {
+		return game.TriggeredAbility{}, false
+	}
+	body, bodySyntax, ok := prepareEnterTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, false
+	}
+	content, contentOK := lowerEventPermanentModifyPTBody(body)
+	if !contentOK {
+		var diagnostic *oracle.Diagnostic
+		content, diagnostic = lowerSelfTriggerBody(cardName, game.EventPermanentEnteredBattlefield, body, bodySyntax)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, false
+		}
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:                                 game.TriggerWhenever,
+			Pattern:                              pattern,
+			InterveningIf:                        interveningIfText(ability.Trigger),
+			InterveningCondition:                 intervening.condition,
+			InterveningIfEventPermanentWasKicked: intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:   intervening.wasCast,
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, true
+}
+
+// lowerEventPermanentModifyPTBody handles the narrow case of a triggered body
+// that modifies the entering permanent via the pronoun "it", e.g.
+// "It gets +2/+0 until end of turn." The pronoun resolves to
+// game.EventPermanentReference(), which identifies the permanent named by the
+// triggering event. Only exact fixed static P/T changes until end of turn are
+// accepted.
+func lowerEventPermanentModifyPTBody(body oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(body.Effects) != 1 ||
+		body.Effects[0].Kind != oracle.EffectModifyPT ||
+		len(body.Targets) != 0 ||
+		len(body.References) != 1 ||
+		body.References[0].Kind != oracle.ReferencePronoun ||
+		!strings.EqualFold(body.References[0].Text, "it") ||
+		len(body.Conditions) != 0 ||
+		len(body.Keywords) != 0 ||
+		len(body.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := body.Effects[0]
+	if !effect.PowerDelta.Known ||
+		!effect.ToughnessDelta.Known ||
+		effect.Negated ||
+		effect.Duration != oracle.DurationUntilEndOfTurn {
+		return game.AbilityContent{}, false
+	}
+	want := fmt.Sprintf("It gets %s/%s until end of turn.",
+		signedAmountText(effect.PowerDelta),
+		signedAmountText(effect.ToughnessDelta))
+	if body.Text != want {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ModifyPT{
+				Object:         game.EventPermanentReference(),
+				PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
+				ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
+				Duration:       game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), true
+}
+
+// parseSingleEnterSuffix parses "{type} {controller?} enters" from the event
+// fragment after an article and optional "nontoken" have been stripped.
+// An empty card type return signals "permanent" (no type filter).
+func parseSingleEnterSuffix(event string) (types.Card, game.TriggerControllerFilter, bool) {
+	controller := game.TriggerControllerAny
+	if s, ok := strings.CutSuffix(event, " you control enters"); ok {
+		event = s + " enters"
+		controller = game.TriggerControllerYou
+	} else if s, ok := strings.CutSuffix(event, " an opponent controls enters"); ok {
+		event = s + " enters"
+		controller = game.TriggerControllerOpponent
+	}
+	cardType, ok := permanentEnterTypeWord(event)
+	return cardType, controller, ok
+}
+
+// parseOneOrMoreEnterSuffix parses "{type_plural} {controller?} enter" from
+// the fragment after "one or more " has been stripped.
+// An empty card type return signals "permanents" (no type filter).
+func parseOneOrMoreEnterSuffix(event string) (types.Card, game.TriggerControllerFilter, bool) {
+	controller := game.TriggerControllerAny
+	if s, ok := strings.CutSuffix(event, " you control enter"); ok {
+		event = s + " enter"
+		controller = game.TriggerControllerYou
+	} else if s, ok := strings.CutSuffix(event, " an opponent controls enter"); ok {
+		event = s + " enter"
+		controller = game.TriggerControllerOpponent
+	}
+	cardType, ok := permanentEnterTypePlural(event)
+	return cardType, controller, ok
+}
+
+func permanentEnterTypeWord(event string) (types.Card, bool) {
+	switch event {
+	case "creature enters":
+		return types.Creature, true
+	case "artifact enters":
+		return types.Artifact, true
+	case "enchantment enters":
+		return types.Enchantment, true
+	case "land enters":
+		return types.Land, true
+	case "permanent enters":
+		return "", true
+	case "planeswalker enters":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
+}
+
+func permanentEnterTypePlural(event string) (types.Card, bool) {
+	switch event {
+	case "creatures enter":
+		return types.Creature, true
+	case "artifacts enter":
+		return types.Artifact, true
+	case "enchantments enter":
+		return types.Enchantment, true
+	case "lands enter":
+		return types.Land, true
+	case "permanents enter":
+		return "", true
+	case "planeswalkers enter":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
 }
 
 func spanCovered(span oracle.Span, covering []oracle.Span) bool {

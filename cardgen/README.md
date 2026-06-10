@@ -54,7 +54,12 @@ Vanguard cards are excluded with explicit report reasons.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
    `game.AddCounter` instructions. Self-enter triggers support exact intervening
    conditions for kicked or cast entry and controlling one
-   permanent of a named permanent card type. Exact
+   permanent of a named permanent card type. Non-self permanent
+   enters-the-battlefield triggers lower for exact single-subject
+   (`a`/`an`/`another`, optional `nontoken` qualifier) and `one or more`
+   subject forms, with optional permanent type filter (creature, artifact,
+   enchantment, land, planeswalker, or unfiltered) and optional you-control or
+   opponent-controls controller constraints. Exact
    self-dies triggers support exact `if it had no +1/+1 counters` and
    `if it had no -1/-1 counters` conditions using the departed permanent's
    last-known information. Fixed-damage bodies preserve that permanent as the
