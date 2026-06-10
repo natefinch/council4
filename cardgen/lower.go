@@ -2378,12 +2378,16 @@ func lowerTapManaAbility(
 		)
 	}
 	if exactAnyColorManaSyntax(syntax.Tokens, costSymbol) {
-		return manaAbilityWithProperties(choiceTapManaAbility(
+		result := choiceTapManaAbility(
 			[]string{"W", "U", "B", "R", "G"},
-		), ability), nil
+		)
+		applyManaAbilityProperties(&result, ability)
+		return result, nil
 	}
 	if colors, ok := exactChoiceManaSyntax(syntax.Tokens, costSymbol); ok {
-		return manaAbilityWithProperties(choiceTapManaAbility(colors), ability), nil
+		result := choiceTapManaAbility(colors)
+		applyManaAbilityProperties(&result, ability)
+		return result, nil
 	}
 	if !exactManaSyntax(syntax.Tokens, costSymbol) {
 		return game.ManaAbility{}, executableDiagnostic(
@@ -2408,13 +2412,12 @@ func lowerTapManaAbility(
 			fmt.Sprintf("the executable source backend cannot emit mana symbol %q", ability.Effects[0].Symbol),
 		)
 	}
-	return manaAbilityWithProperties(game.TapManaAbility(manaColor), ability), nil
+	result := game.TapManaAbility(manaColor)
+	applyManaAbilityProperties(&result, ability)
+	return result, nil
 }
 
-func manaAbilityWithProperties(
-	result game.ManaAbility,
-	ability oracle.CompiledAbility,
-) game.ManaAbility {
+func applyManaAbilityProperties(result *game.ManaAbility, ability oracle.CompiledAbility) {
 	result.Text = ability.Text
 	result.Timing = lowerActivationTiming(ability.ActivationTiming)
 	if ability.Cost.Components[0].Kind == oracle.CostUntap {
@@ -2423,7 +2426,6 @@ func manaAbilityWithProperties(
 			Text: ability.Cost.Components[0].Text,
 		}}
 	}
-	return result
 }
 
 func choiceTapManaAbility(colorNames []string) game.ManaAbility {
