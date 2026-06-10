@@ -804,7 +804,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 	}
 	for i := range def.ReplacementAbilities {
 		replacement := def.ReplacementAbilities[i].Replacement
-		if replacement.TokenMultiplier <= 1 {
+		if replacement.TokenMultiplier <= 1 && replacement.CounterMultiplier <= 1 {
 			continue
 		}
 		replacement.ID = g.IDGen.Next()
@@ -937,7 +937,7 @@ func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.Pl
 	}, g, permanent, zone.None)
 	g.Battlefield = append(g.Battlefield, permanent)
 	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
-		emitCounterAddedEvent(g, permanent, counter.Lore, 0, lore)
+		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 	}
 	event := game.Event{
 		Controller:  controller,

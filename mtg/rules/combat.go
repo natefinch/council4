@@ -197,16 +197,18 @@ func applyToxic(g *game.Game, source *game.Permanent, defendingPlayer game.Playe
 		}
 		total += amount
 	}
-	g.Players[defendingPlayer].PoisonCounters += total
+	if total > 0 {
+		addCountersToPlayerControlledBy(g, effectiveController(g, source), g.Players[defendingPlayer], counter.Poison, total)
+	}
 }
 
-func markPermanentDamage(g *game.Game, permanent *game.Permanent, damage int, minusOneCounters bool) {
+func markPermanentDamage(g *game.Game, placementController game.PlayerID, permanent *game.Permanent, damage int, minusOneCounters bool) {
 	if damage <= 0 {
 		return
 	}
 	switch {
 	case minusOneCounters && permanentHasType(g, permanent, types.Creature):
-		addCountersToPermanent(g, permanent, counter.MinusOneMinusOne, damage)
+		addCountersToPermanentControlledBy(g, placementController, permanent, counter.MinusOneMinusOne, damage)
 	case permanentHasType(g, permanent, types.Planeswalker):
 		permanent.Counters.Remove(counter.Loyalty, damage)
 	case permanentHasType(g, permanent, types.Battle):
@@ -260,7 +262,7 @@ func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controlle
 	if dealt <= 0 {
 		return 0
 	}
-	markPermanentDamage(g, permanent, dealt, damageSourceUsesMinusOneCounters(g, sourceObjectID))
+	markPermanentDamage(g, controller, permanent, dealt, damageSourceUsesMinusOneCounters(g, sourceObjectID))
 	emitEvent(g, game.Event{
 		Kind:            game.EventDamageDealt,
 		SourceID:        sourceID,
