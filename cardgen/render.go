@@ -1851,10 +1851,15 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 		}
 		return structLit("game.Investigate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	case game.PrimitiveProliferate:
-		if _, ok := primitive.(game.Proliferate); !ok {
+		value, ok := primitive.(game.Proliferate)
+		if !ok {
 			return "", errors.New("render: internal error: Proliferate kind has unexpected concrete type")
 		}
-		return "game.Proliferate{}", nil
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Proliferate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	default:
 		return "", fmt.Errorf("render: unsupported standalone primitive kind %d", primitive.Kind())
 	}
