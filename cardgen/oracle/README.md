@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 3,242 / 31,835**
+**Cards supported: 3,302 / 31,834**
 
 The pipeline is:
 
@@ -132,7 +132,9 @@ creatures you control, other creatures you control, Walls, artifacts, tokens,
 and creatures your opponents control. These exact static buffs may also grant one or more supported
 non-parameterized keywords. Exact standalone grants lower for the same
 controlled-creature and attached-creature subjects, as well as controlled
-artifacts, Walls, and tokens.
+artifacts, Walls, and tokens. Source-relative grants also lower for exact
+`as long as` conditions that require controlling supported permanent types,
+subtypes, colors, or colorless permanents.
 Exact `Choose N` and `Choose one or both` modal headers lower to runtime-enforced
 minimum and maximum mode counts when every mode is otherwise supported.
 It also lowers exact `This creature can't block.`,

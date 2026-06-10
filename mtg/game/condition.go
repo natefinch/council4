@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -57,12 +58,14 @@ type Condition struct {
 }
 
 // PermanentFilter matches permanents for reusable condition predicates. Empty
-// fields are wildcards. Types and Supertypes are all required; SubtypesAny
-// matches when any listed subtype is present.
+// fields are wildcards. Types and Supertypes are all required; SubtypesAny and
+// ColorsAny match when any listed value is present.
 type PermanentFilter struct {
-	Types       []types.Card
-	Supertypes  []types.Super
-	SubtypesAny []types.Sub
+	Types          []types.Card
+	Supertypes     []types.Super
+	SubtypesAny    []types.Sub
+	ColorsAny      []color.Color
+	ExcludedColors []color.Color
 
 	// MinCount defaults to 1 when any other filter field is set.
 	MinCount int
@@ -81,6 +84,8 @@ func (f PermanentFilter) Empty() bool {
 	return len(f.Types) == 0 &&
 		len(f.Supertypes) == 0 &&
 		len(f.SubtypesAny) == 0 &&
+		len(f.ColorsAny) == 0 &&
+		len(f.ExcludedColors) == 0 &&
 		f.MinCount == 0 &&
 		!f.Power.Exists &&
 		!f.Toughness.Exists &&

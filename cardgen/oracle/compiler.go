@@ -627,6 +627,9 @@ func effectKindAt(tokens []Token, index int) EffectKind {
 	if kind == EffectCounter && !counterIsVerb(tokens, index) {
 		return EffectUnknown
 	}
+	if kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike") {
+		return EffectUnknown
+	}
 	if kind == EffectGrantKeyword && keywordGrantContinuesPTBuff(tokens, index) {
 		return EffectUnknown
 	}

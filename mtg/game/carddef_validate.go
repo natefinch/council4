@@ -398,6 +398,9 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 	for i := range continuous.AddAbilities {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("AddAbilities[%d]", i)), continuous.AddAbilities[i], nil)
 	}
+	if continuous.AffectedSource && !continuous.Group.Empty() {
+		v.add(faceName, path, CardDefIssueInvalidReference, "continuous effect sets both AffectedSource and Group")
+	}
 	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
 	}
@@ -452,6 +455,9 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	}
 	if condition.ControllerControls.MinCount < 0 {
 		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
+	}
+	if !condition.ControllerControls.Empty() {
+		v.validateSelection(faceName, appendPath(path, "ControllerControls"), condition.ControllerControls.Selection())
 	}
 	if condition.ControlsMatching.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "ControlsMatching"), condition.ControlsMatching.Val)

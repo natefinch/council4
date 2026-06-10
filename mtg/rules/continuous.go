@@ -223,23 +223,41 @@ func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType type
 
 func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues) {
 	sources := staticAbilitySources(g)
-	for _, layer := range []game.ContinuousLayer{
-		game.LayerCopy,
-		game.LayerControl,
-		game.LayerText,
-		game.LayerType,
-		game.LayerColor,
-		game.LayerAbility,
-		game.LayerPowerToughnessSet,
-		game.LayerPowerToughnessModify,
-		game.LayerPowerToughnessSwitch,
-	} {
+	for _, layer := range continuousLayers {
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
 		ordered := orderContinuousEffects(effects)
 		for i := range ordered {
 			applyContinuousEffect(g, permanent, values, &ordered[i])
 		}
 	}
+}
+
+func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop game.ContinuousLayer) permanentEffectiveValues {
+	values := basePermanentValues(g, permanent)
+	sources := staticAbilitySources(g)
+	for _, layer := range continuousLayers {
+		if layer == stop {
+			break
+		}
+		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
+		ordered := orderContinuousEffects(effects)
+		for i := range ordered {
+			applyContinuousEffect(g, permanent, &values, &ordered[i])
+		}
+	}
+	return values
+}
+
+var continuousLayers = [...]game.ContinuousLayer{
+	game.LayerCopy,
+	game.LayerControl,
+	game.LayerText,
+	game.LayerType,
+	game.LayerColor,
+	game.LayerAbility,
+	game.LayerPowerToughnessSet,
+	game.LayerPowerToughnessModify,
+	game.LayerPowerToughnessSwitch,
 }
 
 func continuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
@@ -325,9 +343,9 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 			continue
 		}
 		if !conditionSatisfied(g, conditionContext{
-			controller:             source.controller,
-			source:                 source.permanent,
-			useBaseCharacteristics: true,
+			controller:            source.controller,
+			source:                source.permanent,
+			characteristicsBefore: layer,
 		}, body.Condition) {
 			continue
 		}
@@ -336,11 +354,20 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 			if template.Layer != layer {
 				continue
 			}
+			if template.AffectedSource && !template.Group.Empty() {
+				continue
+			}
 			staticEffect := *template
 			staticEffect.SourceObjectID = sourceObjectID(source)
 			staticEffect.SourceCardID = source.cardID
 			staticEffect.Controller = source.controller
 			staticEffect.Timestamp = source.timestamp
+			if template.AffectedSource {
+				if source.permanent == nil {
+					continue
+				}
+				staticEffect.AffectedObjectID = source.permanent.ObjectID
+			}
 			if continuousEffectApplies(g, permanent, values, &staticEffect) {
 				effects = append(effects, staticEffect)
 			}
