@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,6 +59,63 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	} {
 		if !strings.Contains(string(report), wanted) {
 			t.Errorf("report missing %q:\n%s", wanted, report)
+		}
+	}
+}
+
+func TestRunReportsCompilerAndBackendDiagnostics(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	input := filepath.Join(directory, "oracle.json")
+	reportPath := filepath.Join(directory, "report.json")
+	corpus := `[
+		{
+			"id":"u",
+			"oracle_id":"ou",
+			"name":"Multiply Unsupported Bear",
+			"layout":"normal",
+			"games":["paper"],
+			"legalities":{"commander":"legal"},
+			"type_line":"Creature — Bear",
+			"oracle_text":"Dance: Draw a card.\nWhenever this creature attacks, you gain 1 life.",
+			"power":"2",
+			"toughness":"2"
+		}
+	]`
+	if err := os.WriteFile(input, []byte(corpus), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(config{
+		inputPath:  input,
+		outputRoot: filepath.Join(directory, "cards"),
+		reportPath: reportPath,
+		format:     "json",
+		workers:    1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got report
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Unsupported) != 1 {
+		t.Fatalf("unsupported cards = %d, want 1", len(got.Unsupported))
+	}
+	summaries := make(map[string]bool)
+	for _, diagnostic := range got.Unsupported[0].Diagnostics {
+		summaries[diagnostic.Summary] = true
+	}
+	for _, want := range []string{
+		"unsupported cost",
+		"unsupported activated ability",
+		"unsupported triggered ability",
+	} {
+		if !summaries[want] {
+			t.Errorf("diagnostics missing %q: %#v", want, got.Unsupported[0].Diagnostics)
 		}
 	}
 }

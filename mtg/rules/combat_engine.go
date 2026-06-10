@@ -399,10 +399,14 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 	}
 
 	g.Combat.Blockers = append(g.Combat.Blockers, declare.Blockers...)
+	if len(declare.Blockers) > 0 && g.Combat.BlockedAttackers == nil {
+		g.Combat.BlockedAttackers = make(map[id.ID]bool)
+	}
 	if len(declare.Blockers) > 0 && g.Combat.BlockerOrder == nil {
 		g.Combat.BlockerOrder = make(map[id.ID][]id.ID)
 	}
 	for _, block := range declare.Blockers {
+		g.Combat.BlockedAttackers[block.Blocking] = true
 		g.Combat.BlockerOrder[block.Blocking] = append(g.Combat.BlockerOrder[block.Blocking], block.Blocker)
 		blocker := eligibleByID[block.Blocker]
 		if blocker == nil {

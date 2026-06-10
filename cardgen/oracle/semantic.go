@@ -259,6 +259,8 @@ const (
 	StaticSubjectControlledArtifacts
 	StaticSubjectControlledTokens
 	StaticSubjectOpponentControlledCreatures
+	StaticSubjectControlledCreatureSubtype
+	StaticSubjectOtherControlledCreatureSubtype
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing
@@ -276,8 +278,11 @@ type CompiledEffect struct {
 	ToughnessDelta    CompiledSignedAmount
 	StaticSubject     StaticSubjectKind
 	StaticSubjectSpan Span
-	Symbol            string
-	Negated           bool
+	// StaticSubjectSubtype preserves the printed plural creature subtype for
+	// validation and canonicalization by the executable lowering stage.
+	StaticSubjectSubtype string
+	Symbol               string
+	Negated              bool
 }
 
 // DynamicAmountKind identifies a rules-derived effect amount.

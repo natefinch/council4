@@ -149,6 +149,16 @@ var renderTestCards = []*ScryfallCard{
 		Colors:     []string{"R"},
 		OracleText: "Render Bolt deals 3 damage to any target.",
 	},
+	{
+		Name:       "Render Ninja",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Ninja",
+		ManaCost:   "{2}{U}",
+		Colors:     []string{"U"},
+		OracleText: "Ninjutsu {1}{U}",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	},
 }
 
 func generateExecutable(t *testing.T, card *ScryfallCard) string {

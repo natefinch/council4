@@ -101,6 +101,57 @@ func TestLowerCyclingAbility(t *testing.T) {
 	}
 }
 
+func TestLowerNinjutsuAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Ninja",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Ninja",
+		OracleText: "Ninjutsu {1}{U} ({1}{U}, Return an unblocked attacker you control to hand: Put this card onto the battlefield from your hand tapped and attacking.)",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("got %d activated abilities, want 1", len(face.ActivatedAbilities))
+	}
+	ability := face.ActivatedAbilities[0]
+	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, cost.Mana{cost.O(1), cost.U}) {
+		t.Fatalf("mana cost = %#v, want {1}{U}", ability.ManaCost)
+	}
+	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0].Kind != cost.AdditionalReturnUnblockedAttacker {
+		t.Fatalf("additional costs = %#v, want return unblocked attacker", ability.AdditionalCosts)
+	}
+	if len(ability.KeywordAbilities) != 1 {
+		t.Fatalf("got %d keyword abilities, want 1", len(ability.KeywordAbilities))
+	}
+	if _, ok := ability.KeywordAbilities[0].(game.NinjutsuKeyword); !ok {
+		t.Fatalf("keyword ability = %T, want game.NinjutsuKeyword", ability.KeywordAbilities[0])
+	}
+}
+
+func TestLowerNinjutsuAbilityRejectsMalformedForms(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Ninjutsu",
+		"Ninjutsu {1}{U} extra text",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Malformed Ninja",
+				Layout:     "normal",
+				TypeLine:   "Creature — Ninja",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected malformed Ninjutsu diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerActivatedNonManaCosts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -697,6 +748,7 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 		oracleText string
 		domain     game.GroupReferenceDomain
 		excluded   bool
+		subtypes   []types.Sub
 		keywords   []game.Keyword
 	}{
 		"controlled creatures": {
@@ -719,6 +771,25 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			oracleText: "Equipped creature has shroud and wither.",
 			domain:     game.GroupDomainAttachedObject,
 			keywords:   []game.Keyword{game.Shroud, game.Wither},
+		},
+		"controlled subtype": {
+			oracleText: "Zombies you control have flying.",
+			domain:     game.GroupDomainObjectControlled,
+			subtypes:   []types.Sub{types.Zombie},
+			keywords:   []game.Keyword{game.Flying},
+		},
+		"other controlled subtype": {
+			oracleText: "Other Dinosaurs you control have haste.",
+			domain:     game.GroupDomainObjectControlled,
+			excluded:   true,
+			subtypes:   []types.Sub{types.Dinosaur},
+			keywords:   []game.Keyword{game.Haste},
+		},
+		"irregular plural subtype": {
+			oracleText: "Elves you control have vigilance.",
+			domain:     game.GroupDomainObjectControlled,
+			subtypes:   []types.Sub{types.Elf},
+			keywords:   []game.Keyword{game.Vigilance},
 		},
 	}
 	for name, test := range tests {
@@ -744,10 +815,26 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
 				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
 			}
+			if got := effect.Group.Selection().SubtypesAny; !slices.Equal(got, test.subtypes) {
+				t.Fatalf("subtypes = %v, want %v", got, test.subtypes)
+			}
 			if !slices.Equal(effect.AddKeywords, test.keywords) {
 				t.Fatalf("keywords = %v, want %v", effect.AddKeywords, test.keywords)
 			}
 		})
+	}
+}
+
+func TestRejectUnknownSubtypeStaticKeywordGrant(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Grant",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Splorps you control have haste.",
+	})
+	if len(diagnostics) == 0 || diagnostics[0].Summary != "unsupported static ability" {
+		t.Fatalf("diagnostics = %#v, want unsupported static ability", diagnostics)
 	}
 }
 
@@ -1500,6 +1587,54 @@ func TestLowerSagaChapterAbilities(t *testing.T) {
 	}
 	if got := draw.Amount; got != game.Fixed(2) {
 		t.Fatalf("draw amount = %#v, want 2", got)
+	}
+}
+
+func TestLowerReadAheadSaga(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger.)\nI — Draw a card.\nII — Draw a card.",
+	})
+	if len(face.StaticAbilities) != 1 || !game.BodyHasKeyword(face.StaticAbilities[0].Body, game.ReadAhead) {
+		t.Fatalf("static abilities = %#v, want ReadAheadStaticBody", face.StaticAbilities)
+	}
+	if len(face.ChapterAbilities) != 2 {
+		t.Fatalf("chapter abilities = %#v, want two", face.ChapterAbilities)
+	}
+}
+
+func TestLowerReadAheadRejectsNoncanonicalReminder(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Malformed Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose whichever chapter you want.)\nI — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("noncanonical Read ahead reminder unexpectedly lowered")
+	}
+}
+
+func TestLowerReadAheadRejectsMismatchedSacrificeChapter(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Mismatched Read Ahead Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger. Sacrifice after IV.)\nI — Draw a card.\nII — Draw a card.\nIII — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("mismatched Read ahead sacrifice chapter unexpectedly lowered")
 	}
 }
 

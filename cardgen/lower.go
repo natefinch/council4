@@ -141,9 +141,6 @@ func lowerFaceAbilities(
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
 		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
 	})
-	if len(diagnostics) > 0 {
-		return loweredFaceAbilities{}, diagnostics
-	}
 
 	var result loweredFaceAbilities
 	var unsupported []oracle.Diagnostic
@@ -197,6 +194,30 @@ func lowerFaceAbilities(
 				continue
 			}
 			result.SpellAbility = lowered.spellAbility
+		}
+	}
+	for _, ability := range compilation.Abilities {
+		for _, keyword := range ability.Keywords {
+			if keyword.Name != "Read ahead" {
+				continue
+			}
+			sacrificeChapter, ok := readAheadSacrificeChapter(ability.Text)
+			if !ok || sacrificeChapter == 0 {
+				continue
+			}
+			finalChapter := 0
+			for _, chapter := range result.ChapterAbilities {
+				for _, number := range chapter.Chapters {
+					finalChapter = max(finalChapter, number)
+				}
+			}
+			if sacrificeChapter != finalChapter {
+				unsupported = append(unsupported, *executableDiagnostic(
+					ability,
+					"unsupported Read ahead ability",
+					fmt.Sprintf("the reminder sacrifice chapter %d does not match final chapter %d", sacrificeChapter, finalChapter),
+				))
+			}
 		}
 	}
 	if len(unsupported) > 0 {
@@ -1292,7 +1313,7 @@ func lowerProtectionAbility(
 	return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
 }
 
-// lowerKeywordDispatch tries Enchant, Protection, Equip, and Cycling — the
+// lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, and Ninjutsu — the
 // single-keyword special cases that each produce a full abilityLowering.
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
@@ -1323,6 +1344,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	if ninjutsuAbility, ok, diag := lowerNinjutsuAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&ninjutsuAbility, ability, syntax), true, nil
 	}
 	return abilityLowering{}, false, nil
 }
@@ -1515,6 +1542,51 @@ func lowerCyclingAbility(
 	return game.CyclingActivatedAbility(manaCost), true, nil
 }
 
+func lowerNinjutsuAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.ActivatedAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Ninjutsu" {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	if keyword.Parameter == "" ||
+		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	manaCost, err := parseManaCostValue(keyword.Parameter)
+	if err != nil || len(manaCost) == 0 {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	return game.NinjutsuActivatedAbility(manaCost), true, nil
+}
+
 func lowerStaticPTBuff(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
@@ -1545,7 +1617,7 @@ func lowerStaticPTBuff(
 			"the executable source backend supports only exact fixed static creature power/toughness buffs, optionally granting supported keywords",
 		)
 	}
-	group, ok := staticSubjectGroup(effect.StaticSubject)
+	group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
 	if !ok {
 		return game.StaticAbility{}, false, nil
 	}
@@ -1606,9 +1678,13 @@ func lowerStaticKeywordGrant(
 			"the executable source backend supports only exact standalone grants of runtime-supported keywords",
 		)
 	}
-	group, ok := staticSubjectGroup(effect.StaticSubject)
+	group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
 	if !ok {
-		return game.StaticAbility{}, false, nil
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only known creature subtypes in standalone keyword grants",
+		)
 	}
 	return game.StaticAbility{
 		Text: ability.Text,
@@ -1905,7 +1981,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	}
 }
 
-func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, bool) {
+func staticSubjectGroup(subject oracle.StaticSubjectKind, subtypeText string) (game.GroupReference, bool) {
 	switch subject {
 	case oracle.StaticSubjectAttachedObject:
 		return game.AttachedObjectGroup(game.SourcePermanentReference()), true
@@ -1940,9 +2016,58 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 			RequiredTypes: []types.Card{types.Creature},
 			Controller:    game.ControllerOpponent,
 		}), true
+	case oracle.StaticSubjectControlledCreatureSubtype:
+		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{subtype}},
+		), true
+	case oracle.StaticSubjectOtherControlledCreatureSubtype:
+		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		return game.ObjectControlledGroupExcluding(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{subtype}},
+			game.SourcePermanentReference(),
+		), true
 	default:
 		return game.GroupReference{}, false
 	}
+}
+
+func knownCreatureSubtypeFromPlural(text string) (types.Sub, bool) {
+	candidates := []string{text}
+	if singular, ok := strings.CutSuffix(text, "s"); ok {
+		candidates = append(candidates, singular)
+	}
+	if stem, ok := strings.CutSuffix(text, "ies"); ok {
+		candidates = append(candidates, stem+"y")
+	}
+	if stem, ok := strings.CutSuffix(text, "ves"); ok {
+		candidates = append(candidates, stem+"f", stem+"fe")
+	}
+	if singular, ok := strings.CutSuffix(text, "es"); ok {
+		candidates = append(candidates, singular)
+	}
+	switch text {
+	case "Children":
+		candidates = append(candidates, "Child")
+	case "Mice":
+		candidates = append(candidates, "Mouse")
+	default:
+	}
+	for _, candidate := range candidates {
+		subtype := types.Sub(candidate)
+		if types.KnownSubtypeForType(types.Creature, subtype) {
+			return subtype, true
+		}
+	}
+	return "", false
 }
 
 func matchesExactStaticKeywordGrantSyntax(
@@ -2483,9 +2608,12 @@ func lowerEnterTrigger(
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
 	eventKind, supportedEvent := lowerSelfTriggerEvent(cardName, ability)
-	summary := "unsupported enter trigger"
-	detail := "the executable source backend supports only exact self-enter triggers with supported effects"
-	if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
+	summary := "unsupported triggered ability"
+	detail := "the executable source backend supports only exact self-enter and self-dies triggers with supported effects"
+	if ability.Trigger != nil && strings.Contains(ability.Trigger.Event, " enters") {
+		summary = "unsupported enter trigger"
+		detail = "the executable source backend supports only exact self-enter triggers with supported effects"
+	} else if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
 		summary = "unsupported dies trigger"
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
@@ -2872,6 +3000,13 @@ func lowerKeywordAbility(
 				"the executable source backend supports only exact \"Devoid (This card has no color.)\" abilities",
 			)
 		}
+		if keyword.Name == "Read ahead" && !isReadAheadAbility(ability.Text) {
+			return nil, executableDiagnostic(
+				ability,
+				"unsupported Read ahead ability",
+				"the executable source backend supports only the canonical Read ahead ability and reminder text",
+			)
+		}
 	}
 	if len(ability.Modes) > 0 {
 		return nil, executableDiagnostic(
@@ -2957,6 +3092,43 @@ func lowerKeywordAbility(
 		return nil, mixedKeywordDiagnostic(ability)
 	}
 	return bodies, nil
+}
+
+func isReadAheadAbility(text string) bool {
+	_, ok := readAheadSacrificeChapter(text)
+	return ok
+}
+
+func readAheadSacrificeChapter(text string) (int, bool) {
+	const prefix = "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger."
+	remainder, ok := strings.CutPrefix(text, prefix)
+	if !ok {
+		return 0, false
+	}
+	if remainder == ")" {
+		return 0, true
+	}
+	chapter, ok := strings.CutPrefix(remainder, " Sacrifice after ")
+	if !ok || !strings.HasSuffix(chapter, ".)") {
+		return 0, false
+	}
+	chapter = strings.TrimSuffix(chapter, ".)")
+	switch chapter {
+	case "I":
+		return 1, true
+	case "II":
+		return 2, true
+	case "III":
+		return 3, true
+	case "IV":
+		return 4, true
+	case "V":
+		return 5, true
+	case "VI":
+		return 6, true
+	default:
+		return 0, false
+	}
 }
 
 func lowerParameterizedStaticKeyword(keyword oracle.CompiledKeyword) (game.StaticAbility, bool) {
@@ -4981,6 +5153,7 @@ var keywordStaticBodies = map[string]loweredStaticAbility{
 	"Menace":         {Body: game.MenaceStaticBody, VarName: "game.MenaceStaticBody"},
 	"Persist":        {Body: game.PersistStaticBody, VarName: "game.PersistStaticBody"},
 	"Prowess":        {Body: game.ProwessStaticBody, VarName: "game.ProwessStaticBody"},
+	"Read ahead":     {Body: game.ReadAheadStaticBody, VarName: "game.ReadAheadStaticBody"},
 	"Reach":          {Body: game.ReachStaticBody, VarName: "game.ReachStaticBody"},
 	"Shroud":         {Body: game.ShroudStaticBody, VarName: "game.ShroudStaticBody"},
 	"Split second":   {Body: game.SplitSecondStaticBody, VarName: "game.SplitSecondStaticBody"},

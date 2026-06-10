@@ -337,6 +337,27 @@ func TestCompileDevoidAndReminder(t *testing.T) {
 	}
 }
 
+func TestCompileReadAheadAndReminder(t *testing.T) {
+	t.Parallel()
+	source := "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger.)"
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(compilation.Abilities) != 1 {
+		t.Fatalf("abilities = %#v, want one", compilation.Abilities)
+	}
+	ability := compilation.Abilities[0]
+	if len(ability.Keywords) != 1 ||
+		ability.Keywords[0].Name != "Read ahead" ||
+		ability.Keywords[0].Text != "Read ahead" {
+		t.Fatalf("keywords = %#v", ability.Keywords)
+	}
+	if len(ability.Effects) != 0 || len(ability.References) != 0 {
+		t.Fatalf("reminder text leaked semantics: %#v", ability)
+	}
+}
+
 func TestCompileEnchantKeywordParameter(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile("Enchant creature", ParseContext{})
@@ -776,9 +797,10 @@ func TestCompileStaticPTBuffSubjects(t *testing.T) {
 func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		source      string
-		wantSubject StaticSubjectKind
-		keywords    []string
+		source             string
+		wantSubject        StaticSubjectKind
+		wantSubjectSubtype string
+		keywords           []string
 	}{
 		"enchanted creature": {
 			source:      "Enchanted creature has menace.",
@@ -810,6 +832,18 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 			wantSubject: StaticSubjectControlledArtifacts,
 			keywords:    []string{"Indestructible"},
 		},
+		"controlled subtype": {
+			source:             "Zombies you control have flying.",
+			wantSubject:        StaticSubjectControlledCreatureSubtype,
+			wantSubjectSubtype: "Zombies",
+			keywords:           []string{"Flying"},
+		},
+		"other controlled subtype": {
+			source:             "Other Dinosaurs you control have haste.",
+			wantSubject:        StaticSubjectOtherControlledCreatureSubtype,
+			wantSubjectSubtype: "Dinosaurs",
+			keywords:           []string{"Haste"},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -824,6 +858,9 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 			}
 			if got := ability.Effects[0].StaticSubject; got != test.wantSubject {
 				t.Fatalf("static subject = %v, want %v", got, test.wantSubject)
+			}
+			if got := ability.Effects[0].StaticSubjectSubtype; got != test.wantSubjectSubtype {
+				t.Fatalf("static subject subtype = %q, want %q", got, test.wantSubjectSubtype)
 			}
 			if len(ability.Keywords) != len(test.keywords) {
 				t.Fatalf("keywords = %#v, want %v", ability.Keywords, test.keywords)

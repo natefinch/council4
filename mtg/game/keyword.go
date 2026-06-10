@@ -36,6 +36,11 @@ type CyclingKeyword struct {
 	Cost cost.Mana
 }
 
+// NinjutsuKeyword parameterizes Ninjutsu activation costs.
+type NinjutsuKeyword struct {
+	Cost cost.Mana
+}
+
 // KickerKeyword parameterizes Kicker additional costs and bonus instructions.
 type KickerKeyword struct {
 	Cost         cost.Mana
@@ -79,6 +84,7 @@ func (WardKeyword) isKeywordAbility()       {}
 func (EquipKeyword) isKeywordAbility()      {}
 func (EnchantKeyword) isKeywordAbility()    {}
 func (CyclingKeyword) isKeywordAbility()    {}
+func (NinjutsuKeyword) isKeywordAbility()   {}
 func (KickerKeyword) isKeywordAbility()     {}
 func (MadnessKeyword) isKeywordAbility()    {}
 func (MorphKeyword) isKeywordAbility()      {}
@@ -92,6 +98,7 @@ func (WardKeyword) keyword() Keyword           { return Ward }
 func (EquipKeyword) keyword() Keyword          { return Equip }
 func (EnchantKeyword) keyword() Keyword        { return Enchant }
 func (CyclingKeyword) keyword() Keyword        { return Cycling }
+func (NinjutsuKeyword) keyword() Keyword       { return Ninjutsu }
 func (KickerKeyword) keyword() Keyword         { return Kicker }
 func (MadnessKeyword) keyword() Keyword        { return Madness }
 func (MorphKeyword) keyword() Keyword          { return Morph }
@@ -219,6 +226,19 @@ func ActivatedBodyCyclingCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return cycling.Cost, true
+}
+
+// ActivatedBodyNinjutsuCost returns the Ninjutsu cost from an activated ability.
+func ActivatedBodyNinjutsuCost(body *ActivatedAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Ninjutsu)
+	if !ok {
+		return nil, false
+	}
+	ninjutsu, ok := ka.(NinjutsuKeyword)
+	if !ok {
+		return nil, false
+	}
+	return append(cost.Mana(nil), ninjutsu.Cost...), true
 }
 
 // ActivatedBodyEquipCost returns the Equip cost from an activated ability.

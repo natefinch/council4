@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 3,328 / 31,835**
+**Cards supported: 3,339 / 31,835**
 
 The pipeline is:
 
@@ -115,7 +115,7 @@ never substitutes guessed executable behavior for unsupported wording.
 
 The strict executable backend currently lowers plain non-parameterized
 keywords, exact `Devoid (This card has no color.)`, positive-integer Toxic, and
-mana-cost Kicker, Madness, Morph, Disguise, Ward, Cycling, and Equip. It also
+mana-cost Kicker, Madness, Morph, Disguise, Ward, Cycling, Ninjutsu, and Equip. It also
 lowers base-type Enchant, color-based Protection, supported tap and untap mana
 choices, ordinary activated abilities with exact typed costs and supported
 effect bodies, and exact trailing activation timing restrictions,
@@ -133,8 +133,8 @@ target creatures, and fixed power/toughness buffs on enchanted creature, equippe
 creatures you control, other creatures you control, Walls, artifacts, tokens,
 and creatures your opponents control. These exact static buffs may also grant one or more supported
 non-parameterized keywords. Exact standalone grants lower for the same
-controlled-creature and attached-creature subjects, as well as controlled
-artifacts, Walls, and tokens. Source-relative grants also lower for exact
+controlled-creature and attached-creature subjects, known controlled creature
+subtypes, and controlled artifacts, Walls, and tokens. Source-relative grants also lower for exact
 `as long as` conditions that require controlling supported permanent types,
 subtypes, colors, or colorless permanents.
 Exact `Choose N` and `Choose one or both` modal headers lower to runtime-enforced
