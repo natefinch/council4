@@ -14,13 +14,15 @@ func TestEngineWritesSupportedListAndInspectionManifest(t *testing.T) {
 	corpusPath := writeFixture(t, dir, "corpus.json", `[
 		{"id":"a","name":"Alpha","layout":"normal","oracle_text":"Flying"},
 		{"id":"b","name":"Beta","layout":"normal","oracle_text":"Vigilance"},
-		{"id":"g","name":"Gamma","layout":"normal","oracle_text":"Unsupported"}
+		{"id":"g","name":"Gamma","layout":"normal","oracle_text":"Unsupported"},
+		{"id":"art","name":"Alpha Art Card","layout":"art_series"}
 	]`)
 	baselinePath := writeFixture(t, dir, "baseline.json", `{
-		"card_count":3,"generated_count":1,"unsupported_count":2,
+		"card_count":4,"generated_count":1,"unsupported_count":3,
 		"unsupported":[
 			{"id":"b","name":"Beta","diagnostics":[{"summary":"unsupported static ability"}]},
-			{"id":"g","name":"Gamma","diagnostics":[{"summary":"unsupported Oracle construct"}]}
+			{"id":"g","name":"Gamma","diagnostics":[{"summary":"unsupported Oracle construct"}]},
+			{"id":"art","name":"Alpha Art Card","layout":"art_series","diagnostics":[{"summary":"unsupported card layout"}]}
 		]
 	}`)
 	currentPath := writeFixture(t, dir, "current.json", `{
@@ -67,7 +69,7 @@ func TestEngineWritesSupportedListAndInspectionManifest(t *testing.T) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		t.Fatal(err)
 	}
-	if manifest.GeneratedDelta != 1 || len(manifest.NewlySupported) != 1 {
+	if manifest.CardCount != 3 || manifest.GeneratedDelta != 1 || len(manifest.NewlySupported) != 1 {
 		t.Fatalf("manifest = %#v", manifest)
 	}
 	card := manifest.NewlySupported[0]

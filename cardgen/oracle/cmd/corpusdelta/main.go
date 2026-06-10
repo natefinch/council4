@@ -181,7 +181,12 @@ func (e *Engine) Run() error {
 	if err != nil {
 		return fmt.Errorf("reading current report: %w", err)
 	}
-	if err := validateInputs(cards, baseline, current); err != nil {
+	baseline, err = normalizeReport("baseline", cards, baseline)
+	if err != nil {
+		return err
+	}
+	current, err = normalizeReport("current", cards, current)
+	if err != nil {
 		return err
 	}
 
@@ -277,30 +282,45 @@ func readReport(path string) (compileReport, error) {
 	return report, nil
 }
 
-func validateInputs(cards map[string]cardgen.ScryfallCard, baseline, current compileReport) error {
-	if baseline.CardCount != len(cards) || current.CardCount != len(cards) {
-		return fmt.Errorf(
-			"corpus/report card counts differ: corpus=%d baseline=%d current=%d",
-			len(cards), baseline.CardCount, current.CardCount,
+func normalizeReport(name string, cards map[string]cardgen.ScryfallCard, report compileReport) (compileReport, error) {
+	includedCount := 0
+	for _, card := range cards {
+		if card.IncludedInCompilerCorpus() {
+			includedCount++
+		}
+	}
+	if report.CardCount != len(cards) && report.CardCount != includedCount {
+		return compileReport{}, fmt.Errorf(
+			"%s report card count differs from corpus: corpus=%d included=%d report=%d",
+			name, len(cards), includedCount, report.CardCount,
 		)
 	}
-	for name, report := range map[string]compileReport{"baseline": baseline, "current": current} {
-		if report.UnsupportedCount != len(report.Unsupported) ||
-			report.GeneratedCount+report.UnsupportedCount != report.CardCount {
-			return fmt.Errorf("%s report counts are inconsistent", name)
+	if report.UnsupportedCount != len(report.Unsupported) ||
+		report.GeneratedCount+report.UnsupportedCount != report.CardCount {
+		return compileReport{}, fmt.Errorf("%s report counts are inconsistent", name)
+	}
+	seen := make(map[string]bool)
+	includedUnsupported := make([]unsupportedReport, 0, len(report.Unsupported))
+	for _, unsupported := range report.Unsupported {
+		card, ok := cards[unsupported.ID]
+		if !ok {
+			return compileReport{}, fmt.Errorf("%s report contains unknown stable ID %q", name, unsupported.ID)
 		}
-		seen := make(map[string]bool)
-		for _, card := range report.Unsupported {
-			if _, ok := cards[card.ID]; !ok {
-				return fmt.Errorf("%s report contains unknown stable ID %q", name, card.ID)
-			}
-			if seen[card.ID] {
-				return fmt.Errorf("%s report repeats stable ID %q", name, card.ID)
-			}
-			seen[card.ID] = true
+		if seen[unsupported.ID] {
+			return compileReport{}, fmt.Errorf("%s report repeats stable ID %q", name, unsupported.ID)
+		}
+		seen[unsupported.ID] = true
+		if card.IncludedInCompilerCorpus() {
+			includedUnsupported = append(includedUnsupported, unsupported)
 		}
 	}
-	return nil
+	report.CardCount = includedCount
+	report.Unsupported = includedUnsupported
+	report.UnsupportedCount = len(includedUnsupported)
+	if report.GeneratedCount+report.UnsupportedCount != report.CardCount {
+		return compileReport{}, fmt.Errorf("%s report includes generated records excluded from support totals", name)
+	}
+	return report, nil
 }
 
 func buildManifest(
@@ -319,6 +339,9 @@ func buildManifest(
 	}
 	supported := make([]cardgen.ScryfallCard, 0, current.GeneratedCount)
 	for id, card := range cards {
+		if !card.IncludedInCompilerCorpus() {
+			continue
+		}
 		currentFailure, unsupported := currentUnsupported[id]
 		if !unsupported {
 			supported = append(supported, card)

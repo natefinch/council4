@@ -20,6 +20,12 @@ type ScryfallCard struct {
 	CardFaces     []ScryfallCardFace `json:"card_faces"`
 }
 
+// IncludedInCompilerCorpus reports whether a Scryfall record represents a card
+// that should contribute to generation reports and support totals.
+func (c ScryfallCard) IncludedInCompilerCorpus() bool {
+	return c.Layout != "art_series"
+}
+
 // ScryfallCardFace holds per-face Scryfall fields for multi-face cards.
 type ScryfallCardFace struct {
 	Name       string   `json:"name"`

@@ -20,6 +20,9 @@ semantic element, and meaningful source token is supported. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
+Non-playable Scryfall `art_series` records do not enter compilation reports or
+support totals.
+
 ## Compiler stages
 
 1. **Recognition (`cardgen/oracle`).** The lexer and parser preserve exact source

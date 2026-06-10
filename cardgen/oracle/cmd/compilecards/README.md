@@ -4,13 +4,16 @@
 cards in parallel, and writes deterministic Go definitions for only the cards
 whose complete rules text is supported by the executable backend.
 
+Non-playable `art_series` records are excluded from generation, reports, and
+support totals. Other unsupported layouts remain in the report.
+
 The strict backend supports the mechanic families listed in the package
 [`README`](../../README.md), including ordered spell effects, supported keyword
 templates, mana abilities, fixed quantities and targets, Surveil, Investigate,
 Proliferate, Regenerate, and Fight. Near-miss wording such as variable
 quantities, unsupported conditions or qualifiers, restricted mana, and divided
 effects is rejected. The backend never emits TODOs or partial ability
-implementations. Unsupported cards, layouts, source-generation failures,
+implementations. Unsupported cards, playable layouts, source-generation failures,
 non-ASCII package names, and filename collisions are written to the report.
 
 Writes are serialized after compilation. Existing files at matching generated

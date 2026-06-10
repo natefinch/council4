@@ -18,7 +18,8 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	corpus := `[
 		{"id":"v","oracle_id":"ov","name":"Vanilla Bear","layout":"normal","type_line":"Creature — Bear","power":"2","toughness":"2"},
 		{"id":"k","oracle_id":"ok","name":"Flying Bear","layout":"normal","type_line":"Creature — Bear","oracle_text":"Flying","power":"2","toughness":"2"},
-		{"id":"u","oracle_id":"ou","name":"Drawing Bear","layout":"normal","type_line":"Creature — Bear","oracle_text":"When this creature enters, draw a card, then discard a card.","power":"2","toughness":"2"}
+		{"id":"u","oracle_id":"ou","name":"Drawing Bear","layout":"normal","type_line":"Creature — Bear","oracle_text":"When this creature enters, draw a card, then discard a card.","power":"2","toughness":"2"},
+		{"id":"a","oracle_id":"oa","name":"Vanilla Bear Art Card","layout":"art_series","type_line":"Card"}
 	]`
 	if err := os.WriteFile(input, []byte(corpus), 0o600); err != nil {
 		t.Fatal(err)
@@ -46,6 +47,9 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(output, "d", "drawing_bear.go")); !os.IsNotExist(err) {
 		t.Fatalf("unsupported card file exists or stat failed: %v", err)
 	}
+	if _, err := os.Stat(filepath.Join(output, "v", "vanilla_bear_art_card.go")); !os.IsNotExist(err) {
+		t.Fatalf("excluded art-series file exists or stat failed: %v", err)
+	}
 	report, err := os.ReadFile(reportPath)
 	if err != nil {
 		t.Fatal(err)
@@ -59,6 +63,9 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 		if !strings.Contains(string(report), wanted) {
 			t.Errorf("report missing %q:\n%s", wanted, report)
 		}
+	}
+	if strings.Contains(string(report), "Vanilla Bear Art Card") {
+		t.Fatalf("report includes excluded art-series record:\n%s", report)
 	}
 }
 

@@ -159,6 +159,9 @@ func compileCorpus(input io.Reader, workers int) ([]result, error) {
 				decodeError <- fmt.Errorf("decoding card %d: %w", sent, err)
 				return
 			}
+			if !card.IncludedInCompilerCorpus() {
+				continue
+			}
 			jobs <- job{index: sent, card: card}
 			sent++
 		}
