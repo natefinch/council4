@@ -20,6 +20,13 @@ semantic element, and meaningful source token is supported. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
+Before compilation, `CorpusPolicy` limits the working corpus to cards that are
+legal, restricted, or banned in Standard, Pioneer, Modern, Legacy, Pauper,
+Vintage, or Commander. Playable paper token definitions are retained as a
+special exception. Alchemy, digital-only identities, memorabilia, illegal
+Un-set cards, minigames, art-series records, emblems, planes, schemes, and
+Vanguard cards are excluded with explicit report reasons.
+
 ## Compiler stages
 
 1. **Recognition (`cardgen/oracle`).** The lexer and parser preserve exact source
@@ -35,7 +42,9 @@ data, or guessed behavior.
 
 The bulk compiler detects distinct Oracle cards that map to the same filename or
 Go identifier and appends a stable Scryfall-derived suffix to both generated
-identities. Printed `CardDef.Name` values remain unchanged.
+identities. Playable tokens always use `mtg/cards/tokens/<letter>` and include
+their complete normalized Oracle UUID in both filename and Go identifier.
+Printed `CardDef.Name` values remain unchanged.
 
 `mtg/game` owns typed Card Definition data and structural validity;
 `mtg/rules` owns behavior; `cardgen` owns recognition, lowering, and rendering.
@@ -71,10 +80,12 @@ an `ImplementationID`; that escape hatch is independent of this compiler.
 
 ## Supported layouts
 
-Card Generation accepts Scryfall `normal`, `token`, `leveler`, `saga`, `class`,
-`case`, `prototype`, `host`, `augment`, `emblem`, `mutate`, `planar`, `scheme`,
-`vanguard`, `transform`, `modal_dfc`, `meld`, `double_faced_token`, and
-`reversible_card` layouts.
+The source generator can represent Scryfall `normal`, `token`, `leveler`,
+`saga`, `class`, `case`, `prototype`, `host`, `augment`, `emblem`, `mutate`,
+`planar`, `scheme`, `vanguard`, `transform`, `modal_dfc`, `meld`,
+`double_faced_token`, and `reversible_card` layouts. Corpus policy is narrower:
+it excludes nonstandard game objects such as emblems, planes, schemes, and
+Vanguard cards before source generation.
 
 Transform, modal DFC, and double-faced token cards emit front-face fields on
 `CardDef` and an optional `Back` face. Meld cards emit their front card with
@@ -91,8 +102,10 @@ one Card Definition per playable side.
   Card Definitions deterministically.
 - `ParseTypeLine(typeLine)` splits a type line into supertypes, types, and
   subtypes.
-- `CardNameToVarName`, `CardNameToFileName`, and `CardNameToPackageLetter`
-  provide deterministic source and package names.
+- `GeneratedIdentity` selects a generated card's category, package, filename,
+  variable name, and migration path. `CardNameToVarName`,
+  `CardNameToFileName`, and `CardNameToPackageLetter` provide its component
+  naming rules.
 
 Prepare layouts use `CardFace.EntersPrepared` on the creature face and
 `CardDef.Alternate` for the spell face. The generator accepts them only when

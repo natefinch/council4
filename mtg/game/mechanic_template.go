@@ -15,6 +15,43 @@ import (
 
 const tapManaChoiceKey = ChoiceKey("oracle-mana-color")
 
+// CantBlockStaticBody is the complete static ability for a creature that cannot block.
+var CantBlockStaticBody = StaticAbility{
+	Text: "This creature can't block.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantBlock,
+		AffectedSource: true,
+	}},
+}
+
+// CantBeBlockedStaticBody is the complete static ability for an unblockable creature.
+var CantBeBlockedStaticBody = StaticAbility{
+	Text: "This creature can't be blocked.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantBeBlocked,
+		AffectedSource: true,
+	}},
+}
+
+// MustAttackStaticBody is the complete static ability for a creature that must attack.
+var MustAttackStaticBody = StaticAbility{
+	Text: "This creature attacks each combat if able.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectMustAttack,
+		AffectedSource: true,
+	}},
+}
+
+// CantBeCounteredStaticBody is the complete static ability for an uncounterable spell.
+var CantBeCounteredStaticBody = StaticAbility{
+	Text:           "This spell can't be countered.",
+	ZoneOfFunction: zone.Stack,
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantBeCountered,
+		AffectedSource: true,
+	}},
+}
+
 // WardStaticAbility builds the complete static ability for Ward with a mana cost.
 func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	keywordCost := append(cost.Mana(nil), manaCost...)

@@ -5,13 +5,18 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,543 / 37,628**
+**Cards supported: 2,592 / 31,835**
 
 The pipeline is:
 
 ```text
 Oracle text -> lexer -> syntax tree -> semantic compiler -> CardFace data
 ```
+
+Playable `token` and `double_faced_token` records are generated under
+`mtg/cards/tokens/<letter>` with their complete normalized Oracle UUID in both
+the filename and Go identifier. This keeps token identities distinct from
+sanctioned cards and from same-name tokens.
 
 ## Lexer
 
@@ -107,8 +112,8 @@ its exact source span. Unknown costs receive their own warning. The compiler
 never substitutes guessed executable behavior for unsupported wording.
 
 The strict executable backend currently lowers plain non-parameterized
-keywords, mana-cost Ward, Cycling, and Equip, base-type Enchant, color-based
-Protection, supported tap mana choices, ordinary activated abilities with exact
+keywords, exact `Devoid (This card has no color.)`, mana-cost Ward, Cycling, and
+Equip, base-type Enchant, color-based Protection, supported tap mana choices, ordinary activated abilities with exact
 mana-only, tap-only, or mana-then-tap costs and supported effect bodies,
 unconditional enters-tapped replacements, fixed single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes, narrow mass
@@ -120,8 +125,13 @@ creatures you control, other creatures you control, Walls, artifacts, tokens,
 and creatures your opponents control.
 Exact `Choose N` and `Choose one or both` modal headers lower to runtime-enforced
 minimum and maximum mode counts when every mode is otherwise supported.
+It also lowers exact `This creature can't block.`,
+`This creature can't be blocked.`, `This creature attacks each combat if
+able.`, and `This spell can't be countered.` static declarations to
+source-scoped rule effects in their appropriate zones.
 Adventure, split, and exact enters-prepared layouts are supported when each
-printed face is otherwise exactly representable; these layouts keep the front face in the root
+printed face is otherwise
+exactly representable; these layouts keep the front face in the root
 `game.CardDef`, emit the second spell face as `Alternate`, and derive per-face
 colors from mana costs when Scryfall omits face colors. An exact
 `This creature enters prepared.` ability lowers to `CardFace.EntersPrepared`;

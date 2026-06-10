@@ -166,6 +166,9 @@ func classifyAbility(tokens []Token, context ParseContext) AbilityKind {
 	if replacementWording(tokens) {
 		return AbilityReplacement
 	}
+	if joinedSourceText(tokens) == "This spell can't be countered." {
+		return AbilityStatic
+	}
 	if context.InstantOrSorcery {
 		return AbilitySpell
 	}

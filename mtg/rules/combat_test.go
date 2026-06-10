@@ -255,6 +255,31 @@ func TestGoadedByTwoPlayersMustAttackRemainingNonGoadingOpponentIfAble(t *testin
 	}
 }
 
+func TestGoadDoesNotRequireAttackTaxForNonGoadingOpponent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanent(g, game.Player1)
+	attacker.Goaded = map[game.PlayerID]game.GoadStatus{game.Player2: {CreatedTurn: 1, ExpiresFor: game.Player2}}
+	for _, defender := range []game.PlayerID{game.Player3, game.Player4} {
+		g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: defender, Amount: 1})
+	}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+	want := action.DeclareAttackers([]game.AttackDeclaration{{
+		Attacker: attacker.ObjectID,
+		Target:   game.AttackTarget{Player: game.Player2},
+	}})
+	if len(legal) != 1 || !actionsEqual(legal[0], want) {
+		t.Fatalf("legal actions = %+v, want attack at goading player", legal)
+	}
+	if !engine.applyDeclareAttackers(g, game.Player1, mustDeclareAttackersPayload(t, want)) {
+		t.Fatal("applyDeclareAttackers rejected goading player when other opponents required attack taxes")
+	}
+}
+
 func TestGoadDoesNotForceIllegalAttacks(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	defender := addCombatCreaturePermanent(g, game.Player1, game.Defender)
@@ -272,6 +297,107 @@ func TestGoadDoesNotForceIllegalAttacks(t *testing.T) {
 	}
 	if !engine.applyDeclareAttackers(g, game.Player1, mustDeclareAttackersPayload(t, action.DeclareAttackers(nil))) {
 		t.Fatal("applyDeclareAttackers() rejected no attacks when goaded creature could not legally attack")
+	}
+}
+
+func TestMustAttackStaticBodyRequiresSourceToAttackIfAble(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Reckless Bear",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 3}),
+		Toughness:       opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{game.MustAttackStaticBody},
+	}})
+	otherAttacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+	for _, act := range legal {
+		declarations := mustDeclareAttackersPayload(t, act)
+		if !slices.ContainsFunc(declarations.Attackers, func(declaration game.AttackDeclaration) bool {
+			return declaration.Attacker == attacker.ObjectID
+		}) {
+			t.Fatalf("legal action omitted required attacker: %+v", declarations.Attackers)
+		}
+	}
+	otherOnly := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{{
+		Attacker: otherAttacker.ObjectID,
+		Target:   game.AttackTarget{Player: game.Player2},
+	}}))
+	if engine.applyDeclareAttackers(g, game.Player1, otherOnly) {
+		t.Fatal("applyDeclareAttackers accepted attack without required source")
+	}
+	requiredAttack := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{{
+		Attacker: attacker.ObjectID,
+		Target:   game.AttackTarget{Player: game.Player2},
+	}}))
+	if !engine.applyDeclareAttackers(g, game.Player1, requiredAttack) {
+		t.Fatal("applyDeclareAttackers rejected required source attack")
+	}
+}
+
+func TestMustAttackStaticBodyDoesNotForceIllegalAttack(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Defensive Bear",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 3}),
+		Toughness:       opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{game.DefenderStaticBody, game.MustAttackStaticBody},
+	}})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+	declarations := mustDeclareAttackersPayload(t, legal[0])
+	if len(legal) != 1 || len(declarations.Attackers) != 0 {
+		t.Fatalf("legal actions = %+v, want only no attacks", legal)
+	}
+	if !engine.applyDeclareAttackers(g, game.Player1, declarations) {
+		t.Fatal("applyDeclareAttackers rejected no attacks when required creature could not attack")
+	}
+}
+
+func TestMustAttackStaticBodyDoesNotRequirePayingAttackTax(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Reckless Bear",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 3}),
+		Toughness:       opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{game.MustAttackStaticBody},
+	}})
+	for _, defender := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: defender, Amount: 1})
+	}
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+	var noAttack action.DeclareAttackersAction
+	foundNoAttack := false
+	for _, act := range legal {
+		declarations := mustDeclareAttackersPayload(t, act)
+		if len(declarations.Attackers) == 0 {
+			noAttack = declarations
+			foundNoAttack = true
+			break
+		}
+	}
+	if !foundNoAttack {
+		t.Fatalf("legal actions = %+v, want no-attack option despite available mana", legal)
+	}
+	if !engine.applyDeclareAttackers(g, game.Player1, noAttack) {
+		t.Fatal("applyDeclareAttackers rejected declining to pay an attack tax")
 	}
 }
 
@@ -970,6 +1096,45 @@ func TestStaticRuleEffectsCanProhibitAttackingAndBlocking(t *testing.T) {
 	}
 	if canBlockWith(g, blocker, game.Player2) {
 		t.Fatal("opponent creature could block through cant-block rule effect")
+	}
+}
+
+func TestCantBlockStaticBodyProhibitsSourceFromBlocking(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	blocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Reluctant Bear",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 3}),
+		Toughness:       opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbility{game.CantBlockStaticBody},
+	}})
+	otherBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	if canBlockWith(g, blocker, game.Player2) {
+		t.Fatal("source with cannot-block static ability could block")
+	}
+	if !canBlockWith(g, otherBlocker, game.Player2) {
+		t.Fatal("cannot-block static ability affected another creature")
+	}
+}
+
+func TestCantBeBlockedStaticBodyProhibitsBlockingSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Elusive Bear",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 2}),
+		Toughness:       opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{game.CantBeBlockedStaticBody},
+	}})
+	otherAttacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	if canBlockAttacker(g, blocker, attacker) {
+		t.Fatal("source with cannot-be-blocked static ability could be blocked")
+	}
+	if !canBlockAttacker(g, blocker, otherAttacker) {
+		t.Fatal("cannot-be-blocked static ability affected another creature")
 	}
 }
 

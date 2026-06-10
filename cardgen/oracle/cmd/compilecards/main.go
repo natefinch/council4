@@ -44,15 +44,19 @@ type result struct {
 	relative    string
 	superseded  string
 	source      string
+	exclusion   cardgen.CorpusExclusionReason
 	diagnostics []oracle.Diagnostic
 	err         error
 }
 
 type report struct {
 	CardCount        int           `json:"card_count"`
+	EligibleCount    int           `json:"eligible_count"`
 	GeneratedCount   int           `json:"generated_count"`
 	UnsupportedCount int           `json:"unsupported_count"`
+	ExcludedCount    int           `json:"excluded_count"`
 	Unsupported      []unsupported `json:"unsupported"`
+	Excluded         []excluded    `json:"excluded"`
 }
 
 type unsupported struct {
@@ -61,6 +65,14 @@ type unsupported struct {
 	Name        string             `json:"name"`
 	Layout      string             `json:"layout,omitempty"`
 	Diagnostics []reportDiagnostic `json:"diagnostics"`
+}
+
+type excluded struct {
+	ID       string                        `json:"id,omitempty"`
+	OracleID string                        `json:"oracle_id,omitempty"`
+	Name     string                        `json:"name"`
+	Layout   string                        `json:"layout,omitempty"`
+	Reason   cardgen.CorpusExclusionReason `json:"reason"`
 }
 
 type reportDiagnostic struct {
@@ -188,8 +200,21 @@ func compileCorpus(input io.Reader, workers int) ([]result, error) {
 
 func compileCard(item job) result {
 	card := item.card
-	letter := cardgen.CardNameToPackageLetter(card.Name)
 	compiled := result{index: item.index, card: card}
+	if reason, excluded := (cardgen.CorpusPolicy{}).Exclusion(card); excluded {
+		compiled.exclusion = reason
+		return compiled
+	}
+	identity, err := cardgen.GeneratedIdentity(&card, false)
+	if err != nil {
+		compiled.diagnostics = []oracle.Diagnostic{{
+			Severity: oracle.SeverityWarning,
+			Summary:  "invalid generated identity",
+			Detail:   err.Error(),
+		}}
+		return compiled
+	}
+	letter := identity.PackageName
 	if len(letter) != 1 || letter[0] < 'a' || letter[0] > 'z' {
 		compiled.diagnostics = []oracle.Diagnostic{{
 			Severity: oracle.SeverityWarning,
@@ -198,9 +223,11 @@ func compileCard(item job) result {
 		}}
 		return compiled
 	}
-	compiled.relative = filepath.Join(letter, cardgen.CardNameToSafeFileName(card.Name)+".go")
+	compiled.relative = identity.RelativePath
+	compiled.superseded = identity.SupersededPath
 	compiled.source, compiled.diagnostics, compiled.err =
-		cardgen.GenerateExecutableCardSource(&card, letter)
+		(cardgen.ExecutableGenerator{IdentifierSuffix: identity.IdentifierSuffix}).
+			GenerateCardSource(&card, identity.PackageName)
 	return compiled
 }
 
@@ -273,24 +300,22 @@ func disambiguateCollisions(results []result) {
 	}
 	for index := range colliding {
 		card := &results[index].card
-		suffix := cardgen.CardDisambiguationSuffix(card)
-		if suffix == "" {
+		identity, err := cardgen.GeneratedIdentity(card, true)
+		if err != nil {
 			results[index].source = ""
 			results[index].diagnostics = []oracle.Diagnostic{{
 				Severity: oracle.SeverityWarning,
 				Summary:  "generated identity collision",
-				Detail:   "the card has no Oracle or Scryfall ID for deterministic disambiguation",
+				Detail:   err.Error(),
 			}}
 			continue
 		}
-		original := results[index].relative
-		base := strings.TrimSuffix(results[index].relative, filepath.Ext(results[index].relative))
-		results[index].relative = base + "_" + strings.ToLower(suffix) + ".go"
-		results[index].superseded = original
+		results[index].relative = identity.RelativePath
+		results[index].superseded = identity.SupersededPath
 		results[index].source, results[index].diagnostics, results[index].err =
-			(cardgen.ExecutableGenerator{IdentifierSuffix: suffix}).GenerateCardSource(
+			(cardgen.ExecutableGenerator{IdentifierSuffix: identity.IdentifierSuffix}).GenerateCardSource(
 				card,
-				filepath.Dir(results[index].relative),
+				identity.PackageName,
 			)
 	}
 	finalPaths := make(map[string]bool)
@@ -316,7 +341,7 @@ func cardIdentityKey(card *cardgen.ScryfallCard) string {
 func rejectPathCollisions(results []result) {
 	byPath := make(map[string][]int)
 	for i := range results {
-		if results[i].err == nil && len(results[i].diagnostics) == 0 {
+		if results[i].exclusion == "" && results[i].err == nil && len(results[i].diagnostics) == 0 {
 			byPath[results[i].relative] = append(byPath[results[i].relative], i)
 		}
 	}
@@ -338,7 +363,7 @@ func rejectPathCollisions(results []result) {
 func rejectIdentifierCollisions(results []result) {
 	byName := make(map[string][]int)
 	for i := range results {
-		if results[i].err != nil || len(results[i].diagnostics) > 0 {
+		if results[i].exclusion != "" || results[i].err != nil || len(results[i].diagnostics) > 0 {
 			continue
 		}
 		file, err := parser.ParseFile(
@@ -389,6 +414,17 @@ func rejectIdentifierCollisions(results []result) {
 func buildReport(results []result) report {
 	output := report{CardCount: len(results)}
 	for _, result := range results {
+		if result.exclusion != "" {
+			output.Excluded = append(output.Excluded, excluded{
+				ID:       result.card.ID,
+				OracleID: result.card.OracleID,
+				Name:     result.card.Name,
+				Layout:   result.card.Layout,
+				Reason:   result.exclusion,
+			})
+			continue
+		}
+		output.EligibleCount++
 		if result.err == nil && len(result.diagnostics) == 0 {
 			output.GeneratedCount++
 			continue
@@ -410,6 +446,7 @@ func buildReport(results []result) report {
 		})
 	}
 	output.UnsupportedCount = len(output.Unsupported)
+	output.ExcludedCount = len(output.Excluded)
 	return output
 }
 
@@ -441,6 +478,7 @@ func writeSupported(root string, results []result) error {
 	affected := make(map[string]bool)
 	finalPaths := make(map[string]bool)
 	generatedPrefixes := make(map[string]bool)
+	tokenPrefixes := make(map[string]bool)
 	for _, result := range results {
 		if result.err != nil || len(result.diagnostics) > 0 {
 			continue
@@ -448,17 +486,24 @@ func writeSupported(root string, results []result) error {
 		finalPaths[result.relative] = true
 		directory := filepath.Dir(result.relative)
 		base := cardgen.CardNameToSafeFileName(result.card.Name)
-		generatedPrefixes[filepath.Join(directory, base+"_scryfall")] = true
+		if result.card.Layout == "token" || result.card.Layout == "double_faced_token" {
+			tokenPrefixes[filepath.Join(directory, base+"_")] = true
+		} else {
+			generatedPrefixes[filepath.Join(directory, base+"_scryfall")] = true
+		}
 	}
 	for _, result := range results {
 		if result.err != nil || len(result.diagnostics) > 0 || result.superseded == "" {
 			continue
 		}
 		path := filepath.Join(root, result.superseded)
-		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		err := os.Remove(path)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("removing superseded source for %s: %w", result.card.Name, err)
 		}
-		affected[filepath.Dir(path)] = true
+		if err == nil {
+			affected[filepath.Dir(path)] = true
+		}
 	}
 	for prefix := range generatedPrefixes {
 		matches, err := filepath.Glob(filepath.Join(root, prefix+"*.go"))
@@ -479,8 +524,30 @@ func writeSupported(root string, results []result) error {
 			affected[filepath.Dir(path)] = true
 		}
 	}
+	for prefix := range tokenPrefixes {
+		matches, err := filepath.Glob(filepath.Join(root, prefix+"*.go"))
+		if err != nil {
+			return fmt.Errorf("matching generated token identity paths for %s: %w", prefix, err)
+		}
+		for _, path := range matches {
+			if !isTokenIdentityPath(path, filepath.Join(root, prefix)) {
+				continue
+			}
+			relative, err := filepath.Rel(root, path)
+			if err != nil {
+				return fmt.Errorf("resolving generated token identity path %s: %w", path, err)
+			}
+			if finalPaths[relative] {
+				continue
+			}
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("removing obsolete generated token identity path %s: %w", path, err)
+			}
+			affected[filepath.Dir(path)] = true
+		}
+	}
 	for _, result := range results {
-		if result.err != nil || len(result.diagnostics) > 0 {
+		if result.exclusion != "" || result.err != nil || len(result.diagnostics) > 0 {
 			continue
 		}
 		path := filepath.Join(root, result.relative)
@@ -502,7 +569,113 @@ func writeSupported(root string, results []result) error {
 			return err
 		}
 	}
+	return writeTokenPackages(root, results)
+}
+
+func isTokenIdentityPath(path, prefix string) bool {
+	suffix := strings.TrimSuffix(strings.TrimPrefix(path, prefix), ".go")
+	if len(suffix) != 32 {
+		return false
+	}
+	for _, r := range suffix {
+		if !strings.ContainsRune("0123456789abcdef", r) {
+			return false
+		}
+	}
+	return true
+}
+
+func writeTokenPackages(root string, results []result) error {
+	letters := make(map[string]bool)
+	for _, result := range results {
+		if result.err != nil || len(result.diagnostics) > 0 ||
+			(result.card.Layout != "token" && result.card.Layout != "double_faced_token") {
+			continue
+		}
+		letters[filepath.Base(filepath.Dir(result.relative))] = true
+	}
+	if len(letters) == 0 {
+		return nil
+	}
+	tokenRoot := filepath.Join(root, "tokens")
+	if err := os.MkdirAll(tokenRoot, 0o750); err != nil {
+		return fmt.Errorf("creating token package: %w", err)
+	}
+	rootReadme := "# Tokens\n\n" +
+		"Package `tokens` collects generated definitions for playable paper tokens. " +
+		"Token definitions live in letter subpackages and use their complete Oracle ID " +
+		"in filenames and Go identifiers so same-name tokens remain distinct.\n\n" +
+		"Tokens are not included in `cards.Registry`. In the repository tree, use " +
+		"`tokens.Cards` when all token definitions are needed.\n"
+	if err := os.WriteFile(filepath.Join(tokenRoot, "README.md"), []byte(rootReadme), 0o600); err != nil {
+		return fmt.Errorf("writing token package README: %w", err)
+	}
+	ordered := make([]string, 0, len(letters))
+	for letter := range letters {
+		ordered = append(ordered, letter)
+	}
+	slices.Sort(ordered)
+	for _, letter := range ordered {
+		doc := fmt.Sprintf(
+			"// Package %s contains generated playable token definitions.\npackage %s\n\n"+
+				"//go:generate go run github.com/natefinch/council4/cardgen/cmd/gencardlist\n",
+			letter,
+			letter,
+		)
+		docPath := filepath.Join(tokenRoot, letter, "doc.go")
+		if err := os.WriteFile(docPath, []byte(doc), 0o600); err != nil {
+			return fmt.Errorf("writing token letter package documentation: %w", err)
+		}
+		readme := fmt.Sprintf(
+			"# %s tokens\n\nPackage `%s` contains generated playable token definitions whose names begin with %s. "+
+				"Use `Cards` to iterate over every token definition in this package.\n",
+			strings.ToUpper(letter), letter, strings.ToUpper(letter),
+		)
+		path := filepath.Join(tokenRoot, letter, "README.md")
+		if err := os.WriteFile(path, []byte(readme), 0o600); err != nil {
+			return fmt.Errorf("writing token letter package README: %w", err)
+		}
+	}
+	if !isRepositoryCardsRoot(root) {
+		return nil
+	}
+
+	var builder strings.Builder
+	_, _ = builder.WriteString("// Code generated by compilecards; DO NOT EDIT.\n\n")
+	_, _ = builder.WriteString("// Package tokens provides playable token definitions.\n")
+	_, _ = builder.WriteString("package tokens\n\n")
+	_, _ = builder.WriteString("import (\n\t\"slices\"\n\n")
+	for _, letter := range ordered {
+		_, _ = fmt.Fprintf(
+			&builder,
+			"\t\"github.com/natefinch/council4/mtg/cards/tokens/%s\"\n",
+			letter,
+		)
+	}
+	_, _ = builder.WriteString(")\n\n")
+	_, _ = builder.WriteString("// Cards lists all generated playable token definitions.\n")
+	_, _ = builder.WriteString("var Cards = slices.Concat(\n")
+	for _, letter := range ordered {
+		_, _ = fmt.Fprintf(&builder, "\t%s.Cards,\n", letter)
+	}
+	_, _ = builder.WriteString(")\n")
+	formatted, err := format.Source([]byte(builder.String()))
+	if err != nil {
+		return fmt.Errorf("formatting token package: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(tokenRoot, "cards.go"), formatted, 0o600); err != nil {
+		return fmt.Errorf("writing token package: %w", err)
+	}
 	return nil
+}
+
+func isRepositoryCardsRoot(root string) bool {
+	absoluteRoot, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	repositoryRoot, err := filepath.Abs(filepath.Join("mtg", "cards"))
+	return err == nil && absoluteRoot == repositoryRoot
 }
 
 func writeCardList(directory string) error {
@@ -613,10 +786,12 @@ func writeReport(path, reportFormat string, output report) error {
 	case "text":
 		if _, err := fmt.Fprintf(
 			writer,
-			"cards: %d\ngenerated: %d\nunsupported: %d\n",
+			"cards: %d\neligible: %d\ngenerated: %d\nunsupported: %d\nexcluded: %d\n",
 			output.CardCount,
+			output.EligibleCount,
 			output.GeneratedCount,
 			output.UnsupportedCount,
+			output.ExcludedCount,
 		); err != nil {
 			return fmt.Errorf("writing text report summary: %w", err)
 		}
@@ -631,6 +806,11 @@ func writeReport(path, reportFormat string, output report) error {
 				); err != nil {
 					return fmt.Errorf("writing text report: %w", err)
 				}
+			}
+		}
+		for _, card := range output.Excluded {
+			if _, err := fmt.Fprintf(writer, "%s\texcluded\t%s\n", card.Name, card.Reason); err != nil {
+				return fmt.Errorf("writing text report exclusion: %w", err)
 			}
 		}
 	default:

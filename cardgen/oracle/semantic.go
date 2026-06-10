@@ -179,6 +179,9 @@ const (
 	EffectAddMana
 	EffectAttach
 	EffectCast
+	EffectCantBeBlocked
+	EffectCantBeCountered
+	EffectCantBlock
 	EffectCounter
 	EffectCreate
 	EffectDealDamage
@@ -196,6 +199,7 @@ const (
 	EffectLose
 	EffectMill
 	EffectModifyPT
+	EffectMustAttack
 	EffectPut
 	EffectProliferate
 	EffectRegenerate

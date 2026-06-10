@@ -70,6 +70,9 @@ func compileAbility(
 		conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 	}
 	compiled.Conditions = compileConditions(conditionTokens, ability.Kind == AbilityTriggered)
+	if ability.Text == "This creature attacks each combat if able." {
+		compiled.Conditions = nil
+	}
 	compiled.Effects = compileEffects(
 		parseSentences(source, body),
 		ability.Reminders,
@@ -365,6 +368,10 @@ func compileEffects(
 	var effects []CompiledEffect
 	for _, sentence := range sentences {
 		tokens := semanticTokens(sentence.Tokens, reminders, quoted)
+		if effect, ok := compileStaticRuleEffect(sentence, tokens); ok {
+			effects = append(effects, effect)
+			continue
+		}
 		duration := compileDuration(tokens)
 		staticSubject, staticSubjectSpan := compileStaticSubject(tokens)
 		for i, token := range tokens {
@@ -392,6 +399,54 @@ func compileEffects(
 
 	}
 	return effects
+}
+
+func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect, bool) {
+	var kind EffectKind
+	var verb string
+	var selector CompiledSelector
+	switch sentence.Text {
+	case "This creature can't block.":
+		kind = EffectCantBlock
+		verb = "block"
+		selector = CompiledSelector{
+			Kind: SelectorCreature,
+			Raw:  "this creature",
+		}
+	case "This creature can't be blocked.":
+		kind = EffectCantBeBlocked
+		verb = "blocked"
+		selector = CompiledSelector{
+			Kind: SelectorCreature,
+			Raw:  "this creature",
+		}
+	case "This creature attacks each combat if able.":
+		kind = EffectMustAttack
+		verb = "attacks"
+		selector = CompiledSelector{
+			Kind: SelectorCreature,
+			Raw:  "this creature",
+		}
+	case "This spell can't be countered.":
+		kind = EffectCantBeCountered
+		verb = "countered"
+		selector = CompiledSelector{Raw: "this spell"}
+	default:
+		return CompiledEffect{}, false
+	}
+	for _, token := range tokens {
+		if equalWord(token, verb) {
+			return CompiledEffect{
+				Kind:     kind,
+				Span:     sentence.Span,
+				Text:     sentence.Text,
+				VerbSpan: token.Span,
+				Selector: selector,
+				Negated:  kind != EffectMustAttack,
+			}, true
+		}
+	}
+	return CompiledEffect{}, false
 }
 
 func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span) {
@@ -662,7 +717,7 @@ func compileDuration(tokens []Token) DurationKind {
 var keywordNames = map[string]string{
 	"affinity": "Affinity", "annihilator": "Annihilator", "cascade": "Cascade",
 	"companion": "Companion", "convoke": "Convoke", "cycling": "Cycling",
-	"deathtouch": "Deathtouch", "defender": "Defender", "delve": "Delve",
+	"deathtouch": "Deathtouch", "defender": "Defender", "delve": "Delve", "devoid": "Devoid",
 	"disguise": "Disguise", "double strike": "Double strike", "emerge": "Emerge",
 	"enchant": "Enchant", "equip": "Equip", "escape": "Escape",
 	"eternalize": "Eternalize", "exalted": "Exalted", "first strike": "First strike",

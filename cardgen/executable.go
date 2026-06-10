@@ -209,6 +209,9 @@ func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (g
 	for i := range abilities.StaticAbilities {
 		face.StaticAbilities = append(face.StaticAbilities, abilities.StaticAbilities[i].Body)
 	}
+	if faceHasKeyword(&face, game.Devoid) {
+		face.Colors = nil
+	}
 	face.ActivatedAbilities = abilities.ActivatedAbilities
 	face.ManaAbilities = abilities.ManaAbilities
 	face.LoyaltyAbilities = abilities.LoyaltyAbilities
@@ -216,6 +219,15 @@ func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (g
 	face.ReplacementAbilities = abilities.ReplacementAbilities
 	face.SpellAbility = abilities.SpellAbility
 	return face, nil
+}
+
+func faceHasKeyword(face *game.CardFace, keyword game.Keyword) bool {
+	for i := range face.StaticAbilities {
+		if game.BodyHasKeyword(face.StaticAbilities[i], keyword) {
+			return true
+		}
+	}
+	return false
 }
 
 func identityValue(letters []string) color.Identity {

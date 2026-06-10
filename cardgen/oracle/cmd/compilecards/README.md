@@ -1,8 +1,9 @@
 # compilecards
 
-`compilecards` stream-decodes a Scryfall Oracle Cards bulk-data array, compiles
-cards in parallel, and writes deterministic Go definitions for only the cards
-whose complete rules text is supported by the executable backend.
+`compilecards` stream-decodes a Scryfall Oracle Cards bulk-data array, applies
+the repository corpus-eligibility policy, compiles eligible cards in parallel,
+and writes deterministic Go definitions for only the cards whose complete rules
+text is supported by the executable backend.
 
 The strict backend supports the mechanic families listed in the package
 [`README`](../../README.md), including ordered spell effects, supported keyword
@@ -13,11 +14,24 @@ effects is rejected. The backend never emits TODOs or partial ability
 implementations. Unsupported cards, layouts, source-generation failures, and
 non-ASCII package names are written to the report. Distinct Oracle cards that
 share a generated path or Go identifier receive stable Scryfall-derived suffixes
-without changing their printed names.
+without changing their printed names. Playable `token` and `double_faced_token`
+records instead always go under `tokens/<letter>` and use their complete
+normalized Oracle UUID in the filename and Go identifier. A missing or malformed
+token Oracle ID fails closed as an unsupported generated identity.
+
+The eligible corpus contains cards that are legal, restricted, or banned in
+Standard, Pioneer, Modern, Legacy, Pauper, Vintage, or Commander, plus playable
+paper token definitions. The report explicitly excludes Alchemy, digital-only
+identities, memorabilia, cards with no qualifying paper legality, minigames,
+art-series records, emblems, planes, schemes, and Vanguard cards.
 
 Writes are serialized after compilation. Existing files at matching generated
-paths are overwritten. Each affected letter package's `cards.go` registry is
-then regenerated from all CardDef declarations in that directory.
+paths are overwritten. Each affected letter package's `cards.go` list is then
+regenerated from all CardDef declarations in that directory. Token generation
+also writes package documentation. When targeting the repository's `mtg/cards`
+tree it writes a `tokens.Cards` aggregate; temporary output keeps independently
+buildable token letter packages. Tokens remain outside the ordinary card-name
+registry.
 
 For a safe full-corpus trial, target a temporary cards root:
 
@@ -52,6 +66,12 @@ Flags:
   `runtime.NumCPU()`.
 
 ## Report diagnostics
+
+The report keeps `card_count` as the total input count and separates it into
+`eligible_count` and `excluded_count`. Eligible cards are then partitioned into
+`generated_count` and `unsupported_count`. Each excluded record includes a
+stable reason. This keeps non-playable objects out of compiler-support metrics
+without silently dropping them.
 
 Each unsupported card has one or more source-spanned diagnostics. A card can
 have several diagnostics when it has several unsupported abilities or when the
@@ -104,6 +124,7 @@ semantic compiler and executable backend both identify limitations.
 | `generated path collision` | Multiple corpus records still map to the same generated filename after stable identity disambiguation. |
 | `generated identifier collision` | Multiple generated files still declare the same Go `CardDef` variable after stable identity disambiguation. |
 | `generated identity collision` | A colliding card has neither an Oracle ID nor Scryfall ID from which to derive a stable suffix. |
+| `invalid generated identity` | A playable token is missing the valid Oracle UUID required for its stable token namespace identity. |
 | `source generation failed` | Semantic support checks passed, but mechanical source formatting or generation failed, commonly because a mana symbol or another mechanical field is unsupported. |
 
 Lexer or parser errors such as `unclosed quote`, `unclosed parenthesis`, and

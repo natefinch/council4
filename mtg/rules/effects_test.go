@@ -673,6 +673,46 @@ func TestCounterEffectCannotCounterProtectedCreatureSpell(t *testing.T) {
 	}
 }
 
+func TestCounterEffectCannotCounterSourceSpell(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	protectedID := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected Spell",
+		Types:           []types.Card{types.Sorcery},
+		StaticAbilities: []game.StaticAbility{game.CantBeCounteredStaticBody},
+	}})
+	g.Players[game.Player2].Hand.Remove(protectedID)
+	protected := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   protectedID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(protected)
+
+	ordinaryID := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Ordinary Spell",
+		Types: []types.Card{types.Sorcery},
+	}})
+	g.Players[game.Player2].Hand.Remove(ordinaryID)
+	ordinary := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   ordinaryID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(ordinary)
+
+	if counterStackObject(g, protected.ID) {
+		t.Fatal("source spell was countered despite its can't-be-countered rule effect")
+	}
+	if _, ok := stackObjectByID(g, protected.ID); !ok {
+		t.Fatal("protected source spell left the stack")
+	}
+	if !counterStackObject(g, ordinary.ID) {
+		t.Fatal("source-scoped rule effect protected another spell")
+	}
+}
+
 func TestExcessDamageCanFeedLaterEffectAmount(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

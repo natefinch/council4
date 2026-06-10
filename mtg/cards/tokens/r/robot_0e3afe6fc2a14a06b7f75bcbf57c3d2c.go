@@ -1,0 +1,24 @@
+package r
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Robot
+//
+// Type: Token Artifact Creature — Robot
+//
+// Oracle text:
+
+// RobotToken0e3afe6fc2a14a06b7f75bcbf57c3d2c is the card definition for Robot.
+var RobotToken0e3afe6fc2a14a06b7f75bcbf57c3d2c = &game.CardDef{
+	CardFace: game.CardFace{
+		Name:      "Robot",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Subtypes:  []types.Sub{types.Robot},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	},
+}

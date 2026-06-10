@@ -16,9 +16,9 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	output := filepath.Join(directory, "cards")
 	reportPath := filepath.Join(directory, "report.json")
 	corpus := `[
-		{"id":"v","oracle_id":"ov","name":"Vanilla Bear","layout":"normal","type_line":"Creature — Bear","power":"2","toughness":"2"},
-		{"id":"k","oracle_id":"ok","name":"Flying Bear","layout":"normal","type_line":"Creature — Bear","oracle_text":"Flying","power":"2","toughness":"2"},
-		{"id":"u","oracle_id":"ou","name":"Drawing Bear","layout":"normal","type_line":"Creature — Bear","oracle_text":"When this creature enters, draw a card, then discard a card.","power":"2","toughness":"2"}
+		{"id":"v","oracle_id":"ov","name":"Vanilla Bear","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature — Bear","power":"2","toughness":"2"},
+		{"id":"k","oracle_id":"ok","name":"Flying Bear","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature — Bear","oracle_text":"Flying","power":"2","toughness":"2"},
+		{"id":"u","oracle_id":"ou","name":"Drawing Bear","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature — Bear","oracle_text":"When this creature enters, draw a card, then discard a card.","power":"2","toughness":"2"}
 	]`
 	if err := os.WriteFile(input, []byte(corpus), 0o600); err != nil {
 		t.Fatal(err)
@@ -62,11 +62,85 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	}
 }
 
+func TestRunExcludesCardsOutsideCorpusPolicy(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	input := filepath.Join(directory, "oracle.json")
+	reportPath := filepath.Join(directory, "report.json")
+	corpus := `[
+		{"id":"paper","name":"Paper Card","layout":"normal","games":["paper"],"legalities":{"legacy":"banned"},"type_line":"Creature","power":"1","toughness":"1"},
+		{"id":"funny","name":"Legal Funny Card","layout":"normal","set_type":"funny","games":["paper"],"legalities":{"legacy":"legal"},"type_line":"Creature","power":"1","toughness":"1"},
+		{"id":"token","oracle_id":"11111111-1111-1111-1111-111111111111","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Creature — Bear","power":"2","toughness":"2"},
+		{"id":"digital-print","name":"Paper Identity Digital Printing","layout":"normal","set_type":"masters","games":["mtgo"],"digital":true,"legalities":{"legacy":"legal"},"type_line":"Creature","power":"1","toughness":"1"},
+		{"id":"alchemy","name":"Alchemy Card","layout":"normal","set_type":"alchemy","games":["arena"],"legalities":{"legacy":"legal"},"type_line":"Creature","power":"1","toughness":"1"},
+		{"id":"digital","name":"Digital Card","layout":"normal","set_type":"expansion","games":["arena"],"legalities":{"historic":"legal"},"type_line":"Creature","power":"1","toughness":"1"},
+		{"id":"memorabilia","name":"Challenge Card","layout":"normal","set_type":"memorabilia","games":["paper"],"type_line":"Sorcery"},
+		{"id":"unset","name":"Illegal Funny Card","layout":"normal","set_type":"funny","games":["paper"],"type_line":"Creature","power":"1","toughness":"1"},
+		{"id":"scheme","name":"Scheme Card","layout":"scheme","set_type":"archenemy","games":["paper"],"legalities":{"legacy":"legal"},"type_line":"Scheme"},
+		{"id":"minigame","name":"Minigame Card","layout":"token","set_type":"minigame","games":["paper"],"type_line":"Card"}
+	]`
+	if err := os.WriteFile(input, []byte(corpus), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(config{
+		inputPath:  input,
+		outputRoot: filepath.Join(directory, "cards"),
+		reportPath: reportPath,
+		format:     "json",
+		workers:    2,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		`"card_count": 10`,
+		`"eligible_count": 4`,
+		`"generated_count": 4`,
+		`"excluded_count": 6`,
+		`"reason": "alchemy"`,
+		`"reason": "digital-only"`,
+		`"reason": "memorabilia"`,
+		`"reason": "no-sanctioned-paper-legality"`,
+		`"reason": "special-format"`,
+	} {
+		if !strings.Contains(string(data), wanted) {
+			t.Errorf("report missing %q:\n%s", wanted, data)
+		}
+	}
+}
+
+func TestWriteTextReportListsEachExclusionOnce(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "report.txt")
+	output := report{
+		CardCount:     2,
+		EligibleCount: 1,
+		ExcludedCount: 1,
+		Excluded: []excluded{{
+			Name:   "Excluded Card",
+			Reason: cardgen.ExcludeMemorabilia,
+		}},
+	}
+	if err := writeReport(path, "text", output); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Count(string(data), "Excluded Card\texcluded\tmemorabilia"); got != 1 {
+		t.Fatalf("exclusion count = %d, report:\n%s", got, data)
+	}
+}
+
 func TestCompileCorpusDisambiguatesPathAndIdentifierCollisions(t *testing.T) {
 	t.Parallel()
 	input := `[
-		{"id":"one","oracle_id":"oracle-one","name":"Same Name","layout":"normal","type_line":"Creature"},
-		{"id":"two","oracle_id":"oracle-two","name":"Same Name","layout":"normal","type_line":"Creature"}
+		{"id":"one","oracle_id":"oracle-one","name":"Same Name","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature"},
+		{"id":"two","oracle_id":"oracle-two","name":"Same Name","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature"}
 	]`
 	results, err := compileCorpus(strings.NewReader(input), 2)
 	if err != nil {
@@ -91,6 +165,103 @@ func TestCompileCorpusDisambiguatesPathAndIdentifierCollisions(t *testing.T) {
 		}
 		if !strings.Contains(result.source, `"Same Name"`) {
 			t.Fatalf("source changed printed name:\n%s", result.source)
+		}
+	}
+}
+
+func TestCompileCorpusCategorizesTokensByOracleIdentity(t *testing.T) {
+	t.Parallel()
+	input := `[
+		{"id":"card","oracle_id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","name":"Bear","layout":"normal","games":["paper"],"legalities":{"commander":"legal"},"type_line":"Creature — Bear","power":"2","toughness":"2"},
+		{"id":"token-one","oracle_id":"11111111-1111-1111-1111-111111111111","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Token Creature — Bear","power":"2","toughness":"2"},
+		{"id":"token-two","oracle_id":"22222222-2222-2222-2222-222222222222","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Token Creature — Bear","power":"1","toughness":"1"}
+	]`
+	results, err := compileCorpus(strings.NewReader(input), 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := map[string]string{
+		filepath.Join("b", "bear.go"):                                            "var Bear =",
+		filepath.Join("tokens", "b", "bear_11111111111111111111111111111111.go"): "var BearToken11111111111111111111111111111111 =",
+		filepath.Join("tokens", "b", "bear_22222222222222222222222222222222.go"): "var BearToken22222222222222222222222222222222 =",
+	}
+	for _, result := range results {
+		if result.err != nil || len(result.diagnostics) != 0 {
+			t.Fatalf("result = %#v", result)
+		}
+		variable, ok := wanted[result.relative]
+		if !ok {
+			t.Fatalf("unexpected relative path %q", result.relative)
+		}
+		if !strings.Contains(result.source, "package b") || !strings.Contains(result.source, variable) {
+			t.Fatalf("source for %s:\n%s", result.relative, result.source)
+		}
+		delete(wanted, result.relative)
+	}
+	if len(wanted) != 0 {
+		t.Fatalf("missing generated paths: %v", wanted)
+	}
+}
+
+func TestCompileCorpusRejectsInvalidTokenOracleID(t *testing.T) {
+	t.Parallel()
+	input := `[
+		{"id":"token","oracle_id":"invalid","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Token Creature — Bear","power":"2","toughness":"2"}
+	]`
+	results, err := compileCorpus(strings.NewReader(input), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 || len(results[0].diagnostics) != 1 ||
+		results[0].diagnostics[0].Summary != "invalid generated identity" {
+		t.Fatalf("results = %#v", results)
+	}
+}
+
+func TestWriteSupportedMigratesAndReconcilesTokenPaths(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	ordinaryPath := filepath.Join(root, "b", "bear.go")
+	obsoleteTokenPath := filepath.Join(root, "tokens", "b", "bear_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.go")
+	for _, path := range []string{ordinaryPath, obsoleteTokenPath} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("package b\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	input := `[
+		{"id":"token","oracle_id":"11111111-1111-1111-1111-111111111111","name":"Bear","layout":"token","set_type":"token","games":["paper"],"type_line":"Token Creature — Bear","power":"2","toughness":"2"}
+	]`
+	results, err := compileCorpus(strings.NewReader(input), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeSupported(root, results); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{ordinaryPath, obsoleteTokenPath} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("obsolete path %s still exists or stat failed: %v", path, err)
+		}
+	}
+	finalPath := filepath.Join(
+		root,
+		"tokens",
+		"b",
+		"bear_11111111111111111111111111111111.go",
+	)
+	if _, err := os.Stat(finalPath); err != nil {
+		t.Fatalf("generated token source missing: %v", err)
+	}
+	for _, path := range []string{
+		filepath.Join(root, "tokens", "README.md"),
+		filepath.Join(root, "tokens", "b", "README.md"),
+		filepath.Join(root, "tokens", "b", "cards.go"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("token package file %s missing: %v", path, err)
 		}
 	}
 }

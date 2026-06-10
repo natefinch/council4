@@ -210,7 +210,10 @@ func (r Renderer) writeCardDef(
 	hints []faceRenderHints,
 ) error {
 	varName := CardNameToVarName(def.Name) + r.IdentifierSuffix
-	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
+	if r.IdentifierSuffix != "" {
+		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
+	}
+	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -249,7 +252,10 @@ func (r Renderer) writeCardDef(
 
 func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def *game.CardDef, layout string, hints faceRenderHints) error {
 	varName := CardNameToVarName(def.Name) + r.IdentifierSuffix
-	_, _ = fmt.Fprintf(b, "\nvar %s = &game.CardDef{\n", varName)
+	if r.IdentifierSuffix != "" {
+		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
+	}
+	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -1562,6 +1568,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 	switch kw {
 	case game.KeywordNone:
 		return "game.KeywordNone", nil
+	case game.Devoid:
+		return "game.Devoid", nil
 	case game.Deathtouch:
 		return "game.Deathtouch", nil
 	case game.Defender:

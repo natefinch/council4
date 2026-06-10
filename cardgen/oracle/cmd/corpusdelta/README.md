@@ -5,7 +5,8 @@ Oracle compiler expansion. It:
 
 1. runs `compilecards` into a clean `.cardwork` output directory;
 2. compares the previous and current reports by stable Scryfall card ID;
-3. verifies report counts and every newly generated source path;
+3. verifies input, eligible, excluded, generated, and unsupported report counts
+   and every newly generated source path, including categorized token paths;
 4. regenerates `docs/supported.md`;
 5. writes a deterministic JSON inspection manifest containing Oracle text,
    generated source paths, regressions, and diagnostic-count changes; and
@@ -39,3 +40,6 @@ Flags:
 - `-validate`: test and vet generated packages. Default `true`.
 
 Use `-compile=false` only when inspecting an existing report and generated tree.
+Reports made before explicit corpus exclusions remain readable: their
+`card_count` is both the input and eligible count, and their excluded set is
+empty.

@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -702,18 +700,21 @@ func isLegalAttackTarget(g *game.Game, attackerController game.PlayerID, target 
 	return false
 }
 
-func declareAttackersSatisfiesGoad(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, eligibleByID map[id.ID]*game.Permanent) bool {
+func (combatEngine) declareAttackersSatisfiesRequirements(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, eligibleByID map[id.ID]*game.Permanent) bool {
 	declared := make(map[id.ID]game.AttackTarget, len(declarations))
 	for _, declaration := range declarations {
 		declared[declaration.Attacker] = declaration.Target
 	}
 	for _, attacker := range eligibleByID {
 		target, isAttacking := declared[attacker.ObjectID]
-		if !isGoaded(attacker) {
+		if !attackerMustAttack(g, attacker) {
 			continue
 		}
 		if !isAttacking {
-			return false
+			if requiredAttackerCanAttackWithoutTax(g, playerID, attacker) {
+				return false
+			}
+			continue
 		}
 		if !goadAllowsAttackTarget(g, playerID, attacker, target) {
 			return false
@@ -722,52 +723,77 @@ func declareAttackersSatisfiesGoad(g *game.Game, playerID game.PlayerID, declara
 	return true
 }
 
-func hasGoadedEligibleAttacker(attackers []*game.Permanent) bool {
-	return slices.ContainsFunc(attackers, isGoaded)
+func requiredAttackerCanAttackWithoutTax(g *game.Game, playerID game.PlayerID, attacker *game.Permanent) bool {
+	_, ok := preferredRequiredAttackTarget(g, playerID, attacker)
+	return ok
 }
 
-func preferredGoadAttackDeclarations(g *game.Game, playerID game.PlayerID, attackers []*game.Permanent) []game.AttackDeclaration {
+func preferredRequiredAttackTarget(g *game.Game, playerID game.PlayerID, attacker *game.Permanent) (game.AttackTarget, bool) {
+	for _, target := range legalAttackTargets(g, playerID) {
+		if !canAttackTarget(g, attacker, target) || !goadAllowsAttackTarget(g, playerID, attacker, target) {
+			continue
+		}
+		declaration := []game.AttackDeclaration{{
+			Attacker: attacker.ObjectID,
+			Target:   target,
+		}}
+		if _, taxed := (combatEngine{}).attackTaxCost(g, declaration); !taxed {
+			return target, true
+		}
+	}
+	return game.AttackTarget{}, false
+}
+
+func preferredRequiredAttackDeclarations(g *game.Game, playerID game.PlayerID, attackers []*game.Permanent) []game.AttackDeclaration {
 	declarations := make([]game.AttackDeclaration, 0, len(attackers))
 	for _, attacker := range attackers {
-		target, ok := preferredGoadAttackTarget(g, playerID, attacker)
+		if !attackerMustAttack(g, attacker) {
+			continue
+		}
+		target, ok := preferredRequiredAttackTarget(g, playerID, attacker)
 		if !ok {
-			if isGoaded(attacker) {
-				return nil
-			}
 			continue
 		}
 		declarations = append(declarations, game.AttackDeclaration{
 			Attacker: attacker.ObjectID,
-			Target: game.AttackTarget{
-				Player: target,
-			},
+			Target:   target,
 		})
 	}
 	return declarations
 }
 
-func preferredGoadAttackTarget(g *game.Game, playerID game.PlayerID, attacker *game.Permanent) (game.PlayerID, bool) {
-	opponents := aliveOpponents(g, playerID)
-	for _, opponent := range opponents {
-		target := game.AttackTarget{Player: opponent}
-		if goadAllowsAttackTarget(g, playerID, attacker, target) {
-			return opponent, true
-		}
-	}
-	if len(opponents) == 0 {
-		return 0, false
-	}
-	return opponents[0], true
+func attackerMustAttack(g *game.Game, attacker *game.Permanent) bool {
+	return isGoaded(attacker) || ruleEffectRequiresAttack(g, attacker)
 }
 
 func goadAllowsAttackTarget(g *game.Game, playerID game.PlayerID, attacker *game.Permanent, target game.AttackTarget) bool {
 	if !isLegalAttackTarget(g, playerID, target) {
 		return false
 	}
-	if !isGoaded(attacker) || !hasNonGoadingOpponent(g, playerID, attacker) {
+	if !isGoaded(attacker) || !canAttackNonGoadingOpponentWithoutTax(g, playerID, attacker) {
 		return true
 	}
-	return !wasGoadedBy(attacker, target.Player)
+	return target.IsPlayerAttack() && !wasGoadedBy(attacker, target.Player)
+}
+
+func canAttackNonGoadingOpponentWithoutTax(g *game.Game, playerID game.PlayerID, attacker *game.Permanent) bool {
+	for _, opponent := range aliveOpponents(g, playerID) {
+		if wasGoadedBy(attacker, opponent) {
+			continue
+		}
+		target := game.AttackTarget{Player: opponent}
+		if !canAttackTarget(g, attacker, target) {
+			continue
+		}
+		declaration := []game.AttackDeclaration{{
+			Attacker: attacker.ObjectID,
+			Target:   target,
+		}}
+		if _, taxed := (combatEngine{}).attackTaxCost(g, declaration); !taxed {
+			return true
+		}
+	}
+	return false
 }
 
 func legalAttackTargets(g *game.Game, attackerController game.PlayerID) []game.AttackTarget {
@@ -800,15 +826,6 @@ func attackTargetPermanent(g *game.Game, target game.AttackTarget) (*game.Perman
 	default:
 		return nil, false
 	}
-}
-
-func hasNonGoadingOpponent(g *game.Game, playerID game.PlayerID, attacker *game.Permanent) bool {
-	for _, opponent := range aliveOpponents(g, playerID) {
-		if !wasGoadedBy(attacker, opponent) {
-			return true
-		}
-	}
-	return false
 }
 
 func isGoaded(permanent *game.Permanent) bool {
