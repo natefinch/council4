@@ -39,7 +39,9 @@ Vanguard cards are excluded with explicit report reasons.
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
    Parameterized Kicker, Madness, Morph, Disguise, and Toxic lines lower into
    their corresponding sealed `game.KeywordAbility` values; unsupported
-   parameter forms remain fail-closed. Exact `X` quantities and common target
+   parameter forms remain fail-closed. Exact static power/toughness bonuses may
+   also grant supported keywords through separate layer-6 and layer-7
+   continuous effects. Exact `X` quantities and common target
    restrictions lower into runtime quantities and structured target predicates.
    Ordered effect clauses retain independent target specifications and references.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed

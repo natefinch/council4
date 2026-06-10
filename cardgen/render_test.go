@@ -215,6 +215,46 @@ func TestRenderUnsupportedReplacementErrors(t *testing.T) {
 	}
 }
 
+func TestRenderUnsupportedAbilityLayerFieldsErrors(t *testing.T) {
+	t.Parallel()
+	tests := map[string]game.ContinuousEffect{
+		"unsupported field": {
+			Layer:          game.LayerAbility,
+			Group:          game.BattlefieldGroup(game.Selection{}),
+			RemoveKeywords: []game.Keyword{game.Flying},
+		},
+		"PT field in ability layer": {
+			Layer:      game.LayerAbility,
+			Group:      game.BattlefieldGroup(game.Selection{}),
+			PowerDelta: 1,
+		},
+		"keyword field in PT layer": {
+			Layer:       game.LayerPowerToughnessModify,
+			Group:       game.BattlefieldGroup(game.Selection{}),
+			AddKeywords: []game.Keyword{game.Flying},
+		},
+	}
+	for name, effect := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			def := &game.CardDef{
+				CardFace: game.CardFace{
+					Name:  "Test",
+					Types: []types.Card{types.Enchantment},
+					StaticAbilities: []game.StaticAbility{{
+						ContinuousEffects: []game.ContinuousEffect{effect},
+					}},
+				},
+			}
+			card := &ScryfallCard{Name: "Test", Layout: "normal", TypeLine: "Enchantment"}
+			_, err := Renderer{}.RenderCardSource(card, []*game.CardDef{def}, []faceRenderHints{{}}, "cards")
+			if err == nil {
+				t.Fatal("expected error for incompatible continuous-effect fields")
+			}
+		})
+	}
+}
+
 // TestRenderHintDivergenceErrors verifies the renderer refuses to use a
 // static-ability VarName hint whose recorded body diverges from the validated
 // CardDef value, returning a divergence error instead of emitting a wrong var.

@@ -204,9 +204,10 @@ func lowerExecutableAbility(
 		return abilityLowering{
 			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
 			consumed: semanticConsumption{
-				effects: 1,
+				effects:  1,
+				keywords: len(ability.Keywords),
 			},
-			sourceSpans: []oracle.Span{ability.Effects[0].Span},
+			sourceSpans: staticPTBuffSourceSpans(ability, syntax),
 		}, nil
 	}
 	switch ability.Kind {
@@ -1352,7 +1353,6 @@ func lowerStaticPTBuff(
 		ability.Effects[0].Duration != oracle.DurationNone ||
 		!ability.Effects[0].PowerDelta.Known ||
 		!ability.Effects[0].ToughnessDelta.Known ||
-		len(ability.Keywords) != 0 ||
 		len(ability.Targets) != 0 ||
 		len(ability.Conditions) != 0 ||
 		len(ability.References) != 0 ||
@@ -1362,38 +1362,90 @@ func lowerStaticPTBuff(
 		ability.AbilityWord != "" {
 		return game.StaticAbility{}, false, nil
 	}
-	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []oracle.Span{ability.Effects[0].Span}) ||
-			spanCoveredByDelimited(token.Span, syntax.Reminders) {
-			continue
-		}
-		return game.StaticAbility{}, true, executableDiagnostic(
-			ability,
-			"unsupported static ability",
-			"the executable source backend supports only exact fixed static creature power/toughness buffs",
-		)
-	}
 	effect := ability.Effects[0]
-	if !matchesExactStaticPTBuffSyntax(syntax, effect) {
+	keywords, keywordsOK := mixedStaticKeywords(ability.Keywords)
+	if !keywordsOK ||
+		(len(keywords) == 0 && !matchesExactStaticPTBuffSyntax(syntax, effect)) ||
+		(len(keywords) > 0 && !matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, ability.Keywords)) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported static ability",
-			"the executable source backend supports only exact fixed static creature power/toughness buffs",
+			"the executable source backend supports only exact fixed static creature power/toughness buffs, optionally granting supported keywords",
 		)
 	}
 	group, ok := staticSubjectGroup(effect.StaticSubject)
 	if !ok {
 		return game.StaticAbility{}, false, nil
 	}
+	continuousEffects := []game.ContinuousEffect{{
+		Layer:          game.LayerPowerToughnessModify,
+		Group:          group,
+		PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
+		ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
+	}}
+	if len(keywords) > 0 {
+		continuousEffects = append(continuousEffects, game.ContinuousEffect{
+			Layer:       game.LayerAbility,
+			Group:       group,
+			AddKeywords: keywords,
+		})
+	}
 	return game.StaticAbility{
-		Text: ability.Text,
-		ContinuousEffects: []game.ContinuousEffect{{
-			Layer:          game.LayerPowerToughnessModify,
-			Group:          group,
-			PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
-			ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
-		}},
+		Text:              ability.Text,
+		ContinuousEffects: continuousEffects,
 	}, true, nil
+}
+
+func staticPTBuffSourceSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
+	spans := make([]oracle.Span, 0, 1+len(ability.Keywords)+len(syntax.Reminders))
+	spans = append(spans, ability.Effects[0].Span)
+	for _, keyword := range ability.Keywords {
+		spans = append(spans, keyword.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return spans
+}
+
+func mixedStaticKeywords(keywords []oracle.CompiledKeyword) ([]game.Keyword, bool) {
+	result := make([]game.Keyword, 0, len(keywords))
+	for _, keyword := range keywords {
+		if keyword.Parameter != "" {
+			return nil, false
+		}
+		body, ok := keywordStaticBodies[keyword.Name]
+		if !ok || len(body.Body.KeywordAbilities) != 1 {
+			return nil, false
+		}
+		simple, ok := body.Body.KeywordAbilities[0].(game.SimpleKeyword)
+		if !ok || !mixedStaticKeywordImplemented(simple.Kind) {
+			return nil, false
+		}
+		result = append(result, simple.Kind)
+	}
+	return result, true
+}
+
+func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
+	switch keyword {
+	case game.Deathtouch,
+		game.Defender,
+		game.DoubleStrike,
+		game.FirstStrike,
+		game.Flying,
+		game.Haste,
+		game.Hexproof,
+		game.Indestructible,
+		game.Lifelink,
+		game.Menace,
+		game.Reach,
+		game.Trample,
+		game.Vigilance:
+		return true
+	default:
+		return false
+	}
 }
 
 func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, bool) {
@@ -1441,28 +1493,124 @@ func matchesExactStaticPTBuffSyntax(
 	effect oracle.CompiledEffect,
 ) bool {
 	tokens := syntaxSemanticTokens(syntax)
+	prefixLength, ok := matchesStaticPTBuffPrefix(tokens, effect)
+	return ok &&
+		len(tokens) == prefixLength+1 &&
+		tokens[prefixLength].Kind == oracle.Period
+}
+
+func matchesExactStaticPTBuffWithKeywordsSyntax(
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	prefixLength, ok := matchesStaticPTBuffPrefix(tokens, effect)
+	if !ok ||
+		len(tokens) < prefixLength+4 ||
+		!equalTokenWord(tokens[prefixLength], "and") ||
+		!equalTokenWord(tokens[prefixLength+1], staticPTBuffKeywordVerb(tokens, effect)) ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return false
+	}
+	return matchesExactKeywordList(tokens[prefixLength+2:len(tokens)-1], keywords)
+}
+
+func staticPTBuffKeywordVerb(tokens []oracle.Token, effect oracle.CompiledEffect) string {
+	if effect.StaticSubject == oracle.StaticSubjectAttachedObject ||
+		(effect.StaticSubject == oracle.StaticSubjectControlledWalls &&
+			len(tokens) > 0 &&
+			equalTokenWord(tokens[0], "each")) {
+		return "has"
+	}
+	return "have"
+}
+
+func matchesExactKeywordList(tokens []oracle.Token, keywords []oracle.CompiledKeyword) bool {
+	elements := make([]string, 0, len(tokens))
+	lastKeyword := -1
+	for _, token := range tokens {
+		keywordIndex := -1
+		for i, keyword := range keywords {
+			if spanCovered(token.Span, []oracle.Span{keyword.Span}) {
+				keywordIndex = i
+				break
+			}
+		}
+		if keywordIndex >= 0 {
+			if keywordIndex != lastKeyword {
+				elements = append(elements, "keyword")
+				lastKeyword = keywordIndex
+			}
+			continue
+		}
+		lastKeyword = -1
+		switch {
+		case token.Kind == oracle.Comma:
+			elements = append(elements, "comma")
+		case equalTokenWord(token, "and"):
+			elements = append(elements, "and")
+		default:
+			return false
+		}
+	}
+	if len(keywords) == 1 {
+		return slices.Equal(elements, []string{"keyword"})
+	}
+	if len(keywords) == 2 {
+		return slices.Equal(elements, []string{"keyword", "and", "keyword"})
+	}
+	position := 0
+	for keywordIndex := range keywords {
+		if position >= len(elements) || elements[position] != "keyword" {
+			return false
+		}
+		position++
+		if keywordIndex == len(keywords)-1 {
+			return position == len(elements)
+		}
+		if keywordIndex == len(keywords)-2 {
+			if position < len(elements) && elements[position] == "comma" {
+				position++
+			}
+			if position >= len(elements) || elements[position] != "and" {
+				return false
+			}
+			position++
+			continue
+		}
+		if position >= len(elements) || elements[position] != "comma" {
+			return false
+		}
+		position++
+	}
+	return false
+}
+
+func matchesStaticPTBuffPrefix(
+	tokens []oracle.Token,
+	effect oracle.CompiledEffect,
+) (int, bool) {
 	switch effect.StaticSubject {
 	case oracle.StaticSubjectAttachedObject:
-		return len(tokens) == 9 &&
+		return 8, len(tokens) >= 8 &&
 			(equalTokenWord(tokens[0], "enchanted") || equalTokenWord(tokens[0], "equipped")) &&
 			equalTokenWord(tokens[1], "creature") &&
 			equalTokenWord(tokens[2], "gets") &&
 			tokensMatchSignedAmount(tokens[3], tokens[4], effect.PowerDelta) &&
 			tokens[5].Kind == oracle.Slash &&
-			tokensMatchSignedAmount(tokens[6], tokens[7], effect.ToughnessDelta) &&
-			tokens[8].Kind == oracle.Period
+			tokensMatchSignedAmount(tokens[6], tokens[7], effect.ToughnessDelta)
 	case oracle.StaticSubjectControlledCreatures:
-		return len(tokens) == 10 &&
+		return 9, len(tokens) >= 9 &&
 			equalTokenWord(tokens[0], "creatures") &&
 			equalTokenWord(tokens[1], "you") &&
 			equalTokenWord(tokens[2], "control") &&
 			equalTokenWord(tokens[3], "get") &&
 			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
 			tokens[6].Kind == oracle.Slash &&
-			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta) &&
-			tokens[9].Kind == oracle.Period
+			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta)
 	case oracle.StaticSubjectOtherControlledCreatures:
-		return len(tokens) == 11 &&
+		return 10, len(tokens) >= 10 &&
 			equalTokenWord(tokens[0], "other") &&
 			equalTokenWord(tokens[1], "creatures") &&
 			equalTokenWord(tokens[2], "you") &&
@@ -1470,42 +1618,39 @@ func matchesExactStaticPTBuffSyntax(
 			equalTokenWord(tokens[4], "get") &&
 			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
 			tokens[7].Kind == oracle.Slash &&
-			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta) &&
-			tokens[10].Kind == oracle.Period
+			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta)
 	case oracle.StaticSubjectControlledWalls:
 		offset := 0
 		noun := "walls"
 		verb := "get"
-		if len(tokens) == 11 && equalTokenWord(tokens[0], "each") {
+		if len(tokens) > 0 && equalTokenWord(tokens[0], "each") {
 			offset = 1
 			noun = "wall"
 			verb = "gets"
 		}
-		return len(tokens) == 10+offset &&
+		return 9 + offset, len(tokens) >= 9+offset &&
 			equalTokenWord(tokens[offset], noun) &&
 			equalTokenWord(tokens[offset+1], "you") &&
 			equalTokenWord(tokens[offset+2], "control") &&
 			equalTokenWord(tokens[offset+3], verb) &&
 			tokensMatchSignedAmount(tokens[offset+4], tokens[offset+5], effect.PowerDelta) &&
 			tokens[offset+6].Kind == oracle.Slash &&
-			tokensMatchSignedAmount(tokens[offset+7], tokens[offset+8], effect.ToughnessDelta) &&
-			tokens[offset+9].Kind == oracle.Period
+			tokensMatchSignedAmount(tokens[offset+7], tokens[offset+8], effect.ToughnessDelta)
 	case oracle.StaticSubjectControlledArtifacts, oracle.StaticSubjectControlledTokens:
 		noun := "artifacts"
 		if effect.StaticSubject == oracle.StaticSubjectControlledTokens {
 			noun = "tokens"
 		}
-		return len(tokens) == 10 &&
+		return 9, len(tokens) >= 9 &&
 			equalTokenWord(tokens[0], noun) &&
 			equalTokenWord(tokens[1], "you") &&
 			equalTokenWord(tokens[2], "control") &&
 			equalTokenWord(tokens[3], "get") &&
 			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
 			tokens[6].Kind == oracle.Slash &&
-			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta) &&
-			tokens[9].Kind == oracle.Period
+			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta)
 	case oracle.StaticSubjectOpponentControlledCreatures:
-		return len(tokens) == 11 &&
+		return 10, len(tokens) >= 10 &&
 			equalTokenWord(tokens[0], "creatures") &&
 			equalTokenWord(tokens[1], "your") &&
 			equalTokenWord(tokens[2], "opponents") &&
@@ -1513,10 +1658,9 @@ func matchesExactStaticPTBuffSyntax(
 			equalTokenWord(tokens[4], "get") &&
 			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
 			tokens[7].Kind == oracle.Slash &&
-			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta) &&
-			tokens[10].Kind == oracle.Period
+			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta)
 	default:
-		return false
+		return 0, false
 	}
 }
 

@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 3,092 / 31,834**
+**Cards supported: 3,149 / 31,834**
 
 The pipeline is:
 
@@ -127,7 +127,8 @@ and mill, fixed +1/+1 and -1/-1 counter placement on one target permanent,
 one-target tap, untap, and regeneration, exact fights between two
 target creatures, and fixed power/toughness buffs on enchanted creature, equipped creature,
 creatures you control, other creatures you control, Walls, artifacts, tokens,
-and creatures your opponents control.
+and creatures your opponents control. These exact static buffs may also grant
+one or more supported non-parameterized keywords.
 Exact `Choose N` and `Choose one or both` modal headers lower to runtime-enforced
 minimum and maximum mode counts when every mode is otherwise supported.
 It also lowers exact `This creature can't block.`,
