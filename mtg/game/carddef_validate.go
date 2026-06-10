@@ -287,7 +287,24 @@ func (v *cardDefValidator) validateInstructionSequence(faceName, path string, se
 				faceName,
 				appendPath(instructionPath, "Primitive.Trigger.Content"),
 				delayed.Trigger.Content,
-				targetSpecs,
+				nil,
+			)
+		}
+		if emblem, ok := seq[i].Primitive.(CreateEmblem); ok {
+			for j, ability := range emblem.EmblemAbilities {
+				v.validateAbilityBody(
+					faceName,
+					appendPath(instructionPath, fmt.Sprintf("Primitive.EmblemAbilities[%d]", j)),
+					ability,
+					nil,
+				)
+			}
+		}
+		if replacement, ok := seq[i].Primitive.(CreateReplacement); ok && replacement.Replacement != nil {
+			v.validateReplacementEffect(
+				faceName,
+				appendPath(instructionPath, "Primitive.Replacement"),
+				replacement.Replacement,
 			)
 		}
 	}
@@ -461,6 +478,13 @@ func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string
 	v.validateSelection(faceName, appendPath(path, "Selection"), selection)
 	if selection.Player != PlayerAny {
 		v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "controlled-permanent Selection cannot use a player relation")
+	}
+}
+
+func (v *cardDefValidator) validateReplacementEffect(faceName, path string, replacement *ReplacementEffect) {
+	if replacement.Condition.Exists {
+		condition := replacement.Condition.Val
+		v.validateCondition(faceName, appendPath(path, "Condition"), &condition, nil)
 	}
 }
 

@@ -226,6 +226,69 @@ func TestValidateCardDefChecksDelayedTriggerInstructionCondition(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefRejectsDelayedTriggerConditionUsingEnclosingTarget(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Unavailable Delayed Trigger Target",
+		OracleText: "Target creature gets +1/+1. At the beginning of the next end step, draw a card.",
+		SpellAbility: opt.Val(Mode{
+			Targets: []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
+			Sequence: []Instruction{{
+				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Timing: DelayedAtBeginningOfNextEndStep,
+					Content: Mode{
+						Sequence: []Instruction{{
+							Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
+							Condition: opt.Val(EffectCondition{Condition: opt.Val(Condition{
+								Object: opt.Val(TargetPermanentReference(0)),
+							})}),
+						}},
+					}.Ability(),
+				}},
+			}},
+		}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueTargetIndexOutOfRange) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueTargetIndexOutOfRange)
+	}
+}
+
+func TestValidateCardDefChecksNestedEmblemAbility(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Emblem",
+		OracleText: "You get an emblem.",
+		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+			Primitive: CreateEmblem{EmblemAbilities: []Ability{StaticAbility{
+				Condition: opt.Val(Condition{ControllerLifeAtLeast: -1}),
+			}}},
+		}}}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
+func TestValidateCardDefChecksNestedReplacementCondition(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Replacement",
+		OracleText: "Create a replacement effect.",
+		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+			Primitive: CreateReplacement{Replacement: &ReplacementEffect{
+				MatchEvent: EventPermanentEnteredBattlefield,
+				Condition:  opt.Val(Condition{ControllerLifeAtLeast: -1}),
+			}},
+		}}}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+}
+
 func TestValidateCardDefReportsInvalidTargetSpec(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Target Spec",
