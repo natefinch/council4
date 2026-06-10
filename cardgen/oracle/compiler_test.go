@@ -474,6 +474,7 @@ func TestCompileFixedEffectValues(t *testing.T) {
 			symbol: "{G}",
 		},
 	}
+
 	for source, test := range tests {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
@@ -494,6 +495,188 @@ func TestCompileFixedEffectValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCompileDynamicEffectAmounts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		context    ParseContext
+		kind       DynamicAmountKind
+		form       DynamicAmountForm
+		multiplier int
+		selector   SelectorKind
+		controller ControllerKind
+		text       string
+	}{
+		{"Swarm deals damage equal to the number of creatures you control to any target.", ParseContext{CardName: "Swarm", InstantOrSorcery: true}, DynamicAmountCount, DynamicAmountEqual, 1, SelectorCreature, ControllerYou, "equal to the number of creatures you control"},
+		{"Swarm deals damage equal to twice the number of lands on the battlefield to any target.", ParseContext{CardName: "Swarm", InstantOrSorcery: true}, DynamicAmountCount, DynamicAmountEqual, 2, SelectorLand, ControllerAny, "equal to twice the number of lands on the battlefield"},
+		{"You gain 2 life for each opponent you have.", ParseContext{InstantOrSorcery: true}, DynamicAmountOpponentCount, DynamicAmountForEach, 2, SelectorUnknown, ControllerAny, "for each opponent you have"},
+		{"You gain life equal to your life total.", ParseContext{InstantOrSorcery: true}, DynamicAmountControllerLife, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to your life total"},
+		{"You gain X life, where X is your life total.", ParseContext{InstantOrSorcery: true}, DynamicAmountControllerLife, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is your life total"},
+		{"When this creature dies, it deals damage equal to its power to any target.", ParseContext{CardName: "Devil"}, DynamicAmountSourcePower, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to its power"},
+		{"{T}: Put X +1/+1 counters on target creature, where X is Druid's power.", ParseContext{CardName: "Druid"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Druid's power"},
+		{"{T}: Put X +1/+1 counters on target creature, where X is Fight Bear's power.", ParseContext{CardName: "Fight Bear"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Fight Bear's power"},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, test.context)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			amount := compilation.Abilities[0].Effects[0].Amount
+			if amount.DynamicKind != test.kind ||
+				amount.DynamicForm != test.form ||
+				amount.Multiplier != test.multiplier ||
+				amount.Selector.Kind != test.selector ||
+				amount.Selector.Controller != test.controller ||
+				amount.Text != test.text {
+				t.Fatalf("amount = %#v tokens = %#v", amount, compilation.Syntax.Abilities[0].Tokens)
+			}
+			if test.kind == DynamicAmountSourcePower && amount.ReferenceSpan == (Span{}) {
+				t.Fatal("source-power amount has no reference span")
+			}
+		})
+	}
+}
+
+func TestCompileDynamicEffectAmountsRejectsAmbiguousSubjects(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Swarm deals damage equal to the number of cards in your hand to any target.",
+		"Swarm deals damage equal to the number of creatures you control plus one to any target.",
+		"You gain 2 life for each opponent and creature.",
+		"Swarm deals damage equal to creatures you control to any target.",
+		"You gain X life, where X is opponent.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(source, ParseContext{
+				CardName:         "Swarm",
+				InstantOrSorcery: true,
+			})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if amount := compilation.Abilities[0].Effects[0].Amount; amount.DynamicKind != DynamicAmountNone || amount.Known {
+				t.Fatalf("amount = %#v, want unsupported", amount)
+			}
+		})
+	}
+}
+
+func TestCompileDynamicEffectAmountsRejectsNumberDisagreement(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Draw a card for each creatures you control.",
+		"Swarm deals damage equal to the number of creature you control to any target.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(source, ParseContext{
+				CardName:         "Swarm",
+				InstantOrSorcery: true,
+			})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if amount := compilation.Abilities[0].Effects[0].Amount; amount.DynamicKind != DynamicAmountNone || amount.Known {
+				t.Fatalf("amount = %#v, want unsupported", amount)
+			}
+		})
+	}
+}
+
+func TestCompileEffectAmountsAreClauseLocal(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		check  func(*testing.T, []CompiledEffect)
+	}{
+		{
+			name:   "fixed then dynamic effect",
+			source: "You gain 2 life, then draw a card for each creature you control.",
+			check: func(t *testing.T, effects []CompiledEffect) {
+				t.Helper()
+				assertFixedEffectAmount(t, effects, EffectGain, 2)
+				assertDynamicEffectAmount(t, effects, EffectDraw, DynamicAmountCount)
+			},
+		},
+		{
+			name:   "dynamic then fixed effect",
+			source: "Draw a card for each creature you control, then you gain 2 life.",
+			check: func(t *testing.T, effects []CompiledEffect) {
+				t.Helper()
+				assertDynamicEffectAmount(t, effects, EffectDraw, DynamicAmountCount)
+				assertFixedEffectAmount(t, effects, EffectGain, 2)
+			},
+		},
+		{
+			name:   "and separates effects",
+			source: "Draw a card for each creature you control and gain 2 life.",
+			check: func(t *testing.T, effects []CompiledEffect) {
+				t.Helper()
+				assertDynamicEffectAmount(t, effects, EffectDraw, DynamicAmountCount)
+				assertFixedEffectAmount(t, effects, EffectGain, 2)
+			},
+		},
+		{
+			name:   "fixed before condition formula",
+			source: "You gain 2 life if the number of creatures you control is greater than 3.",
+			check: func(t *testing.T, effects []CompiledEffect) {
+				t.Helper()
+				assertFixedEffectAmount(t, effects, EffectGain, 2)
+			},
+		},
+		{
+			name:   "dynamic before condition amount",
+			source: "Draw a card for each creature you control unless your life total is 2.",
+			check: func(t *testing.T, effects []CompiledEffect) {
+				t.Helper()
+				assertDynamicEffectAmount(t, effects, EffectDraw, DynamicAmountCount)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			test.check(t, compilation.Abilities[0].Effects)
+		})
+	}
+}
+
+func assertFixedEffectAmount(t *testing.T, effects []CompiledEffect, kind EffectKind, value int) {
+	t.Helper()
+	for _, effect := range effects {
+		if effect.Kind == kind {
+			if !effect.Amount.Known ||
+				effect.Amount.Value != value ||
+				effect.Amount.DynamicKind != DynamicAmountNone {
+				t.Fatalf("%v amount = %#v, want fixed %d", kind, effect.Amount, value)
+			}
+			return
+		}
+	}
+	t.Fatalf("effects = %#v, missing %v", effects, kind)
+}
+
+func assertDynamicEffectAmount(t *testing.T, effects []CompiledEffect, kind EffectKind, dynamicKind DynamicAmountKind) {
+	t.Helper()
+	for _, effect := range effects {
+		if effect.Kind == kind {
+			if effect.Amount.Known || effect.Amount.DynamicKind != dynamicKind {
+				t.Fatalf("%v amount = %#v, want dynamic %v", kind, effect.Amount, dynamicKind)
+			}
+			return
+		}
+	}
+	t.Fatalf("effects = %#v, missing %v", effects, kind)
 }
 
 func TestCompileStaticPTBuffSubjects(t *testing.T) {

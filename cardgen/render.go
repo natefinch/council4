@@ -1269,9 +1269,9 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveDraw, game.PrimitiveDiscard, game.PrimitiveMill,
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
 		game.PrimitiveLoseLife:
-		return r.renderPlayerAmountPrimitive(primitive)
+		return r.renderPlayerAmountPrimitive(ctx, primitive)
 	case game.PrimitiveInvestigate, game.PrimitiveProliferate:
-		return r.renderStandalonePrimitive(primitive)
+		return r.renderStandalonePrimitive(ctx, primitive)
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
 		game.PrimitiveExile:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
@@ -1294,7 +1294,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		if !ok {
 			return "", errors.New("render: internal error: ModifyPT kind has unexpected concrete type")
 		}
-		return r.renderModifyPT(&value)
+		return r.renderModifyPT(ctx, &value)
 	case game.PrimitiveFight:
 		return r.renderFightPrimitive(primitive)
 	case game.PrimitiveChoose:
@@ -1398,8 +1398,12 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 		return "", err
 	}
 	ctx.need(importCounter)
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
 	return structLit("game.AddCounter", []string{
-		fmt.Sprintf("Amount: %s,", renderQuantity(value.Amount)),
+		fmt.Sprintf("Amount: %s,", amount),
 		fmt.Sprintf("Object: %s,", object),
 		fmt.Sprintf("CounterKind: %s,", kind),
 	}), nil
@@ -1414,8 +1418,12 @@ func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive
 	if err != nil {
 		return "", err
 	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
 	fields := []string{
-		fmt.Sprintf("Amount: %s,", renderQuantity(value.Amount)),
+		fmt.Sprintf("Amount: %s,", amount),
 		fmt.Sprintf("Recipient: %s,", recipient),
 	}
 	if value.DamageSource.Exists {
@@ -1429,7 +1437,7 @@ func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive
 	return structLit("game.Damage", fields), nil
 }
 
-func (r Renderer) renderPlayerAmountPrimitive(primitive game.Primitive) (string, error) {
+func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	var typeName string
 	var amount game.Quantity
 	var player game.PlayerReference
@@ -1483,19 +1491,21 @@ func (r Renderer) renderPlayerAmountPrimitive(primitive game.Primitive) (string,
 	if err != nil {
 		return "", err
 	}
-	return r.renderAmountPlayer(typeName, amount, rendered), nil
+	return r.renderAmountPlayer(ctx, typeName, amount, rendered)
 }
 
-func (Renderer) renderStandalonePrimitive(primitive game.Primitive) (string, error) {
+func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	switch primitive.Kind() {
 	case game.PrimitiveInvestigate:
 		value, ok := primitive.(game.Investigate)
 		if !ok {
 			return "", errors.New("render: internal error: Investigate kind has unexpected concrete type")
 		}
-		return structLit("game.Investigate", []string{
-			fmt.Sprintf("Amount: %s,", renderQuantity(value.Amount)),
-		}), nil
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Investigate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	case game.PrimitiveProliferate:
 		if _, ok := primitive.(game.Proliferate); !ok {
 			return "", errors.New("render: internal error: Proliferate kind has unexpected concrete type")
@@ -1582,11 +1592,20 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 	}), nil
 }
 
-func (Renderer) renderAmountPlayer(typeName string, amount game.Quantity, player string) string {
+func (r Renderer) renderAmountPlayer(
+	ctx *renderCtx,
+	typeName string,
+	amount game.Quantity,
+	player string,
+) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, amount)
+	if err != nil {
+		return "", err
+	}
 	return structLit(typeName, []string{
-		fmt.Sprintf("Amount: %s,", renderQuantity(amount)),
+		fmt.Sprintf("Amount: %s,", renderedAmount),
 		fmt.Sprintf("Player: %s,", player),
-	})
+	}), nil
 }
 
 func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object game.ObjectReference, group game.GroupReference) (string, error) {
@@ -1604,8 +1623,12 @@ func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object ga
 	return structLit(typeName, []string{fmt.Sprintf("Object: %s,", rendered)}), nil
 }
 
-func (Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, error) {
-	fields := []string{fmt.Sprintf("Amount: %s,", renderQuantity(value.Amount))}
+func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, error) {
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Amount: %s,", amount)}
 	if value.ManaColor != "" {
 		ctx.need(importMana)
 		colorLiteral, err := renderManaColor(value.ManaColor)
@@ -1620,7 +1643,7 @@ func (Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, erro
 	return structLit("game.AddMana", fields), nil
 }
 
-func (r Renderer) renderModifyPT(value *game.ModifyPT) (string, error) {
+func (r Renderer) renderModifyPT(ctx *renderCtx, value *game.ModifyPT) (string, error) {
 	object, err := r.renderObjectReference(value.Object)
 	if err != nil {
 		return "", err
@@ -1629,10 +1652,18 @@ func (r Renderer) renderModifyPT(value *game.ModifyPT) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	power, err := r.renderQuantity(ctx, value.PowerDelta)
+	if err != nil {
+		return "", err
+	}
+	toughness, err := r.renderQuantity(ctx, value.ToughnessDelta)
+	if err != nil {
+		return "", err
+	}
 	return structLit("game.ModifyPT", []string{
 		fmt.Sprintf("Object: %s,", object),
-		fmt.Sprintf("PowerDelta: %s,", renderQuantity(value.PowerDelta)),
-		fmt.Sprintf("ToughnessDelta: %s,", renderQuantity(value.ToughnessDelta)),
+		fmt.Sprintf("PowerDelta: %s,", power),
+		fmt.Sprintf("ToughnessDelta: %s,", toughness),
 		fmt.Sprintf("Duration: %s,", duration),
 	}), nil
 }
@@ -2441,16 +2472,85 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	return structLit("", fields), nil
 }
 
-func renderQuantity(quantity game.Quantity) string {
-	if dynamic := quantity.DynamicAmount(); dynamic.Exists &&
-		dynamic.Val.Kind == game.DynamicAmountX {
-		fields := []string{"Kind: game.DynamicAmountX,"}
-		if dynamic.Val.Multiplier != 0 {
-			fields = append(fields, fmt.Sprintf("Multiplier: %d,", dynamic.Val.Multiplier))
-		}
-		return fmt.Sprintf("game.Dynamic(%s)", structLit("game.DynamicAmount", fields))
+func (r Renderer) renderQuantity(ctx *renderCtx, quantity game.Quantity) (string, error) {
+	dynamic := quantity.DynamicAmount()
+	if !dynamic.Exists {
+		return fmt.Sprintf("game.Fixed(%d)", quantity.Value()), nil
 	}
-	return fmt.Sprintf("game.Fixed(%d)", quantity.Value())
+	kind, err := renderDynamicAmountKind(dynamic.Val.Kind)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
+	if dynamic.Val.Constant != 0 {
+		fields = append(fields, fmt.Sprintf("Constant: %d,", dynamic.Val.Constant))
+	}
+	if dynamic.Val.Multiplier != 0 {
+		fields = append(fields, fmt.Sprintf("Multiplier: %d,", dynamic.Val.Multiplier))
+	}
+	if dynamic.Val.Kind == game.DynamicAmountTargetCounters || dynamic.Val.CounterKind != 0 {
+		counterKind, err := renderCounterKind(dynamic.Val.CounterKind)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		fields = append(fields, fmt.Sprintf("CounterKind: %s,", counterKind))
+	}
+	if !dynamic.Val.Group.Empty() {
+		group, err := r.renderGroupReference(ctx, dynamic.Val.Group)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Group: %s,", group))
+	}
+	if dynamic.Val.Object.Kind() != game.ObjectReferenceNone {
+		object, err := r.renderObjectReference(dynamic.Val.Object)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Object: %s,", object))
+	}
+	if dynamic.Val.ResultKey != "" {
+		fields = append(fields, fmt.Sprintf("ResultKey: game.ResultKey(%q),", string(dynamic.Val.ResultKey)))
+	}
+	return fmt.Sprintf("game.Dynamic(%s)", structLit("game.DynamicAmount", fields)), nil
+}
+
+func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
+	switch kind {
+	case game.DynamicAmountConstant:
+		return "game.DynamicAmountConstant", nil
+	case game.DynamicAmountX:
+		return "game.DynamicAmountX", nil
+	case game.DynamicAmountTargetPower:
+		return "game.DynamicAmountTargetPower", nil
+	case game.DynamicAmountTargetToughness:
+		return "game.DynamicAmountTargetToughness", nil
+	case game.DynamicAmountTargetManaValue:
+		return "game.DynamicAmountTargetManaValue", nil
+	case game.DynamicAmountTargetCounters:
+		return "game.DynamicAmountTargetCounters", nil
+	case game.DynamicAmountControllerLife:
+		return "game.DynamicAmountControllerLife", nil
+	case game.DynamicAmountControllerHandSize:
+		return "game.DynamicAmountControllerHandSize", nil
+	case game.DynamicAmountControllerGraveyardSize:
+		return "game.DynamicAmountControllerGraveyardSize", nil
+	case game.DynamicAmountCountSelector:
+		return "game.DynamicAmountCountSelector", nil
+	case game.DynamicAmountPreviousEffectResult:
+		return "game.DynamicAmountPreviousEffectResult", nil
+	case game.DynamicAmountOpponentCount:
+		return "game.DynamicAmountOpponentCount", nil
+	case game.DynamicAmountEventDamage:
+		return "game.DynamicAmountEventDamage", nil
+	case game.DynamicAmountPreviousEffectExcessDamage:
+		return "game.DynamicAmountPreviousEffectExcessDamage", nil
+	case game.DynamicAmountObjectPower:
+		return "game.DynamicAmountObjectPower", nil
+	default:
+		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
+	}
 }
 
 func renderManaSymbol(ctx *renderCtx, symbol cost.Symbol) (string, error) {

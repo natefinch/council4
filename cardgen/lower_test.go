@@ -1934,6 +1934,7 @@ func TestLowerSpellXAmounts(t *testing.T) {
 				if !ok {
 					return game.Fixed(0)
 				}
+
 				return primitive.Amount
 			},
 		},
@@ -1974,6 +1975,101 @@ func TestLowerSpellXAmounts(t *testing.T) {
 			dynamic := test.quantity(face.SpellAbility.Val).DynamicAmount()
 			if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountX {
 				t.Fatalf("dynamic amount = %+v, want X", dynamic)
+			}
+		})
+	}
+}
+
+func TestLowerDynamicEffectAmounts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		quantity   func(game.AbilityContent) game.Quantity
+		kind       game.DynamicAmountKind
+		multiplier int
+		cardType   types.Card
+		controller game.ControllerRelation
+	}{
+		{"controlled creatures damage", "Test Swarm deals damage equal to the number of creatures you control to any target.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.Damage)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountCountSelector, 1, types.Creature, game.ControllerYou},
+		{"twice battlefield lands damage", "Test Swarm deals damage equal to twice the number of lands on the battlefield to any target.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.Damage)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountCountSelector, 2, types.Land, game.ControllerAny},
+		{"life for opponents", "You gain 2 life for each opponent you have.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.GainLife)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountOpponentCount, 2, "", game.ControllerAny},
+		{"controller life", "You gain life equal to your life total.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.GainLife)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountControllerLife, 1, "", game.ControllerAny},
+		{"draw for controlled lands", "Draw a card for each land you control.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.Draw)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountCountSelector, 1, types.Land, game.ControllerYou},
+		{"power for opponents", "Target creature gets +1/+0 for each opponent you have until end of turn.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.ModifyPT)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.PowerDelta
+		}, game.DynamicAmountOpponentCount, 1, "", game.ControllerAny},
+		{"power after duration", "Target creature gets +1/+0 until end of turn for each opponent you have.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.ModifyPT)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.PowerDelta
+		}, game.DynamicAmountOpponentCount, 1, "", game.ControllerAny},
+		{"counters for controlled lands", "Put X +1/+1 counters on target creature, where X is the number of lands you control.", func(content game.AbilityContent) game.Quantity {
+			primitive, ok := content.Modes[0].Sequence[0].Primitive.(game.AddCounter)
+			if !ok {
+				return game.Fixed(0)
+			}
+			return primitive.Amount
+		}, game.DynamicAmountCountSelector, 1, types.Land, game.ControllerYou},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Swarm",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			dynamic := test.quantity(face.SpellAbility.Val).DynamicAmount()
+			if !dynamic.Exists ||
+				dynamic.Val.Kind != test.kind ||
+				dynamic.Val.Multiplier != test.multiplier {
+				t.Fatalf("dynamic amount = %+v", dynamic)
+			}
+			if test.cardType != "" {
+				selection := dynamic.Val.Group.Selection()
+				if len(selection.RequiredTypes) != 1 ||
+					selection.RequiredTypes[0] != test.cardType ||
+					selection.Controller != test.controller {
+					t.Fatalf("selection = %+v", selection)
+				}
 			}
 		})
 	}

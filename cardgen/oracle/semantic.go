@@ -280,10 +280,39 @@ type CompiledEffect struct {
 	Negated           bool
 }
 
-// CompiledAmount is a fixed numeric amount recognized in an effect.
+// DynamicAmountKind identifies a rules-derived effect amount.
+type DynamicAmountKind uint8
+
+// Dynamic amount kinds recognized by the semantic compiler.
+const (
+	DynamicAmountNone DynamicAmountKind = iota
+	DynamicAmountCount
+	DynamicAmountControllerLife
+	DynamicAmountOpponentCount
+	DynamicAmountSourcePower
+)
+
+// DynamicAmountForm identifies the exact Oracle formula used for an amount.
+type DynamicAmountForm uint8
+
+// Dynamic amount forms recognized by the semantic compiler.
+const (
+	DynamicAmountFormNone DynamicAmountForm = iota
+	DynamicAmountEqual
+	DynamicAmountForEach
+	DynamicAmountWhereX
+)
+
+// CompiledAmount is a fixed or rules-derived amount recognized in an effect.
 type CompiledAmount struct {
-	Value int
-	Known bool
+	Value         int
+	Known         bool
+	DynamicKind   DynamicAmountKind
+	DynamicForm   DynamicAmountForm
+	Multiplier    int
+	Selector      CompiledSelector
+	ReferenceSpan Span
+	Text          string
 }
 
 // CompiledSignedAmount is a fixed signed amount recognized in an effect.
