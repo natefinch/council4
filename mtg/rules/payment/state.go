@@ -94,6 +94,9 @@ type stateMutations interface {
 	// EmitZoneChange emits a zone-change game event.
 	EmitZoneChange(event game.Event)
 
+	// EmitCardReveal records that a card was revealed from a zone while paying a cost.
+	EmitCardReveal(playerID game.PlayerID, sourceCardID, cardID id.ID, from zone.Type)
+
 	// MovePermanentToZone moves a permanent to the destination zone,
 	// handling detach, zone-change events, and token cleanup.
 	MovePermanentToZone(p *game.Permanent, dest zone.Type) bool

@@ -475,6 +475,94 @@ func TestEntersTappedUnlessPaidCannotPayEntersTapped(t *testing.T) {
 	}
 }
 
+func TestEntersTappedUnlessRevealMatchingCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player2)
+	forestID := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Forest",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Forest},
+	}})
+	cardID := addCardToHand(g, game.Player2, revealETBLand())
+	engine := NewEngine(nil)
+
+	if !engine.applyPlayLand(g, game.Player2, cardID) {
+		t.Fatal("applyPlayLand() = false")
+	}
+
+	permanent := g.Battlefield[len(g.Battlefield)-1]
+	if permanent.Tapped {
+		t.Fatalf("permanent = %+v, want untapped after revealing Forest", permanent)
+	}
+	if !g.Players[game.Player2].Hand.Contains(forestID) {
+		t.Fatal("revealed Forest left its owner's hand")
+	}
+	if !eventRevealedCardFromZone(g, game.Player2, cardID, forestID, zone.Hand) {
+		t.Fatal("revealing Forest did not emit a reveal event")
+	}
+}
+
+func eventRevealedCardFromZone(g *game.Game, player game.PlayerID, sourceID, cardID id.ID, from zone.Type) bool {
+	for _, event := range g.Events {
+		if event.Kind == game.EventCardRevealed &&
+			event.Controller == player &&
+			event.Player == player &&
+			event.SourceID == sourceID &&
+			event.CardID == cardID &&
+			event.FromZone == from {
+			return true
+		}
+	}
+	return false
+}
+
+func TestEntersTappedUnlessRevealRejectsNonmatchingCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Elvish Mystic",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Elf},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	cardID := addCardToHand(g, game.Player1, revealETBLand())
+	engine := NewEngine(nil)
+	log := &TurnLog{}
+
+	if !engine.applyPlayLandFaceWithChoices(g, game.Player1, cardID, game.FaceFront, [game.NumPlayers]PlayerAgent{}, log) {
+		t.Fatal("applyPlayLandFaceWithChoices() = false")
+	}
+
+	permanent := g.Battlefield[len(g.Battlefield)-1]
+	if !permanent.Tapped {
+		t.Fatalf("permanent = %+v, want tapped without a matching card", permanent)
+	}
+	if len(log.Choices) != 0 {
+		t.Fatalf("choices = %+v, want no prompt when reveal cost is unpayable", log.Choices)
+	}
+}
+
+func revealETBLand() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Reveal Land",
+		Types: []types.Card{types.Land},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersTappedUnlessPaidReplacement(
+				"As this land enters, you may reveal a Forest or Mountain card from your hand. If you don't, this land enters tapped.",
+				game.ResolutionPayment{
+					Prompt: "Reveal a matching card?",
+					AdditionalCosts: []cost.Additional{{
+						Kind:        cost.AdditionalReveal,
+						SubtypesAny: cost.SubtypeSet{types.Forest, types.Mountain},
+						Source:      zone.Hand,
+					}},
+				},
+			),
+		},
+	}}
+}
+
 func TestGenericReplacementChangesZoneDestination(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

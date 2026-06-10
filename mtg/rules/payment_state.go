@@ -113,6 +113,18 @@ func (s *rulesPaymentState) EmitZoneChange(event game.Event) {
 	emitZoneChangeEvent(s.g, event)
 }
 
+func (s *rulesPaymentState) EmitCardReveal(playerID game.PlayerID, sourceCardID, cardID id.ID, from zone.Type) {
+	emitEvent(s.g, game.Event{
+		Kind:       game.EventCardRevealed,
+		SourceID:   sourceCardID,
+		Controller: playerID,
+		Player:     playerID,
+		CardID:     cardID,
+		FromZone:   from,
+		Amount:     1,
+	})
+}
+
 func (s *rulesPaymentState) MovePermanentToZone(p *game.Permanent, dest zone.Type) bool {
 	return movePermanentToZone(s.g, p, dest)
 }

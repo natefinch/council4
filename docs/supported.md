@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,302
+Cards supported: 3,328
 
 - +2 Mace
 - Aang, Air Nomad
@@ -75,6 +75,7 @@ Cards supported: 3,302
 - Anaba Bodyguard
 - Ancestral Recall
 - Anchovy & Banana Pizza
+- Ancient Amphitheater
 - Ancient Brontodon
 - Ancient Carp
 - Ancient Crab
@@ -162,6 +163,7 @@ Cards supported: 3,302
 - Astartes Warrior
 - Auger Spree
 - Augury Owl
+- Auntie's Hovel
 - Aura Fracture
 - Auriok Transfixer
 - Auspicious Arrival
@@ -305,6 +307,7 @@ Cards supported: 3,302
 - Blistering Barrier
 - Bloated Toad
 - Blood
+- Blood Crypt
 - Blood Glutton
 - Blood Knight
 - Bloodbraid Elf
@@ -371,6 +374,7 @@ Cards supported: 3,302
 - Brazen Scourge
 - Breakneck Berserker
 - Breath of Fire
+- Breeding Pool
 - Briarpack Alpha
 - Brightblade Stoat
 - Brightclimb Pathway // Grimclimb Pathway
@@ -469,6 +473,7 @@ Cards supported: 3,302
 - Child of Night
 - Child of Thorns
 - Chitinous Cloak
+- Choked Estuary
 - Chrome Cat
 - Chrome Prowler
 - Cinder Barrens
@@ -972,6 +977,7 @@ Cards supported: 3,302
 - Foot Soldiers
 - Footlight Fiend
 - Force of Savagery
+- Foreboding Ruins
 - Forest
 - Forest Bear
 - Forgotten Cave
@@ -979,6 +985,7 @@ Cards supported: 3,302
 - Forsaken Drifters
 - Forsaken Sanctuary
 - Fortified Rampart
+- Fortified Village
 - Fortress Crab
 - Forum of Amity
 - Foul Imp
@@ -1000,6 +1007,7 @@ Cards supported: 3,302
 - Frontline Rebel
 - Frost Marsh
 - Frost Ogre
+- Frostboil Snarl
 - Frostbridge Guard
 - Fugitive Wizard
 - Fugue
@@ -1007,6 +1015,7 @@ Cards supported: 3,302
 - Fungus
 - Fungus Beast
 - Fungus Dinosaur
+- Furycalm Snarl
 - Fusion Elemental
 - Fyndhorn Brownie
 - Fyndhorn Elves
@@ -1017,6 +1026,7 @@ Cards supported: 3,302
 - Galina's Knight
 - Gallant Citizen
 - Galvanic Key
+- Game Trail
 - Garenbrig Carver // Shield's Might
 - Gargoyle
 - Garrison Sergeant
@@ -1058,6 +1068,7 @@ Cards supported: 3,302
 - Gigantosaurus
 - Gilacorn
 - Gilded Sentinel
+- Gilt-Leaf Palace
 - Glacial Floodplain
 - Glacial Fortress
 - Glacial Stalker
@@ -1117,6 +1128,7 @@ Cards supported: 3,302
 - Goblin War Paint
 - Goblin Warrior
 - Goblin Wizard
+- Godless Shrine
 - Gohn, Town of Ruin
 - Gold Myr
 - Gold-Forged Sentinel
@@ -1209,6 +1221,7 @@ Cards supported: 3,302
 - Halberdier
 - Halfling
 - Hall
+- Hallowed Fountain
 - Halo Hopper
 - Hamato Ninpō
 - Hamster
@@ -1818,6 +1831,7 @@ Cards supported: 3,302
 - Nearheath Stalker
 - Nebelgast Beguiler
 - Neck Snap
+- Necroblossom Snarl
 - Necrogen Scudder
 - Necrogen Spellbomb
 - Necromancer's Assistant
@@ -1951,8 +1965,10 @@ Cards supported: 3,302
 - Outrider of Jhess
 - Overgrown Estate
 - Overgrown Farmland
+- Overgrown Tomb
 - Overkill
 - Oversoul of Dusk
+- Ox
 - Ox
 - Ox
 - Oxidda Scrapmelter
@@ -2053,6 +2069,7 @@ Cards supported: 3,302
 - Polluted Dead
 - Polluted Mire
 - Pond Prophet
+- Port Town
 - Potion of Healing
 - Pounce
 - Pouncing Cheetah
@@ -2267,6 +2284,7 @@ Cards supported: 3,302
 - Sabretooth Tiger
 - Sacred Armory
 - Sacred Cat
+- Sacred Foundry
 - Sacred Nectar
 - Sacred Peaks
 - Sacred Wolf
@@ -2359,6 +2377,7 @@ Cards supported: 3,302
 - Seashell Cameo
 - Seaside Citadel
 - Seat of the Synod
+- Secluded Glen
 - Secluded Steppe
 - Secret Passage
 - Sedge Scorpion
@@ -2425,6 +2444,7 @@ Cards supported: 3,302
 - Shield Mate
 - Shimmering Barrier
 - Shimmerscale Drake
+- Shineshadow Snarl
 - Shining Aerosaur
 - Shipwreck Marsh
 - Shivan Branch-Burner
@@ -2662,12 +2682,14 @@ Cards supported: 3,302
 - Steadfast Paladin
 - Steadfast Sentinel
 - Steadfast Sentry
+- Steam Vents
 - Steel Wall
 - Steeple Roc
 - Sterling Hound
 - Stern Constable
 - Steward of Valeron
 - Stomper Cub
+- Stomping Ground
 - Stone Golem
 - Stone Haven Medic
 - Stone Quarry
@@ -2783,6 +2805,7 @@ Cards supported: 3,302
 - Tempest Drake
 - Tempest of Light
 - Temple Acolyte
+- Temple Garden
 - Temple of Abandon
 - Temple of Deceit
 - Temple of Enlightenment
@@ -3054,6 +3077,7 @@ Cards supported: 3,302
 - Vigilant Baloth
 - Vindicate
 - Vine Trellis
+- Vineglimmer Snarl
 - Viral Drake
 - Viridian Claw
 - Viridian Corrupter
@@ -3130,6 +3154,7 @@ Cards supported: 3,302
 - Wanderer's Intervention
 - Wandering Ones
 - Wandering Tombshell
+- Wanderwine Hub
 - War Behemoth
 - War Mammoth
 - War Priest of Thune
@@ -3156,6 +3181,7 @@ Cards supported: 3,302
 - Waterfall Aerialist
 - Waterfront Bouncer
 - Waterfront District
+- Watery Grave
 - Waveskimmer Aven
 - Wax // Wane
 - Wayward Giant

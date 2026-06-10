@@ -952,6 +952,16 @@ func (Renderer) renderTriggerPattern(pattern *game.TriggerPattern) (string, erro
 }
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.EntersTapped && ability.UnlessPaid.Exists {
+		if ability.Replacement.Condition.Exists {
+			return "", errors.New("render: paid ETB replacement cannot also have a condition")
+		}
+		payment, err := r.renderResolutionPayment(ctx, ability.UnlessPaid.Val)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EntersTappedUnlessPaidReplacement(%q, %s)", ability.Text, payment), nil
+	}
 	if ability.Replacement.EntersTapped && !ability.UnlessPaid.Exists {
 		if !ability.Replacement.Condition.Exists {
 			return fmt.Sprintf("game.EntersTappedReplacement(%q)", ability.Text), nil
@@ -963,6 +973,36 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return fmt.Sprintf("game.EntersTappedIfReplacement(%q, %s)", ability.Text, condStr), nil
 	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.ResolutionPayment) (string, error) {
+	var fields []string
+	hasCost := payment.ManaCost.Exists || len(payment.AdditionalCosts) > 0
+	if !hasCost {
+		return "", errors.New("render: resolution payment has no cost")
+	}
+	if payment.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", payment.Prompt))
+	}
+	if payment.ManaCost.Exists {
+		manaCost, err := renderManaCostMultiline(ctx, payment.ManaCost.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", manaCost))
+	}
+	if len(payment.AdditionalCosts) > 0 {
+		additionalCosts, err := r.renderAdditionalCosts(ctx, payment.AdditionalCosts)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", additionalCosts))
+	}
+	if payment.XValue != 0 {
+		fields = append(fields, fmt.Sprintf("XValue: %d,", payment.XValue))
+	}
+	return structLit("game.ResolutionPayment", fields), nil
 }
 
 // renderConditionForETBReplacement renders a game.Condition for use in a
@@ -2290,6 +2330,17 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fmt.Sprintf("CardType: %s,", cardType),
 		)
 	}
+	if additional.SubtypesAny != (cost.SubtypeSet{}) {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(additional.SubtypesAny))
+		for _, subtype := range additional.SubtypesAny {
+			if subtype == "" {
+				continue
+			}
+			literals = append(literals, SubtypeToLiteral(string(subtype), []string{"Land", "Creature"}))
+		}
+		fields = append(fields, fmt.Sprintf("SubtypesAny: cost.SubtypeSet{%s},", strings.Join(literals, ", ")))
+	}
 	if additional.Kind == cost.AdditionalRemoveCounter {
 		counterKind, err := renderCounterKind(additional.CounterKind)
 		if err != nil {
@@ -2447,6 +2498,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalPayLife", nil
 	case cost.AdditionalExile:
 		return "cost.AdditionalExile", nil
+	case cost.AdditionalReveal:
+		return "cost.AdditionalReveal", nil
 	case cost.AdditionalTap:
 		return "cost.AdditionalTap", nil
 	case cost.AdditionalExileSource:

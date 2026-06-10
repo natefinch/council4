@@ -38,6 +38,7 @@ type AbilityRequest struct {
 // that do not have a full card context.
 type GenericRequest struct {
 	PlayerID        game.PlayerID
+	SourceCardID    id.ID
 	Cost            *cost.Mana
 	XValue          int
 	Exclude         map[id.ID]bool
@@ -55,6 +56,7 @@ type Preferences struct {
 	SacrificeChoices     []id.ID
 	DiscardChoices       []id.ID
 	ExileChoices         []id.ID
+	RevealChoices        []id.ID
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.

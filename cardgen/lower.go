@@ -339,12 +339,13 @@ func lowerExecutableAbility(
 				conditions: len(ability.Conditions),
 				references: len(ability.References),
 			},
-			sourceSpans: []oracle.Span{ability.Effects[0].Span},
+			sourceSpans: replacementSourceSpans(ability),
 		}, nil
 	case oracle.AbilityReminder:
 		if saga && isOrdinarySagaReminder(ability.Text) {
 			return abilityLowering{sourceSpans: []oracle.Span{ability.Span}}, nil
 		}
+
 		return lowerReminderManaAbility(ability)
 	default:
 		return abilityLowering{}, executableDiagnostic(
@@ -353,6 +354,14 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func replacementSourceSpans(ability oracle.CompiledAbility) []oracle.Span {
+	spans := make([]oracle.Span, 0, len(ability.Effects))
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	return spans
 }
 
 func isOrdinarySagaReminder(text string) bool {
@@ -2176,6 +2185,9 @@ func lowerReminderManaAbility(
 func lowerEntersTappedReplacement(
 	ability oracle.CompiledAbility,
 ) (game.ReplacementAbility, *oracle.Diagnostic) {
+	if replacement, ok := lowerOptionalEntryPayment(ability); ok {
+		return replacement, nil
+	}
 	if !entersTappedReplacementEffectsSupported(ability) ||
 		ability.Effects[0].Kind != oracle.EffectEnterTapped ||
 		len(ability.Targets) != 0 ||
@@ -2212,6 +2224,88 @@ func lowerEntersTappedReplacement(
 		)
 	}
 	return game.EntersTappedReplacement(ability.Text), nil
+}
+
+func lowerOptionalEntryPayment(ability oracle.CompiledAbility) (game.ReplacementAbility, bool) {
+	if len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != oracle.ConditionIf ||
+		ability.Conditions[0].Text != "If you don't" ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return game.ReplacementAbility{}, false
+	}
+	const payLifeText = "As this land enters, you may pay 2 life. If you don't, it enters tapped."
+	if ability.Text == payLifeText &&
+		len(ability.Effects) == 2 &&
+		ability.Effects[0].Kind == oracle.EffectEnterTapped &&
+		ability.Effects[0].Amount.Known &&
+		ability.Effects[0].Amount.Value == 2 &&
+		!ability.Effects[0].Selector.Tapped &&
+		ability.Effects[1].Kind == oracle.EffectEnterTapped &&
+		ability.Effects[1].Selector.Tapped &&
+		len(ability.References) == 2 &&
+		ability.References[0].Kind == oracle.ReferenceThisObject &&
+		ability.References[1].Kind == oracle.ReferencePronoun {
+		return game.EntersTappedUnlessPaidReplacement(ability.Text, game.ResolutionPayment{
+			Prompt: "Pay 2 life?",
+			AdditionalCosts: []cost.Additional{{
+				Kind:   cost.AdditionalPayLife,
+				Amount: 2,
+			}},
+		}), true
+	}
+	subtypes, ok := revealEntrySubtypes(ability.Text)
+	if !ok ||
+		len(ability.Effects) != 3 ||
+		ability.Effects[0].Kind != oracle.EffectEnterTapped ||
+		ability.Effects[0].Selector.Tapped ||
+		ability.Effects[1].Kind != oracle.EffectReveal ||
+		ability.Effects[1].Amount.Value != 1 ||
+		!ability.Effects[1].Amount.Known ||
+		ability.Effects[2].Kind != oracle.EffectEnterTapped ||
+		!ability.Effects[2].Selector.Tapped ||
+		len(ability.References) != 2 ||
+		ability.References[0].Kind != oracle.ReferenceThisObject ||
+		ability.References[1].Kind != oracle.ReferenceThisObject {
+		return game.ReplacementAbility{}, false
+	}
+	var subtypeSet cost.SubtypeSet
+	copy(subtypeSet[:], subtypes)
+	return game.EntersTappedUnlessPaidReplacement(ability.Text, game.ResolutionPayment{
+		Prompt: "Reveal a matching card?",
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalReveal,
+			Amount:      1,
+			SubtypesAny: subtypeSet,
+			Source:      zone.Hand,
+		}},
+	}), true
+}
+
+func revealEntrySubtypes(text string) ([]types.Sub, bool) {
+	const prefix = "As this land enters, you may reveal "
+	const suffix = " card from your hand. If you don't, this land enters tapped."
+	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, suffix) {
+		return nil, false
+	}
+	names := strings.Split(strings.TrimSuffix(strings.TrimPrefix(text, prefix), suffix), " or ")
+	if len(names) > 2 {
+		return nil, false
+	}
+	subtypes := make([]types.Sub, 0, len(names))
+	for _, name := range names {
+		subtype := types.Sub(strings.TrimPrefix(strings.TrimPrefix(name, "a "), "an "))
+		if !types.KnownSubtypeForType(types.Land, subtype) &&
+			!types.KnownSubtypeForType(types.Creature, subtype) {
+			return nil, false
+		}
+		subtypes = append(subtypes, subtype)
+	}
+	return subtypes, len(subtypes) > 0
 }
 
 func entersTappedReplacementEffectsSupported(ability oracle.CompiledAbility) bool {

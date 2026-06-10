@@ -3,6 +3,9 @@ package payment
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -27,5 +30,26 @@ func TestAdditionalCostSourceZone(t *testing.T) {
 				t.Fatalf("additionalCostSourceZone(%d) = %v, want %v", test.source, got, test.want)
 			}
 		})
+	}
+}
+
+func TestAdditionalCostMatchesAnyCardSubtype(t *testing.T) {
+	additional := cost.Additional{
+		Kind:        cost.AdditionalReveal,
+		SubtypesAny: cost.SubtypeSet{types.Forest, types.Mountain},
+	}
+	forest := &game.CardDef{CardFace: game.CardFace{
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Forest},
+	}}
+	if !additionalCostMatchesCard(forest, additional) {
+		t.Fatal("Forest did not match Forest-or-Mountain reveal cost")
+	}
+	creature := &game.CardDef{CardFace: game.CardFace{
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Elf},
+	}}
+	if additionalCostMatchesCard(creature, additional) {
+		t.Fatal("Elf matched Forest-or-Mountain reveal cost")
 	}
 }
