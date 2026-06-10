@@ -308,6 +308,37 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	}
 }
 
+func TestCastSpellRevealCostAttributesSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	forestID := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Forest",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Forest},
+	}})
+	spellID := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Revealing Spell",
+		Types: []types.Card{types.Sorcery},
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalReveal,
+			Source:      zone.Hand,
+			SubtypesAny: cost.SubtypeSet{types.Forest},
+		}},
+		SpellAbility: opt.Val(game.AbilityContent{}),
+	}})
+	setSorcerySpeedTurn(g, game.Player2)
+
+	if !engine.applyAction(g, game.Player2, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast with reveal cost) = false, want true")
+	}
+	if !g.Players[game.Player2].Hand.Contains(forestID) {
+		t.Fatal("revealed Forest left its owner's hand")
+	}
+	if !eventRevealedCardFromZone(g, game.Player2, spellID, forestID, zone.Hand) {
+		t.Fatal("spell reveal cost did not attribute the source spell")
+	}
+}
+
 func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

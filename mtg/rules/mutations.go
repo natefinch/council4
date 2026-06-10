@@ -19,7 +19,7 @@ import (
 func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event) {
 	g.Stack.Push(obj)
 	emitTargetEvents(g, obj)
-	emitZoneChangeEvent(g, castEvent)
+	castEvent = emitZoneChangeEvent(g, castEvent)
 	castEvent.Kind = game.EventSpellCast
 	emitEvent(g, castEvent)
 }

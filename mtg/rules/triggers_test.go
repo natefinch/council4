@@ -335,6 +335,149 @@ func TestDeathTriggerCanUseEventPermanentLKIAndReturnEventCardAsEnchantment(t *t
 	}
 }
 
+func TestSelfDiesTriggerMovesEventCardFromGraveyardToOwnersHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, selfDiesEventCardDefinition(game.MoveCard{
+		Card:        game.CardReference{Kind: game.CardReferenceEvent},
+		FromZone:    zone.Graveyard,
+		Destination: zone.Hand,
+	}))
+	cardID := source.CardInstanceID
+
+	movePermanentToZone(g, source, zone.Graveyard)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-dies return trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !g.Players[game.Player1].Hand.Contains(cardID) {
+		t.Fatal("event card was not moved to its owner's hand")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("event card remained in graveyard")
+	}
+}
+
+func TestSelfDiesEventCardMoveRequiresExpectedZoneAtResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, selfDiesEventCardDefinition(game.MoveCard{
+		Card:        game.CardReference{Kind: game.CardReferenceEvent},
+		FromZone:    zone.Graveyard,
+		Destination: zone.Hand,
+	}))
+	cardID := source.CardInstanceID
+
+	movePermanentToZone(g, source, zone.Graveyard)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-dies return trigger was not put on stack")
+	}
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Graveyard, zone.Exile) {
+		t.Fatal("moving event card before trigger resolution failed")
+	}
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Exile, zone.Graveyard) {
+		t.Fatal("returning event card before trigger resolution failed")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("event-card effect moved a new graveyard object")
+	}
+	if g.Players[game.Player1].Hand.Contains(cardID) {
+		t.Fatal("event card incorrectly moved to hand from exile")
+	}
+}
+
+func TestSelfDiesTriggerGrantsOnlyEventCardAdventureCastFromGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, selfDiesAdventureDefinition())
+	cardID := source.CardInstanceID
+	otherID := addCardToGraveyard(g, game.Player1, selfDiesAdventureDefinition())
+
+	movePermanentToZone(g, source, zone.Graveyard)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-dies cast-permission trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	alternateCast := action.CastSpellFaceFromZone(cardID, zone.Graveyard, game.FaceAlternate, nil, 0, nil)
+	legal := engine.legalActions(g, game.Player1)
+	if !actionsContain(legal, alternateCast) {
+		t.Fatalf("legal actions = %+v, want event card Adventure cast", legal)
+	}
+	if actionsContain(legal, action.CastSpellFaceFromZone(cardID, zone.Graveyard, game.FaceFront, nil, 0, nil)) {
+		t.Fatal("permission allowed event card's front face from graveyard")
+	}
+	if actionsContain(legal, action.CastSpellFaceFromZone(otherID, zone.Graveyard, game.FaceAlternate, nil, 0, nil)) {
+		t.Fatal("permission allowed a different Adventure card from graveyard")
+	}
+	if !engine.applyAction(g, game.Player1, alternateCast) {
+		t.Fatal("casting permitted Adventure face failed")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != cardID || obj.SourceZone != zone.Graveyard || obj.Face != game.FaceAlternate {
+		t.Fatalf("stack object = %+v, want same event card's Adventure face", obj)
+	}
+}
+
+func TestSelfDiesAdventureCastPermissionExpiresAfterNextTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, selfDiesAdventureDefinition())
+	cardID := source.CardInstanceID
+	g.Turn.TurnNumber = 4
+
+	movePermanentToZone(g, source, zone.Graveyard)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-dies cast-permission trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	g.Turn.TurnNumber = 5
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	if !engine.canCastSpellFaceFromZoneWithKicker(g, game.Player1, cardID, zone.Graveyard, game.FaceAlternate, nil, 0, nil, false) {
+		t.Fatal("Adventure permission did not last through controller's next turn")
+	}
+	expireRuleEffects(g)
+	if engine.canCastSpellFaceFromZoneWithKicker(g, game.Player1, cardID, zone.Graveyard, game.FaceAlternate, nil, 0, nil, false) {
+		t.Fatal("Adventure permission remained after controller's next-turn cleanup")
+	}
+}
+
+func TestSelfDiesAdventureCastPermissionEndsWhenCardLeavesGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, selfDiesAdventureDefinition())
+	cardID := source.CardInstanceID
+
+	movePermanentToZone(g, source, zone.Graveyard)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-dies cast-permission trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Graveyard, zone.Exile) ||
+		!moveCardBetweenZones(g, game.Player1, cardID, zone.Exile, zone.Graveyard) {
+		t.Fatal("moving permitted card out of and back into graveyard failed")
+	}
+
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	if engine.canCastSpellFaceFromZoneWithKicker(g, game.Player1, cardID, zone.Graveyard, game.FaceAlternate, nil, 0, nil, false) {
+		t.Fatal("cast permission followed a card through a zone change")
+	}
+}
+
 func TestCounterTransferInterveningIfUsesLKI(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -350,6 +493,70 @@ func TestCounterTransferInterveningIfUsesLKI(t *testing.T) {
 
 	if engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("counter transfer trigger was put on stack for artifact with no counters")
+	}
+}
+
+func TestSelfDiesCounterAbsenceInterveningIfUsesLKI(t *testing.T) {
+	tests := []struct {
+		name        string
+		counterKind counter.Kind
+		add         []counter.Kind
+		wantTrigger bool
+	}{
+		{
+			name:        "absent",
+			counterKind: counter.PlusOnePlusOne,
+			wantTrigger: true,
+		},
+		{
+			name:        "same kind present",
+			counterKind: counter.PlusOnePlusOne,
+			add:         []counter.Kind{counter.PlusOnePlusOne},
+		},
+		{
+			name:        "different kind present",
+			counterKind: counter.PlusOnePlusOne,
+			add:         []counter.Kind{counter.Charge},
+			wantTrigger: true,
+		},
+		{
+			name:        "minus kind present",
+			counterKind: counter.MinusOneMinusOne,
+			add:         []counter.Kind{counter.MinusOneMinusOne},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			source := addSelfDiesCounterAbsenceTrigger(g, test.counterKind)
+			for _, kind := range test.add {
+				source.Counters.Add(kind, 1)
+			}
+
+			movePermanentToZone(g, source, zone.Graveyard)
+			if got := engine.putTriggeredAbilitiesOnStack(g); got != test.wantTrigger {
+				t.Fatalf("putTriggeredAbilitiesOnStack = %v, want %v", got, test.wantTrigger)
+			}
+		})
+	}
+}
+
+func TestSelfDiesCounterAbsenceInterveningIfFailsClosedAtResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	source := addSelfDiesCounterAbsenceTrigger(g, counter.PlusOnePlusOne)
+
+	movePermanentToZone(g, source, zone.Graveyard)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("counter-absence trigger was not put on stack")
+	}
+	delete(g.LastKnownInformation, source.ObjectID)
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+		t.Fatalf("hand size = %d, want no draw when LKI is unavailable at resolution", got)
 	}
 }
 
@@ -1408,6 +1615,54 @@ func addSelfEnterInterveningTrigger(g *game.Game, condition *game.TriggerConditi
 	}
 	card.Def.TriggeredAbilities[0].Trigger = *condition
 	return permanent
+}
+
+func addSelfDiesCounterAbsenceTrigger(g *game.Game, kind counter.Kind) *game.Permanent {
+	permanent := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventPermanentDied,
+		Source: game.TriggerSourceSelf,
+	}, []game.Instruction{{
+		Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+	}}, nil)
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok {
+		panic("triggered permanent card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.InterveningIfEventPermanentHadNoCounterKind = opt.Val(kind)
+	return permanent
+}
+
+func selfDiesEventCardDefinition(primitive game.Primitive) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:      "Returning Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		TriggeredAbilities: []game.TriggeredAbility{{
+			Trigger: game.TriggerCondition{Type: game.TriggerWhen, Pattern: game.TriggerPattern{
+				Event:  game.EventPermanentDied,
+				Source: game.TriggerSourceSelf,
+			}},
+			Content: game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(),
+		}},
+	}}
+}
+
+func selfDiesAdventureDefinition() *game.CardDef {
+	def := selfDiesEventCardDefinition(game.GrantCastPermission{
+		Card:     game.CardReference{Kind: game.CardReferenceEvent},
+		FromZone: zone.Graveyard,
+		Face:     game.FaceAlternate,
+		Duration: game.DurationUntilEndOfYourNextTurn,
+	})
+	def.Layout = game.LayoutAdventure
+	def.Alternate = opt.Val(game.CardFace{
+		Name:         "Returning Adventure",
+		Types:        []types.Card{types.Sorcery},
+		Subtypes:     []types.Sub{types.Adventure},
+		SpellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}}.Ability()),
+	})
+	return def
 }
 
 func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *game.Permanent {

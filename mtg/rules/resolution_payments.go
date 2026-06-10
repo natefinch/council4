@@ -20,6 +20,7 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
+		SourceCardID:    stackObjectSourceID(obj),
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,
 		AdditionalCosts: res.AdditionalCosts,

@@ -137,7 +137,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 			if !ok {
 				continue
 			}
-			for _, face := range legalCastFacesForZone(card.Def, sourceZone) {
+			for _, face := range legalCastFacesForZone(g, playerID, card, sourceZone) {
 				spellDef := cardFaceOrDefault(card, face)
 				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
 					for _, modes := range modeChoicesForSpell(spellDef) {
@@ -174,7 +174,7 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 		return nil
 	}
 	var actions []action.Action
-	for _, face := range legalCastFacesForZone(card.Def, zone.Command) {
+	for _, face := range card.Def.LegalCastFaces() {
 		spellDef := cardFaceOrDefault(card, face)
 		for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
 			for _, modes := range modeChoicesForSpell(spellDef) {
@@ -880,9 +880,6 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 	if !ok || !card.Def.CanChooseCastFace(face) {
 		return false
 	}
-	if sourceZone != zone.Hand && sourceZone != zone.Command && face != game.FaceFront {
-		return false
-	}
 	switch sourceZone {
 	case zone.Command:
 		if player.CommanderInstanceID != cardID {
@@ -890,7 +887,7 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 		}
 	case zone.Hand:
 	case zone.Graveyard:
-		if !canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone) {
+		if !canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face) {
 			return false
 		}
 	case zone.Exile:
@@ -921,14 +918,17 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 	return true
 }
 
-func legalCastFacesForZone(card *game.CardDef, sourceZone zone.Type) []game.FaceIndex {
-	if sourceZone != zone.Hand && sourceZone != zone.Command {
-		if card.CanChooseCastFace(game.FaceFront) {
-			return []game.FaceIndex{game.FaceFront}
+func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type) []game.FaceIndex {
+	if sourceZone == zone.Graveyard {
+		var faces []game.FaceIndex
+		for _, face := range card.Def.LegalCastFaces() {
+			if canCastFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
+				faces = append(faces, face)
+			}
 		}
-		return nil
+		return faces
 	}
-	return card.LegalCastFaces()
+	return card.Def.LegalCastFaces()
 }
 
 func castSourceContains(player *game.Player, cardID id.ID, sourceZone zone.Type) bool {

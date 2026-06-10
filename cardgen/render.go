@@ -900,6 +900,15 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("InterveningCondition: opt.Val(%s),", condition))
 	}
+	if trigger.InterveningIfEventPermanentHadNoCounterKind.Exists {
+		kind, err := renderCounterKind(trigger.InterveningIfEventPermanentHadNoCounterKind.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("InterveningIfEventPermanentHadNoCounterKind: opt.Val(%s),", kind))
+	}
 	if trigger.InterveningIfEventPermanentWasKicked {
 		fields = append(fields, "InterveningIfEventPermanentWasKicked: true,")
 	}
@@ -952,6 +961,16 @@ func (Renderer) renderTriggerPattern(pattern *game.TriggerPattern) (string, erro
 }
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.EntersTapped && ability.UnlessPaid.Exists {
+		if ability.Replacement.Condition.Exists {
+			return "", errors.New("render: paid ETB replacement cannot also have a condition")
+		}
+		payment, err := r.renderResolutionPayment(ctx, ability.UnlessPaid.Val)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EntersTappedUnlessPaidReplacement(%q, %s)", ability.Text, payment), nil
+	}
 	if ability.Replacement.EntersTapped && !ability.UnlessPaid.Exists {
 		if !ability.Replacement.Condition.Exists {
 			return fmt.Sprintf("game.EntersTappedReplacement(%q)", ability.Text), nil
@@ -963,6 +982,36 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return fmt.Sprintf("game.EntersTappedIfReplacement(%q, %s)", ability.Text, condStr), nil
 	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.ResolutionPayment) (string, error) {
+	var fields []string
+	hasCost := payment.ManaCost.Exists || len(payment.AdditionalCosts) > 0
+	if !hasCost {
+		return "", errors.New("render: resolution payment has no cost")
+	}
+	if payment.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", payment.Prompt))
+	}
+	if payment.ManaCost.Exists {
+		manaCost, err := renderManaCostMultiline(ctx, payment.ManaCost.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", manaCost))
+	}
+	if len(payment.AdditionalCosts) > 0 {
+		additionalCosts, err := r.renderAdditionalCosts(ctx, payment.AdditionalCosts)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", additionalCosts))
+	}
+	if payment.XValue != 0 {
+		fields = append(fields, fmt.Sprintf("XValue: %d,", payment.XValue))
+	}
+	return structLit("game.ResolutionPayment", fields), nil
 }
 
 // renderConditionForETBReplacement renders a game.Condition for use in a
@@ -1254,8 +1303,88 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: Choose kind has unexpected concrete type")
 		}
 		return r.renderChoose(ctx, value)
+	case game.PrimitiveMoveCard:
+		value, ok := primitive.(game.MoveCard)
+		if !ok {
+			return "", errors.New("render: internal error: MoveCard kind has unexpected concrete type")
+		}
+		return r.renderMoveCard(ctx, value)
+	case game.PrimitiveGrantCastPermission:
+		value, ok := primitive.(game.GrantCastPermission)
+		if !ok {
+			return "", errors.New("render: internal error: GrantCastPermission kind has unexpected concrete type")
+		}
+		return r.renderGrantCastPermission(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
+	}
+}
+
+func (Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, error) {
+	card, err := renderCardReference(value.Card)
+	if err != nil {
+		return "", err
+	}
+	fromZone, err := renderZone(value.FromZone)
+	if err != nil {
+		return "", err
+	}
+	destination, err := renderZone(value.Destination)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	return structLit("game.MoveCard", []string{
+		fmt.Sprintf("Card: %s,", card),
+		fmt.Sprintf("FromZone: %s,", fromZone),
+		fmt.Sprintf("Destination: %s,", destination),
+	}), nil
+}
+
+func (Renderer) renderGrantCastPermission(ctx *renderCtx, value game.GrantCastPermission) (string, error) {
+	card, err := renderCardReference(value.Card)
+	if err != nil {
+		return "", err
+	}
+	fromZone, err := renderZone(value.FromZone)
+	if err != nil {
+		return "", err
+	}
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	if value.Face != game.FaceAlternate {
+		return "", fmt.Errorf("render: unsupported cast-permission face %d", value.Face)
+	}
+	ctx.need(importZone)
+	return structLit("game.GrantCastPermission", []string{
+		fmt.Sprintf("Card: %s,", card),
+		fmt.Sprintf("FromZone: %s,", fromZone),
+		"Face: game.FaceAlternate,",
+		fmt.Sprintf("Duration: %s,", duration),
+	}), nil
+}
+
+func renderCardReference(reference game.CardReference) (string, error) {
+	switch reference.Kind {
+	case game.CardReferenceEvent:
+		if reference.LinkID != "" {
+			return "", errors.New("render: event card reference has LinkID")
+		}
+		return "game.CardReference{Kind: game.CardReferenceEvent}", nil
+	case game.CardReferenceSource:
+		if reference.LinkID != "" {
+			return "", errors.New("render: source card reference has LinkID")
+		}
+		return "game.CardReference{Kind: game.CardReferenceSource}", nil
+	case game.CardReferenceLinked:
+		if reference.LinkID == "" {
+			return "", errors.New("render: linked card reference has no LinkID")
+		}
+		return fmt.Sprintf("game.CardReference{Kind: game.CardReferenceLinked, LinkID: %q}", reference.LinkID), nil
+	default:
+		return "", fmt.Errorf("render: unsupported card reference kind %d", reference.Kind)
 	}
 }
 
@@ -2290,6 +2419,17 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fmt.Sprintf("CardType: %s,", cardType),
 		)
 	}
+	if additional.SubtypesAny != (cost.SubtypeSet{}) {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(additional.SubtypesAny))
+		for _, subtype := range additional.SubtypesAny {
+			if subtype == "" {
+				continue
+			}
+			literals = append(literals, SubtypeToLiteral(string(subtype), []string{"Land", "Creature"}))
+		}
+		fields = append(fields, fmt.Sprintf("SubtypesAny: cost.SubtypeSet{%s},", strings.Join(literals, ", ")))
+	}
 	if additional.Kind == cost.AdditionalRemoveCounter {
 		counterKind, err := renderCounterKind(additional.CounterKind)
 		if err != nil {
@@ -2447,6 +2587,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalPayLife", nil
 	case cost.AdditionalExile:
 		return "cost.AdditionalExile", nil
+	case cost.AdditionalReveal:
+		return "cost.AdditionalReveal", nil
 	case cost.AdditionalTap:
 		return "cost.AdditionalTap", nil
 	case cost.AdditionalExileSource:
@@ -2548,6 +2690,8 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 	switch duration {
 	case game.DurationUntilEndOfTurn:
 		return "game.DurationUntilEndOfTurn", nil
+	case game.DurationUntilEndOfYourNextTurn:
+		return "game.DurationUntilEndOfYourNextTurn", nil
 	default:
 		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
 	}

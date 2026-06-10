@@ -61,12 +61,23 @@ mana ability costs on the corresponding ability body.
 `Amount` defaults to one for costs involving objects or cards. `Text` supplies
 card-specific display text when the generic text for the kind is insufficient.
 `MatchPermanentType` and `PermanentType` constrain battlefield objects;
-`MatchCardType` and `CardType` constrain cards in other zones.
+`MatchCardType` and `CardType` constrain cards in other zones. `SubtypesAny`
+requires a selected card to have at least one of the listed subtypes:
+
+```go
+cost.Additional{
+	Kind:        cost.AdditionalReveal,
+	Amount:      1,
+	Source:      zone.Hand,
+	SubtypesAny: cost.SubtypeSet{types.Forest, types.Island},
+}
+```
 
 `Source` identifies the zone that supplies cards for costs that choose cards
 outside the battlefield. `zone.None` leaves the default to the rules module.
-The current default for `AdditionalExile` is the graveyard. Use an explicit
-source when another zone is required:
+The current default for `AdditionalExile` is the graveyard, while
+`AdditionalReveal` defaults to the hand. Use an explicit source when another
+zone is required:
 
 ```go
 cost.Additional{

@@ -581,6 +581,57 @@ func TestGenerateExecutableCardSourceLifeAndOpponentEntersTappedConditions(t *te
 // TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped
 // verifies that near-miss conditions outside the supported wording family are
 // rejected. Supported: "unless you control two or more basic lands".
+func TestGenerateExecutableCardSourceOptionalEntryPayments(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "pay life",
+			oracleText: "As this land enters, you may pay 2 life. If you don't, it enters tapped.",
+			wants: []string{
+				"game.EntersTappedUnlessPaidReplacement",
+				"cost.AdditionalPayLife",
+				"Amount: 2",
+			},
+		},
+		{
+			name:       "reveal subtypes",
+			oracleText: "As this land enters, you may reveal a Mountain or Forest card from your hand. If you don't, this land enters tapped.",
+			wants: []string{
+				"game.EntersTappedUnlessPaidReplacement",
+				"cost.AdditionalReveal",
+				"SubtypesAny: cost.SubtypeSet{types.Mountain, types.Forest}",
+				"zone.Hand",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Land",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1980,6 +2031,103 @@ func TestGenerateExecutableCardSourceSelfDiesDamageTrigger(t *testing.T) {
 		"game.EventPermanentDied",
 		"Primitive: game.Damage",
 		"DamageSource: opt.Val(game.EventPermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfDiesCounterAbsence(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Undying Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature dies, if it had no +1/+1 counters on it, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`InterveningIf: "if it had no +1/+1 counters on it"`,
+		"InterveningIfEventPermanentHadNoCounterKind: opt.Val(counter.PlusOnePlusOne)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfDiesEventCardReturn(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Phoenix",
+		Layout:     "normal",
+		TypeLine:   "Creature — Phoenix",
+		OracleText: "When this creature dies, return it to its owner's hand.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.MoveCard",
+		"game.CardReference{Kind: game.CardReferenceEvent}",
+		"zone.Graveyard",
+		"zone.Hand",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfDiesAdventurePermission(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:   "Test Dreadknight // Test Whispers",
+		Layout: "adventure",
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:       "Test Dreadknight",
+				ManaCost:   "{1}{G}",
+				TypeLine:   "Creature — Human Knight",
+				OracleText: "When Test Dreadknight dies, you may cast it from your graveyard as an Adventure until the end of your next turn.",
+				Power:      new("2"),
+				Toughness:  new("1"),
+			},
+			{
+				Name:       "Test Whispers",
+				ManaCost:   "{1}{B}",
+				TypeLine:   "Sorcery — Adventure",
+				OracleText: "Draw a card.",
+			},
+		},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Optional: true",
+		"Primitive: game.GrantCastPermission",
+		"game.CardReference{Kind: game.CardReferenceEvent}",
+		"zone.Graveyard",
+		"Face:     game.FaceAlternate",
+		"Duration: game.DurationUntilEndOfYourNextTurn",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

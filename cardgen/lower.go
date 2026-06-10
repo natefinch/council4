@@ -92,7 +92,33 @@ func lowerExecutableFaces(card *ScryfallCard) ([]loweredFaceAbilities, []oracle.
 		diagnostics = append(diagnostics, faceDiagnostics...)
 		lowered[i] = faceAbilities
 	}
+	if card.Layout != "adventure" && hasAdventureCastPermission(lowered) {
+		diagnostics = append(diagnostics, oracle.Diagnostic{
+			Severity: oracle.SeverityWarning,
+			Summary:  "unsupported Adventure cast permission",
+			Detail:   "an Adventure graveyard-cast permission requires an Adventure card layout",
+		})
+	}
 	return lowered, diagnostics
+}
+
+func hasAdventureCastPermission(faces []loweredFaceAbilities) bool {
+	for faceIndex := range faces {
+		for abilityIndex := range faces[faceIndex].TriggeredAbilities {
+			ability := &faces[faceIndex].TriggeredAbilities[abilityIndex]
+			for modeIndex := range ability.Content.Modes {
+				mode := &ability.Content.Modes[modeIndex]
+				for instructionIndex := range mode.Sequence {
+					instruction := &mode.Sequence[instructionIndex]
+					if instruction.Primitive != nil &&
+						instruction.Primitive.Kind() == game.PrimitiveGrantCastPermission {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 func lowerFaceAbilities(
@@ -339,12 +365,13 @@ func lowerExecutableAbility(
 				conditions: len(ability.Conditions),
 				references: len(ability.References),
 			},
-			sourceSpans: []oracle.Span{ability.Effects[0].Span},
+			sourceSpans: replacementSourceSpans(ability),
 		}, nil
 	case oracle.AbilityReminder:
 		if saga && isOrdinarySagaReminder(ability.Text) {
 			return abilityLowering{sourceSpans: []oracle.Span{ability.Span}}, nil
 		}
+
 		return lowerReminderManaAbility(ability)
 	default:
 		return abilityLowering{}, executableDiagnostic(
@@ -353,6 +380,14 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func replacementSourceSpans(ability oracle.CompiledAbility) []oracle.Span {
+	spans := make([]oracle.Span, 0, len(ability.Effects))
+	for _, effect := range ability.Effects {
+		spans = append(spans, effect.Span)
+	}
+	return spans
 }
 
 func isOrdinarySagaReminder(text string) bool {
@@ -2229,6 +2264,9 @@ func lowerReminderManaAbility(
 func lowerEntersTappedReplacement(
 	ability oracle.CompiledAbility,
 ) (game.ReplacementAbility, *oracle.Diagnostic) {
+	if replacement, ok := lowerOptionalEntryPayment(ability); ok {
+		return replacement, nil
+	}
 	if !entersTappedReplacementEffectsSupported(ability) ||
 		ability.Effects[0].Kind != oracle.EffectEnterTapped ||
 		len(ability.Targets) != 0 ||
@@ -2265,6 +2303,88 @@ func lowerEntersTappedReplacement(
 		)
 	}
 	return game.EntersTappedReplacement(ability.Text), nil
+}
+
+func lowerOptionalEntryPayment(ability oracle.CompiledAbility) (game.ReplacementAbility, bool) {
+	if len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != oracle.ConditionIf ||
+		ability.Conditions[0].Text != "If you don't" ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return game.ReplacementAbility{}, false
+	}
+	const payLifeText = "As this land enters, you may pay 2 life. If you don't, it enters tapped."
+	if ability.Text == payLifeText &&
+		len(ability.Effects) == 2 &&
+		ability.Effects[0].Kind == oracle.EffectEnterTapped &&
+		ability.Effects[0].Amount.Known &&
+		ability.Effects[0].Amount.Value == 2 &&
+		!ability.Effects[0].Selector.Tapped &&
+		ability.Effects[1].Kind == oracle.EffectEnterTapped &&
+		ability.Effects[1].Selector.Tapped &&
+		len(ability.References) == 2 &&
+		ability.References[0].Kind == oracle.ReferenceThisObject &&
+		ability.References[1].Kind == oracle.ReferencePronoun {
+		return game.EntersTappedUnlessPaidReplacement(ability.Text, game.ResolutionPayment{
+			Prompt: "Pay 2 life?",
+			AdditionalCosts: []cost.Additional{{
+				Kind:   cost.AdditionalPayLife,
+				Amount: 2,
+			}},
+		}), true
+	}
+	subtypes, ok := revealEntrySubtypes(ability.Text)
+	if !ok ||
+		len(ability.Effects) != 3 ||
+		ability.Effects[0].Kind != oracle.EffectEnterTapped ||
+		ability.Effects[0].Selector.Tapped ||
+		ability.Effects[1].Kind != oracle.EffectReveal ||
+		ability.Effects[1].Amount.Value != 1 ||
+		!ability.Effects[1].Amount.Known ||
+		ability.Effects[2].Kind != oracle.EffectEnterTapped ||
+		!ability.Effects[2].Selector.Tapped ||
+		len(ability.References) != 2 ||
+		ability.References[0].Kind != oracle.ReferenceThisObject ||
+		ability.References[1].Kind != oracle.ReferenceThisObject {
+		return game.ReplacementAbility{}, false
+	}
+	var subtypeSet cost.SubtypeSet
+	copy(subtypeSet[:], subtypes)
+	return game.EntersTappedUnlessPaidReplacement(ability.Text, game.ResolutionPayment{
+		Prompt: "Reveal a matching card?",
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalReveal,
+			Amount:      1,
+			SubtypesAny: subtypeSet,
+			Source:      zone.Hand,
+		}},
+	}), true
+}
+
+func revealEntrySubtypes(text string) ([]types.Sub, bool) {
+	const prefix = "As this land enters, you may reveal "
+	const suffix = " card from your hand. If you don't, this land enters tapped."
+	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, suffix) {
+		return nil, false
+	}
+	names := strings.Split(strings.TrimSuffix(strings.TrimPrefix(text, prefix), suffix), " or ")
+	if len(names) > 2 {
+		return nil, false
+	}
+	subtypes := make([]types.Sub, 0, len(names))
+	for _, name := range names {
+		subtype := types.Sub(strings.TrimPrefix(strings.TrimPrefix(name, "a "), "an "))
+		if !types.KnownSubtypeForType(types.Land, subtype) &&
+			!types.KnownSubtypeForType(types.Creature, subtype) {
+			return nil, false
+		}
+		subtypes = append(subtypes, subtype)
+	}
+	return subtypes, len(subtypes) > 0
 }
 
 func entersTappedReplacementEffectsSupported(ability oracle.CompiledAbility) bool {
@@ -2415,18 +2535,15 @@ func lowerEnterTrigger(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
-	eventKind, supportedEvent := lowerSelfTriggerEvent(ability)
+	eventKind, supportedEvent := lowerSelfTriggerEvent(cardName, ability)
 	summary := "unsupported enter trigger"
 	detail := "the executable source backend supports only exact self-enter triggers with supported effects"
 	if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
 		summary = "unsupported dies trigger"
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
-	intervening, supportedCondition := lowerEnterInterveningCondition(ability.Trigger)
+	intervening, supportedCondition := lowerSelfInterveningCondition(eventKind, ability.Trigger)
 	hasInterveningCondition := ability.Trigger != nil && ability.Trigger.Condition != nil
-	if hasInterveningCondition && eventKind != game.EventPermanentEnteredBattlefield {
-		supportedCondition = false
-	}
 	resolvingEffects := ability.Effects
 	if hasInterveningCondition {
 		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
@@ -2524,7 +2641,7 @@ func lowerEnterTrigger(
 	}
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
-	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	content, diagnostic := lowerSelfTriggerBody(cardName, eventKind, body, bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
@@ -2548,20 +2665,103 @@ func lowerEnterTrigger(
 				Event:  eventKind,
 				Source: game.TriggerSourceSelf,
 			},
-			InterveningIf:                        interveningIfText(ability.Trigger),
-			InterveningCondition:                 intervening.condition,
-			InterveningIfEventPermanentWasKicked: intervening.wasKicked,
-			InterveningIfEventPermanentWasCast:   intervening.wasCast,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening.condition,
+			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
+			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:          intervening.wasCast,
 		},
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
 }
 
+func lowerSelfTriggerBody(
+	cardName string,
+	eventKind game.EventKind,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	if eventKind == game.EventPermanentDied {
+		if content, ok := lowerDiesEventCardEffect(ability); ok {
+			return content, nil
+		}
+	}
+	return lowerSpell(cardName, ability, syntax)
+}
+
+func lowerDiesEventCardEffect(ability oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(ability.Effects) != 1 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	eventCard := game.CardReference{Kind: game.CardReferenceEvent}
+	switch ability.Effects[0].Kind {
+	case oracle.EffectReturn:
+		if ability.Text != "Return it to its owner's hand." ||
+			!exactPronounReferences(ability.References, "it", "its") {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.MoveCard{
+				Card:        eventCard,
+				FromZone:    zone.Graveyard,
+				Destination: zone.Hand,
+			},
+		}}}.Ability(), true
+	case oracle.EffectCast:
+		if ability.Text != "Cast it from your graveyard as an Adventure until the end of your next turn." ||
+			!exactPronounReferences(ability.References, "it") {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.GrantCastPermission{
+				Card:     eventCard,
+				FromZone: zone.Graveyard,
+				Face:     game.FaceAlternate,
+				Duration: game.DurationUntilEndOfYourNextTurn,
+			},
+		}}}.Ability(), true
+	default:
+		return game.AbilityContent{}, false
+	}
+}
+
+func exactPronounReferences(references []oracle.CompiledReference, texts ...string) bool {
+	if len(references) != len(texts) {
+		return false
+	}
+	for i, text := range texts {
+		if references[i].Kind != oracle.ReferencePronoun ||
+			!strings.EqualFold(references[i].Text, text) {
+			return false
+		}
+	}
+	return true
+}
+
 type enterInterveningCondition struct {
-	condition opt.V[game.Condition]
-	wasKicked bool
-	wasCast   bool
+	condition        opt.V[game.Condition]
+	hadNoCounterKind opt.V[counter.Kind]
+	wasKicked        bool
+	wasCast          bool
+}
+
+func lowerSelfInterveningCondition(
+	eventKind game.EventKind,
+	trigger *oracle.CompiledTrigger,
+) (enterInterveningCondition, bool) {
+	switch eventKind {
+	case game.EventPermanentEnteredBattlefield:
+		return lowerEnterInterveningCondition(trigger)
+	case game.EventPermanentDied:
+		return lowerDiesInterveningCondition(trigger)
+	default:
+		return enterInterveningCondition{}, trigger == nil || trigger.Condition == nil
+	}
 }
 
 func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
@@ -2590,6 +2790,24 @@ func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInter
 			}),
 		}),
 	}, true
+}
+
+func lowerDiesInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
+	if trigger == nil || trigger.Condition == nil {
+		return enterInterveningCondition{}, true
+	}
+	condition := trigger.Condition
+	if condition.Kind != oracle.ConditionIf || !condition.Intervening {
+		return enterInterveningCondition{}, false
+	}
+	switch condition.Text {
+	case "if it had no +1/+1 counters", "if it had no +1/+1 counters on it":
+		return enterInterveningCondition{hadNoCounterKind: opt.Val(counter.PlusOnePlusOne)}, true
+	case "if it had no -1/-1 counters", "if it had no -1/-1 counters on it":
+		return enterInterveningCondition{hadNoCounterKind: opt.Val(counter.MinusOneMinusOne)}, true
+	default:
+		return enterInterveningCondition{}, false
+	}
 }
 
 func controlledPermanentConditionType(text string) (types.Card, bool) {
@@ -2628,7 +2846,7 @@ func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbili
 	return true
 }
 
-func lowerSelfTriggerEvent(ability oracle.CompiledAbility) (game.EventKind, bool) {
+func lowerSelfTriggerEvent(cardName string, ability oracle.CompiledAbility) (game.EventKind, bool) {
 	if ability.Trigger == nil {
 		return 0, false
 	}
@@ -2645,6 +2863,9 @@ func lowerSelfTriggerEvent(ability oracle.CompiledAbility) (game.EventKind, bool
 	case "this creature dies", "this permanent dies":
 		return game.EventPermanentDied, true
 	default:
+		if strings.EqualFold(ability.Trigger.Event, cardName+" dies") {
+			return game.EventPermanentDied, true
+		}
 		return 0, false
 	}
 }

@@ -37,7 +37,7 @@ func (*Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
 		ToZone:   zone.Hand,
 		Amount:   1,
 	}
-	emitZoneChangeEvent(g, event)
+	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventCardDrawn
 	emitEvent(g, event)
 	return cardID, true
