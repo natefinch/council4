@@ -393,6 +393,7 @@ Cards supported: 3,430
 - Brindle Boar
 - Brinebarrow Intruder
 - Brittle Effigy
+- Brokers Veteran
 - Bronze Sable
 - Bronze Sword
 - Bronze Walrus
@@ -567,6 +568,7 @@ Cards supported: 3,430
 - Coral Merfolk
 - Cordyceps Infected
 - Core Prowler
+- Coretapper
 - Cosmium Blast
 - Council of Advisors
 - Counsel of the Soratami
@@ -3144,6 +3146,7 @@ Cards supported: 3,430
 - Vedalken Archmage
 - Vedalken Blademaster
 - Vedalken Entrancer
+- Vedalken Infuser
 - Vedalken Mastermind
 - Vedalken Outlander
 - Venerable Lammasu
