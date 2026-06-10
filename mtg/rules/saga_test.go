@@ -251,6 +251,34 @@ func TestReadAheadSingleChapterWaitsForPendingTriggerBeforeSacrifice(t *testing.
 	}
 }
 
+func TestReadAheadSkippedChaptersRemainSkippedAfterLoreCountersAreRemoved(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	card := addSagaCardInstance(g, game.Player1, []game.ChapterAbility{
+		sagaNamedChapter(1),
+		sagaNamedChapter(2),
+		sagaNamedChapter(3),
+	})
+	card.Def.CardFace.StaticAbilities = []game.StaticAbility{game.ReadAheadStaticBody}
+	agent := &choiceOnlyAgent{choices: [][]int{{3}}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
+
+	permanent, ok := createCardPermanentFaceWithChoices(engine, g, card, game.Player1, zone.Stack, game.FaceFront, agents, &TurnLog{})
+	if !ok {
+		t.Fatal("create Read ahead Saga failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("chosen chapter was not put on the stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	permanent.Counters.Remove(counter.Lore, 3)
+	addCountersToPermanent(g, permanent, counter.Lore, 2)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("skipped chapters triggered after lore counters were removed")
+	}
+}
+
 func addSagaCardInstance(g *game.Game, owner game.PlayerID, chapters []game.ChapterAbility) *game.CardInstance {
 	card := &game.CardInstance{
 		ID:    g.IDGen.Next(),
@@ -288,6 +316,9 @@ func sagaNamedChapter(number int) game.ChapterAbility {
 
 func assertSagaChapterOnTop(t *testing.T, g *game.Game, text string) {
 	t.Helper()
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want one Saga chapter", got)
+	}
 	object, ok := g.Stack.Peek()
 	if !ok || !object.SagaChapter || object.InlineTrigger == nil || object.InlineTrigger.Text != text {
 		t.Fatalf("stack object = %+v, want Saga chapter %q", object, text)
