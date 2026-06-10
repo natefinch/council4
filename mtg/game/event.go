@@ -68,7 +68,8 @@ type Event struct {
 	// Controller is the player who controlled the source spell, ability, or permanent.
 	Controller PlayerID
 
-	// Player is the affected player for draw, discard, and player-damage events.
+	// Player is the affected player for draw, discard, player-damage, and
+	// player-counter events.
 	Player PlayerID
 
 	// CardID identifies the card that moved, was drawn, discarded, or became a permanent.
@@ -121,7 +122,8 @@ type Event struct {
 	// counters added.
 	Amount int
 
-	// CounterKind and PreviousCounterAmount describe EventCountersAdded.
+	// CounterKind and PreviousCounterAmount describe EventCountersAdded for
+	// either PermanentID or Player.
 	CounterKind           counter.Kind
 	PreviousCounterAmount int
 

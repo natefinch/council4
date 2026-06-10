@@ -4,6 +4,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 // Compile parses and semantically lowers one card face's Oracle text.
@@ -434,6 +436,7 @@ func compileEffects(
 			clauseEnd := effectClauseEnd(tokens, effectIndices, effectIndex)
 			clauseTokens := tokens[tokenIndex+1 : clauseEnd]
 			powerDelta, toughnessDelta := compilePTChange(clauseTokens)
+			counterKind, counterKindKnown := counterKindWord(clauseTokens)
 			effects = append(effects, CompiledEffect{
 				Kind:                 kind,
 				Span:                 sentence.Span,
@@ -448,12 +451,75 @@ func compileEffects(
 				StaticSubjectSpan:    staticSubjectSpan,
 				StaticSubjectSubtype: staticSubjectSubtype,
 				Symbol:               firstSymbol(clauseTokens),
+				CounterKind:          counterKind,
+				CounterKindKnown:     kind == EffectPut && counterKindKnown,
 				Negated:              effectNegated(tokens, tokenIndex),
 			})
 		}
 
 	}
 	return effects
+}
+
+func counterKindWord(tokens []Token) (counter.Kind, bool) {
+	counterIndex := -1
+	for index, token := range tokens {
+		if equalWord(token, "counter") || equalWord(token, "counters") {
+			if counterIndex >= 0 {
+				return 0, false
+			}
+			counterIndex = index
+		}
+	}
+	if counterIndex <= 0 {
+		return 0, false
+	}
+	prefix := strings.ToLower(joinedSourceText(tokens[:counterIndex]))
+	names := []counter.Kind{
+		counter.PlusOnePlusOne,
+		counter.MinusOneMinusOne,
+		counter.Loyalty,
+		counter.Charge,
+		counter.Time,
+		counter.Defense,
+		counter.Poison,
+		counter.Lore,
+		counter.Verse,
+		counter.Shield,
+		counter.Stun,
+		counter.Finality,
+		counter.Brick,
+		counter.Page,
+		counter.Enlightened,
+		counter.Indestructible,
+		counter.Deathtouch,
+		counter.Flying,
+		counter.FirstStrike,
+		counter.Hexproof,
+		counter.Lifelink,
+		counter.Menace,
+		counter.Reach,
+		counter.Trample,
+		counter.Vigilance,
+		counter.Energy,
+		counter.Experience,
+	}
+	for _, kind := range names {
+		name := kind.String()
+		if !strings.HasSuffix(prefix, name) {
+			continue
+		}
+		amount := strings.TrimSpace(strings.TrimSuffix(prefix, name))
+		switch amount {
+		case "a", "an", "one", "two", "three", "four", "x":
+			return kind, CounterKindPlacementSupported(kind)
+		default:
+			if value, err := strconv.Atoi(amount); err == nil && value > 0 {
+				return kind, CounterKindPlacementSupported(kind)
+			}
+		}
+	}
+	return 0, false
 }
 
 func effectTokenIndices(tokens []Token, cardName string) []int {

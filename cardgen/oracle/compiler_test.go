@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 func TestCompileActivatedAbility(t *testing.T) {
@@ -539,6 +541,7 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 		{"{T}: Put X +1/+1 counters on target creature, where X is Druid's power.", ParseContext{CardName: "Druid"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Druid's power"},
 		{"{T}: Put X +1/+1 counters on target creature, where X is Fight Bear's power.", ParseContext{CardName: "Fight Bear"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Fight Bear's power"},
 	}
+
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
 			t.Parallel()
@@ -559,6 +562,57 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 				t.Fatal("source-power amount has no reference span")
 			}
 		})
+	}
+}
+
+func TestCompileNamedCounterKinds(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		kind counter.Kind
+	}{
+		{"+1/+1", counter.PlusOnePlusOne},
+		{"charge", counter.Charge},
+		{"first strike", counter.FirstStrike},
+		{"poison", counter.Poison},
+		{"experience", counter.Experience},
+	}
+	for _, test := range tests {
+		source := "Put a " + test.name + " counter on target permanent."
+		compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q diagnostics = %#v", source, diagnostics)
+		}
+		effect := compilation.Abilities[0].Effects[0]
+		if !effect.CounterKindKnown || effect.CounterKind != test.kind {
+			t.Fatalf("%q counter kind = %v, %v", source, effect.CounterKind, effect.CounterKindKnown)
+		}
+	}
+
+	compilation, diagnostics := Compile(
+		"Put a quest counter on target permanent.",
+		ParseContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("unknown counter diagnostics = %#v", diagnostics)
+	}
+	if compilation.Abilities[0].Effects[0].CounterKindKnown {
+		t.Fatal("unknown counter kind was recognized")
+	}
+}
+
+func TestCompileNamedCounterKindsRejectsMissingRuntimeMechanics(t *testing.T) {
+	t.Parallel()
+	for _, name := range []string{"stun", "finality"} {
+		source := "Put a " + name + " counter on target creature."
+		compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q diagnostics = %#v", source, diagnostics)
+		}
+		effect := compilation.Abilities[0].Effects[0]
+		if effect.CounterKindKnown {
+			t.Fatalf("%q counter kind was accepted for placement", source)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -15,6 +16,42 @@ func validateTargetReference(index int, targets []TargetSpec, checkTargets bool)
 		return fmt.Errorf("target index %d has no matching target specification", index)
 	}
 	return nil
+}
+
+func validateTargetAllows(index int, allow TargetAllow, targets []TargetSpec, checkTargets bool) error {
+	if err := validateTargetReference(index, targets, checkTargets); err != nil {
+		return err
+	}
+	if checkTargets && targetSpecAllowedKinds(&targets[index]) != allow {
+		return errors.New("target specification allows an incompatible target kind")
+	}
+	return nil
+}
+
+func targetSpecAllowedKinds(target *TargetSpec) TargetAllow {
+	if target.Allow != TargetAllowUnspecified {
+		return target.Allow
+	}
+	constraint := strings.ToLower(strings.TrimSpace(target.Constraint))
+	constraint = strings.TrimPrefix(constraint, "target ")
+	constraint = strings.Join(strings.Fields(constraint), " ")
+	if constraint == "any target" {
+		return TargetAllowPermanent | TargetAllowPlayer
+	}
+	switch constraint {
+	case "player", "opponent":
+		return TargetAllowPlayer
+	}
+	if strings.Contains(constraint, "permanent") ||
+		strings.Contains(constraint, "creature") ||
+		strings.Contains(constraint, "artifact") ||
+		strings.Contains(constraint, "enchantment") ||
+		strings.Contains(constraint, "land") ||
+		strings.Contains(constraint, "planeswalker") ||
+		strings.Contains(constraint, "battle") {
+		return TargetAllowPermanent
+	}
+	return TargetAllowUnspecified
 }
 
 // firstProblem adapts the structural []string problem list returned by the
@@ -145,6 +182,13 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 	return nil
 }
 
+func validatePositiveQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool) error {
+	if !quantity.IsDynamic() && quantity.Value() <= 0 {
+		return errors.New("counter amount must be positive")
+	}
+	return validateQuantity(quantity, targets, checkTargets)
+}
+
 func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if !p.Recipient.Valid() {
 		return errors.New("damage requires a valid recipient")
@@ -211,10 +255,41 @@ func (p AddMana) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 }
 
 func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+	if !p.CounterKind.Valid() {
+		return errors.New("add counter requires a recognized counter kind")
+	}
+	if p.CounterKind.PlayerOnly() {
+		return errors.New("player-only counter kind cannot be placed on a permanent")
+	}
+	if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	return validateObjectReference(p.Object, targets, checkTargets)
+	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Object.Kind() == ObjectReferenceTargetPermanent {
+		return validateTargetAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
+	}
+	return nil
+}
+
+func (p AddPlayerCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if !p.CounterKind.Valid() {
+		return errors.New("add player counter requires a recognized counter kind")
+	}
+	if !p.CounterKind.PlayerOnly() {
+		return errors.New("permanent-only counter kind cannot be placed on a player")
+	}
+	if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Player.Kind() == PlayerReferenceTargetPlayer {
+		return validateTargetAllows(p.Player.TargetIndex(), TargetAllowPlayer, targets, checkTargets)
+	}
+	return nil
 }
 
 func (p MoveCounters) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

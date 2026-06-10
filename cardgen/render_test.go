@@ -45,6 +45,7 @@ func TestRenderDynamicQuantityFieldsAndImports(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for _, wanted := range []string{
 		"game.DynamicAmountCountSelector",
 		"Multiplier: 2",
@@ -77,6 +78,69 @@ func TestRenderDynamicQuantityFieldsAndImports(t *testing.T) {
 	}
 	if _, ok := ctx.imports[importCounter]; !ok {
 		t.Fatal("counter quantity did not request counter import")
+	}
+}
+
+func TestRenderNamedCounterPrimitives(t *testing.T) {
+	t.Parallel()
+	renderer := Renderer{}
+	tests := []struct {
+		primitive game.Primitive
+		wants     []string
+	}{
+		{
+			primitive: game.AddCounter{
+				Amount:      game.Fixed(2),
+				Object:      game.TargetPermanentReference(0),
+				CounterKind: counter.Stun,
+			},
+			wants: []string{"game.AddCounter", "game.Fixed(2)", "counter.Stun"},
+		},
+		{
+			primitive: game.AddPlayerCounter{
+				Amount: game.Dynamic(game.DynamicAmount{
+					Kind:   game.DynamicAmountObjectPower,
+					Object: game.SourcePermanentReference(),
+				}),
+				Player:      game.TargetPlayerReference(1),
+				CounterKind: counter.Poison,
+			},
+			wants: []string{
+				"game.AddPlayerCounter",
+				"game.DynamicAmountObjectPower",
+				"game.SourcePermanentReference()",
+				"game.TargetPlayerReference(1)",
+				"counter.Poison",
+			},
+		},
+	}
+	for _, test := range tests {
+		ctx := newRenderCtx()
+		rendered, err := renderer.renderPrimitive(ctx, test.primitive)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, want := range test.wants {
+			if !strings.Contains(rendered, want) {
+				t.Fatalf("rendered primitive missing %q:\n%s", want, rendered)
+			}
+		}
+		if _, ok := ctx.imports[importCounter]; !ok {
+			t.Fatal("counter primitive did not request counter import")
+		}
+	}
+}
+
+func TestRenderEveryRecognizedCounterKind(t *testing.T) {
+	t.Parallel()
+	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {
+		rendered, err := renderCounterKind(kind)
+		if err != nil {
+			t.Fatalf("%s: %v", kind, err)
+		}
+		if rendered == "" {
+			t.Fatalf("%s rendered empty", kind)
+		}
 	}
 }
 

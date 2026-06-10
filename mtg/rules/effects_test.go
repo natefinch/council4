@@ -57,7 +57,86 @@ func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 	if g.Players[game.Player2].Life != 43 {
 		t.Fatalf("player 2 life = %d, want 43", g.Players[game.Player2].Life)
 	}
+}
 
+func TestAddPlayerCounterEffectUpdatesCountersAndEvents(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.AddPlayerCounter{
+		Amount:      game.Fixed(3),
+		Player:      game.TargetPlayerReference(0),
+		CounterKind: counter.Poison,
+	}, []game.Target{game.PlayerTarget(game.Player2)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player2].PoisonCounters; got != 3 {
+		t.Fatalf("poison counters = %d, want 3", got)
+	}
+	var event game.Event
+	for _, candidate := range g.Events {
+		if candidate.Kind == game.EventCountersAdded {
+			event = candidate
+		}
+	}
+	if event.Kind != game.EventCountersAdded ||
+		event.Player != game.Player2 ||
+		event.CounterKind != counter.Poison ||
+		event.PreviousCounterAmount != 0 ||
+		event.Amount != 3 {
+		t.Fatalf("counter event = %+v", event)
+	}
+}
+
+func TestAddPlayerCounterEffectDynamicAndNonpositiveAmounts(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.AddPlayerCounter{
+		Amount: game.Dynamic(game.DynamicAmount{
+			Kind:       game.DynamicAmountOpponentCount,
+			Multiplier: 2,
+		}),
+		Player:      game.TargetPlayerReference(0),
+		CounterKind: counter.Energy,
+	}, []game.Target{game.PlayerTarget(game.Player2)})
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player2].EnergyCounters; got != 6 {
+		t.Fatalf("energy counters = %d, want 6", got)
+	}
+
+	for _, amount := range []int{0, -1} {
+		addEffectSpellToStack(g, game.Player1, game.AddPlayerCounter{
+			Amount:      game.Fixed(amount),
+			Player:      game.TargetPlayerReference(0),
+			CounterKind: counter.Experience,
+		}, []game.Target{game.PlayerTarget(game.Player2)})
+		engine.resolveTopOfStack(g, &TurnLog{})
+	}
+	if got := g.Players[game.Player2].ExperienceCounters; got != 0 {
+		t.Fatalf("experience counters = %d, want 0", got)
+	}
+}
+
+func TestAddPlayerPoisonCounterCausesStateBasedLoss(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player2].PoisonCounters = 9
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.AddPlayerCounter{
+		Amount:      game.Fixed(1),
+		Player:      game.TargetPlayerReference(0),
+		CounterKind: counter.Poison,
+	}, []game.Target{game.PlayerTarget(game.Player2)})
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	losses := engine.applyStateBasedActions(g)
+	if !g.Players[game.Player2].Eliminated ||
+		len(losses) != 1 ||
+		losses[0].Reason != LossReasonPoisonCounters {
+		t.Fatalf("player = %+v, losses = %+v", g.Players[game.Player2], losses)
+	}
 }
 
 func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
@@ -1129,6 +1208,17 @@ func TestProliferateAddsOneChosenCounterKind(t *testing.T) {
 	}
 	if got := g.Players[game.Player2].PoisonCounters; got != 2 {
 		t.Fatalf("poison counters = %d, want proliferated player counter", got)
+	}
+	var playerCounterEvent game.Event
+	for _, event := range g.Events {
+		if event.Kind == game.EventCountersAdded && event.Player == game.Player2 {
+			playerCounterEvent = event
+		}
+	}
+	if playerCounterEvent.CounterKind != counter.Poison ||
+		playerCounterEvent.PreviousCounterAmount != 1 ||
+		playerCounterEvent.Amount != 1 {
+		t.Fatalf("player counter event = %+v", playerCounterEvent)
 	}
 	if len(log.Choices) != 2 || log.Choices[0].Request.Kind != game.ChoiceProliferate {
 		t.Fatalf("choices = %+v, want proliferate choices", log.Choices)
