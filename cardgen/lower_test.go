@@ -3333,6 +3333,36 @@ func TestLowerProliferateTwiceSpell(t *testing.T) {
 	}
 }
 
+func TestLowerExploreSourcePermanentTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scout",
+		Layout:     "normal",
+		TypeLine:   "Creature — Merfolk Scout",
+		OracleText: "When this creature enters, it explores.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	explore, ok := mode.Sequence[0].Primitive.(game.Explore)
+	if !ok || explore.Creature.Kind() != game.ObjectReferenceSourcePermanent {
+		t.Fatalf("primitive = %+v, want source permanent explores", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Explore",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature explores.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported explore diagnostic")
+	}
+}
+
 func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -3354,6 +3384,11 @@ func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
 			name:      "proliferate",
 			text:      "When this creature enters, if you control an artifact, proliferate.",
 			primitive: game.Proliferate{Amount: game.Fixed(1)},
+		},
+		{
+			name:      "explore",
+			text:      "When this creature enters, if you control an artifact, it explores.",
+			primitive: game.Explore{Creature: game.SourcePermanentReference()},
 		},
 		{
 			name:      "mill",

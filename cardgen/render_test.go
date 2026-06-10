@@ -132,6 +132,21 @@ func TestRenderNamedCounterPrimitives(t *testing.T) {
 	}
 }
 
+func TestRenderExplorePrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Explore{
+		Creature: game.SourcePermanentReference(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.Explore", "Creature: game.SourcePermanentReference()"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered explore missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderEveryRecognizedCounterKind(t *testing.T) {
 	t.Parallel()
 	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {
