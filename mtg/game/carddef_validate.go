@@ -22,6 +22,7 @@ const (
 	CardDefIssueInvalidKeywordAbility  CardDefIssueCode = "invalid-keyword-ability"
 	CardDefIssueInvalidAbilityBody     CardDefIssueCode = "invalid-ability-body"
 	CardDefIssueInvalidSelection       CardDefIssueCode = "invalid-selection"
+	CardDefIssueInvalidCondition       CardDefIssueCode = "invalid-condition"
 )
 
 // CardDefIssue describes one structural problem found in a CardDef.
@@ -398,6 +399,15 @@ func (v *cardDefValidator) validateTargetIndex(faceName, path string, targetInde
 }
 
 func (v *cardDefValidator) validateCondition(faceName, path string, condition *Condition, targets []TargetSpec) {
+	if condition.ControllerLifeAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerLifeAtLeast"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	}
+	if condition.AnyPlayerLifeAtMost < 0 {
+		v.add(faceName, appendPath(path, "AnyPlayerLifeAtMost"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	}
+	if condition.OpponentCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "OpponentCountAtLeast"), CardDefIssueInvalidCondition, "opponent-count threshold cannot be negative")
+	}
 	if condition.ControlsMatching.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "ControlsMatching"), condition.ControlsMatching.Val)
 		if !condition.ControllerControls.Empty() {

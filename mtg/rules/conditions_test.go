@@ -354,6 +354,21 @@ func TestLifeAndOpponentConditions(t *testing.T) {
 	}
 }
 
+func TestNegativeConditionThresholdsFailClosed(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+	conditions := []game.Condition{
+		{Negate: true, ControllerLifeAtLeast: -1},
+		{Negate: true, AnyPlayerLifeAtMost: -1},
+		{Negate: true, OpponentCountAtLeast: -1},
+	}
+	for _, condition := range conditions {
+		if conditionSatisfied(g, ctx, opt.Val(condition)) {
+			t.Fatalf("conditionSatisfied(%+v) = true, want false", condition)
+		}
+	}
+}
+
 func TestOpponentPermanentCountConditions(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	ctx := conditionContext{controller: game.Player1}

@@ -694,6 +694,31 @@ func TestValidateCardDefReportsConditionDualSpecification(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefReportsNegativeConditionThresholds(t *testing.T) {
+	tests := map[string]Condition{
+		"controller life": {ControllerLifeAtLeast: -1},
+		"any player life": {AnyPlayerLifeAtMost: -1},
+		"opponent count":  {OpponentCountAtLeast: -1},
+	}
+	for name, condition := range tests {
+		t.Run(name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Invalid Condition",
+				OracleText: "Invalid condition.",
+				StaticAbilities: []StaticAbility{{
+					Condition: opt.Val(condition),
+				}},
+			}}
+
+			issues := ValidateCardDef(card)
+
+			if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefReportsTriggerPatternDualSpecification(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Dual Trigger Pattern",

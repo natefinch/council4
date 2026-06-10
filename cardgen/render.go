@@ -917,6 +917,11 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 // conditional enters-tapped replacement. Only the exact supported shape is
 // accepted; any other combination returns an error.
 func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Condition) (string, error) {
+	if cond.ControllerLifeAtLeast < 0 ||
+		cond.AnyPlayerLifeAtMost < 0 ||
+		cond.OpponentCountAtLeast < 0 {
+		return "", errors.New("render: ETB replacement condition has a negative threshold")
+	}
 	// Reject unsupported condition fields.
 	if cond.ControlsMatching.Exists ||
 		cond.Object.Exists ||
