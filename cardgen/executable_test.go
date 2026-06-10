@@ -1578,6 +1578,38 @@ func TestGenerateExecutableCardSourceEnterDrawTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceKickedEnterTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Kicked Bear",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Kicker {1}{G}\nWhen this creature enters, if it was kicked, you gain 4 life.",
+		Colors:     []string{"G"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "k")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"InterveningIf:",
+		`"if it was kicked"`,
+		"InterveningIfEventPermanentWasKicked: true",
+		"Primitive: game.GainLife",
+		"game.Fixed(4)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEnterMultipleEffectTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -1811,6 +1843,29 @@ func TestGenerateExecutableCardSourceRejectsPartiallyOptionalTrigger(t *testing.
 		t.Fatalf("source = %q, want no partial card", source)
 	}
 	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported enter trigger" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsOptionalKickedEnterTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Unclear Kicker",
+		Layout:     "normal",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Kicker {1}{U}\nWhen this creature enters, if it was kicked, you may draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported enter trigger effect" {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 }

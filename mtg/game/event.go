@@ -80,6 +80,10 @@ type Event struct {
 	// face it had while leaving the stack or battlefield.
 	Face FaceIndex
 
+	// KickerPaid records whether the entering permanent spell's kicker cost was
+	// paid. It is false for permanents that did not enter from a kicked spell.
+	KickerPaid bool
+
 	// CardTypes records the relevant card types at event time for spell-cast
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).

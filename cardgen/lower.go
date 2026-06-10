@@ -277,6 +277,9 @@ func lowerExecutableAbility(
 		for _, target := range ability.Targets {
 			spans = append(spans, target.Span)
 		}
+		for _, condition := range ability.Conditions {
+			spans = append(spans, condition.Span)
+		}
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
 		}
@@ -289,6 +292,7 @@ func lowerExecutableAbility(
 				trigger:    true,
 				optional:   ability.Optional,
 				targets:    len(ability.Targets),
+				conditions: len(ability.Conditions),
 				effects:    len(ability.Effects),
 				references: len(ability.References),
 			},
@@ -1588,25 +1592,23 @@ func lowerEnterTrigger(
 		summary = "unsupported dies trigger"
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
+	kickedCondition := ability.Trigger != nil &&
+		ability.Trigger.Condition != nil &&
+		ability.Trigger.Condition.Kind == oracle.ConditionIf &&
+		ability.Trigger.Condition.Intervening &&
+		ability.Trigger.Condition.Text == "if it was kicked"
 	if ability.Trigger == nil ||
 		ability.Trigger.Kind != oracle.TriggerWhen ||
 		!supportedEvent ||
-		ability.Trigger.Condition != nil ||
+		(ability.Trigger.Condition != nil && !kickedCondition) ||
 		len(ability.Effects) == 0 ||
-		len(ability.Conditions) != 0 ||
+		(len(ability.Conditions) != 0 && !kickedCondition) ||
+		(kickedCondition && (len(ability.Conditions) != 1 ||
+			ability.Conditions[0] != *ability.Trigger.Condition ||
+			ability.Optional)) ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		ability.AbilityWord != "" {
-		return game.TriggeredAbility{}, executableDiagnostic(
-			ability,
-			summary,
-			detail,
-		)
-	}
-	comma := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-		return token.Kind == oracle.Comma
-	})
-	if comma < 0 || comma+1 >= len(syntax.Tokens) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
 			summary,
@@ -1625,10 +1627,40 @@ func lowerEnterTrigger(
 	body.Trigger = nil
 	body.Optional = false
 	body.OptionalSpan = oracle.Span{}
-	body.References = bodyReferences(ability.References, ability.Trigger.Span)
+	excludedReferenceSpans := []oracle.Span{ability.Trigger.Span}
+	if kickedCondition {
+		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
+		body.Conditions = nil
+		bodyStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+			return token.Kind != oracle.Comma &&
+				token.Span.Start.Offset >= ability.Trigger.Condition.Span.End.Offset
+		})
+		if bodyStart < 0 {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
+		}
+		effect := body.Effects[0]
+		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
+		effect.Text = ability.Text[effect.Span.Start.Offset-ability.Span.Start.Offset : effect.Span.End.Offset-ability.Span.Start.Offset]
+		body.Effects[0] = effect
+		body.Span.Start = effect.Span.Start
+		body.Text = titleFirst(
+			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+		)
+	}
+	body.References = bodyReferences(ability.References, excludedReferenceSpans...)
+	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Span.Start.Offset >= body.Span.Start.Offset
+	})
+	if bodyTokenStart < 0 {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			detail,
+		)
+	}
 	bodySyntax := syntax
 	bodySyntax.Kind = oracle.AbilitySpell
-	bodySyntax.Tokens = syntax.Tokens[comma+1:]
+	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
 	if ability.Optional {
 		if len(ability.Effects) != 1 ||
 			len(bodySyntax.Tokens) < 3 ||
@@ -1665,6 +1697,8 @@ func lowerEnterTrigger(
 				Event:  eventKind,
 				Source: game.TriggerSourceSelf,
 			},
+			InterveningIf:                        interveningIfText(ability.Trigger),
+			InterveningIfEventPermanentWasKicked: kickedCondition,
 		},
 		Optional: ability.Optional,
 		Content:  content,
@@ -1694,16 +1728,23 @@ func lowerSelfTriggerEvent(ability oracle.CompiledAbility) (game.EventKind, bool
 
 func bodyReferences(
 	references []oracle.CompiledReference,
-	triggerSpan oracle.Span,
+	excludedSpans ...oracle.Span,
 ) []oracle.CompiledReference {
 	var body []oracle.CompiledReference
 	for _, reference := range references {
-		if spanCovered(reference.Span, []oracle.Span{triggerSpan}) {
+		if spanCovered(reference.Span, excludedSpans) {
 			continue
 		}
 		body = append(body, reference)
 	}
 	return body
+}
+
+func interveningIfText(trigger *oracle.CompiledTrigger) string {
+	if trigger == nil || trigger.Condition == nil {
+		return ""
+	}
+	return trigger.Condition.Text
 }
 
 func spanCovered(span oracle.Span, covering []oracle.Span) bool {

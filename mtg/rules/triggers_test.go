@@ -1184,6 +1184,17 @@ func TestInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 	})
 }
 
+func TestKickedInterveningIfChecksEnterEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	trigger := game.TriggerCondition{InterveningIfEventPermanentWasKicked: true}
+	if triggerInterveningIf(g, nil, game.Player1, &trigger, &game.Event{}) {
+		t.Fatal("unkicked enter event satisfied kicked intervening-if")
+	}
+	if !triggerInterveningIf(g, nil, game.Player1, &trigger, &game.Event{KickerPaid: true}) {
+		t.Fatal("kicked enter event did not satisfy kicked intervening-if")
+	}
+}
+
 func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

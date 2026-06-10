@@ -654,12 +654,35 @@ func TestLowerEnterTrigger(t *testing.T) {
 	if len(face.TriggeredAbilities) != 1 {
 		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
 	}
+
 	trigger := face.TriggeredAbilities[0].Trigger
 	if trigger.Pattern.Event != game.EventPermanentEnteredBattlefield {
 		t.Fatalf("event = %v, want EventPermanentEnteredBattlefield", trigger.Pattern.Event)
 	}
 	if trigger.Pattern.Source != game.TriggerSourceSelf {
 		t.Fatalf("source = %v, want TriggerSourceSelf", trigger.Pattern.Source)
+	}
+}
+
+func TestLowerKickedEnterTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Kicker",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Kicker {1}{U}\nWhen this creature enters, if it was kicked, draw two cards.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.InterveningIf != "if it was kicked" ||
+		!trigger.InterveningIfEventPermanentWasKicked {
+		t.Fatalf("trigger = %+v, want kicked intervening-if", trigger)
+	}
+	draw, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok || draw.Amount != game.Fixed(2) {
+		t.Fatalf("primitive = %+v, want draw two", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
 	}
 }
 
