@@ -546,6 +546,9 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 	if trigger.InterveningIfEventPermanentHadCounters && !eventPermanentHadCounters(g, event) {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentWasKicked && (event == nil || !event.KickerPaid) {
+		return false
+	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
 		source:     source,

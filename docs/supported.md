@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,875
+Cards supported: 2,882
 
 - +2 Mace
 - Aardvark Sloth
@@ -219,6 +219,7 @@ Cards supported: 2,875
 - Beast
 - Bee Sting
 - Beeble
+- Benalish Emissary
 - Benalish Heralds
 - Benalish Knight
 - Benalish Marshal
@@ -403,6 +404,7 @@ Cards supported: 2,875
 - Chrome Prowler
 - Cinder Barrens
 - Cinder Glade
+- Citanul Woodreaders
 - Citizen
 - Citizen
 - Citywatch Sphinx
@@ -1076,6 +1078,7 @@ Cards supported: 2,875
 - Healer of the Glade
 - Healer's Flock
 - Healer's Hawk
+- Heartstabber Mosquito
 - Heat Ray
 - Heavy Infantry
 - Hedge Maze
@@ -1276,6 +1279,7 @@ Cards supported: 2,875
 - Jungle Shrine
 - Jungle Weaver
 - Juniper Order Druid
+- Juniper Order Rootweaver
 - Juvenile Gloomwidow
 - Jwar Isle Refuge
 - Jwari Scuttler
@@ -1353,6 +1357,7 @@ Cards supported: 2,875
 - Kraul Raider
 - Kraul Stinger
 - Krosan Colossus
+- Krosan Druid
 - Krovikan Scoundrel
 - Krumar Bond-Kin
 - Kujar Seedsculptor
@@ -2484,6 +2489,7 @@ Cards supported: 2,875
 - Titanic Growth
 - Tobias Andrion
 - Tocasia's Dig Site
+- Tolarian Emissary
 - Tolarian Scholar
 - Tomakul Honor Guard
 - Tombstalker
@@ -2582,6 +2588,7 @@ Cards supported: 2,875
 - Updraft Elemental
 - Urborg Drake
 - Urborg Elf
+- Urborg Emissary
 - Urborg Volcano
 - Ursapine
 - Urzan Automaton

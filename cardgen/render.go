@@ -810,10 +810,17 @@ func (r Renderer) renderTriggerCondition(trigger *game.TriggerCondition) (string
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.TriggerCondition", []string{
+	fields := []string{
 		fmt.Sprintf("Type: %s,", triggerType),
 		fmt.Sprintf("Pattern: %s,", pattern),
-	}), nil
+	}
+	if trigger.InterveningIf != "" {
+		fields = append(fields, fmt.Sprintf("InterveningIf: %q,", trigger.InterveningIf))
+	}
+	if trigger.InterveningIfEventPermanentWasKicked {
+		fields = append(fields, "InterveningIfEventPermanentWasKicked: true,")
+	}
+	return structLit("game.TriggerCondition", fields), nil
 }
 
 func (Renderer) renderTriggerPattern(pattern *game.TriggerPattern) (string, error) {

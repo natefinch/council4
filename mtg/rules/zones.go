@@ -30,6 +30,7 @@ func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.C
 
 type permanentCreationOptions struct {
 	ForceTapped bool
+	KickerPaid  bool
 }
 
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -67,6 +68,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		Player:      card.Owner,
 		CardID:      card.ID,
 		Face:        face,
+		KickerPaid:  options.KickerPaid,
 		PermanentID: objectID,
 		FromZone:    fromZone,
 		ToZone:      zone.Battlefield,

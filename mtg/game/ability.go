@@ -196,6 +196,11 @@ type TriggerCondition struct {
 	// checks the event permanent's current object or last-known information.
 	InterveningIfEventPermanentHadCounters bool
 
+	// InterveningIfEventPermanentWasKicked is true for "if it was kicked" on
+	// enter triggers. The entering permanent event preserves the spell's kicker
+	// choice for both trigger-time and resolution-time checks.
+	InterveningIfEventPermanentWasKicked bool
+
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
 	State opt.V[StateTriggerCondition]

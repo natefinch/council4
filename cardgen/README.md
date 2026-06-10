@@ -42,7 +42,8 @@ Vanguard cards are excluded with explicit report reasons.
    parameter forms remain fail-closed. Exact `X` quantities and common target
    restrictions lower into runtime quantities and structured target predicates.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
-   `game.AddCounter` instructions.
+   `game.AddCounter` instructions. Exact `if it was kicked` self-enter triggers
+   preserve the kicker choice as a typed intervening-if predicate.
    Common enters-tapped land-count and basic-land-subtype conditions lower into
    typed replacement predicates.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated

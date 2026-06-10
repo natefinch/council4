@@ -1095,6 +1095,37 @@ func TestKickerSpellPaysKickerAndAppliesKickerEffects(t *testing.T) {
 	}
 }
 
+func TestKickedPermanentPreservesKickerOnEnterEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Kicked Creature",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: cost.Mana{cost.G}}},
+		}},
+	}})
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastKickedSpell(spellID, nil, 0, nil)) {
+		t.Fatal("kicked permanent cast failed")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for i := len(g.Events) - 1; i >= 0; i-- {
+		if g.Events[i].Kind == game.EventPermanentEnteredBattlefield {
+			if !g.Events[i].KickerPaid {
+				t.Fatal("permanent enter event lost kicker payment")
+			}
+			return
+		}
+	}
+	t.Fatal("missing permanent enter event")
+}
+
 func TestKickedSpellPlansBaseAndKickerTogether(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
