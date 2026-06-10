@@ -52,7 +52,7 @@ Vanguard cards are excluded with explicit report reasons.
    restrictions lower into runtime quantities and structured target predicates.
    Ordered effect clauses retain independent target specifications and references.
    Exact fixed, `X`, and supported dynamic placement of recognized named
-   counters lowers from supported spell, activated, loyalty, self-enter trigger,
+   counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`
    permanent instructions or `game.AddPlayerCounter` instructions for poison,
    energy, and experience. Counter kinds and target domains are checked
@@ -61,7 +61,17 @@ Vanguard cards are excluded with explicit report reasons.
    implemented ([#222](https://github.com/natefinch/council4/issues/222),
    [#223](https://github.com/natefinch/council4/issues/223)). Self-enter triggers support exact intervening
    conditions for kicked or cast entry and controlling one
-   permanent of a named permanent card type. Exact
+   permanent of a named permanent card type. Non-self permanent
+   enters-the-battlefield triggers lower for exact single-subject
+   (`a`/`an`/`another`, optional `nontoken` qualifier) and `one or more`
+   subject forms, with optional permanent type filter (creature, artifact,
+   enchantment, land, planeswalker, or unfiltered) and optional you-control or
+   opponent-controls controller constraints. Phase and step triggered abilities
+   using `At the beginning of …` lower for the ten exact step-trigger phrases:
+   your upkeep, each upkeep, each player's upkeep, each opponent's upkeep, your
+   end step, each end step, each player's end step, combat on your turn, each
+   combat, and your draw step. All other step-trigger phrases and all
+   intervening-if conditions on step triggers are fail-closed. Exact
    self-dies triggers support exact `if it had no +1/+1 counters` and
    `if it had no -1/-1 counters` conditions using the departed permanent's
    last-known information. Fixed-damage bodies preserve that permanent as the

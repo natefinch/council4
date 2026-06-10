@@ -2491,6 +2491,38 @@ func TestLowerKeywordNamedCounterPlacementAbilityShapes(t *testing.T) {
 			kind: counter.FirstStrike,
 		},
 		{
+			name: "phase triggered",
+			card: &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: "At the beginning of your upkeep, put a flying counter on target creature.",
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if len(face.TriggeredAbilities) != 1 {
+					return game.AbilityContent{}, false
+				}
+				return face.TriggeredAbilities[0].Content, true
+			},
+			kind: counter.Flying,
+		},
+		{
+			name: "non-self enter triggered",
+			card: &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: "Whenever another creature enters, put a lifelink counter on target creature.",
+			},
+			content: func(face loweredFaceAbilities) (game.AbilityContent, bool) {
+				if len(face.TriggeredAbilities) != 1 {
+					return game.AbilityContent{}, false
+				}
+				return face.TriggeredAbilities[0].Content, true
+			},
+			kind: counter.Lifelink,
+		},
+		{
 			name: "ordered effects",
 			card: &ScryfallCard{
 				Name:       "Test Counter",
@@ -2983,5 +3015,267 @@ func TestLowerModalUnsupportedModeBodyRejected(t *testing.T) {
 	})
 	if len(diagnostics) == 0 {
 		t.Fatal("expected diagnostics for unsupported mode body, got none")
+	}
+}
+
+func TestLowerAtTriggerYourUpkeepDrawCard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "At the beginning of your upkeep, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Type != game.TriggerAt {
+		t.Fatalf("trigger type = %v, want TriggerAt", ta.Trigger.Type)
+	}
+	if ta.Trigger.Pattern.Event != game.EventBeginningOfStep {
+		t.Fatalf("event = %v, want EventBeginningOfStep", ta.Trigger.Pattern.Event)
+	}
+	if ta.Trigger.Pattern.Step != game.StepUpkeep {
+		t.Fatalf("step = %v, want StepUpkeep", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", ta.Trigger.Pattern.Controller)
+	}
+	draw, ok := ta.Content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok || draw.Amount != game.Fixed(1) {
+		t.Fatalf("primitive = %+v, want Draw{Amount: Fixed(1)}", ta.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerAtTriggerEachOpponentUpkeepDamage(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pinger",
+		Layout:     "normal",
+		TypeLine:   "Creature — Goblin",
+		OracleText: "At the beginning of each opponent's upkeep, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Type != game.TriggerAt {
+		t.Fatalf("trigger type = %v, want TriggerAt", ta.Trigger.Type)
+	}
+	if ta.Trigger.Pattern.Event != game.EventBeginningOfStep {
+		t.Fatalf("event = %v, want EventBeginningOfStep", ta.Trigger.Pattern.Event)
+	}
+	if ta.Trigger.Pattern.Step != game.StepUpkeep {
+		t.Fatalf("step = %v, want StepUpkeep", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerOpponent {
+		t.Fatalf("controller = %v, want TriggerControllerOpponent", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerEachUpkeepAny(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Watcher",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "At the beginning of each upkeep, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerAny {
+		t.Fatalf("controller = %v, want TriggerControllerAny", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerYourEndStep(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mystic",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "At the beginning of your end step, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Step != game.StepEnd {
+		t.Fatalf("step = %v, want StepEnd", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerBeginningOfCombatYourTurn(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Fighter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Warrior",
+		OracleText: "At the beginning of combat on your turn, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Step != game.StepBeginningOfCombat {
+		t.Fatalf("step = %v, want StepBeginningOfCombat", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerYourDrawStep(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scholar",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "At the beginning of your draw step, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Step != game.StepDraw {
+		t.Fatalf("step = %v, want StepDraw", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerEachCombat(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Battler",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Soldier",
+		OracleText: "At the beginning of each combat, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Step != game.StepBeginningOfCombat {
+		t.Fatalf("step = %v, want StepBeginningOfCombat", ta.Trigger.Pattern.Step)
+	}
+	if ta.Trigger.Pattern.Controller != game.TriggerControllerAny {
+		t.Fatalf("controller = %v, want TriggerControllerAny", ta.Trigger.Pattern.Controller)
+	}
+}
+
+func TestLowerAtTriggerOptional(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sage",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "At the beginning of your upkeep, you may draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if !ta.Optional {
+		t.Fatal("expected Optional = true for 'you may' trigger")
+	}
+	if ta.Trigger.Pattern.Step != game.StepUpkeep {
+		t.Fatalf("step = %v, want StepUpkeep", ta.Trigger.Pattern.Step)
+	}
+}
+
+func TestLowerAtTriggerPrecombatMainPhaseFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Planeswalker",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "At the beginning of your precombat main phase, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for precombat main phase trigger, got none")
+	}
+	found := false
+	for _, d := range diagnostics {
+		if strings.Contains(d.Summary, "unsupported phase/step trigger phrase") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected 'unsupported phase/step trigger phrase' diagnostic, got: %v", diagnostics)
+	}
+}
+
+func TestLowerAtTriggerInterveningIfFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "At the beginning of your upkeep, if you control a creature, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for intervening-if on at-trigger, got none")
+	}
+}
+
+func TestLowerAtTriggerPhraseVariants(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase     string
+		step       game.Step
+		controller game.TriggerControllerFilter
+	}{
+		{"each upkeep", game.StepUpkeep, game.TriggerControllerAny},
+		{"each player's upkeep", game.StepUpkeep, game.TriggerControllerAny},
+		{"each opponent's upkeep", game.StepUpkeep, game.TriggerControllerOpponent},
+		{"each end step", game.StepEnd, game.TriggerControllerAny},
+		{"each player's end step", game.StepEnd, game.TriggerControllerAny},
+		{"each combat", game.StepBeginningOfCombat, game.TriggerControllerAny},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Card",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: "At the beginning of " + tc.phrase + ", draw a card.",
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			ta := face.TriggeredAbilities[0]
+			if ta.Trigger.Pattern.Step != tc.step {
+				t.Errorf("step = %v, want %v", ta.Trigger.Pattern.Step, tc.step)
+			}
+			if ta.Trigger.Pattern.Controller != tc.controller {
+				t.Errorf("controller = %v, want %v", ta.Trigger.Pattern.Controller, tc.controller)
+			}
+		})
 	}
 }

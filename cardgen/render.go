@@ -881,7 +881,7 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	if err != nil {
 		return "", err
 	}
-	pattern, err := r.renderTriggerPattern(&trigger.Pattern)
+	pattern, err := r.renderTriggerPattern(ctx, &trigger.Pattern)
 	if err != nil {
 		return "", err
 	}
@@ -944,7 +944,25 @@ func (r Renderer) renderControlledPermanentInterveningCondition(ctx *renderCtx, 
 	return structLit("game.Condition", fields), nil
 }
 
-func (Renderer) renderTriggerPattern(pattern *game.TriggerPattern) (string, error) {
+func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {
+	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
+		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
+	}
+	if pattern.Subject != game.TriggerSubjectDefault ||
+		!pattern.SubjectSelection.Empty() ||
+		len(pattern.RequireCardTypes) != 0 ||
+		len(pattern.ExcludeCardTypes) != 0 ||
+		!pattern.CardSelection.Empty() ||
+		pattern.MatchFromZone ||
+		pattern.MatchToZone ||
+		pattern.MatchStackObjectKind ||
+		pattern.DamageRecipient != game.DamageRecipientNone ||
+		pattern.DamageRecipientCombatState != game.CombatStateAny ||
+		pattern.SpellTargetsSource ||
+		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
+		pattern.SpellTargetPattern.Exists {
+		return "", errors.New("render: unsupported trigger pattern fields")
+	}
 	event, err := renderEventKind(pattern.Event)
 	if err != nil {
 		return "", err
@@ -956,6 +974,50 @@ func (Renderer) renderTriggerPattern(pattern *game.TriggerPattern) (string, erro
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Source: %s,", source))
+	}
+	if pattern.Controller != game.TriggerControllerAny {
+		controller, err := renderTriggerController(pattern.Controller)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Controller: %s,", controller))
+	}
+	if pattern.Step != game.StepNone {
+		step, err := renderStep(pattern.Step)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Step: %s,", step))
+	}
+	if pattern.ExcludeSelf {
+		fields = append(fields, "ExcludeSelf: true,")
+	}
+	if len(pattern.RequirePermanentTypes) > 0 {
+		rpt, err := renderTypesCardSlice(ctx, pattern.RequirePermanentTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("RequirePermanentTypes: %s,", rpt))
+	}
+	if len(pattern.ExcludePermanentTypes) > 0 {
+		ept, err := renderTypesCardSlice(ctx, pattern.ExcludePermanentTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludePermanentTypes: %s,", ept))
+	}
+	if pattern.RequireNonToken {
+		fields = append(fields, "RequireNonToken: true,")
+	}
+	if pattern.OneOrMore {
+		fields = append(fields, "OneOrMore: true,")
+	}
+	if pattern.Player != game.TriggerPlayerAny {
+		player, err := renderTriggerPlayer(pattern.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Player: %s,", player))
 	}
 	return structLit("game.TriggerPattern", fields), nil
 }
@@ -2848,6 +2910,21 @@ func renderTriggerType(triggerType game.TriggerType) (string, error) {
 	}
 }
 
+func renderStep(step game.Step) (string, error) {
+	switch step {
+	case game.StepUpkeep:
+		return "game.StepUpkeep", nil
+	case game.StepDraw:
+		return "game.StepDraw", nil
+	case game.StepBeginningOfCombat:
+		return "game.StepBeginningOfCombat", nil
+	case game.StepEnd:
+		return "game.StepEnd", nil
+	default:
+		return "", fmt.Errorf("render: unsupported step %d", step)
+	}
+}
+
 func renderTriggerSource(source game.TriggerSourceFilter) (string, error) {
 	switch source {
 	case game.TriggerSourceSelf:
@@ -2859,12 +2936,36 @@ func renderTriggerSource(source game.TriggerSourceFilter) (string, error) {
 	}
 }
 
+func renderTriggerController(controller game.TriggerControllerFilter) (string, error) {
+	switch controller {
+	case game.TriggerControllerYou:
+		return "game.TriggerControllerYou", nil
+	case game.TriggerControllerOpponent:
+		return "game.TriggerControllerOpponent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger controller filter %d", controller)
+	}
+}
+
+func renderTriggerPlayer(player game.TriggerPlayerFilter) (string, error) {
+	switch player {
+	case game.TriggerPlayerYou:
+		return "game.TriggerPlayerYou", nil
+	case game.TriggerPlayerOpponent:
+		return "game.TriggerPlayerOpponent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger player filter %d", player)
+	}
+}
+
 func renderEventKind(event game.EventKind) (string, error) {
 	switch event {
 	case game.EventPermanentEnteredBattlefield:
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
 		return "game.EventPermanentDied", nil
+	case game.EventBeginningOfStep:
+		return "game.EventBeginningOfStep", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
 	}
