@@ -1481,6 +1481,7 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		fields = append(fields, fmt.Sprintf("ExcludedKeyword: %s,", kw))
 	}
 	if predicate.ManaValue.Exists {
+		ctx.need(importOpt)
 		cmp, err := renderCompareInt(ctx, predicate.ManaValue.Val)
 		if err != nil {
 			return "", false, err
@@ -1488,6 +1489,7 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		fields = append(fields, fmt.Sprintf("ManaValue: opt.Val(%s),", cmp))
 	}
 	if predicate.Power.Exists {
+		ctx.need(importOpt)
 		cmp, err := renderCompareInt(ctx, predicate.Power.Val)
 		if err != nil {
 			return "", false, err
@@ -1495,6 +1497,7 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		fields = append(fields, fmt.Sprintf("Power: opt.Val(%s),", cmp))
 	}
 	if predicate.Toughness.Exists {
+		ctx.need(importOpt)
 		cmp, err := renderCompareInt(ctx, predicate.Toughness.Val)
 		if err != nil {
 			return "", false, err

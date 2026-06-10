@@ -132,6 +132,9 @@ func TestRenderTargetPredicateQualifiers(t *testing.T) {
 	if !ok {
 		t.Fatal("renderTargetPredicate() did not render qualified predicate")
 	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("renderTargetPredicate() did not request opt import")
+	}
 	for _, want := range []string{
 		"ExcludedTypes: []types.Card{types.Artifact}",
 		"Colors: []color.Color{color.Green}",
