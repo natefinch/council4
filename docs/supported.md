@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,804
+Cards supported: 2,836
 
 - +2 Mace
 - Aardvark Sloth
@@ -240,6 +240,7 @@ Cards supported: 2,804
 - Bishop's Soldier
 - Bitterbow Sharpshooters
 - Black Knight
+- Blackcleave Cliffs
 - Blackcleave Goblin
 - Blade of the Sixth Pride
 - Blanchwood Treefolk
@@ -266,6 +267,7 @@ Cards supported: 2,804
 - Bloodrock Cyclops
 - Bloodstone Cameo
 - Bloom Hulk
+- Blooming Marsh
 - Blossom Dryad
 - Blossoming Sands
 - Blurred Mongoose
@@ -294,6 +296,7 @@ Cards supported: 2,804
 - Boreal Druid
 - Boreal Shelf
 - Boros Guildgate
+- Botanical Sanctum
 - Bounding Wolf
 - Braidwood Cup
 - Braingeyser
@@ -346,6 +349,7 @@ Cards supported: 2,804
 - Carrion Crow
 - Carrion Screecher
 - Carven Caryatid
+- Castle Vantress
 - Cat
 - Cat
 - Cat
@@ -402,6 +406,7 @@ Cards supported: 2,804
 - Cleric
 - Cleric
 - Cliffhaven Sell-Sword
+- Clifftop Retreat
 - Clinging Darkness
 - Cloaked Siren
 - Clockwork Drawbridge
@@ -427,6 +432,7 @@ Cards supported: 2,804
 - Colossapede
 - Colossodon Yearling
 - Commercial District
+- Concealed Courtyard
 - Concentrate
 - Conclave Equenaut
 - Concordia Pegasus
@@ -447,6 +453,7 @@ Cards supported: 2,804
 - Contingency Plan
 - Copper Host Crusher
 - Copper Myr
+- Copperline Gorge
 - Coral Commando
 - Coral Eel
 - Coral Merfolk
@@ -504,6 +511,7 @@ Cards supported: 2,804
 - Darkbore Pathway // Slitherbore Pathway
 - Darkmoss Bridge
 - Darkslick Drake
+- Darkslick Shores
 - Darkstar
 - Darksteel Axe
 - Darksteel Citadel
@@ -534,6 +542,7 @@ Cards supported: 2,804
 - Death Stroke
 - Death Ward
 - Deathbloom Gardener
+- Deathcap Glade
 - Deathcap Marionette
 - Deathgaze Cockatrice
 - Debilitating Injury
@@ -563,6 +572,7 @@ Cards supported: 2,804
 - Desert of the Indomitable
 - Desert of the Mindful
 - Desert of the True
+- Deserted Beach
 - Deserted Temple
 - Desperate Bloodseeker
 - Detective
@@ -618,6 +628,7 @@ Cards supported: 2,804
 - Dragon Spirit
 - Dragon's Eye Sentry
 - Dragon's Presence
+- Dragonskull Summit
 - Drain the Well
 - Drake
 - Drake
@@ -625,6 +636,7 @@ Cards supported: 2,804
 - Drakewing Krasis
 - Dramatic Rescue
 - Dread Reaper
+- Dreamroot Cascade
 - Dreg Reaver
 - Drifting Meadow
 - Dromoka Warrior
@@ -632,6 +644,7 @@ Cards supported: 2,804
 - Drossforge Bridge
 - Drown in Ichor
 - Drown in Shapelessness
+- Drowned Catacomb
 - Drownyard Explorers
 - Druid of the Anima
 - Druid of the Cowl
@@ -897,6 +910,7 @@ Cards supported: 2,804
 - Gilacorn
 - Gilded Sentinel
 - Glacial Floodplain
+- Glacial Fortress
 - Glacial Stalker
 - Glacial Wall
 - Gladecover Scout
@@ -1034,6 +1048,7 @@ Cards supported: 2,804
 - Harvest Gwyllion
 - Haunted Guardian
 - Haunted Mire
+- Haunted Ridge
 - Haunter of Nightveil
 - Havenwood Wurm
 - Havoc Devils
@@ -1066,6 +1081,7 @@ Cards supported: 2,804
 - Highspire Mantis
 - Hill Giant
 - Hill Giant Herdgorger
+- Hinterland Harbor
 - Hippo
 - Hippo-Cows
 - Hired Blade
@@ -1195,6 +1211,7 @@ Cards supported: 2,804
 - Insomnia, Crown City
 - Inspiration
 - Inspiring Cleric
+- Inspiring Vantage
 - Invisible Stalker
 - Invoke the Firemind
 - Iron Giant
@@ -1207,6 +1224,7 @@ Cards supported: 2,804
 - Irrigated Farmland
 - Isamaru, Hound of Konda
 - Island
+- Isolated Chapel
 - Ithilien Kingfisher
 - Izzet Guildgate
 - Jace's Ingenuity
@@ -1271,6 +1289,7 @@ Cards supported: 2,804
 - Kingfisher
 - Kinsbaile Skirmisher
 - Kiora's Dambreaker
+- Kishla Village
 - Kitchen
 - Kitchen Finks
 - Kitchen Imp
@@ -1645,6 +1664,7 @@ Cards supported: 2,804
 - Otter
 - Outlaw Medic
 - Outrider of Jhess
+- Overgrown Farmland
 - Overkill
 - Oversoul of Dusk
 - Ox
@@ -1810,6 +1830,7 @@ Cards supported: 2,804
 - Razorfield Thresher
 - Razorfoot Griffin
 - Razortide Bridge
+- Razorverge Thicket
 - Reach Through Mists
 - Rearing Embermare
 - Rebel
@@ -1873,8 +1894,10 @@ Cards supported: 2,804
 - Robot Warrior
 - Roc Hunter
 - Roc of Kher Ridges
+- Rockfall Vale
 - Rogue
 - Rogue
+- Rootbound Crag
 - Rootbreaker Wurm
 - Rorix Bladewing
 - Rosemane Centaur
@@ -1984,6 +2007,7 @@ Cards supported: 2,804
 - Scuzzback Scrapper
 - Sea Eagle
 - Sea Sprite
+- Seachrome Coast
 - Seacoast Drake
 - Seagraf Skaab
 - Searing Spear
@@ -2031,6 +2055,7 @@ Cards supported: 2,804
 - Shark
 - Sharlayan, Nation of Scholars
 - Shatter
+- Shattered Sanctum
 - Shattering Blow
 - Shatterskull Giant
 - Shatterskull Recruit
@@ -2044,6 +2069,7 @@ Cards supported: 2,804
 - Shimmering Barrier
 - Shimmerscale Drake
 - Shining Aerosaur
+- Shipwreck Marsh
 - Shivan Branch-Burner
 - Shivan Oasis
 - Shivan Zombie
@@ -2203,6 +2229,7 @@ Cards supported: 2,804
 - Spineless Thug
 - Spinning Wheel
 - Spire Monitor
+- Spirebluff Canal
 - Spirit
 - Spirit
 - Spirit
@@ -2267,6 +2294,7 @@ Cards supported: 2,804
 - Storm Crow
 - Storm Fleet Sprinter
 - Stormcaller of Keranos
+- Stormcarved Coast
 - Stormchaser Mage
 - Stormcloud Spirit
 - Stormfront Pegasus
@@ -2285,6 +2313,7 @@ Cards supported: 2,804
 - Submerged Boneyard
 - Suburban Sanctuary
 - Sudden Strike
+- Sulfur Falls
 - Sulfurous Mire
 - Sultai Scavenger
 - Sultai Skullkeeper
@@ -2294,9 +2323,11 @@ Cards supported: 2,804
 - Sun-Dappled Celebrant
 - Sunblade Angel
 - Sundial, Dawn Tyrant
+- Sundown Pass
 - Sungrace Pegasus
 - Sunken Hollow
 - Sunlit Marsh
+- Sunpetal Grove
 - Sunspire Griffin
 - Suntail Hawk
 - Supreme Verdict
@@ -2733,6 +2764,7 @@ Cards supported: 2,804
 - Wolf
 - Wolf Cove Villager
 - Wooded Ridgeline
+- Woodland Cemetery
 - Woodland Chasm
 - Woodland Druid
 - Woodland Mystic

@@ -866,11 +866,9 @@ func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Co
 		return "", errors.New("render: ETB replacement condition has no ControllerControls filter")
 	}
 	// Reject unsupported PermanentFilter fields.
-	if len(filter.SubtypesAny) != 0 ||
-		filter.Power.Exists ||
+	if filter.Power.Exists ||
 		filter.Toughness.Exists ||
-		filter.TotalPower.Exists ||
-		filter.ExcludeSource {
+		filter.TotalPower.Exists {
 		return "", errors.New("render: unsupported PermanentFilter shape for ETB replacement condition")
 	}
 	filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
@@ -885,8 +883,6 @@ func (r Renderer) renderConditionForETBReplacement(ctx *renderCtx, cond *game.Co
 	return "&" + structLit("game.Condition", fields), nil
 }
 
-// renderPermanentFilterForCondition renders a game.PermanentFilter with only
-// Types, Supertypes, and MinCount for use in condition rendering.
 func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {
 	var fields []string
 	if len(filter.Types) > 0 {
@@ -908,8 +904,19 @@ func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.Pe
 		}
 		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
 	}
+	if len(filter.SubtypesAny) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(filter.SubtypesAny))
+		for _, subtype := range filter.SubtypesAny {
+			literals = append(literals, SubtypeToLiteral(string(subtype), []string{"Land"}))
+		}
+		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
 	if filter.MinCount != 0 {
 		fields = append(fields, fmt.Sprintf("MinCount: %d,", filter.MinCount))
+	}
+	if filter.ExcludeSource {
+		fields = append(fields, "ExcludeSource: true,")
 	}
 	return structLit("game.PermanentFilter", fields), nil
 }
