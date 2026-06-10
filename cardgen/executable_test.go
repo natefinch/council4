@@ -878,6 +878,34 @@ func TestGenerateExecutableCardSourceProliferate(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceFixedCounterSpell(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Counter",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Put a -1/-1 counter on target creature.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		`"github.com/natefinch/council4/mtg/game/counter"`,
+		"Primitive: game.AddCounter",
+		"Amount:      game.Fixed(1)",
+		"Object:      game.TargetPermanentReference(0)",
+		"CounterKind: counter.MinusOneMinusOne",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceRegenerate(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
