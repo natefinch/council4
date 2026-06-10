@@ -11,17 +11,18 @@ import (
 )
 
 func TestLegalActionsIncludesNinjutsuWithUnblockedAttacker(t *testing.T) {
-	g, engine, ninjaID, _ := ninjutsuGame(t)
+	fixture := newNinjutsuFixture(t)
 
-	legal := engine.legalActions(g, game.Player1)
+	legal := fixture.engine.legalActions(fixture.game, game.Player1)
 
-	if !actionsContain(legal, action.ActivateAbility(ninjaID, 0, nil, 0)) {
+	if !actionsContain(legal, action.ActivateAbility(fixture.ninjaID, 0, nil, 0)) {
 		t.Fatalf("legal actions = %+v, want Ninjutsu activation", legal)
 	}
 }
 
 func TestNinjutsuReturnsAttackerAndEntersTappedAttacking(t *testing.T) {
-	g, engine, ninjaID, attacker := ninjutsuGame(t)
+	fixture := newNinjutsuFixture(t)
+	g, engine, ninjaID, attacker := fixture.game, fixture.engine, fixture.ninjaID, fixture.attacker
 	target := g.Combat.Attackers[0].Target
 
 	if !engine.applyAction(g, game.Player1, action.ActivateAbility(ninjaID, 0, nil, 0)) {
@@ -62,7 +63,8 @@ func TestNinjutsuReturnsAttackerAndEntersTappedAttacking(t *testing.T) {
 }
 
 func TestNinjutsuSourceLeavingHandBeforeResolutionDoesNotEnter(t *testing.T) {
-	g, engine, ninjaID, _ := ninjutsuGame(t)
+	fixture := newNinjutsuFixture(t)
+	g, engine, ninjaID := fixture.game, fixture.engine, fixture.ninjaID
 	if !engine.applyAction(g, game.Player1, action.ActivateAbility(ninjaID, 0, nil, 0)) {
 		t.Fatal("applyAction() = false, want true for Ninjutsu")
 	}
@@ -120,7 +122,8 @@ func TestNinjutsuRequiresLegalTimingResourcesAndAttacker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, engine, ninjaID, attacker := ninjutsuGame(t)
+			fixture := newNinjutsuFixture(t)
+			g, engine, ninjaID, attacker := fixture.game, fixture.engine, fixture.ninjaID, fixture.attacker
 			tt.mutate(g, attacker)
 
 			if actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(ninjaID, 0, nil, 0)) {
@@ -143,7 +146,14 @@ func TestBlockedAttackerRemainsBlockedAfterBlockerLeavesCombat(t *testing.T) {
 	}
 }
 
-func ninjutsuGame(t *testing.T) (*game.Game, *Engine, game.ObjectID, *game.Permanent) {
+type ninjutsuFixture struct {
+	game     *game.Game
+	engine   *Engine
+	ninjaID  game.ObjectID
+	attacker *game.Permanent
+}
+
+func newNinjutsuFixture(t *testing.T) ninjutsuFixture {
 	t.Helper()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -159,7 +169,12 @@ func ninjutsuGame(t *testing.T) (*game.Game, *Engine, game.ObjectID, *game.Perma
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareBlockers
 	g.Turn.PriorityPlayer = game.Player1
-	return g, engine, ninjaID, attacker
+	return ninjutsuFixture{
+		game:     g,
+		engine:   engine,
+		ninjaID:  ninjaID,
+		attacker: attacker,
+	}
 }
 
 func ninjutsuCard() *game.CardDef {

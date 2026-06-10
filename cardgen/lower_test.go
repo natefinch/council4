@@ -136,6 +136,7 @@ func TestLowerNinjutsuAbilityRejectsMalformedForms(t *testing.T) {
 		"Ninjutsu {1}{U} extra text",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
 			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 				Name:       "Malformed Ninja",
 				Layout:     "normal",
