@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,672
+Cards supported: 3,696
 
 - +2 Mace
 - Aang, Air Nomad
@@ -412,6 +412,7 @@ Cards supported: 3,672
 - Brass Secretary
 - Brave-Kin Duo
 - Brawler's Plate
+- Brazen Buccaneers
 - Brazen Scourge
 - Breakneck Berserker
 - Breath of Fire
@@ -498,6 +499,7 @@ Cards supported: 3,672
 - Caustic Rain
 - Celestial Force
 - Cemetery Gate
+- Cenote Scout
 - Centaur
 - Centaur
 - Centaur
@@ -652,6 +654,7 @@ Cards supported: 3,672
 - Cultbrand Cinder
 - Cultist's Staff
 - Cumber Stone
+- Curator of Mysteries
 - Curio Vendor
 - Cursebreak
 - Cursed Minotaur
@@ -779,6 +782,7 @@ Cards supported: 3,672
 - Dinosaur Egg
 - Dinosaur Soldier
 - Diplomatic Immunity
+- Dire Fleet Interloper
 - Diregraf Ghoul
 - Disciple of Grace
 - Disciple of Law
@@ -828,8 +832,10 @@ Cards supported: 3,672
 - Drake-Skull Cameo
 - Drakewing Krasis
 - Dramatic Rescue
+- Drannith Healer
 - Dread Reaper
 - Dread Rider
+- Dreadwaters
 - Dreamroot Cascade
 - Dreamtail Heron
 - Dreg Reaver
@@ -949,6 +955,8 @@ Cards supported: 3,672
 - Elvish Warrior
 - Embereth Shieldbreaker // Battle Display
 - Embraal Bruiser
+- Emissary of Sunrise
+- Emperor's Vanguard
 - Enatu Golem
 - Enchantress's Presence
 - Endless Cockroaches
@@ -1579,6 +1587,7 @@ Cards supported: 3,672
 - Island
 - Isolated Chapel
 - Ithilien Kingfisher
+- Ixalli's Diviner
 - Izzet Chronarch
 - Izzet Cluestone
 - Izzet Guildgate
@@ -1662,6 +1671,7 @@ Cards supported: 3,672
 - Kindly Customer
 - King Cheetah
 - Kingfisher
+- Kinjalli's Dawnrunner
 - Kinsbaile Skirmisher
 - Kiora's Dambreaker
 - Kishla Village
@@ -1887,6 +1897,7 @@ Cards supported: 3,672
 - Merfolk
 - Merfolk
 - Merfolk
+- Merfolk Branchwalker
 - Merfolk Mesmerist
 - Merfolk Secretkeeper // Venture Deeper
 - Merfolk Skydiver
@@ -2133,6 +2144,7 @@ Cards supported: 3,672
 - Omen of the Dead
 - Omenspeaker
 - Ominous Asylum
+- Ominous Sphinx
 - Onakke Ogre
 - One With the Wind
 - Onslaught
@@ -2190,6 +2202,8 @@ Cards supported: 3,672
 - Parallel Lives
 - Parcel Myr
 - Pardic Wanderer
+- Path of Discovery
+- Pathfinding Axejaw
 - Peace Strider
 - Peace of Mind
 - Peach Garden Oath
@@ -2339,6 +2353,7 @@ Cards supported: 3,672
 - Quaketusk Boar
 - Quandrix Campus
 - Quarry Beetle
+- Queen's Agent
 - Queen's Bay Soldier
 - Quick Study
 - Quiet Purity
@@ -2474,6 +2489,8 @@ Cards supported: 3,672
 - Rishadan Port
 - Ritual of Restoration
 - Riven Turnbull
+- River Herald Guide
+- River Herald Scout
 - River Kaijin
 - Riverglide Pathway // Lavaglide Pathway
 - Riverwheel Aerialists
@@ -2561,6 +2578,7 @@ Cards supported: 3,672
 - Sandbar Merfolk
 - Sandbar Serpent
 - Sandblast
+- Sands of Delirium
 - Sandsower
 - Sandsteppe Citadel
 - Sangrite Backlash
@@ -2648,6 +2666,7 @@ Cards supported: 3,672
 - Secret Passage
 - Sedge Scorpion
 - Seeker of Skybreak
+- Seekers' Squire
 - Seer of the Last Tomorrow
 - Seer's Lantern
 - Segovian Angel
@@ -2775,6 +2794,7 @@ Cards supported: 3,672
 - Sinister Starfish
 - Sinkhole
 - Sir Shandlar of Eberyn
+- Siren Lookout
 - Sisters of the Flame
 - Sivitri Scarzam
 - Skaab Wrangler
@@ -2834,6 +2854,7 @@ Cards supported: 3,672
 - Snake
 - Snake // Zombie
 - Snapping Drake
+- Snare Tactician
 - Snare Thopter
 - Snow-Covered Forest
 - Snow-Covered Island
@@ -3039,6 +3060,7 @@ Cards supported: 3,672
 - Sunken Hollow
 - Sunlit Marsh
 - Sunpetal Grove
+- Sunrise Seeker
 - Sunspire Griffin
 - Suntail Hawk
 - Supply Drop
@@ -3184,6 +3206,7 @@ Cards supported: 3,672
 - Tine Shrike
 - Tiny
 - Tireless Missionaries
+- Tishana's Wayfinder
 - Titan's Grave
 - Titan's Strength
 - Titanic Bulvox
@@ -3530,6 +3553,7 @@ Cards supported: 3,672
 - Weirded Vampire
 - Welding Jar
 - Wetland Sambar
+- Whetwheel
 - Whip-Spine Drake
 - Whipcorder
 - Whiptail Wurm
