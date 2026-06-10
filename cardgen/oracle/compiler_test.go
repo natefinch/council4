@@ -614,9 +614,10 @@ func TestCompileStaticPTBuffSubjects(t *testing.T) {
 func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		source      string
-		wantSubject StaticSubjectKind
-		keywords    []string
+		source             string
+		wantSubject        StaticSubjectKind
+		wantSubjectSubtype string
+		keywords           []string
 	}{
 		"enchanted creature": {
 			source:      "Enchanted creature has menace.",
@@ -648,6 +649,18 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 			wantSubject: StaticSubjectControlledArtifacts,
 			keywords:    []string{"Indestructible"},
 		},
+		"controlled subtype": {
+			source:             "Zombies you control have flying.",
+			wantSubject:        StaticSubjectControlledCreatureSubtype,
+			wantSubjectSubtype: "Zombies",
+			keywords:           []string{"Flying"},
+		},
+		"other controlled subtype": {
+			source:             "Other Dinosaurs you control have haste.",
+			wantSubject:        StaticSubjectOtherControlledCreatureSubtype,
+			wantSubjectSubtype: "Dinosaurs",
+			keywords:           []string{"Haste"},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -662,6 +675,9 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 			}
 			if got := ability.Effects[0].StaticSubject; got != test.wantSubject {
 				t.Fatalf("static subject = %v, want %v", got, test.wantSubject)
+			}
+			if got := ability.Effects[0].StaticSubjectSubtype; got != test.wantSubjectSubtype {
+				t.Fatalf("static subject subtype = %q, want %q", got, test.wantSubjectSubtype)
 			}
 			if len(ability.Keywords) != len(test.keywords) {
 				t.Fatalf("keywords = %#v, want %v", ability.Keywords, test.keywords)

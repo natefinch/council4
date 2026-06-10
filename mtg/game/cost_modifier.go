@@ -74,5 +74,8 @@ type RuleEffect struct {
 
 	CostModifier CostModifier
 
-	CastFromZone zone.Type
+	CastFromZone   zone.Type
+	AffectedCardID id.ID
+	CastFace       opt.V[FaceIndex]
+	ExpiresFor     PlayerID
 }

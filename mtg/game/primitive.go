@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -57,10 +58,12 @@ const (
 	PrimitiveCreateDelayedTrigger
 	PrimitiveCreateReplacement
 	PrimitivePreventDamage
+	PrimitiveMoveCard
+	PrimitiveGrantCastPermission
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePreventDamage) + 1
+const primitiveKindCount = int(PrimitiveGrantCastPermission) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -513,6 +516,22 @@ type Bounce struct {
 	Group  GroupReference
 }
 
+// MoveCard moves a referenced card between two non-battlefield zones.
+type MoveCard struct {
+	Card        CardReference
+	FromZone    zone.Type
+	Destination zone.Type
+}
+
+// GrantCastPermission allows a referenced card to be cast from a specific zone
+// using a specific face for a bounded duration.
+type GrantCastPermission struct {
+	Card     CardReference
+	FromZone zone.Type
+	Face     FaceIndex
+	Duration EffectDuration
+}
+
 // Sacrifice sacrifices the referenced permanent. When no object is set, the
 // controller's first permanent is used.
 type Sacrifice struct {
@@ -752,6 +771,12 @@ func (CreateReplacement) Kind() PrimitiveKind { return PrimitiveCreateReplacemen
 // Kind implements Primitive for PreventDamage.
 func (PreventDamage) Kind() PrimitiveKind { return PrimitivePreventDamage }
 
+// Kind implements Primitive for MoveCard.
+func (MoveCard) Kind() PrimitiveKind { return PrimitiveMoveCard }
+
+// Kind implements Primitive for GrantCastPermission.
+func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermission }
+
 func (Damage) isPrimitive()                      {}
 func (Draw) isPrimitive()                        {}
 func (Discard) isPrimitive()                     {}
@@ -797,6 +822,8 @@ func (CreateEmblem) isPrimitive()                {}
 func (CreateDelayedTrigger) isPrimitive()        {}
 func (CreateReplacement) isPrimitive()           {}
 func (PreventDamage) isPrimitive()               {}
+func (MoveCard) isPrimitive()                    {}
+func (GrantCastPermission) isPrimitive()         {}
 
 func (p Damage) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
 func (p Draw) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
@@ -873,6 +900,17 @@ func (CreateEmblem) instructionRefs() primitiveRefs         { return primitiveRe
 func (CreateDelayedTrigger) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (CreateReplacement) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (p PreventDamage) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (p MoveCard) instructionRefs() primitiveRefs           { return cardReferenceRefs(p.Card) }
+func (p GrantCastPermission) instructionRefs() primitiveRefs {
+	return cardReferenceRefs(p.Card)
+}
+
+func cardReferenceRefs(reference CardReference) primitiveRefs {
+	if reference.Kind != CardReferenceLinked || reference.LinkID == "" {
+		return primitiveRefs{}
+	}
+	return primitiveRefs{consumesLinked: []LinkedKey{LinkedKey(reference.LinkID)}}
+}
 
 func quantityRefs(quantity Quantity) primitiveRefs {
 	if !quantity.IsDynamic() {

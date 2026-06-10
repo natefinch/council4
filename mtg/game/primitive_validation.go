@@ -85,6 +85,24 @@ func validateMassObjectOrGroup(object ObjectReference, group GroupReference, tar
 	return validateGroupReference(group, targets, checkTargets)
 }
 
+func validateCardReference(ref CardReference) error {
+	switch ref.Kind {
+	case CardReferenceLinked:
+		if ref.LinkID == "" {
+			return errors.New("linked card reference requires LinkID")
+		}
+	case CardReferenceSource, CardReferenceEvent:
+		if ref.LinkID != "" {
+			return errors.New("source/event card reference must not set LinkID")
+		}
+	case CardReferenceNone:
+		return errors.New("card reference has no kind")
+	default:
+		return fmt.Errorf("unknown card reference kind %d", ref.Kind)
+	}
+	return nil
+}
+
 // validateGroupReference checks structural validity of a GroupReference and
 // recursively checks target-slot bounds for its anchor and exclusion
 // ObjectReferences. group.Validate() already checks structural consistency
@@ -370,6 +388,35 @@ func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 
 func (p Bounce) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
+}
+
+func (p MoveCard) validatePrimitive([]TargetSpec, bool) error {
+	if err := validateCardReference(p.Card); err != nil {
+		return err
+	}
+	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack {
+		return errors.New("move card requires a non-battlefield source zone")
+	}
+	if p.Destination == zone.None || p.Destination == zone.Battlefield || p.Destination == zone.Stack {
+		return errors.New("move card requires a non-battlefield destination zone")
+	}
+	if p.FromZone == p.Destination {
+		return errors.New("move card requires different source and destination zones")
+	}
+	return nil
+}
+
+func (p GrantCastPermission) validatePrimitive([]TargetSpec, bool) error {
+	if err := validateCardReference(p.Card); err != nil {
+		return err
+	}
+	if p.FromZone != zone.Graveyard {
+		return errors.New("cast permission requires graveyard as its source zone")
+	}
+	if p.Duration != DurationUntilEndOfYourNextTurn {
+		return errors.New("cast permission requires a supported bounded duration")
+	}
+	return nil
 }
 
 func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

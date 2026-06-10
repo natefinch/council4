@@ -76,7 +76,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		FromZone:     fromZone,
 		ToZone:       zone.Battlefield,
 	}
-	emitZoneChangeEvent(g, event)
+	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
 	emitEvent(g, event)
 	return permanent, true
@@ -127,7 +127,7 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 		FromZone:     fromZone,
 		ToZone:       zone.Battlefield,
 	}
-	emitZoneChangeEvent(g, event)
+	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
 	emitEvent(g, event)
 	return permanent, true
@@ -267,7 +267,7 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 		ToZone:   destination,
 		Amount:   1,
 	}
-	emitZoneChangeEvent(g, event)
+	event = emitZoneChangeEvent(g, event)
 	// A command-zone replacement changes the destination, but the discard still happened.
 	event.Kind = game.EventCardDiscarded
 	emitEvent(g, event)
@@ -286,7 +286,11 @@ func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destinati
 		FromZone:    zone.Battlefield,
 		ToZone:      destination,
 	}
-	emitZoneChangeEvent(g, event)
+	if card, ok := g.GetCardInstance(event.CardID); ok {
+		card.ZoneVersion++
+		event.CardZoneVersion = card.ZoneVersion
+	}
+	event = emitZoneChangeEvent(g, event)
 	if destination == zone.Graveyard {
 		event.Kind = game.EventPermanentDied
 		emitEvent(g, event)

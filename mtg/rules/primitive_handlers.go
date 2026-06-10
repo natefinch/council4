@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func (r *effectResolver) quantity(q game.Quantity) int {
@@ -539,6 +540,51 @@ func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	if ok {
 		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
 	}
+	return res
+}
+
+func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
+	res := effectResolved{accepted: true}
+	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
+	if !ok || fromZone != prim.FromZone {
+		return res
+	}
+	card, ok := r.game.GetCardInstance(cardID)
+	if !ok {
+		return res
+	}
+	res.succeeded = moveCardBetweenZones(r.game, card.Owner, cardID, fromZone, prim.Destination)
+	return res
+}
+
+func handleGrantCastPermission(r *effectResolver, prim game.GrantCastPermission) effectResolved {
+	res := effectResolved{accepted: true}
+	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
+	if !ok || fromZone != prim.FromZone {
+		return res
+	}
+	card, ok := r.game.GetCardInstance(cardID)
+	if !ok {
+		return res
+	}
+	if _, ok := cardFaceDef(card, prim.Face); !ok {
+		return res
+	}
+	r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
+		ID:             r.game.IDGen.Next(),
+		Kind:           game.RuleEffectCastFromZone,
+		Controller:     r.obj.Controller,
+		SourceCardID:   r.obj.SourceCardID,
+		SourceObjectID: r.obj.SourceID,
+		AffectedPlayer: game.PlayerYou,
+		Duration:       prim.Duration,
+		CreatedTurn:    r.game.Turn.TurnNumber,
+		CastFromZone:   prim.FromZone,
+		AffectedCardID: cardID,
+		CastFace:       opt.Val(prim.Face),
+		ExpiresFor:     r.obj.Controller,
+	})
+	res.succeeded = true
 	return res
 }
 

@@ -170,6 +170,28 @@ func CyclingActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	}
 }
 
+// NinjutsuActivatedAbility builds the complete hand-zone activation template
+// for Ninjutsu with a mana cost.
+func NinjutsuActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	return ActivatedAbility{
+		Text:           "Ninjutsu " + manaCost.String(),
+		ManaCost:       opt.Val(activationCost),
+		ZoneOfFunction: zone.Hand,
+		Timing:         DuringCombat,
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalReturnUnblockedAttacker,
+			Text:   "Return an unblocked attacker you control to its owner's hand",
+			Amount: 1,
+		}},
+		KeywordAbilities: []KeywordAbility{
+			NinjutsuKeyword{Cost: keywordCost},
+		},
+		Content: Mode{}.Ability(),
+	}
+}
+
 // EquipActivatedAbility builds the complete activated ability for Equip with a
 // mana cost.
 func EquipActivatedAbility(manaCost cost.Mana) ActivatedAbility {

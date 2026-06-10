@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -49,6 +50,99 @@ func TestValidateInstructionSequenceAcceptsLinkedBattlefieldSource(t *testing.T)
 
 	if err := ValidateInstructionSequence(seq); err != nil {
 		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+}
+
+func TestValidateInstructionSequenceAcceptsLinkedCardConsumers(t *testing.T) {
+	for _, primitive := range []Primitive{
+		MoveCard{
+			Card:        CardReference{Kind: CardReferenceLinked, LinkID: "revealed-card"},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		},
+		GrantCastPermission{
+			Card:     CardReference{Kind: CardReferenceLinked, LinkID: "revealed-card"},
+			FromZone: zone.Graveyard,
+			Face:     FaceAlternate,
+			Duration: DurationUntilEndOfYourNextTurn,
+		},
+	} {
+		seq := []Instruction{
+			{Primitive: Reveal{
+				Amount:        Fixed(1),
+				Player:        ControllerReference(),
+				PublishLinked: LinkedKey("revealed-card"),
+			}},
+			{Primitive: primitive},
+		}
+		if err := ValidateInstructionSequence(seq); err != nil {
+			t.Errorf("%T linked consumer: %v", primitive, err)
+		}
+	}
+}
+
+func TestValidateInstructionSequenceRejectsUnknownOrForwardLinkedCardConsumers(t *testing.T) {
+	for _, primitive := range []Primitive{
+		MoveCard{
+			Card:        CardReference{Kind: CardReferenceLinked, LinkID: "later"},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		},
+		GrantCastPermission{
+			Card:     CardReference{Kind: CardReferenceLinked, LinkID: "later"},
+			FromZone: zone.Graveyard,
+			Face:     FaceAlternate,
+			Duration: DurationUntilEndOfYourNextTurn,
+		},
+	} {
+		seq := []Instruction{
+			{Primitive: primitive},
+			{Primitive: Reveal{
+				Amount:        Fixed(1),
+				Player:        ControllerReference(),
+				PublishLinked: LinkedKey("later"),
+			}},
+		}
+		err := ValidateInstructionSequence(seq)
+		if err == nil || !strings.Contains(err.Error(), `linked key "later" not yet published`) {
+			t.Errorf("%T error = %v, want linked-key validation failure", primitive, err)
+		}
+	}
+}
+
+func TestValidateInstructionSequenceDoesNotTreatNonLinkedCardReferencesAsLinked(t *testing.T) {
+	for _, reference := range []CardReference{
+		{Kind: CardReferenceSource},
+		{Kind: CardReferenceEvent},
+	} {
+		for _, primitive := range []Primitive{
+			MoveCard{
+				Card:        reference,
+				FromZone:    zone.Graveyard,
+				Destination: zone.Hand,
+			},
+			GrantCastPermission{
+				Card:     reference,
+				FromZone: zone.Graveyard,
+				Face:     FaceAlternate,
+				Duration: DurationUntilEndOfYourNextTurn,
+			},
+		} {
+			if err := ValidateInstructionSequence([]Instruction{{Primitive: primitive}}); err != nil {
+				t.Errorf("%T with card reference %v: %v", primitive, reference.Kind, err)
+			}
+		}
+	}
+}
+
+func TestValidateInstructionSequenceRejectsSameZoneMoveCard(t *testing.T) {
+	err := ValidateInstructionSequence([]Instruction{{Primitive: MoveCard{
+		Card:        CardReference{Kind: CardReferenceEvent},
+		FromZone:    zone.Graveyard,
+		Destination: zone.Graveyard,
+	}}})
+	if err == nil || !strings.Contains(err.Error(), "different source and destination zones") {
+		t.Fatalf("error = %v, want same-zone move validation failure", err)
 	}
 }
 

@@ -433,7 +433,7 @@ func compileEffects(
 			continue
 		}
 		duration := compileDuration(tokens)
-		staticSubject, staticSubjectSpan := compileStaticSubject(tokens)
+		staticSubject, staticSubjectSpan, staticSubjectSubtype := compileStaticSubject(tokens)
 		for i, token := range tokens {
 			kind := effectKindAt(tokens, i)
 			if kind == EffectUnknown {
@@ -441,19 +441,20 @@ func compileEffects(
 			}
 			powerDelta, toughnessDelta := compilePTChange(tokens[i+1:])
 			effects = append(effects, CompiledEffect{
-				Kind:              kind,
-				Span:              sentence.Span,
-				Text:              sentence.Text,
-				VerbSpan:          token.Span,
-				Duration:          duration,
-				Selector:          compileSelector(tokens[i+1:]),
-				Amount:            compileEffectAmount(tokens[i+1:]),
-				PowerDelta:        powerDelta,
-				ToughnessDelta:    toughnessDelta,
-				StaticSubject:     staticSubject,
-				StaticSubjectSpan: staticSubjectSpan,
-				Symbol:            firstSymbol(tokens[i+1:]),
-				Negated:           effectNegated(tokens, i),
+				Kind:                 kind,
+				Span:                 sentence.Span,
+				Text:                 sentence.Text,
+				VerbSpan:             token.Span,
+				Duration:             duration,
+				Selector:             compileSelector(tokens[i+1:]),
+				Amount:               compileEffectAmount(tokens[i+1:]),
+				PowerDelta:           powerDelta,
+				ToughnessDelta:       toughnessDelta,
+				StaticSubject:        staticSubject,
+				StaticSubjectSpan:    staticSubjectSpan,
+				StaticSubjectSubtype: staticSubjectSubtype,
+				Symbol:               firstSymbol(tokens[i+1:]),
+				Negated:              effectNegated(tokens, i),
 			})
 		}
 
@@ -509,60 +510,73 @@ func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect,
 	return CompiledEffect{}, false
 }
 
-func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span) {
+func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span, string) {
 	switch {
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
 		equalWord(tokens[1], "creature") &&
 		(equalWord(tokens[2], "gets") || equalWord(tokens[2], "has")):
-		return StaticSubjectAttachedObject, spanOf(tokens[:2])
+		return StaticSubjectAttachedObject, spanOf(tokens[:2]), ""
 	case len(tokens) >= 5 &&
 		equalWord(tokens[0], "other") &&
 		equalWord(tokens[1], "creatures") &&
 		equalWord(tokens[2], "you") &&
 		equalWord(tokens[3], "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
-		return StaticSubjectOtherControlledCreatures, spanOf(tokens[:4])
+		return StaticSubjectOtherControlledCreatures, spanOf(tokens[:4]), ""
 	case len(tokens) >= 4 &&
 		equalWord(tokens[0], "creatures") &&
 		equalWord(tokens[1], "you") &&
 		equalWord(tokens[2], "control") &&
 		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
-		return StaticSubjectControlledCreatures, spanOf(tokens[:3])
+		return StaticSubjectControlledCreatures, spanOf(tokens[:3]), ""
 	case len(tokens) >= 6 &&
 		equalWord(tokens[0], "creatures") &&
 		equalWord(tokens[1], "your") &&
 		equalWord(tokens[2], "opponents") &&
 		equalWord(tokens[3], "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
-		return StaticSubjectOpponentControlledCreatures, spanOf(tokens[:4])
+		return StaticSubjectOpponentControlledCreatures, spanOf(tokens[:4]), ""
 	case len(tokens) >= 5 &&
 		equalWord(tokens[0], "each") &&
 		equalWord(tokens[1], "wall") &&
 		equalWord(tokens[2], "you") &&
 		equalWord(tokens[3], "control") &&
 		(equalWord(tokens[4], "gets") || equalWord(tokens[4], "has")):
-		return StaticSubjectControlledWalls, spanOf(tokens[:4])
+		return StaticSubjectControlledWalls, spanOf(tokens[:4]), ""
 	case len(tokens) >= 4 &&
 		equalWord(tokens[0], "walls") &&
 		equalWord(tokens[1], "you") &&
 		equalWord(tokens[2], "control") &&
 		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
-		return StaticSubjectControlledWalls, spanOf(tokens[:3])
+		return StaticSubjectControlledWalls, spanOf(tokens[:3]), ""
 	case len(tokens) >= 4 &&
 		equalWord(tokens[0], "artifacts") &&
 		equalWord(tokens[1], "you") &&
 		equalWord(tokens[2], "control") &&
 		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
-		return StaticSubjectControlledArtifacts, spanOf(tokens[:3])
+		return StaticSubjectControlledArtifacts, spanOf(tokens[:3]), ""
 	case len(tokens) >= 4 &&
 		equalWord(tokens[0], "tokens") &&
 		equalWord(tokens[1], "you") &&
 		equalWord(tokens[2], "control") &&
 		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
-		return StaticSubjectControlledTokens, spanOf(tokens[:3])
+		return StaticSubjectControlledTokens, spanOf(tokens[:3]), ""
+	case len(tokens) >= 5 &&
+		equalWord(tokens[0], "other") &&
+		tokens[1].Kind == Word &&
+		equalWord(tokens[2], "you") &&
+		equalWord(tokens[3], "control") &&
+		equalWord(tokens[4], "have"):
+		return StaticSubjectOtherControlledCreatureSubtype, spanOf(tokens[:4]), tokens[1].Text
+	case len(tokens) >= 4 &&
+		tokens[0].Kind == Word &&
+		equalWord(tokens[1], "you") &&
+		equalWord(tokens[2], "control") &&
+		equalWord(tokens[3], "have"):
+		return StaticSubjectControlledCreatureSubtype, spanOf(tokens[:3]), tokens[0].Text
 	default:
-		return StaticSubjectNone, Span{}
+		return StaticSubjectNone, Span{}, ""
 	}
 }
 

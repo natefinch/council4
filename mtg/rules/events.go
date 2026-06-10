@@ -9,13 +9,36 @@ func emitEvent(g *game.Game, event game.Event) {
 	g.AppendEvent(event)
 }
 
-func emitZoneChangeEvent(g *game.Game, event game.Event) {
+func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {
+	if event.CardID != 0 && event.CardZoneVersion == 0 {
+		if card, ok := g.GetCardInstance(event.CardID); ok {
+			card.ZoneVersion++
+			event.CardZoneVersion = card.ZoneVersion
+		}
+	}
 	if event.FromZone == zone.Exile && event.ToZone != zone.Exile {
 		delete(g.AdventureCards, event.CardID)
 		delete(g.SuspendedCards, event.CardID)
 	}
+	if event.CardID != 0 && event.FromZone != event.ToZone {
+		clearCardCastPermissions(g, event.CardID, event.FromZone)
+	}
 	event.Kind = game.EventZoneChanged
 	emitEvent(g, event)
+	return event
+}
+
+func clearCardCastPermissions(g *game.Game, cardID game.ObjectID, fromZone zone.Type) {
+	kept := g.RuleEffects[:0]
+	for _, effect := range g.RuleEffects {
+		if effect.Kind == game.RuleEffectCastFromZone &&
+			effect.AffectedCardID == cardID &&
+			effect.CastFromZone == fromZone {
+			continue
+		}
+		kept = append(kept, effect)
+	}
+	g.RuleEffects = kept
 }
 
 func markCurrentTurnEventStart(g *game.Game) {

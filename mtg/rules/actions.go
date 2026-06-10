@@ -43,6 +43,7 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 	actions = append(actions, e.legalCommanderCastActions(g, playerID)...)
 	actions = append(actions, e.legalActivateAbilityActions(g, playerID)...)
 	actions = append(actions, e.legalCyclingActions(g, playerID)...)
+	actions = append(actions, e.legalNinjutsuActions(g, playerID)...)
 	actions = append(actions, e.legalSuspendActions(g, playerID)...)
 	actions = append(actions, e.legalTurnFaceUpActions(g, playerID)...)
 	actions = append(actions, actionBuild.pass())
@@ -137,7 +138,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 			if !ok {
 				continue
 			}
-			for _, face := range legalCastFacesForZone(card.Def, sourceZone) {
+			for _, face := range legalCastFacesForZone(g, playerID, card, sourceZone) {
 				spellDef := cardFaceOrDefault(card, face)
 				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
 					for _, modes := range modeChoicesForSpell(spellDef) {
@@ -174,7 +175,7 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 		return nil
 	}
 	var actions []action.Action
-	for _, face := range legalCastFacesForZone(card.Def, zone.Command) {
+	for _, face := range card.Def.LegalCastFaces() {
 		spellDef := cardFaceOrDefault(card, face)
 		for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
 			for _, modes := range modeChoicesForSpell(spellDef) {
@@ -365,6 +366,32 @@ func (*Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []actio
 			body := &frontDef.ActivatedAbilities[i]
 			idx := frontDef.ActivatedAbilityIndex(i)
 			if canActivateCyclingAbility(g, playerID, cardID, body, idx, nil, 0) {
+				actions = append(actions, actionBuild.activateAbility(cardID, idx, nil, 0))
+			}
+		}
+	}
+	return actions
+}
+
+func (*Engine) legalNinjutsuActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || len(unblockedAttackers(g, playerID)) == 0 {
+		return nil
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	var actions []action.Action
+	for _, cardID := range player.Hand.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		frontDef := cardFaceOrDefault(card, game.FaceFront)
+		for i := range frontDef.ActivatedAbilities {
+			body := &frontDef.ActivatedAbilities[i]
+			idx := frontDef.ActivatedAbilityIndex(i)
+			if canActivateNinjutsuAbility(g, playerID, cardID, body, idx, nil, 0) {
 				actions = append(actions, actionBuild.activateAbility(cardID, idx, nil, 0))
 			}
 		}
@@ -618,6 +645,9 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if e.applyCyclingAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
+	if e.applyNinjutsuAbilityWithChoices(g, playerID, activate, agents, log) {
+		return true
+	}
 	if e.applyGraveyardAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
@@ -852,6 +882,127 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	return true
 }
 
+func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	card, ability, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
+	if !ok || !canActivateNinjutsuAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
+		return false
+	}
+	attacker := chooseNinjutsuAttacker(e, g, playerID, unblockedAttackers(g, playerID), agents, log)
+	if attacker == nil {
+		return false
+	}
+	attackTarget, ok := attackTargetForAttacker(g, attacker.ObjectID)
+	if !ok || attackerWasBlocked(g, attacker.ObjectID) {
+		return false
+	}
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, agents, log)
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), Prefs: prefs}) {
+		return false
+	}
+	removePermanentFromCombat(g, attacker.ObjectID)
+	if !movePermanentToZone(g, attacker, zone.Hand) {
+		panic("Ninjutsu attacker disappeared after validation")
+	}
+	pushAbilityToStack(g, &game.StackObject{
+		ID:                   g.IDGen.Next(),
+		Kind:                 game.StackActivatedAbility,
+		SourceID:             card.ID,
+		SourceCardID:         card.ID,
+		SourceZone:           zone.Hand,
+		SourceZoneVersion:    card.ZoneVersion,
+		AbilityIndex:         activate.AbilityIndex,
+		Controller:           playerID,
+		Ninjutsu:             true,
+		NinjutsuAttackTarget: attackTarget,
+		AdditionalCostsPaid:  []string{"Return an unblocked attacker you control to its owner's hand"},
+	})
+	return true
+}
+
+func chooseNinjutsuAttacker(e *Engine, g *game.Game, playerID game.PlayerID, attackers []*game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *game.Permanent {
+	if len(attackers) == 0 {
+		return nil
+	}
+	if len(attackers) == 1 {
+		return attackers[0]
+	}
+	options := make([]game.ChoiceOption, 0, len(attackers))
+	for i, attacker := range attackers {
+		options = append(options, game.ChoiceOption{Index: i, Label: permanentEffectiveName(g, attacker)})
+	}
+	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:             game.ChoicePayment,
+		Player:           playerID,
+		Prompt:           "Choose an unblocked attacker to return",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(attackers) {
+		return nil
+	}
+	return attackers[selected[0]]
+}
+
+func unblockedAttackers(g *game.Game, playerID game.PlayerID) []*game.Permanent {
+	if g.Combat == nil ||
+		g.Turn.Phase != game.PhaseCombat ||
+		g.Turn.Step < game.StepDeclareBlockers ||
+		g.Turn.Step > game.StepEndOfCombat {
+		return nil
+	}
+	var attackers []*game.Permanent
+	for _, attack := range g.Combat.Attackers {
+		permanent, ok := permanentByObjectID(g, attack.Attacker)
+		if !ok || effectiveController(g, permanent) != playerID || attackerWasBlocked(g, attack.Attacker) {
+			continue
+		}
+		attackers = append(attackers, permanent)
+	}
+	return attackers
+}
+
+func attackTargetForAttacker(g *game.Game, attackerID id.ID) (game.AttackTarget, bool) {
+	if g.Combat == nil {
+		return game.AttackTarget{}, false
+	}
+	for _, attack := range g.Combat.Attackers {
+		if attack.Attacker == attackerID {
+			return attack.Target, true
+		}
+	}
+	return game.AttackTarget{}, false
+}
+
+func canActivateNinjutsuAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
+	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return false
+	}
+	if xValue != 0 ||
+		abilityIndex < 0 ||
+		!game.BodyHasKeyword(body, game.Ninjutsu) ||
+		game.BodyFunctionZone(body) != zone.Hand ||
+		body.Timing != game.DuringCombat ||
+		len(targets) != 0 ||
+		len(game.BodyTargets(body)) != 0 ||
+		!abilityHasReturnUnblockedAttackerCost(body.AdditionalCosts) ||
+		len(unblockedAttackers(g, playerID)) == 0 {
+		return false
+	}
+	_, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
+	if !ok || !game.BodyHasKeyword(gotAbility, game.Ninjutsu) {
+		return false
+	}
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+}
+
+func abilityHasReturnUnblockedAttackerCost(costs []cost.Additional) bool {
+	return len(costs) == 1 &&
+		costs[0].Kind == cost.AdditionalReturnUnblockedAttacker &&
+		payment.AdditionalCostAmount(costs[0]) == 1
+}
+
 func (e *Engine) canCastSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, targets []game.Target, xValue int, chosenModes []int) bool {
 	return e.canCastSpellWithKicker(g, playerID, cardID, targets, xValue, chosenModes, false)
 }
@@ -880,9 +1031,6 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 	if !ok || !card.Def.CanChooseCastFace(face) {
 		return false
 	}
-	if sourceZone != zone.Hand && sourceZone != zone.Command && face != game.FaceFront {
-		return false
-	}
 	switch sourceZone {
 	case zone.Command:
 		if player.CommanderInstanceID != cardID {
@@ -890,7 +1038,7 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 		}
 	case zone.Hand:
 	case zone.Graveyard:
-		if !canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone) {
+		if !canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face) {
 			return false
 		}
 	case zone.Exile:
@@ -921,14 +1069,17 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 	return true
 }
 
-func legalCastFacesForZone(card *game.CardDef, sourceZone zone.Type) []game.FaceIndex {
-	if sourceZone != zone.Hand && sourceZone != zone.Command {
-		if card.CanChooseCastFace(game.FaceFront) {
-			return []game.FaceIndex{game.FaceFront}
+func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type) []game.FaceIndex {
+	if sourceZone == zone.Graveyard {
+		var faces []game.FaceIndex
+		for _, face := range card.Def.LegalCastFaces() {
+			if canCastFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
+				faces = append(faces, face)
+			}
 		}
-		return nil
+		return faces
 	}
-	return card.LegalCastFaces()
+	return card.Def.LegalCastFaces()
 }
 
 func castSourceContains(player *game.Player, cardID id.ID, sourceZone zone.Type) bool {
@@ -1039,6 +1190,10 @@ func activatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 }
 
 func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbility, bool) {
+	return handActivatedAbilitySource(g, playerID, sourceID, abilityIndex)
+}
+
+func handActivatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbility, bool) {
 	if abilityIndex < 0 {
 		return nil, game.ActivatedAbility{}, false
 	}

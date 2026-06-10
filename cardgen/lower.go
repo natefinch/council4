@@ -92,7 +92,33 @@ func lowerExecutableFaces(card *ScryfallCard) ([]loweredFaceAbilities, []oracle.
 		diagnostics = append(diagnostics, faceDiagnostics...)
 		lowered[i] = faceAbilities
 	}
+	if card.Layout != "adventure" && hasAdventureCastPermission(lowered) {
+		diagnostics = append(diagnostics, oracle.Diagnostic{
+			Severity: oracle.SeverityWarning,
+			Summary:  "unsupported Adventure cast permission",
+			Detail:   "an Adventure graveyard-cast permission requires an Adventure card layout",
+		})
+	}
 	return lowered, diagnostics
+}
+
+func hasAdventureCastPermission(faces []loweredFaceAbilities) bool {
+	for faceIndex := range faces {
+		for abilityIndex := range faces[faceIndex].TriggeredAbilities {
+			ability := &faces[faceIndex].TriggeredAbilities[abilityIndex]
+			for modeIndex := range ability.Content.Modes {
+				mode := &ability.Content.Modes[modeIndex]
+				for instructionIndex := range mode.Sequence {
+					instruction := &mode.Sequence[instructionIndex]
+					if instruction.Primitive != nil &&
+						instruction.Primitive.Kind() == game.PrimitiveGrantCastPermission {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 func lowerFaceAbilities(
@@ -115,9 +141,6 @@ func lowerFaceAbilities(
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
 		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
 	})
-	if len(diagnostics) > 0 {
-		return loweredFaceAbilities{}, diagnostics
-	}
 
 	var result loweredFaceAbilities
 	var unsupported []oracle.Diagnostic
@@ -1266,7 +1289,7 @@ func lowerProtectionAbility(
 	return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
 }
 
-// lowerKeywordDispatch tries Enchant, Protection, Equip, and Cycling — the
+// lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, and Ninjutsu — the
 // single-keyword special cases that each produce a full abilityLowering.
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
@@ -1297,6 +1320,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	if ninjutsuAbility, ok, diag := lowerNinjutsuAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&ninjutsuAbility, ability, syntax), true, nil
 	}
 	return abilityLowering{}, false, nil
 }
@@ -1489,6 +1518,51 @@ func lowerCyclingAbility(
 	return game.CyclingActivatedAbility(manaCost), true, nil
 }
 
+func lowerNinjutsuAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.ActivatedAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Ninjutsu" {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	if keyword.Parameter == "" ||
+		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	manaCost, err := parseManaCostValue(keyword.Parameter)
+	if err != nil || len(manaCost) == 0 {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	return game.NinjutsuActivatedAbility(manaCost), true, nil
+}
+
 func lowerStaticPTBuff(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
@@ -1519,7 +1593,7 @@ func lowerStaticPTBuff(
 			"the executable source backend supports only exact fixed static creature power/toughness buffs, optionally granting supported keywords",
 		)
 	}
-	group, ok := staticSubjectGroup(effect.StaticSubject)
+	group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
 	if !ok {
 		return game.StaticAbility{}, false, nil
 	}
@@ -1580,9 +1654,13 @@ func lowerStaticKeywordGrant(
 			"the executable source backend supports only exact standalone grants of runtime-supported keywords",
 		)
 	}
-	group, ok := staticSubjectGroup(effect.StaticSubject)
+	group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
 	if !ok {
-		return game.StaticAbility{}, false, nil
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported static ability",
+			"the executable source backend supports only known creature subtypes in standalone keyword grants",
+		)
 	}
 	return game.StaticAbility{
 		Text: ability.Text,
@@ -1879,7 +1957,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	}
 }
 
-func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, bool) {
+func staticSubjectGroup(subject oracle.StaticSubjectKind, subtypeText string) (game.GroupReference, bool) {
 	switch subject {
 	case oracle.StaticSubjectAttachedObject:
 		return game.AttachedObjectGroup(game.SourcePermanentReference()), true
@@ -1914,9 +1992,58 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 			RequiredTypes: []types.Card{types.Creature},
 			Controller:    game.ControllerOpponent,
 		}), true
+	case oracle.StaticSubjectControlledCreatureSubtype:
+		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{subtype}},
+		), true
+	case oracle.StaticSubjectOtherControlledCreatureSubtype:
+		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		return game.ObjectControlledGroupExcluding(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{subtype}},
+			game.SourcePermanentReference(),
+		), true
 	default:
 		return game.GroupReference{}, false
 	}
+}
+
+func knownCreatureSubtypeFromPlural(text string) (types.Sub, bool) {
+	candidates := []string{text}
+	if singular, ok := strings.CutSuffix(text, "s"); ok {
+		candidates = append(candidates, singular)
+	}
+	if stem, ok := strings.CutSuffix(text, "ies"); ok {
+		candidates = append(candidates, stem+"y")
+	}
+	if stem, ok := strings.CutSuffix(text, "ves"); ok {
+		candidates = append(candidates, stem+"f", stem+"fe")
+	}
+	if singular, ok := strings.CutSuffix(text, "es"); ok {
+		candidates = append(candidates, singular)
+	}
+	switch text {
+	case "Children":
+		candidates = append(candidates, "Child")
+	case "Mice":
+		candidates = append(candidates, "Mouse")
+	default:
+	}
+	for _, candidate := range candidates {
+		subtype := types.Sub(candidate)
+		if types.KnownSubtypeForType(types.Creature, subtype) {
+			return subtype, true
+		}
+	}
+	return "", false
 }
 
 func matchesExactStaticKeywordGrantSyntax(
@@ -2456,18 +2583,18 @@ func lowerEnterTrigger(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
-	eventKind, supportedEvent := lowerSelfTriggerEvent(ability)
-	summary := "unsupported enter trigger"
-	detail := "the executable source backend supports only exact self-enter triggers with supported effects"
-	if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
+	eventKind, supportedEvent := lowerSelfTriggerEvent(cardName, ability)
+	summary := "unsupported triggered ability"
+	detail := "the executable source backend supports only exact self-enter and self-dies triggers with supported effects"
+	if ability.Trigger != nil && strings.Contains(ability.Trigger.Event, " enters") {
+		summary = "unsupported enter trigger"
+		detail = "the executable source backend supports only exact self-enter triggers with supported effects"
+	} else if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
 		summary = "unsupported dies trigger"
 		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
 	}
-	intervening, supportedCondition := lowerEnterInterveningCondition(ability.Trigger)
+	intervening, supportedCondition := lowerSelfInterveningCondition(eventKind, ability.Trigger)
 	hasInterveningCondition := ability.Trigger != nil && ability.Trigger.Condition != nil
-	if hasInterveningCondition && eventKind != game.EventPermanentEnteredBattlefield {
-		supportedCondition = false
-	}
 	resolvingEffects := ability.Effects
 	if hasInterveningCondition {
 		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
@@ -2565,7 +2692,7 @@ func lowerEnterTrigger(
 	}
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
-	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	content, diagnostic := lowerSelfTriggerBody(cardName, eventKind, body, bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
@@ -2589,20 +2716,103 @@ func lowerEnterTrigger(
 				Event:  eventKind,
 				Source: game.TriggerSourceSelf,
 			},
-			InterveningIf:                        interveningIfText(ability.Trigger),
-			InterveningCondition:                 intervening.condition,
-			InterveningIfEventPermanentWasKicked: intervening.wasKicked,
-			InterveningIfEventPermanentWasCast:   intervening.wasCast,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening.condition,
+			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
+			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:          intervening.wasCast,
 		},
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
 }
 
+func lowerSelfTriggerBody(
+	cardName string,
+	eventKind game.EventKind,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	if eventKind == game.EventPermanentDied {
+		if content, ok := lowerDiesEventCardEffect(ability); ok {
+			return content, nil
+		}
+	}
+	return lowerSpell(cardName, ability, syntax)
+}
+
+func lowerDiesEventCardEffect(ability oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(ability.Effects) != 1 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	eventCard := game.CardReference{Kind: game.CardReferenceEvent}
+	switch ability.Effects[0].Kind {
+	case oracle.EffectReturn:
+		if ability.Text != "Return it to its owner's hand." ||
+			!exactPronounReferences(ability.References, "it", "its") {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.MoveCard{
+				Card:        eventCard,
+				FromZone:    zone.Graveyard,
+				Destination: zone.Hand,
+			},
+		}}}.Ability(), true
+	case oracle.EffectCast:
+		if ability.Text != "Cast it from your graveyard as an Adventure until the end of your next turn." ||
+			!exactPronounReferences(ability.References, "it") {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.GrantCastPermission{
+				Card:     eventCard,
+				FromZone: zone.Graveyard,
+				Face:     game.FaceAlternate,
+				Duration: game.DurationUntilEndOfYourNextTurn,
+			},
+		}}}.Ability(), true
+	default:
+		return game.AbilityContent{}, false
+	}
+}
+
+func exactPronounReferences(references []oracle.CompiledReference, texts ...string) bool {
+	if len(references) != len(texts) {
+		return false
+	}
+	for i, text := range texts {
+		if references[i].Kind != oracle.ReferencePronoun ||
+			!strings.EqualFold(references[i].Text, text) {
+			return false
+		}
+	}
+	return true
+}
+
 type enterInterveningCondition struct {
-	condition opt.V[game.Condition]
-	wasKicked bool
-	wasCast   bool
+	condition        opt.V[game.Condition]
+	hadNoCounterKind opt.V[counter.Kind]
+	wasKicked        bool
+	wasCast          bool
+}
+
+func lowerSelfInterveningCondition(
+	eventKind game.EventKind,
+	trigger *oracle.CompiledTrigger,
+) (enterInterveningCondition, bool) {
+	switch eventKind {
+	case game.EventPermanentEnteredBattlefield:
+		return lowerEnterInterveningCondition(trigger)
+	case game.EventPermanentDied:
+		return lowerDiesInterveningCondition(trigger)
+	default:
+		return enterInterveningCondition{}, trigger == nil || trigger.Condition == nil
+	}
 }
 
 func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
@@ -2631,6 +2841,24 @@ func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInter
 			}),
 		}),
 	}, true
+}
+
+func lowerDiesInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
+	if trigger == nil || trigger.Condition == nil {
+		return enterInterveningCondition{}, true
+	}
+	condition := trigger.Condition
+	if condition.Kind != oracle.ConditionIf || !condition.Intervening {
+		return enterInterveningCondition{}, false
+	}
+	switch condition.Text {
+	case "if it had no +1/+1 counters", "if it had no +1/+1 counters on it":
+		return enterInterveningCondition{hadNoCounterKind: opt.Val(counter.PlusOnePlusOne)}, true
+	case "if it had no -1/-1 counters", "if it had no -1/-1 counters on it":
+		return enterInterveningCondition{hadNoCounterKind: opt.Val(counter.MinusOneMinusOne)}, true
+	default:
+		return enterInterveningCondition{}, false
+	}
 }
 
 func controlledPermanentConditionType(text string) (types.Card, bool) {
@@ -2669,7 +2897,7 @@ func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbili
 	return true
 }
 
-func lowerSelfTriggerEvent(ability oracle.CompiledAbility) (game.EventKind, bool) {
+func lowerSelfTriggerEvent(cardName string, ability oracle.CompiledAbility) (game.EventKind, bool) {
 	if ability.Trigger == nil {
 		return 0, false
 	}
@@ -2686,6 +2914,9 @@ func lowerSelfTriggerEvent(ability oracle.CompiledAbility) (game.EventKind, bool
 	case "this creature dies", "this permanent dies":
 		return game.EventPermanentDied, true
 	default:
+		if strings.EqualFold(ability.Trigger.Event, cardName+" dies") {
+			return game.EventPermanentDied, true
+		}
 		return 0, false
 	}
 }

@@ -12,6 +12,7 @@ const (
 	DurationThisTurn
 	DurationUntilYourNextTurn
 	DurationNextTime
+	DurationUntilEndOfYourNextTurn
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.
