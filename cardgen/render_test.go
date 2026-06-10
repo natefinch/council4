@@ -144,6 +144,18 @@ func TestRenderEveryRecognizedCounterKind(t *testing.T) {
 	}
 }
 
+func TestRenderReplacementAbilityRejectsMixedETBCounters(t *testing.T) {
+	t.Parallel()
+	ability := game.EntersTappedReplacement("This creature enters tapped with a +1/+1 counter on it.")
+	ability.Replacement.EntersWithCounters = []game.CounterPlacement{{
+		Kind:   counter.PlusOnePlusOne,
+		Amount: 1,
+	}}
+	if _, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability); err == nil {
+		t.Fatal("expected mixed ETB counter replacement to fail closed")
+	}
+}
+
 func TestRenderResolutionPaymentRejectsPromptWithoutCost(t *testing.T) {
 	if _, err := (Renderer{}).renderResolutionPayment(&renderCtx{}, game.ResolutionPayment{
 		Prompt: "Pay?",

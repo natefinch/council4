@@ -343,6 +343,20 @@ func lowerExecutableAbility(
 	case oracle.AbilityChapter:
 		return lowerChapterAbility(cardName, ability, syntax)
 	case oracle.AbilityReplacement:
+		if replacementAbility, handled, diagnostic := lowerEntersWithCountersReplacement(ability); handled || diagnostic != nil {
+			if diagnostic != nil {
+				return abilityLowering{}, diagnostic
+			}
+			return abilityLowering{
+				replacementAbility: opt.Val(replacementAbility),
+				consumed: semanticConsumption{
+					effects:    len(ability.Effects),
+					conditions: len(ability.Conditions),
+					references: len(ability.References),
+				},
+				sourceSpans: replacementSourceSpans(ability),
+			}, nil
+		}
 		replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
@@ -2434,6 +2448,69 @@ func lowerEntersTappedReplacement(
 		)
 	}
 	return game.EntersTappedReplacement(ability.Text), nil
+}
+
+func lowerEntersWithCountersReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	if !isEntersWithCountersReplacement(ability) {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported enters-with-counters replacement",
+			detail,
+		)
+	}
+	if len(ability.Conditions) != 0 {
+		return unsupported("the executable source backend does not yet support conditional enters-with-counters replacements")
+	}
+	if len(ability.Effects) != 1 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		!selfEntersWithCountersReferences(ability.References) {
+		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
+	}
+	effect := ability.Effects[0]
+	if effect.Duration != oracle.DurationNone || effect.Negated {
+		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
+	}
+	if strings.Contains(effect.Selector.Raw, " X ") ||
+		strings.Contains(effect.Selector.Raw, " for each ") ||
+		!effect.Amount.Known ||
+		effect.Amount.Value <= 0 {
+		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
+	}
+	if !effect.CounterKindKnown {
+		return unsupported("the executable source backend does not support this enters-with-counters counter kind")
+	}
+	return game.EntersWithCountersReplacement(ability.Text, game.CounterPlacement{
+		Kind:   effect.CounterKind,
+		Amount: effect.Amount.Value,
+	}), true, nil
+}
+
+func isEntersWithCountersReplacement(ability oracle.CompiledAbility) bool {
+	if len(ability.Effects) == 0 ||
+		ability.Effects[0].Kind != oracle.EffectEnterTapped {
+		return false
+	}
+	raw := ability.Effects[0].Selector.Raw
+	return strings.HasPrefix(raw, "with ") &&
+		strings.Contains(raw, " counter") &&
+		strings.HasSuffix(raw, " on it.")
+}
+
+func selfEntersWithCountersReferences(references []oracle.CompiledReference) bool {
+	return len(references) == 2 &&
+		references[0].Kind == oracle.ReferenceThisObject &&
+		references[1].Kind == oracle.ReferencePronoun &&
+		strings.EqualFold(references[1].Text, "it")
 }
 
 func lowerOptionalEntryPayment(ability oracle.CompiledAbility) (game.ReplacementAbility, bool) {
