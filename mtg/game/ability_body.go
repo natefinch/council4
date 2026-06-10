@@ -2,6 +2,8 @@ package game
 
 import (
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -147,6 +149,32 @@ func TokenCreationReplacement(text string, multiplier int, filter TriggerControl
 			ControllerFilter: filter,
 			TokenMultiplier:  multiplier,
 			Duration:         DurationPermanent,
+		},
+	}
+}
+
+// CounterPlacementReplacement creates a persistent replacement that multiplies
+// placement of one specific counter kind.
+func CounterPlacementReplacement(text string, multiplier int, kindFilter counter.Kind, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, filter)
+	replacement.Replacement.MatchCounterKind = true
+	replacement.Replacement.CounterKindFilter = kindFilter
+	replacement.Replacement.CounterRecipientTypes = []types.Card{types.Creature}
+	replacement.Replacement.CounterUseRecipientController = true
+	return replacement
+}
+
+// AnyCounterPlacementReplacement creates a persistent replacement that
+// multiplies placement of any counter kind.
+func AnyCounterPlacementReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:       text,
+			MatchEvent:        EventCountersAdded,
+			ControllerFilter:  filter,
+			CounterMultiplier: multiplier,
+			Duration:          DurationPermanent,
 		},
 	}
 }

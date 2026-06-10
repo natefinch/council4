@@ -215,6 +215,50 @@ func TestRenderTokenCreationReplacement(t *testing.T) {
 	}
 }
 
+func TestRenderCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	ability := game.CounterPlacementReplacement(
+		"If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
+		2,
+		counter.PlusOnePlusOne,
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(ctx, &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.CounterPlacementReplacement",
+		"2",
+		"counter.PlusOnePlusOne",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importCounter]; !ok {
+		t.Fatal("counter-placement replacement did not request counter import")
+	}
+}
+
+func TestRenderAnyCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	ability := game.AnyCounterPlacementReplacement(
+		"If one or more counters would be put on a permanent or player, twice that many of each of those kinds of counters are put on that permanent or player instead.",
+		2,
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "game.AnyCounterPlacementReplacement") {
+		t.Fatalf("rendered replacement missing any-counter constructor:\n%s", rendered)
+	}
+}
+
 func TestRenderResolutionPaymentRejectsPromptWithoutCost(t *testing.T) {
 	if _, err := (Renderer{}).renderResolutionPayment(&renderCtx{}, game.ResolutionPayment{
 		Prompt: "Pay?",

@@ -261,7 +261,7 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok && res.amount > 0 {
-		addCountersToPermanent(r.game, permanent, prim.CounterKind, res.amount)
+		addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), permanent, prim.CounterKind, res.amount)
 		res.succeeded = true
 	}
 	return res
@@ -277,7 +277,7 @@ func handleAddPlayerCounter(r *effectResolver, prim game.AddPlayerCounter) effec
 	if !ok || player.Eliminated {
 		return res
 	}
-	if addCountersToPlayer(r.game, player, prim.CounterKind, res.amount) {
+	if addCountersToPlayerControlledBy(r.game, stackObjectController(r.obj), player, prim.CounterKind, res.amount) {
 		res.succeeded = true
 	}
 	return res
@@ -294,7 +294,7 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 		return res
 	}
 	for kind, amount := range counters.All() {
-		addCountersToPermanent(r.game, destination, kind, amount)
+		addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), destination, kind, amount)
 		if source != nil {
 			source.Counters.Remove(kind, amount)
 		}
@@ -470,7 +470,7 @@ func handleMonstrosity(r *effectResolver, prim game.Monstrosity) effectResolved 
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok && !permanent.Monstrous {
 		if res.amount > 0 {
-			permanent.Counters.Add(counter.PlusOnePlusOne, res.amount)
+			addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), permanent, counter.PlusOnePlusOne, res.amount)
 		}
 		permanent.Monstrous = true
 		res.succeeded = true

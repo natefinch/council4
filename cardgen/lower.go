@@ -361,6 +361,9 @@ func lowerExecutableAbility(
 }
 
 func lowerReplacementAbility(ability oracle.CompiledAbility) (abilityLowering, *oracle.Diagnostic) {
+	if replacementAbility, handled, diagnostic := lowerCounterPlacementReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerTokenCreationReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -2494,6 +2497,78 @@ func lowerSelfZoneDestinationReplacement(
 			Duration:           game.DurationPermanent,
 		},
 	}, true, nil
+}
+
+func lowerCounterPlacementReplacement(
+	ability oracle.CompiledAbility,
+) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	if !counterPlacementReplacementCandidate(ability) {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported counter-placement replacement",
+			detail,
+		)
+	}
+	if len(ability.Conditions) != 1 ||
+		ability.Conditions[0].Kind != oracle.ConditionIf ||
+		len(ability.Effects) != 2 ||
+		ability.Effects[0].Kind != oracle.EffectPut ||
+		ability.Effects[1].Kind != oracle.EffectPut ||
+		len(ability.Targets) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact counter-doubling replacements")
+	}
+	condition := ability.Conditions[0].Text
+	switch condition {
+	case "If one or more +1/+1 counters would be put on a creature you control":
+		if !plusOneCounterDoublingEffects(ability.Effects) {
+			return unsupported("the executable source backend supports only +1/+1 counter-doubling replacement amounts")
+		}
+		return game.CounterPlacementReplacement(ability.Text, 2, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
+	case "If you would put one or more counters on a permanent or player":
+		if !anyCounterDoublingEffects(ability.Effects) {
+			return unsupported("the executable source backend supports only all-counter-doubling replacement amounts")
+		}
+		return game.AnyCounterPlacementReplacement(ability.Text, 2, game.TriggerControllerYou), true, nil
+	default:
+		return unsupported("the executable source backend supports only controlled-creature +1/+1 or broad permanent/player counter-doubling replacements")
+	}
+}
+
+func counterPlacementReplacementCandidate(ability oracle.CompiledAbility) bool {
+	if ability.Kind != oracle.AbilityReplacement || len(ability.Conditions) == 0 {
+		return false
+	}
+	condition := ability.Conditions[0].Text
+	return strings.Contains(condition, "counters would be put") ||
+		strings.Contains(condition, "would put one or more counters")
+}
+
+func plusOneCounterDoublingEffects(effects []oracle.CompiledEffect) bool {
+	first, second := effects[0], effects[1]
+	if first.PowerDelta.Value != 1 || !first.PowerDelta.Known ||
+		first.ToughnessDelta.Value != 1 || !first.ToughnessDelta.Known {
+		return false
+	}
+	raw := first.Selector.Raw + " " + second.Selector.Raw
+	if !strings.Contains(raw, "twice that many +1/+1 counters") {
+		return false
+	}
+	return strings.Contains(raw, "on that creature instead.") ||
+		strings.Contains(raw, "on it instead.")
+}
+
+func anyCounterDoublingEffects(effects []oracle.CompiledEffect) bool {
+	raw := effects[0].Selector.Raw + " " + effects[1].Selector.Raw
+	return strings.Contains(raw, "twice that many of each of those kinds of counters") &&
+		strings.Contains(raw, "on that permanent or player instead.")
 }
 
 func lowerTokenCreationReplacement(

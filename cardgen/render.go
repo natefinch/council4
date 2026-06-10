@@ -1110,7 +1110,49 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
+	if ability.Replacement.CounterMultiplier > 0 {
+		replacement, err := renderCounterPlacementReplacement(ctx, ability)
+		if err != nil {
+			return "", err
+		}
+		return replacement, nil
+	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists ||
+		replacement.MatchEvent != game.EventCountersAdded ||
+		replacement.ControllerFilter == game.TriggerControllerAny ||
+		replacement.CounterMultiplier <= 1 {
+		return "", errors.New("render: unsupported counter-placement replacement shape")
+	}
+	controller, err := renderTriggerController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	if !replacement.MatchCounterKind {
+		return fmt.Sprintf("game.AnyCounterPlacementReplacement(%q, %d, %s)",
+			ability.Text,
+			replacement.CounterMultiplier,
+			controller,
+		), nil
+	}
+	kind, err := renderCounterKind(replacement.CounterKindFilter)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCounter)
+	return fmt.Sprintf("game.CounterPlacementReplacement(%q, %d, %s, %s)",
+		ability.Text,
+		replacement.CounterMultiplier,
+		kind,
+		controller,
+	), nil
 }
 
 func renderTokenCreationReplacement(ability *game.ReplacementAbility) (string, error) {

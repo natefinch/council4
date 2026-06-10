@@ -17,15 +17,16 @@ type proliferateTarget struct {
 
 func (e *Engine) resolveProliferate(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	applied := false
+	controller := stackObjectController(obj)
 	for _, target := range proliferateTargets(g) {
 		if len(target.counters) == 0 {
 			continue
 		}
-		selected := e.chooseChoice(g, agents, proliferateChoiceRequest(obj.Controller, target), log)
+		selected := e.chooseChoice(g, agents, proliferateChoiceRequest(controller, target), log)
 		if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(target.counters) {
 			continue
 		}
-		if addProliferatedCounter(g, target, target.counters[selected[0]]) {
+		if addProliferatedCounter(g, controller, target, target.counters[selected[0]]) {
 			applied = true
 		}
 	}
@@ -112,17 +113,17 @@ func proliferateChoiceRequest(player game.PlayerID, target proliferateTarget) ga
 	}
 }
 
-func addProliferatedCounter(g *game.Game, target proliferateTarget, kind counter.Kind) bool {
+func addProliferatedCounter(g *game.Game, placementController game.PlayerID, target proliferateTarget, kind counter.Kind) bool {
 	if target.permanentID != 0 {
 		permanent, ok := permanentByObjectID(g, target.permanentID)
 		if !ok {
 			return false
 		}
-		return addCountersToPermanent(g, permanent, kind, 1)
+		return addCountersToPermanentControlledBy(g, placementController, permanent, kind, 1)
 	}
 	player, ok := playerByID(g, target.player)
 	if !ok {
 		return false
 	}
-	return addCountersToPlayer(g, player, kind, 1)
+	return addCountersToPlayerControlledBy(g, placementController, player, kind, 1)
 }

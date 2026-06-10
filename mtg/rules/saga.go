@@ -39,21 +39,30 @@ func initializeReadAhead(e *Engine, g *game.Game, permanent *game.Permanent, age
 }
 
 func addCountersToPermanent(g *game.Game, permanent *game.Permanent, kind counter.Kind, amount int) bool {
+	placementController := game.PlayerID(-1)
+	if permanent != nil {
+		placementController = effectiveController(g, permanent)
+	}
+	return addCountersToPermanentControlledBy(g, placementController, permanent, kind, amount)
+}
+
+func addCountersToPermanentControlledBy(g *game.Game, placementController game.PlayerID, permanent *game.Permanent, kind counter.Kind, amount int) bool {
 	if permanent == nil || amount <= 0 {
 		return false
 	}
+	amount = replacementPermanentCounterPlacementAmount(g, placementController, permanent, kind, amount)
 	previous := permanent.Counters.Get(kind)
 	permanent.Counters.Add(kind, amount)
-	emitCounterAddedEvent(g, permanent, kind, previous, amount)
+	emitCounterAddedEvent(g, permanent, placementController, kind, previous, amount)
 	return true
 }
 
-func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, kind counter.Kind, previous, amount int) {
+func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, kind counter.Kind, previous, amount int) {
 	emitEvent(g, game.Event{
 		Kind:                  game.EventCountersAdded,
 		SourceID:              permanent.CardInstanceID,
 		SourceObjectID:        permanent.ObjectID,
-		Controller:            effectiveController(g, permanent),
+		Controller:            controller,
 		CardID:                permanent.CardInstanceID,
 		PermanentID:           permanent.ObjectID,
 		CounterKind:           kind,
@@ -63,9 +72,18 @@ func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, kind counter
 }
 
 func addCountersToPlayer(g *game.Game, player *game.Player, kind counter.Kind, amount int) bool {
+	placementController := game.PlayerID(-1)
+	if player != nil {
+		placementController = player.ID
+	}
+	return addCountersToPlayerControlledBy(g, placementController, player, kind, amount)
+}
+
+func addCountersToPlayerControlledBy(g *game.Game, placementController game.PlayerID, player *game.Player, kind counter.Kind, amount int) bool {
 	if player == nil || amount <= 0 {
 		return false
 	}
+	amount = replacementPlayerCounterPlacementAmount(g, placementController, player.ID, kind, amount)
 	previous := 0
 	switch kind {
 	case counter.Poison:
@@ -82,7 +100,7 @@ func addCountersToPlayer(g *game.Game, player *game.Player, kind counter.Kind, a
 	}
 	emitEvent(g, game.Event{
 		Kind:                  game.EventCountersAdded,
-		Controller:            player.ID,
+		Controller:            placementController,
 		Player:                player.ID,
 		CounterKind:           kind,
 		PreviousCounterAmount: previous,
