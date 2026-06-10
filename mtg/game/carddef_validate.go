@@ -328,14 +328,15 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 		selection.Power.Exists ||
 		selection.Toughness.Exists ||
 		selection.ExcludeSource ||
-		selection.NonToken
+		selection.NonToken ||
+		selection.TokenOnly
 }
 
 func (v *cardDefValidator) validateContinuousEffect(faceName, path string, continuous *ContinuousEffect, targets []TargetSpec) {
 	for i := range continuous.AddAbilities {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("AddAbilities[%d]", i)), continuous.AddAbilities[i], nil)
 	}
-	if continuous.Group.Valid() {
+	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
 	}
 }
@@ -402,6 +403,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.ExcludedTypes = nil
 		unsupported.Controller = ControllerAny
 		unsupported.NonToken = false
+		unsupported.TokenOnly = false
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "SubjectSelection"), CardDefIssueInvalidSelection, "trigger subject Selection uses predicates unavailable from event data")
 		}

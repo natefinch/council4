@@ -232,6 +232,10 @@ const (
 	StaticSubjectAttachedObject
 	StaticSubjectControlledCreatures
 	StaticSubjectOtherControlledCreatures
+	StaticSubjectControlledWalls
+	StaticSubjectControlledArtifacts
+	StaticSubjectControlledTokens
+	StaticSubjectOpponentControlledCreatures
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing

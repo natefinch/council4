@@ -208,7 +208,7 @@ Do **not** extract solely to reduce file size or to match the `payment` preceden
 
 ## Static and continuous effects
 
-The continuous-effect layer derives effective permanent values on demand rather than mutating printed card definitions. Runtime `ContinuousEffect` values cover copy, control, text, type, color, ability, and P/T layers with timestamp/dependency ordering. Battlefield static abilities with `EffectModifyPT` contribute to matching permanents through source-aware selectors such as `EffectSelectorCreaturesYouControl` and `EffectSelectorOtherCreaturesYouControl`; if the source leaves the battlefield, the next effective-value calculation naturally stops applying the effect.
+The continuous-effect layer derives effective permanent values on demand rather than mutating printed card definitions. Runtime `ContinuousEffect` values cover copy, control, text, type, color, ability, and P/T layers with timestamp/dependency ordering. Battlefield static abilities with `EffectModifyPT` contribute to matching permanents through source-aware groups and selections, including controlled creature, subtype, card-type, token-only, and opponent-controlled creature groups; if the source leaves the battlefield, the next effective-value calculation naturally stops applying the effect.
 
 The layer system still has carry-forward work for richer CDA forms, exact copy/back-face interactions, and performance memoization as card coverage grows.
 

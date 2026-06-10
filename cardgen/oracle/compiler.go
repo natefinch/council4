@@ -414,6 +414,38 @@ func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span) {
 		equalWord(tokens[2], "control") &&
 		equalWord(tokens[3], "get"):
 		return StaticSubjectControlledCreatures, spanOf(tokens[:3])
+	case len(tokens) >= 6 &&
+		equalWord(tokens[0], "creatures") &&
+		equalWord(tokens[1], "your") &&
+		equalWord(tokens[2], "opponents") &&
+		equalWord(tokens[3], "control") &&
+		equalWord(tokens[4], "get"):
+		return StaticSubjectOpponentControlledCreatures, spanOf(tokens[:4])
+	case len(tokens) >= 5 &&
+		equalWord(tokens[0], "each") &&
+		equalWord(tokens[1], "wall") &&
+		equalWord(tokens[2], "you") &&
+		equalWord(tokens[3], "control") &&
+		equalWord(tokens[4], "gets"):
+		return StaticSubjectControlledWalls, spanOf(tokens[:4])
+	case len(tokens) >= 4 &&
+		equalWord(tokens[0], "walls") &&
+		equalWord(tokens[1], "you") &&
+		equalWord(tokens[2], "control") &&
+		equalWord(tokens[3], "get"):
+		return StaticSubjectControlledWalls, spanOf(tokens[:3])
+	case len(tokens) >= 4 &&
+		equalWord(tokens[0], "artifacts") &&
+		equalWord(tokens[1], "you") &&
+		equalWord(tokens[2], "control") &&
+		equalWord(tokens[3], "get"):
+		return StaticSubjectControlledArtifacts, spanOf(tokens[:3])
+	case len(tokens) >= 4 &&
+		equalWord(tokens[0], "tokens") &&
+		equalWord(tokens[1], "you") &&
+		equalWord(tokens[2], "control") &&
+		equalWord(tokens[3], "get"):
+		return StaticSubjectControlledTokens, spanOf(tokens[:3])
 	default:
 		return StaticSubjectNone, Span{}
 	}

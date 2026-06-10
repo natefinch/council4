@@ -1137,6 +1137,26 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind) (game.GroupReference, 
 			game.Selection{RequiredTypes: []types.Card{types.Creature}},
 			game.SourcePermanentReference(),
 		), true
+	case oracle.StaticSubjectControlledWalls:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{SubtypesAny: []types.Sub{types.Wall}},
+		), true
+	case oracle.StaticSubjectControlledArtifacts:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+		), true
+	case oracle.StaticSubjectControlledTokens:
+		return game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{TokenOnly: true},
+		), true
+	case oracle.StaticSubjectOpponentControlledCreatures:
+		return game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerOpponent,
+		}), true
 	default:
 		return game.GroupReference{}, false
 	}
@@ -1172,6 +1192,49 @@ func matchesExactStaticPTBuffSyntax(
 			equalTokenWord(tokens[0], "other") &&
 			equalTokenWord(tokens[1], "creatures") &&
 			equalTokenWord(tokens[2], "you") &&
+			equalTokenWord(tokens[3], "control") &&
+			equalTokenWord(tokens[4], "get") &&
+			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
+			tokens[7].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta) &&
+			tokens[10].Kind == oracle.Period
+	case oracle.StaticSubjectControlledWalls:
+		offset := 0
+		noun := "walls"
+		verb := "get"
+		if len(tokens) == 11 && equalTokenWord(tokens[0], "each") {
+			offset = 1
+			noun = "wall"
+			verb = "gets"
+		}
+		return len(tokens) == 10+offset &&
+			equalTokenWord(tokens[offset], noun) &&
+			equalTokenWord(tokens[offset+1], "you") &&
+			equalTokenWord(tokens[offset+2], "control") &&
+			equalTokenWord(tokens[offset+3], verb) &&
+			tokensMatchSignedAmount(tokens[offset+4], tokens[offset+5], effect.PowerDelta) &&
+			tokens[offset+6].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[offset+7], tokens[offset+8], effect.ToughnessDelta) &&
+			tokens[offset+9].Kind == oracle.Period
+	case oracle.StaticSubjectControlledArtifacts, oracle.StaticSubjectControlledTokens:
+		noun := "artifacts"
+		if effect.StaticSubject == oracle.StaticSubjectControlledTokens {
+			noun = "tokens"
+		}
+		return len(tokens) == 10 &&
+			equalTokenWord(tokens[0], noun) &&
+			equalTokenWord(tokens[1], "you") &&
+			equalTokenWord(tokens[2], "control") &&
+			equalTokenWord(tokens[3], "get") &&
+			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
+			tokens[6].Kind == oracle.Slash &&
+			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta) &&
+			tokens[9].Kind == oracle.Period
+	case oracle.StaticSubjectOpponentControlledCreatures:
+		return len(tokens) == 11 &&
+			equalTokenWord(tokens[0], "creatures") &&
+			equalTokenWord(tokens[1], "your") &&
+			equalTokenWord(tokens[2], "opponents") &&
 			equalTokenWord(tokens[3], "control") &&
 			equalTokenWord(tokens[4], "get") &&
 			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&

@@ -1474,7 +1474,13 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.NonToken {
 		fields = append(fields, "NonToken: true,")
 	}
+	if selection.TokenOnly {
+		fields = append(fields, "TokenOnly: true,")
+	}
 
+	for i := range fields {
+		fields[i] = strings.TrimSuffix(fields[i], ",")
+	}
 	return compactStructLit("game.Selection", fields), nil
 }
 

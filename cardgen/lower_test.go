@@ -420,6 +420,51 @@ func TestRejectVariablePTBuff(t *testing.T) {
 	}
 }
 
+func TestGenerateExtendedStaticPTBuffSubjects(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		want       string
+	}{
+		"walls": {
+			oracleText: "Each Wall you control gets +0/+2.",
+			want:       `SubtypesAny: []types.Sub{types.Sub("Wall")}`,
+		},
+		"artifacts": {
+			oracleText: "Artifacts you control get +1/+1.",
+			want:       "RequiredTypes: []types.Card{types.Artifact}",
+		},
+		"tokens": {
+			oracleText: "Tokens you control get +1/+1.",
+			want:       "TokenOnly: true",
+		},
+		"opponents' creatures": {
+			oracleText: "Creatures your opponents control get -1/-0.",
+			want:       "Controller: game.ControllerOpponent",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Anthem",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, test.want) {
+				t.Fatalf("source missing %q:\n%s", test.want, source)
+			}
+		})
+	}
+}
+
 func TestLowerConditionalEntersTappedReplacement(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

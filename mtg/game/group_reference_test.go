@@ -113,6 +113,9 @@ func TestGroupReferenceConstructorsAreValid(t *testing.T) {
 
 func TestGroupReferenceZeroValueInvalid(t *testing.T) {
 	var group GroupReference
+	if !group.Empty() {
+		t.Fatal("zero-value GroupReference is not empty")
+	}
 	if group.Valid() {
 		t.Fatal("zero GroupReference Valid() = true, want false")
 	}

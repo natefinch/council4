@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,538
+Cards supported: 2,543
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -148,6 +148,7 @@ Cards supported: 2,538
 - Axebane Stag
 - Axegrinder Giant
 - Azorius Guildgate
+- Azorius Skyguard
 - Azure Drake
 - Azure Mage
 - Back to Nature
@@ -433,6 +434,7 @@ Cards supported: 2,538
 - Crystacean
 - Crystal Ball
 - Cultist's Staff
+- Cumber Stone
 - Curio Vendor
 - Curious Killbot
 - Cursebreak
@@ -446,6 +448,7 @@ Cards supported: 2,538
 - Dakmor Bat
 - Dakmor Scorpion
 - Dalek
+- Dampening Pulse
 - Dancing Scimitar
 - Daring Thunder-Thief
 - Dark Deed
@@ -634,6 +637,7 @@ Cards supported: 2,538
 - Elephant
 - Elephant
 - Elephant-Rat
+- Elesh Norn, Grand Cenobite
 - Elf
 - Elf Druid
 - Elf Knight
@@ -950,6 +954,7 @@ Cards supported: 2,538
 - Harvest Gwyllion
 - Haunted Guardian
 - Haunted Mire
+- Haunter of Nightveil
 - Havenwood Wurm
 - Havoc Devils
 - Hawkeater Moth

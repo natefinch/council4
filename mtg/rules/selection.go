@@ -130,6 +130,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.NonToken && s.isToken() {
 		return false
 	}
+	if sel.TokenOnly && !s.isToken() {
+		return false
+	}
 	return true
 }
 
