@@ -96,7 +96,8 @@ The intermediate representation mirrors the information needed by categorized
 `game.CardFace` abilities without constructing runtime game values yet. It
 records:
 
-- ordered activated and loyalty cost components;
+- ordered activated and loyalty cost components, including `{T}`, `{Q}`, exile,
+  and counter-removal costs;
 - trigger clauses and intervening-if conditions;
 - modes and inclusive target cardinalities;
 - conservative selectors and controller constraints;
@@ -115,8 +116,9 @@ never substitutes guessed executable behavior for unsupported wording.
 The strict executable backend currently lowers plain non-parameterized
 keywords, exact `Devoid (This card has no color.)`, positive-integer Toxic, and
 mana-cost Kicker, Madness, Morph, Disguise, Ward, Cycling, and Equip. It also
-lowers base-type Enchant, color-based Protection, supported tap mana choices, ordinary activated abilities with exact
-mana-only, tap-only, or mana-then-tap costs and supported effect bodies,
+lowers base-type Enchant, color-based Protection, supported tap and untap mana
+choices, ordinary activated abilities with exact typed costs and supported
+effect bodies, and exact trailing activation timing restrictions,
 unconditional enters-tapped replacements and common land-count or basic-land-subtype
 conditions, fixed or `X` single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes with common
@@ -149,9 +151,10 @@ intervening condition `if it was kicked`. Exact fixed-damage self-dies triggers
 using `it` preserve the departed permanent as the damage source. An exact
 leading `you may` on a single-effect trigger maps to trigger-level optionality;
 partially optional sequences remain unsupported. Exact ordinary battlefield
-activations may combine mana and tap costs with typed sacrifice, discard,
-pay-life, and source-exile costs. Every semantic element and meaningful source
-token must be consumed; otherwise the whole card is rejected.
+activations may combine mana, tap, and untap costs with typed sacrifice,
+discard, pay-life, source-exile, graveyard-exile, and source-counter-removal
+costs. Every semantic element and meaningful source token must be consumed;
+otherwise the whole card is rejected.
 
 This compiler IR is the recognition stage. The strict backend in `cardgen`
 consumes it and lowers each recognized ability into a second, **typed**

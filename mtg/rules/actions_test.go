@@ -920,6 +920,103 @@ func TestActivatedAbilityExilesMatchingGraveyardCardAsCost(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityUntapsSourceAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalUntap, Text: "{Q}"}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap-cost ability was legal while source was untapped")
+	}
+	source.Tapped = true
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap-cost ability was not legal while source was tapped")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(untap-cost ability) = false, want true")
+	}
+	if source.Tapped {
+		t.Fatal("source remained tapped after paying untap cost")
+	}
+}
+
+func TestActivatedAbilityRemovesSourceCounterAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalRemoveCounter,
+			Text:        "Remove a charge counter from this creature",
+			Amount:      1,
+			CounterKind: counter.Charge,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("counter-removal ability was legal without a counter")
+	}
+	source.Counters.Add(counter.Charge, 2)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("counter-removal ability was not legal with a counter")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(counter-removal ability) = false, want true")
+	}
+	if got := source.Counters.Get(counter.Charge); got != 1 {
+		t.Fatalf("charge counters = %d, want 1 after payment", got)
+	}
+}
+
+func TestManaAbilityUntapsSourceAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	body := game.TapManaAbility(mana.G)
+	body.Text = "{Q}: Add {G}."
+	body.AdditionalCosts = []cost.Additional{{Kind: cost.AdditionalUntap, Text: "{Q}"}}
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:          "Untap Mana Engine",
+		Types:         []types.Card{types.Artifact},
+		ManaAbilities: []game.ManaAbility{body},
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap-cost mana ability was legal while source was untapped")
+	}
+	source.Tapped = true
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("untap-cost mana ability was not legal while source was tapped")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(untap-cost mana ability) = false, want true")
+	}
+	if source.Tapped {
+		t.Fatal("mana source remained tapped after paying untap cost")
+	}
+}
+
 func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

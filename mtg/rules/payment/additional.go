@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
@@ -18,6 +19,14 @@ type additionalCostPlan struct {
 	discards        []id.ID
 	exiles          []cardZoneSelection
 	lifePaid        int
+	untapSource     *game.Permanent
+	counterRemovals []counterRemoval
+}
+
+type counterRemoval struct {
+	source *game.Permanent
+	kind   counter.Kind
+	amount int
 }
 
 type cardZoneSelection struct {
@@ -37,6 +46,35 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			return plan, false
 		case cost.AdditionalTap:
 			continue
+		case cost.AdditionalUntap:
+			if amount != 1 ||
+				source == nil ||
+				s.EffectiveController(source) != playerID ||
+				!source.Tapped ||
+				plan.untapSource != nil {
+				return plan, false
+			}
+			plan.untapSource = source
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalRemoveCounter:
+			if source == nil || s.EffectiveController(source) != playerID {
+				return plan, false
+			}
+			planned := 0
+			for _, removal := range plan.counterRemovals {
+				if removal.source == source && removal.kind == additional.CounterKind {
+					planned += removal.amount
+				}
+			}
+			if source.Counters.Get(additional.CounterKind) < planned+amount {
+				return plan, false
+			}
+			plan.counterRemovals = append(plan.counterRemovals, counterRemoval{
+				source: source,
+				kind:   additional.CounterKind,
+				amount: amount,
+			})
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalSacrifice:
 			chosen := preferredSacrificePermanents(s, playerID, additional, amount, plan.sacrifices, prefs)
 			if len(chosen) != amount {
@@ -311,12 +349,39 @@ func AdditionalCostText(additional cost.Additional) string {
 		return "Reveal a card"
 	case cost.AdditionalTap:
 		return "{T}"
+	case cost.AdditionalUntap:
+		return "{Q}"
+	case cost.AdditionalRemoveCounter:
+		return "Remove a counter"
 	default:
 		return "Additional cost"
 	}
 }
 
 func additionalCostPlanStillValid(s State, player *game.Player, plan additionalCostPlan) bool {
+	if plan.untapSource != nil {
+		current, ok := s.PermanentByObjectID(plan.untapSource.ObjectID)
+		if !ok ||
+			current != plan.untapSource ||
+			s.EffectiveController(current) != player.ID ||
+			!current.Tapped {
+			return false
+		}
+	}
+	plannedCounters := make(map[*game.Permanent]map[counter.Kind]int)
+	for _, removal := range plan.counterRemovals {
+		current, ok := s.PermanentByObjectID(removal.source.ObjectID)
+		if !ok || current != removal.source || s.EffectiveController(current) != player.ID {
+			return false
+		}
+		if plannedCounters[current] == nil {
+			plannedCounters[current] = make(map[counter.Kind]int)
+		}
+		plannedCounters[current][removal.kind] += removal.amount
+		if current.Counters.Get(removal.kind) < plannedCounters[current][removal.kind] {
+			return false
+		}
+	}
 	for _, sacrifice := range plan.sacrifices {
 		permanent, ok := s.PermanentByObjectID(sacrifice.ObjectID)
 		if !ok || s.EffectiveController(permanent) != player.ID || permanent != sacrifice {
@@ -346,6 +411,14 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 }
 
 func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
+	if plan.untapSource != nil {
+		s.SetTapped(plan.untapSource, false)
+	}
+	for _, removal := range plan.counterRemovals {
+		if !s.RemoveCounters(removal.source, removal.kind, removal.amount) {
+			return false
+		}
+	}
 	for _, sacrifice := range plan.sacrifices {
 		if !s.MovePermanentToZone(sacrifice, zone.Graveyard) {
 			return false

@@ -1186,20 +1186,19 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	if len(game.BodyTargets(body)) != 0 || !manaBodyHasAddManaEffect(body) || !manaBodyChoicesAvailable(g, playerID, body) {
 		return false
 	}
-	if body.Timing != game.NoTimingRestriction || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
+	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
+		activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
 		return false
 	}
-	if hasTapCostOf(body.AdditionalCosts) {
-		if !canTapPermanentForAbility(g, permanent) {
-			return false
-		}
-	} else if abilityHasNonTapAdditionalCosts(body.AdditionalCosts) {
-		return false
-	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+		PlayerID:        playerID,
+		Source:          permanent,
+		ManaCost:        body.ManaCost,
+		AdditionalCosts: abilityAdditionalCosts(body.AdditionalCosts),
+	})
 }
 
 func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {

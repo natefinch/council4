@@ -1115,14 +1115,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	if err != nil {
 		return "", err
 	}
-	var kind string
-	switch value.CounterKind {
-	case counter.PlusOnePlusOne:
-		kind = "counter.PlusOnePlusOne"
-	case counter.MinusOneMinusOne:
-		kind = "counter.MinusOneMinusOne"
-	default:
-		return "", fmt.Errorf("render: unsupported counter kind %d", value.CounterKind)
+	kind, err := renderCounterKind(value.CounterKind)
+	if err != nil {
+		return "", err
 	}
 	ctx.need(importCounter)
 	return structLit("game.AddCounter", []string{
@@ -2063,6 +2058,14 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fmt.Sprintf("CardType: %s,", cardType),
 		)
 	}
+	if additional.Kind == cost.AdditionalRemoveCounter {
+		counterKind, err := renderCounterKind(additional.CounterKind)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		fields = append(fields, fmt.Sprintf("CounterKind: %s,", counterKind))
+	}
 	return structLit("", fields), nil
 }
 
@@ -2216,8 +2219,27 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalTap", nil
 	case cost.AdditionalExileSource:
 		return "cost.AdditionalExileSource", nil
+	case cost.AdditionalUntap:
+		return "cost.AdditionalUntap", nil
+	case cost.AdditionalRemoveCounter:
+		return "cost.AdditionalRemoveCounter", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
+	}
+}
+
+func renderCounterKind(kind counter.Kind) (string, error) {
+	switch kind {
+	case counter.PlusOnePlusOne:
+		return "counter.PlusOnePlusOne", nil
+	case counter.MinusOneMinusOne:
+		return "counter.MinusOneMinusOne", nil
+	case counter.Charge:
+		return "counter.Charge", nil
+	case counter.Loyalty:
+		return "counter.Loyalty", nil
+	default:
+		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}
 }
 

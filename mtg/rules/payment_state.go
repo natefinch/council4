@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -89,6 +90,10 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 
 func (s *rulesPaymentState) SetTapped(p *game.Permanent, tapped bool) {
 	setPermanentTapped(s.g, p, tapped)
+}
+
+func (*rulesPaymentState) RemoveCounters(p *game.Permanent, kind counter.Kind, amount int) bool {
+	return p != nil && p.Counters.Remove(kind, amount) == amount
 }
 
 func (s *rulesPaymentState) LoseLife(playerID game.PlayerID, amount int) {

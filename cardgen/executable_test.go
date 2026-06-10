@@ -397,7 +397,9 @@ func TestGenerateExecutableCardSourceNonManaActivatedCosts(t *testing.T) {
 			"Discard two creature cards: Draw a card.\n" +
 			"Pay 2 life: Draw a card.\n" +
 			"Exile this artifact: Draw a card.\n" +
-			"Exile a creature card from your graveyard: Draw a card.",
+			"Exile a creature card from your graveyard: Draw a card.\n" +
+			"{Q}: Draw a card.\n" +
+			"Remove a charge counter from this artifact: Draw a card.",
 	}
 	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
 	if err != nil {
@@ -421,6 +423,9 @@ func TestGenerateExecutableCardSourceNonManaActivatedCosts(t *testing.T) {
 		"zone.Battlefield",
 		"cost.AdditionalExile",
 		"zone.Graveyard",
+		"cost.AdditionalUntap",
+		"cost.AdditionalRemoveCounter",
+		"counter.Charge",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -431,12 +436,11 @@ func TestGenerateExecutableCardSourceNonManaActivatedCosts(t *testing.T) {
 func TestGenerateExecutableCardSourceRejectsUnsupportedActivatedCost(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"Remove a +1/+1 counter from this artifact: Draw a card.",
+		"Remove a +1/+1 counter from target creature: Draw a card.",
 		"Sacrifice a nontoken creature: Draw a card.",
 		"Discard a nonblack card: Draw a card.",
 		"Discard a permanent card: Draw a card.",
 		"Exile a card: Draw a card.",
-		"{Q}: Draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()
@@ -2170,7 +2174,7 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		},
 		"activated": {
 			typeLine:   "Creature — Bear",
-			oracleText: "{Q}: Draw a card.",
+			oracleText: "Remove a +1/+1 counter from target creature: Draw a card.",
 			summary:    "unsupported activated ability",
 			detail:     "supports only exact typed costs",
 		},

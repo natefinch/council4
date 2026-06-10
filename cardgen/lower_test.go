@@ -211,6 +211,31 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:       "untap source",
+			oracleText: "{Q}: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalUntap ||
+					costs[0].Text != "{Q}" {
+					t.Fatalf("additional costs = %#v, want untap source", costs)
+				}
+			},
+		},
+		{
+			name:       "remove source counter",
+			oracleText: "Remove a +1/+1 counter from this artifact: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalRemoveCounter ||
+					costs[0].Amount != 1 ||
+					costs[0].CounterKind != counter.PlusOnePlusOne {
+					t.Fatalf("additional costs = %#v, want source +1/+1 counter removal", costs)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -236,6 +261,22 @@ func TestLowerActivatedAbilityRejectsAmbiguousExileCost(t *testing.T) {
 		Layout:     "normal",
 		TypeLine:   "Artifact",
 		OracleText: "Exile a card: Draw a card.",
+	})
+	if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+		t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostic")
+	}
+}
+
+func TestLowerActivatedAbilityRejectsCounterRemovalFromTarget(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Remove a +1/+1 counter from target creature: Draw a card.",
 	})
 	if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
 		t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
@@ -294,6 +335,23 @@ func TestLowerManaAbilityTiming(t *testing.T) {
 	}
 	if got := face.ManaAbilities[0].Timing; got != game.DuringCombat {
 		t.Fatalf("timing = %v, want %v", got, game.DuringCombat)
+	}
+}
+
+func TestLowerUntapManaAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{Q}: Add {G}.",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("mana abilities = %d, want 1", len(face.ManaAbilities))
+	}
+	costs := face.ManaAbilities[0].AdditionalCosts
+	if len(costs) != 1 || costs[0].Kind != cost.AdditionalUntap {
+		t.Fatalf("additional costs = %#v, want untap source", costs)
 	}
 }
 

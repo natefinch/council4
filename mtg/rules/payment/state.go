@@ -8,6 +8,7 @@ package payment
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -75,6 +76,9 @@ type stateMutations interface {
 	// SetTapped sets the tapped state of a permanent and emits the appropriate
 	// tapped/untapped event.
 	SetTapped(p *game.Permanent, tapped bool)
+
+	// RemoveCounters removes exactly amount counters of kind from a permanent.
+	RemoveCounters(p *game.Permanent, kind counter.Kind, amount int) bool
 
 	// LoseLife applies life loss to a player, including any applicable
 	// replacement effects.
