@@ -686,6 +686,13 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
 	}
+	if ability.Timing != game.NoTimingRestriction {
+		timing, err := renderTimingRestriction(ability.Timing)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Timing: %s,", timing))
+	}
 	if len(ability.KeywordAbilities) > 0 {
 		elements := make([]string, 0, len(ability.KeywordAbilities))
 		for _, keyword := range ability.KeywordAbilities {
@@ -750,12 +757,38 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
 	}
+	if ability.Timing != game.NoTimingRestriction {
+		timing, err := renderTimingRestriction(ability.Timing)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Timing: %s,", timing))
+	}
 	content, err := r.renderAbilityContent(ctx, ability.Content)
 	if err != nil {
 		return "", err
 	}
 	fields = append(fields, fmt.Sprintf("Content: %s,", content))
 	return structLit("game.ManaAbility", fields), nil
+}
+
+func renderTimingRestriction(timing game.TimingRestriction) (string, error) {
+	switch timing {
+	case game.NoTimingRestriction:
+		return "game.NoTimingRestriction", nil
+	case game.SorceryOnly:
+		return "game.SorceryOnly", nil
+	case game.OncePerTurn:
+		return "game.OncePerTurn", nil
+	case game.SorceryOncePerTurn:
+		return "game.SorceryOncePerTurn", nil
+	case game.DuringCombat:
+		return "game.DuringCombat", nil
+	case game.DuringUpkeep:
+		return "game.DuringUpkeep", nil
+	default:
+		return "", fmt.Errorf("unsupported timing restriction %d", timing)
+	}
 }
 
 func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
@@ -1123,14 +1156,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	if err != nil {
 		return "", err
 	}
-	var kind string
-	switch value.CounterKind {
-	case counter.PlusOnePlusOne:
-		kind = "counter.PlusOnePlusOne"
-	case counter.MinusOneMinusOne:
-		kind = "counter.MinusOneMinusOne"
-	default:
-		return "", fmt.Errorf("render: unsupported counter kind %d", value.CounterKind)
+	kind, err := renderCounterKind(value.CounterKind)
+	if err != nil {
+		return "", err
 	}
 	ctx.need(importCounter)
 	return structLit("game.AddCounter", []string{
@@ -1430,12 +1458,95 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", lits))
 	}
+	if len(predicate.ExcludedTypes) > 0 {
+		lits, err := renderTypesCardSlice(ctx, predicate.ExcludedTypes)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
+	}
+	if len(predicate.Colors) > 0 {
+		colors, err := renderColorSlice(ctx, predicate.Colors)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Colors: %s,", colors))
+	}
+	if len(predicate.ExcludedColors) > 0 {
+		colors, err := renderColorSlice(ctx, predicate.ExcludedColors)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", colors))
+	}
 	if predicate.Player != game.PlayerAny {
 		pr, err := renderPlayerRelation(predicate.Player)
 		if err != nil {
 			return "", false, err
 		}
 		fields = append(fields, fmt.Sprintf("Player: %s,", pr))
+	}
+	if predicate.Controller != game.ControllerAny {
+		cr, err := renderControllerRelation(predicate.Controller)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Controller: %s,", cr))
+	}
+	if predicate.Tapped != game.TriAny {
+		ts, err := renderTriState(predicate.Tapped)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Tapped: %s,", ts))
+	}
+	if predicate.CombatState != game.CombatStateAny {
+		cs, err := renderCombatStateFilter(predicate.CombatState)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("CombatState: %s,", cs))
+	}
+	if predicate.Keyword != game.KeywordNone {
+		kw, err := renderKeyword(predicate.Keyword)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Keyword: %s,", kw))
+	}
+	if predicate.ExcludedKeyword != game.KeywordNone {
+		kw, err := renderKeyword(predicate.ExcludedKeyword)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedKeyword: %s,", kw))
+	}
+	if predicate.ManaValue.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, predicate.ManaValue.Val)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ManaValue: opt.Val(%s),", cmp))
+	}
+	if predicate.Power.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, predicate.Power.Val)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Power: opt.Val(%s),", cmp))
+	}
+	if predicate.Toughness.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, predicate.Toughness.Val)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("Toughness: opt.Val(%s),", cmp))
+	}
+	if predicate.Another {
+		fields = append(fields, "Another: true,")
 	}
 	if len(fields) == 0 {
 		return "", false, nil
@@ -2071,6 +2182,14 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fmt.Sprintf("CardType: %s,", cardType),
 		)
 	}
+	if additional.Kind == cost.AdditionalRemoveCounter {
+		counterKind, err := renderCounterKind(additional.CounterKind)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		fields = append(fields, fmt.Sprintf("CounterKind: %s,", counterKind))
+	}
 	return structLit("", fields), nil
 }
 
@@ -2218,12 +2337,33 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalDiscard", nil
 	case cost.AdditionalPayLife:
 		return "cost.AdditionalPayLife", nil
+	case cost.AdditionalExile:
+		return "cost.AdditionalExile", nil
 	case cost.AdditionalTap:
 		return "cost.AdditionalTap", nil
 	case cost.AdditionalExileSource:
 		return "cost.AdditionalExileSource", nil
+	case cost.AdditionalUntap:
+		return "cost.AdditionalUntap", nil
+	case cost.AdditionalRemoveCounter:
+		return "cost.AdditionalRemoveCounter", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
+	}
+}
+
+func renderCounterKind(kind counter.Kind) (string, error) {
+	switch kind {
+	case counter.PlusOnePlusOne:
+		return "counter.PlusOnePlusOne", nil
+	case counter.MinusOneMinusOne:
+		return "counter.MinusOneMinusOne", nil
+	case counter.Charge:
+		return "counter.Charge", nil
+	case counter.Loyalty:
+		return "counter.Loyalty", nil
+	default:
+		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}
 }
 
@@ -2326,6 +2466,8 @@ func renderZone(zoneType zone.Type) (string, error) {
 		return "zone.Battlefield", nil
 	case zone.Hand:
 		return "zone.Hand", nil
+	case zone.Graveyard:
+		return "zone.Graveyard", nil
 	default:
 		return "", fmt.Errorf("render: unsupported zone %d", zoneType)
 	}

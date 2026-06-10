@@ -559,6 +559,85 @@ func TestPermanentTargetThatLeavesBeforeResolutionCountersSpellByRules(t *testin
 	}
 }
 
+func TestSpellResolvesForRemainingLegalTargetWithoutShiftingSlots(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	shrouded := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	legal := addCombatCreaturePermanentWithPower(g, game.Player3, 2)
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.Damage{Amount: game.Fixed(2), Recipient: game.AnyTargetDamageRecipient(0)}},
+		{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.AnyTargetDamageRecipient(1)}},
+	}, []game.Target{
+		game.PermanentTarget(shrouded.ObjectID),
+		game.PermanentTarget(legal.ObjectID),
+	})
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{
+		{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
+		{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("spell was not put on stack")
+	}
+	obj.TargetCounts = []int{1, 1}
+	addShroudGranter(g, game.Player2)
+	log := TurnLog{}
+
+	engine.resolveTopOfStack(g, &log)
+
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "graveyard" {
+		t.Fatalf("resolve log = %+v, want spell resolved to graveyard", log.Resolves)
+	}
+	if shrouded.MarkedDamage != 0 {
+		t.Fatalf("shrouded target marked damage = %d, want 0", shrouded.MarkedDamage)
+	}
+	if legal.MarkedDamage != 3 {
+		t.Fatalf("legal target marked damage = %d, want 3", legal.MarkedDamage)
+	}
+}
+
+func TestSpellIsCounteredWhenAllTargetsGainShroud(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.Damage{Amount: game.Fixed(2), Recipient: game.AnyTargetDamageRecipient(0)}},
+		{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.AnyTargetDamageRecipient(1)}},
+	}, []game.Target{
+		game.PermanentTarget(first.ObjectID),
+		game.PermanentTarget(second.ObjectID),
+	})
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{
+		{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
+		{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("spell was not put on stack")
+	}
+	obj.TargetCounts = []int{1, 1}
+	addShroudGranter(g, game.Player2)
+	log := TurnLog{}
+
+	engine.resolveTopOfStack(g, &log)
+
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "countered by rules" {
+		t.Fatalf("resolve log = %+v, want countered by rules", log.Resolves)
+	}
+	if first.MarkedDamage != 0 || second.MarkedDamage != 0 {
+		t.Fatalf("marked damage = %d, %d; want no damage", first.MarkedDamage, second.MarkedDamage)
+	}
+}
+
 func TestPermanentTargetedDamageMarksDamageOnResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -860,4 +939,21 @@ func opponentChosenTargetAbilitySource() *game.CardDef {
 			}.Ability(),
 		}}},
 	}
+}
+
+func addShroudGranter(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Shroud Granter",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.ObjectControlledGroup(
+					game.SourcePermanentReference(),
+					game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				),
+				AddKeywords: []game.Keyword{game.Shroud},
+			}},
+		}},
+	}})
 }

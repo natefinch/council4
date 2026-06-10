@@ -169,6 +169,73 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:       "exile graveyard card",
+			oracleText: "Exile a card from your graveyard: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalExile ||
+					costs[0].Amount != 1 ||
+					costs[0].Source != zone.Graveyard ||
+					costs[0].MatchCardType {
+					t.Fatalf("additional costs = %#v, want one graveyard card exile", costs)
+				}
+			},
+		},
+		{
+			name:       "exile typed graveyard card",
+			oracleText: "Exile a creature card from your graveyard: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalExile ||
+					costs[0].Amount != 1 ||
+					costs[0].Source != zone.Graveyard ||
+					!costs[0].MatchCardType ||
+					costs[0].CardType != types.Creature {
+					t.Fatalf("additional costs = %#v, want one graveyard creature card exile", costs)
+				}
+			},
+		},
+		{
+			name:       "exile two graveyard cards",
+			oracleText: "Exile two cards from your graveyard: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalExile ||
+					costs[0].Amount != 2 ||
+					costs[0].Source != zone.Graveyard {
+					t.Fatalf("additional costs = %#v, want two graveyard card exiles", costs)
+				}
+			},
+		},
+		{
+			name:       "untap source",
+			oracleText: "{Q}: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalUntap ||
+					costs[0].Text != "{Q}" {
+					t.Fatalf("additional costs = %#v, want untap source", costs)
+				}
+			},
+		},
+		{
+			name:       "remove source counter",
+			oracleText: "Remove a +1/+1 counter from this artifact: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalRemoveCounter ||
+					costs[0].Amount != 1 ||
+					costs[0].CounterKind != counter.PlusOnePlusOne {
+					t.Fatalf("additional costs = %#v, want source +1/+1 counter removal", costs)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -184,6 +251,107 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 			}
 			test.check(t, face.ActivatedAbilities[0].AdditionalCosts)
 		})
+	}
+}
+
+func TestLowerActivatedAbilityRejectsAmbiguousExileCost(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Exile a card: Draw a card.",
+	})
+	if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+		t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostic")
+	}
+}
+
+func TestLowerActivatedAbilityRejectsCounterRemovalFromTarget(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Remove a +1/+1 counter from target creature: Draw a card.",
+	})
+	if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+		t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostic")
+	}
+}
+
+func TestLowerActivatedAbilityTiming(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       game.TimingRestriction
+	}{
+		{"sorcery", "{1}: Draw a card. Activate only as a sorcery.", game.SorceryOnly},
+		{"once per turn", "{1}: Draw a card. Activate only once each turn.", game.OncePerTurn},
+		{"combat", "{1}: Draw a card. Activate only during combat.", game.DuringCombat},
+		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", game.DuringUpkeep},
+		{
+			"sorcery once per turn",
+			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
+			game.SorceryOncePerTurn,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			if got := face.ActivatedAbilities[0].Timing; got != test.want {
+				t.Fatalf("timing = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestLowerManaAbilityTiming(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Add {G}. Activate only during combat.",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("mana abilities = %d, want 1", len(face.ManaAbilities))
+	}
+	if got := face.ManaAbilities[0].Timing; got != game.DuringCombat {
+		t.Fatalf("timing = %v, want %v", got, game.DuringCombat)
+	}
+}
+
+func TestLowerUntapManaAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{Q}: Add {G}.",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("mana abilities = %d, want 1", len(face.ManaAbilities))
+	}
+	costs := face.ManaAbilities[0].AdditionalCosts
+	if len(costs) != 1 || costs[0].Kind != cost.AdditionalUntap {
+		t.Fatalf("additional costs = %#v, want untap source", costs)
 	}
 }
 

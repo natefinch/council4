@@ -462,13 +462,17 @@ func lowerActivatedAbilityKind(
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
+		spans := []oracle.Span{ability.Cost.Span, ability.Effects[0].Span}
+		if ability.ActivationTiming != oracle.ActivationTimingNone {
+			spans = append(spans, ability.ActivationTimingSpan)
+		}
 		return abilityLowering{
 			manaAbility: opt.Val(manaAbility),
 			consumed: semanticConsumption{
 				cost:    true,
 				effects: 1,
 			},
-			sourceSpans: []oracle.Span{ability.Cost.Span, ability.Effects[0].Span},
+			sourceSpans: spans,
 		}, nil
 	}
 	activatedAbility, diagnostic := lowerActivatedAbility(cardName, ability, syntax)
@@ -481,6 +485,9 @@ func lowerActivatedAbilityKind(
 		1+len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
 	)
 	spans = append(spans, ability.Cost.Span)
+	if ability.ActivationTiming != oracle.ActivationTimingNone {
+		spans = append(spans, ability.ActivationTimingSpan)
+	}
 	for _, effect := range ability.Effects {
 		spans = append(spans, effect.Span)
 	}
@@ -847,6 +854,16 @@ func lowerActivatedAbility(
 				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
 			}
 			additionalCosts = append(additionalCosts, cost.T)
+		case oracle.CostUntap:
+			if slices.ContainsFunc(additionalCosts, func(additional cost.Additional) bool {
+				return additional.Kind == cost.AdditionalUntap
+			}) {
+				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+			}
+			additionalCosts = append(additionalCosts, cost.Additional{
+				Kind: cost.AdditionalUntap,
+				Text: component.Text,
+			})
 		default:
 			additional, ok := lowerActivatedAdditionalCost(cardName, component)
 			if !ok {
@@ -862,20 +879,31 @@ func lowerActivatedAbility(
 	if colon < 0 || colon+1 >= len(syntax.Tokens) {
 		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
 	}
+	bodyTokens := append([]oracle.Token(nil), syntax.Tokens[colon+1:]...)
+	if ability.ActivationTiming != oracle.ActivationTimingNone {
+		bodyTokens = slices.DeleteFunc(bodyTokens, func(token oracle.Token) bool {
+			return spanCovered(token.Span, []oracle.Span{ability.ActivationTimingSpan})
+		})
+	}
+	if len(bodyTokens) == 0 {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
 	body := ability
 	body.Kind = oracle.AbilitySpell
 	body.Cost = nil
+	body.ActivationTiming = oracle.ActivationTimingNone
+	body.ActivationTimingSpan = oracle.Span{}
 	body.References = bodyReferences(ability.References, ability.Cost.Span)
 	body.Span = oracle.Span{
-		Start: syntax.Tokens[colon+1].Span.Start,
-		End:   syntax.Span.End,
+		Start: bodyTokens[0].Span.Start,
+		End:   bodyTokens[len(bodyTokens)-1].Span.End,
 	}
-	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset:])
+	body.Text = strings.TrimSpace(ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset])
 	bodySyntax := syntax
 	bodySyntax.Kind = oracle.AbilitySpell
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
-	bodySyntax.Tokens = syntax.Tokens[colon+1:]
+	bodySyntax.Tokens = bodyTokens
 	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
 	if diagnostic != nil {
 		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
@@ -885,12 +913,32 @@ func lowerActivatedAbility(
 		Text:            ability.Text,
 		AdditionalCosts: additionalCosts,
 		ZoneOfFunction:  zone.Battlefield,
+		Timing:          lowerActivationTiming(ability.ActivationTiming),
 		Content:         content,
 	}
 	if manaCost != nil {
 		result.ManaCost = opt.Val(manaCost)
 	}
 	return result, nil
+}
+
+func lowerActivationTiming(timing oracle.ActivationTimingKind) game.TimingRestriction {
+	switch timing {
+	case oracle.ActivationTimingNone:
+		return game.NoTimingRestriction
+	case oracle.ActivationTimingSorcery:
+		return game.SorceryOnly
+	case oracle.ActivationTimingOncePerTurn:
+		return game.OncePerTurn
+	case oracle.ActivationTimingSorceryOncePerTurn:
+		return game.SorceryOncePerTurn
+	case oracle.ActivationTimingDuringCombat:
+		return game.DuringCombat
+	case oracle.ActivationTimingDuringUpkeep:
+		return game.DuringUpkeep
+	default:
+		panic(fmt.Sprintf("unknown activation timing %d", timing))
+	}
 }
 
 func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
@@ -910,15 +958,79 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 			Amount: amount,
 		}, true
 	case oracle.CostExile:
-		if !isSelfCostObject(cardName, component.Object) {
+		if isSelfCostObject(cardName, component.Object) {
+			return cost.Additional{
+				Kind:   cost.AdditionalExileSource,
+				Text:   component.Text,
+				Amount: 1,
+				Source: zone.Battlefield,
+			}, true
+		}
+		return lowerExileCost(component)
+	case oracle.CostRemoveCounter:
+		return lowerRemoveCounterCost(cardName, component)
+	default:
+		return cost.Additional{}, false
+	}
+}
+
+func lowerRemoveCounterCost(
+	cardName string,
+	component oracle.CostComponent,
+) (cost.Additional, bool) {
+	object := strings.ToLower(strings.TrimSpace(component.Object))
+	counterKinds := []struct {
+		prefix string
+		kind   counter.Kind
+	}{
+		{"a +1/+1 counter from ", counter.PlusOnePlusOne},
+		{"a -1/-1 counter from ", counter.MinusOneMinusOne},
+		{"a charge counter from ", counter.Charge},
+		{"a loyalty counter from ", counter.Loyalty},
+	}
+	for _, candidate := range counterKinds {
+		if !strings.HasPrefix(object, candidate.prefix) {
+			continue
+		}
+		source := strings.TrimSpace(strings.TrimPrefix(object, candidate.prefix))
+		if source != "it" && !isSelfCostObject(cardName, source) {
 			return cost.Additional{}, false
 		}
 		return cost.Additional{
-			Kind:   cost.AdditionalExileSource,
-			Text:   component.Text,
-			Amount: 1,
-			Source: zone.Battlefield,
+			Kind:        cost.AdditionalRemoveCounter,
+			Text:        component.Text,
+			Amount:      1,
+			CounterKind: candidate.kind,
 		}, true
+	}
+	return cost.Additional{}, false
+}
+
+func lowerExileCost(component oracle.CostComponent) (cost.Additional, bool) {
+	additional := cost.Additional{
+		Kind:   cost.AdditionalExile,
+		Text:   component.Text,
+		Amount: 1,
+		Source: zone.Graveyard,
+	}
+	switch strings.ToLower(strings.TrimSpace(component.Object)) {
+	case "a card from your graveyard":
+		return additional, true
+	case "a creature card from your graveyard":
+		additional.MatchCardType = true
+		additional.CardType = types.Creature
+		return additional, true
+	case "an artifact card from your graveyard":
+		additional.MatchCardType = true
+		additional.CardType = types.Artifact
+		return additional, true
+	case "a land card from your graveyard":
+		additional.MatchCardType = true
+		additional.CardType = types.Land
+		return additional, true
+	case "two cards from your graveyard":
+		additional.Amount = 2
+		return additional, true
 	default:
 		return cost.Additional{}, false
 	}
@@ -2304,7 +2416,8 @@ func lowerTapManaAbility(
 ) (game.ManaAbility, *oracle.Diagnostic) {
 	if ability.Cost == nil ||
 		len(ability.Cost.Components) != 1 ||
-		ability.Cost.Components[0].Kind != oracle.CostTap ||
+		(ability.Cost.Components[0].Kind != oracle.CostTap &&
+			ability.Cost.Components[0].Kind != oracle.CostUntap) ||
 		len(ability.Effects) != 1 ||
 		ability.Effects[0].Kind != oracle.EffectAddMana ||
 		!ability.Effects[0].Amount.Known ||
@@ -2319,22 +2432,38 @@ func lowerTapManaAbility(
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
 			"unsupported activated ability",
-			"the executable source backend supports only exact supported tap mana abilities",
+			"the executable source backend supports only exact supported tap and untap mana abilities",
 		)
 	}
-	if exactAnyColorTapManaSyntax(syntax.Tokens) {
-		return choiceTapManaAbility(
+	costSymbol := "{T}"
+	if ability.Cost.Components[0].Kind == oracle.CostUntap {
+		costSymbol = "{Q}"
+	}
+	if ability.ActivationTiming != oracle.ActivationTimingNone {
+		syntax.Tokens = slices.DeleteFunc(
+			append([]oracle.Token(nil), syntax.Tokens...),
+			func(token oracle.Token) bool {
+				return spanCovered(token.Span, []oracle.Span{ability.ActivationTimingSpan})
+			},
+		)
+	}
+	if exactAnyColorManaSyntax(syntax.Tokens, costSymbol) {
+		result := choiceTapManaAbility(
 			[]string{"W", "U", "B", "R", "G"},
-		), nil
+		)
+		applyManaAbilityProperties(&result, ability)
+		return result, nil
 	}
-	if colors, ok := exactChoiceTapManaSyntax(syntax.Tokens); ok {
-		return choiceTapManaAbility(colors), nil
+	if colors, ok := exactChoiceManaSyntax(syntax.Tokens, costSymbol); ok {
+		result := choiceTapManaAbility(colors)
+		applyManaAbilityProperties(&result, ability)
+		return result, nil
 	}
-	if !exactTapManaSyntax(syntax.Tokens) {
+	if !exactManaSyntax(syntax.Tokens, costSymbol) {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
 			"unsupported activated ability",
-			"the executable source backend supports only exact supported tap mana abilities",
+			"the executable source backend supports only exact supported tap and untap mana abilities",
 		)
 	}
 	colorName, ok := manaColorName(ability.Effects[0].Symbol)
@@ -2353,7 +2482,20 @@ func lowerTapManaAbility(
 			fmt.Sprintf("the executable source backend cannot emit mana symbol %q", ability.Effects[0].Symbol),
 		)
 	}
-	return game.TapManaAbility(manaColor), nil
+	result := game.TapManaAbility(manaColor)
+	applyManaAbilityProperties(&result, ability)
+	return result, nil
+}
+
+func applyManaAbilityProperties(result *game.ManaAbility, ability oracle.CompiledAbility) {
+	result.Text = ability.Text
+	result.Timing = lowerActivationTiming(ability.ActivationTiming)
+	if ability.Cost.Components[0].Kind == oracle.CostUntap {
+		result.AdditionalCosts = []cost.Additional{{
+			Kind: cost.AdditionalUntap,
+			Text: ability.Cost.Components[0].Text,
+		}}
+	}
 }
 
 func choiceTapManaAbility(colorNames []string) game.ManaAbility {
@@ -3702,10 +3844,10 @@ func manaColorValue(name string) (mana.Color, bool) {
 	}
 }
 
-func exactAnyColorTapManaSyntax(tokens []oracle.Token) bool {
+func exactAnyColorManaSyntax(tokens []oracle.Token, costSymbol string) bool {
 	return len(tokens) == 9 &&
 		tokens[0].Kind == oracle.Symbol &&
-		strings.EqualFold(tokens[0].Text, "{T}") &&
+		strings.EqualFold(tokens[0].Text, costSymbol) &&
 		tokens[1].Kind == oracle.Colon &&
 		equalTokenWord(tokens[2], "add") &&
 		equalTokenWord(tokens[3], "one") &&
@@ -3720,10 +3862,10 @@ func equalTokenWord(token oracle.Token, word string) bool {
 	return token.Kind == oracle.Word && strings.EqualFold(token.Text, word)
 }
 
-func exactChoiceTapManaSyntax(tokens []oracle.Token) ([]string, bool) {
+func exactChoiceManaSyntax(tokens []oracle.Token, costSymbol string) ([]string, bool) {
 	if len(tokens) < 7 ||
 		tokens[0].Kind != oracle.Symbol ||
-		!strings.EqualFold(tokens[0].Text, "{T}") ||
+		!strings.EqualFold(tokens[0].Text, costSymbol) ||
 		tokens[1].Kind != oracle.Colon ||
 		!equalTokenWord(tokens[2], "add") ||
 		tokens[len(tokens)-1].Kind != oracle.Period {
@@ -3756,10 +3898,10 @@ func exactChoiceTapManaSyntax(tokens []oracle.Token) ([]string, bool) {
 	return colors, len(colors) >= 2
 }
 
-func exactTapManaSyntax(tokens []oracle.Token) bool {
+func exactManaSyntax(tokens []oracle.Token, costSymbol string) bool {
 	return len(tokens) == 5 &&
 		tokens[0].Kind == oracle.Symbol &&
-		strings.EqualFold(tokens[0].Text, "{T}") &&
+		strings.EqualFold(tokens[0].Text, costSymbol) &&
 		tokens[1].Kind == oracle.Colon &&
 		tokens[2].Kind == oracle.Word &&
 		strings.EqualFold(tokens[2].Text, "Add") &&

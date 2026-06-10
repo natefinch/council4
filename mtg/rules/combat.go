@@ -91,6 +91,12 @@ func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 	if len(blockers) == 0 && (!dealsCombatDamageInPass(g, attacker, pass) || !hasKeyword(g, attacker, game.Trample)) {
 		return
 	}
+	blockerDamage := make([]int, len(blockers))
+	for i, blocker := range blockers {
+		if dealsCombatDamageInPass(g, blocker, pass) {
+			blockerDamage[i] = effectivePower(g, blocker)
+		}
+	}
 	if dealsCombatDamageInPass(g, attacker, pass) {
 		assignments, tramplingDamage := assignAttackerCombatDamage(g, attacker, blockers)
 		for _, assignment := range assignments {
@@ -98,9 +104,9 @@ func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 		}
 		markAttackTargetCombatDamage(g, attacker, target, tramplingDamage, log)
 	}
-	for _, blocker := range blockers {
-		if dealsCombatDamageInPass(g, blocker, pass) {
-			markCreatureCombatDamage(g, blocker, attacker, effectivePower(g, blocker), log)
+	for i, blocker := range blockers {
+		if blockerDamage[i] > 0 {
+			markCreatureCombatDamage(g, blocker, attacker, blockerDamage[i], log)
 		}
 	}
 }
@@ -194,11 +200,13 @@ func applyToxic(g *game.Game, source *game.Permanent, defendingPlayer game.Playe
 	g.Players[defendingPlayer].PoisonCounters += total
 }
 
-func markPermanentDamage(g *game.Game, permanent *game.Permanent, damage int) {
+func markPermanentDamage(g *game.Game, permanent *game.Permanent, damage int, minusOneCounters bool) {
 	if damage <= 0 {
 		return
 	}
 	switch {
+	case minusOneCounters && permanentHasType(g, permanent, types.Creature):
+		addCountersToPermanent(g, permanent, counter.MinusOneMinusOne, damage)
 	case permanentHasType(g, permanent, types.Planeswalker):
 		permanent.Counters.Remove(counter.Loyalty, damage)
 	case permanentHasType(g, permanent, types.Battle):
@@ -252,7 +260,7 @@ func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controlle
 	if dealt <= 0 {
 		return 0
 	}
-	markPermanentDamage(g, permanent, dealt)
+	markPermanentDamage(g, permanent, dealt, damageSourceUsesMinusOneCounters(g, sourceObjectID))
 	emitEvent(g, game.Event{
 		Kind:            game.EventDamageDealt,
 		SourceID:        sourceID,
@@ -267,6 +275,22 @@ func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controlle
 		CombatDamage:    combatDamage,
 	})
 	return dealt
+}
+
+func damageSourceUsesMinusOneCounters(g *game.Game, sourceObjectID id.ID) bool {
+	if source, ok := permanentByObjectID(g, sourceObjectID); ok {
+		return hasKeyword(g, source, game.Wither) || hasKeyword(g, source, game.Infect)
+	}
+	snapshot, ok := lastKnownObject(g, sourceObjectID)
+	if !ok {
+		return false
+	}
+	for _, keyword := range snapshot.Keywords {
+		if keyword == game.Wither || keyword == game.Infect {
+			return true
+		}
+	}
+	return false
 }
 
 func applyLifelink(g *game.Game, source *game.Permanent, damage int) {

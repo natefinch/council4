@@ -50,8 +50,10 @@ Vanguard cards are excluded with explicit report reasons.
    permanent of a named permanent card type. Exact
    self-dies fixed-damage triggers preserve the departed permanent as the
    damage source through an event reference. Ordinary battlefield activations
-   lower exact mana, tap, sacrifice, discard, pay-life, and source-exile costs
-   into typed payment data.
+   lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
+   graveyard-exile, and source-counter-removal costs into typed payment data.
+   Exact trailing activation restrictions lower to typed sorcery, combat,
+   upkeep, and once-per-turn timing checks.
    Common enters-tapped land-count and basic-land-subtype conditions lower into
    typed replacement predicates.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated

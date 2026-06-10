@@ -13,23 +13,37 @@ import (
 )
 
 type permanentManaOutputResult struct {
-	color  mana.Color
-	amount int
-	snow   bool
+	color        mana.Color
+	amount       int
+	snow         bool
+	untap        bool
+	abilityIndex int
+	timing       game.TimingRestriction
+}
+
+type simpleManaAbilityResult struct {
+	index int
+	body  *game.ManaAbility
+	untap bool
 }
 
 // permanentManaOutput derives the mana output of a permanent by checking
 // basic land types and simple tap mana abilities.
 func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutputResult, bool) {
 	if c, ok := basicLandManaColor(s, permanent); ok {
-		return permanentManaOutputResult{color: c, amount: 1, snow: s.PermanentHasSupertype(permanent, types.Snow)}, true
+		return permanentManaOutputResult{
+			color:        c,
+			amount:       1,
+			snow:         s.PermanentHasSupertype(permanent, types.Snow),
+			abilityIndex: -1,
+		}, true
 	}
 	controller := s.EffectiveController(permanent)
-	_, ability, ok := simpleTapManaAbility(s, controller, permanent)
+	ability, ok := simpleManaAbility(s, controller, permanent)
 	if !ok {
 		return permanentManaOutputResult{}, false
 	}
-	addMana, ok := simpleAddMana(ability)
+	addMana, ok := simpleAddMana(ability.body)
 	if !ok {
 		return permanentManaOutputResult{}, false
 	}
@@ -37,7 +51,14 @@ func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutpu
 	if amount <= 0 {
 		amount = 1
 	}
-	return permanentManaOutputResult{color: addMana.ManaColor, amount: amount, snow: s.PermanentHasSupertype(permanent, types.Snow)}, true
+	return permanentManaOutputResult{
+		color:        addMana.ManaColor,
+		amount:       amount,
+		snow:         s.PermanentHasSupertype(permanent, types.Snow),
+		untap:        ability.untap,
+		abilityIndex: ability.index,
+		timing:       ability.body.Timing,
+	}, true
 }
 
 func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
@@ -64,10 +85,10 @@ var basicLandTypes = []struct {
 	{subtype: types.Forest, color: mana.G},
 }
 
-func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (int, *game.ManaAbility, bool) {
+func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (simpleManaAbilityResult, bool) {
 	card, ok := s.PermanentCardDef(permanent)
 	if !ok {
-		return 0, nil, false
+		return simpleManaAbilityResult{}, false
 	}
 	face := &card.CardFace
 	offset := 0
@@ -77,18 +98,44 @@ func simpleTapManaAbility(s State, playerID game.PlayerID, permanent *game.Perma
 	offset += len(face.ActivatedAbilities)
 	for i := range face.ManaAbilities {
 		body := &face.ManaAbilities[i]
-		if !hasTapCostOf(body.AdditionalCosts) || body.ManaCost.Exists || !isSimpleAddMana(body) {
+		untap, ok := simpleManaAbilityTapState(body.AdditionalCosts)
+		if !ok || body.ManaCost.Exists || !isSimpleAddMana(body) {
+			continue
+		}
+		if permanent.Tapped != untap {
 			continue
 		}
 		if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick {
-			return 0, nil, false
+			continue
 		}
 		if !s.ActivationConditionSatisfied(playerID, permanent, body.ActivationCondition) {
 			continue
 		}
-		return offset + i, body, true
+		abilityIndex := offset + i
+		if !s.ManaAbilityTimingAllowed(playerID, permanent, abilityIndex, body.Timing) {
+			continue
+		}
+		return simpleManaAbilityResult{
+			index: abilityIndex,
+			body:  body,
+			untap: untap,
+		}, true
 	}
-	return 0, nil, false
+	return simpleManaAbilityResult{}, false
+}
+
+func simpleManaAbilityTapState(costs []cost.Additional) (untap, ok bool) {
+	if len(costs) != 1 {
+		return false, false
+	}
+	switch costs[0].Kind {
+	case cost.AdditionalTap:
+		return false, true
+	case cost.AdditionalUntap:
+		return true, true
+	default:
+		return false, false
+	}
 }
 
 func isSimpleAddMana(body *game.ManaAbility) bool {
@@ -251,18 +298,21 @@ func costWithGenericRequirement(manaCost *cost.Mana, generic int) *cost.Mana {
 func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]bool) map[mana.Color][]manaSource {
 	available := make(map[mana.Color][]manaSource)
 	for _, permanent := range s.Battlefield() {
-		if s.EffectiveController(permanent) != playerID || permanent.Tapped || exclude[permanent.ObjectID] {
+		if s.EffectiveController(permanent) != playerID || exclude[permanent.ObjectID] {
 			continue
 		}
 		output, ok := permanentManaOutput(s, permanent)
-		if !ok {
+		if !ok || permanent.Tapped != output.untap {
 			continue
 		}
 		available[output.color] = append(available[output.color], manaSource{
-			permanent: permanent,
-			color:     output.color,
-			amount:    output.amount,
-			snow:      output.snow,
+			permanent:    permanent,
+			color:        output.color,
+			amount:       output.amount,
+			snow:         output.snow,
+			untap:        output.untap,
+			abilityIndex: output.abilityIndex,
+			timing:       output.timing,
 		})
 	}
 	return available

@@ -1,6 +1,7 @@
 package cost
 
 import (
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -20,6 +21,8 @@ const (
 	AdditionalReveal
 	AdditionalTap
 	AdditionalExileSource
+	AdditionalUntap
+	AdditionalRemoveCounter
 )
 
 // Additional describes a typed non-mana cost printed on a spell, ability, or
@@ -47,6 +50,10 @@ type Additional struct {
 	// Source identifies the zone cards are chosen from for card costs.
 	// zone.None delegates to the rules-defined default for the cost kind.
 	Source zone.Type
+
+	// CounterKind identifies the counter removed from the source permanent by
+	// an AdditionalRemoveCounter cost.
+	CounterKind counter.Kind
 }
 
 // Alternative describes an optional cost that replaces a spell or ability's

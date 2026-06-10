@@ -681,6 +681,10 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		return false
 	}
 	activate.Targets = completedTargets
+	targetCounts, ok := bodyTargetCounts(g, playerID, card, permanent.ObjectID, body, activate.Targets)
+	if !ok {
+		panic("validated ability targets could not be segmented")
+	}
 	if activatedOK &&
 		!canActivateEquipAbility(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue) &&
 		!canActivateGeneralAbility(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue) &&
@@ -727,6 +731,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		AbilityIndex:   activate.AbilityIndex,
 		Controller:     playerID,
 		Targets:        append([]game.Target(nil), activate.Targets...),
+		TargetCounts:   targetCounts,
 		XValue:         activate.XValue,
 	}
 	pushAbilityToStack(g, obj)
@@ -746,6 +751,10 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	completedTargets, ok := e.completeAbilityAnnouncementTargets(g, playerID, def, 0, &ability, activate.Targets, agents, log)
 	if !ok || !canActivateGraveyardAbility(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue) {
 		return false
+	}
+	targetCounts, ok := bodyTargetCounts(g, playerID, def, 0, &ability, completedTargets)
+	if !ok {
+		panic("validated graveyard ability targets could not be segmented")
 	}
 	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), agents, log)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
@@ -769,6 +778,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		AbilityIndex: activate.AbilityIndex,
 		Controller:   playerID,
 		Targets:      append([]game.Target(nil), completedTargets...),
+		TargetCounts: targetCounts,
 		XValue:       activate.XValue,
 	}
 	pushAbilityToStack(g, obj)
@@ -1186,20 +1196,19 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	if len(game.BodyTargets(body)) != 0 || !manaBodyHasAddManaEffect(body) || !manaBodyChoicesAvailable(g, playerID, body) {
 		return false
 	}
-	if body.Timing != game.NoTimingRestriction || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
+	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
+		activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
 		return false
 	}
-	if hasTapCostOf(body.AdditionalCosts) {
-		if !canTapPermanentForAbility(g, permanent) {
-			return false
-		}
-	} else if abilityHasNonTapAdditionalCosts(body.AdditionalCosts) {
-		return false
-	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+		PlayerID:        playerID,
+		Source:          permanent,
+		ManaCost:        body.ManaCost,
+		AdditionalCosts: abilityAdditionalCosts(body.AdditionalCosts),
+	})
 }
 
 func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
@@ -1322,7 +1331,9 @@ func activatedAbilityTimingAllows(g *game.Game, playerID game.PlayerID, timing g
 	case game.DuringCombat:
 		return g.Turn.Phase == game.PhaseCombat
 	case game.DuringUpkeep:
-		return g.Turn.Phase == game.PhaseBeginning && g.Turn.Step == game.StepUpkeep
+		return g.Turn.ActivePlayer == playerID &&
+			g.Turn.Phase == game.PhaseBeginning &&
+			g.Turn.Step == game.StepUpkeep
 	default:
 		return false
 	}
