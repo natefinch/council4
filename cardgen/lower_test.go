@@ -1034,6 +1034,68 @@ func TestLowerLifeAndOpponentConditionalEntersTappedReplacements(t *testing.T) {
 	}
 }
 
+func TestLowerOptionalEntryPayments(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		assert     func(*testing.T, game.ResolutionPayment)
+	}{
+		{
+			name:       "pay life",
+			oracleText: "As this land enters, you may pay 2 life. If you don't, it enters tapped.",
+			assert: func(t *testing.T, payment game.ResolutionPayment) {
+				if len(payment.AdditionalCosts) != 1 ||
+					payment.AdditionalCosts[0].Kind != cost.AdditionalPayLife ||
+					payment.AdditionalCosts[0].Amount != 2 {
+					t.Fatalf("payment = %+v, want pay 2 life", payment)
+				}
+			},
+		},
+		{
+			name:       "reveal land subtype",
+			oracleText: "As this land enters, you may reveal a Mountain or Forest card from your hand. If you don't, this land enters tapped.",
+			assert: func(t *testing.T, payment game.ResolutionPayment) {
+				if len(payment.AdditionalCosts) != 1 {
+					t.Fatalf("payment = %+v, want one reveal cost", payment)
+				}
+				additional := payment.AdditionalCosts[0]
+				if additional.Kind != cost.AdditionalReveal ||
+					additional.Source != zone.Hand ||
+					!slices.Equal(additional.SubtypesAny, []types.Sub{types.Mountain, types.Forest}) {
+					t.Fatalf("additional cost = %+v, want Mountain-or-Forest reveal from hand", additional)
+				}
+			},
+		},
+		{
+			name:       "reveal creature subtype",
+			oracleText: "As this land enters, you may reveal a Giant card from your hand. If you don't, this land enters tapped.",
+			assert: func(t *testing.T, payment game.ResolutionPayment) {
+				if len(payment.AdditionalCosts) != 1 ||
+					!slices.Equal(payment.AdditionalCosts[0].SubtypesAny, []types.Sub{types.Giant}) {
+					t.Fatalf("payment = %+v, want Giant reveal", payment)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Land",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: test.oracleText,
+			})
+			if len(face.ReplacementAbilities) != 1 ||
+				!face.ReplacementAbilities[0].UnlessPaid.Exists {
+				t.Fatalf("replacement abilities = %+v, want one paid replacement", face.ReplacementAbilities)
+			}
+			test.assert(t, face.ReplacementAbilities[0].UnlessPaid.Val)
+		})
+	}
+}
+
 func TestLowerReminderManaAbilitySingleColor(t *testing.T) {
 	t.Parallel()
 	// Basic lands express their mana ability as a parenthesized reminder.

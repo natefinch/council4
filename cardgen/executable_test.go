@@ -581,6 +581,57 @@ func TestGenerateExecutableCardSourceLifeAndOpponentEntersTappedConditions(t *te
 // TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped
 // verifies that near-miss conditions outside the supported wording family are
 // rejected. Supported: "unless you control two or more basic lands".
+func TestGenerateExecutableCardSourceOptionalEntryPayments(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "pay life",
+			oracleText: "As this land enters, you may pay 2 life. If you don't, it enters tapped.",
+			wants: []string{
+				"game.EntersTappedUnlessPaidReplacement",
+				"cost.AdditionalPayLife",
+				"Amount: 2",
+			},
+		},
+		{
+			name:       "reveal subtypes",
+			oracleText: "As this land enters, you may reveal a Mountain or Forest card from your hand. If you don't, this land enters tapped.",
+			wants: []string{
+				"game.EntersTappedUnlessPaidReplacement",
+				"cost.AdditionalReveal",
+				"SubtypesAny: []types.Sub{types.Mountain, types.Forest}",
+				"zone.Hand",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Land",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

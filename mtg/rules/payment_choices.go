@@ -23,6 +23,8 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalExile:
 			prefs.ExileChoices = append(prefs.ExileChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
+		case cost.AdditionalReveal:
+			prefs.RevealChoices = append(prefs.RevealChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
 		default:
 		}
 	}
@@ -218,6 +220,9 @@ func localAdditionalCostMatchesCard(face *game.CardDef, addCost cost.Additional)
 		return false
 	}
 	if addCost.MatchCardType && !face.HasType(addCost.CardType) {
+		return false
+	}
+	if len(addCost.SubtypesAny) > 0 && !face.HasAnySubtype(addCost.SubtypesAny...) {
 		return false
 	}
 	return true

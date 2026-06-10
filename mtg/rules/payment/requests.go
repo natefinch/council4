@@ -55,6 +55,7 @@ type Preferences struct {
 	SacrificeChoices     []id.ID
 	DiscardChoices       []id.ID
 	ExileChoices         []id.ID
+	RevealChoices        []id.ID
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.

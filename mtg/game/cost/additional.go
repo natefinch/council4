@@ -47,6 +47,10 @@ type Additional struct {
 	MatchCardType bool
 	CardType      types.Card
 
+	// SubtypesAny constrains card costs to cards with at least one listed
+	// subtype. It is independent of MatchCardType.
+	SubtypesAny []types.Sub
+
 	// Source identifies the zone cards are chosen from for card costs.
 	// zone.None delegates to the rules-defined default for the cost kind.
 	Source zone.Type

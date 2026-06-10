@@ -58,6 +58,9 @@ Vanguard cards are excluded with explicit report reasons.
    upkeep, and once-per-turn timing checks.
    Common enters-tapped life, opponent-count, land-count, and
    basic-land-subtype conditions lower into typed replacement predicates.
+   Exact optional pay-2-life and reveal-a-land-or-creature-subtype entry
+   wordings lower into typed resolution payments for enters-tapped
+   replacements.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

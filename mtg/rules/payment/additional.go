@@ -18,6 +18,7 @@ type additionalCostPlan struct {
 	exilePermanents []*game.Permanent
 	discards        []id.ID
 	exiles          []cardZoneSelection
+	reveals         []cardZoneSelection
 	lifePaid        int
 	untapSource     *game.Permanent
 	counterRemovals []counterRemoval
@@ -109,6 +110,13 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			}
 			plan.exiles = append(plan.exiles, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalReveal:
+			chosen := preferredRevealCards(s, playerID, additional, amount, plan.reveals, prefs)
+			if len(chosen) != amount {
+				return plan, false
+			}
+			plan.reveals = append(plan.reveals, chosen...)
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalExileSource:
 			if sourceZone == zone.Battlefield {
 				if amount != 1 ||
@@ -181,12 +189,45 @@ func preferredExileCards(s State, playerID game.PlayerID, additional cost.Additi
 		if !ok || !zoneContainsCard(s, playerID, sourceZone, cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) {
 			return nil
 		}
-
 		chosen = append(chosen, cardZoneSelection{cardID: cardID, zone: sourceZone})
 		chosenIDs[cardID] = true
 		consumed++
 		if len(chosen) == amount {
 			prefs.ExileChoices = prefs.ExileChoices[consumed:]
+			return chosen
+		}
+	}
+	return nil
+}
+
+func preferredRevealCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []cardZoneSelection, prefs *Preferences) []cardZoneSelection {
+	sourceZone := additional.Source
+	if sourceZone == zone.None {
+		sourceZone = zone.Hand
+	}
+	if prefs == nil || len(prefs.RevealChoices) == 0 {
+		additional.Source = sourceZone
+		return chooseExileCards(s, playerID, additional, amount, alreadyChosen)
+	}
+	chosenIDs := make(map[id.ID]bool, len(alreadyChosen))
+	for _, chosen := range alreadyChosen {
+		chosenIDs[chosen.cardID] = true
+	}
+	var chosen []cardZoneSelection
+	var consumed int
+	for _, cardID := range prefs.RevealChoices {
+		card, ok := s.CardInstance(cardID)
+		if !ok ||
+			!zoneContainsCard(s, playerID, sourceZone, cardID) ||
+			chosenIDs[cardID] ||
+			!additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) {
+			return nil
+		}
+		chosen = append(chosen, cardZoneSelection{cardID: cardID, zone: sourceZone})
+		chosenIDs[cardID] = true
+		consumed++
+		if len(chosen) == amount {
+			prefs.RevealChoices = prefs.RevealChoices[consumed:]
 			return chosen
 		}
 	}
@@ -316,6 +357,9 @@ func additionalCostMatchesCard(card *game.CardDef, additional cost.Additional) b
 	if additional.MatchCardType && !card.HasType(additional.CardType) {
 		return false
 	}
+	if len(additional.SubtypesAny) > 0 && !card.HasAnySubtype(additional.SubtypesAny...) {
+		return false
+	}
 	return true
 }
 
@@ -404,6 +448,11 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 			return false
 		}
 	}
+	for _, reveal := range plan.reveals {
+		if !zoneContainsCard(s, player.ID, reveal.zone, reveal.cardID) {
+			return false
+		}
+	}
 	if plan.lifePaid > 0 && player.Life < plan.lifePaid {
 		return false
 	}
@@ -438,6 +487,9 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 		if !s.MoveCard(plan.player, exile.cardID, exile.zone, zone.Exile) {
 			return false
 		}
+	}
+	for _, reveal := range plan.reveals {
+		s.EmitCardReveal(plan.player, reveal.cardID, reveal.zone)
 	}
 	if plan.lifePaid > 0 {
 		player, ok := s.Player(plan.player)
