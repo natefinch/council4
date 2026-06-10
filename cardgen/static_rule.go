@@ -27,6 +27,10 @@ func lowerStaticRuleDeclaration(
 		body = game.CantBeCounteredStaticBody
 		varName = "game.CantBeCounteredStaticBody"
 		detail = "the executable source backend supports only exact self uncounterable text"
+	case oracle.EffectMustAttack:
+		body = game.MustAttackStaticBody
+		varName = "game.MustAttackStaticBody"
+		detail = "the executable source backend supports only exact self must-attack text"
 	default:
 		return abilityLowering{}, false, nil
 	}

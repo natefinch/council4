@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,258 / 38,101**
+**Cards supported: 2,277 / 38,101**
 
 The pipeline is:
 
@@ -118,8 +118,9 @@ and mill, one-target tap, untap, and regeneration, exact fights between two
 target creatures, and fixed power/toughness buffs on enchanted creature,
 equipped creature, creatures you control, and other creatures you control.
 It also lowers exact `This creature can't block.`,
-`This creature can't be blocked.`, and `This spell can't be countered.` static
-declarations to source-scoped rule effects in their appropriate zones.
+`This creature can't be blocked.`, `This creature attacks each combat if
+able.`, and `This spell can't be countered.` static declarations to
+source-scoped rule effects in their appropriate zones.
 Adventure and split layouts are supported when each printed face is otherwise
 exactly representable; these layouts keep the front face in the root
 `game.CardDef`, emit the second spell face as `Alternate`, and derive per-face

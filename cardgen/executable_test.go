@@ -148,6 +148,49 @@ func TestGenerateExecutableCardSourceSelfCannotBeBlocked(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfMustAttack(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Reckless Bear",
+		Layout:     "normal",
+		ManaCost:   "{1}{R}",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature attacks each combat if able.",
+		Colors:     []string{"R"},
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.MustAttackStaticBody") {
+		t.Fatalf("source missing must-attack static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsConditionalMustAttack(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Conditional Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature attacks each combat if able unless you control an artifact.",
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsConditionalCannotBeBlocked(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

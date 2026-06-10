@@ -177,7 +177,7 @@ func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []ac
 				if !canAttackTarget(g, attacker, target) {
 					continue
 				}
-				if len(attackers) > 1 && declareAttackersSatisfiesGoad(g, playerID, single, eligibleByID) {
+				if len(attackers) > 1 && ce.declareAttackersSatisfiesRequirements(g, playerID, single, eligibleByID) {
 					act := actionBuild.declareAttackers(single)
 					if !containsAction(actions, act) && ce.canPayAttackTax(g, playerID, single) {
 						actions = append(actions, act)
@@ -185,7 +185,7 @@ func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []ac
 				}
 				declarations = append(declarations, single[0])
 			}
-			if declareAttackersSatisfiesGoad(g, playerID, declarations, eligibleByID) {
+			if ce.declareAttackersSatisfiesRequirements(g, playerID, declarations, eligibleByID) {
 				act := actionBuild.declareAttackers(declarations)
 				if !containsAction(actions, act) && ce.canPayAttackTax(g, playerID, declarations) {
 					actions = append(actions, act)
@@ -193,10 +193,10 @@ func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []ac
 			}
 		}
 	}
-	if !hasGoadedEligibleAttacker(attackers) {
+	if ce.declareAttackersSatisfiesRequirements(g, playerID, nil, eligibleByID) {
 		actions = append(actions, actionBuild.declareAttackers(nil))
 	} else if len(actions) == 0 {
-		if declarations := preferredGoadAttackDeclarations(g, playerID, attackers); len(declarations) > 0 {
+		if declarations := preferredRequiredAttackDeclarations(g, playerID, attackers); len(declarations) > 0 {
 			if ce.canPayAttackTax(g, playerID, declarations) {
 				actions = append(actions, actionBuild.declareAttackers(declarations))
 			}
@@ -318,7 +318,7 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 			return false
 		}
 	}
-	if !declareAttackersSatisfiesGoad(g, playerID, declare.Attackers, eligibleByID) {
+	if !ce.declareAttackersSatisfiesRequirements(g, playerID, declare.Attackers, eligibleByID) {
 		return false
 	}
 	if tax, ok := ce.attackTaxCost(g, declare.Attackers); ok {

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,258
+Cards supported: 2,277
 
 - +2 Mace
 - A-Eyes of the Beholder
@@ -112,6 +112,7 @@ Cards supported: 2,258
 - Asgardian Citadel
 - Ashaya, the Awoken World
 - Ashcoat Bear
+- Ashen Monstrosity
 - Ashenmoor Gouger
 - Assault Griffin
 - Assault Zeppelid
@@ -165,6 +166,7 @@ Cards supported: 2,258
 - Baron, Airship Kingdom
 - Barony Vampire
 - Barren Moor
+- Barricade Breaker
 - Barry's Land
 - Bartizan Bats
 - Bassara Tower Archer
@@ -186,6 +188,7 @@ Cards supported: 2,258
 - Benalish Marshal
 - Benalish Trapper
 - Benthic Giant
+- Berserkers of Blood Ridge
 - Billiard Room
 - Bird Illusion
 - Bird Maiden
@@ -217,6 +220,7 @@ Cards supported: 2,258
 - Bloodfell Caves
 - Bloodfire Expert
 - Bloodrage Brawler
+- Bloodrock Cyclops
 - Bloodstone Cameo
 - Blossom Dryad
 - Blossoming Sands
@@ -379,6 +383,7 @@ Cards supported: 2,258
 - Craven Giant
 - Craven Knight
 - Craw Wurm
+- Crazed Goblin
 - Crazed Skirge
 - Creeping Corrosion
 - Crenellated Wall
@@ -637,6 +642,7 @@ Cards supported: 2,258
 - Fists of the Anvil
 - Flame Lash
 - Flame Slash
+- Flameborn Hellion
 - Flameborn Viron
 - Flatten
 - Fleetfoot Dancer
@@ -677,6 +683,7 @@ Cards supported: 2,258
 - Frog Lizard
 - Frog-Squirrels
 - Frontier Bivouac
+- Frontline Rebel
 - Frost Marsh
 - Frost Ogre
 - Frostbridge Guard
@@ -748,6 +755,7 @@ Cards supported: 2,258
 - Goat
 - Goblin Assailant
 - Goblin Berserker
+- Goblin Brigand
 - Goblin Bully
 - Goblin Cavaliers
 - Goblin Champion
@@ -932,6 +940,7 @@ Cards supported: 2,258
 - Impale
 - Imperial Outrider
 - Impervious Greatwurm
+- Impetuous Sunchaser
 - Imposing Vantasaur
 - Improvised Armor
 - Incurable Ogre
@@ -1120,6 +1129,7 @@ Cards supported: 2,258
 - Lurching Rotbeast
 - Macetail Hystrodon
 - Maelstrom Colossus
+- Mage-Ring Bully
 - Mageta's Boon
 - Maggot Therapy
 - Magma Jet
@@ -1200,6 +1210,7 @@ Cards supported: 2,258
 - Monoist Sentry
 - Mons's Goblin Raiders
 - Monster Mashup
+- Monstrous Carabid
 - Monstrous Growth
 - Moogle
 - Moon Heron
@@ -1364,6 +1375,7 @@ Cards supported: 2,258
 - Phyrexian Golem
 - Phyrexian Hulk
 - Phyrexian Insect
+- Phyrexian Juggernaut
 - Phyrexian Saproling
 - Phyrexian Walker
 - Phytoburst
@@ -1470,6 +1482,7 @@ Cards supported: 2,258
 - Reach Through Mists
 - Rearing Embermare
 - Rebel
+- Reckless Brute
 - Redwood Treefolk
 - Reflection
 - Regal Unicorn
@@ -1504,6 +1517,7 @@ Cards supported: 2,258
 - Ringwarden Owl
 - Riot Devils
 - Riot Gear
+- Riot Piker
 - Rip-Clan Crasher
 - Ripscale Predator
 - Riptide Crab
@@ -1534,6 +1548,7 @@ Cards supported: 2,258
 - Rubble Slinger
 - Rubbleback Rhino
 - Rubblebelt Boar
+- Rubblebelt Recluse
 - Rugged Highlands
 - Ruination Wurm
 - Rukh
@@ -1887,6 +1902,7 @@ Cards supported: 2,258
 - Target Minotaur
 - Tarpan
 - Tasseled Dromedary
+- Tattermunge Maniac
 - Teddy Bear
 - Teetering Peaks
 - Tel-Jilad Justice
@@ -2026,15 +2042,18 @@ Cards supported: 2,258
 - Unwavering Initiate
 - Unyaro Bee Sting
 - Updraft Elemental
+- Urborg Drake
 - Urborg Elf
 - Urborg Volcano
 - Ursapine
 - Urza
 - Urzan Automaton
 - Utopia Tree
+- Utvara Scalper
 - Valeron Outlander
 - Valiant Guard
 - Valkyrior Skyrider
+- Valley Dasher
 - Vampire Champion
 - Vampire Demon
 - Vampire Interloper

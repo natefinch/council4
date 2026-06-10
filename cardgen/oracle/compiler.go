@@ -70,6 +70,9 @@ func compileAbility(
 		conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 	}
 	compiled.Conditions = compileConditions(conditionTokens, ability.Kind == AbilityTriggered)
+	if ability.Text == "This creature attacks each combat if able." {
+		compiled.Conditions = nil
+	}
 	compiled.Effects = compileEffects(
 		parseSentences(source, body),
 		ability.Reminders,
@@ -417,6 +420,13 @@ func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect,
 			Kind: SelectorCreature,
 			Raw:  "this creature",
 		}
+	case "This creature attacks each combat if able.":
+		kind = EffectMustAttack
+		verb = "attacks"
+		selector = CompiledSelector{
+			Kind: SelectorCreature,
+			Raw:  "this creature",
+		}
 	case "This spell can't be countered.":
 		kind = EffectCantBeCountered
 		verb = "countered"
@@ -432,7 +442,7 @@ func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect,
 				Text:     sentence.Text,
 				VerbSpan: token.Span,
 				Selector: selector,
-				Negated:  true,
+				Negated:  kind != EffectMustAttack,
 			}, true
 		}
 	}

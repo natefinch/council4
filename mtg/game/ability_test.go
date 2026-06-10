@@ -162,6 +162,19 @@ func TestCantBeBlockedStaticBodyBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestMustAttackStaticBodyBuildsCompleteMechanic(t *testing.T) {
+	if MustAttackStaticBody.Text != "This creature attacks each combat if able." {
+		t.Fatalf("text = %q", MustAttackStaticBody.Text)
+	}
+	if len(MustAttackStaticBody.RuleEffects) != 1 {
+		t.Fatalf("rule effects = %+v", MustAttackStaticBody.RuleEffects)
+	}
+	effect := MustAttackStaticBody.RuleEffects[0]
+	if effect.Kind != RuleEffectMustAttack || !effect.AffectedSource {
+		t.Fatalf("rule effect = %+v", effect)
+	}
+}
+
 func TestCantBeCounteredStaticBodyBuildsCompleteMechanic(t *testing.T) {
 	if CantBeCounteredStaticBody.Text != "This spell can't be countered." {
 		t.Fatalf("text = %q", CantBeCounteredStaticBody.Text)

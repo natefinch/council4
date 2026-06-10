@@ -236,6 +236,15 @@ func ruleEffectProhibitsAttack(g *game.Game, attacker *game.Permanent, target *g
 	return false
 }
 
+func ruleEffectRequiresAttack(g *game.Game, attacker *game.Permanent) bool {
+	for _, effect := range activeRuleEffects(g) {
+		if effect.Kind == game.RuleEffectMustAttack && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectProhibitsBlock(g *game.Game, blocker *game.Permanent) bool {
 	for _, effect := range activeRuleEffects(g) {
 		if effect.Kind == game.RuleEffectCantBlock && ruleEffectMatchesPermanent(g, effect, blocker) {
