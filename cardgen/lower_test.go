@@ -1132,6 +1132,63 @@ func TestLowerOrderedSpellEffects(t *testing.T) {
 	}
 }
 
+func TestLowerOrderedSpellEffectsWithMultipleTargets(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target artifact. Tap target creature.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want two targets and two instructions", mode)
+	}
+	destroy, ok := mode.Sequence[0].Primitive.(game.Destroy)
+	if !ok || destroy.Object.TargetIndex() != 0 {
+		t.Fatalf("first primitive = %+v, want target 0 destroy", mode.Sequence[0].Primitive)
+	}
+	tap, ok := mode.Sequence[1].Primitive.(game.Tap)
+	if !ok || tap.Object.TargetIndex() != 1 {
+		t.Fatalf("second primitive = %+v, want target 1 tap", mode.Sequence[1].Primitive)
+	}
+}
+
+func TestLowerOrderedSpellEffectsRebasesEveryTargetClause(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target artifact. Tap target creature. Target player mills three cards.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 3 || len(mode.Sequence) != 3 {
+		t.Fatalf("mode = %+v, want three targets and three instructions", mode)
+	}
+	destroy, destroyOK := mode.Sequence[0].Primitive.(game.Destroy)
+	tap, tapOK := mode.Sequence[1].Primitive.(game.Tap)
+	mill, millOK := mode.Sequence[2].Primitive.(game.Mill)
+	if !destroyOK || !tapOK || !millOK {
+		t.Fatalf(
+			"primitives = %T, %T, %T; want game.Destroy, game.Tap, game.Mill",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+			mode.Sequence[2].Primitive,
+		)
+	}
+	if destroy.Object.TargetIndex() != 0 ||
+		tap.Object.TargetIndex() != 1 ||
+		mill.Player.TargetIndex() != 2 {
+		t.Fatalf(
+			"target indices = %d, %d, %d; want 0, 1, 2",
+			destroy.Object.TargetIndex(),
+			tap.Object.TargetIndex(),
+			mill.Player.TargetIndex(),
+		)
+	}
+}
+
 func TestLowerSurveilSpell(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

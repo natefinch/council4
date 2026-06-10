@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,090
+Cards supported: 3,092
 
 - +2 Mace
 - Aardvark Sloth
@@ -588,6 +588,7 @@ Cards supported: 3,090
 - Dead Weight
 - Deadly Insect
 - Deadly Recluse
+- Deal Gone Bad
 - Death Grasp
 - Death Speakers
 - Death Stroke
@@ -1316,6 +1317,7 @@ Cards supported: 3,090
 - Inspiring Cleric
 - Inspiring Vantage
 - Instant Ramen
+- Into the Maw of Hell
 - Invisible Stalker
 - Invoke the Firemind
 - Iron Bully

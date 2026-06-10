@@ -41,6 +41,7 @@ Vanguard cards are excluded with explicit report reasons.
    their corresponding sealed `game.KeywordAbility` values; unsupported
    parameter forms remain fail-closed. Exact `X` quantities and common target
    restrictions lower into runtime quantities and structured target predicates.
+   Ordered effect clauses retain independent target specifications and references.
    Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
    `game.AddCounter` instructions. Exact `if it was kicked` self-enter triggers
    preserve the kicker choice as a typed intervening-if predicate. Exact

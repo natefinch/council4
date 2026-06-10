@@ -2508,10 +2508,10 @@ func lowerOrderedEffectSequence(
 		}
 		mode := content.Modes[0]
 		if len(mode.Targets) > 0 {
-			if len(targets) > 0 {
+			if !rebaseTargetedSequence(mode.Sequence, len(targets)) {
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 			}
-			targets = mode.Targets
+			targets = append(targets, mode.Targets...)
 		}
 		sequence = append(sequence, mode.Sequence...)
 	}
@@ -2521,6 +2521,165 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func rebaseTargetedSequence(sequence []game.Instruction, offset int) bool {
+	for i := range sequence {
+		primitive, ok := rebaseTargetedPrimitive(sequence[i].Primitive, offset)
+		if !ok {
+			return false
+		}
+		sequence[i].Primitive = primitive
+	}
+	return true
+}
+
+func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primitive, bool) {
+	// Keep this as an explicit allowlist so a new target-bearing primitive cannot
+	// silently retain a clause-local target index.
+	if value, ok := primitive.(game.Damage); ok {
+		recipient, ok := rebaseDamageRecipient(value.Recipient, offset)
+		if !ok {
+			return nil, false
+		}
+		value.Recipient = recipient
+		if value.DamageSource.Exists {
+			source, ok := rebaseObjectReference(value.DamageSource.Val, offset)
+			if !ok {
+				return nil, false
+			}
+			value.DamageSource = opt.Val(source)
+		}
+		return value, true
+	}
+	if value, ok := primitive.(game.Destroy); ok {
+		if value.Group.Valid() {
+			return nil, false
+		}
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.AddCounter); ok {
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.ModifyPT); ok {
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Fight); ok {
+		var ok bool
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		if !ok {
+			return nil, false
+		}
+		value.RelatedObject, ok = rebaseObjectReference(value.RelatedObject, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Tap); ok {
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Untap); ok {
+		if value.Group.Valid() {
+			return nil, false
+		}
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Exile); ok {
+		if value.Group.Valid() {
+			return nil, false
+		}
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Bounce); ok {
+		if value.Group.Valid() {
+			return nil, false
+		}
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.CounterObject); ok {
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Regenerate); ok {
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Draw); ok {
+		value.Player, ok = rebasePlayerReference(value.Player, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Discard); ok {
+		value.Player, ok = rebasePlayerReference(value.Player, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Mill); ok {
+		value.Player, ok = rebasePlayerReference(value.Player, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.GainLife); ok {
+		value.Player, ok = rebasePlayerReference(value.Player, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.LoseLife); ok {
+		value.Player, ok = rebasePlayerReference(value.Player, offset)
+		return value, ok
+	}
+	return nil, false
+}
+
+func rebaseDamageRecipient(recipient game.DamageRecipient, offset int) (game.DamageRecipient, bool) {
+	if object, ok := recipient.AnyTargetObjectReference(); ok {
+		return game.AnyTargetDamageRecipient(object.TargetIndex() + offset), true
+	}
+	if object, ok := recipient.ObjectReference(); ok {
+		rebased, valid := rebaseObjectReference(object, offset)
+		return game.ObjectDamageRecipient(rebased), valid
+	}
+	if player, ok := recipient.PlayerReference(); ok {
+		rebased, valid := rebasePlayerReference(player, offset)
+		return game.PlayerDamageRecipient(rebased), valid
+	}
+	return game.DamageRecipient{}, false
+}
+
+func rebaseObjectReference(reference game.ObjectReference, offset int) (game.ObjectReference, bool) {
+	switch reference.Kind() {
+	case game.ObjectReferenceTargetPermanent:
+		return game.TargetPermanentReference(reference.TargetIndex() + offset), true
+	case game.ObjectReferenceTargetStackObject:
+		return game.TargetStackObjectReference(reference.TargetIndex() + offset), true
+	case game.ObjectReferenceTargetAttachedPermanent:
+		return game.TargetAttachedPermanentReference(reference.TargetIndex() + offset), true
+	default:
+		return reference, len(reference.Validate()) == 0
+	}
+}
+
+func rebasePlayerReference(reference game.PlayerReference, offset int) (game.PlayerReference, bool) {
+	switch reference.Kind() {
+	case game.PlayerReferenceTargetPlayer:
+		return game.TargetPlayerReference(reference.TargetIndex() + offset), true
+	case game.PlayerReferenceObjectController, game.PlayerReferenceObjectOwner:
+		object, ok := reference.Object()
+		if !ok {
+			return game.PlayerReference{}, false
+		}
+		object, ok = rebaseObjectReference(object, offset)
+		if !ok {
+			return game.PlayerReference{}, false
+		}
+		if reference.Kind() == game.PlayerReferenceObjectController {
+			return game.ObjectControllerReference(object), true
+		}
+		return game.ObjectOwnerReference(object), true
+	default:
+		return reference, len(reference.Validate()) == 0
+	}
 }
 
 func abilityForEffect(
@@ -2571,7 +2730,7 @@ func unsupportedEffectSequenceDiagnostic(ability oracle.CompiledAbility) *oracle
 	return executableDiagnostic(
 		ability,
 		"unsupported ordered effect sequence",
-		"the executable source backend supports only exact ordered sequences of independently supported effects with at most one targeted clause",
+		"the executable source backend supports only exact ordered sequences of independently supported effects",
 	)
 }
 
