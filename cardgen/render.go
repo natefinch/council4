@@ -951,7 +951,6 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if !pattern.SubjectSelection.Empty() ||
 		len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
-		!pattern.CardSelection.Empty() ||
 		pattern.MatchFromZone ||
 		pattern.MatchToZone ||
 		pattern.MatchStackObjectKind ||
@@ -960,6 +959,19 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
 		pattern.SpellTargetPattern.Exists {
 		return "", errors.New("render: unsupported trigger pattern fields")
+	}
+	if !pattern.CardSelection.Empty() && pattern.Event != game.EventSpellCast {
+		return "", errors.New("render: CardSelection is only supported for EventSpellCast trigger patterns")
+	}
+	if !pattern.CardSelection.Empty() {
+		unsupported := pattern.CardSelection
+		unsupported.RequiredTypes = nil
+		unsupported.RequiredTypesAny = nil
+		unsupported.ExcludedTypes = nil
+		unsupported.ColorsAny = nil
+		if !unsupported.Empty() {
+			return "", errors.New("render: unsupported CardSelection fields in cast trigger pattern")
+		}
 	}
 	event, err := renderEventKind(pattern.Event)
 	if err != nil {
@@ -1040,6 +1052,13 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	}
 	if pattern.RequireCombatDamage {
 		fields = append(fields, "RequireCombatDamage: true,")
+	}
+	if !pattern.CardSelection.Empty() {
+		sel, err := (Renderer{}).renderSelection(ctx, pattern.CardSelection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("CardSelection: %s,", sel))
 	}
 	return structLit("game.TriggerPattern", fields), nil
 }
@@ -3010,6 +3029,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventAttackerDeclared", nil
 	case game.EventBlockerDeclared:
 		return "game.EventBlockerDeclared", nil
+	case game.EventSpellCast:
+		return "game.EventSpellCast", nil
 	case game.EventPermanentEnteredBattlefield:
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:

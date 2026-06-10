@@ -38,6 +38,37 @@ func TestGenerateExecutableCardSourceKeywords(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSpellCastTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Blue Spell Watcher",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever an opponent casts a blue spell, draw a card.",
+		Colors:     []string{"U"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventSpellCast",
+		"game.TriggerControllerOpponent",
+		"CardSelection: game.Selection{ColorsAny: []color.Color{color.Blue}}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceReadAhead(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

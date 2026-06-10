@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -13,17 +14,22 @@ func TestEventsForTurnReturnsCopy(t *testing.T) {
 	g.AppendEvent(Event{
 		Kind:      EventSpellCast,
 		CardTypes: []types.Card{types.Instant},
+		Colors:    []color.Color{color.Blue},
 	})
 
 	events := g.EventsForTurn(1)
 	events[0].Kind = EventDamageDealt
 	events[0].CardTypes[0] = types.Creature
+	events[0].Colors[0] = color.Red
 
 	if g.Events[0].Kind != EventSpellCast {
 		t.Fatalf("event kind mutated through EventsForTurn copy: %v", g.Events[0].Kind)
 	}
 	if g.Events[0].CardTypes[0] != types.Instant {
 		t.Fatalf("event card types mutated through EventsForTurn copy: %v", g.Events[0].CardTypes)
+	}
+	if g.Events[0].Colors[0] != color.Blue {
+		t.Fatalf("event colors mutated through EventsForTurn copy: %v", g.Events[0].Colors)
 	}
 }
 
@@ -50,11 +56,16 @@ func TestEventsThisTurnAndPreviousTurnReturnCopies(t *testing.T) {
 func TestAppendEventCopiesEventSlices(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
 	cardTypes := []types.Card{types.Sorcery}
+	colors := []color.Color{color.Green}
 
-	g.AppendEvent(Event{Kind: EventSpellCast, CardTypes: cardTypes})
+	g.AppendEvent(Event{Kind: EventSpellCast, CardTypes: cardTypes, Colors: colors})
 	cardTypes[0] = types.Artifact
+	colors[0] = color.Black
 
 	if g.Events[0].CardTypes[0] != types.Sorcery {
 		t.Fatalf("AppendEvent aliased caller card types: %v", g.Events[0].CardTypes)
+	}
+	if g.Events[0].Colors[0] != color.Green {
+		t.Fatalf("AppendEvent aliased caller colors: %v", g.Events[0].Colors)
 	}
 }

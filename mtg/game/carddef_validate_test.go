@@ -908,6 +908,25 @@ func TestValidateCardDefAllowsTokenOnlyTriggerSubject(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsColorFilteredSpellCastTrigger(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Blue Spell Watcher",
+		OracleText: "Whenever you cast a blue spell, draw a card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:         EventSpellCast,
+				CardSelection: Selection{ColorsAny: []color.Color{color.Blue}},
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want color-filtered spell-cast trigger accepted", issues)
+	}
+}
+
 func TestValidateCardDefAllowsSelectionOnlyTargetSpec(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Selection Target Spec",
@@ -1001,6 +1020,16 @@ func TestValidateCardDefRejectsSelectionFieldsUnavailableInContext(t *testing.T)
 				Trigger: TriggerCondition{Pattern: TriggerPattern{
 					Event:         EventSpellCast,
 					CardSelection: Selection{Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})},
+				}},
+			}}},
+		},
+		{
+			name: "non-cast trigger card with color",
+			face: CardFace{TriggeredAbilities: []TriggeredAbility{{
+				Content: Mode{}.Ability(),
+				Trigger: TriggerCondition{Pattern: TriggerPattern{
+					Event:         EventCardDrawn,
+					CardSelection: Selection{ColorsAny: []color.Color{color.Blue}},
 				}},
 			}}},
 		},

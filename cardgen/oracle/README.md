@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 3,406 / 31,835**
+**Cards supported: 3,433 / 31,835**
 
 The pipeline is:
 
@@ -171,7 +171,17 @@ absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.
 Exact self-dies event-card references support returning the card from its
 owner's graveyard to hand and granting its Adventure face graveyard-cast
-permission through the end of the controller's next turn. An exact
+permission through the end of the controller's next turn. Spell-cast triggered
+abilities with `Whenever ... casts ...` lower for three exact player prefixes
+(`you cast`, `a player casts`, `an opponent casts`) and seventeen exact spell
+phrases:
+filters: `a spell` (wildcard), `a noncreature spell`, `a creature spell`,
+`an instant or sorcery spell`, `an instant spell`/`an instant`, `a sorcery
+spell`, `an artifact spell`, `an enchantment spell`, `a land spell`, `a
+planeswalker spell`, `a noncreature, nonland spell`, and single-color forms `a
+white/blue/black/red/green spell`. Self-cast (`when you cast this spell`), `TriggerWhen`, intervening-if
+conditions, ability words, modes, and all other player or spell-phrase forms
+are fail-closed. An exact
 leading `you may` on a single-effect trigger maps to trigger-level optionality;
 partially optional sequences remain unsupported. Exact ordinary battlefield
 activations may combine mana, tap, and untap costs with typed sacrifice,

@@ -74,6 +74,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		Controller:    playerID,
 		CardID:        card.ID,
 		CardTypes:     cardTypes(spellDef),
+		Colors:        spellColors(spellDef),
 		FromZone:      zone.Exile,
 		ToZone:        zone.Stack,
 	})

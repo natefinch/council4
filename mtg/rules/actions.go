@@ -507,6 +507,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		CardID:        cast.CardID,
 		Face:          cast.Face,
 		CardTypes:     cardTypes(spellDef),
+		Colors:        spellColors(spellDef),
 		FromZone:      sourceZone,
 		ToZone:        zone.Stack,
 	})
@@ -569,6 +570,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		CardID:        cast.CardID,
 		Face:          game.FaceFront,
 		CardTypes:     cardTypes(spellDef),
+		Colors:        spellColors(spellDef),
 		FromZone:      sourceZone,
 		ToZone:        zone.Stack,
 	})
@@ -746,6 +748,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		PermanentID:   permanent.ObjectID,
 		TokenDef:      permanent.TokenDef,
 		CardTypes:     cardTypes(spellDef),
+		Colors:        spellColors(spellDef),
 	})
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)

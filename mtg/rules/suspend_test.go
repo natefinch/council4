@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -87,7 +88,11 @@ func TestSuspendCastsSpellWhenLastCounterRemoved(t *testing.T) {
 		t.Fatalf("stack top = %+v, want suspended spell", obj)
 	}
 	assertEvent(t, g.Events, game.EventSpellCast, func(event game.Event) bool {
-		return event.CardID == cardID && event.FromZone == zone.Exile && event.ToZone == zone.Stack
+		return event.CardID == cardID &&
+			event.FromZone == zone.Exile &&
+			event.ToZone == zone.Stack &&
+			len(event.Colors) == 1 &&
+			event.Colors[0] == color.Green
 	})
 }
 
@@ -142,6 +147,7 @@ func TestSuspendedCreatureEntersWithSuspendHaste(t *testing.T) {
 func suspendSorcery(counters int, suspendCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Suspend Sorcery",
 		Types:    []types.Card{types.Sorcery},
+		Colors:   []color.Color{color.Green},
 		ManaCost: opt.Val(cost.Mana{cost.O(9)}),
 		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.SuspendKeyword{Cost: suspendCost, TimeCounters: counters}},

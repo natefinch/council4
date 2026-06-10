@@ -1900,3 +1900,98 @@ func (a *choiceOnlyAgent) ChooseChoice(obs PlayerObservation, request game.Choic
 	a.next++
 	return choice
 }
+
+func TestSpellCastTriggerMatchesColorSelection(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			ColorsAny: []color.Color{color.Green},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	greenSpell := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Giant Growth",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Instant},
+		Colors:   []color.Color{color.Green},
+	}}
+	spellID := addCardToHand(g, game.Player1, greenSpell)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast green instant failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("green-spell cast trigger did not fire for green instant")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want green-spell trigger to draw one card", got)
+	}
+}
+
+func TestSpellCastTriggerColorSelectionExcludesWrongColor(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			ColorsAny: []color.Color{color.Blue},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	greenSpell := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Giant Growth",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Instant},
+		Colors:   []color.Color{color.Green},
+	}}
+	spellID := addCardToHand(g, game.Player1, greenSpell)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast green instant failed")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("blue-spell trigger incorrectly fired for green instant")
+	}
+}
+
+func TestSpellCastEventPopulatesColors(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	greenSpell := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Giant Growth",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Instant},
+		Colors:   []color.Color{color.Green},
+	}}
+	spellID := addCardToHand(g, game.Player1, greenSpell)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast green instant failed")
+	}
+	var castEvent *game.Event
+	for i := range g.Events {
+		if g.Events[i].Kind == game.EventSpellCast {
+			castEvent = &g.Events[i]
+			break
+		}
+	}
+	if castEvent == nil {
+		t.Fatal("no EventSpellCast found")
+	}
+	if len(castEvent.Colors) != 1 || castEvent.Colors[0] != color.Green {
+		t.Fatalf("EventSpellCast.Colors = %v, want [Green]", castEvent.Colors)
+	}
+}

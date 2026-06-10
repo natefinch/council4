@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -99,6 +100,11 @@ type Event struct {
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).
 	CardTypes []types.Card
+
+	// Colors records the colors of the spell as cast on the stack for
+	// color-filtered cast triggers such as "a blue spell". Populated at every
+	// EventSpellCast emission site from the effective face being cast.
+	Colors []color.Color
 
 	// PermanentID identifies the permanent that entered, left, was damaged, attacked, or blocked.
 	PermanentID id.ID
@@ -200,5 +206,6 @@ func cloneEvents(events []Event) []Event {
 
 func cloneEvent(event Event) Event {
 	event.CardTypes = append([]types.Card(nil), event.CardTypes...)
+	event.Colors = append([]color.Color(nil), event.Colors...)
 	return event
 }

@@ -2723,6 +2723,11 @@ func lowerTriggeredAbility(
 	if diagnostic == nil ||
 		ability.Trigger == nil ||
 		!strings.Contains(ability.Trigger.Event, " enter") {
+		if diagnostic != nil && ability.Trigger != nil {
+			if castAbility, ok := lowerCastTrigger(cardName, ability, syntax); ok {
+				return castAbility, nil
+			}
+		}
 		return triggeredAbility, diagnostic
 	}
 	nonSelf, ok := lowerNonSelfEnterTrigger(cardName, ability, syntax)
@@ -3345,6 +3350,104 @@ func lowerNonSelfEnterTrigger(
 		Optional: ability.Optional,
 		Content:  content,
 	}, true
+}
+
+// lowerCastTrigger lowers a "whenever ... casts ..." triggered ability into a
+// game.TriggeredAbility with EventSpellCast. It returns false for any event
+// string it cannot fully represent, including self-cast (TriggerWhen), all
+// forms other than the three accepted player prefixes, unsupported spell
+// phrases, intervening-if conditions, keywords, modes, and ability words.
+func lowerCastTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, bool) {
+	if ability.Trigger == nil ||
+		ability.Trigger.Kind != oracle.TriggerWhenever ||
+		ability.Trigger.Condition != nil ||
+		len(ability.Effects) == 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.AbilityWord != "" {
+		return game.TriggeredAbility{}, false
+	}
+
+	event := ability.Trigger.Event
+	var controller game.TriggerControllerFilter
+	switch {
+	case strings.HasPrefix(event, "you cast "):
+		controller = game.TriggerControllerYou
+		event = strings.TrimPrefix(event, "you cast ")
+	case strings.HasPrefix(event, "a player casts "):
+		controller = game.TriggerControllerAny
+		event = strings.TrimPrefix(event, "a player casts ")
+	case strings.HasPrefix(event, "an opponent casts "):
+		controller = game.TriggerControllerOpponent
+		event = strings.TrimPrefix(event, "an opponent casts ")
+	default:
+		return game.TriggeredAbility{}, false
+	}
+
+	cardSelection, ok := parseCastSpellSelection(event)
+	if !ok {
+		return game.TriggeredAbility{}, false
+	}
+
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, false
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, false
+	}
+
+	pattern := game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: controller,
+	}
+	if !cardSelection.Empty() {
+		pattern.CardSelection = cardSelection
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:    game.TriggerWhenever,
+			Pattern: pattern,
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, true
+}
+
+// castSpellPhrases maps an oracle spell-phrase fragment to the corresponding
+// game.Selection. "a spell" maps to an empty selection (wildcard).
+var castSpellPhrases = map[string]game.Selection{
+	"a spell":                      {},
+	"a noncreature spell":          {ExcludedTypes: []types.Card{types.Creature}},
+	"a creature spell":             {RequiredTypes: []types.Card{types.Creature}},
+	"an instant or sorcery spell":  {RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}},
+	"an instant spell":             {RequiredTypes: []types.Card{types.Instant}},
+	"an instant":                   {RequiredTypes: []types.Card{types.Instant}},
+	"a sorcery spell":              {RequiredTypes: []types.Card{types.Sorcery}},
+	"an artifact spell":            {RequiredTypes: []types.Card{types.Artifact}},
+	"an enchantment spell":         {RequiredTypes: []types.Card{types.Enchantment}},
+	"a land spell":                 {RequiredTypes: []types.Card{types.Land}},
+	"a planeswalker spell":         {RequiredTypes: []types.Card{types.Planeswalker}},
+	"a noncreature, nonland spell": {ExcludedTypes: []types.Card{types.Creature, types.Land}},
+	"a white spell":                {ColorsAny: []color.Color{color.White}},
+	"a blue spell":                 {ColorsAny: []color.Color{color.Blue}},
+	"a black spell":                {ColorsAny: []color.Color{color.Black}},
+	"a red spell":                  {ColorsAny: []color.Color{color.Red}},
+	"a green spell":                {ColorsAny: []color.Color{color.Green}},
+}
+
+// parseCastSpellSelection maps the spell-phrase fragment (what follows the
+// player+casts prefix) to a game.Selection. It returns false for any
+// unrecognized or unsupported phrase.
+func parseCastSpellSelection(phrase string) (game.Selection, bool) {
+	sel, ok := castSpellPhrases[phrase]
+	return sel, ok
 }
 
 // lowerEventPermanentModifyPTBody handles the narrow case of a triggered body

@@ -160,6 +160,7 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 		Controller:    playerID,
 		CardID:        cardID,
 		CardTypes:     cardTypes(spellDef),
+		Colors:        spellColors(spellDef),
 		FromZone:      zone.Exile,
 		ToZone:        zone.Stack,
 	})
