@@ -20,6 +20,7 @@ type pendingTriggeredAbility struct {
 	face         game.FaceIndex
 	abilityIndex int
 	targets      []game.Target
+	targetCounts []int
 	event        game.Event
 	hasEvent     bool
 	inline       *game.TriggeredAbility
@@ -62,6 +63,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			WardTargetStackObjectID: trigger.wardTargetID,
 			Controller:              trigger.controller,
 			Targets:                 append([]game.Target(nil), trigger.targets...),
+			TargetCounts:            append([]int(nil), trigger.targetCounts...),
 		}
 		pushAbilityToStack(g, obj)
 	}
@@ -787,6 +789,11 @@ func (e *Engine) preparePlayerTriggers(g *game.Game, playerID game.PlayerID, tri
 			continue
 		}
 		trigger.targets = targets
+		targetCounts, ok := bodyTargetCounts(g, trigger.controller, source, trigger.sourceID, ability, targets)
+		if !ok {
+			panic("validated triggered ability targets could not be segmented")
+		}
+		trigger.targetCounts = targetCounts
 		prepared = append(prepared, *trigger)
 	}
 	return prepared

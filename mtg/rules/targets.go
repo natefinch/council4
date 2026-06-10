@@ -237,6 +237,13 @@ func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDe
 	return targetCountsForSpecs(g, controller, card, 0, spellTargetSpecs(card, chosenModes), targets)
 }
 
+func bodyTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target) ([]int, bool) {
+	if body == nil {
+		return nil, len(targets) == 0
+	}
+	return targetCountsForSpecs(g, controller, source, sourceObjectID, game.BodyTargets(body), targets)
+}
+
 func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, targets []game.Target) bool {
 	if len(targets) < spec.MinTargets || len(targets) > spec.MaxTargets {
 		return false
@@ -260,31 +267,96 @@ func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.
 	return true
 }
 
-func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, controller game.PlayerID, chosenModes []int, targets []game.Target) bool {
-	specs := spellTargetSpecs(card, chosenModes)
-	return hasAnyLegalTargetForSpecs(g, controller, card, 0, specs, targets)
+func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, obj *game.StackObject) bool {
+	return stackObjectHasAnyLegalTargetsForSpecs(g, card, 0, spellTargetSpecs(card, obj.ChosenModes), obj)
 }
 
-func bodyHasAnyLegalTargets(g *game.Game, body game.Ability, controller game.PlayerID, targets []game.Target) bool {
-	return bodyHasAnyLegalTargetsFromSource(g, nil, body, controller, targets)
-}
-
-func bodyHasAnyLegalTargetsFromSource(g *game.Game, source *game.CardDef, body game.Ability, controller game.PlayerID, targets []game.Target) bool {
-	return bodyHasAnyLegalTargetsFromSourceObject(g, source, 0, body, controller, targets)
-}
-
-func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.Ability, controller game.PlayerID, targets []game.Target) bool {
+func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.Ability, obj *game.StackObject) bool {
 	if body == nil {
-		return len(targets) == 0
+		return len(obj.Targets) == 0
 	}
-	return hasAnyLegalTargetForSpecs(g, controller, source, sourceObjectID, game.BodyTargets(body), targets)
+	return stackObjectHasAnyLegalTargetsForSpecs(g, source, sourceObjectID, game.BodyTargets(body), obj)
 }
 
-func hasAnyLegalTargetForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) bool {
+func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, obj *game.StackObject) bool {
 	if len(specs) == 0 {
 		return true
 	}
-	return targetsValidForSpecs(g, controller, source, sourceObjectID, specs, targets)
+	counts, ok := resolutionTargetCounts(specs, obj.TargetCounts, len(obj.Targets))
+	if !ok {
+		return false
+	}
+	if len(obj.Targets) == 0 {
+		return true
+	}
+	targets := append([]game.Target(nil), obj.Targets...)
+	anyLegal := false
+	targetIndex := 0
+	for specIndex := range specs {
+		spec := normalizeTargetSpec(&specs[specIndex])
+		for range counts[specIndex] {
+			target := targets[targetIndex]
+			if targetLegalForSpecAtResolution(g, obj.Controller, source, sourceObjectID, &spec, target) {
+				anyLegal = true
+			} else {
+				targets[targetIndex] = game.DeferredTarget()
+			}
+			targetIndex++
+		}
+	}
+	obj.Targets = targets
+	return anyLegal
+}
+
+func resolutionTargetCounts(specs []game.TargetSpec, recorded []int, targetCount int) ([]int, bool) {
+	if targetCountsHaveValidCardinality(specs, recorded, targetCount) {
+		return recorded, true
+	}
+	counts := make([]int, len(specs))
+	if !targetCountsForCardinality(specs, targetCount, counts, 0, 0) {
+		return nil, false
+	}
+	return counts, true
+}
+
+func targetCountsHaveValidCardinality(specs []game.TargetSpec, counts []int, targetCount int) bool {
+	if len(counts) != len(specs) {
+		return false
+	}
+	total := 0
+	for i := range specs {
+		spec := normalizeTargetSpec(&specs[i])
+		if !targetSpecValid(&spec) || counts[i] < spec.MinTargets || counts[i] > spec.MaxTargets {
+			return false
+		}
+		total += counts[i]
+	}
+	return total == targetCount
+}
+
+func targetCountsForCardinality(specs []game.TargetSpec, targetCount int, counts []int, specIndex, assigned int) bool {
+	if specIndex == len(specs) {
+		return assigned == targetCount
+	}
+	spec := normalizeTargetSpec(&specs[specIndex])
+	if !targetSpecValid(&spec) {
+		return false
+	}
+	for count := spec.MinTargets; count <= spec.MaxTargets && assigned+count <= targetCount; count++ {
+		counts[specIndex] = count
+		if targetCountsForCardinality(specs, targetCount, counts, specIndex+1, assigned+count) {
+			return true
+		}
+	}
+	return false
+}
+
+func targetLegalForSpecAtResolution(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
+	if targetSpecUsesExternalChooser(spec) {
+		return externalChooserCouldChooseTarget(g, controller, source, sourceObjectID, spec, target)
+	}
+	return targetMatchesSpec(g, controller, sourceObjectID, spec, target) &&
+		!targetProtectedFromSource(g, controller, source, target)
 }
 
 func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
@@ -758,6 +830,9 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 	permanent, ok := permanentByObjectID(g, target.PermanentID)
 	if !ok {
 		return false
+	}
+	if hasKeyword(g, permanent, game.Shroud) {
+		return true
 	}
 	if hasKeyword(g, permanent, game.Hexproof) && effectiveController(g, permanent) != controller {
 		return true
