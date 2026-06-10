@@ -387,6 +387,9 @@ func attackerWasBlocked(g *game.Game, attackerID id.ID) bool {
 	if g.Combat == nil {
 		return false
 	}
+	if g.Combat.BlockedAttackers[attackerID] {
+		return true
+	}
 	for _, block := range g.Combat.Blockers {
 		if block.Blocking == attackerID {
 			return true

@@ -2285,6 +2285,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.CyclingKeyword{Cost: %s}", cyclingCost), nil
 	}
+	if ninjutsu, ok := keyword.(game.NinjutsuKeyword); ok {
+		ninjutsuCost, err := r.renderManaCost(ctx, ninjutsu.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.NinjutsuKeyword{Cost: %s}", ninjutsuCost), nil
+	}
 	if kicker, ok := keyword.(game.KickerKeyword); ok {
 		kickerCost, err := r.renderManaCost(ctx, kicker.Cost)
 		if err != nil {
@@ -2597,6 +2604,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalUntap", nil
 	case cost.AdditionalRemoveCounter:
 		return "cost.AdditionalRemoveCounter", nil
+	case cost.AdditionalReturnUnblockedAttacker:
+		return "cost.AdditionalReturnUnblockedAttacker", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
 	}

@@ -1289,7 +1289,7 @@ func lowerProtectionAbility(
 	return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
 }
 
-// lowerKeywordDispatch tries Enchant, Protection, Equip, and Cycling — the
+// lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, and Ninjutsu — the
 // single-keyword special cases that each produce a full abilityLowering.
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
@@ -1320,6 +1320,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	if ninjutsuAbility, ok, diag := lowerNinjutsuAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&ninjutsuAbility, ability, syntax), true, nil
 	}
 	return abilityLowering{}, false, nil
 }
@@ -1510,6 +1516,51 @@ func lowerCyclingAbility(
 		)
 	}
 	return game.CyclingActivatedAbility(manaCost), true, nil
+}
+
+func lowerNinjutsuAbility(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.ActivatedAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Ninjutsu" {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Keywords[0]
+	if keyword.Parameter == "" ||
+		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Effects) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	manaCost, err := parseManaCostValue(keyword.Parameter)
+	if err != nil || len(manaCost) == 0 {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	for _, token := range syntax.Tokens {
+		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+			continue
+		}
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ninjutsu ability",
+			"the executable source backend supports only exact Ninjutsu with a mana cost",
+		)
+	}
+	return game.NinjutsuActivatedAbility(manaCost), true, nil
 }
 
 func lowerStaticPTBuff(
