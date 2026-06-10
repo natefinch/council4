@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -1041,6 +1042,27 @@ func TestLowerProliferateSpell(t *testing.T) {
 	mode := face.SpellAbility.Val.Modes[0]
 	if _, ok := mode.Sequence[0].Primitive.(game.Proliferate); !ok {
 		t.Fatalf("primitive = %T, want game.Proliferate", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerFixedCounterSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Counter",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Put two +1/+1 counters on target creature.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || mode.Targets[0].Predicate.PermanentTypes[0] != types.Creature {
+		t.Fatalf("targets = %+v, want one creature target", mode.Targets)
+	}
+	add, ok := mode.Sequence[0].Primitive.(game.AddCounter)
+	if !ok ||
+		add.Amount.Value() != 2 ||
+		add.CounterKind != counter.PlusOnePlusOne ||
+		add.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("primitive = %+v, want two +1/+1 counters on target 0", mode.Sequence[0].Primitive)
 	}
 }
 

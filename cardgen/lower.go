@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -2023,6 +2024,8 @@ func lowerSingleEffectSpell(
 		})
 	case oracle.EffectReturn:
 		return lowerFixedBounceSpell(ability)
+	case oracle.EffectPut:
+		return lowerFixedCounterSpell(ability)
 	case oracle.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ability)
 	default:
@@ -2032,6 +2035,102 @@ func lowerSingleEffectSpell(
 			"the executable source backend does not yet lower this spell ability",
 		)
 	}
+}
+
+func lowerFixedCounterSpell(
+	ability oracle.CompiledAbility,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
+	if len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		!effect.Amount.Known ||
+		effect.Amount.Value <= 0 ||
+		effect.Negated ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported spell ability",
+			"the executable source backend does not yet lower this spell ability",
+		)
+	}
+	target, ok := permanentTargetSpec(ability.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported spell ability",
+			"the executable source backend does not yet lower this spell ability",
+		)
+	}
+
+	var kind counter.Kind
+	var counterName string
+	switch {
+	case strings.Contains(effect.Text, "+1/+1 counter"):
+		kind = counter.PlusOnePlusOne
+		counterName = "+1/+1"
+	case strings.Contains(effect.Text, "-1/-1 counter"):
+		kind = counter.MinusOneMinusOne
+		counterName = "-1/-1"
+	default:
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported spell ability",
+			"the executable source backend does not yet lower this spell ability",
+		)
+	}
+	if !isExactPutCounterText(
+		ability.Text,
+		ability.Targets[0].Text,
+		effect.Amount.Value,
+		counterName,
+	) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported spell ability",
+			"the executable source backend does not yet lower this spell ability",
+		)
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(effect.Amount.Value),
+				Object:      game.TargetPermanentReference(0),
+				CounterKind: kind,
+			},
+		}},
+	}.Ability(), nil
+}
+
+func isExactPutCounterText(text, targetText string, amount int, counterName string) bool {
+	amountWords := []string{strconv.Itoa(amount)}
+	switch amount {
+	case 1:
+		amountWords = append(amountWords, "a", "one")
+	case 2:
+		amountWords = append(amountWords, "two")
+	case 3:
+		amountWords = append(amountWords, "three")
+	case 4:
+		amountWords = append(amountWords, "four")
+	case 5:
+		amountWords = append(amountWords, "five")
+	default:
+	}
+	noun := "counters"
+	if amount == 1 {
+		noun = "counter"
+	}
+	for _, amountWord := range amountWords {
+		if text == fmt.Sprintf("Put %s %s %s on %s.", amountWord, counterName, noun, targetText) {
+			return true
+		}
+	}
+	return false
 }
 
 func textWithoutDelimited(text string, span oracle.Span, groups []oracle.Delimited) string {

@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 2,836 / 31,834**
+**Cards supported: 2,875 / 31,834**
 
 The pipeline is:
 
@@ -123,7 +123,8 @@ destruction, exile, return-to-hand, and power/toughness changes with common
 controller, tapped-state, and combat-state target restrictions, narrow mass
 destruction, fixed or `X` draw and life changes, fixed controller scry and surveil,
 exact investigate and proliferate, fixed controller or target-player discard
-and mill, one-target tap, untap, and regeneration, exact fights between two
+and mill, fixed +1/+1 and -1/-1 counter placement on one target permanent,
+one-target tap, untap, and regeneration, exact fights between two
 target creatures, and fixed power/toughness buffs on enchanted creature, equipped creature,
 creatures you control, other creatures you control, Walls, artifacts, tokens,
 and creatures your opponents control.

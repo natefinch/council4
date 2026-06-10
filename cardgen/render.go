@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -22,6 +23,7 @@ const (
 	importGame    = "github.com/natefinch/council4/mtg/game"
 	importColor   = "github.com/natefinch/council4/mtg/game/color"
 	importCompare = "github.com/natefinch/council4/mtg/game/compare"
+	importCounter = "github.com/natefinch/council4/mtg/game/counter"
 	importCost    = "github.com/natefinch/council4/mtg/game/cost"
 	importMana    = "github.com/natefinch/council4/mtg/game/mana"
 	importTypes   = "github.com/natefinch/council4/mtg/game/types"
@@ -1016,6 +1018,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: AddMana kind has unexpected concrete type")
 		}
 		return r.renderAddMana(ctx, &value)
+	case game.PrimitiveAddCounter:
+		value, ok := primitive.(game.AddCounter)
+		if !ok {
+			return "", errors.New("render: internal error: AddCounter kind has unexpected concrete type")
+		}
+		return r.renderAddCounter(ctx, &value)
 	case game.PrimitiveModifyPT:
 		value, ok := primitive.(game.ModifyPT)
 		if !ok {
@@ -1033,6 +1041,28 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	var kind string
+	switch value.CounterKind {
+	case counter.PlusOnePlusOne:
+		kind = "counter.PlusOnePlusOne"
+	case counter.MinusOneMinusOne:
+		kind = "counter.MinusOneMinusOne"
+	default:
+		return "", fmt.Errorf("render: unsupported counter kind %d", value.CounterKind)
+	}
+	ctx.need(importCounter)
+	return structLit("game.AddCounter", []string{
+		fmt.Sprintf("Amount: %s,", renderQuantity(value.Amount)),
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("CounterKind: %s,", kind),
+	}), nil
 }
 
 func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {

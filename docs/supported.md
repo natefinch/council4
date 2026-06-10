@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 2,836
+Cards supported: 2,875
 
 - +2 Mace
 - Aardvark Sloth
@@ -12,6 +12,7 @@ Cards supported: 2,836
 - Acolyte of Xathrid
 - Adult Gold Dragon
 - Adventurer's Inn
+- Adventurous Eater // Have a Bite
 - Aegis Turtle
 - Aegis of the Heavens
 - Aerial Responder
@@ -162,13 +163,16 @@ Cards supported: 2,836
 - Azorius Guildgate
 - Azorius Knight-Arbiter
 - Azorius Skyguard
+- Azula Always Lies
 - Azure Drake
 - Azure Mage
 - Back to Nature
+- Backup Agent
 - Badger
 - Badlands
 - Balduvian Barbarians
 - Balduvian Bears
+- Baleful Ammit
 - Baleful Strix
 - Ballistic Boulder
 - Balloon
@@ -198,6 +202,7 @@ Cards supported: 2,836
 - Battering Craghorn
 - Battle Hurda
 - Battlefield Raptor
+- Battlegrowth
 - Battlewise Valor
 - Bay Falcon
 - Bayou
@@ -247,6 +252,7 @@ Cards supported: 2,836
 - Blasted Landscape
 - Blaze
 - Blessed Orator
+- Blight Rot
 - Blightbelly Rat
 - Blighted Agent
 - Blightstep Pathway // Searstep Pathway
@@ -282,6 +288,7 @@ Cards supported: 2,836
 - Bogstomper
 - Bolt of Keranos
 - Bombard
+- Bond Beetle
 - Bone Pit Brute
 - Bone Saw
 - Bonebreaker Giant
@@ -448,6 +455,7 @@ Cards supported: 2,836
 - Construct
 - Consulate Skygate
 - Consult the Necrosages
+- Contagion Clasp
 - Contagious Nim
 - Contaminated Aquifer
 - Contingency Plan
@@ -479,6 +487,7 @@ Cards supported: 2,836
 - Creeping Corrosion
 - Crenellated Wall
 - Crimson Kobolds
+- Crocodile of the Crossing
 - Crooked Custodian
 - Crookshank Kobolds
 - Crude Rampart
@@ -487,6 +496,7 @@ Cards supported: 2,836
 - Crush Contraband
 - Crystacean
 - Crystal Ball
+- Cultbrand Cinder
 - Cultist's Staff
 - Cumber Stone
 - Curio Vendor
@@ -523,6 +533,7 @@ Cards supported: 2,836
 - Darksteel Sentinel
 - Darkwatch Elves
 - Daru Lancer
+- Dauntless Survivor
 - Dawn Gryff
 - Dawn's Light Archer
 - Dawnhart Rejuvenator
@@ -621,6 +632,7 @@ Cards supported: 2,836
 - Dragon
 - Dragon
 - Dragon Bell Monk
+- Dragon Blood
 - Dragon Elemental
 - Dragon Illusion
 - Dragon Moose
@@ -786,8 +798,10 @@ Cards supported: 2,836
 - Ferocious Charge
 - Ferocious Zheng
 - Festering Goblin
+- Festering Mummy
 - Festering Thicket
 - Fetid Pools
+- Fevered Convulsions
 - Field Creeper
 - Fields of Strife
 - Fiery Finish
@@ -924,6 +938,7 @@ Cards supported: 2,836
 - Glorious Anthem
 - Glory Seeker
 - Glowing Anemone
+- Gnarled Effigy
 - Gnarled Mass
 - Gnawing Vermin
 - Gnome
@@ -937,6 +952,7 @@ Cards supported: 2,836
 - Goblin
 - Goblin // Soldier
 - Goblin Assailant
+- Goblin Assault Team
 - Goblin Berserker
 - Goblin Brigand
 - Goblin Bully
@@ -1032,6 +1048,7 @@ Cards supported: 2,836
 - Gurmag Angler
 - Gurmag Swiftwing
 - Gutter Skulk
+- Guul Draz Mucklord
 - Haazda Officer
 - Hagra Sharpshooter
 - Halberdier
@@ -1214,13 +1231,16 @@ Cards supported: 2,836
 - Inspiring Vantage
 - Invisible Stalker
 - Invoke the Firemind
+- Iron Bully
 - Iron Giant
 - Iron Myr
 - Iron Tusk Elephant
 - Iron Will
 - Iron-Barb Hellion
 - Ironclad Krovod
+- Ironpaw Aspirant
 - Ironroot Treefolk
+- Ironshell Beetle
 - Irrigated Farmland
 - Isamaru, Hound of Konda
 - Island
@@ -1237,6 +1257,7 @@ Cards supported: 2,836
 - Jayemdae Tome
 - Jedit Ojanen
 - Jedit's Dragoons
+- Jeong Jeong's Deserters
 - Jerrard of the Closed Fist
 - Jeskai Sage
 - Jeskai Student
@@ -1334,6 +1355,7 @@ Cards supported: 2,836
 - Krosan Colossus
 - Krovikan Scoundrel
 - Krumar Bond-Kin
+- Kujar Seedsculptor
 - Kyoshi Warrior Guard
 - Kyren Glider
 - Laboratory Brute
@@ -1350,6 +1372,7 @@ Cards supported: 2,836
 - Latch Seeker
 - Lathnu Sailback
 - Lava Serpent
+- Lawless Broker
 - Lay Waste
 - Lazotep Behemoth
 - Leaden Myr
@@ -1365,6 +1388,7 @@ Cards supported: 2,836
 - Library
 - Lich's Caress
 - Lifespring Druid
+- Light of Hope
 - Lightning Angel
 - Lightning Blast
 - Lightning Bolt
@@ -1453,6 +1477,7 @@ Cards supported: 2,836
 - Merfolk
 - Merfolk Mesmerist
 - Merfolk Secretkeeper // Venture Deeper
+- Merfolk Skydiver
 - Merfolk Wizard
 - Merfolk of the Depths
 - Merfolk of the Pearl Trident
@@ -1556,6 +1581,7 @@ Cards supported: 2,836
 - Necrogen Scudder
 - Necromancer's Assistant
 - Necron Warrior
+- Necropede
 - Needlepeak Spider
 - Needleshot Gourna
 - Needlethorn Drake
@@ -1654,6 +1680,7 @@ Cards supported: 2,836
 - Orc Army
 - Order of the Sacred Bell
 - Oreskos Swiftclaw
+- Ornery Kudu
 - Ornithopter
 - Ornithopter
 - Ornithopter of Paradise
@@ -1962,6 +1989,7 @@ Cards supported: 2,836
 - Satyr
 - Satyr
 - Satyr
+- Satyr Grovedancer
 - Satyr Rambler
 - Savage Lands
 - Savage Mansion
@@ -1974,6 +2002,7 @@ Cards supported: 2,836
 - Scalebane's Elite
 - Scaled Behemoth
 - Scaled Wurm
+- Scar
 - Scarblade Scout
 - Scarecrow
 - Scarecrow
@@ -2125,6 +2154,7 @@ Cards supported: 2,836
 - Skeleton
 - Skeleton
 - Skeleton Pirate
+- Skinrender
 - Skull Prophet
 - Sky Diamond
 - Sky Ruin Drake
@@ -2206,6 +2236,7 @@ Cards supported: 2,836
 - Spara's Headquarters
 - Spark Jolt
 - Spark Spray
+- Sparring Construct
 - Sparring Mummy
 - Spawn
 - Spectacle Summit
@@ -2223,6 +2254,7 @@ Cards supported: 2,836
 - Spider-Rex, Daring Dino
 - Spike Jester
 - Spiked Baloth
+- Spinal Centipede
 - Spined Basher
 - Spined Karok
 - Spined Wurm
@@ -2278,6 +2310,7 @@ Cards supported: 2,836
 - Steadfast Guard
 - Steadfast Paladin
 - Steadfast Sentinel
+- Steadfast Sentry
 - Steel Wall
 - Steeple Roc
 - Sterling Hound
@@ -2311,6 +2344,7 @@ Cards supported: 2,836
 - Stroke of Genius
 - Study
 - Submerged Boneyard
+- Subtle Strike
 - Suburban Sanctuary
 - Sudden Strike
 - Sulfur Falls
@@ -2330,6 +2364,7 @@ Cards supported: 2,836
 - Sunpetal Grove
 - Sunspire Griffin
 - Suntail Hawk
+- Supply-Line Cranes
 - Supreme Verdict
 - Surrakar Banisher
 - Surveilling Sprite
@@ -2400,6 +2435,7 @@ Cards supported: 2,836
 - Terrian, World Tyrant
 - Territorial Roc
 - Terror of the Fairgrounds
+- Teyo's Lightshield
 - Thassa's Bounty
 - Thaumaturge's Familiar
 - The Atropal
@@ -2437,6 +2473,7 @@ Cards supported: 2,836
 - Tidings
 - Tigereye Cameo
 - Timber Gorge
+- Timberland Guide
 - Timeless Dragon
 - Tine Shrike
 - Tiny
@@ -2498,6 +2535,7 @@ Cards supported: 2,836
 - Troll-Horn Cameo
 - Tropical Island
 - Trusty Machete
+- Tuinvale Treefolk // Oaken Boon
 - Tuknir Deathlock
 - Tundra
 - Tundra Wall
@@ -2575,6 +2613,7 @@ Cards supported: 2,836
 - Vanquisher's Axe
 - Varmint
 - Vassal Soul
+- Vastwood Fortification // Vastwood Thicket
 - Vastwood Gorger
 - Vault of Whispers
 - Vecna

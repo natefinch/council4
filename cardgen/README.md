@@ -41,6 +41,8 @@ Vanguard cards are excluded with explicit report reasons.
    their corresponding sealed `game.KeywordAbility` values; unsupported
    parameter forms remain fail-closed. Exact `X` quantities and common target
    restrictions lower into runtime quantities and structured target predicates.
+   Exact fixed +1/+1 and -1/-1 counter placement lowers into typed
+   `game.AddCounter` instructions.
    Common enters-tapped land-count and basic-land-subtype conditions lower into
    typed replacement predicates.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
