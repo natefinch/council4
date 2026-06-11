@@ -1779,6 +1779,306 @@ func TestLowerTapManaAbilityChoice(t *testing.T) {
 	}
 }
 
+// TestLowerManaAbilityMultiSymbolOutput verifies that "{T}: Add {G}{W}." is
+// lowered to a mana ability with two sequential AddMana instructions, one for
+// each mana symbol. This is the single-tap / two-color-output shape shared by
+// dual-color tap lands (e.g. Sungrass Prairie).
+func TestLowerManaAbilityMultiSymbolOutput(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Land",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{T}: Add {G}{W}.",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	ab := face.ManaAbilities[0]
+	if ab.ManaCost.Exists {
+		t.Fatalf("ManaCost = %v, want none", ab.ManaCost)
+	}
+	if len(ab.AdditionalCosts) != 1 || ab.AdditionalCosts[0].Kind != cost.AdditionalTap {
+		t.Fatalf("AdditionalCosts = %#v, want [tap]", ab.AdditionalCosts)
+	}
+	mode := ab.Content.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+	}
+	first, ok := mode.Sequence[0].Primitive.(game.AddMana)
+	if !ok {
+		t.Fatalf("sequence[0] = %T, want game.AddMana", mode.Sequence[0].Primitive)
+	}
+	second, ok := mode.Sequence[1].Primitive.(game.AddMana)
+	if !ok {
+		t.Fatalf("sequence[1] = %T, want game.AddMana", mode.Sequence[1].Primitive)
+	}
+	if first.ManaColor != mana.G {
+		t.Fatalf("first mana color = %q, want G", first.ManaColor)
+	}
+	if second.ManaColor != mana.W {
+		t.Fatalf("second mana color = %q, want W", second.ManaColor)
+	}
+}
+
+// TestLowerManaAbilityManaCostAndTap verifies that "{1}, {T}: Add {G}{W}." is
+// lowered to a mana ability with ManaCost {1} and AdditionalCosts [tap], plus
+// two sequential AddMana instructions. This is the Signet / mana-cost-tap-dual
+// shape (e.g. Selesnya Signet, Sungrass Prairie variant).
+func TestLowerManaAbilityManaCostAndTap(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Signet",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{1}, {T}: Add {G}{W}.",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	ab := face.ManaAbilities[0]
+	if !ab.ManaCost.Exists {
+		t.Fatal("ManaCost missing, want {1}")
+	}
+	if len(ab.ManaCost.Val) != 1 {
+		t.Fatalf("ManaCost symbols = %d, want 1", len(ab.ManaCost.Val))
+	}
+	if len(ab.AdditionalCosts) != 1 || ab.AdditionalCosts[0].Kind != cost.AdditionalTap {
+		t.Fatalf("AdditionalCosts = %#v, want [tap]", ab.AdditionalCosts)
+	}
+	mode := ab.Content.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+	}
+	first, ok := mode.Sequence[0].Primitive.(game.AddMana)
+	if !ok || first.ManaColor != mana.G {
+		t.Fatalf("first AddMana = %v, want G", mode.Sequence[0].Primitive)
+	}
+	second, ok := mode.Sequence[1].Primitive.(game.AddMana)
+	if !ok || second.ManaColor != mana.W {
+		t.Fatalf("second AddMana = %v, want W", mode.Sequence[1].Primitive)
+	}
+}
+
+// TestLowerManaAbilityTapPayLife verifies that "{T}, Pay 1 life: Add {U} or {R}."
+// is lowered with a tap additional cost, a pay-life additional cost, and a
+// two-color mana choice. This is the pain-land / filter-land shape.
+func TestLowerManaAbilityTapPayLife(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pain Land",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{T}, Pay 1 life: Add {U} or {R}.",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	ab := face.ManaAbilities[0]
+	if ab.ManaCost.Exists {
+		t.Fatalf("ManaCost = %v, want none", ab.ManaCost)
+	}
+	if len(ab.AdditionalCosts) != 2 {
+		t.Fatalf("AdditionalCosts count = %d, want 2", len(ab.AdditionalCosts))
+	}
+	if ab.AdditionalCosts[0].Kind != cost.AdditionalTap {
+		t.Fatalf("AdditionalCosts[0].Kind = %v, want AdditionalTap", ab.AdditionalCosts[0].Kind)
+	}
+	if ab.AdditionalCosts[1].Kind != cost.AdditionalPayLife || ab.AdditionalCosts[1].Amount != 1 {
+		t.Fatalf("AdditionalCosts[1] = %#v, want AdditionalPayLife amount=1", ab.AdditionalCosts[1])
+	}
+	mode := ab.Content.Modes[0]
+	choose, ok := mode.Sequence[0].Primitive.(game.Choose)
+	if !ok || choose.Choice.Kind != game.ResolutionChoiceMana || len(choose.Choice.Colors) != 2 {
+		t.Fatalf("sequence[0] = %v, want mana choice of 2 colors", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerManaAbilitySacrificeSelf verifies that "Sacrifice this creature: Add {C}."
+// is lowered with an AdditionalSacrificeSource cost and a fixed colorless mana output.
+func TestLowerManaAbilitySacrificeSelf(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scion",
+		Layout:     "normal",
+		TypeLine:   "Creature — Eldrazi Scion",
+		OracleText: "Sacrifice this creature: Add {C}.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	ab := face.ManaAbilities[0]
+	if ab.ManaCost.Exists {
+		t.Fatalf("ManaCost = %v, want none", ab.ManaCost)
+	}
+	if len(ab.AdditionalCosts) != 1 || ab.AdditionalCosts[0].Kind != cost.AdditionalSacrificeSource {
+		t.Fatalf("AdditionalCosts = %#v, want [sacrifice source]", ab.AdditionalCosts)
+	}
+	mode := ab.Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence length = %d, want 1", len(mode.Sequence))
+	}
+	addMana, ok := mode.Sequence[0].Primitive.(game.AddMana)
+	if !ok || addMana.ManaColor != mana.C {
+		t.Fatalf("sequence[0] = %v, want AddMana{C}", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerManaAbilityPureManaAnyColor verifies that "{G}: Add one mana of any
+// color." is lowered with a mana cost {G}, no additional costs, and a five-color
+// choice output. This is the Orochi Leafcaller / Nomadic Elf shape.
+func TestLowerManaAbilityPureManaAnyColor(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Leafcaller",
+		Layout:     "normal",
+		TypeLine:   "Creature — Snake Shaman",
+		OracleText: "{G}: Add one mana of any color.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	ab := face.ManaAbilities[0]
+	if !ab.ManaCost.Exists {
+		t.Fatal("ManaCost missing, want {G}")
+	}
+	if len(ab.AdditionalCosts) != 0 {
+		t.Fatalf("AdditionalCosts = %#v, want empty", ab.AdditionalCosts)
+	}
+	mode := ab.Content.Modes[0]
+	choose, ok := mode.Sequence[0].Primitive.(game.Choose)
+	if !ok || choose.Choice.Kind != game.ResolutionChoiceMana || len(choose.Choice.Colors) != 5 {
+		t.Fatalf("sequence[0] = %v, want any-color mana choice", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerManaAbilityPureManaFixed verifies that "{R}: Add {B}." is lowered
+// with a mana cost {R}, no additional costs, and a single AddMana{B} instruction.
+// This is the Agent of Stromgald / mana-conversion shape.
+func TestLowerManaAbilityPureManaFixed(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Agent",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Cleric",
+		OracleText: "{R}: Add {B}.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	ab := face.ManaAbilities[0]
+	if !ab.ManaCost.Exists {
+		t.Fatal("ManaCost missing, want {R}")
+	}
+	if len(ab.AdditionalCosts) != 0 {
+		t.Fatalf("AdditionalCosts = %#v, want empty", ab.AdditionalCosts)
+	}
+	mode := ab.Content.Modes[0]
+	addMana, ok := mode.Sequence[0].Primitive.(game.AddMana)
+	if !ok || addMana.ManaColor != mana.B {
+		t.Fatalf("sequence[0] = %v, want AddMana{B}", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerManaAbilityDiscardCost verifies that "Discard a card: Add {B}." is
+// lowered with an AdditionalDiscard cost and a single AddMana{B} output.
+// This is the Skirge Familiar family shape (mana ability with discard cost).
+func TestLowerManaAbilityDiscardCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Skirge",
+		Layout:     "normal",
+		TypeLine:   "Creature — Imp",
+		OracleText: "Discard a card: Add {B}.",
+		Power:      new("3"),
+		Toughness:  new("1"),
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	ab := face.ManaAbilities[0]
+	if ab.ManaCost.Exists {
+		t.Fatalf("ManaCost = %v, want none", ab.ManaCost)
+	}
+	if len(ab.AdditionalCosts) != 1 || ab.AdditionalCosts[0].Kind != cost.AdditionalDiscard {
+		t.Fatalf("AdditionalCosts = %#v, want [discard]", ab.AdditionalCosts)
+	}
+	if ab.AdditionalCosts[0].Amount != 1 {
+		t.Fatalf("discard amount = %d, want 1", ab.AdditionalCosts[0].Amount)
+	}
+	mode := ab.Content.Modes[0]
+	addMana, ok := mode.Sequence[0].Primitive.(game.AddMana)
+	if !ok || addMana.ManaColor != mana.B {
+		t.Fatalf("sequence[0] = %v, want AddMana{B}", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerManaAbilityTypedSacrifice verifies that "Sacrifice a creature: Add {C}{C}."
+// is lowered with an AdditionalSacrifice cost targeting creatures and a two-instruction
+// colorless mana output. This is the Ashnod's Altar shape.
+func TestLowerManaAbilityTypedSacrifice(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Altar",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Sacrifice a creature: Add {C}{C}.",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	ab := face.ManaAbilities[0]
+	if ab.ManaCost.Exists {
+		t.Fatalf("ManaCost = %v, want none", ab.ManaCost)
+	}
+	if len(ab.AdditionalCosts) != 1 {
+		t.Fatalf("AdditionalCosts count = %d, want 1", len(ab.AdditionalCosts))
+	}
+	sacCost := ab.AdditionalCosts[0]
+	if sacCost.Kind != cost.AdditionalSacrifice || sacCost.Amount != 1 ||
+		!sacCost.MatchPermanentType || sacCost.PermanentType != types.Creature {
+		t.Fatalf("AdditionalCosts[0] = %#v, want sacrifice-a-creature", sacCost)
+	}
+	mode := ab.Content.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+	}
+	for i, instr := range mode.Sequence {
+		addMana, ok := instr.Primitive.(game.AddMana)
+		if !ok || addMana.ManaColor != mana.C {
+			t.Fatalf("sequence[%d] = %v, want AddMana{C}", i, instr.Primitive)
+		}
+	}
+}
+
+// TestLowerManaAbilityRejectsComplexBody verifies that mana abilities with body
+// patterns outside the three supported shapes (fixed, choice, any-color) are
+// rejected. "Three mana in any combination" requires Amount > 1 with a
+// repeated-choice mechanism that is not yet supported.
+func TestLowerManaAbilityRejectsComplexBody(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Goblin",
+		Layout:     "normal",
+		TypeLine:   "Creature — Goblin",
+		OracleText: "{T}, Sacrifice a Forest: Add three mana in any combination of {R} and/or {G}.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostic for complex mana body")
+	}
+}
+
 func TestLowerEntersTappedReplacement(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
