@@ -210,6 +210,9 @@ func (s *selectionSubject) hasKeyword(keyword game.Keyword) bool {
 	if s.kind == subjectPermanent {
 		return s.values.keywords[keyword]
 	}
+	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
+		return s.card.Def.HasKeyword(keyword)
+	}
 	return false
 }
 

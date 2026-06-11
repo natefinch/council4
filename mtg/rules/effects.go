@@ -264,8 +264,13 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 		if obj == nil {
 			return 0, zone.None, false
 		}
+		cardTargetIndex := 0
 		for _, target := range obj.Targets {
 			if target.Kind != game.TargetCard || target.CardID == 0 {
+				continue
+			}
+			if cardTargetIndex != ref.TargetIndex {
+				cardTargetIndex++
 				continue
 			}
 			card, ok := g.GetCardInstance(target.CardID)
@@ -546,6 +551,10 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		}
 	case game.DynamicAmountCountSelector:
 		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
+	case game.DynamicAmountCountCardsInZone:
+		if dynamic.Player != nil && dynamic.Selection != nil {
+			amount = countCardsInZoneMatchingSelection(g, obj, controller, *dynamic.Player, dynamic.CardZone, *dynamic.Selection)
+		}
 	case game.DynamicAmountPreviousEffectResult:
 		key := dynamicResultKey(dynamic)
 		if obj != nil && key != "" {
@@ -576,6 +585,56 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+func countCardsInZoneMatchingSelection(g *game.Game, obj *game.StackObject, controller game.PlayerID, playerRef game.PlayerReference, cardZone zone.Type, selection game.Selection) int {
+	playerID, ok := resolvePlayerReference(g, obj, playerRef)
+	if !ok {
+		return 0
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return 0
+	}
+	collection, ok := playerCardsInZone(player, cardZone)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, cardID := range collection.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		subject := selectionSubject{
+			kind:       subjectCard,
+			g:          g,
+			card:       card,
+			controller: card.Owner,
+			viewer:     controller,
+		}
+		if matchSelection(&subject, &selection) {
+			count++
+		}
+	}
+	return count
+}
+
+func playerCardsInZone(player *game.Player, cardZone zone.Type) (*zone.Zone, bool) {
+	switch cardZone {
+	case zone.Library:
+		return &player.Library, true
+	case zone.Hand:
+		return &player.Hand, true
+	case zone.Graveyard:
+		return &player.Graveyard, true
+	case zone.Exile:
+		return &player.Exile, true
+	case zone.Command:
+		return &player.CommandZone, true
+	default:
+		return nil, false
+	}
 }
 
 func dynamicResultKey(dynamic game.DynamicAmount) string {

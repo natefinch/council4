@@ -611,6 +611,94 @@ func TestCardTargetedSpellCreatesActionsForMatchingGraveyardCards(t *testing.T) 
 	}
 }
 
+func TestCardTargetedSpellMatchesCardsWithCyclingInGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cyclingID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Cycling Card",
+		ActivatedAbilities: []game.ActivatedAbility{
+			game.CyclingActivatedAbility(cost.Mana{cost.W}),
+		},
+	}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Plain Card",
+	}})
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Excavation",
+		Types: []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      game.TargetAllowCard,
+				TargetZone: zone.Graveyard,
+				Selection: opt.Val(game.Selection{
+					Keyword:    game.Cycling,
+					Controller: game.ControllerYou,
+				}),
+			}},
+			Sequence: []game.Instruction{{Primitive: game.MoveCard{
+				Card:        game.CardReference{Kind: game.CardReferenceTarget},
+				FromZone:    zone.Graveyard,
+				Destination: zone.Hand,
+			}}},
+		}.Ability()),
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	want := action.CastSpell(spellID, []game.Target{currentCardTarget(t, g, cyclingID)}, 0, nil)
+	if !containsAction(legal, want) {
+		t.Fatalf("legal actions did not include cycling-card target action %+v", want)
+	}
+	for _, act := range legal {
+		cast, ok := act.CastSpellPayload()
+		if !ok || cast.CardID != spellID {
+			continue
+		}
+		if len(cast.Targets) != 1 || cast.Targets[0] != currentCardTarget(t, g, cyclingID) {
+			t.Fatalf("unexpected cycling card target %+v", cast.Targets)
+		}
+	}
+}
+
+func TestIndexedCardTargetReferencesMoveMultipleTargetCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	firstID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Cycling"}})
+	secondID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Cycling"}})
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.MoveCard{
+			Card:        game.CardReference{Kind: game.CardReferenceTarget},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}},
+		{Primitive: game.MoveCard{
+			Card:        game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: 1},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}},
+	}, []game.Target{currentCardTarget(t, g, firstID), currentCardTarget(t, g, secondID)})
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{
+		MinTargets: 0,
+		MaxTargets: 2,
+		Allow:      game.TargetAllowCard,
+		TargetZone: zone.Graveyard,
+	}}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !g.Players[game.Player1].Hand.Contains(firstID) || !g.Players[game.Player1].Hand.Contains(secondID) {
+		t.Fatalf("hand = %+v, want both target cards moved", g.Players[game.Player1].Hand.All())
+	}
+}
+
 func currentCardTarget(t *testing.T, g *game.Game, cardID id.ID) game.Target {
 	t.Helper()
 	card, ok := g.GetCardInstance(cardID)

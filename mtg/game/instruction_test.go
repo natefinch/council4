@@ -235,6 +235,31 @@ func TestValidateInstructionSequenceRejectsOutOfRangePrimitiveTarget(t *testing.
 	}
 }
 
+func TestValidateInstructionSequenceCardReferenceIndexesCardTargetsOnly(t *testing.T) {
+	targets := []TargetSpec{
+		{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPlayer},
+		{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowCard, TargetZone: zone.Graveyard},
+	}
+	seq := []Instruction{{Primitive: MoveCard{
+		Card:        CardReference{Kind: CardReferenceTarget, TargetIndex: 0},
+		FromZone:    zone.Graveyard,
+		Destination: zone.Hand,
+	}}}
+
+	if err := ValidateInstructionSequence(seq, targets); err != nil {
+		t.Fatalf("first card target after player target: ValidateInstructionSequence() = %v, want nil", err)
+	}
+
+	seq[0].Primitive = MoveCard{
+		Card:        CardReference{Kind: CardReferenceTarget, TargetIndex: 1},
+		FromZone:    zone.Graveyard,
+		Destination: zone.Hand,
+	}
+	if err := ValidateInstructionSequence(seq, targets); err == nil {
+		t.Fatal("second card target with one card-target spec: ValidateInstructionSequence() = nil, want error")
+	}
+}
+
 func TestValidateInstructionSequenceRejectsNilPrimitive(t *testing.T) {
 	err := ValidateInstructionSequence([]Instruction{{}})
 	if err == nil || !strings.Contains(err.Error(), "nil Primitive") {
