@@ -231,6 +231,84 @@ func TestTriggerPatternStackSpellDoesNotMatchAbilityTargetingSelf(t *testing.T) 
 	}
 }
 
+func TestTriggerPatternControlledCreatureAttackMatchesOnlyIntendedSubject(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	attacker := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:      game.EventAttackerDeclared,
+		Controller: game.TriggerControllerYou,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+	event := game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: attacker.ObjectID,
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("controlled-creature attack pattern did not match intended attacker")
+	}
+
+	opponent := addCombatCreaturePermanent(g, game.Player2)
+	event.Controller = game.Player2
+	event.PermanentID = opponent.ObjectID
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("controlled-creature attack pattern matched opponent's attacker")
+	}
+
+	land := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Attacking Land",
+		Types: []types.Card{types.Land},
+	}})
+	event.Controller = game.Player1
+	event.PermanentID = land.ObjectID
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("controlled-creature attack pattern matched noncreature attacker")
+	}
+}
+
+func TestTriggerPatternAttachedCreatureBlocksMatchesOnlyAttachment(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	blocker := addCombatCreaturePermanent(g, game.Player1)
+	other := addCombatCreaturePermanent(g, game.Player1)
+	equipment := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Equipment",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
+	}})
+	if !attachPermanent(g, equipment, blocker) {
+		t.Fatal("attachPermanent failed")
+	}
+	pattern := &game.TriggerPattern{
+		Event:  game.EventBlockerDeclared,
+		Source: game.TriggerSourceAttachedPermanent,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+	event := game.Event{
+		Kind:        game.EventBlockerDeclared,
+		Controller:  game.Player1,
+		PermanentID: blocker.ObjectID,
+	}
+	if !triggerMatchesEvent(g, equipment, pattern, event) {
+		t.Fatal("attached-creature block pattern did not match equipped blocker")
+	}
+	event.PermanentID = other.ObjectID
+	if triggerMatchesEvent(g, equipment, pattern, event) {
+		t.Fatal("attached-creature block pattern matched an unattached blocker")
+	}
+	event.Kind = game.EventAttackerDeclared
+	event.PermanentID = blocker.ObjectID
+	if triggerMatchesEvent(g, equipment, pattern, event) {
+		t.Fatal("attached-creature block pattern matched adjacent attack event")
+	}
+}
+
 func TestExaltedTriggersForCreatureAttackingAlone(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

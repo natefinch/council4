@@ -7,3 +7,11 @@ Phase 9 builds triggered abilities, replacement/prevention effects, and reportin
 - **Logs as events**: Rejected because report logs omit rules details and would force gameplay behavior to depend on analytics shape.
 - **Direct callbacks inside each mutation**: Rejected because triggers and replacement effects would become scattered across unrelated rule helpers.
 - **Typed game event data in `game/`, behavior in `rules/` (chosen)**: Keeps event emission close to state mutation while providing one shared vocabulary for trigger specs, replacement/prevention effects, and derived logs.
+
+Oracle trigger wording is adapted at generation time rather than interpreted by
+runtime rules or by the executable backend. `cardgen/oracle` recognizes exact
+phrases into a source-spanned semantic Trigger Pattern with its own closed
+vocabulary. `cardgen/trigger_pattern.go` mechanically lowers that value into
+`game.TriggerPattern`, and the centralized `rules` matcher remains the only
+runtime trigger matcher. Raw event-clause text is retained solely for
+diagnostics and exact source consumption.

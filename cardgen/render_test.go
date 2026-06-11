@@ -1819,9 +1819,7 @@ func TestRenderTriggerPatternSubjectSelectionNonToken(t *testing.T) {
 	}
 }
 
-// TestRenderTriggerPatternSubjectSelectionRejectsNonDiedEvent verifies that
-// SubjectSelection is rejected for non-EventPermanentDied events.
-func TestRenderTriggerPatternSubjectSelectionRejectsNonDiedEvent(t *testing.T) {
+func TestRenderTriggerPatternSubjectSelectionSupportsEnterEvent(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{
 		Event: game.EventPermanentEnteredBattlefield,
@@ -1829,8 +1827,12 @@ func TestRenderTriggerPatternSubjectSelectionRejectsNonDiedEvent(t *testing.T) {
 			RequiredTypes: []types.Card{types.Creature},
 		},
 	}
-	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
-		t.Fatal("expected error: SubjectSelection only allowed on EventPermanentDied patterns")
+	rendered, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "SubjectSelection: game.Selection{") {
+		t.Fatalf("rendered pattern missing SubjectSelection:\n%s", rendered)
 	}
 }
 
