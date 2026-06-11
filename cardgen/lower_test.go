@@ -7193,49 +7193,134 @@ func TestLowerAtTriggerOptional(t *testing.T) {
 	}
 }
 
-func TestLowerAtTriggerPrecombatMainPhaseFailsClosed(t *testing.T) {
+func TestLowerAtTriggerMainPhasePhrases(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-		Name:       "Test Planeswalker",
-		Layout:     "normal",
-		TypeLine:   "Creature — Human",
-		OracleText: "At the beginning of your precombat main phase, draw a card.",
-		Power:      new("2"),
-		Toughness:  new("2"),
-	}, "t")
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		phrase string
+		step   game.Step
+	}{
+		{"your first main phase", game.StepPrecombatMain},
+		{"your precombat main phase", game.StepPrecombatMain},
+		{"each of your first main phases", game.StepPrecombatMain},
+		{"your second main phase", game.StepPostcombatMain},
+		{"your postcombat main phase", game.StepPostcombatMain},
+		{"each of your postcombat main phases", game.StepPostcombatMain},
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostic for precombat main phase trigger, got none")
-	}
-	found := false
-	for _, d := range diagnostics {
-		if strings.Contains(d.Summary, "unsupported phase/step trigger phrase") {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected 'unsupported phase/step trigger phrase' diagnostic, got: %v", diagnostics)
+	for _, test := range tests {
+		t.Run(test.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Planner",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: "At the beginning of " + test.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Pattern.Step != test.step || trigger.Pattern.Controller != game.TriggerControllerYou {
+				t.Fatalf("trigger pattern = %+v, want step %v controlled by you", trigger.Pattern, test.step)
+			}
+		})
 	}
 }
 
-func TestLowerAtTriggerInterveningIfFailsClosed(t *testing.T) {
+func TestLowerAtTriggerEnchantedPlayerMainPhaseFailsClosed(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-		Name:       "Test Bear",
+		Name:       "Test Aura",
 		Layout:     "normal",
-		TypeLine:   "Creature — Bear",
-		OracleText: "At the beginning of your upkeep, if you control a creature, draw a card.",
-		Power:      new("2"),
-		Toughness:  new("2"),
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant player\nAt the beginning of each of enchanted player's postcombat main phases, draw a card.",
 	}, "t")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostic for intervening-if on at-trigger, got none")
+		t.Fatal("enchanted-player main-phase trigger unexpectedly lowered")
+	}
+	if !slices.ContainsFunc(diagnostics, func(d oracle.Diagnostic) bool {
+		return strings.Contains(d.Summary, "unsupported phase/step trigger phrase")
+	}) {
+		t.Fatalf("diagnostics = %#v, want unsupported phase/step trigger phrase", diagnostics)
+	}
+}
+
+func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		condition string
+		assert    func(*testing.T, game.Condition)
+	}{
+		{
+			name:      "controls creature",
+			condition: "if you control a creature",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				controls := condition.ControlsMatching
+				if !controls.Exists || !slices.Equal(controls.Val.Selection.RequiredTypes, []types.Card{types.Creature}) {
+					t.Fatalf("condition = %+v, want controls a creature", condition)
+				}
+			},
+		},
+		{
+			name:      "controller life",
+			condition: "if you have 10 or more life",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				if condition.ControllerLifeAtLeast != 10 {
+					t.Fatalf("ControllerLifeAtLeast = %d, want 10", condition.ControllerLifeAtLeast)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "At the beginning of your upkeep, " + test.condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.InterveningIf != test.condition || !trigger.InterveningCondition.Exists {
+				t.Fatalf("trigger = %+v, want %q intervening-if condition", trigger, test.condition)
+			}
+			test.assert(t, trigger.InterveningCondition.Val)
+		})
+	}
+}
+
+func TestLowerAtTriggerUnsupportedInterveningIfFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"if you gained 2 or more life this turn",
+		"if this creature came under your control since the beginning of your last upkeep",
+	} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "At the beginning of your upkeep, " + condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("unsupported intervening-if condition unexpectedly lowered")
+			}
+			if !strings.Contains(diagnostics[0].Detail, "does not support this intervening-if condition") {
+				t.Fatalf("diagnostics = %#v, want intervening-if diagnostic", diagnostics)
+			}
+		})
 	}
 }
 
@@ -7811,6 +7896,317 @@ func TestLowerHandCyclingGrantRejectsHistoric(t *testing.T) {
 	}
 }
 
+// ---- Gain-control spell tests (issue #224) ----
+
+// checkGainControlSequence validates the standard gain-control sequence:
+//
+//	Instruction 0: ApplyContinuous (LayerControl, NewController = Player1)
+//	Instruction 1 (optional): Untap
+//	Instruction 2 (optional): ApplyContinuous (LayerAbility, AddKeywords = [Haste])
+func checkGainControlPrimitive(t *testing.T, mode game.Mode, seqIdx int, duration game.EffectDuration) {
+	t.Helper()
+	prim, ok := mode.Sequence[seqIdx].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("sequence[%d] = %T, want game.ApplyContinuous", seqIdx, mode.Sequence[seqIdx].Primitive)
+	}
+	if !prim.Object.Exists || prim.Object.Val != game.TargetPermanentReference(0) {
+		t.Fatalf("ApplyContinuous.Object = %v, want TargetPermanentReference(0)", prim.Object)
+	}
+	if len(prim.ContinuousEffects) != 1 {
+		t.Fatalf("ContinuousEffects len = %d, want 1", len(prim.ContinuousEffects))
+	}
+	eff := prim.ContinuousEffects[0]
+	if eff.Layer != game.LayerControl {
+		t.Fatalf("Layer = %v, want LayerControl", eff.Layer)
+	}
+	if !eff.NewController.Exists || eff.NewController.Val != game.Player1 {
+		t.Fatalf("NewController = %v, want Player1", eff.NewController)
+	}
+	if prim.Duration != duration {
+		t.Fatalf("Duration = %v, want %v", prim.Duration, duration)
+	}
+}
+
+func checkUntapPrimitive(t *testing.T, mode game.Mode, seqIdx int) {
+	t.Helper()
+	untap, ok := mode.Sequence[seqIdx].Primitive.(game.Untap)
+	if !ok {
+		t.Fatalf("sequence[%d] = %T, want game.Untap", seqIdx, mode.Sequence[seqIdx].Primitive)
+	}
+	if untap.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("Untap.Object = %v, want TargetPermanentReference(0)", untap.Object)
+	}
+}
+
+func checkKeywordGrantPrimitive(t *testing.T, mode game.Mode, seqIdx int, keyword game.Keyword) {
+	t.Helper()
+	prim, ok := mode.Sequence[seqIdx].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("sequence[%d] = %T, want game.ApplyContinuous (keyword grant)", seqIdx, mode.Sequence[seqIdx].Primitive)
+	}
+	if !prim.Object.Exists || prim.Object.Val != game.TargetPermanentReference(0) {
+		t.Fatalf("keyword grant Object = %v, want TargetPermanentReference(0)", prim.Object)
+	}
+	if len(prim.ContinuousEffects) != 1 {
+		t.Fatalf("keyword grant ContinuousEffects len = %d, want 1", len(prim.ContinuousEffects))
+	}
+	eff := prim.ContinuousEffects[0]
+	if eff.Layer != game.LayerAbility {
+		t.Fatalf("keyword grant Layer = %v, want LayerAbility", eff.Layer)
+	}
+	if len(eff.AddKeywords) != 1 || eff.AddKeywords[0] != keyword {
+		t.Fatalf("AddKeywords = %v, want [%v]", eff.AddKeywords, keyword)
+	}
+	if prim.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("keyword grant Duration = %v, want DurationUntilEndOfTurn", prim.Duration)
+	}
+}
+
+func TestLowerGainControlUntapHasteSequence(t *testing.T) {
+	t.Parallel()
+	// Act of Treason pattern.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Act",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Untap that creature. It gains haste until end of turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1", len(mode.Targets))
+	}
+	if mode.Targets[0].Predicate.PermanentTypes[0] != types.Creature {
+		t.Fatalf("target type = %v, want Creature", mode.Targets[0].Predicate.PermanentTypes)
+	}
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence len = %d, want 3", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationUntilEndOfTurn)
+	checkUntapPrimitive(t, mode, 1)
+	checkKeywordGrantPrimitive(t, mode, 2, game.Haste)
+}
+
+func TestLowerGainControlUntapHasteScrySequence(t *testing.T) {
+	t.Parallel()
+	// Portent of Betrayal pattern: Gain control + Untap + Haste + Scry.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Portent",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Untap that creature. It gains haste until end of turn. Scry 1.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 4 {
+		t.Fatalf("sequence len = %d, want 4", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationUntilEndOfTurn)
+	checkUntapPrimitive(t, mode, 1)
+	checkKeywordGrantPrimitive(t, mode, 2, game.Haste)
+	scry, ok := mode.Sequence[3].Primitive.(game.Scry)
+	if !ok {
+		t.Fatalf("sequence[3] = %T, want game.Scry", mode.Sequence[3].Primitive)
+	}
+	if scry.Amount.Value() != 1 {
+		t.Fatalf("Scry.Amount = %v, want 1", scry.Amount)
+	}
+}
+
+func TestLowerGainControlCounterUntapHasteSequence(t *testing.T) {
+	t.Parallel()
+	// Mark of Mutiny's actual oracle text pattern: counter and untap are
+	// in the same sentence ("Put a +1/+1 counter on it and untap it."),
+	// followed by a haste grant.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mark",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Put a +1/+1 counter on it and untap it. That creature gains haste until end of turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 4 {
+		t.Fatalf("sequence len = %d, want 4", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationUntilEndOfTurn)
+	addCtr, ok := mode.Sequence[1].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("sequence[1] = %T, want game.AddCounter", mode.Sequence[1].Primitive)
+	}
+	if addCtr.Object != game.TargetPermanentReference(0) || addCtr.Amount.Value() != 1 {
+		t.Fatalf("AddCounter = %+v", addCtr)
+	}
+	checkUntapPrimitive(t, mode, 2)
+	checkKeywordGrantPrimitive(t, mode, 3, game.Haste)
+}
+
+func TestLowerGainControlActivatedAbility(t *testing.T) {
+	t.Parallel()
+	// Captivating Crew pattern: activated ability body.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Crew",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Pirate",
+		OracleText: "{3}{R}: Gain control of target creature an opponent controls until end of turn. Untap that creature.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1", len(mode.Targets))
+	}
+	if mode.Targets[0].Predicate.Controller != game.ControllerOpponent {
+		t.Fatalf("target controller predicate = %v, want Opponent", mode.Targets[0].Predicate.Controller)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence len = %d, want 2", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationUntilEndOfTurn)
+	checkUntapPrimitive(t, mode, 1)
+}
+
+func TestLowerGainControlPermanentDuration(t *testing.T) {
+	t.Parallel()
+	// Nicol Bolas style: single gain-control with permanent duration.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bolas",
+		Layout:     "normal",
+		TypeLine:   "Planeswalker — Bolas",
+		OracleText: "−2: Gain control of target creature.",
+	})
+	if len(face.LoyaltyAbilities) != 1 {
+		t.Fatalf("loyalty abilities = %d, want 1", len(face.LoyaltyAbilities))
+	}
+	mode := face.LoyaltyAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationPermanent)
+}
+
+func TestLowerGainControlUntapReversedOrder(t *testing.T) {
+	t.Parallel()
+	// Threaten pattern: Untap first, gain control second (same sentence).
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Threaten",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Untap target creature and gain control of it until end of turn. That creature gains haste until end of turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 3 {
+		t.Fatalf("mode targets=%d seq=%d, want 1 target 3 instructions", len(mode.Targets), len(mode.Sequence))
+	}
+	// Sequence order follows oracle text: Untap, then GainControl, then Haste.
+	checkUntapPrimitive(t, mode, 0)
+	checkGainControlPrimitive(t, mode, 1, game.DurationUntilEndOfTurn)
+	checkKeywordGrantPrimitive(t, mode, 2, game.Haste)
+}
+
+func TestLowerGainControlRejectsControllerYouTarget(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Self-Control",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature you control.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for gaining control of your own permanent")
+	}
+}
+
+func TestLowerGainControlRejectsMultipleEffectsWithoutBackRef(t *testing.T) {
+	t.Parallel()
+	// A sequence where the second Untap has a new target (not a back-ref) should
+	// fall through to the general ordered-sequence lowerer, not the gain-control
+	// path.  We just verify it doesn't produce a bogus zero-diagnostic result.
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Weird",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Untap target land.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for unsupported multi-target gain-control spell")
+	}
+}
+
+func TestGenerateExecutableCardSourceGainControlRendersApplyContinuous(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Treason",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Untap that creature. It gains haste until end of turn.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_treason.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.LayerControl",
+		"NewController: opt.Val(game.Player1)",
+		"game.DurationUntilEndOfTurn",
+		"game.Untap",
+		"game.TargetPermanentReference(0)",
+		"game.LayerAbility",
+		"game.Haste",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceGainControlPermanentDurationRenders(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Bolas",
+		Layout:     "normal",
+		TypeLine:   "Planeswalker — Bolas",
+		OracleText: "−2: Gain control of target creature.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_bolas.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.LayerControl",
+		"NewController: opt.Val(game.Player1)",
+		"game.DurationPermanent",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 // --- Issue #125: state-change and counter-added triggers ---
 
 func TestLowerBecomesTabTrigger(t *testing.T) {
@@ -8088,5 +8484,639 @@ func TestLowerCreatureDiesRegressionStillWorks(t *testing.T) {
 	}
 	if trigger.Trigger.Pattern.Event != game.EventPermanentDied {
 		t.Fatalf("trigger event = %v, want EventPermanentDied", trigger.Trigger.Pattern.Event)
+	}
+}
+
+// --- Issue #225: source-tied control durations ---
+
+// TestLowerGainControlForAsLongAsYouControlSourceCardName checks that an
+// activated ability whose body is "Gain control of target creature for as long
+// as you control [CardName]." lowers to DurationForAsLongAsYouControlSource.
+func TestLowerGainControlForAsLongAsYouControlSourceCardName(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Merieke Ri Berit",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Wizard",
+		OracleText: "{T}: Gain control of target creature for as long as you control Merieke Ri Berit.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsYouControlSource)
+}
+
+// TestLowerGainControlForAsLongAsYouControlThis checks the "for as long as
+// you control this [type]" self-referential variant.
+func TestLowerGainControlForAsLongAsYouControlThis(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Control Source",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Wizard",
+		OracleText: "{T}: Gain control of target creature for as long as you control this creature.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsYouControlSource)
+}
+
+// TestLowerGainControlAsLongAsSourceOnBattlefield checks the "as long as this
+// [type] remains on the battlefield" variant for single-effect spells.
+func TestLowerGainControlAsLongAsSourceOnBattlefield(t *testing.T) {
+	t.Parallel()
+	// Simulate an enchantment that gives control as long as it's on the
+	// battlefield, represented as a loyalty ability for simplicity.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Control Aura",
+		Layout:     "normal",
+		TypeLine:   "Planeswalker — Test",
+		OracleText: "−2: Gain control of target creature as long as this planeswalker remains on the battlefield.",
+	})
+	if len(face.LoyaltyAbilities) != 1 {
+		t.Fatalf("loyalty abilities = %d, want 1", len(face.LoyaltyAbilities))
+	}
+	mode := face.LoyaltyAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsSourceOnBattlefield)
+}
+
+// TestGenerateExecutableCardSourceGainControlForAsLongAsYouControlRenders
+// verifies that the rendered Go source contains DurationForAsLongAsYouControlSource.
+func TestGenerateExecutableCardSourceGainControlForAsLongAsYouControlRenders(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Merieke Ri Berit",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Wizard",
+		OracleText: "{T}: Gain control of target creature for as long as you control Merieke Ri Berit.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "merieke.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.LayerControl",
+		"NewController: opt.Val(game.Player1)",
+		"game.DurationForAsLongAsYouControlSource",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceGainControlSourceOnBattlefieldRenders
+// verifies that the rendered Go source contains DurationForAsLongAsSourceOnBattlefield.
+func TestGenerateExecutableCardSourceGainControlSourceOnBattlefieldRenders(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Control Aura",
+		Layout:     "normal",
+		TypeLine:   "Planeswalker — Test",
+		OracleText: "−2: Gain control of target creature as long as this planeswalker remains on the battlefield.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "control_aura.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.LayerControl",
+		"NewController: opt.Val(game.Player1)",
+		"game.DurationForAsLongAsSourceOnBattlefield",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+// TestLowerGainControlSourceTiedDurationRejectsOtherDurations ensures that
+// unrecognized source-tied duration phrases remain fail-closed.
+func TestLowerGainControlSourceTiedDurationRejectsOtherDurations(t *testing.T) {
+	t.Parallel()
+	// "for as long as that creature is enchanted" is attachment-dependent and
+	// must remain unsupported.
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Rootwater Matriarch",
+		Layout:     "normal",
+		TypeLine:   "Creature — Merfolk",
+		OracleText: "{T}: Gain control of target creature for as long as that creature is enchanted.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for attachment-dependent duration, got none")
+	}
+}
+
+// TestLowerNonSelfDiesTriggerAnotherCreatureYouControl verifies the main
+// happy-path non-self dies trigger phrase.
+func TestLowerNonSelfDiesTriggerAnotherCreatureYouControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Death Watcher",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever another creature you control dies, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0]
+	if trigger.Trigger.Type != game.TriggerWhenever {
+		t.Fatalf("trigger type = %v, want TriggerWhenever", trigger.Trigger.Type)
+	}
+	pat := trigger.Trigger.Pattern
+	if pat.Event != game.EventPermanentDied {
+		t.Fatalf("event = %v, want EventPermanentDied", pat.Event)
+	}
+	if pat.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", pat.Controller)
+	}
+	if !pat.ExcludeSelf {
+		t.Fatal("ExcludeSelf = false, want true")
+	}
+	wantTypes := []types.Card{types.Creature}
+	if !reflect.DeepEqual(pat.SubjectSelection.RequiredTypes, wantTypes) {
+		t.Fatalf("SubjectSelection.RequiredTypes = %v, want %v", pat.SubjectSelection.RequiredTypes, wantTypes)
+	}
+	// Verify the body lowers to a draw effect.
+	if len(trigger.Content.Modes) == 0 || len(trigger.Content.Modes[0].Sequence) == 0 {
+		t.Fatal("expected non-empty body content")
+	}
+	if _, ok := trigger.Content.Modes[0].Sequence[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("body primitive = %T, want game.Draw", trigger.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerEnchantedCreature verifies the attached-permanent
+// (enchanted creature) trigger phrase.
+func TestLowerNonSelfDiesTriggerEnchantedCreature(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Elegy Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nWhen enchanted creature dies, draw a card.",
+		Power:      nil,
+		Toughness:  nil,
+	})
+	var ta *game.TriggeredAbility
+	for i := range face.TriggeredAbilities {
+		if strings.Contains(face.TriggeredAbilities[i].Text, "enchanted creature dies") {
+			ta = &face.TriggeredAbilities[i]
+		}
+	}
+	if ta == nil {
+		t.Fatal("enchanted-creature-dies triggered ability not lowered")
+	}
+	if ta.Trigger.Type != game.TriggerWhen {
+		t.Fatalf("trigger type = %v, want TriggerWhen", ta.Trigger.Type)
+	}
+	pat := ta.Trigger.Pattern
+	if pat.Event != game.EventPermanentDied {
+		t.Fatalf("event = %v, want EventPermanentDied", pat.Event)
+	}
+	if pat.Source != game.TriggerSourceAttachedPermanent {
+		t.Fatalf("source = %v, want TriggerSourceAttachedPermanent", pat.Source)
+	}
+	wantTypes := []types.Card{types.Creature}
+	if !reflect.DeepEqual(pat.SubjectSelection.RequiredTypes, wantTypes) {
+		t.Fatalf("SubjectSelection.RequiredTypes = %v, want %v", pat.SubjectSelection.RequiredTypes, wantTypes)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerBodyWithPronounReferenceFailsClosed verifies that
+// bodies referring to the dying permanent via a pronoun are rejected.
+func TestLowerNonSelfDiesTriggerBodyWithPronounReferenceFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Damage Dealer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever a creature dies, this creature deals 1 damage to its controller.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for pronoun reference to dying permanent")
+	}
+	if !strings.Contains(diagnostics[0].Summary, "unsupported dies trigger") {
+		t.Fatalf("diagnostic summary = %q, want 'unsupported dies trigger'", diagnostics[0].Summary)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerUnrecognisedPhraseFailsClosed verifies that an
+// unrecognised trigger phrase produces a fail-closed diagnostic.
+func TestLowerNonSelfDiesTriggerUnrecognisedPhraseFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Haunting Creature",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit",
+		OracleText: "Whenever the haunted creature dies, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported dies trigger diagnostic for unrecognised phrase")
+	}
+	found := false
+	for _, d := range diagnostics {
+		if strings.Contains(d.Summary, "unsupported") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("no unsupported diagnostic found in: %v", diagnostics)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerACreatureDies verifies "a creature dies".
+func TestLowerNonSelfDiesTriggerACreatureDies(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Morbid Counter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever a creature dies, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	pat := face.TriggeredAbilities[0].Trigger.Pattern
+	if pat.Event != game.EventPermanentDied {
+		t.Fatalf("event = %v, want EventPermanentDied", pat.Event)
+	}
+	if pat.Controller != game.TriggerControllerAny {
+		t.Fatalf("controller = %v, want TriggerControllerAny", pat.Controller)
+	}
+	if pat.ExcludeSelf {
+		t.Fatal("ExcludeSelf = true, want false for 'a creature dies'")
+	}
+	if !reflect.DeepEqual(pat.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("SubjectSelection.RequiredTypes = %v", pat.SubjectSelection.RequiredTypes)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerNontokenCreatureYouControl verifies the nontoken
+// creature trigger.
+func TestLowerNonSelfDiesTriggerNontokenCreatureYouControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Soul Collector",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever a nontoken creature you control dies, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	pat := face.TriggeredAbilities[0].Trigger.Pattern
+	if pat.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", pat.Controller)
+	}
+	if !pat.SubjectSelection.NonToken {
+		t.Fatal("SubjectSelection.NonToken = false, want true")
+	}
+}
+
+func TestLowerNonSelfDiesTriggerInterveningIfFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Life Watcher",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever a creature you control dies, if you have 5 or more life, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("intervening-if non-self dies trigger unexpectedly lowered")
+	}
+	if !strings.Contains(diagnostics[0].Detail, "intervening-if conditions are not supported") {
+		t.Fatalf("diagnostic = %#v, want intervening-if detail", diagnostics[0])
+	}
+}
+
+// TestLowerNonSelfDiesTriggerEventLookupTable verifies the complete phrase
+// table: each entry must return ok=true and the correct pattern.
+func TestLowerNonSelfDiesTriggerEventLookupTable(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase      string
+		wantSource  game.TriggerSourceFilter
+		wantCtrl    game.TriggerControllerFilter
+		excludeSelf bool
+		wantTypes   []types.Card
+		nonToken    bool
+		wantKind    game.TriggerType
+	}{
+		{"enchanted creature dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhen},
+		{"equipped creature dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhen},
+		{"enchanted land dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Land}, false, game.TriggerWhen},
+		{"enchanted permanent dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, nil, false, game.TriggerWhen},
+		{"another creature dies", game.TriggerSourceAny, game.TriggerControllerAny, true, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"another creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, true, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"a creature dies", game.TriggerSourceAny, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"a creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, false, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"a creature an opponent controls dies", game.TriggerSourceAny, game.TriggerControllerOpponent, false, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"a nontoken creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, false, []types.Card{types.Creature}, true, game.TriggerWhenever},
+		{"another nontoken creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, true, []types.Card{types.Creature}, true, game.TriggerWhenever},
+		{"another nontoken creature dies", game.TriggerSourceAny, game.TriggerControllerAny, true, []types.Card{types.Creature}, true, game.TriggerWhenever},
+		{"a nontoken creature an opponent controls dies", game.TriggerSourceAny, game.TriggerControllerOpponent, false, []types.Card{types.Creature}, true, game.TriggerWhenever},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			params, ok := lowerNonSelfDiesTriggerEvent(tc.phrase)
+			if !ok {
+				t.Fatalf("lowerNonSelfDiesTriggerEvent(%q) returned ok=false", tc.phrase)
+			}
+			if params.triggerType != tc.wantKind {
+				t.Errorf("triggerType = %v, want %v", params.triggerType, tc.wantKind)
+			}
+			if params.pattern.Source != tc.wantSource {
+				t.Errorf("source = %v, want %v", params.pattern.Source, tc.wantSource)
+			}
+			if params.pattern.Controller != tc.wantCtrl {
+				t.Errorf("controller = %v, want %v", params.pattern.Controller, tc.wantCtrl)
+			}
+			if params.pattern.ExcludeSelf != tc.excludeSelf {
+				t.Errorf("ExcludeSelf = %v, want %v", params.pattern.ExcludeSelf, tc.excludeSelf)
+			}
+			if !reflect.DeepEqual(params.pattern.SubjectSelection.RequiredTypes, tc.wantTypes) {
+				t.Errorf("SubjectSelection.RequiredTypes = %v, want %v", params.pattern.SubjectSelection.RequiredTypes, tc.wantTypes)
+			}
+			if params.pattern.SubjectSelection.NonToken != tc.nonToken {
+				t.Errorf("SubjectSelection.NonToken = %v, want %v", params.pattern.SubjectSelection.NonToken, tc.nonToken)
+			}
+		})
+	}
+}
+
+// TestLowerNonSelfDiesTriggerUnknownPhraseReturnsFalse verifies that
+// lowerNonSelfDiesTriggerEvent returns ok=false for unknown phrases.
+func TestLowerNonSelfDiesTriggerUnknownPhraseReturnsFalse(t *testing.T) {
+	t.Parallel()
+	unknownPhrases := []string{
+		"the haunted creature dies",
+		"an elf dies",
+		"a zombie you control dies",
+		"a creature with flying dies",
+		"another artifact dies",
+	}
+	for _, phrase := range unknownPhrases {
+		_, ok := lowerNonSelfDiesTriggerEvent(phrase)
+		if ok {
+			t.Errorf("lowerNonSelfDiesTriggerEvent(%q) returned ok=true, want false", phrase)
+		}
+	}
+}
+
+func TestLowerDrawTriggerYou(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Draw Sentinel",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever you draw a card, you gain 1 life.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Type != game.TriggerWhenever {
+		t.Errorf("Trigger.Type = %v, want TriggerWhenever", got.Trigger.Type)
+	}
+	if got.Trigger.Pattern.Event != game.EventCardDrawn {
+		t.Errorf("Pattern.Event = %v, want EventCardDrawn", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerYou {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerYou", got.Trigger.Pattern.Player)
+	}
+	if got.Trigger.Pattern.OneOrMore {
+		t.Error("Pattern.OneOrMore = true, want false")
+	}
+}
+
+func TestLowerDrawTriggerOpponent(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Opponent Draw Watcher",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever an opponent draws a card, that player loses 1 life.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Pattern.Event != game.EventCardDrawn {
+		t.Errorf("Pattern.Event = %v, want EventCardDrawn", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerOpponent {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerOpponent", got.Trigger.Pattern.Player)
+	}
+}
+
+func TestLowerDrawTriggerAnyPlayer(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Universal Draw Watcher",
+		Layout:     "normal",
+		ManaCost:   "{3}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever a player draws a card, you gain 1 life.",
+		Colors:     []string{"U"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	if face.TriggeredAbilities[0].Trigger.Pattern.Player != game.TriggerPlayerAny {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerAny", face.TriggeredAbilities[0].Trigger.Pattern.Player)
+	}
+}
+
+func TestLowerDiscardTriggerYou(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Discard Reactor",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Creature — Rogue",
+		OracleText: "Whenever you discard a card, you lose 1 life.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Pattern.Event != game.EventCardDiscarded {
+		t.Errorf("Pattern.Event = %v, want EventCardDiscarded", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerYou {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerYou", got.Trigger.Pattern.Player)
+	}
+	if got.Trigger.Pattern.OneOrMore {
+		t.Error("Pattern.OneOrMore = true, want false")
+	}
+}
+
+func TestLowerDiscardOneOrMoreTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Discard Engine",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}",
+		TypeLine:   "Creature — Specter",
+		OracleText: "Whenever you discard one or more cards, you lose 1 life.",
+		Colors:     []string{"B"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Pattern.Event != game.EventCardDiscarded {
+		t.Errorf("Pattern.Event = %v, want EventCardDiscarded", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerYou {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerYou", got.Trigger.Pattern.Player)
+	}
+	if !got.Trigger.Pattern.OneOrMore {
+		t.Error("Pattern.OneOrMore = false, want true")
+	}
+}
+
+func TestLowerDiscardTriggerOpponent(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Specter Watcher",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}",
+		TypeLine:   "Creature — Specter",
+		OracleText: "Whenever an opponent discards a card, you gain 1 life.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Pattern.Event != game.EventCardDiscarded {
+		t.Errorf("Pattern.Event = %v, want EventCardDiscarded", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerOpponent {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerOpponent", got.Trigger.Pattern.Player)
+	}
+}
+
+func TestLowerDrawDiscardTriggerRejectsUnknownPhrase(t *testing.T) {
+	t.Parallel()
+	unknownPhrases := []string{
+		"you draw two or more cards",
+		"you draw your second card each turn",
+		"an opponent draws their second card in their draw step",
+		"you discard a land card",
+		"you discard a creature card",
+	}
+	for _, phrase := range unknownPhrases {
+		t.Run(phrase, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Unsupported Trigger Card",
+				Layout:     "normal",
+				ManaCost:   "{1}{U}",
+				TypeLine:   "Creature — Wizard",
+				OracleText: "Whenever " + phrase + ", you gain 1 life.",
+				Colors:     []string{"U"},
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected diagnostic for phrase %q, got none", phrase)
+			}
+		})
+	}
+}
+
+func TestLowerDrawDiscardTriggerInterveningIfFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Conditional Draw Watcher",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever you draw a card, if you have 5 or more life, you gain 1 life.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("intervening-if draw trigger unexpectedly lowered")
+	}
+	if !strings.Contains(diagnostics[0].Detail, "without conditions") {
+		t.Fatalf("diagnostic = %#v, want condition detail", diagnostics[0])
 	}
 }

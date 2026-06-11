@@ -165,6 +165,10 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 		playerID, ok = r.referencedObjectController(ref)
 	case game.PlayerReferenceObjectOwner:
 		playerID, ok = r.referencedObjectOwner(ref)
+	case game.PlayerReferenceEventPlayer:
+		if r.obj.HasTriggerEvent {
+			playerID, ok = triggeringEventPlayer(r.obj.TriggerEvent)
+		}
 	default:
 		return 0, false
 	}
@@ -172,6 +176,24 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 		return 0, false
 	}
 	return playerID, true
+}
+
+func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
+	switch event.Kind {
+	case game.EventSpellCast:
+		return event.Controller, true
+	case game.EventCardDrawn,
+		game.EventCardDiscarded,
+		game.EventCycled,
+		game.EventBeginningOfStep,
+		game.EventLifeGained,
+		game.EventLifeLost:
+		return event.Player, true
+	case game.EventDamageDealt:
+		return event.Player, event.DamageRecipient == game.DamageRecipientPlayer
+	default:
+		return 0, false
+	}
 }
 
 // playerGroup resolves a PlayerGroupReference to alive players in stable player order.

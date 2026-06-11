@@ -285,6 +285,54 @@ func TestLegacyTokenCreationStillUsesSpellController(t *testing.T) {
 	}
 }
 
+func TestEventPlayerReferenceUsesZeroValuedEventPlayer(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	obj := &game.StackObject{
+		HasTriggerEvent: true,
+		TriggerEvent: game.Event{
+			Kind:   game.EventCardDrawn,
+			Player: game.Player1,
+		},
+	}
+
+	player, ok := newReferenceResolver(g, obj).player(game.EventPlayerReference())
+	if !ok || player != game.Player1 {
+		t.Fatalf("event player = %v (%v), want Player1", player, ok)
+	}
+}
+
+func TestEventPlayerReferenceUsesSpellController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	obj := &game.StackObject{
+		HasTriggerEvent: true,
+		TriggerEvent: game.Event{
+			Kind:       game.EventSpellCast,
+			Controller: game.Player3,
+		},
+	}
+
+	player, ok := newReferenceResolver(g, obj).player(game.EventPlayerReference())
+	if !ok || player != game.Player3 {
+		t.Fatalf("event player = %v (%v), want Player3", player, ok)
+	}
+}
+
+func TestEventPlayerReferenceRejectsEventWithoutPlayerSubject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	obj := &game.StackObject{
+		HasTriggerEvent: true,
+		TriggerEvent: game.Event{
+			Kind:            game.EventDamageDealt,
+			Controller:      game.Player2,
+			DamageRecipient: game.DamageRecipientPermanent,
+		},
+	}
+
+	if player, ok := newReferenceResolver(g, obj).player(game.EventPlayerReference()); ok {
+		t.Fatalf("event player = %v, want unresolved", player)
+	}
+}
+
 func countControlledTokensNamed(g *game.Game, controller game.PlayerID, name types.Sub) int {
 	count := 0
 	for _, permanent := range g.Battlefield {

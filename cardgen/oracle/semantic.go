@@ -233,6 +233,7 @@ const (
 	EffectExile
 	EffectFight
 	EffectGain
+	EffectGainControl // gain control of [target permanent]
 	EffectGrantKeyword
 	EffectInvestigate
 	EffectExplore
@@ -267,6 +268,16 @@ const (
 	DurationUntilYourNextTurn
 	DurationThisTurn
 	DurationThisCombat
+	// DurationForAsLongAsSourceOnBattlefield matches "as long as this [type]
+	// remains on the battlefield" and "for as long as this [type] remains on
+	// the battlefield".  The effect expires when the source permanent leaves
+	// the battlefield.
+	DurationForAsLongAsSourceOnBattlefield
+	// DurationForAsLongAsYouControlSource matches "for as long as you control
+	// [source name]" or "for as long as you control this [type]".  The effect
+	// expires when the effect controller no longer controls the source, or
+	// when the source leaves the battlefield.
+	DurationForAsLongAsYouControlSource
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.
