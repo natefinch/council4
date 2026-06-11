@@ -4218,17 +4218,13 @@ func lowerAtTrigger(
 			fmt.Sprintf("the executable source backend does not support step trigger phrase %q", ability.Trigger.Event),
 		)
 	}
-	var intervening opt.V[game.Condition]
-	if ability.Trigger.Condition != nil {
-		condition, ok := lowerKnownCondition(*ability.Trigger.Condition, oracle.ConditionIf)
-		if !ok {
-			return game.TriggeredAbility{}, executableDiagnostic(
-				ability,
-				summary,
-				"the executable source backend does not support this intervening-if condition",
-			)
-		}
-		intervening = opt.Val(condition)
+	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend does not support this intervening-if condition",
+		)
 	}
 	if len(ability.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, executableDiagnostic(
@@ -4268,6 +4264,46 @@ func lowerAtTrigger(
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
+}
+
+func lowerAtInterveningCondition(trigger *oracle.CompiledTrigger) (opt.V[game.Condition], bool) {
+	if trigger == nil || trigger.Condition == nil {
+		return opt.V[game.Condition]{}, true
+	}
+	condition := *trigger.Condition
+	if lowered, ok := lowerKnownCondition(condition, oracle.ConditionIf); ok {
+		return opt.Val(lowered), true
+	}
+	if condition.Kind != oracle.ConditionIf || !condition.Intervening {
+		return opt.V[game.Condition]{}, false
+	}
+	if cardType, ok := controlledPermanentConditionType(strings.ToLower(condition.Text)); ok {
+		return opt.Val(game.Condition{
+			Text: condition.Text,
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{RequiredTypes: []types.Card{cardType}},
+			}),
+		}), true
+	}
+	if life, ok := controllerLifeAtLeastStepCondition(strings.ToLower(condition.Text)); ok {
+		return opt.Val(game.Condition{
+			Text:                  condition.Text,
+			ControllerLifeAtLeast: life,
+		}), true
+	}
+	return opt.V[game.Condition]{}, false
+}
+
+func controllerLifeAtLeastStepCondition(text string) (int, bool) {
+	const (
+		prefix = "if you have "
+		suffix = " or more life"
+	)
+	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, suffix) {
+		return 0, false
+	}
+	value, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(text, prefix), suffix))
+	return value, err == nil && value > 0
 }
 
 func lowerTriggeredAbility(
