@@ -587,6 +587,17 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		}
 		fields = append(fields, sliceField("ContinuousEffects", "game.ContinuousEffect", elements))
 	}
+	if len(body.RuleEffects) > 0 {
+		elements := make([]string, 0, len(body.RuleEffects))
+		for i := range body.RuleEffects {
+			rendered, err := r.renderRuleEffect(ctx, &body.RuleEffects[i])
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("RuleEffects", "game.RuleEffect", elements))
+	}
 	return structLit("game.StaticAbility", fields), nil
 }
 
@@ -652,6 +663,48 @@ func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
 		return "game.LayerPowerToughnessModify", nil
 	default:
 		return "", fmt.Errorf("render: unsupported continuous layer %d", layer)
+	}
+}
+
+func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (string, error) {
+	kind, err := renderRuleEffectKind(effect.Kind)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
+	if effect.AffectedPlayer != game.PlayerAny {
+		player, err := renderPlayerRelation(effect.AffectedPlayer)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AffectedPlayer: %s,", player))
+	}
+	if !effect.CardSelection.Empty() {
+		selection, err := r.renderSelection(ctx, effect.CardSelection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("CardSelection: %s,", selection))
+	}
+	if effect.Kind == game.RuleEffectGrantHandCardAbility {
+		if !game.BodyHasKeyword(effect.GrantedAbility, game.Cycling) {
+			return "", errors.New("render: hand-card ability grant must grant Cycling")
+		}
+		ability, err := r.renderActivatedAbility(ctx, &effect.GrantedAbility)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("GrantedAbility: %s,", ability))
+	}
+	return structLit("game.RuleEffect", fields), nil
+}
+
+func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
+	switch kind {
+	case game.RuleEffectGrantHandCardAbility:
+		return "game.RuleEffectGrantHandCardAbility", nil
+	default:
+		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
 }
 

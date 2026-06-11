@@ -51,6 +51,7 @@ const (
 	RuleEffectCantBeBlocked
 	RuleEffectMustBeBlocked
 	RuleEffectMustAttack
+	RuleEffectGrantHandCardAbility
 )
 
 // RuleEffect models static or runtime effects that change game rules rather
@@ -73,6 +74,9 @@ type RuleEffect struct {
 	DefendingPlayer    PlayerRelation
 
 	CostModifier CostModifier
+
+	CardSelection  Selection
+	GrantedAbility ActivatedAbility
 
 	CastFromZone   zone.Type
 	AffectedCardID id.ID

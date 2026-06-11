@@ -1096,6 +1096,93 @@ func TestValidateCardDefRejectsSelectionFieldsUnavailableInContext(t *testing.T)
 	}
 }
 
+func TestValidateCardDefAllowsHandCyclingGrantRuleEffect(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name: "Cycling Granter",
+		StaticAbilities: []StaticAbility{{
+			RuleEffects: []RuleEffect{{
+				Kind:           RuleEffectGrantHandCardAbility,
+				AffectedPlayer: PlayerYou,
+				CardSelection: Selection{
+					RequiredTypes: []types.Card{types.Land},
+				},
+				GrantedAbility: CyclingActivatedAbility(cost.Mana{cost.R}),
+			}},
+		}},
+	}}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefRejectsInvalidHandCyclingGrantRuleEffect(t *testing.T) {
+	tests := []struct {
+		name   string
+		effect RuleEffect
+		code   CardDefIssueCode
+	}{
+		{
+			name: "missing affected player",
+			effect: RuleEffect{
+				Kind: RuleEffectGrantHandCardAbility,
+				CardSelection: Selection{
+					RequiredTypes: []types.Card{types.Land},
+				},
+				GrantedAbility: CyclingActivatedAbility(cost.Mana{cost.R}),
+			},
+			code: CardDefIssueInvalidRuleEffect,
+		},
+		{
+			name: "empty card selection",
+			effect: RuleEffect{
+				Kind:           RuleEffectGrantHandCardAbility,
+				AffectedPlayer: PlayerYou,
+				GrantedAbility: CyclingActivatedAbility(cost.Mana{cost.R}),
+			},
+			code: CardDefIssueInvalidSelection,
+		},
+		{
+			name: "unsupported card predicate",
+			effect: RuleEffect{
+				Kind:           RuleEffectGrantHandCardAbility,
+				AffectedPlayer: PlayerYou,
+				CardSelection: Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Tapped:        TriTrue,
+				},
+				GrantedAbility: CyclingActivatedAbility(cost.Mana{cost.R}),
+			},
+			code: CardDefIssueInvalidSelection,
+		},
+		{
+			name: "non-cycling grant",
+			effect: RuleEffect{
+				Kind:           RuleEffectGrantHandCardAbility,
+				AffectedPlayer: PlayerYou,
+				CardSelection: Selection{
+					RequiredTypes: []types.Card{types.Land},
+				},
+				GrantedAbility: ActivatedAbility{},
+			},
+			code: CardDefIssueInvalidRuleEffect,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name: "Bad Cycling Granter",
+				StaticAbilities: []StaticAbility{{
+					RuleEffects: []RuleEffect{tt.effect},
+				}},
+			}}
+			issues := ValidateCardDef(card)
+			if !hasCardDefIssue(issues, tt.code) {
+				t.Fatalf("issues = %+v, want %s", issues, tt.code)
+			}
+		})
+	}
+}
+
 func hasCardDefIssue(issues []CardDefIssue, code CardDefIssueCode) bool {
 	for _, issue := range issues {
 		if issue.Code == code {
