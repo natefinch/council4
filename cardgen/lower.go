@@ -6389,6 +6389,9 @@ func lowerSpell(
 		len(ability.Modes) == 0 {
 		return manifestDreadAbility(), nil
 	}
+	if len(ability.Effects) > 0 && ability.Effects[0].Kind == oracle.EffectSearch {
+		return lowerSearchSpell(ability)
+	}
 	if len(ability.Effects) > 1 {
 		if ability.Effects[0].Kind == oracle.EffectGainControl ||
 			(ability.Effects[0].Kind == oracle.EffectUntap &&
@@ -6406,6 +6409,154 @@ func lowerSpell(
 		"unsupported spell ability",
 		"the executable source backend does not yet lower this spell ability",
 	)
+}
+
+func lowerSearchSpell(ability oracle.CompiledAbility) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func(detail string) (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported search effect",
+			detail,
+		)
+	}
+	if ability.Optional ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		!exactSearchEffectSequence(ability.Effects) {
+		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
+	}
+	search := ability.Effects[0]
+	if !search.Amount.Known || search.Amount.Value != 1 {
+		return unsupported("the executable source backend supports only searches for exactly one card")
+	}
+	text := search.Text
+	for _, effect := range ability.Effects {
+		if effect.Text != text ||
+			effect.DelayedTiming != 0 ||
+			effect.Duration != oracle.DurationNone ||
+			effect.Negated {
+			return unsupported("the executable source backend supports only exact same-sentence library-search sequences")
+		}
+	}
+	if !strings.HasPrefix(text, "Search your library for ") || !strings.HasSuffix(text, ", then shuffle.") {
+		return unsupported("the executable source backend supports only searches of your library ending with \"then shuffle\"")
+	}
+
+	filter, ok := searchFilterPhrase(text)
+	if !ok {
+		return unsupported("the executable source backend supports only exact singular-card search wording")
+	}
+	spec, ok := searchSpecForFilter(filter)
+	if !ok {
+		return unsupported(fmt.Sprintf("unsupported library-search filter %q", filter))
+	}
+	spec.SourceZone = zone.Library
+
+	spec.Reveal = len(ability.Effects) == 4
+	destination, entersTapped, ok := searchDestination(text, spec.Reveal)
+	if !ok {
+		return unsupported("the executable source backend supports only exact hand or battlefield search destinations")
+	}
+	spec.Destination = destination
+	spec.EntersTapped = entersTapped
+
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.Search{
+		Player: game.ControllerReference(),
+		Spec:   spec,
+		Amount: game.Fixed(1),
+	}}}}.Ability(), nil
+}
+
+func exactSearchEffectSequence(effects []oracle.CompiledEffect) bool {
+	if len(effects) == 3 {
+		return effects[0].Kind == oracle.EffectSearch &&
+			effects[1].Kind == oracle.EffectPut &&
+			effects[2].Kind == oracle.EffectShuffle
+	}
+	return len(effects) == 4 &&
+		effects[0].Kind == oracle.EffectSearch &&
+		effects[1].Kind == oracle.EffectReveal &&
+		effects[2].Kind == oracle.EffectPut &&
+		effects[3].Kind == oracle.EffectShuffle
+}
+
+func searchFilterPhrase(text string) (string, bool) {
+	for _, prefix := range []string{
+		"Search your library for a ",
+		"Search your library for an ",
+	} {
+		rest, ok := strings.CutPrefix(text, prefix)
+		if !ok {
+			continue
+		}
+		if strings.HasPrefix(rest, "card,") {
+			return "", true
+		}
+		filter, _, ok := strings.Cut(rest, " card,")
+		return filter, ok
+	}
+	return "", false
+}
+
+func searchSpecForFilter(filter string) (game.SearchSpec, bool) {
+	var spec game.SearchSpec
+	switch filter {
+	case "":
+	case "basic land":
+		spec.CardType = opt.Val(types.Land)
+		spec.Supertype = opt.Val(types.Basic)
+	case "land":
+		spec.CardType = opt.Val(types.Land)
+	case "creature":
+		spec.CardType = opt.Val(types.Creature)
+	case "artifact":
+		spec.CardType = opt.Val(types.Artifact)
+	case "enchantment":
+		spec.CardType = opt.Val(types.Enchantment)
+	case "Forest":
+		spec.SubtypesAny = []types.Sub{types.Forest}
+	case "Plains":
+		spec.SubtypesAny = []types.Sub{types.Plains}
+	case "Island":
+		spec.SubtypesAny = []types.Sub{types.Island}
+	case "Swamp":
+		spec.SubtypesAny = []types.Sub{types.Swamp}
+	case "Mountain":
+		spec.SubtypesAny = []types.Sub{types.Mountain}
+	case "Forest or Plains":
+		spec.SubtypesAny = []types.Sub{types.Forest, types.Plains}
+	case "Plains, Island, Swamp, or Mountain":
+		spec.SubtypesAny = []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}
+	default:
+		return game.SearchSpec{}, false
+	}
+	return spec, true
+}
+
+func searchDestination(text string, reveal bool) (destination zone.Type, entersTapped, ok bool) {
+	type searchDestinationPattern struct {
+		suffix        string
+		destination   zone.Type
+		entersTapped  bool
+		revealsSearch bool
+	}
+	for _, pattern := range []searchDestinationPattern{
+		{suffix: ", put it into your hand, then shuffle.", destination: zone.Hand},
+		{suffix: ", put that card into your hand, then shuffle.", destination: zone.Hand},
+		{suffix: ", reveal it, put it into your hand, then shuffle.", destination: zone.Hand, revealsSearch: true},
+		{suffix: ", reveal that card, put it into your hand, then shuffle.", destination: zone.Hand, revealsSearch: true},
+		{suffix: ", put it onto the battlefield, then shuffle.", destination: zone.Battlefield},
+		{suffix: ", put that card onto the battlefield, then shuffle.", destination: zone.Battlefield},
+		{suffix: ", put it onto the battlefield tapped, then shuffle.", destination: zone.Battlefield, entersTapped: true},
+		{suffix: ", put that card onto the battlefield tapped, then shuffle.", destination: zone.Battlefield, entersTapped: true},
+	} {
+		if reveal == pattern.revealsSearch && strings.HasSuffix(text, pattern.suffix) {
+			return pattern.destination, pattern.entersTapped, true
+		}
+	}
+	return zone.None, false, false
 }
 
 func lowerSingleEffectSpell(

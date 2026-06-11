@@ -2396,6 +2396,115 @@ func TestGenerateExecutableCardSourceThenJoinedSpellEffects(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "Diabolic Tutor",
+			oracleText: "Search your library for a card, put that card into your hand, then shuffle.",
+			wants:      []string{"zone.Hand", "Amount: game.Fixed(1)"},
+		},
+		{
+			name:       "Rampant Growth",
+			oracleText: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+			wants: []string{
+				"zone.Battlefield",
+				"opt.Val(types.Land)",
+				"opt.Val(types.Basic)",
+				"EntersTapped",
+			},
+		},
+		{
+			name:       "Three Visits",
+			oracleText: "Search your library for a Forest card, put it onto the battlefield, then shuffle.",
+			wants:      []string{"zone.Battlefield", "SubtypesAny: []types.Sub{types.Forest}"},
+		},
+		{
+			name:       "Farseek",
+			oracleText: "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.",
+			wants: []string{
+				"[]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}",
+				"zone.Battlefield",
+				"EntersTapped",
+			},
+		},
+		{
+			name:       "Safewright Quest",
+			oracleText: "Search your library for a Forest or Plains card, reveal it, put it into your hand, then shuffle.",
+			wants: []string{
+				"SubtypesAny: []types.Sub{types.Forest, types.Plains}",
+				"zone.Hand",
+				"Reveal",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       test.name,
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			}, "s")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range append([]string{
+				"Primitive: game.Search",
+				"zone.Library",
+				"Player: game.ControllerReference()",
+			}, test.wants...) {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsUnsupportedLibrarySearches(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"Search your library for a card, put that card into your graveyard, then shuffle.",
+		"Search your library for a green creature card, put it into your hand, then shuffle.",
+		"Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+		"Search target opponent's library for a card, put that card into their hand, then shuffle.",
+		"Search your library for that card, reveal it, put it into your hand, then shuffle.",
+		"Search your library for a creature card, reveal it, put it into your hand or graveyard, then shuffle.",
+	}
+	for _, oracleText := range tests {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Unsupported Search",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			}, "u")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" {
+				t.Fatalf("source = %q, want no partial card", source)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported search diagnostic")
+			}
+			if diagnostics[0].Summary != "unsupported search effect" {
+				t.Fatalf("diagnostics = %#v, want unsupported search effect", diagnostics)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceOptionalEnterTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
