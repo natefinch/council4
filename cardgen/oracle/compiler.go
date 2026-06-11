@@ -1308,6 +1308,8 @@ func effectKind(token Token) EffectKind {
 		return EffectLose
 	case "manifest":
 		return EffectManifest
+	case "look":
+		return EffectManifestDread
 	case "mill", "mills":
 		return EffectMill
 	case "get", "gets":

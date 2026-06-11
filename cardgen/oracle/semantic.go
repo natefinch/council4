@@ -224,6 +224,7 @@ const (
 	EffectExplore
 	EffectLose
 	EffectManifest
+	EffectManifestDread
 	EffectMill
 	EffectModifyPT
 	EffectMustAttack

@@ -1861,10 +1861,15 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 		}
 		return structLit("game.Proliferate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	case game.PrimitiveManifest:
-		if _, ok := primitive.(game.Manifest); !ok {
+		value, ok := primitive.(game.Manifest)
+		if !ok {
 			return "", errors.New("render: internal error: Manifest kind has unexpected concrete type")
 		}
-		return structLit("game.Manifest", nil), nil
+		var fields []string
+		if value.Dread {
+			fields = append(fields, "Dread: true,")
+		}
+		return structLit("game.Manifest", fields), nil
 	default:
 		return "", fmt.Errorf("render: unsupported standalone primitive kind %d", primitive.Kind())
 	}

@@ -4426,6 +4426,13 @@ func lowerSpell(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
+	if exactManifestDreadLongFormPattern(syntax.Tokens) &&
+		len(ability.Targets) == 0 &&
+		len(ability.Conditions) == 0 &&
+		len(ability.Keywords) == 0 &&
+		len(ability.Modes) == 0 {
+		return manifestDreadAbility(), nil
+	}
 	if len(ability.Effects) > 1 {
 		return lowerOrderedEffectSequence(cardName, ability, syntax)
 	}
@@ -4482,7 +4489,7 @@ func lowerSingleEffectSpell(
 		})
 	case oracle.EffectExplore:
 		return lowerExploreSpell(ability, syntax)
-	case oracle.EffectManifest:
+	case oracle.EffectManifest, oracle.EffectManifestDread:
 		return lowerManifestSpell(ability, syntax)
 	case oracle.EffectRegenerate:
 		return lowerFixedPermanentTargetSpell(ability, "Regenerate", func(object game.ObjectReference) game.Primitive {
@@ -5135,16 +5142,28 @@ func lowerManifestSpell(
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		len(ability.References) != 0 ||
-		!exactManifestTopLibraryPattern(tokens) {
+		!exactManifestTopLibraryPattern(tokens) &&
+			!exactManifestDreadShorthandPattern(tokens) &&
+			!exactManifestDreadLongFormPattern(tokens) {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
 			"unsupported manifest spell",
-			"the executable source backend supports only \"manifest the top card of your library\"",
+			"the executable source backend supports only \"manifest the top card of your library\" and manifest dread",
 		)
+	}
+	dread := exactManifestDreadShorthandPattern(tokens) || exactManifestDreadLongFormPattern(tokens)
+	if dread {
+		return manifestDreadAbility(), nil
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Manifest{},
 	}}}.Ability(), nil
+}
+
+func manifestDreadAbility() game.AbilityContent {
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Manifest{Dread: true},
+	}}}.Ability()
 }
 
 func exactManifestTopLibraryPattern(tokens []oracle.Token) bool {
@@ -5157,6 +5176,52 @@ func exactManifestTopLibraryPattern(tokens []oracle.Token) bool {
 		equalTokenWord(tokens[5], "your") &&
 		equalTokenWord(tokens[6], "library") &&
 		tokens[7].Kind == oracle.Period
+}
+
+func exactManifestDreadShorthandPattern(tokens []oracle.Token) bool {
+	return len(tokens) == 3 &&
+		equalTokenWord(tokens[0], "manifest") &&
+		equalTokenWord(tokens[1], "dread") &&
+		tokens[2].Kind == oracle.Period
+}
+
+func exactManifestDreadLongFormPattern(tokens []oracle.Token) bool {
+	return len(tokens) == 33 &&
+		equalTokenWord(tokens[0], "look") &&
+		equalTokenWord(tokens[1], "at") &&
+		equalTokenWord(tokens[2], "the") &&
+		equalTokenWord(tokens[3], "top") &&
+		equalTokenWord(tokens[4], "two") &&
+		equalTokenWord(tokens[5], "cards") &&
+		equalTokenWord(tokens[6], "of") &&
+		equalTokenWord(tokens[7], "your") &&
+		equalTokenWord(tokens[8], "library") &&
+		tokens[9].Kind == oracle.Period &&
+		equalTokenWord(tokens[10], "put") &&
+		equalTokenWord(tokens[11], "one") &&
+		equalTokenWord(tokens[12], "of") &&
+		equalTokenWord(tokens[13], "them") &&
+		equalTokenWord(tokens[14], "onto") &&
+		equalTokenWord(tokens[15], "the") &&
+		equalTokenWord(tokens[16], "battlefield") &&
+		equalTokenWord(tokens[17], "face") &&
+		equalTokenWord(tokens[18], "down") &&
+		equalTokenWord(tokens[19], "as") &&
+		equalTokenWord(tokens[20], "a") &&
+		tokens[21].Kind == oracle.Integer &&
+		tokens[21].Text == "2" &&
+		tokens[22].Kind == oracle.Slash &&
+		tokens[23].Kind == oracle.Integer &&
+		tokens[23].Text == "2" &&
+		equalTokenWord(tokens[24], "creature") &&
+		tokens[25].Kind == oracle.Period &&
+		equalTokenWord(tokens[26], "put") &&
+		equalTokenWord(tokens[27], "the") &&
+		equalTokenWord(tokens[28], "other") &&
+		equalTokenWord(tokens[29], "into") &&
+		equalTokenWord(tokens[30], "your") &&
+		equalTokenWord(tokens[31], "graveyard") &&
+		tokens[32].Kind == oracle.Period
 }
 
 func lowerExactPrimitiveSpell(

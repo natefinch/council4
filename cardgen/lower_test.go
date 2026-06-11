@@ -3480,8 +3480,48 @@ func TestLowerManifestSpell(t *testing.T) {
 		OracleText: "Manifest the top card of your library.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	if _, ok := mode.Sequence[0].Primitive.(game.Manifest); !ok {
+	manifest, ok := mode.Sequence[0].Primitive.(game.Manifest)
+	if !ok {
 		t.Fatalf("primitive = %T, want game.Manifest", mode.Sequence[0].Primitive)
+	}
+	if manifest.Dread {
+		t.Fatal("basic manifest lowered with Dread=true")
+	}
+}
+
+func TestLowerManifestDreadSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{
+			name:   "shorthand",
+			oracle: "Manifest Dread.",
+		},
+		{
+			name:   "long form",
+			oracle: "Look at the top two cards of your library. Put one of them onto the battlefield face down as a 2/2 creature. Put the other into your graveyard.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Manifest Dread",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			manifest, ok := mode.Sequence[0].Primitive.(game.Manifest)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Manifest", mode.Sequence[0].Primitive)
+			}
+			if !manifest.Dread {
+				t.Fatal("manifest dread lowered with Dread=false")
+			}
+		})
 	}
 }
 
