@@ -4284,6 +4284,11 @@ func lowerTriggeredAbility(
 	if triggeredAbility, ok := lowerLifeDamageTrigger(cardName, ability, syntax); ok {
 		return triggeredAbility, nil
 	}
+	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerWhenever {
+		if _, ok := drawDiscardTriggerPhrases[ability.Trigger.Event]; ok {
+			return lowerDrawDiscardTrigger(cardName, ability, syntax)
+		}
+	}
 	triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
 	if diagnostic == nil ||
 		ability.Trigger == nil ||
@@ -4305,6 +4310,69 @@ func lowerTriggeredAbility(
 		return game.TriggeredAbility{}, diagnostic
 	}
 	return nonSelf, nil
+}
+
+type drawDiscardTriggerPattern struct {
+	event     game.EventKind
+	player    game.TriggerPlayerFilter
+	oneOrMore bool
+}
+
+var drawDiscardTriggerPhrases = map[string]drawDiscardTriggerPattern{
+	"you draw a card":               {event: game.EventCardDrawn, player: game.TriggerPlayerYou},
+	"an opponent draws a card":      {event: game.EventCardDrawn, player: game.TriggerPlayerOpponent},
+	"a player draws a card":         {event: game.EventCardDrawn, player: game.TriggerPlayerAny},
+	"you discard a card":            {event: game.EventCardDiscarded, player: game.TriggerPlayerYou},
+	"you discard one or more cards": {event: game.EventCardDiscarded, player: game.TriggerPlayerYou, oneOrMore: true},
+	"an opponent discards a card":   {event: game.EventCardDiscarded, player: game.TriggerPlayerOpponent},
+	"a player discards a card":      {event: game.EventCardDiscarded, player: game.TriggerPlayerAny},
+}
+
+func lowerDrawDiscardTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	const summary = "unsupported draw/discard trigger"
+	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend supports only TriggerWhenever draw and discard triggers")
+	}
+	params, ok := drawDiscardTriggerPhrases[ability.Trigger.Event]
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"unrecognized draw/discard trigger event phrase: "+ability.Trigger.Event)
+	}
+	if ability.Trigger.Condition != nil ||
+		len(ability.Effects) == 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend supports only simple draw/discard triggers without conditions, modes, keywords, or ability words")
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend does not support this draw/discard trigger body")
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary+" effect", diagnostic.Detail)
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhenever,
+			Pattern: game.TriggerPattern{
+				Event:     params.event,
+				Player:    params.player,
+				OneOrMore: params.oneOrMore,
+			},
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, nil
 }
 
 type cyclingTriggerPattern struct {
@@ -9335,6 +9403,14 @@ func lowerFixedLifeSpell(
 	switch {
 	case len(ability.Targets) == 0 &&
 		exactLifeAmountSyntax("You", verb, ability.Text, effect.Amount, amountText):
+	case len(ability.Targets) == 0 &&
+		exactLifeAmountSyntax("That player", verb+"s", ability.Text, effect.Amount, amountText):
+		playerRef = game.EventPlayerReference()
+	case len(ability.Targets) == 0 &&
+		exactLifeAmountSyntax("They", verb, ability.Text, effect.Amount, amountText):
+		// "They" is a pronoun for the player who triggered the event (e.g. "they lose 2 life"
+		// in "Whenever an opponent draws a card, they lose 2 life.").
+		playerRef = game.EventPlayerReference()
 	case len(ability.Targets) == 1:
 		targetSpec, ok := playerTargetSpec(ability.Targets[0])
 		if !ok ||
