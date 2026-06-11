@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,765
+Cards supported: 3,835
 
 - +2 Mace
 - Aang, Air Nomad
@@ -48,6 +48,7 @@ Cards supported: 3,765
 - Akrasan Squire
 - Akroan Jailer
 - Akroan Mastiff
+- Akroma's Vengeance
 - Akroma, Angel of Wrath
 - Alabaster Host Sanctifier
 - Alabaster Kirin
@@ -80,6 +81,7 @@ Cards supported: 3,765
 - Ambush Viper
 - Amphin Cutthroat
 - Anaba Bodyguard
+- Anarchy
 - Ancestor's Prophet
 - Ancestral Recall
 - Anchovy & Banana Pizza
@@ -101,6 +103,7 @@ Cards supported: 3,765
 - Angel of Retribution
 - Angel of the God-Pharaoh
 - Angel's Mercy
+- Angelic Curator
 - Angelic Overseer
 - Angelic Page
 - Angelic Shield
@@ -149,6 +152,7 @@ Cards supported: 3,765
 - Argothian Swine
 - Arisen Gorgon
 - Ark of Blight
+- Armageddon
 - Armored Cancrix
 - Armored Griffin
 - Armored Pegasus
@@ -192,6 +196,7 @@ Cards supported: 3,765
 - Auriok Transfixer
 - Auroral Procession
 - Auspicious Arrival
+- Austere Command
 - Autochthon Wurm
 - Automatic Librarian
 - Avacyn
@@ -216,6 +221,7 @@ Cards supported: 3,765
 - Axiom Engraver
 - Azami, Lady of Scrolls
 - Azorius Cluestone
+- Azorius First-Wing
 - Azorius Guildgate
 - Azorius Knight-Arbiter
 - Azorius Locket
@@ -237,6 +243,7 @@ Cards supported: 3,765
 - Ballroom
 - Bane Alley Blackguard
 - Banehound
+- Baneslayer Angel
 - Barbarian Horde
 - Barbarian Riftcutter
 - Barbary Apes
@@ -284,6 +291,7 @@ Cards supported: 3,765
 - Bee Sting
 - Beeble
 - Behemoth Sledge
+- Beloved Chaplain
 - Benalish Emissary
 - Benalish Heralds
 - Benalish Knight
@@ -545,9 +553,12 @@ Cards supported: 3,765
 - Citizen
 - Citizen
 - Citywatch Sphinx
+- Citywide Bust
 - Claws of Gix
 - Clay Revenant
 - Cleanfall
+- Cleanse
+- Cleansing Nova
 - Cleansing Screech
 - Clear
 - Clearwater Pathway // Murkwater Pathway
@@ -586,6 +597,7 @@ Cards supported: 3,765
 - Colossal Dreadmaw
 - Colossapede
 - Colossodon Yearling
+- Commander Eesha
 - Commercial District
 - Compulsion
 - Concealed Courtyard
@@ -768,6 +780,7 @@ Cards supported: 3,765
 - Deserted Temple
 - Desperate Bloodseeker
 - Detective
+- Devastation
 - Devil
 - Devilthorn Fox
 - Devoted Hero
@@ -837,6 +850,7 @@ Cards supported: 3,765
 - Dragon's Presence
 - Dragon-Style Twins
 - Dragonskull Summit
+- Dragonstalker
 - Drain the Well
 - Drake
 - Drake
@@ -949,6 +963,7 @@ Cards supported: 3,765
 - Elfhame Palace
 - Elfhame Wurm
 - Elite Arrester
+- Elite Inquisitor
 - Elite Vanguard
 - Elixir of Vitality
 - Elk
@@ -972,8 +987,10 @@ Cards supported: 3,765
 - Enatu Golem
 - Enchantress's Presence
 - Endless Cockroaches
+- Enemy of the Guildpact
 - Enforcer Griffin
 - Engulfing Eruption
+- Enigma Eidolon
 - Enlightened Ascetic
 - Enlisted Wurm
 - Enormous Baloth
@@ -1006,6 +1023,7 @@ Cards supported: 3,765
 - Expel
 - Explosive Impact
 - Explosive Shot
+- Extinguish All Hope
 - Exultant Cultist
 - Exultant Skymarcher
 - Eye of Nowhere
@@ -1023,8 +1041,10 @@ Cards supported: 3,765
 - Faithbearer Paladin
 - Faithful Watchdog
 - Falkenrath Reaver
+- Fallen Cleric
 - False Defeat
 - False Mourning
+- False Prophet
 - Fan Bearer
 - Fanatical Devotion
 - Fang of Shigeki
@@ -1067,6 +1087,7 @@ Cards supported: 3,765
 - Filigree Sages
 - Fill with Fright
 - Final Death
+- Final Judgment
 - Final Reward
 - Fire Ambush
 - Fire Diamond
@@ -1113,6 +1134,7 @@ Cards supported: 3,765
 - Foot Headquarters
 - Foot Skirmisher
 - Foot Soldiers
+- Foothill Guide
 - Footlight Fiend
 - Force of Savagery
 - Foreboding Ruins
@@ -1316,6 +1338,7 @@ Cards supported: 3,765
 - Grasp of Darkness
 - Grasping Dunes
 - Grasping Longneck
+- Grave Bramble
 - Graveborn
 - Gravedigger
 - Gravelgill Axeshark
@@ -1355,15 +1378,18 @@ Cards supported: 3,765
 - Gruul Locket
 - Gryff Vanguard
 - Guadosalam, Farplane Gateway
+- Guan Yu's 1,000-Li March
 - Guard Duty
 - Guardian Automaton
 - Guardian Lions
 - Guardian of Pilgrims
 - Guardian of Vitu-Ghazi
+- Guardian of the Guildpact
 - Guardians of Akrasa
 - Guardians of Meletis
 - Guenhwyvar
 - Guidelight Synergist
+- Guildscorn Ward
 - Guma
 - Gurmag Angler
 - Gurmag Swiftwing
@@ -1450,6 +1476,7 @@ Cards supported: 3,765
 - Hitchclaw Recluse
 - Hobgoblin Dragoon
 - Hollowhenge Beast
+- Holy Mantle
 - Holy Strength
 - Homarid Explorer
 - Homunculus
@@ -1458,6 +1485,7 @@ Cards supported: 3,765
 - Honey Mammoth
 - Honored Hydra
 - Hooting Mandrills
+- Horizon Drake
 - Horizon Scholar
 - Horned Turtle
 - Hornet
@@ -1593,6 +1621,7 @@ Cards supported: 3,765
 - Intrepid Rabbit
 - Invisible Stalker
 - Invoke the Firemind
+- Iridescent Angel
 - Iroas's Champion
 - Iron Bully
 - Iron Giant
@@ -1869,8 +1898,10 @@ Cards supported: 3,765
 - Magma Jet
 - Magnifying Glass
 - Magnigoth Sentry
+- Magus of the Disk
 - Mahamoti Djinn
 - Majestic Auricorn
+- Major Teroh
 - Makindi Aeronaut
 - Makindi Griffin
 - Makindi Ox
@@ -1900,7 +1931,9 @@ Cards supported: 3,765
 - Markov Patrician
 - Martyr for the Cause
 - Mask of Avacyn
+- Mask of Law and Grace
 - Masked Meower
+- Mass Calcify
 - Mass of Ghouls
 - Master Decoy
 - Maw of the Mire
@@ -1919,6 +1952,7 @@ Cards supported: 3,765
 - Mercenary
 - Merchant of Many Hats
 - Merchant of Secrets
+- Merciless Eviction
 - Merfolk
 - Merfolk
 - Merfolk
@@ -1945,6 +1979,7 @@ Cards supported: 3,765
 - Meteoric Mace
 - Meticulous Archive
 - Midnight Assassin
+- Midnight Duelist
 - Midnight Scavengers
 - Might of Oaks
 - Might of the Masses
@@ -2050,13 +2085,16 @@ Cards supported: 3,765
 - Mystic of the Hidden Way
 - Mythic Proportions
 - Nacatl Outlander
+- Nacatl Savage
 - Naga Eternal
 - Naga Oracle
 - Nantuko Disciple
 - Narcissism
 - Narrow Escape
 - Narwhal
+- Nath's Buffoon
 - Natural Spring
+- Nature's Ruin
 - Naya Battlemage
 - Nearheath Stalker
 - Nebelgast Beguiler
@@ -2071,6 +2109,7 @@ Cards supported: 3,765
 - Necropanther
 - Necropede
 - Necrosavant
+- Needlebug
 - Needlepeak Spider
 - Needleshot Gourna
 - Needlethorn Drake
@@ -2087,7 +2126,9 @@ Cards supported: 3,765
 - Neurok Commando
 - Neurok Hoversail
 - Neurok Replica
+- Nevinyrral's Disk
 - New Benalia
+- New Perspectives
 - Nexus Wardens
 - Nezumi Bladeblesser
 - Nezumi Bone-Reader
@@ -2131,6 +2172,7 @@ Cards supported: 3,765
 - Not on My Watch
 - Nourish
 - Nova Cleric
+- Novablast Wurm
 - Novice Inspector
 - Noxious Groodion
 - Noxious Newt
@@ -2180,6 +2222,7 @@ Cards supported: 3,765
 - Ominous Asylum
 - Ominous Sphinx
 - Onakke Ogre
+- Ondu Inversion // Ondu Skyruins
 - One With the Wind
 - Onslaught
 - Onulet
@@ -2256,6 +2299,7 @@ Cards supported: 3,765
 - Peregrine Griffin
 - Peregrine Mask
 - Perilous Myr
+- Perilous Vault
 - Persistent Specimen
 - Pest
 - Pestilent Syphoner
@@ -2323,6 +2367,7 @@ Cards supported: 3,765
 - Plagued Rusalka
 - Plaguemaw Beast
 - Plains
+- Planar Cleansing
 - Plant
 - Plant
 - Plant
@@ -2369,6 +2414,7 @@ Cards supported: 3,765
 - Prized Griffin
 - Prizefighter Construct
 - Prodigious Growth
+- Progenitus
 - Prophet of Distortion
 - Prophet of the Peak
 - Protomatter Powder
@@ -2379,6 +2425,7 @@ Cards supported: 3,765
 - Pteron Ghost
 - Pull Under
 - Punk Frogs
+- Purify
 - Purple Pentapus
 - Purple-Crystal Crab
 - Putrid Goblin
@@ -2442,6 +2489,7 @@ Cards supported: 3,765
 - Raugrin Crystal
 - Raugrin Triome
 - Ravage
+- Ravages of War
 - Ravaging Horde
 - Ravenous Chupacabra
 - Ravenous Lindwurm
@@ -2496,6 +2544,7 @@ Cards supported: 3,765
 - Revelsong Horn
 - Reviving Melody
 - Revolutionist
+- Rewards of Diversity
 - Reya Dawnbringer
 - Rhet-Tomb Mystic
 - Rhino
@@ -2524,12 +2573,14 @@ Cards supported: 3,765
 - Rip-Clan Crasher
 - Ripchain Razorkin
 - Ripscale Predator
+- Riptide Biologist
 - Riptide Crab
 - Riptide Turtle
 - Rise Again
 - Risen Sanctuary
 - Rishadan Port
 - Ritual of Restoration
+- Ritual of Soot
 - Riven Turnbull
 - River Herald Guide
 - River Herald Scout
@@ -2575,6 +2626,7 @@ Cards supported: 3,765
 - Rugged Highlands
 - Ruination Wurm
 - Ruinous Gremlin
+- Ruinous Ultimatum
 - Rukh
 - Rumbling Baloth
 - Rumbling Sentry
@@ -2774,6 +2826,7 @@ Cards supported: 3,765
 - Shepherd of the Flock // Usher to Safety
 - Shepherd of the Lost
 - Shield Mate
+- Shield of Duty and Reason
 - Shimmering Barrier
 - Shimmerscale Drake
 - Shineshadow Snarl
@@ -2790,6 +2843,7 @@ Cards supported: 3,765
 - Shore Keeper
 - Shore Lurker
 - Shorecomber Crab
+- Shoreline Raider
 - Short Bow
 - Short Sword
 - Show of Valor
@@ -2934,6 +2988,7 @@ Cards supported: 3,765
 - Soldier // Soldier
 - Soldier Ally
 - Soldier of the Grey Host
+- Soldier of the Pantheon
 - Somnomancer
 - Sootfeather Flock
 - Soothing Balm
@@ -2948,6 +3003,7 @@ Cards supported: 3,765
 - Soulknife Spy
 - Soulmender
 - Soulreaper of Mogis
+- Soulscour
 - Southern Elephant
 - Spara's Headquarters
 - Spare Supplies
@@ -3011,6 +3067,7 @@ Cards supported: 3,765
 - Spirit
 - Spirit
 - Spirit
+- Spirit Mantle
 - Spirit Warrior
 - Spirited Companion
 - Spiritual Guardian
@@ -3083,6 +3140,8 @@ Cards supported: 3,765
 - Stream of Life
 - Streetbreaker Wurm
 - Strength of Cedars
+- Strength of Isolation
+- Strength of Lunacy
 - Strider Harness
 - Strip Mine
 - Striped Bears
@@ -3111,6 +3170,7 @@ Cards supported: 3,765
 - Sun-Dappled Celebrant
 - Sunbeam Spellbomb
 - Sunblade Angel
+- Sunblast Angel
 - Sundial, Dawn Tyrant
 - Sundown Pass
 - Sungrace Pegasus
@@ -3180,7 +3240,10 @@ Cards supported: 3,765
 - Tectonic Reformation
 - Teddy Bear
 - Teetering Peaks
+- Tel-Jilad Chosen
+- Tel-Jilad Fallen
 - Tel-Jilad Justice
+- Tel-Jilad Outrider
 - Tempest Drake
 - Tempest of Light
 - Temple Acolyte
@@ -3221,6 +3284,7 @@ Cards supported: 3,765
 - The Lady of the Mountain
 - The Surgical Bay
 - The Terror of Serpent's Pass
+- Their Name Is Death
 - Thermal Glider
 - Thicket Crasher
 - Thieving Magpie
@@ -3282,6 +3346,7 @@ Cards supported: 3,765
 - Tomb Trawler
 - Tombstalker
 - Tome Raider
+- Tome of the Guildpact
 - Tonic Peddler
 - Tor Giant
 - Tor Wauki
@@ -3316,6 +3381,7 @@ Cards supported: 3,765
 - Tramway Station
 - Tranquil Cove
 - Tranquil Expanse
+- Tranquil Grove
 - Tranquil Thicket
 - Tranquility
 - Trapjaw Kelpie
@@ -3498,6 +3564,7 @@ Cards supported: 3,765
 - Viridian Lorebearers
 - Viridian Shaman
 - Virtue of Persistence // Locthwain Scorn
+- Virtue's Ruin
 - Virulent Emissary
 - Viscera Seer
 - Vithian Renegades
@@ -3584,6 +3651,7 @@ Cards supported: 3,765
 - Warlord's Axe
 - Warmth
 - Warpath Ghoul
+- Warren-Scourge Elf
 - Warrior
 - Warrior
 - Warrior
@@ -3623,6 +3691,7 @@ Cards supported: 3,765
 - Whip-Spine Drake
 - Whipcorder
 - Whiptail Wurm
+- Whirlwind
 - Whirlwind Adept
 - Whirlwind of Thought
 - Whisper Agent
@@ -3712,6 +3781,7 @@ Cards supported: 3,765
 - Yavimaya Barbarian
 - Yavimaya Enchantress
 - Yavimaya Hollow
+- Yavimaya Scion
 - Yavimaya Wurm
 - Yellow Scarves Troops
 - Yeva's Forcemage
