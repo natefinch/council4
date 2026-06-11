@@ -158,13 +158,108 @@ const (
 	ConditionAsLongAs
 )
 
-// CompiledCondition preserves a condition and whether it is an intervening-if
-// trigger condition.
+// ConditionPredicate identifies the closed semantic predicate recognized in a
+// condition.
+type ConditionPredicate uint8
+
+// Condition predicates recognized by the semantic compiler.
+const (
+	ConditionPredicateUnsupported ConditionPredicate = iota
+	ConditionPredicateControllerLifeAtLeast
+	ConditionPredicateAnyPlayerLifeAtMost
+	ConditionPredicateOpponentCountAtLeast
+	ConditionPredicateControllerControls
+	ConditionPredicateAnyOpponentControls
+	ConditionPredicateOpponentsControl
+	ConditionPredicateControllerHandEmpty
+	ConditionPredicateControllerGraveyardCardCountAtLeast
+	ConditionPredicateControllerGraveyardCardTypeCountAtLeast
+	ConditionPredicateControllerCreaturePowerDiversityAtLeast
+	ConditionPredicateEventSubjectWasKicked
+	ConditionPredicateEventSubjectWasCast
+	ConditionPredicateEventSubjectWasCastByController
+	ConditionPredicateEventSubjectHadNoCounter
+	ConditionPredicatePriorInstructionNotAccepted
+	ConditionPredicateCounterPlacementOnControlledCreature
+	ConditionPredicateControllerCounterPlacement
+	ConditionPredicateDamageByControlledSource
+	ConditionPredicateTokenCreationUnderController
+	ConditionPredicateSourceWouldDie
+	ConditionPredicateSourceWouldGoToGraveyard
+	ConditionPredicateTargetControllerDoesNotPay
+)
+
+// ConditionCardType identifies a card type in a semantic condition Selection.
+type ConditionCardType uint8
+
+// Condition card types.
+const (
+	ConditionCardTypeUnknown ConditionCardType = iota
+	ConditionCardTypeArtifact
+	ConditionCardTypeBattle
+	ConditionCardTypeCreature
+	ConditionCardTypeEnchantment
+	ConditionCardTypeLand
+	ConditionCardTypePlaneswalker
+)
+
+// ConditionSupertype identifies a supertype in a semantic condition Selection.
+type ConditionSupertype uint8
+
+// Condition supertypes.
+const (
+	ConditionSupertypeUnknown ConditionSupertype = iota
+	ConditionSupertypeBasic
+	ConditionSupertypeSnow
+)
+
+// ConditionColor identifies a color in a semantic condition Selection.
+type ConditionColor uint8
+
+// Condition colors.
+const (
+	ConditionColorUnknown ConditionColor = iota
+	ConditionColorWhite
+	ConditionColorBlue
+	ConditionColorBlack
+	ConditionColorRed
+	ConditionColorGreen
+)
+
+// ConditionCounter identifies a counter kind in an event-subject condition.
+type ConditionCounter uint8
+
+// Condition counter kinds.
+const (
+	ConditionCounterUnknown ConditionCounter = iota
+	ConditionCounterPlusOnePlusOne
+	ConditionCounterMinusOneMinusOne
+)
+
+// ConditionSelection is the source-independent Selection vocabulary used by
+// semantic conditions. Subtype names are canonicalized during recognition.
+type ConditionSelection struct {
+	RequiredTypes     []ConditionCardType
+	Supertypes        []ConditionSupertype
+	SubtypesAny       []string
+	ColorsAny         []ConditionColor
+	Colorless         bool
+	ExcludeSource     bool
+	PowerAtLeast      int
+	MatchPowerAtLeast bool
+}
+
+// CompiledCondition is a closed, source-spanned semantic condition.
 type CompiledCondition struct {
 	Kind        ConditionKind
 	Span        Span
 	Text        string
 	Intervening bool
+	Predicate   ConditionPredicate
+	Negated     bool
+	Threshold   int
+	Selection   ConditionSelection
+	Counter     ConditionCounter
 }
 
 // TargetCardinality is an inclusive target count range.
@@ -410,7 +505,8 @@ type CompiledKeyword struct {
 	Parameter string
 }
 
-// ReferenceKind identifies references requiring semantic binding.
+// ReferenceKind identifies the exact reference wording recognized before
+// antecedent binding.
 type ReferenceKind uint8
 
 // Reference kinds.
@@ -422,9 +518,25 @@ const (
 	ReferenceThatObject
 )
 
-// CompiledReference records a self-reference or antecedent-dependent phrase.
+// ReferenceBinding identifies the intended referent of a reference occurrence.
+type ReferenceBinding uint8
+
+// Bound reference kinds.
+const (
+	ReferenceBindingUnsupported ReferenceBinding = iota
+	ReferenceBindingAmbiguous
+	ReferenceBindingSource
+	ReferenceBindingTarget
+	ReferenceBindingEventPermanent
+	ReferenceBindingPriorInstructionResult
+)
+
+// CompiledReference records a source-spanned reference and its bound referent.
 type CompiledReference struct {
-	Kind ReferenceKind
-	Span Span
-	Text string
+	Kind             ReferenceKind
+	Span             Span
+	Text             string
+	Binding          ReferenceBinding
+	Occurrence       int
+	PriorInstruction int
 }

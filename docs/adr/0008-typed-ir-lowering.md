@@ -66,6 +66,18 @@ correct layer:
    `oracle.TriggerPattern` to `game.TriggerPattern` lowering path; `lower.go`
    dispatches and lowers trigger bodies from typed pattern fields and never
    interprets raw trigger text.
+   <br><br>
+   Conditions and object references follow the same boundary. `cardgen/oracle`
+   recognizes exact condition wording into a closed source-spanned predicate
+   vocabulary, then conservatively binds each semantic reference occurrence to
+   its source, target occurrence, triggering event permanent, or prior
+   instruction result. Ambiguous and unsupported references remain explicit;
+   recognition never guesses an antecedent. `cardgen/condition.go` is the
+   single `oracle.CompiledCondition` to `game.Condition` adapter and requires an
+   explicit lowering context. `cardgen/reference.go` is the single adapter from
+   bound references to typed runtime object and card references. Triggering
+   event permanents resolve live objects or last-known information; prior
+   instruction results use validated linked keys.
 2. **Assembly + validation** (`cardgen/executable.go`). `assembleCardDefs`
    combines parsed Scryfall fields with the lowered typed abilities into one or
    more `game.CardDef` values and calls `game.ValidateCardDef`. Any structural

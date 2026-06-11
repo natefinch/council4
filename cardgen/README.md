@@ -19,8 +19,12 @@ The compiler is fail-closed. It emits a card only when every face, ability,
 semantic element, and meaningful source token is supported. Trigger wording is
 recognized here into a source-spanned `oracle.TriggerPattern` with closed
 semantic event, relation, Selection, zone, step, combat, batching, and
-intervening-condition vocabulary. The retained raw event clause is used only
-for diagnostics and exact source consumption. Unsupported cards
+intervening-condition vocabulary. Exact condition wording is recognized once
+into a closed, source-spanned semantic predicate and exact object wording is
+bound conservatively to its source, target occurrence, triggering event
+subject, or prior instruction result. Ambiguous and unsupported references
+remain explicit semantic values. The retained raw text is used only for
+diagnostics and exact source consumption. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
@@ -41,7 +45,8 @@ Vanguard cards are excluded with explicit report reasons.
    `oracle.CompiledMode` carries one `oracle.AbilityContent` value alongside its
    shell-specific fields (cost, trigger clause, loyalty change, chapter numbers,
    text, span, optional flag).
-2. **Typed lowering (`lower.go`, `trigger_pattern.go`, and `executable.go`).**
+2. **Typed lowering (`lower.go`, `condition.go`, `reference.go`,
+   `trigger_pattern.go`, and `executable.go`).**
    `lowerTriggerPattern` is the single mechanical adapter from
    `oracle.TriggerPattern` to `game.TriggerPattern`; trigger shell lowerers never
    interpret raw event-clause text. `lowerAbilityContent`
@@ -49,7 +54,12 @@ Vanguard cards are excluded with explicit report reasons.
    `game.AbilityContent`. All supported shells — spell, activated body, triggered
    body, loyalty body, chapter body, modal option, and ordered-effect clauses —
    call `lowerAbilityContent` directly; no shell lowerer constructs a fake spell
-   ability to reach body lowering. Recognized semantics
+   ability to reach body lowering. `condition.go` is the single
+   `oracle.CompiledCondition` to `game.Condition` adapter and requires an
+   explicit static, activation, replacement, or intervening-trigger context.
+   `reference.go` is the single adapter from bound semantic references to typed
+   runtime object and card references, including event-permanent LKI and linked
+   prior-instruction results. Recognized semantics
    become typed `game.*` ability values, including chapter-numbered
    `game.ChapterAbility` values and the `game.ReadAheadStaticBody` Saga keyword
    template. `assembleCardDefs` combines

@@ -1839,6 +1839,92 @@ func TestCompileScryfallCacheHasNoSilentAbilities(t *testing.T) {
 	}
 }
 
+func TestCompileConditionsRecognizesClosedSemanticPredicates(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		source    string
+		kind      ConditionKind
+		predicate ConditionPredicate
+		negated   bool
+	}{
+		{"static Selection", "As long as you control another red creature, this creature has flying.", ConditionAsLongAs, ConditionPredicateControllerControls, false},
+		{"negated static Selection", "As long as you control two or fewer other lands, this creature has flying.", ConditionAsLongAs, ConditionPredicateControllerControls, true},
+		{"replacement Selection count", "This land enters tapped unless you control two or more basic lands.", ConditionUnless, ConditionPredicateControllerControls, true},
+		{"event subject", "When this creature enters, if it was kicked, draw a card.", ConditionIf, ConditionPredicateEventSubjectWasKicked, false},
+		{"activation resource threshold", "{T}: Draw a card. Activate only if you have 10 or more life.", ConditionOnlyIf, ConditionPredicateControllerLifeAtLeast, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, _ := Compile(test.source, ParseContext{CardName: "Test Bear"})
+			if len(compilation.Abilities) != 1 || len(compilation.Abilities[0].Content.Conditions) != 1 {
+				t.Fatalf("compilation = %#v", compilation)
+			}
+			condition := compilation.Abilities[0].Content.Conditions[0]
+			if condition.Kind != test.kind ||
+				condition.Predicate != test.predicate ||
+				condition.Negated != test.negated ||
+				condition.Span.Start.Offset >= condition.Span.End.Offset ||
+				test.source[condition.Span.Start.Offset:condition.Span.End.Offset] != condition.Text {
+				t.Fatalf("condition = %#v", condition)
+			}
+		})
+	}
+}
+
+func TestCompileConditionsRejectsNearMissWordingSemantically(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"When this creature enters, if you nearly control an artifact, draw a card.",
+		"If a creature dealt damage by this creature this turn would die, exile it instead.",
+	} {
+		compilation, _ := Compile(source, ParseContext{CardName: "Test Bear"})
+		condition := compilation.Abilities[0].Content.Conditions[0]
+		if condition.Predicate != ConditionPredicateUnsupported {
+			t.Fatalf("condition = %#v, want unsupported predicate", condition)
+		}
+		if got := source[condition.Span.Start.Offset:condition.Span.End.Offset]; got != condition.Text {
+			t.Fatalf("condition span text = %q, want %q", got, condition.Text)
+		}
+	}
+}
+
+func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		source   string
+		bindings []ReferenceBinding
+	}{
+		{"trigger event subject", "Whenever a creature dies, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingEventPermanent, ReferenceBindingEventPermanent}},
+		{"explicit source in trigger body", "Whenever a creature dies, this creature deals 1 damage to its controller.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingSource}},
+		{"single target occurrence", "Return target creature to its owner's hand.", []ReferenceBinding{ReferenceBindingTarget}},
+		{"prior instruction result", "Exile target creature. Return it to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingPriorInstructionResult, ReferenceBindingPriorInstructionResult}},
+		{"delayed source", "When this creature enters, exile it at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingSource}},
+		{"delayed non-self event subject", "When enchanted creature dies, return that card to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingEventPermanent, ReferenceBindingEventPermanent}},
+		{"ambiguous pronoun", "It explores.", []ReferenceBinding{ReferenceBindingAmbiguous}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, _ := Compile(test.source, ParseContext{CardName: "Test Bear", InstantOrSorcery: true})
+			references := compilation.Abilities[0].Content.References
+			if len(references) != len(test.bindings) {
+				t.Fatalf("references = %#v, want bindings %v", references, test.bindings)
+			}
+			for i, reference := range references {
+				if reference.Binding != test.bindings[i] {
+					t.Fatalf("reference[%d] = %#v, want binding %v", i, reference, test.bindings[i])
+				}
+				if got := test.source[reference.Span.Start.Offset:reference.Span.End.Offset]; got != reference.Text {
+					t.Fatalf("reference[%d] span text = %q, want %q", i, got, reference.Text)
+				}
+			}
+		})
+	}
+}
+
 func hasDiagnosticForSpan(diagnostics []Diagnostic, span Span) bool {
 	for _, diagnostic := range diagnostics {
 		if diagnostic.Span == span {

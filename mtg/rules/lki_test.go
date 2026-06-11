@@ -186,6 +186,38 @@ func TestDelayedLinkedExileReturnFailsClosedAfterCardLeavesExile(t *testing.T) {
 	}
 }
 
+func TestDelayedLinkedModifyPTReturnsSameTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanent(g, game.Player2)
+	source := addCombatCreaturePermanent(g, game.Player1)
+	obj := linkedSourceObject(source)
+	obj.Targets = []game.Target{game.PermanentTarget(target.ObjectID)}
+	key := game.LinkedKey("delayed-target")
+
+	resolveInstruction(engine, g, obj, game.ModifyPT{
+		Object:         game.TargetPermanentReference(0),
+		PowerDelta:     game.Fixed(2),
+		ToughnessDelta: game.Fixed(2),
+		Duration:       game.DurationUntilEndOfTurn,
+		PublishLinked:  key,
+	}, nil)
+	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Bounce{
+			Object: game.LinkedObjectReference(string(key)),
+		}}}}.Ability(),
+	}}, nil)
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if !g.Players[game.Player2].Hand.Contains(target.CardInstanceID) {
+		t.Fatal("linked target was not returned to its owner's hand")
+	}
+	if permanentByCardID(g, target.CardInstanceID) != nil {
+		t.Fatal("linked target remained on the battlefield")
+	}
+}
+
 func linkedSourceObject(source *game.Permanent) *game.StackObject {
 	return &game.StackObject{
 		Kind:         game.StackActivatedAbility,

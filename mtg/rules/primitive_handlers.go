@@ -343,6 +343,13 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 	powerDelta := r.quantity(prim.PowerDelta)
 	toughnessDelta := r.quantity(prim.ToughnessDelta)
 	r.game.ContinuousEffects = append(r.game.ContinuousEffects, untilEndOfTurnPTContinuousEffect(r.game, r.obj, permanent, powerDelta, toughnessDelta))
+	if prim.PublishLinked != "" {
+		rememberLinkedObject(
+			r.game,
+			linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
+			permanentLinkedObjectRef(permanent),
+		)
+	}
 	res.succeeded = true
 	return res
 }
