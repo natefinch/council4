@@ -1446,6 +1446,42 @@ func TestActivatedAbilityRemovesMultipleSourceCountersAsCost(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityPaysEnergyCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalEnergy,
+			Text:   "Pay {E}{E}",
+			Amount: 2,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	g.Players[game.Player1].EnergyCounters = 1
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("energy-cost ability was legal with too little energy")
+	}
+	g.Players[game.Player1].EnergyCounters = 3
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("energy-cost ability was not legal with enough energy")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(energy-cost ability) = false, want true")
+	}
+	if got := g.Players[game.Player1].EnergyCounters; got != 1 {
+		t.Fatalf("energy counters = %d, want 1 after payment", got)
+	}
+}
+
 func TestManaAbilityUntapsSourceAsCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

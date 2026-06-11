@@ -1103,6 +1103,16 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 		return lowerRemoveCounterCost(cardName, component)
 	case oracle.CostTapPermanents:
 		return lowerTapPermanentsCost(component)
+	case oracle.CostEnergy:
+		amount, err := strconv.Atoi(component.Amount)
+		if err != nil || amount <= 0 {
+			return cost.Additional{}, false
+		}
+		return cost.Additional{
+			Kind:   cost.AdditionalEnergy,
+			Text:   component.Text,
+			Amount: amount,
+		}, true
 	default:
 		return cost.Additional{}, false
 	}
