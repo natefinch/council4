@@ -35,6 +35,7 @@ const (
 	AdditionalExert
 	AdditionalMill
 	AdditionalPutCounter
+	AdditionalCollectEvidence
 )
 
 // Additional describes a typed non-mana cost printed on a spell, ability, or

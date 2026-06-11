@@ -3407,6 +3407,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalMill", nil
 	case cost.AdditionalPutCounter:
 		return "cost.AdditionalPutCounter", nil
+	case cost.AdditionalCollectEvidence:
+		return "cost.AdditionalCollectEvidence", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
 	}

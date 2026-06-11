@@ -1234,9 +1234,24 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 		return lowerMillCost(component)
 	case oracle.CostPutCounter:
 		return lowerPutCounterCost(cardName, component)
+	case oracle.CostCollectEvidence:
+		return lowerCollectEvidenceCost(component)
 	default:
 		return cost.Additional{}, false
 	}
+}
+
+func lowerCollectEvidenceCost(component oracle.CostComponent) (cost.Additional, bool) {
+	amount, err := strconv.Atoi(component.Amount)
+	if err != nil || amount <= 0 {
+		return cost.Additional{}, false
+	}
+	return cost.Additional{
+		Kind:   cost.AdditionalCollectEvidence,
+		Text:   component.Text,
+		Amount: amount,
+		Source: zone.Graveyard,
+	}, true
 }
 
 func lowerExertCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {

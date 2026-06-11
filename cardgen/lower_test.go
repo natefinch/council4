@@ -182,6 +182,50 @@ func TestLowerIssue210AdditionalCosts(t *testing.T) {
 	}
 }
 
+func TestLowerCollectEvidenceAdditionalCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Detective",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Detective",
+		OracleText: "Collect evidence 4: Draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	additional := face.ActivatedAbilities[0].AdditionalCosts[0]
+	if additional.Kind != cost.AdditionalCollectEvidence ||
+		additional.Amount != 4 ||
+		additional.Source != zone.Graveyard {
+		t.Fatalf("additional = %#v, want collect evidence 4 from graveyard", additional)
+	}
+}
+
+func TestLowerCollectEvidenceRejectsMalformedThresholds(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Collect evidence 0: Draw a card.",
+		"Collect evidence two: Draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Malformed Detective",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Detective",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected collect-evidence diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerNinjutsuAbility(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

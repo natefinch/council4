@@ -245,6 +245,9 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 			case startsWords(words, "put") && containsNoun(words, "counter"):
 				component.Kind = CostPutCounter
 				component.Object = wordsAfterFirst(part)
+			case startsWords(words, "collect", "evidence") && len(part) == 3 && positiveIntegerWord(firstInteger(part)):
+				component.Kind = CostCollectEvidence
+				component.Amount = firstInteger(part)
 			case startsWords(words, "exile"):
 				component.Kind = CostExile
 				component.Object = wordsAfterFirst(part)
@@ -1769,6 +1772,11 @@ func firstInteger(tokens []Token) string {
 		}
 	}
 	return ""
+}
+
+func positiveIntegerWord(word string) bool {
+	amount, err := strconv.Atoi(word)
+	return err == nil && amount > 0
 }
 
 func joinedTokenText(tokens []Token) string {
