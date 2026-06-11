@@ -105,6 +105,12 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
 - ordered activated and loyalty cost components, including `{T}`, `{Q}`, exile,
   and counter-removal costs;
 - trigger clauses and intervening-if conditions;
+- source-spanned semantic trigger patterns. Their closed vocabulary records
+  trigger kind, representable event family, self/attached-source and controller
+  relations, subject Selection, affected player, zones, phase/step, combat
+  qualifiers, one-or-more batching, and an intervening-condition reference.
+  Raw event-clause text is retained only for diagnostics and exact source
+  consumption;
 - modes and inclusive target cardinalities;
 - conservative selectors and controller constraints;
 - keyword abilities and parameters;
@@ -168,11 +174,13 @@ enters-the-battlefield triggers lower for single-subject (`a`/`an`/`another`,
 optional `nontoken` qualifier) and `one or more` subject forms, with optional
 permanent type filter (creature, artifact, enchantment, land, planeswalker, or
 unfiltered) and optional you-control or opponent-controls controller constraints.
-Phase and step triggered abilities with `At the beginning of …` lower for ten
-exact step-trigger phrases: your upkeep, each upkeep, each player's upkeep, each
-opponent's upkeep, your end step, each end step, each player's end step, combat
-on your turn, each combat, and your draw step. Intervening-if conditions on step
-triggers are always rejected fail-closed.
+Phase and step triggered abilities with `At the beginning of …` recognize exact
+supported controller-relative upkeep, draw, end, combat, combat-step, and main
+phase variants. Common exact self and controller-relative attack, block, tap,
+untap, and self became-target phrases also recognize into the same semantic
+pattern vocabulary. One-or-more wording is accepted only for event families
+whose runtime emission supports correct batching. Unsupported phrase variants
+remain fail-closed.
 Self-dies triggers support exact
 absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.
@@ -206,7 +214,9 @@ exactly referenced source object's power. Count and opponent formulas may use
 their printed integer multiplier or “twice.” Arithmetic offsets, mixed groups,
 zone counts, and ambiguous pronouns remain unsupported.
 
-This compiler IR is the recognition stage. The strict backend in `cardgen`
+This compiler IR is the recognition stage. Trigger phrase tables and adapters
+live here; `cardgen/lower.go` never interprets retained raw trigger-event text.
+The strict backend in `cardgen`
 consumes it and lowers each recognized ability into a second, **typed**
 intermediate representation made of `game.*` values (`game.ActivatedAbility`,
 `game.ManaAbility`, `game.TriggeredAbility`, and so on), assembles a

@@ -16,7 +16,11 @@ Scryfall JSON
 ```
 
 The compiler is fail-closed. It emits a card only when every face, ability,
-semantic element, and meaningful source token is supported. Unsupported cards
+semantic element, and meaningful source token is supported. Trigger wording is
+recognized here into a source-spanned `oracle.TriggerPattern` with closed
+semantic event, relation, Selection, zone, step, combat, batching, and
+intervening-condition vocabulary. The retained raw event clause is used only
+for diagnostics and exact source consumption. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
@@ -37,7 +41,10 @@ Vanguard cards are excluded with explicit report reasons.
    `oracle.CompiledMode` carries one `oracle.AbilityContent` value alongside its
    shell-specific fields (cost, trigger clause, loyalty change, chapter numbers,
    text, span, optional flag).
-2. **Typed lowering (`lower.go` and `executable.go`).** `lowerAbilityContent`
+2. **Typed lowering (`lower.go`, `trigger_pattern.go`, and `executable.go`).**
+   `lowerTriggerPattern` is the single mechanical adapter from
+   `oracle.TriggerPattern` to `game.TriggerPattern`; trigger shell lowerers never
+   interpret raw event-clause text. `lowerAbilityContent`
    is the single entry point that lowers an `oracle.AbilityContent` value into
    `game.AbilityContent`. All supported shells — spell, activated body, triggered
    body, loyalty body, chapter body, modal option, and ordered-effect clauses —
@@ -78,11 +85,14 @@ Vanguard cards are excluded with explicit report reasons.
    subject forms, with optional permanent type filter (creature, artifact,
    enchantment, land, planeswalker, or unfiltered) and optional you-control or
    opponent-controls controller constraints. Phase and step triggered abilities
-   using `At the beginning of …` lower for the ten exact step-trigger phrases:
-   your upkeep, each upkeep, each player's upkeep, each opponent's upkeep, your
-   end step, each end step, each player's end step, combat on your turn, each
-   combat, and your draw step. All other step-trigger phrases and all
-   intervening-if conditions on step triggers are fail-closed. Exact
+   using `At the beginning of …` lower for
+   exact supported controller-relative upkeep, draw, end, combat, combat-step,
+   and main-phase variants. Common exact creature attack/block, permanent
+   tap/untap, and self became-target event clauses lower through the same
+   semantic pattern path; controller-relative subjects use
+   `game.TriggerPattern.SubjectSelection`. Unsupported variants, including
+   one-or-more combat wording without correctly batched runtime emission, remain
+   fail-closed. Exact
    self-dies triggers support exact `if it had no +1/+1 counters` and
    `if it had no -1/-1 counters` conditions using the departed permanent's
    last-known information. Fixed-damage bodies preserve that permanent as the

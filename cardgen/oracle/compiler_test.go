@@ -350,6 +350,222 @@ func TestCompileTriggeredAbilityWithInternalEventComma(t *testing.T) {
 	}
 }
 
+func TestCompileSemanticTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		check  func(*testing.T, TriggerPattern)
+	}{
+		{
+			name:   "source self",
+			source: "When this creature enters, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Kind != TriggerWhen ||
+					pattern.Event != TriggerEventPermanentEnteredBattlefield ||
+					pattern.Source != TriggerSourceSelf {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "source self with capitalized subtype",
+			source: "When this Aura enters, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Kind != TriggerWhen ||
+					pattern.Event != TriggerEventPermanentEnteredBattlefield ||
+					pattern.Source != TriggerSourceSelf {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "controller and subject Selection",
+			source: "Whenever another nontoken creature you control enters, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Controller != ControllerYou ||
+					!pattern.ExcludeSelf ||
+					!pattern.SubjectSelection.NonToken ||
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "step and active player relation",
+			source: "At the beginning of each opponent's draw step, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventBeginningOfStep ||
+					pattern.Step != TriggerStepDraw ||
+					pattern.Controller != ControllerOpponent {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "combat damage role",
+			source: "Whenever this creature deals combat damage to a creature, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventDamageDealt ||
+					pattern.Source != TriggerSourceSelf ||
+					pattern.Subject != TriggerSubjectDamageSource ||
+					pattern.CombatQualifier != TriggerCombatDamage ||
+					pattern.DamageRecipient != TriggerDamageRecipientPermanent ||
+					!slices.Equal(pattern.DamageRecipientSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "one or more",
+			source: "Whenever one or more artifacts you control enter, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if !pattern.OneOrMore ||
+					pattern.Controller != ControllerYou ||
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeArtifact}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "attack subject",
+			source: "Whenever a creature an opponent controls attacks, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventAttackerDeclared ||
+					pattern.Controller != ControllerOpponent ||
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "attached blocker",
+			source: "Whenever equipped creature blocks, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventBlockerDeclared ||
+					pattern.Source != TriggerSourceAttachedPermanent {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "attached permanent dies whenever",
+			source: "Whenever equipped creature dies, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Kind != TriggerWhenever ||
+					pattern.Event != TriggerEventPermanentDied ||
+					pattern.Source != TriggerSourceAttachedPermanent ||
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "tap controller relation",
+			source: "Whenever another artifact you control becomes tapped, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventPermanentTapped ||
+					pattern.Controller != ControllerYou ||
+					!pattern.ExcludeSelf ||
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeArtifact}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "untap subject",
+			source: "Whenever a creature you control becomes untapped, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventPermanentUntapped ||
+					pattern.Controller != ControllerYou {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "became target of spell",
+			source: "Whenever this creature becomes the target of a spell, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventObjectBecameTarget ||
+					pattern.Source != TriggerSourceSelf ||
+					pattern.StackObject != TriggerStackObjectSpell {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := compilation.Abilities[0].Trigger
+			if trigger == nil || trigger.Event == "" {
+				t.Fatalf("trigger = %#v", trigger)
+			}
+			eventText := test.source[trigger.Pattern.Span.Start.Offset:trigger.Pattern.Span.End.Offset]
+			if eventText != trigger.Event {
+				t.Fatalf("pattern span text = %q, raw diagnostic event = %q", eventText, trigger.Event)
+			}
+			test.check(t, trigger.Pattern)
+		})
+	}
+}
+
+func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Whenever this creature attacks alone, draw a card.",
+		"Whenever one or more creatures you control attack, draw a card.",
+		"Whenever this creature becomes the target of a spell or ability an opponent controls, draw a card.",
+		"Whenever creature you control becomes tapped, draw a card.",
+		"At the beginning of your next upkeep, draw a card.",
+		"At the beginning of your declare attackers step, draw a card.",
+		"When another creature dies, draw a card.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if pattern := compilation.Abilities[0].Trigger.Pattern; pattern.Event != TriggerEventUnknown {
+				t.Fatalf("near-miss pattern = %#v, want unknown event", pattern)
+			}
+		})
+	}
+}
+
+func TestCompileNamedSelfEnterTriggerPattern(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"When Example Card enters, draw a card.",
+		ParseContext{CardName: "Example Card"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	pattern := compilation.Abilities[0].Trigger.Pattern
+	if pattern.Event != TriggerEventPermanentEnteredBattlefield || pattern.Source != TriggerSourceSelf {
+		t.Fatalf("pattern = %#v", pattern)
+	}
+}
+
+func TestCompileSemanticTriggerPatternReferencesInterveningCondition(t *testing.T) {
+	t.Parallel()
+	source := "When this creature enters, if it was kicked, draw a card."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	trigger := compilation.Abilities[0].Trigger
+	if trigger.Condition == nil || trigger.Pattern.InterveningCondition != trigger.Condition {
+		t.Fatalf("trigger = %#v, want pattern to reference source-spanned intervening condition", trigger)
+	}
+}
+
 func TestCompileSagaChapterAbility(t *testing.T) {
 	t.Parallel()
 	source := "II, III — Draw a card."

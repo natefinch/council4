@@ -136,10 +136,13 @@ const (
 // CompiledTrigger is the event clause before a triggered ability's first
 // top-level comma.
 type CompiledTrigger struct {
-	Kind      TriggerKind
-	Span      Span
-	Text      string
+	Kind TriggerKind
+	Span Span
+	Text string
+	// Event retains the exact event-clause text for diagnostics and source
+	// consumption. Executable lowering consumes Pattern instead.
 	Event     string
+	Pattern   TriggerPattern
 	Condition *CompiledCondition
 }
 

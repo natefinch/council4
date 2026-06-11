@@ -4190,54 +4190,25 @@ func entersTappedLandSubtypes(condition string) ([]types.Sub, bool) {
 	return subtypes, len(subtypes) > 0
 }
 
-type atTriggerParams struct {
-	step       game.Step
-	controller game.TriggerControllerFilter
-}
-
-var atTriggerPhrases = map[string]atTriggerParams{
-	"the beginning of your upkeep":            {game.StepUpkeep, game.TriggerControllerYou},
-	"the beginning of each upkeep":            {game.StepUpkeep, game.TriggerControllerAny},
-	"the beginning of each player's upkeep":   {game.StepUpkeep, game.TriggerControllerAny},
-	"the beginning of each opponent's upkeep": {game.StepUpkeep, game.TriggerControllerOpponent},
-	"the beginning of your end step":          {game.StepEnd, game.TriggerControllerYou},
-	"the beginning of each end step":          {game.StepEnd, game.TriggerControllerAny},
-	"the beginning of each player's end step": {game.StepEnd, game.TriggerControllerAny},
-	"the beginning of combat on your turn":    {game.StepBeginningOfCombat, game.TriggerControllerYou},
-	"the beginning of each combat":            {game.StepBeginningOfCombat, game.TriggerControllerAny},
-	"the beginning of your draw step":         {game.StepDraw, game.TriggerControllerYou},
-	"the beginning of your first main phase":  {game.StepPrecombatMain, game.TriggerControllerYou},
-	"the beginning of your precombat main phase": {
-		game.StepPrecombatMain,
-		game.TriggerControllerYou,
-	},
-	"the beginning of each of your first main phases": {
-		game.StepPrecombatMain,
-		game.TriggerControllerYou,
-	},
-	"the beginning of your second main phase": {game.StepPostcombatMain, game.TriggerControllerYou},
-	"the beginning of your postcombat main phase": {
-		game.StepPostcombatMain,
-		game.TriggerControllerYou,
-	},
-	"the beginning of each of your postcombat main phases": {
-		game.StepPostcombatMain,
-		game.TriggerControllerYou,
-	},
-}
-
 func lowerAtTrigger(
 	cardName string,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
 	const summary = "unsupported phase/step trigger phrase"
-	params, ok := atTriggerPhrases[ability.Trigger.Event]
-	if !ok {
+	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
 			summary,
-			fmt.Sprintf("the executable source backend does not support step trigger phrase %q", ability.Trigger.Event),
+			"the executable source backend requires a semantic step trigger pattern",
+		)
+	}
+	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
+	if !ok || pattern.Event != game.EventBeginningOfStep {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend does not support this semantic step trigger pattern",
 		)
 	}
 	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
@@ -4251,7 +4222,7 @@ func lowerAtTrigger(
 	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
-			summary,
+			"unsupported phase/step trigger phrase effect",
 			"modes and ability words are not supported in phase/step triggers",
 		)
 	}
@@ -4259,7 +4230,7 @@ func lowerAtTrigger(
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
-			summary,
+			"unsupported phase/step trigger phrase effect",
 			"the executable source backend does not support this phase/step trigger body",
 		)
 	}
@@ -4270,12 +4241,8 @@ func lowerAtTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type: game.TriggerAt,
-			Pattern: game.TriggerPattern{
-				Event:      game.EventBeginningOfStep,
-				Controller: params.controller,
-				Step:       params.step,
-			},
+			Type:                 game.TriggerAt,
+			Pattern:              pattern,
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,
 		},
@@ -4329,57 +4296,40 @@ func lowerTriggeredAbility(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
-	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerAt {
+	if ability.Trigger == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			"unsupported triggered ability",
+			"the executable source backend requires a semantic trigger pattern",
+		)
+	}
+	pattern := ability.Trigger.Pattern
+	if pattern.Kind == oracle.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
-	if cyclingAbility, ok, diagnostic := lowerCyclingTrigger(cardName, ability, syntax); ok {
-		return cyclingAbility, diagnostic
-	}
-	if triggeredAbility, ok := lowerLifeDamageTrigger(cardName, ability, syntax); ok {
-		return triggeredAbility, nil
-	}
-	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerWhenever {
-		if _, ok := drawDiscardTriggerPhrases[ability.Trigger.Event]; ok {
-			return lowerDrawDiscardTrigger(cardName, ability, syntax)
+	switch pattern.Event {
+	case oracle.TriggerEventCardDrawn, oracle.TriggerEventCardDiscarded, oracle.TriggerEventCycled:
+		return lowerDrawDiscardTrigger(cardName, ability, syntax)
+	case oracle.TriggerEventLifeGained, oracle.TriggerEventLifeLost, oracle.TriggerEventDamageDealt:
+		return lowerLifeDamageTrigger(cardName, ability, syntax)
+	case oracle.TriggerEventPermanentEnteredBattlefield:
+		if pattern.Source == oracle.TriggerSourceSelf {
+			return lowerEnterTrigger(cardName, ability, syntax)
 		}
-	}
-	triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
-	if diagnostic == nil ||
-		ability.Trigger == nil ||
-		!strings.Contains(ability.Trigger.Event, " enter") {
-		if diagnostic != nil && ability.Trigger != nil {
-			if castAbility, ok := lowerCastTrigger(cardName, ability, syntax); ok {
-				return castAbility, nil
-			}
-			if strings.HasSuffix(ability.Trigger.Event, " dies") {
-				if _, ok := lowerNonSelfDiesTriggerEvent(ability.Trigger.Event); ok {
-					return lowerNonSelfDiesTrigger(cardName, ability, syntax)
-				}
-			}
+		return lowerNonSelfEnterTrigger(cardName, ability, syntax)
+	case oracle.TriggerEventPermanentDied:
+		if pattern.Source == oracle.TriggerSourceSelf {
+			return lowerEnterTrigger(cardName, ability, syntax)
 		}
-		return triggeredAbility, diagnostic
+		return lowerNonSelfDiesTrigger(cardName, ability, syntax)
+	case oracle.TriggerEventSpellCast:
+		return lowerCastTrigger(cardName, ability, syntax)
+	default:
+		if pattern.Source == oracle.TriggerSourceSelf {
+			return lowerEnterTrigger(cardName, ability, syntax)
+		}
+		return lowerGenericPatternTrigger(cardName, ability, syntax)
 	}
-	nonSelf, ok := lowerNonSelfEnterTrigger(cardName, ability, syntax)
-	if !ok {
-		return game.TriggeredAbility{}, diagnostic
-	}
-	return nonSelf, nil
-}
-
-type drawDiscardTriggerPattern struct {
-	event     game.EventKind
-	player    game.TriggerPlayerFilter
-	oneOrMore bool
-}
-
-var drawDiscardTriggerPhrases = map[string]drawDiscardTriggerPattern{
-	"you draw a card":               {event: game.EventCardDrawn, player: game.TriggerPlayerYou},
-	"an opponent draws a card":      {event: game.EventCardDrawn, player: game.TriggerPlayerOpponent},
-	"a player draws a card":         {event: game.EventCardDrawn, player: game.TriggerPlayerAny},
-	"you discard a card":            {event: game.EventCardDiscarded, player: game.TriggerPlayerYou},
-	"you discard one or more cards": {event: game.EventCardDiscarded, player: game.TriggerPlayerYou, oneOrMore: true},
-	"an opponent discards a card":   {event: game.EventCardDiscarded, player: game.TriggerPlayerOpponent},
-	"a player discards a card":      {event: game.EventCardDiscarded, player: game.TriggerPlayerAny},
 }
 
 func lowerDrawDiscardTrigger(
@@ -4388,26 +4338,32 @@ func lowerDrawDiscardTrigger(
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
 	const summary = "unsupported draw/discard trigger"
-	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
+	if ability.Trigger == nil || ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"the executable source backend supports only TriggerWhenever draw and discard triggers")
 	}
-	params, ok := drawDiscardTriggerPhrases[ability.Trigger.Event]
-	if !ok {
+	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
+	if !ok ||
+		(pattern.Event != game.EventCardDrawn &&
+			pattern.Event != game.EventCardDiscarded &&
+			pattern.Event != game.EventCycled) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
-			"unrecognized draw/discard trigger event phrase: "+ability.Trigger.Event)
+			"unrecognized semantic draw, discard, or cycling trigger pattern")
 	}
-	if ability.Trigger.Condition != nil ||
-		len(ability.Content.Effects) == 0 ||
+	if ability.Trigger.Condition != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend does not support this semantic draw/discard trigger condition")
+	}
+	if len(ability.Content.Effects) == 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
 		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported draw/discard trigger effect",
 			"the executable source backend supports only simple draw/discard triggers without conditions, modes, keywords, or ability words")
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported draw/discard trigger effect",
 			"the executable source backend does not support this draw/discard trigger body")
 	}
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
@@ -4417,78 +4373,62 @@ func lowerDrawDiscardTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type: game.TriggerWhenever,
-			Pattern: game.TriggerPattern{
-				Event:     params.event,
-				Player:    params.player,
-				OneOrMore: params.oneOrMore,
-			},
+			Type:    game.TriggerWhenever,
+			Pattern: pattern,
 		},
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
 }
 
-type cyclingTriggerPattern struct {
-	event       game.EventKind
-	excludeSelf bool
-}
-
-var cyclingTriggerPhrases = map[string]cyclingTriggerPattern{
-	"you cycle a card":                  {event: game.EventCycled},
-	"you cycle another card":            {event: game.EventCycled, excludeSelf: true},
-	"you cycle or discard a card":       {event: game.EventCardDiscarded},
-	"you cycle or discard another card": {event: game.EventCardDiscarded, excludeSelf: true},
-}
-
-func lowerCyclingTrigger(
+func lowerGenericPatternTrigger(
 	cardName string,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
-) (game.TriggeredAbility, bool, *oracle.Diagnostic) {
-	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
-		return game.TriggeredAbility{}, false, nil
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	if ability.Trigger == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend requires a semantic trigger pattern")
 	}
-	params, ok := cyclingTriggerPhrases[ability.Trigger.Event]
+	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
 	if !ok {
-		return game.TriggeredAbility{}, false, nil
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic trigger pattern")
 	}
-	const summary = "unsupported cycling trigger"
-	if ability.Trigger.Condition != nil ||
+	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
+	if !ok || triggerType == game.TriggerAt {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic trigger kind")
+	}
+	if ability.Trigger.Condition != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic trigger condition")
+	}
+	if len(ability.Content.Effects) == 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
 		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
-		return game.TriggeredAbility{}, true, executableDiagnostic(
-			ability,
-			summary,
-			"the executable source backend supports only exact cycling trigger phrases without modes, ability words, or intervening conditions",
-		)
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
+			"the executable source backend does not support this trigger body")
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, true, executableDiagnostic(
-			ability,
-			summary,
-			"the executable source backend does not support this cycling trigger body",
-		)
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
+			"the executable source backend does not support this trigger body")
 	}
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
 	if diagnostic != nil {
-		return game.TriggeredAbility{}, true, diagnostic
+		return game.TriggeredAbility{}, diagnostic
 	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type: game.TriggerWhenever,
-			Pattern: game.TriggerPattern{
-				Event:       params.event,
-				Player:      game.TriggerPlayerYou,
-				ExcludeSelf: params.excludeSelf,
-			},
+			Type:    triggerType,
+			Pattern: pattern,
 		},
 		Optional: ability.Optional,
 		Content:  content,
-	}, true, nil
+	}, nil
 }
 
 func lowerTriggeredAbilityKind(
@@ -4572,29 +4512,41 @@ func lowerEnterTrigger(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
-	pattern, supportedEvent := lowerSelfTriggerPattern(cardName, ability)
+	if ability.Trigger == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			"unsupported triggered ability",
+			"the executable source backend requires a semantic self trigger pattern",
+		)
+	}
+	pattern, supportedEvent := lowerTriggerPattern(&ability.Trigger.Pattern)
 	eventKind := pattern.Event
 	summary := "unsupported triggered ability"
-	detail := "the executable source backend supports only exact self-enter, self-dies, self-mutate, and simple combat triggers with supported effects"
-	if ability.Trigger != nil && strings.Contains(ability.Trigger.Event, " enters") {
+	effectSummary := "unsupported triggered ability effect"
+	detail := "the executable source backend supports only recognized semantic self triggers with supported effects"
+	switch ability.Trigger.Pattern.Event {
+	case oracle.TriggerEventPermanentEnteredBattlefield:
 		summary = "unsupported enter trigger"
-		detail = "the executable source backend supports only exact self-enter triggers with supported effects"
-	} else if ability.Trigger != nil && strings.HasSuffix(ability.Trigger.Event, " dies") {
+		effectSummary = "unsupported enter trigger effect"
+		detail = "the executable source backend supports only recognized semantic self-enter triggers with supported effects"
+	case oracle.TriggerEventPermanentDied:
 		summary = "unsupported dies trigger"
-		detail = "the executable source backend supports only exact self-dies triggers with supported effects"
+		effectSummary = "unsupported dies trigger effect"
+		detail = "the executable source backend supports only recognized semantic self-dies triggers with supported effects"
+	default:
 	}
 	intervening, supportedCondition := lowerSelfInterveningCondition(eventKind, ability.Trigger)
-	if ability.Trigger == nil ||
-		!supportedSelfTriggerKind(eventKind, ability.Trigger.Kind) ||
+	if !supportedSelfTriggerKind(eventKind, ability.Trigger.Pattern.Kind) ||
 		!supportedEvent ||
-		!supportedCondition ||
-		len(ability.Content.Modes) != 0 ||
-		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		!supportedCondition {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
+	}
+	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
+		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
 	selfDamage := eventKind == game.EventPermanentDied &&
 		normalizeSelfDamageReference(cardName, &body)
@@ -4608,7 +4560,7 @@ func lowerEnterTrigger(
 	if selfDamage {
 		damage, ok := content.Modes[0].Sequence[0].Primitive.(game.Damage)
 		if !ok {
-			return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
+			return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 		}
 		damage.DamageSource = opt.Val(game.EventPermanentReference())
 		if dynamic := damage.Amount.DynamicAmount(); dynamic.Exists &&
@@ -4618,9 +4570,9 @@ func lowerEnterTrigger(
 		}
 		content.Modes[0].Sequence[0].Primitive = damage
 	}
-	triggerType := game.TriggerWhen
-	if ability.Trigger.Kind == oracle.TriggerWhenever {
-		triggerType = game.TriggerWhenever
+	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
@@ -4642,24 +4594,35 @@ func lowerLifeDamageTrigger(
 	cardName string,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
-) (game.TriggeredAbility, bool) {
-	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
-		return game.TriggeredAbility{}, false
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	if ability.Trigger == nil || ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend requires a semantic whenever life or damage trigger")
 	}
-	pattern, ok := lowerLifeDamageTriggerPattern(ability)
+	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
 	if !ok ||
-		ability.Trigger.Condition != nil ||
-		len(ability.Content.Modes) != 0 ||
-		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
-		return game.TriggeredAbility{}, false
+		(pattern.Event != game.EventLifeGained &&
+			pattern.Event != game.EventLifeLost &&
+			pattern.Event != game.EventDamageDealt) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic life or damage trigger pattern")
+	}
+	if ability.Trigger.Condition != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic life or damage trigger condition")
+	}
+	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
+			"the executable source backend does not support this life or damage trigger body")
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, false
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
+			"the executable source backend does not support this life or damage trigger body")
 	}
 	content, diagnostic := lowerSelfTriggerBody(cardName, pattern.Event, body, bodySyntax)
 	if diagnostic != nil {
-		return game.TriggeredAbility{}, false
+		return game.TriggeredAbility{}, diagnostic
 	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
@@ -4669,119 +4632,7 @@ func lowerLifeDamageTrigger(
 		},
 		Optional: ability.Optional,
 		Content:  content,
-	}, true
-}
-
-func lowerLifeDamageTriggerPattern(ability oracle.CompiledAbility) (game.TriggerPattern, bool) {
-	if ability.Trigger == nil {
-		return game.TriggerPattern{}, false
-	}
-	switch ability.Trigger.Event {
-	case "you gain life":
-		return game.TriggerPattern{
-			Event:  game.EventLifeGained,
-			Player: game.TriggerPlayerYou,
-		}, true
-	case "an opponent gains life":
-		return game.TriggerPattern{
-			Event:  game.EventLifeGained,
-			Player: game.TriggerPlayerOpponent,
-		}, true
-	case "you lose life":
-		return game.TriggerPattern{
-			Event:  game.EventLifeLost,
-			Player: game.TriggerPlayerYou,
-		}, true
-	case "an opponent loses life":
-		return game.TriggerPattern{
-			Event:  game.EventLifeLost,
-			Player: game.TriggerPlayerOpponent,
-		}, true
-	case "this creature is dealt damage",
-		"this permanent is dealt damage":
-		return game.TriggerPattern{
-			Event:           game.EventDamageDealt,
-			Source:          game.TriggerSourceSelf,
-			Subject:         game.TriggerSubjectPermanent,
-			DamageRecipient: game.DamageRecipientPermanent,
-		}, true
-	case "enchanted creature is dealt damage",
-		"enchanted permanent is dealt damage",
-		"equipped creature is dealt damage":
-		return game.TriggerPattern{
-			Event:           game.EventDamageDealt,
-			Source:          game.TriggerSourceAttachedPermanent,
-			DamageRecipient: game.DamageRecipientPermanent,
-		}, true
-	case "this creature deals damage":
-		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientNone, game.TriggerPlayerAny), true
-	case "this creature deals damage to a player":
-		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
-	case "this creature deals damage to an opponent":
-		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
-	case "this creature deals damage to a creature":
-		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
-	case "this creature deals combat damage":
-		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientNone, game.TriggerPlayerAny), true
-	case "this creature deals combat damage to a player":
-		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
-	case "this creature deals combat damage to an opponent":
-		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
-	case "this creature deals combat damage to a creature":
-		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
-	case "equipped creature deals damage",
-		"enchanted creature deals damage":
-		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientNone, game.TriggerPlayerAny), true
-	case "equipped creature deals damage to a player",
-		"enchanted creature deals damage to a player":
-		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
-	case "equipped creature deals damage to an opponent",
-		"enchanted creature deals damage to an opponent":
-		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
-	case "equipped creature deals damage to a creature",
-		"enchanted creature deals damage to a creature":
-		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
-	case "equipped creature deals combat damage",
-		"enchanted creature deals combat damage":
-		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientNone, game.TriggerPlayerAny), true
-	case "equipped creature deals combat damage to a player",
-		"enchanted creature deals combat damage to a player":
-		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
-	case "equipped creature deals combat damage to an opponent",
-		"enchanted creature deals combat damage to an opponent":
-		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
-	case "equipped creature deals combat damage to a creature",
-		"enchanted creature deals combat damage to a creature":
-		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
-	case "you're dealt damage", "you are dealt damage":
-		return game.TriggerPattern{
-			Event:           game.EventDamageDealt,
-			Player:          game.TriggerPlayerYou,
-			DamageRecipient: game.DamageRecipientPlayer,
-		}, true
-	default:
-		return game.TriggerPattern{}, false
-	}
-}
-
-func damageSourceTriggerPattern(
-	source game.TriggerSourceFilter,
-	combat bool,
-	recipient game.DamageRecipientKind,
-	player game.TriggerPlayerFilter,
-) game.TriggerPattern {
-	pattern := game.TriggerPattern{
-		Event:               game.EventDamageDealt,
-		Source:              source,
-		Subject:             game.TriggerSubjectDamageSource,
-		Player:              player,
-		DamageRecipient:     recipient,
-		RequireCombatDamage: combat,
-	}
-	if recipient == game.DamageRecipientPermanent {
-		pattern.DamageRecipientTypes = []types.Card{types.Creature}
-	}
-	return pattern
+	}, nil
 }
 
 func lowerSelfTriggerBody(
@@ -4901,6 +4752,7 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind)
 		game.EventDamageDealt,
 		game.EventPermanentTapped,
 		game.EventPermanentUntapped,
+		game.EventObjectBecameTarget,
 		game.EventCountersAdded:
 		return kind == oracle.TriggerWhenever
 	default:
@@ -4995,142 +4847,6 @@ func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbili
 	ability.Content.References[0].Kind = oracle.ReferenceSelfName
 	ability.Content.References[0].Text = cardName
 	return true
-}
-
-func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (game.TriggerPattern, bool) {
-	if ability.Trigger == nil {
-		return game.TriggerPattern{}, false
-	}
-	switch ability.Trigger.Event {
-	case "this creature enters",
-		"this permanent enters",
-		"this aura enters",
-		"this artifact enters",
-		"this equipment enters",
-		"this land enters",
-		"this vehicle enters",
-		"this enchantment enters":
-		return game.TriggerPattern{
-			Event:  game.EventPermanentEnteredBattlefield,
-			Source: game.TriggerSourceSelf,
-		}, true
-	case "this creature dies", "this permanent dies",
-		"this aura is put into a graveyard from the battlefield",
-		"this artifact is put into a graveyard from the battlefield",
-		"this enchantment is put into a graveyard from the battlefield",
-		"this vehicle is put into a graveyard from the battlefield",
-		"this equipment is put into a graveyard from the battlefield":
-		return game.TriggerPattern{
-			Event:  game.EventPermanentDied,
-			Source: game.TriggerSourceSelf,
-		}, true
-	case "this creature mutates":
-		return game.TriggerPattern{
-			Event:  game.EventPermanentMutated,
-			Source: game.TriggerSourceSelf,
-		}, true
-	case "this creature attacks":
-		return game.TriggerPattern{
-			Event:  game.EventAttackerDeclared,
-			Source: game.TriggerSourceSelf,
-		}, true
-	case "this creature blocks":
-		return game.TriggerPattern{
-			Event:  game.EventBlockerDeclared,
-			Source: game.TriggerSourceSelf,
-		}, true
-	case "this creature becomes blocked":
-		return game.TriggerPattern{
-			Event:  game.EventAttackerBecameBlocked,
-			Source: game.TriggerSourceSelf,
-		}, true
-	case "this creature deals combat damage to a player":
-		return game.TriggerPattern{
-			Event:               game.EventDamageDealt,
-			Source:              game.TriggerSourceSelf,
-			Subject:             game.TriggerSubjectDamageSource,
-			DamageRecipient:     game.DamageRecipientPlayer,
-			RequireCombatDamage: true,
-		}, true
-	case "this creature deals combat damage to a creature":
-		return game.TriggerPattern{
-			Event:                game.EventDamageDealt,
-			Source:               game.TriggerSourceSelf,
-			Subject:              game.TriggerSubjectDamageSource,
-			DamageRecipient:      game.DamageRecipientPermanent,
-			DamageRecipientTypes: []types.Card{types.Creature},
-			RequireCombatDamage:  true,
-		}, true
-	case "this creature becomes tapped", "this permanent becomes tapped",
-		"this land becomes tapped", "this artifact becomes tapped",
-		"this enchantment becomes tapped", "this vehicle becomes tapped":
-		return game.TriggerPattern{
-			Event:  game.EventPermanentTapped,
-			Source: game.TriggerSourceSelf,
-		}, true
-	case "this creature becomes untapped", "this permanent becomes untapped",
-		"this land becomes untapped", "this artifact becomes untapped",
-		"this enchantment becomes untapped", "this vehicle becomes untapped":
-		return game.TriggerPattern{
-			Event:  game.EventPermanentUntapped,
-			Source: game.TriggerSourceSelf,
-		}, true
-	default:
-		if strings.EqualFold(ability.Trigger.Event, cardName+" dies") {
-			return game.TriggerPattern{
-				Event:  game.EventPermanentDied,
-				Source: game.TriggerSourceSelf,
-			}, true
-		}
-		if strings.EqualFold(ability.Trigger.Event, cardName+" becomes tapped") {
-			return game.TriggerPattern{
-				Event:  game.EventPermanentTapped,
-				Source: game.TriggerSourceSelf,
-			}, true
-		}
-		if strings.EqualFold(ability.Trigger.Event, cardName+" becomes untapped") {
-			return game.TriggerPattern{
-				Event:  game.EventPermanentUntapped,
-				Source: game.TriggerSourceSelf,
-			}, true
-		}
-		if pattern, ok := lowerCounterAddedSelfTrigger(ability.Trigger.Event); ok {
-			return pattern, true
-		}
-		return game.TriggerPattern{}, false
-	}
-}
-
-// lowerCounterAddedSelfTrigger recognizes supported "N counter(s) added to
-// self" trigger event clauses and returns the corresponding TriggerPattern.
-// Returns false for unsupported counter kinds (fail-closed).
-func lowerCounterAddedSelfTrigger(event string) (game.TriggerPattern, bool) {
-	base := game.TriggerPattern{
-		Event:            game.EventCountersAdded,
-		Source:           game.TriggerSourceSelf,
-		MatchCounterKind: true,
-	}
-	switch event {
-	case "one or more +1/+1 counters are put on this creature",
-		"one or more +1/+1 counters are put on this permanent":
-		base.CounterKind = counter.PlusOnePlusOne
-		base.OneOrMore = true
-		return base, true
-	case "a +1/+1 counter is put on this creature",
-		"a +1/+1 counter is put on this permanent":
-		base.CounterKind = counter.PlusOnePlusOne
-		return base, true
-	case "one or more -1/-1 counters are put on this creature",
-		"one or more -1/-1 counters are put on this permanent":
-		base.CounterKind = counter.MinusOneMinusOne
-		base.OneOrMore = true
-		return base, true
-	case "a -1/-1 counter is put on this creature",
-		"a -1/-1 counter is put on this permanent":
-		base.CounterKind = counter.MinusOneMinusOne
-		return base, true
-	}
-	return game.TriggerPattern{}, false
 }
 
 func bodyReferences(
@@ -5260,64 +4976,34 @@ func lowerNonSelfEnterTrigger(
 	cardName string,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
-) (game.TriggeredAbility, bool) {
+) (game.TriggeredAbility, *oracle.Diagnostic) {
 	if ability.Trigger == nil ||
-		ability.Trigger.Kind != oracle.TriggerWhenever ||
-		len(ability.Content.Effects) == 0 ||
-		len(ability.Content.Modes) != 0 {
-		return game.TriggeredAbility{}, false
+		ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger",
+			"the executable source backend requires a semantic whenever enter trigger")
 	}
 
-	event := ability.Trigger.Event
-	pattern := game.TriggerPattern{
-		Event: game.EventPermanentEnteredBattlefield,
-	}
-
-	if strings.HasPrefix(event, "one or more ") {
-		pattern.OneOrMore = true
-		rest := strings.TrimPrefix(event, "one or more ")
-		cardType, controller, ok := parseOneOrMoreEnterSuffix(rest)
-		if !ok {
-			return game.TriggeredAbility{}, false
-		}
-		if cardType != "" {
-			pattern.RequirePermanentTypes = []types.Card{cardType}
-		}
-		pattern.Controller = controller
-	} else {
-		switch {
-		case strings.HasPrefix(event, "another "):
-			pattern.ExcludeSelf = true
-			event = strings.TrimPrefix(event, "another ")
-		case strings.HasPrefix(event, "a "):
-			event = strings.TrimPrefix(event, "a ")
-		case strings.HasPrefix(event, "an "):
-			event = strings.TrimPrefix(event, "an ")
-		default:
-			return game.TriggeredAbility{}, false
-		}
-		if strings.HasPrefix(event, "nontoken ") {
-			pattern.RequireNonToken = true
-			event = strings.TrimPrefix(event, "nontoken ")
-		}
-		cardType, controller, ok := parseSingleEnterSuffix(event)
-		if !ok {
-			return game.TriggeredAbility{}, false
-		}
-		if cardType != "" {
-			pattern.RequirePermanentTypes = []types.Card{cardType}
-		}
-		pattern.Controller = controller
+	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
+	if !ok || pattern.Event != game.EventPermanentEnteredBattlefield ||
+		pattern.Source != game.TriggerSourceAny {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger",
+			"the executable source backend does not support this semantic enter trigger pattern")
 	}
 
 	intervening, supportedCondition := lowerEnterInterveningCondition(ability.Trigger)
 	if !supportedCondition ||
 		(ability.Trigger.Condition != nil && ability.Trigger.Condition.Text == "if you cast it") {
-		return game.TriggeredAbility{}, false
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger",
+			"the executable source backend does not support this semantic enter trigger condition")
+	}
+	if len(ability.Content.Effects) == 0 || len(ability.Content.Modes) != 0 {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger effect",
+			"the executable source backend does not support this enter trigger body")
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, false
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger effect",
+			"the executable source backend does not support this enter trigger body")
 	}
 	content, contentOK := lowerEventPermanentModifyPTBody(contentCtx{
 		text:     body.Text,
@@ -5329,7 +5015,7 @@ func lowerNonSelfEnterTrigger(
 		var diagnostic *oracle.Diagnostic
 		content, diagnostic = lowerSelfTriggerBody(cardName, game.EventPermanentEnteredBattlefield, body, bodySyntax)
 		if diagnostic != nil {
-			return game.TriggeredAbility{}, false
+			return game.TriggeredAbility{}, diagnostic
 		}
 	}
 	return game.TriggeredAbility{
@@ -5344,164 +5030,11 @@ func lowerNonSelfEnterTrigger(
 		},
 		Optional: ability.Optional,
 		Content:  content,
-	}, true
+	}, nil
 }
 
-// nonSelfDiesTriggerParams holds the TriggerType and TriggerPattern values for
-// a recognised non-self dies trigger phrase.
-type nonSelfDiesTriggerParams struct {
-	triggerType game.TriggerType
-	pattern     game.TriggerPattern
-}
-
-// nonSelfDiesPhrases maps exact trigger.Event texts (after the "When[ever] "
-// prefix has been stripped by the oracle compiler) to their lowered forms. Any
-// phrase absent from this table is unsupported — no inference is performed.
-var nonSelfDiesPhrases = map[string]nonSelfDiesTriggerParams{
-	"enchanted creature dies": {
-		triggerType: game.TriggerWhen,
-		pattern: game.TriggerPattern{
-			Event:  game.EventPermanentDied,
-			Source: game.TriggerSourceAttachedPermanent,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-			},
-		},
-	},
-	"equipped creature dies": {
-		triggerType: game.TriggerWhen,
-		pattern: game.TriggerPattern{
-			Event:  game.EventPermanentDied,
-			Source: game.TriggerSourceAttachedPermanent,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-			},
-		},
-	},
-	"enchanted land dies": {
-		triggerType: game.TriggerWhen,
-		pattern: game.TriggerPattern{
-			Event:  game.EventPermanentDied,
-			Source: game.TriggerSourceAttachedPermanent,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Land},
-			},
-		},
-	},
-	"enchanted permanent dies": {
-		triggerType: game.TriggerWhen,
-		pattern: game.TriggerPattern{
-			Event:  game.EventPermanentDied,
-			Source: game.TriggerSourceAttachedPermanent,
-		},
-	},
-	"another creature dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event:       game.EventPermanentDied,
-			ExcludeSelf: true,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-			},
-		},
-	},
-	"another creature you control dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event:       game.EventPermanentDied,
-			Controller:  game.TriggerControllerYou,
-			ExcludeSelf: true,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-			},
-		},
-	},
-	"a creature dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event: game.EventPermanentDied,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-			},
-		},
-	},
-	"a creature you control dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event:      game.EventPermanentDied,
-			Controller: game.TriggerControllerYou,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-			},
-		},
-	},
-	"a creature an opponent controls dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event:      game.EventPermanentDied,
-			Controller: game.TriggerControllerOpponent,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-			},
-		},
-	},
-	"a nontoken creature you control dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event:      game.EventPermanentDied,
-			Controller: game.TriggerControllerYou,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-				NonToken:      true,
-			},
-		},
-	},
-	"another nontoken creature you control dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event:       game.EventPermanentDied,
-			Controller:  game.TriggerControllerYou,
-			ExcludeSelf: true,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-				NonToken:      true,
-			},
-		},
-	},
-	"another nontoken creature dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event:       game.EventPermanentDied,
-			ExcludeSelf: true,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-				NonToken:      true,
-			},
-		},
-	},
-	"a nontoken creature an opponent controls dies": {
-		triggerType: game.TriggerWhenever,
-		pattern: game.TriggerPattern{
-			Event:      game.EventPermanentDied,
-			Controller: game.TriggerControllerOpponent,
-			SubjectSelection: game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-				NonToken:      true,
-			},
-		},
-	},
-}
-
-// lowerNonSelfDiesTriggerEvent looks up event text in the recognised non-self
-// dies phrase table and returns the lowered TriggerType and TriggerPattern. If
-// the phrase is not in the table, ok is false; no inference is performed.
-func lowerNonSelfDiesTriggerEvent(event string) (nonSelfDiesTriggerParams, bool) {
-	params, ok := nonSelfDiesPhrases[event]
-	return params, ok
-}
-
-// lowerNonSelfDiesTrigger lowers a non-self dies triggered ability whose event
-// text is in the recognised phrase table. It rejects any body that contains
+// lowerNonSelfDiesTrigger lowers a recognized semantic non-self dies trigger.
+// It rejects any body that contains
 // pronoun references (ReferencePronoun) — those require EventPermanentReference
 // dynamics not yet supported by the body lowering pass.
 func lowerNonSelfDiesTrigger(
@@ -5513,15 +5046,22 @@ func lowerNonSelfDiesTrigger(
 	const unsupportedBody = "unsupported dies trigger body"
 
 	if ability.Trigger == nil ||
-		(ability.Trigger.Kind != oracle.TriggerWhen && ability.Trigger.Kind != oracle.TriggerWhenever) {
+		(ability.Trigger.Pattern.Kind != oracle.TriggerWhen &&
+			ability.Trigger.Pattern.Kind != oracle.TriggerWhenever) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
 			"non-self dies trigger requires When or Whenever trigger kind")
 	}
 
-	params, ok := lowerNonSelfDiesTriggerEvent(ability.Trigger.Event)
+	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
+	if !ok || pattern.Event != game.EventPermanentDied ||
+		pattern.Source == game.TriggerSourceSelf {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"unrecognised semantic non-self dies trigger pattern")
+	}
+	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
-			"unrecognised non-self dies trigger phrase: "+ability.Trigger.Event)
+			"non-self dies trigger requires When or Whenever trigger kind")
 	}
 	if ability.Trigger.Condition != nil {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
@@ -5539,13 +5079,13 @@ func lowerNonSelfDiesTrigger(
 	}
 
 	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedBody,
 			"non-self dies trigger does not support modes or ability words")
 	}
 
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedBody,
 			"could not prepare trigger body")
 	}
 
@@ -5557,84 +5097,54 @@ func lowerNonSelfDiesTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:    params.triggerType,
-			Pattern: params.pattern,
+			Type:    triggerType,
+			Pattern: pattern,
 		},
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
 }
 
-// lowerCastTrigger lowers a "whenever ... casts ..." triggered ability into a
-// game.TriggeredAbility with EventSpellCast. It returns false for any event
-// string it cannot fully represent, including self-cast (TriggerWhen), all
-// forms other than the three accepted player prefixes, unsupported spell
-// phrases, intervening-if conditions, keywords, modes, and ability words.
+// lowerCastTrigger lowers a recognized semantic spell-cast trigger into a
+// game.TriggeredAbility with EventSpellCast.
 func lowerCastTrigger(
 	cardName string,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
-) (game.TriggeredAbility, bool) {
+) (game.TriggeredAbility, *oracle.Diagnostic) {
 	if ability.Trigger == nil ||
-		ability.Trigger.Kind != oracle.TriggerWhenever ||
-		ability.Trigger.Condition != nil ||
-		len(ability.Content.Effects) == 0 ||
+		ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend requires a semantic whenever spell-cast trigger")
+	}
+
+	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
+	if !ok || pattern.Event != game.EventSpellCast {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic spell-cast trigger pattern")
+	}
+	if ability.Trigger.Condition != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic spell-cast trigger condition")
+	}
+	if len(ability.Content.Effects) == 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
 		ability.AbilityWord != "" {
-		return game.TriggeredAbility{}, false
-	}
-
-	event := ability.Trigger.Event
-	var controller game.TriggerControllerFilter
-	switch {
-	case strings.HasPrefix(event, "you cast "):
-		controller = game.TriggerControllerYou
-		event = strings.TrimPrefix(event, "you cast ")
-	case strings.HasPrefix(event, "a player casts "):
-		controller = game.TriggerControllerAny
-		event = strings.TrimPrefix(event, "a player casts ")
-	case strings.HasPrefix(event, "an opponent casts "):
-		controller = game.TriggerControllerOpponent
-		event = strings.TrimPrefix(event, "an opponent casts ")
-	default:
-		return game.TriggeredAbility{}, false
-	}
-
-	predicate, ok := parseCastSpellPredicate(event)
-	if !ok {
-		return game.TriggeredAbility{}, false
-	}
-	if predicate.MatchFromZone && controller != game.TriggerControllerYou {
-		return game.TriggeredAbility{}, false
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
+			"the executable source backend does not support this spell-cast trigger body")
 	}
 
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, false
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
+			"the executable source backend does not support this spell-cast trigger body")
 	}
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
 	if diagnostic != nil {
-		return game.TriggeredAbility{}, false
+		return game.TriggeredAbility{}, diagnostic
 	}
 
-	pattern := game.TriggerPattern{
-		Event:      game.EventSpellCast,
-		Controller: controller,
-	}
-	if !predicate.CardSelection.Empty() {
-		pattern.CardSelection = predicate.CardSelection
-	}
-	if predicate.RequireKickerPaid {
-		pattern.RequireKickerPaid = true
-	}
-	if predicate.RequireHistoric {
-		pattern.RequireHistoric = true
-	}
-	if predicate.MatchFromZone {
-		pattern.MatchFromZone = true
-		pattern.FromZone = predicate.FromZone
-	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
@@ -5643,70 +5153,7 @@ func lowerCastTrigger(
 		},
 		Optional: ability.Optional,
 		Content:  content,
-	}, true
-}
-
-type castSpellPredicate struct {
-	CardSelection     game.Selection
-	RequireKickerPaid bool
-	RequireHistoric   bool
-	MatchFromZone     bool
-	FromZone          zone.Type
-}
-
-// castSpellPhrases maps an oracle spell-phrase fragment to the corresponding
-// predicate. "a spell" maps to an empty predicate (wildcard).
-var castSpellPhrases = map[string]castSpellPredicate{
-	"a spell":                      {},
-	"a noncreature spell":          {CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Creature}}},
-	"a creature spell":             {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}}},
-	"an instant or sorcery spell":  {CardSelection: game.Selection{RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}}},
-	"an instant spell":             {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Instant}}},
-	"an instant":                   {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Instant}}},
-	"a sorcery spell":              {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Sorcery}}},
-	"an artifact spell":            {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Artifact}}},
-	"an enchantment spell":         {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Enchantment}}},
-	"a land spell":                 {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Land}}},
-	"a planeswalker spell":         {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Planeswalker}}},
-	"a noncreature, nonland spell": {CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Creature, types.Land}}},
-	"a white spell":                {CardSelection: game.Selection{ColorsAny: []color.Color{color.White}}},
-	"a blue spell":                 {CardSelection: game.Selection{ColorsAny: []color.Color{color.Blue}}},
-	"a black spell":                {CardSelection: game.Selection{ColorsAny: []color.Color{color.Black}}},
-	"a red spell":                  {CardSelection: game.Selection{ColorsAny: []color.Color{color.Red}}},
-	"a green spell":                {CardSelection: game.Selection{ColorsAny: []color.Color{color.Green}}},
-	"a colorless spell":            {CardSelection: game.Selection{Colorless: true}},
-	"a multicolored spell":         {CardSelection: game.Selection{Multicolored: true}},
-	"a kicked spell":               {RequireKickerPaid: true},
-	"a spell from your graveyard":  {MatchFromZone: true, FromZone: zone.Graveyard},
-	"a Spirit or Arcane spell":     {CardSelection: game.Selection{SubtypesAny: []types.Sub{types.Spirit, types.Arcane}}},
-	"a historic spell":             {RequireHistoric: true},
-}
-
-// parseCastSpellPredicate maps the spell-phrase fragment (what follows the
-// player+casts prefix) to a predicate. It returns false for any unrecognized or
-// unsupported phrase.
-func parseCastSpellPredicate(phrase string) (castSpellPredicate, bool) {
-	if predicate, ok := castSpellPhrases[phrase]; ok {
-		return predicate, true
-	}
-	const prefix = "a spell with mana value "
-	const suffix = " or greater"
-	if valueText, ok := strings.CutPrefix(phrase, prefix); ok {
-		valueText, ok = strings.CutSuffix(valueText, suffix)
-		if !ok {
-			return castSpellPredicate{}, false
-		}
-		value, err := strconv.Atoi(valueText)
-		if err != nil || value < 0 {
-			return castSpellPredicate{}, false
-		}
-		return castSpellPredicate{
-			CardSelection: game.Selection{
-				ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: value}),
-			},
-		}, true
-	}
-	return castSpellPredicate{}, false
+	}, nil
 }
 
 // lowerEventPermanentModifyPTBody handles the narrow case of a triggered body
@@ -5750,76 +5197,6 @@ func lowerEventPermanentModifyPTBody(ctx contentCtx) (game.AbilityContent, bool)
 			},
 		}},
 	}.Ability(), true
-}
-
-// parseSingleEnterSuffix parses "{type} {controller?} enters" from the event
-// fragment after an article and optional "nontoken" have been stripped.
-// An empty card type return signals "permanent" (no type filter).
-func parseSingleEnterSuffix(event string) (types.Card, game.TriggerControllerFilter, bool) {
-	controller := game.TriggerControllerAny
-	if s, ok := strings.CutSuffix(event, " you control enters"); ok {
-		event = s + " enters"
-		controller = game.TriggerControllerYou
-	} else if s, ok := strings.CutSuffix(event, " an opponent controls enters"); ok {
-		event = s + " enters"
-		controller = game.TriggerControllerOpponent
-	}
-	cardType, ok := permanentEnterTypeWord(event)
-	return cardType, controller, ok
-}
-
-// parseOneOrMoreEnterSuffix parses "{type_plural} {controller?} enter" from
-// the fragment after "one or more " has been stripped.
-// An empty card type return signals "permanents" (no type filter).
-func parseOneOrMoreEnterSuffix(event string) (types.Card, game.TriggerControllerFilter, bool) {
-	controller := game.TriggerControllerAny
-	if s, ok := strings.CutSuffix(event, " you control enter"); ok {
-		event = s + " enter"
-		controller = game.TriggerControllerYou
-	} else if s, ok := strings.CutSuffix(event, " an opponent controls enter"); ok {
-		event = s + " enter"
-		controller = game.TriggerControllerOpponent
-	}
-	cardType, ok := permanentEnterTypePlural(event)
-	return cardType, controller, ok
-}
-
-func permanentEnterTypeWord(event string) (types.Card, bool) {
-	switch event {
-	case "creature enters":
-		return types.Creature, true
-	case "artifact enters":
-		return types.Artifact, true
-	case "enchantment enters":
-		return types.Enchantment, true
-	case "land enters":
-		return types.Land, true
-	case "permanent enters":
-		return "", true
-	case "planeswalker enters":
-		return types.Planeswalker, true
-	default:
-		return "", false
-	}
-}
-
-func permanentEnterTypePlural(event string) (types.Card, bool) {
-	switch event {
-	case "creatures enter":
-		return types.Creature, true
-	case "artifacts enter":
-		return types.Artifact, true
-	case "enchantments enter":
-		return types.Enchantment, true
-	case "lands enter":
-		return types.Land, true
-	case "permanents enter":
-		return "", true
-	case "planeswalkers enter":
-		return types.Planeswalker, true
-	default:
-		return "", false
-	}
 }
 
 func spanCovered(span oracle.Span, covering []oracle.Span) bool {

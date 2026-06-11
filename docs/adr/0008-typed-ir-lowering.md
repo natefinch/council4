@@ -57,6 +57,15 @@ correct layer:
    failures, loyalty-cost failures) are owned by the shell lowerer; content
    diagnostics (effect, target, keyword, reference failures) are owned by
    `lowerAbilityContent`.
+   <br><br>
+   Trigger shells follow the same boundary. `cardgen/oracle` recognizes exact
+   Oracle event clauses into a source-spanned semantic `oracle.TriggerPattern`
+   whose enums and Selection vocabulary do not depend on runtime `game` values.
+   Raw event-clause text remains available only for diagnostics and exact source
+   consumption. `cardgen/trigger_pattern.go` owns the single mechanical
+   `oracle.TriggerPattern` to `game.TriggerPattern` lowering path; `lower.go`
+   dispatches and lowers trigger bodies from typed pattern fields and never
+   interprets raw trigger text.
 2. **Assembly + validation** (`cardgen/executable.go`). `assembleCardDefs`
    combines parsed Scryfall fields with the lowered typed abilities into one or
    more `game.CardDef` values and calls `game.ValidateCardDef`. Any structural

@@ -2900,9 +2900,15 @@ func TestGenerateExecutableCardSourceNonSelfEnterTrigger(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, want := range test.wants {
+				want = strings.Replace(want, "RequirePermanentTypes:", "RequiredTypes:", 1)
+				want = strings.Replace(want, "RequireNonToken:", "NonToken:", 1)
 				if !strings.Contains(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
+			}
+			if !strings.Contains(source, "SubjectSelection: game.Selection{") &&
+				!strings.Contains(test.oracleText, "permanent enters") {
+				t.Fatalf("source missing semantic SubjectSelection:\n%s", source)
 			}
 		})
 	}
@@ -3332,7 +3338,7 @@ func TestGenerateExecutableCardSourceRejectsPartiallyOptionalTrigger(t *testing.
 	if source != "" {
 		t.Fatalf("source = %q, want no partial card", source)
 	}
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported enter trigger" {
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported enter trigger effect" {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 }

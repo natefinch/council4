@@ -3956,6 +3956,216 @@ func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
 	}
 }
 
+func TestLowerExpandedSemanticTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		cardName string
+		typeLine string
+		text     string
+		want     game.TriggerPattern
+	}{
+		{
+			name:     "controlled creature attacks",
+			cardName: "Test Watcher",
+			typeLine: "Creature — Human",
+			text:     "Whenever a creature you control attacks, draw a card.",
+			want: game.TriggerPattern{
+				Event:      game.EventAttackerDeclared,
+				Controller: game.TriggerControllerYou,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
+		{
+			name:     "equipped creature blocks",
+			cardName: "Test Equipment",
+			typeLine: "Artifact — Equipment",
+			text:     "Whenever equipped creature blocks, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventBlockerDeclared,
+				Source: game.TriggerSourceAttachedPermanent,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
+		{
+			name:     "another controlled artifact taps",
+			cardName: "Test Watcher",
+			typeLine: "Artifact",
+			text:     "Whenever another artifact you control becomes tapped, draw a card.",
+			want: game.TriggerPattern{
+				Event:       game.EventPermanentTapped,
+				Controller:  game.TriggerControllerYou,
+				ExcludeSelf: true,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Artifact},
+				},
+			},
+		},
+		{
+			name:     "controlled creature untaps",
+			cardName: "Test Watcher",
+			typeLine: "Creature — Human",
+			text:     "Whenever a creature you control becomes untapped, draw a card.",
+			want: game.TriggerPattern{
+				Event:      game.EventPermanentUntapped,
+				Controller: game.TriggerControllerYou,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
+		{
+			name:     "self becomes spell target",
+			cardName: "Test Wardless",
+			typeLine: "Creature — Human",
+			text:     "Whenever this creature becomes the target of a spell, draw a card.",
+			want: game.TriggerPattern{
+				Event:                game.EventObjectBecameTarget,
+				Source:               game.TriggerSourceSelf,
+				MatchStackObjectKind: true,
+				StackObjectKind:      game.StackSpell,
+			},
+		},
+		{
+			name:     "opponent draw step",
+			cardName: "Test Watcher",
+			typeLine: "Creature — Human",
+			text:     "At the beginning of each opponent's draw step, draw a card.",
+			want: game.TriggerPattern{
+				Event:      game.EventBeginningOfStep,
+				Controller: game.TriggerControllerOpponent,
+				Step:       game.StepDraw,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       test.cardName,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+			}
+			if got := face.TriggeredAbilities[0].Trigger.Pattern; !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("pattern = %#v, want %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestLowerWheneverEquippedCreatureDiesRegression(t *testing.T) {
+	t.Parallel()
+	for _, card := range []ScryfallCard{
+		{
+			Name:       "Skullclamp",
+			Layout:     "normal",
+			TypeLine:   "Artifact — Equipment",
+			OracleText: "Equipped creature gets +1/-1.\nWhenever equipped creature dies, draw two cards.\nEquip {1}",
+		},
+		{
+			Name:       "Sylvok Lifestaff",
+			Layout:     "normal",
+			TypeLine:   "Artifact — Equipment",
+			OracleText: "Equipped creature gets +1/+0.\nWhenever equipped creature dies, you gain 3 life.\nEquip {1}",
+		},
+	} {
+		t.Run(card.Name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &card)
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Type != game.TriggerWhenever ||
+				trigger.Pattern.Event != game.EventPermanentDied ||
+				trigger.Pattern.Source != game.TriggerSourceAttachedPermanent ||
+				!slices.Equal(trigger.Pattern.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
+				t.Fatalf("trigger = %#v", trigger)
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceExpandedSemanticTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+		want []string
+	}{
+		{
+			name: "attack Selection",
+			text: "Whenever a creature you control attacks, draw a card.",
+			want: []string{
+				"game.EventAttackerDeclared",
+				"game.TriggerControllerYou",
+				"SubjectSelection: game.Selection{",
+			},
+		},
+		{
+			name: "spell became target",
+			text: "Whenever this creature becomes the target of a spell, draw a card.",
+			want: []string{
+				"game.EventObjectBecameTarget",
+				"game.TriggerSourceSelf",
+				"MatchStackObjectKind: true",
+				"game.StackSpell",
+			},
+		},
+		{
+			name: "opponent draw step",
+			text: "At the beginning of each opponent's draw step, draw a card.",
+			want: []string{
+				"game.EventBeginningOfStep",
+				"game.TriggerControllerOpponent",
+				"game.StepDraw",
+			},
+		},
+		{
+			name: "end of combat step",
+			text: "At the beginning of the end of combat, draw a card.",
+			want: []string{
+				"game.EventBeginningOfStep",
+				"game.StepEndOfCombat",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: test.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.want {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
 func TestLowerDamageSourceTriggers(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -8934,9 +9144,9 @@ func TestLowerNonSelfDiesTriggerInterveningIfFailsClosed(t *testing.T) {
 	}
 }
 
-// TestLowerNonSelfDiesTriggerEventLookupTable verifies the complete phrase
-// table: each entry must return ok=true and the correct pattern.
-func TestLowerNonSelfDiesTriggerEventLookupTable(t *testing.T) {
+// TestLowerNonSelfDiesSemanticPatterns verifies that every recognized dies
+// pattern passes through the shared semantic trigger-pattern lowerer.
+func TestLowerNonSelfDiesSemanticPatterns(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		phrase      string
@@ -8964,35 +9174,43 @@ func TestLowerNonSelfDiesTriggerEventLookupTable(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.phrase, func(t *testing.T) {
 			t.Parallel()
-			params, ok := lowerNonSelfDiesTriggerEvent(tc.phrase)
+			kind := "Whenever "
+			if tc.wantKind == game.TriggerWhen {
+				kind = "When "
+			}
+			compilation, diagnostics := oracle.Compile(kind+tc.phrase+", draw a card.", oracle.ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := compilation.Abilities[0].Trigger
+			pattern, ok := lowerTriggerPattern(&trigger.Pattern)
 			if !ok {
-				t.Fatalf("lowerNonSelfDiesTriggerEvent(%q) returned ok=false", tc.phrase)
+				t.Fatalf("lowerTriggerPattern(%q) returned ok=false", tc.phrase)
 			}
-			if params.triggerType != tc.wantKind {
-				t.Errorf("triggerType = %v, want %v", params.triggerType, tc.wantKind)
+			triggerType, ok := lowerTriggerKind(trigger.Pattern.Kind)
+			if !ok || triggerType != tc.wantKind {
+				t.Errorf("triggerType = %v, %v, want %v, true", triggerType, ok, tc.wantKind)
 			}
-			if params.pattern.Source != tc.wantSource {
-				t.Errorf("source = %v, want %v", params.pattern.Source, tc.wantSource)
+			if pattern.Source != tc.wantSource {
+				t.Errorf("source = %v, want %v", pattern.Source, tc.wantSource)
 			}
-			if params.pattern.Controller != tc.wantCtrl {
-				t.Errorf("controller = %v, want %v", params.pattern.Controller, tc.wantCtrl)
+			if pattern.Controller != tc.wantCtrl {
+				t.Errorf("controller = %v, want %v", pattern.Controller, tc.wantCtrl)
 			}
-			if params.pattern.ExcludeSelf != tc.excludeSelf {
-				t.Errorf("ExcludeSelf = %v, want %v", params.pattern.ExcludeSelf, tc.excludeSelf)
+			if pattern.ExcludeSelf != tc.excludeSelf {
+				t.Errorf("ExcludeSelf = %v, want %v", pattern.ExcludeSelf, tc.excludeSelf)
 			}
-			if !reflect.DeepEqual(params.pattern.SubjectSelection.RequiredTypes, tc.wantTypes) {
-				t.Errorf("SubjectSelection.RequiredTypes = %v, want %v", params.pattern.SubjectSelection.RequiredTypes, tc.wantTypes)
+			if !reflect.DeepEqual(pattern.SubjectSelection.RequiredTypes, tc.wantTypes) {
+				t.Errorf("SubjectSelection.RequiredTypes = %v, want %v", pattern.SubjectSelection.RequiredTypes, tc.wantTypes)
 			}
-			if params.pattern.SubjectSelection.NonToken != tc.nonToken {
-				t.Errorf("SubjectSelection.NonToken = %v, want %v", params.pattern.SubjectSelection.NonToken, tc.nonToken)
+			if pattern.SubjectSelection.NonToken != tc.nonToken {
+				t.Errorf("SubjectSelection.NonToken = %v, want %v", pattern.SubjectSelection.NonToken, tc.nonToken)
 			}
 		})
 	}
 }
 
-// TestLowerNonSelfDiesTriggerUnknownPhraseReturnsFalse verifies that
-// lowerNonSelfDiesTriggerEvent returns ok=false for unknown phrases.
-func TestLowerNonSelfDiesTriggerUnknownPhraseReturnsFalse(t *testing.T) {
+func TestLowerNonSelfDiesUnknownSemanticPatternReturnsFalse(t *testing.T) {
 	t.Parallel()
 	unknownPhrases := []string{
 		"the haunted creature dies",
@@ -9002,9 +9220,13 @@ func TestLowerNonSelfDiesTriggerUnknownPhraseReturnsFalse(t *testing.T) {
 		"another artifact dies",
 	}
 	for _, phrase := range unknownPhrases {
-		_, ok := lowerNonSelfDiesTriggerEvent(phrase)
+		compilation, diagnostics := oracle.Compile("Whenever "+phrase+", draw a card.", oracle.ParseContext{})
+		if len(diagnostics) != 0 {
+			t.Fatalf("diagnostics = %#v", diagnostics)
+		}
+		_, ok := lowerTriggerPattern(&compilation.Abilities[0].Trigger.Pattern)
 		if ok {
-			t.Errorf("lowerNonSelfDiesTriggerEvent(%q) returned ok=true, want false", phrase)
+			t.Errorf("lowerTriggerPattern(%q) returned ok=true, want false", phrase)
 		}
 	}
 }
@@ -9208,7 +9430,7 @@ func TestLowerDrawDiscardTriggerInterveningIfFailsClosed(t *testing.T) {
 	if len(diagnostics) == 0 {
 		t.Fatal("intervening-if draw trigger unexpectedly lowered")
 	}
-	if !strings.Contains(diagnostics[0].Detail, "without conditions") {
+	if !strings.Contains(diagnostics[0].Detail, "condition") {
 		t.Fatalf("diagnostic = %#v, want condition detail", diagnostics[0])
 	}
 }
@@ -9745,6 +9967,39 @@ func TestLowerContentDiagnosticDistinguishesShellFromContent(t *testing.T) {
 			}
 		}
 	})
+
+	for _, oracleText := range []string{
+		"Whenever you gain life, search your library for a creature card, then shuffle.",
+		"Whenever a creature enters, search your library for a creature card, then shuffle.",
+		"Whenever you cast an artifact spell, search your library for a creature card, then shuffle.",
+		"Whenever equipped creature attacks, search your library for a creature card, then shuffle.",
+	} {
+		t.Run("content failure through typed trigger "+oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Card",
+				Layout:     "normal",
+				TypeLine:   "Artifact — Equipment",
+				OracleText: oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("want at least one diagnostic, got none")
+			}
+			if slices.ContainsFunc(diagnostics, func(d oracle.Diagnostic) bool {
+				return d.Summary == "unsupported triggered ability"
+			}) {
+				t.Fatalf("recognized typed trigger body collapsed into generic pattern diagnostic: %#v", diagnostics)
+			}
+			if !slices.ContainsFunc(diagnostics, func(d oracle.Diagnostic) bool {
+				return d.Summary == "unsupported search effect"
+			}) {
+				t.Fatalf("diagnostics = %#v, want shared content diagnostic", diagnostics)
+			}
+		})
+	}
 
 	// A card with an unsupported activated-ability cost produces a shell
 	// diagnostic; the body "Draw a card." is fully supported.

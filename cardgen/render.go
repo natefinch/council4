@@ -1158,14 +1158,10 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
 	allowCastFromZone := pattern.Event == game.EventSpellCast && pattern.MatchFromZone && !pattern.MatchToZone
-	if !pattern.SubjectSelection.Empty() && pattern.Event != game.EventPermanentDied {
-		return "", errors.New("render: SubjectSelection is only supported for EventPermanentDied trigger patterns")
-	}
 	if len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
 		(pattern.MatchFromZone && !allowCastFromZone) ||
 		pattern.MatchToZone ||
-		pattern.MatchStackObjectKind ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		pattern.SpellTargetsSource ||
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
@@ -1227,6 +1223,13 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if pattern.RequireHistoric {
 		fields = append(fields, "RequireHistoric: true,")
 	}
+	if pattern.MatchStackObjectKind {
+		stackObjectKind, err := renderStackObjectKind(pattern.StackObjectKind)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, "MatchStackObjectKind: true,", fmt.Sprintf("StackObjectKind: %s,", stackObjectKind))
+	}
 	if len(pattern.RequirePermanentTypes) > 0 {
 		rpt, err := renderTypesCardSlice(ctx, pattern.RequirePermanentTypes)
 		if err != nil {
@@ -1286,6 +1289,19 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		fields = append(fields, subjectFields...)
 	}
 	return structLit("game.TriggerPattern", fields), nil
+}
+
+func renderStackObjectKind(kind game.StackObjectKind) (string, error) {
+	switch kind {
+	case game.StackSpell:
+		return "game.StackSpell", nil
+	case game.StackActivatedAbility:
+		return "game.StackActivatedAbility", nil
+	case game.StackTriggeredAbility:
+		return "game.StackTriggeredAbility", nil
+	default:
+		return "", fmt.Errorf("render: unsupported stack object kind %d", kind)
+	}
 }
 
 // validateTriggerPatternCardSelection validates CardSelection constraints for a
@@ -4063,6 +4079,8 @@ func renderStep(step game.Step) (string, error) {
 		return "game.StepDraw", nil
 	case game.StepBeginningOfCombat:
 		return "game.StepBeginningOfCombat", nil
+	case game.StepEndOfCombat:
+		return "game.StepEndOfCombat", nil
 	case game.StepEnd:
 		return "game.StepEnd", nil
 	case game.StepPrecombatMain:
@@ -4152,6 +4170,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventPermanentTapped", nil
 	case game.EventPermanentUntapped:
 		return "game.EventPermanentUntapped", nil
+	case game.EventObjectBecameTarget:
+		return "game.EventObjectBecameTarget", nil
 	case game.EventCountersAdded:
 		return "game.EventCountersAdded", nil
 	case game.EventBeginningOfStep:

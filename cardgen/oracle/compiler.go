@@ -51,7 +51,7 @@ func compileAbility(
 		compiled.Cost = &cost
 	}
 	if ability.Kind == AbilityTriggered {
-		trigger := compileTrigger(ability)
+		trigger := compileTrigger(ability, context)
 		compiled.Trigger = &trigger
 	}
 	if ability.Modal != nil {
@@ -283,7 +283,7 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 	return cost
 }
 
-func compileTrigger(ability Ability) CompiledTrigger {
+func compileTrigger(ability Ability, context ParseContext) CompiledTrigger {
 	tokens := ability.Tokens
 	if ability.AbilityWord != nil || len(ability.Chapters) > 0 {
 		if dash := topLevelIndex(tokens, EmDash); dash >= 0 {
@@ -323,6 +323,14 @@ func compileTrigger(ability Ability) CompiledTrigger {
 			break
 		}
 	}
+	eventTokens := triggerTokens[1:]
+	trigger.Pattern = compileTriggerPattern(
+		trigger.Event,
+		trigger.Kind,
+		spanOf(eventTokens),
+		context.CardName,
+		trigger.Condition,
+	)
 	return trigger
 }
 
