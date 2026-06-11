@@ -76,6 +76,9 @@ const (
 	CostTapPermanents
 	CostEnergy
 	CostReturn
+	CostExert
+	CostMill
+	CostPutCounter
 	CostLoyalty
 )
 

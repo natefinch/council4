@@ -20,6 +20,8 @@ type additionalCostPlan struct {
 	permanentsToTap []*game.Permanent
 	returnsToHand   []returnToHand
 	exilePermanents []*game.Permanent
+	exertSource     *game.Permanent
+	millAmount      int
 	discards        []id.ID
 	exiles          []cardZoneSelection
 	reveals         []cardZoneSelection
@@ -27,9 +29,16 @@ type additionalCostPlan struct {
 	energyPaid      int
 	untapSource     *game.Permanent
 	counterRemovals []counterRemoval
+	counterAdds     []counterPlacement
 }
 
 type counterRemoval struct {
+	source *game.Permanent
+	kind   counter.Kind
+	amount int
+}
+
+type counterPlacement struct {
 	source *game.Permanent
 	kind   counter.Kind
 	amount int
@@ -89,6 +98,32 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			plan.counterRemovals = append(plan.counterRemovals, counterRemoval{
+				source: source,
+				kind:   additional.CounterKind,
+				amount: amount,
+			})
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalExert:
+			if amount != 1 ||
+				source == nil ||
+				s.EffectiveController(source) != playerID ||
+				plan.exertSource != nil {
+				return plan, false
+			}
+			plan.exertSource = source
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalMill:
+			plan.millAmount += amount
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalPutCounter:
+			if source == nil ||
+				s.EffectiveController(source) != playerID ||
+				amount <= 0 ||
+				!additional.CounterKind.Valid() ||
+				additional.CounterKind.PlayerOnly() {
+				return plan, false
+			}
+			plan.counterAdds = append(plan.counterAdds, counterPlacement{
 				source: source,
 				kind:   additional.CounterKind,
 				amount: amount,
@@ -207,13 +242,16 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 }
 
 func plannedBattlefieldCosts(plan additionalCostPlan) []*game.Permanent {
-	permanents := make([]*game.Permanent, 0, len(plan.sacrifices)+len(plan.permanentsToTap)+len(plan.returnsToHand)+len(plan.exilePermanents))
+	permanents := make([]*game.Permanent, 0, len(plan.sacrifices)+len(plan.permanentsToTap)+len(plan.returnsToHand)+len(plan.exilePermanents)+1)
 	permanents = append(permanents, plan.sacrifices...)
 	permanents = append(permanents, plan.permanentsToTap...)
 	for _, returned := range plan.returnsToHand {
 		permanents = append(permanents, returned.permanent)
 	}
 	permanents = append(permanents, plan.exilePermanents...)
+	if plan.exertSource != nil {
+		permanents = append(permanents, plan.exertSource)
+	}
 	return permanents
 }
 
@@ -594,6 +632,12 @@ func AdditionalCostText(additional cost.Additional) string {
 		return fmt.Sprintf("Pay {E}x%d", AdditionalCostAmount(additional))
 	case cost.AdditionalReturnToHand:
 		return fmt.Sprintf("Return %d permanents to hand", AdditionalCostAmount(additional))
+	case cost.AdditionalExert:
+		return "Exert this permanent"
+	case cost.AdditionalMill:
+		return fmt.Sprintf("Mill %d cards", AdditionalCostAmount(additional))
+	case cost.AdditionalPutCounter:
+		return fmt.Sprintf("Put %d %s counters on source", AdditionalCostAmount(additional), additional.CounterKind)
 	case cost.AdditionalExile:
 		return "Exile a card"
 	case cost.AdditionalExileSource:
@@ -667,6 +711,20 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 			return false
 		}
 	}
+	if plan.exertSource != nil {
+		current, ok := s.PermanentByObjectID(plan.exertSource.ObjectID)
+		if !ok ||
+			current != plan.exertSource ||
+			s.EffectiveController(current) != player.ID {
+			return false
+		}
+	}
+	for _, placement := range plan.counterAdds {
+		current, ok := s.PermanentByObjectID(placement.source.ObjectID)
+		if !ok || current != placement.source || s.EffectiveController(current) != player.ID {
+			return false
+		}
+	}
 	for _, cardID := range plan.discards {
 		if !player.Hand.Contains(cardID) {
 			return false
@@ -699,6 +757,17 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 		if !s.RemoveCounters(removal.source, removal.kind, removal.amount) {
 			return false
 		}
+	}
+	if plan.exertSource != nil && !s.ExertPermanent(plan.exertSource) {
+		return false
+	}
+	for _, placement := range plan.counterAdds {
+		if !s.AddCounters(plan.player, placement.source, placement.kind, placement.amount) {
+			return false
+		}
+	}
+	if plan.millAmount > 0 {
+		s.MillCards(plan.player, plan.millAmount)
 	}
 	for _, sacrifice := range plan.sacrifices {
 		if !s.MovePermanentToZone(sacrifice, zone.Graveyard) {

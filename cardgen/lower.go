@@ -1144,8 +1144,100 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 		}, true
 	case oracle.CostReturn:
 		return lowerReturnToHandCost(component)
+	case oracle.CostExert:
+		return lowerExertCost(cardName, component)
+	case oracle.CostMill:
+		return lowerMillCost(component)
+	case oracle.CostPutCounter:
+		return lowerPutCounterCost(cardName, component)
 	default:
 		return cost.Additional{}, false
+	}
+}
+
+func lowerExertCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
+	object := strings.TrimSpace(component.Object)
+	if object != "it" && !isSelfCostObject(cardName, object) {
+		return cost.Additional{}, false
+	}
+	return cost.Additional{
+		Kind: cost.AdditionalExert,
+		Text: component.Text,
+	}, true
+}
+
+func lowerMillCost(component oracle.CostComponent) (cost.Additional, bool) {
+	words := strings.Fields(strings.ToLower(strings.TrimSpace(component.Object)))
+	if len(words) != 2 {
+		return cost.Additional{}, false
+	}
+	amount, ok := exactCostAmount(words[0])
+	if !ok || strings.TrimSuffix(words[1], "s") != "card" {
+		return cost.Additional{}, false
+	}
+	return cost.Additional{
+		Kind:   cost.AdditionalMill,
+		Text:   component.Text,
+		Amount: amount,
+	}, true
+}
+
+func lowerPutCounterCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
+	object := strings.TrimSpace(component.Object)
+	normalized := strings.ToLower(object)
+	counterWord := " counter on "
+	index := strings.Index(normalized, counterWord)
+	if index < 0 {
+		counterWord = " counters on "
+		index = strings.Index(normalized, counterWord)
+	}
+	if index < 0 {
+		return cost.Additional{}, false
+	}
+	prefix := strings.TrimSpace(object[:index])
+	source := strings.TrimSpace(object[index+len(counterWord):])
+	if !putCounterCostSelfReference(cardName, source) {
+		return cost.Additional{}, false
+	}
+	words := strings.Fields(strings.ToLower(prefix))
+	if len(words) < 2 {
+		return cost.Additional{}, false
+	}
+	amount, ok := exactCostAmount(words[0])
+	if !ok {
+		return cost.Additional{}, false
+	}
+	kind, ok := putCounterCostKind(strings.Join(words[1:], " "))
+	if !ok {
+		return cost.Additional{}, false
+	}
+	return cost.Additional{
+		Kind:        cost.AdditionalPutCounter,
+		Text:        component.Text,
+		Amount:      amount,
+		CounterKind: kind,
+	}, true
+}
+
+func putCounterCostSelfReference(cardName, source string) bool {
+	source = strings.TrimSpace(source)
+	return strings.EqualFold(source, "it") || isSelfCostObject(cardName, source)
+}
+
+func putCounterCostKind(name string) (counter.Kind, bool) {
+	switch name {
+	case "+1/+1":
+		return counter.PlusOnePlusOne, true
+	case "-1/-1":
+		return counter.MinusOneMinusOne, true
+	case "charge":
+		return counter.Charge, true
+	case "verse":
+		return counter.Verse, true
+	case "blood":
+		return counter.Blood, true
+	default:
+		return 0, false
 	}
 }
 

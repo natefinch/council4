@@ -1541,6 +1541,206 @@ func TestActivatedAbilityPaysEnergyCost(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityExertsSourceAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalExert,
+			Text:   "Exert this creature",
+			Amount: 1,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("exert ability was not legal for untapped source")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(exert ability) = false, want true")
+	}
+	if source.Tapped || !source.Exerted {
+		t.Fatalf("source tapped/exerted = %v/%v, want false/true", source.Tapped, source.Exerted)
+	}
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("exert ability was not legal while source was already exerted")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(second exert ability) = false, want true")
+	}
+
+	source.SummoningSick = true
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if source.Tapped || source.Exerted || source.SummoningSick {
+		t.Fatalf("after exerted untap step tapped/exerted/sick = %v/%v/%v, want false/false/false", source.Tapped, source.Exerted, source.SummoningSick)
+	}
+}
+
+func TestActivatedAbilityTapAndExertSourceAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{
+			cost.T,
+			{
+				Kind:   cost.AdditionalExert,
+				Text:   "Exert this creature",
+				Amount: 1,
+			},
+		},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("tap-and-exert ability was not legal for untapped source")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(tap-and-exert ability) = false, want true")
+	}
+	if !source.Tapped || !source.Exerted {
+		t.Fatalf("source tapped/exerted = %v/%v, want true/true", source.Tapped, source.Exerted)
+	}
+	source.Tapped = false
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("tap-and-exert ability was not legal after source was untapped while already exerted")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(second tap-and-exert ability) = false, want true")
+	}
+	if !source.Tapped || !source.Exerted {
+		t.Fatalf("after second activation tapped/exerted = %v/%v, want true/true", source.Tapped, source.Exerted)
+	}
+
+	source.SummoningSick = true
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if !source.Tapped || source.Exerted || source.SummoningSick {
+		t.Fatalf("after exerted untap step tapped/exerted/sick = %v/%v/%v, want true/false/false", source.Tapped, source.Exerted, source.SummoningSick)
+	}
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Next Draw Step Card"}})
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if source.Tapped {
+		t.Fatal("source did not untap on the next untap step after exert cleared")
+	}
+}
+
+func TestExertedPhasedOutPermanentClearsExertionDuringUntap(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Exerted Phased Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	permanent.Tapped = true
+	permanent.Exerted = true
+	permanent.PhasedOut = true
+	permanent.SummoningSick = true
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if permanent.PhasedOut {
+		t.Fatal("permanent did not phase in")
+	}
+	if !permanent.Tapped || permanent.Exerted || permanent.SummoningSick {
+		t.Fatalf("after phased exerted untap tapped/exerted/sick = %v/%v/%v, want true/false/false", permanent.Tapped, permanent.Exerted, permanent.SummoningSick)
+	}
+}
+
+func TestActivatedAbilityMillsCardsAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalMill,
+			Text:   "Mill four cards",
+			Amount: 4,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+	first := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First"}})
+	second := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second"}})
+
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("mill-cost ability was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(mill-cost ability) = false, want true")
+	}
+	if g.Players[game.Player1].Library.Size() != 0 {
+		t.Fatalf("library size = %d, want 0", g.Players[game.Player1].Library.Size())
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(first) ||
+		!g.Players[game.Player1].Graveyard.Contains(second) {
+		t.Fatal("milled cards did not move to graveyard")
+	}
+}
+
+func TestActivatedAbilityPutsCounterOnSourceAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalPutCounter,
+			Text:        "Put a verse counter on this creature",
+			Amount:      1,
+			CounterKind: counter.Verse,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("put-counter-cost ability was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(put-counter-cost ability) = false, want true")
+	}
+	if got := source.Counters.Get(counter.Verse); got != 1 {
+		t.Fatalf("verse counters = %d, want 1", got)
+	}
+}
+
 func TestActivatedAbilityReturnsPermanentsToOwnersHandAsCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

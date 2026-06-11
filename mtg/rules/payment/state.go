@@ -86,6 +86,7 @@ type stateAbilityQueries interface {
 	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type) []game.CostModifier
 }
 
+//nolint:interfacebloat // Payment plans need one adapter surface for all atomic game-state mutations.
 type stateMutations interface {
 	// SetTapped sets the tapped state of a permanent and emits the appropriate
 	// tapped/untapped event.
@@ -96,6 +97,15 @@ type stateMutations interface {
 
 	// RemoveCounters removes exactly amount counters of kind from a permanent.
 	RemoveCounters(p *game.Permanent, kind counter.Kind, amount int) bool
+
+	// AddCounters adds amount counters of kind to a permanent.
+	AddCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool
+
+	// ExertPermanent marks a permanent to skip its controller's next untap step.
+	ExertPermanent(p *game.Permanent) bool
+
+	// MillCards moves up to amount cards from the player's library to their graveyard.
+	MillCards(playerID game.PlayerID, amount int)
 
 	// LoseLife applies life loss to a player, including any applicable
 	// replacement effects.
