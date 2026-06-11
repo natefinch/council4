@@ -101,6 +101,7 @@ type ResolutionChoiceResult struct {
 // resolution (CR 608.2c, CR 117.12).
 type ResolutionPayment struct {
 	Prompt          string
+	Payer           opt.V[PlayerReference]
 	ManaCost        opt.V[cost.Mana]
 	AdditionalCosts []cost.Additional
 	XValue          int

@@ -525,6 +525,78 @@ func TestRenderResolutionPaymentRejectsPromptWithoutCost(t *testing.T) {
 	}
 }
 
+func TestRenderResolutionPaymentPayer(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderResolutionPayment(ctx, game.ResolutionPayment{
+		Prompt:   "Pay {2}?",
+		Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+		ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Prompt: \"Pay {2}?\"",
+		"Payer: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0)))",
+		"cost.O(2)",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered payment missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("resolution payment payer did not request opt import")
+	}
+}
+
+func TestRenderPayPrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Pay{
+		Payment: game.ResolutionPayment{
+			ManaCost: opt.Val(cost.Mana{cost.U}),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.Pay", "Payment: game.ResolutionPayment", "cost.U"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered pay missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRenderInstructionEnvelope(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderInstruction(ctx, &game.Instruction{
+		Primitive:     game.CounterObject{Object: game.TargetStackObjectReference(0)},
+		PublishResult: "countered",
+		ResultGate: opt.Val(game.InstructionResultGate{
+			Key:       "unless-paid",
+			Succeeded: game.TriFalse,
+		}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.CounterObject",
+		"PublishResult: game.ResultKey(\"countered\")",
+		"ResultGate: opt.Val(game.InstructionResultGate",
+		"Key: \"unless-paid\"",
+		"Succeeded: game.TriFalse",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered instruction missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("result gate did not request opt import")
+	}
+}
+
 func TestRenderConditionForETBReplacementRejectsNegativePermanentCount(t *testing.T) {
 	tests := map[string]game.Condition{
 		"controller": {

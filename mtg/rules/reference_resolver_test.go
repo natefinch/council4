@@ -213,7 +213,7 @@ func TestReferenceResolverObjectUsesLastKnownInformation(t *testing.T) {
 	if controller, ok := resolved.controller(g); !ok || controller != game.Player2 {
 		t.Fatalf("snapshot controller = %v (%v), want Player2", controller, ok)
 	}
-	if owner, ok := resolved.owner(); !ok || owner != game.Player2 {
+	if owner, ok := resolved.owner(g); !ok || owner != game.Player2 {
 		t.Fatalf("snapshot owner = %v (%v), want Player2", owner, ok)
 	}
 }
@@ -261,6 +261,104 @@ func TestReferenceResolverControllerAndOwnerReferences(t *testing.T) {
 	owner, ok := resolver.player(game.ObjectOwnerReference(game.TargetPermanentReference(0)))
 	if !ok || owner != game.Player3 {
 		t.Fatalf("object owner reference = %v (%v), want Player3", owner, ok)
+	}
+}
+
+func TestReferenceResolverStackObjectControllerAndOwnerReferences(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardInstance(g, game.Player3, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Borrowed Spell",
+		Types: []types.Card{types.Instant},
+	}})
+	targetSpell := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   cardID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetSpell)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.StackObjectTarget(targetSpell.ID)},
+	}
+	resolver := newReferenceResolver(g, obj)
+
+	controller, ok := resolver.player(game.ObjectControllerReference(game.TargetStackObjectReference(0)))
+	if !ok || controller != game.Player2 {
+		t.Fatalf("stack object controller reference = %v (%v), want Player2", controller, ok)
+	}
+	owner, ok := resolver.player(game.ObjectOwnerReference(game.TargetStackObjectReference(0)))
+	if !ok || owner != game.Player3 {
+		t.Fatalf("stack object owner reference = %v (%v), want Player3", owner, ok)
+	}
+}
+
+func TestReferenceResolverStackObjectOwnerFallsBackToController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	targetSpell := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetSpell)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.StackObjectTarget(targetSpell.ID)},
+	}
+	resolver := newReferenceResolver(g, obj)
+
+	owner, ok := resolver.player(game.ObjectOwnerReference(game.TargetStackObjectReference(0)))
+	if !ok || owner != game.Player2 {
+		t.Fatalf("stack object owner reference = %v (%v), want Player2 fallback controller", owner, ok)
+	}
+}
+
+func TestReferenceResolverCopiedSpellOwnerIsController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardInstance(g, game.Player3, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Copied Spell",
+		Types: []types.Card{types.Instant},
+	}})
+	targetSpell := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   cardID,
+		Controller: game.Player2,
+		Copy:       true,
+	}
+	g.Stack.Push(targetSpell)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.StackObjectTarget(targetSpell.ID)},
+	}
+
+	owner, ok := newReferenceResolver(g, obj).player(game.ObjectOwnerReference(game.TargetStackObjectReference(0)))
+	if !ok || owner != game.Player2 {
+		t.Fatalf("copied spell owner reference = %v (%v), want Player2 controller", owner, ok)
+	}
+}
+
+func TestReferenceResolverStackAbilityOwnerIsController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardInstance(g, game.Player3, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Borrowed Source",
+		Types: []types.Card{types.Creature},
+	}})
+	targetAbility := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceCardID: cardID,
+		Controller:   game.Player2,
+	}
+	g.Stack.Push(targetAbility)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.StackObjectTarget(targetAbility.ID)},
+	}
+
+	owner, ok := newReferenceResolver(g, obj).player(game.ObjectOwnerReference(game.TargetStackObjectReference(0)))
+	if !ok || owner != game.Player2 {
+		t.Fatalf("stack ability owner reference = %v (%v), want Player2 controller", owner, ok)
 	}
 }
 
