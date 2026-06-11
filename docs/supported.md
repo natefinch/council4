@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,932
+Cards supported: 3,933
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1029,6 +1029,7 @@ Cards supported: 3,932
 - Esper Cormorants
 - Essence Scatter
 - Essence Warden
+- Etched Champion
 - Etched Cornfield
 - Eternal Warrior
 - Eternal Witness

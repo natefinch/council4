@@ -2537,6 +2537,95 @@ func TestGenerateSourceConditionalKeywordGrant(t *testing.T) {
 	}
 }
 
+// TestGenerateSourceConditionalProtectionGrant verifies Finding 4: a conditional
+// self-grant of a parameterized Protection keyword is lowered using AddAbilities
+// (not AddKeywords), analogous to the non-conditional grant path.
+func TestGenerateSourceConditionalProtectionGrant(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantSnip   string
+	}{
+		{
+			name:       "protection from color conditional",
+			oracleText: "As long as you control an artifact, this creature has protection from black.",
+			wantSnip:   "game.ProtectionFromColorsStaticAbility(color.Black)",
+		},
+		{
+			name:       "protection from each color conditional postfix",
+			oracleText: "This creature has protection from each color as long as you control three or more artifacts.",
+			wantSnip:   "game.ProtectionFromEachColorStaticAbility()",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Champion",
+				Layout:     "normal",
+				TypeLine:   "Artifact Creature — Soldier",
+				OracleText: tc.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+			}
+			for _, want := range []string{
+				"AffectedSource: true",
+				"AddAbilities:",
+				tc.wantSnip,
+			} {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+// TestLowerSourceConditionalProtectionKeywordGrant verifies that
+// lowerSourceConditionalKeywordGrant produces a ContinuousEffect with
+// AddAbilities (not AddKeywords) for parameterized Protection.
+func TestLowerSourceConditionalProtectionKeywordGrant(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Champion",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Soldier",
+		OracleText: "Metalcraft — As long as you control three or more artifacts, this creature has protection from all colors.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+	}
+	ability := face.StaticAbilities[0].Body
+	if !ability.Condition.Exists {
+		t.Fatal("static ability has no condition")
+	}
+	if len(ability.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %#v", ability.ContinuousEffects)
+	}
+	effect := ability.ContinuousEffects[0]
+	if effect.Layer != game.LayerAbility {
+		t.Fatalf("effect layer = %v, want LayerAbility", effect.Layer)
+	}
+	if !effect.AffectedSource {
+		t.Fatal("effect.AffectedSource should be true")
+	}
+	if len(effect.AddKeywords) != 0 {
+		t.Fatalf("effect.AddKeywords = %v, want empty (should use AddAbilities for Protection)", effect.AddKeywords)
+	}
+	if len(effect.AddAbilities) != 1 {
+		t.Fatalf("effect.AddAbilities len = %d, want 1", len(effect.AddAbilities))
+	}
+}
+
 func TestRejectUnsupportedSourceConditionalKeywordGrant(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

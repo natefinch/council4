@@ -990,6 +990,14 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 				return permanentProtectedFromChars(g, permanent, chars)
 			}
 		}
+		// LKI fallback: covers departed permanents and resolved spells.
+		if snapshot, ok2 := lastKnownObject(g, sourceObjectID); ok2 {
+			return permanentProtectedFromChars(g, permanent, sourceChars{
+				colors:   snapshot.Colors,
+				types:    snapshot.Types,
+				subtypes: snapshot.Subtypes,
+			})
+		}
 	}
 	// Fall back to the supplied face def (LKI, spell during announcement, etc.).
 	return source != nil && permanentProtectedFromSourceDef(g, permanent, source)

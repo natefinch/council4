@@ -801,6 +801,15 @@ func permanentProtectedFromSource(g *game.Game, permanent *game.Permanent, sourc
 				return permanentProtectedFromChars(g, permanent, chars)
 			}
 		}
+		// LKI fallback: covers departed permanents and resolved spells whose
+		// stack object was already removed (CR 702.16c, 800.4a).
+		if snapshot, ok := lastKnownObject(g, sourceObjectID); ok {
+			return permanentProtectedFromChars(g, permanent, sourceChars{
+				colors:   snapshot.Colors,
+				types:    snapshot.Types,
+				subtypes: snapshot.Subtypes,
+			})
+		}
 	}
 	// Fall back to card def for instants/sorceries identified by card instance.
 	// Use the card's selected face if one is on the stack; otherwise root def.
@@ -866,9 +875,15 @@ func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, so
 }
 
 func permanentProtectedFromChars(g *game.Game, permanent *game.Permanent, source sourceChars) bool {
-	abilities := permanentEffectiveAbilities(g, permanent)
-	for i := range abilities {
-		body, ok := abilities[i].(game.StaticAbility)
+	values := effectivePermanentValues(g, permanent)
+	// Check the effective keyword map first: if Protection was removed via
+	// RemoveKeywords (e.g., "loses all abilities"), it will be false here even
+	// though the ability body may still appear in values.abilities.
+	if !values.keywords[game.Protection] {
+		return false
+	}
+	for i := range values.abilities {
+		body, ok := values.abilities[i].(game.StaticAbility)
 		if !ok {
 			continue
 		}

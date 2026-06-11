@@ -2804,20 +2804,49 @@ func lowerSourceConditionalKeywordGrant(
 	if !ok {
 		return game.StaticAbility{}, false
 	}
-	keywords, ok := mixedStaticKeywords(ability.Keywords)
-	if !ok || len(keywords) == 0 ||
-		!matchesExactSourceConditionalKeywordGrantSyntax(syntaxWithoutAbilityWord(syntax), ability.Conditions[0], ability.Keywords) {
-		return game.StaticAbility{}, false
+
+	// Try simple (non-parameterized) keywords first.
+	keywords, keywordsOK := mixedStaticKeywords(ability.Keywords)
+	if keywordsOK && len(keywords) > 0 &&
+		matchesExactSourceConditionalKeywordGrantSyntax(syntaxWithoutAbilityWord(syntax), ability.Conditions[0], ability.Keywords) {
+		return game.StaticAbility{
+			Text:      ability.Text,
+			Condition: opt.Val(condition),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:          game.LayerAbility,
+				AffectedSource: true,
+				AddKeywords:    keywords,
+			}},
+		}, true
 	}
-	return game.StaticAbility{
-		Text:      ability.Text,
-		Condition: opt.Val(condition),
-		ContinuousEffects: []game.ContinuousEffect{{
-			Layer:          game.LayerAbility,
-			AffectedSource: true,
-			AddKeywords:    keywords,
-		}},
-	}, true
+
+	// Try parameterized Protection self-grant (e.g., Etched Champion:
+	// "As long as you control three or more artifacts, this creature has
+	// protection from all colors.").
+	if len(ability.Keywords) == 1 && ability.Keywords[0].Name == "Protection" &&
+		matchesExactSourceConditionalKeywordGrantSyntax(syntaxWithoutAbilityWord(syntax), ability.Conditions[0], ability.Keywords) {
+		kw := ability.Keywords[0]
+		var protKeyword game.ProtectionKeyword
+		if colors, ok2 := oracleColors(kw.Parameter); ok2 {
+			protKeyword = game.ProtectionKeyword{FromColors: colors}
+		} else if pk, ok2 := parseProtectionParameter(kw.Parameter); ok2 {
+			protKeyword = pk
+		} else {
+			return game.StaticAbility{}, false
+		}
+		protBody := staticAbilityFromProtectionKeyword(protKeyword, ability.Text)
+		return game.StaticAbility{
+			Text:      ability.Text,
+			Condition: opt.Val(condition),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:          game.LayerAbility,
+				AffectedSource: true,
+				AddAbilities:   []game.Ability{protBody},
+			}},
+		}, true
+	}
+
+	return game.StaticAbility{}, false
 }
 
 func lowerSourceAsLongAsCondition(condition oracle.CompiledCondition) (game.Condition, bool) {
@@ -5458,11 +5487,15 @@ func lowerKnownCondition(condition oracle.CompiledCondition, expectedKind oracle
 	default:
 		return game.Condition{}, false
 	}
-	if !strings.HasPrefix(condition.Text, prefix) {
+	// Use case-insensitive prefix matching: oracle conditions may be capitalized
+	// when they open an ability sentence (e.g. "As long as..." vs "as long as...").
+	lowered := strings.ToLower(condition.Text)
+	if !strings.HasPrefix(lowered, prefix) {
 		return game.Condition{}, false
 	}
+	remainder := strings.ToLower(condition.Text[len(prefix):])
 	result := game.Condition{Text: condition.Text}
-	switch strings.TrimPrefix(condition.Text, prefix) {
+	switch remainder {
 	case "there are seven or more cards in your graveyard",
 		"seven or more cards are in your graveyard":
 		result.ControllerGraveyardCardCountAtLeast = 7

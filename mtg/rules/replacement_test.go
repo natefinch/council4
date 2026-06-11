@@ -2,6 +2,7 @@ package rules
 
 import (
 	"math/rand/v2"
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -595,6 +596,245 @@ func TestProtectionSourceUsesSelectedStackFace(t *testing.T) {
 	}
 	if permanentProtectedFromSource(g, protFromRed, cardID, 0) {
 		t.Fatal("protection from red should not apply using sourceID with blue face on stack")
+	}
+}
+
+// TestProtectionAppliesDuringAlternateFaceSpellResolution verifies that after a
+// StackSpell is popped and effects resolve, protection checks against the
+// resolving spell still use the selected (alternate) face's characteristics
+// rather than falling back to the front face.
+func TestProtectionAppliesDuringAlternateFaceSpellResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	// Build an adventure card: front face is a red creature, alternate face is
+	// a blue instant that deals 3 damage.
+	blueDamageSpell := game.CardFace{
+		Name:   "Blue Blast",
+		Types:  []types.Card{types.Instant},
+		Colors: []color.Color{color.Blue},
+		SpellAbility: opt.Val(game.Mode{
+			Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}},
+			Sequence: []game.Instruction{{Primitive: game.Damage{Amount: game.Fixed(3), Recipient: game.AnyTargetDamageRecipient(0)}}},
+		}.Ability()),
+	}
+	redFront := game.CardFace{
+		Name:   "Red Creature",
+		Types:  []types.Card{types.Creature},
+		Colors: []color.Color{color.Red},
+		Power:  opt.Val(game.PT{Value: 2}),
+	}
+	adventureDef := &game.CardDef{
+		CardFace:  redFront,
+		Alternate: opt.Val(blueDamageSpell),
+	}
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID:    cardID,
+		Def:   adventureDef,
+		Owner: game.Player1,
+	}
+
+	// Target: a creature with protection from blue.
+	protFromBlue := addProtectionFromColorPermanent(g, game.Player2, color.Blue)
+	// Also a creature with protection from red (should NOT prevent damage from the blue face).
+	protFromRed := addProtectionFromColorPermanent(g, game.Player2, color.Red)
+
+	// Cast the alternate (blue) face as a spell targeting the blue-protected creature.
+	stackID := g.IDGen.Next()
+	g.Stack.Push(&game.StackObject{
+		ID:         stackID,
+		Kind:       game.StackSpell,
+		SourceID:   cardID,
+		Face:       game.FaceAlternate,
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PermanentTarget(protFromBlue.ObjectID)},
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	// Protection from blue MUST prevent damage even though the spell was popped.
+	if protFromBlue.MarkedDamage != 0 {
+		t.Fatalf("blue-protected creature took %d damage, want 0 (blue face protection not applied after pop)", protFromBlue.MarkedDamage)
+	}
+	// Protection from red must NOT affect the blue-face spell.
+	g.Stack.Push(&game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   cardID,
+		Face:       game.FaceAlternate,
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PermanentTarget(protFromRed.ObjectID)},
+	})
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if protFromRed.MarkedDamage == 0 {
+		t.Fatal("red-protected creature incorrectly had damage prevented against blue-face spell")
+	}
+}
+
+// TestProtectionChecksLKIForDepartedSourcePermanent verifies that if the damage
+// source was a permanent that has since left the battlefield, protection checks
+// use the departed permanent's last-known characteristics.
+func TestProtectionChecksLKIForDepartedSourcePermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+
+	// A red permanent that will be moved off the battlefield before damage
+	// processing. We capture its LKI manually (as zones.go would in normal play).
+	sourcePermanent := addMulticoloredSourcePermanent(g, game.Player1, color.Red)
+	snapshot := snapshotPermanent(g, sourcePermanent, 0)
+	rememberLastKnown(g, &snapshot)
+	sourceObjID := sourcePermanent.ObjectID
+
+	// Remove it from the battlefield to simulate departure.
+	g.Battlefield = slices.DeleteFunc(g.Battlefield, func(p *game.Permanent) bool {
+		return p.ObjectID == sourcePermanent.ObjectID
+	})
+
+	protected := addProtectionFromColorPermanent(g, game.Player2, color.Red)
+
+	// Damage event with departed source (objectID present but not on battlefield).
+	result := permanentProtectedFromSource(g, protected, sourcePermanent.CardInstanceID, sourceObjID)
+	if !result {
+		t.Fatal("protection from red should apply against departed red source via LKI")
+	}
+
+	// Also verify a non-red protection does not match.
+	notProtected := addProtectionFromColorPermanent(g, game.Player2, color.Blue)
+	result = permanentProtectedFromSource(g, notProtected, sourcePermanent.CardInstanceID, sourceObjID)
+	if result {
+		t.Fatal("protection from blue should not apply against departed red source via LKI")
+	}
+}
+
+// TestProtectionConsultedForDepartedTriggeredAbilitySource exercises the full
+// resolveInstruction path: a triggered ability's damage must be blocked by
+// protection even when the source permanent has left the battlefield, using LKI
+// to identify its effective characteristics.
+func TestProtectionConsultedForDepartedTriggeredAbilitySource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	// Red creature whose triggered ability will deal damage.
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Red Vandal",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Red},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+
+	protFromRed := addProtectionFromColorPermanent(g, game.Player2, color.Red)
+	notProtected := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+
+	obj := &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+		Targets:      []game.Target{game.PermanentTarget(protFromRed.ObjectID)},
+	}
+
+	// Move the source off the battlefield — LKI is stored by movePermanentToZone.
+	if !movePermanentToZone(g, source, zone.Graveyard) {
+		t.Fatal("source should move to graveyard")
+	}
+
+	resolveInstruction(engine, g, obj,
+		game.Damage{Amount: game.Fixed(3), Recipient: game.AnyTargetDamageRecipient(0)}, &TurnLog{})
+
+	if protFromRed.MarkedDamage != 0 {
+		t.Fatalf("protection from red should block damage from departed red source via LKI, got %d damage", protFromRed.MarkedDamage)
+	}
+
+	// Confirm a creature without protection takes damage (sanity check).
+	obj2 := &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+		Targets:      []game.Target{game.PermanentTarget(notProtected.ObjectID)},
+	}
+	resolveInstruction(engine, g, obj2,
+		game.Damage{Amount: game.Fixed(3), Recipient: game.AnyTargetDamageRecipient(0)}, &TurnLog{})
+	if notProtected.MarkedDamage != 3 {
+		t.Fatalf("unprotected creature should take 3 damage, got %d", notProtected.MarkedDamage)
+	}
+}
+
+// TestProtectionConsultedForDepartedTokenAbilitySource verifies that protection
+// checks consult LKI for a token source that has left the battlefield. Token
+// permanents have no SourceCardID; the source object ID is the sole identity.
+func TestProtectionConsultedForDepartedTokenAbilitySource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	// Manually create a red token permanent.
+	tokenDef := &game.CardDef{CardFace: game.CardFace{
+		Name:      "Red Dragon Token",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Red},
+		Power:     opt.Val(game.PT{Value: 5}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+	}}
+	token := &game.Permanent{
+		ObjectID:   g.IDGen.Next(),
+		Token:      true,
+		TokenDef:   tokenDef,
+		Owner:      game.Player1,
+		Controller: game.Player1,
+	}
+	g.Battlefield = append(g.Battlefield, token)
+
+	protFromRed := addProtectionFromColorPermanent(g, game.Player2, color.Red)
+
+	obj := &game.StackObject{
+		Kind:     game.StackTriggeredAbility,
+		SourceID: token.ObjectID,
+		// SourceCardID intentionally 0: tokens have no card instance.
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PermanentTarget(protFromRed.ObjectID)},
+	}
+
+	// Token departs — LKI records its effective characteristics.
+	if !movePermanentToZone(g, token, zone.Graveyard) {
+		t.Fatal("token should move to graveyard")
+	}
+
+	resolveInstruction(engine, g, obj,
+		game.Damage{Amount: game.Fixed(5), Recipient: game.AnyTargetDamageRecipient(0)}, &TurnLog{})
+
+	if protFromRed.MarkedDamage != 0 {
+		t.Fatalf("protection from red should block token damage via LKI, got %d damage", protFromRed.MarkedDamage)
+	}
+}
+
+// TestRemoveKeywordsSuppressesProtectionSemantics verifies that a continuous
+// effect removing Protection (e.g., "loses all abilities") prevents the
+// protection ability body from blocking damage/targeting.
+func TestRemoveKeywordsSuppressesProtectionSemantics(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	protected := addProtectionFromColorPermanent(g, game.Player2, color.Red)
+
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+
+	// Without the removal effect, protection prevents damage.
+	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, protected, 3, false); dealt != 0 {
+		t.Fatalf("before removal: dealt = %d, want 0", dealt)
+	}
+	protected.MarkedDamage = 0
+	g.Events = nil
+
+	// Apply a RemoveKeywords effect that strips Protection.
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               g.IDGen.Next(),
+		AffectedObjectID: protected.ObjectID,
+		Layer:            game.LayerAbility,
+		RemoveKeywords:   []game.Keyword{game.Protection},
+	})
+
+	// Now damage should go through.
+	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, protected, 3, false); dealt != 3 {
+		t.Fatalf("after removal: dealt = %d, want 3 (Protection removed but body still blocked damage)", dealt)
 	}
 }
 

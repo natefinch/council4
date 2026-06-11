@@ -1098,10 +1098,18 @@ func TestGenerateExecutableCardSourceProtectionFromEachColor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// "protection from all colors" is in a conditional, which may not be fully supported,
-	// but verify it doesn't panic.
-	_ = source
-	_ = diagnostics
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"AffectedSource: true",
+		"game.ProtectionFromEachColorStaticAbility()",
+		"AddAbilities:",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
 }
 
 func TestGenerateExecutableCardSourceProtectionGrantFromEnchant(t *testing.T) {
