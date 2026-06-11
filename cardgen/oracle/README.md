@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 4,250 / 31,838**
+**Cards supported: 4,758 / 31,838**
 
 The pipeline is:
 
@@ -104,7 +104,10 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
 
 - ordered activated and loyalty cost components, including `{T}`, `{Q}`, exile,
   and counter-removal costs;
-- trigger clauses and intervening-if conditions;
+- trigger clauses and conditions. Conditions use a closed predicate, kind
+  (`if`, `unless`, `only if`, or `as long as`), negation, threshold, counter,
+  and Selection vocabulary. Exact wording recognition lives in the condition
+  adapter; unsupported wording remains an explicit predicate;
 - source-spanned semantic trigger patterns. Their closed vocabulary records
   trigger kind, representable event family, self/attached-source and controller
   relations, subject Selection, affected player, zones, phase/step, combat
@@ -116,7 +119,11 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
 - keyword abilities and parameters;
 - instruction verbs, fixed, exact `X`, and typed dynamic amounts, mana symbols,
   negation, and common durations;
-- card-name, `this`-object, `that`-object, and pronoun references.
+- card-name, `this`-object, `that`-object, and pronoun references. A conservative
+  binding pass records whether each occurrence denotes the source, a specific
+  target occurrence, the triggering event permanent, or a prior instruction
+  result. Ambiguous and unsupported occurrences remain explicit and fail
+  closed; the compiler never guesses an antecedent.
 
 Recognition is deliberately conservative. Reminder and quoted text do not leak
 into the containing ability's semantics. Trigger conditions and activation
@@ -184,9 +191,14 @@ remain fail-closed.
 Self-dies triggers support exact
 absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.
-Exact self-dies event-card references support returning the card from its
-owner's graveyard to hand and granting its Adventure face graveyard-cast
-permission through the end of the controller's next turn. Spell-cast triggered
+Exact self-dies and attached-permanent-dies event-card references support
+returning the card from its owner's graveyard to hand, and self-dies references
+support granting its Adventure face graveyard-cast permission through the end
+of the controller's next turn. Bound event permanents also lower through the
+shared reference adapter for supported trigger-body effects such as damage,
+power/toughness modification, and explore, using runtime LKI after the permanent
+leaves the battlefield. Remaining non-self-dies cards require effect or dynamic
+amount vocabulary rather than another reference path. Spell-cast triggered
 abilities with `Whenever ... casts ...` lower for three exact player prefixes
 (`you cast`, `a player casts`, `an opponent casts`) and seventeen exact spell
 phrases:

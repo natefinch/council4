@@ -81,6 +81,40 @@ func TestValidateInstructionSequenceRejectsDelayedUnknownLinkedBattlefieldSource
 	}
 }
 
+func TestValidateInstructionSequenceAcceptsDelayedLinkedObject(t *testing.T) {
+	key := LinkedKey("delayed-target")
+	err := ValidateInstructionSequence([]Instruction{
+		{Primitive: ModifyPT{
+			Object:         TargetPermanentReference(0),
+			PowerDelta:     Fixed(2),
+			ToughnessDelta: Fixed(2),
+			Duration:       DurationUntilEndOfTurn,
+			PublishLinked:  key,
+		}},
+		{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+			Timing: DelayedAtBeginningOfNextEndStep,
+			Content: Mode{Sequence: []Instruction{{Primitive: Bounce{
+				Object: LinkedObjectReference(string(key)),
+			}}}}.Ability(),
+		}}},
+	}, []TargetSpec{{MinTargets: 1, MaxTargets: 1}})
+	if err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsDelayedUnknownLinkedObject(t *testing.T) {
+	err := ValidateInstructionSequence([]Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+		Timing: DelayedAtBeginningOfNextEndStep,
+		Content: Mode{Sequence: []Instruction{{Primitive: Bounce{
+			Object: LinkedObjectReference("missing"),
+		}}}}.Ability(),
+	}}}})
+	if err == nil {
+		t.Fatal("ValidateInstructionSequence() accepted unknown delayed linked object")
+	}
+}
+
 func TestValidateInstructionSequenceAcceptsLinkedCardConsumers(t *testing.T) {
 	for _, primitive := range []Primitive{
 		MoveCard{

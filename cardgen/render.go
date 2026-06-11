@@ -2723,12 +2723,16 @@ func (r Renderer) renderModifyPT(ctx *renderCtx, value *game.ModifyPT) (string, 
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.ModifyPT", []string{
+	fields := []string{
 		fmt.Sprintf("Object: %s,", object),
 		fmt.Sprintf("PowerDelta: %s,", power),
 		fmt.Sprintf("ToughnessDelta: %s,", toughness),
 		fmt.Sprintf("Duration: %s,", duration),
-	}), nil
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	return structLit("game.ModifyPT", fields), nil
 }
 
 func (r Renderer) renderChoose(ctx *renderCtx, value game.Choose) (string, error) {

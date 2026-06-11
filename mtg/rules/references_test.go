@@ -141,6 +141,28 @@ func TestEventPermanentDamageSourceUsesLastKnownKeywords(t *testing.T) {
 	}
 }
 
+func TestEventPermanentModifyPTResolvesLiveSubject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addCombatCreaturePermanent(g, game.Player1)
+	obj := &game.StackObject{
+		Controller:      game.Player1,
+		HasTriggerEvent: true,
+		TriggerEvent:    game.Event{PermanentID: permanent.ObjectID},
+	}
+
+	resolveInstruction(engine, g, obj, game.ModifyPT{
+		Object:         game.EventPermanentReference(),
+		PowerDelta:     game.Fixed(2),
+		ToughnessDelta: game.Fixed(0),
+		Duration:       game.DurationUntilEndOfTurn,
+	}, nil)
+
+	if len(g.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %d, want event-subject P/T modification", len(g.ContinuousEffects))
+	}
+}
+
 func TestEventPermanentDamageSourceUsesKeywordsFromSimultaneousDeath(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

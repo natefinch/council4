@@ -814,6 +814,91 @@ func TestLowerDelayedBlinkRejectsUnsupportedVariants(t *testing.T) {
 	}
 }
 
+func TestLowerDelayedTargetReturnUsesLinkedReference(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mask",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{3}, {T}: Target creature you control gets +2/+2 until end of turn. Return it to its owner's hand at the beginning of the next end step.",
+	})
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %#v, want one target and two instructions", mode)
+	}
+	modify, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
+	if !ok || modify.PublishLinked == "" {
+		t.Fatalf("modify = %#v, want published linked target", mode.Sequence[0].Primitive)
+	}
+	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok {
+		t.Fatalf("second primitive = %#v, want delayed trigger", mode.Sequence[1].Primitive)
+	}
+	bounce, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Bounce)
+	if !ok ||
+		bounce.Object.Kind() != game.ObjectReferenceLinkedObject ||
+		bounce.Object.LinkID() != string(modify.PublishLinked) {
+		t.Fatalf("delayed bounce = %#v, want linked object bounce", bounce)
+	}
+}
+
+func TestLowerConditionAndDelayedReferenceNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, card := range []*ScryfallCard{
+		{
+			Name:       "Test Pupils",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human",
+			OracleText: "If a creature dealt damage by this creature this turn would die, exile it instead.",
+			Power:      new("3"),
+			Toughness:  new("3"),
+		},
+		{
+			Name:       "Test Cathar",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human",
+			OracleText: "When this creature dies, return it to the battlefield transformed under your control at the beginning of the next end step.",
+			Power:      new("2"),
+			Toughness:  new("2"),
+		},
+		{
+			Name:       "Test Orb",
+			Layout:     "normal",
+			TypeLine:   "Enchantment — Aura",
+			OracleText: "Enchant creature\nWhen enchanted creature dies, return that card to the battlefield under its owner's control at the beginning of the next end step.",
+		},
+		{
+			Name:       "Test Ambiguity",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human",
+			OracleText: "It explores.",
+			Power:      new("2"),
+			Toughness:  new("2"),
+		},
+		{
+			Name:       "Test Invalid Condition Context",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human",
+			OracleText: "This creature has flying unless you control an artifact.",
+			Power:      new("2"),
+			Toughness:  new("2"),
+		},
+	} {
+		t.Run(card.Name, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(card)
+			if len(diagnostics) == 0 {
+				t.Fatal("near-miss unexpectedly lowered")
+			}
+			for _, diagnostic := range diagnostics {
+				if diagnostic.Span.End.Offset <= diagnostic.Span.Start.Offset {
+					t.Fatalf("diagnostic has no source span: %#v", diagnostic)
+				}
+			}
+		})
+	}
+}
+
 func TestLowerTargetedGraveyardReturnToHand(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -3021,7 +3106,8 @@ func TestLowerSourceConditionalKeywordGrant(t *testing.T) {
 	}
 	condition := ability.Condition.Val
 	if condition.Text != "As long as you control a Mountain" ||
-		!slices.Equal(condition.ControllerControls.SubtypesAny, []types.Sub{types.Mountain}) {
+		!condition.ControlsMatching.Exists ||
+		!slices.Equal(condition.ControlsMatching.Val.Selection.SubtypesAny, []types.Sub{types.Mountain}) {
 		t.Fatalf("condition = %+v", condition)
 	}
 	if len(ability.ContinuousEffects) != 1 {
@@ -3047,8 +3133,9 @@ func TestLowerPostfixSourceConditionalKeywordGrant(t *testing.T) {
 	})
 	ability := face.StaticAbilities[0].Body
 	condition := ability.Condition.Val
-	if !condition.ControllerControls.ExcludeSource ||
-		!slices.Equal(condition.ControllerControls.SubtypesAny, []types.Sub{types.Cleric}) {
+	if !condition.ControlsMatching.Exists ||
+		!condition.ControlsMatching.Val.Selection.ExcludeSource ||
+		!slices.Equal(condition.ControlsMatching.Val.Selection.SubtypesAny, []types.Sub{types.Cleric}) {
 		t.Fatalf("condition = %+v", condition)
 	}
 	effect := ability.ContinuousEffects[0]
@@ -3068,7 +3155,8 @@ func TestLowerPostfixLandSubtypeConditionalKeywordGrant(t *testing.T) {
 		Toughness:  new("3"),
 	})
 	condition := face.StaticAbilities[0].Body.Condition.Val
-	if !slices.Equal(condition.ControllerControls.SubtypesAny, []types.Sub{types.Gate}) {
+	if !condition.ControlsMatching.Exists ||
+		!slices.Equal(condition.ControlsMatching.Val.Selection.SubtypesAny, []types.Sub{types.Gate}) {
 		t.Fatalf("condition = %+v", condition)
 	}
 }
@@ -3080,6 +3168,7 @@ func TestLowerColorQualifiedSourceConditionalKeywordGrants(t *testing.T) {
 		types          []types.Card
 		colors         []color.Color
 		excludedColors []color.Color
+		colorless      bool
 	}{
 		"one color": {
 			oracleText: "This creature has haste as long as you control a red creature.",
@@ -3093,13 +3182,7 @@ func TestLowerColorQualifiedSourceConditionalKeywordGrants(t *testing.T) {
 		"colorless": {
 			oracleText: "This creature has haste as long as you control another colorless creature.",
 			types:      []types.Card{types.Creature},
-			excludedColors: []color.Color{
-				color.White,
-				color.Blue,
-				color.Black,
-				color.Red,
-				color.Green,
-			},
+			colorless:  true,
 		},
 	}
 	for name, test := range tests {
@@ -3113,10 +3196,15 @@ func TestLowerColorQualifiedSourceConditionalKeywordGrants(t *testing.T) {
 				Power:      new("2"),
 				Toughness:  new("2"),
 			})
-			filter := face.StaticAbilities[0].Body.Condition.Val.ControllerControls
-			if !slices.Equal(filter.Types, test.types) ||
+			match := face.StaticAbilities[0].Body.Condition.Val.ControlsMatching
+			if !match.Exists {
+				t.Fatal("condition has no matching-selection count")
+			}
+			filter := match.Val.Selection
+			if !slices.Equal(filter.RequiredTypes, test.types) ||
 				!slices.Equal(filter.ColorsAny, test.colors) ||
-				!slices.Equal(filter.ExcludedColors, test.excludedColors) {
+				!slices.Equal(filter.ExcludedColors, test.excludedColors) ||
+				filter.Colorless != test.colorless {
 				t.Fatalf("filter = %+v", filter)
 			}
 		})
@@ -3387,15 +3475,18 @@ func TestLowerConditionalEntersTappedReplacement(t *testing.T) {
 	if !cond.Negate {
 		t.Fatal("condition should be negated (unless)")
 	}
-	filter := cond.ControllerControls
-	if len(filter.Types) != 1 || filter.Types[0] != types.Land {
-		t.Fatalf("filter types = %#v, want [types.Land]", filter.Types)
+	if !cond.ControlsMatching.Exists {
+		t.Fatal("condition has no matching-selection count")
+	}
+	filter := cond.ControlsMatching.Val.Selection
+	if len(filter.RequiredTypes) != 1 || filter.RequiredTypes[0] != types.Land {
+		t.Fatalf("filter types = %#v, want [types.Land]", filter.RequiredTypes)
 	}
 	if len(filter.Supertypes) != 1 || filter.Supertypes[0] != types.Basic {
 		t.Fatalf("filter supertypes = %#v, want [types.Basic]", filter.Supertypes)
 	}
-	if filter.MinCount != 2 {
-		t.Fatalf("filter MinCount = %d, want 2", filter.MinCount)
+	if cond.ControlsMatching.Val.MinCount != 2 {
+		t.Fatalf("filter MinCount = %d, want 2", cond.ControlsMatching.Val.MinCount)
 	}
 }
 
@@ -3439,9 +3530,12 @@ func TestLowerCommonConditionalEntersTappedReplacements(t *testing.T) {
 				OracleText: test.oracleText,
 			})
 			condition := face.ReplacementAbilities[0].Replacement.Condition.Val
-			filter := condition.ControllerControls
+			if !condition.ControlsMatching.Exists {
+				t.Fatal("condition has no matching-selection count")
+			}
+			filter := condition.ControlsMatching.Val.Selection
 			if condition.Negate != test.negate ||
-				filter.MinCount != test.minCount ||
+				condition.ControlsMatching.Val.MinCount != test.minCount ||
 				filter.ExcludeSource != test.excludeSource ||
 				!slices.Equal(filter.SubtypesAny, test.subtypes) {
 				t.Fatalf("condition = %+v, want negate=%v min=%d exclude=%v subtypes=%v",
@@ -4547,21 +4641,21 @@ func TestLowerControlsPermanentEnterTrigger(t *testing.T) {
 	}
 }
 
-func TestLowerEnterTriggerRejectsUnsupportedInterveningWording(t *testing.T) {
+func TestLowerEnterTriggerSupportsSubtypeInterveningCondition(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Handler",
 		Layout:     "normal",
 		TypeLine:   "Creature — Elf",
 		OracleText: "When this creature enters, if you control an Elf, draw a card.",
 		Power:      new("2"),
 		Toughness:  new("2"),
-	}, "t")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(diagnostics) == 0 {
-		t.Fatal("unsupported subtype condition unexpectedly lowered")
+	})
+	condition := face.TriggeredAbilities[0].Trigger.InterveningCondition
+	if !condition.Exists ||
+		!condition.Val.ControlsMatching.Exists ||
+		!slices.Equal(condition.Val.ControlsMatching.Val.Selection.SubtypesAny, []types.Sub{types.Elf}) {
+		t.Fatalf("condition = %+v, want controlled Elf selection", condition)
 	}
 }
 
@@ -4893,7 +4987,6 @@ func TestLowerDiesTriggerRejectsEnterOnlyInterveningConditions(t *testing.T) {
 		"if it was cast",
 		"if you cast it",
 		"if this creature attacked this turn",
-		"if you control an artifact",
 	} {
 		t.Run(condition, func(t *testing.T) {
 			t.Parallel()
@@ -6513,8 +6606,25 @@ func TestLowerExploreSourcePermanentTrigger(t *testing.T) {
 	})
 	mode := face.TriggeredAbilities[0].Content.Modes[0]
 	explore, ok := mode.Sequence[0].Primitive.(game.Explore)
-	if !ok || explore.Creature.Kind() != game.ObjectReferenceSourcePermanent {
-		t.Fatalf("primitive = %+v, want source permanent explores", mode.Sequence[0].Primitive)
+	if !ok || explore.Creature.Kind() != game.ObjectReferenceEventPermanent {
+		t.Fatalf("primitive = %+v, want event permanent explores", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerModifyPTEventPermanentTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Guide",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever another creature enters, it gets +2/+0 until end of turn.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	modify, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
+	if !ok || modify.Object != game.EventPermanentReference() {
+		t.Fatalf("primitive = %+v, want event permanent P/T modification", mode.Sequence[0].Primitive)
 	}
 }
 
@@ -6623,7 +6733,7 @@ func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
 		{
 			name:      "explore",
 			text:      "When this creature enters, if you control an artifact, it explores.",
-			primitive: game.Explore{Creature: game.SourcePermanentReference()},
+			primitive: game.Explore{Creature: game.EventPermanentReference()},
 		},
 		{
 			name:      "manifest",
@@ -9023,9 +9133,9 @@ func TestLowerNonSelfDiesTriggerEnchantedCreature(t *testing.T) {
 	}
 }
 
-// TestLowerNonSelfDiesTriggerBodyWithPronounReferenceFailsClosed verifies that
-// bodies referring to the dying permanent via a pronoun are rejected.
-func TestLowerNonSelfDiesTriggerBodyWithPronounReferenceFailsClosed(t *testing.T) {
+// TestLowerNonSelfDiesTriggerUnsupportedControllerDamageFailsClosed verifies
+// that a bound source reference does not make unsupported player damage valid.
+func TestLowerNonSelfDiesTriggerUnsupportedControllerDamageFailsClosed(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 		Name:       "Damage Dealer",
@@ -9038,8 +9148,8 @@ func TestLowerNonSelfDiesTriggerBodyWithPronounReferenceFailsClosed(t *testing.T
 	if len(diagnostics) == 0 {
 		t.Fatal("expected diagnostic for pronoun reference to dying permanent")
 	}
-	if !strings.Contains(diagnostics[0].Summary, "unsupported dies trigger") {
-		t.Fatalf("diagnostic summary = %q, want 'unsupported dies trigger'", diagnostics[0].Summary)
+	if !strings.Contains(diagnostics[0].Summary, "unsupported damage spell") {
+		t.Fatalf("diagnostic summary = %q, want 'unsupported damage spell'", diagnostics[0].Summary)
 	}
 }
 

@@ -101,6 +101,23 @@ func compileAbility(
 		referenceTokens,
 		context.CardName,
 	)
+	compiled.Content.References = bindReferences(
+		compiled.Content.References,
+		compiled.Content.Targets,
+		compiled.Content.Effects,
+		compiled.Trigger,
+	)
+	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References)
+	if compiled.Trigger != nil && compiled.Trigger.Condition != nil {
+		for i := range compiled.Content.Conditions {
+			if compiled.Content.Conditions[i].Span == compiled.Trigger.Condition.Span {
+				condition := compiled.Content.Conditions[i]
+				compiled.Trigger.Condition = &condition
+				compiled.Trigger.Pattern.InterveningCondition = &condition
+				break
+			}
+		}
+	}
 
 	for _, mode := range compiled.Content.Modes {
 		if len(mode.Content.Effects) == 0 && len(mode.Content.Keywords) == 0 {
@@ -199,8 +216,18 @@ func compileMode(
 				mode.Quoted,
 				context.CardName,
 			),
-			Keywords:   compileKeywords(tokens),
-			References: compileReferences(tokens, context.CardName),
+			Keywords: compileKeywords(tokens),
+			References: bindReferences(
+				compileReferences(tokens, context.CardName),
+				compileTargets(tokens),
+				compileEffects(
+					parseSentences(source, mode.Tokens),
+					mode.Reminders,
+					mode.Quoted,
+					context.CardName,
+				),
+				nil,
+			),
 		},
 	}
 	// Set Content.Span to the mode's full source span: a modal option has no
@@ -511,12 +538,14 @@ func compileConditions(tokens []Token, triggered bool) []CompiledCondition {
 		start := i
 		end := conditionEnd(tokens, i)
 		phrase := tokens[start:end]
-		conditions = append(conditions, CompiledCondition{
+		condition := CompiledCondition{
 			Kind:        kind,
 			Span:        spanOf(phrase),
 			Text:        joinedSourceText(phrase),
 			Intervening: triggered && kind == ConditionIf && isInterveningIf(tokens, start),
-		})
+		}
+		recognizeCondition(&condition)
+		conditions = append(conditions, condition)
 		i = end - 1
 	}
 	return conditions

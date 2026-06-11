@@ -418,6 +418,7 @@ type ModifyPT struct {
 	PowerDelta     Quantity
 	ToughnessDelta Quantity
 	Duration       EffectDuration
+	PublishLinked  LinkedKey
 }
 
 // Fight makes two permanents fight each other.
@@ -893,7 +894,10 @@ func (ApplyContinuous) instructionRefs() primitiveRefs { return primitiveRefs{} 
 func (ApplyRule) instructionRefs() primitiveRefs       { return primitiveRefs{} }
 
 func (p ModifyPT) instructionRefs() primitiveRefs {
-	return mergePrimitiveRefs(quantityRefs(p.PowerDelta), quantityRefs(p.ToughnessDelta))
+	refs := mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.PowerDelta))
+	refs = mergePrimitiveRefs(refs, quantityRefs(p.ToughnessDelta))
+	refs.publishesLinked = p.PublishLinked
+	return refs
 }
 func (Fight) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (Tap) instructionRefs() primitiveRefs      { return primitiveRefs{} }
@@ -938,7 +942,7 @@ func (p LoseLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount
 func (p Exile) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.ExileLinkedKey}
 }
-func (Bounce) instructionRefs() primitiveRefs                { return primitiveRefs{} }
+func (p Bounce) instructionRefs() primitiveRefs              { return objectReferenceRefs(p.Object) }
 func (Sacrifice) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (Untap) instructionRefs() primitiveRefs                 { return primitiveRefs{} }
@@ -971,6 +975,13 @@ func cardReferenceRefs(reference CardReference) primitiveRefs {
 		return primitiveRefs{}
 	}
 	return primitiveRefs{consumesLinked: []LinkedKey{LinkedKey(reference.LinkID)}}
+}
+
+func objectReferenceRefs(reference ObjectReference) primitiveRefs {
+	if reference.Kind() != ObjectReferenceLinkedObject || reference.LinkID() == "" {
+		return primitiveRefs{}
+	}
+	return primitiveRefs{consumesLinked: []LinkedKey{LinkedKey(reference.LinkID())}}
 }
 
 func quantityRefs(quantity Quantity) primitiveRefs {
