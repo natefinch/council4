@@ -1102,6 +1102,38 @@ func TestRenderTriggerPatternCyclingEvents(t *testing.T) {
 	}
 }
 
+func TestRenderStaticAbilityHandCyclingGrant(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderStaticAbility(newRenderCtx(), &game.StaticAbility{
+		Text: "Each land card in your hand has cycling {R}.",
+		RuleEffects: []game.RuleEffect{{
+			Kind:           game.RuleEffectGrantHandCardAbility,
+			AffectedPlayer: game.PlayerYou,
+			CardSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+			},
+			GrantedAbility: game.CyclingActivatedAbility(cost.Mana{cost.R}),
+		}},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.RuleEffectGrantHandCardAbility",
+		"AffectedPlayer: game.PlayerYou",
+		"RequiredTypes: []types.Card{types.Land}",
+		"game.CyclingActivatedAbility(cost.Mana{cost.R})",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered static ability missing %q:\n%s", want, rendered)
+		}
+	}
+	src := "package p\nimport (\n\"github.com/natefinch/council4/mtg/game\"\n\"github.com/natefinch/council4/mtg/game/cost\"\n\"github.com/natefinch/council4/mtg/game/types\"\n)\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered static ability is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
 func TestRenderTriggerPatternRejectsCardSelectionOnNonCastEvent(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{

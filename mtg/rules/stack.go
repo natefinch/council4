@@ -308,7 +308,9 @@ func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 	if !ok {
 		return true
 	}
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCantBeCountered {
 			continue
 		}

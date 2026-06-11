@@ -910,6 +910,36 @@ func TestGenerateExecutableCardSourceCyclingTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceHandCyclingGrant(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Reformation",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		ManaCost:   "{1}{R}",
+		Colors:     []string{"R"},
+		OracleText: "Each land card in your hand has cycling {R}.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"StaticAbilities: []game.StaticAbility",
+		"game.RuleEffectGrantHandCardAbility",
+		"game.PlayerYou",
+		"RequiredTypes: []types.Card{types.Land}",
+		"game.CyclingActivatedAbility(cost.Mana{cost.R})",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEquip(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

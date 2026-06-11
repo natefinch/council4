@@ -2,9 +2,11 @@ package game
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // CardDefIssueCode identifies a class of structural CardDef validation issue.
@@ -23,6 +25,7 @@ const (
 	CardDefIssueInvalidAbilityBody     CardDefIssueCode = "invalid-ability-body"
 	CardDefIssueInvalidSelection       CardDefIssueCode = "invalid-selection"
 	CardDefIssueInvalidCondition       CardDefIssueCode = "invalid-condition"
+	CardDefIssueInvalidRuleEffect      CardDefIssueCode = "invalid-rule-effect"
 )
 
 // CardDefIssue describes one structural problem found in a CardDef.
@@ -176,6 +179,9 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 		}
 		for i := range abilityBody.ContinuousEffects {
 			v.validateContinuousEffect(faceName, appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i)), &abilityBody.ContinuousEffects[i], targets)
+		}
+		for i := range abilityBody.RuleEffects {
+			v.validateRuleEffect(faceName, appendPath(path, fmt.Sprintf("RuleEffects[%d]", i)), &abilityBody.RuleEffects[i])
 		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "ability body is nil")
@@ -409,6 +415,52 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
 	}
+}
+
+func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *RuleEffect) {
+	if effect == nil {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "rule effect is nil")
+		return
+	}
+	switch effect.Kind {
+	case RuleEffectGrantHandCardAbility:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "hand-card ability grants must set affected player")
+		}
+		v.validateSelection(faceName, appendPath(path, "CardSelection"), effect.CardSelection)
+		if effect.CardSelection.Empty() {
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "hand-card ability grants require a card selection")
+		}
+		if handCardSelectionHasUnsupportedPredicates(effect.CardSelection) {
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "hand-card ability grants support only printed card characteristics")
+		}
+		cyclingCost, ok := ActivatedBodyCyclingCost(&effect.GrantedAbility)
+		if !ok {
+			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must grant Cycling")
+			return
+		}
+		if effect.GrantedAbility.ZoneOfFunction != zone.Hand {
+			v.add(faceName, appendPath(path, "GrantedAbility.ZoneOfFunction"), CardDefIssueInvalidRuleEffect, "hand-card granted ability must function from hand")
+		}
+		if !reflect.DeepEqual(effect.GrantedAbility, CyclingActivatedAbility(cyclingCost)) {
+			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
+		}
+	default:
+	}
+}
+
+func handCardSelectionHasUnsupportedPredicates(selection Selection) bool {
+	return selection.Controller != ControllerAny ||
+		selection.Player != PlayerAny ||
+		selection.Tapped != TriAny ||
+		selection.CombatState != CombatStateAny ||
+		selection.Keyword != KeywordNone ||
+		selection.ExcludedKeyword != KeywordNone ||
+		selection.Power.Exists ||
+		selection.Toughness.Exists ||
+		selection.ExcludeSource ||
+		selection.NonToken ||
+		selection.TokenOnly
 }
 
 // validateGroupRef validates the structural consistency of a GroupReference and

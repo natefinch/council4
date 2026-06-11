@@ -30,13 +30,14 @@ func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {
 
 func clearCardCastPermissions(g *game.Game, cardID game.ObjectID, fromZone zone.Type) {
 	kept := g.RuleEffects[:0]
-	for _, effect := range g.RuleEffects {
+	for i := range g.RuleEffects {
+		effect := &g.RuleEffects[i]
 		if effect.Kind == game.RuleEffectCastFromZone &&
 			effect.AffectedCardID == cardID &&
 			effect.CastFromZone == fromZone {
 			continue
 		}
-		kept = append(kept, effect)
+		kept = append(kept, *effect)
 	}
 	g.RuleEffects = kept
 }
