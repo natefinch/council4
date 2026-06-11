@@ -1803,7 +1803,11 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 	if err != nil {
 		return "", err
 	}
-	return structLit("", []string{fmt.Sprintf("Primitive: %s,", primitive)}), nil
+	fields := []string{fmt.Sprintf("Primitive: %s,", primitive)}
+	if instruction.PublishResult != "" {
+		fields = append(fields, fmt.Sprintf("PublishResult: game.ResultKey(%q),", string(instruction.PublishResult)))
+	}
+	return structLit("", fields), nil
 }
 
 func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
@@ -2117,11 +2121,17 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		if !ok {
 			return "", errors.New("render: internal error: GainLife kind has unexpected concrete type")
 		}
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return r.renderAmountPlayerGroup(ctx, "game.GainLife", value.Amount, value.PlayerGroup)
+		}
 		typeName, amount, player = "game.GainLife", value.Amount, value.Player
 	case game.PrimitiveLoseLife:
 		value, ok := primitive.(game.LoseLife)
 		if !ok {
 			return "", errors.New("render: internal error: LoseLife kind has unexpected concrete type")
+		}
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return r.renderAmountPlayerGroup(ctx, "game.LoseLife", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.LoseLife", value.Amount, value.Player
 	default:
@@ -2274,6 +2284,31 @@ func (r Renderer) renderAmountPlayer(
 	return structLit(typeName, []string{
 		fmt.Sprintf("Amount: %s,", renderedAmount),
 		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
+func (r Renderer) renderAmountPlayerGroup(
+	ctx *renderCtx,
+	typeName string,
+	amount game.Quantity,
+	group game.PlayerGroupReference,
+) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, amount)
+	if err != nil {
+		return "", err
+	}
+	var renderedGroup string
+	switch group.Kind {
+	case game.PlayerGroupReferenceOpponents:
+		renderedGroup = "game.OpponentsReference()"
+	case game.PlayerGroupReferenceAllPlayers:
+		renderedGroup = "game.AllPlayersReference()"
+	default:
+		return "", fmt.Errorf("render: unsupported player group reference kind %d", group.Kind)
+	}
+	return structLit(typeName, []string{
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
 	}), nil
 }
 

@@ -1919,6 +1919,75 @@ func TestGenerateExecutableCardSourceLifeRecipients(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceLifeGroupRecipients(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		text    string
+		wanteds []string
+	}{
+		{
+			text: "Each opponent loses 3 life.",
+			wanteds: []string{
+				"game.LoseLife",
+				"game.Fixed(3)",
+				"PlayerGroup: game.OpponentsReference()",
+			},
+		},
+		{
+			text: "Each player gains 2 life.",
+			wanteds: []string{
+				"game.GainLife",
+				"game.Fixed(2)",
+				"PlayerGroup: game.AllPlayersReference()",
+			},
+		},
+		{
+			text: "Each opponent loses 1 life and you gain 1 life.",
+			wanteds: []string{
+				"game.LoseLife",
+				"PlayerGroup: game.OpponentsReference()",
+				`PublishResult: game.ResultKey("life-change")`,
+				"game.GainLife",
+				"Player: game.ControllerReference()",
+			},
+		},
+		{
+			text: "Each opponent loses 1 life and you gain that much life.",
+			wanteds: []string{
+				"game.LoseLife",
+				"PlayerGroup: game.OpponentsReference()",
+				`PublishResult: game.ResultKey("life-change")`,
+				"game.GainLife",
+				"game.DynamicAmountPreviousEffectResult",
+				`ResultKey: game.ResultKey("life-change")`,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.text, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:     "Test Life",
+				Layout:   "normal",
+				TypeLine: "Sorcery",
+				OracleText: test.text,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanteds {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceScry(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
@@ -3146,7 +3215,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "variable power toughness", cardName: "Test Growth", typeLine: "Instant", oracleText: "Target creature gets +X/+X until end of turn."},
 		{name: "permanent power toughness", cardName: "Test Growth", typeLine: "Sorcery", oracleText: "Target creature gets +2/+2."},
 		{name: "power toughness rider", cardName: "Test Growth", typeLine: "Instant", oracleText: "Target creature gets +2/+2 and gains trample until end of turn."},
-		{name: "each opponent life", cardName: "Test Life", typeLine: "Sorcery", oracleText: "Each opponent loses 3 life."},
 		{name: "set life total", cardName: "Test Life", typeLine: "Sorcery", oracleText: "Your life total becomes 10."},
 		{name: "compound life", cardName: "Test Life", typeLine: "Sorcery", oracleText: "You gain 3 life and draw a card."},
 		{name: "variable scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry X."},
