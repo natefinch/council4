@@ -6003,10 +6003,14 @@ func lowerSingleEffectSpell(
 	case oracle.EffectGain:
 		return lowerFixedLifeSpell(ability, "gain", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.GainLife{Amount: amount, Player: player}
+		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
+			return game.GainLife{Amount: amount, PlayerGroup: group}
 		})
 	case oracle.EffectLose:
 		return lowerFixedLifeSpell(ability, "lose", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.LoseLife{Amount: amount, Player: player}
+		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
+			return game.LoseLife{Amount: amount, PlayerGroup: group}
 		})
 	case oracle.EffectScry:
 		return lowerFixedControllerSpell(ability, syntax, "scry", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
@@ -6862,6 +6866,9 @@ func lowerOrderedEffectSequence(
 	if content, ok := lowerCyclingCountDamageAndGain(cardName, ability); ok {
 		return content, nil
 	}
+	if content, ok := lowerGroupLinkedLifeSpell(ability); ok {
+		return content, nil
+	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
 	consumedTargets := 0
@@ -7174,7 +7181,65 @@ func lowerCyclingCountDamageAndGain(cardName string, ability oracle.CompiledAbil
 	}.Ability(), true
 }
 
-// remapTargetedSequence applies a non-uniform per-local-index → game-index
+// lowerGroupLinkedLifeSpell handles linked two-effect patterns of the form
+// "Each opponent loses N life and you gain [N | that much] life."
+// It emits LoseLife with PublishResult "life-change" followed by GainLife.
+// For "that much", the GainLife amount uses DynamicAmountPreviousEffectResult.
+func lowerGroupLinkedLifeSpell(ability oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(ability.Effects) != 2 ||
+		ability.Effects[0].Kind != oracle.EffectLose ||
+		ability.Effects[1].Kind != oracle.EffectGain ||
+		ability.Effects[0].Negated ||
+		ability.Effects[1].Negated ||
+		!ability.Effects[0].Amount.Known ||
+		ability.Effects[0].Amount.Value < 1 ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ability)) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	loseAmount := game.Fixed(ability.Effects[0].Amount.Value)
+	amountText := fmt.Sprint(ability.Effects[0].Amount.Value)
+
+	// Determine player group from full sentence text.
+	var group game.PlayerGroupReference
+	switch {
+	case ability.Text == fmt.Sprintf("Each opponent loses %s life and you gain %s life.", amountText, amountText) ||
+		ability.Text == fmt.Sprintf("Each opponent loses %s life and you gain that much life.", amountText):
+		group = game.OpponentsReference()
+	default:
+		return game.AbilityContent{}, false
+	}
+
+	// Determine the gain amount: fixed if effects[1] has a known value, dynamic ("that much") otherwise.
+	var gainAmount game.Quantity
+	switch {
+	case ability.Effects[1].Amount.Known && ability.Effects[1].Amount.Value > 0:
+		gainAmount = game.Fixed(ability.Effects[1].Amount.Value)
+	case !ability.Effects[1].Amount.Known:
+		gainAmount = game.Dynamic(game.DynamicAmount{
+			Kind:      game.DynamicAmountPreviousEffectResult,
+			ResultKey: "life-change",
+		})
+	default:
+		return game.AbilityContent{}, false
+	}
+
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive:     game.LoseLife{PlayerGroup: group, Amount: loseAmount},
+				PublishResult: "life-change",
+			},
+			{
+				Primitive: game.GainLife{Player: game.ControllerReference(), Amount: gainAmount},
+			},
+		},
+	}.Ability(), true
+}
+
 // remapping to all target references in sequence. Unlike rebaseTargetedSequence
 // which adds a uniform offset, this function looks up each local target index
 // in localToGame and replaces it with the corresponding accumulated game index.
@@ -8405,6 +8470,7 @@ func lowerFixedLifeSpell(
 	ability oracle.CompiledAbility,
 	verb string,
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
+	groupPrimitiveFactory func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
@@ -8442,6 +8508,24 @@ func lowerFixedLifeSpell(
 			"the executable source backend supports only exact supported life changes",
 		)
 	default:
+	}
+	// Group patterns: "Each opponent gains/loses N life." / "Each player gains/loses N life."
+	// These require a known fixed amount and no targets.
+	if len(ability.Targets) == 0 && effect.Amount.Known {
+		switch {
+		case exactLifeAmountSyntax("Each opponent", verb+"s", ability.Text, effect.Amount, amountText):
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: groupPrimitiveFactory(amount, game.OpponentsReference()),
+				}},
+			}.Ability(), nil
+		case exactLifeAmountSyntax("Each player", verb+"s", ability.Text, effect.Amount, amountText):
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
+				}},
+			}.Ability(), nil
+		}
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec

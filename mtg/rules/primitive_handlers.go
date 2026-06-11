@@ -499,8 +499,18 @@ func handleChoose(r *effectResolver, prim game.Choose) effectResolved {
 }
 
 func handleGainLife(r *effectResolver, prim game.GainLife) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	if res.amount <= 0 {
+	perPlayer := r.quantity(prim.Amount)
+	res := effectResolved{accepted: true, amount: perPlayer}
+	if perPlayer <= 0 {
+		return res
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		res.amount = 0
+		for _, playerID := range r.playerGroupMembers(prim.PlayerGroup) {
+			gained := gainLife(r.game, playerID, perPlayer)
+			res.amount += gained
+			res.succeeded = gained > 0 || res.succeeded
+		}
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
@@ -511,8 +521,18 @@ func handleGainLife(r *effectResolver, prim game.GainLife) effectResolved {
 }
 
 func handleLoseLife(r *effectResolver, prim game.LoseLife) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	if res.amount <= 0 {
+	perPlayer := r.quantity(prim.Amount)
+	res := effectResolved{accepted: true, amount: perPlayer}
+	if perPlayer <= 0 {
+		return res
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		res.amount = 0
+		for _, playerID := range r.playerGroupMembers(prim.PlayerGroup) {
+			lost := loseLife(r.game, playerID, perPlayer)
+			res.amount += lost
+			res.succeeded = lost > 0 || res.succeeded
+		}
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)

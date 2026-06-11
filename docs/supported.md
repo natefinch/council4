@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 4,207
+Cards supported: 4,250
 
 - +2 Mace
 - Aang, Air Nomad
@@ -146,6 +146,7 @@ Cards supported: 4,207
 - Archaeomender
 - Archangel
 - Archers of Qarsi
+- Archers' Parapet
 - Archive Dragon
 - Archivist
 - Archon of Falling Stars
@@ -383,6 +384,7 @@ Cards supported: 4,207
 - Blood Knight
 - Blood Pet
 - Blood Vassal
+- Blood-Toll Harpy
 - Bloodbraid Elf
 - Bloodfell Caves
 - Bloodfire Expert
@@ -484,6 +486,7 @@ Cards supported: 4,207
 - Bronze Sword
 - Bronze Walrus
 - Broodhunter Wurm
+- Brotherhood Patriarch
 - Brushstrider
 - Brute Force
 - Bull Cerodon
@@ -559,6 +562,7 @@ Cards supported: 4,207
 - Cathartic Adept
 - Cathedral Sanctifier
 - Cathedral of War
+- Caustic Hound
 - Caustic Rain
 - Cave of Temptation
 - Celestial Force
@@ -571,6 +575,7 @@ Cards supported: 4,207
 - Centaur Courser
 - Centaur Healer
 - Centaur Nurturer
+- Centaur Peacemaker
 - Cephalid Broker
 - Cephalid Looter
 - Cephalid Scout
@@ -621,6 +626,7 @@ Cards supported: 4,207
 - Cleric
 - Cleric
 - Cliffhaven Sell-Sword
+- Cliffhaven Vampire
 - Cliffrunner Behemoth
 - Clifftop Retreat
 - Clinging Darkness
@@ -697,6 +703,7 @@ Cards supported: 4,207
 - Core Prowler
 - Coretapper
 - Corpse Hauler
+- Corpse Knight
 - Corpsejack Menace
 - Cosmium Blast
 - Council of Advisors
@@ -814,6 +821,7 @@ Cards supported: 4,207
 - Deathcap Cultivator
 - Deathcap Glade
 - Deathcap Marionette
+- Deathcurse Ogre
 - Deathgaze Cockatrice
 - Deathless Ancient
 - Debilitating Injury
@@ -915,6 +923,7 @@ Cards supported: 4,207
 - Djinn of the Lamp
 - Dog
 - Dog
+- Dogged Pursuit
 - Dokuchi Shadow-Walker
 - Doom Whisperer
 - Doomed Necromancer
@@ -945,6 +954,7 @@ Cards supported: 4,207
 - Drake-Skull Cameo
 - Drakewing Krasis
 - Dramatic Rescue
+- Drana's Emissary
 - Drannith Healer
 - Dread Reaper
 - Dread Rider
@@ -1088,6 +1098,7 @@ Cards supported: 4,207
 - Enemy of the Guildpact
 - Energy Refractor
 - Enforcer Griffin
+- Engine Rat
 - Engulfing Eruption
 - Enhanced Awareness
 - Enigma Eidolon
@@ -1097,6 +1108,7 @@ Cards supported: 4,207
 - Enraged Giant
 - Envelop
 - Epic Proportions
+- Epicure of Blood
 - Epitaph Golem
 - Erase
 - Eriette's Lullaby
@@ -1108,6 +1120,7 @@ Cards supported: 4,207
 - Essence Warden
 - Etched Champion
 - Etched Cornfield
+- Etched Familiar
 - Eternal Warrior
 - Eternal Witness
 - Ethercaste Knight
@@ -1377,6 +1390,7 @@ Cards supported: 4,207
 - Glass Golem
 - Glasswing Grace // Age-Graced Chapel
 - Glen Elendra Archmage
+- Glidedive Duo
 - Glider Kids
 - Glimmer
 - Glistener Elf
@@ -1661,6 +1675,7 @@ Cards supported: 4,207
 - Hound of the Farbogs
 - Hover Barrier
 - Hovermyr
+- Howling Banshee
 - Howling Fury
 - Huatli's Raptor
 - Huatli's Snubhorn
@@ -1745,6 +1760,7 @@ Cards supported: 4,207
 - Inescapable Blaze
 - Inexorable Tide
 - Infantry Veteran
+- Infectious Horror
 - Infectious Host
 - Infernal Grasp
 - Infirmary Healer // Stream of Life
@@ -1878,6 +1894,7 @@ Cards supported: 4,207
 - Keep Out
 - Keeper of the Nine Gales
 - Keepers of the Faith
+- Keimi
 - Keldon Arsonist
 - Keldon Necropolis
 - Kelinore Bat
@@ -1966,6 +1983,7 @@ Cards supported: 4,207
 - Lagac Lizard
 - Lagonna-Band Elder
 - Lakeside Shack
+- Lampad of Death's Vigil
 - Lance
 - Land Leeches
 - Landscape Painter // Vibrant Idea
@@ -2078,6 +2096,7 @@ Cards supported: 4,207
 - Mage-Ring Bully
 - Magefire Wings
 - Mageta's Boon
+- Maggot Carrier
 - Maggot Therapy
 - Magma Jet
 - Magnifying Glass
@@ -2107,6 +2126,7 @@ Cards supported: 4,207
 - Mantle of Webs
 - Maraleaf Pixie
 - Marauder's Axe
+- Marauding Blight-Priest
 - Marble Chalice
 - Marble Diamond
 - Mardu Banner
@@ -2377,6 +2397,7 @@ Cards supported: 4,207
 - Nivix Barrier
 - No-Dachi
 - Noble Hierarch
+- Nocturnal Feeder
 - Nomad Outpost
 - Nomadic Elf
 - North Pole Gates
@@ -2476,6 +2497,7 @@ Cards supported: 4,207
 - Orochi Sustainer
 - Orzhov Cluestone
 - Orzhov Guildgate
+- Orzhov Guildmage
 - Orzhov Locket
 - Orzhov Signet
 - Oscorp Research Team
@@ -2664,6 +2686,7 @@ Cards supported: 4,207
 - Pteron Ghost
 - Pull Under
 - Pull from Tomorrow
+- Pulse Tracker
 - Punk Frogs
 - Purify
 - Purple Pentapus
@@ -2689,6 +2712,7 @@ Cards supported: 4,207
 - Quirion Ranger
 - Rabanastre, Royal City
 - Rabbit
+- Rabid Bloodsucker
 - Rabid Rats
 - Raccoon
 - Racers' Ring
@@ -2833,6 +2857,7 @@ Cards supported: 4,207
 - Risen Sanctuary
 - Rishadan Port
 - Risky Research
+- Risky Shortcut
 - Rith's Attendant
 - Ritual of Restoration
 - Ritual of Soot
@@ -2941,6 +2966,7 @@ Cards supported: 4,207
 - Sandsteppe Citadel
 - Sangrite Backlash
 - Sanguinary Mage
+- Sanguine Syphoner
 - Sanitarium Skeleton
 - Sanitation Automaton
 - Saprazzan Heir
@@ -3143,7 +3169,9 @@ Cards supported: 4,207
 - Sickle Ripper
 - Sidisi's Pet
 - Siege Mastodon
+- Siege Rhino
 - Siege Wurm
+- Siege Zombie
 - Siegecraft
 - Sift
 - Sightless Ghoul
@@ -3181,6 +3209,7 @@ Cards supported: 4,207
 - Simic Sky Swallower
 - Sinister Concoction
 - Sinister Hideout
+- Sinister Monolith
 - Sinister Starfish
 - Sinkhole
 - Sir Shandlar of Eberyn
@@ -3198,6 +3227,8 @@ Cards supported: 4,207
 - Skeleton Pirate
 - Skinrender
 - Skirge Familiar
+- Skirmish Rhino
+- Skirsdag Supplicant
 - Skull Prophet
 - Skull of Orm
 - Skull of Ramos
@@ -3258,6 +3289,7 @@ Cards supported: 4,207
 - Snapsail Glider
 - Snare Tactician
 - Snare Thopter
+- Sneering Shadewriter
 - Snow-Covered Forest
 - Snow-Covered Island
 - Snow-Covered Mountain
@@ -3302,6 +3334,7 @@ Cards supported: 4,207
 - Soul of the Harvest
 - Soul of the Rapids
 - Soulbound Guardians
+- Soulcage Fiend
 - Soulknife Spy
 - Soulmender
 - Soulreaper of Mogis
@@ -3375,8 +3408,10 @@ Cards supported: 4,207
 - Spirit
 - Spirit Mantle
 - Spirit Warrior
+- Spirit of Malevolence
 - Spirited Companion
 - Spiritual Guardian
+- Spiteflame Witch
 - Spiteful Motives
 - Spitting Gourna
 - Splatter Goblin
@@ -3404,6 +3439,7 @@ Cards supported: 4,207
 - Stangg Twin
 - Starlight Invoker
 - Starlit Angel
+- Starscape Cleric
 - Start from Scratch
 - Starved Rusalka
 - Staunch Defenders
@@ -3532,6 +3568,7 @@ Cards supported: 4,207
 - Sworn Guardian
 - Sylvan Brushstrider
 - Sylvan Caryatid
+- Symbiote Spawn
 - Syphon Fuel
 - TCRI Building
 - Tah-Crop Skirmisher
@@ -3561,6 +3598,7 @@ Cards supported: 4,207
 - Tarfire
 - Tarpan
 - Tasseled Dromedary
+- Tattered Mummy
 - Tattermunge Maniac
 - Tazeem Roilmage
 - Teacher's Pest
@@ -3854,11 +3892,14 @@ Cards supported: 4,207
 - Vampire Demon
 - Vampire Interloper
 - Vampire Knight
+- Vampire Neonate
 - Vampire Nighthawk
 - Vampire Noble
+- Vampire Opportunist
 - Vampire Revenant
 - Vampire Rogue
 - Vampire Soulcaller
+- Vampire Spawn
 - Vampire of the Dire Moon
 - Vampiric Spirit
 - Vandalize
@@ -3905,6 +3946,7 @@ Cards supported: 4,207
 - Viashino Runner
 - Viashino Spearhunter
 - Viashino Warrior
+- Vicious Conquistador
 - Vigilant Baloth
 - Vile Manifestation
 - Vindicate
@@ -4184,6 +4226,7 @@ Cards supported: 4,207
 - Zhao, the Seething Flame
 - Ziatora's Proving Ground
 - Zoetic Cavern
+- Zof Consumption // Zof Bloodbog
 - Zombie
 - Zombie
 - Zombie

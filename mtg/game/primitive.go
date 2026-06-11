@@ -502,16 +502,20 @@ type Choose struct {
 	PublishChoice ChoiceKey
 }
 
-// GainLife causes a referenced player to gain life.
+// GainLife causes a referenced player or group of players to gain life.
+// Exactly one of Player or PlayerGroup must be set.
 type GainLife struct {
-	Amount Quantity
-	Player PlayerReference
+	Amount      Quantity
+	Player      PlayerReference
+	PlayerGroup PlayerGroupReference
 }
 
-// LoseLife causes a referenced player to lose life.
+// LoseLife causes a referenced player or group of players to lose life.
+// Exactly one of Player or PlayerGroup must be set.
 type LoseLife struct {
-	Amount Quantity
-	Player PlayerReference
+	Amount      Quantity
+	Player      PlayerReference
+	PlayerGroup PlayerGroupReference
 }
 
 // Exile exiles one referenced permanent or every permanent in a referenced group.
