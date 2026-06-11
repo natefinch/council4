@@ -12,7 +12,10 @@ type Compilation struct {
 	Abilities []CompiledAbility
 }
 
-// CompiledAbility is a source-spanned semantic ability.
+// CompiledAbility is a source-spanned semantic ability. Shell semantics
+// (cost, trigger, timing, chapter numbers) are fields on CompiledAbility;
+// the ability's instruction content (targets, conditions, effects, keywords,
+// references, modes) lives in Content.
 type CompiledAbility struct {
 	Kind                 AbilityKind
 	Span                 Span
@@ -26,12 +29,7 @@ type CompiledAbility struct {
 	OptionalSpan         Span
 	Cost                 *CompiledCost
 	Trigger              *CompiledTrigger
-	Modes                []CompiledMode
-	Targets              []CompiledTarget
-	Conditions           []CompiledCondition
-	Effects              []CompiledEffect
-	Keywords             []CompiledKeyword
-	References           []CompiledReference
+	Content              AbilityContent
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated
@@ -48,15 +46,38 @@ const (
 	ActivationTimingDuringUpkeep
 )
 
-// CompiledMode is one semantic option in a modal ability.
-type CompiledMode struct {
+// AbilityContent is the reusable semantic content of an ability, independent
+// of its shell (spell, activated, triggered, loyalty, chapter, or modal
+// option). It owns the ordered targets, conditions, effects, keywords,
+// references, and nested modes that form an ability's instruction content.
+type AbilityContent struct {
 	Span       Span
-	Text       string
+	Modes      []CompiledMode
 	Targets    []CompiledTarget
 	Conditions []CompiledCondition
 	Effects    []CompiledEffect
 	Keywords   []CompiledKeyword
 	References []CompiledReference
+}
+
+// Unconsumed reports whether any sidechannel content fields (targets,
+// conditions, keywords, modes, or references) are non-empty. Effect
+// consumption is checked separately by lowering code since effect count
+// drives dispatch. Lowerers that deliberately consume references must clear
+// them from the content before calling Unconsumed.
+func (c AbilityContent) Unconsumed() bool {
+	return len(c.Targets) != 0 ||
+		len(c.Conditions) != 0 ||
+		len(c.Keywords) != 0 ||
+		len(c.Modes) != 0 ||
+		len(c.References) != 0
+}
+
+// CompiledMode is one semantic option in a modal ability.
+type CompiledMode struct {
+	Span    Span
+	Text    string
+	Content AbilityContent
 }
 
 // CostKind identifies a component paid to activate an ability.

@@ -3355,7 +3355,7 @@ func TestGenerateExecutableCardSourceRejectsOptionalKickedEnterTrigger(t *testin
 	if source != "" {
 		t.Fatalf("source = %q, want no partial card", source)
 	}
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported enter trigger effect" {
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported draw spell" {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 }
@@ -3521,8 +3521,8 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		"spell": {
 			typeLine:   "Sorcery",
 			oracleText: "Create a Treasure token.",
-			summary:    "unsupported spell ability",
-			detail:     "does not yet lower this spell ability",
+			summary:    "unsupported ability content",
+			detail:     "does not yet lower this ability content",
 		},
 		"activated": {
 			typeLine:   "Creature — Bear",
@@ -4060,17 +4060,19 @@ func TestGenerateExecutableCardSourceTourachDreadCantor(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The trigger phrase is recognized even though its self-name counter-placement
-	// body remains unsupported.
+	// body remains unsupported; the body diagnostic now propagates directly as
+	// the content-level "unsupported counter placement" diagnostic.
 	foundBodyDiagnostic := false
 	for _, d := range diagnostics {
-		if d.Summary == "unsupported draw/discard trigger effect" {
+		if d.Summary == "unsupported draw/discard trigger" &&
+			strings.Contains(d.Detail, "unrecognized draw/discard trigger event phrase") {
+			t.Fatalf("trigger phrase unexpectedly unrecognized: %#v", d)
+		}
+		if d.Summary == "unsupported counter placement" {
 			foundBodyDiagnostic = true
-			if strings.Contains(d.Detail, "unrecognized draw/discard trigger event phrase") {
-				t.Fatalf("trigger phrase unexpectedly unrecognized: %#v", d)
-			}
 		}
 	}
 	if !foundBodyDiagnostic {
-		t.Fatalf("diagnostics = %#v, want unsupported draw/discard trigger effect", diagnostics)
+		t.Fatalf("diagnostics = %#v, want unsupported counter placement", diagnostics)
 	}
 }

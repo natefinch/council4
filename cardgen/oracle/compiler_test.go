@@ -30,24 +30,95 @@ func TestCompileActivatedAbility(t *testing.T) {
 		ability.Cost.Components[1].Kind != CostTap {
 		t.Fatalf("cost components = %#v", ability.Cost.Components)
 	}
-	if len(ability.Targets) != 1 {
-		t.Fatalf("targets = %#v", ability.Targets)
+	if len(ability.Content.Targets) != 1 {
+		t.Fatalf("targets = %#v", ability.Content.Targets)
 	}
-	target := ability.Targets[0]
+	target := ability.Content.Targets[0]
 	if target.Selector.Kind != SelectorCreature ||
 		target.Selector.Controller != ControllerYou ||
 		!target.Selector.Attacking {
 		t.Fatalf("target selector = %#v", target.Selector)
 	}
-	if len(ability.Effects) != 1 ||
-		ability.Effects[0].Kind != EffectModifyPT ||
-		ability.Effects[0].Duration != DurationUntilEndOfTurn {
-		t.Fatalf("effects = %#v", ability.Effects)
+	if len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectModifyPT ||
+		ability.Content.Effects[0].Duration != DurationUntilEndOfTurn {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
 	}
-	if ability.Effects[0].PowerDelta != (CompiledSignedAmount{Value: 2, Known: true}) ||
-		ability.Effects[0].ToughnessDelta != (CompiledSignedAmount{Value: 2, Known: true}) {
-		t.Fatalf("power/toughness change = %#v", ability.Effects[0])
+	if ability.Content.Effects[0].PowerDelta != (CompiledSignedAmount{Value: 2, Known: true}) ||
+		ability.Content.Effects[0].ToughnessDelta != (CompiledSignedAmount{Value: 2, Known: true}) {
+		t.Fatalf("power/toughness change = %#v", ability.Content.Effects[0])
 	}
+}
+
+func TestCompileAbilityContentSpan(t *testing.T) {
+	t.Parallel()
+	source := "Draw a card."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	span := ability.Content.Span
+	if span.Start.Offset < 0 {
+		t.Fatalf("content span start = %d, want >= 0", span.Start.Offset)
+	}
+	if span.End.Offset <= span.Start.Offset {
+		t.Fatalf("content span = %#v, want End.Offset > Start.Offset", span)
+	}
+	if len(ability.Content.Effects) != 1 {
+		t.Fatalf("effects = %#v, want one effect", ability.Content.Effects)
+	}
+	effect := ability.Content.Effects[0]
+	if span.Start.Offset > effect.Span.Start.Offset || span.End.Offset < effect.Span.End.Offset {
+		t.Fatalf("content span %#v does not cover effect span %#v", span, effect.Span)
+	}
+}
+
+// TestCompileAbilityContentSpanBodyRange proves that Content.Span is taken from
+// the body token range, not just the union of recognized elements, so that:
+//   - Unrecognized/unsupported bodies still have a non-zero Content.Span.
+//   - Activated-ability Content.Span excludes the cost (everything before the
+//     colon) and therefore starts at the body, not at offset 0.
+func TestCompileAbilityContentSpanBodyRange(t *testing.T) {
+	t.Parallel()
+	t.Run("unsupported_body_nonzero_span", func(t *testing.T) {
+		t.Parallel()
+		// An ability text the compiler cannot recognise into any element still
+		// has a body; Content.Span must cover that body.
+		source := "Frob the gronk."
+		compilation, _ := Compile(source, ParseContext{})
+		if len(compilation.Abilities) == 0 {
+			t.Fatal("expected at least one ability")
+		}
+		span := compilation.Abilities[0].Content.Span
+		if span.Start.Offset < 0 || span.End.Offset <= span.Start.Offset {
+			t.Fatalf("expected non-zero Content.Span for unrecognized body, got %#v", span)
+		}
+		if got := source[span.Start.Offset:span.End.Offset]; got == "" {
+			t.Fatal("Content.Span maps to empty source slice")
+		}
+	})
+	t.Run("activated_span_excludes_cost", func(t *testing.T) {
+		t.Parallel()
+		// For an activated ability the cost is everything up to and including
+		// the colon.  Content.Span must start at the body (after the colon),
+		// not at offset 0 where the cost begins.
+		source := "{T}: Draw a card."
+		compilation, diagnostics := Compile(source, ParseContext{})
+		if len(diagnostics) != 0 {
+			t.Fatalf("diagnostics = %#v", diagnostics)
+		}
+		ability := compilation.Abilities[0]
+		if ability.Cost == nil {
+			t.Fatal("expected a cost")
+		}
+		costEnd := ability.Cost.Span.End.Offset
+		contentStart := ability.Content.Span.Start.Offset
+		if contentStart <= costEnd {
+			t.Fatalf("Content.Span.Start (%d) is not after cost end (%d); content span = %#v",
+				contentStart, costEnd, ability.Content.Span)
+		}
+	})
 }
 
 func TestCompileActivatedAbilityTiming(t *testing.T) {
@@ -81,11 +152,11 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 			if got := test.text[ability.ActivationTimingSpan.Start.Offset:ability.ActivationTimingSpan.End.Offset]; got == "" {
 				t.Fatal("activation timing span is empty")
 			}
-			if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
-				t.Fatalf("effects = %#v, want one draw effect", ability.Effects)
+			if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
+				t.Fatalf("effects = %#v, want one draw effect", ability.Content.Effects)
 			}
-			if len(ability.References) != 0 {
-				t.Fatalf("references = %#v, want timing references excluded", ability.References)
+			if len(ability.Content.References) != 0 {
+				t.Fatalf("references = %#v, want timing references excluded", ability.Content.References)
 			}
 		})
 	}
@@ -255,8 +326,8 @@ func TestCompileTriggeredAbility(t *testing.T) {
 	if ability.Trigger.Condition == nil || !ability.Trigger.Condition.Intervening {
 		t.Fatalf("intervening condition = %#v", ability.Trigger.Condition)
 	}
-	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
-		t.Fatalf("effects = %#v", ability.Effects)
+	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
 	}
 }
 
@@ -274,8 +345,8 @@ func TestCompileTriggeredAbilityWithInternalEventComma(t *testing.T) {
 		ability.Trigger.Event != "you cast a noncreature, nonland spell" {
 		t.Fatalf("trigger = %#v", ability.Trigger)
 	}
-	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
-		t.Fatalf("effects = %#v", ability.Effects)
+	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
 	}
 }
 
@@ -293,8 +364,8 @@ func TestCompileSagaChapterAbility(t *testing.T) {
 	if ability.AbilityWord != "" {
 		t.Fatalf("ability word = %q, want empty", ability.AbilityWord)
 	}
-	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectDraw {
-		t.Fatalf("effects = %#v", ability.Effects)
+	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
 	}
 }
 
@@ -322,14 +393,14 @@ func TestCompileSelfCannotBlockStaticAbility(t *testing.T) {
 
 	ability := compilation.Abilities[0]
 	if ability.Kind != AbilityStatic ||
-		len(ability.Effects) != 1 ||
-		ability.Effects[0].Kind != EffectCantBlock ||
-		!ability.Effects[0].Negated {
+		len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectCantBlock ||
+		!ability.Content.Effects[0].Negated {
 		t.Fatalf("ability = %#v", ability)
 	}
-	if len(ability.References) != 1 ||
-		ability.References[0].Kind != ReferenceThisObject {
-		t.Fatalf("references = %#v", ability.References)
+	if len(ability.Content.References) != 1 ||
+		ability.Content.References[0].Kind != ReferenceThisObject {
+		t.Fatalf("references = %#v", ability.Content.References)
 	}
 }
 
@@ -343,14 +414,14 @@ func TestCompileSelfCannotBeBlockedStaticAbility(t *testing.T) {
 
 	ability := compilation.Abilities[0]
 	if ability.Kind != AbilityStatic ||
-		len(ability.Effects) != 1 ||
-		ability.Effects[0].Kind != EffectCantBeBlocked ||
-		!ability.Effects[0].Negated {
+		len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectCantBeBlocked ||
+		!ability.Content.Effects[0].Negated {
 		t.Fatalf("ability = %#v", ability)
 	}
-	if len(ability.References) != 1 ||
-		ability.References[0].Kind != ReferenceThisObject {
-		t.Fatalf("references = %#v", ability.References)
+	if len(ability.Content.References) != 1 ||
+		ability.Content.References[0].Kind != ReferenceThisObject {
+		t.Fatalf("references = %#v", ability.Content.References)
 	}
 }
 
@@ -364,17 +435,17 @@ func TestCompileSelfMustAttackStaticAbility(t *testing.T) {
 
 	ability := compilation.Abilities[0]
 	if ability.Kind != AbilityStatic ||
-		len(ability.Effects) != 1 ||
-		ability.Effects[0].Kind != EffectMustAttack ||
-		ability.Effects[0].Negated {
+		len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectMustAttack ||
+		ability.Content.Effects[0].Negated {
 		t.Fatalf("ability = %#v", ability)
 	}
-	if len(ability.References) != 1 ||
-		ability.References[0].Kind != ReferenceThisObject {
-		t.Fatalf("references = %#v", ability.References)
+	if len(ability.Content.References) != 1 ||
+		ability.Content.References[0].Kind != ReferenceThisObject {
+		t.Fatalf("references = %#v", ability.Content.References)
 	}
-	if len(ability.Conditions) != 0 {
-		t.Fatalf("intrinsic if-able text became a separate condition: %#v", ability.Conditions)
+	if len(ability.Content.Conditions) != 0 {
+		t.Fatalf("intrinsic if-able text became a separate condition: %#v", ability.Content.Conditions)
 	}
 }
 
@@ -388,14 +459,14 @@ func TestCompileSelfUncounterableStaticAbility(t *testing.T) {
 
 	ability := compilation.Abilities[0]
 	if ability.Kind != AbilityStatic ||
-		len(ability.Effects) != 1 ||
-		ability.Effects[0].Kind != EffectCantBeCountered ||
-		!ability.Effects[0].Negated {
+		len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectCantBeCountered ||
+		!ability.Content.Effects[0].Negated {
 		t.Fatalf("ability = %#v", ability)
 	}
-	if len(ability.References) != 1 ||
-		ability.References[0].Kind != ReferenceThisObject {
-		t.Fatalf("references = %#v", ability.References)
+	if len(ability.Content.References) != 1 ||
+		ability.Content.References[0].Kind != ReferenceThisObject {
+		t.Fatalf("references = %#v", ability.Content.References)
 	}
 }
 
@@ -409,25 +480,25 @@ func TestCompileReturnToOwnersHand(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	ability := compilation.Abilities[0]
-	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectReturn {
-		t.Fatalf("effects = %#v", ability.Effects)
+	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectReturn {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
 	}
-	if len(ability.Targets) != 1 ||
-		ability.Targets[0].Selector.Kind != SelectorCreature ||
-		ability.Targets[0].Text != "target creature to its owner's hand" {
-		t.Fatalf("targets = %#v", ability.Targets)
+	if len(ability.Content.Targets) != 1 ||
+		ability.Content.Targets[0].Selector.Kind != SelectorCreature ||
+		ability.Content.Targets[0].Text != "target creature to its owner's hand" {
+		t.Fatalf("targets = %#v", ability.Content.Targets)
 	}
-	if len(ability.References) != 1 ||
-		ability.References[0].Kind != ReferencePronoun ||
-		ability.References[0].Text != "its" {
-		t.Fatalf("references = %#v", ability.References)
+	if len(ability.Content.References) != 1 ||
+		ability.Content.References[0].Kind != ReferencePronoun ||
+		ability.Content.References[0].Text != "its" {
+		t.Fatalf("references = %#v", ability.Content.References)
 	}
-	if len(ability.Conditions) != 0 ||
-		len(ability.Keywords) != 0 ||
-		len(ability.Modes) != 0 ||
-		ability.Effects[0].Negated ||
-		ability.Targets[0].Cardinality.Min != 1 ||
-		ability.Targets[0].Cardinality.Max != 1 {
+	if len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Content.Effects[0].Negated ||
+		ability.Content.Targets[0].Cardinality.Min != 1 ||
+		ability.Content.Targets[0].Cardinality.Max != 1 {
 		t.Fatalf("ability = %#v", ability)
 	}
 }
@@ -473,10 +544,10 @@ func TestCompileGraveyardReturnZones(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			ability := compilation.Abilities[0]
-			if len(ability.Effects) != 1 {
-				t.Fatalf("effects = %#v", ability.Effects)
+			if len(ability.Content.Effects) != 1 {
+				t.Fatalf("effects = %#v", ability.Content.Effects)
 			}
-			effect := ability.Effects[0]
+			effect := ability.Content.Effects[0]
 			if effect.FromZone != tc.fromZone || effect.ToZone != tc.toZone {
 				t.Fatalf("zones = %v -> %v, want %v -> %v", effect.FromZone, effect.ToZone, tc.fromZone, tc.toZone)
 			}
@@ -498,8 +569,8 @@ func TestCompileResolutionConditionIsNotIntervening(t *testing.T) {
 	if ability.Trigger.Condition != nil {
 		t.Fatalf("resolution condition became trigger condition: %#v", ability.Trigger.Condition)
 	}
-	if len(ability.Conditions) != 1 || ability.Conditions[0].Intervening {
-		t.Fatalf("conditions = %#v", ability.Conditions)
+	if len(ability.Content.Conditions) != 1 || ability.Content.Conditions[0].Intervening {
+		t.Fatalf("conditions = %#v", ability.Content.Conditions)
 	}
 }
 
@@ -511,13 +582,13 @@ func TestCompileModalAbility(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	ability := compilation.Abilities[0]
-	if len(ability.Modes) != 2 {
-		t.Fatalf("modes = %#v", ability.Modes)
+	if len(ability.Content.Modes) != 2 {
+		t.Fatalf("modes = %#v", ability.Content.Modes)
 	}
-	if ability.Modes[0].Effects[0].Kind != EffectDestroy ||
-		len(ability.Modes[0].Targets) != 1 ||
-		ability.Modes[1].Effects[0].Kind != EffectDraw {
-		t.Fatalf("compiled modes = %#v", ability.Modes)
+	if ability.Content.Modes[0].Content.Effects[0].Kind != EffectDestroy ||
+		len(ability.Content.Modes[0].Content.Targets) != 1 ||
+		ability.Content.Modes[1].Content.Effects[0].Kind != EffectDraw {
+		t.Fatalf("compiled modes = %#v", ability.Content.Modes)
 	}
 }
 
@@ -528,15 +599,15 @@ func TestCompileKeywordsAndReminder(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if got := compilation.Abilities[0].Keywords; len(got) != 1 || got[0].Name != "First strike" {
+	if got := compilation.Abilities[0].Content.Keywords; len(got) != 1 || got[0].Name != "First strike" {
 		t.Fatalf("first strike = %#v", got)
 	}
 	equip := compilation.Abilities[1]
-	if len(equip.Keywords) != 1 || equip.Keywords[0].Name != "Equip" ||
-		equip.Keywords[0].Parameter != "{2}" {
-		t.Fatalf("equip = %#v", equip.Keywords)
+	if len(equip.Content.Keywords) != 1 || equip.Content.Keywords[0].Name != "Equip" ||
+		equip.Content.Keywords[0].Parameter != "{2}" {
+		t.Fatalf("equip = %#v", equip.Content.Keywords)
 	}
-	if len(equip.Effects) != 0 || len(equip.Targets) != 0 {
+	if len(equip.Content.Effects) != 0 || len(equip.Content.Targets) != 0 {
 		t.Fatalf("reminder text leaked semantics: %#v", equip)
 	}
 }
@@ -549,12 +620,12 @@ func TestCompileDevoidAndReminder(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	ability := compilation.Abilities[0]
-	if len(ability.Keywords) != 1 ||
-		ability.Keywords[0].Name != "Devoid" ||
-		ability.Keywords[0].Text != "Devoid" {
-		t.Fatalf("keywords = %#v", ability.Keywords)
+	if len(ability.Content.Keywords) != 1 ||
+		ability.Content.Keywords[0].Name != "Devoid" ||
+		ability.Content.Keywords[0].Text != "Devoid" {
+		t.Fatalf("keywords = %#v", ability.Content.Keywords)
 	}
-	if len(ability.Effects) != 0 || len(ability.References) != 0 {
+	if len(ability.Content.Effects) != 0 || len(ability.Content.References) != 0 {
 		t.Fatalf("reminder text leaked semantics: %#v", ability)
 	}
 }
@@ -570,12 +641,12 @@ func TestCompileReadAheadAndReminder(t *testing.T) {
 		t.Fatalf("abilities = %#v, want one", compilation.Abilities)
 	}
 	ability := compilation.Abilities[0]
-	if len(ability.Keywords) != 1 ||
-		ability.Keywords[0].Name != "Read ahead" ||
-		ability.Keywords[0].Text != "Read ahead" {
-		t.Fatalf("keywords = %#v", ability.Keywords)
+	if len(ability.Content.Keywords) != 1 ||
+		ability.Content.Keywords[0].Name != "Read ahead" ||
+		ability.Content.Keywords[0].Text != "Read ahead" {
+		t.Fatalf("keywords = %#v", ability.Content.Keywords)
 	}
-	if len(ability.Effects) != 0 || len(ability.References) != 0 {
+	if len(ability.Content.Effects) != 0 || len(ability.Content.References) != 0 {
 		t.Fatalf("reminder text leaked semantics: %#v", ability)
 	}
 }
@@ -586,7 +657,7 @@ func TestCompileEnchantKeywordParameter(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	keywords := compilation.Abilities[0].Keywords
+	keywords := compilation.Abilities[0].Content.Keywords
 	if len(keywords) != 1 {
 		t.Fatalf("keywords = %#v", keywords)
 	}
@@ -605,7 +676,7 @@ func TestCompileProtectionKeywordParameter(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	keywords := compilation.Abilities[0].Keywords
+	keywords := compilation.Abilities[0].Content.Keywords
 	if len(keywords) != 1 {
 		t.Fatalf("keywords = %#v", keywords)
 	}
@@ -624,7 +695,7 @@ func TestCompileProtectionKeywordMultipleColors(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	keywords := compilation.Abilities[0].Keywords
+	keywords := compilation.Abilities[0].Content.Keywords
 	if len(keywords) != 1 ||
 		keywords[0].Parameter != "black,red" ||
 		keywords[0].Text != "Protection from black and from red" ||
@@ -643,15 +714,15 @@ func TestCompileTargetsAndReferences(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	ability := compilation.Abilities[0]
-	if len(ability.Targets) != 1 ||
-		ability.Targets[0].Cardinality != (TargetCardinality{Min: 0, Max: 1}) ||
-		ability.Targets[0].Selector.Controller != ControllerNotYou {
-		t.Fatalf("targets = %#v", ability.Targets)
+	if len(ability.Content.Targets) != 1 ||
+		ability.Content.Targets[0].Cardinality != (TargetCardinality{Min: 0, Max: 1}) ||
+		ability.Content.Targets[0].Selector.Controller != ControllerNotYou {
+		t.Fatalf("targets = %#v", ability.Content.Targets)
 	}
-	if len(ability.References) != 2 ||
-		ability.References[0].Kind != ReferenceSelfName ||
-		ability.References[1].Kind != ReferencePronoun {
-		t.Fatalf("references = %#v", ability.References)
+	if len(ability.Content.References) != 2 ||
+		ability.Content.References[0].Kind != ReferenceSelfName ||
+		ability.Content.References[1].Kind != ReferencePronoun {
+		t.Fatalf("references = %#v", ability.Content.References)
 	}
 }
 
@@ -661,7 +732,7 @@ func TestCompileExactTargetCardinalityAndPluralSelector(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	targets := compilation.Abilities[0].Targets
+	targets := compilation.Abilities[0].Content.Targets
 	if len(targets) != 1 ||
 		targets[0].Cardinality != (TargetCardinality{Min: 2, Max: 2}) ||
 		targets[0].Selector.Kind != SelectorCreature {
@@ -685,7 +756,7 @@ func TestCompileThirdPersonEffects(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			effects := compilation.Abilities[0].Effects
+			effects := compilation.Abilities[0].Content.Effects
 			if len(effects) != 1 || effects[0].Kind != want {
 				t.Fatalf("effects = %#v, want %v", effects, want)
 			}
@@ -725,7 +796,7 @@ func TestCompileFixedEffectValues(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			effects := compilation.Abilities[0].Effects
+			effects := compilation.Abilities[0].Content.Effects
 			if len(effects) != 1 {
 				t.Fatalf("effects = %#v", effects)
 			}
@@ -775,7 +846,7 @@ func TestCompileDelayedEffectTiming(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			effects := compilation.Abilities[0].Effects
+			effects := compilation.Abilities[0].Content.Effects
 			if len(effects) != 1 || effects[0].Kind != tt.kind || effects[0].DelayedTiming != tt.timing {
 				t.Fatalf("effects = %#v, want kind %v timing %v", effects, tt.kind, tt.timing)
 			}
@@ -792,7 +863,7 @@ func TestCompileDelayedBlinkEffects(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	effects := compilation.Abilities[0].Effects
+	effects := compilation.Abilities[0].Content.Effects
 	if len(effects) != 2 ||
 		effects[0].Kind != EffectExile ||
 		effects[0].DelayedTiming != 0 ||
@@ -834,7 +905,7 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			amount := compilation.Abilities[0].Effects[0].Amount
+			amount := compilation.Abilities[0].Content.Effects[0].Amount
 			if amount.DynamicKind != test.kind ||
 				amount.DynamicForm != test.form ||
 				amount.Multiplier != test.multiplier ||
@@ -857,7 +928,7 @@ func TestCompileWithCyclingTargetSelector(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	target := compilation.Abilities[0].Targets[0]
+	target := compilation.Abilities[0].Content.Targets[0]
 	if target.Cardinality.Min != 0 || target.Cardinality.Max != 2 {
 		t.Fatalf("cardinality = %#v, want up to two", target.Cardinality)
 	}
@@ -873,7 +944,7 @@ func TestCompileDynamicCardCountWithCyclingInGraveyard(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	amount := compilation.Abilities[0].Effects[0].Amount
+	amount := compilation.Abilities[0].Content.Effects[0].Amount
 	if amount.DynamicKind != DynamicAmountCount ||
 		amount.DynamicForm != DynamicAmountWhereX ||
 		amount.Selector.Kind != SelectorCard ||
@@ -902,7 +973,7 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 		if len(diagnostics) != 0 {
 			t.Fatalf("%q diagnostics = %#v", source, diagnostics)
 		}
-		effect := compilation.Abilities[0].Effects[0]
+		effect := compilation.Abilities[0].Content.Effects[0]
 		if !effect.CounterKindKnown || effect.CounterKind != test.kind {
 			t.Fatalf("%q counter kind = %v, %v", source, effect.CounterKind, effect.CounterKindKnown)
 		}
@@ -915,7 +986,7 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("unknown counter diagnostics = %#v", diagnostics)
 	}
-	if compilation.Abilities[0].Effects[0].CounterKindKnown {
+	if compilation.Abilities[0].Content.Effects[0].CounterKindKnown {
 		t.Fatal("unknown counter kind was recognized")
 	}
 }
@@ -929,7 +1000,7 @@ func TestCompileEntersWithCounterKind(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	effect := compilation.Abilities[0].Effects[0]
+	effect := compilation.Abilities[0].Content.Effects[0]
 	if effect.Kind != EffectEnterTapped ||
 		!effect.CounterKindKnown ||
 		effect.CounterKind != counter.PlusOnePlusOne ||
@@ -947,7 +1018,7 @@ func TestCompileNamedCounterKindsRejectsMissingRuntimeMechanics(t *testing.T) {
 		if len(diagnostics) != 0 {
 			t.Fatalf("%q diagnostics = %#v", source, diagnostics)
 		}
-		effect := compilation.Abilities[0].Effects[0]
+		effect := compilation.Abilities[0].Content.Effects[0]
 		if effect.CounterKindKnown {
 			t.Fatalf("%q counter kind was accepted for placement", source)
 		}
@@ -972,7 +1043,7 @@ func TestCompileDynamicEffectAmountsRejectsAmbiguousSubjects(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			if amount := compilation.Abilities[0].Effects[0].Amount; amount.DynamicKind != DynamicAmountNone || amount.Known {
+			if amount := compilation.Abilities[0].Content.Effects[0].Amount; amount.DynamicKind != DynamicAmountNone || amount.Known {
 				t.Fatalf("amount = %#v, want unsupported", amount)
 			}
 		})
@@ -994,7 +1065,7 @@ func TestCompileDynamicEffectAmountsRejectsNumberDisagreement(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			if amount := compilation.Abilities[0].Effects[0].Amount; amount.DynamicKind != DynamicAmountNone || amount.Known {
+			if amount := compilation.Abilities[0].Content.Effects[0].Amount; amount.DynamicKind != DynamicAmountNone || amount.Known {
 				t.Fatalf("amount = %#v, want unsupported", amount)
 			}
 		})
@@ -1059,7 +1130,7 @@ func TestCompileEffectAmountsAreClauseLocal(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			test.check(t, compilation.Abilities[0].Effects)
+			test.check(t, compilation.Abilities[0].Content.Effects)
 		})
 	}
 }
@@ -1169,10 +1240,10 @@ func TestCompileStaticPTBuffSubjects(t *testing.T) {
 				t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
 			}
 			ability := compilation.Abilities[0]
-			if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectModifyPT {
-				t.Fatalf("effects = %#v", ability.Effects)
+			if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectModifyPT {
+				t.Fatalf("effects = %#v", ability.Content.Effects)
 			}
-			effect := ability.Effects[0]
+			effect := ability.Content.Effects[0]
 			if effect.StaticSubject != test.wantSubject {
 				t.Fatalf("static subject = %v, want %v", effect.StaticSubject, test.wantSubject)
 			}
@@ -1245,19 +1316,19 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			ability := compilation.Abilities[0]
-			if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectGrantKeyword {
-				t.Fatalf("effects = %#v", ability.Effects)
+			if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectGrantKeyword {
+				t.Fatalf("effects = %#v", ability.Content.Effects)
 			}
-			if got := ability.Effects[0].StaticSubject; got != test.wantSubject {
+			if got := ability.Content.Effects[0].StaticSubject; got != test.wantSubject {
 				t.Fatalf("static subject = %v, want %v", got, test.wantSubject)
 			}
-			if got := ability.Effects[0].StaticSubjectSubtype; got != test.wantSubjectSubtype {
+			if got := ability.Content.Effects[0].StaticSubjectSubtype; got != test.wantSubjectSubtype {
 				t.Fatalf("static subject subtype = %q, want %q", got, test.wantSubjectSubtype)
 			}
-			if len(ability.Keywords) != len(test.keywords) {
-				t.Fatalf("keywords = %#v, want %v", ability.Keywords, test.keywords)
+			if len(ability.Content.Keywords) != len(test.keywords) {
+				t.Fatalf("keywords = %#v, want %v", ability.Content.Keywords, test.keywords)
 			}
-			for i, keyword := range ability.Keywords {
+			for i, keyword := range ability.Content.Keywords {
 				if keyword.Name != test.keywords[i] {
 					t.Fatalf("keyword %d = %q, want %q", i, keyword.Name, test.keywords[i])
 				}
@@ -1276,8 +1347,8 @@ func TestCompileStaticPTBuffWithKeywordHasOneEffect(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	ability := compilation.Abilities[0]
-	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectModifyPT {
-		t.Fatalf("effects = %#v", ability.Effects)
+	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectModifyPT {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
 	}
 }
 
@@ -1290,7 +1361,7 @@ func TestCompileResolvingPTBuffHasNoStaticSubject(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	effect := compilation.Abilities[0].Effects[0]
+	effect := compilation.Abilities[0].Content.Effects[0]
 	if effect.StaticSubject != StaticSubjectNone {
 		t.Fatalf("static subject = %v, want StaticSubjectNone", effect.StaticSubject)
 	}
@@ -1305,7 +1376,7 @@ func TestCompileSurveilEffect(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	effects := compilation.Abilities[0].Effects
+	effects := compilation.Abilities[0].Content.Effects
 	if len(effects) != 1 ||
 		effects[0].Kind != EffectSurveil ||
 		effects[0].Amount != (CompiledAmount{Value: 2, Known: true}) {
@@ -1319,7 +1390,7 @@ func TestCompileInvestigateEffect(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	effects := compilation.Abilities[0].Effects
+	effects := compilation.Abilities[0].Content.Effects
 	if len(effects) != 1 || effects[0].Kind != EffectInvestigate {
 		t.Fatalf("effects = %#v, want investigate", effects)
 	}
@@ -1331,7 +1402,7 @@ func TestCompileProliferateEffect(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	effects := compilation.Abilities[0].Effects
+	effects := compilation.Abilities[0].Content.Effects
 	if len(effects) != 1 || effects[0].Kind != EffectProliferate {
 		t.Fatalf("effects = %#v, want proliferate", effects)
 	}
@@ -1346,7 +1417,7 @@ func TestCompileRegenerateEffect(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	effects := compilation.Abilities[0].Effects
+	effects := compilation.Abilities[0].Content.Effects
 	if len(effects) != 1 || effects[0].Kind != EffectRegenerate {
 		t.Fatalf("effects = %#v, want regenerate", effects)
 	}
@@ -1377,7 +1448,7 @@ func TestCompileCounterVerbAndNoun(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			effects := compilation.Abilities[0].Effects
+			effects := compilation.Abilities[0].Content.Effects
 			if len(effects) != len(test.wantKinds) {
 				t.Fatalf("effects = %#v, want kinds %v", effects, test.wantKinds)
 			}
@@ -1409,7 +1480,7 @@ func TestCompileExactCounterAbilityTargets(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			targets := compilation.Abilities[0].Targets
+			targets := compilation.Abilities[0].Content.Targets
 			if len(targets) != 1 || targets[0].Text != test.text || targets[0].Selector.Kind != test.kind {
 				t.Fatalf("targets = %#v, want text %q kind %v", targets, test.text, test.kind)
 			}
@@ -1423,7 +1494,7 @@ func TestCompileNegatedEffect(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	effects := compilation.Abilities[0].Effects
+	effects := compilation.Abilities[0].Content.Effects
 	if len(effects) != 1 || effects[0].Kind != EffectGain || !effects[0].Negated {
 		t.Fatalf("effects = %#v", effects)
 	}
@@ -1440,16 +1511,16 @@ func TestCompileEntersTappedUnlessCondition(t *testing.T) {
 	if ability.Kind != AbilityReplacement {
 		t.Fatalf("kind = %v, want AbilityReplacement", ability.Kind)
 	}
-	if len(ability.Effects) != 1 || ability.Effects[0].Kind != EffectEnterTapped {
-		t.Fatalf("effects = %#v", ability.Effects)
+	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectEnterTapped {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
 	}
-	if len(ability.Conditions) != 1 ||
-		ability.Conditions[0].Kind != ConditionUnless ||
-		ability.Conditions[0].Text != "unless you control two or more basic lands" {
-		t.Fatalf("conditions = %#v", ability.Conditions)
+	if len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Kind != ConditionUnless ||
+		ability.Content.Conditions[0].Text != "unless you control two or more basic lands" {
+		t.Fatalf("conditions = %#v", ability.Content.Conditions)
 	}
-	if len(ability.References) != 1 || ability.References[0].Kind != ReferenceThisObject {
-		t.Fatalf("references = %#v", ability.References)
+	if len(ability.Content.References) != 1 || ability.Content.References[0].Kind != ReferenceThisObject {
+		t.Fatalf("references = %#v", ability.Content.References)
 	}
 }
 
@@ -1470,8 +1541,8 @@ func TestCompileArtifactAndEnchantmentEntersTappedReference(t *testing.T) {
 			if ability.Kind != AbilityReplacement {
 				t.Fatalf("kind = %v, want AbilityReplacement", ability.Kind)
 			}
-			if len(ability.References) != 1 || ability.References[0].Kind != ReferenceThisObject {
-				t.Fatalf("references = %#v", ability.References)
+			if len(ability.Content.References) != 1 || ability.Content.References[0].Kind != ReferenceThisObject {
+				t.Fatalf("references = %#v", ability.Content.References)
 			}
 		})
 	}
@@ -1533,9 +1604,9 @@ func TestCompileScryfallCacheHasNoSilentAbilities(t *testing.T) {
 				if ability.Kind == AbilityReminder {
 					continue
 				}
-				meaningful := len(ability.Effects) > 0 ||
-					len(ability.Keywords) > 0 ||
-					len(ability.Modes) > 0
+				meaningful := len(ability.Content.Effects) > 0 ||
+					len(ability.Content.Keywords) > 0 ||
+					len(ability.Content.Modes) > 0
 				if meaningful || hasDiagnosticForSpan(diagnostics, ability.Span) {
 					continue
 				}

@@ -38,6 +38,7 @@ var diagnosticCapabilities = map[string]supportCapabilityID{
 	"unsupported reminder ability":                      capabilityRecognitionFallback,
 	"unsupported ordered effect sequence":               capabilitySharedAbilityContent,
 	"unsupported spell ability":                         capabilitySharedAbilityContent,
+	"unsupported ability content":                       capabilitySharedAbilityContent,
 	"unsupported enter trigger effect":                  capabilitySharedAbilityContent,
 	"unsupported phase/step trigger phrase effect":      capabilitySharedAbilityContent,
 	"unsupported triggered ability effect":              capabilitySharedAbilityContent,

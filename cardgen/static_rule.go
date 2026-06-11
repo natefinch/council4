@@ -8,13 +8,13 @@ import (
 func lowerStaticRuleDeclaration(
 	ability oracle.CompiledAbility,
 ) (abilityLowering, bool, *oracle.Diagnostic) {
-	if len(ability.Effects) != 1 {
+	if len(ability.Content.Effects) != 1 {
 		return abilityLowering{}, false, nil
 	}
 	var body game.StaticAbility
 	var varName string
 	var detail string
-	switch ability.Effects[0].Kind {
+	switch ability.Content.Effects[0].Kind {
 	case oracle.EffectCantBeBlocked:
 		body = game.CantBeBlockedStaticBody
 		varName = "game.CantBeBlockedStaticBody"
@@ -38,12 +38,12 @@ func lowerStaticRuleDeclaration(
 		ability.Text != body.Text ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
-		len(ability.Modes) != 0 ||
-		len(ability.Targets) != 0 ||
-		len(ability.Conditions) != 0 ||
-		len(ability.Keywords) != 0 ||
-		len(ability.References) != 1 ||
-		ability.References[0].Kind != oracle.ReferenceThisObject ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.References) != 1 ||
+		ability.Content.References[0].Kind != oracle.ReferenceThisObject ||
 		ability.AbilityWord != "" {
 		return abilityLowering{}, true, executableDiagnostic(
 			ability,
@@ -60,6 +60,6 @@ func lowerStaticRuleDeclaration(
 			effects:    1,
 			references: 1,
 		},
-		sourceSpans: []oracle.Span{ability.Effects[0].Span},
+		sourceSpans: []oracle.Span{ability.Content.Effects[0].Span},
 	}, true, nil
 }

@@ -31,8 +31,18 @@ Vanguard cards are excluded with explicit report reasons.
 
 1. **Recognition (`cardgen/oracle`).** The lexer and parser preserve exact source
    spans. The semantic compiler recognizes costs, targets, triggers, keywords,
-   Saga chapter headings, references, and ordered effects conservatively.
-2. **Typed lowering (`lower.go` and `executable.go`).** Recognized semantics
+   Saga chapter headings, references, and ordered effects conservatively. Reusable
+   body content (targets, conditions, effects, keywords, references, nested modes)
+   is grouped into `oracle.AbilityContent`; each `oracle.CompiledAbility` and
+   `oracle.CompiledMode` carries one `oracle.AbilityContent` value alongside its
+   shell-specific fields (cost, trigger clause, loyalty change, chapter numbers,
+   text, span, optional flag).
+2. **Typed lowering (`lower.go` and `executable.go`).** `lowerAbilityContent`
+   is the single entry point that lowers an `oracle.AbilityContent` value into
+   `game.AbilityContent`. All supported shells — spell, activated body, triggered
+   body, loyalty body, chapter body, modal option, and ordered-effect clauses —
+   call `lowerAbilityContent` directly; no shell lowerer constructs a fake spell
+   ability to reach body lowering. Recognized semantics
    become typed `game.*` ability values, including chapter-numbered
    `game.ChapterAbility` values and the `game.ReadAheadStaticBody` Saga keyword
    template. `assembleCardDefs` combines
