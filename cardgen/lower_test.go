@@ -18,6 +18,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func lowerSingleFace(t *testing.T, card *ScryfallCard) loweredFaceAbilities {
@@ -3888,6 +3889,172 @@ func TestLowerSpellDestroyQualifiedTarget(t *testing.T) {
 	if target.Predicate.Tapped != game.TriTrue ||
 		target.Predicate.Controller != game.ControllerOpponent {
 		t.Fatalf("predicate = %+v, want tapped creature an opponent controls", target.Predicate)
+	}
+}
+
+func TestLowerMassDestroyAndExile(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		selection  game.Selection
+		exile      bool
+	}{
+		{
+			name:       "land",
+			oracleText: "Destroy all lands.",
+			selection:  game.Selection{RequiredTypes: []types.Card{types.Land}},
+		},
+		{
+			name:       "nonland permanent",
+			oracleText: "Destroy all nonland permanents.",
+			selection:  game.Selection{ExcludedTypes: []types.Card{types.Land}},
+		},
+		{
+			name:       "not controlled by you",
+			oracleText: "Destroy all creatures you don't control.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerOpponent,
+			},
+		},
+		{
+			name:       "excluded color",
+			oracleText: "Destroy all nonwhite creatures.",
+			selection: game.Selection{
+				RequiredTypes:  []types.Card{types.Creature},
+				ExcludedColors: []color.Color{color.White},
+			},
+		},
+		{
+			name:       "keyword",
+			oracleText: "Destroy all creatures with flying.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Keyword:       game.Flying,
+			},
+		},
+		{
+			name:       "mana value",
+			oracleText: "Destroy all creatures with mana value 3 or less.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				ManaValue: opt.Val(compare.Int{
+					Op:    compare.LessOrEqual,
+					Value: 3,
+				}),
+			},
+		},
+		{
+			name:       "toughness",
+			oracleText: "Destroy all creatures with toughness 4 or greater.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Toughness: opt.Val(compare.Int{
+					Op:    compare.GreaterOrEqual,
+					Value: 4,
+				}),
+			},
+		},
+		{
+			name:       "other",
+			oracleText: "Destroy all other creatures.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				ExcludeSource: true,
+			},
+		},
+		{
+			name:       "exile",
+			oracleText: "Exile all creatures.",
+			selection:  game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			exile:      true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Mass Effect",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			primitive := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive
+			var group game.GroupReference
+			switch primitive := primitive.(type) {
+			case game.Destroy:
+				if test.exile {
+					t.Fatalf("primitive = %T, want game.Exile", primitive)
+				}
+				group = primitive.Group
+			case game.Exile:
+				if !test.exile {
+					t.Fatalf("primitive = %T, want game.Destroy", primitive)
+				}
+				group = primitive.Group
+			default:
+				t.Fatalf("primitive = %T, want mass destroy or exile", primitive)
+			}
+			if group.Domain() != game.GroupDomainBattlefield {
+				t.Fatalf("group domain = %v, want battlefield", group.Domain())
+			}
+			if selection := group.Selection(); !reflect.DeepEqual(selection, test.selection) {
+				t.Fatalf("selection = %#v, want %#v", selection, test.selection)
+			}
+		})
+	}
+}
+
+func TestParseMassGroupQualifier(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase    string
+		selection game.Selection
+	}{
+		{"artifacts, creatures, and enchantments", game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Enchantment}}},
+		{"tapped creatures", game.Selection{RequiredTypes: []types.Card{types.Creature}, Tapped: game.TriTrue}},
+		{"red planeswalkers", game.Selection{RequiredTypes: []types.Card{types.Planeswalker}, ColorsAny: []color.Color{color.Red}}},
+		{"nonartifact creatures", game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedTypes: []types.Card{types.Artifact}}},
+		{"creatures your opponents control", game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerOpponent}},
+		{"creatures with power equal to 2", game.Selection{RequiredTypes: []types.Card{types.Creature}, Power: opt.Val(compare.Int{Op: compare.Equal, Value: 2})}},
+	}
+	for _, test := range tests {
+		t.Run(test.phrase, func(t *testing.T) {
+			t.Parallel()
+			selection, ok := parseMassGroupQualifier(test.phrase)
+			if !ok {
+				t.Fatalf("parseMassGroupQualifier(%q) = false", test.phrase)
+			}
+			if !reflect.DeepEqual(selection, test.selection) {
+				t.Fatalf("selection = %#v, want %#v", selection, test.selection)
+			}
+		})
+	}
+	for _, phrase := range []string{
+		"creature",
+		"all creatures",
+		"token creatures",
+		"white creatures and lands",
+		"creatures with hexproof",
+		"creatures with flying you control",
+		"untapped creatures",
+		"other tapped creatures",
+		"nonland",
+		"creatures with mana value X or less",
+		"creatures with power 3 or more",
+		"creatures with flying and reach",
+		"creatures controlled by you",
+		"creatures except Dragons",
+		"nonland cards",
+		"white artifacts and creatures",
+	} {
+		t.Run("reject "+phrase, func(t *testing.T) {
+			t.Parallel()
+			if selection, ok := parseMassGroupQualifier(phrase); ok {
+				t.Fatalf("parseMassGroupQualifier(%q) = %#v, true; want rejection", phrase, selection)
+			}
+		})
 	}
 }
 
