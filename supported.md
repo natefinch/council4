@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,258 of 31,838 cards eligible for paper support (13.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,273 of 31,838 cards eligible for paper support (13.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -571,6 +571,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Celestial Prism
 - Cemetery Gate
 - Cenote Scout
+- Censor
 - Centaur
 - Centaur
 - Centaur
@@ -694,6 +695,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Contemplation
 - Contingency Plan
 - Contraband Kingpin
+- Convolute
 - Copper Host Crusher
 - Copper Longlegs
 - Copper Myr
@@ -829,6 +831,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Deathless Ancient
 - Debilitating Injury
 - Debtors' Knell
+- Decisive Denial
 - Dedicated Martyr
 - Deduce
 - Deepwood Drummer
@@ -1274,6 +1277,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Foothill Guide
 - Footlight Fiend
 - Force of Savagery
+- Force Spike
 - Foreboding Ruins
 - Foresee
 - Forest
@@ -1820,8 +1824,10 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Isamaru, Hound of Konda
 - Island
 - Isolated Chapel
+- It'll Quench Ya!
 - Ithilien Kingfisher
 - Ixalli's Diviner
+- Izzet Charm
 - Izzet Chronarch
 - Izzet Cluestone
 - Izzet Guildgate
@@ -1871,6 +1877,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Junk Diver
 - Juvenile Gloomwidow
 - Jwar Isle Refuge
+- Jwari Disruption // Jwari Ruins
 - Jwari Scuttler
 - Kabira Crossroads
 - Kabuto Moth
@@ -2122,7 +2129,9 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Mana Confluence
 - Mana Cylix
 - Mana Geode
+- Mana Leak
 - Mana Prism
+- Mana Tithe
 - Manaforce Mace
 - Manakin
 - Manalith
@@ -2213,6 +2222,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Mind Spring
 - Mind Stone
 - Mindscour Dragon
+- Mindstatic
 - Mindwarper
 - Mine Bearer
 - Minecart Daredevil // Ride the Rails
@@ -2226,6 +2236,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Mire's Grasp
 - Mirran Crusader
 - Mirran Spy
+- Miscalculation
 - Misshapen Fiend
 - Mist Leopard
 - Mist Raven
@@ -2711,6 +2722,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Quarry Beetle
 - Queen's Agent
 - Queen's Bay Soldier
+- Quench
 - Quick Study
 - Quicksilver Fisher
 - Quiet Purity
@@ -3337,6 +3349,7 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Soul Manipulation
 - Soul of the Harvest
 - Soul of the Rapids
+- Soul Read
 - Soul Shepherd
 - Soul Summons
 - Soul Warden
@@ -3360,6 +3373,8 @@ Council4 currently supports **4,258 of 31,838 cards eligible for paper support (
 - Spectator Seating
 - Spectral Flight
 - Spectral Sailor
+- Spell Pierce
+- Spell Snip
 - Spellbook Seeker // Careful Study
 - Spellgyre
 - Spellkeeper Weird

@@ -281,13 +281,16 @@ func lowerExecutableAbility(
 		spans := make(
 			[]oracle.Span,
 			0,
-			len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
+			len(ability.Effects)+len(ability.Targets)+len(ability.Conditions)+len(ability.References)+len(syntax.Reminders),
 		)
 		for _, effect := range ability.Effects {
 			spans = append(spans, effect.Span)
 		}
 		for _, target := range ability.Targets {
 			spans = append(spans, target.Span)
+		}
+		for _, condition := range ability.Conditions {
+			spans = append(spans, condition.Span)
 		}
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
@@ -300,6 +303,7 @@ func lowerExecutableAbility(
 			spellAbility: opt.Val(spellAbility),
 			consumed: semanticConsumption{
 				targets:    len(ability.Targets),
+				conditions: len(ability.Conditions),
 				effects:    len(ability.Effects),
 				keywords:   len(ability.Keywords),
 				references: len(ability.References),
@@ -9566,6 +9570,9 @@ func lowerCounterSpell(ability oracle.CompiledAbility) (game.AbilityContent, *or
 			"the executable source backend supports only exact counter of one target spell",
 		)
 	}
+	if content, ok := lowerCounterUnlessPaysSpell(ability); ok {
+		return content, nil
+	}
 	if len(ability.Effects) != 1 ||
 		len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
@@ -9587,6 +9594,81 @@ func lowerCounterSpell(ability oracle.CompiledAbility) (game.AbilityContent, *or
 			Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
 		}},
 	}.Ability(), nil
+}
+
+func lowerCounterUnlessPaysSpell(ability oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(ability.Effects) != 1 ||
+		len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		ability.Effects[0].Negated ||
+		len(ability.Conditions) != 1 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	targetText, manaCost, ok := counterUnlessPaysParts(ability)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	target := ability.Targets[0]
+	target.Text = targetText
+	targetSpec, ok := stackSpellTargetSpec(target)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	const resultKey = game.ResultKey("unless-paid")
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{
+			{
+				Primitive: game.Pay{Payment: game.ResolutionPayment{
+					Prompt:   "Pay " + manaCost.String() + "?",
+					Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+					ManaCost: opt.Val(manaCost),
+				}},
+				PublishResult: resultKey,
+			},
+			{
+				Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key:       resultKey,
+					Succeeded: game.TriFalse,
+				}),
+			},
+		},
+	}.Ability(), true
+}
+
+func counterUnlessPaysParts(ability oracle.CompiledAbility) (string, cost.Mana, bool) {
+	const marker = " unless its controller pays "
+	before, after, ok := strings.Cut(ability.Text, marker)
+	if !ok || !strings.HasPrefix(before, "Counter ") || !strings.HasSuffix(after, ".") {
+		return "", nil, false
+	}
+	targetText := strings.TrimPrefix(before, "Counter ")
+	manaText := strings.TrimSuffix(after, ".")
+	manaCost, err := parseManaCostValue(manaText)
+	if err != nil || len(manaCost) == 0 || manaCost.String() != manaText || manaCostHasVariableSymbol(manaCost) {
+		return "", nil, false
+	}
+	conditionText := "unless its controller pays" + manaText
+	if ability.Conditions[0].Kind != oracle.ConditionUnless ||
+		ability.Conditions[0].Text != conditionText ||
+		ability.Targets[0].Text != targetText+" "+conditionText {
+		return "", nil, false
+	}
+	return targetText, manaCost, true
+}
+
+func manaCostHasVariableSymbol(manaCost cost.Mana) bool {
+	for _, symbol := range manaCost {
+		if symbol.Kind == cost.VariableSymbol {
+			return true
+		}
+	}
+	return false
 }
 
 func playerTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {

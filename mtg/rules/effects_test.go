@@ -998,6 +998,98 @@ func TestCounterEffectCannotCounterSourceSpell(t *testing.T) {
 	}
 }
 
+func TestUnlessPaysCounterUsesTargetControllerPayment(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addStackSpell(g, game.Player2, "Target Spell", []types.Card{types.Sorcery})
+	addBasicLandPermanent(g, game.Player2, types.Forest)
+	addInstructionSpellToStackForController(
+		g,
+		game.Player1,
+		unlessPaysCounterInstructions(cost.Mana{cost.G}),
+		[]game.Target{game.StackObjectTarget(target.ID)},
+	)
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	if _, ok := stackObjectByID(g, target.ID); !ok {
+		t.Fatal("target spell was countered even though its controller paid")
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Player != game.Player2 {
+		t.Fatalf("choices = %+v, want payment choice for target controller", log.Choices)
+	}
+}
+
+func TestUnlessPaysCounterCountersWhenPaymentDeclined(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addStackSpell(g, game.Player2, "Target Spell", []types.Card{types.Sorcery})
+	addBasicLandPermanent(g, game.Player2, types.Forest)
+	addInstructionSpellToStackForController(
+		g,
+		game.Player1,
+		unlessPaysCounterInstructions(cost.Mana{cost.G}),
+		[]game.Target{game.StackObjectTarget(target.ID)},
+	)
+	log := TurnLog{}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player2: &choiceOnlyAgent{choices: [][]int{{0}}},
+	}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	if _, ok := stackObjectByID(g, target.ID); ok {
+		t.Fatal("target spell remained on stack after payment was declined")
+	}
+	if !g.Players[game.Player2].Graveyard.Contains(target.SourceID) {
+		t.Fatal("countered target spell did not move to graveyard")
+	}
+}
+
+func TestUnlessPaysCounterSkipsPaymentWhenTargetGone(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addStackSpell(g, game.Player2, "Target Spell", []types.Card{types.Sorcery})
+	addBasicLandPermanent(g, game.Player2, types.Forest)
+	addInstructionSpellToStackForController(
+		g,
+		game.Player1,
+		unlessPaysCounterInstructions(cost.Mana{cost.G}),
+		[]game.Target{game.StackObjectTarget(target.ID)},
+	)
+	if _, ok := g.Stack.RemoveByID(target.ID); !ok {
+		t.Fatal("failed to remove target stack object")
+	}
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	if len(log.Choices) != 0 {
+		t.Fatalf("choices = %+v, want no payment choice for missing target", log.Choices)
+	}
+}
+
+func unlessPaysCounterInstructions(manaCost cost.Mana) []game.Instruction {
+	return []game.Instruction{
+		{
+			Primitive: game.Pay{Payment: game.ResolutionPayment{
+				Prompt:   "Pay " + manaCost.String() + "?",
+				Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+				ManaCost: opt.Val(manaCost),
+			}},
+			PublishResult: "unless-paid",
+		},
+		{
+			Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
+			ResultGate: opt.Val(game.InstructionResultGate{
+				Key:       "unless-paid",
+				Succeeded: game.TriFalse,
+			}),
+		},
+	}
+}
+
 func TestExcessDamageCanFeedLaterEffectAmount(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
