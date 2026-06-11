@@ -183,14 +183,14 @@ func TestAddPlayerCounterInstructionReferences(t *testing.T) {
 
 func TestCounterObjectPrimitiveValidation(t *testing.T) {
 	t.Parallel()
-	counter := CounterObject{Object: TargetStackObjectReference(0)}
+	counterPrimitive := CounterObject{Object: TargetStackObjectReference(0)}
 	stackTarget := []TargetSpec{{
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      TargetAllowStackObject,
 		Predicate:  TargetPredicate{StackObjectKinds: []StackObjectKind{StackSpell}},
 	}}
-	if err := ValidateInstructionSequence([]Instruction{{Primitive: counter}}, stackTarget); err != nil {
+	if err := ValidateInstructionSequence([]Instruction{{Primitive: counterPrimitive}}, stackTarget); err != nil {
 		t.Fatalf("stack target: ValidateInstructionSequence() = %v", err)
 	}
 
@@ -198,7 +198,7 @@ func TestCounterObjectPrimitiveValidation(t *testing.T) {
 		{{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPermanent}},
 		{{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPermanent | TargetAllowStackObject}},
 	} {
-		if err := ValidateInstructionSequence([]Instruction{{Primitive: counter}}, targets); err == nil {
+		if err := ValidateInstructionSequence([]Instruction{{Primitive: counterPrimitive}}, targets); err == nil {
 			t.Fatalf("incompatible target %+v: ValidateInstructionSequence() = nil", targets[0])
 		}
 	}
