@@ -304,6 +304,12 @@ func lowerExecutableAbility(
 		}
 
 		spans := make([]oracle.Span, 0, len(ability.Keywords)+len(syntax.Reminders))
+		if syntax.AbilityWord != nil && len(ability.Keywords) > 0 {
+			spans = append(spans, oracle.Span{
+				Start: ability.Span.Start,
+				End:   ability.Keywords[0].Span.Start,
+			})
+		}
 		spans = appendKeywordSpans(spans, ability.Keywords)
 		for _, reminder := range syntax.Reminders {
 			spans = append(spans, reminder.Span)
@@ -2633,11 +2639,8 @@ func tokensMatchSignedAmount(sign, amount oracle.Token, want oracle.CompiledSign
 		amount.Text == strconv.Itoa(want.Value)
 }
 
-// lowerReminderManaAbility handles a parenthesized reminder mana ability such
-// as "({T}: Add {R} or {G}.)" — reminder text that describes the tap-for-mana
-// behavior granted by basic-land subtypes. These are compiled with no semantic
-// elements because their content is filtered as parenthesized. We re-compile
-// the inner text and lower it as a mana ability.
+// lowerReminderManaAbility preserves a parenthesized reminder mana ability such
+// as "({T}: Add {R} or {G}.)" and consumes other rules-free reminder abilities.
 func lowerReminderManaAbility(
 	ability oracle.CompiledAbility,
 ) (abilityLowering, *oracle.Diagnostic) {
@@ -2655,26 +2658,32 @@ func lowerReminderManaAbility(
 	}
 	inner := strings.TrimSpace(ability.Text[1 : len(ability.Text)-1])
 	innerComp, innerDiags := oracle.Compile(inner, oracle.ParseContext{})
-	if len(innerDiags) != 0 ||
-		len(innerComp.Abilities) != 1 ||
-		innerComp.Abilities[0].Kind != oracle.AbilityActivated {
-		return abilityLowering{}, unsupported()
+	if len(innerComp.Abilities) == 1 && hasAddManaEffect(innerComp.Abilities[0]) {
+		if len(innerDiags) != 0 ||
+			len(innerComp.Syntax.Abilities) != 1 ||
+			innerComp.Abilities[0].Kind != oracle.AbilityActivated {
+			return abilityLowering{}, unsupported()
+		}
+		manaAbility, diagnostic := lowerTapManaAbility(
+			innerComp.Abilities[0],
+			innerComp.Syntax.Abilities[0],
+		)
+		if diagnostic != nil {
+			return abilityLowering{}, unsupported()
+		}
+		// The compiled reminder ability has no independent semantic elements;
+		// all content is filtered as parenthesized. The consumed counts are all
+		// zero, matching the empty CompiledAbility fields.
+		return abilityLowering{
+			manaAbility: opt.Val(manaAbility),
+			consumed:    semanticConsumption{},
+			sourceSpans: []oracle.Span{ability.Span},
+		}, nil
 	}
-	innerAbility := innerComp.Abilities[0]
-	innerSyntax := innerComp.Syntax.Abilities[0]
-	if !hasAddManaEffect(innerAbility) {
-		return abilityLowering{}, unsupported()
-	}
-	manaAbility, diagnostic := lowerTapManaAbility(innerAbility, innerSyntax)
-	if diagnostic != nil {
-		return abilityLowering{}, unsupported()
-	}
-	// The compiled reminder ability has no independent semantic elements;
-	// all content is filtered as parenthesized. The consumed counts are all
-	// zero, matching the empty CompiledAbility fields.
+
+	// Non-mana reminder abilities carry no semantic content beyond their
+	// parenthesized explanation.
 	return abilityLowering{
-		manaAbility: opt.Val(manaAbility),
-		consumed:    semanticConsumption{},
 		sourceSpans: []oracle.Span{ability.Span},
 	}, nil
 }
@@ -4387,7 +4396,7 @@ func lowerKeywordAbility(
 			"the executable source backend does not yet lower modal abilities",
 		)
 	}
-	if ability.AbilityWord != "" {
+	if !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return nil, executableDiagnostic(
 			ability,
 			"unsupported ability word",
@@ -4457,6 +4466,8 @@ func lowerKeywordAbility(
 	}
 	for _, token := range syntax.Tokens {
 		if token.Kind == oracle.Comma ||
+			(syntax.AbilityWord != nil && token.Kind == oracle.EmDash) ||
+			spanCoveredByAbilityWord(token.Span, syntax.AbilityWord) ||
 			spanCoveredByKeyword(token.Span, ability.Keywords) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
@@ -4464,6 +4475,22 @@ func lowerKeywordAbility(
 		return nil, mixedKeywordDiagnostic(ability)
 	}
 	return bodies, nil
+}
+
+func rulesFreeAbilityWordLabel(label string) bool {
+	switch label {
+	case "",
+		"Coven",
+		"Delirium",
+		"Domain",
+		"Ferocious",
+		"Hellbent",
+		"Metalcraft",
+		"Threshold":
+		return true
+	default:
+		return false
+	}
 }
 
 func isReadAheadAbility(text string) bool {
@@ -7011,6 +7038,12 @@ func spanCoveredByKeyword(span oracle.Span, keywords []oracle.CompiledKeyword) b
 		}
 	}
 	return false
+}
+
+func spanCoveredByAbilityWord(span oracle.Span, abilityWord *oracle.Phrase) bool {
+	return abilityWord != nil &&
+		abilityWord.Span.Start.Offset <= span.Start.Offset &&
+		abilityWord.Span.End.Offset >= span.End.Offset
 }
 
 func spanCoveredByDelimited(span oracle.Span, groups []oracle.Delimited) bool {

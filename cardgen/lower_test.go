@@ -2359,10 +2359,9 @@ func TestLowerReminderManaAbilityChoice(t *testing.T) {
 	}
 }
 
-func TestLowerReminderManaAbilityRejectsHybridCost(t *testing.T) {
+func TestLowerNonManaHybridReminderDoesNotBlockCard(t *testing.T) {
 	t.Parallel()
-	// Hybrid-mana cost reminders are not mana abilities; they must be rejected.
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Test Hybrid",
 		Layout:     "normal",
 		TypeLine:   "Creature — Soldier",
@@ -2373,15 +2372,17 @@ func TestLowerReminderManaAbilityRejectsHybridCost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for hybrid-cost reminder, got none")
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if source == "" {
+		t.Fatal("expected generated source")
 	}
 }
 
-func TestLowerReminderManaAbilityRejectsNonMana(t *testing.T) {
+func TestLowerNonManaReminderDoesNotBlockCard(t *testing.T) {
 	t.Parallel()
-	// A parenthesized reminder that is not a mana ability must be rejected.
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Test Card",
 		Layout:     "normal",
 		TypeLine:   "Creature — Human",
@@ -2392,8 +2393,73 @@ func TestLowerReminderManaAbilityRejectsNonMana(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if source == "" {
+		t.Fatal("expected generated source")
+	}
+}
+
+func TestLowerAbilityWordDoesNotBlockSupportedKeyword(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Threshold",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Threshold — Flying",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if source == "" {
+		t.Fatal("expected generated source")
+	}
+}
+
+func TestLowerAbilityWordSurfacesActualUnsupportedKeyword(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Threshold",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Threshold — Protection from everything",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for non-mana reminder, got none")
+		t.Fatal("expected unsupported keyword diagnostic")
+	}
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Summary == "unsupported ability word" {
+			t.Fatalf("diagnostics = %#v, want actual unsupported keyword diagnostic", diagnostics)
+		}
+	}
+}
+
+func TestLowerUnknownEmDashHeaderRemainsUnsupported(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Ticketed",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "{TK}{TK} — Menace",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unknown em-dash header to remain unsupported")
 	}
 }
 
