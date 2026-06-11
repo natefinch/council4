@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,335 of 31,838 cards eligible for paper support (13.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,343 of 31,838 cards eligible for paper support (13.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -686,6 +686,7 @@ Council4 currently supports **4,335 of 31,838 cards eligible for paper support (
 - Congregate
 - Conifer Strider
 - Conquering Manticore
+- Consecrated Sphinx
 - Conservatory
 - Constricting Tendrils
 - Construct
@@ -1374,6 +1375,7 @@ Council4 currently supports **4,335 of 31,838 cards eligible for paper support (
 - Germ
 - Gerrard's Irregulars
 - Get the Point
+- Geth's Grimoire
 - Ghalma's Warden
 - Ghen, Arcanum Weaver
 - Ghirapur Osprey
@@ -1614,6 +1616,7 @@ Council4 currently supports **4,335 of 31,838 cards eligible for paper support (
 - Haunter of Nightveil
 - Havenwood Battleground
 - Havenwood Wurm
+- Havoc
 - Havoc Devils
 - Hawkeater Moth
 - Hazerider Drake
@@ -1681,6 +1684,7 @@ Council4 currently supports **4,335 of 31,838 cards eligible for paper support (
 - Honored Hydra
 - Hooting Mandrills
 - Horizon Canopy
+- Horizon Chimera
 - Horizon Drake
 - Horizon Scholar
 - Horizon Seed
@@ -2077,6 +2081,7 @@ Council4 currently supports **4,335 of 31,838 cards eligible for paper support (
 - Lightning Visionary
 - Lightshell Duo
 - Lightshield Parry
+- Liliana's Caress
 - Limestone Golem
 - Limits of Solidarity
 - Live or Die
@@ -2131,6 +2136,7 @@ Council4 currently supports **4,335 of 31,838 cards eligible for paper support (
 - Lurching Rotbeast
 - Lush Portico
 - Luxury Suite
+- Lyla, Holographic Assistant
 - Macetail Hystrodon
 - Mad Prophet
 - Madcap Skills
@@ -2148,6 +2154,7 @@ Council4 currently supports **4,335 of 31,838 cards eligible for paper support (
 - Magus of the Bazaar
 - Magus of the Disk
 - Mahamoti Djinn
+- Mai, Scornful Striker
 - Majestic Auricorn
 - Major Teroh
 - Makindi Aeronaut
@@ -3193,6 +3200,7 @@ Council4 currently supports **4,335 of 31,838 cards eligible for paper support (
 - Sheep
 - Sheltered Thicket
 - Sheoldred's Headcleaver
+- Sheoldred, the Apocalypse
 - Shepherd of the Flock // Usher to Safety
 - Shepherd of the Lost
 - Shield Mate

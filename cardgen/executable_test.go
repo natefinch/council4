@@ -3796,3 +3796,103 @@ func TestGenerateExecutableCardSourceRejectsAlternateLayoutsWithMoreThanTwoFaces
 		t.Fatalf("diagnostic detail = %q", diagnostics[0].Detail)
 	}
 }
+
+func TestGenerateExecutableCardSourceSheoldredApocalypse(t *testing.T) {
+	t.Parallel()
+	// Sheoldred, the Apocalypse: real oracle text uses "they lose 2 life" for opponent draw trigger.
+	card := &ScryfallCard{
+		Name:       "Sheoldred, the Apocalypse",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}{B}",
+		TypeLine:   "Legendary Creature — Phyrexian Praetor",
+		OracleText: "Deathtouch\nWhenever you draw a card, you gain 2 life.\nWhenever an opponent draws a card, they lose 2 life.",
+		Colors:     []string{"B"},
+		Power:      new("4"),
+		Toughness:  new("5"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventCardDrawn",
+		"game.TriggerPlayerYou",
+		"game.TriggerPlayerOpponent",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceDyingToServe(t *testing.T) {
+	t.Parallel()
+	// Dying to Serve uses "discard one or more cards" (OneOrMore: true) trigger.
+	// The real card creates tokens, which lowerSpell does not yet support (token
+	// creation support is a separate follow-up). This test uses a supported effect
+	// to verify the trigger pattern is lowered correctly.
+	card := &ScryfallCard{
+		Name:       "Dying to Serve",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever you discard one or more cards, you lose 1 life.",
+		Colors:     []string{"B"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventCardDiscarded",
+		"game.TriggerPlayerYou",
+		"OneOrMore: true",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceTourachDreadCantor(t *testing.T) {
+	t.Parallel()
+	// Tourach, Dread Cantor: discard trigger for opponent + unsupported enter-when-kicked trigger.
+	// The discard trigger "Whenever an opponent discards a card" should lower correctly.
+	// The "+1/+1 counter on Tourach" effect is a self-name reference that is not yet supported by
+	// lowerCounterPlacementSpell, so the card will still have diagnostics — but none for the discard
+	// trigger phrase itself.
+	card := &ScryfallCard{
+		Name:       "Tourach, Dread Cantor",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Legendary Creature — Human Cleric",
+		OracleText: "Kicker {B}{B}\nProtection from white\nWhen Tourach, Dread Cantor enters, if it was kicked, target opponent discards two cards.\nWhenever an opponent discards a card, put a +1/+1 counter on Tourach, Dread Cantor.",
+		Colors:     []string{"B"},
+		Power:      new("2"),
+		Toughness:  new("1"),
+	}
+	_, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The trigger phrase is recognized even though its self-name counter-placement
+	// body remains unsupported.
+	foundBodyDiagnostic := false
+	for _, d := range diagnostics {
+		if d.Summary == "unsupported draw/discard trigger effect" {
+			foundBodyDiagnostic = true
+			if strings.Contains(d.Detail, "unrecognized draw/discard trigger event phrase") {
+				t.Fatalf("trigger phrase unexpectedly unrecognized: %#v", d)
+			}
+		}
+	}
+	if !foundBodyDiagnostic {
+		t.Fatalf("diagnostics = %#v, want unsupported draw/discard trigger effect", diagnostics)
+	}
+}

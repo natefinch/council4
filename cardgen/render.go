@@ -3313,6 +3313,8 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 			return "", err
 		}
 		return fmt.Sprintf("game.ObjectOwnerReference(%s)", rendered), nil
+	case game.PlayerReferenceEventPlayer:
+		return "game.EventPlayerReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
 	}
@@ -3988,6 +3990,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 	switch event {
 	case game.EventDamageDealt:
 		return "game.EventDamageDealt", nil
+	case game.EventCardDrawn:
+		return "game.EventCardDrawn", nil
 	case game.EventAttackerBecameBlocked:
 		return "game.EventAttackerBecameBlocked", nil
 	case game.EventAttackerDeclared:

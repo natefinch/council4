@@ -8799,3 +8799,207 @@ func TestLowerNonSelfDiesTriggerUnknownPhraseReturnsFalse(t *testing.T) {
 		}
 	}
 }
+
+func TestLowerDrawTriggerYou(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Draw Sentinel",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever you draw a card, you gain 1 life.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Type != game.TriggerWhenever {
+		t.Errorf("Trigger.Type = %v, want TriggerWhenever", got.Trigger.Type)
+	}
+	if got.Trigger.Pattern.Event != game.EventCardDrawn {
+		t.Errorf("Pattern.Event = %v, want EventCardDrawn", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerYou {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerYou", got.Trigger.Pattern.Player)
+	}
+	if got.Trigger.Pattern.OneOrMore {
+		t.Error("Pattern.OneOrMore = true, want false")
+	}
+}
+
+func TestLowerDrawTriggerOpponent(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Opponent Draw Watcher",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever an opponent draws a card, that player loses 1 life.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Pattern.Event != game.EventCardDrawn {
+		t.Errorf("Pattern.Event = %v, want EventCardDrawn", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerOpponent {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerOpponent", got.Trigger.Pattern.Player)
+	}
+}
+
+func TestLowerDrawTriggerAnyPlayer(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Universal Draw Watcher",
+		Layout:     "normal",
+		ManaCost:   "{3}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever a player draws a card, you gain 1 life.",
+		Colors:     []string{"U"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	if face.TriggeredAbilities[0].Trigger.Pattern.Player != game.TriggerPlayerAny {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerAny", face.TriggeredAbilities[0].Trigger.Pattern.Player)
+	}
+}
+
+func TestLowerDiscardTriggerYou(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Discard Reactor",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Creature — Rogue",
+		OracleText: "Whenever you discard a card, you lose 1 life.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Pattern.Event != game.EventCardDiscarded {
+		t.Errorf("Pattern.Event = %v, want EventCardDiscarded", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerYou {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerYou", got.Trigger.Pattern.Player)
+	}
+	if got.Trigger.Pattern.OneOrMore {
+		t.Error("Pattern.OneOrMore = true, want false")
+	}
+}
+
+func TestLowerDiscardOneOrMoreTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Discard Engine",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}",
+		TypeLine:   "Creature — Specter",
+		OracleText: "Whenever you discard one or more cards, you lose 1 life.",
+		Colors:     []string{"B"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Pattern.Event != game.EventCardDiscarded {
+		t.Errorf("Pattern.Event = %v, want EventCardDiscarded", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerYou {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerYou", got.Trigger.Pattern.Player)
+	}
+	if !got.Trigger.Pattern.OneOrMore {
+		t.Error("Pattern.OneOrMore = false, want true")
+	}
+}
+
+func TestLowerDiscardTriggerOpponent(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Specter Watcher",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}",
+		TypeLine:   "Creature — Specter",
+		OracleText: "Whenever an opponent discards a card, you gain 1 life.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	got := face.TriggeredAbilities[0]
+	if got.Trigger.Pattern.Event != game.EventCardDiscarded {
+		t.Errorf("Pattern.Event = %v, want EventCardDiscarded", got.Trigger.Pattern.Event)
+	}
+	if got.Trigger.Pattern.Player != game.TriggerPlayerOpponent {
+		t.Errorf("Pattern.Player = %v, want TriggerPlayerOpponent", got.Trigger.Pattern.Player)
+	}
+}
+
+func TestLowerDrawDiscardTriggerRejectsUnknownPhrase(t *testing.T) {
+	t.Parallel()
+	unknownPhrases := []string{
+		"you draw two or more cards",
+		"you draw your second card each turn",
+		"an opponent draws their second card in their draw step",
+		"you discard a land card",
+		"you discard a creature card",
+	}
+	for _, phrase := range unknownPhrases {
+		t.Run(phrase, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Unsupported Trigger Card",
+				Layout:     "normal",
+				ManaCost:   "{1}{U}",
+				TypeLine:   "Creature — Wizard",
+				OracleText: "Whenever " + phrase + ", you gain 1 life.",
+				Colors:     []string{"U"},
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected diagnostic for phrase %q, got none", phrase)
+			}
+		})
+	}
+}
+
+func TestLowerDrawDiscardTriggerInterveningIfFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Conditional Draw Watcher",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever you draw a card, if you have 5 or more life, you gain 1 life.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("intervening-if draw trigger unexpectedly lowered")
+	}
+	if !strings.Contains(diagnostics[0].Detail, "without conditions") {
+		t.Fatalf("diagnostic = %#v, want condition detail", diagnostics[0])
+	}
+}

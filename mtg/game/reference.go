@@ -162,6 +162,10 @@ const (
 	PlayerReferenceTargetPlayer
 	PlayerReferenceObjectController
 	PlayerReferenceObjectOwner
+	// PlayerReferenceEventPlayer references the player identified by the
+	// triggering event, such as the player who drew, discarded, or cast a card.
+	// It is only valid for event kinds with a well-defined player subject.
+	PlayerReferenceEventPlayer
 )
 
 // PlayerReference describes how a rules effect finds a player at resolution.
@@ -209,6 +213,13 @@ func ObjectOwnerReference(object ObjectReference) PlayerReference {
 	return PlayerReference{kind: PlayerReferenceObjectOwner, object: opt.Val(object)}
 }
 
+// EventPlayerReference references the player identified by the triggering event.
+// It is valid only inside triggered abilities whose event kind has a
+// well-defined player subject.
+func EventPlayerReference() PlayerReference {
+	return PlayerReference{kind: PlayerReferenceEventPlayer}
+}
+
 // Validate reports structural problems with a PlayerReference that represent
 // card-definition bugs. It checks player-level kind/field consistency and the
 // structure of any nested object reference; target-index bounds depend on the
@@ -238,6 +249,10 @@ func (r PlayerReference) Validate() []string {
 		}
 	case PlayerReferenceNone:
 		return []string{"player reference has no kind"}
+	case PlayerReferenceEventPlayer:
+		if r.targetIndex != 0 || r.object.Exists {
+			return []string{"event player reference must not set TargetIndex or Object"}
+		}
 	default:
 		return []string{fmt.Sprintf("unknown player reference kind %d", r.kind)}
 	}
