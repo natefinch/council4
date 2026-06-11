@@ -269,6 +269,42 @@ func TestLowerTargetedGraveyardReturnToHand(t *testing.T) {
 	}
 }
 
+func TestLowerTargetedGraveyardReturnCardsWithCyclingToHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Excavation",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return up to two target cards with cycling from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one variable target spec", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.MinTargets != 0 || target.MaxTargets != 2 ||
+		target.Allow != game.TargetAllowCard ||
+		target.TargetZone != zone.Graveyard ||
+		target.Selection.Val.Keyword != game.Cycling ||
+		target.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("target = %#v", target)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+	}
+	for i, instruction := range mode.Sequence {
+		move, ok := instruction.Primitive.(game.MoveCard)
+		if !ok {
+			t.Fatalf("primitive %d = %T, want game.MoveCard", i, instruction.Primitive)
+		}
+		if move.Card.Kind != game.CardReferenceTarget || move.Card.TargetIndex != i ||
+			move.FromZone != zone.Graveyard ||
+			move.Destination != zone.Hand {
+			t.Fatalf("move %d = %#v", i, move)
+		}
+	}
+}
+
 func TestLowerTargetedGraveyardReturnToLibrary(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -361,6 +397,64 @@ func TestLowerTargetedGraveyardVehicleReturnToBattlefield(t *testing.T) {
 	}
 }
 
+func TestLowerDynamicDamageCountsCardsWithCyclingInGraveyard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Zenith Flare",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Zenith Flare deals X damage to any target and you gain X life, where X is the number of cards with a cycling ability in your graveyard.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	damage, ok := mode.Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Damage", mode.Sequence[0].Primitive)
+	}
+	dynamic := damage.Amount.DynamicAmount()
+	if !dynamic.Exists ||
+		dynamic.Val.Kind != game.DynamicAmountCountCardsInZone ||
+		dynamic.Val.Player == nil ||
+		*dynamic.Val.Player != game.ControllerReference() ||
+		dynamic.Val.CardZone != zone.Graveyard ||
+		dynamic.Val.Selection == nil ||
+		dynamic.Val.Selection.Keyword != game.Cycling {
+		t.Fatalf("dynamic amount = %#v", dynamic)
+	}
+	gain, ok := mode.Sequence[1].Primitive.(game.GainLife)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.GainLife", mode.Sequence[1].Primitive)
+	}
+	if gain.Player != game.ControllerReference() || !reflect.DeepEqual(gain.Amount, damage.Amount) {
+		t.Fatalf("gain = %#v, damage amount = %#v", gain, damage.Amount)
+	}
+}
+
+func TestLowerStaticPTCountsCardsWithCyclingInGraveyard(t *testing.T) {
+	t.Parallel()
+	power := "0"
+	toughness := "4"
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Vile Manifestation",
+		Layout:     "normal",
+		TypeLine:   "Creature — Horror",
+		OracleText: "Vile Manifestation gets +1/+0 for each card with cycling in your graveyard.",
+		Power:      &power,
+		Toughness:  &toughness,
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+	}
+	continuous := face.StaticAbilities[0].Body.ContinuousEffects[0]
+	if !continuous.PowerDeltaDynamic.Exists ||
+		continuous.PowerDeltaDynamic.Val.Kind != game.DynamicAmountCountCardsInZone ||
+		continuous.PowerDeltaDynamic.Val.Selection == nil ||
+		continuous.PowerDeltaDynamic.Val.Selection.Keyword != game.Cycling ||
+		continuous.PowerDeltaDynamic.Val.CardZone != zone.Graveyard ||
+		continuous.ToughnessDeltaDynamic.Exists {
+		t.Fatalf("continuous effect = %#v", continuous)
+	}
+}
+
 func TestGenerateExecutableCardSourceTargetedGraveyardReturnRendersCardTargetConstraints(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -372,6 +466,7 @@ func TestGenerateExecutableCardSourceTargetedGraveyardReturnRendersCardTargetCon
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
@@ -390,6 +485,35 @@ func TestGenerateExecutableCardSourceTargetedGraveyardReturnRendersCardTargetCon
 		"zone.Library",
 		"DestinationBottom:",
 		"true",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceWithCyclingTargetsRenderIndexedCardReferences(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Excavation",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return up to two target cards with cycling from your graveyard to your hand.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_excavation.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"MinTargets: 0",
+		"MaxTargets: 2",
+		"Keyword: game.Cycling",
+		"game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: 1}",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)

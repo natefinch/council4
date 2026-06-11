@@ -250,6 +250,10 @@ const (
 type CardReference struct {
 	Kind CardReferenceKind
 
+	// TargetIndex identifies which card target slot to read when Kind is
+	// CardReferenceTarget. The zero value preserves the first target.
+	TargetIndex int
+
 	// LinkID identifies a linked card recorded by an earlier effect.
 	LinkID string
 }

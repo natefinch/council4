@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/mtg/game/counter"
+import (
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
 
 // DynamicAmountKind identifies a rules-derived integer for effect resolution.
 // Variable values such as X and "equal to" quantities are determined as the
@@ -21,6 +24,7 @@ const (
 	DynamicAmountControllerHandSize
 	DynamicAmountControllerGraveyardSize
 	DynamicAmountCountSelector
+	DynamicAmountCountCardsInZone
 	DynamicAmountPreviousEffectResult
 	DynamicAmountOpponentCount
 	DynamicAmountEventDamage
@@ -39,5 +43,8 @@ type DynamicAmount struct {
 	CounterKind counter.Kind
 	Group       GroupReference
 	Object      ObjectReference
+	Player      *PlayerReference
+	CardZone    zone.Type
+	Selection   *Selection
 	ResultKey   ResultKey
 }
