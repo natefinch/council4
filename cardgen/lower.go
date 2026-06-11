@@ -1199,31 +1199,88 @@ func lowerRemoveCounterCost(
 	component oracle.CostComponent,
 ) (cost.Additional, bool) {
 	object := strings.ToLower(strings.TrimSpace(component.Object))
-	counterKinds := []struct {
-		prefix string
-		kind   counter.Kind
+	amount, rest, ok := removeCounterCostAmount(object)
+	if !ok {
+		return cost.Additional{}, false
+	}
+	kind, source, ok := removeCounterCostKindAndSource(rest)
+	if !ok || source != "it" && !isSelfCostObject(cardName, source) {
+		return cost.Additional{}, false
+	}
+	return cost.Additional{
+		Kind:        cost.AdditionalRemoveCounter,
+		Text:        component.Text,
+		Amount:      amount,
+		CounterKind: kind,
+	}, true
+}
+
+func removeCounterCostAmount(object string) (amount int, rest string, ok bool) {
+	object = strings.TrimSpace(object)
+	if strings.HasPrefix(object, "any number of ") || strings.HasPrefix(object, "x ") {
+		return 0, "", false
+	}
+	amountWord, rest, ok := strings.Cut(object, " ")
+	if !ok {
+		return 0, "", false
+	}
+	amount, ok = exactCostAmount(amountWord)
+	if !ok {
+		return 0, "", false
+	}
+	return amount, strings.TrimSpace(rest), true
+}
+
+func removeCounterCostKindAndSource(rest string) (counter.Kind, string, bool) {
+	for _, candidate := range removeCounterCostKinds() {
+		for _, counterWord := range []string{" counter from ", " counters from "} {
+			prefix := candidate.name + counterWord
+			if !strings.HasPrefix(rest, prefix) {
+				continue
+			}
+			return candidate.kind, strings.TrimSpace(strings.TrimPrefix(rest, prefix)), true
+		}
+	}
+	return 0, "", false
+}
+
+func removeCounterCostKinds() []struct {
+	name string
+	kind counter.Kind
+} {
+	return []struct {
+		name string
+		kind counter.Kind
 	}{
-		{"a +1/+1 counter from ", counter.PlusOnePlusOne},
-		{"a -1/-1 counter from ", counter.MinusOneMinusOne},
-		{"a charge counter from ", counter.Charge},
-		{"a loyalty counter from ", counter.Loyalty},
+		{"+1/+1", counter.PlusOnePlusOne},
+		{"-1/-1", counter.MinusOneMinusOne},
+		{"loyalty", counter.Loyalty},
+		{"charge", counter.Charge},
+		{"storage", counter.Charge},
+		{"fuse", counter.Charge},
+		{"time", counter.Time},
+		{"defense", counter.Defense},
+		{"lore", counter.Lore},
+		{"verse", counter.Verse},
+		{"shield", counter.Shield},
+		{"stun", counter.Stun},
+		{"finality", counter.Finality},
+		{"brick", counter.Brick},
+		{"page", counter.Page},
+		{"enlightened", counter.Enlightened},
+		{"oil", counter.Oil},
+		{"blood", counter.Blood},
+		{"indestructible", counter.Indestructible},
+		{"deathtouch", counter.Deathtouch},
+		{"flying", counter.Flying},
+		{"first strike", counter.FirstStrike},
+		{"hexproof", counter.Hexproof},
+		{"lifelink", counter.Lifelink},
+		{"menace", counter.Menace},
+		{"reach", counter.Reach},
+		{"trample", counter.Trample},
+		{"vigilance", counter.Vigilance},
 	}
-	for _, candidate := range counterKinds {
-		if !strings.HasPrefix(object, candidate.prefix) {
-			continue
-		}
-		source := strings.TrimSpace(strings.TrimPrefix(object, candidate.prefix))
-		if source != "it" && !isSelfCostObject(cardName, source) {
-			return cost.Additional{}, false
-		}
-		return cost.Additional{
-			Kind:        cost.AdditionalRemoveCounter,
-			Text:        component.Text,
-			Amount:      1,
-			CounterKind: candidate.kind,
-		}, true
-	}
-	return cost.Additional{}, false
 }
 
 func lowerExileCost(component oracle.CostComponent) (cost.Additional, bool) {

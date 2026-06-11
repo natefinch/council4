@@ -106,6 +106,22 @@ func TestCompileActivatedAbilityTapPermanentsCost(t *testing.T) {
 	}
 }
 
+func TestCompileActivatedAbilityPluralRemoveCounterCost(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Remove two storage counters from this land: Add {G}.", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Cost == nil || len(ability.Cost.Components) != 1 {
+		t.Fatalf("cost = %#v", ability.Cost)
+	}
+	component := ability.Cost.Components[0]
+	if component.Kind != CostRemoveCounter || component.Object != "two storage counters from this land" {
+		t.Fatalf("cost component = %#v, want remove-counter object", component)
+	}
+}
+
 func TestCompileTriggeredAbility(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a creature enters, if it was cast, draw a card."

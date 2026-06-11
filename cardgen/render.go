@@ -3233,6 +3233,10 @@ func renderCounterKind(kind counter.Kind) (string, error) {
 		return "counter.Page", nil
 	case counter.Enlightened:
 		return "counter.Enlightened", nil
+	case counter.Oil:
+		return "counter.Oil", nil
+	case counter.Blood:
+		return "counter.Blood", nil
 	case counter.Indestructible:
 		return "counter.Indestructible", nil
 	case counter.Deathtouch:

@@ -748,6 +748,98 @@ func TestLowerActivatedTapPermanentsCosts(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedRemoveCounterCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantAmount int
+		wantKind   counter.Kind
+	}{
+		{
+			name:       "plural storage counters",
+			oracleText: "Remove two storage counters from this land: Draw a card.",
+			wantAmount: 2,
+			wantKind:   counter.Charge,
+		},
+		{
+			name:       "number-word fuse counters",
+			oracleText: "Remove five fuse counters from this enchantment: Draw a card.",
+			wantAmount: 5,
+			wantKind:   counter.Charge,
+		},
+		{
+			name:       "verse counter",
+			oracleText: "Remove a verse counter from this artifact: Draw a card.",
+			wantAmount: 1,
+			wantKind:   counter.Verse,
+		},
+		{
+			name:       "time counters from it",
+			oracleText: "Remove 3 time counters from it: Draw a card.",
+			wantAmount: 3,
+			wantKind:   counter.Time,
+		},
+		{
+			name:       "oil counter",
+			oracleText: "Remove an oil counter from this artifact: Draw a card.",
+			wantAmount: 1,
+			wantKind:   counter.Oil,
+		},
+		{
+			name:       "blood counters",
+			oracleText: "Remove two blood counters from this artifact: Draw a card.",
+			wantAmount: 2,
+			wantKind:   counter.Blood,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Artifact Enchantment Land",
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			costs := face.ActivatedAbilities[0].AdditionalCosts
+			if len(costs) != 1 ||
+				costs[0].Kind != cost.AdditionalRemoveCounter ||
+				costs[0].Amount != test.wantAmount ||
+				costs[0].CounterKind != test.wantKind {
+				t.Fatalf("additional costs = %#v, want amount %d kind %v", costs, test.wantAmount, test.wantKind)
+			}
+		})
+	}
+}
+
+func TestLowerActivatedAbilityRejectsVariableRemoveCounterCosts(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Remove X storage counters from this land: Add {G}.",
+		"Remove any number of storage counters from this land: Add {G}.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: oracleText,
+			})
+			if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+				t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerActivatedAbilityRejectsVariableTapPermanentsCost(t *testing.T) {
 	t.Parallel()
 	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
