@@ -363,7 +363,10 @@ func targetPhraseEnd(tokens []Token, start int) int {
 		token := tokens[end]
 		if token.Kind == Comma || token.Kind == Period || token.Kind == Semicolon ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && isEffectVerb(tokens[end+2])) ||
-			(end > start && isEffectVerb(token)) {
+			(equalWord(token, "and") && end+1 < len(tokens) && isEffectVerb(tokens[end+1])) ||
+			(end > start && isEffectVerb(token)) ||
+			(equalWord(token, "until") && end+1 < len(tokens) && equalWord(tokens[end+1], "end")) ||
+			(equalWord(token, "until") && end+2 < len(tokens) && equalWord(tokens[end+1], "your") && equalWord(tokens[end+2], "next")) {
 			break
 		}
 		end++
@@ -1362,6 +1365,9 @@ func effectKindAt(tokens []Token, index int) EffectKind {
 	}
 	if kind == EffectCounter && !counterIsVerb(tokens, index) {
 		return EffectUnknown
+	}
+	if kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control") {
+		return EffectGainControl
 	}
 	if kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike") {
 		return EffectUnknown

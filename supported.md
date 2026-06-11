@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,299 of 31,838 cards eligible for paper support (13.5%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,317 of 31,838 cards eligible for paper support (13.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -19,6 +19,8 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Academy Ruins
 - Accorder's Shield
 - Acolyte of Xathrid
+- Act of Aggression
+- Act of Treason
 - Adaptive Shimmerer
 - Adorned Pouncer
 - Adult Gold Dragon
@@ -528,6 +530,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Capital Guard
 - Captain of Umbar
 - Captivating Cave
+- Captivating Crew
 - Captivating Unicorn
 - Captive Flame
 - Carapace Forger
@@ -680,6 +683,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Conduit Pylons
 - Congregate
 - Conifer Strider
+- Conquering Manticore
 - Conservatory
 - Constricting Tendrils
 - Construct
@@ -1330,6 +1334,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Fungus
 - Fungus Beast
 - Fungus Dinosaur
+- Furnace Reins
 - Furtive Analyst
 - Furycalm Snarl
 - Fusion Elemental
@@ -1919,9 +1924,11 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Keep Out
 - Keeper of the Nine Gales
 - Keepers of the Faith
+- Kefnet's Last Word
 - Keimi
 - Keldon Arsonist
 - Keldon Necropolis
+- Keldon Overseer
 - Kelinore Bat
 - Kemba's Skyguard
 - Kessig Dire Swine
@@ -2062,6 +2069,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Lightshell Duo
 - Lightshield Parry
 - Limestone Golem
+- Limits of Solidarity
 - Live or Die
 - Living Lightning
 - Living Tempest
@@ -2083,6 +2091,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Looming Altisaur
 - Lore Drakkis
 - Lorehold Campus
+- Lose Calm
 - Lose Hope
 - Lost in a Labyrinth
 - Lost in the Mist
@@ -2162,6 +2171,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Marisi's Twinclaws
 - Marit Lage
 - Maritime Guard
+- Mark of Mutiny
 - Mark of the Vampire
 - Marked by Honor
 - Marker Beetles
@@ -2215,6 +2225,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Messenger Drake
 - Messenger Falcons
 - Messenger's Speed
+- Metallic Mastery
 - Metallic Sliver
 - Metallic Sliver
 - Metallurgeon
@@ -2548,6 +2559,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Overgrown Tomb
 - Overkill
 - Oversoul of Dusk
+- Overtaker
 - Owl Familiar
 - Ox
 - Ox
@@ -2675,6 +2687,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Pond Prophet
 - Porcelain Legionnaire
 - Port Town
+- Portent of Betrayal
 - Potion of Healing
 - Pounce
 - Pouncing Cheetah
@@ -3140,6 +3153,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Seton's Scout
 - Seton, Krosan Protector
 - Sewn-Eye Drake
+- Shackles of Treachery
 - Shadow Glider
 - Shadowblood Ridge
 - Shadowy Backstreet
@@ -3360,6 +3374,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Soldier of the Grey Host
 - Soldier of the Pantheon
 - Somnomancer
+- Song-Mad Treachery // Song-Mad Ruins
 - Sootfeather Flock
 - Soothing Balm
 - Soothsayer Adept
@@ -3723,6 +3738,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Thraben Valiant
 - Thran Dynamo
 - Threadbind Clique // Rip the Seams
+- Threaten
 - Three Tragedies
 - Three Tree Rootweaver
 - Thriss, Nantuko Primus
@@ -3801,6 +3817,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Trained Jackal
 - Trained Orgg
 - Training Center
+- Traitorous Blood
 - Tramway Station
 - Tranquil Cove
 - Tranquil Expanse
@@ -4260,6 +4277,7 @@ Council4 currently supports **4,299 of 31,838 cards eligible for paper support (
 - Zagoth Mamba
 - Zagoth Triome
 - Zarichi Tiger
+- Zealous Conscripts
 - Zealous Guardian
 - Zealous Lorecaster
 - Zenith Flare

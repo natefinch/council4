@@ -761,3 +761,41 @@ func addEquipmentWithPTBuff(g *game.Game, controller game.PlayerID, powerDelta, 
 		}},
 	}})
 }
+
+func TestGainControlApplyContinuousSubstitutesController(t *testing.T) {
+	t.Parallel()
+	// Verify that applyTypedContinuousEffects substitutes the sentinel Player1
+	// NewController value with the actual resolving controller.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// Player2 controls a creature.
+	creature := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Target Beast",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	}})
+	// Player1 casts a gain-control spell targeting the creature.
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{{
+		Primitive: game.ApplyContinuous{
+			Object: opt.Val(game.TargetPermanentReference(0)),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:         game.LayerControl,
+				NewController: opt.Val(game.Player1), // sentinel: replaced with actual controller
+			}},
+			Duration: game.DurationUntilEndOfTurn,
+		},
+	}}, []game.Target{game.PermanentTarget(creature.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectiveController(g, creature); got != game.Player1 {
+		t.Fatalf("controller after gain-control = %v, want Player1", got)
+	}
+	// After cleanup, the control effect should expire and the original
+	// controller is restored.
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+	if got := effectiveController(g, creature); got != game.Player2 {
+		t.Fatalf("controller after cleanup = %v, want Player2 (original)", got)
+	}
+}
