@@ -5992,6 +5992,9 @@ func lowerSingleEffectSpell(
 	)
 	switch ability.Effects[0].Kind {
 	case oracle.EffectDealDamage:
+		if len(ability.Targets) == 0 {
+			return lowerGroupDamageSpell(cardName, ability)
+		}
 		return lowerFixedDamageSpell(cardName, ability)
 	case oracle.EffectDraw:
 		return lowerFixedDrawSpell(ability, syntax)
@@ -7174,6 +7177,97 @@ func unsupportedEffectSequenceDiagnostic(ability oracle.CompiledAbility) *oracle
 		"unsupported ordered effect sequence",
 		"the executable source backend supports only exact ordered sequences of independently supported effects",
 	)
+}
+
+func lowerGroupDamageSpell(
+	cardName string,
+	ability oracle.CompiledAbility,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
+	if len(ability.Effects) != 1 ||
+		effect.Kind != oracle.EffectDealDamage ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
+		effect.Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ability)) != 0 ||
+		len(ability.Modes) != 0 {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported damage spell",
+			"the executable source backend supports only exact fixed group damage amounts",
+		)
+	}
+	if !singleSelfReference(ability.References) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported damage spell",
+			"the executable source backend supports only exact fixed group damage amounts",
+		)
+	}
+	amountText := fmt.Sprint(effect.Amount.Value)
+	sel := effect.Selector
+	var recipient game.DamageRecipient
+	switch {
+	case sel.Kind == oracle.SelectorOpponent && !sel.Other:
+		if ability.Text != fmt.Sprintf("%s deals %s damage to each opponent.", cardName, amountText) {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported damage spell",
+				"the executable source backend supports only exact fixed group damage amounts",
+			)
+		}
+		recipient = game.PlayerGroupDamageRecipient(game.OpponentsReference())
+	case sel.Kind == oracle.SelectorPlayer && !sel.Other:
+		if ability.Text != fmt.Sprintf("%s deals %s damage to each player.", cardName, amountText) {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported damage spell",
+				"the executable source backend supports only exact fixed group damage amounts",
+			)
+		}
+		recipient = game.PlayerGroupDamageRecipient(game.AllPlayersReference())
+	case sel.Kind == oracle.SelectorCreature && !sel.Other:
+		if ability.Text != fmt.Sprintf("%s deals %s damage to each creature.", cardName, amountText) {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported damage spell",
+				"the executable source backend supports only exact fixed group damage amounts",
+			)
+		}
+		recipient = game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		}))
+	case sel.Kind == oracle.SelectorCreature && sel.Other:
+		if ability.Text != fmt.Sprintf("%s deals %s damage to each other creature.", cardName, amountText) {
+			return game.AbilityContent{}, executableDiagnostic(
+				ability,
+				"unsupported damage spell",
+				"the executable source backend supports only exact fixed group damage amounts",
+			)
+		}
+		recipient = game.GroupDamageRecipient(game.BattlefieldGroupExcluding(
+			game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			game.SourcePermanentReference(),
+		))
+	default:
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported damage spell",
+			"the executable source backend does not support this group recipient",
+		)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive: game.Damage{
+					Amount:    game.Fixed(effect.Amount.Value),
+					Recipient: recipient,
+				},
+			},
+		},
+	}.Ability(), nil
 }
 
 func lowerFixedDamageSpell(

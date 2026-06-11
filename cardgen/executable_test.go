@@ -1486,6 +1486,68 @@ func TestGenerateExecutableCardSourceFixedDamageTargets(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceGroupDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantedSnip string
+	}{
+		{
+			name:       "each opponent",
+			oracleText: "Test Bolt deals 3 damage to each opponent.",
+			wantedSnip: "game.PlayerGroupDamageRecipient(game.OpponentsReference())",
+		},
+		{
+			name:       "each player",
+			oracleText: "Test Bolt deals 3 damage to each player.",
+			wantedSnip: "game.PlayerGroupDamageRecipient(game.AllPlayersReference())",
+		},
+		{
+			name:       "each creature",
+			oracleText: "Test Bolt deals 3 damage to each creature.",
+			wantedSnip: "game.GroupDamageRecipient(game.BattlefieldGroup(",
+		},
+		{
+			name:       "each other creature",
+			oracleText: "Test Bolt deals 3 damage to each other creature.",
+			wantedSnip: "game.GroupDamageRecipient(game.BattlefieldGroupExcluding(",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if source == "" {
+				t.Fatal("expected non-empty source")
+			}
+			for _, wanted := range []string{
+				"Primitive: game.Damage",
+				"game.Fixed(3)",
+				test.wantedSnip,
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDraw(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{"Draw a card.", "Draw two cards."} {
@@ -3013,7 +3075,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "qualified enchant", cardName: "Test Aura", typeLine: "Enchantment — Aura", oracleText: "Enchant creature you control"},
 		{name: "noncolor protection (replaced by support test)", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Protection from a chosen color"},
 		{name: "divided damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage divided as you choose among any number of targets."},
-		{name: "mass damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage to each opponent."},
 		{name: "variable surveil", cardName: "Test Surveil", typeLine: "Sorcery", oracleText: "Surveil X."},
 		{name: "repeated proliferate", cardName: "Test Proliferate", typeLine: "Sorcery", oracleText: "Proliferate X times."},
 		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
