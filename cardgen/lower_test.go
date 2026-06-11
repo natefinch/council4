@@ -7685,3 +7685,314 @@ func TestLowerHandCyclingGrantRejectsHistoric(t *testing.T) {
 		t.Fatalf("diagnostic = %#v, want historic predicate detail", diagnostics[0])
 	}
 }
+
+// ---- Gain-control spell tests (issue #224) ----
+
+// checkGainControlSequence validates the standard gain-control sequence:
+//
+//	Instruction 0: ApplyContinuous (LayerControl, NewController = Player1)
+//	Instruction 1 (optional): Untap
+//	Instruction 2 (optional): ApplyContinuous (LayerAbility, AddKeywords = [Haste])
+func checkGainControlPrimitive(t *testing.T, mode game.Mode, seqIdx int, duration game.EffectDuration) {
+	t.Helper()
+	prim, ok := mode.Sequence[seqIdx].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("sequence[%d] = %T, want game.ApplyContinuous", seqIdx, mode.Sequence[seqIdx].Primitive)
+	}
+	if !prim.Object.Exists || prim.Object.Val != game.TargetPermanentReference(0) {
+		t.Fatalf("ApplyContinuous.Object = %v, want TargetPermanentReference(0)", prim.Object)
+	}
+	if len(prim.ContinuousEffects) != 1 {
+		t.Fatalf("ContinuousEffects len = %d, want 1", len(prim.ContinuousEffects))
+	}
+	eff := prim.ContinuousEffects[0]
+	if eff.Layer != game.LayerControl {
+		t.Fatalf("Layer = %v, want LayerControl", eff.Layer)
+	}
+	if !eff.NewController.Exists || eff.NewController.Val != game.Player1 {
+		t.Fatalf("NewController = %v, want Player1", eff.NewController)
+	}
+	if prim.Duration != duration {
+		t.Fatalf("Duration = %v, want %v", prim.Duration, duration)
+	}
+}
+
+func checkUntapPrimitive(t *testing.T, mode game.Mode, seqIdx int) {
+	t.Helper()
+	untap, ok := mode.Sequence[seqIdx].Primitive.(game.Untap)
+	if !ok {
+		t.Fatalf("sequence[%d] = %T, want game.Untap", seqIdx, mode.Sequence[seqIdx].Primitive)
+	}
+	if untap.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("Untap.Object = %v, want TargetPermanentReference(0)", untap.Object)
+	}
+}
+
+func checkKeywordGrantPrimitive(t *testing.T, mode game.Mode, seqIdx int, keyword game.Keyword) {
+	t.Helper()
+	prim, ok := mode.Sequence[seqIdx].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("sequence[%d] = %T, want game.ApplyContinuous (keyword grant)", seqIdx, mode.Sequence[seqIdx].Primitive)
+	}
+	if !prim.Object.Exists || prim.Object.Val != game.TargetPermanentReference(0) {
+		t.Fatalf("keyword grant Object = %v, want TargetPermanentReference(0)", prim.Object)
+	}
+	if len(prim.ContinuousEffects) != 1 {
+		t.Fatalf("keyword grant ContinuousEffects len = %d, want 1", len(prim.ContinuousEffects))
+	}
+	eff := prim.ContinuousEffects[0]
+	if eff.Layer != game.LayerAbility {
+		t.Fatalf("keyword grant Layer = %v, want LayerAbility", eff.Layer)
+	}
+	if len(eff.AddKeywords) != 1 || eff.AddKeywords[0] != keyword {
+		t.Fatalf("AddKeywords = %v, want [%v]", eff.AddKeywords, keyword)
+	}
+	if prim.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("keyword grant Duration = %v, want DurationUntilEndOfTurn", prim.Duration)
+	}
+}
+
+func TestLowerGainControlUntapHasteSequence(t *testing.T) {
+	t.Parallel()
+	// Act of Treason pattern.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Act",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Untap that creature. It gains haste until end of turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1", len(mode.Targets))
+	}
+	if mode.Targets[0].Predicate.PermanentTypes[0] != types.Creature {
+		t.Fatalf("target type = %v, want Creature", mode.Targets[0].Predicate.PermanentTypes)
+	}
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence len = %d, want 3", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationUntilEndOfTurn)
+	checkUntapPrimitive(t, mode, 1)
+	checkKeywordGrantPrimitive(t, mode, 2, game.Haste)
+}
+
+func TestLowerGainControlUntapHasteScrySequence(t *testing.T) {
+	t.Parallel()
+	// Portent of Betrayal pattern: Gain control + Untap + Haste + Scry.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Portent",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Untap that creature. It gains haste until end of turn. Scry 1.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 4 {
+		t.Fatalf("sequence len = %d, want 4", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationUntilEndOfTurn)
+	checkUntapPrimitive(t, mode, 1)
+	checkKeywordGrantPrimitive(t, mode, 2, game.Haste)
+	scry, ok := mode.Sequence[3].Primitive.(game.Scry)
+	if !ok {
+		t.Fatalf("sequence[3] = %T, want game.Scry", mode.Sequence[3].Primitive)
+	}
+	if scry.Amount.Value() != 1 {
+		t.Fatalf("Scry.Amount = %v, want 1", scry.Amount)
+	}
+}
+
+func TestLowerGainControlCounterUntapHasteSequence(t *testing.T) {
+	t.Parallel()
+	// Mark of Mutiny's actual oracle text pattern: counter and untap are
+	// in the same sentence ("Put a +1/+1 counter on it and untap it."),
+	// followed by a haste grant.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mark",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Put a +1/+1 counter on it and untap it. That creature gains haste until end of turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 4 {
+		t.Fatalf("sequence len = %d, want 4", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationUntilEndOfTurn)
+	addCtr, ok := mode.Sequence[1].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("sequence[1] = %T, want game.AddCounter", mode.Sequence[1].Primitive)
+	}
+	if addCtr.Object != game.TargetPermanentReference(0) || addCtr.Amount.Value() != 1 {
+		t.Fatalf("AddCounter = %+v", addCtr)
+	}
+	checkUntapPrimitive(t, mode, 2)
+	checkKeywordGrantPrimitive(t, mode, 3, game.Haste)
+}
+
+func TestLowerGainControlActivatedAbility(t *testing.T) {
+	t.Parallel()
+	// Captivating Crew pattern: activated ability body.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Crew",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Pirate",
+		OracleText: "{3}{R}: Gain control of target creature an opponent controls until end of turn. Untap that creature.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1", len(mode.Targets))
+	}
+	if mode.Targets[0].Predicate.Controller != game.ControllerOpponent {
+		t.Fatalf("target controller predicate = %v, want Opponent", mode.Targets[0].Predicate.Controller)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence len = %d, want 2", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationUntilEndOfTurn)
+	checkUntapPrimitive(t, mode, 1)
+}
+
+func TestLowerGainControlPermanentDuration(t *testing.T) {
+	t.Parallel()
+	// Nicol Bolas style: single gain-control with permanent duration.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bolas",
+		Layout:     "normal",
+		TypeLine:   "Planeswalker — Bolas",
+		OracleText: "−2: Gain control of target creature.",
+	})
+	if len(face.LoyaltyAbilities) != 1 {
+		t.Fatalf("loyalty abilities = %d, want 1", len(face.LoyaltyAbilities))
+	}
+	mode := face.LoyaltyAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationPermanent)
+}
+
+func TestLowerGainControlUntapReversedOrder(t *testing.T) {
+	t.Parallel()
+	// Threaten pattern: Untap first, gain control second (same sentence).
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Threaten",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Untap target creature and gain control of it until end of turn. That creature gains haste until end of turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 3 {
+		t.Fatalf("mode targets=%d seq=%d, want 1 target 3 instructions", len(mode.Targets), len(mode.Sequence))
+	}
+	// Sequence order follows oracle text: Untap, then GainControl, then Haste.
+	checkUntapPrimitive(t, mode, 0)
+	checkGainControlPrimitive(t, mode, 1, game.DurationUntilEndOfTurn)
+	checkKeywordGrantPrimitive(t, mode, 2, game.Haste)
+}
+
+func TestLowerGainControlRejectsControllerYouTarget(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Self-Control",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature you control.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for gaining control of your own permanent")
+	}
+}
+
+func TestLowerGainControlRejectsMultipleEffectsWithoutBackRef(t *testing.T) {
+	t.Parallel()
+	// A sequence where the second Untap has a new target (not a back-ref) should
+	// fall through to the general ordered-sequence lowerer, not the gain-control
+	// path.  We just verify it doesn't produce a bogus zero-diagnostic result.
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Weird",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Untap target land.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for unsupported multi-target gain-control spell")
+	}
+}
+
+func TestGenerateExecutableCardSourceGainControlRendersApplyContinuous(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Treason",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Gain control of target creature until end of turn. Untap that creature. It gains haste until end of turn.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_treason.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.LayerControl",
+		"NewController: opt.Val(game.Player1)",
+		"game.DurationUntilEndOfTurn",
+		"game.Untap",
+		"game.TargetPermanentReference(0)",
+		"game.LayerAbility",
+		"game.Haste",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceGainControlPermanentDurationRenders(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Bolas",
+		Layout:     "normal",
+		TypeLine:   "Planeswalker — Bolas",
+		OracleText: "−2: Gain control of target creature.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "test_bolas.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.LayerControl",
+		"NewController: opt.Val(game.Player1)",
+		"game.DurationPermanent",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}

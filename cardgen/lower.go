@@ -5976,6 +5976,12 @@ func lowerSpell(
 		return manifestDreadAbility(), nil
 	}
 	if len(ability.Effects) > 1 {
+		if ability.Effects[0].Kind == oracle.EffectGainControl ||
+			(ability.Effects[0].Kind == oracle.EffectUntap &&
+				len(ability.Effects) >= 2 &&
+				ability.Effects[1].Kind == oracle.EffectGainControl) {
+			return lowerControlSpellSequence(cardName, ability, syntax)
+		}
 		return lowerOrderedEffectSequence(cardName, ability, syntax)
 	}
 	if len(ability.Effects) == 1 {
@@ -6150,6 +6156,8 @@ func lowerImmediateSingleEffectSpell(
 		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
 			return game.GainLife{Amount: amount, PlayerGroup: group}
 		})
+	case oracle.EffectGainControl:
+		return lowerSingleControlSpell(ability)
 	case oracle.EffectLose:
 		return lowerFixedLifeSpell(ability, "lose", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.LoseLife{Amount: amount, Player: player}
@@ -6999,6 +7007,276 @@ func standaloneActionAmount(tokens []oracle.Token, verb string) (int, bool) {
 	return 0, false
 }
 
+// lowerControlSpellSequence lowers an ordered effect sequence whose first
+// effect (or second, after an initial Untap) is EffectGainControl.  It handles
+// two oracle text patterns atomically:
+//
+//	Pattern A (effects[0] = GainControl):
+//	  "Gain control of target X until end of turn. [Untap that X.] [It gains KW.] [Scry N.]"
+//
+//	Pattern B (effects[0] = Untap, effects[1] = GainControl, same sentence):
+//	  "Untap target X and gain control of it until end of turn. [That X gains KW.]"
+//
+// Subsequent effects (Untap back-ref, keyword grant, counter placement, or
+// standalone effects like Scry) are consumed in order.
+func lowerControlSpellSequence(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported gain-control spell",
+			"the executable source backend supports only exact gain-control sequences targeting one permanent",
+		)
+	}
+
+	if len(ability.Conditions) != 0 || len(ability.Modes) != 0 {
+		return unsupported()
+	}
+	if len(ability.Targets) != 1 {
+		return unsupported()
+	}
+
+	// Detect Pattern B: Untap first, GainControl second (same sentence span).
+	isPatternB := len(ability.Effects) >= 2 &&
+		ability.Effects[0].Kind == oracle.EffectUntap &&
+		ability.Effects[1].Kind == oracle.EffectGainControl
+
+	gainControlIdx := 0
+	if isPatternB {
+		gainControlIdx = 1
+	}
+	controlEffect := ability.Effects[gainControlIdx]
+
+	targetSpec, ok := permanentTargetSpec(ability.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	// Gaining control of something you already control is a no-op for the
+	// control layer, but we do allow ControllerAny (e.g. Threaten) so the
+	// effect can still untap and grant keywords.
+	if ability.Targets[0].Selector.Controller == oracle.ControllerYou {
+		return unsupported()
+	}
+
+	var duration game.EffectDuration
+	switch controlEffect.Duration {
+	case oracle.DurationUntilEndOfTurn:
+		duration = game.DurationUntilEndOfTurn
+	case oracle.DurationNone:
+		duration = game.DurationPermanent
+	default:
+		return unsupported()
+	}
+
+	gainControlPrim := game.ApplyContinuous{
+		Object: opt.Val(game.TargetPermanentReference(0)),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:         game.LayerControl,
+			NewController: opt.Val(game.Player1),
+		}},
+		Duration: duration,
+	}
+
+	clauseSyntaxes := splitEffectSyntaxes(syntax, ability.Effects)
+	consumedTargets := 0
+	// Use span-keyed sets to count each reference/keyword exactly once, even
+	// when multiple same-sentence effects share the same reference spans.
+	consumedRefSpans := make(map[oracle.Span]bool)
+	consumedKwSpans := make(map[oracle.Span]bool)
+	var sequence []game.Instruction
+
+	if isPatternB {
+		// Pattern B: effects[0] (Untap) and effects[1] (GainControl) share the
+		// same sentence span.  Count targets and references from the shared span
+		// once rather than per-effect to avoid double-counting.
+		sharedSpan := ability.Effects[0].Span
+		consumedTargets += len(targetsWithinSpan(ability.Targets, sharedSpan))
+		for _, r := range referencesWithinSpan(ability.References, sharedSpan) {
+			consumedRefSpans[r.Span] = true
+		}
+		sequence = append(sequence,
+			game.Instruction{Primitive: game.Untap{Object: game.TargetPermanentReference(0)}},
+			game.Instruction{Primitive: gainControlPrim},
+		)
+		for i := 2; i < len(ability.Effects); i++ {
+			effAbility := abilityForEffect(ability, ability.Effects[i])
+			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, clauseSyntaxes[i])
+			if !ok {
+				return unsupported()
+			}
+			sequence = append(sequence, game.Instruction{Primitive: prim})
+			for _, r := range effAbility.References {
+				consumedRefSpans[r.Span] = true
+			}
+			for _, k := range effAbility.Keywords {
+				consumedKwSpans[k.Span] = true
+			}
+		}
+	} else {
+		// Pattern A: effects[0] is GainControl; subsequent effects are follow-ons.
+		effAbility0 := abilityForEffect(ability, ability.Effects[0])
+		consumedTargets += len(effAbility0.Targets)
+		for _, r := range effAbility0.References {
+			consumedRefSpans[r.Span] = true
+		}
+		sequence = append(sequence, game.Instruction{Primitive: gainControlPrim})
+		for i := 1; i < len(ability.Effects); i++ {
+			effAbility := abilityForEffect(ability, ability.Effects[i])
+			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, clauseSyntaxes[i])
+			if !ok {
+				return unsupported()
+			}
+			sequence = append(sequence, game.Instruction{Primitive: prim})
+			for _, r := range effAbility.References {
+				consumedRefSpans[r.Span] = true
+			}
+			for _, k := range effAbility.Keywords {
+				consumedKwSpans[k.Span] = true
+			}
+		}
+	}
+
+	if consumedTargets != len(ability.Targets) ||
+		len(consumedKwSpans) != len(ability.Keywords) ||
+		len(consumedRefSpans) != len(ability.References) ||
+		len(sequence) != len(ability.Effects) {
+		return unsupported()
+	}
+
+	return game.Mode{Targets: []game.TargetSpec{targetSpec}, Sequence: sequence}.Ability(), nil
+}
+
+// lowerControlSequenceFollowOn lowers a single follow-on effect in a
+// gain-control sequence: an Untap back-reference, a keyword grant, a counter
+// placement, or a standalone effect (e.g. Scry) with no back-references.
+func lowerControlSequenceFollowOn(
+	cardName string,
+	effectAbility oracle.CompiledAbility,
+	clauseSyntax oracle.Ability,
+) (game.Primitive, bool) {
+	effect := effectAbility.Effects[0]
+
+	switch effect.Kind {
+	case oracle.EffectUntap:
+		// Back-reference untap: "Untap that creature." — no new targets.
+		if len(effectAbility.Targets) != 0 {
+			return nil, false
+		}
+		return game.Untap{Object: game.TargetPermanentReference(0)}, true
+
+	case oracle.EffectGain:
+		// Keyword grant: "It gains haste until end of turn." — back-ref, no new targets.
+		if len(effectAbility.Targets) != 0 || len(effectAbility.Keywords) == 0 {
+			return nil, false
+		}
+		if effect.Duration != oracle.DurationUntilEndOfTurn {
+			return nil, false
+		}
+		keywords, ok := mixedStaticKeywords(effectAbility.Keywords)
+		if !ok {
+			return nil, false
+		}
+		return game.ApplyContinuous{
+			Object: opt.Val(game.TargetPermanentReference(0)),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:       game.LayerAbility,
+				AddKeywords: keywords,
+			}},
+			Duration: game.DurationUntilEndOfTurn,
+		}, true
+
+	case oracle.EffectPut:
+		// Counter placement: "Put a +1/+1 counter on it." — back-ref, no new targets.
+		if len(effectAbility.Targets) != 0 {
+			return nil, false
+		}
+		if !effect.CounterKindKnown || !oracle.CounterKindPlacementSupported(effect.CounterKind) {
+			return nil, false
+		}
+		if !effect.Amount.Known || effect.Amount.Value < 1 {
+			return nil, false
+		}
+		return game.AddCounter{
+			Amount:      game.Fixed(effect.Amount.Value),
+			Object:      game.TargetPermanentReference(0),
+			CounterKind: effect.CounterKind,
+		}, true
+
+	default:
+		// Standalone effect with no back-references (e.g. Scry).
+		if len(effectAbility.References) != 0 || len(effectAbility.Targets) != 0 {
+			return nil, false
+		}
+		content, diag := lowerSingleEffectSpell(cardName, effectAbility, clauseSyntax)
+		if diag != nil {
+			return nil, false
+		}
+		if len(content.SharedTargets) != 0 ||
+			content.IsModal() ||
+			len(content.Modes) != 1 ||
+			len(content.Modes[0].Targets) != 0 ||
+			len(content.Modes[0].Sequence) != 1 {
+			return nil, false
+		}
+		return content.Modes[0].Sequence[0].Primitive, true
+	}
+}
+
+// lowerSingleControlSpell lowers a single EffectGainControl spell with no
+// Untap or keyword grant (e.g. "Gain control of target permanent." or the
+// DurationUntilEndOfTurn variant).
+func lowerSingleControlSpell(
+	ability oracle.CompiledAbility,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported gain-control spell",
+			"the executable source backend supports only exact gain-control of one target permanent",
+		)
+	}
+	if len(ability.Targets) != 1 ||
+		len(ability.References) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Effects[0].Negated {
+		return unsupported()
+	}
+	targetSpec, ok := permanentTargetSpec(ability.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	if ability.Targets[0].Selector.Controller == oracle.ControllerYou {
+		return unsupported()
+	}
+	var duration game.EffectDuration
+	switch ability.Effects[0].Duration {
+	case oracle.DurationUntilEndOfTurn:
+		duration = game.DurationUntilEndOfTurn
+	case oracle.DurationNone:
+		duration = game.DurationPermanent
+	default:
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(game.TargetPermanentReference(0)),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:         game.LayerControl,
+					NewController: opt.Val(game.Player1),
+				}},
+				Duration: duration,
+			},
+		}},
+	}.Ability(), nil
+}
+
 func lowerOrderedEffectSequence(
 	cardName string,
 	ability oracle.CompiledAbility,
@@ -7686,6 +7964,16 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primiti
 		return value, ok
 	}
 	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
+		return value, true
+	}
+	if value, ok := primitive.(game.ApplyContinuous); ok {
+		if value.Object.Exists {
+			rebased, ok := rebaseObjectReference(value.Object.Val, offset)
+			if !ok {
+				return nil, false
+			}
+			value.Object = opt.Val(rebased)
+		}
 		return value, true
 	}
 	return nil, false

@@ -657,6 +657,16 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		return "", errors.New("render: continuous effect cannot set both AffectedSource and Group")
 	}
 	switch effect.Layer {
+	case game.LayerControl:
+		if effect.PowerDelta != 0 ||
+			effect.ToughnessDelta != 0 ||
+			effect.PowerDeltaDynamic.Exists ||
+			effect.ToughnessDeltaDynamic.Exists {
+			return "", errors.New("render: power/toughness fields require a power/toughness layer")
+		}
+		if len(effect.AddKeywords) > 0 {
+			return "", errors.New("render: keyword fields require the ability layer")
+		}
 	case game.LayerAbility:
 		if effect.PowerDelta != 0 ||
 			effect.ToughnessDelta != 0 ||
@@ -675,6 +685,10 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		return "", err
 	}
 	fields = append(fields, fmt.Sprintf("Layer: %s,", layerLit))
+	if effect.Layer == game.LayerControl && effect.NewController.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, "NewController: opt.Val(game.Player1),")
+	}
 	if effect.AffectedSource {
 		fields = append(fields, "AffectedSource: true,")
 	}
@@ -738,6 +752,8 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 
 func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
 	switch layer {
+	case game.LayerControl:
+		return "game.LayerControl", nil
 	case game.LayerAbility:
 		return "game.LayerAbility", nil
 	case game.LayerPowerToughnessModify:
@@ -1953,9 +1969,42 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: CreateDelayedTrigger kind has unexpected concrete type")
 		}
 		return r.renderCreateDelayedTrigger(ctx, value)
+	case game.PrimitiveApplyContinuous:
+		value, ok := primitive.(game.ApplyContinuous)
+		if !ok {
+			return "", errors.New("render: internal error: ApplyContinuous kind has unexpected concrete type")
+		}
+		return r.renderApplyContinuousPrimitive(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.ApplyContinuous) (string, error) {
+	var fields []string
+	if value.Object.Exists {
+		obj, err := r.renderObjectReference(value.Object.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Object: opt.Val(%s),", obj))
+	}
+	effectLiterals := make([]string, 0, len(value.ContinuousEffects))
+	for i := range value.ContinuousEffects {
+		eff, err := r.renderContinuousEffect(ctx, &value.ContinuousEffects[i])
+		if err != nil {
+			return "", err
+		}
+		effectLiterals = append(effectLiterals, eff+",")
+	}
+	fields = append(fields, sliceField("ContinuousEffects", "game.ContinuousEffect", effectLiterals))
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
+	return structLit("game.ApplyContinuous", fields), nil
 }
 
 func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDelayedTrigger) (string, error) {
@@ -3894,6 +3943,8 @@ func renderDamageRecipient(recipient game.DamageRecipientKind) (string, error) {
 
 func renderDuration(duration game.EffectDuration) (string, error) {
 	switch duration {
+	case game.DurationPermanent:
+		return "game.DurationPermanent", nil
 	case game.DurationUntilEndOfTurn:
 		return "game.DurationUntilEndOfTurn", nil
 	case game.DurationUntilEndOfYourNextTurn:

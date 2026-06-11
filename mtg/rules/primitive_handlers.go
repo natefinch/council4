@@ -864,6 +864,9 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		if runtimeEffect.Duration == game.DurationUntilYourNextTurn && runtimeEffect.ExpiresFor == game.Player1 {
 			runtimeEffect.ExpiresFor = obj.Controller
 		}
+		if runtimeEffect.NewController.Exists && runtimeEffect.NewController.Val == game.Player1 {
+			runtimeEffect.NewController = opt.Val(obj.Controller)
+		}
 		if runtimeEffect.AffectedObjectID == 0 && !runtimeEffect.Group.Valid() {
 			if permanent == nil {
 				continue

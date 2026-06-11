@@ -229,6 +229,7 @@ const (
 	EffectExile
 	EffectFight
 	EffectGain
+	EffectGainControl // gain control of [target permanent]
 	EffectGrantKeyword
 	EffectInvestigate
 	EffectExplore
