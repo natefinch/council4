@@ -1112,6 +1112,8 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 			}, true
 		}
 		return lowerExileCost(component)
+	case oracle.CostReveal:
+		return lowerRevealCost(component)
 	case oracle.CostRemoveCounter:
 		return lowerRemoveCounterCost(cardName, component)
 	case oracle.CostTapPermanents:
@@ -1130,6 +1132,70 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 		return lowerReturnToHandCost(component)
 	default:
 		return cost.Additional{}, false
+	}
+}
+
+func lowerRevealCost(component oracle.CostComponent) (cost.Additional, bool) {
+	object := strings.TrimSpace(component.Object)
+	normalized := strings.ToLower(object)
+	if strings.HasSuffix(normalized, " that share a color") {
+		object = strings.TrimSpace(object[:len(object)-len(" that share a color")])
+		normalized = strings.TrimSpace(normalized[:len(normalized)-len(" that share a color")])
+	}
+	const suffix = " from your hand"
+	if !strings.HasSuffix(normalized, suffix) {
+		return cost.Additional{}, false
+	}
+	object = strings.TrimSpace(object[:len(object)-len(suffix)])
+	words := strings.Fields(object)
+	if len(words) < 2 || len(words) > 3 {
+		return cost.Additional{}, false
+	}
+	additional := cost.Additional{
+		Kind:   cost.AdditionalReveal,
+		Text:   component.Text,
+		Source: zone.Hand,
+	}
+	switch strings.ToLower(words[0]) {
+	case "x":
+		additional.AmountFromX = true
+	default:
+		amount, ok := exactCostAmount(strings.ToLower(words[0]))
+		if !ok {
+			return cost.Additional{}, false
+		}
+		additional.Amount = amount
+	}
+	words = words[1:]
+	if len(words) == 2 {
+		cardColor, ok := revealCostColor(strings.ToLower(words[0]))
+		if !ok {
+			return cost.Additional{}, false
+		}
+		additional.MatchCardColor = true
+		additional.CardColor = cardColor
+		words = words[1:]
+	}
+	if strings.TrimSuffix(strings.ToLower(words[0]), "s") != "card" {
+		return cost.Additional{}, false
+	}
+	return additional, true
+}
+
+func revealCostColor(word string) (color.Color, bool) {
+	switch word {
+	case "white":
+		return color.White, true
+	case "blue":
+		return color.Blue, true
+	case "black":
+		return color.Black, true
+	case "red":
+		return color.Red, true
+	case "green":
+		return color.Green, true
+	default:
+		return "", false
 	}
 }
 

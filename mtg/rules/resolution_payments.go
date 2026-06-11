@@ -17,7 +17,7 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 	if !e.chooseMay(g, agents, playerID, prompt, log) {
 		return false, false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, res.XValue, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
 		SourceCardID:    stackObjectSourceID(obj),

@@ -239,7 +239,7 @@ func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.
 	}
 	cost := &wardCost
 	if paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost}) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
-		prefs := e.paymentPreferencesForCost(g, payer, cost, nil, agents, log)
+		prefs := e.paymentPreferencesForCost(g, payer, cost, nil, 0, agents, log)
 		if paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost, Prefs: prefs}) {
 			return "resolved"
 		}

@@ -278,7 +278,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				continue
 			}
 			if body, ok := ability.(game.ActivatedAbility); ok {
-				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(body.ManaCost)) {
+				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
 					targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, &body)
 					if targetResult.kind == targetInvalidSpec {
 						continue
@@ -326,7 +326,7 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 		for i := range def.ActivatedAbilities {
 			body := &def.ActivatedAbilities[i]
 			idx := def.ActivatedAbilityIndex(i)
-			for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(body.ManaCost)) {
+			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
 				targetResult := targetChoicesForBodyFromSourceObject(g, playerID, def, 0, body)
 				if targetResult.kind == targetInvalidSpec {
 					continue
@@ -807,7 +807,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		if len(activate.Targets) != 0 || activate.XValue != 0 {
 			return false
 		}
-		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), agents, log)
+		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), 0, agents, log)
 		if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 			PlayerID:        playerID,
 			Source:          permanent,
@@ -887,7 +887,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if hasTapCostOf(additionalCosts) {
 		tapExclusions = append(tapExclusions, permanent.ObjectID)
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaCost), additionalCosts, agents, log, tapExclusions...)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaCost), additionalCosts, activate.XValue, agents, log, tapExclusions...)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
@@ -944,7 +944,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	if !ok {
 		panic("validated graveyard ability targets could not be segmented")
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, agents, log)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     card.ID,
@@ -1019,7 +1019,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	if !canActivateCyclingAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), XValue: activate.XValue, Prefs: prefs}) {
 		return false
 	}
@@ -1062,7 +1062,7 @@ func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.Pla
 	if !ok || attackerWasBlocked(g, attacker.ObjectID) {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), Prefs: prefs}) {
 		return false
 	}
@@ -1325,6 +1325,29 @@ func legalXValuesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Ma
 		values = append(values, x)
 	}
 	return values
+}
+
+func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional) []int {
+	if !additionalCostsUseX(additionalCosts) {
+		return legalXValuesForCost(g, playerID, manaCost)
+	}
+	var values []int
+	for x := 0; x <= maxLegalXValue; x++ {
+		if costHasVariableMana(manaCost) && !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: x}) {
+			break
+		}
+		values = append(values, x)
+	}
+	return values
+}
+
+func additionalCostsUseX(additionalCosts []cost.Additional) bool {
+	for _, additional := range additionalCosts {
+		if additional.AmountFromX {
+			return true
+		}
+	}
+	return false
 }
 
 func costHasVariableMana(manaCost *cost.Mana) bool {

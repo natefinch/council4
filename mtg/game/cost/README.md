@@ -61,8 +61,10 @@ mana ability costs on the corresponding ability body.
 `Amount` defaults to one for costs involving objects or cards. `Text` supplies
 card-specific display text when the generic text for the kind is insufficient.
 `MatchPermanentType` and `PermanentType` constrain battlefield objects;
-`MatchCardType` and `CardType` constrain cards in other zones. `SubtypesAny`
-requires a selected card to have at least one of the listed subtypes:
+`MatchCardType` and `CardType` constrain cards in other zones.
+`MatchCardColor` and `CardColor` constrain card costs such as revealing blue
+cards. `SubtypesAny` requires a selected card to have at least one of the listed
+subtypes:
 
 ```go
 cost.Additional{
@@ -72,6 +74,9 @@ cost.Additional{
 	SubtypesAny: cost.SubtypeSet{types.Forest, types.Island},
 }
 ```
+
+Use `AmountFromX` for costs whose required count is the announced X value, such
+as "Reveal X blue cards from your hand".
 
 `Source` identifies the zone that supplies cards for costs that choose cards
 outside the battlefield. `zone.None` leaves the default to the rules module.
