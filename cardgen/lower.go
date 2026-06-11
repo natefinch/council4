@@ -1756,14 +1756,14 @@ func abilityTextWithoutReminders(syntax oracle.Ability) string {
 		}
 		text := token.Text
 		if text == "." || text == "," || text == ";" || text == ":" {
-			b.WriteString(text)
+			_, _ = b.WriteString(text)
 			prev = text
 			continue
 		}
-		if b.Len() > 0 && !(strings.HasPrefix(prev, "{") && strings.HasPrefix(text, "{")) {
-			b.WriteByte(' ')
+		if b.Len() > 0 && (!strings.HasPrefix(prev, "{") || !strings.HasPrefix(text, "{")) {
+			_ = b.WriteByte(' ')
 		}
-		b.WriteString(text)
+		_, _ = b.WriteString(text)
 		prev = text
 	}
 	return b.String()

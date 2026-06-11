@@ -15,7 +15,8 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
-	for _, ruleEffect := range templates {
+	for i := range templates {
+		ruleEffect := templates[i]
 		ruleEffect.ID = g.IDGen.Next()
 		ruleEffect.Controller = obj.Controller
 		ruleEffect.SourceCardID = sourceID
@@ -40,9 +41,9 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 
 func activeRuleEffects(g *game.Game) []game.RuleEffect {
 	effects := make([]game.RuleEffect, 0, len(g.RuleEffects))
-	for _, effect := range g.RuleEffects {
-		if ruleEffectSourceStillApplies(g, effect) {
-			effects = append(effects, effect)
+	for i := range g.RuleEffects {
+		if ruleEffectSourceStillApplies(g, &g.RuleEffects[i]) {
+			effects = append(effects, g.RuleEffects[i])
 		}
 	}
 	effects = append(effects, staticRuleEffects(g)...)
@@ -68,7 +69,8 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 				}, body.Condition) {
 					continue
 				}
-				for _, ruleEffect := range body.RuleEffects {
+				for j := range body.RuleEffects {
+					ruleEffect := body.RuleEffects[j]
 					ruleEffect.Controller = effectiveController(g, source)
 					ruleEffect.SourceObjectID = source.ObjectID
 					ruleEffect.SourceCardID = component.cardID
@@ -103,7 +105,8 @@ func stackStaticRuleEffects(g *game.Game) []game.RuleEffect {
 			}, body.Condition) {
 				continue
 			}
-			for _, ruleEffect := range body.RuleEffects {
+			for j := range body.RuleEffects {
+				ruleEffect := body.RuleEffects[j]
 				ruleEffect.Controller = source.Controller
 				ruleEffect.SourceObjectID = source.ID
 				ruleEffect.SourceCardID = source.SourceID
@@ -117,7 +120,10 @@ func stackStaticRuleEffects(g *game.Game) []game.RuleEffect {
 	return effects
 }
 
-func ruleEffectSourceStillApplies(g *game.Game, effect game.RuleEffect) bool {
+func ruleEffectSourceStillApplies(g *game.Game, effect *game.RuleEffect) bool {
+	if effect == nil {
+		return false
+	}
 	if effect.Duration != game.DurationPermanent || effect.SourceObjectID == 0 {
 		return true
 	}
@@ -130,7 +136,8 @@ func expireRuleEffects(g *game.Game) {
 		return
 	}
 	kept := g.RuleEffects[:0]
-	for _, effect := range g.RuleEffects {
+	for i := range g.RuleEffects {
+		effect := &g.RuleEffects[i]
 		if effect.Duration == game.DurationUntilEndOfYourNextTurn &&
 			effect.ExpiresFor == g.Turn.ActivePlayer &&
 			effect.CreatedTurn < g.Turn.TurnNumber {
@@ -142,13 +149,15 @@ func expireRuleEffects(g *game.Game) {
 		if !ruleEffectSourceStillApplies(g, effect) {
 			continue
 		}
-		kept = append(kept, effect)
+		kept = append(kept, *effect)
 	}
 	g.RuleEffects = kept
 }
 
 func canGainLife(g *game.Game, playerID game.PlayerID) bool {
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCantGainLife {
 			continue
 		}
@@ -219,7 +228,9 @@ func increaseActivePlayerSpeedForOpponentLifeLoss(g *game.Game, losingPlayer gam
 }
 
 func ruleEffectProhibitsAttack(g *game.Game, attacker *game.Permanent, target *game.AttackTarget) bool {
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCantAttack {
 			continue
 		}
@@ -240,7 +251,9 @@ func ruleEffectProhibitsAttack(g *game.Game, attacker *game.Permanent, target *g
 }
 
 func ruleEffectRequiresAttack(g *game.Game, attacker *game.Permanent) bool {
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind == game.RuleEffectMustAttack && ruleEffectMatchesPermanent(g, effect, attacker) {
 			return true
 		}
@@ -249,7 +262,9 @@ func ruleEffectRequiresAttack(g *game.Game, attacker *game.Permanent) bool {
 }
 
 func ruleEffectProhibitsBlock(g *game.Game, blocker *game.Permanent) bool {
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind == game.RuleEffectCantBlock && ruleEffectMatchesPermanent(g, effect, blocker) {
 			return true
 		}
@@ -258,7 +273,9 @@ func ruleEffectProhibitsBlock(g *game.Game, blocker *game.Permanent) bool {
 }
 
 func ruleEffectProhibitsBeingBlocked(g *game.Game, attacker *game.Permanent) bool {
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind == game.RuleEffectCantBeBlocked && ruleEffectMatchesPermanent(g, effect, attacker) {
 			return true
 		}
@@ -267,7 +284,9 @@ func ruleEffectProhibitsBeingBlocked(g *game.Game, attacker *game.Permanent) boo
 }
 
 func ruleEffectRequiresBeingBlocked(g *game.Game, attacker *game.Permanent) bool {
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind == game.RuleEffectMustBeBlocked && ruleEffectMatchesPermanent(g, effect, attacker) {
 			return true
 		}
@@ -275,7 +294,10 @@ func ruleEffectRequiresBeingBlocked(g *game.Game, attacker *game.Permanent) bool
 	return false
 }
 
-func ruleEffectMatchesPermanent(g *game.Game, effect game.RuleEffect, permanent *game.Permanent) bool {
+func ruleEffectMatchesPermanent(g *game.Game, effect *game.RuleEffect, permanent *game.Permanent) bool {
+	if effect == nil {
+		return false
+	}
 	if permanent == nil {
 		return false
 	}
@@ -317,7 +339,9 @@ func playerRelationMatches(sourceController, candidate game.PlayerID, relation g
 
 func staticCostModifiersForContext(g *game.Game, card *game.CardDef) []game.CostModifier {
 	var modifiers []game.CostModifier
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCostModifier {
 			continue
 		}
@@ -338,7 +362,9 @@ func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id
 	if sourceZone == zone.Graveyard && face == game.FaceFront && cardOK && cardHasFlashbackAlternative(card) {
 		return true
 	}
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCastFromZone || effect.CastFromZone != sourceZone {
 			continue
 		}

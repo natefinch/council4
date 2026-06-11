@@ -375,7 +375,9 @@ func (*Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []actio
 		if !ok {
 			continue
 		}
-		for _, effective := range effectiveHandActivatedAbilities(g, playerID, card) {
+		effectiveAbilities := effectiveHandActivatedAbilities(g, playerID, card)
+		for i := range effectiveAbilities {
+			effective := &effectiveAbilities[i]
 			if canActivateCyclingAbility(g, playerID, cardID, &effective.body, effective.index, nil, 0) {
 				actions = append(actions, actionBuild.activateAbility(cardID, effective.index, nil, 0))
 			}
@@ -1369,7 +1371,9 @@ func handActivatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID i
 	if !ok {
 		return nil, game.ActivatedAbility{}, false
 	}
-	for _, effective := range effectiveHandActivatedAbilities(g, playerID, card) {
+	effectiveAbilities := effectiveHandActivatedAbilities(g, playerID, card)
+	for i := range effectiveAbilities {
+		effective := &effectiveAbilities[i]
 		if effective.index == abilityIndex {
 			return card, effective.body, true
 		}
@@ -1401,7 +1405,9 @@ func effectiveHandActivatedAbilities(g *game.Game, playerID game.PlayerID, card 
 	}
 
 	nextIndex := frontDef.AbilityCount()
-	for _, effect := range activeRuleEffects(g) {
+	activeEffects := activeRuleEffects(g)
+	for i := range activeEffects {
+		effect := &activeEffects[i]
 		if effect.Kind != game.RuleEffectGrantHandCardAbility ||
 			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
 			!handCardMatchesSelection(g, card, effect.CardSelection, effect.Controller) {
