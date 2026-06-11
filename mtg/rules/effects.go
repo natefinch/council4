@@ -483,6 +483,49 @@ func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, log
 	return drew
 }
 
+// chooseSacrificePermanentsForPlayer makes playerID choose amount permanents that
+// satisfy sel from the battlefield. If there are fewer or equal eligible
+// permanents than amount, it chooses all of them without asking.
+func (e *Engine) chooseSacrificePermanentsForPlayer(g *game.Game, resolver referenceResolver, playerID game.PlayerID, amount int, sel game.Selection, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []*game.Permanent {
+	var candidates []*game.Permanent
+	for _, permanent := range g.Battlefield {
+		if effectiveController(g, permanent) != playerID {
+			continue
+		}
+		if !resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
+			continue
+		}
+		candidates = append(candidates, permanent)
+	}
+	if len(candidates) == 0 || amount <= 0 {
+		return nil
+	}
+	if len(candidates) <= amount {
+		return candidates
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent)}
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoicePayment,
+		Player:           playerID,
+		Prompt:           "Choose a permanent to sacrifice",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	chosen := make([]*game.Permanent, 0, len(selected))
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			chosen = append(chosen, candidates[idx])
+		}
+	}
+	return chosen
+}
+
 func stackObjectSourceIsSnow(g *game.Game, obj *game.StackObject) bool {
 	permanent, ok := permanentByObjectID(g, obj.SourceID)
 	return ok && permanentIsSnow(g, permanent)

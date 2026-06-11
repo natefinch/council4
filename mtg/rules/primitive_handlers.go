@@ -60,6 +60,25 @@ func (r *effectResolver) playerGroupMembers(group game.PlayerGroupReference) []g
 	return newReferenceResolver(r.game, r.obj).playerGroup(group)
 }
 
+func playersInAPNAPOrder(g *game.Game, players []game.PlayerID) []game.PlayerID {
+	included := make(map[game.PlayerID]bool, len(players))
+	for _, playerID := range players {
+		included[playerID] = true
+	}
+	ordered := make([]game.PlayerID, 0, len(included))
+	playerID := g.Turn.ActivePlayer
+	for range game.NumPlayers {
+		if included[playerID] {
+			ordered = append(ordered, playerID)
+		}
+		playerID = g.TurnOrder.NextActivePlayer(playerID)
+		if playerID == g.Turn.ActivePlayer {
+			break
+		}
+	}
+	return ordered
+}
+
 func (r *effectResolver) damageSource(source game.ObjectReference) (effectDamageSource, bool) {
 	if source.Kind() == game.ObjectReferenceNone {
 		sourceID, sourceObjectID := damageSourceIDs(r.game, r.obj)
@@ -632,6 +651,24 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 		return res
 	}
 	res.succeeded = movePermanentToZone(r.game, permanent, zone.Graveyard)
+	return res
+}
+
+func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents) effectResolved {
+	res := effectResolved{accepted: true}
+	amount := r.quantity(prim.Amount)
+	var players []game.PlayerID
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		players = playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup))
+	} else if playerID, ok := r.resolvePlayer(prim.Player); ok {
+		players = []game.PlayerID{playerID}
+	}
+	resolver := newReferenceResolver(r.game, r.obj)
+	var chosen []*game.Permanent
+	for _, playerID := range players {
+		chosen = append(chosen, r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, amount, prim.Selection, r.agents, r.log)...)
+	}
+	res.succeeded = movePermanentsToZoneSimultaneously(r.game, chosen, zone.Graveyard)
 	return res
 }
 

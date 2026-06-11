@@ -3030,6 +3030,30 @@ func TestNonSelfDiesTriggerControllerFilterFiresOnlyForCorrectController(t *test
 	}
 }
 
+func TestNonSelfDiesTriggerFiresForSimultaneousDeath(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	other := addCombatCreaturePermanent(g, game.Player1)
+
+	if !movePermanentsToZoneSimultaneously(g, []*game.Permanent{source, other}, zone.Graveyard) {
+		t.Fatal("simultaneous move failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("departed source did not trigger for another simultaneous death")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != other.ObjectID {
+		t.Fatalf("top of stack = %+v, want source %v triggered by %v", obj, source.ObjectID, other.ObjectID)
+	}
+}
+
 // TestNonSelfDiesTriggerExcludeSelfDoesNotFireForSource verifies that a
 // non-self dies trigger with ExcludeSelf=true does not fire when the source
 // permanent itself dies.

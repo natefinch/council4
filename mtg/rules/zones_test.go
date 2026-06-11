@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -39,6 +40,34 @@ func TestMovePermanentToZoneMovesCardBackedPermanent(t *testing.T) {
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(permanent.CardInstanceID) {
 		t.Fatal("card-backed permanent did not move to owner's graveyard")
+	}
+}
+
+func TestMovePermanentsToZoneSimultaneouslyPreservesPreMoveLastKnownInformation(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	granter := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Dying Mentor",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+				}),
+				AddKeywords: []game.Keyword{game.Deathtouch},
+			}},
+		}},
+	}})
+	creature := addCombatCreaturePermanent(g, game.Player1)
+
+	if !movePermanentsToZoneSimultaneously(g, []*game.Permanent{granter, creature}, zone.Graveyard) {
+		t.Fatal("movePermanentsToZoneSimultaneously() = false, want true")
+	}
+
+	snapshot, ok := lastKnownObject(g, creature.ObjectID)
+	if !ok || !slices.Contains(snapshot.Keywords, game.Deathtouch) {
+		t.Fatalf("last known keywords = %v, want deathtouch from pre-move battlefield", snapshot.Keywords)
 	}
 }
 
