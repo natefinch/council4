@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/cardgen/oracle"
 )
 
 func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
@@ -191,6 +192,98 @@ func TestWriteTextReportListsEachExclusionOnce(t *testing.T) {
 	}
 	if got := strings.Count(string(data), "Excluded Card\texcluded\tmemorabilia"); got != 1 {
 		t.Fatalf("exclusion count = %d, report:\n%s", got, data)
+	}
+}
+
+func TestWriteSupportDocumentation(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	readmePath := filepath.Join(directory, "README.md")
+	if err := os.WriteFile(
+		readmePath,
+		[]byte("# Test\n\n<!-- card-support:start -->\nold\n<!-- card-support:end -->\n"),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	output := report{
+		CardCount:        4,
+		EligibleCount:    3,
+		GeneratedCount:   2,
+		UnsupportedCount: 1,
+		ExcludedCount:    1,
+		Unsupported: []unsupported{{
+			Name: "Unsupported [Card]",
+			Diagnostics: []reportDiagnostic{{
+				Summary: "unsupported ability",
+				Detail:  "cannot handle\nthis",
+			}},
+		}},
+	}
+	results := []result{
+		{card: cardgen.ScryfallCard{Name: "Zulu"}},
+		{card: cardgen.ScryfallCard{Name: "alpha"}},
+		{
+			card:        cardgen.ScryfallCard{Name: "Unsupported [Card]"},
+			diagnostics: []oracle.Diagnostic{{Summary: "unsupported ability"}},
+		},
+		{
+			card:      cardgen.ScryfallCard{Name: "Excluded"},
+			exclusion: cardgen.ExcludeDigitalOnly,
+		},
+	}
+	cfg := config{
+		supportedPath:   filepath.Join(directory, "supported.md"),
+		unsupportedPath: filepath.Join(directory, "unsupported.md"),
+		readmePath:      readmePath,
+	}
+	if err := writeSupportDocumentation(cfg, output, results); err != nil {
+		t.Fatal(err)
+	}
+	supported, err := os.ReadFile(cfg.supportedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"**2 of 3 cards eligible for paper support (66.7%)**",
+		"1 additional digital, special-format",
+		"- alpha\n- Zulu\n",
+	} {
+		if !strings.Contains(string(supported), wanted) {
+			t.Errorf("supported.md missing %q:\n%s", wanted, supported)
+		}
+	}
+	unsupportedData, err := os.ReadFile(cfg.unsupportedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wanted := "- **Unsupported \\[Card\\]** — unsupported ability: cannot handle this"; !strings.Contains(string(unsupportedData), wanted) {
+		t.Errorf("unsupported.md missing %q:\n%s", wanted, unsupportedData)
+	}
+	readme, err := os.ReadFile(cfg.readmePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		readmeSupportStart,
+		"**2 of 3 cards eligible for paper support (66.7%)**",
+		"[`supported.md`](./supported.md)",
+		readmeSupportEnd,
+	} {
+		if !strings.Contains(string(readme), wanted) {
+			t.Errorf("README missing %q:\n%s", wanted, readme)
+		}
+	}
+}
+
+func TestUpdateReadmeSupportRequiresMarkers(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "README.md")
+	if err := os.WriteFile(path, []byte("# Missing markers\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := updateReadmeSupport(path, report{}); err == nil {
+		t.Fatal("updateReadmeSupport() succeeded without markers")
 	}
 }
 

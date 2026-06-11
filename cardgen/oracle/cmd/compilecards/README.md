@@ -62,8 +62,16 @@ Flags:
 - `-out`: cards package root. Default `mtg/cards`.
 - `-report`: unsupported report path, or `-` for standard output. Default `-`.
 - `-format`: `json` or `text`. Default `json`.
+- `-supported`: optional supported-card Markdown output path.
+- `-unsupported`: optional unsupported-card Markdown output path, including each
+  card's diagnostics as reasons.
+- `-readme`: optional README path containing the card-support marker pair to
+  update from the report counts.
 - `-workers`: compiler/source-generator worker count. Default
   `runtime.NumCPU()`.
+
+Use the repository `cardSupport` Mage target instead of setting the documentation
+flags manually when updating the canonical root support files.
 
 ## Report diagnostics
 
