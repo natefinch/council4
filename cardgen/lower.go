@@ -620,7 +620,7 @@ func lowerActivatedAbilityKind(
 	syntax oracle.Ability,
 ) (abilityLowering, *oracle.Diagnostic) {
 	if hasAddManaEffect(ability) {
-		manaAbility, diagnostic := lowerTapManaAbility(ability, syntax)
+		manaAbility, diagnostic := lowerManaAbility(cardName, ability, syntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
@@ -632,12 +632,16 @@ func lowerActivatedAbilityKind(
 		if ability.ActivationTiming != oracle.ActivationTimingNone {
 			spans = append(spans, ability.ActivationTimingSpan)
 		}
+		for _, reference := range ability.References {
+			spans = append(spans, reference.Span)
+		}
 		return abilityLowering{
 			manaAbility: opt.Val(manaAbility),
 			consumed: semanticConsumption{
 				cost:       true,
 				conditions: len(ability.Conditions),
 				effects:    len(ability.Effects),
+				references: len(ability.References),
 			},
 			sourceSpans: spans,
 		}, nil
@@ -1014,43 +1018,9 @@ func lowerActivatedAbility(
 	if !ok {
 		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
 	}
-	var manaCost cost.Mana
-	var additionalCosts []cost.Additional
-	for i, component := range ability.Cost.Components {
-		switch component.Kind {
-		case oracle.CostMana:
-			if i != 0 || manaCost != nil {
-				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
-			}
-			parsed, err := parseManaCostValue(component.Symbol)
-			if err != nil || len(parsed) == 0 {
-				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
-			}
-			manaCost = parsed
-		case oracle.CostTap:
-			if slices.ContainsFunc(additionalCosts, func(additional cost.Additional) bool {
-				return additional.Kind == cost.AdditionalTap
-			}) {
-				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
-			}
-			additionalCosts = append(additionalCosts, cost.T)
-		case oracle.CostUntap:
-			if slices.ContainsFunc(additionalCosts, func(additional cost.Additional) bool {
-				return additional.Kind == cost.AdditionalUntap
-			}) {
-				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
-			}
-			additionalCosts = append(additionalCosts, cost.Additional{
-				Kind: cost.AdditionalUntap,
-				Text: component.Text,
-			})
-		default:
-			additional, ok := lowerActivatedAdditionalCost(cardName, component)
-			if !ok {
-				return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
-			}
-			additionalCosts = append(additionalCosts, additional)
-		}
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
 	}
 
 	colon := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
@@ -1239,6 +1209,65 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 	default:
 		return cost.Additional{}, false
 	}
+}
+
+// lowerActivationCostComponents is the shared cost-parsing kernel used by both
+// lowerActivatedAbility and lowerManaAbility. It iterates the compiled cost
+// components and produces (manaCost, additionalCosts):
+//
+//   - CostMana must be the first component and may appear at most once.
+//   - CostTap and CostUntap each may appear at most once.
+//   - All other cost kinds are delegated to lowerActivatedAdditionalCost,
+//     which covers sacrifice, discard, pay-life, exile, reveal, remove-counter,
+//     tap-permanents, energy, return, exert, mill, put-counter, and
+//     collect-evidence.
+//
+// Returns nil, nil, false if any component is unsupported or ordering rules are
+// violated. The caller must check that ability.Cost is non-nil and non-empty
+// before calling.
+func lowerActivationCostComponents(
+	cardName string,
+	compiled *oracle.CompiledCost,
+) (cost.Mana, []cost.Additional, bool) {
+	var manaCost cost.Mana
+	var additionalCosts []cost.Additional
+	for i, component := range compiled.Components {
+		switch component.Kind {
+		case oracle.CostMana:
+			if i != 0 || manaCost != nil {
+				return nil, nil, false
+			}
+			parsed, err := parseManaCostValue(component.Symbol)
+			if err != nil || len(parsed) == 0 {
+				return nil, nil, false
+			}
+			manaCost = parsed
+		case oracle.CostTap:
+			if slices.ContainsFunc(additionalCosts, func(a cost.Additional) bool {
+				return a.Kind == cost.AdditionalTap
+			}) {
+				return nil, nil, false
+			}
+			additionalCosts = append(additionalCosts, cost.T)
+		case oracle.CostUntap:
+			if slices.ContainsFunc(additionalCosts, func(a cost.Additional) bool {
+				return a.Kind == cost.AdditionalUntap
+			}) {
+				return nil, nil, false
+			}
+			additionalCosts = append(additionalCosts, cost.Additional{
+				Kind: cost.AdditionalUntap,
+				Text: component.Text,
+			})
+		default:
+			additional, ok := lowerActivatedAdditionalCost(cardName, component)
+			if !ok {
+				return nil, nil, false
+			}
+			additionalCosts = append(additionalCosts, additional)
+		}
+	}
+	return manaCost, additionalCosts, true
 }
 
 func lowerCollectEvidenceCost(component oracle.CostComponent) (cost.Additional, bool) {
@@ -3544,7 +3573,8 @@ func lowerReminderManaAbility(
 			innerComp.Abilities[0].Kind != oracle.AbilityActivated {
 			return abilityLowering{}, unsupported()
 		}
-		manaAbility, diagnostic := lowerTapManaAbility(
+		manaAbility, diagnostic := lowerManaAbility(
+			"",
 			innerComp.Abilities[0],
 			innerComp.Syntax.Abilities[0],
 		)
@@ -5691,107 +5721,226 @@ func parseFixedKeywordManaCost(parameter string) (cost.Mana, bool) {
 	return manaCost, true
 }
 
-func lowerTapManaAbility(
+// lowerManaAbility lowers an activated mana ability into a game.ManaAbility.
+// It accepts the same supported cost shapes as ordinary activated abilities,
+// plus supported fixed-symbol, choice, and any-color mana output bodies.
+// Unrecognised costs and bodies remain fail-closed.
+func lowerManaAbility(
+	cardName string,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.ManaAbility, *oracle.Diagnostic) {
+	unsupported := func() *oracle.Diagnostic {
+		return executableDiagnostic(
+			ability,
+			"unsupported mana ability",
+			"the executable source backend supports only supported mana abilities",
+		)
+	}
 	originalText := ability.Text
 	activationCondition, ok := prepareActivationCondition(&ability, &syntax)
 	if !ok {
-		return game.ManaAbility{}, executableDiagnostic(
-			ability,
-			"unsupported activated ability",
-			"the executable source backend supports only exact supported tap and untap mana abilities",
-		)
+		return game.ManaAbility{}, unsupported()
 	}
 	if ability.Cost == nil ||
-		len(ability.Cost.Components) != 1 ||
-		(ability.Cost.Components[0].Kind != oracle.CostTap &&
-			ability.Cost.Components[0].Kind != oracle.CostUntap) ||
+		len(ability.Cost.Components) == 0 ||
 		len(ability.Effects) != 1 ||
 		ability.Effects[0].Kind != oracle.EffectAddMana ||
-		!ability.Effects[0].Amount.Known ||
-		ability.Effects[0].Amount.Value != 1 ||
 		ability.Effects[0].Negated ||
 		len(ability.Modes) != 0 ||
 		!rulesFreeAbilityWordLabel(ability.AbilityWord) ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Targets) != 0 ||
-		len(ability.Conditions) != 0 ||
-		len(ability.References) != 0 {
-		return game.ManaAbility{}, executableDiagnostic(
-			ability,
-			"unsupported activated ability",
-			"the executable source backend supports only exact supported tap and untap mana abilities",
-		)
+		len(ability.Conditions) != 0 {
+		return game.ManaAbility{}, unsupported()
 	}
-	costSymbol := "{T}"
-	if ability.Cost.Components[0].Kind == oracle.CostUntap {
-		costSymbol = "{Q}"
+	// References within the cost span are acceptable (e.g. "this creature" in
+	// "Sacrifice this creature"). References outside the cost — in the body —
+	// indicate unsupported complexity.
+	if len(bodyReferences(ability.References, ability.Cost.Span)) != 0 {
+		return game.ManaAbility{}, unsupported()
 	}
+
+	// Parse cost components using the shared kernel used by lowerActivatedAbility.
+	// All cost kinds supported by lowerActivatedAdditionalCost are accepted here
+	// too — discard, exile, sacrifice, pay-life, etc.
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok {
+		return game.ManaAbility{}, unsupported()
+	}
+
+	// Strip activation-timing tokens before extracting body tokens.
+	tokens := syntax.Tokens
 	if ability.ActivationTiming != oracle.ActivationTimingNone {
-		syntax.Tokens = slices.DeleteFunc(
-			append([]oracle.Token(nil), syntax.Tokens...),
+		tokens = slices.DeleteFunc(
+			append([]oracle.Token(nil), tokens...),
 			func(token oracle.Token) bool {
 				return spanCovered(token.Span, []oracle.Span{ability.ActivationTimingSpan})
 			},
 		)
 	}
-	if exactAnyColorManaSyntax(syntax.Tokens, costSymbol) {
-		result := choiceTapManaAbility(
-			[]string{"W", "U", "B", "R", "G"},
-		)
-		applyManaAbilityProperties(&result, ability, originalText, activationCondition)
-		return result, nil
+
+	// Extract body tokens — everything after the colon.
+	colon := slices.IndexFunc(tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.Colon
+	})
+	if colon < 0 || colon+1 >= len(tokens) {
+		return game.ManaAbility{}, unsupported()
 	}
-	if colors, ok := exactChoiceManaSyntax(syntax.Tokens, costSymbol); ok {
-		result := choiceTapManaAbility(colors)
-		applyManaAbilityProperties(&result, ability, originalText, activationCondition)
-		return result, nil
-	}
-	if !exactManaSyntax(syntax.Tokens, costSymbol) {
-		return game.ManaAbility{}, executableDiagnostic(
-			ability,
-			"unsupported activated ability",
-			"the executable source backend supports only exact supported tap and untap mana abilities",
-		)
-	}
-	colorName, ok := manaColorName(ability.Effects[0].Symbol)
+	bodyTokens := tokens[colon+1:]
+
+	// Build mana output content from the body.
+	content, ok := manaBodyContent(bodyTokens)
 	if !ok {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
 			"unsupported mana symbol",
-			fmt.Sprintf("the executable source backend cannot emit mana symbol %q", ability.Effects[0].Symbol),
+			"the executable source backend cannot lower this mana ability body",
 		)
 	}
-	manaColor, ok := manaColorValue(colorName)
-	if !ok {
-		return game.ManaAbility{}, executableDiagnostic(
-			ability,
-			"unsupported mana symbol",
-			fmt.Sprintf("the executable source backend cannot emit mana symbol %q", ability.Effects[0].Symbol),
-		)
+
+	result := game.ManaAbility{
+		Text:                originalText,
+		Content:             content,
+		Timing:              lowerActivationTiming(ability.ActivationTiming),
+		ActivationCondition: activationCondition,
+		AdditionalCosts:     additionalCosts,
 	}
-	result := game.TapManaAbility(manaColor)
-	applyManaAbilityProperties(&result, ability, originalText, activationCondition)
+	if manaCost != nil {
+		result.ManaCost = opt.Val(manaCost)
+	}
 	return result, nil
 }
 
-func applyManaAbilityProperties(
-	result *game.ManaAbility,
-	ability oracle.CompiledAbility,
-	text string,
-	activationCondition opt.V[game.Condition],
-) {
-	result.Text = text
-	result.Timing = lowerActivationTiming(ability.ActivationTiming)
-	result.ActivationCondition = activationCondition
-	if ability.Cost.Components[0].Kind == oracle.CostUntap {
-		result.AdditionalCosts = []cost.Additional{{
-			Kind: cost.AdditionalUntap,
-			Text: ability.Cost.Components[0].Text,
-		}}
+// manaBodyContent builds the game.AbilityContent for a mana ability output
+// from the body tokens (the tokens after the colon, with activation-timing
+// tokens already stripped). It matches three patterns:
+//
+//   - "Add one mana of any color." → choice of all five colors
+//   - "Add {X} or {Y}." (two or more mana symbols with separators) → choice
+//   - "Add {X}." or "Add {X}{Y}." (one or more consecutive mana symbols) → fixed
+//
+// Any other body returns false.
+func manaBodyContent(bodyTokens []oracle.Token) (game.AbilityContent, bool) {
+	if manaBodyIsAnyColor(bodyTokens) {
+		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true
 	}
+	if colorNames, ok := manaBodyChoiceColors(bodyTokens); ok {
+		colors := make([]mana.Color, 0, len(colorNames))
+		for _, name := range colorNames {
+			c, ok := manaColorValue(name)
+			if !ok {
+				return game.AbilityContent{}, false
+			}
+			colors = append(colors, c)
+		}
+		if len(colors) < 2 {
+			return game.AbilityContent{}, false
+		}
+		return game.TapManaChoiceAbility(colors...).Content, true
+	}
+	if colorNames, ok := manaBodyFixedColors(bodyTokens); ok {
+		colors := make([]mana.Color, 0, len(colorNames))
+		for _, name := range colorNames {
+			c, ok := manaColorValue(name)
+			if !ok {
+				return game.AbilityContent{}, false
+			}
+			colors = append(colors, c)
+		}
+		return manaFixedContent(colors), true
+	}
+	return game.AbilityContent{}, false
+}
+
+// manaFixedContent builds AbilityContent that adds one mana of each color in
+// the given order. For a single color this produces a single AddMana
+// instruction identical to game.TapManaAbility.
+func manaFixedContent(colors []mana.Color) game.AbilityContent {
+	seq := make([]game.Instruction, 0, len(colors))
+	for _, c := range colors {
+		seq = append(seq, game.Instruction{
+			Primitive: game.AddMana{
+				Amount:    game.Fixed(1),
+				ManaColor: c,
+			},
+		})
+	}
+	return game.Mode{Sequence: seq}.Ability()
+}
+
+// manaBodyIsAnyColor reports whether bodyTokens matches the pattern
+// "Add one mana of any color.".
+func manaBodyIsAnyColor(tokens []oracle.Token) bool {
+	return len(tokens) == 7 &&
+		equalTokenWord(tokens[0], "add") &&
+		equalTokenWord(tokens[1], "one") &&
+		equalTokenWord(tokens[2], "mana") &&
+		equalTokenWord(tokens[3], "of") &&
+		equalTokenWord(tokens[4], "any") &&
+		equalTokenWord(tokens[5], "color") &&
+		tokens[6].Kind == oracle.Period
+}
+
+// manaBodyChoiceColors extracts the mana color names from a body like
+// "Add {R} or {G}." or "Add {W}, {U}, or {B}." Returns false if the pattern
+// does not match or fewer than two colors are present.
+func manaBodyChoiceColors(tokens []oracle.Token) ([]string, bool) {
+	if len(tokens) < 4 ||
+		!equalTokenWord(tokens[0], "add") ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return nil, false
+	}
+	inner := tokens[1 : len(tokens)-1]
+	var colors []string
+	for i := 0; i < len(inner); {
+		token := inner[i]
+		manaColor, ok := manaColorName(token.Text)
+		if token.Kind != oracle.Symbol || !ok {
+			return nil, false
+		}
+		colors = append(colors, manaColor)
+		i++
+		if i == len(inner) {
+			break
+		}
+		if inner[i].Kind == oracle.Comma {
+			i++
+			if i < len(inner) && equalTokenWord(inner[i], "or") {
+				i++
+			}
+			continue
+		}
+		if !equalTokenWord(inner[i], "or") {
+			return nil, false
+		}
+		i++
+	}
+	return colors, len(colors) >= 2
+}
+
+// manaBodyFixedColors extracts the mana color names from a body like "Add {G}."
+// or "Add {G}{W}." (one or more consecutive mana symbols). Returns false if
+// any inner token is not a recognised mana symbol.
+func manaBodyFixedColors(tokens []oracle.Token) ([]string, bool) {
+	if len(tokens) < 3 ||
+		!equalTokenWord(tokens[0], "add") ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return nil, false
+	}
+	inner := tokens[1 : len(tokens)-1]
+	if len(inner) == 0 {
+		return nil, false
+	}
+	var colors []string
+	for _, token := range inner {
+		name, ok := manaColorName(token.Text)
+		if token.Kind != oracle.Symbol || !ok {
+			return nil, false
+		}
+		colors = append(colors, name)
+	}
+	return colors, len(colors) >= 1
 }
 
 func choiceTapManaAbility(colorNames []string) game.ManaAbility {
@@ -8568,69 +8717,8 @@ func manaColorValue(name string) (mana.Color, bool) {
 	}
 }
 
-func exactAnyColorManaSyntax(tokens []oracle.Token, costSymbol string) bool {
-	return len(tokens) == 9 &&
-		tokens[0].Kind == oracle.Symbol &&
-		strings.EqualFold(tokens[0].Text, costSymbol) &&
-		tokens[1].Kind == oracle.Colon &&
-		equalTokenWord(tokens[2], "add") &&
-		equalTokenWord(tokens[3], "one") &&
-		equalTokenWord(tokens[4], "mana") &&
-		equalTokenWord(tokens[5], "of") &&
-		equalTokenWord(tokens[6], "any") &&
-		equalTokenWord(tokens[7], "color") &&
-		tokens[8].Kind == oracle.Period
-}
-
 func equalTokenWord(token oracle.Token, word string) bool {
 	return token.Kind == oracle.Word && strings.EqualFold(token.Text, word)
-}
-
-func exactChoiceManaSyntax(tokens []oracle.Token, costSymbol string) ([]string, bool) {
-	if len(tokens) < 7 ||
-		tokens[0].Kind != oracle.Symbol ||
-		!strings.EqualFold(tokens[0].Text, costSymbol) ||
-		tokens[1].Kind != oracle.Colon ||
-		!equalTokenWord(tokens[2], "add") ||
-		tokens[len(tokens)-1].Kind != oracle.Period {
-		return nil, false
-	}
-	var colors []string
-	for i := 3; i < len(tokens)-1; {
-		token := tokens[i]
-		manaColor, ok := manaColorName(token.Text)
-		if token.Kind != oracle.Symbol || !ok {
-			return nil, false
-		}
-		colors = append(colors, manaColor)
-		i++
-		if i == len(tokens)-1 {
-			break
-		}
-		if tokens[i].Kind == oracle.Comma {
-			i++
-			if i < len(tokens)-1 && equalTokenWord(tokens[i], "or") {
-				i++
-			}
-			continue
-		}
-		if !equalTokenWord(tokens[i], "or") {
-			return nil, false
-		}
-		i++
-	}
-	return colors, len(colors) >= 2
-}
-
-func exactManaSyntax(tokens []oracle.Token, costSymbol string) bool {
-	return len(tokens) == 5 &&
-		tokens[0].Kind == oracle.Symbol &&
-		strings.EqualFold(tokens[0].Text, costSymbol) &&
-		tokens[1].Kind == oracle.Colon &&
-		tokens[2].Kind == oracle.Word &&
-		strings.EqualFold(tokens[2].Text, "Add") &&
-		tokens[3].Kind == oracle.Symbol &&
-		tokens[4].Kind == oracle.Period
 }
 
 func spanCoveredByKeyword(span oracle.Span, keywords []oracle.CompiledKeyword) bool {
