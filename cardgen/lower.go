@@ -1126,9 +1126,103 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 			Text:   component.Text,
 			Amount: amount,
 		}, true
+	case oracle.CostReturn:
+		return lowerReturnToHandCost(component)
 	default:
 		return cost.Additional{}, false
 	}
+}
+
+func lowerReturnToHandCost(component oracle.CostComponent) (cost.Additional, bool) {
+	object := strings.TrimSpace(component.Object)
+	normalized := strings.ToLower(object)
+	suffix := " you control to its owner's hand"
+	if !strings.HasSuffix(normalized, suffix) {
+		suffix = " you control to their owner's hand"
+	}
+	if !strings.HasSuffix(normalized, suffix) {
+		return cost.Additional{}, false
+	}
+	object = strings.TrimSpace(object[:len(object)-len(suffix)])
+	words := strings.Fields(object)
+	if len(words) < 2 {
+		return cost.Additional{}, false
+	}
+	amount, ok := exactCostAmount(words[0])
+	if !ok {
+		return cost.Additional{}, false
+	}
+	words = words[1:]
+	requireTapped := false
+	if len(words) > 0 && words[0] == "tapped" {
+		requireTapped = true
+		words = words[1:]
+	}
+	if len(words) == 0 {
+		return cost.Additional{}, false
+	}
+	additional := cost.Additional{
+		Kind:          cost.AdditionalReturnToHand,
+		Text:          component.Text,
+		Amount:        amount,
+		RequireTapped: requireTapped,
+	}
+	if lowerReturnToHandObject(strings.Join(words, " "), &additional) {
+		return additional, true
+	}
+	return cost.Additional{}, false
+}
+
+func lowerReturnToHandObject(object string, additional *cost.Additional) bool {
+	normalized := strings.ToLower(strings.TrimSpace(object))
+	switch strings.TrimSuffix(normalized, "s") {
+	case "permanent":
+		return true
+	case "artifact":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Artifact
+		return true
+	case "creature":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Creature
+		return true
+	case "enchantment":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Enchantment
+		return true
+	case "land":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Land
+		return true
+	case "snow land":
+		additional.MatchPermanentType = true
+		additional.PermanentType = types.Land
+		additional.RequireSupertype = types.Snow
+		return true
+	default:
+	}
+	if subtype, ok := returnToHandSubtype(object); ok {
+		additional.SubtypesAny = cost.SubtypeSet{subtype}
+		return true
+	}
+	return false
+}
+
+func returnToHandSubtype(object string) (types.Sub, bool) {
+	candidates := []string{
+		strings.TrimSpace(object),
+		singularCostNoun(object),
+	}
+	for _, candidate := range candidates {
+		subtype := types.Sub(candidate)
+		if types.KnownSubtypeForType(types.Land, subtype) ||
+			types.KnownSubtypeForType(types.Creature, subtype) ||
+			types.KnownSubtypeForType(types.Artifact, subtype) ||
+			types.KnownSubtypeForType(types.Enchantment, subtype) {
+			return subtype, true
+		}
+	}
+	return "", false
 }
 
 func lowerTapPermanentsCost(component oracle.CostComponent) (cost.Additional, bool) {

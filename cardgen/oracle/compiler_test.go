@@ -138,6 +138,22 @@ func TestCompileActivatedAbilityEnergyCost(t *testing.T) {
 	}
 }
 
+func TestCompileActivatedAbilityReturnToHandCost(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Return two Islands you control to their owner's hand: Draw a card.", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Cost == nil || len(ability.Cost.Components) != 1 {
+		t.Fatalf("cost = %#v", ability.Cost)
+	}
+	component := ability.Cost.Components[0]
+	if component.Kind != CostReturn || component.Object != "two Islands you control to their owner's hand" {
+		t.Fatalf("cost component = %#v, want return object", component)
+	}
+}
+
 func TestCompileTriggeredAbility(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a creature enters, if it was cast, draw a card."
