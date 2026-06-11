@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math/rand/v2"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -13,19 +14,15 @@ import (
 )
 
 func TestSpellModeRunsDeterministicallyWithCastsAndResolves(t *testing.T) {
-	first := runSpellMode(1)
-	second := runSpellMode(1)
+	result := runSpellMode(t, 1)
 
-	if first.TurnCount == 0 {
-		t.Fatal("spell mode produced zero turns")
+	if result.TurnCount != 52 {
+		t.Fatalf("spell mode produced %d turns, want 52", result.TurnCount)
 	}
-	if first.TurnCount != second.TurnCount {
-		t.Fatalf("turn count differs: %d != %d", first.TurnCount, second.TurnCount)
+	if !result.HasWinner || result.Winner != game.Player4 {
+		t.Fatalf("spell mode winner = (%v,%v), want (true,%v)", result.HasWinner, result.Winner, game.Player4)
 	}
-	if first.HasWinner != second.HasWinner || first.Winner != second.Winner {
-		t.Fatalf("winner differs: (%v,%v) != (%v,%v)", first.HasWinner, first.Winner, second.HasWinner, second.Winner)
-	}
-	casts, resolves := countCastsAndResolves(first)
+	casts, resolves := countCastsAndResolves(result)
 	if casts == 0 {
 		t.Fatal("spell mode produced no casts")
 	}
@@ -35,22 +32,15 @@ func TestSpellModeRunsDeterministicallyWithCastsAndResolves(t *testing.T) {
 }
 
 func TestCombatModeRunsDeterministicallyWithAttacksAndCombatDamage(t *testing.T) {
-	first := runCombatMode(1)
-	second := runCombatMode(1)
+	_, result := runCombatModeSeed1(t)
 
-	if first.TurnCount == 0 {
-		t.Fatal("combat mode produced zero turns")
+	if result.TurnCount != 73 {
+		t.Fatalf("combat mode produced %d turns, want 73", result.TurnCount)
 	}
-	if first.TurnCount != second.TurnCount {
-		t.Fatalf("turn count differs: %d != %d", first.TurnCount, second.TurnCount)
+	if !result.HasWinner || result.Winner != game.Player4 {
+		t.Fatalf("combat mode winner = (%v,%v), want (true,%v)", result.HasWinner, result.Winner, game.Player4)
 	}
-	if first.HasWinner != second.HasWinner || first.Winner != second.Winner {
-		t.Fatalf("winner differs: (%v,%v) != (%v,%v)", first.HasWinner, first.Winner, second.HasWinner, second.Winner)
-	}
-	if !first.HasWinner {
-		t.Fatal("combat mode did not produce a winner")
-	}
-	attacks, damage := countAttacksAndDamage(first)
+	attacks, damage := countAttacksAndDamage(result)
 	if attacks == 0 {
 		t.Fatal("combat mode produced no attacks")
 	}
@@ -204,13 +194,7 @@ func TestPrintTurnLogNoPassKeepsOtherEvents(t *testing.T) {
 }
 
 func TestCombatVerboseLogPrintsResolveBeforeResolvedPermanentAttacks(t *testing.T) {
-	configs, agents, err := gameModeConfig("combat", 8, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	engine := rules.NewEngine(rand.New(rand.NewPCG(1, 1^0x9e3779b97f4a7c15)))
-	g := engine.NewGame(configs)
-	result := engine.RunGame(g, agents)
+	g, result := runCombatModeSeed1(t)
 	var out bytes.Buffer
 
 	printTurnLog(&out, g, result, logOptions{OmitPasses: true})
@@ -237,6 +221,28 @@ func TestCombatVerboseLogPrintsResolveBeforeResolvedPermanentAttacks(t *testing.
 	}
 }
 
+type modeRun struct {
+	game   *game.Game
+	result *rules.GameResult
+}
+
+var combatModeSeed1 struct {
+	once sync.Once
+	run  modeRun
+	err  error
+}
+
+func runCombatModeSeed1(t testing.TB) (*game.Game, *rules.GameResult) {
+	t.Helper()
+	combatModeSeed1.once.Do(func() {
+		combatModeSeed1.run, combatModeSeed1.err = runMode("combat", 1)
+	})
+	if combatModeSeed1.err != nil {
+		t.Fatal(combatModeSeed1.err)
+	}
+	return combatModeSeed1.run.game, combatModeSeed1.run.result
+}
+
 func addTestCard(g *game.Game, owner game.PlayerID, def *game.CardDef) id.ID {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{
@@ -247,22 +253,23 @@ func addTestCard(g *game.Game, owner game.PlayerID, def *game.CardDef) id.ID {
 	return cardID
 }
 
-func runSpellMode(seed uint64) *rules.GameResult {
-	configs, agents, err := gameModeConfig("spells", 8, false)
+func runSpellMode(t testing.TB, seed uint64) *rules.GameResult {
+	t.Helper()
+	run, err := runMode("spells", seed)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	engine := rules.NewEngine(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
-	return engine.RunGame(engine.NewGame(configs), agents)
+	return run.result
 }
 
-func runCombatMode(seed uint64) *rules.GameResult {
-	configs, agents, err := gameModeConfig("combat", 8, false)
+func runMode(mode string, seed uint64) (modeRun, error) {
+	configs, agents, err := gameModeConfig(mode, 8, false)
 	if err != nil {
-		panic(err)
+		return modeRun{}, err
 	}
 	engine := rules.NewEngine(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
-	return engine.RunGame(engine.NewGame(configs), agents)
+	g := engine.NewGame(configs)
+	return modeRun{game: g, result: engine.RunGame(g, agents)}, nil
 }
 
 func countCastsAndResolves(result *rules.GameResult) (casts, resolves int) {
