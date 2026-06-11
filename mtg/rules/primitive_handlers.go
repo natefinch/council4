@@ -847,6 +847,19 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 	if len(templates) == 0 {
 		return false
 	}
+	// Source-tied durations require the resolving ability to come from a
+	// battlefield permanent (an activated or triggered ability).  Spell sources
+	// are not permanents, so a source-tied duration would be immediately stale.
+	// Fail closed here rather than silently creating a permanent-duration effect.
+	if duration == game.DurationForAsLongAsSourceOnBattlefield ||
+		duration == game.DurationForAsLongAsYouControlSource {
+		if obj.Kind != game.StackActivatedAbility && obj.Kind != game.StackTriggeredAbility {
+			return false
+		}
+		if _, ok := permanentByObjectID(g, obj.SourceID); !ok {
+			return false
+		}
+	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	timestamp := game.Timestamp(g.IDGen.Next())
 	applied := false

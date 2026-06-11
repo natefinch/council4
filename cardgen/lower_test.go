@@ -8369,3 +8369,158 @@ func TestLowerCreatureDiesRegressionStillWorks(t *testing.T) {
 		t.Fatalf("trigger event = %v, want EventPermanentDied", trigger.Trigger.Pattern.Event)
 	}
 }
+
+// --- Issue #225: source-tied control durations ---
+
+// TestLowerGainControlForAsLongAsYouControlSourceCardName checks that an
+// activated ability whose body is "Gain control of target creature for as long
+// as you control [CardName]." lowers to DurationForAsLongAsYouControlSource.
+func TestLowerGainControlForAsLongAsYouControlSourceCardName(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Merieke Ri Berit",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Wizard",
+		OracleText: "{T}: Gain control of target creature for as long as you control Merieke Ri Berit.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsYouControlSource)
+}
+
+// TestLowerGainControlForAsLongAsYouControlThis checks the "for as long as
+// you control this [type]" self-referential variant.
+func TestLowerGainControlForAsLongAsYouControlThis(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Control Source",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Wizard",
+		OracleText: "{T}: Gain control of target creature for as long as you control this creature.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsYouControlSource)
+}
+
+// TestLowerGainControlAsLongAsSourceOnBattlefield checks the "as long as this
+// [type] remains on the battlefield" variant for single-effect spells.
+func TestLowerGainControlAsLongAsSourceOnBattlefield(t *testing.T) {
+	t.Parallel()
+	// Simulate an enchantment that gives control as long as it's on the
+	// battlefield, represented as a loyalty ability for simplicity.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Control Aura",
+		Layout:     "normal",
+		TypeLine:   "Planeswalker — Test",
+		OracleText: "−2: Gain control of target creature as long as this planeswalker remains on the battlefield.",
+	})
+	if len(face.LoyaltyAbilities) != 1 {
+		t.Fatalf("loyalty abilities = %d, want 1", len(face.LoyaltyAbilities))
+	}
+	mode := face.LoyaltyAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsSourceOnBattlefield)
+}
+
+// TestGenerateExecutableCardSourceGainControlForAsLongAsYouControlRenders
+// verifies that the rendered Go source contains DurationForAsLongAsYouControlSource.
+func TestGenerateExecutableCardSourceGainControlForAsLongAsYouControlRenders(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Merieke Ri Berit",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Wizard",
+		OracleText: "{T}: Gain control of target creature for as long as you control Merieke Ri Berit.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "merieke.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.LayerControl",
+		"NewController: opt.Val(game.Player1)",
+		"game.DurationForAsLongAsYouControlSource",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceGainControlSourceOnBattlefieldRenders
+// verifies that the rendered Go source contains DurationForAsLongAsSourceOnBattlefield.
+func TestGenerateExecutableCardSourceGainControlSourceOnBattlefieldRenders(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Control Aura",
+		Layout:     "normal",
+		TypeLine:   "Planeswalker — Test",
+		OracleText: "−2: Gain control of target creature as long as this planeswalker remains on the battlefield.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "control_aura.go", source, parser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.LayerControl",
+		"NewController: opt.Val(game.Player1)",
+		"game.DurationForAsLongAsSourceOnBattlefield",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+// TestLowerGainControlSourceTiedDurationRejectsOtherDurations ensures that
+// unrecognized source-tied duration phrases remain fail-closed.
+func TestLowerGainControlSourceTiedDurationRejectsOtherDurations(t *testing.T) {
+	t.Parallel()
+	// "for as long as that creature is enchanted" is attachment-dependent and
+	// must remain unsupported.
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Rootwater Matriarch",
+		Layout:     "normal",
+		TypeLine:   "Creature — Merfolk",
+		OracleText: "{T}: Gain control of target creature for as long as that creature is enchanted.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for attachment-dependent duration, got none")
+	}
+}

@@ -4004,6 +4004,10 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 		return "game.DurationUntilEndOfTurn", nil
 	case game.DurationUntilEndOfYourNextTurn:
 		return "game.DurationUntilEndOfYourNextTurn", nil
+	case game.DurationForAsLongAsSourceOnBattlefield:
+		return "game.DurationForAsLongAsSourceOnBattlefield", nil
+	case game.DurationForAsLongAsYouControlSource:
+		return "game.DurationForAsLongAsYouControlSource", nil
 	default:
 		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
 	}
