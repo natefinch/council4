@@ -18,6 +18,13 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 	if !ok {
 		return
 	}
+	// Snapshot the resolving spell's face characteristics into LKI before
+	// effects run so that protection checks against the source can find the
+	// correct face even after the object has been removed from the stack.
+	if obj.Kind == game.StackSpell && obj.ID != 0 {
+		snapshot := snapshotStackSpell(g, obj)
+		rememberLastKnown(g, &snapshot)
+	}
 	result := e.resolveStackObjectWithChoices(g, obj, agents, log)
 	if obj.Kind == game.StackSpell && spellResolved(result) {
 		emitEvent(g, game.Event{

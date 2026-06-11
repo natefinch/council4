@@ -5,7 +5,9 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -258,8 +260,54 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 			v.add(faceName, appendPath(path, "TimeCounters"), CardDefIssueInvalidKeywordAbility, "suspend time counters must be positive")
 		}
 	case ProtectionKeyword:
-		if len(keyword.FromColors) == 0 {
-			v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility, "protection needs at least one protected color")
+		// Count how many mutually exclusive predicate groups are set.
+		predicateCount := 0
+		if len(keyword.FromColors) > 0 {
+			predicateCount++
+		}
+		if len(keyword.FromTypes) > 0 {
+			predicateCount++
+		}
+		if len(keyword.FromSubtypes) > 0 {
+			predicateCount++
+		}
+		if keyword.Multicolored {
+			predicateCount++
+		}
+		if keyword.Monocolored {
+			predicateCount++
+		}
+		if keyword.Everything {
+			predicateCount++
+		}
+		if keyword.EachColor {
+			predicateCount++
+		}
+		if predicateCount == 0 {
+			v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility, "protection needs at least one protected predicate")
+		} else if predicateCount > 1 {
+			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "protection must use exactly one predicate group (mixed predicates are not supported)")
+		}
+		// Validate that FromSubtypes values are known creature or land subtypes.
+		for _, sub := range keyword.FromSubtypes {
+			if !isKnownProtectionSubtype(sub) {
+				v.add(faceName, appendPath(path, "FromSubtypes"), CardDefIssueInvalidKeywordAbility,
+					fmt.Sprintf("unknown protection subtype %q", string(sub)))
+			}
+		}
+		// Validate that FromTypes values are known renderable card types.
+		for _, t := range keyword.FromTypes {
+			if !isKnownProtectionCardType(t) {
+				v.add(faceName, appendPath(path, "FromTypes"), CardDefIssueInvalidKeywordAbility,
+					fmt.Sprintf("unknown protection card type %q", string(t)))
+			}
+		}
+		// Validate that FromColors values are known magic colors.
+		for _, c := range keyword.FromColors {
+			if !isKnownProtectionColor(c) {
+				v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility,
+					fmt.Sprintf("unknown protection color %q", string(c)))
+			}
 		}
 	case ToxicKeyword:
 		if keyword.Amount <= 0 {
@@ -618,6 +666,8 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.RequiredTypesAny = nil
 		unsupported.ExcludedTypes = nil
 		if pattern.Event == EventSpellCast {
+			unsupported.Supertypes = nil
+			unsupported.SubtypesAny = nil
 			unsupported.ColorsAny = nil
 			unsupported.Colorless = false
 			unsupported.Multicolored = false
@@ -632,6 +682,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.RequireKickerPaid && pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "RequireKickerPaid"), CardDefIssueInvalidSelection, "kicker-paid trigger filter is only supported for spell-cast events")
+	}
+	if pattern.RequireHistoric && pattern.Event != EventSpellCast {
+		v.add(faceName, appendPath(path, "RequireHistoric"), CardDefIssueInvalidSelection, "historic trigger filter is only supported for spell-cast events")
 	}
 	if pattern.MatchFromZone && pattern.FromZone == zone.None {
 		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter must set a source zone")
@@ -739,4 +792,35 @@ func appendPath(parent, child string) string {
 		return child
 	}
 	return parent + "." + child
+}
+
+// isKnownProtectionSubtype reports whether sub is a creature or land subtype
+// that the renderer can emit (via types.KnownSubtypeForType).
+func isKnownProtectionSubtype(sub types.Sub) bool {
+	return types.KnownSubtypeForType(types.Creature, sub) ||
+		types.KnownSubtypeForType(types.Land, sub)
+}
+
+// isKnownProtectionCardType reports whether t is a card type the renderer can
+// serialise. Mirrors the set supported by cardgen.cardTypeLiteral.
+func isKnownProtectionCardType(t types.Card) bool {
+	switch t {
+	case types.Land, types.Creature, types.Artifact, types.Enchantment,
+		types.Instant, types.Sorcery, types.Planeswalker, types.Battle,
+		types.Kindred, types.Plane, types.Dungeon, types.Phenomenon,
+		types.Scheme, types.Vanguard, types.Conspiracy:
+		return true
+	default:
+		return false
+	}
+}
+
+// isKnownProtectionColor reports whether c is one of the five Magic colors.
+func isKnownProtectionColor(c color.Color) bool {
+	switch c {
+	case color.White, color.Blue, color.Black, color.Red, color.Green:
+		return true
+	default:
+		return false
+	}
 }

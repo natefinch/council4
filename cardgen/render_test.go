@@ -555,7 +555,7 @@ func TestRenderInstructionEnvelope(t *testing.T) {
 	}
 	for _, want := range []string{
 		"game.CounterObject",
-		"PublishResult: \"countered\"",
+		"PublishResult: game.ResultKey(\"countered\")",
 		"ResultGate: opt.Val(game.InstructionResultGate",
 		"Key: \"unless-paid\"",
 		"Succeeded: game.TriFalse",
@@ -1374,6 +1374,28 @@ func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
 			wantParts: []string{"CardSelection:", "ManaValue:", "compare.GreaterOrEqual", "Value: 5"},
 		},
 		{
+			name: "Spirit or Arcane spell",
+			pattern: game.TriggerPattern{
+				Event:      game.EventSpellCast,
+				Controller: game.TriggerControllerYou,
+				CardSelection: game.Selection{
+					SubtypesAny: []types.Sub{types.Spirit, types.Arcane},
+				},
+			},
+			wantParts: []string{"CardSelection:", "SubtypesAny:", `types.Sub("Spirit")`, `types.Sub("Arcane")`},
+		},
+		{
+			name: "legendary spell",
+			pattern: game.TriggerPattern{
+				Event:      game.EventSpellCast,
+				Controller: game.TriggerControllerYou,
+				CardSelection: game.Selection{
+					Supertypes: []types.Super{types.Legendary},
+				},
+			},
+			wantParts: []string{"CardSelection:", "Supertypes:", "types.Legendary"},
+		},
+		{
 			name: "kicked spell",
 			pattern: game.TriggerPattern{
 				Event:             game.EventSpellCast,
@@ -1381,6 +1403,15 @@ func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
 				RequireKickerPaid: true,
 			},
 			wantParts: []string{"RequireKickerPaid: true"},
+		},
+		{
+			name: "historic spell",
+			pattern: game.TriggerPattern{
+				Event:           game.EventSpellCast,
+				Controller:      game.TriggerControllerYou,
+				RequireHistoric: true,
+			},
+			wantParts: []string{"RequireHistoric: true"},
 		},
 		{
 			name: "spell from graveyard",
@@ -1546,10 +1577,10 @@ func TestRenderTriggerPatternRejectsUnsupportedCardSelectionFields(t *testing.T)
 	pattern := game.TriggerPattern{
 		Event: game.EventSpellCast,
 		CardSelection: game.Selection{
-			Supertypes: []types.Super{types.Legendary},
+			Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2}),
 		},
 	}
 	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
-		t.Fatal("expected error: Supertypes is unsupported in CardSelection")
+		t.Fatal("expected error: Power is unsupported in CardSelection")
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -1562,32 +1563,186 @@ func compileKeywordParameter(tokens []Token, keyword string, start int) (paramet
 }
 
 func compileProtectionParameter(tokens []Token, start int) (parameter string, end int, ok bool) {
-	if start+1 >= len(tokens) ||
-		!equalWord(tokens[start], "from") ||
-		!isColorWord(tokens[start+1]) {
+	if start >= len(tokens) || !equalWord(tokens[start], "from") {
 		return "", start, false
 	}
-	colors := []string{strings.ToLower(tokens[start+1].Text)}
-	end = start + 2
-	for end < len(tokens) {
-		next := end
-		if tokens[next].Kind == Comma {
-			next++
-		} else if !equalWord(tokens[next], "and") {
-			break
-		}
-		if next < len(tokens) && equalWord(tokens[next], "and") {
-			next++
-		}
-		if next+1 >= len(tokens) ||
-			!equalWord(tokens[next], "from") ||
-			!isColorWord(tokens[next+1]) {
-			break
-		}
-		colors = append(colors, strings.ToLower(tokens[next+1].Text))
-		end = next + 2
+	if start+1 >= len(tokens) {
+		return "", start, false
 	}
-	return strings.Join(colors, ","), end, true
+
+	// Boolean / special single-clause predicates that don't repeat.
+	if equalWord(tokens[start+1], "everything") {
+		return "everything", start + 2, true
+	}
+	if equalWord(tokens[start+1], "multicolored") {
+		return "multicolored", start + 2, true
+	}
+	if equalWord(tokens[start+1], "monocolored") {
+		return "monocolored", start + 2, true
+	}
+	// "from each color" or "from all colors"
+	if equalWord(tokens[start+1], "each") && start+2 < len(tokens) && equalWord(tokens[start+2], "color") {
+		return "eachcolor", start + 3, true
+	}
+	if equalWord(tokens[start+1], "all") && start+2 < len(tokens) &&
+		(equalWord(tokens[start+2], "colors") || equalWord(tokens[start+2], "color")) {
+		return "eachcolor", start + 3, true
+	}
+
+	// Colors: keep existing bare "black,red" format for backward compatibility.
+	if isColorWord(tokens[start+1]) {
+		colors := []string{strings.ToLower(tokens[start+1].Text)}
+		end = start + 2
+		for end < len(tokens) {
+			next := end
+			if tokens[next].Kind == Comma {
+				next++
+			} else if !equalWord(tokens[next], "and") {
+				break
+			}
+			if next < len(tokens) && equalWord(tokens[next], "and") {
+				next++
+			}
+			if next+1 >= len(tokens) ||
+				!equalWord(tokens[next], "from") ||
+				!isColorWord(tokens[next+1]) {
+				break
+			}
+			colors = append(colors, strings.ToLower(tokens[next+1].Text))
+			end = next + 2
+		}
+		return strings.Join(colors, ","), end, true
+	}
+
+	// Card types: "from artifacts", "from creatures", etc.
+	if ct, ok2 := protectionCardType(tokens[start+1]); ok2 {
+		cardTypes := []string{ct}
+		end = start + 2
+		for end < len(tokens) {
+			next := end
+			if tokens[next].Kind == Comma {
+				next++
+			} else if !equalWord(tokens[next], "and") {
+				break
+			}
+			if next < len(tokens) && equalWord(tokens[next], "and") {
+				next++
+			}
+			if next+1 >= len(tokens) || !equalWord(tokens[next], "from") {
+				break
+			}
+			ct2, ok3 := protectionCardType(tokens[next+1])
+			if !ok3 {
+				break
+			}
+			cardTypes = append(cardTypes, ct2)
+			end = next + 2
+		}
+		return "types:" + strings.Join(cardTypes, ","), end, true
+	}
+
+	// Creature/land subtypes: "from Dragons", "from Humans", etc.
+	if sub, ok2 := protectionSubtype(tokens[start+1]); ok2 {
+		subtypes := []string{sub}
+		end = start + 2
+		for end < len(tokens) {
+			next := end
+			if tokens[next].Kind == Comma {
+				next++
+			} else if !equalWord(tokens[next], "and") {
+				break
+			}
+			if next < len(tokens) && equalWord(tokens[next], "and") {
+				next++
+			}
+			if next+1 >= len(tokens) || !equalWord(tokens[next], "from") {
+				break
+			}
+			sub2, ok3 := protectionSubtype(tokens[next+1])
+			if !ok3 {
+				break
+			}
+			subtypes = append(subtypes, sub2)
+			end = next + 2
+		}
+		return "subtypes:" + strings.Join(subtypes, ","), end, true
+	}
+
+	return "", start, false
+}
+
+// protectionCardType reports whether token is a known card type word used in
+// protection and returns the canonical lowercase singular name.
+func protectionCardType(token Token) (string, bool) {
+	if token.Kind != Word {
+		return "", false
+	}
+	word := strings.ToLower(token.Text)
+	switch word {
+	case "artifact", "artifacts":
+		return "artifact", true
+	case "creature", "creatures":
+		return "creature", true
+	case "enchantment", "enchantments":
+		return "enchantment", true
+	case "instant", "instants":
+		return "instant", true
+	case "sorcery", "sorceries":
+		return "sorcery", true
+	case "planeswalker", "planeswalkers":
+		return "planeswalker", true
+	case "land", "lands":
+		return "land", true
+	default:
+		return "", false
+	}
+}
+
+// protectionSubtype reports whether token is a recognized creature or land
+// subtype used in protection and returns the canonical subtype string.
+func protectionSubtype(token Token) (string, bool) {
+	if token.Kind != Word {
+		return "", false
+	}
+	word := strings.TrimSpace(token.Text)
+	// Title-case candidates for KnownSubtypeForType lookup.
+	candidates := []string{word}
+	if word != "" {
+		title := strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+		candidates = append(candidates, title)
+	}
+	// "ves" → "f" (Werewolves → Werewolf, Elves → Elf).
+	if stem, ok := strings.CutSuffix(word, "ves"); ok && len(stem) > 1 {
+		for _, suffix := range []string{"f", "fe"} {
+			candidate := stem + suffix
+			candidates = append(candidates,
+				candidate,
+				strings.ToUpper(candidate[:1])+strings.ToLower(candidate[1:]),
+			)
+		}
+	}
+	// "ies" → "y" (Pixies → Pixy, etc.)
+	if stem, ok := strings.CutSuffix(word, "ies"); ok && stem != "" {
+		candidate := stem + "y"
+		candidates = append(candidates,
+			candidate,
+			strings.ToUpper(candidate[:1])+strings.ToLower(candidate[1:]),
+		)
+	}
+	// Also try stripping a trailing 's' for plural forms.
+	if singular, ok := strings.CutSuffix(word, "s"); ok && len(singular) > 1 {
+		title := strings.ToUpper(singular[:1]) + strings.ToLower(singular[1:])
+		candidates = append(candidates, singular, title)
+	}
+	for _, candidate := range candidates {
+		sub := types.Sub(candidate)
+		if types.KnownSubtypeForType(types.Creature, sub) ||
+			types.KnownSubtypeForType(types.Land, sub) {
+			// Return the canonical form (as used by the types package).
+			return string(sub), true
+		}
+	}
+	return "", false
 }
 
 func isColorWord(token Token) bool {

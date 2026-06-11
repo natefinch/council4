@@ -516,17 +516,19 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	stormCopies := stormCopyCount(g, spellDef)
 	pushSpellToStack(g, obj, game.Event{
-		SourceID:      cast.CardID,
-		StackObjectID: obj.ID,
-		Controller:    playerID,
-		CardID:        cast.CardID,
-		Face:          cast.Face,
-		CardTypes:     cardTypes(spellDef),
-		Colors:        spellColors(spellDef),
-		ManaValue:     opt.Val(stackManaValue(spellDef, cast.XValue)),
-		KickerPaid:    cast.KickerPaid,
-		FromZone:      sourceZone,
-		ToZone:        zone.Stack,
+		SourceID:       cast.CardID,
+		StackObjectID:  obj.ID,
+		Controller:     playerID,
+		CardID:         cast.CardID,
+		Face:           cast.Face,
+		CardTypes:      cardTypes(spellDef),
+		CardSupertypes: cardSupertypes(spellDef),
+		CardSubtypes:   cardSubtypes(spellDef),
+		Colors:         spellColors(spellDef),
+		ManaValue:      opt.Val(stackManaValue(spellDef, cast.XValue)),
+		KickerPaid:     cast.KickerPaid,
+		FromZone:       sourceZone,
+		ToZone:         zone.Stack,
 	})
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
@@ -581,16 +583,18 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		SourceZone:          sourceZone,
 	}
 	pushSpellToStack(g, obj, game.Event{
-		SourceID:      cast.CardID,
-		StackObjectID: obj.ID,
-		Controller:    playerID,
-		CardID:        cast.CardID,
-		Face:          game.FaceFront,
-		CardTypes:     cardTypes(spellDef),
-		Colors:        spellColors(spellDef),
-		ManaValue:     opt.Val(stackManaValue(spellDef, 0)),
-		FromZone:      sourceZone,
-		ToZone:        zone.Stack,
+		SourceID:       cast.CardID,
+		StackObjectID:  obj.ID,
+		Controller:     playerID,
+		CardID:         cast.CardID,
+		Face:           game.FaceFront,
+		CardTypes:      cardTypes(spellDef),
+		CardSupertypes: cardSupertypes(spellDef),
+		CardSubtypes:   cardSubtypes(spellDef),
+		Colors:         spellColors(spellDef),
+		ManaValue:      opt.Val(stackManaValue(spellDef, 0)),
+		FromZone:       sourceZone,
+		ToZone:         zone.Stack,
 	})
 	return true
 }
@@ -652,7 +656,7 @@ func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellDef *ga
 		target.Owner == owner &&
 		permanentHasType(g, target, types.Creature) &&
 		!permanentHasSubtype(g, target, types.Human) &&
-		!targetProtectedFromSource(g, playerID, spellDef, game.PermanentTarget(targetID))
+		!targetProtectedFromSource(g, playerID, spellDef, 0, game.PermanentTarget(targetID))
 }
 
 func mutateAlternativeCost(manaCost cost.Mana) cost.Alternative {
@@ -757,19 +761,21 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	g.Stack.Push(obj)
 	emitTargetEvents(g, obj)
 	emitEvent(g, game.Event{
-		Kind:          game.EventSpellCast,
-		SourceID:      sourceID,
-		StackObjectID: obj.ID,
-		Controller:    playerID,
-		CardID:        permanent.CardInstanceID,
-		Face:          game.FaceAlternate,
-		PermanentID:   permanent.ObjectID,
-		TokenDef:      permanent.TokenDef,
-		CardTypes:     cardTypes(spellDef),
-		Colors:        spellColors(spellDef),
-		ManaValue:     opt.Val(stackManaValue(spellDef, cast.XValue)),
-		FromZone:      zone.Battlefield,
-		ToZone:        zone.Stack,
+		Kind:           game.EventSpellCast,
+		SourceID:       sourceID,
+		StackObjectID:  obj.ID,
+		Controller:     playerID,
+		CardID:         permanent.CardInstanceID,
+		Face:           game.FaceAlternate,
+		PermanentID:    permanent.ObjectID,
+		TokenDef:       permanent.TokenDef,
+		CardTypes:      cardTypes(spellDef),
+		CardSupertypes: cardSupertypes(spellDef),
+		CardSubtypes:   cardSubtypes(spellDef),
+		Colors:         spellColors(spellDef),
+		ManaValue:      opt.Val(stackManaValue(spellDef, cast.XValue)),
+		FromZone:       zone.Battlefield,
+		ToZone:         zone.Stack,
 	})
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)

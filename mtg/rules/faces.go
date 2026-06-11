@@ -86,6 +86,14 @@ func cardTypes(def *game.CardDef) []types.Card {
 	return append([]types.Card(nil), def.Types...)
 }
 
+func cardSupertypes(def *game.CardDef) []types.Super {
+	return append([]types.Super(nil), def.Supertypes...)
+}
+
+func cardSubtypes(def *game.CardDef) []types.Sub {
+	return append([]types.Sub(nil), def.Subtypes...)
+}
+
 // spellColors returns the colors of a spell's effective face for use in
 // EventSpellCast, paralleling cardTypes for type-based filters.
 func spellColors(def *game.CardDef) []color.Color {
