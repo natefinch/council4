@@ -1412,6 +1412,40 @@ func TestActivatedAbilityRemovesSourceCounterAsCost(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityRemovesMultipleSourceCountersAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalRemoveCounter,
+			Text:        "Remove two charge counters from this creature",
+			Amount:      2,
+			CounterKind: counter.Charge,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	source.Counters.Add(counter.Charge, 1)
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("counter-removal ability was legal with too few counters")
+	}
+	source.Counters.Add(counter.Charge, 2)
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(counter-removal ability) = false, want true")
+	}
+	if got := source.Counters.Get(counter.Charge); got != 1 {
+		t.Fatalf("charge counters = %d, want 1 after payment", got)
+	}
+}
+
 func TestManaAbilityUntapsSourceAsCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -29,6 +29,8 @@ const (
 	Brick                        // Brick counter
 	Page                         // Page counter
 	Enlightened                  // Enlightened counter
+	Oil                          // Oil counter
+	Blood                        // Blood counter
 	Indestructible               // Indestructible counter
 	Deathtouch                   // Deathtouch counter
 	Flying                       // Flying counter
@@ -91,6 +93,10 @@ func (k Kind) String() string {
 		return "page"
 	case Enlightened:
 		return "enlightened"
+	case Oil:
+		return "oil"
+	case Blood:
+		return "blood"
 	case Indestructible:
 		return "indestructible"
 	case Deathtouch:
