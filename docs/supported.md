@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,853
+Cards supported: 3,856
 
 - +2 Mace
 - Aang, Air Nomad
@@ -996,6 +996,7 @@ Cards supported: 3,853
 - Endless Cockroaches
 - Enforcer Griffin
 - Engulfing Eruption
+- Enigma Eidolon
 - Enlightened Ascetic
 - Enlisted Wurm
 - Enormous Baloth
@@ -2563,6 +2564,7 @@ Cards supported: 3,853
 - Revelsong Horn
 - Reviving Melody
 - Revolutionist
+- Rewards of Diversity
 - Reya Dawnbringer
 - Rhet-Tomb Mystic
 - Rhino
@@ -3361,6 +3363,7 @@ Cards supported: 3,853
 - Tomb Trawler
 - Tombstalker
 - Tome Raider
+- Tome of the Guildpact
 - Tonic Peddler
 - Tor Giant
 - Tor Wauki
