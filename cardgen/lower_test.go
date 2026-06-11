@@ -5838,6 +5838,46 @@ func TestLowerThenJoinedActivatedAbilitySequence(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedAbilitySequenceWithDelayedSelfSacrifice(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Elementalist",
+		Layout:     "normal",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "{U}{U}: Target creature you control gains flying until end of turn. Sacrifice it at the beginning of the next end step.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("got %d activated abilities, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want one target and two instructions", mode)
+	}
+	grant, grantOK := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+	delayed, delayedOK := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !grantOK || !delayedOK {
+		t.Fatalf(
+			"primitives = %T, %T; want game.ApplyContinuous, game.CreateDelayedTrigger",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+		)
+	}
+	if !grant.Object.Exists || grant.Object.Val.TargetIndex() != 0 {
+		t.Fatalf("grant object = %+v, want target 0", grant.Object)
+	}
+	if delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep ||
+		len(delayed.Trigger.Content.Modes) != 1 ||
+		len(delayed.Trigger.Content.Modes[0].Sequence) != 1 {
+		t.Fatalf("delayed trigger = %+v, want next-end-step sacrifice", delayed)
+	}
+	sacrifice, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Sacrifice)
+	if !ok || sacrifice.Object.TargetIndex() != 0 {
+		t.Fatalf("delayed content = %#v, want target permanent sacrifice", delayed.Trigger.Content)
+	}
+}
+
 func TestLowerThenJoinedLoyaltyAbilitySequence(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
