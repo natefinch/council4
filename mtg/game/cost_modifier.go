@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -19,14 +20,17 @@ const (
 
 // CostModifier is a generic-cost increase/reduction/set effect.
 type CostModifier struct {
-	Kind             CostModifierKind
-	Controller       PlayerID
-	MatchCardType    bool
-	CardType         types.Card
-	GenericIncrease  int
-	GenericReduction int
-	SetGeneric       opt.V[int]
-	MinimumGeneric   int
+	Kind               CostModifierKind
+	Controller         PlayerID
+	MatchCardType      bool
+	CardType           types.Card
+	AbilityKeyword     Keyword
+	GenericIncrease    int
+	GenericReduction   int
+	SetGeneric         opt.V[int]
+	SetManaCost        opt.V[cost.Mana]
+	MinimumGeneric     int
+	FirstCycleEachTurn bool
 }
 
 // AttackTax is an additional generic mana cost to attack a player.
