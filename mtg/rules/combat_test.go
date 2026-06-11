@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -2145,6 +2146,138 @@ func addCombatCreaturePermanent(g *game.Game, controller game.PlayerID, keywords
 			KeywordAbilities: game.SimpleKeywords(keywords...),
 		}}},
 	})
+}
+
+func TestProtectionFromColorBlockingEnforced(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+
+	// Attacker has protection from red.
+	pt := game.PT{Value: 2}
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected Attacker",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromColorsStaticAbility(color.Red)},
+	}})
+	// Red blocker — cannot block attacker.
+	redBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Red Creature",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Red},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	// Green blocker — can block.
+	greenBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Green Creature",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Green},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+
+	if canBlockAttacker(g, redBlocker, attacker) {
+		t.Fatal("red creature can block attacker with protection from red, want false")
+	}
+	if !canBlockAttacker(g, greenBlocker, attacker) {
+		t.Fatal("green creature cannot block attacker with protection from red, want true")
+	}
+}
+
+func TestProtectionFromEverythingBlockingEnforced(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+
+	pt := game.PT{Value: 2}
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected Attacker",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromEverythingStaticAbility()},
+	}})
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+
+	if canBlockAttacker(g, blocker, attacker) {
+		t.Fatal("creature can block attacker with protection from everything, want false")
+	}
+}
+
+func TestLegalBlockersExcludesProtectionMatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+
+	pt := game.PT{Value: 2}
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected Attacker",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromColorsStaticAbility(color.Blue)},
+	}})
+	blueBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Blue Blocker",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Blue},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	redBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Red Blocker",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Red},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+
+	legal := legalDeclareBlockersActions(g, game.Player2)
+	for _, act := range legal {
+		payload, ok := act.DeclareBlockersPayload()
+		if !ok {
+			continue
+		}
+		for _, block := range payload.Blockers {
+			if block.Blocker == blueBlocker.ObjectID {
+				t.Fatal("blue blocker appeared in legal block actions but attacker has protection from blue")
+			}
+		}
+	}
+	// Red blocker should be allowed.
+	found := false
+	for _, act := range legal {
+		payload, ok := act.DeclareBlockersPayload()
+		if !ok {
+			continue
+		}
+		for _, block := range payload.Blockers {
+			if block.Blocker == redBlocker.ObjectID {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("red blocker not found in any legal block action, want allowed")
+	}
 }
 
 func addCombatCreaturePermanentWithPower(g *game.Game, controller game.PlayerID, power int, keywords ...game.Keyword) *game.Permanent {

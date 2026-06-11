@@ -527,13 +527,9 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 	if hint != nil && hint.VarName != "" {
 		return hint.VarName, nil
 	}
-	if protectedColors := game.StaticBodyProtectionColors(body); len(protectedColors) > 0 {
-		renderedColors, err := renderColorArguments(ctx, protectedColors)
-		if err != nil {
-			return "", err
-		}
-		if reflect.DeepEqual(*body, game.ProtectionFromColorsStaticAbility(protectedColors...)) {
-			return fmt.Sprintf("game.ProtectionFromColorsStaticAbility(%s)", renderedColors), nil
+	if prot, ok := game.StaticBodyProtectionKeyword(body); ok {
+		if s, err := r.renderProtectionStaticAbility(ctx, body, prot); s != "" || err != nil {
+			return s, err
 		}
 	}
 	if target, ok := game.StaticBodyEnchantTarget(body); ok &&
@@ -600,9 +596,61 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 	return structLit("game.StaticAbility", fields), nil
 }
 
+// renderProtectionStaticAbility renders a ProtectionKeyword static ability as
+// a factory call if it matches the canonical factory form. Returns ("", nil)
+// when the body does not match any canonical factory, leaving the caller to
+// fall through to the generic struct-literal renderer.
+func (Renderer) renderProtectionStaticAbility(ctx *renderCtx, body *game.StaticAbility, prot game.ProtectionKeyword) (string, error) {
+	switch {
+	case prot.Everything:
+		if reflect.DeepEqual(*body, game.ProtectionFromEverythingStaticAbility()) {
+			return "game.ProtectionFromEverythingStaticAbility()", nil
+		}
+	case prot.EachColor:
+		if reflect.DeepEqual(*body, game.ProtectionFromEachColorStaticAbility()) {
+			return "game.ProtectionFromEachColorStaticAbility()", nil
+		}
+	case prot.Multicolored:
+		if reflect.DeepEqual(*body, game.ProtectionFromMulticoloredStaticAbility()) {
+			return "game.ProtectionFromMulticoloredStaticAbility()", nil
+		}
+	case prot.Monocolored:
+		if reflect.DeepEqual(*body, game.ProtectionFromMonocoloredStaticAbility()) {
+			return "game.ProtectionFromMonocoloredStaticAbility()", nil
+		}
+	case len(prot.FromTypes) > 0:
+		renderedTypes, err := renderCardTypeArguments(ctx, prot.FromTypes)
+		if err != nil {
+			return "", err
+		}
+		if reflect.DeepEqual(*body, game.ProtectionFromTypesStaticAbility(prot.FromTypes...)) {
+			return fmt.Sprintf("game.ProtectionFromTypesStaticAbility(%s)", renderedTypes), nil
+		}
+	case len(prot.FromSubtypes) > 0:
+		renderedSubtypes, err := renderSubtypeArguments(ctx, prot.FromSubtypes)
+		if err != nil {
+			return "", err
+		}
+		if reflect.DeepEqual(*body, game.ProtectionFromSubtypesStaticAbility(prot.FromSubtypes...)) {
+			return fmt.Sprintf("game.ProtectionFromSubtypesStaticAbility(%s)", renderedSubtypes), nil
+		}
+	case len(prot.FromColors) > 0:
+		renderedColors, err := renderColorArguments(ctx, prot.FromColors)
+		if err != nil {
+			return "", err
+		}
+		if reflect.DeepEqual(*body, game.ProtectionFromColorsStaticAbility(prot.FromColors...)) {
+			return fmt.Sprintf("game.ProtectionFromColorsStaticAbility(%s)", renderedColors), nil
+		}
+	default:
+		// Unknown predicate combination — fall through to generic rendering.
+	}
+	return "", nil
+}
+
 func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.ContinuousEffect) (string, error) {
 	var fields []string
-	if len(effect.RemoveKeywords) > 0 || len(effect.AddAbilities) > 0 {
+	if len(effect.RemoveKeywords) > 0 {
 		return "", errors.New("render: unsupported ability-layer continuous effect fields")
 	}
 	if effect.AffectedSource && !effect.Group.Empty() {
@@ -669,6 +717,21 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 			elements = append(elements, literal+",")
 		}
 		fields = append(fields, sliceField("AddKeywords", "game.Keyword", elements))
+	}
+	if len(effect.AddAbilities) > 0 {
+		elements := make([]string, 0, len(effect.AddAbilities))
+		for _, ability := range effect.AddAbilities {
+			staticBody, ok := ability.(game.StaticAbility)
+			if !ok {
+				return "", fmt.Errorf("render: AddAbilities element is not a StaticAbility: %T", ability)
+			}
+			rendered, err := r.renderStaticAbility(ctx, &staticBody, nil)
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("AddAbilities", "game.Ability", elements))
 	}
 	return structLit("game.ContinuousEffect", fields), nil
 }
@@ -2685,6 +2748,32 @@ func renderColorArguments(ctx *renderCtx, colors []color.Color) (string, error) 
 			return "", err
 		}
 		literals = append(literals, literal)
+	}
+	return strings.Join(literals, ", "), nil
+}
+
+func renderCardTypeArguments(ctx *renderCtx, cardTypes []types.Card) (string, error) {
+	ctx.need(importTypes)
+	literals := make([]string, 0, len(cardTypes))
+	for _, t := range cardTypes {
+		lit, err := cardTypeLiteral(t)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, lit)
+	}
+	return strings.Join(literals, ", "), nil
+}
+
+func renderSubtypeArguments(ctx *renderCtx, subtypes []types.Sub) (string, error) {
+	ctx.need(importTypes)
+	literals := make([]string, 0, len(subtypes))
+	for _, sub := range subtypes {
+		lit := SubtypeToLiteral(string(sub), []string{"Creature", "Land"})
+		if strings.HasPrefix(lit, "/*") {
+			return "", fmt.Errorf("render: unsupported subtype %q", string(sub))
+		}
+		literals = append(literals, lit)
 	}
 	return strings.Join(literals, ", "), nil
 }

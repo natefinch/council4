@@ -138,7 +138,7 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 	if targetSpecAllowsPlayers(spec) {
 		for playerID := range game.PlayerID(game.NumPlayers) {
 			target := game.PlayerTarget(playerID)
-			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, target) {
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, sourceObjectID, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -146,7 +146,7 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 	if targetSpecAllowsPermanents(spec) {
 		for _, permanent := range g.Battlefield {
 			target := game.PermanentTarget(permanent.ObjectID)
-			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, target) {
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, sourceObjectID, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -279,7 +279,7 @@ func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.
 	}
 	seen := make(map[game.Target]bool, len(targets))
 	for _, target := range targets {
-		if seen[target] || !targetMatchesSpec(g, controller, sourceObjectID, spec, target) || targetProtectedFromSource(g, controller, source, target) {
+		if seen[target] || !targetMatchesSpec(g, controller, sourceObjectID, spec, target) || targetProtectedFromSource(g, controller, source, sourceObjectID, target) {
 			return false
 		}
 		seen[target] = true
@@ -376,7 +376,7 @@ func targetLegalForSpecAtResolution(g *game.Game, controller game.PlayerID, sour
 		return externalChooserCouldChooseTarget(g, controller, source, sourceObjectID, spec, target)
 	}
 	return targetMatchesSpec(g, controller, sourceObjectID, spec, target) &&
-		!targetProtectedFromSource(g, controller, source, target)
+		!targetProtectedFromSource(g, controller, source, sourceObjectID, target)
 }
 
 func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
@@ -964,7 +964,7 @@ func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.Com
 	}
 }
 
-func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, target game.Target) bool {
+func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, target game.Target) bool {
 	if target.Kind != game.TargetPermanent {
 		return false
 	}
@@ -978,6 +978,28 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 	if hasKeyword(g, permanent, game.Hexproof) && effectiveController(g, permanent) != controller {
 		return true
 	}
+	// Use effective source characteristics when the source is a permanent on
+	// the battlefield (CR 702.16c).
+	if sourceObjectID != 0 {
+		if sourcePermanent, ok2 := permanentByObjectID(g, sourceObjectID); ok2 {
+			return permanentProtectedFromPermanentEffective(g, permanent, sourcePermanent)
+		}
+		// Stack spell: use the selected face's characteristics.
+		if stackObj, ok2 := stackObjectByID(g, sourceObjectID); ok2 {
+			if chars, ok3 := stackObjectSourceChars(g, stackObj); ok3 {
+				return permanentProtectedFromChars(g, permanent, chars)
+			}
+		}
+		// LKI fallback: covers departed permanents and resolved spells.
+		if snapshot, ok2 := lastKnownObject(g, sourceObjectID); ok2 {
+			return permanentProtectedFromChars(g, permanent, sourceChars{
+				colors:   snapshot.Colors,
+				types:    snapshot.Types,
+				subtypes: snapshot.Subtypes,
+			})
+		}
+	}
+	// Fall back to the supplied face def (LKI, spell during announcement, etc.).
 	return source != nil && permanentProtectedFromSourceDef(g, permanent, source)
 }
 

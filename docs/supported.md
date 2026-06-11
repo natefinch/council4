@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,898
+Cards supported: 3,933
 
 - +2 Mace
 - Aang, Air Nomad
@@ -104,6 +104,7 @@ Cards supported: 3,898
 - Angel of Retribution
 - Angel of the God-Pharaoh
 - Angel's Mercy
+- Angelic Curator
 - Angelic Overseer
 - Angelic Page
 - Angelic Shield
@@ -225,6 +226,7 @@ Cards supported: 3,898
 - Axiom Engraver
 - Azami, Lady of Scrolls
 - Azorius Cluestone
+- Azorius First-Wing
 - Azorius Guildgate
 - Azorius Knight-Arbiter
 - Azorius Locket
@@ -247,6 +249,7 @@ Cards supported: 3,898
 - Ballroom
 - Bane Alley Blackguard
 - Banehound
+- Baneslayer Angel
 - Barbarian Horde
 - Barbarian Riftcutter
 - Barbary Apes
@@ -294,6 +297,7 @@ Cards supported: 3,898
 - Bee Sting
 - Beeble
 - Behemoth Sledge
+- Beloved Chaplain
 - Benalish Emissary
 - Benalish Heralds
 - Benalish Knight
@@ -608,6 +612,7 @@ Cards supported: 3,898
 - Colossal Majesty
 - Colossapede
 - Colossodon Yearling
+- Commander Eesha
 - Commercial District
 - Compulsion
 - Concealed Courtyard
@@ -868,6 +873,7 @@ Cards supported: 3,898
 - Dragon's Presence
 - Dragon-Style Twins
 - Dragonskull Summit
+- Dragonstalker
 - Drain the Well
 - Drake
 - Drake
@@ -981,6 +987,7 @@ Cards supported: 3,898
 - Elfhame Palace
 - Elfhame Wurm
 - Elite Arrester
+- Elite Inquisitor
 - Elite Vanguard
 - Elixir of Vitality
 - Elk
@@ -1004,6 +1011,7 @@ Cards supported: 3,898
 - Enatu Golem
 - Enchantress's Presence
 - Endless Cockroaches
+- Enemy of the Guildpact
 - Enforcer Griffin
 - Engulfing Eruption
 - Enigma Eidolon
@@ -1021,6 +1029,7 @@ Cards supported: 3,898
 - Esper Cormorants
 - Essence Scatter
 - Essence Warden
+- Etched Champion
 - Etched Cornfield
 - Eternal Warrior
 - Eternal Witness
@@ -1063,6 +1072,7 @@ Cards supported: 3,898
 - Faithful Watchdog
 - Falkenrath Reaver
 - Fall of the Gavel
+- Fallen Cleric
 - False Defeat
 - False Mourning
 - False Prophet
@@ -1158,6 +1168,7 @@ Cards supported: 3,898
 - Foot Headquarters
 - Foot Skirmisher
 - Foot Soldiers
+- Foothill Guide
 - Footlight Fiend
 - Force of Savagery
 - Foreboding Ruins
@@ -1367,6 +1378,7 @@ Cards supported: 3,898
 - Grasp of Darkness
 - Grasping Dunes
 - Grasping Longneck
+- Grave Bramble
 - Graveborn
 - Gravedigger
 - Gravelgill Axeshark
@@ -1413,10 +1425,12 @@ Cards supported: 3,898
 - Guardian Lions
 - Guardian of Pilgrims
 - Guardian of Vitu-Ghazi
+- Guardian of the Guildpact
 - Guardians of Akrasa
 - Guardians of Meletis
 - Guenhwyvar
 - Guidelight Synergist
+- Guildscorn Ward
 - Guma
 - Gurmag Angler
 - Gurmag Swiftwing
@@ -1503,6 +1517,7 @@ Cards supported: 3,898
 - Hitchclaw Recluse
 - Hobgoblin Dragoon
 - Hollowhenge Beast
+- Holy Mantle
 - Holy Strength
 - Homarid Explorer
 - Homunculus
@@ -1511,6 +1526,7 @@ Cards supported: 3,898
 - Honey Mammoth
 - Honored Hydra
 - Hooting Mandrills
+- Horizon Drake
 - Horizon Scholar
 - Horned Turtle
 - Hornet
@@ -1648,6 +1664,7 @@ Cards supported: 3,898
 - Intrepid Rabbit
 - Invisible Stalker
 - Invoke the Firemind
+- Iridescent Angel
 - Iroas's Champion
 - Iron Bully
 - Iron Giant
@@ -1967,6 +1984,7 @@ Cards supported: 3,898
 - Markov Patrician
 - Martyr for the Cause
 - Mask of Avacyn
+- Mask of Law and Grace
 - Masked Meower
 - Mass Calcify
 - Mass of Ghouls
@@ -2017,6 +2035,7 @@ Cards supported: 3,898
 - Meteoric Mace
 - Meticulous Archive
 - Midnight Assassin
+- Midnight Duelist
 - Midnight Scavengers
 - Might of Alara
 - Might of Oaks
@@ -2128,6 +2147,7 @@ Cards supported: 3,898
 - Mystic of the Hidden Way
 - Mythic Proportions
 - Nacatl Outlander
+- Nacatl Savage
 - Naga Eternal
 - Naga Oracle
 - Nantuko Calmer
@@ -2135,6 +2155,7 @@ Cards supported: 3,898
 - Narcissism
 - Narrow Escape
 - Narwhal
+- Nath's Buffoon
 - Natural Spring
 - Nature's Ruin
 - Naya Battlemage
@@ -2151,6 +2172,7 @@ Cards supported: 3,898
 - Necropanther
 - Necropede
 - Necrosavant
+- Needlebug
 - Needlepeak Spider
 - Needleshot Gourna
 - Needlethorn Drake
@@ -2463,6 +2485,7 @@ Cards supported: 3,898
 - Prized Griffin
 - Prizefighter Construct
 - Prodigious Growth
+- Progenitus
 - Prophet of Distortion
 - Prophet of the Peak
 - Protomatter Powder
@@ -2623,6 +2646,7 @@ Cards supported: 3,898
 - Rip-Clan Crasher
 - Ripchain Razorkin
 - Ripscale Predator
+- Riptide Biologist
 - Riptide Crab
 - Riptide Turtle
 - Rise Again
@@ -2878,6 +2902,7 @@ Cards supported: 3,898
 - Shepherd of the Flock // Usher to Safety
 - Shepherd of the Lost
 - Shield Mate
+- Shield of Duty and Reason
 - Shimmering Barrier
 - Shimmerscale Drake
 - Shineshadow Snarl
@@ -2894,6 +2919,7 @@ Cards supported: 3,898
 - Shore Keeper
 - Shore Lurker
 - Shorecomber Crab
+- Shoreline Raider
 - Short Bow
 - Short Sword
 - Show of Valor
@@ -3042,6 +3068,7 @@ Cards supported: 3,898
 - Soldier // Soldier
 - Soldier Ally
 - Soldier of the Grey Host
+- Soldier of the Pantheon
 - Somnomancer
 - Sootfeather Flock
 - Soothing Balm
@@ -3123,6 +3150,7 @@ Cards supported: 3,898
 - Spirit
 - Spirit
 - Spirit
+- Spirit Mantle
 - Spirit Warrior
 - Spirited Companion
 - Spiritual Guardian
@@ -3197,6 +3225,8 @@ Cards supported: 3,898
 - Stream of Life
 - Streetbreaker Wurm
 - Strength of Cedars
+- Strength of Isolation
+- Strength of Lunacy
 - Strength of Unity
 - Strider Harness
 - Strip Mine
@@ -3299,7 +3329,10 @@ Cards supported: 3,898
 - Tectonic Reformation
 - Teddy Bear
 - Teetering Peaks
+- Tel-Jilad Chosen
+- Tel-Jilad Fallen
 - Tel-Jilad Justice
+- Tel-Jilad Outrider
 - Tempest Drake
 - Tempest of Light
 - Temple Acolyte
@@ -3713,6 +3746,7 @@ Cards supported: 3,898
 - Warlord's Axe
 - Warmth
 - Warpath Ghoul
+- Warren-Scourge Elf
 - Warrior
 - Warrior
 - Warrior
@@ -3845,6 +3879,7 @@ Cards supported: 3,898
 - Yavimaya Barbarian
 - Yavimaya Enchantress
 - Yavimaya Hollow
+- Yavimaya Scion
 - Yavimaya Wurm
 - Yellow Scarves Troops
 - Yeva's Forcemage

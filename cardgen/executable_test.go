@@ -1018,6 +1018,177 @@ func TestGenerateExecutableCardSourceProtectionFromColor(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceProtectionFromEverything(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Angel",
+		Layout:     "normal",
+		TypeLine:   "Creature — Angel",
+		OracleText: "Flying\nProtection from everything",
+		Power:      new("5"),
+		Toughness:  new("5"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.ProtectionFromEverythingStaticAbility()") {
+		t.Fatalf("source missing ProtectionFromEverythingStaticAbility:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceProtectionFromTypes(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Protection from artifacts",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.ProtectionFromTypesStaticAbility(types.Artifact)") {
+		t.Fatalf("source missing ProtectionFromTypesStaticAbility:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceProtectionFromSubtypes(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Dragon Hunter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Warrior",
+		OracleText: "Protection from Dragons",
+		Power:      new("2"),
+		Toughness:  new("1"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.ProtectionFromSubtypesStaticAbility(types.Dragon)") {
+		t.Fatalf("source missing ProtectionFromSubtypesStaticAbility:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceProtectionFromEachColor(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Etched Champion",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Soldier",
+		OracleText: "Metalcraft — As long as you control three or more artifacts, this creature has protection from all colors.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"AffectedSource: true",
+		"game.ProtectionFromEachColorStaticAbility()",
+		"AddAbilities:",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceProtectionGrantFromEnchant(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nEnchanted creature has protection from black.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"AddAbilities:",
+		"game.ProtectionFromColorsStaticAbility(color.Black)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceProtectionGrantWithSourcePTBuff(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Guardian",
+		Layout:     "normal",
+		TypeLine:   "Creature — Guardian",
+		OracleText: "This creature gets +1/+1 and has protection from creatures.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"PowerDelta:",
+		"ToughnessDelta:",
+		"AddAbilities:",
+		"game.ProtectionFromTypesStaticAbility(types.Creature)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if got := strings.Count(source, "AffectedSource: true"); got != 2 {
+		t.Fatalf("AffectedSource count = %d, want 2:\n%s", got, source)
+	}
+}
+
+func TestGenerateExecutableCardSourceChosenColorProtectionFails(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Shield",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nEnchanted creature has protection from the chosen color.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("unexpected source for chosen-color protection:\n%s", source)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostic for chosen-color protection")
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -2841,7 +3012,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "nonmana equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip—Pay {3} or discard a card."},
 		{name: "qualified equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip creature token {1}"},
 		{name: "qualified enchant", cardName: "Test Aura", typeLine: "Enchantment — Aura", oracleText: "Enchant creature you control"},
-		{name: "noncolor protection", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Protection from artifacts"},
+		{name: "noncolor protection (replaced by support test)", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Protection from a chosen color"},
 		{name: "divided damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage divided as you choose among any number of targets."},
 		{name: "mass damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage to each opponent."},
 		{name: "variable surveil", cardName: "Test Surveil", typeLine: "Sorcery", oracleText: "Surveil X."},

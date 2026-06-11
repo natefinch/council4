@@ -824,7 +824,9 @@ func damageSourceIDs(g *game.Game, obj *game.StackObject) (sourceID, sourceObjec
 			if permanent, ok := permanentByObjectID(g, obj.SourceID); ok && permanent.CardInstanceID == obj.SourceCardID {
 				return obj.SourceCardID, obj.SourceID
 			}
-			return obj.SourceCardID, 0
+			// Permanent has left the battlefield. Preserve obj.SourceID so that
+			// protection checks can consult LKI for its last-known characteristics.
+			return obj.SourceCardID, obj.SourceID
 		}
 		permanent, ok := permanentByObjectID(g, obj.SourceID)
 		if !ok {
@@ -832,7 +834,10 @@ func damageSourceIDs(g *game.Game, obj *game.StackObject) (sourceID, sourceObjec
 		}
 		return permanent.CardInstanceID, permanent.ObjectID
 	default:
-		return obj.SourceID, 0
+		// For StackSpell, include the stack object's own ID as sourceObjectID so
+		// that protection checks can use the selected face via LKI even after the
+		// object has been removed from the stack during resolution.
+		return obj.SourceID, obj.ID
 	}
 }
 

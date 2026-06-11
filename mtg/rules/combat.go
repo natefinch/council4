@@ -642,6 +642,10 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if hasKeyword(g, attacker, game.Flying) && !hasKeyword(g, blocker, game.Flying) && !hasKeyword(g, blocker, game.Reach) {
 		return false
 	}
+	// CR 702.16b: the attacker can't be blocked by a permanent it has protection from.
+	if permanentProtectedFromPermanentEffective(g, attacker, blocker) {
+		return false
+	}
 	return true
 }
 

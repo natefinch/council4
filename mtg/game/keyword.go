@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // KeywordAbility is a sealed data-only variant for one printed keyword ability.
@@ -75,7 +76,13 @@ type SuspendKeyword struct {
 
 // ProtectionKeyword parameterizes Protection effects.
 type ProtectionKeyword struct {
-	FromColors []color.Color
+	FromColors   []color.Color // protection from specific colors
+	FromTypes    []types.Card  // protection from card types (artifact, creature, …)
+	FromSubtypes []types.Sub   // protection from creature/land subtypes (Dragon, Human, …)
+	Multicolored bool          // protection from sources with ≥2 colors
+	Monocolored  bool          // protection from sources with exactly 1 color
+	Everything   bool          // protection from all sources
+	EachColor    bool          // protection from sources with any color (all five)
 }
 
 // ToxicKeyword parameterizes the number of poison counters given after combat
@@ -404,4 +411,14 @@ func StaticBodyProtectionColors(body *StaticAbility) []color.Color {
 		return nil
 	}
 	return protection.FromColors
+}
+
+// StaticBodyProtectionKeyword returns the ProtectionKeyword from a StaticAbility body.
+func StaticBodyProtectionKeyword(body *StaticAbility) (ProtectionKeyword, bool) {
+	ka, ok := BodyKeywordAbility(body, Protection)
+	if !ok {
+		return ProtectionKeyword{}, false
+	}
+	protection, ok := ka.(ProtectionKeyword)
+	return protection, ok
 }
