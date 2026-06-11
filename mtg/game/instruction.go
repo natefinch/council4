@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/natefinch/council4/opt"
 )
@@ -103,9 +104,14 @@ func ValidateInstructionSequence(seq []Instruction, targetSpecs ...[]TargetSpec)
 	if checkTargets {
 		targets = targetSpecs[0]
 	}
+	return validateInstructionSequenceWithLinked(seq, targets, checkTargets, nil)
+}
+
+func validateInstructionSequenceWithLinked(seq []Instruction, targets []TargetSpec, checkTargets bool, inheritedLinked map[LinkedKey]int) error {
 	publishedResults := map[ResultKey]int{}
 	publishedChoices := map[ChoiceKey]int{}
 	publishedLinked := map[LinkedKey]int{}
+	maps.Copy(publishedLinked, inheritedLinked)
 	for i := range seq {
 		instr := &seq[i]
 		if instr.Primitive == nil {
@@ -113,6 +119,11 @@ func ValidateInstructionSequence(seq []Instruction, targetSpecs ...[]TargetSpec)
 		}
 		if err := instr.Primitive.validatePrimitive(targets, checkTargets); err != nil {
 			return fmt.Errorf("instruction[%d]: %w", i, err)
+		}
+		if delayed, ok := instr.Primitive.(CreateDelayedTrigger); ok {
+			if err := validateNestedAbilityContent(delayed.Trigger.Content, publishedLinked); err != nil {
+				return fmt.Errorf("instruction[%d]: %w", i, err)
+			}
 		}
 		if instr.ResultGate.Exists {
 			key := instr.ResultGate.Val.Key

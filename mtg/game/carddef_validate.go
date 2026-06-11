@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 
@@ -203,6 +204,15 @@ func (v *cardDefValidator) validateReplacementAbility(faceName, path string, abi
 }
 
 func (v *cardDefValidator) validateAbilityContent(faceName, path string, content AbilityContent, fallbackTargets []TargetSpec) {
+	v.validateAbilityContentWithLinked(faceName, path, content, fallbackTargets, nil)
+}
+
+func (v *cardDefValidator) validateAbilityContentWithLinked(
+	faceName, path string,
+	content AbilityContent,
+	fallbackTargets []TargetSpec,
+	inheritedLinked map[LinkedKey]int,
+) {
 	if len(content.Modes) == 0 {
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "ability content has no modes")
 		return
@@ -221,7 +231,7 @@ func (v *cardDefValidator) validateAbilityContent(faceName, path string, content
 		if len(targets) == 0 {
 			targets = fallbackTargets
 		}
-		v.validateInstructionSequence(faceName, appendPath(modePath, "Sequence"), mode.Sequence, targets)
+		v.validateInstructionSequence(faceName, appendPath(modePath, "Sequence"), mode.Sequence, targets, inheritedLinked)
 	}
 }
 
@@ -320,14 +330,17 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 	}
 }
 
-func (v *cardDefValidator) validateInstructionSequence(faceName, path string, seq []Instruction, targets ...[]TargetSpec) {
-	if err := ValidateInstructionSequence(seq, targets...); err != nil {
+func (v *cardDefValidator) validateInstructionSequence(
+	faceName, path string,
+	seq []Instruction,
+	targets []TargetSpec,
+	inheritedLinked map[LinkedKey]int,
+) {
+	if err := validateInstructionSequenceWithLinked(seq, targets, true, inheritedLinked); err != nil {
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, err.Error())
 	}
-	var targetSpecs []TargetSpec
-	if len(targets) > 0 {
-		targetSpecs = targets[0]
-	}
+	publishedLinked := make(map[LinkedKey]int, len(inheritedLinked))
+	maps.Copy(publishedLinked, inheritedLinked)
 	for i := range seq {
 		instructionPath := appendPath(path, fmt.Sprintf("Instructions[%d]", i))
 		effectCondition := seq[i].Condition
@@ -337,15 +350,16 @@ func (v *cardDefValidator) validateInstructionSequence(faceName, path string, se
 				faceName,
 				appendPath(instructionPath, "Condition.Condition"),
 				&condition,
-				targetSpecs,
+				targets,
 			)
 		}
 		if delayed, ok := seq[i].Primitive.(CreateDelayedTrigger); ok {
-			v.validateAbilityContent(
+			v.validateAbilityContentWithLinked(
 				faceName,
 				appendPath(instructionPath, "Primitive.Trigger.Content"),
 				delayed.Trigger.Content,
 				nil,
+				publishedLinked,
 			)
 		}
 		if emblem, ok := seq[i].Primitive.(CreateEmblem); ok {
@@ -364,6 +378,11 @@ func (v *cardDefValidator) validateInstructionSequence(faceName, path string, se
 				appendPath(instructionPath, "Primitive.Replacement"),
 				replacement.Replacement,
 			)
+		}
+		if seq[i].Primitive != nil {
+			if key := seq[i].Primitive.instructionRefs().publishesLinked; key != "" {
+				publishedLinked[key] = i
+			}
 		}
 	}
 }

@@ -2301,10 +2301,27 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 		if !ok {
 			return "", errors.New("render: internal error: Exile kind has unexpected concrete type")
 		}
-		return r.renderObjectOrGroup(ctx, "game.Exile", value.Object, value.Group)
+		return r.renderExile(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderExile(ctx *renderCtx, value game.Exile) (string, error) {
+	if value.ExileLinkedKey == "" {
+		return r.renderObjectOrGroup(ctx, "game.Exile", value.Object, value.Group)
+	}
+	if value.Group.Domain() != 0 {
+		return "", errors.New("render: linked exile requires one object")
+	}
+	rendered, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Exile", []string{
+		fmt.Sprintf("Object: %s,", rendered),
+		fmt.Sprintf("ExileLinkedKey: game.LinkedKey(%q),", string(value.ExileLinkedKey)),
+	}), nil
 }
 
 func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error) {

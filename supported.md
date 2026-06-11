@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,273 of 31,838 cards eligible for paper support (13.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,281 of 31,838 cards eligible for paper support (13.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -302,6 +302,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Bear
 - Bear
 - Bear Cub
+- Bearer of the Heavens
 - Beast
 - Beast
 - Beast
@@ -535,6 +536,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Carnage Tyrant
 - Carnivore
 - Carnivorous Plant
+- Carrier Pigeons
 - Carrion Crow
 - Carrion Screecher
 - Cartographer
@@ -946,6 +948,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Dragon Blood
 - Dragon Elemental
 - Dragon Illusion
+- Dragon Mask
 - Dragon Moose
 - Dragon Sniper
 - Dragon Spirit
@@ -1732,6 +1735,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Icewind Elemental
 - Ichorspit Basilisk
 - Icy Manalith
+- Ideas Unbound
 - Idyllic Beachfront
 - Ignoble Hierarch
 - Iguana Parrot
@@ -2028,6 +2032,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Levitation
 - Ley Druid
 - Leyline Prowler
+- Liberate
 - Library
 - Library Larcenist
 - Lich's Caress
@@ -2241,6 +2246,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Mist Leopard
 - Mist Raven
 - Mist-Cloaked Herald
+- Mistmeadow Witch
 - Mistral Charger
 - Mistral Singer
 - Mistvault Bridge
@@ -2710,6 +2716,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Purple-Crystal Crab
 - Putrid Goblin
 - Pygmy Razorback
+- Pyknite
 - Pyre Spawn
 - Pyroclasm
 - Pyromantic Pilgrim
@@ -3829,6 +3836,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Turbulent Springs
 - Turbulent Steppe
 - Turbulent Wilderness
+- Turn to Mist
 - Turntimber Ascetic
 - Turntimber Grove
 - Turtle-Seals

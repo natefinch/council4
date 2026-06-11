@@ -7108,7 +7108,10 @@ func lowerOrderedEffectSequence(
 		// default: straightforward lowering with own targets only.
 		var content game.AbilityContent
 		var diagnostic *oracle.Diagnostic
-		if allSharedTargets {
+		if linkedExile, delayedContent, ok := lowerDelayedBlinkReturn(ability.Effects, i, effectAbility, sequence); ok {
+			sequence[len(sequence)-1].Primitive = linkedExile
+			content = delayedContent
+		} else if allSharedTargets {
 			content, diagnostic = lowerSingleEffectSpell(cardName, effectAbility, clauseSyntaxes[i])
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
@@ -7143,6 +7146,68 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func lowerDelayedBlinkReturn(
+	effects []oracle.CompiledEffect,
+	effectIndex int,
+	ability oracle.CompiledAbility,
+	sequence []game.Instruction,
+) (game.Exile, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		effects[effectIndex-1].Kind != oracle.EffectExile ||
+		effects[effectIndex-1].DelayedTiming != 0 ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectReturn ||
+		ability.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	switch ability.Text {
+	case "Return that card to the battlefield under its owner's control at the beginning of the next end step.":
+		if !exactReferenceTexts(ability.References, "that card", "its") {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+	case "Return it to the battlefield under its owner's control at the beginning of the next end step.":
+		if !exactReferenceTexts(ability.References, "it", "its") {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+	default:
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	if !ok ||
+		exile.Group.Valid() ||
+		exile.Object.Kind() != game.ObjectReferenceTargetPermanent ||
+		exile.ExileLinkedKey != "" {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-blink-%d", effectIndex))
+	exile.ExileLinkedKey = key
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
+			Source: game.LinkedBattlefieldSource(key),
+		}}}}.Ability(),
+	}}
+	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+func exactReferenceTexts(references []oracle.CompiledReference, texts ...string) bool {
+	if len(references) != len(texts) {
+		return false
+	}
+	for i, text := range texts {
+		if !strings.EqualFold(references[i].Text, text) {
+			return false
+		}
+	}
+	return true
 }
 
 // joinedTokenText reconstructs the source text from a token slice, inserting

@@ -200,6 +200,26 @@ func TestRenderCreateDelayedTriggerPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderLinkedExilePrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Exile{
+		Object:         game.TargetPermanentReference(1),
+		ExileLinkedKey: game.LinkedKey("delayed-blink-1"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.Exile",
+		"game.TargetPermanentReference(1)",
+		`ExileLinkedKey: game.LinkedKey("delayed-blink-1")`,
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered linked exile missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderTargetPredicateSpellCardTypes(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()
