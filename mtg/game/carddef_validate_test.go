@@ -354,6 +354,113 @@ func TestValidateCardDefReportsInvalidTargetSpec(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
+	tests := []struct {
+		name      string
+		spec      TargetSpec
+		wantIssue bool
+	}{
+		{
+			name:      "stack target without kinds",
+			spec:      TargetSpec{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowStackObject},
+			wantIssue: true,
+		},
+		{
+			name: "kinds without stack target",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Predicate:  TargetPredicate{StackObjectKinds: []StackObjectKind{StackActivatedAbility}},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "duplicate kind",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate:  TargetPredicate{StackObjectKinds: []StackObjectKind{StackSpell, StackSpell}},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "unknown kind",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate:  TargetPredicate{StackObjectKinds: []StackObjectKind{StackObjectKind(99)}},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "spell type without spell kind",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					SpellCardTypes:   []types.Card{types.Creature},
+					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
+				},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "stack target with unsupported predicate",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
+					Controller:       ControllerOpponent,
+				},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "stack target with unknown allow bit",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject | TargetAllow(1<<30),
+				Predicate: TargetPredicate{
+					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
+					Controller:       ControllerOpponent,
+				},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "valid composite",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					StackObjectKinds: []StackObjectKind{StackSpell, StackActivatedAbility, StackTriggeredAbility},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name: "Stack Target",
+				SpellAbility: opt.Val(Mode{
+					Targets: []TargetSpec{test.spec},
+				}.Ability()),
+			}}
+			got := hasCardDefIssue(ValidateCardDef(card), CardDefIssueInvalidTargetSpec)
+			if got != test.wantIssue {
+				t.Fatalf("invalid target issue = %v, want %v", got, test.wantIssue)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefReportsInvalidTargetChooserSpec(t *testing.T) {
 	tests := []struct {
 		name string

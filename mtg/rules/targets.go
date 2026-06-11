@@ -153,9 +153,6 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 	}
 	if targetSpecAllowsStackObjects(spec) {
 		for _, obj := range g.Stack.Objects() {
-			if obj.Kind != game.StackSpell {
-				continue
-			}
 			target := game.StackObjectTarget(obj.ID)
 			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) {
 				candidates = append(candidates, target)
@@ -790,22 +787,33 @@ func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id
 	case game.TargetCard:
 		return cardTargetMatchesSpec(g, controller, spec, target)
 	case game.TargetStackObject:
-		return stackObjectTargetMatchesSpec(g, spec, target.StackObjectID)
+		return stackObjectTargetMatchesSpec(g, sourceObjectID, spec, target.StackObjectID)
 	default:
 		return false
 	}
 }
 
-func stackObjectTargetMatchesSpec(g *game.Game, spec *game.TargetSpec, stackObjectID id.ID) bool {
+func stackObjectTargetMatchesSpec(g *game.Game, sourceObjectID id.ID, spec *game.TargetSpec, stackObjectID id.ID) bool {
 	if !targetSpecAllowsStackObjects(spec) {
 		return false
 	}
 	obj, ok := stackObjectByID(g, stackObjectID)
-	if !ok || obj.Kind != game.StackSpell {
+	if !ok || stackObjectID == sourceObjectID {
+		return false
+	}
+	switch obj.Kind {
+	case game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility:
+	default:
 		return false
 	}
 	pred := spec.Predicate
+	if !slices.Contains(pred.StackObjectKinds, obj.Kind) {
+		return false
+	}
 	if len(pred.SpellCardTypes) == 0 && len(pred.ExcludedSpellCardTypes) == 0 {
+		return true
+	}
+	if obj.Kind != game.StackSpell {
 		return true
 	}
 	cardTypes, ok := stackSpellCardTypes(g, obj)

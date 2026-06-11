@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,273 of 31,838 cards eligible for paper support (13.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,277 of 31,838 cards eligible for paper support (13.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -241,6 +241,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Azorius Cluestone
 - Azorius First-Wing
 - Azorius Guildgate
+- Azorius Guildmage
 - Azorius Knight-Arbiter
 - Azorius Locket
 - Azorius Signet
@@ -905,6 +906,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Dire Fleet Interloper
 - Diregraf Ghoul
 - Diresight
+- Disallow
 - Disciple of Grace
 - Disciple of Law
 - Disciple of Malice
@@ -3479,6 +3481,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Sterling Hound
 - Stern Constable
 - Steward of Valeron
+- Stifle
 - Stitchwing Skaab
 - Stoic Builder
 - Stomper Cub
@@ -4001,6 +4004,7 @@ Council4 currently supports **4,273 of 31,838 cards eligible for paper support (
 - Voice of Reason
 - Voice of Truth
 - Voiceless Spirit
+- Voidslime
 - Voidwielder
 - Voja
 - Voja // Saproling

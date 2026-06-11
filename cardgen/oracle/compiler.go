@@ -357,6 +357,12 @@ func compileTargets(tokens []Token) []CompiledTarget {
 }
 
 func targetPhraseEnd(tokens []Token, start int) int {
+	const spellOrAbility = "spell, activated ability, or triggered ability"
+	for end := start + 1; end <= len(tokens); end++ {
+		if joinedSourceText(tokens[start:end]) == spellOrAbility {
+			return end
+		}
+	}
 	end := start
 	for end < len(tokens) {
 		token := tokens[end]
@@ -374,6 +380,14 @@ func compileSelector(tokens []Token) CompiledSelector {
 	selector := CompiledSelector{Raw: joinedSourceText(tokens)}
 	words := normalizedWords(tokens)
 	switch {
+	case selector.Raw == "activated ability":
+		selector.Kind = SelectorActivatedAbility
+	case selector.Raw == "triggered ability":
+		selector.Kind = SelectorTriggeredAbility
+	case selector.Raw == "activated or triggered ability":
+		selector.Kind = SelectorActivatedOrTriggeredAbility
+	case selector.Raw == "spell, activated ability, or triggered ability":
+		selector.Kind = SelectorSpellActivatedOrTriggeredAbility
 	case containsNoun(words, "artifact"):
 		selector.Kind = SelectorArtifact
 	case containsNoun(words, "creature"):

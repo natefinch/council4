@@ -233,35 +233,62 @@ func TestLowerCounterSpellTargets(t *testing.T) {
 		oracleText        string
 		wantSpellTypes    []types.Card
 		wantExcludedTypes []types.Card
+		wantKinds         []game.StackObjectKind
 	}{
 		{
 			name:       "any spell",
 			oracleText: "Counter target spell.",
+			wantKinds:  []game.StackObjectKind{game.StackSpell},
 		},
 		{
 			name:           "creature spell",
 			oracleText:     "Counter target creature spell.",
 			wantSpellTypes: []types.Card{types.Creature},
+			wantKinds:      []game.StackObjectKind{game.StackSpell},
 		},
 		{
 			name:           "artifact spell",
 			oracleText:     "Counter target artifact spell.",
 			wantSpellTypes: []types.Card{types.Artifact},
+			wantKinds:      []game.StackObjectKind{game.StackSpell},
 		},
 		{
 			name:           "instant spell",
 			oracleText:     "Counter target instant spell.",
 			wantSpellTypes: []types.Card{types.Instant},
+			wantKinds:      []game.StackObjectKind{game.StackSpell},
 		},
 		{
 			name:           "sorcery spell",
 			oracleText:     "Counter target sorcery spell.",
 			wantSpellTypes: []types.Card{types.Sorcery},
+			wantKinds:      []game.StackObjectKind{game.StackSpell},
 		},
 		{
 			name:              "noncreature spell",
 			oracleText:        "Counter target noncreature spell.",
 			wantExcludedTypes: []types.Card{types.Creature},
+			wantKinds:         []game.StackObjectKind{game.StackSpell},
+		},
+		{
+			name:       "activated ability",
+			oracleText: "Counter target activated ability.",
+			wantKinds:  []game.StackObjectKind{game.StackActivatedAbility},
+		},
+		{
+			name:       "triggered ability",
+			oracleText: "Counter target triggered ability.",
+			wantKinds:  []game.StackObjectKind{game.StackTriggeredAbility},
+		},
+		{
+			name:       "activated or triggered ability",
+			oracleText: "Counter target activated or triggered ability.",
+			wantKinds:  []game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility},
+		},
+		{
+			name:       "spell activated or triggered ability",
+			oracleText: "Counter target spell, activated ability, or triggered ability.",
+			wantKinds:  []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility},
 		},
 	}
 	for _, test := range tests {
@@ -293,6 +320,9 @@ func TestLowerCounterSpellTargets(t *testing.T) {
 			}
 			if !slices.Equal(target.Predicate.ExcludedSpellCardTypes, test.wantExcludedTypes) {
 				t.Fatalf("excluded spell types = %+v, want %+v", target.Predicate.ExcludedSpellCardTypes, test.wantExcludedTypes)
+			}
+			if !slices.Equal(target.Predicate.StackObjectKinds, test.wantKinds) {
+				t.Fatalf("stack object kinds = %+v, want %+v", target.Predicate.StackObjectKinds, test.wantKinds)
 			}
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence = %d, want 1", len(mode.Sequence))
@@ -388,8 +418,10 @@ func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
 		"Counter target blue spell.",
 		"Counter target artifact or enchantment spell.",
 		"Counter target spell unless its controller pays {X}.",
-		"Counter target activated or triggered ability.",
 		"Counter target activated ability from an artifact source.",
+		"Counter target triggered ability you don't control.",
+		"Counter target activated ability unless its controller pays {1}.",
+		"Counter target activated ability. Draw a card.",
 		"Counter target spell or ability that targets a creature.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
@@ -7285,7 +7317,7 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"opponent your graveyard", "Whenever an opponent casts a spell from your graveyard, draw a card."},
 		{"intervening if", "Whenever you cast a spell, if you control an artifact, draw a card."},
 		{"ability word", "Spellcraft — Whenever you cast a spell, draw a card."},
-		{"unsupported body", "Whenever you cast a spell, counter target activated or triggered ability."},
+		{"unsupported body", "Whenever you cast a spell, counter target activated ability from an artifact source."},
 		{"partially optional body", "Whenever you cast a spell, draw a card. You may gain 1 life."},
 	}
 	for _, tc := range tests {

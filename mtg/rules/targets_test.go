@@ -1266,7 +1266,10 @@ func TestStackSpellTargetCandidatesRespectTypeFilters(t *testing.T) {
 		MaxTargets: 1,
 		Allow:      game.TargetAllowStackObject,
 		Constraint: "noncreature spell",
-		Predicate:  game.TargetPredicate{ExcludedSpellCardTypes: []types.Card{types.Creature}},
+		Predicate: game.TargetPredicate{
+			ExcludedSpellCardTypes: []types.Card{types.Creature},
+			StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
+		},
 	}
 	source := counterTargetSpell(&spec)
 
@@ -1292,6 +1295,7 @@ func TestStackSpellTargetCandidatesIncludeCantBeCounteredSpells(t *testing.T) {
 		MaxTargets: 1,
 		Allow:      game.TargetAllowStackObject,
 		Constraint: "spell",
+		Predicate:  game.TargetPredicate{StackObjectKinds: []game.StackObjectKind{game.StackSpell}},
 	}
 	source := counterTargetSpell(&spec)
 
@@ -1310,14 +1314,20 @@ func TestStackSpellTargetCandidatesUseFaceDownCreatureType(t *testing.T) {
 		MaxTargets: 1,
 		Allow:      game.TargetAllowStackObject,
 		Constraint: "creature spell",
-		Predicate:  game.TargetPredicate{SpellCardTypes: []types.Card{types.Creature}},
+		Predicate: game.TargetPredicate{
+			SpellCardTypes:   []types.Card{types.Creature},
+			StackObjectKinds: []game.StackObjectKind{game.StackSpell},
+		},
 	}
 	noncreatureSpec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowStackObject,
 		Constraint: "noncreature spell",
-		Predicate:  game.TargetPredicate{ExcludedSpellCardTypes: []types.Card{types.Creature}},
+		Predicate: game.TargetPredicate{
+			ExcludedSpellCardTypes: []types.Card{types.Creature},
+			StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
+		},
 	}
 	source := counterTargetSpell(&creatureSpec)
 
@@ -1329,6 +1339,75 @@ func TestStackSpellTargetCandidatesUseFaceDownCreatureType(t *testing.T) {
 	}
 	if slices.Contains(noncreatureCandidates, game.StackObjectTarget(faceDown.ID)) {
 		t.Fatal("noncreature-spell candidates included face-down spell")
+	}
+}
+
+func TestStackAbilityTargetCandidatesRespectKindsAndExcludeSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	spell := addStackSpell(g, game.Player2, "Spell", []types.Card{types.Instant})
+	activated := &game.StackObject{ID: g.IDGen.Next(), Kind: game.StackActivatedAbility, Controller: game.Player2}
+	triggered := &game.StackObject{ID: g.IDGen.Next(), Kind: game.StackTriggeredAbility, Controller: game.Player2}
+	futureManaAbility := &game.StackObject{ID: g.IDGen.Next(), Kind: game.StackObjectKind(99), Controller: game.Player2}
+	g.Stack.Push(activated)
+	g.Stack.Push(triggered)
+	g.Stack.Push(futureManaAbility)
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowStackObject,
+		Predicate: game.TargetPredicate{
+			StackObjectKinds: []game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility},
+		},
+	}
+
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, nil, activated.ID, &spec)
+
+	if slices.Contains(candidates, game.StackObjectTarget(spell.ID)) {
+		t.Fatal("ability target candidates included spell")
+	}
+	if slices.Contains(candidates, game.StackObjectTarget(activated.ID)) {
+		t.Fatal("ability target candidates included source stack object")
+	}
+	if !slices.Contains(candidates, game.StackObjectTarget(triggered.ID)) {
+		t.Fatal("ability target candidates omitted triggered ability")
+	}
+	if slices.Contains(candidates, game.StackObjectTarget(futureManaAbility.ID)) {
+		t.Fatal("ability target candidates included unknown future stack-object kind")
+	}
+}
+
+func TestStackObjectTargetKindsMatchExactly(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	spell := addStackSpell(g, game.Player2, "Spell", []types.Card{types.Instant})
+	activated := &game.StackObject{ID: g.IDGen.Next(), Kind: game.StackActivatedAbility, Controller: game.Player2}
+	triggered := &game.StackObject{ID: g.IDGen.Next(), Kind: game.StackTriggeredAbility, Controller: game.Player2}
+	g.Stack.Push(activated)
+	g.Stack.Push(triggered)
+
+	tests := []struct {
+		name  string
+		kinds []game.StackObjectKind
+		want  *game.StackObject
+	}{
+		{"spell", []game.StackObjectKind{game.StackSpell}, spell},
+		{"activated ability", []game.StackObjectKind{game.StackActivatedAbility}, activated},
+		{"triggered ability", []game.StackObjectKind{game.StackTriggeredAbility}, triggered},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			spec := game.TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      game.TargetAllowStackObject,
+				Predicate:  game.TargetPredicate{StackObjectKinds: test.kinds},
+			}
+			for _, obj := range []*game.StackObject{spell, activated, triggered} {
+				got := targetMatchesSpec(g, game.Player1, 0, &spec, game.StackObjectTarget(obj.ID))
+				if got != (obj == test.want) {
+					t.Fatalf("target kind %v match = %v, want %v", obj.Kind, got, obj == test.want)
+				}
+			}
+		})
 	}
 }
 

@@ -173,6 +173,10 @@ const (
 	SelectorPermanent
 	SelectorCard
 	SelectorSpell
+	SelectorActivatedAbility
+	SelectorTriggeredAbility
+	SelectorActivatedOrTriggeredAbility
+	SelectorSpellActivatedOrTriggeredAbility
 	SelectorPlaneswalker
 	SelectorBattle
 )

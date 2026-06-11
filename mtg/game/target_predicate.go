@@ -75,6 +75,7 @@ type TargetPredicate struct {
 
 	SpellCardTypes         []types.Card
 	ExcludedSpellCardTypes []types.Card
+	StackObjectKinds       []StackObjectKind
 
 	Colors         []color.Color
 	ExcludedColors []color.Color
