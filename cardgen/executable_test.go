@@ -2269,6 +2269,64 @@ func TestGenerateExecutableCardSourceEnterMultipleEffectTrigger(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceThenJoinedSpellEffects(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		first      string
+		second     string
+	}{
+		{
+			name:       "draw then discard",
+			oracleText: "Draw two cards, then discard a card.",
+			first:      "game.Draw",
+			second:     "game.Discard",
+		},
+		{
+			name:       "scry then draw",
+			oracleText: "Scry 2, then draw a card.",
+			first:      "game.Scry",
+			second:     "game.Draw",
+		},
+		{
+			name:       "discard then draw",
+			oracleText: "Discard a card, then draw a card.",
+			first:      "game.Discard",
+			second:     "game.Draw",
+		},
+		{
+			name:       "targeted mill then draw",
+			oracleText: "Target player mills three cards, then draws a card.",
+			first:      "game.Mill",
+			second:     "game.Draw",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Spell",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			first := strings.Index(source, "Primitive: "+test.first)
+			second := strings.Index(source, "Primitive: "+test.second)
+			if first < 0 || second < 0 || first >= second {
+				t.Fatalf("sequence is not %s then %s:\n%s", test.first, test.second, source)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceOptionalEnterTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -3079,7 +3137,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "repeated proliferate", cardName: "Test Proliferate", typeLine: "Sorcery", oracleText: "Proliferate X times."},
 		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
 		{name: "conditional draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "If you control a creature, draw two cards."},
-		{name: "compound draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "Draw two cards, then discard a card."},
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
 		{name: "regeneration destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. It can't be regenerated."},
 		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack creature."},
@@ -3094,13 +3151,11 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "compound life", cardName: "Test Life", typeLine: "Sorcery", oracleText: "You gain 3 life and draw a card."},
 		{name: "variable scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry X."},
 		{name: "conditional scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "If you control a creature, scry 2."},
-		{name: "compound scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry 2, then draw a card."},
 		{name: "targeted scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Target player scries 2."},
 		{name: "random discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a card at random."},
 		{name: "named discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a creature card."},
 		{name: "hand discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards their hand."},
 		{name: "optional discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "You may discard a card."},
-		{name: "compound discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Discard a card, then draw a card."},
 		{name: "mass tap", cardName: "Test Sleep", typeLine: "Sorcery", oracleText: "Tap all creatures."},
 		{name: "optional tap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "You may tap target creature."},
 		{name: "unsupported tap qualifier", cardName: "Test Sleep", typeLine: "Instant", oracleText: "Tap target creature with flying."},
@@ -3108,11 +3163,9 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "conditional untap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "If it is tapped, untap target creature."},
 		{name: "until mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills cards until they mill a land card."},
 		{name: "reveal mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player reveals and mills three cards."},
-		{name: "compound mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills three cards, then draws a card."},
 		{name: "mass mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Each opponent mills three cards."},
 		{name: "leave trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature leaves the battlefield, draw a card."},
 		{name: "cast trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When you cast this spell, draw a card."},
-		{name: "compound enter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature enters, draw a card, then discard a card."},
 		{name: "other creature dies", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature dies, draw a card."},
 	}
 	for _, test := range tests {
@@ -3138,23 +3191,28 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 	}
 }
 
-func TestGenerateExecutableCardSourceRejectsPartialAbility(t *testing.T) {
+func TestGenerateExecutableCardSourceThenJoinedEnterTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
 		Name:       "Drawing Bear",
 		Layout:     "normal",
 		TypeLine:   "Creature — Bear",
 		OracleText: "When this creature enters, draw a card, then discard a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
 	}
+
 	source, diagnostics, err := GenerateExecutableCardSource(card, "d")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if source != "" || len(diagnostics) == 0 {
-		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if got := diagnostics[0].Summary; got != "unsupported enter trigger effect" {
-		t.Fatalf("summary = %q", got)
+	draw := strings.Index(source, "Primitive: game.Draw")
+	discard := strings.Index(source, "Primitive: game.Discard")
+	if draw < 0 || discard < 0 || draw >= discard {
+		t.Fatalf("trigger sequence is not draw then discard:\n%s", source)
 	}
 }
 
