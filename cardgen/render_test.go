@@ -65,6 +65,16 @@ func TestRenderDynamicQuantityFieldsAndImports(t *testing.T) {
 		t.Fatal("dynamic group requested unused counter import")
 	}
 
+	rendered, err = renderer.renderQuantity(ctx, game.Dynamic(game.DynamicAmount{
+		Kind: game.DynamicAmountControllerBasicLandTypeCount,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "game.DynamicAmountControllerBasicLandTypeCount") {
+		t.Fatalf("domain quantity = %s", rendered)
+	}
+
 	ctx = newRenderCtx()
 	rendered, err = renderer.renderQuantity(ctx, game.Dynamic(game.DynamicAmount{
 		Kind:        game.DynamicAmountTargetCounters,
@@ -390,8 +400,66 @@ func TestRenderConditionRejectsTextWithoutPredicate(t *testing.T) {
 	if _, err := renderer.renderConditionForETBReplacement(ctx, &condition); err == nil {
 		t.Fatal("expected ETB replacement condition without predicate to fail")
 	}
+
 	if _, err := renderer.renderStaticAbilityCondition(ctx, &condition); err == nil {
 		t.Fatal("expected static ability condition without predicate to fail")
+	}
+}
+
+func TestRenderLiveStateCondition(t *testing.T) {
+	condition := game.Condition{
+		Text:                                    "if ability-word conditions are met",
+		ControllerHandEmpty:                     true,
+		ControllerGraveyardCardCountAtLeast:     7,
+		ControllerGraveyardCardTypeCountAtLeast: 4,
+		ControllerBasicLandTypeCountAtLeast:     5,
+		ControllerCreaturePowerDiversityAtLeast: 3,
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+			MinCount:  3,
+		}),
+	}
+	rendered, err := (Renderer{}).renderStaticAbilityCondition(newRenderCtx(), &condition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"ControllerHandEmpty: true",
+		"ControllerGraveyardCardCountAtLeast: 7",
+		"ControllerGraveyardCardTypeCountAtLeast: 4",
+		"ControllerBasicLandTypeCountAtLeast: 5",
+		"ControllerCreaturePowerDiversityAtLeast: 3",
+		"ControlsMatching: opt.Val",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered condition missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRenderContinuousDynamicPT(t *testing.T) {
+	domain := opt.Val(game.DynamicAmount{
+		Kind:       game.DynamicAmountControllerBasicLandTypeCount,
+		Multiplier: 1,
+	})
+	rendered, err := (Renderer{}).renderContinuousEffect(newRenderCtx(), &game.ContinuousEffect{
+		Layer:                 game.LayerPowerToughnessModify,
+		AffectedSource:        true,
+		PowerDeltaDynamic:     domain,
+		ToughnessDeltaDynamic: domain,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"PowerDeltaDynamic: opt.Val(game.DynamicAmount{",
+		"ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{",
+		"game.DynamicAmountControllerBasicLandTypeCount",
+		"Multiplier: 1",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered continuous effect missing %q:\n%s", want, rendered)
+		}
 	}
 }
 
@@ -730,6 +798,11 @@ func TestRenderUnsupportedAbilityLayerFieldsErrors(t *testing.T) {
 			Layer:      game.LayerAbility,
 			Group:      game.BattlefieldGroup(game.Selection{}),
 			PowerDelta: 1,
+		},
+		"dynamic PT field in ability layer": {
+			Layer:             game.LayerAbility,
+			Group:             game.BattlefieldGroup(game.Selection{}),
+			PowerDeltaDynamic: opt.Val(game.DynamicAmount{Kind: game.DynamicAmountOpponentCount}),
 		},
 		"keyword field in PT layer": {
 			Layer:       game.LayerPowerToughnessModify,

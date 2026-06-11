@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -104,9 +105,60 @@ func TestConditionControlsMatchingIgnoresPhasedOutPermanents(t *testing.T) {
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition did not count in-phase artifact")
 	}
+
 	artifact.PhasedOut = true
 	if conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition counted phased-out artifact")
+	}
+}
+
+func TestConditionControllerLiveStatePredicates(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for i, cardTypes := range [][]types.Card{
+		{types.Artifact, types.Creature},
+		{types.Enchantment},
+		{types.Instant},
+		{types.Land},
+		{types.Creature},
+		{types.Creature},
+		{types.Creature},
+	} {
+		addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:  fmt.Sprintf("Graveyard Card %d", i),
+			Types: cardTypes,
+		}})
+	}
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Dual Land",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Plains, types.Island},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Forest",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Forest},
+	}})
+	for _, power := range []int{-1, 0, 4} {
+		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:      fmt.Sprintf("Creature %d", power),
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(game.PT{Value: power}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+		}})
+	}
+
+	condition := opt.Val(game.Condition{
+		ControllerHandEmpty:                     true,
+		ControllerGraveyardCardCountAtLeast:     7,
+		ControllerGraveyardCardTypeCountAtLeast: 4,
+		ControllerBasicLandTypeCountAtLeast:     3,
+		ControllerCreaturePowerDiversityAtLeast: 3,
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not match controller live state")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("condition matched another player's live state")
 	}
 }
 

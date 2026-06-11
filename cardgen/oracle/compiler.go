@@ -941,7 +941,8 @@ func (m dynamicAmountPrefixMatch) allows(subject dynamicAmountSubjectMatch) bool
 	switch m.subjectClass {
 	case dynamicAmountCountSubject:
 		if subject.amount.DynamicKind != DynamicAmountCount &&
-			subject.amount.DynamicKind != DynamicAmountOpponentCount {
+			subject.amount.DynamicKind != DynamicAmountOpponentCount &&
+			subject.amount.DynamicKind != DynamicAmountBasicLandTypes {
 			return false
 		}
 		return subject.number == dynamicSubjectInvariant || subject.number == m.subjectNumber
@@ -1010,9 +1011,13 @@ func dynamicAmountSubject(tokens []Token, start int, cardName string) (dynamicAm
 	if start >= len(tokens) {
 		return dynamicAmountSubjectMatch{}, false
 	}
+	if subject, ok := dynamicBasicLandTypeAmountSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := dynamicCountAmountSubject(tokens, start); ok {
 		return subject, true
 	}
+
 	switch {
 	case wordsAt(tokens, start, "your", "life", "total") &&
 		dynamicSubjectBoundary(tokens, start+3):
@@ -1090,6 +1095,29 @@ func dynamicAmountSubject(tokens []Token, start int, cardName string) (dynamicAm
 		}
 		return dynamicAmountSubjectMatch{}, false
 	}
+}
+
+func dynamicBasicLandTypeAmountSubject(tokens []Token, start int) (dynamicAmountSubjectMatch, bool) {
+	number := dynamicSubjectNumberNone
+	end := start
+	switch {
+	case wordsAt(tokens, start, "basic", "land", "type", "among", "lands", "you", "control"):
+		number = dynamicSubjectSingular
+		end = start + 7
+	case wordsAt(tokens, start, "basic", "land", "types", "among", "lands", "you", "control"):
+		number = dynamicSubjectPlural
+		end = start + 7
+	default:
+		return dynamicAmountSubjectMatch{}, false
+	}
+	if !dynamicSubjectBoundary(tokens, end) {
+		return dynamicAmountSubjectMatch{}, false
+	}
+	return dynamicAmountSubjectMatch{
+		amount: CompiledAmount{DynamicKind: DynamicAmountBasicLandTypes},
+		end:    end,
+		number: number,
+	}, true
 }
 
 func dynamicCountAmountSubject(tokens []Token, start int) (dynamicAmountSubjectMatch, bool) {

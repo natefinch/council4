@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 3,433 / 31,835**
+**Cards supported: 3,851 / 31,838**
 
 The pipeline is:
 
@@ -179,9 +179,12 @@ filters: `a spell` (wildcard), `a noncreature spell`, `a creature spell`,
 `an instant or sorcery spell`, `an instant spell`/`an instant`, `a sorcery
 spell`, `an artifact spell`, `an enchantment spell`, `a land spell`, `a
 planeswalker spell`, `a noncreature, nonland spell`, and single-color forms `a
-white/blue/black/red/green spell`. Self-cast (`when you cast this spell`), `TriggerWhen`, intervening-if
-conditions, ability words, modes, and all other player or spell-phrase forms
-are fail-closed. An exact
+white/blue/black/red/green spell`. Exact Threshold, Delirium, Domain, Metalcraft,
+Hellbent, Ferocious, and Coven conditions lower into typed live-state
+predicates and dynamic amounts. Self-cast (`when you cast this spell`),
+`TriggerWhen`, unsupported intervening-if conditions, unknown or non-exact
+ability-word forms, modes, and all other player or spell-phrase forms are
+fail-closed. An exact
 leading `you may` on a single-effect trigger maps to trigger-level optionality;
 partially optional sequences remain unsupported. Exact ordinary battlefield
 activations may combine mana, tap, and untap costs with typed sacrifice,

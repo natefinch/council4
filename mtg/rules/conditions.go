@@ -25,6 +25,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerLifeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
 		cond.OpponentCountAtLeast < 0 ||
+		cond.ControllerGraveyardCardCountAtLeast < 0 ||
+		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
+		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
+		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
 		cond.ControllerControls.MinCount < 0 ||
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
@@ -46,6 +50,23 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.OpponentCountAtLeast > 0 {
 		matches = matches && len(aliveOpponents(g, ctx.controller)) >= cond.OpponentCountAtLeast
+	}
+	if cond.ControllerHandEmpty {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.Hand.Size() == 0
+	}
+	if cond.ControllerGraveyardCardCountAtLeast > 0 {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.Graveyard.Size() >= cond.ControllerGraveyardCardCountAtLeast
+	}
+	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
+		matches = matches && controllerGraveyardCardTypeCount(g, ctx.controller) >= cond.ControllerGraveyardCardTypeCountAtLeast
+	}
+	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
+		matches = matches && controllerBasicLandTypeCount(g, ctx.controller) >= cond.ControllerBasicLandTypeCountAtLeast
+	}
+	if cond.ControllerCreaturePowerDiversityAtLeast > 0 {
+		matches = matches && controllerCreaturePowerDiversity(g, ctx.controller) >= cond.ControllerCreaturePowerDiversityAtLeast
 	}
 	if cond.AnyOpponentControls.Exists {
 		matches = matches && anyOpponentControlsMatchingSelection(g, ctx, cond.AnyOpponentControls.Val)
@@ -82,6 +103,60 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		return !matches
 	}
 	return matches
+}
+
+func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) int {
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	distinct := make(map[types.Card]bool)
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		for _, cardType := range cardFaceOrDefault(card, game.FaceFront).Types {
+			distinct[cardType] = true
+		}
+	}
+	return len(distinct)
+}
+
+func controllerBasicLandTypeCount(g *game.Game, controller game.PlayerID) int {
+	basicLandTypes := [...]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest}
+	distinct := make(map[types.Sub]bool)
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		values := effectivePermanentValues(g, permanent)
+		if values.controller != controller || !slices.Contains(values.types, types.Land) {
+			continue
+		}
+		for _, subtype := range basicLandTypes {
+			if slices.Contains(values.subtypes, subtype) {
+				distinct[subtype] = true
+			}
+		}
+	}
+	return len(distinct)
+}
+
+func controllerCreaturePowerDiversity(g *game.Game, controller game.PlayerID) int {
+	distinct := make(map[int]bool)
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		values := effectivePermanentValues(g, permanent)
+		if values.controller == controller &&
+			slices.Contains(values.types, types.Creature) &&
+			values.powerOK {
+			distinct[values.power] = true
+		}
+	}
+	return len(distinct)
 }
 
 func conditionObjectMatches(g *game.Game, ctx conditionContext, cond *game.Condition) bool {

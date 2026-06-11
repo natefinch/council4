@@ -676,6 +676,9 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 		{"When this creature dies, it deals damage equal to its power to any target.", ParseContext{CardName: "Devil"}, DynamicAmountSourcePower, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to its power"},
 		{"{T}: Put X +1/+1 counters on target creature, where X is Druid's power.", ParseContext{CardName: "Druid"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Druid's power"},
 		{"{T}: Put X +1/+1 counters on target creature, where X is Fight Bear's power.", ParseContext{CardName: "Fight Bear"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Fight Bear's power"},
+		{"You gain 2 life for each basic land type among lands you control.", ParseContext{InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountForEach, 2, SelectorUnknown, ControllerAny, "for each basic land type among lands you control"},
+		{"Flames deals damage equal to the number of basic land types among lands you control to any target.", ParseContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to the number of basic land types among lands you control"},
+		{"Flames deals X damage to any target, where X is the number of basic land types among lands you control.", ParseContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is the number of basic land types among lands you control"},
 	}
 
 	for _, test := range tests {

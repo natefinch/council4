@@ -39,6 +39,15 @@ type Condition struct {
 	// OpponentCountAtLeast requires this many non-eliminated opponents.
 	OpponentCountAtLeast int
 
+	// ControllerHandEmpty and the controller-relative thresholds model
+	// live game-state predicates used by ability words such as threshold,
+	// delirium, domain, hellbent, and coven.
+	ControllerHandEmpty                     bool
+	ControllerGraveyardCardCountAtLeast     int
+	ControllerGraveyardCardTypeCountAtLeast int
+	ControllerBasicLandTypeCountAtLeast     int
+	ControllerCreaturePowerDiversityAtLeast int
+
 	// AnyOpponentControls checks each opponent independently. OpponentsControl
 	// counts matching permanents controlled by all opponents collectively.
 	AnyOpponentControls opt.V[SelectionCount]
@@ -100,6 +109,11 @@ func (c *Condition) Empty() bool {
 		c.ControllerLifeAtLeast == 0 &&
 		c.AnyPlayerLifeAtMost == 0 &&
 		c.OpponentCountAtLeast == 0 &&
+		!c.ControllerHandEmpty &&
+		c.ControllerGraveyardCardCountAtLeast == 0 &&
+		c.ControllerGraveyardCardTypeCountAtLeast == 0 &&
+		c.ControllerBasicLandTypeCountAtLeast == 0 &&
+		c.ControllerCreaturePowerDiversityAtLeast == 0 &&
 		!c.AnyOpponentControls.Exists &&
 		!c.OpponentsControl.Exists &&
 		!c.Object.Exists &&

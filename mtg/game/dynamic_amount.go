@@ -23,6 +23,7 @@ const (
 	DynamicAmountControllerLife
 	DynamicAmountControllerHandSize
 	DynamicAmountControllerGraveyardSize
+	DynamicAmountControllerBasicLandTypeCount
 	DynamicAmountCountSelector
 	DynamicAmountCountCardsInZone
 	DynamicAmountPreviousEffectResult

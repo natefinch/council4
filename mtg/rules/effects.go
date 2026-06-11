@@ -549,6 +549,8 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		if player, ok := playerByID(g, controller); ok {
 			amount = player.Graveyard.Size()
 		}
+	case game.DynamicAmountControllerBasicLandTypeCount:
+		amount = controllerBasicLandTypeCount(g, controller)
 	case game.DynamicAmountCountSelector:
 		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
 	case game.DynamicAmountCountCardsInZone:
