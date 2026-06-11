@@ -36,9 +36,12 @@ type Selection struct {
 	SubtypesAny []types.Sub
 
 	// ColorsAny matches when any listed color is present. ExcludedColors must
-	// all be absent.
+	// all be absent. Colorless requires no colors; Multicolored requires at
+	// least two colors.
 	ColorsAny      []color.Color
 	ExcludedColors []color.Color
+	Colorless      bool
+	Multicolored   bool
 
 	// Controller constrains a permanent by its controller relative to the
 	// viewing player. Player constrains a player relative to the viewing player.
@@ -78,6 +81,8 @@ func (s Selection) Empty() bool {
 		len(s.SubtypesAny) == 0 &&
 		len(s.ColorsAny) == 0 &&
 		len(s.ExcludedColors) == 0 &&
+		!s.Colorless &&
+		!s.Multicolored &&
 		s.Controller == ControllerAny &&
 		s.Player == PlayerAny &&
 		s.Tapped == TriAny &&
@@ -111,6 +116,12 @@ func (s Selection) Validate() []string {
 		return !slices.Contains(s.ExcludedColors, c)
 	}) {
 		problems = append(problems, "every any-of color is excluded")
+	}
+	if s.Colorless && s.Multicolored {
+		problems = append(problems, "selection cannot require both colorless and multicolored")
+	}
+	if s.Colorless && len(s.ColorsAny) > 0 {
+		problems = append(problems, "selection cannot require both colorless and any color")
 	}
 	if s.Keyword != KeywordNone && s.Keyword == s.ExcludedKeyword {
 		problems = append(problems, fmt.Sprintf("keyword %v is both required and excluded", s.Keyword))

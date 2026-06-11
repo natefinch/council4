@@ -1100,6 +1100,24 @@ func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
 			},
 			wantParts: []string{"CardSelection:", "ColorsAny:", "color.Blue"},
 		},
+		{
+			name: "colorless spell",
+			pattern: game.TriggerPattern{
+				Event:         game.EventSpellCast,
+				Controller:    game.TriggerControllerYou,
+				CardSelection: game.Selection{Colorless: true},
+			},
+			wantParts: []string{"CardSelection:", "Colorless: true"},
+		},
+		{
+			name: "multicolored spell",
+			pattern: game.TriggerPattern{
+				Event:         game.EventSpellCast,
+				Controller:    game.TriggerControllerYou,
+				CardSelection: game.Selection{Multicolored: true},
+			},
+			wantParts: []string{"CardSelection:", "Multicolored: true"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
