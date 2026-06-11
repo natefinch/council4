@@ -7359,6 +7359,10 @@ func lowerControlSpellSequence(
 		duration = game.DurationUntilEndOfTurn
 	case oracle.DurationNone:
 		duration = game.DurationPermanent
+	case oracle.DurationForAsLongAsSourceOnBattlefield:
+		duration = game.DurationForAsLongAsSourceOnBattlefield
+	case oracle.DurationForAsLongAsYouControlSource:
+		duration = game.DurationForAsLongAsYouControlSource
 	default:
 		return unsupported()
 	}
@@ -7551,6 +7555,10 @@ func lowerSingleControlSpell(
 		duration = game.DurationUntilEndOfTurn
 	case oracle.DurationNone:
 		duration = game.DurationPermanent
+	case oracle.DurationForAsLongAsSourceOnBattlefield:
+		duration = game.DurationForAsLongAsSourceOnBattlefield
+	case oracle.DurationForAsLongAsYouControlSource:
+		duration = game.DurationForAsLongAsYouControlSource
 	default:
 		return unsupported()
 	}

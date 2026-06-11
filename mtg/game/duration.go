@@ -13,6 +13,14 @@ const (
 	DurationUntilYourNextTurn
 	DurationNextTime
 	DurationUntilEndOfYourNextTurn
+	// DurationForAsLongAsSourceOnBattlefield expires when the source permanent
+	// is no longer on the battlefield. Use object identity (SourceObjectID),
+	// never card name, to identify the source.
+	DurationForAsLongAsSourceOnBattlefield
+	// DurationForAsLongAsYouControlSource expires when the effect controller no
+	// longer controls the source permanent, or when the source permanent leaves
+	// the battlefield. Use object identity (SourceObjectID), never card name.
+	DurationForAsLongAsYouControlSource
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.

@@ -43,6 +43,35 @@ func expireCleanupDurations(g *game.Game) {
 	})
 }
 
+// expireSourceTiedControlDurations removes continuous effects whose duration
+// is tied to the source permanent's presence on the battlefield or to the
+// effect controller's continued control of the source.  It is called at
+// state-based-action cadence so that stale effects are removed before
+// legality and selector decisions are made.  Returns true when at least one
+// effect was removed.
+func expireSourceTiedControlDurations(g *game.Game) bool {
+	sourceTied := func(effect *game.ContinuousEffect) bool {
+		switch effect.Duration {
+		case game.DurationForAsLongAsSourceOnBattlefield:
+			// Expire when the source object is no longer on the battlefield.
+			_, onBattlefield := permanentByObjectID(g, effect.SourceObjectID)
+			return !onBattlefield
+		case game.DurationForAsLongAsYouControlSource:
+			// Expire when the source is gone or no longer controlled by the
+			// effect's controller.
+			src, onBattlefield := permanentByObjectID(g, effect.SourceObjectID)
+			if !onBattlefield {
+				return true
+			}
+			return effectiveController(g, src) != effect.Controller
+		}
+		return false
+	}
+	before := len(g.ContinuousEffects)
+	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, sourceTied)
+	return len(g.ContinuousEffects) < before
+}
+
 func filterContinuousEffects(effects []game.ContinuousEffect, expired func(*game.ContinuousEffect) bool) []game.ContinuousEffect {
 	if len(effects) == 0 {
 		return effects

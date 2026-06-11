@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,332 of 31,838 cards eligible for paper support (13.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,335 of 31,838 cards eligible for paper support (13.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -62,6 +62,7 @@ Council4 currently supports **4,332 of 31,838 cards eligible for paper support (
 - Alaborn Grenadier
 - Alaborn Musketeer
 - Alaborn Trooper
+- Aladdin
 - Alchemist's Apprentice
 - Alert Shu Infantry
 - Alexi's Cloak
@@ -2192,6 +2193,7 @@ Council4 currently supports **4,332 of 31,838 cards eligible for paper support (
 - Mass Calcify
 - Mass of Ghouls
 - Master Decoy
+- Master Thief
 - Maw of the Mire
 - Meandering River
 - Mechan Navigator
@@ -2941,6 +2943,7 @@ Council4 currently supports **4,332 of 31,838 cards eligible for paper support (
 - Rogue
 - Rogue
 - Rogue's Gloves
+- Roil Elemental
 - Romantic Rendezvous
 - Ronom Unicorn
 - Rootbound Crag
