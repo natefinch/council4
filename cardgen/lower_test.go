@@ -4975,6 +4975,479 @@ func TestLowerOrderedSpellEffectsRebasesEveryTargetClause(t *testing.T) {
 	}
 }
 
+func TestLowerThenJoinedSpellSequence(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		typeLine    string
+		oracleText  string
+		checkFirst  func(*testing.T, game.Instruction)
+		checkSecond func(*testing.T, game.Instruction)
+	}{
+		{
+			name:       "draw then discard spell",
+			typeLine:   "Sorcery",
+			oracleText: "Draw two cards, then discard a card.",
+			checkFirst: func(t *testing.T, inst game.Instruction) {
+				draw, ok := inst.Primitive.(game.Draw)
+				if !ok || draw.Amount.Value() != 2 || draw.Player != game.ControllerReference() {
+					t.Fatalf("first = %+v, want controller draws 2", inst.Primitive)
+				}
+			},
+			checkSecond: func(t *testing.T, inst game.Instruction) {
+				discard, ok := inst.Primitive.(game.Discard)
+				if !ok || discard.Amount.Value() != 1 || discard.Player != game.ControllerReference() {
+					t.Fatalf("second = %+v, want controller discards 1", inst.Primitive)
+				}
+			},
+		},
+		{
+			name:       "scry then draw spell",
+			typeLine:   "Sorcery",
+			oracleText: "Scry 2, then draw a card.",
+			checkFirst: func(t *testing.T, inst game.Instruction) {
+				scry, ok := inst.Primitive.(game.Scry)
+				if !ok || scry.Amount.Value() != 2 || scry.Player != game.ControllerReference() {
+					t.Fatalf("first = %+v, want controller scries 2", inst.Primitive)
+				}
+			},
+			checkSecond: func(t *testing.T, inst game.Instruction) {
+				draw, ok := inst.Primitive.(game.Draw)
+				if !ok || draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+					t.Fatalf("second = %+v, want controller draws 1", inst.Primitive)
+				}
+			},
+		},
+		{
+			name:       "discard then draw spell",
+			typeLine:   "Sorcery",
+			oracleText: "Discard a card, then draw a card.",
+			checkFirst: func(t *testing.T, inst game.Instruction) {
+				discard, ok := inst.Primitive.(game.Discard)
+				if !ok || discard.Amount.Value() != 1 || discard.Player != game.ControllerReference() {
+					t.Fatalf("first = %+v, want controller discards 1", inst.Primitive)
+				}
+			},
+			checkSecond: func(t *testing.T, inst game.Instruction) {
+				draw, ok := inst.Primitive.(game.Draw)
+				if !ok || draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+					t.Fatalf("second = %+v, want controller draws 1", inst.Primitive)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Spell",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability not lowered")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+				t.Fatalf("mode = %+v, want no targets and two instructions", mode)
+			}
+			test.checkFirst(t, mode.Sequence[0])
+			test.checkSecond(t, mode.Sequence[1])
+		})
+	}
+}
+
+func TestLowerThenJoinedEnterTriggerSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Looting Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature enters, draw a card, then discard a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want no targets and two instructions", mode)
+	}
+	draw, drawOK := mode.Sequence[0].Primitive.(game.Draw)
+	discard, discardOK := mode.Sequence[1].Primitive.(game.Discard)
+	if !drawOK || !discardOK {
+		t.Fatalf(
+			"primitives = %T, %T; want game.Draw, game.Discard",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+		)
+	}
+	if draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+		t.Fatalf("draw = %+v, want controller draws 1", draw)
+	}
+	if discard.Amount.Value() != 1 || discard.Player != game.ControllerReference() {
+		t.Fatalf("discard = %+v, want controller discards 1", discard)
+	}
+}
+
+func TestLowerThenJoinedSharedTargetSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mill",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player mills three cards, then draws a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want one target and two instructions", mode)
+	}
+	mill, millOK := mode.Sequence[0].Primitive.(game.Mill)
+	draw, drawOK := mode.Sequence[1].Primitive.(game.Draw)
+	if !millOK || !drawOK {
+		t.Fatalf(
+			"primitives = %T, %T; want game.Mill, game.Draw",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+		)
+	}
+	if mill.Amount.Value() != 3 || mill.Player.TargetIndex() != 0 {
+		t.Fatalf("mill = %+v, want target player mills 3", mill)
+	}
+	if draw.Amount.Value() != 1 || draw.Player.TargetIndex() != 0 {
+		t.Fatalf("draw = %+v, want target player draws 1", draw)
+	}
+}
+
+// TestLowerThenJoinedThreeEffectSequence is a regression for a bug where
+// 3-effect then-joined chains would assign the wrong clause start for
+// effects after the first in the group, causing middle clauses to
+// incorrectly include previous effects' tokens.
+func TestLowerThenJoinedThreeEffectSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Chain",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Draw a card, then discard a card, then proliferate.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 3 {
+		t.Fatalf("mode = %+v, want no targets and three instructions", mode)
+	}
+	draw, drawOK := mode.Sequence[0].Primitive.(game.Draw)
+	discard, discardOK := mode.Sequence[1].Primitive.(game.Discard)
+	_, prolifOK := mode.Sequence[2].Primitive.(game.Proliferate)
+	if !drawOK || !discardOK || !prolifOK {
+		t.Fatalf(
+			"primitives = %T, %T, %T; want game.Draw, game.Discard, game.Proliferate",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+			mode.Sequence[2].Primitive,
+		)
+	}
+	if draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+		t.Fatalf("draw = %+v, want controller draws 1", draw)
+	}
+	if discard.Amount.Value() != 1 || discard.Player != game.ControllerReference() {
+		t.Fatalf("discard = %+v, want controller discards 1", discard)
+	}
+}
+
+// TestLowerThenJoinedNonTargetFinalClause is a regression for the case where
+// a then-joined sentence is followed by a separate sentence: the final
+// clause of the then-group must be bounded to its own sentence and must not
+// spill into subsequent-sentence tokens.
+func TestLowerThenJoinedNonTargetFinalClause(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Multi",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Draw a card, then discard a card. You gain 3 life.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 3 {
+		t.Fatalf("mode = %+v, want no targets and three instructions", mode)
+	}
+	draw, drawOK := mode.Sequence[0].Primitive.(game.Draw)
+	discard, discardOK := mode.Sequence[1].Primitive.(game.Discard)
+	gain, gainOK := mode.Sequence[2].Primitive.(game.GainLife)
+	if !drawOK || !discardOK || !gainOK {
+		t.Fatalf(
+			"primitives = %T, %T, %T; want game.Draw, game.Discard, game.GainLife",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+			mode.Sequence[2].Primitive,
+		)
+	}
+	if draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+		t.Fatalf("draw = %+v, want controller draws 1", draw)
+	}
+	if discard.Amount.Value() != 1 || discard.Player != game.ControllerReference() {
+		t.Fatalf("discard = %+v, want controller discards 1", discard)
+	}
+	if gain.Amount.Value() != 3 || gain.Player != game.ControllerReference() {
+		t.Fatalf("gain = %+v, want controller gains 3", gain)
+	}
+}
+
+// TestLowerThenJoinedSharedTargetNoExtraSpec is a regression for the target
+// deduplication requirement: a shared-subject then-joined sequence
+// (e.g. "Target player mills N, then draws M") must produce exactly one
+// game.TargetSpec, and both instructions must reference TargetIndex 0.
+func TestLowerThenJoinedSharedTargetNoExtraSpec(t *testing.T) {
+	t.Parallel()
+	// Verify that compound-mill produces exactly one target spec and both
+	// instructions reference the same target player at index 0.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Shared Target Test",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player mills three cards, then draws a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want exactly 1 (no duplicate target spec)", len(mode.Targets))
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
+	}
+	mill, millOK := mode.Sequence[0].Primitive.(game.Mill)
+	draw, drawOK := mode.Sequence[1].Primitive.(game.Draw)
+	if !millOK || !drawOK {
+		t.Fatalf("primitives = %T, %T, want game.Mill, game.Draw",
+			mode.Sequence[0].Primitive, mode.Sequence[1].Primitive)
+	}
+	if mill.Player.TargetIndex() != 0 {
+		t.Fatalf("mill.Player target index = %d, want 0", mill.Player.TargetIndex())
+	}
+	if draw.Player.TargetIndex() != 0 {
+		t.Fatalf("draw.Player target index = %d, want 0 (reusing existing target)", draw.Player.TargetIndex())
+	}
+}
+
+// TestLowerThenJoinedDestroyThenProliferate verifies that a then-joined pair
+// where the second effect does not use the shared target (proliferate has no
+// target) correctly discards the spurious shared target via the fallback
+// path, producing one target spec for destroy and a standalone proliferate.
+func TestLowerThenJoinedDestroyThenProliferate(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Spread",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target creature, then proliferate.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1 (destroy target only, no duplicate)", len(mode.Targets))
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
+	}
+	destroy, destroyOK := mode.Sequence[0].Primitive.(game.Destroy)
+	_, prolifOK := mode.Sequence[1].Primitive.(game.Proliferate)
+	if !destroyOK || !prolifOK {
+		t.Fatalf("primitives = %T, %T, want game.Destroy, game.Proliferate",
+			mode.Sequence[0].Primitive, mode.Sequence[1].Primitive)
+	}
+	if destroy.Object.TargetIndex() != 0 {
+		t.Fatalf("destroy.Object target index = %d, want 0", destroy.Object.TargetIndex())
+	}
+}
+
+func TestLowerThenJoinedActivatedAbilitySequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Tome",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{2}, {T}: Draw a card, then discard a card.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("got %d activated abilities, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want no targets and two instructions", mode)
+	}
+	draw, drawOK := mode.Sequence[0].Primitive.(game.Draw)
+	discard, discardOK := mode.Sequence[1].Primitive.(game.Discard)
+	if !drawOK || !discardOK {
+		t.Fatalf(
+			"primitives = %T, %T; want game.Draw, game.Discard",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+		)
+	}
+	if draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+		t.Fatalf("draw = %+v, want controller draws 1", draw)
+	}
+	if discard.Amount.Value() != 1 || discard.Player != game.ControllerReference() {
+		t.Fatalf("discard = %+v, want controller discards 1", discard)
+	}
+}
+
+func TestLowerThenJoinedLoyaltyAbilitySequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Walker",
+		Layout:     "normal",
+		TypeLine:   "Legendary Planeswalker — Test",
+		OracleText: "+1: Scry 1, then draw a card.",
+		Loyalty:    func() *string { s := "3"; return &s }(),
+	})
+	if len(face.LoyaltyAbilities) != 1 {
+		t.Fatalf("got %d loyalty abilities, want 1", len(face.LoyaltyAbilities))
+	}
+	mode := face.LoyaltyAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want no targets and two instructions", mode)
+	}
+	scry, scryOK := mode.Sequence[0].Primitive.(game.Scry)
+	draw, drawOK := mode.Sequence[1].Primitive.(game.Draw)
+	if !scryOK || !drawOK {
+		t.Fatalf(
+			"primitives = %T, %T; want game.Scry, game.Draw",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+		)
+	}
+	if scry.Amount.Value() != 1 || scry.Player != game.ControllerReference() {
+		t.Fatalf("scry = %+v, want controller scries 1", scry)
+	}
+	if draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+		t.Fatalf("draw = %+v, want controller draws 1", draw)
+	}
+}
+
+func TestLowerThenJoinedSagaChapterSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "I, II — Scry 2, then draw a card.\nIII — Draw two cards.",
+	})
+	if len(face.ChapterAbilities) != 2 {
+		t.Fatalf("got %d chapter abilities, want 2", len(face.ChapterAbilities))
+	}
+	mode := face.ChapterAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+		t.Fatalf("chapter I/II mode = %+v, want no targets and two instructions", mode)
+	}
+	scry, scryOK := mode.Sequence[0].Primitive.(game.Scry)
+	draw, drawOK := mode.Sequence[1].Primitive.(game.Draw)
+	if !scryOK || !drawOK {
+		t.Fatalf(
+			"primitives = %T, %T; want game.Scry, game.Draw",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+		)
+	}
+	if scry.Amount.Value() != 2 || scry.Player != game.ControllerReference() {
+		t.Fatalf("scry = %+v, want controller scries 2", scry)
+	}
+	if draw.Amount.Value() != 1 || draw.Player != game.ControllerReference() {
+		t.Fatalf("draw = %+v, want controller draws 1", draw)
+	}
+}
+
+// TestCompoundMillOracleIR documents the oracle compiler IR for the
+// shared-subject then-joined pattern ("Target player mills three cards, then
+// draws a card.") and proves that compound mill is achievable within the scope
+// of issue #131 without additional effect kinds.
+//
+// Hypothesis verified: the oracle compiler emits exactly one CompiledTarget
+// ("target player") for the sentence; it does NOT create a second implicit
+// target for the "draws" clause. The second effect's subject is implied, not
+// independently emitted. lowerOrderedEffectSequence resolves this through the
+// shared-target deduplication path: abilityForEffect uses the sentence Span for
+// both effects (finding the one target for each), allOracleTargetSpansClaimed
+// recognises the second claim as a duplicate, and rebaseTargetedSequence with
+// offset 0 correctly produces TargetPlayerReference(0) for both instructions
+// without adding a duplicate game.TargetSpec.
+func TestCompoundMillOracleIR(t *testing.T) {
+	t.Parallel()
+	const text = "Target player mills three cards, then draws a card."
+	compilation, diags := oracle.Compile(text, oracle.ParseContext{CardName: "Test Mill"})
+	if len(diags) > 0 {
+		t.Fatalf("compile diagnostics: %v", diags)
+	}
+	if len(compilation.Abilities) != 1 {
+		t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
+	}
+	ab := compilation.Abilities[0]
+
+	// Two effects with the same sentence Span — the root condition that
+	// requires the then-join split.
+	if len(ab.Effects) != 2 {
+		t.Fatalf("IR effects = %d, want 2 (mills + draws)", len(ab.Effects))
+	}
+	if ab.Effects[0].Kind != oracle.EffectMill {
+		t.Fatalf("effect[0].Kind = %v, want EffectMill", ab.Effects[0].Kind)
+	}
+	if ab.Effects[1].Kind != oracle.EffectDraw {
+		t.Fatalf("effect[1].Kind = %v, want EffectDraw", ab.Effects[1].Kind)
+	}
+	if ab.Effects[0].Span != ab.Effects[1].Span {
+		t.Fatalf("effect spans differ: %+v vs %+v; want same sentence span",
+			ab.Effects[0].Span, ab.Effects[1].Span)
+	}
+
+	// Verb spans are at distinct offsets, enabling the split to locate each
+	// clause boundary precisely.
+	if ab.Effects[0].VerbSpan == ab.Effects[1].VerbSpan {
+		t.Fatal("verb spans equal; want mills ≠ draws")
+	}
+
+	// Exactly one target ("target player") in the IR. The compiler does not
+	// emit a separate target for the implied "draws" subject.
+	if len(ab.Targets) != 1 {
+		t.Fatalf("IR targets = %d, want 1 (shared; not duplicated for draws clause)", len(ab.Targets))
+	}
+	if ab.Targets[0].Selector.Kind != oracle.SelectorPlayer {
+		t.Fatalf("target selector = %v, want SelectorPlayer", ab.Targets[0].Selector.Kind)
+	}
+
+	// End-to-end: compound mill lowers successfully with no diagnostics.
+	card := &ScryfallCard{
+		Name: "Test Mill", Layout: "normal", TypeLine: "Sorcery", OracleText: text,
+	}
+	_, execDiags, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(execDiags) != 0 {
+		t.Fatalf("executable diagnostics: %v", execDiags)
+	}
+	fmt.Printf("compound mill IR: effects=%d same-span=%v verb-spans-distinct=%v targets=%d\n",
+		len(ab.Effects),
+		ab.Effects[0].Span == ab.Effects[1].Span,
+		ab.Effects[0].VerbSpan != ab.Effects[1].VerbSpan,
+		len(ab.Targets),
+	)
+}
+
+
 func TestLowerSurveilSpell(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

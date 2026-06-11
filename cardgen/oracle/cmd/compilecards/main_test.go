@@ -37,15 +37,14 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	for _, relative := range []string{
 		filepath.Join("v", "vanilla_bear.go"),
 		filepath.Join("f", "flying_bear.go"),
+		filepath.Join("d", "drawing_bear.go"),
 		filepath.Join("v", "cards.go"),
 		filepath.Join("f", "cards.go"),
+		filepath.Join("d", "cards.go"),
 	} {
 		if _, err := os.Stat(filepath.Join(output, relative)); err != nil {
 			t.Errorf("%s was not generated: %v", relative, err)
 		}
-	}
-	if _, err := os.Stat(filepath.Join(output, "d", "drawing_bear.go")); !os.IsNotExist(err) {
-		t.Fatalf("unsupported card file exists or stat failed: %v", err)
 	}
 	report, err := os.ReadFile(reportPath)
 	if err != nil {
@@ -53,9 +52,8 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`"card_count": 3`,
-		`"generated_count": 2`,
-		`"unsupported_count": 1`,
-		`"name": "Drawing Bear"`,
+		`"generated_count": 3`,
+		`"unsupported_count": 0`,
 	} {
 		if !strings.Contains(string(report), wanted) {
 			t.Errorf("report missing %q:\n%s", wanted, report)

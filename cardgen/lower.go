@@ -6867,16 +6867,59 @@ func lowerOrderedEffectSequence(
 	consumedTargets := 0
 	consumedKeywords := 0
 	consumedReferences := 0
-	for _, effect := range ability.Effects {
+	// claimedOracleTargetSpans tracks which oracle-level target spans have been
+	// consumed by earlier effects in a then-joined clause. When a subsequent
+	// effect in the same sentence has all its oracle targets already claimed, the
+	// target is shared rather than new: it is not added to consumedTargets and
+	// its game.TargetSpec is not added again, but its sequence references remain
+	// valid (they already point to the correct accumulated target index).
+	var claimedOracleTargetSpans []oracle.Span
+	clauseSyntaxes := splitEffectSyntaxes(syntax, ability.Effects)
+	for i, effect := range ability.Effects {
 		effectAbility := abilityForEffect(ability, effect)
-		consumedTargets += len(effectAbility.Targets)
+		// Override the ability text and span with per-clause values derived from
+		// the split syntax tokens. This is needed for lowerers that validate
+		// ability.Text against an exact template (e.g. lowerFixedDestroySpell
+		// checks ability.Text == "Destroy "+target.Text+"."). The span must be
+		// updated in concert so that textWithoutDelimited uses consistent offsets
+		// when stripping reminder text. Target and reference filtering has already
+		// been performed by abilityForEffect using the original sentence span, so
+		// the span override does not change which targets the ability carries.
+		if clause := clauseSyntaxes[i]; clause.Span != effect.Span {
+			if clauseText := joinedTokenText(clause.Tokens); clauseText != "" {
+				effectAbility.Text = clauseText
+				effectAbility.Span = clause.Span
+			}
+		}
+		allSharedTargets := len(effectAbility.Targets) > 0 &&
+			allOracleTargetSpansClaimed(effectAbility.Targets, claimedOracleTargetSpans)
+		if !allSharedTargets {
+			consumedTargets += len(effectAbility.Targets)
+			for _, t := range effectAbility.Targets {
+				claimedOracleTargetSpans = append(claimedOracleTargetSpans, t.Span)
+			}
+		}
 		consumedKeywords += len(effectAbility.Keywords)
 		consumedReferences += len(effectAbility.References)
-		content, diagnostic := lowerSingleEffectSpell(
-			cardName,
-			effectAbility,
-			syntaxWithinSpan(syntax, effect.Span),
-		)
+		// Lower the effect. For then-joined effects where the shared target was
+		// already consumed by a previous effect (allSharedTargets), first try
+		// lowering with the shared targets present (needed for effects whose
+		// syntax references the shared subject, e.g. "then draws a card" in a
+		// target-player sequence). If that fails, retry with targets cleared
+		// (needed for standalone effects that do not use the shared target,
+		// e.g. "then proliferate").
+		var content game.AbilityContent
+		var diagnostic *oracle.Diagnostic
+		if allSharedTargets {
+			content, diagnostic = lowerSingleEffectSpell(cardName, effectAbility, clauseSyntaxes[i])
+			if diagnostic != nil {
+				effectAbilityNoTarget := effectAbility
+				effectAbilityNoTarget.Targets = nil
+				content, diagnostic = lowerSingleEffectSpell(cardName, effectAbilityNoTarget, clauseSyntaxes[i])
+			}
+		} else {
+			content, diagnostic = lowerSingleEffectSpell(cardName, effectAbility, clauseSyntaxes[i])
+		}
 		if diagnostic != nil ||
 			len(content.SharedTargets) != 0 ||
 			content.IsModal() ||
@@ -6885,10 +6928,20 @@ func lowerOrderedEffectSequence(
 		}
 		mode := content.Modes[0]
 		if len(mode.Targets) > 0 {
-			if !rebaseTargetedSequence(mode.Sequence, len(targets)) {
-				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+			if allSharedTargets {
+				// Shared targets: the mode's sequence already references target
+				// indices that are valid in the accumulated targets slice.
+				// Rebase with offset 0 to leave references unchanged, and do not
+				// append duplicate target specs.
+				if !rebaseTargetedSequence(mode.Sequence, 0) {
+					return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+				}
+			} else {
+				if !rebaseTargetedSequence(mode.Sequence, len(targets)) {
+					return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+				}
+				targets = append(targets, mode.Targets...)
 			}
-			targets = append(targets, mode.Targets...)
 		}
 		sequence = append(sequence, mode.Sequence...)
 	}
@@ -6900,6 +6953,57 @@ func lowerOrderedEffectSequence(
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
 }
+
+// allOracleTargetSpansClaimed reports whether every oracle target in targets
+// has its span already present in claimed.
+func allOracleTargetSpansClaimed(targets []oracle.CompiledTarget, claimed []oracle.Span) bool {
+	for _, t := range targets {
+		found := false
+		for _, s := range claimed {
+			if s == t.Span {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// joinedTokenText reconstructs the source text from a token slice, inserting
+// spaces between tokens where appropriate (following oracle punctuation rules).
+// This mirrors the unexported oracle.joinedSourceText function.
+func joinedTokenText(tokens []oracle.Token) string {
+	if len(tokens) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	for i, tok := range tokens {
+		if i > 0 && joinedTokenNeedsSpace(tokens[i-1], tok) {
+			b.WriteByte(' ')
+		}
+		b.WriteString(tok.Text)
+	}
+	return b.String()
+}
+
+func joinedTokenNeedsSpace(prev, cur oracle.Token) bool {
+	if cur.Kind == oracle.Comma || cur.Kind == oracle.Period || cur.Kind == oracle.Colon ||
+		cur.Kind == oracle.Semicolon || cur.Kind == oracle.RightParen ||
+		cur.Kind == oracle.Apostrophe ||
+		prev.Kind == oracle.LeftParen || prev.Kind == oracle.Quote || cur.Kind == oracle.Quote {
+		return false
+	}
+	if prev.Kind == oracle.Plus || prev.Kind == oracle.Minus || prev.Kind == oracle.Slash ||
+		cur.Kind == oracle.Plus || cur.Kind == oracle.Minus || cur.Kind == oracle.Slash ||
+		prev.Kind == oracle.Asterisk || cur.Kind == oracle.Asterisk {
+		return false
+	}
+	return true
+}
+
 
 func lowerCyclingCountDamageAndGain(cardName string, ability oracle.CompiledAbility) (game.AbilityContent, bool) {
 	if len(ability.Effects) != 2 ||
@@ -7169,6 +7273,185 @@ func syntaxWithinSpan(syntax oracle.Ability, span oracle.Span) oracle.Ability {
 		},
 	)
 	return syntax
+}
+
+// splitEffectSyntaxes returns per-clause syntax for each effect in an ordered
+// sequence. For consecutive effects that share the same sentence Span and are
+// joined by a "then" connector between their verb positions, the shared syntax
+// is split at the "then" boundary:
+//   - The first effect in a then-joined group receives tokens from the
+//     beginning of its sentence through just before the "then" (stripping any
+//     immediately preceding comma), with the sentence's terminal period
+//     appended. Starting from the sentence beginning rather than the verb
+//     preserves any subject-phrase tokens (e.g. "target player") that precede
+//     the verb.
+//   - Each subsequent effect receives the subject prefix (tokens before the
+//     first verb within the sentence) followed by tokens from its own verb
+//     through the end of the sentence, so that then-joined clauses with an
+//     implied shared subject (e.g. "Target player mills three cards, then draws
+//     a card.") include the subject in every per-clause syntax.
+//
+// If no "then" token is found between consecutive verb positions, or if effects
+// occupy separate sentences, the function falls back to
+// syntaxWithinSpan(syntax, effect.Span) for those effects. The function is
+// fail-closed: any ambiguous or degenerate boundary produces the original
+// full-sentence fallback rather than a partial slice.
+func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect) []oracle.Ability {
+	clauses := make([]oracle.Ability, len(effects))
+	for i, effect := range effects {
+		clauses[i] = syntaxWithinSpan(syntax, effect.Span)
+	}
+	tokens := syntax.Tokens
+
+	// Pre-compute the verb position of the first effect within each sentence
+	// group. For a then-joined chain of N>2 effects all sharing the same Span,
+	// pairs (0,1), (1,2), … are each processed independently. Effects after the
+	// first in a group must not inherit tokens from earlier effects as their
+	// "clause start" — only the first-in-group may start at sentenceStart so
+	// that any genuine subject prefix (e.g. "target player" before the first
+	// verb) is included in its clause. Subsequent effects in the group start
+	// from their own verb position.
+	firstVerbInGroup := make(map[oracle.Span]int)
+	for _, effect := range effects {
+		if _, seen := firstVerbInGroup[effect.Span]; seen {
+			continue
+		}
+		vi := findVerbTokenIndex(tokens, effect.VerbSpan)
+		if vi >= 0 {
+			firstVerbInGroup[effect.Span] = vi
+		}
+	}
+
+	for i := 0; i+1 < len(effects); i++ {
+		if effects[i].Span != effects[i+1].Span {
+			continue
+		}
+		sentenceSpan := effects[i].Span
+
+		// Find the first token within the sentence span.
+		sentenceStart := -1
+		for k, tok := range tokens {
+			if spanCovered(tok.Span, []oracle.Span{sentenceSpan}) {
+				sentenceStart = k
+				break
+			}
+		}
+		if sentenceStart < 0 {
+			continue
+		}
+
+		vi := findVerbTokenIndex(tokens, effects[i].VerbSpan)
+		vj := findVerbTokenIndex(tokens, effects[i+1].VerbSpan)
+		if vi < 0 || vj < 0 || vi >= vj || vi < sentenceStart {
+			continue
+		}
+
+		thenIdx := -1
+		for k := vi + 1; k < vj; k++ {
+			if tokens[k].Kind == oracle.Word && strings.EqualFold(tokens[k].Text, "then") {
+				thenIdx = k
+				break
+			}
+		}
+		if thenIdx < 0 {
+			continue
+		}
+
+		// Find the terminal period that ends the sentence — searching only within
+		// the sentence span so reminder-text periods are not mistaken for it.
+		period, hasPeriod := lastPeriodTokenInSpan(tokens, sentenceSpan)
+		if !hasPeriod {
+			continue
+		}
+		periodIdx := -1
+		for k := len(tokens) - 1; k >= vj; k-- {
+			if tokens[k].Span == period.Span {
+				periodIdx = k
+				break
+			}
+		}
+		if periodIdx < 0 {
+			continue
+		}
+
+		// Clause end for effect i: up to but not including any comma immediately
+		// before "then", but no earlier than sentenceStart.
+		end := thenIdx
+		if end > sentenceStart && tokens[end-1].Kind == oracle.Comma {
+			end--
+		}
+		if end <= sentenceStart {
+			continue
+		}
+
+		// The clause for effect i begins at sentenceStart only when this effect
+		// is the first one in its then-joined group (vi == firstVerbInGroup),
+		// so that any genuine subject phrase before the first verb (e.g.
+		// "target player" in "Target player mills …, then draws …") is included.
+		// For subsequent effects in a multi-step chain (vi > firstVerbInGroup),
+		// the clause begins at vi so that earlier effects' tokens are not
+		// mistakenly included as a subject.
+		viFirst := firstVerbInGroup[sentenceSpan]
+		iClauseStart := vi
+		if vi == viFirst {
+			iClauseStart = sentenceStart
+		}
+
+		// Effect i clause: tokens[iClauseStart:end] + terminal period.
+		// The clause Span.End uses the last content token's End (not the appended
+		// period's End) so that the span is strictly smaller than the sentence
+		// span. This ensures the per-clause text and span override in
+		// lowerOrderedEffectSequence fires correctly (clause.Span != effect.Span).
+		iClauseTokens := append([]oracle.Token(nil), tokens[iClauseStart:end]...)
+		iClauseTokens = append(iClauseTokens, period)
+		clauses[i] = oracle.Ability{
+			Span:      oracle.Span{Start: tokens[iClauseStart].Span.Start, End: tokens[end-1].Span.End},
+			Tokens:    iClauseTokens,
+			Reminders: syntax.Reminders,
+		}
+
+		// Subject prefix: tokens before the first verb in the sentence group.
+		// This propagates the shared subject (e.g. "Target player") to the i+1
+		// clause. For groups where the first verb is at sentenceStart there is
+		// no subject, so the prefix is empty.
+		subjectPrefix := append([]oracle.Token(nil), tokens[sentenceStart:viFirst]...)
+
+		// Effect i+1 clause: subject prefix + tokens from vj through end of
+		// sentence (inclusive). Limiting to periodIdx+1 ensures the clause does
+		// not spill into tokens from subsequent sentences.
+		jClauseTokens := append(subjectPrefix, tokens[vj:periodIdx+1]...)
+		clauses[i+1] = oracle.Ability{
+			Span: oracle.Span{
+				Start: tokens[vj].Span.Start,
+				End:   period.Span.End,
+			},
+			Tokens:    jClauseTokens,
+			Reminders: syntax.Reminders,
+		}
+	}
+	return clauses
+}
+
+// lastPeriodTokenInSpan returns the last Period token in tokens whose own span
+// lies within span, or the zero Token and false if none is found.
+func lastPeriodTokenInSpan(tokens []oracle.Token, span oracle.Span) (oracle.Token, bool) {
+	for i := len(tokens) - 1; i >= 0; i-- {
+		if tokens[i].Kind == oracle.Period && spanCovered(tokens[i].Span, []oracle.Span{span}) {
+			return tokens[i], true
+		}
+	}
+	return oracle.Token{}, false
+}
+
+// findVerbTokenIndex returns the index in tokens of the token whose span start
+// matches verbSpan.Start, or -1 if not found.
+func findVerbTokenIndex(tokens []oracle.Token, verbSpan oracle.Span) int {
+	for i, token := range tokens {
+		if token.Span.Start.Offset == verbSpan.Start.Offset {
+			return i
+		}
+	}
+	return -1
 }
 
 func unsupportedEffectSequenceDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
@@ -8428,9 +8711,7 @@ func exactTargetPlayerDrawSyntax(tokens []oracle.Token, amount int) bool {
 		strings.EqualFold(tokens[1].Text, "player") &&
 		tokens[2].Kind == oracle.Word &&
 		strings.EqualFold(tokens[2].Text, "draws") &&
-		fixedNumberToken(tokens[3], amount) &&
-		tokens[4].Kind == oracle.Word &&
-		strings.EqualFold(tokens[4].Text, "cards") &&
+		fixedCardCountSyntax(tokens[3], tokens[4], amount) &&
 		tokens[5].Kind == oracle.Period
 }
 
