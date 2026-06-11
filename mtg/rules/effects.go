@@ -953,7 +953,7 @@ func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, l
 		if !ok || !owner.Exile.Remove(ref.CardID) {
 			continue
 		}
-		if _, ok := createCardPermanentWithChoices(e, g, card, obj.Controller, zone.Exile, agents, log); ok {
+		if _, ok := createCardPermanentWithChoices(e, g, card, card.Owner, zone.Exile, agents, log); ok {
 			returned = true
 		}
 	}

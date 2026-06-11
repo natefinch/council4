@@ -1244,6 +1244,13 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if pattern.OneOrMore {
 		fields = append(fields, "OneOrMore: true,")
 	}
+	if pattern.MatchCounterKind {
+		kindFields, err := renderTriggerPatternCounterKind(ctx, pattern)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, kindFields...)
+	}
 	if pattern.Player != game.TriggerPlayerAny {
 		player, err := renderTriggerPlayer(pattern.Player)
 		if err != nil {
@@ -1251,19 +1258,12 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		}
 		fields = append(fields, fmt.Sprintf("Player: %s,", player))
 	}
-	if pattern.DamageRecipient != game.DamageRecipientNone {
-		recipient, err := renderDamageRecipient(pattern.DamageRecipient)
+	if pattern.DamageRecipient != game.DamageRecipientNone || len(pattern.DamageRecipientTypes) > 0 {
+		damageFields, err := renderTriggerPatternDamageFields(ctx, pattern)
 		if err != nil {
 			return "", err
 		}
-		fields = append(fields, fmt.Sprintf("DamageRecipient: %s,", recipient))
-	}
-	if len(pattern.DamageRecipientTypes) > 0 {
-		recipientTypes, err := renderTypesCardSlice(ctx, pattern.DamageRecipientTypes)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("DamageRecipientTypes: %s,", recipientTypes))
+		fields = append(fields, damageFields...)
 	}
 	if pattern.RequireCombatDamage {
 		fields = append(fields, "RequireCombatDamage: true,")
@@ -1276,6 +1276,38 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		fields = append(fields, fmt.Sprintf("CardSelection: %s,", sel))
 	}
 	return structLit("game.TriggerPattern", fields), nil
+}
+
+// renderTriggerPatternCounterKind renders the MatchCounterKind and CounterKind
+// fields for a TriggerPattern and appends the import requirement.
+func renderTriggerPatternCounterKind(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	kind, err := renderCounterKind(pattern.CounterKind)
+	if err != nil {
+		return nil, fmt.Errorf("render: trigger pattern counter kind: %w", err)
+	}
+	ctx.need(importCounter)
+	return []string{"MatchCounterKind: true,", fmt.Sprintf("CounterKind: %s,", kind)}, nil
+}
+
+// renderTriggerPatternDamageFields renders DamageRecipient and
+// DamageRecipientTypes fields for a TriggerPattern.
+func renderTriggerPatternDamageFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	var fields []string
+	if pattern.DamageRecipient != game.DamageRecipientNone {
+		recipient, err := renderDamageRecipient(pattern.DamageRecipient)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("DamageRecipient: %s,", recipient))
+	}
+	if len(pattern.DamageRecipientTypes) > 0 {
+		recipientTypes, err := renderTypesCardSlice(ctx, pattern.DamageRecipientTypes)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("DamageRecipientTypes: %s,", recipientTypes))
+	}
+	return fields, nil
 }
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
@@ -2301,10 +2333,27 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 		if !ok {
 			return "", errors.New("render: internal error: Exile kind has unexpected concrete type")
 		}
-		return r.renderObjectOrGroup(ctx, "game.Exile", value.Object, value.Group)
+		return r.renderExile(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderExile(ctx *renderCtx, value game.Exile) (string, error) {
+	if value.ExileLinkedKey == "" {
+		return r.renderObjectOrGroup(ctx, "game.Exile", value.Object, value.Group)
+	}
+	if value.Group.Domain() != 0 {
+		return "", errors.New("render: linked exile requires one object")
+	}
+	rendered, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Exile", []string{
+		fmt.Sprintf("Object: %s,", rendered),
+		fmt.Sprintf("ExileLinkedKey: game.LinkedKey(%q),", string(value.ExileLinkedKey)),
+	}), nil
 }
 
 func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error) {
@@ -3874,6 +3923,12 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventCycled", nil
 	case game.EventPermanentMutated:
 		return "game.EventPermanentMutated", nil
+	case game.EventPermanentTapped:
+		return "game.EventPermanentTapped", nil
+	case game.EventPermanentUntapped:
+		return "game.EventPermanentUntapped", nil
+	case game.EventCountersAdded:
+		return "game.EventCountersAdded", nil
 	case game.EventBeginningOfStep:
 		return "game.EventBeginningOfStep", nil
 	default:

@@ -53,6 +53,34 @@ func TestValidateInstructionSequenceAcceptsLinkedBattlefieldSource(t *testing.T)
 	}
 }
 
+func TestValidateInstructionSequenceAcceptsDelayedLinkedBattlefieldSource(t *testing.T) {
+	key := LinkedKey("delayed-blink")
+	seq := []Instruction{
+		{Primitive: Exile{Object: TargetPermanentReference(0), ExileLinkedKey: key}},
+		{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+			Timing: DelayedAtBeginningOfNextEndStep,
+			Content: Mode{Sequence: []Instruction{{Primitive: PutOnBattlefield{
+				Source: LinkedBattlefieldSource(key),
+			}}}}.Ability(),
+		}}},
+	}
+	if err := ValidateInstructionSequence(seq, []TargetSpec{{MinTargets: 1, MaxTargets: 1}}); err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsDelayedUnknownLinkedBattlefieldSource(t *testing.T) {
+	err := ValidateInstructionSequence([]Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+		Timing: DelayedAtBeginningOfNextEndStep,
+		Content: Mode{Sequence: []Instruction{{Primitive: PutOnBattlefield{
+			Source: LinkedBattlefieldSource("missing"),
+		}}}}.Ability(),
+	}}}})
+	if err == nil || !strings.Contains(err.Error(), `linked key "missing" not yet published`) {
+		t.Fatalf("error = %v, want linked-key validation failure", err)
+	}
+}
+
 func TestValidateInstructionSequenceAcceptsLinkedCardConsumers(t *testing.T) {
 	for _, primitive := range []Primitive{
 		MoveCard{

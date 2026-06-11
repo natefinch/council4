@@ -4761,7 +4761,10 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind)
 		game.EventAttackerBecameBlocked,
 		game.EventAttackerDeclared,
 		game.EventBlockerDeclared,
-		game.EventDamageDealt:
+		game.EventDamageDealt,
+		game.EventPermanentTapped,
+		game.EventPermanentUntapped,
+		game.EventCountersAdded:
 		return kind == oracle.TriggerWhenever
 	default:
 		return kind == oracle.TriggerWhen
@@ -4874,7 +4877,12 @@ func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (g
 			Event:  game.EventPermanentEnteredBattlefield,
 			Source: game.TriggerSourceSelf,
 		}, true
-	case "this creature dies", "this permanent dies":
+	case "this creature dies", "this permanent dies",
+		"this aura is put into a graveyard from the battlefield",
+		"this artifact is put into a graveyard from the battlefield",
+		"this enchantment is put into a graveyard from the battlefield",
+		"this vehicle is put into a graveyard from the battlefield",
+		"this equipment is put into a graveyard from the battlefield":
 		return game.TriggerPattern{
 			Event:  game.EventPermanentDied,
 			Source: game.TriggerSourceSelf,
@@ -4916,6 +4924,20 @@ func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (g
 			DamageRecipientTypes: []types.Card{types.Creature},
 			RequireCombatDamage:  true,
 		}, true
+	case "this creature becomes tapped", "this permanent becomes tapped",
+		"this land becomes tapped", "this artifact becomes tapped",
+		"this enchantment becomes tapped", "this vehicle becomes tapped":
+		return game.TriggerPattern{
+			Event:  game.EventPermanentTapped,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature becomes untapped", "this permanent becomes untapped",
+		"this land becomes untapped", "this artifact becomes untapped",
+		"this enchantment becomes untapped", "this vehicle becomes untapped":
+		return game.TriggerPattern{
+			Event:  game.EventPermanentUntapped,
+			Source: game.TriggerSourceSelf,
+		}, true
 	default:
 		if strings.EqualFold(ability.Trigger.Event, cardName+" dies") {
 			return game.TriggerPattern{
@@ -4923,8 +4945,55 @@ func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (g
 				Source: game.TriggerSourceSelf,
 			}, true
 		}
+		if strings.EqualFold(ability.Trigger.Event, cardName+" becomes tapped") {
+			return game.TriggerPattern{
+				Event:  game.EventPermanentTapped,
+				Source: game.TriggerSourceSelf,
+			}, true
+		}
+		if strings.EqualFold(ability.Trigger.Event, cardName+" becomes untapped") {
+			return game.TriggerPattern{
+				Event:  game.EventPermanentUntapped,
+				Source: game.TriggerSourceSelf,
+			}, true
+		}
+		if pattern, ok := lowerCounterAddedSelfTrigger(ability.Trigger.Event); ok {
+			return pattern, true
+		}
 		return game.TriggerPattern{}, false
 	}
+}
+
+// lowerCounterAddedSelfTrigger recognizes supported "N counter(s) added to
+// self" trigger event clauses and returns the corresponding TriggerPattern.
+// Returns false for unsupported counter kinds (fail-closed).
+func lowerCounterAddedSelfTrigger(event string) (game.TriggerPattern, bool) {
+	base := game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Source:           game.TriggerSourceSelf,
+		MatchCounterKind: true,
+	}
+	switch event {
+	case "one or more +1/+1 counters are put on this creature",
+		"one or more +1/+1 counters are put on this permanent":
+		base.CounterKind = counter.PlusOnePlusOne
+		base.OneOrMore = true
+		return base, true
+	case "a +1/+1 counter is put on this creature",
+		"a +1/+1 counter is put on this permanent":
+		base.CounterKind = counter.PlusOnePlusOne
+		return base, true
+	case "one or more -1/-1 counters are put on this creature",
+		"one or more -1/-1 counters are put on this permanent":
+		base.CounterKind = counter.MinusOneMinusOne
+		base.OneOrMore = true
+		return base, true
+	case "a -1/-1 counter is put on this creature",
+		"a -1/-1 counter is put on this permanent":
+		base.CounterKind = counter.MinusOneMinusOne
+		return base, true
+	}
+	return game.TriggerPattern{}, false
 }
 
 func bodyReferences(
@@ -7108,7 +7177,10 @@ func lowerOrderedEffectSequence(
 		// default: straightforward lowering with own targets only.
 		var content game.AbilityContent
 		var diagnostic *oracle.Diagnostic
-		if allSharedTargets {
+		if linkedExile, delayedContent, ok := lowerDelayedBlinkReturn(ability.Effects, i, effectAbility, sequence); ok {
+			sequence[len(sequence)-1].Primitive = linkedExile
+			content = delayedContent
+		} else if allSharedTargets {
 			content, diagnostic = lowerSingleEffectSpell(cardName, effectAbility, clauseSyntaxes[i])
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
@@ -7143,6 +7215,68 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func lowerDelayedBlinkReturn(
+	effects []oracle.CompiledEffect,
+	effectIndex int,
+	ability oracle.CompiledAbility,
+	sequence []game.Instruction,
+) (game.Exile, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		effects[effectIndex-1].Kind != oracle.EffectExile ||
+		effects[effectIndex-1].DelayedTiming != 0 ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectReturn ||
+		ability.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	switch ability.Text {
+	case "Return that card to the battlefield under its owner's control at the beginning of the next end step.":
+		if !exactReferenceTexts(ability.References, "that card", "its") {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+	case "Return it to the battlefield under its owner's control at the beginning of the next end step.":
+		if !exactReferenceTexts(ability.References, "it", "its") {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+	default:
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	if !ok ||
+		exile.Group.Valid() ||
+		exile.Object.Kind() != game.ObjectReferenceTargetPermanent ||
+		exile.ExileLinkedKey != "" {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-blink-%d", effectIndex))
+	exile.ExileLinkedKey = key
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
+			Source: game.LinkedBattlefieldSource(key),
+		}}}}.Ability(),
+	}}
+	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+func exactReferenceTexts(references []oracle.CompiledReference, texts ...string) bool {
+	if len(references) != len(texts) {
+		return false
+	}
+	for i, text := range texts {
+		if !strings.EqualFold(references[i].Text, text) {
+			return false
+		}
+	}
+	return true
 }
 
 // joinedTokenText reconstructs the source text from a token slice, inserting
