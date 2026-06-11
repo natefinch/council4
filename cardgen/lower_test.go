@@ -584,11 +584,12 @@ func TestLowerSimpleDelayedOneShotEffects(t *testing.T) {
 			}
 			face := lowerSingleFace(t, card)
 			var content game.AbilityContent
-			if face.SpellAbility.Exists {
+			switch {
+			case face.SpellAbility.Exists:
 				content = face.SpellAbility.Val
-			} else if len(face.TriggeredAbilities) == 1 {
+			case len(face.TriggeredAbilities) == 1:
 				content = face.TriggeredAbilities[0].Content
-			} else {
+			default:
 				t.Fatalf("lowered face has no single spell or triggered ability: %#v", face)
 			}
 			if len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
