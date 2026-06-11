@@ -2995,6 +2995,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	if additional.Amount != 0 {
 		fields = append(fields, fmt.Sprintf("Amount: %d,", additional.Amount))
 	}
+	if additional.AmountFromX {
+		fields = append(fields, "AmountFromX: true,")
+	}
 	if additional.Source != zone.None {
 		ctx.need(importZone)
 		zoneLiteral, err := renderZone(additional.Source)
@@ -3023,6 +3026,17 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		fields = append(fields,
 			"MatchCardType: true,",
 			fmt.Sprintf("CardType: %s,", cardType),
+		)
+	}
+	if additional.MatchCardColor {
+		colorLiteral, err := colorValueToLiteral(additional.CardColor)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importColor)
+		fields = append(fields,
+			"MatchCardColor: true,",
+			fmt.Sprintf("CardColor: %s,", colorLiteral),
 		)
 	}
 	if additional.RequireTapped {

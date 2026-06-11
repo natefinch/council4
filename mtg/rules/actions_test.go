@@ -439,6 +439,65 @@ func TestCastSpellRevealCostAttributesSource(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityRevealXColoredCardsAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	firstBlue := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Blue One",
+		Colors: []color.Color{color.Blue},
+	}})
+	red := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Red",
+		Colors: []color.Color{color.Red},
+	}})
+	secondBlue := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Blue Two",
+		Colors: []color.Color{color.Blue},
+	}})
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:           cost.AdditionalReveal,
+			Text:           "Reveal X blue cards from your hand",
+			AmountFromX:    true,
+			Source:         zone.Hand,
+			MatchCardColor: true,
+			CardColor:      color.Blue,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+	actX2 := action.ActivateAbility(source.ObjectID, 0, nil, 2)
+	if !containsAction(legal, actX2) {
+		t.Fatal("reveal-X ability was not legal for X=2 with two blue cards in hand")
+	}
+	if containsAction(legal, action.ActivateAbility(source.ObjectID, 0, nil, 3)) {
+		t.Fatal("reveal-X ability was legal for X=3 with only two blue cards in hand")
+	}
+	if !engine.applyAction(g, game.Player1, actX2) {
+		t.Fatal("applyAction(reveal-X ability) = false, want true")
+	}
+	if !g.Players[game.Player1].Hand.Contains(firstBlue) ||
+		!g.Players[game.Player1].Hand.Contains(red) ||
+		!g.Players[game.Player1].Hand.Contains(secondBlue) {
+		t.Fatal("revealed cards should remain in hand")
+	}
+	if !eventRevealedCardFromZone(g, game.Player1, source.CardInstanceID, firstBlue, zone.Hand) ||
+		!eventRevealedCardFromZone(g, game.Player1, source.CardInstanceID, secondBlue, zone.Hand) {
+		t.Fatal("reveal-X ability did not emit reveal events for both blue cards")
+	}
+	if eventRevealedCardFromZone(g, game.Player1, source.CardInstanceID, red, zone.Hand) {
+		t.Fatal("reveal-X ability revealed a nonmatching red card")
+	}
+}
+
 func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

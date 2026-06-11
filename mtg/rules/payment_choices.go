@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -11,11 +12,11 @@ import (
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
-func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
+func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
 	prefs := &payment.Preferences{}
 	prefs.PhyrexianLifeChoices = e.phyrexianPaymentChoices(g, playerID, manaCost, agents, log)
 	for _, additionalCost := range additionalCosts {
-		amount := payment.AdditionalCostAmount(additionalCost)
+		amount := payment.AdditionalCostAmountFor(additionalCost, xValue)
 		switch additionalCost.Kind {
 		case cost.AdditionalSacrifice:
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
@@ -41,7 +42,7 @@ func (e *Engine) paymentPreferencesForSpell(g *game.Game, playerID game.PlayerID
 
 func (e *Engine) paymentPreferencesForSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
 	option := e.chooseSpellCostOptionFromZone(g, playerID, cardID, sourceZone, card, xValue, agents, log)
-	prefs := e.paymentPreferencesForCost(g, playerID, option.ManaCost, option.AdditionalCosts, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, option.ManaCost, option.AdditionalCosts, xValue, agents, log)
 	prefs.AlternativeIndex = option.Index
 	return prefs
 }
@@ -137,6 +138,9 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+	if amount == 0 {
+		return nil
+	}
 	candidates := candidateAdditionalCostCards(g, playerID, addCost)
 	if len(candidates) <= amount {
 		return candidates
@@ -251,6 +255,9 @@ func localAdditionalCostMatchesCard(face *game.CardDef, addCost cost.Additional)
 		return false
 	}
 	if addCost.MatchCardType && !face.HasType(addCost.CardType) {
+		return false
+	}
+	if addCost.MatchCardColor && !slices.Contains(face.Colors, addCost.CardColor) {
 		return false
 	}
 	if addCost.SubtypesAny != (cost.SubtypeSet{}) {

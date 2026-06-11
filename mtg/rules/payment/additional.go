@@ -46,14 +46,17 @@ type cardZoneSelection struct {
 }
 
 //nolint:maintidx // Centralized cost dispatch keeps cross-cost reservation checks in one place.
-func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, tapReservations ...*game.Permanent) (additionalCostPlan, bool) {
+func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, tapReservations ...*game.Permanent) (additionalCostPlan, bool) {
 	plan := additionalCostPlan{player: playerID, sourceCardID: sourceCardID}
 	reservedTapPermanents := append([]*game.Permanent(nil), tapReservations...)
 	if source != nil && hasTapCostOf(costs) {
 		reservedTapPermanents = append(reservedTapPermanents, source)
 	}
 	for _, additional := range costs {
-		amount := AdditionalCostAmount(additional)
+		amount := AdditionalCostAmountFor(additional, xValue)
+		if amount < 0 {
+			return plan, false
+		}
 		switch additional.Kind {
 		case cost.AdditionalUnknown:
 			if additional.Text == "" {
@@ -163,6 +166,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.exiles = append(plan.exiles, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalReveal:
+			if amount == 0 {
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
 			chosen := preferredRevealCards(s, playerID, additional, amount, plan.reveals, prefs)
 			if len(chosen) != amount {
 				return plan, false
@@ -538,6 +545,9 @@ func additionalCostMatchesCard(card *game.CardDef, additional cost.Additional) b
 	if additional.MatchCardType && !card.HasType(additional.CardType) {
 		return false
 	}
+	if additional.MatchCardColor && !slices.Contains(card.Colors, additional.CardColor) {
+		return false
+	}
 	if additional.SubtypesAny != (cost.SubtypeSet{}) {
 		for _, subtype := range additional.SubtypesAny {
 			if subtype != "" && card.HasSubtype(subtype) {
@@ -551,6 +561,15 @@ func additionalCostMatchesCard(card *game.CardDef, additional cost.Additional) b
 
 // AdditionalCostAmount returns the effective amount for an additional cost.
 func AdditionalCostAmount(additional cost.Additional) int {
+	return AdditionalCostAmountFor(additional, 0)
+}
+
+// AdditionalCostAmountFor returns the effective amount for an additional cost
+// using the announced X value when the cost is variable.
+func AdditionalCostAmountFor(additional cost.Additional, xValue int) int {
+	if additional.AmountFromX {
+		return xValue
+	}
 	if additional.Amount > 0 {
 		return additional.Amount
 	}

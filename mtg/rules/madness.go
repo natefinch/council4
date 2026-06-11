@@ -51,7 +51,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 	if !ok {
 		panic("validated madness spell targets could not be segmented")
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
 	}
