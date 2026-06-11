@@ -231,9 +231,10 @@ func TestWriteSupportDocumentation(t *testing.T) {
 		},
 	}
 	cfg := config{
-		supportedPath:   filepath.Join(directory, "supported.md"),
-		unsupportedPath: filepath.Join(directory, "unsupported.md"),
-		readmePath:      readmePath,
+		supportedPath:          filepath.Join(directory, "supported.md"),
+		unsupportedPath:        filepath.Join(directory, "unsupported.md"),
+		unsupportedReasonsPath: filepath.Join(directory, "unsupported-reasons.md"),
+		readmePath:             readmePath,
 	}
 	if err := writeSupportDocumentation(cfg, output, results); err != nil {
 		t.Fatal(err)
@@ -258,6 +259,13 @@ func TestWriteSupportDocumentation(t *testing.T) {
 	if wanted := "- **Unsupported \\[Card\\]** — unsupported ability: cannot handle this"; !strings.Contains(string(unsupportedData), wanted) {
 		t.Errorf("unsupported.md missing %q:\n%s", wanted, unsupportedData)
 	}
+	reasons, err := os.ReadFile(cfg.unsupportedReasonsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wanted := "| 1 | unsupported ability | 1 | 1 | 100.0% | - |"; !strings.Contains(string(reasons), wanted) {
+		t.Errorf("unsupported-reasons.md missing %q:\n%s", wanted, reasons)
+	}
 	readme, err := os.ReadFile(cfg.readmePath)
 	if err != nil {
 		t.Fatal(err)
@@ -266,6 +274,7 @@ func TestWriteSupportDocumentation(t *testing.T) {
 		readmeSupportStart,
 		"**2 of 3 cards eligible for paper support (66.7%)**",
 		"[`supported.md`](./supported.md)",
+		"[`unsupported-reasons.md`](./unsupported-reasons.md)",
 		readmeSupportEnd,
 	} {
 		if !strings.Contains(string(readme), wanted) {

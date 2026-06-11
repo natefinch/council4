@@ -27,14 +27,15 @@ import (
 )
 
 type config struct {
-	inputPath       string
-	outputRoot      string
-	reportPath      string
-	format          string
-	supportedPath   string
-	unsupportedPath string
-	readmePath      string
-	workers         int
+	inputPath              string
+	outputRoot             string
+	reportPath             string
+	format                 string
+	supportedPath          string
+	unsupportedPath        string
+	unsupportedReasonsPath string
+	readmePath             string
+	workers                int
 }
 
 type job struct {
@@ -107,6 +108,7 @@ func parseFlags(args []string) (config, error) {
 	flags.StringVar(&cfg.format, "format", "json", "report format: json or text")
 	flags.StringVar(&cfg.supportedPath, "supported", "", "supported-card Markdown path")
 	flags.StringVar(&cfg.unsupportedPath, "unsupported", "", "unsupported-card Markdown path")
+	flags.StringVar(&cfg.unsupportedReasonsPath, "unsupported-reasons", "", "card-support planning Markdown path")
 	flags.StringVar(&cfg.readmePath, "readme", "", "README path whose card-support block should be updated")
 	flags.IntVar(&cfg.workers, "workers", runtime.NumCPU(), "number of compiler workers")
 	if err := flags.Parse(args); err != nil {
@@ -158,6 +160,11 @@ func writeSupportDocumentation(cfg config, output report, results []result) erro
 	}
 	if cfg.unsupportedPath != "" {
 		if err := writeUnsupportedMarkdown(cfg.unsupportedPath, output); err != nil {
+			return err
+		}
+	}
+	if cfg.unsupportedReasonsPath != "" {
+		if err := writeUnsupportedReasonsMarkdown(cfg.unsupportedReasonsPath, output); err != nil {
 			return err
 		}
 	}
@@ -232,6 +239,65 @@ func writeUnsupportedMarkdown(path string, output report) error {
 	return writeDocumentationFile(path, builder.String())
 }
 
+func writeUnsupportedReasonsMarkdown(path string, output report) error {
+	analysis := analyzeSupport(output)
+	var builder strings.Builder
+	_, _ = builder.WriteString("# Card-Support Planning Report\n\n")
+	_, _ = builder.WriteString(
+		"Capability-aware blockers for eligible paper cards that cannot yet be generated. " +
+			"Each distinct diagnostic summary and capability is counted at most once per card.\n\n",
+	)
+	_, _ = builder.WriteString("## Diagnostic reasons\n\n")
+	_, _ = builder.WriteString(
+		"A sole blocker is the card's only distinct diagnostic summary. " +
+			"The most common co-blocker excludes the reason in its own row.\n\n",
+	)
+	_, _ = builder.WriteString(
+		"| Rank | Reason | Affected cards | Sole blockers | Sole blocker % | Most common co-blocker |\n",
+	)
+	_, _ = builder.WriteString("| ---: | --- | ---: | ---: | ---: | --- |\n")
+	for index, reason := range analysis.reasons {
+		coBlocker := "-"
+		if reason.mostCommonCoBlocker != "" {
+			coBlocker = markdownTableCell(reason.mostCommonCoBlocker)
+		}
+		_, _ = fmt.Fprintf(
+			&builder,
+			"| %d | %s | %s | %s | %.1f%% | %s |\n",
+			index+1,
+			markdownTableCell(reason.summary),
+			formatCount(reason.affectedCards),
+			formatCount(reason.soleBlockerCards),
+			reason.soleBlockerPercentage(),
+			coBlocker,
+		)
+	}
+	_, _ = builder.WriteString("\n## Capability clusters\n\n")
+	_, _ = builder.WriteString(
+		"A fully unlockable card has every distinct diagnostic summary in one capability cluster. " +
+			"Constituent summaries list the diagnostics currently observed in that cluster.\n\n",
+	)
+	_, _ = builder.WriteString(
+		"| Capability | Affected cards | Fully unlockable cards | Constituent diagnostic summaries |\n",
+	)
+	_, _ = builder.WriteString("| --- | ---: | ---: | --- |\n")
+	for _, capability := range analysis.capabilities {
+		summaries := make([]string, len(capability.summaries))
+		for index, summary := range capability.summaries {
+			summaries[index] = markdownTableCell(summary)
+		}
+		_, _ = fmt.Fprintf(
+			&builder,
+			"| %s | %s | %s | %s |\n",
+			capability.id,
+			formatCount(capability.affectedCards),
+			formatCount(capability.fullyUnlockableCards),
+			strings.Join(summaries, "; "),
+		)
+	}
+	return writeDocumentationFile(path, builder.String())
+}
+
 func updateReadmeSupport(path string, output report) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -248,7 +314,8 @@ func updateReadmeSupport(path string, output report) error {
 	}
 	start += len(readmeSupportStart)
 	replacement := "\n" + supportSummary(output) +
-		" See [`supported.md`](./supported.md) and [`unsupported.md`](./unsupported.md) for the complete lists.\n"
+		" See [`supported.md`](./supported.md) and [`unsupported.md`](./unsupported.md) for the complete lists, " +
+		"and [`unsupported-reasons.md`](./unsupported-reasons.md) for capability-aware blocker planning.\n"
 	content = content[:start] + replacement + content[end:]
 	return writeDocumentationFile(path, content)
 }
@@ -290,6 +357,10 @@ func markdownInline(text string) string {
 		">", "&gt;",
 	)
 	return replacer.Replace(text)
+}
+
+func markdownTableCell(text string) string {
+	return strings.ReplaceAll(markdownInline(text), "|", "\\|")
 }
 
 func writeDocumentationFile(path, content string) error {
