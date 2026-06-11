@@ -3203,6 +3203,32 @@ func staticSubjectGroup(subject oracle.StaticSubjectKind, subtypeText string) (g
 	}
 }
 
+func resolvingStaticSubjectGroup(subject oracle.StaticSubjectKind, subtypeText string) (game.GroupReference, bool) {
+	selection := game.Selection{Controller: game.ControllerYou}
+	switch subject {
+	case oracle.StaticSubjectControlledCreatures:
+		selection.RequiredTypes = []types.Card{types.Creature}
+	case oracle.StaticSubjectControlledWalls:
+		selection.SubtypesAny = []types.Sub{types.Wall}
+	case oracle.StaticSubjectControlledArtifacts:
+		selection.RequiredTypes = []types.Card{types.Artifact}
+	case oracle.StaticSubjectControlledTokens:
+		selection.TokenOnly = true
+	case oracle.StaticSubjectOpponentControlledCreatures:
+		selection.RequiredTypes = []types.Card{types.Creature}
+		selection.Controller = game.ControllerOpponent
+	case oracle.StaticSubjectControlledCreatureSubtype:
+		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		selection.SubtypesAny = []types.Sub{subtype}
+	default:
+		return game.GroupReference{}, false
+	}
+	return game.BattlefieldGroup(selection), true
+}
+
 func knownCreatureSubtypeFromPlural(text string) (types.Sub, bool) {
 	candidates := []string{text}
 	if singular, ok := strings.CutSuffix(text, "s"); ok {
@@ -6716,6 +6742,10 @@ func lowerImmediateSingleEffectSpell(
 	case oracle.EffectDestroy:
 		return lowerFixedDestroySpell(ability)
 	case oracle.EffectGain:
+		if len(ability.Keywords) != 0 &&
+			ability.Effects[0].Duration == oracle.DurationUntilEndOfTurn {
+			return lowerTemporaryKeywordSpell(ability, syntax)
+		}
 		return lowerFixedLifeSpell(ability, "gain", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.GainLife{Amount: amount, Player: player}
 		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
@@ -6789,7 +6819,7 @@ func lowerImmediateSingleEffectSpell(
 		}
 		return lowerCounterPlacementSpell(ability)
 	case oracle.EffectModifyPT:
-		return lowerFixedModifyPTSpell(ability)
+		return lowerFixedModifyPTSpell(ability, syntax)
 	case oracle.EffectCounter:
 		return lowerCounterSpell(ability)
 	default:
@@ -7857,6 +7887,9 @@ func lowerOrderedEffectSequence(
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	if len(ability.Conditions) != 0 || len(ability.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+	}
+	if content, ok := lowerTemporaryPTKeywordSpell(ability, syntax); ok {
+		return content, nil
 	}
 	if content, ok := lowerCyclingCountDamageAndGain(cardName, ability); ok {
 		return content, nil
@@ -9256,8 +9289,12 @@ func lowerFixedDamageSpell(
 
 func lowerFixedModifyPTSpell(
 	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ability.Effects[0]
+	if effect.StaticSubject != oracle.StaticSubjectNone {
+		return lowerFixedGroupModifyPTSpell(ability, syntax, effect)
+	}
 	dynamicPT := effect.Amount.DynamicKind != oracle.DynamicAmountNone
 	if len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
@@ -9323,6 +9360,161 @@ func lowerFixedModifyPTSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+func lowerFixedGroupModifyPTSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported group power/toughness spell",
+			"the executable source backend supports only exact fixed supported group power/toughness changes until end of turn",
+		)
+	}
+	if len(ability.Targets) != 0 ||
+		len(ability.References) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		effect.Negated ||
+		effect.Duration != oracle.DurationUntilEndOfTurn ||
+		effect.Amount.DynamicKind != oracle.DynamicAmountNone ||
+		!effect.PowerDelta.Known ||
+		!effect.ToughnessDelta.Known ||
+		!matchesExactTemporaryGroupPTSyntax(syntax, effect) {
+		return unsupported()
+	}
+	group, ok := resolvingStaticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:          game.LayerPowerToughnessModify,
+					Group:          group,
+					PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
+					ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), nil
+}
+
+func lowerTemporaryKeywordSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported temporary keyword spell",
+			"the executable source backend supports only exact non-parameterized keyword grants to one target creature or permanent until end of turn",
+		)
+	}
+	effect := ability.Effects[0]
+	if len(ability.Effects) != 1 ||
+		len(ability.Targets) != 1 ||
+		len(ability.References) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Modes) != 0 ||
+		effect.Negated ||
+		effect.StaticSubject != oracle.StaticSubjectNone ||
+		effect.Duration != oracle.DurationUntilEndOfTurn ||
+		!temporaryKeywordTarget(ability.Targets[0]) ||
+		!matchesExactTemporaryKeywordSyntax(syntax, ability.Targets[0], ability.Keywords) {
+		return unsupported()
+	}
+	keywords, ok := mixedStaticKeywords(ability.Keywords)
+	if !ok {
+		return unsupported()
+	}
+	target, ok := permanentTargetSpec(ability.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(game.TargetPermanentReference(0)),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:       game.LayerAbility,
+					AddKeywords: keywords,
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), nil
+}
+
+func lowerTemporaryPTKeywordSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, bool) {
+	if len(ability.Effects) != 2 ||
+		ability.Effects[0].Kind != oracle.EffectModifyPT ||
+		ability.Effects[1].Kind != oracle.EffectGain ||
+		len(ability.Targets) != 1 ||
+		len(ability.References) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Modes) != 0 ||
+		!temporaryKeywordTarget(ability.Targets[0]) {
+		return game.AbilityContent{}, false
+	}
+	modifyEffect := ability.Effects[0]
+	keywordEffect := ability.Effects[1]
+	if modifyEffect.Span != keywordEffect.Span ||
+		modifyEffect.Negated ||
+		keywordEffect.Negated ||
+		modifyEffect.StaticSubject != oracle.StaticSubjectNone ||
+		keywordEffect.StaticSubject != oracle.StaticSubjectNone ||
+		modifyEffect.Duration != oracle.DurationUntilEndOfTurn ||
+		keywordEffect.Duration != oracle.DurationUntilEndOfTurn ||
+		modifyEffect.Amount.DynamicKind != oracle.DynamicAmountNone ||
+		!modifyEffect.PowerDelta.Known ||
+		!modifyEffect.ToughnessDelta.Known ||
+		!matchesExactTemporaryPTKeywordSyntax(syntax, ability.Targets[0], modifyEffect, ability.Keywords) {
+		return game.AbilityContent{}, false
+	}
+	keywords, ok := mixedStaticKeywords(ability.Keywords)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	target, ok := permanentTargetSpec(ability.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(game.TargetPermanentReference(0)),
+				ContinuousEffects: []game.ContinuousEffect{
+					{
+						Layer:          game.LayerPowerToughnessModify,
+						PowerDelta:     compiledSignedAmountValue(modifyEffect.PowerDelta),
+						ToughnessDelta: compiledSignedAmountValue(modifyEffect.ToughnessDelta),
+					},
+					{
+						Layer:       game.LayerAbility,
+						AddKeywords: keywords,
+					},
+				},
+				Duration: game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), true
+}
+
+func temporaryKeywordTarget(target oracle.CompiledTarget) bool {
+	return target.Selector.Kind == oracle.SelectorCreature ||
+		target.Selector.Kind == oracle.SelectorPermanent
 }
 
 func lowerFixedBounceSpell(
@@ -10307,6 +10499,69 @@ func exactModifyPTAmountSyntax(ability oracle.CompiledAbility, effect oracle.Com
 	default:
 		return false
 	}
+}
+
+func matchesExactTemporaryGroupPTSyntax(syntax oracle.Ability, effect oracle.CompiledEffect) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	prefixLength, ok := matchesStaticPTBuffPrefix(tokens, effect)
+	return ok &&
+		effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
+		matchesUntilEndOfTurnSuffix(tokens, prefixLength)
+}
+
+func matchesExactTemporaryKeywordSyntax(
+	syntax oracle.Ability,
+	target oracle.CompiledTarget,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	targetLength := leadingSpanTokenCount(tokens, target.Span)
+	suffixStart := len(tokens) - 5
+	return targetLength > 0 &&
+		suffixStart > targetLength+1 &&
+		equalTokenWord(tokens[targetLength], "gains") &&
+		matchesExactKeywordList(tokens[targetLength+1:suffixStart], keywords) &&
+		matchesUntilEndOfTurnSuffix(tokens, suffixStart)
+}
+
+func matchesExactTemporaryPTKeywordSyntax(
+	syntax oracle.Ability,
+	target oracle.CompiledTarget,
+	effect oracle.CompiledEffect,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	targetLength := leadingSpanTokenCount(tokens, target.Span)
+	keywordStart := targetLength + 8
+	suffixStart := len(tokens) - 5
+	return targetLength > 0 &&
+		suffixStart > keywordStart &&
+		equalTokenWord(tokens[targetLength], "gets") &&
+		tokensMatchSignedAmount(tokens[targetLength+1], tokens[targetLength+2], effect.PowerDelta) &&
+		tokens[targetLength+3].Kind == oracle.Slash &&
+		tokensMatchSignedAmount(tokens[targetLength+4], tokens[targetLength+5], effect.ToughnessDelta) &&
+		equalTokenWord(tokens[targetLength+6], "and") &&
+		equalTokenWord(tokens[targetLength+7], "gains") &&
+		matchesExactKeywordList(tokens[keywordStart:suffixStart], keywords) &&
+		matchesUntilEndOfTurnSuffix(tokens, suffixStart)
+}
+
+func leadingSpanTokenCount(tokens []oracle.Token, span oracle.Span) int {
+	length := 0
+	for length < len(tokens) && spanCovered(tokens[length].Span, []oracle.Span{span}) {
+		length++
+	}
+	return length
+}
+
+func matchesUntilEndOfTurnSuffix(tokens []oracle.Token, start int) bool {
+	return start >= 0 &&
+		len(tokens) == start+5 &&
+		equalTokenWord(tokens[start], "until") &&
+		equalTokenWord(tokens[start+1], "end") &&
+		equalTokenWord(tokens[start+2], "of") &&
+		equalTokenWord(tokens[start+3], "turn") &&
+		tokens[start+4].Kind == oracle.Period
 }
 
 func dynamicPTMultiplierMatches(

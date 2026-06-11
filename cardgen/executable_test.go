@@ -1779,6 +1779,72 @@ func TestGenerateExecutableCardSourcePumpTargetCreature(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceTemporaryContinuousEffects(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "group power toughness",
+			oracleText: "Creatures you control get +1/+1 until end of turn.",
+			wants: []string{
+				"game.ApplyContinuous",
+				"game.BattlefieldGroup",
+				"Controller: game.ControllerYou",
+				"game.LayerPowerToughnessModify",
+				"PowerDelta:",
+				"ToughnessDelta:",
+			},
+		},
+		{
+			name:       "target keyword",
+			oracleText: "Target creature gains flying until end of turn.",
+			wants: []string{
+				"game.ApplyContinuous",
+				"Object: opt.Val(game.TargetPermanentReference(0))",
+				"game.LayerAbility",
+				"game.Flying",
+			},
+		},
+		{
+			name:       "target power toughness and keyword",
+			oracleText: "Target creature gets +2/+2 and gains trample until end of turn.",
+			wants: []string{
+				"game.ApplyContinuous",
+				"game.LayerPowerToughnessModify",
+				"PowerDelta:",
+				"ToughnessDelta:",
+				"game.LayerAbility",
+				"game.Trample",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Effect",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceNegativeZeroToughness(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -3323,7 +3389,10 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "bounce to your hand", cardName: "Test Bounce", typeLine: "Instant", oracleText: "Return target creature to your hand."},
 		{name: "variable power toughness", cardName: "Test Growth", typeLine: "Instant", oracleText: "Target creature gets +X/+X until end of turn."},
 		{name: "permanent power toughness", cardName: "Test Growth", typeLine: "Sorcery", oracleText: "Target creature gets +2/+2."},
-		{name: "power toughness rider", cardName: "Test Growth", typeLine: "Instant", oracleText: "Target creature gets +2/+2 and gains trample until end of turn."},
+		{name: "dynamic group power toughness", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +X/+X until end of turn."},
+		{name: "unsupported group power toughness duration", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +2/+2 until your next turn."},
+		{name: "group keyword grant", cardName: "Test Flight", typeLine: "Instant", oracleText: "Creatures you control gain flying until end of turn."},
+		{name: "parameterized temporary keyword", cardName: "Test Ward", typeLine: "Instant", oracleText: "Target creature gains ward {2} until end of turn."},
 		{name: "set life total", cardName: "Test Life", typeLine: "Sorcery", oracleText: "Your life total becomes 10."},
 		{name: "compound life", cardName: "Test Life", typeLine: "Sorcery", oracleText: "You gain 3 life and draw a card."},
 		{name: "variable scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry X."},

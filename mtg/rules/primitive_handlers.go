@@ -865,7 +865,6 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 	applied := false
 	for i := range templates {
 		runtimeEffect := templates[i]
-		runtimeEffect.ID = g.IDGen.Next()
 		runtimeEffect.SourceCardID = sourceID
 		runtimeEffect.SourceObjectID = sourceObjectID
 		runtimeEffect.Controller = obj.Controller
@@ -880,12 +879,25 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		if runtimeEffect.NewController.Exists && runtimeEffect.NewController.Val == game.Player1 {
 			runtimeEffect.NewController = opt.Val(obj.Controller)
 		}
-		if runtimeEffect.AffectedObjectID == 0 && !runtimeEffect.Group.Valid() {
+		if runtimeEffect.Group.Valid() {
+			members := newReferenceResolver(g, obj).groupMembers(runtimeEffect.Group)
+			runtimeEffect.Group = game.GroupReference{}
+			for _, objectID := range members {
+				memberEffect := runtimeEffect
+				memberEffect.ID = g.IDGen.Next()
+				memberEffect.AffectedObjectID = objectID
+				g.ContinuousEffects = append(g.ContinuousEffects, memberEffect)
+			}
+			applied = true
+			continue
+		}
+		if runtimeEffect.AffectedObjectID == 0 {
 			if permanent == nil {
 				continue
 			}
 			runtimeEffect.AffectedObjectID = permanent.ObjectID
 		}
+		runtimeEffect.ID = g.IDGen.Next()
 		g.ContinuousEffects = append(g.ContinuousEffects, runtimeEffect)
 		applied = true
 	}
