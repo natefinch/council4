@@ -1470,6 +1470,31 @@ func TestGenerateExecutableCardSourceDestroyAllCreatures(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceDestroyAllOtherCreatures(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test One-Sided Wrath",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy all other creatures.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.Destroy",
+		"Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludeSource: true})",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceModifyTargetCreature(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -2825,7 +2850,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "conditional draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "If you control a creature, draw two cards."},
 		{name: "compound draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "Draw two cards, then discard a card."},
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
-		{name: "qualified mass destroy", cardName: "Test Doom", typeLine: "Sorcery", oracleText: "Destroy all other creatures."},
 		{name: "regeneration destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. It can't be regenerated."},
 		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack creature."},
 		{name: "linked exile", cardName: "Test Exile", typeLine: "Instant", oracleText: "Exile target creature, then return it to the battlefield."},
