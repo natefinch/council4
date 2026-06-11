@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,696
+Cards supported: 3,702
 
 - +2 Mace
 - Aang, Air Nomad
@@ -212,6 +212,7 @@ Cards supported: 3,696
 - Axebane Beast
 - Axebane Stag
 - Axegrinder Giant
+- Axiom Engraver
 - Azami, Lady of Scrolls
 - Azorius Cluestone
 - Azorius Guildgate
@@ -1210,6 +1211,7 @@ Cards supported: 3,696
 - Glider Kids
 - Glimmer
 - Glistener Elf
+- Glistener Seer
 - Glittering Massif
 - Gloom Pangolin
 - Gloomhunter
@@ -2311,6 +2313,7 @@ Cards supported: 3,696
 - Prairie Stream
 - Prakhata Club Security
 - Precision Bolt
+- Predation Steward
 - Prescient Chimera
 - Prey Upon
 - Pride Guardian
@@ -2888,6 +2891,7 @@ Cards supported: 3,696
 - Sootfeather Flock
 - Soothing Balm
 - Soul Shepherd
+- Soul Summons
 - Soul Warden
 - Soul of the Harvest
 - Soul of the Rapids
@@ -3042,6 +3046,7 @@ Cards supported: 3,696
 - Sulfurous Mire
 - Sultai Ascendancy
 - Sultai Banner
+- Sultai Emissary
 - Sultai Scavenger
 - Sultai Skullkeeper
 - Summit Apes
@@ -3061,6 +3066,7 @@ Cards supported: 3,696
 - Sunlit Marsh
 - Sunpetal Grove
 - Sunrise Seeker
+- Sunset Pyramid
 - Sunspire Griffin
 - Suntail Hawk
 - Supply Drop

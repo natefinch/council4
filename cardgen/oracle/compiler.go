@@ -230,7 +230,7 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 			case startsWords(words, "exile"):
 				component.Kind = CostExile
 				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "remove") && containsWord(words, "counter"):
+			case startsWords(words, "remove") && (containsWord(words, "counter") || containsWord(words, "counters")):
 				component.Kind = CostRemoveCounter
 				component.Object = wordsAfterFirst(part)
 			case startsWords(words, "tap"):
@@ -566,6 +566,8 @@ func counterKindWord(tokens []Token) (counter.Kind, bool) {
 		counter.Brick,
 		counter.Page,
 		counter.Enlightened,
+		counter.Oil,
+		counter.Blood,
 		counter.Indestructible,
 		counter.Deathtouch,
 		counter.Flying,
