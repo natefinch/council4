@@ -780,32 +780,153 @@ func emitDamagePreventedEvent(g *game.Game, event damageEvent, prevented int) {
 }
 
 func permanentProtectedFromSource(g *game.Game, permanent *game.Permanent, sourceID, sourceObjectID id.ID) bool {
-	source, ok := damageSourceDef(g, sourceID, sourceObjectID)
-	return ok && permanentProtectedFromSourceDef(g, permanent, source)
+	if permanent == nil {
+		return false
+	}
+	// Use effective characteristics for permanents on the battlefield (CR 702.16c).
+	if sourceObjectID != 0 {
+		if sourcePermanent, ok := permanentByObjectID(g, sourceObjectID); ok {
+			vals := effectivePermanentValues(g, sourcePermanent)
+			return permanentProtectedFromChars(g, permanent, sourceChars{
+				colors:   vals.colors,
+				types:    vals.types,
+				subtypes: vals.subtypes,
+			})
+		}
+		// If the object ID resolves to a stack object, use the selected face's
+		// characteristics so that alternate-face spells (adventures, MDFCs)
+		// use the face that was actually cast.
+		if stackObj, ok := stackObjectByID(g, sourceObjectID); ok {
+			if chars, ok := stackObjectSourceChars(g, stackObj); ok {
+				return permanentProtectedFromChars(g, permanent, chars)
+			}
+		}
+		// LKI fallback: covers departed permanents and resolved spells whose
+		// stack object was already removed (CR 702.16c, 800.4a).
+		if snapshot, ok := lastKnownObject(g, sourceObjectID); ok {
+			return permanentProtectedFromChars(g, permanent, sourceChars{
+				colors:   snapshot.Colors,
+				types:    snapshot.Types,
+				subtypes: snapshot.Subtypes,
+			})
+		}
+	}
+	// Fall back to card def for instants/sorceries identified by card instance.
+	// Use the card's selected face if one is on the stack; otherwise root def.
+	if sourceID != 0 {
+		if card, ok := g.GetCardInstance(sourceID); ok {
+			return permanentProtectedFromSourceDef(g, permanent, cardFaceOrDefault(card, selectedFaceForCardInstance(g, card)))
+		}
+	}
+	return false
+}
+
+// stackObjectSourceChars returns the effective source characteristics of a
+// spell stack object, using the selected face (obj.Face) so that
+// alternate-face spells carry the correct types/colors/subtypes.
+func stackObjectSourceChars(g *game.Game, obj *game.StackObject) (sourceChars, bool) {
+	if obj.SourceTokenDef != nil {
+		return sourceChars{
+			colors:   obj.SourceTokenDef.Colors,
+			types:    obj.SourceTokenDef.Types,
+			subtypes: obj.SourceTokenDef.Subtypes,
+		}, true
+	}
+	if obj.SourceID != 0 {
+		if card, ok := g.GetCardInstance(obj.SourceID); ok {
+			faceDef := cardFaceOrDefault(card, obj.Face)
+			return sourceChars{
+				colors:   faceDef.Colors,
+				types:    faceDef.Types,
+				subtypes: faceDef.Subtypes,
+			}, true
+		}
+	}
+	return sourceChars{}, false
+}
+
+// selectedFaceForCardInstance finds the face the card instance is currently
+// using on the stack (if any); falls back to FaceFront.
+func selectedFaceForCardInstance(g *game.Game, card *game.CardInstance) game.FaceIndex {
+	for _, obj := range g.Stack.Objects() {
+		if obj.SourceID == card.ID {
+			return obj.Face
+		}
+	}
+	return game.FaceFront
+}
+
+// sourceChars holds the effective qualities used for protection evaluation.
+type sourceChars struct {
+	colors   []color.Color
+	types    []types.Card
+	subtypes []types.Sub
 }
 
 func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, source *game.CardDef) bool {
 	if permanent == nil || source == nil {
 		return false
 	}
-	for _, clr := range permanentProtectionColors(g, permanent) {
-		if slices.Contains(source.Colors, clr) {
+	return permanentProtectedFromChars(g, permanent, sourceChars{
+		colors:   source.Colors,
+		types:    source.Types,
+		subtypes: source.Subtypes,
+	})
+}
+
+func permanentProtectedFromChars(g *game.Game, permanent *game.Permanent, source sourceChars) bool {
+	values := effectivePermanentValues(g, permanent)
+	// Check the effective keyword map first: if Protection was removed via
+	// RemoveKeywords (e.g., "loses all abilities"), it will be false here even
+	// though the ability body may still appear in values.abilities.
+	if !values.keywords[game.Protection] {
+		return false
+	}
+	for i := range values.abilities {
+		body, ok := values.abilities[i].(game.StaticAbility)
+		if !ok {
+			continue
+		}
+		prot, ok := game.StaticBodyProtectionKeyword(&body)
+		if !ok {
+			continue
+		}
+		if protectionMatchesSource(prot, source) {
 			return true
 		}
 	}
 	return false
 }
 
-func permanentProtectionColors(g *game.Game, permanent *game.Permanent) []color.Color {
-	var colors []color.Color
-	abilities := permanentEffectiveAbilities(g, permanent)
-	for i := range abilities {
-		body, ok := abilities[i].(game.StaticAbility)
-		if ok {
-			colors = append(colors, game.StaticBodyProtectionColors(&body)...)
+func protectionMatchesSource(prot game.ProtectionKeyword, source sourceChars) bool {
+	if prot.Everything {
+		return true
+	}
+	if prot.EachColor && len(source.colors) > 0 {
+		return true
+	}
+	if prot.Multicolored && len(source.colors) >= 2 {
+		return true
+	}
+	if prot.Monocolored && len(source.colors) == 1 {
+		return true
+	}
+	for _, clr := range prot.FromColors {
+		if slices.Contains(source.colors, clr) {
+			return true
 		}
 	}
-	return colors
+	for _, t := range prot.FromTypes {
+		if slices.Contains(source.types, t) {
+			return true
+		}
+	}
+	for _, sub := range prot.FromSubtypes {
+		if slices.Contains(source.subtypes, sub) {
+			return true
+		}
+	}
+	return false
 }
 
 func damageSourceDef(g *game.Game, sourceID, sourceObjectID id.ID) (*game.CardDef, bool) {
@@ -818,4 +939,19 @@ func damageSourceDef(g *game.Game, sourceID, sourceObjectID id.ID) (*game.CardDe
 		return permanentCardDef(g, permanent)
 	}
 	return nil, false
+}
+
+// permanentProtectedFromPermanentEffective reports whether permanent has
+// protection from sourcePermanent using sourcePermanent's effective
+// characteristics. Used for blocking checks (CR 702.16b).
+func permanentProtectedFromPermanentEffective(g *game.Game, permanent, sourcePermanent *game.Permanent) bool {
+	if permanent == nil || sourcePermanent == nil {
+		return false
+	}
+	vals := effectivePermanentValues(g, sourcePermanent)
+	return permanentProtectedFromChars(g, permanent, sourceChars{
+		colors:   vals.colors,
+		types:    vals.types,
+		subtypes: vals.subtypes,
+	})
 }

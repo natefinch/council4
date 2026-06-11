@@ -157,6 +157,47 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderCounterObjectPrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CounterObject{
+		Object: game.TargetStackObjectReference(0),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.CounterObject", "Object: game.TargetStackObjectReference(0)"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered counter missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRenderTargetPredicateSpellCardTypes(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, ok, err := (Renderer{}).renderTargetPredicate(ctx, game.TargetPredicate{
+		SpellCardTypes:         []types.Card{types.Instant},
+		ExcludedSpellCardTypes: []types.Card{types.Creature},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("predicate rendered empty")
+	}
+	for _, want := range []string{
+		"SpellCardTypes: []types.Card{types.Instant}",
+		"ExcludedSpellCardTypes: []types.Card{types.Creature}",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered predicate missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importTypes]; !ok {
+		t.Fatal("spell card predicate did not request types import")
+	}
+}
+
 func TestRenderManifestPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Manifest{})
@@ -261,6 +302,12 @@ func TestRenderIssue210AdditionalCosts(t *testing.T) {
 			},
 			wants:      []string{"cost.AdditionalPutCounter", `Text: "Put a verse counter on Test Bard"`, "Amount: 1", "CounterKind: counter.Verse"},
 			wantImport: importCounter,
+		},
+		{
+			name:       "collect evidence",
+			additional: cost.Additional{Kind: cost.AdditionalCollectEvidence, Text: "Collect evidence 4", Amount: 4, Source: zone.Graveyard},
+			wants:      []string{"cost.AdditionalCollectEvidence", `Text: "Collect evidence 4"`, "Amount: 4", "Source: zone.Graveyard"},
+			wantImport: importZone,
 		},
 	}
 	for _, test := range tests {

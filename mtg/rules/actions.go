@@ -652,7 +652,7 @@ func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellDef *ga
 		target.Owner == owner &&
 		permanentHasType(g, target, types.Creature) &&
 		!permanentHasSubtype(g, target, types.Human) &&
-		!targetProtectedFromSource(g, playerID, spellDef, game.PermanentTarget(targetID))
+		!targetProtectedFromSource(g, playerID, spellDef, 0, game.PermanentTarget(targetID))
 }
 
 func mutateAlternativeCost(manaCost cost.Mana) cost.Alternative {
@@ -965,7 +965,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	if !ok {
 		panic("validated graveyard ability targets could not be segmented")
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, agents, log)
+	prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     card.ID,

@@ -73,6 +73,9 @@ type TargetPredicate struct {
 	PermanentTypes []types.Card
 	ExcludedTypes  []types.Card
 
+	SpellCardTypes         []types.Card
+	ExcludedSpellCardTypes []types.Card
+
 	Colors         []color.Color
 	ExcludedColors []color.Color
 

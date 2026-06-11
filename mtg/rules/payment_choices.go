@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -13,9 +14,14 @@ import (
 )
 
 func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
+	return e.paymentPreferencesForCostFromSource(g, playerID, manaCost, additionalCosts, xValue, 0, zone.None, agents, log, tapExclusions...)
+}
+
+func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
 	prefs := &payment.Preferences{}
 	prefs.PhyrexianLifeChoices = e.phyrexianPaymentChoices(g, playerID, manaCost, agents, log)
-	for _, additionalCost := range additionalCosts {
+	reservedGraveyardCards := map[id.ID]bool{}
+	for i, additionalCost := range additionalCosts {
 		amount := payment.AdditionalCostAmountFor(additionalCost, xValue)
 		switch additionalCost.Kind {
 		case cost.AdditionalSacrifice:
@@ -25,11 +31,21 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 		case cost.AdditionalReturnToHand:
 			prefs.ReturnChoices = append(prefs.ReturnChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalDiscard:
-			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
+			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, nil, 0, 0, zone.None, agents, log)...)
 		case cost.AdditionalExile:
-			prefs.ExileChoices = append(prefs.ExileChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
+			choices := e.additionalCostCardChoices(g, playerID, additionalCost, amount, additionalCosts[i+1:], xValue, sourceCardID, sourceZone, agents, log, reservedCardIDs(reservedGraveyardCards)...)
+			prefs.ExileChoices = append(prefs.ExileChoices, choices...)
+			reserveIfGraveyard(additionalCost, choices, reservedGraveyardCards)
 		case cost.AdditionalReveal:
-			prefs.RevealChoices = append(prefs.RevealChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
+			prefs.RevealChoices = append(prefs.RevealChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, nil, 0, 0, zone.None, agents, log)...)
+		case cost.AdditionalExileSource:
+			if sourceCardID != 0 && sourceZone == zone.Graveyard {
+				reservedGraveyardCards[sourceCardID] = true
+			}
+		case cost.AdditionalCollectEvidence:
+			choices := e.collectEvidenceChoices(g, playerID, additionalCost, amount, additionalCosts[i+1:], xValue, sourceCardID, sourceZone, agents, log, reservedCardIDs(reservedGraveyardCards)...)
+			prefs.EvidenceChoices = append(prefs.EvidenceChoices, choices...)
+			reserveIfGraveyard(additionalCost, choices, reservedGraveyardCards)
 		default:
 		}
 	}
@@ -42,9 +58,36 @@ func (e *Engine) paymentPreferencesForSpell(g *game.Game, playerID game.PlayerID
 
 func (e *Engine) paymentPreferencesForSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
 	option := e.chooseSpellCostOptionFromZone(g, playerID, cardID, sourceZone, card, xValue, agents, log)
-	prefs := e.paymentPreferencesForCost(g, playerID, option.ManaCost, option.AdditionalCosts, xValue, agents, log)
+	prefs := e.paymentPreferencesForCostFromSource(g, playerID, option.ManaCost, option.AdditionalCosts, xValue, cardID, sourceZone, agents, log)
 	prefs.AlternativeIndex = option.Index
 	return prefs
+}
+
+func reservedCardIDs(reserved map[id.ID]bool) []id.ID {
+	ids := make([]id.ID, 0, len(reserved))
+	for cardID := range reserved {
+		ids = append(ids, cardID)
+	}
+	return ids
+}
+
+func reserveIfGraveyard(additionalCost cost.Additional, choices []id.ID, reserved map[id.ID]bool) {
+	if additionalCostSourceZone(additionalCost) != zone.Graveyard {
+		return
+	}
+	for _, cardID := range choices {
+		reserved[cardID] = true
+	}
+}
+
+func additionalCostSourceZone(additionalCost cost.Additional) zone.Type {
+	if additionalCost.Source != zone.None {
+		return additionalCost.Source
+	}
+	if additionalCost.Kind == cost.AdditionalExile || additionalCost.Kind == cost.AdditionalCollectEvidence {
+		return zone.Graveyard
+	}
+	return zone.Hand
 }
 
 func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) payment.SpellOptionSummary {
@@ -137,13 +180,20 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 	return selectedPaymentPermanentIDs(candidates, selected)
 }
 
-func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedCardIDs ...id.ID) []id.ID {
 	if amount == 0 {
 		return nil
 	}
-	candidates := candidateAdditionalCostCards(g, playerID, addCost)
+	candidates := candidateAdditionalCostCards(g, playerID, addCost, excludedCardIDs...)
 	if len(candidates) <= amount {
 		return candidates
+	}
+	defaultSelection := firstChoiceIndices(amount)
+	if additionalCostSourceZone(addCost) == zone.Graveyard {
+		defaultSelection = exileDefaultSelection(g, playerID, candidates, addCost, amount, remainingCosts, xValue, sourceCardID, sourceZone, excludedCardIDs...)
+	}
+	if len(defaultSelection) == 0 {
+		return nil
 	}
 	options := make([]game.ChoiceOption, 0, len(candidates))
 	for i, cardID := range candidates {
@@ -156,10 +206,200 @@ func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID,
 		Options:          options,
 		MinChoices:       amount,
 		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
+		DefaultSelection: defaultSelection,
 	}
 	selected := e.chooseChoice(g, agents, request, log)
 	return selectedCardIDs(candidates, selected)
+}
+
+func (e *Engine) collectEvidenceChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, threshold int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedCardIDs ...id.ID) []id.ID {
+	if threshold <= 0 {
+		return nil
+	}
+	candidates := candidateAdditionalCostCards(g, playerID, addCost, excludedCardIDs...)
+	defaultSelection := evidenceDefaultSelection(g, playerID, candidates, threshold, remainingCosts, xValue, sourceCardID, sourceZone, excludedCardIDs...)
+	if len(defaultSelection) == 0 {
+		return nil
+	}
+	options := make([]game.ChoiceOption, 0, len(candidates))
+	for i, cardID := range candidates {
+		options = append(options, game.ChoiceOption{Index: i, Label: evidenceChoiceLabel(g, cardID)})
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoicePayment,
+		Player:           playerID,
+		Prompt:           payment.AdditionalCostText(addCost),
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       len(candidates),
+		DefaultSelection: defaultSelection,
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	return selectedCardIDs(candidates, selected)
+}
+
+func evidenceDefaultSelection(g *game.Game, playerID game.PlayerID, candidates []id.ID, threshold int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, excludedCardIDs ...id.ID) []int {
+	reserved := cardIDSet(excludedCardIDs...)
+	return evidenceDefaultSelectionWithReserved(g, playerID, candidates, threshold, remainingCosts, xValue, sourceCardID, sourceZone, reserved)
+}
+
+func evidenceDefaultSelectionWithReserved(g *game.Game, playerID game.PlayerID, candidates []id.ID, threshold int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, reserved map[id.ID]bool) []int {
+	type evidenceOption struct {
+		index     int
+		manaValue int
+	}
+	var options []evidenceOption
+	for i, cardID := range candidates {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		face := cardFaceOrDefault(card, game.FaceFront)
+		if !evidenceFaceHasSupportedManaValue(face) {
+			continue
+		}
+		manaValue := face.ManaValue()
+		if manaValue <= 0 {
+			continue
+		}
+		options = append(options, evidenceOption{index: i, manaValue: manaValue})
+	}
+	slices.SortStableFunc(options, func(a, b evidenceOption) int {
+		switch {
+		case a.manaValue > b.manaValue:
+			return -1
+		case a.manaValue < b.manaValue:
+			return 1
+		default:
+			return 0
+		}
+	})
+	var search func(start int, total int, selected []int) []int
+	search = func(start int, total int, selected []int) []int {
+		if total >= threshold {
+			nextReserved := reserveSelectedCardIDs(candidates, selected, reserved)
+			if remainingGraveyardPreferenceCostsPayable(g, playerID, remainingCosts, xValue, sourceCardID, sourceZone, nextReserved) {
+				return append([]int(nil), selected...)
+			}
+			return nil
+		}
+		for i := start; i < len(options); i++ {
+			option := options[i]
+			next := slices.Clone(selected)
+			next = append(next, option.index)
+			if selection := search(i+1, total+option.manaValue, next); len(selection) > 0 {
+				return selection
+			}
+		}
+		return nil
+	}
+	return search(0, 0, nil)
+}
+
+func exileDefaultSelection(g *game.Game, playerID game.PlayerID, candidates []id.ID, addCost cost.Additional, amount int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, excludedCardIDs ...id.ID) []int {
+	reserved := cardIDSet(excludedCardIDs...)
+	return exileDefaultSelectionWithReserved(g, playerID, candidates, addCost, amount, remainingCosts, xValue, sourceCardID, sourceZone, reserved)
+}
+
+func exileDefaultSelectionWithReserved(g *game.Game, playerID game.PlayerID, candidates []id.ID, addCost cost.Additional, amount int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, reserved map[id.ID]bool) []int {
+	return chooseFixedChoiceIndices(len(candidates), amount, func(selected []int) bool {
+		nextReserved := reserveSelectedCardIDs(candidates, selected, reserved)
+		return remainingGraveyardPreferenceCostsPayable(g, playerID, remainingCosts, xValue, sourceCardID, sourceZone, nextReserved)
+	})
+}
+
+func chooseFixedChoiceIndices(candidateCount, amount int, allowsRemaining func([]int) bool) []int {
+	var search func(start int, selected []int) []int
+	search = func(start int, selected []int) []int {
+		if len(selected) == amount {
+			if allowsRemaining(selected) {
+				return append([]int(nil), selected...)
+			}
+			return nil
+		}
+		remainingNeeded := amount - len(selected)
+		for i := start; i <= candidateCount-remainingNeeded; i++ {
+			next := slices.Clone(selected)
+			next = append(next, i)
+			if selection := search(i+1, next); len(selection) == amount {
+				return selection
+			}
+		}
+		return nil
+	}
+	return search(0, nil)
+}
+
+func remainingGraveyardPreferenceCostsPayable(g *game.Game, playerID game.PlayerID, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, reserved map[id.ID]bool) bool {
+	for i, additional := range remainingCosts {
+		amount := payment.AdditionalCostAmountFor(additional, xValue)
+		if amount < 0 {
+			return false
+		}
+		switch additional.Kind {
+		case cost.AdditionalCollectEvidence:
+			if amount <= 0 {
+				return false
+			}
+			candidates := candidateAdditionalCostCards(g, playerID, additional, reservedCardIDs(reserved)...)
+			return len(evidenceDefaultSelectionWithReserved(g, playerID, candidates, amount, remainingCosts[i+1:], xValue, sourceCardID, sourceZone, reserved)) > 0
+		case cost.AdditionalExile:
+			if amount == 0 || additionalCostSourceZone(additional) != zone.Graveyard {
+				continue
+			}
+			candidates := candidateAdditionalCostCards(g, playerID, additional, reservedCardIDs(reserved)...)
+			return len(exileDefaultSelectionWithReserved(g, playerID, candidates, additional, amount, remainingCosts[i+1:], xValue, sourceCardID, sourceZone, reserved)) == amount
+		case cost.AdditionalExileSource:
+			if amount != 1 || sourceCardID == 0 || sourceZone != zone.Graveyard {
+				continue
+			}
+			if reserved[sourceCardID] {
+				return false
+			}
+			card, ok := g.GetCardInstance(sourceCardID)
+			if !ok || !g.Players[playerID].Graveyard.Contains(sourceCardID) || !localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), additional) {
+				return false
+			}
+			nextReserved := cardIDSet(reservedCardIDs(reserved)...)
+			nextReserved[sourceCardID] = true
+			return remainingGraveyardPreferenceCostsPayable(g, playerID, remainingCosts[i+1:], xValue, sourceCardID, sourceZone, nextReserved)
+		}
+	}
+	return true
+}
+
+func cardIDSet(cardIDs ...id.ID) map[id.ID]bool {
+	result := make(map[id.ID]bool, len(cardIDs))
+	for _, cardID := range cardIDs {
+		result[cardID] = true
+	}
+	return result
+}
+
+func reserveSelectedCardIDs(candidates []id.ID, selected []int, reserved map[id.ID]bool) map[id.ID]bool {
+	next := make(map[id.ID]bool, len(reserved)+len(selected))
+	maps.Copy(next, reserved)
+	for _, selection := range selected {
+		if selection >= 0 && selection < len(candidates) {
+			next[candidates[selection]] = true
+		}
+	}
+	return next
+}
+
+func evidenceFaceHasSupportedManaValue(face *game.CardDef) bool {
+	if face == nil {
+		return false
+	}
+	if !face.ManaCost.Exists {
+		return true
+	}
+	for _, symbol := range face.ManaCost.Val {
+		if symbol.Kind == cost.VariableSymbol {
+			return false
+		}
+	}
+	return true
 }
 
 func firstChoiceIndices(amount int) []int {
@@ -214,18 +454,15 @@ func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent
 	return true
 }
 
-func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional) []id.ID {
+func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedCardIDs ...id.ID) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
 	}
-	source := addCost.Source
-	if source == zone.None {
-		if addCost.Kind == cost.AdditionalExile {
-			source = zone.Graveyard
-		} else {
-			source = zone.Hand
-		}
+	source := additionalCostSourceZone(addCost)
+	excluded := make(map[id.ID]bool, len(excludedCardIDs))
+	for _, cardID := range excludedCardIDs {
+		excluded[cardID] = true
 	}
 	var cardIDs []id.ID
 	switch source {
@@ -242,6 +479,9 @@ func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost 
 	}
 	var candidates []id.ID
 	for _, cardID := range cardIDs {
+		if excluded[cardID] {
+			continue
+		}
 		card, ok := g.GetCardInstance(cardID)
 		if ok && localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), addCost) {
 			candidates = append(candidates, cardID)
@@ -313,4 +553,13 @@ func cardChoiceLabel(g *game.Game, cardID id.ID) string {
 		return fmt.Sprintf("Card %d", cardID)
 	}
 	return cardFaceOrDefault(card, game.FaceFront).Name
+}
+
+func evidenceChoiceLabel(g *game.Game, cardID id.ID) string {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return fmt.Sprintf("Card %d", cardID)
+	}
+	face := cardFaceOrDefault(card, game.FaceFront)
+	return fmt.Sprintf("%s (mana value %d)", face.Name, face.ManaValue())
 }

@@ -80,6 +80,38 @@ func rememberLastKnown(g *game.Game, snapshot *game.ObjectSnapshot) {
 	g.LastKnownInformation[snapshot.ObjectID] = *snapshot
 }
 
+// snapshotStackSpell builds a minimal ObjectSnapshot for a resolving StackSpell
+// so that protection checks can consult the correct face after the object has
+// been removed from the stack (CR 702.16c).
+func snapshotStackSpell(g *game.Game, obj *game.StackObject) game.ObjectSnapshot {
+	snapshot := game.ObjectSnapshot{
+		ObjectID:   obj.ID,
+		CardID:     obj.SourceID,
+		Face:       obj.Face,
+		Owner:      obj.Controller,
+		Controller: obj.Controller,
+	}
+	if obj.SourceTokenDef != nil {
+		if def, ok := obj.SourceTokenDef.FaceDef(obj.Face); ok {
+			snapshot.Colors = append([]color.Color(nil), def.Colors...)
+			snapshot.Types = append([]types.Card(nil), def.Types...)
+			snapshot.Subtypes = append([]types.Sub(nil), def.Subtypes...)
+		}
+		return snapshot
+	}
+	if obj.SourceID != 0 {
+		if card, ok := g.GetCardInstance(obj.SourceID); ok {
+			faceDef := cardFaceOrDefault(card, obj.Face)
+			if faceDef != nil {
+				snapshot.Colors = append([]color.Color(nil), faceDef.Colors...)
+				snapshot.Types = append([]types.Card(nil), faceDef.Types...)
+				snapshot.Subtypes = append([]types.Sub(nil), faceDef.Subtypes...)
+			}
+		}
+	}
+	return snapshot
+}
+
 func lastKnownObject(g *game.Game, objectID id.ID) (game.ObjectSnapshot, bool) {
 	if objectID == 0 {
 		return game.ObjectSnapshot{}, false

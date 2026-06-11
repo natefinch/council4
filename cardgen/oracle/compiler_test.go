@@ -201,6 +201,42 @@ func TestCompileActivatedAbilityIssue210Costs(t *testing.T) {
 	}
 }
 
+func TestCompileActivatedAbilityCollectEvidenceCost(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Collect evidence 4: Draw a card.", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Cost == nil || len(ability.Cost.Components) != 1 {
+		t.Fatalf("cost = %#v", ability.Cost)
+	}
+	component := ability.Cost.Components[0]
+	if component.Kind != CostCollectEvidence || component.Amount != "4" {
+		t.Fatalf("cost component = %#v, want collect evidence 4", component)
+	}
+}
+
+func TestCompileActivatedAbilityCollectEvidenceRejectsMalformedThresholds(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"Collect evidence 0: Draw a card.",
+		"Collect evidence two: Draw a card.",
+		"Collect evidence X: Draw a card.",
+	} {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(text, ParseContext{})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported cost diagnostic")
+			}
+			if compilation.Abilities[0].Cost.Components[0].Kind != CostUnknown {
+				t.Fatalf("cost component = %#v, want CostUnknown", compilation.Abilities[0].Cost.Components[0])
+			}
+		})
+	}
+}
+
 func TestCompileTriggeredAbility(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a creature enters, if it was cast, draw a card."

@@ -59,6 +59,106 @@ func TestGainLifeEffectIncreasesTargetLife(t *testing.T) {
 	}
 }
 
+func TestGainLifeGroupEffectAffectsAllOpponents(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.GainLife{
+		Amount:      game.Fixed(2),
+		PlayerGroup: game.OpponentsReference(),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 42 {
+			t.Fatalf("player %d life = %d, want 42", playerID, got)
+		}
+	}
+	if g.Players[game.Player1].Life != 40 {
+		t.Fatalf("controller life changed unexpectedly: %d", g.Players[game.Player1].Life)
+	}
+}
+
+func TestLoseLifeGroupEffectAffectsAllOpponents(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.LoseLife{
+		Amount:      game.Fixed(3),
+		PlayerGroup: game.OpponentsReference(),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 37 {
+			t.Fatalf("player %d life = %d, want 37", playerID, got)
+		}
+	}
+	if g.Players[game.Player1].Life != 40 {
+		t.Fatalf("controller life changed unexpectedly: %d", g.Players[game.Player1].Life)
+	}
+}
+
+func TestLinkedLoseLifeGroupGainAmountIsTotal(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// 3 opponents each lose 1 life; controller gains the total (3).
+	addInstructionSpellToStack(g, []game.Instruction{
+		{
+			Primitive:     game.LoseLife{PlayerGroup: game.OpponentsReference(), Amount: game.Fixed(1)},
+			PublishResult: "life-change",
+		},
+		{
+			Primitive: game.GainLife{
+				Player: game.ControllerReference(),
+				Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountPreviousEffectResult, ResultKey: "life-change"}),
+			},
+		},
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 39 {
+			t.Fatalf("opponent %d life = %d, want 39", playerID, got)
+		}
+	}
+	if got := g.Players[game.Player1].Life; got != 43 {
+		t.Fatalf("controller life = %d, want 43 (gained total 3)", got)
+	}
+}
+
+func TestCantGainLifeBlocksGroupGainLifePerPlayer(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// CantGainLife blocks all players.
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "No Lifegain",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCantGainLife,
+				AffectedPlayer: game.PlayerAny,
+			}},
+		}}},
+	})
+	addEffectSpellToStack(g, game.Player1, game.GainLife{
+		Amount:      game.Fixed(5),
+		PlayerGroup: game.AllPlayersReference(),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 40 {
+			t.Fatalf("player %d life = %d, want gain prevented (40)", playerID, got)
+		}
+	}
+}
+
 func TestAddPlayerCounterEffectUpdatesCountersAndEvents(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

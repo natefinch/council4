@@ -107,6 +107,68 @@ func ProtectionFromColorsStaticAbility(colors ...color.Color) StaticAbility {
 	}
 }
 
+// ProtectionFromTypesStaticAbility builds the static ability for protection
+// from one or more card types.
+func ProtectionFromTypesStaticAbility(cardTypes ...types.Card) StaticAbility {
+	ts := append([]types.Card(nil), cardTypes...)
+	if len(ts) == 0 {
+		panic("game: protection from types requires at least one type")
+	}
+	return StaticAbility{
+		Text:             protectionFromTypesText(ts),
+		KeywordAbilities: []KeywordAbility{ProtectionKeyword{FromTypes: ts}},
+	}
+}
+
+// ProtectionFromSubtypesStaticAbility builds the static ability for protection
+// from one or more creature/land subtypes.
+func ProtectionFromSubtypesStaticAbility(subtypes ...types.Sub) StaticAbility {
+	ss := append([]types.Sub(nil), subtypes...)
+	if len(ss) == 0 {
+		panic("game: protection from subtypes requires at least one subtype")
+	}
+	return StaticAbility{
+		Text:             protectionFromSubtypesText(ss),
+		KeywordAbilities: []KeywordAbility{ProtectionKeyword{FromSubtypes: ss}},
+	}
+}
+
+// ProtectionFromEverythingStaticAbility builds the static ability for
+// protection from everything.
+func ProtectionFromEverythingStaticAbility() StaticAbility {
+	return StaticAbility{
+		Text:             "Protection from everything",
+		KeywordAbilities: []KeywordAbility{ProtectionKeyword{Everything: true}},
+	}
+}
+
+// ProtectionFromEachColorStaticAbility builds the static ability for
+// protection from each color.
+func ProtectionFromEachColorStaticAbility() StaticAbility {
+	return StaticAbility{
+		Text:             "Protection from each color",
+		KeywordAbilities: []KeywordAbility{ProtectionKeyword{EachColor: true}},
+	}
+}
+
+// ProtectionFromMulticoloredStaticAbility builds the static ability for
+// protection from multicolored sources.
+func ProtectionFromMulticoloredStaticAbility() StaticAbility {
+	return StaticAbility{
+		Text:             "Protection from multicolored",
+		KeywordAbilities: []KeywordAbility{ProtectionKeyword{Multicolored: true}},
+	}
+}
+
+// ProtectionFromMonocoloredStaticAbility builds the static ability for
+// protection from monocolored sources.
+func ProtectionFromMonocoloredStaticAbility() StaticAbility {
+	return StaticAbility{
+		Text:             "Protection from monocolored",
+		KeywordAbilities: []KeywordAbility{ProtectionKeyword{Monocolored: true}},
+	}
+}
+
 func validateProtectionColors(colors []color.Color) {
 	if len(colors) == 0 {
 		panic("game: protection requires at least one color")
@@ -140,6 +202,33 @@ func protectionFromColorsText(colors []color.Color) string {
 			strings.Join(phrases[:len(phrases)-1], ", ") +
 			", and " +
 			phrases[len(phrases)-1]
+	}
+}
+
+func protectionFromTypesText(cardTypes []types.Card) string {
+	phrases := make([]string, len(cardTypes))
+	for i, t := range cardTypes {
+		phrases[i] = "from " + strings.ToLower(string(t)) + "s"
+	}
+	return "Protection " + joinProtectionPhrases(phrases)
+}
+
+func protectionFromSubtypesText(subtypes []types.Sub) string {
+	phrases := make([]string, len(subtypes))
+	for i, s := range subtypes {
+		phrases[i] = "from " + strings.ToLower(string(s)) + "s"
+	}
+	return "Protection " + joinProtectionPhrases(phrases)
+}
+
+func joinProtectionPhrases(phrases []string) string {
+	switch len(phrases) {
+	case 1:
+		return phrases[0]
+	case 2:
+		return phrases[0] + " and " + phrases[1]
+	default:
+		return strings.Join(phrases[:len(phrases)-1], ", ") + ", and " + phrases[len(phrases)-1]
 	}
 }
 

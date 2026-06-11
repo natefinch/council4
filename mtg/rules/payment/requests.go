@@ -60,6 +60,7 @@ type Preferences struct {
 	DiscardChoices       []id.ID
 	ExileChoices         []id.ID
 	RevealChoices        []id.ID
+	EvidenceChoices      []id.ID
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.
@@ -96,5 +97,6 @@ func clonePreferences(prefs *Preferences) *Preferences {
 		DiscardChoices:       append([]id.ID(nil), prefs.DiscardChoices...),
 		ExileChoices:         append([]id.ID(nil), prefs.ExileChoices...),
 		RevealChoices:        append([]id.ID(nil), prefs.RevealChoices...),
+		EvidenceChoices:      append([]id.ID(nil), prefs.EvidenceChoices...),
 	}
 }
