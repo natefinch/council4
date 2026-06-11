@@ -995,6 +995,23 @@ func TestCounterEffectCannotCounterUnknownFutureStackObjectKind(t *testing.T) {
 	}
 }
 
+func TestCounterStackObjectRejectsUnknownFutureKind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	target := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackObjectKind(99),
+		Controller: game.Player2,
+	}
+	g.Stack.Push(target)
+
+	if counterStackObject(g, target.ID) {
+		t.Fatal("counterStackObject accepted unknown future stack-object kind")
+	}
+	if _, ok := stackObjectByID(g, target.ID); !ok {
+		t.Fatal("unknown future stack-object kind left the stack")
+	}
+}
+
 func TestCounterEffectCannotCounterProtectedCreatureSpell(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

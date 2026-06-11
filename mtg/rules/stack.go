@@ -26,6 +26,7 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 		rememberLastKnown(g, &snapshot)
 	}
 	result := e.resolveStackObjectWithChoices(g, obj, agents, log)
+	releaseStateTriggerLatch(g, obj)
 	if obj.Kind == game.StackSpell && spellResolved(result) {
 		emitEvent(g, game.Event{
 			Kind:          game.EventSpellResolved,
@@ -284,15 +285,25 @@ func stackObjectByID(g *game.Game, objectID id.ID) (*game.StackObject, bool) {
 }
 
 func counterStackObject(g *game.Game, objectID id.ID) bool {
-	if obj, ok := stackObjectByID(g, objectID); ok && obj.Kind == game.StackSpell && !stackSpellCanBeCountered(g, obj) {
+	obj, ok := stackObjectByID(g, objectID)
+	if !ok {
 		return false
 	}
-	obj, ok := g.Stack.RemoveByID(objectID)
+	switch obj.Kind {
+	case game.StackSpell:
+		if !stackSpellCanBeCountered(g, obj) {
+			return false
+		}
+	case game.StackActivatedAbility, game.StackTriggeredAbility:
+	default:
+		return false
+	}
+	obj, ok = g.Stack.RemoveByID(objectID)
 	if !ok {
 		return false
 	}
 	if obj.Kind != game.StackSpell {
-		releaseCounteredStateTriggerLatch(g, obj)
+		releaseStateTriggerLatch(g, obj)
 		return true
 	}
 	if obj.Copy {
@@ -305,16 +316,20 @@ func counterStackObject(g *game.Game, objectID id.ID) bool {
 	return moveStackCardToGraveyard(g, obj, card)
 }
 
-func releaseCounteredStateTriggerLatch(g *game.Game, obj *game.StackObject) {
+func releaseStateTriggerLatch(g *game.Game, obj *game.StackObject) {
 	if obj.Kind != game.StackTriggeredAbility ||
 		obj.InlineTrigger == nil ||
-		obj.InlineTrigger.Trigger.Type != game.TriggerState {
+		!obj.InlineTrigger.Trigger.State.Exists {
 		return
 	}
+	deleteStateTriggerLatch(g, obj.SourceID, obj.SourceCardID, obj.AbilityIndex)
+}
+
+func deleteStateTriggerLatch(g *game.Game, sourceObjectID, sourceCardID id.ID, abilityIndex int) {
 	delete(g.StateTriggerLatches, game.StateTriggerKey{
-		SourceObjectID: obj.SourceID,
-		SourceCardID:   obj.SourceCardID,
-		AbilityIndex:   obj.AbilityIndex,
+		SourceObjectID: sourceObjectID,
+		SourceCardID:   sourceCardID,
+		AbilityIndex:   abilityIndex,
 	})
 }
 

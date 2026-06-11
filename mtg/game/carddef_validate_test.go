@@ -463,11 +463,37 @@ func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 			wantIssue: true,
 		},
 		{
+			name: "spell type with mixed kinds",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					SpellCardTypes:   []types.Card{types.Creature},
+					StackObjectKinds: []StackObjectKind{StackSpell, StackActivatedAbility},
+				},
+			},
+			wantIssue: true,
+		},
+		{
 			name: "stack target with unsupported predicate",
 			spec: TargetSpec{
 				MinTargets: 1,
 				MaxTargets: 1,
 				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
+					Controller:       ControllerOpponent,
+				},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "mixed stack target with unsupported predicate",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowPermanent | TargetAllowStackObject,
 				Predicate: TargetPredicate{
 					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
 					Controller:       ControllerOpponent,

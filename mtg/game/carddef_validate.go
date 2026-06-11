@@ -456,7 +456,7 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	kinds := target.Predicate.StackObjectKinds
 	knownAllows := target.Allow & knownTargetAllows
 	allowsStackObjects := knownAllows&TargetAllowStackObject != 0
-	if knownAllows == TargetAllowStackObject && !target.Predicate.Selection().Empty() {
+	if allowsStackObjects && !target.Predicate.Selection().Empty() {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
 	}
 	if allowsStackObjects && len(kinds) == 0 {
@@ -468,11 +468,13 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	}
 	seen := make(map[StackObjectKind]bool, len(kinds))
 	allowsSpells := false
+	allowsAbilities := false
 	for i, kind := range kinds {
 		switch kind {
 		case StackSpell:
 			allowsSpells = true
 		case StackActivatedAbility, StackTriggeredAbility:
+			allowsAbilities = true
 		default:
 			v.add(faceName, appendPath(path, fmt.Sprintf("Predicate.StackObjectKinds[%d]", i)), CardDefIssueInvalidTargetSpec, "unknown stack-object kind")
 		}
@@ -481,8 +483,9 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 		}
 		seen[kind] = true
 	}
-	if (len(target.Predicate.SpellCardTypes) > 0 || len(target.Predicate.ExcludedSpellCardTypes) > 0) && !allowsSpells {
-		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require spell stack-object targets")
+	hasSpellTypePredicate := len(target.Predicate.SpellCardTypes) > 0 || len(target.Predicate.ExcludedSpellCardTypes) > 0
+	if hasSpellTypePredicate && (!allowsSpells || allowsAbilities) {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require spell-only stack-object targets")
 	}
 }
 

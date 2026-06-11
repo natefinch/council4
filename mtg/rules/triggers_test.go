@@ -1439,7 +1439,7 @@ func (r *mainPhaseStepRecorder) ChooseAction(obs PlayerObservation, legal []acti
 	return action.Pass()
 }
 
-func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
+func TestResolvedStateTriggerReleasesLatch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First"}})
@@ -1449,7 +1449,6 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 	if !ok {
 		t.Fatal("source card instance not found")
 	}
-	card.Def.TriggeredAbilities[0].Trigger.Type = game.TriggerState
 	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{MatchControllerLifeLessOrEqual: true, ControllerLifeLessOrEqual: 10})
 	g.Players[game.Player1].Life = 10
 
@@ -1457,14 +1456,36 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 		t.Fatal("state trigger was not put on stack")
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
-	if engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("state trigger re-fired while condition remained true")
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("resolved state trigger did not re-fire while condition remained true")
+	}
+}
+
+func TestStateTriggerDoesNotRetriggerBeforeLeavingStack(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{}, nil, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{
+		MatchControllerLifeLessOrEqual: true,
+		ControllerLifeLessOrEqual:      10,
+	})
+	g.Players[game.Player1].Life = 10
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger was not put on stack")
 	}
 	g.Players[game.Player1].Life = 11
 	engine.putTriggeredAbilitiesOnStack(g)
 	g.Players[game.Player1].Life = 10
-	if !engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("state trigger did not re-arm after condition became false")
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger re-fired before the original left the stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want original state trigger only", got)
 	}
 }
 
@@ -1478,7 +1499,6 @@ func TestCounteredStateTriggerReleasesLatch(t *testing.T) {
 	if !ok {
 		t.Fatal("source card instance not found")
 	}
-	card.Def.TriggeredAbilities[0].Trigger.Type = game.TriggerState
 	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{
 		MatchControllerLifeLessOrEqual: true,
 		ControllerLifeLessOrEqual:      10,
@@ -1497,6 +1517,34 @@ func TestCounteredStateTriggerReleasesLatch(t *testing.T) {
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("countered state trigger did not re-fire while condition remained true")
+	}
+}
+
+func TestStateTriggerWithoutLegalTargetsReleasesLatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{}, nil, []game.TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowPermanent,
+		Predicate:  game.TargetPredicate{Controller: game.ControllerOpponent},
+	}})
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{
+		MatchControllerLifeLessOrEqual: true,
+		ControllerLifeLessOrEqual:      10,
+	})
+	g.Players[game.Player1].Life = 10
+
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger with no legal targets was put on stack")
+	}
+	addBasicLandPermanent(g, game.Player2, types.Forest)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger did not re-fire after legal target became available")
 	}
 }
 

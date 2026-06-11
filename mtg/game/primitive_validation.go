@@ -607,7 +607,7 @@ func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if p.Object.Kind() != ObjectReferenceTargetStackObject {
 		return errors.New("counter object requires a target stack object reference")
 	}
-	return nil
+	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
 }
 
 func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

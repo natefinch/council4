@@ -50,6 +50,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	for i := range orderedTriggers {
 		trigger := &orderedTriggers[i]
 		if !e.prepareTriggeredAbility(g, trigger, agents, log) {
+			releasePendingStateTriggerLatch(g, trigger)
 			continue
 		}
 		obj := &game.StackObject{
@@ -353,14 +354,13 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 			}
 			seen[key] = true
 			if !stateTriggerConditionSatisfied(g, controller, &triggeredBody.Trigger.State.Val) {
-				delete(g.StateTriggerLatches, key)
 				continue
 			}
 			if g.StateTriggerLatches[key] {
 				continue
 			}
-			// State triggers fire once while their condition is true and do not
-			// trigger again until the condition becomes false, then true (CR 603.8).
+			// State triggers do not trigger again until the ability leaves the stack
+			// or fails to enter it (CR 603.8).
 			g.StateTriggerLatches[key] = true
 			pending = append(pending, pendingTriggeredAbility{
 				controller:   controller,
@@ -976,6 +976,13 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 	}
 	trigger.targetCounts = targetCounts
 	return true
+}
+
+func releasePendingStateTriggerLatch(g *game.Game, trigger *pendingTriggeredAbility) {
+	if trigger.inline == nil || !trigger.inline.Trigger.State.Exists {
+		return
+	}
+	deleteStateTriggerLatch(g, trigger.sourceID, trigger.sourceCardID, trigger.abilityIndex)
 }
 
 func pendingTriggerAbility(g *game.Game, trigger *pendingTriggeredAbility) (*game.TriggeredAbility, bool) {
