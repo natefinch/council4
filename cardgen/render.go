@@ -1977,6 +1977,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveTap, game.PrimitiveRegenerate, game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice:
 		return r.renderObjectPrimitive(primitive)
+	case game.PrimitiveSearch:
+		value, ok := primitive.(game.Search)
+		if !ok {
+			return "", errors.New("render: internal error: Search kind has unexpected concrete type")
+		}
+		return r.renderSearchPrimitive(ctx, value)
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
 		if !ok {
@@ -2048,6 +2054,66 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	source, err := renderZone(value.Spec.SourceZone)
+	if err != nil {
+		return "", err
+	}
+	destination, err := renderZone(value.Spec.Destination)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	specFields := []string{
+		fmt.Sprintf("SourceZone: %s,", source),
+		fmt.Sprintf("Destination: %s,", destination),
+	}
+	if value.Spec.CardType.Exists {
+		cardType, err := cardTypeLiteral(value.Spec.CardType.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		ctx.need(importTypes)
+		specFields = append(specFields, fmt.Sprintf("CardType: opt.Val(%s),", cardType))
+	}
+	if value.Spec.Supertype.Exists {
+		supertype, err := supertypeLiteral(value.Spec.Supertype.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		ctx.need(importTypes)
+		specFields = append(specFields, fmt.Sprintf("Supertype: opt.Val(%s),", supertype))
+	}
+	if len(value.Spec.SubtypesAny) > 0 {
+		subtypes, err := renderSubtypeArguments(ctx, value.Spec.SubtypesAny)
+		if err != nil {
+			return "", err
+		}
+		specFields = append(specFields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", subtypes))
+	}
+	if value.Spec.Reveal {
+		specFields = append(specFields, "Reveal: true,")
+	}
+	if value.Spec.EntersTapped {
+		specFields = append(specFields, "EntersTapped: true,")
+	}
+	return structLit("game.Search", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Spec: %s,", structLit("game.SearchSpec", specFields)),
+		fmt.Sprintf("Amount: %s,", amount),
+	}), nil
 }
 
 func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.ApplyContinuous) (string, error) {

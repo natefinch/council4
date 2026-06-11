@@ -157,6 +157,48 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderSearchPrimitive(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:   zone.Library,
+			Destination:  zone.Battlefield,
+			CardType:     opt.Val(types.Land),
+			Supertype:    opt.Val(types.Basic),
+			SubtypesAny:  []types.Sub{types.Forest, types.Plains},
+			Reveal:       true,
+			EntersTapped: true,
+		},
+		Amount: game.Fixed(1),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.Search",
+		"Player: game.ControllerReference()",
+		"SourceZone: zone.Library",
+		"Destination: zone.Battlefield",
+		"CardType: opt.Val(types.Land)",
+		"Supertype: opt.Val(types.Basic)",
+		"SubtypesAny: []types.Sub{types.Forest, types.Plains}",
+		"Reveal: true",
+		"EntersTapped: true",
+		"Amount: game.Fixed(1)",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered search missing %q:\n%s", want, rendered)
+		}
+	}
+	for _, requiredImport := range []string{importZone, importTypes, importOpt} {
+		if _, ok := ctx.imports[requiredImport]; !ok {
+			t.Fatalf("search primitive did not request import %q", requiredImport)
+		}
+	}
+}
+
 func TestRenderCounterObjectPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CounterObject{
