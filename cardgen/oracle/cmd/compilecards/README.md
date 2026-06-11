@@ -65,6 +65,10 @@ Flags:
 - `-supported`: optional supported-card Markdown output path.
 - `-unsupported`: optional unsupported-card Markdown output path, including each
   card's diagnostics as reasons.
+- `-unsupported-reasons`: optional Markdown output path for capability-aware planning
+  tables. The report ranks up to 100 diagnostic summaries by affected and
+  sole-blocker cards, identifies their most common co-blockers, and groups all
+  observed summaries into stable capability clusters with fully unlockable counts.
 - `-readme`: optional README path containing the card-support marker pair to
   update from the report counts.
 - `-workers`: compiler/source-generator worker count. Default

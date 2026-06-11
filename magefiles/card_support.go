@@ -39,6 +39,7 @@ func CardSupport(ctx context.Context) error {
 		"-report", filepath.FromSlash(".cardwork/current-report.json"),
 		"-supported", "supported.md",
 		"-unsupported", "unsupported.md",
+		"-unsupported-reasons", "unsupported-reasons.md",
 		"-readme", "README.md",
 	)
 }
