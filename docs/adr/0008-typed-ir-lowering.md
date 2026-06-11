@@ -44,6 +44,19 @@ correct layer:
    per-face result is a `loweredFaceAbilities` holding the categorized typed
    values in Oracle order. Unsupported text yields a source-spanned
    `oracle.Diagnostic`, never a guessed value.
+   <br><br>
+   Ability body content is a first-class semantic concept in `oracle.AbilityContent`
+   (targets, conditions, effects, keywords, references, and nested modes). Each
+   `oracle.CompiledAbility` and `oracle.CompiledMode` carries one
+   `oracle.AbilityContent` alongside its shell-specific fields. The single
+   `lowerAbilityContent(cardName, content, optional, bodySyntax)` entry point lowers
+   an `oracle.AbilityContent` into `game.AbilityContent`; every shell lowerer
+   (spell, activated, triggered, loyalty, chapter, modal option, ordered-effect
+   clause) calls it directly. No shell lowerer constructs a fake spell ability to
+   reach body lowering. Shell-specific diagnostics (cost failures, trigger
+   failures, loyalty-cost failures) are owned by the shell lowerer; content
+   diagnostics (effect, target, keyword, reference failures) are owned by
+   `lowerAbilityContent`.
 2. **Assembly + validation** (`cardgen/executable.go`). `assembleCardDefs`
    combines parsed Scryfall fields with the lowered typed abilities into one or
    more `game.CardDef` values and calls `game.ValidateCardDef`. Any structural

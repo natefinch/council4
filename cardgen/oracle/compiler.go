@@ -57,7 +57,7 @@ func compileAbility(
 	if ability.Modal != nil {
 		for _, mode := range ability.Modal.Options {
 			compiledMode, modeDiagnostics := compileMode(source, mode, context)
-			compiled.Modes = append(compiled.Modes, compiledMode)
+			compiled.Content.Modes = append(compiled.Content.Modes, compiledMode)
 			diagnostics = append(diagnostics, modeDiagnostics...)
 		}
 	}
@@ -77,17 +77,17 @@ func compileAbility(
 		compiled.Optional = true
 		compiled.OptionalSpan = Span{Start: tokens[0].Span.Start, End: tokens[1].Span.End}
 	}
-	compiled.Keywords = compileKeywords(tokens)
-	compiled.Targets = compileTargets(tokens)
+	compiled.Content.Keywords = compileKeywords(tokens)
+	compiled.Content.Targets = compileTargets(tokens)
 	conditionTokens := tokens
 	if ability.Kind == AbilityTriggered {
 		conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 	}
-	compiled.Conditions = compileConditions(conditionTokens, ability.Kind == AbilityTriggered)
+	compiled.Content.Conditions = compileConditions(conditionTokens, ability.Kind == AbilityTriggered)
 	if ability.Text == "This creature attacks each combat if able." {
-		compiled.Conditions = nil
+		compiled.Content.Conditions = nil
 	}
-	compiled.Effects = compileEffects(
+	compiled.Content.Effects = compileEffects(
 		parseSentences(source, body),
 		ability.Reminders,
 		ability.Quoted,
@@ -97,19 +97,27 @@ func compileAbility(
 	if timing != ActivationTimingNone {
 		referenceTokens = tokensOutsideSpan(referenceTokens, timingSpan)
 	}
-	compiled.References = compileReferences(
+	compiled.Content.References = compileReferences(
 		referenceTokens,
 		context.CardName,
 	)
 
-	for _, mode := range compiled.Modes {
-		if len(mode.Effects) == 0 && len(mode.Keywords) == 0 {
+	for _, mode := range compiled.Content.Modes {
+		if len(mode.Content.Effects) == 0 && len(mode.Content.Keywords) == 0 {
 			diagnostics = append(diagnostics, unsupportedDiagnostic(mode.Span, mode.Text))
 		}
 	}
 	if ability.Kind != AbilityReminder && ability.Modal == nil &&
-		len(compiled.Effects) == 0 && len(compiled.Keywords) == 0 {
+		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 {
 		diagnostics = append(diagnostics, unsupportedDiagnostic(ability.Span, ability.Text))
+	}
+	// Set Content.Span from the body token range after shell/timing extraction.
+	// This is non-zero even for unrecognized content, and for activated/loyalty
+	// abilities it excludes the cost span. For triggered abilities with an
+	// optional prefix, advance past "you may" since that is shell semantics.
+	compiled.Content.Span = spanOf(body)
+	if compiled.Optional && len(tokens) >= 3 {
+		compiled.Content.Span.Start = tokens[2].Span.Start
 	}
 	if compiled.Cost != nil {
 		for _, component := range compiled.Cost.Components {
@@ -180,19 +188,24 @@ func compileMode(
 ) (CompiledMode, []Diagnostic) {
 	tokens := semanticTokens(mode.Tokens, mode.Reminders, mode.Quoted)
 	compiled := CompiledMode{
-		Span:       mode.Span,
-		Text:       mode.Text,
-		Targets:    compileTargets(tokens),
-		Conditions: compileConditions(tokens, false),
-		Effects: compileEffects(
-			parseSentences(source, mode.Tokens),
-			mode.Reminders,
-			mode.Quoted,
-			context.CardName,
-		),
-		Keywords:   compileKeywords(tokens),
-		References: compileReferences(tokens, context.CardName),
+		Span: mode.Span,
+		Text: mode.Text,
+		Content: AbilityContent{
+			Targets:    compileTargets(tokens),
+			Conditions: compileConditions(tokens, false),
+			Effects: compileEffects(
+				parseSentences(source, mode.Tokens),
+				mode.Reminders,
+				mode.Quoted,
+				context.CardName,
+			),
+			Keywords:   compileKeywords(tokens),
+			References: compileReferences(tokens, context.CardName),
+		},
 	}
+	// Set Content.Span to the mode's full source span: a modal option has no
+	// shell cost or trigger, so the mode body IS the content.
+	compiled.Content.Span = mode.Span
 	return compiled, nil
 }
 

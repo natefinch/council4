@@ -93,8 +93,14 @@ tree into a source-spanned semantic intermediate representation.
 or transform it first.
 
 The intermediate representation mirrors the information needed by categorized
-`game.CardFace` abilities without constructing runtime game values yet. It
-records:
+`game.CardFace` abilities without constructing runtime game values yet. The
+reusable body content — targets, conditions, effects, keywords, references, and
+nested modes — is grouped into a single `oracle.AbilityContent` value. Each
+`oracle.CompiledAbility` carries its shell semantics (cost, trigger clause,
+loyalty change, chapter numbers, text, span, optional flag) plus one
+`oracle.AbilityContent`; each `oracle.CompiledMode` likewise carries its mode
+text and span plus one `oracle.AbilityContent`. The content group is the unit
+passed to `lowerAbilityContent` in `cardgen`. It records:
 
 - ordered activated and loyalty cost components, including `{T}`, `{Q}`, exile,
   and counter-removal costs;
@@ -205,7 +211,11 @@ consumes it and lowers each recognized ability into a second, **typed**
 intermediate representation made of `game.*` values (`game.ActivatedAbility`,
 `game.ManaAbility`, `game.TriggeredAbility`, and so on), assembles a
 `game.CardDef`, validates it with `game.ValidateCardDef`, and only then renders
-Go source. This compiler package stays purely about Oracle-text recognition; it
+Go source. The single entry point for lowering ability body content is
+`lowerAbilityContent` in `cardgen/lower.go`; it accepts an `oracle.AbilityContent`
+value and an `oracle.Ability` syntax node and is the path used by all supported
+shells (spell, activated, triggered, loyalty, chapter, modal option). This
+compiler package stays purely about Oracle-text recognition; it
 never constructs runtime `game` values itself. See
 [`cardgen/README.md`](../README.md#compiler-stages)
 and [ADR 0008](../../docs/adr/0008-typed-ir-lowering.md).
