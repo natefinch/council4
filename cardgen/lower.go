@@ -7239,6 +7239,7 @@ func lowerGroupLinkedLifeSpell(ability oracle.CompiledAbility) (game.AbilityCont
 		},
 	}.Ability(), true
 }
+
 // remapping to all target references in sequence. Unlike rebaseTargetedSequence
 // which adds a uniform offset, this function looks up each local target index
 // in localToGame and replaces it with the corresponding accumulated game index.

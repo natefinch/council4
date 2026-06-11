@@ -70,9 +70,9 @@ func TestGainLifeGroupEffectAffectsAllOpponents(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	for _, id := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
-		if got := g.Players[id].Life; got != 42 {
-			t.Fatalf("player %d life = %d, want 42", id, got)
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 42 {
+			t.Fatalf("player %d life = %d, want 42", playerID, got)
 		}
 	}
 	if g.Players[game.Player1].Life != 40 {
@@ -91,9 +91,9 @@ func TestLoseLifeGroupEffectAffectsAllOpponents(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	for _, id := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
-		if got := g.Players[id].Life; got != 37 {
-			t.Fatalf("player %d life = %d, want 37", id, got)
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 37 {
+			t.Fatalf("player %d life = %d, want 37", playerID, got)
 		}
 	}
 	if g.Players[game.Player1].Life != 40 {
@@ -121,9 +121,9 @@ func TestLinkedLoseLifeGroupGainAmountIsTotal(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	for _, id := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
-		if got := g.Players[id].Life; got != 39 {
-			t.Fatalf("opponent %d life = %d, want 39", id, got)
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 39 {
+			t.Fatalf("opponent %d life = %d, want 39", playerID, got)
 		}
 	}
 	if got := g.Players[game.Player1].Life; got != 43 {
@@ -152,9 +152,9 @@ func TestCantGainLifeBlocksGroupGainLifePerPlayer(t *testing.T) {
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	for _, id := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
-		if got := g.Players[id].Life; got != 40 {
-			t.Fatalf("player %d life = %d, want gain prevented (40)", id, got)
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 40 {
+			t.Fatalf("player %d life = %d, want gain prevented (40)", playerID, got)
 		}
 	}
 }

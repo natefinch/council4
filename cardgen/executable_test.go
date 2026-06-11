@@ -1967,9 +1967,9 @@ func TestGenerateExecutableCardSourceLifeGroupRecipients(t *testing.T) {
 		t.Run(test.text, func(t *testing.T) {
 			t.Parallel()
 			card := &ScryfallCard{
-				Name:     "Test Life",
-				Layout:   "normal",
-				TypeLine: "Sorcery",
+				Name:       "Test Life",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
 				OracleText: test.text,
 			}
 			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
