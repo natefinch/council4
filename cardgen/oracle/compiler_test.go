@@ -783,6 +783,25 @@ func TestCompileDelayedEffectTiming(t *testing.T) {
 	}
 }
 
+func TestCompileDelayedBlinkEffects(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"Exile target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step.",
+		ParseContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Effects
+	if len(effects) != 2 ||
+		effects[0].Kind != EffectExile ||
+		effects[0].DelayedTiming != 0 ||
+		effects[1].Kind != EffectReturn ||
+		effects[1].DelayedTiming != game.DelayedAtBeginningOfNextEndStep {
+		t.Fatalf("effects = %#v, want immediate exile followed by delayed return", effects)
+	}
+}
+
 func TestCompileDynamicEffectAmounts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

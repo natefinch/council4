@@ -898,7 +898,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 	}
 	cardCondition := r.currentInstruction.CardCondition
 	for _, ref := range refs {
-		if ref.CardID == 0 {
+		if ref.ObjectID != 0 || ref.CardID == 0 {
 			continue
 		}
 		card, ok := r.game.GetCardInstance(ref.CardID)
