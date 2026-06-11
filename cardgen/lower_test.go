@@ -964,6 +964,25 @@ func TestLowerActivatedAbilityRejectsVariableRemoveCounterCosts(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedEnergyCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Pay {E}{E}: Draw a card.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	costs := face.ActivatedAbilities[0].AdditionalCosts
+	if len(costs) != 1 ||
+		costs[0].Kind != cost.AdditionalEnergy ||
+		costs[0].Amount != 2 {
+		t.Fatalf("additional costs = %#v, want two-energy cost", costs)
+	}
+}
+
 func TestLowerActivatedAbilityRejectsVariableTapPermanentsCost(t *testing.T) {
 	t.Parallel()
 	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
@@ -2483,10 +2502,9 @@ func TestLowerReminderManaAbilityChoice(t *testing.T) {
 	}
 }
 
-func TestLowerReminderManaAbilityRejectsHybridCost(t *testing.T) {
+func TestLowerNonManaHybridReminderDoesNotBlockCard(t *testing.T) {
 	t.Parallel()
-	// Hybrid-mana cost reminders are not mana abilities; they must be rejected.
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Test Hybrid",
 		Layout:     "normal",
 		TypeLine:   "Creature — Soldier",
@@ -2497,15 +2515,17 @@ func TestLowerReminderManaAbilityRejectsHybridCost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for hybrid-cost reminder, got none")
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if source == "" {
+		t.Fatal("expected generated source")
 	}
 }
 
-func TestLowerReminderManaAbilityRejectsNonMana(t *testing.T) {
+func TestLowerNonManaReminderDoesNotBlockCard(t *testing.T) {
 	t.Parallel()
-	// A parenthesized reminder that is not a mana ability must be rejected.
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Test Card",
 		Layout:     "normal",
 		TypeLine:   "Creature — Human",
@@ -2516,8 +2536,73 @@ func TestLowerReminderManaAbilityRejectsNonMana(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if source == "" {
+		t.Fatal("expected generated source")
+	}
+}
+
+func TestLowerAbilityWordDoesNotBlockSupportedKeyword(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Threshold",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Threshold — Flying",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if source == "" {
+		t.Fatal("expected generated source")
+	}
+}
+
+func TestLowerAbilityWordSurfacesActualUnsupportedKeyword(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Threshold",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Threshold — Protection from everything",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for non-mana reminder, got none")
+		t.Fatal("expected unsupported keyword diagnostic")
+	}
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Summary == "unsupported ability word" {
+			t.Fatalf("diagnostics = %#v, want actual unsupported keyword diagnostic", diagnostics)
+		}
+	}
+}
+
+func TestLowerUnknownEmDashHeaderRemainsUnsupported(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Ticketed",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "{TK}{TK} — Menace",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unknown em-dash header to remain unsupported")
 	}
 }
 
@@ -3775,8 +3860,48 @@ func TestLowerManifestSpell(t *testing.T) {
 		OracleText: "Manifest the top card of your library.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	if _, ok := mode.Sequence[0].Primitive.(game.Manifest); !ok {
+	manifest, ok := mode.Sequence[0].Primitive.(game.Manifest)
+	if !ok {
 		t.Fatalf("primitive = %T, want game.Manifest", mode.Sequence[0].Primitive)
+	}
+	if manifest.Dread {
+		t.Fatal("basic manifest lowered with Dread=true")
+	}
+}
+
+func TestLowerManifestDreadSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{
+			name:   "shorthand",
+			oracle: "Manifest Dread.",
+		},
+		{
+			name:   "long form",
+			oracle: "Look at the top two cards of your library. Put one of them onto the battlefield face down as a 2/2 creature. Put the other into your graveyard.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Manifest Dread",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			manifest, ok := mode.Sequence[0].Primitive.(game.Manifest)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Manifest", mode.Sequence[0].Primitive)
+			}
+			if !manifest.Dread {
+				t.Fatal("manifest dread lowered with Dread=false")
+			}
+		})
 	}
 }
 

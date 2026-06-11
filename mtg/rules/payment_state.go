@@ -117,6 +117,15 @@ func (s *rulesPaymentState) LoseLife(playerID game.PlayerID, amount int) {
 	loseLife(s.g, playerID, amount)
 }
 
+func (s *rulesPaymentState) SetPlayerEnergyCounters(playerID game.PlayerID, amount int) bool {
+	player, ok := playerByID(s.g, playerID)
+	if !ok || amount < 0 {
+		return false
+	}
+	player.EnergyCounters = amount
+	return true
+}
+
 func (s *rulesPaymentState) EmitZoneChange(event game.Event) {
 	emitZoneChangeEvent(s.g, event)
 }

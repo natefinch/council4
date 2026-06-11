@@ -718,19 +718,11 @@ func handleExplore(r *effectResolver, prim game.Explore) effectResolved {
 func handleManifest(r *effectResolver, prim game.Manifest) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID := stackObjectController(r.obj)
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
+	if prim.Dread {
+		res.succeeded = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
 		return res
 	}
-	cardID, ok := player.Library.Top()
-	if !ok {
-		return res
-	}
-	card, ok := r.game.GetCardInstance(cardID)
-	if !ok || !player.Library.Remove(cardID) {
-		return res
-	}
-	if _, ok := createCardPermanentFaceDownWithChoices(r.engine, r.game, card, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, r.agents, r.log); ok {
+	if r.engine.manifestTopCard(r.game, r.agents, r.log, playerID) {
 		res.succeeded = true
 	}
 	return res

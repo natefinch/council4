@@ -73,6 +73,7 @@ const (
 	CostExile
 	CostRemoveCounter
 	CostTapPermanents
+	CostEnergy
 	CostLoyalty
 )
 
@@ -226,6 +227,7 @@ const (
 	EffectExplore
 	EffectLose
 	EffectManifest
+	EffectManifestDread
 	EffectMill
 	EffectModifyPT
 	EffectMustAttack

@@ -19,6 +19,7 @@ const (
 	ChoiceProliferate
 	ChoicePlayer
 	ChoiceExplore
+	ChoiceManifest
 )
 
 // ChoiceOption is one legal option in a ChoiceRequest.

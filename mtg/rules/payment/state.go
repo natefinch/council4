@@ -101,6 +101,9 @@ type stateMutations interface {
 	// replacement effects.
 	LoseLife(playerID game.PlayerID, amount int)
 
+	// SetPlayerEnergyCounters sets a player's energy counter total.
+	SetPlayerEnergyCounters(playerID game.PlayerID, amount int) bool
+
 	// EmitZoneChange emits a zone-change game event.
 	EmitZoneChange(event game.Event)
 

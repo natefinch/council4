@@ -156,6 +156,16 @@ func TestRenderManifestPrimitive(t *testing.T) {
 	if rendered != "game.Manifest{}" {
 		t.Fatalf("rendered manifest = %q, want game.Manifest{}", rendered)
 	}
+
+	rendered, err = (Renderer{}).renderPrimitive(newRenderCtx(), game.Manifest{Dread: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.Manifest", "Dread: true"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered manifest dread missing %q:\n%s", want, rendered)
+		}
+	}
 }
 
 func TestRenderEveryRecognizedCounterKind(t *testing.T) {

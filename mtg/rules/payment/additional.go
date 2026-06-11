@@ -23,6 +23,7 @@ type additionalCostPlan struct {
 	exiles          []cardZoneSelection
 	reveals         []cardZoneSelection
 	lifePaid        int
+	energyPaid      int
 	untapSource     *game.Permanent
 	counterRemovals []counterRemoval
 }
@@ -128,6 +129,13 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			plan.lifePaid += amount
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalEnergy:
+			player, ok := s.Player(playerID)
+			if !ok || player.EnergyCounters < plan.energyPaid+amount {
+				return plan, false
+			}
+			plan.energyPaid += amount
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalExile:
 			chosen := preferredExileCards(s, playerID, additional, amount, plan.exiles, prefs)
@@ -487,6 +495,8 @@ func AdditionalCostText(additional cost.Additional) string {
 		return "Discard a card"
 	case cost.AdditionalPayLife:
 		return "Pay life"
+	case cost.AdditionalEnergy:
+		return fmt.Sprintf("Pay {E}x%d", AdditionalCostAmount(additional))
 	case cost.AdditionalExile:
 		return "Exile a card"
 	case cost.AdditionalExileSource:
@@ -569,6 +579,9 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 	if plan.lifePaid > 0 && player.Life < plan.lifePaid {
 		return false
 	}
+	if plan.energyPaid > 0 && player.EnergyCounters < plan.energyPaid {
+		return false
+	}
 	return true
 }
 
@@ -613,6 +626,15 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 			return false
 		}
 		s.LoseLife(plan.player, plan.lifePaid)
+	}
+	if plan.energyPaid > 0 {
+		player, ok := s.Player(plan.player)
+		if !ok || player.EnergyCounters < plan.energyPaid {
+			return false
+		}
+		if !s.SetPlayerEnergyCounters(plan.player, player.EnergyCounters-plan.energyPaid) {
+			return false
+		}
 	}
 	return true
 }
