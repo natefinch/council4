@@ -423,6 +423,8 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		return
 	}
 	switch effect.Kind {
+	case RuleEffectCostModifier:
+		v.validateCostModifier(faceName, appendPath(path, "CostModifier"), effect.CostModifier)
 	case RuleEffectGrantHandCardAbility:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "hand-card ability grants must set affected player")
@@ -446,6 +448,30 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
 		}
 	default:
+	}
+}
+
+func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier CostModifier) {
+	if modifier.GenericIncrease < 0 {
+		v.add(faceName, appendPath(path, "GenericIncrease"), CardDefIssueInvalidRuleEffect, "generic cost increase cannot be negative")
+	}
+	if modifier.GenericReduction < 0 {
+		v.add(faceName, appendPath(path, "GenericReduction"), CardDefIssueInvalidRuleEffect, "generic cost reduction cannot be negative")
+	}
+	if modifier.SetGeneric.Exists && modifier.SetGeneric.Val < 0 {
+		v.add(faceName, appendPath(path, "SetGeneric"), CardDefIssueInvalidRuleEffect, "generic cost replacement cannot be negative")
+	}
+	if modifier.MinimumGeneric < 0 {
+		v.add(faceName, appendPath(path, "MinimumGeneric"), CardDefIssueInvalidRuleEffect, "minimum generic cost cannot be negative")
+	}
+	if modifier.FirstCycleEachTurn && modifier.AbilityKeyword != Cycling {
+		v.add(faceName, appendPath(path, "FirstCycleEachTurn"), CardDefIssueInvalidRuleEffect, "first-cycle cost modifiers must match Cycling")
+	}
+	if modifier.Kind == CostModifierAbility && modifier.AbilityKeyword == KeywordNone {
+		v.add(faceName, appendPath(path, "AbilityKeyword"), CardDefIssueInvalidRuleEffect, "ability cost modifiers must set AbilityKeyword")
+	}
+	if modifier.SetManaCost.Exists && modifier.SetGeneric.Exists {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot set both full mana cost and generic cost")
 	}
 }
 
@@ -503,6 +529,9 @@ func (v *cardDefValidator) validateTargetIndex(faceName, path string, targetInde
 func (v *cardDefValidator) validateCondition(faceName, path string, condition *Condition, targets []TargetSpec) {
 	if condition.ControllerLifeAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerLifeAtLeast"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	}
+	if condition.ControllerHandSizeAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerHandSizeAtLeast"), CardDefIssueInvalidCondition, "hand-size threshold cannot be negative")
 	}
 	if condition.AnyPlayerLifeAtMost < 0 {
 		v.add(faceName, appendPath(path, "AnyPlayerLifeAtMost"), CardDefIssueInvalidCondition, "life threshold cannot be negative")

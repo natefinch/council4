@@ -72,6 +72,7 @@ const (
 	CostPayLife
 	CostExile
 	CostRemoveCounter
+	CostReveal
 	CostTapPermanents
 	CostEnergy
 	CostReturn

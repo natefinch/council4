@@ -206,6 +206,33 @@ func TestRenderReturnToHandAdditionalCost(t *testing.T) {
 	}
 }
 
+func TestRenderRevealAdditionalCostWithXAndColor(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := renderAdditional(ctx, cost.Additional{
+		Kind:           cost.AdditionalReveal,
+		Text:           "Reveal X blue cards from your hand",
+		AmountFromX:    true,
+		Source:         zone.Hand,
+		MatchCardColor: true,
+		CardColor:      color.Blue,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"cost.AdditionalReveal",
+		"AmountFromX: true",
+		"Source: zone.Hand",
+		"MatchCardColor: true",
+		"CardColor: color.Blue",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered additional missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderEveryRecognizedCounterKind(t *testing.T) {
 	t.Parallel()
 	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {
@@ -1240,6 +1267,45 @@ func TestRenderStaticAbilityHandCyclingGrant(t *testing.T) {
 		}
 	}
 	src := "package p\nimport (\n\"github.com/natefinch/council4/mtg/game\"\n\"github.com/natefinch/council4/mtg/game/cost\"\n\"github.com/natefinch/council4/mtg/game/types\"\n)\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered static ability is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+func TestRenderStaticAbilityCyclingCostModifier(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderStaticAbility(newRenderCtx(), &game.StaticAbility{
+		Text: "As long as you have seven or more cards in hand, you may pay {0} rather than pay cycling costs.",
+		Condition: opt.Val(game.Condition{
+			Text:                      "As long as you have seven or more cards in hand",
+			ControllerHandSizeAtLeast: 7,
+		}),
+		RuleEffects: []game.RuleEffect{{
+			Kind:           game.RuleEffectCostModifier,
+			AffectedPlayer: game.PlayerYou,
+			CostModifier: game.CostModifier{
+				Kind:           game.CostModifierAbility,
+				AbilityKeyword: game.Cycling,
+				SetManaCost:    opt.Val(cost.Mana{}),
+			},
+		}},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"ControllerHandSizeAtLeast: 7",
+		"game.RuleEffectCostModifier",
+		"AffectedPlayer: game.PlayerYou",
+		"Kind: game.CostModifierAbility",
+		"AbilityKeyword: game.Cycling",
+		"SetManaCost: opt.Val(cost.Mana{})",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered static ability missing %q:\n%s", want, rendered)
+		}
+	}
+	src := "package p\nimport (\n\"github.com/natefinch/council4/mtg/game\"\n\"github.com/natefinch/council4/mtg/game/cost\"\n\"github.com/natefinch/council4/opt\"\n)\nvar _ = " + rendered
 	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
 		t.Fatalf("rendered static ability is not valid Go: %v\n%s", err, rendered)
 	}

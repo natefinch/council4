@@ -278,7 +278,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				continue
 			}
 			if body, ok := ability.(game.ActivatedAbility); ok {
-				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(body.ManaCost)) {
+				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
 					targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, &body)
 					if targetResult.kind == targetInvalidSpec {
 						continue
@@ -326,7 +326,7 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 		for i := range def.ActivatedAbilities {
 			body := &def.ActivatedAbilities[i]
 			idx := def.ActivatedAbilityIndex(i)
-			for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(body.ManaCost)) {
+			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
 				targetResult := targetChoicesForBodyFromSourceObject(g, playerID, def, 0, body)
 				if targetResult.kind == targetInvalidSpec {
 					continue
@@ -807,7 +807,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		if len(activate.Targets) != 0 || activate.XValue != 0 {
 			return false
 		}
-		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), agents, log)
+		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), 0, agents, log)
 		if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 			PlayerID:        playerID,
 			Source:          permanent,
@@ -887,7 +887,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if hasTapCostOf(additionalCosts) {
 		tapExclusions = append(tapExclusions, permanent.ObjectID)
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaCost), additionalCosts, agents, log, tapExclusions...)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaCost), additionalCosts, activate.XValue, agents, log, tapExclusions...)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
@@ -944,7 +944,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	if !ok {
 		panic("validated graveyard ability targets could not be segmented")
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, agents, log)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     card.ID,
@@ -1019,8 +1019,9 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	if !canActivateCyclingAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), XValue: activate.XValue, Prefs: prefs}) {
+	effectiveCost := effectiveCyclingCost(g, playerID, card, &ability)
+	prefs := e.paymentPreferencesForCost(g, playerID, effectiveCost, nil, activate.XValue, agents, log)
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCost, XValue: activate.XValue, Prefs: prefs}) {
 		return false
 	}
 	if !discardCardFromHand(g, playerID, card.ID) {
@@ -1062,7 +1063,7 @@ func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.Pla
 	if !ok || attackerWasBlocked(g, attacker.ObjectID) {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), Prefs: prefs}) {
 		return false
 	}
@@ -1162,6 +1163,126 @@ func canActivateNinjutsuAbility(g *game.Game, playerID game.PlayerID, cardID id.
 		return false
 	}
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+}
+
+func effectiveCyclingCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) *cost.Mana {
+	if body == nil {
+		return nil
+	}
+	return applyAbilityCostModifiers(manaCostPtr(body.ManaCost), cyclingCostModifiers(g, playerID, card, body))
+}
+
+func cyclingCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) []game.CostModifier {
+	var modifiers []game.CostModifier
+	for _, modifier := range g.CostModifiers {
+		if costModifierAppliesToAbility(g, modifier, playerID, card, body) {
+			modifiers = append(modifiers, modifier)
+		}
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCostModifier ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
+		}
+		if costModifierAppliesToAbility(g, effect.CostModifier, playerID, card, body) {
+			modifiers = append(modifiers, effect.CostModifier)
+		}
+	}
+	return modifiers
+}
+
+func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) bool {
+	if modifier.Kind != game.CostModifierAbility {
+		return false
+	}
+	if modifier.AbilityKeyword != game.KeywordNone && !game.BodyHasKeyword(body, modifier.AbilityKeyword) {
+		return false
+	}
+	if modifier.MatchCardType {
+		if card == nil || card.Def == nil || !card.Def.HasType(modifier.CardType) {
+			return false
+		}
+	}
+	if modifier.FirstCycleEachTurn && playerCycledThisTurn(g, playerID) {
+		return false
+	}
+	return true
+}
+
+func playerCycledThisTurn(g *game.Game, playerID game.PlayerID) bool {
+	for _, event := range g.EventsThisTurn() {
+		if event.Kind == game.EventCycled && event.Player == playerID {
+			return true
+		}
+	}
+	return false
+}
+
+func applyAbilityCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
+	if len(modifiers) == 0 {
+		return manaCost
+	}
+	baseCost := manaCost
+	for i := range modifiers {
+		if modifiers[i].SetManaCost.Exists {
+			value := append(cost.Mana(nil), modifiers[i].SetManaCost.Val...)
+			baseCost = &value
+		}
+	}
+	generic := genericCostAmount(baseCost)
+	minimum := 0
+	setGeneric := (*int)(nil)
+	for i := range modifiers {
+		modifier := modifiers[i]
+		if modifier.SetGeneric.Exists {
+			setGeneric = &modifier.SetGeneric.Val
+		}
+		generic += modifier.GenericIncrease
+		generic -= modifier.GenericReduction
+		if modifier.MinimumGeneric > minimum {
+			minimum = modifier.MinimumGeneric
+		}
+	}
+	if setGeneric != nil {
+		generic = *setGeneric
+	}
+	if generic < minimum {
+		generic = minimum
+	}
+	if generic < 0 {
+		generic = 0
+	}
+	return costWithGenericAmount(baseCost, generic)
+}
+
+func genericCostAmount(manaCost *cost.Mana) int {
+	if manaCost == nil {
+		return 0
+	}
+	total := 0
+	for _, symbol := range *manaCost {
+		if symbol.Kind == cost.GenericSymbol {
+			total += symbol.Generic
+		}
+	}
+	return total
+}
+
+func costWithGenericAmount(manaCost *cost.Mana, generic int) *cost.Mana {
+	var modified cost.Mana
+	if generic > 0 {
+		modified = append(modified, cost.O(generic))
+	}
+	if manaCost != nil {
+		for _, symbol := range *manaCost {
+			if symbol.Kind != cost.GenericSymbol {
+				modified = append(modified, symbol)
+			}
+		}
+	}
+	return &modified
 }
 
 func abilityHasReturnUnblockedAttackerCost(costs []cost.Additional) bool {
@@ -1325,6 +1446,29 @@ func legalXValuesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Ma
 		values = append(values, x)
 	}
 	return values
+}
+
+func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional) []int {
+	if !additionalCostsUseX(additionalCosts) {
+		return legalXValuesForCost(g, playerID, manaCost)
+	}
+	var values []int
+	for x := 0; x <= maxLegalXValue; x++ {
+		if costHasVariableMana(manaCost) && !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: x}) {
+			break
+		}
+		values = append(values, x)
+	}
+	return values
+}
+
+func additionalCostsUseX(additionalCosts []cost.Additional) bool {
+	for _, additional := range additionalCosts {
+		if additional.AmountFromX {
+			return true
+		}
+	}
+	return false
 }
 
 func costHasVariableMana(manaCost *cost.Mana) bool {
@@ -1532,11 +1676,11 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 	if len(targets) != 0 || len(game.BodyTargets(body)) != 0 {
 		return false
 	}
-	_, gotAbility, ok := cyclingAbilitySource(g, playerID, cardID, abilityIndex)
+	card, gotAbility, ok := cyclingAbilitySource(g, playerID, cardID, abilityIndex)
 	if !ok || !game.BodyHasKeyword(gotAbility, game.Cycling) {
 		return false
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCyclingCost(g, playerID, card, body)})
 }
 
 func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {

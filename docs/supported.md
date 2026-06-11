@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,851
+Cards supported: 3,853
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1563,6 +1563,7 @@ Cards supported: 3,851
 - Ihsan's Shade
 - Il Mheg Pixie
 - Illegitimate Business
+- Illuminated Folio
 - Illusion
 - Illusion
 - Illusion
@@ -2142,6 +2143,7 @@ Cards supported: 3,851
 - Neurok Replica
 - Nevinyrral's Disk
 - New Benalia
+- New Perspectives
 - Nexus Wardens
 - Nezumi Bladeblesser
 - Nezumi Bone-Reader

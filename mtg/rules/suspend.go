@@ -54,7 +54,7 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 	card, _ := g.GetCardInstance(cardID)
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	manaCost, counters, _ := suspendCostForCard(spellDef)
-	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
 	}

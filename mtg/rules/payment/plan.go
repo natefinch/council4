@@ -129,7 +129,7 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	if req.Source == nil && req.SourceCardID == 0 {
 		return plan, false
 	}
-	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.ManaCost)) {
+	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.ManaCost)) && !additionalCostsUseX(req.AdditionalCosts) {
 		return plan, false
 	}
 	tapSource := hasTapCostOf(req.AdditionalCosts)
@@ -142,7 +142,7 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 		sourceCardID = req.Source.CardInstanceID
 		sourceZone = zone.Battlefield
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, clonePreferences(req.Prefs), req.Source, sourceCardID, sourceZone)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), req.Source, sourceCardID, sourceZone)
 	if !ok {
 		return plan, false
 	}
@@ -167,7 +167,7 @@ func retryAbilityCostPlanAvoidingManaTapConflict(s State, req AbilityRequest, so
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, tapRetryPreferences(req.Prefs), req.Source, sourceCardID, sourceZone, paymentPlanTappedPermanents(manaPlan)...)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), req.Source, sourceCardID, sourceZone, paymentPlanTappedPermanents(manaPlan)...)
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
@@ -176,6 +176,15 @@ func retryAbilityCostPlanAvoidingManaTapConflict(s State, req AbilityRequest, so
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
 	return additional, manaPlan, true
+}
+
+func additionalCostsUseX(costs []cost.Additional) bool {
+	for _, additional := range costs {
+		if additional.AmountFromX {
+			return true
+		}
+	}
+	return false
 }
 
 func abilityManaExclusions(additional additionalCostPlan, tapSource bool, source *game.Permanent, includeTapPermanents bool) map[id.ID]bool {
@@ -288,7 +297,7 @@ func payGenericCost(s State, req GenericRequest) bool {
 
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, clonePreferences(req.Prefs), nil, req.SourceCardID, zone.None)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), nil, req.SourceCardID, zone.None)
 	if !ok {
 		return plan, false
 	}
@@ -312,7 +321,7 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, tapRetryPreferences(req.Prefs), nil, req.SourceCardID, zone.None, paymentPlanTappedPermanents(manaPlan)...)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), nil, req.SourceCardID, zone.None, paymentPlanTappedPermanents(manaPlan)...)
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
@@ -326,7 +335,7 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, prefs *Preferences) (spellCostPlan, bool) {
 	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, option: option})
 	plan := spellCostPlan{option: option}
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, clonePreferences(prefs), nil, cardID, sourceZone)
+	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, clonePreferences(prefs), nil, cardID, sourceZone)
 	if !ok {
 		return plan, false
 	}
@@ -350,7 +359,7 @@ func retrySpellCostPlanAvoidingManaTapConflict(s State, playerID game.PlayerID, 
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, tapRetryPreferences(prefs), nil, cardID, sourceZone, paymentPlanTappedPermanents(manaPlan)...)
+	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, tapRetryPreferences(prefs), nil, cardID, sourceZone, paymentPlanTappedPermanents(manaPlan)...)
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}

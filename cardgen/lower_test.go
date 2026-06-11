@@ -984,6 +984,90 @@ func TestLowerActivatedEnergyCost(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedRevealCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		oracleText      string
+		wantAmount      int
+		wantAmountFromX bool
+		wantColor       color.Color
+	}{
+		{
+			name:       "fixed cards sharing color",
+			oracleText: "{1}, {T}, Reveal two cards from your hand that share a color: Draw a card.",
+			wantAmount: 2,
+		},
+		{
+			name:            "variable blue cards",
+			oracleText:      "{2}, Reveal X blue cards from your hand, Sacrifice this creature: Draw a card.",
+			wantAmountFromX: true,
+			wantColor:       color.Blue,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Creature",
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			costs := face.ActivatedAbilities[0].AdditionalCosts
+			var got cost.Additional
+			for _, additional := range costs {
+				if additional.Kind == cost.AdditionalReveal {
+					got = additional
+					break
+				}
+			}
+			if got.Kind != cost.AdditionalReveal || got.Source != zone.Hand {
+				t.Fatalf("additional costs = %#v, want reveal from hand", costs)
+			}
+			if got.Amount != test.wantAmount {
+				t.Fatalf("Amount = %d, want %d", got.Amount, test.wantAmount)
+			}
+			if got.AmountFromX != test.wantAmountFromX {
+				t.Fatalf("AmountFromX = %v, want %v", got.AmountFromX, test.wantAmountFromX)
+			}
+			if test.wantColor != "" {
+				if !got.MatchCardColor || got.CardColor != test.wantColor {
+					t.Fatalf("card color = %v/%v, want %v", got.MatchCardColor, got.CardColor, test.wantColor)
+				}
+			}
+		})
+	}
+}
+
+func TestLowerActivatedAbilityRejectsUnsupportedRevealCosts(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Reveal the player you chose: Draw a card.",
+		"Reveal this card from your hand: Draw a card.",
+		"Reveal a toy you own: Draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: oracleText,
+			})
+			if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+				t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerActivatedReturnToHandCosts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -5695,6 +5779,83 @@ func TestLowerHandCyclingGrants(t *testing.T) {
 			gotCost, ok := game.ActivatedBodyCyclingCost(&effect.GrantedAbility)
 			if !ok || !slices.Equal(gotCost, tc.wantCost) {
 				t.Fatalf("cycling cost = %v, %v; want %v", gotCost, ok, tc.wantCost)
+			}
+		})
+	}
+}
+
+func TestLowerCyclingCostModifiers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                string
+		oracle              string
+		wantReduction       int
+		wantSetCost         bool
+		wantHandSize        int
+		wantFirstCycleLimit bool
+	}{
+		{
+			name:          "Fluctuator",
+			oracle:        "Cycling abilities you activate cost up to {2} less to activate.",
+			wantReduction: 2,
+		},
+		{
+			name:         "New Perspectives",
+			oracle:       "As long as you have seven or more cards in hand, you may pay {0} rather than pay cycling costs.",
+			wantSetCost:  true,
+			wantHandSize: 7,
+		},
+		{
+			name:                "Gavi Nest Warden",
+			oracle:              "You may pay {0} rather than pay the cycling cost of the first card you cycle each turn.",
+			wantSetCost:         true,
+			wantFirstCycleLimit: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       tc.name,
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("got %d static abilities, want 1", len(face.StaticAbilities))
+			}
+			body := face.StaticAbilities[0].Body
+			if len(body.RuleEffects) != 1 {
+				t.Fatalf("rule effects = %+v, want one", body.RuleEffects)
+			}
+			if body.Condition.Exists != (tc.wantHandSize > 0) {
+				t.Fatalf("condition exists = %v, want %v", body.Condition.Exists, tc.wantHandSize > 0)
+			}
+			if tc.wantHandSize > 0 && body.Condition.Val.ControllerHandSizeAtLeast != tc.wantHandSize {
+				t.Fatalf("hand-size condition = %d, want %d", body.Condition.Val.ControllerHandSizeAtLeast, tc.wantHandSize)
+			}
+			effect := body.RuleEffects[0]
+			if effect.Kind != game.RuleEffectCostModifier {
+				t.Fatalf("rule effect kind = %v, want RuleEffectCostModifier", effect.Kind)
+			}
+			if effect.AffectedPlayer != game.PlayerYou {
+				t.Fatalf("affected player = %v, want PlayerYou", effect.AffectedPlayer)
+			}
+			modifier := effect.CostModifier
+			if modifier.Kind != game.CostModifierAbility || modifier.AbilityKeyword != game.Cycling {
+				t.Fatalf("modifier = %+v, want Cycling ability modifier", modifier)
+			}
+			if modifier.GenericReduction != tc.wantReduction {
+				t.Fatalf("generic reduction = %d, want %d", modifier.GenericReduction, tc.wantReduction)
+			}
+			if modifier.SetManaCost.Exists != tc.wantSetCost {
+				t.Fatalf("set mana cost exists = %v, want %v", modifier.SetManaCost.Exists, tc.wantSetCost)
+			}
+			if tc.wantSetCost && len(modifier.SetManaCost.Val) != 0 {
+				t.Fatalf("set mana cost = %v, want zero", modifier.SetManaCost.Val)
+			}
+			if modifier.FirstCycleEachTurn != tc.wantFirstCycleLimit {
+				t.Fatalf("first-cycle limit = %v, want %v", modifier.FirstCycleEachTurn, tc.wantFirstCycleLimit)
 			}
 		})
 	}

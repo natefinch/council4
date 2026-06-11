@@ -356,7 +356,7 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 	if !engine.chooseMay(g, ctx.agents, playerID, prompt, ctx.log) {
 		return false
 	}
-	prefs := engine.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, ctx.agents, ctx.log)
+	prefs := engine.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, res.XValue, ctx.agents, ctx.log)
 	return paymentOrch.payGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
 		SourceCardID:    sourceCardID,

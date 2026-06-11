@@ -1,6 +1,7 @@
 package cost
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -45,6 +46,9 @@ type Additional struct {
 	// Zero means one for object/card costs.
 	Amount int
 
+	// AmountFromX uses the announced X value as the required amount.
+	AmountFromX bool
+
 	// MatchPermanentType constrains battlefield costs such as "sacrifice a
 	// creature." When false, any permanent is allowed for permanent costs.
 	MatchPermanentType bool
@@ -54,6 +58,10 @@ type Additional struct {
 	// When false, any card in the relevant zone is allowed for card costs.
 	MatchCardType bool
 	CardType      types.Card
+
+	// MatchCardColor constrains card costs to cards with the listed color.
+	MatchCardColor bool
+	CardColor      color.Color
 
 	// SubtypesAny constrains card costs to cards with at least one listed
 	// subtype. It is independent of MatchCardType and remains bounded so

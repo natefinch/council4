@@ -252,6 +252,20 @@ func lowerExecutableAbility(
 			sourceSpans: handCyclingGrantSourceSpans(ability, syntax),
 		}, nil
 	}
+	if costModifier, ok, diagnostic := lowerCyclingCostModifier(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: costModifier}},
+			consumed: semanticConsumption{
+				effects:    len(ability.Effects),
+				conditions: len(ability.Conditions),
+				keywords:   len(ability.Keywords),
+			},
+			sourceSpans: []oracle.Span{ability.Span},
+		}, nil
+	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
 		return lowered, diagnostic
 	}
@@ -1184,6 +1198,8 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 			}, true
 		}
 		return lowerExileCost(component)
+	case oracle.CostReveal:
+		return lowerRevealCost(component)
 	case oracle.CostRemoveCounter:
 		return lowerRemoveCounterCost(cardName, component)
 	case oracle.CostTapPermanents:
@@ -1202,6 +1218,70 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 		return lowerReturnToHandCost(component)
 	default:
 		return cost.Additional{}, false
+	}
+}
+
+func lowerRevealCost(component oracle.CostComponent) (cost.Additional, bool) {
+	object := strings.TrimSpace(component.Object)
+	normalized := strings.ToLower(object)
+	if strings.HasSuffix(normalized, " that share a color") {
+		object = strings.TrimSpace(object[:len(object)-len(" that share a color")])
+		normalized = strings.TrimSpace(normalized[:len(normalized)-len(" that share a color")])
+	}
+	const suffix = " from your hand"
+	if !strings.HasSuffix(normalized, suffix) {
+		return cost.Additional{}, false
+	}
+	object = strings.TrimSpace(object[:len(object)-len(suffix)])
+	words := strings.Fields(object)
+	if len(words) < 2 || len(words) > 3 {
+		return cost.Additional{}, false
+	}
+	additional := cost.Additional{
+		Kind:   cost.AdditionalReveal,
+		Text:   component.Text,
+		Source: zone.Hand,
+	}
+	switch strings.ToLower(words[0]) {
+	case "x":
+		additional.AmountFromX = true
+	default:
+		amount, ok := exactCostAmount(strings.ToLower(words[0]))
+		if !ok {
+			return cost.Additional{}, false
+		}
+		additional.Amount = amount
+	}
+	words = words[1:]
+	if len(words) == 2 {
+		cardColor, ok := revealCostColor(strings.ToLower(words[0]))
+		if !ok {
+			return cost.Additional{}, false
+		}
+		additional.MatchCardColor = true
+		additional.CardColor = cardColor
+		words = words[1:]
+	}
+	if strings.TrimSuffix(strings.ToLower(words[0]), "s") != "card" {
+		return cost.Additional{}, false
+	}
+	return additional, true
+}
+
+func revealCostColor(word string) (color.Color, bool) {
+	switch word {
+	case "white":
+		return color.White, true
+	case "blue":
+		return color.Blue, true
+	case "black":
+		return color.Black, true
+	case "red":
+		return color.Red, true
+	case "green":
+		return color.Green, true
+	default:
+		return "", false
 	}
 }
 
@@ -1986,6 +2066,48 @@ func lowerHandCyclingGrant(
 			GrantedAbility: game.CyclingActivatedAbility(manaCost),
 		}},
 	}, true, nil
+}
+
+func lowerCyclingCostModifier(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if ability.Kind != oracle.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, false, nil
+	}
+	text := abilityTextWithoutReminders(syntax)
+	baseModifier := game.CostModifier{
+		Kind:           game.CostModifierAbility,
+		AbilityKeyword: game.Cycling,
+	}
+	body := game.StaticAbility{Text: text}
+	effect := game.RuleEffect{
+		Kind:           game.RuleEffectCostModifier,
+		AffectedPlayer: game.PlayerYou,
+		CostModifier:   baseModifier,
+	}
+	switch text {
+	case "Cycling abilities you activate cost up to {2} less to activate.":
+		effect.CostModifier.GenericReduction = 2
+	case "As long as you have seven or more cards in hand, you may pay {0} rather than pay cycling costs.":
+		body.Condition = opt.Val(game.Condition{
+			Text:                      "As long as you have seven or more cards in hand",
+			ControllerHandSizeAtLeast: 7,
+		})
+		effect.CostModifier.SetManaCost = opt.Val(cost.Mana{})
+	case "You may pay {0} rather than pay the cycling cost of the first card you cycle each turn.":
+		effect.CostModifier.SetManaCost = opt.Val(cost.Mana{})
+		effect.CostModifier.FirstCycleEachTurn = true
+	default:
+		return game.StaticAbility{}, false, nil
+	}
+	body.RuleEffects = []game.RuleEffect{effect}
+	return body, true, nil
 }
 
 func handCyclingGrantSelection(text, parameter string) (game.Selection, bool) {

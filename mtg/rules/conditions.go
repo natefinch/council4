@@ -45,6 +45,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.Life >= cond.ControllerLifeAtLeast
 	}
+	if cond.ControllerHandSizeAtLeast > 0 {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.Hand.Size() >= cond.ControllerHandSizeAtLeast
+	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		matches = matches && anyPlayerLifeAtMost(g, cond.AnyPlayerLifeAtMost)
 	}
