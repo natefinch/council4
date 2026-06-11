@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,250 of 31,838 cards eligible for paper support (13.3%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,258 of 31,838 cards eligible for paper support (13.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -182,6 +182,7 @@ Council4 currently supports **4,250 of 31,838 cards eligible for paper support (
 - Artful Takedown
 - Artifact Blast
 - Artifact Zombie
+- Artificer's Assistant
 - Ascended Lawmage
 - Asceticism
 - Asha's Favor
@@ -472,6 +473,7 @@ Council4 currently supports **4,250 of 31,838 cards eligible for paper support (
 - Breath of Malfegor
 - Breeding Pool
 - Briar Hydra
+- Briarknit Kami
 - Briarpack Alpha
 - Brightblade Stoat
 - Brightclimb Pathway // Grimclimb Pathway
@@ -759,6 +761,7 @@ Council4 currently supports **4,250 of 31,838 cards eligible for paper support (
 - Cyclops of One-Eyed Pass
 - Cylian Elf
 - Cystbearer
+- D'Avenant Trapper
 - Daggerback Basilisk
 - Daggerclaw Imp
 - Daggerdrome Imp
@@ -874,6 +877,7 @@ Council4 currently supports **4,250 of 31,838 cards eligible for paper support (
 - Devotee of Strength
 - Devout Monk
 - Dictate of Heliod
+- Diligent Excavator
 - Dimension X
 - Dimir Cluestone
 - Dimir Guildgate
@@ -1654,6 +1658,7 @@ Council4 currently supports **4,250 of 31,838 cards eligible for paper support (
 - Horizon Canopy
 - Horizon Drake
 - Horizon Scholar
+- Horizon Seed
 - Horn of Ramos
 - Horned Turtle
 - Hornet
@@ -1847,6 +1852,7 @@ Council4 currently supports **4,250 of 31,838 cards eligible for paper support (
 - Jhessian Infiltrator
 - Jhessian Lookout
 - Jhessian Thief
+- Jhoira, Weatherlight Captain
 - Jhovall Queen
 - Jhovall Rider
 - Jibbirik Omnivore
@@ -3213,6 +3219,7 @@ Council4 currently supports **4,250 of 31,838 cards eligible for paper support (
 - Sinister Starfish
 - Sinkhole
 - Sir Shandlar of Eberyn
+- Sire of the Storm
 - Siren Lookout
 - Sisay's Ring
 - Sisters of the Flame
@@ -3639,6 +3646,7 @@ Council4 currently supports **4,250 of 31,838 cards eligible for paper support (
 - Territorial Hammerskull
 - Territorial Roc
 - Terror of the Fairgrounds
+- Teshar, Ancestor's Apostle
 - Teyo's Lightshield
 - Tezzeret's Gambit
 - Tezzeret's Strider
