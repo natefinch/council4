@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,762
+Cards supported: 3,763
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1529,6 +1529,7 @@ Cards supported: 3,762
 - Ihsan's Shade
 - Il Mheg Pixie
 - Illegitimate Business
+- Illuminated Folio
 - Illusion
 - Illusion
 - Illusion

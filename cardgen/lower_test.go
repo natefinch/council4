@@ -984,6 +984,90 @@ func TestLowerActivatedEnergyCost(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedRevealCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		oracleText      string
+		wantAmount      int
+		wantAmountFromX bool
+		wantColor       color.Color
+	}{
+		{
+			name:       "fixed cards sharing color",
+			oracleText: "{1}, {T}, Reveal two cards from your hand that share a color: Draw a card.",
+			wantAmount: 2,
+		},
+		{
+			name:            "variable blue cards",
+			oracleText:      "{2}, Reveal X blue cards from your hand, Sacrifice this creature: Draw a card.",
+			wantAmountFromX: true,
+			wantColor:       color.Blue,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Creature",
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			costs := face.ActivatedAbilities[0].AdditionalCosts
+			var got cost.Additional
+			for _, additional := range costs {
+				if additional.Kind == cost.AdditionalReveal {
+					got = additional
+					break
+				}
+			}
+			if got.Kind != cost.AdditionalReveal || got.Source != zone.Hand {
+				t.Fatalf("additional costs = %#v, want reveal from hand", costs)
+			}
+			if got.Amount != test.wantAmount {
+				t.Fatalf("Amount = %d, want %d", got.Amount, test.wantAmount)
+			}
+			if got.AmountFromX != test.wantAmountFromX {
+				t.Fatalf("AmountFromX = %v, want %v", got.AmountFromX, test.wantAmountFromX)
+			}
+			if test.wantColor != "" {
+				if !got.MatchCardColor || got.CardColor != test.wantColor {
+					t.Fatalf("card color = %v/%v, want %v", got.MatchCardColor, got.CardColor, test.wantColor)
+				}
+			}
+		})
+	}
+}
+
+func TestLowerActivatedAbilityRejectsUnsupportedRevealCosts(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Reveal the player you chose: Draw a card.",
+		"Reveal this card from your hand: Draw a card.",
+		"Reveal a toy you own: Draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: oracleText,
+			})
+			if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+				t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerActivatedReturnToHandCosts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -139,7 +139,7 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 	if !e.canCastFaceDown(g, playerID, cast.CardID, cast.Face, cast.FaceDownKind) {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, &faceDownCastCost, nil, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, &faceDownCastCost, nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &faceDownCastCost, Prefs: prefs}) {
 		return false
 	}
@@ -214,7 +214,7 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 	if !ok {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, agents, log)
+	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
 	}
