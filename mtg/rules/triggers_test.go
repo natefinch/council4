@@ -979,6 +979,156 @@ func TestCombatDamageSourceTriggerUsesLKIAfterSourceDies(t *testing.T) {
 	}
 }
 
+func TestAttachedPermanentDamageSourceTriggerMatchesDealer(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	dealer := addCombatCreaturePermanent(g, game.Player1)
+	other := addCombatCreaturePermanent(g, game.Player1)
+	equipment := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Equipment",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
+	}})
+	if !attachPermanent(g, equipment, dealer) {
+		t.Fatal("attachPermanent failed")
+	}
+	pattern := &game.TriggerPattern{
+		Event:               game.EventDamageDealt,
+		Source:              game.TriggerSourceAttachedPermanent,
+		Subject:             game.TriggerSubjectDamageSource,
+		DamageRecipient:     game.DamageRecipientPlayer,
+		RequireCombatDamage: true,
+	}
+	event := game.Event{
+		Kind:            game.EventDamageDealt,
+		SourceID:        dealer.CardInstanceID,
+		SourceObjectID:  dealer.ObjectID,
+		Controller:      game.Player1,
+		Player:          game.Player2,
+		DamageRecipient: game.DamageRecipientPlayer,
+		CombatDamage:    true,
+	}
+	if !triggerMatchesEvent(g, equipment, pattern, event) {
+		t.Fatal("attached permanent trigger did not match damage dealt by attached creature")
+	}
+	event.SourceID = other.CardInstanceID
+	event.SourceObjectID = other.ObjectID
+	if triggerMatchesEvent(g, equipment, pattern, event) {
+		t.Fatal("attached permanent trigger matched damage dealt by unattached creature")
+	}
+	event.SourceID = dealer.CardInstanceID
+	event.SourceObjectID = dealer.ObjectID
+	event.CombatDamage = false
+	if triggerMatchesEvent(g, equipment, pattern, event) {
+		t.Fatal("combat damage trigger matched noncombat damage")
+	}
+}
+
+func TestAttachedPermanentDamageSourceTriggerUsesLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	equipment := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Equipment",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
+		TriggeredAbilities: []game.TriggeredAbility{{
+			Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{
+				Event:                game.EventDamageDealt,
+				Source:               game.TriggerSourceAttachedPermanent,
+				Subject:              game.TriggerSubjectDamageSource,
+				DamageRecipient:      game.DamageRecipientPermanent,
+				DamageRecipientTypes: []types.Card{types.Creature},
+				RequireCombatDamage:  true,
+			}},
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+			}}}.Ability(),
+		}},
+	}})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 1)
+	if !attachPermanent(g, equipment, attacker) {
+		t.Fatal("attachPermanent failed")
+	}
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{
+			Attacker: attacker.ObjectID,
+			Target:   game.AttackTarget{Player: game.Player2},
+		}},
+		Blockers: []game.BlockDeclaration{{
+			Blocker:  blocker.ObjectID,
+			Blocking: attacker.ObjectID,
+		}},
+		BlockedAttackers: map[id.ID]bool{attacker.ObjectID: true},
+		BlockerOrder:     map[id.ID][]id.ID{attacker.ObjectID: {blocker.ObjectID}},
+	}
+
+	combatEngine{}.resolveDamagePass(g, normalCombatDamage, &TurnLog{})
+	engine.applyStateBasedActions(g)
+	if equipment.AttachedTo.Exists {
+		t.Fatal("equipment remained attached after damage source died")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("attached permanent damage-source trigger was not put on stack from LKI")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want attached permanent trigger to draw one card", got)
+	}
+}
+
+func TestAuraDamageSourceTriggerUsesLKIAfterAuraLeaves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	aura := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Curious Aura",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{
+			game.EnchantStaticAbility(&game.TargetSpec{
+				Allow: game.TargetAllowPermanent,
+				Predicate: game.TargetPredicate{
+					PermanentTypes: []types.Card{types.Creature},
+				},
+			}),
+		},
+		TriggeredAbilities: []game.TriggeredAbility{{
+			Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceAttachedPermanent,
+				Subject:         game.TriggerSubjectDamageSource,
+				Player:          game.TriggerPlayerOpponent,
+				DamageRecipient: game.DamageRecipientPlayer,
+			}},
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+			}}}.Ability(),
+		}},
+	}})
+	dealer := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
+	if !attachPermanent(g, aura, dealer) {
+		t.Fatal("attachPermanent failed")
+	}
+
+	dealPlayerDamage(g, dealer.CardInstanceID, dealer.ObjectID, game.Player1, game.Player2, 1, true)
+	dealer.MarkedDamage = 1
+	engine.applyStateBasedActions(g)
+	if _, ok := permanentByObjectID(g, dealer.ObjectID); ok {
+		t.Fatal("damage source remained on battlefield")
+	}
+	if _, ok := permanentByObjectID(g, aura.ObjectID); ok {
+		t.Fatal("Aura remained on battlefield after enchanted creature died")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("departed Aura damage-source trigger was not put on stack from LKI")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want departed Aura trigger to draw one card", got)
+	}
+}
+
 func TestBecomesBlockedTriggerFiresOnceForMultipleBlockers(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

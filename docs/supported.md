@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,728
+Cards supported: 3,738
 
 - +2 Mace
 - Aang, Air Nomad
@@ -528,6 +528,7 @@ Cards supported: 3,728
 - Charging Strifeknight
 - Chariot of Victory
 - Charity Extractor
+- Charnelhoard Wurm
 - Checkpoint Officer
 - Cheerful Osteomancer // Raise Dead
 - Cherubael
@@ -661,6 +662,7 @@ Cards supported: 3,728
 - Cumber Stone
 - Curator of Mysteries
 - Curio Vendor
+- Curiosity
 - Cursebreak
 - Cursed Minotaur
 - Custodian of the Trove
@@ -1663,6 +1665,7 @@ Cards supported: 3,728
 - Kazandu Nectarpot
 - Kazandu Refuge
 - Kederekt Creeper
+- Keen Sense
 - Keen-Eyed Archers
 - Keeneye Aven
 - Keening Apparition
@@ -1942,6 +1945,7 @@ Cards supported: 3,728
 - Mind Rot
 - Mind Spring
 - Mind Stone
+- Mindscour Dragon
 - Mindwarper
 - Mine Bearer
 - Minecart Daredevil // Ride the Rails
@@ -2053,6 +2057,7 @@ Cards supported: 3,728
 - Necrogen Scudder
 - Necrogen Spellbomb
 - Necromancer's Assistant
+- Necromantic Thirst
 - Necron Warrior
 - Necropanther
 - Necropede
@@ -2174,6 +2179,7 @@ Cards supported: 3,728
 - Ooze
 - Opaline Unicorn
 - Open Fire
+- Ophidian Eye
 - Opportunity
 - Opulent Palace
 - Oracle of Nectars
@@ -2527,6 +2533,7 @@ Cards supported: 3,728
 - Rockshard Elemental
 - Rogue
 - Rogue
+- Rogue's Gloves
 - Ronom Unicorn
 - Rootbound Crag
 - Rootbreaker Wurm
@@ -3193,6 +3200,8 @@ Cards supported: 3,728
 - The Terror of Serpent's Pass
 - Thermal Glider
 - Thicket Crasher
+- Thieving Magpie
+- Thieving Otter
 - Think Tank
 - Third Path Savant
 - Thopter
@@ -3428,6 +3437,7 @@ Cards supported: 3,728
 - Vedalken Archmage
 - Vedalken Blademaster
 - Vedalken Entrancer
+- Vedalken Heretic
 - Vedalken Infuser
 - Vedalken Mastermind
 - Vedalken Mesmerist

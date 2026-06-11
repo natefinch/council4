@@ -2620,6 +2620,174 @@ func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
 	}
 }
 
+func TestLowerDamageSourceTriggers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+		want game.TriggerPattern
+	}{
+		{
+			name: "self damage",
+			text: "Whenever this creature deals damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:   game.EventDamageDealt,
+				Source:  game.TriggerSourceSelf,
+				Subject: game.TriggerSubjectDamageSource,
+			},
+		},
+		{
+			name: "self damage to player",
+			text: "Whenever this creature deals damage to a player, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceSelf,
+				Subject:         game.TriggerSubjectDamageSource,
+				DamageRecipient: game.DamageRecipientPlayer,
+			},
+		},
+		{
+			name: "self damage to opponent",
+			text: "Whenever this creature deals damage to an opponent, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceSelf,
+				Subject:         game.TriggerSubjectDamageSource,
+				Player:          game.TriggerPlayerOpponent,
+				DamageRecipient: game.DamageRecipientPlayer,
+			},
+		},
+		{
+			name: "self damage to creature",
+			text: "Whenever this creature deals damage to a creature, draw a card.",
+			want: game.TriggerPattern{
+				Event:                game.EventDamageDealt,
+				Source:               game.TriggerSourceSelf,
+				Subject:              game.TriggerSubjectDamageSource,
+				DamageRecipient:      game.DamageRecipientPermanent,
+				DamageRecipientTypes: []types.Card{types.Creature},
+			},
+		},
+		{
+			name: "self combat damage",
+			text: "Whenever this creature deals combat damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:               game.EventDamageDealt,
+				Source:              game.TriggerSourceSelf,
+				Subject:             game.TriggerSubjectDamageSource,
+				RequireCombatDamage: true,
+			},
+		},
+		{
+			name: "self combat damage to opponent",
+			text: "Whenever this creature deals combat damage to an opponent, draw a card.",
+			want: game.TriggerPattern{
+				Event:               game.EventDamageDealt,
+				Source:              game.TriggerSourceSelf,
+				Subject:             game.TriggerSubjectDamageSource,
+				Player:              game.TriggerPlayerOpponent,
+				DamageRecipient:     game.DamageRecipientPlayer,
+				RequireCombatDamage: true,
+			},
+		},
+		{
+			name: "equipped creature combat damage to player",
+			text: "Whenever equipped creature deals combat damage to a player, draw a card.",
+			want: game.TriggerPattern{
+				Event:               game.EventDamageDealt,
+				Source:              game.TriggerSourceAttachedPermanent,
+				Subject:             game.TriggerSubjectDamageSource,
+				DamageRecipient:     game.DamageRecipientPlayer,
+				RequireCombatDamage: true,
+			},
+		},
+		{
+			name: "enchanted creature damage",
+			text: "Whenever enchanted creature deals damage, draw a card.",
+			want: game.TriggerPattern{
+				Event:   game.EventDamageDealt,
+				Source:  game.TriggerSourceAttachedPermanent,
+				Subject: game.TriggerSubjectDamageSource,
+			},
+		},
+		{
+			name: "enchanted creature damage to opponent",
+			text: "Whenever enchanted creature deals damage to an opponent, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventDamageDealt,
+				Source:          game.TriggerSourceAttachedPermanent,
+				Subject:         game.TriggerSubjectDamageSource,
+				Player:          game.TriggerPlayerOpponent,
+				DamageRecipient: game.DamageRecipientPlayer,
+			},
+		},
+		{
+			name: "equipped creature damage to creature",
+			text: "Whenever equipped creature deals damage to a creature, draw a card.",
+			want: game.TriggerPattern{
+				Event:                game.EventDamageDealt,
+				Source:               game.TriggerSourceAttachedPermanent,
+				Subject:              game.TriggerSubjectDamageSource,
+				DamageRecipient:      game.DamageRecipientPermanent,
+				DamageRecipientTypes: []types.Card{types.Creature},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Fighter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Warrior",
+				OracleText: tc.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Type != game.TriggerWhenever {
+				t.Fatalf("trigger type = %v, want TriggerWhenever", trigger.Type)
+			}
+			if !reflect.DeepEqual(trigger.Pattern, tc.want) {
+				t.Fatalf("pattern = %+v, want %+v", trigger.Pattern, tc.want)
+			}
+		})
+	}
+}
+
+func TestLowerDamageSourceTriggersFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Whenever this creature deals damage to a player or planeswalker, draw a card.",
+		"Whenever one or more creatures you control deal damage to a player, draw a card.",
+		"Whenever a creature you control deals combat damage to a player, draw a card.",
+		"Whenever this creature deals combat damage to defending player, draw a card.",
+		"Whenever equipped creature or this Equipment deals damage, draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Fighter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Warrior",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("unsupported damage-source trigger unexpectedly lowered")
+			}
+		})
+	}
+}
+
 func TestLowerLifeDamageReceivedTriggers(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -2729,7 +2897,6 @@ func TestLowerLifeDamageReceivedTriggersFailClosed(t *testing.T) {
 		"Whenever you gain or lose life, draw a card.",
 		"Whenever you gain life for the first time each turn, draw a card.",
 		"Whenever this creature is dealt combat damage, draw a card.",
-		"Whenever this creature deals damage to a player, draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()
