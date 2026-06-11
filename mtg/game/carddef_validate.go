@@ -546,6 +546,18 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.OpponentCountAtLeast < 0 {
 		v.add(faceName, appendPath(path, "OpponentCountAtLeast"), CardDefIssueInvalidCondition, "opponent-count threshold cannot be negative")
 	}
+	if condition.ControllerGraveyardCardCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerGraveyardCardCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card threshold cannot be negative")
+	}
+	if condition.ControllerGraveyardCardTypeCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerGraveyardCardTypeCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card-type threshold cannot be negative")
+	}
+	if condition.ControllerBasicLandTypeCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerBasicLandTypeCountAtLeast"), CardDefIssueInvalidCondition, "basic-land-type threshold cannot be negative")
+	}
+	if condition.ControllerCreaturePowerDiversityAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerCreaturePowerDiversityAtLeast"), CardDefIssueInvalidCondition, "creature-power-diversity threshold cannot be negative")
+	}
 	if condition.ControllerControls.MinCount < 0 {
 		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
 	}
@@ -614,6 +626,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			unsupported.ColorsAny = nil
 			unsupported.Colorless = false
 			unsupported.Multicolored = false
+			unsupported.ManaValue.Exists = false
 		}
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "trigger card Selection uses predicates unavailable from event data")
@@ -621,6 +634,15 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		if len(pattern.RequireCardTypes) > 0 || len(pattern.ExcludeCardTypes) > 0 {
 			v.add(faceName, path, CardDefIssueInvalidSelection, "TriggerPattern sets both card-type filters and CardSelection")
 		}
+	}
+	if pattern.RequireKickerPaid && pattern.Event != EventSpellCast {
+		v.add(faceName, appendPath(path, "RequireKickerPaid"), CardDefIssueInvalidSelection, "kicker-paid trigger filter is only supported for spell-cast events")
+	}
+	if pattern.MatchFromZone && pattern.FromZone == zone.None {
+		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter must set a source zone")
+	}
+	if pattern.MatchToZone && pattern.ToZone == zone.None {
+		v.add(faceName, appendPath(path, "ToZone"), CardDefIssueInvalidSelection, "to-zone trigger filter must set a destination zone")
 	}
 }
 

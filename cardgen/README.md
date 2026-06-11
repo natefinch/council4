@@ -87,8 +87,11 @@ Vanguard cards are excluded with explicit report reasons.
    `a sorcery spell`, `an artifact spell`, `an enchantment spell`,
    `a land spell`, `a planeswalker spell`, `a noncreature, nonland spell`, and single-color forms
    `a white/blue/black/red/green spell`. Self-cast (`when you cast this spell`),
-   `TriggerWhen`, intervening-if conditions, ability words, modes, and all other
-   spell-phrase forms are fail-closed. Ordinary battlefield activations
+   `TriggerWhen`, unsupported intervening-if conditions, unknown or non-exact
+   ability-word forms, modes, and all other spell-phrase forms are fail-closed.
+   Exact Threshold, Delirium, Domain, Metalcraft, Hellbent, Ferocious, and Coven
+   conditions lower into typed live-state predicates and dynamic amounts.
+   Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
    Exact trailing activation restrictions lower to typed sorcery, combat,

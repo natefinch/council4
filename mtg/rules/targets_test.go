@@ -1257,6 +1257,81 @@ func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 	}
 }
 
+func TestStackSpellTargetCandidatesRespectTypeFilters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addStackSpell(g, game.Player2, "Creature Spell", []types.Card{types.Creature})
+	sorcery := addStackSpell(g, game.Player2, "Sorcery Spell", []types.Card{types.Sorcery})
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowStackObject,
+		Constraint: "noncreature spell",
+		Predicate:  game.TargetPredicate{ExcludedSpellCardTypes: []types.Card{types.Creature}},
+	}
+	source := counterTargetSpell(&spec)
+
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+
+	if !slices.Contains(candidates, game.StackObjectTarget(sorcery.ID)) {
+		t.Fatalf("candidates = %+v, want noncreature stack target %d", candidates, sorcery.ID)
+	}
+	if slices.Contains(candidates, game.StackObjectTarget(creature.ID)) {
+		t.Fatal("candidates included excluded creature spell target")
+	}
+}
+
+func TestStackSpellTargetCandidatesIncludeCantBeCounteredSpells(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	protected := addStackSpellWithFace(g, game.Player2, &game.CardFace{
+		Name:            "Protected Spell",
+		Types:           []types.Card{types.Sorcery},
+		StaticAbilities: []game.StaticAbility{game.CantBeCounteredStaticBody},
+	})
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowStackObject,
+		Constraint: "spell",
+	}
+	source := counterTargetSpell(&spec)
+
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+
+	if !slices.Contains(candidates, game.StackObjectTarget(protected.ID)) {
+		t.Fatal("candidates omitted can't-be-countered stack target")
+	}
+}
+
+func TestStackSpellTargetCandidatesUseFaceDownCreatureType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	faceDown := addFaceDownStackSpell(g, game.Player2, "Hidden Sorcery", []types.Card{types.Sorcery})
+	creatureSpec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowStackObject,
+		Constraint: "creature spell",
+		Predicate:  game.TargetPredicate{SpellCardTypes: []types.Card{types.Creature}},
+	}
+	noncreatureSpec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowStackObject,
+		Constraint: "noncreature spell",
+		Predicate:  game.TargetPredicate{ExcludedSpellCardTypes: []types.Card{types.Creature}},
+	}
+	source := counterTargetSpell(&creatureSpec)
+
+	creatureCandidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &creatureSpec)
+	noncreatureCandidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &noncreatureSpec)
+
+	if !slices.Contains(creatureCandidates, game.StackObjectTarget(faceDown.ID)) {
+		t.Fatal("creature-spell candidates omitted face-down spell")
+	}
+	if slices.Contains(noncreatureCandidates, game.StackObjectTarget(faceDown.ID)) {
+		t.Fatal("noncreature-spell candidates included face-down spell")
+	}
+}
+
 func playerDamageSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Sorcery},
 		SpellAbility: opt.Val(game.Mode{
@@ -1288,6 +1363,50 @@ func permanentTargetSpellWithSpecs(specs []game.TargetSpec) *game.CardDef {
 			Targets: specs,
 		}.Ability())},
 	}
+}
+
+func counterTargetSpell(spec *game.TargetSpec) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Counterspell",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Instant},
+		SpellAbility: opt.Val(game.Mode{
+			Targets:  []game.TargetSpec{*spec},
+			Sequence: []game.Instruction{{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}}},
+		}.Ability())},
+	}
+}
+
+func addStackSpell(g *game.Game, controller game.PlayerID, name string, cardTypes []types.Card) *game.StackObject {
+	return addStackSpellWithFace(g, controller, &game.CardFace{Name: name, Types: cardTypes})
+}
+
+func addStackSpellWithFace(g *game.Game, controller game.PlayerID, face *game.CardFace) *game.StackObject {
+	cardID := addCardToHand(g, controller, &game.CardDef{CardFace: *face})
+	g.Players[controller].Hand.Remove(cardID)
+	obj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   cardID,
+		Controller: controller,
+	}
+	g.Stack.Push(obj)
+	return obj
+}
+
+func addFaceDownStackSpell(g *game.Game, controller game.PlayerID, name string, cardTypes []types.Card) *game.StackObject {
+	cardID := addCardToHand(g, controller, &game.CardDef{CardFace: game.CardFace{Name: name, Types: cardTypes}})
+	g.Players[controller].Hand.Remove(cardID)
+	obj := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackSpell,
+		SourceID:     cardID,
+		Controller:   controller,
+		FaceDown:     true,
+		FaceDownFace: game.FaceFront,
+		FaceDownKind: game.FaceDownMorph,
+	}
+	g.Stack.Push(obj)
+	return obj
 }
 
 func opponentChosenTargetAbilitySource() *game.CardDef {

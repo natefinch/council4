@@ -118,7 +118,7 @@ card remains rejected as a whole.
 | `unsupported static ability` | The text is a non-keyword static ability. The current backend supports only static abilities composed entirely of supported keyword templates. |
 | `unsupported reminder ability` | The entire Oracle text is reminder text. This is valid syntax, but it does not map to an executable ability emitted by the backend. |
 | `unsupported modal ability` | The parser recognized a bullet or inline `Choose` ability, but the executable backend cannot emit its modes yet. |
-| `unsupported ability word` | The ability has a prefix such as landfall or threshold. The semantic text is preserved, but the backend does not yet lower ability-word abilities. |
+| `unsupported ability word` | The ability has an unknown ability-word prefix or a non-exact variant outside the supported Threshold, Delirium, Domain, Metalcraft, Hellbent, Ferocious, and Coven condition forms. |
 | `unsupported keyword ability` | The keyword was recognized, but `mtg/game` has no reusable static-ability template for it. |
 | `unsupported parameterized keyword` | The keyword requires a value, cost, selector, or other parameter, such as `Toxic 1`; the strict backend currently emits only non-parameterized keyword templates. |
 | `unsupported mixed keyword ability` | One or more supported keywords were recognized, but the same ability also contains additional rules text. The backend rejects the whole ability rather than emitting only the keyword portion. |

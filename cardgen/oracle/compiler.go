@@ -246,6 +246,9 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 			case startsWords(words, "put") && containsNoun(words, "counter"):
 				component.Kind = CostPutCounter
 				component.Object = wordsAfterFirst(part)
+			case startsWords(words, "collect", "evidence") && len(part) == 3 && positiveIntegerWord(firstInteger(part)):
+				component.Kind = CostCollectEvidence
+				component.Amount = firstInteger(part)
 			case startsWords(words, "exile"):
 				component.Kind = CostExile
 				component.Object = wordsAfterFirst(part)
@@ -954,7 +957,8 @@ func (m dynamicAmountPrefixMatch) allows(subject dynamicAmountSubjectMatch) bool
 	switch m.subjectClass {
 	case dynamicAmountCountSubject:
 		if subject.amount.DynamicKind != DynamicAmountCount &&
-			subject.amount.DynamicKind != DynamicAmountOpponentCount {
+			subject.amount.DynamicKind != DynamicAmountOpponentCount &&
+			subject.amount.DynamicKind != DynamicAmountBasicLandTypes {
 			return false
 		}
 		return subject.number == dynamicSubjectInvariant || subject.number == m.subjectNumber
@@ -1023,9 +1027,13 @@ func dynamicAmountSubject(tokens []Token, start int, cardName string) (dynamicAm
 	if start >= len(tokens) {
 		return dynamicAmountSubjectMatch{}, false
 	}
+	if subject, ok := dynamicBasicLandTypeAmountSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := dynamicCountAmountSubject(tokens, start); ok {
 		return subject, true
 	}
+
 	switch {
 	case wordsAt(tokens, start, "your", "life", "total") &&
 		dynamicSubjectBoundary(tokens, start+3):
@@ -1103,6 +1111,29 @@ func dynamicAmountSubject(tokens []Token, start int, cardName string) (dynamicAm
 		}
 		return dynamicAmountSubjectMatch{}, false
 	}
+}
+
+func dynamicBasicLandTypeAmountSubject(tokens []Token, start int) (dynamicAmountSubjectMatch, bool) {
+	var number dynamicSubjectNumber
+	var end int
+	switch {
+	case wordsAt(tokens, start, "basic", "land", "type", "among", "lands", "you", "control"):
+		number = dynamicSubjectSingular
+		end = start + 7
+	case wordsAt(tokens, start, "basic", "land", "types", "among", "lands", "you", "control"):
+		number = dynamicSubjectPlural
+		end = start + 7
+	default:
+		return dynamicAmountSubjectMatch{}, false
+	}
+	if !dynamicSubjectBoundary(tokens, end) {
+		return dynamicAmountSubjectMatch{}, false
+	}
+	return dynamicAmountSubjectMatch{
+		amount: CompiledAmount{DynamicKind: DynamicAmountBasicLandTypes},
+		end:    end,
+		number: number,
+	}, true
 }
 
 func dynamicCountAmountSubject(tokens []Token, start int) (dynamicAmountSubjectMatch, bool) {
@@ -1896,6 +1927,11 @@ func firstInteger(tokens []Token) string {
 		}
 	}
 	return ""
+}
+
+func positiveIntegerWord(word string) bool {
+	amount, err := strconv.Atoi(word)
+	return err == nil && amount > 0
 }
 
 func joinedTokenText(tokens []Token) string {

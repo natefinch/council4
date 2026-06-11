@@ -182,6 +182,186 @@ func TestLowerIssue210AdditionalCosts(t *testing.T) {
 	}
 }
 
+func TestLowerCollectEvidenceAdditionalCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Detective",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Detective",
+		OracleText: "Collect evidence 4: Draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	additional := face.ActivatedAbilities[0].AdditionalCosts[0]
+	if additional.Kind != cost.AdditionalCollectEvidence ||
+		additional.Amount != 4 ||
+		additional.Source != zone.Graveyard {
+		t.Fatalf("additional = %#v, want collect evidence 4 from graveyard", additional)
+	}
+}
+
+func TestLowerCollectEvidenceRejectsMalformedThresholds(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Collect evidence 0: Draw a card.",
+		"Collect evidence two: Draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Malformed Detective",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Detective",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected collect-evidence diagnostic")
+			}
+		})
+	}
+}
+
+func TestLowerCounterSpellTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		oracleText        string
+		wantSpellTypes    []types.Card
+		wantExcludedTypes []types.Card
+	}{
+		{
+			name:       "any spell",
+			oracleText: "Counter target spell.",
+		},
+		{
+			name:           "creature spell",
+			oracleText:     "Counter target creature spell.",
+			wantSpellTypes: []types.Card{types.Creature},
+		},
+		{
+			name:           "artifact spell",
+			oracleText:     "Counter target artifact spell.",
+			wantSpellTypes: []types.Card{types.Artifact},
+		},
+		{
+			name:           "instant spell",
+			oracleText:     "Counter target instant spell.",
+			wantSpellTypes: []types.Card{types.Instant},
+		},
+		{
+			name:           "sorcery spell",
+			oracleText:     "Counter target sorcery spell.",
+			wantSpellTypes: []types.Card{types.Sorcery},
+		},
+		{
+			name:              "noncreature spell",
+			oracleText:        "Counter target noncreature spell.",
+			wantExcludedTypes: []types.Card{types.Creature},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			ability := face.SpellAbility.Val
+			if len(ability.Modes) != 1 {
+				t.Fatalf("modes = %d, want 1", len(ability.Modes))
+			}
+			mode := ability.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			target := mode.Targets[0]
+			if target.Allow != game.TargetAllowStackObject {
+				t.Fatalf("target allow = %v, want stack object", target.Allow)
+			}
+			if !slices.Equal(target.Predicate.SpellCardTypes, test.wantSpellTypes) {
+				t.Fatalf("spell types = %+v, want %+v", target.Predicate.SpellCardTypes, test.wantSpellTypes)
+			}
+			if !slices.Equal(target.Predicate.ExcludedSpellCardTypes, test.wantExcludedTypes) {
+				t.Fatalf("excluded spell types = %+v, want %+v", target.Predicate.ExcludedSpellCardTypes, test.wantExcludedTypes)
+			}
+			if len(mode.Sequence) != 1 {
+				t.Fatalf("sequence = %d, want 1", len(mode.Sequence))
+			}
+			counter, ok := mode.Sequence[0].Primitive.(game.CounterObject)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+			}
+			if counter.Object.Kind() != game.ObjectReferenceTargetStackObject || counter.Object.TargetIndex() != 0 {
+				t.Fatalf("counter object = %+v, want target stack object 0", counter.Object)
+			}
+		})
+	}
+}
+
+func TestLowerCounterSpellWithDrawRider(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Dismiss",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Counter target spell. Draw a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1", len(mode.Targets))
+	}
+	if mode.Targets[0].Allow != game.TargetAllowStackObject {
+		t.Fatalf("target allow = %v, want stack object", mode.Targets[0].Allow)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want counter plus draw", len(mode.Sequence))
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("first primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("second primitive = %T, want game.Draw", mode.Sequence[1].Primitive)
+	}
+}
+
+func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Counter target blue spell.",
+		"Counter target artifact or enchantment spell.",
+		"Counter target spell unless its controller pays {1}.",
+		"Counter target activated or triggered ability.",
+		"Counter target activated ability from an artifact source.",
+		"Counter target spell or ability that targets a creature.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Unsupported Counter",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: oracleText,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected counter-spell diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerNinjutsuAbility(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -2807,11 +2987,89 @@ func TestLowerAbilityWordDoesNotBlockSupportedKeyword(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v, want none", diagnostics)
 	}
 	if source == "" {
 		t.Fatal("expected generated source")
+	}
+}
+
+func TestLowerAbilityWordConditions(t *testing.T) {
+	tests := []struct {
+		name       string
+		cardName   string
+		typeLine   string
+		oracleText string
+		wants      []string
+	}{
+		{"threshold static", "Threshold Bear", "Creature — Bear", "Threshold — This creature gets +2/+2 as long as there are seven or more cards in your graveyard.", []string{"ControllerGraveyardCardCountAtLeast: 7"}},
+		{"delirium static", "Delirium Bear", "Creature — Bear", "Delirium — This creature gets +1/+1 and has menace as long as there are four or more card types among cards in your graveyard.", []string{"ControllerGraveyardCardTypeCountAtLeast: 4", "AffectedSource: true"}},
+		{"domain static", "Domain Bear", "Creature — Bear", "Domain — This creature gets +1/+1 for each basic land type among lands you control.", []string{"PowerDeltaDynamic: opt.Val(game.DynamicAmount{", "ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{", "game.DynamicAmountControllerBasicLandTypeCount"}},
+		{"domain spell", "Tribal Flames", "Sorcery", "Domain — Tribal Flames deals X damage to any target, where X is the number of basic land types among lands you control.", []string{"game.DynamicAmountControllerBasicLandTypeCount"}},
+		{"metalcraft trigger", "Metalcraft Bear", "Creature — Bear", "Metalcraft — When this creature enters, if you control three or more artifacts, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "MinCount:"}},
+		{"hellbent activation", "Hellbent Bear", "Creature — Bear", "Hellbent — {1}: Draw a card. Activate only if you have no cards in hand.", []string{"ActivationCondition: opt.Val(game.Condition{", "ControllerHandEmpty: true"}},
+		{"ferocious activation", "Ferocious Bear", "Creature — Bear", "Ferocious — {1}: Draw a card. Activate only if you control a creature with power 4 or greater.", []string{"ActivationCondition: opt.Val(game.Condition{", "Value: 4"}},
+		{"coven trigger", "Coven Bear", "Creature — Bear", "Coven — At the beginning of combat on your turn, if you control three or more creatures with different powers, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "ControllerCreaturePowerDiversityAtLeast: 3"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			card := &ScryfallCard{
+				Name:       test.cardName,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			if strings.HasPrefix(test.typeLine, "Creature") {
+				card.Power = new("2")
+				card.Toughness = new("2")
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if source == "" {
+				t.Fatal("expected generated source")
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+func TestLowerAbilityWordConditionsFailClosed(t *testing.T) {
+	tests := []string{
+		"Threshold — This creature gets +2/+2 as long as there are six or more cards in your graveyard.",
+		"Delirium — This creature gets +2/+2 as long as there are three or more card types among cards in your graveyard.",
+		"Metalcraft — This creature gets +2/+2 as long as you control two or more artifacts.",
+		"Hellbent — {1}: Draw a card. Activate only if you have one or fewer cards in hand.",
+		"Ferocious — {1}: Draw a card. Activate only if you control a creature with power 3 or greater.",
+		"Coven — At the beginning of combat on your turn, if you control three or more creatures with the same power, draw a card.",
+	}
+	for _, oracleText := range tests {
+		t.Run(oracleText, func(t *testing.T) {
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Fail Closed Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+			}
+		})
 	}
 }
 
@@ -5636,6 +5894,64 @@ func TestLowerCastTriggerAcceptsColorCardinalityPhrases(t *testing.T) {
 	}
 }
 
+func TestLowerCastTriggerAcceptsManaValueKickedAndZonePhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		phrase string
+		assert func(t *testing.T, pattern game.TriggerPattern)
+	}{
+		{
+			name:   "mana value",
+			phrase: "a spell with mana value 5 or greater",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				mv := pattern.CardSelection.ManaValue
+				if !mv.Exists || mv.Val.Op != compare.GreaterOrEqual || mv.Val.Value != 5 {
+					t.Fatalf("ManaValue = %+v, want >= 5", mv)
+				}
+			},
+		},
+		{
+			name:   "kicked",
+			phrase: "a kicked spell",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				if !pattern.RequireKickerPaid {
+					t.Fatal("RequireKickerPaid = false, want true")
+				}
+			},
+		},
+		{
+			name:   "graveyard",
+			phrase: "a spell from your graveyard",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				if !pattern.MatchFromZone || pattern.FromZone != zone.Graveyard {
+					t.Fatalf("from-zone filter = (%v, %v), want graveyard", pattern.MatchFromZone, pattern.FromZone)
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever you cast " + tc.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			tc.assert(t, face.TriggeredAbilities[0].Trigger.Pattern)
+		})
+	}
+}
+
 func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -5649,12 +5965,13 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"ordinal spell", "Whenever you cast your second spell each turn, draw a card."},
 		{"subtype spell", "Whenever you cast a Spirit or Arcane spell, draw a card."},
 		{"historic spell", "Whenever you cast a historic spell, draw a card."},
-		{"mana value spell", "Whenever you cast a spell with mana value 5 or greater, draw a card."},
-		{"kicked spell", "Whenever you cast a kicked spell, draw a card."},
-		{"zone-filtered spell", "Whenever you cast a spell from your graveyard, draw a card."},
+		{"unsupported mana value comparison", "Whenever you cast a spell with mana value less than 5, draw a card."},
+		{"unsupported zone-filtered spell", "Whenever you cast a spell from your library, draw a card."},
+		{"any player your graveyard", "Whenever a player casts a spell from your graveyard, draw a card."},
+		{"opponent your graveyard", "Whenever an opponent casts a spell from your graveyard, draw a card."},
 		{"intervening if", "Whenever you cast a spell, if you control an artifact, draw a card."},
 		{"ability word", "Spellcraft — Whenever you cast a spell, draw a card."},
-		{"unsupported body", "Whenever you cast a spell, counter target spell."},
+		{"unsupported body", "Whenever you cast a spell, counter target activated or triggered ability."},
 		{"partially optional body", "Whenever you cast a spell, draw a card. You may gain 1 life."},
 	}
 	for _, tc := range tests {

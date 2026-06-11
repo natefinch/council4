@@ -201,6 +201,42 @@ func TestCompileActivatedAbilityIssue210Costs(t *testing.T) {
 	}
 }
 
+func TestCompileActivatedAbilityCollectEvidenceCost(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Collect evidence 4: Draw a card.", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Cost == nil || len(ability.Cost.Components) != 1 {
+		t.Fatalf("cost = %#v", ability.Cost)
+	}
+	component := ability.Cost.Components[0]
+	if component.Kind != CostCollectEvidence || component.Amount != "4" {
+		t.Fatalf("cost component = %#v, want collect evidence 4", component)
+	}
+}
+
+func TestCompileActivatedAbilityCollectEvidenceRejectsMalformedThresholds(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"Collect evidence 0: Draw a card.",
+		"Collect evidence two: Draw a card.",
+		"Collect evidence X: Draw a card.",
+	} {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(text, ParseContext{})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported cost diagnostic")
+			}
+			if compilation.Abilities[0].Cost.Components[0].Kind != CostUnknown {
+				t.Fatalf("cost component = %#v, want CostUnknown", compilation.Abilities[0].Cost.Components[0])
+			}
+		})
+	}
+}
+
 func TestCompileTriggeredAbility(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a creature enters, if it was cast, draw a card."
@@ -723,6 +759,9 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 		{"When this creature dies, it deals damage equal to its power to any target.", ParseContext{CardName: "Devil"}, DynamicAmountSourcePower, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to its power"},
 		{"{T}: Put X +1/+1 counters on target creature, where X is Druid's power.", ParseContext{CardName: "Druid"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Druid's power"},
 		{"{T}: Put X +1/+1 counters on target creature, where X is Fight Bear's power.", ParseContext{CardName: "Fight Bear"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Fight Bear's power"},
+		{"You gain 2 life for each basic land type among lands you control.", ParseContext{InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountForEach, 2, SelectorUnknown, ControllerAny, "for each basic land type among lands you control"},
+		{"Flames deals damage equal to the number of basic land types among lands you control to any target.", ParseContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to the number of basic land types among lands you control"},
+		{"Flames deals X damage to any target, where X is the number of basic land types among lands you control.", ParseContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is the number of basic land types among lands you control"},
 	}
 
 	for _, test := range tests {
