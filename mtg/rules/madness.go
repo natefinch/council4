@@ -70,15 +70,17 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		ChosenModes:  append([]int(nil), modes...),
 	}
 	pushSpellToStack(g, stackObj, game.Event{
-		SourceID:      card.ID,
-		StackObjectID: stackObj.ID,
-		Controller:    playerID,
-		CardID:        card.ID,
-		CardTypes:     cardTypes(spellDef),
-		Colors:        spellColors(spellDef),
-		ManaValue:     opt.Val(stackManaValue(spellDef, 0)),
-		FromZone:      zone.Exile,
-		ToZone:        zone.Stack,
+		SourceID:       card.ID,
+		StackObjectID:  stackObj.ID,
+		Controller:     playerID,
+		CardID:         card.ID,
+		CardTypes:      cardTypes(spellDef),
+		CardSupertypes: cardSupertypes(spellDef),
+		CardSubtypes:   cardSubtypes(spellDef),
+		Colors:         spellColors(spellDef),
+		ManaValue:      opt.Val(stackManaValue(spellDef, 0)),
+		FromZone:       zone.Exile,
+		ToZone:         zone.Stack,
 	})
 	return true
 }

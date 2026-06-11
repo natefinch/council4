@@ -171,6 +171,9 @@ func (s *selectionSubject) hasSupertype(supertype types.Super) bool {
 	if s.kind == subjectPermanent {
 		return slices.Contains(s.values.supertypes, supertype)
 	}
+	if s.kind == subjectCastSpell {
+		return slices.Contains(s.event.CardSupertypes, supertype)
+	}
 	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
 		return slices.Contains(s.card.Def.DefaultFace().Supertypes, supertype)
 	}
@@ -181,6 +184,13 @@ func (s *selectionSubject) hasAnySubtype(subtypes []types.Sub) bool {
 	if s.kind == subjectPermanent {
 		for _, subtype := range subtypes {
 			if slices.Contains(s.values.subtypes, subtype) {
+				return true
+			}
+		}
+	}
+	if s.kind == subjectCastSpell {
+		for _, subtype := range subtypes {
+			if slices.Contains(s.event.CardSubtypes, subtype) {
 				return true
 			}
 		}

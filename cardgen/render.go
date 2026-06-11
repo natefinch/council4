@@ -1152,7 +1152,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		pattern.SpellTargetsSource ||
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
 		pattern.SpellTargetPattern.Exists ||
-		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) {
+		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
+		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
 	if !pattern.CardSelection.Empty() && pattern.Event != game.EventSpellCast {
@@ -1163,6 +1164,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		unsupported.RequiredTypes = nil
 		unsupported.RequiredTypesAny = nil
 		unsupported.ExcludedTypes = nil
+		unsupported.Supertypes = nil
+		unsupported.SubtypesAny = nil
 		unsupported.ColorsAny = nil
 		unsupported.Colorless = false
 		unsupported.Multicolored = false
@@ -1217,6 +1220,9 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	}
 	if pattern.RequireKickerPaid {
 		fields = append(fields, "RequireKickerPaid: true,")
+	}
+	if pattern.RequireHistoric {
+		fields = append(fields, "RequireHistoric: true,")
 	}
 	if len(pattern.RequirePermanentTypes) > 0 {
 		rpt, err := renderTypesCardSlice(ctx, pattern.RequirePermanentTypes)
