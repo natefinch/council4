@@ -115,6 +115,9 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []p
 		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
 			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
+		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
+			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+		}
 		if source, ok := damageSourceTriggerSource(g, event); ok {
 			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
@@ -126,6 +129,28 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []p
 		}
 	}
 	return filterPendingTriggeredAbilities(g, pending)
+}
+
+func simultaneousLeftBattlefieldTriggerSources(g *game.Game, event game.Event, events []game.Event) []*game.Permanent {
+	if event.SimultaneousID == 0 {
+		return nil
+	}
+	seen := make(map[id.ID]bool)
+	var sources []*game.Permanent
+	for _, candidate := range events {
+		if candidate.SimultaneousID != event.SimultaneousID ||
+			candidate.PermanentID == event.PermanentID ||
+			seen[candidate.PermanentID] {
+			continue
+		}
+		source, ok := leftBattlefieldTriggerSource(g, candidate)
+		if !ok {
+			continue
+		}
+		seen[candidate.PermanentID] = true
+		sources = append(sources, source)
+	}
+	return sources
 }
 
 func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
@@ -146,6 +171,7 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 				abilityIndex: trigger.abilityIndex,
 				event:        trigger.event.Kind,
 				controller:   trigger.controller,
+				simultaneous: trigger.event.SimultaneousID,
 			}
 			if seenOneOrMore[key] {
 				continue
@@ -172,6 +198,7 @@ type triggerBatchKey struct {
 	abilityIndex int
 	event        game.EventKind
 	controller   game.PlayerID
+	simultaneous id.ID
 }
 
 func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {

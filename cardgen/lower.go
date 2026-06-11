@@ -6822,6 +6822,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerFixedModifyPTSpell(ability, syntax)
 	case oracle.EffectCounter:
 		return lowerCounterSpell(ability)
+	case oracle.EffectSacrifice:
+		return lowerSacrificeSpell(ability, syntax)
 	default:
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
@@ -7890,6 +7892,11 @@ func lowerOrderedEffectSequence(
 	}
 	for _, target := range ability.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+		}
+	}
+	for _, effect := range ability.Effects {
+		if effect.Kind == oracle.EffectSacrifice {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 		}
 	}
@@ -10965,6 +10972,167 @@ func lowerCounterSpell(ability oracle.CompiledAbility) (game.AbilityContent, *or
 			Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
 		}},
 	}.Ability(), nil
+}
+
+func lowerSacrificeSpell(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported sacrifice spell",
+			"the executable source backend does not yet lower this sacrifice effect",
+		)
+	}
+
+	effect := ability.Effects[0]
+	// Strict fail-closed: reject unsupported modifiers and dynamic amounts.
+	if len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
+		effect.Negated {
+		return unsupported()
+	}
+
+	// Map selector kind to game.Selection; fail-closed for unknown kinds.
+	var selection game.Selection
+	switch effect.Selector.Kind {
+	case oracle.SelectorCreature:
+		selection = game.Selection{RequiredTypes: []types.Card{types.Creature}}
+	case oracle.SelectorArtifact:
+		selection = game.Selection{RequiredTypes: []types.Card{types.Artifact}}
+	case oracle.SelectorLand:
+		selection = game.Selection{RequiredTypes: []types.Card{types.Land}}
+	case oracle.SelectorEnchantment:
+		selection = game.Selection{RequiredTypes: []types.Card{types.Enchantment}}
+	case oracle.SelectorPermanent:
+		// zero Selection = any permanent
+	default:
+		return unsupported()
+	}
+
+	amount := game.Fixed(effect.Amount.Value)
+
+	switch {
+	case len(ability.Targets) == 1:
+		// "Target player/opponent sacrifices <N> <type>."
+		target := ability.Targets[0]
+		if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+			return unsupported()
+		}
+		targetSpec, ok := playerTargetSpec(target)
+		if !ok {
+			return unsupported()
+		}
+		var actor string
+		switch target.Selector.Kind {
+		case oracle.SelectorPlayer:
+			actor = "player"
+		case oracle.SelectorOpponent:
+			actor = "opponent"
+		default:
+			return unsupported()
+		}
+		if !matchesExactSacrificeSyntax(syntax, "target", actor, effect) {
+			return unsupported()
+		}
+		return game.Mode{
+			Targets: []game.TargetSpec{targetSpec},
+			Sequence: []game.Instruction{{
+				Primitive: game.SacrificePermanents{
+					Player:    game.TargetPlayerReference(0),
+					Amount:    amount,
+					Selection: selection,
+				},
+			}},
+		}.Ability(), nil
+
+	case len(ability.Targets) == 0:
+		// "Each opponent/player sacrifices <N> <type>."
+		var group game.PlayerGroupReference
+		var actor string
+		switch {
+		case strings.HasPrefix(ability.Text, "Each opponent "):
+			group = game.OpponentsReference()
+			actor = "opponent"
+		case strings.HasPrefix(ability.Text, "Each player "):
+			group = game.AllPlayersReference()
+			actor = "player"
+		default:
+			return unsupported()
+		}
+		if !matchesExactSacrificeSyntax(syntax, "each", actor, effect) {
+			return unsupported()
+		}
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.SacrificePermanents{
+					PlayerGroup: group,
+					Amount:      amount,
+					Selection:   selection,
+				},
+			}},
+		}.Ability(), nil
+
+	default:
+		return unsupported()
+	}
+}
+
+func matchesExactSacrificeSyntax(
+	syntax oracle.Ability,
+	actorQuantifier, actor string,
+	effect oracle.CompiledEffect,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	singular, plural, ok := sacrificeSelectorNouns(effect.Selector.Kind)
+	if !ok ||
+		(len(tokens) != 6 && len(tokens) != 9) ||
+		!equalTokenWord(tokens[0], actorQuantifier) ||
+		!equalTokenWord(tokens[1], actor) ||
+		!equalTokenWord(tokens[2], "sacrifices") ||
+		!matchesExactSacrificeChoiceSuffix(tokens) {
+		return false
+	}
+	if effect.Amount.Value == 1 {
+		return (equalTokenWord(tokens[3], "a") ||
+			equalTokenWord(tokens[3], "an") ||
+			equalTokenWord(tokens[3], "one")) &&
+			equalTokenWord(tokens[4], singular)
+	}
+	return fixedNumberToken(tokens[3], effect.Amount.Value) &&
+		equalTokenWord(tokens[4], plural)
+}
+
+func matchesExactSacrificeChoiceSuffix(tokens []oracle.Token) bool {
+	if len(tokens) == 6 {
+		return tokens[5].Kind == oracle.Period
+	}
+	return len(tokens) == 9 &&
+		equalTokenWord(tokens[5], "of") &&
+		equalTokenWord(tokens[6], "their") &&
+		equalTokenWord(tokens[7], "choice") &&
+		tokens[8].Kind == oracle.Period
+}
+
+func sacrificeSelectorNouns(kind oracle.SelectorKind) (singular, plural string, ok bool) {
+	switch kind {
+	case oracle.SelectorCreature:
+		return "creature", "creatures", true
+	case oracle.SelectorArtifact:
+		return "artifact", "artifacts", true
+	case oracle.SelectorLand:
+		return "land", "lands", true
+	case oracle.SelectorEnchantment:
+		return "enchantment", "enchantments", true
+	case oracle.SelectorPermanent:
+		return "permanent", "permanents", true
+	default:
+		return "", "", false
+	}
 }
 
 func lowerCounterUnlessPaysSpell(ability oracle.CompiledAbility) (game.AbilityContent, bool) {

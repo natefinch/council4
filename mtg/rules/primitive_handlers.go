@@ -5,7 +5,6 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
-	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -58,6 +57,25 @@ func (r *effectResolver) groupPermanentsWithSource(group game.GroupReference, so
 
 func (r *effectResolver) playerGroupMembers(group game.PlayerGroupReference) []game.PlayerID {
 	return newReferenceResolver(r.game, r.obj).playerGroup(group)
+}
+
+func playersInAPNAPOrder(g *game.Game, players []game.PlayerID) []game.PlayerID {
+	included := make(map[game.PlayerID]bool, len(players))
+	for _, playerID := range players {
+		included[playerID] = true
+	}
+	ordered := make([]game.PlayerID, 0, len(included))
+	playerID := g.Turn.ActivePlayer
+	for range game.NumPlayers {
+		if included[playerID] {
+			ordered = append(ordered, playerID)
+		}
+		playerID = g.TurnOrder.NextActivePlayer(playerID)
+		if playerID == g.Turn.ActivePlayer {
+			break
+		}
+	}
+	return ordered
 }
 
 func (r *effectResolver) damageSource(source game.ObjectReference) (effectDamageSource, bool) {
@@ -214,18 +232,14 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.Group.Valid() {
 		permanents := r.groupPermanents(prim.Group)
-		snapshots := make(map[id.ID]game.ObjectSnapshot, len(permanents))
+		destroyed := make([]*game.Permanent, 0, len(permanents))
 		for _, permanent := range permanents {
-			snapshots[permanent.ObjectID] = snapshotPermanent(r.game, permanent, zone.Battlefield)
-		}
-		for _, permanent := range permanents {
-			_, destroyed := destroyPermanent(r.game, permanent.ObjectID)
-			if _, remains := permanentByObjectID(r.game, permanent.ObjectID); !remains {
-				snapshot := snapshots[permanent.ObjectID]
-				rememberLastKnown(r.game, &snapshot)
+			if hasKeyword(r.game, permanent, game.Indestructible) || replaceDestroyPermanent(r.game, permanent) {
+				continue
 			}
-			res.succeeded = destroyed || res.succeeded
+			destroyed = append(destroyed, permanent)
 		}
+		res.succeeded = movePermanentsToZoneSimultaneously(r.game, destroyed, zone.Graveyard)
 		return res
 	}
 	permanent, ok := r.resolveObject(prim.Object)
@@ -632,6 +646,24 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 		return res
 	}
 	res.succeeded = movePermanentToZone(r.game, permanent, zone.Graveyard)
+	return res
+}
+
+func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents) effectResolved {
+	res := effectResolved{accepted: true}
+	amount := r.quantity(prim.Amount)
+	var players []game.PlayerID
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		players = playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup))
+	} else if playerID, ok := r.resolvePlayer(prim.Player); ok {
+		players = []game.PlayerID{playerID}
+	}
+	resolver := newReferenceResolver(r.game, r.obj)
+	var chosen []*game.Permanent
+	for _, playerID := range players {
+		chosen = append(chosen, r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, amount, prim.Selection, r.agents, r.log)...)
+	}
+	res.succeeded = movePermanentsToZoneSimultaneously(r.game, chosen, zone.Graveyard)
 	return res
 }
 

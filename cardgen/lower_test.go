@@ -5838,6 +5838,24 @@ func TestLowerThenJoinedActivatedAbilitySequence(t *testing.T) {
 	}
 }
 
+func TestRejectActivatedAbilitySequenceWithDelayedTargetSacrifice(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Elementalist",
+		Layout:     "normal",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "{U}{U}: Target creature you control gains flying until end of turn. Sacrifice it at the beginning of the next end step.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported ordered effect sequence diagnostic")
+	}
+	if diagnostics[0].Summary != "unsupported activated ability" {
+		t.Fatalf("summary = %q, want unsupported activated ability", diagnostics[0].Summary)
+	}
+}
+
 func TestLowerThenJoinedLoyaltyAbilitySequence(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -9190,5 +9208,225 @@ func TestLowerDrawDiscardTriggerInterveningIfFailsClosed(t *testing.T) {
 	}
 	if !strings.Contains(diagnostics[0].Detail, "without conditions") {
 		t.Fatalf("diagnostic = %#v, want condition detail", diagnostics[0])
+	}
+}
+
+func TestLowerSacrificeSpellTargetPlayerCreature(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Diabolic Edict",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Target player sacrifices a creature.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	modes := face.SpellAbility.Val.Modes
+	if len(modes) != 1 {
+		t.Fatalf("modes = %d, want 1", len(modes))
+	}
+	mode := modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one target spec", mode.Targets)
+	}
+	if mode.Targets[0].Allow != game.TargetAllowPlayer {
+		t.Fatalf("target allow = %v, want TargetAllowPlayer", mode.Targets[0].Allow)
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence length = %d, want 1", len(mode.Sequence))
+	}
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.Player.Kind() != game.PlayerReferenceTargetPlayer || prim.Player.TargetIndex() != 0 {
+		t.Fatalf("player = %#v, want TargetPlayerReference(0)", prim.Player)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		t.Fatalf("player group = %v, want none", prim.PlayerGroup.Kind)
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", prim.Amount.Value())
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v, want creature filter", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellEachOpponentCreature(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Each Opponent Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each opponent sacrifices a creature of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %d, want none", len(mode.Targets))
+	}
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceOpponents {
+		t.Fatalf("player group = %v, want opponents", prim.PlayerGroup.Kind)
+	}
+	if prim.Player.Kind() != game.PlayerReferenceNone {
+		t.Fatalf("player = %v, want none", prim.Player.Kind())
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", prim.Amount.Value())
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v, want creature filter", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellEachPlayerLand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Tremble",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices a land.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Land}) {
+		t.Fatalf("selection = %#v, want land filter", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellTargetPlayerTwoCreatures(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Two Creature Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player sacrifices two creatures.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.Amount.Value() != 2 {
+		t.Fatalf("amount = %d, want 2", prim.Amount.Value())
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v, want creature filter", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellEachPlayerPermanent(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Forced Pact",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices a permanent.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", prim.Amount.Value())
+	}
+	if !prim.Selection.Empty() {
+		t.Fatalf("selection = %#v, want zero selection (any permanent)", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellRejectsPronounReference(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Conditional Sacrifice",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Creature — Zombie",
+		OracleText: "When this creature enters, its controller sacrifices a creature.",
+		Colors:     []string{"B"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("pronoun 'its controller' sacrifice unexpectedly lowered without diagnostic")
+	}
+}
+
+func TestLowerSacrificeSpellRejectsUnknownActorPattern(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Forced Tribute",
+		Layout:   "normal",
+		TypeLine: "Sorcery",
+		// "You sacrifice" is not a supported actor pattern
+		OracleText: "You sacrifice a creature.",
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("unsupported sacrifice actor pattern unexpectedly lowered without diagnostic")
+	}
+}
+
+func TestLowerSacrificeSpellRejectsQualifiedPermanentChoice(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Crackling Doom",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Crackling Doom deals 2 damage to each opponent. Each opponent sacrifices a creature with the greatest power among creatures that player controls.",
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("qualified sacrifice choice unexpectedly lowered without diagnostic")
+	}
+}
+
+func TestLowerSacrificeSpellRejectsOrderedEffectSequence(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Wildfire",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices four lands of their choice. Wildfire deals 4 damage to each creature.",
+	}, "w")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("ordered sacrifice effect sequence unexpectedly lowered without diagnostic")
 	}
 }

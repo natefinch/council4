@@ -596,6 +596,24 @@ func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p SacrificePermanents) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return errors.New("SacrificePermanents requires exactly one of Player or PlayerGroup")
+	}
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p Untap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
