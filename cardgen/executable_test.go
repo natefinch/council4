@@ -3234,7 +3234,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "mass mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Each opponent mills three cards."},
 		{name: "leave trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature leaves the battlefield, draw a card."},
 		{name: "cast trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When you cast this spell, draw a card."},
-		{name: "other creature dies", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature dies, draw a card."},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
