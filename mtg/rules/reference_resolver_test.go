@@ -290,6 +290,55 @@ func TestReferenceResolverStackObjectOwnerFallsBackToController(t *testing.T) {
 	}
 }
 
+func TestReferenceResolverCopiedSpellOwnerIsController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardInstance(g, game.Player3, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Copied Spell",
+		Types: []types.Card{types.Instant},
+	}})
+	targetSpell := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   cardID,
+		Controller: game.Player2,
+		Copy:       true,
+	}
+	g.Stack.Push(targetSpell)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.StackObjectTarget(targetSpell.ID)},
+	}
+
+	owner, ok := newReferenceResolver(g, obj).player(game.ObjectOwnerReference(game.TargetStackObjectReference(0)))
+	if !ok || owner != game.Player2 {
+		t.Fatalf("copied spell owner reference = %v (%v), want Player2 controller", owner, ok)
+	}
+}
+
+func TestReferenceResolverStackAbilityOwnerIsController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardInstance(g, game.Player3, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Borrowed Source",
+		Types: []types.Card{types.Creature},
+	}})
+	targetAbility := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceCardID: cardID,
+		Controller:   game.Player2,
+	}
+	g.Stack.Push(targetAbility)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.StackObjectTarget(targetAbility.ID)},
+	}
+
+	owner, ok := newReferenceResolver(g, obj).player(game.ObjectOwnerReference(game.TargetStackObjectReference(0)))
+	if !ok || owner != game.Player2 {
+		t.Fatalf("stack ability owner reference = %v (%v), want Player2 controller", owner, ok)
+	}
+}
+
 func TestReferenceResolverPlayerReferenceRejectsDeadPlayer(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	g.Players[game.Player2].Eliminated = true
