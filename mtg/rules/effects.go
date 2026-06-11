@@ -493,6 +493,10 @@ func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
 }
 
 func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount) int {
+	return dynamicAmountValueBeforeLayer(g, obj, controller, dynamic, 0)
+}
+
+func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
 	amount := 0
 	switch dynamic.Kind {
 	case game.DynamicAmountConstant:
@@ -543,12 +547,17 @@ func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.Pla
 		}
 	case game.DynamicAmountControllerHandSize:
 		if player, ok := playerByID(g, controller); ok {
-			amount = player.Hand.Size()
+			amount = cardInstanceCount(g, player.Hand.All())
 		}
 	case game.DynamicAmountControllerGraveyardSize:
 		if player, ok := playerByID(g, controller); ok {
-			amount = player.Graveyard.Size()
+			amount = cardInstanceCount(g, player.Graveyard.All())
 		}
+	case game.DynamicAmountControllerBasicLandTypeCount:
+		amount = controllerBasicLandTypeCount(g, conditionContext{
+			controller:            controller,
+			characteristicsBefore: before,
+		})
 	case game.DynamicAmountCountSelector:
 		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
 	case game.DynamicAmountCountCardsInZone:

@@ -541,6 +541,18 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.OpponentCountAtLeast < 0 {
 		v.add(faceName, appendPath(path, "OpponentCountAtLeast"), CardDefIssueInvalidCondition, "opponent-count threshold cannot be negative")
 	}
+	if condition.ControllerGraveyardCardCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerGraveyardCardCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card threshold cannot be negative")
+	}
+	if condition.ControllerGraveyardCardTypeCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerGraveyardCardTypeCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card-type threshold cannot be negative")
+	}
+	if condition.ControllerBasicLandTypeCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerBasicLandTypeCountAtLeast"), CardDefIssueInvalidCondition, "basic-land-type threshold cannot be negative")
+	}
+	if condition.ControllerCreaturePowerDiversityAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerCreaturePowerDiversityAtLeast"), CardDefIssueInvalidCondition, "creature-power-diversity threshold cannot be negative")
+	}
 	if condition.ControllerControls.MinCount < 0 {
 		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
 	}

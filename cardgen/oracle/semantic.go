@@ -327,6 +327,7 @@ const (
 	DynamicAmountControllerLife
 	DynamicAmountOpponentCount
 	DynamicAmountSourcePower
+	DynamicAmountBasicLandTypes
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

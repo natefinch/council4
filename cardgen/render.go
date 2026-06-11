@@ -16,7 +16,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 // Import paths that the renderer may emit. The game package is always needed.
@@ -611,7 +610,10 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 	}
 	switch effect.Layer {
 	case game.LayerAbility:
-		if effect.PowerDelta != 0 || effect.ToughnessDelta != 0 {
+		if effect.PowerDelta != 0 ||
+			effect.ToughnessDelta != 0 ||
+			effect.PowerDeltaDynamic.Exists ||
+			effect.ToughnessDeltaDynamic.Exists {
 			return "", errors.New("render: power/toughness fields require a power/toughness layer")
 		}
 	case game.LayerPowerToughnessModify:
@@ -640,6 +642,22 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 	}
 	if effect.ToughnessDelta != 0 {
 		fields = append(fields, fmt.Sprintf("ToughnessDelta: %d,", effect.ToughnessDelta))
+	}
+	if effect.PowerDeltaDynamic.Exists {
+		dynamic, err := r.renderDynamicAmount(ctx, effect.PowerDeltaDynamic.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("PowerDeltaDynamic: opt.Val(%s),", dynamic))
+	}
+	if effect.ToughnessDeltaDynamic.Exists {
+		dynamic, err := r.renderDynamicAmount(ctx, effect.ToughnessDeltaDynamic.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ToughnessDeltaDynamic: opt.Val(%s),", dynamic))
 	}
 	if len(effect.AddKeywords) > 0 {
 		elements := make([]string, 0, len(effect.AddKeywords))
@@ -840,6 +858,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		fields = append(fields, sliceField("KeywordAbilities", "game.KeywordAbility", elements))
 	}
+	if ability.ActivationCondition.Exists {
+		condition, err := r.renderControllerControlsCondition(ctx, &ability.ActivationCondition.Val, "activated ability")
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ActivationCondition: opt.Val(%s),", condition))
+	}
 	content, err := r.renderAbilityContent(ctx, ability.Content)
 	if err != nil {
 		return "", err
@@ -899,6 +925,14 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Timing: %s,", timing))
+	}
+	if ability.ActivationCondition.Exists {
+		condition, err := r.renderControllerControlsCondition(ctx, &ability.ActivationCondition.Val, "mana ability")
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ActivationCondition: opt.Val(%s),", condition))
 	}
 	content, err := r.renderAbilityContent(ctx, ability.Content)
 	if err != nil {
@@ -1015,7 +1049,7 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 		fields = append(fields, fmt.Sprintf("InterveningIf: %q,", trigger.InterveningIf))
 	}
 	if trigger.InterveningCondition.Exists {
-		condition, err := r.renderControlledPermanentInterveningCondition(ctx, &trigger.InterveningCondition.Val)
+		condition, err := r.renderControllerControlsCondition(ctx, &trigger.InterveningCondition.Val, "trigger intervening")
 		if err != nil {
 			return "", err
 		}
@@ -1038,32 +1072,6 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 		fields = append(fields, "InterveningIfEventPermanentWasCast: true,")
 	}
 	return structLit("game.TriggerCondition", fields), nil
-}
-
-func (r Renderer) renderControlledPermanentInterveningCondition(ctx *renderCtx, condition *game.Condition) (string, error) {
-	if condition == nil || !condition.ControlsMatching.Exists {
-		return "", errors.New("render: unsupported trigger intervening condition")
-	}
-	unsupported := *condition
-	unsupported.Text = ""
-	unsupported.ControlsMatching = opt.V[game.SelectionCount]{}
-	if !unsupported.Empty() || unsupported.Negate {
-		return "", errors.New("render: unsupported trigger intervening condition")
-	}
-	count := condition.ControlsMatching.Val
-	if count.Selection.Empty() || count.MinCount != 0 || count.TotalPower.Exists {
-		return "", errors.New("render: unsupported trigger intervening controls condition")
-	}
-	selection, err := r.renderSelection(ctx, count.Selection)
-	if err != nil {
-		return "", err
-	}
-	fields := []string{
-		fmt.Sprintf("Text: %q,", condition.Text),
-		fmt.Sprintf("ControlsMatching: opt.Val(game.SelectionCount{Selection: %s}),", selection),
-	}
-	ctx.need(importOpt)
-	return structLit("game.Condition", fields), nil
 }
 
 func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {
@@ -1458,12 +1466,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	if cond.ControllerLifeAtLeast < 0 ||
 		cond.ControllerHandSizeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
-		cond.OpponentCountAtLeast < 0 {
+		cond.OpponentCountAtLeast < 0 ||
+		cond.ControllerGraveyardCardCountAtLeast < 0 ||
+		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
+		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
+		cond.ControllerCreaturePowerDiversityAtLeast < 0 {
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
-	if cond.ControlsMatching.Exists ||
-		cond.Object.Exists ||
+	if cond.Object.Exists ||
 		len(cond.Types) != 0 ||
 		cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures ||
 		cond.SourceClassLevelAtLeast != 0 ||
@@ -1496,6 +1507,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
 		hasPredicate = true
 	}
+	if cond.ControlsMatching.Exists {
+		rendered, err := r.renderSelectionCountForCondition(ctx, cond.ControlsMatching.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ControlsMatching: opt.Val(%s),", rendered))
+		hasPredicate = true
+	}
 	if cond.ControllerLifeAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
 		hasPredicate = true
@@ -1510,6 +1530,26 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.OpponentCountAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("OpponentCountAtLeast: %d,", cond.OpponentCountAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerHandEmpty {
+		fields = append(fields, "ControllerHandEmpty: true,")
+		hasPredicate = true
+	}
+	if cond.ControllerGraveyardCardCountAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardCountAtLeast: %d,", cond.ControllerGraveyardCardCountAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardTypeCountAtLeast: %d,", cond.ControllerGraveyardCardTypeCountAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerBasicLandTypeCountAtLeast: %d,", cond.ControllerBasicLandTypeCountAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerCreaturePowerDiversityAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerCreaturePowerDiversityAtLeast: %d,", cond.ControllerCreaturePowerDiversityAtLeast))
 		hasPredicate = true
 	}
 	if cond.AnyOpponentControls.Exists {
@@ -3085,65 +3125,73 @@ func (r Renderer) renderQuantity(ctx *renderCtx, quantity game.Quantity) (string
 	if !dynamic.Exists {
 		return fmt.Sprintf("game.Fixed(%d)", quantity.Value()), nil
 	}
-	kind, err := renderDynamicAmountKind(dynamic.Val.Kind)
+	rendered, err := r.renderDynamicAmount(ctx, dynamic.Val)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("game.Dynamic(%s)", rendered), nil
+}
+
+func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic game.DynamicAmount) (string, error) {
+	kind, err := renderDynamicAmountKind(dynamic.Kind)
 	if err != nil {
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
-	if dynamic.Val.Constant != 0 {
-		fields = append(fields, fmt.Sprintf("Constant: %d,", dynamic.Val.Constant))
+	if dynamic.Constant != 0 {
+		fields = append(fields, fmt.Sprintf("Constant: %d,", dynamic.Constant))
 	}
-	if dynamic.Val.Multiplier != 0 {
-		fields = append(fields, fmt.Sprintf("Multiplier: %d,", dynamic.Val.Multiplier))
+	if dynamic.Multiplier != 0 {
+		fields = append(fields, fmt.Sprintf("Multiplier: %d,", dynamic.Multiplier))
 	}
-	if dynamic.Val.Kind == game.DynamicAmountTargetCounters || dynamic.Val.CounterKind != 0 {
-		counterKind, err := renderCounterKind(dynamic.Val.CounterKind)
+	if dynamic.Kind == game.DynamicAmountTargetCounters || dynamic.CounterKind != 0 {
+		counterKind, err := renderCounterKind(dynamic.CounterKind)
 		if err != nil {
 			return "", err
 		}
 		ctx.need(importCounter)
 		fields = append(fields, fmt.Sprintf("CounterKind: %s,", counterKind))
 	}
-	if !dynamic.Val.Group.Empty() {
-		group, err := r.renderGroupReference(ctx, dynamic.Val.Group)
+	if !dynamic.Group.Empty() {
+		group, err := r.renderGroupReference(ctx, dynamic.Group)
 		if err != nil {
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Group: %s,", group))
 	}
-	if dynamic.Val.Object.Kind() != game.ObjectReferenceNone {
-		object, err := r.renderObjectReference(dynamic.Val.Object)
+	if dynamic.Object.Kind() != game.ObjectReferenceNone {
+		object, err := r.renderObjectReference(dynamic.Object)
 		if err != nil {
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Object: %s,", object))
 	}
-	if dynamic.Val.Player != nil && dynamic.Val.Player.Kind() != game.PlayerReferenceNone {
-		player, err := r.renderPlayerReference(*dynamic.Val.Player)
+	if dynamic.Player != nil && dynamic.Player.Kind() != game.PlayerReferenceNone {
+		player, err := r.renderPlayerReference(*dynamic.Player)
 		if err != nil {
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Player: func() *game.PlayerReference { ref := %s; return &ref }(),", player))
 	}
-	if dynamic.Val.CardZone != zone.None {
-		cardZone, err := renderZone(dynamic.Val.CardZone)
+	if dynamic.CardZone != zone.None {
+		cardZone, err := renderZone(dynamic.CardZone)
 		if err != nil {
 			return "", err
 		}
 		ctx.need(importZone)
 		fields = append(fields, fmt.Sprintf("CardZone: %s,", cardZone))
 	}
-	if dynamic.Val.Selection != nil && !dynamic.Val.Selection.Empty() {
-		selection, err := r.renderSelection(ctx, *dynamic.Val.Selection)
+	if dynamic.Selection != nil && !dynamic.Selection.Empty() {
+		selection, err := r.renderSelection(ctx, *dynamic.Selection)
 		if err != nil {
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Selection: &%s,", selection))
 	}
-	if dynamic.Val.ResultKey != "" {
-		fields = append(fields, fmt.Sprintf("ResultKey: game.ResultKey(%q),", string(dynamic.Val.ResultKey)))
+	if dynamic.ResultKey != "" {
+		fields = append(fields, fmt.Sprintf("ResultKey: game.ResultKey(%q),", string(dynamic.ResultKey)))
 	}
-	return fmt.Sprintf("game.Dynamic(%s)", structLit("game.DynamicAmount", fields)), nil
+	return structLit("game.DynamicAmount", fields), nil
 }
 
 func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
@@ -3166,6 +3214,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountControllerHandSize", nil
 	case game.DynamicAmountControllerGraveyardSize:
 		return "game.DynamicAmountControllerGraveyardSize", nil
+	case game.DynamicAmountControllerBasicLandTypeCount:
+		return "game.DynamicAmountControllerBasicLandTypeCount", nil
 	case game.DynamicAmountCountSelector:
 		return "game.DynamicAmountCountSelector", nil
 	case game.DynamicAmountCountCardsInZone:

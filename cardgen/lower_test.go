@@ -2807,11 +2807,89 @@ func TestLowerAbilityWordDoesNotBlockSupportedKeyword(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v, want none", diagnostics)
 	}
 	if source == "" {
 		t.Fatal("expected generated source")
+	}
+}
+
+func TestLowerAbilityWordConditions(t *testing.T) {
+	tests := []struct {
+		name       string
+		cardName   string
+		typeLine   string
+		oracleText string
+		wants      []string
+	}{
+		{"threshold static", "Threshold Bear", "Creature — Bear", "Threshold — This creature gets +2/+2 as long as there are seven or more cards in your graveyard.", []string{"ControllerGraveyardCardCountAtLeast: 7"}},
+		{"delirium static", "Delirium Bear", "Creature — Bear", "Delirium — This creature gets +1/+1 and has menace as long as there are four or more card types among cards in your graveyard.", []string{"ControllerGraveyardCardTypeCountAtLeast: 4", "AffectedSource: true"}},
+		{"domain static", "Domain Bear", "Creature — Bear", "Domain — This creature gets +1/+1 for each basic land type among lands you control.", []string{"PowerDeltaDynamic: opt.Val(game.DynamicAmount{", "ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{", "game.DynamicAmountControllerBasicLandTypeCount"}},
+		{"domain spell", "Tribal Flames", "Sorcery", "Domain — Tribal Flames deals X damage to any target, where X is the number of basic land types among lands you control.", []string{"game.DynamicAmountControllerBasicLandTypeCount"}},
+		{"metalcraft trigger", "Metalcraft Bear", "Creature — Bear", "Metalcraft — When this creature enters, if you control three or more artifacts, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "MinCount:"}},
+		{"hellbent activation", "Hellbent Bear", "Creature — Bear", "Hellbent — {1}: Draw a card. Activate only if you have no cards in hand.", []string{"ActivationCondition: opt.Val(game.Condition{", "ControllerHandEmpty: true"}},
+		{"ferocious activation", "Ferocious Bear", "Creature — Bear", "Ferocious — {1}: Draw a card. Activate only if you control a creature with power 4 or greater.", []string{"ActivationCondition: opt.Val(game.Condition{", "Value: 4"}},
+		{"coven trigger", "Coven Bear", "Creature — Bear", "Coven — At the beginning of combat on your turn, if you control three or more creatures with different powers, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "ControllerCreaturePowerDiversityAtLeast: 3"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			card := &ScryfallCard{
+				Name:       test.cardName,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			if strings.HasPrefix(test.typeLine, "Creature") {
+				card.Power = new("2")
+				card.Toughness = new("2")
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if source == "" {
+				t.Fatal("expected generated source")
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+func TestLowerAbilityWordConditionsFailClosed(t *testing.T) {
+	tests := []string{
+		"Threshold — This creature gets +2/+2 as long as there are six or more cards in your graveyard.",
+		"Delirium — This creature gets +2/+2 as long as there are three or more card types among cards in your graveyard.",
+		"Metalcraft — This creature gets +2/+2 as long as you control two or more artifacts.",
+		"Hellbent — {1}: Draw a card. Activate only if you have one or fewer cards in hand.",
+		"Ferocious — {1}: Draw a card. Activate only if you control a creature with power 3 or greater.",
+		"Coven — At the beginning of combat on your turn, if you control three or more creatures with the same power, draw a card.",
+	}
+	for _, oracleText := range tests {
+		t.Run(oracleText, func(t *testing.T) {
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Fail Closed Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+			}
+		})
 	}
 }
 

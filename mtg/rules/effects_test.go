@@ -173,6 +173,22 @@ func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
 	if got := dynamicAmountValue(g, obj, game.Player1, count); got != 0 {
 		t.Fatalf("zero matching lands = %d, want 0", got)
 	}
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Dual Land",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Plains, types.Island},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Forest",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Forest},
+	}})
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:       game.DynamicAmountControllerBasicLandTypeCount,
+		Multiplier: 2,
+	}); got != 6 {
+		t.Fatalf("twice controlled basic land type count = %d, want 6", got)
+	}
 
 	g.Players[game.Player1].Life = 17
 	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
