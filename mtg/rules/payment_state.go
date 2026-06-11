@@ -113,6 +113,31 @@ func (*rulesPaymentState) RemoveCounters(p *game.Permanent, kind counter.Kind, a
 	return p != nil && p.Counters.Remove(kind, amount) == amount
 }
 
+func (s *rulesPaymentState) AddCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool {
+	return addCountersToPermanentControlledBy(s.g, playerID, p, kind, amount)
+}
+
+func (*rulesPaymentState) ExertPermanent(p *game.Permanent) bool {
+	if p == nil {
+		return false
+	}
+	p.Exerted = true
+	return true
+}
+
+func (s *rulesPaymentState) MillCards(playerID game.PlayerID, amount int) {
+	for range amount {
+		player, ok := playerByID(s.g, playerID)
+		if !ok {
+			return
+		}
+		cardID, ok := player.Library.Top()
+		if !ok || !moveCardBetweenZones(s.g, playerID, cardID, zone.Library, zone.Graveyard) {
+			return
+		}
+	}
+}
+
 func (s *rulesPaymentState) LoseLife(playerID game.PlayerID, amount int) {
 	loseLife(s.g, playerID, amount)
 }

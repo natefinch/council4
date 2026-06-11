@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,763
+Cards supported: 3,765
 
 - +2 Mace
 - Aang, Air Nomad
@@ -2555,6 +2555,7 @@ Cards supported: 3,763
 - Rootwater Diver
 - Rorix Bladewing
 - Rosemane Centaur
+- Rot Farm Skeleton
 - Rotted Hulk
 - Rotted Hystrix
 - Rottenheart Ghoul
@@ -2837,6 +2838,7 @@ Cards supported: 3,763
 - Simic Guildgate
 - Simic Locket
 - Simic Sky Swallower
+- Sinister Concoction
 - Sinister Hideout
 - Sinister Starfish
 - Sinkhole

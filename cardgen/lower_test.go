@@ -106,6 +106,82 @@ func TestLowerCyclingAbility(t *testing.T) {
 	}
 }
 
+func TestLowerIssue210AdditionalCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       cost.AdditionalKind
+		assert     func(t *testing.T, additional cost.Additional)
+	}{
+		{
+			name:       "exert source",
+			oracleText: "Exert this creature: Draw a card.",
+			want:       cost.AdditionalExert,
+		},
+		{
+			name:       "mill cards",
+			oracleText: "Mill four cards: Draw a card.",
+			want:       cost.AdditionalMill,
+			assert: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Amount != 4 {
+					t.Fatalf("amount = %d, want 4", additional.Amount)
+				}
+			},
+		},
+		{
+			name:       "put counter on source",
+			oracleText: "Put a verse counter on Test Bard: Draw a card.",
+			want:       cost.AdditionalPutCounter,
+			assert: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Amount != 1 || additional.CounterKind != counter.Verse {
+					t.Fatalf("additional = %#v, want one verse counter", additional)
+				}
+			},
+		},
+		{
+			name:       "put counters on source",
+			oracleText: "Put two charge counters on Test Bard: Draw a card.",
+			want:       cost.AdditionalPutCounter,
+			assert: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Amount != 2 || additional.CounterKind != counter.Charge {
+					t.Fatalf("additional = %#v, want two charge counters", additional)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bard",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Bard",
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			ability := face.ActivatedAbilities[0]
+			if len(ability.AdditionalCosts) != 1 {
+				t.Fatalf("additional costs = %#v, want 1", ability.AdditionalCosts)
+			}
+			additional := ability.AdditionalCosts[0]
+			if additional.Kind != test.want {
+				t.Fatalf("additional kind = %v, want %v", additional.Kind, test.want)
+			}
+			if test.assert != nil {
+				test.assert(t, additional)
+			}
+		})
+	}
+}
+
 func TestLowerNinjutsuAbility(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
