@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 4,758 / 31,838**
+**Cards supported: 4,790 / 31,838**
 
 The pipeline is:
 
@@ -123,7 +123,13 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   binding pass records whether each occurrence denotes the source, a specific
   target occurrence, the triggering event permanent, or a prior instruction
   result. Ambiguous and unsupported occurrences remain explicit and fail
-  closed; the compiler never guesses an antecedent.
+  closed; the compiler never guesses an antecedent;
+- source-spanned Static Declarations attached directly to a static ability,
+  separate from resolving `AbilityContent`. Their closed semantic vocabulary
+  records affected group domain plus Selection, source exclusion, optional
+  condition, continuous-effect layer and operation, rule domain and operation,
+  zone, cost modifier, or non-battlefield card-ability grant. Static
+  Declarations never resolve and do not reference runtime `game` values.
 
 Recognition is deliberately conservative. Reminder and quoted text do not leak
 into the containing ability's semantics. Trigger conditions and activation
@@ -165,6 +171,15 @@ It also lowers exact `This creature can't block.`,
 `This creature can't be blocked.`, `This creature attacks each combat if
 able.`, and `This spell can't be countered.` static declarations to
 source-scoped rule effects in their appropriate zones.
+All supported static power/toughness changes, keyword grants, these rule
+declarations, Cycling cost modifiers, and hand-card Cycling grants first
+recognize into semantic Static Declarations and then use one shared mechanical
+lowering adapter. Fully understood mixed paragraphs may produce multiple
+declarations; for example, Dragon's Rage Channeler's Delirium paragraph
+produces separate conditional power/toughness, Flying-grant, and must-attack
+declarations. Adjacent unsupported groups, conditions, durations, operations,
+and shells fail closed with capability-specific diagnostics rather than a
+wording-family fallback.
 Adventure, split, and exact enters-prepared layouts are supported when each
 printed face is otherwise
 exactly representable; these layouts keep the front face in the root
@@ -226,8 +241,9 @@ exactly referenced source object's power. Count and opponent formulas may use
 their printed integer multiplier or “twice.” Arithmetic offsets, mixed groups,
 zone counts, and ambiguous pronouns remain unsupported.
 
-This compiler IR is the recognition stage. Trigger phrase tables and adapters
-live here; `cardgen/lower.go` never interprets retained raw trigger-event text.
+This compiler IR is the recognition stage. Trigger phrase tables and Static
+Declaration adapters live here; `cardgen/lower.go` never interprets retained
+raw trigger-event or static-declaration text.
 The strict backend in `cardgen`
 consumes it and lowers each recognized ability into a second, **typed**
 intermediate representation made of `game.*` values (`game.ActivatedAbility`,

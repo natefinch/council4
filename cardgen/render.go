@@ -769,6 +769,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
+	if effect.AffectedSource {
+		fields = append(fields, "AffectedSource: true,")
+	}
 	if effect.AffectedPlayer != game.PlayerAny {
 		player, err := renderPlayerRelation(effect.AffectedPlayer)
 		if err != nil {
@@ -805,6 +808,14 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 
 func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 	switch kind {
+	case game.RuleEffectCantBlock:
+		return "game.RuleEffectCantBlock", nil
+	case game.RuleEffectCantBeCountered:
+		return "game.RuleEffectCantBeCountered", nil
+	case game.RuleEffectCantBeBlocked:
+		return "game.RuleEffectCantBeBlocked", nil
+	case game.RuleEffectMustAttack:
+		return "game.RuleEffectMustAttack", nil
 	case game.RuleEffectCostModifier:
 		return "game.RuleEffectCostModifier", nil
 	case game.RuleEffectGrantHandCardAbility:

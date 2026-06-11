@@ -44,9 +44,15 @@ Vanguard cards are excluded with explicit report reasons.
    is grouped into `oracle.AbilityContent`; each `oracle.CompiledAbility` and
    `oracle.CompiledMode` carries one `oracle.AbilityContent` value alongside its
    shell-specific fields (cost, trigger clause, loyalty change, chapter numbers,
-   text, span, optional flag).
-2. **Typed lowering (`lower.go`, `condition.go`, `reference.go`,
-   `trigger_pattern.go`, and `executable.go`).**
+   text, span, optional flag). Static wording is recognized separately into one
+   or more source-spanned `oracle.StaticDeclaration` values because declarations
+   never resolve and are not Instructions. A declaration carries a closed group
+   domain plus Selection, optional shared condition, and a typed continuous
+   layer operation, rule domain and operation, cost modifier, or non-battlefield
+   card-ability grant. Unsupported groups, conditions, durations, operations,
+   and shells remain explicit capability blockers.
+2. **Typed lowering (`lower.go`, `static_declaration.go`, `condition.go`,
+   `reference.go`, `trigger_pattern.go`, and `executable.go`).**
    `lowerTriggerPattern` is the single mechanical adapter from
    `oracle.TriggerPattern` to `game.TriggerPattern`; trigger shell lowerers never
    interpret raw event-clause text. `lowerAbilityContent`
@@ -59,7 +65,11 @@ Vanguard cards are excluded with explicit report reasons.
    explicit static, activation, replacement, or intervening-trigger context.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
-   prior-instruction results. Recognized semantics
+   prior-instruction results. `static_declaration.go` is the single mechanical
+   adapter from semantic Static Declarations to `game.StaticAbility`,
+   `game.ContinuousEffect`, `game.RuleEffect`, and `game.CostModifier` values.
+   Mixed static paragraphs lower through that adapter as multiple declarations
+   sharing one runtime static ability. Recognized semantics
    become typed `game.*` ability values, including chapter-numbered
    `game.ChapterAbility` values and the `game.ReadAheadStaticBody` Saga keyword
    template. `assembleCardDefs` combines

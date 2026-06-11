@@ -30,6 +30,7 @@ type CompiledAbility struct {
 	Cost                 *CompiledCost
 	Trigger              *CompiledTrigger
 	Content              AbilityContent
+	Static               *CompiledStaticSemantics
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated
@@ -166,6 +167,7 @@ type ConditionPredicate uint8
 const (
 	ConditionPredicateUnsupported ConditionPredicate = iota
 	ConditionPredicateControllerLifeAtLeast
+	ConditionPredicateControllerHandSizeAtLeast
 	ConditionPredicateAnyPlayerLifeAtMost
 	ConditionPredicateOpponentCountAtLeast
 	ConditionPredicateControllerControls

@@ -84,8 +84,10 @@ func compileAbility(
 		conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 	}
 	compiled.Content.Conditions = compileConditions(conditionTokens, ability.Kind == AbilityTriggered)
-	if ability.Text == "This creature attacks each combat if able." {
-		compiled.Content.Conditions = nil
+	if containsSequence(normalizedWords(tokens), "attacks", "each", "combat", "if", "able") {
+		compiled.Content.Conditions = slices.DeleteFunc(compiled.Content.Conditions, func(condition CompiledCondition) bool {
+			return strings.EqualFold(condition.Text, "if able")
+		})
 	}
 	compiled.Content.Effects = compileEffects(
 		parseSentences(source, body),
@@ -118,6 +120,7 @@ func compileAbility(
 			}
 		}
 	}
+	recognizeStaticDeclarations(&compiled, ability)
 
 	for _, mode := range compiled.Content.Modes {
 		if len(mode.Content.Effects) == 0 && len(mode.Content.Keywords) == 0 {
@@ -125,7 +128,8 @@ func compileAbility(
 		}
 	}
 	if ability.Kind != AbilityReminder && ability.Modal == nil &&
-		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 {
+		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
+		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {
 		diagnostics = append(diagnostics, unsupportedDiagnostic(ability.Span, ability.Text))
 	}
 	// Set Content.Span from the body token range after shell/timing extraction.

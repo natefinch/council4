@@ -341,6 +341,78 @@ func TestMustAttackStaticBodyRequiresSourceToAttackIfAble(t *testing.T) {
 	}
 }
 
+func TestConditionalMixedStaticValuesAffectCharacteristicsAndAttackLegality(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Delirious Attacker",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{ControllerGraveyardCardTypeCountAtLeast: 4}),
+			ContinuousEffects: []game.ContinuousEffect{
+				{
+					Layer:          game.LayerPowerToughnessModify,
+					AffectedSource: true,
+					PowerDelta:     2,
+					ToughnessDelta: 2,
+				},
+				{
+					Layer:          game.LayerAbility,
+					AffectedSource: true,
+					AddKeywords:    []game.Keyword{game.Flying},
+				},
+			},
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectMustAttack,
+				AffectedSource: true,
+			}},
+		}},
+	}})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+
+	if got := effectivePower(g, attacker); got != 1 {
+		t.Fatalf("power before condition = %d, want 1", got)
+	}
+	if hasKeyword(g, attacker, game.Flying) {
+		t.Fatal("attacker had flying before condition")
+	}
+	if !slices.ContainsFunc(legalDeclareAttackersActions(g, game.Player1), func(act action.Action) bool {
+		return len(mustDeclareAttackersPayload(t, act).Attackers) == 0
+	}) {
+		t.Fatal("no-attack action was not legal before condition")
+	}
+
+	for name, cardType := range map[string]types.Card{
+		"Relic":  types.Artifact,
+		"Bear":   types.Creature,
+		"Lesson": types.Sorcery,
+		"Trick":  types.Instant,
+	} {
+		addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:  name,
+			Types: []types.Card{cardType},
+		}})
+	}
+
+	if got := effectivePower(g, attacker); got != 3 {
+		t.Fatalf("power while condition holds = %d, want 3", got)
+	}
+	if !hasKeyword(g, attacker, game.Flying) {
+		t.Fatal("attacker did not have flying while condition held")
+	}
+	for _, act := range legalDeclareAttackersActions(g, game.Player1) {
+		declarations := mustDeclareAttackersPayload(t, act)
+		if !slices.ContainsFunc(declarations.Attackers, func(declaration game.AttackDeclaration) bool {
+			return declaration.Attacker == attacker.ObjectID
+		}) {
+			t.Fatalf("legal action omitted conditionally required attacker: %+v", declarations.Attackers)
+		}
+	}
+}
+
 func TestMustAttackStaticBodyDoesNotForceIllegalAttack(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

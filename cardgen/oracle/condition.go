@@ -32,6 +32,9 @@ func recognizeCondition(condition *CompiledCondition) {
 		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeArtifact}
 	case "you have no cards in hand":
 		condition.Predicate = ConditionPredicateControllerHandEmpty
+	case "you have seven or more cards in hand":
+		condition.Predicate = ConditionPredicateControllerHandSizeAtLeast
+		condition.Threshold = 7
 	case "you control a creature with power 4 or greater":
 		condition.Predicate = ConditionPredicateControllerControls
 		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
