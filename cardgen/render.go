@@ -2772,6 +2772,13 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("ExcludedSpellCardTypes: %s,", lits))
 	}
+	if len(predicate.StackObjectKinds) > 0 {
+		kinds, err := renderStackObjectKinds(predicate.StackObjectKinds)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("StackObjectKinds: %s,", kinds))
+	}
 	if len(predicate.Colors) > 0 {
 		colors, err := renderColorSlice(ctx, predicate.Colors)
 		if err != nil {
@@ -2859,6 +2866,23 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		return "", false, nil
 	}
 	return structLit("game.TargetPredicate", fields), true, nil
+}
+
+func renderStackObjectKinds(kinds []game.StackObjectKind) (string, error) {
+	lits := make([]string, 0, len(kinds))
+	for _, kind := range kinds {
+		switch kind {
+		case game.StackSpell:
+			lits = append(lits, "game.StackSpell")
+		case game.StackActivatedAbility:
+			lits = append(lits, "game.StackActivatedAbility")
+		case game.StackTriggeredAbility:
+			lits = append(lits, "game.StackTriggeredAbility")
+		default:
+			return "", fmt.Errorf("render: unsupported stack-object kind %d", kind)
+		}
+	}
+	return "[]game.StackObjectKind{" + strings.Join(lits, ", ") + "}", nil
 }
 
 func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference) (string, error) {

@@ -393,6 +393,8 @@ func (v *cardDefValidator) validateManaKeywordCost(faceName, path string, manaCo
 	}
 }
 
+const knownTargetAllows = TargetAllowPermanent | TargetAllowPlayer | TargetAllowStackObject | TargetAllowCard
+
 func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *TargetSpec) {
 	if target.MinTargets < 0 || target.MaxTargets < 0 {
 		v.add(faceName, path, CardDefIssueInvalidTargetSpec, "target counts must be non-negative")
@@ -401,6 +403,10 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 	if target.MaxTargets < target.MinTargets {
 		v.add(faceName, path, CardDefIssueInvalidTargetSpec, "max targets is less than min targets")
 	}
+	if target.Allow&^knownTargetAllows != 0 {
+		v.add(faceName, appendPath(path, "Allow"), CardDefIssueInvalidTargetSpec, "unknown target allow category")
+	}
+	v.validateStackObjectTargetPredicate(faceName, path, target)
 	if target.Selection.Exists {
 		selection := target.Selection.Val
 		v.validateSelection(faceName, appendPath(path, "Selection"), selection)
@@ -423,6 +429,7 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 			v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidSelection, "Selection requires permanent, card, or player targets")
 		}
 	}
+
 	switch target.Chooser {
 	case TargetChooserController:
 	case TargetChooserOpponent:
@@ -442,6 +449,46 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 		}
 	default:
 		v.add(faceName, appendPath(path, "Chooser"), CardDefIssueInvalidTargetSpec, "unknown target chooser")
+	}
+}
+
+func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path string, target *TargetSpec) {
+	kinds := target.Predicate.StackObjectKinds
+	knownAllows := target.Allow & knownTargetAllows
+	allowsStackObjects := knownAllows&TargetAllowStackObject != 0
+	if allowsStackObjects && !target.Predicate.Selection().Empty() {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
+	}
+	if allowsStackObjects && target.Selection.Exists {
+		v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidTargetSpec, "stack-object target cannot use Selection")
+	}
+	if allowsStackObjects && len(kinds) == 0 {
+		v.add(faceName, appendPath(path, "Predicate.StackObjectKinds"), CardDefIssueInvalidTargetSpec, "stack-object target must allow at least one stack-object kind")
+		return
+	}
+	if len(kinds) > 0 && !allowsStackObjects {
+		v.add(faceName, appendPath(path, "Predicate.StackObjectKinds"), CardDefIssueInvalidTargetSpec, "stack-object kinds require stack-object targets")
+	}
+	seen := make(map[StackObjectKind]bool, len(kinds))
+	allowsSpells := false
+	allowsAbilities := false
+	for i, kind := range kinds {
+		switch kind {
+		case StackSpell:
+			allowsSpells = true
+		case StackActivatedAbility, StackTriggeredAbility:
+			allowsAbilities = true
+		default:
+			v.add(faceName, appendPath(path, fmt.Sprintf("Predicate.StackObjectKinds[%d]", i)), CardDefIssueInvalidTargetSpec, "unknown stack-object kind")
+		}
+		if seen[kind] {
+			v.add(faceName, appendPath(path, fmt.Sprintf("Predicate.StackObjectKinds[%d]", i)), CardDefIssueInvalidTargetSpec, "duplicate stack-object kind")
+		}
+		seen[kind] = true
+	}
+	hasSpellTypePredicate := len(target.Predicate.SpellCardTypes) > 0 || len(target.Predicate.ExcludedSpellCardTypes) > 0
+	if hasSpellTypePredicate && (!allowsSpells || allowsAbilities) {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require spell-only stack-object targets")
 	}
 }
 

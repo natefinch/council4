@@ -328,6 +328,33 @@ func TestRenderTargetPredicateSpellCardTypes(t *testing.T) {
 	}
 }
 
+func TestRenderTargetPredicateStackObjectKinds(t *testing.T) {
+	t.Parallel()
+	rendered, ok, err := (Renderer{}).renderTargetPredicate(newRenderCtx(), game.TargetPredicate{
+		StackObjectKinds: []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("predicate rendered empty")
+	}
+	want := "StackObjectKinds: []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility}"
+	if !strings.Contains(rendered, want) {
+		t.Fatalf("rendered predicate missing %q:\n%s", want, rendered)
+	}
+}
+
+func TestRenderTargetPredicateRejectsUnknownStackObjectKind(t *testing.T) {
+	t.Parallel()
+	_, _, err := (Renderer{}).renderTargetPredicate(newRenderCtx(), game.TargetPredicate{
+		StackObjectKinds: []game.StackObjectKind{game.StackObjectKind(99)},
+	})
+	if err == nil {
+		t.Fatal("expected unknown stack-object kind error")
+	}
+}
+
 func TestRenderManifestPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Manifest{})

@@ -7888,6 +7888,11 @@ func lowerOrderedEffectSequence(
 	if len(ability.Conditions) != 0 || len(ability.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 	}
+	for _, target := range ability.Targets {
+		if _, ok := counterAbilityTargetSpec(target); ok {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
+		}
+	}
 	if content, ok := lowerTemporaryPTKeywordSpell(ability, syntax); ok {
 		return content, nil
 	}
@@ -10859,6 +10864,9 @@ func stackSpellTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) 
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowStackObject,
+		Predicate: game.TargetPredicate{
+			StackObjectKinds: []game.StackObjectKind{game.StackSpell},
+		},
 	}
 	text := strings.ToLower(target.Text)
 	switch target.Selector.Kind {
@@ -10866,11 +10874,11 @@ func stackSpellTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) 
 		switch text {
 		case "target spell":
 		case "target instant spell":
-			spec.Predicate = game.TargetPredicate{SpellCardTypes: []types.Card{types.Instant}}
+			spec.Predicate.SpellCardTypes = []types.Card{types.Instant}
 		case "target sorcery spell":
-			spec.Predicate = game.TargetPredicate{SpellCardTypes: []types.Card{types.Sorcery}}
+			spec.Predicate.SpellCardTypes = []types.Card{types.Sorcery}
 		case "target noncreature spell":
-			spec.Predicate = game.TargetPredicate{ExcludedSpellCardTypes: []types.Card{types.Creature}}
+			spec.Predicate.ExcludedSpellCardTypes = []types.Card{types.Creature}
 		default:
 			return game.TargetSpec{}, false
 		}
@@ -10878,17 +10886,51 @@ func stackSpellTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) 
 		if text != "target creature spell" {
 			return game.TargetSpec{}, false
 		}
-		spec.Predicate = game.TargetPredicate{SpellCardTypes: []types.Card{types.Creature}}
+		spec.Predicate.SpellCardTypes = []types.Card{types.Creature}
 	case oracle.SelectorArtifact:
 		if text != "target artifact spell" {
 			return game.TargetSpec{}, false
 		}
-		spec.Predicate = game.TargetPredicate{SpellCardTypes: []types.Card{types.Artifact}}
+		spec.Predicate.SpellCardTypes = []types.Card{types.Artifact}
 	default:
 		return game.TargetSpec{}, false
 	}
 	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
+}
+
+func counterAbilityTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+	if target.Selector.Another || target.Selector.Other ||
+		target.Selector.Controller != oracle.ControllerAny {
+		return game.TargetSpec{}, false
+	}
+	var kinds []game.StackObjectKind
+	switch {
+	case target.Selector.Kind == oracle.SelectorActivatedAbility && target.Text == "target activated ability":
+		kinds = []game.StackObjectKind{game.StackActivatedAbility}
+	case target.Selector.Kind == oracle.SelectorTriggeredAbility && target.Text == "target triggered ability":
+		kinds = []game.StackObjectKind{game.StackTriggeredAbility}
+	case target.Selector.Kind == oracle.SelectorActivatedOrTriggeredAbility && target.Text == "target activated or triggered ability":
+		kinds = []game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility}
+	case target.Selector.Kind == oracle.SelectorSpellActivatedOrTriggeredAbility && target.Text == "target spell, activated ability, or triggered ability":
+		kinds = []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility}
+	default:
+		return game.TargetSpec{}, false
+	}
+	return game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: lowerFirst(target.Text),
+		Allow:      game.TargetAllowStackObject,
+		Predicate:  game.TargetPredicate{StackObjectKinds: kinds},
+	}, true
+}
+
+func counterTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+	if spec, ok := stackSpellTargetSpec(target); ok {
+		return spec, true
+	}
+	return counterAbilityTargetSpec(target)
 }
 
 func lowerCounterSpell(ability oracle.CompiledAbility) (game.AbilityContent, *oracle.Diagnostic) {
@@ -10913,7 +10955,7 @@ func lowerCounterSpell(ability oracle.CompiledAbility) (game.AbilityContent, *or
 		len(ability.References) != 0 {
 		return unsupported()
 	}
-	targetSpec, ok := stackSpellTargetSpec(ability.Targets[0])
+	targetSpec, ok := counterTargetSpec(ability.Targets[0])
 	if !ok || ability.Text != "Counter "+ability.Targets[0].Text+"." {
 		return unsupported()
 	}

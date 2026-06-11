@@ -1439,7 +1439,7 @@ func (r *mainPhaseStepRecorder) ChooseAction(obs PlayerObservation, legal []acti
 	return action.Pass()
 }
 
-func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
+func TestResolvedStateTriggerReleasesLatch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First"}})
@@ -1449,7 +1449,6 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 	if !ok {
 		t.Fatal("source card instance not found")
 	}
-	card.Def.TriggeredAbilities[0].Trigger.Type = game.TriggerState
 	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{MatchControllerLifeLessOrEqual: true, ControllerLifeLessOrEqual: 10})
 	g.Players[game.Player1].Life = 10
 
@@ -1457,14 +1456,95 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 		t.Fatal("state trigger was not put on stack")
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
-	if engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("state trigger re-fired while condition remained true")
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("resolved state trigger did not re-fire while condition remained true")
+	}
+}
+
+func TestStateTriggerDoesNotRetriggerBeforeLeavingStack(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{}, nil, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{
+		MatchControllerLifeLessOrEqual: true,
+		ControllerLifeLessOrEqual:      10,
+	})
+	g.Players[game.Player1].Life = 10
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger was not put on stack")
 	}
 	g.Players[game.Player1].Life = 11
 	engine.putTriggeredAbilitiesOnStack(g)
 	g.Players[game.Player1].Life = 10
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger re-fired before the original left the stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want original state trigger only", got)
+	}
+}
+
+func TestCounteredStateTriggerReleasesLatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{}, []game.Instruction{{
+		Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+	}}, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{
+		MatchControllerLifeLessOrEqual: true,
+		ControllerLifeLessOrEqual:      10,
+	})
+	g.Players[game.Player1].Life = 10
+
 	if !engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("state trigger did not re-arm after condition became false")
+		t.Fatal("state trigger was not put on stack")
+	}
+	trigger, ok := g.Stack.Peek()
+	if !ok || trigger.Kind != game.StackTriggeredAbility {
+		t.Fatal("state trigger stack object missing")
+	}
+	if !counterStackObject(g, trigger.ID) {
+		t.Fatal("state trigger was not countered")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("countered state trigger did not re-fire while condition remained true")
+	}
+}
+
+func TestStateTriggerWithoutLegalTargetsReleasesLatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{}, nil, []game.TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowPermanent,
+		Predicate:  game.TargetPredicate{Controller: game.ControllerOpponent},
+	}})
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{
+		MatchControllerLifeLessOrEqual: true,
+		ControllerLifeLessOrEqual:      10,
+	})
+	g.Players[game.Player1].Life = 10
+
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger with no legal targets was put on stack")
+	}
+	addBasicLandPermanent(g, game.Player2, types.Forest)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger did not re-fire after legal target became available")
 	}
 }
 
@@ -2155,6 +2235,46 @@ func TestTriggeredAbilitiesUseAgentOrderWithinController(t *testing.T) {
 	}
 	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceOrder || log.Choices[0].UsedFallback {
 		t.Fatalf("choices = %+v, want recorded order choice without fallback", log.Choices)
+	}
+}
+
+func TestSimultaneousCounterTriggerCanTargetEarlierTrigger(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
+	addTriggeredPermanent(
+		g,
+		game.Player1,
+		&game.TriggerPattern{Event: game.EventCardDrawn},
+		[]game.Instruction{{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}}},
+		[]game.TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Allow:      game.TargetAllowStackObject,
+			Predicate: game.TargetPredicate{
+				StackObjectKinds: []game.StackObjectKind{game.StackTriggeredAbility},
+			},
+		}},
+	)
+	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	if _, ok := engine.drawCard(g, game.Player2); !ok {
+		t.Fatal("drawCard() = false, want true")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw triggers were not put on stack")
+	}
+	objects := g.Stack.Objects()
+	if len(objects) != 2 {
+		t.Fatalf("stack size = %d, want two triggers", len(objects))
+	}
+	if len(objects[1].Targets) != 1 || objects[1].Targets[0] != game.StackObjectTarget(objects[0].ID) {
+		t.Fatalf("counter trigger targets = %+v, want earlier trigger %v", objects[1].Targets, objects[0].ID)
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !g.Stack.IsEmpty() {
+		t.Fatal("counter trigger did not remove earlier simultaneous trigger")
 	}
 }
 

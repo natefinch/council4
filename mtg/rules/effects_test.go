@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -961,6 +962,95 @@ func TestCounterEffectCountersTargetStackObject(t *testing.T) {
 	}
 	if !g.Players[game.Player2].Graveyard.Contains(targetID) {
 		t.Fatal("countered spell did not move to graveyard")
+	}
+}
+
+func TestCounterEffectCountersAbilityWithoutMovingSourceCard(t *testing.T) {
+	for _, kind := range []game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility} {
+		t.Run(fmt.Sprint(kind), func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			source := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+				Name:  "Ability Source",
+				Types: []types.Card{types.Artifact},
+			}})
+			targetObj := &game.StackObject{
+				ID:           g.IDGen.Next(),
+				Kind:         kind,
+				SourceID:     source.ObjectID,
+				SourceCardID: source.CardInstanceID,
+				Controller:   game.Player2,
+			}
+			g.Stack.Push(targetObj)
+			addEffectSpellToStack(g, game.Player1, game.CounterObject{Object: game.TargetStackObjectReference(0)}, []game.Target{game.StackObjectTarget(targetObj.ID)})
+
+			engine.resolveTopOfStack(g, &TurnLog{})
+
+			if _, ok := stackObjectByID(g, targetObj.ID); ok {
+				t.Fatal("target ability remained after counter effect")
+			}
+			if _, ok := permanentByObjectID(g, source.ObjectID); !ok {
+				t.Fatal("countering ability removed source permanent")
+			}
+			if g.Players[game.Player2].Graveyard.Contains(source.CardInstanceID) {
+				t.Fatal("countering ability moved source card to graveyard")
+			}
+		})
+	}
+}
+
+func TestCounterEffectCannotCounterUnknownFutureStackObjectKind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	targetObj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackObjectKind(99),
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetObj)
+	addEffectSpellToStack(g, game.Player1, game.CounterObject{Object: game.TargetStackObjectReference(0)}, []game.Target{game.StackObjectTarget(targetObj.ID)})
+	counterObj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("counter spell missing from stack")
+	}
+	counterObj.TargetCounts = []int{1}
+	counterCard, ok := g.GetCardInstance(counterObj.SourceID)
+	if !ok {
+		t.Fatal("counter spell card missing")
+	}
+	counterCard.Def.SpellAbility = opt.Val(game.Mode{
+		Targets: []game.TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Allow:      game.TargetAllowStackObject,
+			Predicate: game.TargetPredicate{
+				StackObjectKinds: []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility},
+			},
+		}},
+		Sequence: []game.Instruction{{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}}},
+	}.Ability())
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := stackObjectByID(g, targetObj.ID); !ok {
+		t.Fatal("unknown future stack-object kind was countered")
+	}
+}
+
+func TestCounterStackObjectRejectsUnknownFutureKind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	target := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackObjectKind(99),
+		Controller: game.Player2,
+	}
+	g.Stack.Push(target)
+
+	if counterStackObject(g, target.ID) {
+		t.Fatal("counterStackObject accepted unknown future stack-object kind")
+	}
+	if _, ok := stackObjectByID(g, target.ID); !ok {
+		t.Fatal("unknown future stack-object kind left the stack")
 	}
 }
 
