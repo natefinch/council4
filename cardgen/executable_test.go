@@ -2396,6 +2396,115 @@ func TestGenerateExecutableCardSourceThenJoinedSpellEffects(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "Diabolic Tutor",
+			oracleText: "Search your library for a card, put that card into your hand, then shuffle.",
+			wants:      []string{"zone.Hand", "Amount: game.Fixed(1)"},
+		},
+		{
+			name:       "Rampant Growth",
+			oracleText: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+			wants: []string{
+				"zone.Battlefield",
+				"opt.Val(types.Land)",
+				"opt.Val(types.Basic)",
+				"EntersTapped",
+			},
+		},
+		{
+			name:       "Three Visits",
+			oracleText: "Search your library for a Forest card, put it onto the battlefield, then shuffle.",
+			wants:      []string{"zone.Battlefield", "SubtypesAny: []types.Sub{types.Forest}"},
+		},
+		{
+			name:       "Farseek",
+			oracleText: "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.",
+			wants: []string{
+				"[]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}",
+				"zone.Battlefield",
+				"EntersTapped",
+			},
+		},
+		{
+			name:       "Safewright Quest",
+			oracleText: "Search your library for a Forest or Plains card, reveal it, put it into your hand, then shuffle.",
+			wants: []string{
+				"SubtypesAny: []types.Sub{types.Forest, types.Plains}",
+				"zone.Hand",
+				"Reveal",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       test.name,
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			}, "s")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range append([]string{
+				"Primitive: game.Search",
+				"zone.Library",
+				"Player: game.ControllerReference()",
+			}, test.wants...) {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsUnsupportedLibrarySearches(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"Search your library for a card, put that card into your graveyard, then shuffle.",
+		"Search your library for a green creature card, put it into your hand, then shuffle.",
+		"Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+		"Search target opponent's library for a card, put that card into their hand, then shuffle.",
+		"Search your library for that card, reveal it, put it into your hand, then shuffle.",
+		"Search your library for a creature card, reveal it, put it into your hand or graveyard, then shuffle.",
+	}
+	for _, oracleText := range tests {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Unsupported Search",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			}, "u")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" {
+				t.Fatalf("source = %q, want no partial card", source)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported search diagnostic")
+			}
+			if diagnostics[0].Summary != "unsupported search effect" {
+				t.Fatalf("diagnostics = %#v, want unsupported search effect", diagnostics)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceOptionalEnterTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -3234,7 +3343,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "mass mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Each opponent mills three cards."},
 		{name: "leave trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature leaves the battlefield, draw a card."},
 		{name: "cast trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When you cast this spell, draw a card."},
-		{name: "other creature dies", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature dies, draw a card."},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -3795,5 +3903,105 @@ func TestGenerateExecutableCardSourceRejectsAlternateLayoutsWithMoreThanTwoFaces
 	}
 	if !strings.Contains(diagnostics[0].Detail, `supports at most 2 faces for "split" layout cards, found 3`) {
 		t.Fatalf("diagnostic detail = %q", diagnostics[0].Detail)
+	}
+}
+
+func TestGenerateExecutableCardSourceSheoldredApocalypse(t *testing.T) {
+	t.Parallel()
+	// Sheoldred, the Apocalypse: real oracle text uses "they lose 2 life" for opponent draw trigger.
+	card := &ScryfallCard{
+		Name:       "Sheoldred, the Apocalypse",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}{B}",
+		TypeLine:   "Legendary Creature — Phyrexian Praetor",
+		OracleText: "Deathtouch\nWhenever you draw a card, you gain 2 life.\nWhenever an opponent draws a card, they lose 2 life.",
+		Colors:     []string{"B"},
+		Power:      new("4"),
+		Toughness:  new("5"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventCardDrawn",
+		"game.TriggerPlayerYou",
+		"game.TriggerPlayerOpponent",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceDyingToServe(t *testing.T) {
+	t.Parallel()
+	// Dying to Serve uses "discard one or more cards" (OneOrMore: true) trigger.
+	// The real card creates tokens, which lowerSpell does not yet support (token
+	// creation support is a separate follow-up). This test uses a supported effect
+	// to verify the trigger pattern is lowered correctly.
+	card := &ScryfallCard{
+		Name:       "Dying to Serve",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever you discard one or more cards, you lose 1 life.",
+		Colors:     []string{"B"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventCardDiscarded",
+		"game.TriggerPlayerYou",
+		"OneOrMore: true",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceTourachDreadCantor(t *testing.T) {
+	t.Parallel()
+	// Tourach, Dread Cantor: discard trigger for opponent + unsupported enter-when-kicked trigger.
+	// The discard trigger "Whenever an opponent discards a card" should lower correctly.
+	// The "+1/+1 counter on Tourach" effect is a self-name reference that is not yet supported by
+	// lowerCounterPlacementSpell, so the card will still have diagnostics — but none for the discard
+	// trigger phrase itself.
+	card := &ScryfallCard{
+		Name:       "Tourach, Dread Cantor",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Legendary Creature — Human Cleric",
+		OracleText: "Kicker {B}{B}\nProtection from white\nWhen Tourach, Dread Cantor enters, if it was kicked, target opponent discards two cards.\nWhenever an opponent discards a card, put a +1/+1 counter on Tourach, Dread Cantor.",
+		Colors:     []string{"B"},
+		Power:      new("2"),
+		Toughness:  new("1"),
+	}
+	_, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The trigger phrase is recognized even though its self-name counter-placement
+	// body remains unsupported.
+	foundBodyDiagnostic := false
+	for _, d := range diagnostics {
+		if d.Summary == "unsupported draw/discard trigger effect" {
+			foundBodyDiagnostic = true
+			if strings.Contains(d.Detail, "unrecognized draw/discard trigger event phrase") {
+				t.Fatalf("trigger phrase unexpectedly unrecognized: %#v", d)
+			}
+		}
+	}
+	if !foundBodyDiagnostic {
+		t.Fatalf("diagnostics = %#v, want unsupported draw/discard trigger effect", diagnostics)
 	}
 }

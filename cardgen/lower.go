@@ -4202,6 +4202,24 @@ var atTriggerPhrases = map[string]atTriggerParams{
 	"the beginning of combat on your turn":    {game.StepBeginningOfCombat, game.TriggerControllerYou},
 	"the beginning of each combat":            {game.StepBeginningOfCombat, game.TriggerControllerAny},
 	"the beginning of your draw step":         {game.StepDraw, game.TriggerControllerYou},
+	"the beginning of your first main phase":  {game.StepPrecombatMain, game.TriggerControllerYou},
+	"the beginning of your precombat main phase": {
+		game.StepPrecombatMain,
+		game.TriggerControllerYou,
+	},
+	"the beginning of each of your first main phases": {
+		game.StepPrecombatMain,
+		game.TriggerControllerYou,
+	},
+	"the beginning of your second main phase": {game.StepPostcombatMain, game.TriggerControllerYou},
+	"the beginning of your postcombat main phase": {
+		game.StepPostcombatMain,
+		game.TriggerControllerYou,
+	},
+	"the beginning of each of your postcombat main phases": {
+		game.StepPostcombatMain,
+		game.TriggerControllerYou,
+	},
 }
 
 func lowerAtTrigger(
@@ -4218,17 +4236,13 @@ func lowerAtTrigger(
 			fmt.Sprintf("the executable source backend does not support step trigger phrase %q", ability.Trigger.Event),
 		)
 	}
-	var intervening opt.V[game.Condition]
-	if ability.Trigger.Condition != nil {
-		condition, ok := lowerKnownCondition(*ability.Trigger.Condition, oracle.ConditionIf)
-		if !ok {
-			return game.TriggeredAbility{}, executableDiagnostic(
-				ability,
-				summary,
-				"the executable source backend does not support this intervening-if condition",
-			)
-		}
-		intervening = opt.Val(condition)
+	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"the executable source backend does not support this intervening-if condition",
+		)
 	}
 	if len(ability.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, executableDiagnostic(
@@ -4270,6 +4284,46 @@ func lowerAtTrigger(
 	}, nil
 }
 
+func lowerAtInterveningCondition(trigger *oracle.CompiledTrigger) (opt.V[game.Condition], bool) {
+	if trigger == nil || trigger.Condition == nil {
+		return opt.V[game.Condition]{}, true
+	}
+	condition := *trigger.Condition
+	if lowered, ok := lowerKnownCondition(condition, oracle.ConditionIf); ok {
+		return opt.Val(lowered), true
+	}
+	if condition.Kind != oracle.ConditionIf || !condition.Intervening {
+		return opt.V[game.Condition]{}, false
+	}
+	if cardType, ok := controlledPermanentConditionType(strings.ToLower(condition.Text)); ok {
+		return opt.Val(game.Condition{
+			Text: condition.Text,
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{RequiredTypes: []types.Card{cardType}},
+			}),
+		}), true
+	}
+	if life, ok := controllerLifeAtLeastStepCondition(strings.ToLower(condition.Text)); ok {
+		return opt.Val(game.Condition{
+			Text:                  condition.Text,
+			ControllerLifeAtLeast: life,
+		}), true
+	}
+	return opt.V[game.Condition]{}, false
+}
+
+func controllerLifeAtLeastStepCondition(text string) (int, bool) {
+	const (
+		prefix = "if you have "
+		suffix = " or more life"
+	)
+	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, suffix) {
+		return 0, false
+	}
+	value, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(text, prefix), suffix))
+	return value, err == nil && value > 0
+}
+
 func lowerTriggeredAbility(
 	cardName string,
 	ability oracle.CompiledAbility,
@@ -4284,6 +4338,11 @@ func lowerTriggeredAbility(
 	if triggeredAbility, ok := lowerLifeDamageTrigger(cardName, ability, syntax); ok {
 		return triggeredAbility, nil
 	}
+	if ability.Trigger != nil && ability.Trigger.Kind == oracle.TriggerWhenever {
+		if _, ok := drawDiscardTriggerPhrases[ability.Trigger.Event]; ok {
+			return lowerDrawDiscardTrigger(cardName, ability, syntax)
+		}
+	}
 	triggeredAbility, diagnostic := lowerEnterTrigger(cardName, ability, syntax)
 	if diagnostic == nil ||
 		ability.Trigger == nil ||
@@ -4291,6 +4350,11 @@ func lowerTriggeredAbility(
 		if diagnostic != nil && ability.Trigger != nil {
 			if castAbility, ok := lowerCastTrigger(cardName, ability, syntax); ok {
 				return castAbility, nil
+			}
+			if strings.HasSuffix(ability.Trigger.Event, " dies") {
+				if _, ok := lowerNonSelfDiesTriggerEvent(ability.Trigger.Event); ok {
+					return lowerNonSelfDiesTrigger(cardName, ability, syntax)
+				}
 			}
 		}
 		return triggeredAbility, diagnostic
@@ -4300,6 +4364,69 @@ func lowerTriggeredAbility(
 		return game.TriggeredAbility{}, diagnostic
 	}
 	return nonSelf, nil
+}
+
+type drawDiscardTriggerPattern struct {
+	event     game.EventKind
+	player    game.TriggerPlayerFilter
+	oneOrMore bool
+}
+
+var drawDiscardTriggerPhrases = map[string]drawDiscardTriggerPattern{
+	"you draw a card":               {event: game.EventCardDrawn, player: game.TriggerPlayerYou},
+	"an opponent draws a card":      {event: game.EventCardDrawn, player: game.TriggerPlayerOpponent},
+	"a player draws a card":         {event: game.EventCardDrawn, player: game.TriggerPlayerAny},
+	"you discard a card":            {event: game.EventCardDiscarded, player: game.TriggerPlayerYou},
+	"you discard one or more cards": {event: game.EventCardDiscarded, player: game.TriggerPlayerYou, oneOrMore: true},
+	"an opponent discards a card":   {event: game.EventCardDiscarded, player: game.TriggerPlayerOpponent},
+	"a player discards a card":      {event: game.EventCardDiscarded, player: game.TriggerPlayerAny},
+}
+
+func lowerDrawDiscardTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	const summary = "unsupported draw/discard trigger"
+	if ability.Trigger == nil || ability.Trigger.Kind != oracle.TriggerWhenever {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend supports only TriggerWhenever draw and discard triggers")
+	}
+	params, ok := drawDiscardTriggerPhrases[ability.Trigger.Event]
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"unrecognized draw/discard trigger event phrase: "+ability.Trigger.Event)
+	}
+	if ability.Trigger.Condition != nil ||
+		len(ability.Effects) == 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend supports only simple draw/discard triggers without conditions, modes, keywords, or ability words")
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend does not support this draw/discard trigger body")
+	}
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary+" effect", diagnostic.Detail)
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhenever,
+			Pattern: game.TriggerPattern{
+				Event:     params.event,
+				Player:    params.player,
+				OneOrMore: params.oneOrMore,
+			},
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, nil
 }
 
 type cyclingTriggerPattern struct {
@@ -5205,6 +5332,224 @@ func lowerNonSelfEnterTrigger(
 	}, true
 }
 
+// nonSelfDiesTriggerParams holds the TriggerType and TriggerPattern values for
+// a recognised non-self dies trigger phrase.
+type nonSelfDiesTriggerParams struct {
+	triggerType game.TriggerType
+	pattern     game.TriggerPattern
+}
+
+// nonSelfDiesPhrases maps exact trigger.Event texts (after the "When[ever] "
+// prefix has been stripped by the oracle compiler) to their lowered forms. Any
+// phrase absent from this table is unsupported — no inference is performed.
+var nonSelfDiesPhrases = map[string]nonSelfDiesTriggerParams{
+	"enchanted creature dies": {
+		triggerType: game.TriggerWhen,
+		pattern: game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceAttachedPermanent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"equipped creature dies": {
+		triggerType: game.TriggerWhen,
+		pattern: game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceAttachedPermanent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"enchanted land dies": {
+		triggerType: game.TriggerWhen,
+		pattern: game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceAttachedPermanent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+			},
+		},
+	},
+	"enchanted permanent dies": {
+		triggerType: game.TriggerWhen,
+		pattern: game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceAttachedPermanent,
+		},
+	},
+	"another creature dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:       game.EventPermanentDied,
+			ExcludeSelf: true,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"another creature you control dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:       game.EventPermanentDied,
+			Controller:  game.TriggerControllerYou,
+			ExcludeSelf: true,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"a creature dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event: game.EventPermanentDied,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"a creature you control dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:      game.EventPermanentDied,
+			Controller: game.TriggerControllerYou,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"a creature an opponent controls dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:      game.EventPermanentDied,
+			Controller: game.TriggerControllerOpponent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"a nontoken creature you control dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:      game.EventPermanentDied,
+			Controller: game.TriggerControllerYou,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				NonToken:      true,
+			},
+		},
+	},
+	"another nontoken creature you control dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:       game.EventPermanentDied,
+			Controller:  game.TriggerControllerYou,
+			ExcludeSelf: true,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				NonToken:      true,
+			},
+		},
+	},
+	"another nontoken creature dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:       game.EventPermanentDied,
+			ExcludeSelf: true,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				NonToken:      true,
+			},
+		},
+	},
+	"a nontoken creature an opponent controls dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:      game.EventPermanentDied,
+			Controller: game.TriggerControllerOpponent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				NonToken:      true,
+			},
+		},
+	},
+}
+
+// lowerNonSelfDiesTriggerEvent looks up event text in the recognised non-self
+// dies phrase table and returns the lowered TriggerType and TriggerPattern. If
+// the phrase is not in the table, ok is false; no inference is performed.
+func lowerNonSelfDiesTriggerEvent(event string) (nonSelfDiesTriggerParams, bool) {
+	params, ok := nonSelfDiesPhrases[event]
+	return params, ok
+}
+
+// lowerNonSelfDiesTrigger lowers a non-self dies triggered ability whose event
+// text is in the recognised phrase table. It rejects any body that contains
+// pronoun references (ReferencePronoun) — those require EventPermanentReference
+// dynamics not yet supported by the body lowering pass.
+func lowerNonSelfDiesTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	const unsupportedPhrase = "unsupported dies trigger phrase"
+	const unsupportedBody = "unsupported dies trigger body"
+
+	if ability.Trigger == nil ||
+		(ability.Trigger.Kind != oracle.TriggerWhen && ability.Trigger.Kind != oracle.TriggerWhenever) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"non-self dies trigger requires When or Whenever trigger kind")
+	}
+
+	params, ok := lowerNonSelfDiesTriggerEvent(ability.Trigger.Event)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"unrecognised non-self dies trigger phrase: "+ability.Trigger.Event)
+	}
+	if ability.Trigger.Condition != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"intervening-if conditions are not supported for non-self dies triggers")
+	}
+
+	// Reject bodies that contain pronoun references to the dying permanent.
+	// Those require EventPermanentReference dynamics in body lowering which are
+	// deferred; fail-closed rather than silently produce wrong output.
+	for _, ref := range ability.References {
+		if ref.Kind == oracle.ReferencePronoun {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedBody,
+				"references to dying permanent are not yet lowered")
+		}
+	}
+
+	if len(ability.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"non-self dies trigger does not support modes or ability words")
+	}
+
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"could not prepare trigger body")
+	}
+
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedBody+" effect", diagnostic.Detail)
+	}
+
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:    params.triggerType,
+			Pattern: params.pattern,
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, nil
+}
+
 // lowerCastTrigger lowers a "whenever ... casts ..." triggered ability into a
 // game.TriggeredAbility with EventSpellCast. It returns false for any event
 // string it cannot fully represent, including self-cast (TriggerWhen), all
@@ -6044,7 +6389,16 @@ func lowerSpell(
 		len(ability.Modes) == 0 {
 		return manifestDreadAbility(), nil
 	}
+	if len(ability.Effects) > 0 && ability.Effects[0].Kind == oracle.EffectSearch {
+		return lowerSearchSpell(ability)
+	}
 	if len(ability.Effects) > 1 {
+		if ability.Effects[0].Kind == oracle.EffectGainControl ||
+			(ability.Effects[0].Kind == oracle.EffectUntap &&
+				len(ability.Effects) >= 2 &&
+				ability.Effects[1].Kind == oracle.EffectGainControl) {
+			return lowerControlSpellSequence(cardName, ability, syntax)
+		}
 		return lowerOrderedEffectSequence(cardName, ability, syntax)
 	}
 	if len(ability.Effects) == 1 {
@@ -6055,6 +6409,154 @@ func lowerSpell(
 		"unsupported spell ability",
 		"the executable source backend does not yet lower this spell ability",
 	)
+}
+
+func lowerSearchSpell(ability oracle.CompiledAbility) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func(detail string) (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported search effect",
+			detail,
+		)
+	}
+	if ability.Optional ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		!exactSearchEffectSequence(ability.Effects) {
+		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
+	}
+	search := ability.Effects[0]
+	if !search.Amount.Known || search.Amount.Value != 1 {
+		return unsupported("the executable source backend supports only searches for exactly one card")
+	}
+	text := search.Text
+	for _, effect := range ability.Effects {
+		if effect.Text != text ||
+			effect.DelayedTiming != 0 ||
+			effect.Duration != oracle.DurationNone ||
+			effect.Negated {
+			return unsupported("the executable source backend supports only exact same-sentence library-search sequences")
+		}
+	}
+	if !strings.HasPrefix(text, "Search your library for ") || !strings.HasSuffix(text, ", then shuffle.") {
+		return unsupported("the executable source backend supports only searches of your library ending with \"then shuffle\"")
+	}
+
+	filter, ok := searchFilterPhrase(text)
+	if !ok {
+		return unsupported("the executable source backend supports only exact singular-card search wording")
+	}
+	spec, ok := searchSpecForFilter(filter)
+	if !ok {
+		return unsupported(fmt.Sprintf("unsupported library-search filter %q", filter))
+	}
+	spec.SourceZone = zone.Library
+
+	spec.Reveal = len(ability.Effects) == 4
+	destination, entersTapped, ok := searchDestination(text, spec.Reveal)
+	if !ok {
+		return unsupported("the executable source backend supports only exact hand or battlefield search destinations")
+	}
+	spec.Destination = destination
+	spec.EntersTapped = entersTapped
+
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.Search{
+		Player: game.ControllerReference(),
+		Spec:   spec,
+		Amount: game.Fixed(1),
+	}}}}.Ability(), nil
+}
+
+func exactSearchEffectSequence(effects []oracle.CompiledEffect) bool {
+	if len(effects) == 3 {
+		return effects[0].Kind == oracle.EffectSearch &&
+			effects[1].Kind == oracle.EffectPut &&
+			effects[2].Kind == oracle.EffectShuffle
+	}
+	return len(effects) == 4 &&
+		effects[0].Kind == oracle.EffectSearch &&
+		effects[1].Kind == oracle.EffectReveal &&
+		effects[2].Kind == oracle.EffectPut &&
+		effects[3].Kind == oracle.EffectShuffle
+}
+
+func searchFilterPhrase(text string) (string, bool) {
+	for _, prefix := range []string{
+		"Search your library for a ",
+		"Search your library for an ",
+	} {
+		rest, ok := strings.CutPrefix(text, prefix)
+		if !ok {
+			continue
+		}
+		if strings.HasPrefix(rest, "card,") {
+			return "", true
+		}
+		filter, _, ok := strings.Cut(rest, " card,")
+		return filter, ok
+	}
+	return "", false
+}
+
+func searchSpecForFilter(filter string) (game.SearchSpec, bool) {
+	var spec game.SearchSpec
+	switch filter {
+	case "":
+	case "basic land":
+		spec.CardType = opt.Val(types.Land)
+		spec.Supertype = opt.Val(types.Basic)
+	case "land":
+		spec.CardType = opt.Val(types.Land)
+	case "creature":
+		spec.CardType = opt.Val(types.Creature)
+	case "artifact":
+		spec.CardType = opt.Val(types.Artifact)
+	case "enchantment":
+		spec.CardType = opt.Val(types.Enchantment)
+	case "Forest":
+		spec.SubtypesAny = []types.Sub{types.Forest}
+	case "Plains":
+		spec.SubtypesAny = []types.Sub{types.Plains}
+	case "Island":
+		spec.SubtypesAny = []types.Sub{types.Island}
+	case "Swamp":
+		spec.SubtypesAny = []types.Sub{types.Swamp}
+	case "Mountain":
+		spec.SubtypesAny = []types.Sub{types.Mountain}
+	case "Forest or Plains":
+		spec.SubtypesAny = []types.Sub{types.Forest, types.Plains}
+	case "Plains, Island, Swamp, or Mountain":
+		spec.SubtypesAny = []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}
+	default:
+		return game.SearchSpec{}, false
+	}
+	return spec, true
+}
+
+func searchDestination(text string, reveal bool) (destination zone.Type, entersTapped, ok bool) {
+	type searchDestinationPattern struct {
+		suffix        string
+		destination   zone.Type
+		entersTapped  bool
+		revealsSearch bool
+	}
+	for _, pattern := range []searchDestinationPattern{
+		{suffix: ", put it into your hand, then shuffle.", destination: zone.Hand},
+		{suffix: ", put that card into your hand, then shuffle.", destination: zone.Hand},
+		{suffix: ", reveal it, put it into your hand, then shuffle.", destination: zone.Hand, revealsSearch: true},
+		{suffix: ", reveal that card, put it into your hand, then shuffle.", destination: zone.Hand, revealsSearch: true},
+		{suffix: ", put it onto the battlefield, then shuffle.", destination: zone.Battlefield},
+		{suffix: ", put that card onto the battlefield, then shuffle.", destination: zone.Battlefield},
+		{suffix: ", put it onto the battlefield tapped, then shuffle.", destination: zone.Battlefield, entersTapped: true},
+		{suffix: ", put that card onto the battlefield tapped, then shuffle.", destination: zone.Battlefield, entersTapped: true},
+	} {
+		if reveal == pattern.revealsSearch && strings.HasSuffix(text, pattern.suffix) {
+			return pattern.destination, pattern.entersTapped, true
+		}
+	}
+	return zone.None, false, false
 }
 
 func lowerSingleEffectSpell(
@@ -6219,6 +6721,8 @@ func lowerImmediateSingleEffectSpell(
 		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
 			return game.GainLife{Amount: amount, PlayerGroup: group}
 		})
+	case oracle.EffectGainControl:
+		return lowerSingleControlSpell(ability)
 	case oracle.EffectLose:
 		return lowerFixedLifeSpell(ability, "lose", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.LoseLife{Amount: amount, Player: player}
@@ -7068,6 +7572,284 @@ func standaloneActionAmount(tokens []oracle.Token, verb string) (int, bool) {
 	return 0, false
 }
 
+// lowerControlSpellSequence lowers an ordered effect sequence whose first
+// effect (or second, after an initial Untap) is EffectGainControl.  It handles
+// two oracle text patterns atomically:
+//
+//	Pattern A (effects[0] = GainControl):
+//	  "Gain control of target X until end of turn. [Untap that X.] [It gains KW.] [Scry N.]"
+//
+//	Pattern B (effects[0] = Untap, effects[1] = GainControl, same sentence):
+//	  "Untap target X and gain control of it until end of turn. [That X gains KW.]"
+//
+// Subsequent effects (Untap back-ref, keyword grant, counter placement, or
+// standalone effects like Scry) are consumed in order.
+func lowerControlSpellSequence(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported gain-control spell",
+			"the executable source backend supports only exact gain-control sequences targeting one permanent",
+		)
+	}
+
+	if len(ability.Conditions) != 0 || len(ability.Modes) != 0 {
+		return unsupported()
+	}
+	if len(ability.Targets) != 1 {
+		return unsupported()
+	}
+
+	// Detect Pattern B: Untap first, GainControl second (same sentence span).
+	isPatternB := len(ability.Effects) >= 2 &&
+		ability.Effects[0].Kind == oracle.EffectUntap &&
+		ability.Effects[1].Kind == oracle.EffectGainControl
+
+	gainControlIdx := 0
+	if isPatternB {
+		gainControlIdx = 1
+	}
+	controlEffect := ability.Effects[gainControlIdx]
+
+	targetSpec, ok := permanentTargetSpec(ability.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	// Gaining control of something you already control is a no-op for the
+	// control layer, but we do allow ControllerAny (e.g. Threaten) so the
+	// effect can still untap and grant keywords.
+	if ability.Targets[0].Selector.Controller == oracle.ControllerYou {
+		return unsupported()
+	}
+
+	var duration game.EffectDuration
+	switch controlEffect.Duration {
+	case oracle.DurationUntilEndOfTurn:
+		duration = game.DurationUntilEndOfTurn
+	case oracle.DurationNone:
+		duration = game.DurationPermanent
+	case oracle.DurationForAsLongAsSourceOnBattlefield:
+		duration = game.DurationForAsLongAsSourceOnBattlefield
+	case oracle.DurationForAsLongAsYouControlSource:
+		duration = game.DurationForAsLongAsYouControlSource
+	default:
+		return unsupported()
+	}
+
+	gainControlPrim := game.ApplyContinuous{
+		Object: opt.Val(game.TargetPermanentReference(0)),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:         game.LayerControl,
+			NewController: opt.Val(game.Player1),
+		}},
+		Duration: duration,
+	}
+
+	clauseSyntaxes := splitEffectSyntaxes(syntax, ability.Effects)
+	consumedTargets := 0
+	// Use span-keyed sets to count each reference/keyword exactly once, even
+	// when multiple same-sentence effects share the same reference spans.
+	consumedRefSpans := make(map[oracle.Span]bool)
+	consumedKwSpans := make(map[oracle.Span]bool)
+	var sequence []game.Instruction
+
+	if isPatternB {
+		// Pattern B: effects[0] (Untap) and effects[1] (GainControl) share the
+		// same sentence span.  Count targets and references from the shared span
+		// once rather than per-effect to avoid double-counting.
+		sharedSpan := ability.Effects[0].Span
+		consumedTargets += len(targetsWithinSpan(ability.Targets, sharedSpan))
+		for _, r := range referencesWithinSpan(ability.References, sharedSpan) {
+			consumedRefSpans[r.Span] = true
+		}
+		sequence = append(sequence,
+			game.Instruction{Primitive: game.Untap{Object: game.TargetPermanentReference(0)}},
+			game.Instruction{Primitive: gainControlPrim},
+		)
+		for i := 2; i < len(ability.Effects); i++ {
+			effAbility := abilityForEffect(ability, ability.Effects[i])
+			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, clauseSyntaxes[i])
+			if !ok {
+				return unsupported()
+			}
+			sequence = append(sequence, game.Instruction{Primitive: prim})
+			for _, r := range effAbility.References {
+				consumedRefSpans[r.Span] = true
+			}
+			for _, k := range effAbility.Keywords {
+				consumedKwSpans[k.Span] = true
+			}
+		}
+	} else {
+		// Pattern A: effects[0] is GainControl; subsequent effects are follow-ons.
+		effAbility0 := abilityForEffect(ability, ability.Effects[0])
+		consumedTargets += len(effAbility0.Targets)
+		for _, r := range effAbility0.References {
+			consumedRefSpans[r.Span] = true
+		}
+		sequence = append(sequence, game.Instruction{Primitive: gainControlPrim})
+		for i := 1; i < len(ability.Effects); i++ {
+			effAbility := abilityForEffect(ability, ability.Effects[i])
+			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, clauseSyntaxes[i])
+			if !ok {
+				return unsupported()
+			}
+			sequence = append(sequence, game.Instruction{Primitive: prim})
+			for _, r := range effAbility.References {
+				consumedRefSpans[r.Span] = true
+			}
+			for _, k := range effAbility.Keywords {
+				consumedKwSpans[k.Span] = true
+			}
+		}
+	}
+
+	if consumedTargets != len(ability.Targets) ||
+		len(consumedKwSpans) != len(ability.Keywords) ||
+		len(consumedRefSpans) != len(ability.References) ||
+		len(sequence) != len(ability.Effects) {
+		return unsupported()
+	}
+
+	return game.Mode{Targets: []game.TargetSpec{targetSpec}, Sequence: sequence}.Ability(), nil
+}
+
+// lowerControlSequenceFollowOn lowers a single follow-on effect in a
+// gain-control sequence: an Untap back-reference, a keyword grant, a counter
+// placement, or a standalone effect (e.g. Scry) with no back-references.
+func lowerControlSequenceFollowOn(
+	cardName string,
+	effectAbility oracle.CompiledAbility,
+	clauseSyntax oracle.Ability,
+) (game.Primitive, bool) {
+	effect := effectAbility.Effects[0]
+
+	switch effect.Kind {
+	case oracle.EffectUntap:
+		// Back-reference untap: "Untap that creature." — no new targets.
+		if len(effectAbility.Targets) != 0 {
+			return nil, false
+		}
+		return game.Untap{Object: game.TargetPermanentReference(0)}, true
+
+	case oracle.EffectGain:
+		// Keyword grant: "It gains haste until end of turn." — back-ref, no new targets.
+		if len(effectAbility.Targets) != 0 || len(effectAbility.Keywords) == 0 {
+			return nil, false
+		}
+		if effect.Duration != oracle.DurationUntilEndOfTurn {
+			return nil, false
+		}
+		keywords, ok := mixedStaticKeywords(effectAbility.Keywords)
+		if !ok {
+			return nil, false
+		}
+		return game.ApplyContinuous{
+			Object: opt.Val(game.TargetPermanentReference(0)),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:       game.LayerAbility,
+				AddKeywords: keywords,
+			}},
+			Duration: game.DurationUntilEndOfTurn,
+		}, true
+
+	case oracle.EffectPut:
+		// Counter placement: "Put a +1/+1 counter on it." — back-ref, no new targets.
+		if len(effectAbility.Targets) != 0 {
+			return nil, false
+		}
+		if !effect.CounterKindKnown || !oracle.CounterKindPlacementSupported(effect.CounterKind) {
+			return nil, false
+		}
+		if !effect.Amount.Known || effect.Amount.Value < 1 {
+			return nil, false
+		}
+		return game.AddCounter{
+			Amount:      game.Fixed(effect.Amount.Value),
+			Object:      game.TargetPermanentReference(0),
+			CounterKind: effect.CounterKind,
+		}, true
+
+	default:
+		// Standalone effect with no back-references (e.g. Scry).
+		if len(effectAbility.References) != 0 || len(effectAbility.Targets) != 0 {
+			return nil, false
+		}
+		content, diag := lowerSingleEffectSpell(cardName, effectAbility, clauseSyntax)
+		if diag != nil {
+			return nil, false
+		}
+		if len(content.SharedTargets) != 0 ||
+			content.IsModal() ||
+			len(content.Modes) != 1 ||
+			len(content.Modes[0].Targets) != 0 ||
+			len(content.Modes[0].Sequence) != 1 {
+			return nil, false
+		}
+		return content.Modes[0].Sequence[0].Primitive, true
+	}
+}
+
+// lowerSingleControlSpell lowers a single EffectGainControl spell with no
+// Untap or keyword grant (e.g. "Gain control of target permanent." or the
+// DurationUntilEndOfTurn variant).
+func lowerSingleControlSpell(
+	ability oracle.CompiledAbility,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported gain-control spell",
+			"the executable source backend supports only exact gain-control of one target permanent",
+		)
+	}
+	if len(ability.Targets) != 1 ||
+		len(ability.References) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Effects[0].Negated {
+		return unsupported()
+	}
+	targetSpec, ok := permanentTargetSpec(ability.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	if ability.Targets[0].Selector.Controller == oracle.ControllerYou {
+		return unsupported()
+	}
+	var duration game.EffectDuration
+	switch ability.Effects[0].Duration {
+	case oracle.DurationUntilEndOfTurn:
+		duration = game.DurationUntilEndOfTurn
+	case oracle.DurationNone:
+		duration = game.DurationPermanent
+	case oracle.DurationForAsLongAsSourceOnBattlefield:
+		duration = game.DurationForAsLongAsSourceOnBattlefield
+	case oracle.DurationForAsLongAsYouControlSource:
+		duration = game.DurationForAsLongAsYouControlSource
+	default:
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(game.TargetPermanentReference(0)),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:         game.LayerControl,
+					NewController: opt.Val(game.Player1),
+				}},
+				Duration: duration,
+			},
+		}},
+	}.Ability(), nil
+}
+
 func lowerOrderedEffectSequence(
 	cardName string,
 	ability oracle.CompiledAbility,
@@ -7820,6 +8602,16 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primiti
 		return value, ok
 	}
 	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
+		return value, true
+	}
+	if value, ok := primitive.(game.ApplyContinuous); ok {
+		if value.Object.Exists {
+			rebased, ok := rebaseObjectReference(value.Object.Val, offset)
+			if !ok {
+				return nil, false
+			}
+			value.Object = opt.Val(rebased)
+		}
 		return value, true
 	}
 	return nil, false
@@ -8816,6 +9608,14 @@ func lowerFixedLifeSpell(
 	switch {
 	case len(ability.Targets) == 0 &&
 		exactLifeAmountSyntax("You", verb, ability.Text, effect.Amount, amountText):
+	case len(ability.Targets) == 0 &&
+		exactLifeAmountSyntax("That player", verb+"s", ability.Text, effect.Amount, amountText):
+		playerRef = game.EventPlayerReference()
+	case len(ability.Targets) == 0 &&
+		exactLifeAmountSyntax("They", verb, ability.Text, effect.Amount, amountText):
+		// "They" is a pronoun for the player who triggered the event (e.g. "they lose 2 life"
+		// in "Whenever an opponent draws a card, they lose 2 life.").
+		playerRef = game.EventPlayerReference()
 	case len(ability.Targets) == 1:
 		targetSpec, ok := playerTargetSpec(ability.Targets[0])
 		if !ok ||

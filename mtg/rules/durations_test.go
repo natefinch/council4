@@ -5,7 +5,9 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestUntilEndOfTurnPTModifierUsesRuntimeContinuousEffect(t *testing.T) {
@@ -375,5 +377,241 @@ func TestDelayedNextEndStepTriggersUseAPNAPStackOrder(t *testing.T) {
 	}
 	if objects[0].Controller != game.Player1 || objects[1].Controller != game.Player2 {
 		t.Fatalf("stack controllers bottom-to-top = %v/%v, want APNAP Player1/Player2", objects[0].Controller, objects[1].Controller)
+	}
+}
+
+// --- Issue #225: source-tied control durations ---
+
+// makeCreaturePermanent is a minimal helper that adds a creature permanent
+// controlled by controller with the given name.
+func makeCreaturePermanent(g *game.Game, controller game.PlayerID, name string) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:      name,
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+}
+
+// applySourceTiedControlEffect simulates an activated ability from source
+// giving controller control of target with the provided duration.
+func applySourceTiedControlEffect(g *game.Game, controller game.PlayerID, source, target *game.Permanent, duration game.EffectDuration) bool {
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   controller,
+	}
+	return applyTypedContinuousEffects(g, obj, target, []game.ContinuousEffect{{
+		Layer:         game.LayerControl,
+		NewController: opt.Val(game.Player1),
+	}}, duration)
+}
+
+// TestSourceOnBattlefieldControlDurationExpiresWhenSourceLeaves verifies that
+// DurationForAsLongAsSourceOnBattlefield expires at SBA cadence when the
+// source permanent leaves the battlefield.
+func TestSourceOnBattlefieldControlDurationExpiresWhenSourceLeaves(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Control Enchantment",
+	}})
+	target := makeCreaturePermanent(g, game.Player2, "Stolen Creature")
+
+	if !applySourceTiedControlEffect(g, game.Player1, source, target, game.DurationForAsLongAsSourceOnBattlefield) {
+		t.Fatal("applyTypedContinuousEffects returned false")
+	}
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller before source leaves = %v, want Player1", got)
+	}
+
+	if !movePermanentToZone(g, source, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	engine.applyStateBasedActions(g)
+
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after source leaves = %v, want Player2 (original)", got)
+	}
+}
+
+// TestSourceOnBattlefieldControlDurationPersistsWhileSourcePresent verifies
+// that DurationForAsLongAsSourceOnBattlefield does NOT expire while the source
+// remains on the battlefield.
+func TestSourceOnBattlefieldControlDurationPersistsWhileSourcePresent(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Control Enchantment",
+	}})
+	target := makeCreaturePermanent(g, game.Player2, "Stolen Creature")
+
+	applySourceTiedControlEffect(g, game.Player1, source, target, game.DurationForAsLongAsSourceOnBattlefield)
+	engine.applyStateBasedActions(g)
+
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller while source present = %v, want Player1", got)
+	}
+}
+
+// TestYouControlSourceDurationExpiresWhenSourceLeaves verifies that
+// DurationForAsLongAsYouControlSource expires when the source leaves the
+// battlefield.
+func TestYouControlSourceDurationExpiresWhenSourceLeaves(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := makeCreaturePermanent(g, game.Player1, "Merieke-style Creature")
+	target := makeCreaturePermanent(g, game.Player2, "Stolen Creature")
+
+	applySourceTiedControlEffect(g, game.Player1, source, target, game.DurationForAsLongAsYouControlSource)
+
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller before source leaves = %v, want Player1", got)
+	}
+
+	if !movePermanentToZone(g, source, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	engine.applyStateBasedActions(g)
+
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after source leaves = %v, want Player2 (original)", got)
+	}
+}
+
+// TestYouControlSourceDurationExpiresWhenControllerLosesSource verifies that
+// DurationForAsLongAsYouControlSource expires when the effect controller no
+// longer controls the source (i.e. someone else takes control of it).
+func TestYouControlSourceDurationExpiresWhenControllerLosesSource(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := makeCreaturePermanent(g, game.Player1, "Merieke-style Creature")
+	target := makeCreaturePermanent(g, game.Player2, "Stolen Creature")
+
+	applySourceTiedControlEffect(g, game.Player1, source, target, game.DurationForAsLongAsYouControlSource)
+
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller before control change = %v, want Player1", got)
+	}
+
+	// Player2 gains control of the source via a permanent-duration effect.
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               g.IDGen.Next(),
+		SourceObjectID:   g.IDGen.Next(),
+		Controller:       game.Player2,
+		Timestamp:        game.Timestamp(g.IDGen.Next()),
+		Duration:         game.DurationPermanent,
+		AffectedObjectID: source.ObjectID,
+		Layer:            game.LayerControl,
+		NewController:    opt.Val(game.Player2),
+	})
+
+	// SBAs: Player1 no longer controls source, so the target effect expires.
+	engine.applyStateBasedActions(g)
+
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after source changes hands = %v, want Player2 (original owner)", got)
+	}
+}
+
+// TestSourceTiedDurationFailsClosedForSpellSource verifies that
+// ApplyContinuous fails closed when a source-tied duration is used with a
+// spell source (not a battlefield permanent).
+func TestSourceTiedDurationFailsClosedForSpellSource(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	target := makeCreaturePermanent(g, game.Player2, "Target Creature")
+
+	addEffectSpellToStack(g, game.Player1, game.ApplyContinuous{
+		Object: opt.Val(game.TargetPermanentReference(0)),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:         game.LayerControl,
+			NewController: opt.Val(game.Player1),
+		}},
+		Duration: game.DurationForAsLongAsSourceOnBattlefield,
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after spell with source-on-battlefield duration = %v, want Player2 (unchanged)", got)
+	}
+	if len(g.ContinuousEffects) != 0 {
+		t.Fatalf("continuous effects = %d, want 0 (spell source rejected)", len(g.ContinuousEffects))
+	}
+}
+
+// TestSourceTiedDurationFailsClosedForSpellSourceYouControl is the same test
+// for DurationForAsLongAsYouControlSource.
+func TestSourceTiedDurationFailsClosedForSpellSourceYouControl(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	target := makeCreaturePermanent(g, game.Player2, "Target Creature")
+
+	addEffectSpellToStack(g, game.Player1, game.ApplyContinuous{
+		Object: opt.Val(game.TargetPermanentReference(0)),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:         game.LayerControl,
+			NewController: opt.Val(game.Player1),
+		}},
+		Duration: game.DurationForAsLongAsYouControlSource,
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after spell with you-control-source duration = %v, want Player2 (unchanged)", got)
+	}
+	if len(g.ContinuousEffects) != 0 {
+		t.Fatalf("continuous effects = %d, want 0 (spell source rejected)", len(g.ContinuousEffects))
+	}
+}
+
+// TestExistingUntilEOTControlUnchanged verifies that existing
+// DurationUntilEndOfTurn control effects from #224 are unaffected by the new
+// source-tied expiry path.
+func TestExistingUntilEOTControlUnchanged(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	target := makeCreaturePermanent(g, game.Player2, "Target Creature")
+
+	addEffectSpellToStack(g, game.Player1, game.ApplyContinuous{
+		Object: opt.Val(game.TargetPermanentReference(0)),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:         game.LayerControl,
+			NewController: opt.Val(game.Player1),
+		}},
+		Duration: game.DurationUntilEndOfTurn,
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller after gain-control until EOT = %v, want Player1", got)
+	}
+	// SBAs must NOT expire until-EOT effects.
+	engine.applyStateBasedActions(g)
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller after SBAs = %v, want Player1 (until-EOT should survive SBAs)", got)
+	}
+	// Cleanup step expires it.
+	expireCleanupDurations(g)
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after cleanup = %v, want Player2 (original)", got)
 	}
 }

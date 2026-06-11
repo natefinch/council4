@@ -157,6 +157,48 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderSearchPrimitive(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:   zone.Library,
+			Destination:  zone.Battlefield,
+			CardType:     opt.Val(types.Land),
+			Supertype:    opt.Val(types.Basic),
+			SubtypesAny:  []types.Sub{types.Forest, types.Plains},
+			Reveal:       true,
+			EntersTapped: true,
+		},
+		Amount: game.Fixed(1),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.Search",
+		"Player: game.ControllerReference()",
+		"SourceZone: zone.Library",
+		"Destination: zone.Battlefield",
+		"CardType: opt.Val(types.Land)",
+		"Supertype: opt.Val(types.Basic)",
+		"SubtypesAny: []types.Sub{types.Forest, types.Plains}",
+		"Reveal: true",
+		"EntersTapped: true",
+		"Amount: game.Fixed(1)",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered search missing %q:\n%s", want, rendered)
+		}
+	}
+	for _, requiredImport := range []string{importZone, importTypes, importOpt} {
+		if _, ok := ctx.imports[requiredImport]; !ok {
+			t.Fatalf("search primitive did not request import %q", requiredImport)
+		}
+	}
+}
+
 func TestRenderCounterObjectPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CounterObject{
@@ -1274,6 +1316,8 @@ func TestRenderStepHelperAcceptsKnownSteps(t *testing.T) {
 		{game.StepDraw, "game.StepDraw"},
 		{game.StepBeginningOfCombat, "game.StepBeginningOfCombat"},
 		{game.StepEnd, "game.StepEnd"},
+		{game.StepPrecombatMain, "game.StepPrecombatMain"},
+		{game.StepPostcombatMain, "game.StepPostcombatMain"},
 	}
 	for _, tc := range tests {
 		got, err := renderStep(tc.step)
@@ -1304,6 +1348,8 @@ func TestRenderTriggerPatternAllSteps(t *testing.T) {
 		{game.StepDraw, "game.StepDraw"},
 		{game.StepBeginningOfCombat, "game.StepBeginningOfCombat"},
 		{game.StepEnd, "game.StepEnd"},
+		{game.StepPrecombatMain, "game.StepPrecombatMain"},
+		{game.StepPostcombatMain, "game.StepPostcombatMain"},
 	}
 	for _, tc := range steps {
 		ctx := newRenderCtx()
@@ -1644,5 +1690,79 @@ func TestRenderTriggerPatternRejectsUnsupportedCardSelectionFields(t *testing.T)
 	}
 	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
 		t.Fatal("expected error: Power is unsupported in CardSelection")
+	}
+}
+
+// TestRenderTriggerPatternSubjectSelection verifies that a SubjectSelection on
+// an EventPermanentDied pattern renders correctly and produces valid Go syntax.
+func TestRenderTriggerPatternSubjectSelection(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	pattern := game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		Controller:  game.TriggerControllerYou,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.EventPermanentDied",
+		"Controller: game.TriggerControllerYou",
+		"ExcludeSelf: true",
+		"SubjectSelection:",
+		"types.Creature",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered pattern missing %q:\n%s", want, rendered)
+		}
+	}
+	src := "package p\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered pattern is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+// TestRenderTriggerPatternSubjectSelectionNonToken verifies a NonToken
+// SubjectSelection renders correctly.
+func TestRenderTriggerPatternSubjectSelectionNonToken(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	pattern := game.TriggerPattern{
+		Event: game.EventPermanentDied,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			NonToken:      true,
+		},
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "NonToken: true") {
+		t.Fatalf("rendered pattern missing NonToken:\n%s", rendered)
+	}
+	src := "package p\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered pattern is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+// TestRenderTriggerPatternSubjectSelectionRejectsNonDiedEvent verifies that
+// SubjectSelection is rejected for non-EventPermanentDied events.
+func TestRenderTriggerPatternSubjectSelectionRejectsNonDiedEvent(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event: game.EventPermanentEnteredBattlefield,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		t.Fatal("expected error: SubjectSelection only allowed on EventPermanentDied patterns")
 	}
 }

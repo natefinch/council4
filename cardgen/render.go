@@ -657,6 +657,16 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		return "", errors.New("render: continuous effect cannot set both AffectedSource and Group")
 	}
 	switch effect.Layer {
+	case game.LayerControl:
+		if effect.PowerDelta != 0 ||
+			effect.ToughnessDelta != 0 ||
+			effect.PowerDeltaDynamic.Exists ||
+			effect.ToughnessDeltaDynamic.Exists {
+			return "", errors.New("render: power/toughness fields require a power/toughness layer")
+		}
+		if len(effect.AddKeywords) > 0 {
+			return "", errors.New("render: keyword fields require the ability layer")
+		}
 	case game.LayerAbility:
 		if effect.PowerDelta != 0 ||
 			effect.ToughnessDelta != 0 ||
@@ -675,6 +685,10 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		return "", err
 	}
 	fields = append(fields, fmt.Sprintf("Layer: %s,", layerLit))
+	if effect.Layer == game.LayerControl && effect.NewController.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, "NewController: opt.Val(game.Player1),")
+	}
 	if effect.AffectedSource {
 		fields = append(fields, "AffectedSource: true,")
 	}
@@ -738,6 +752,8 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 
 func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
 	switch layer {
+	case game.LayerControl:
+		return "game.LayerControl", nil
 	case game.LayerAbility:
 		return "game.LayerAbility", nil
 	case game.LayerPowerToughnessModify:
@@ -1142,8 +1158,10 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
 	allowCastFromZone := pattern.Event == game.EventSpellCast && pattern.MatchFromZone && !pattern.MatchToZone
-	if !pattern.SubjectSelection.Empty() ||
-		len(pattern.RequireCardTypes) != 0 ||
+	if !pattern.SubjectSelection.Empty() && pattern.Event != game.EventPermanentDied {
+		return "", errors.New("render: SubjectSelection is only supported for EventPermanentDied trigger patterns")
+	}
+	if len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
 		(pattern.MatchFromZone && !allowCastFromZone) ||
 		pattern.MatchToZone ||
@@ -1156,23 +1174,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
-	if !pattern.CardSelection.Empty() && pattern.Event != game.EventSpellCast {
-		return "", errors.New("render: CardSelection is only supported for EventSpellCast trigger patterns")
-	}
-	if !pattern.CardSelection.Empty() {
-		unsupported := pattern.CardSelection
-		unsupported.RequiredTypes = nil
-		unsupported.RequiredTypesAny = nil
-		unsupported.ExcludedTypes = nil
-		unsupported.Supertypes = nil
-		unsupported.SubtypesAny = nil
-		unsupported.ColorsAny = nil
-		unsupported.Colorless = false
-		unsupported.Multicolored = false
-		unsupported.ManaValue.Exists = false
-		if !unsupported.Empty() {
-			return "", errors.New("render: unsupported CardSelection fields in cast trigger pattern")
-		}
+	if err := validateTriggerPatternCardSelection(pattern); err != nil {
+		return "", err
 	}
 	event, err := renderEventKind(pattern.Event)
 	if err != nil {
@@ -1269,13 +1272,64 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		fields = append(fields, "RequireCombatDamage: true,")
 	}
 	if !pattern.CardSelection.Empty() {
-		sel, err := (Renderer{}).renderSelection(ctx, pattern.CardSelection)
+		cardFields, err := renderTriggerPatternCardSelectionFields(ctx, pattern)
 		if err != nil {
 			return "", err
 		}
-		fields = append(fields, fmt.Sprintf("CardSelection: %s,", sel))
+		fields = append(fields, cardFields...)
+	}
+	if !pattern.SubjectSelection.Empty() {
+		subjectFields, err := renderTriggerPatternSubjectSelection(ctx, pattern)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, subjectFields...)
 	}
 	return structLit("game.TriggerPattern", fields), nil
+}
+
+// validateTriggerPatternCardSelection validates CardSelection constraints for a
+// TriggerPattern and returns an error if they are unsupported.
+func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
+	if !pattern.CardSelection.Empty() && pattern.Event != game.EventSpellCast {
+		return errors.New("render: CardSelection is only supported for EventSpellCast trigger patterns")
+	}
+	if !pattern.CardSelection.Empty() {
+		unsupported := pattern.CardSelection
+		unsupported.RequiredTypes = nil
+		unsupported.RequiredTypesAny = nil
+		unsupported.ExcludedTypes = nil
+		unsupported.Supertypes = nil
+		unsupported.SubtypesAny = nil
+		unsupported.ColorsAny = nil
+		unsupported.Colorless = false
+		unsupported.Multicolored = false
+		unsupported.ManaValue.Exists = false
+		if !unsupported.Empty() {
+			return errors.New("render: unsupported CardSelection fields in cast trigger pattern")
+		}
+	}
+	return nil
+}
+
+// renderTriggerPatternCardSelectionFields renders the CardSelection field for a
+// TriggerPattern and returns it as a slice of struct-literal field strings.
+func renderTriggerPatternCardSelectionFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	sel, err := (Renderer{}).renderSelection(ctx, pattern.CardSelection)
+	if err != nil {
+		return nil, err
+	}
+	return []string{fmt.Sprintf("CardSelection: %s,", sel)}, nil
+}
+
+// renderTriggerPatternSubjectSelection renders the SubjectSelection field for
+// a TriggerPattern and returns it as a slice of struct-literal field strings.
+func renderTriggerPatternSubjectSelection(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	sel, err := (Renderer{}).renderSelection(ctx, pattern.SubjectSelection)
+	if err != nil {
+		return nil, err
+	}
+	return []string{fmt.Sprintf("SubjectSelection: %s,", sel)}, nil
 }
 
 // renderTriggerPatternCounterKind renders the MatchCounterKind and CounterKind
@@ -1923,6 +1977,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveTap, game.PrimitiveRegenerate, game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice:
 		return r.renderObjectPrimitive(primitive)
+	case game.PrimitiveSearch:
+		value, ok := primitive.(game.Search)
+		if !ok {
+			return "", errors.New("render: internal error: Search kind has unexpected concrete type")
+		}
+		return r.renderSearchPrimitive(ctx, value)
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
 		if !ok {
@@ -1985,9 +2045,102 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: CreateDelayedTrigger kind has unexpected concrete type")
 		}
 		return r.renderCreateDelayedTrigger(ctx, value)
+	case game.PrimitiveApplyContinuous:
+		value, ok := primitive.(game.ApplyContinuous)
+		if !ok {
+			return "", errors.New("render: internal error: ApplyContinuous kind has unexpected concrete type")
+		}
+		return r.renderApplyContinuousPrimitive(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	source, err := renderZone(value.Spec.SourceZone)
+	if err != nil {
+		return "", err
+	}
+	destination, err := renderZone(value.Spec.Destination)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	specFields := []string{
+		fmt.Sprintf("SourceZone: %s,", source),
+		fmt.Sprintf("Destination: %s,", destination),
+	}
+	if value.Spec.CardType.Exists {
+		cardType, err := cardTypeLiteral(value.Spec.CardType.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		ctx.need(importTypes)
+		specFields = append(specFields, fmt.Sprintf("CardType: opt.Val(%s),", cardType))
+	}
+	if value.Spec.Supertype.Exists {
+		supertype, err := supertypeLiteral(value.Spec.Supertype.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		ctx.need(importTypes)
+		specFields = append(specFields, fmt.Sprintf("Supertype: opt.Val(%s),", supertype))
+	}
+	if len(value.Spec.SubtypesAny) > 0 {
+		subtypes, err := renderSubtypeArguments(ctx, value.Spec.SubtypesAny)
+		if err != nil {
+			return "", err
+		}
+		specFields = append(specFields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", subtypes))
+	}
+	if value.Spec.Reveal {
+		specFields = append(specFields, "Reveal: true,")
+	}
+	if value.Spec.EntersTapped {
+		specFields = append(specFields, "EntersTapped: true,")
+	}
+	return structLit("game.Search", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Spec: %s,", structLit("game.SearchSpec", specFields)),
+		fmt.Sprintf("Amount: %s,", amount),
+	}), nil
+}
+
+func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.ApplyContinuous) (string, error) {
+	var fields []string
+	if value.Object.Exists {
+		obj, err := r.renderObjectReference(value.Object.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Object: opt.Val(%s),", obj))
+	}
+	effectLiterals := make([]string, 0, len(value.ContinuousEffects))
+	for i := range value.ContinuousEffects {
+		eff, err := r.renderContinuousEffect(ctx, &value.ContinuousEffects[i])
+		if err != nil {
+			return "", err
+		}
+		effectLiterals = append(effectLiterals, eff+",")
+	}
+	fields = append(fields, sliceField("ContinuousEffects", "game.ContinuousEffect", effectLiterals))
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
+	return structLit("game.ApplyContinuous", fields), nil
 }
 
 func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDelayedTrigger) (string, error) {
@@ -3226,6 +3379,8 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 			return "", err
 		}
 		return fmt.Sprintf("game.ObjectOwnerReference(%s)", rendered), nil
+	case game.PlayerReferenceEventPlayer:
+		return "game.EventPlayerReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
 	}
@@ -3846,6 +4001,10 @@ func renderStep(step game.Step) (string, error) {
 		return "game.StepBeginningOfCombat", nil
 	case game.StepEnd:
 		return "game.StepEnd", nil
+	case game.StepPrecombatMain:
+		return "game.StepPrecombatMain", nil
+	case game.StepPostcombatMain:
+		return "game.StepPostcombatMain", nil
 	default:
 		return "", fmt.Errorf("render: unsupported step %d", step)
 	}
@@ -3901,6 +4060,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 	switch event {
 	case game.EventDamageDealt:
 		return "game.EventDamageDealt", nil
+	case game.EventCardDrawn:
+		return "game.EventCardDrawn", nil
 	case game.EventAttackerBecameBlocked:
 		return "game.EventAttackerBecameBlocked", nil
 	case game.EventAttackerDeclared:
@@ -3949,10 +4110,16 @@ func renderDamageRecipient(recipient game.DamageRecipientKind) (string, error) {
 
 func renderDuration(duration game.EffectDuration) (string, error) {
 	switch duration {
+	case game.DurationPermanent:
+		return "game.DurationPermanent", nil
 	case game.DurationUntilEndOfTurn:
 		return "game.DurationUntilEndOfTurn", nil
 	case game.DurationUntilEndOfYourNextTurn:
 		return "game.DurationUntilEndOfYourNextTurn", nil
+	case game.DurationForAsLongAsSourceOnBattlefield:
+		return "game.DurationForAsLongAsSourceOnBattlefield", nil
+	case game.DurationForAsLongAsYouControlSource:
+		return "game.DurationForAsLongAsYouControlSource", nil
 	default:
 		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
 	}

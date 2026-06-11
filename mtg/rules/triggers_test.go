@@ -1354,6 +1354,64 @@ func TestBeginningOfCombatTriggerResolves(t *testing.T) {
 	}
 }
 
+func TestBeginningOfMainPhaseTriggerResolvesAtCorrectBoundary(t *testing.T) {
+	tests := []struct {
+		name       string
+		phase      game.Phase
+		wrongPhase game.Phase
+		step       game.Step
+	}{
+		{"precombat", game.PhasePrecombatMain, game.PhasePostcombatMain, game.StepPrecombatMain},
+		{"postcombat", game.PhasePostcombatMain, game.PhasePrecombatMain, game.StepPostcombatMain},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Main Phase Draw"}})
+			addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Should Stay in Library"}})
+			addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+				Event:      game.EventBeginningOfStep,
+				Controller: game.TriggerControllerYou,
+				Step:       test.step,
+			}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+			recorder := &mainPhaseStepRecorder{}
+			agents := [game.NumPlayers]PlayerAgent{game.Player1: recorder}
+			engine.runMainPhase(g, agents, test.wrongPhase, &TurnLog{})
+			if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+				t.Fatalf("hand size at wrong boundary = %d, want 0", got)
+			}
+			engine.runMainPhase(g, agents, test.phase, &TurnLog{})
+
+			if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+				t.Fatalf("hand size = %d, want one main-phase trigger draw", got)
+			}
+			if recorder.sawNonNoneStep || g.Turn.Step != game.StepNone {
+				t.Fatalf("main-phase priority observed step %v, want StepNone", g.Turn.Step)
+			}
+		})
+	}
+}
+
+func TestBeginningOfMainPhaseTriggerDoesNotFireOnOpponentTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Turn.ActivePlayer = game.Player2
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Should Not Draw"}})
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventBeginningOfStep,
+		Controller: game.TriggerControllerYou,
+		Step:       game.StepPrecombatMain,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	engine.runMainPhase(g, [game.NumPlayers]PlayerAgent{}, game.PhasePrecombatMain, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+		t.Fatalf("hand size = %d, want no draw on opponent's main phase", got)
+	}
+}
+
 func TestBeginningOfStepTriggerRequiresExplicitStep(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -1367,6 +1425,18 @@ func TestBeginningOfStepTriggerRequiresExplicitStep(t *testing.T) {
 	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
 		t.Fatalf("hand size = %d, want only turn draw without broad step trigger", got)
 	}
+}
+
+type mainPhaseStepRecorder struct {
+	sawNonNoneStep bool
+}
+
+func (r *mainPhaseStepRecorder) ChooseAction(obs PlayerObservation, legal []action.Action) action.Action {
+	if (obs.Turn.Phase == game.PhasePrecombatMain || obs.Turn.Phase == game.PhasePostcombatMain) &&
+		obs.Turn.Step != game.StepNone {
+		r.sawNonNoneStep = true
+	}
+	return action.Pass()
 }
 
 func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
@@ -1908,6 +1978,90 @@ func TestControlsPermanentInterveningIfCheckedWhenTriggeringAndResolving(t *test
 		t.Fatal("controls-artifact enter trigger was not put on stack")
 	}
 	artifact.PhasedOut = true
+	log := TurnLog{}
+	engine.resolveTopOfStack(g, &log)
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+		t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+	}
+}
+
+func TestStepControlsPermanentInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventBeginningOfStep,
+		Controller: game.TriggerControllerYou,
+		Step:       game.StepUpkeep,
+	}, nil, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("trigger source card not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.InterveningCondition = opt.Val(game.Condition{
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+		}),
+	})
+	event := game.Event{
+		Kind:       game.EventBeginningOfStep,
+		Controller: game.Player1,
+		Player:     game.Player1,
+		Step:       game.StepUpkeep,
+	}
+
+	emitEvent(g, event)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("step trigger fired without a controlled artifact")
+	}
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Relic",
+		Types: []types.Card{types.Artifact},
+	}})
+	emitEvent(g, event)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("step trigger did not fire with a controlled artifact")
+	}
+	artifact.PhasedOut = true
+	log := TurnLog{}
+	engine.resolveTopOfStack(g, &log)
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+		t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+	}
+}
+
+func TestStepLifeInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventBeginningOfStep,
+		Controller: game.TriggerControllerYou,
+		Step:       game.StepUpkeep,
+	}, nil, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("trigger source card not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.InterveningCondition = opt.Val(game.Condition{
+		ControllerLifeAtLeast: 10,
+	})
+	event := game.Event{
+		Kind:       game.EventBeginningOfStep,
+		Controller: game.Player1,
+		Player:     game.Player1,
+		Step:       game.StepUpkeep,
+	}
+
+	g.Players[game.Player1].Life = 9
+	emitEvent(g, event)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("step trigger fired below the life threshold")
+	}
+	g.Players[game.Player1].Life = 10
+	emitEvent(g, event)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("step trigger did not fire at the life threshold")
+	}
+	g.Players[game.Player1].Life = 9
 	log := TurnLog{}
 	engine.resolveTopOfStack(g, &log)
 	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
@@ -2715,5 +2869,287 @@ func TestSelfCounterAddedOneOrMoreCoalesces(t *testing.T) {
 	}
 	if got := g.Stack.Size(); got != 1 {
 		t.Fatalf("stack size = %d, want one coalesced trigger", got)
+	}
+}
+
+// TestNonSelfDiesTriggerControllerFilterFiresOnlyForCorrectController
+// exercises the TriggerControllerYou + ExcludeSelf + SubjectSelection path:
+// the trigger on Player1's creature must NOT fire when an opponent's creature
+// dies and MUST fire when a different Player1-controlled creature dies.
+func TestNonSelfDiesTriggerControllerFilterFiresOnlyForCorrectController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	// Source permanent: watches "another creature you control dies".
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		Controller:  game.TriggerControllerYou,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Opponent's creature dies — trigger must NOT fire.
+	opponentCreature := addCombatCreaturePermanent(g, game.Player2)
+	destroyPermanent(g, opponentCreature.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("non-self dies trigger fired for an opponent-controlled creature")
+	}
+
+	// Another Player1-controlled creature dies — trigger MUST fire once.
+	friendlyCreature := addCombatCreaturePermanent(g, game.Player1)
+	destroyPermanent(g, friendlyCreature.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("non-self dies trigger did not fire for another friendly creature")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+}
+
+// TestNonSelfDiesTriggerExcludeSelfDoesNotFireForSource verifies that a
+// non-self dies trigger with ExcludeSelf=true does not fire when the source
+// permanent itself dies.
+func TestNonSelfDiesTriggerExcludeSelfDoesNotFireForSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	destroyPermanent(g, source.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("ExcludeSelf non-self dies trigger fired for its own source permanent")
+	}
+}
+
+// TestNonSelfDiesTriggerSubjectSelectionCreatureDoesNotMatchNonCreature checks
+// that a trigger with SubjectSelection{RequiredTypes: [Creature]} does not fire
+// when a non-creature permanent dies.
+func TestNonSelfDiesTriggerSubjectSelectionCreatureDoesNotMatchNonCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventPermanentDied,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Add a non-creature (artifact) and destroy it.
+	artifact := addCombatPermanent(g, game.Player2, &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Some Artifact",
+			Types: []types.Card{types.Artifact},
+		},
+	})
+	destroyPermanent(g, artifact.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("creature SubjectSelection trigger fired when a non-creature permanent died")
+	}
+}
+
+// TestNonSelfDiesTriggerSubjectSelectionFiresForMatchingCreature verifies that
+// a SubjectSelection{RequiredTypes: [Creature]} trigger fires when any creature
+// dies — confirming the happy path with LKI-based type matching.
+func TestNonSelfDiesTriggerSubjectSelectionFiresForMatchingCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventPermanentDied,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	creature := addCombatCreaturePermanent(g, game.Player2)
+	destroyPermanent(g, creature.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("SubjectSelection creature trigger did not fire when a creature died")
+	}
+}
+
+func TestDrawTriggerYouFiresForControllerDraw(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDrawn,
+		Player: game.TriggerPlayerYou,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Controller draws → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger did not fire for controller draw")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want 1 after controller draw", got)
+	}
+
+	// Opponent draws → trigger must not fire
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player2})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger fired for opponent draw but should not")
+	}
+}
+
+func TestDrawTriggerOpponentFiresForOpponentDraw(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDrawn,
+		Player: game.TriggerPlayerOpponent,
+	}, []game.Instruction{{Primitive: game.LoseLife{Amount: game.Fixed(2), Player: game.EventPlayerReference()}}}, nil)
+
+	// Opponent draws → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player2})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger did not fire for opponent draw")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want 1 after opponent draw", got)
+	}
+	before := g.Players[game.Player2].Life
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player2].Life; got != before-2 {
+		t.Fatalf("opponent life = %d, want %d after event-player life loss", got, before-2)
+	}
+
+	// Controller draws → trigger must not fire
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger fired for controller draw but should not")
+	}
+}
+
+func TestSpellCastTriggerEventPlayerUsesCaster(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerOpponent,
+	}, []game.Instruction{{Primitive: game.LoseLife{Amount: game.Fixed(2), Player: game.EventPlayerReference()}}}, nil)
+
+	before := g.Players[game.Player2].Life
+	emitEvent(g, game.Event{Kind: game.EventSpellCast, Controller: game.Player2})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("spell-cast trigger did not fire for opponent")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player2].Life; got != before-2 {
+		t.Fatalf("caster life = %d, want %d after event-player life loss", got, before-2)
+	}
+}
+
+func TestDrawTriggerAnyPlayerFiresForBoth(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDrawn,
+		Player: game.TriggerPlayerAny,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Controller draws → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger did not fire for controller draw with TriggerPlayerAny")
+	}
+
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+
+	// Opponent draws → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player2})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger did not fire for opponent draw with TriggerPlayerAny")
+	}
+}
+
+func TestDiscardTriggerYouFiresForControllerDiscard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDiscarded,
+		Player: game.TriggerPlayerYou,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Controller discards → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard trigger did not fire for controller discard")
+	}
+
+	// Opponent discards → trigger must not fire
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player2})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard trigger fired for opponent discard but should not")
+	}
+}
+
+func TestDiscardTriggerOpponentFiresForOpponentDiscard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDiscarded,
+		Player: game.TriggerPlayerOpponent,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Opponent discards → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player2})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard trigger did not fire for opponent discard")
+	}
+
+	// Controller discards → trigger must not fire
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard trigger fired for controller discard but should not")
+	}
+}
+
+func TestDiscardOneOrMoreCoalesces(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:     game.EventCardDiscarded,
+		Player:    game.TriggerPlayerYou,
+		OneOrMore: true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Three discard events in one detection pass → triggers exactly once
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard one-or-more trigger did not fire")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want 1 coalesced trigger for three discards", got)
 	}
 }

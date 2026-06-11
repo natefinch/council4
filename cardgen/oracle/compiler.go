@@ -363,7 +363,16 @@ func targetPhraseEnd(tokens []Token, start int) int {
 		token := tokens[end]
 		if token.Kind == Comma || token.Kind == Period || token.Kind == Semicolon ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && isEffectVerb(tokens[end+2])) ||
-			(end > start && isEffectVerb(token)) {
+			(equalWord(token, "and") && end+1 < len(tokens) && isEffectVerb(tokens[end+1])) ||
+			(end > start && isEffectVerb(token)) ||
+			(equalWord(token, "until") && end+1 < len(tokens) && equalWord(tokens[end+1], "end")) ||
+			(equalWord(token, "until") && end+2 < len(tokens) && equalWord(tokens[end+1], "your") && equalWord(tokens[end+2], "next")) ||
+			// "for as long as" marks a source-tied duration, not part of the target.
+			(equalWord(token, "for") && end+3 < len(tokens) &&
+				equalWord(tokens[end+1], "as") && equalWord(tokens[end+2], "long") && equalWord(tokens[end+3], "as")) ||
+			// "as long as this" marks a source-on-battlefield duration.
+			(equalWord(token, "as") && end+3 < len(tokens) &&
+				equalWord(tokens[end+1], "long") && equalWord(tokens[end+2], "as") && equalWord(tokens[end+3], "this")) {
 			break
 		}
 		end++
@@ -443,6 +452,27 @@ func compileConditions(tokens []Token, triggered bool) []CompiledCondition {
 		if kind == ConditionUnknown {
 			continue
 		}
+		// Skip source-tied duration phrases that are captured by compileDuration.
+		// Only suppress "as long as you control" when it is preceded by "for"
+		// (making it "for as long as you control"), which distinguishes a duration
+		// suffix from a leading static-ability condition like "As long as you
+		// control a Mountain, this creature has...".
+		// Also skip "as long as this [type] remains on the battlefield" (but NOT
+		// other "as long as this [type] is [state]" forms which are real conditions).
+		if kind == ConditionAsLongAs {
+			if i > 0 && equalWord(tokens[i-1], "for") {
+				// "for as long as ..." — the "as long as" is a duration suffix.
+				end := conditionEnd(tokens, i)
+				i = end - 1
+				continue
+			}
+			if isSourceOnBattlefieldPhrase(tokens, i) {
+				// "as long as this [type] remains on the battlefield" — duration.
+				end := conditionEnd(tokens, i)
+				i = end - 1
+				continue
+			}
+		}
 		start := i
 		end := conditionEnd(tokens, i)
 		phrase := tokens[start:end]
@@ -478,7 +508,7 @@ func compileEffects(
 			effects = append(effects, effect)
 			continue
 		}
-		duration := compileDuration(tokens)
+		duration := compileDuration(tokens, cardName)
 		staticSubject, staticSubjectSpan, staticSubjectSubtype := compileStaticSubject(tokens)
 		effectIndices := effectTokenIndices(tokens, cardName)
 		for effectIndex, tokenIndex := range effectIndices {
@@ -764,6 +794,18 @@ func conditionKindAt(tokens []Token, index int) ConditionKind {
 	default:
 		return ConditionUnknown
 	}
+}
+
+// isSourceOnBattlefieldPhrase reports whether tokens starting at index represent
+// "as long as this [type] remains on the battlefield" or
+// "as long as this [type] is on the battlefield". This is specifically the
+// DurationForAsLongAsSourceOnBattlefield duration pattern — NOT other
+// "as long as this [type] is [state]" conditions (which are real conditions).
+func isSourceOnBattlefieldPhrase(tokens []Token, index int) bool {
+	words := normalizedWords(tokens[index:])
+	return containsSequence(words, "as", "long", "as", "this") &&
+		(containsSequence(words, "remains", "on", "the", "battlefield") ||
+			containsSequence(words, "is", "on", "the", "battlefield"))
 }
 
 func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect, bool) {
@@ -1363,6 +1405,9 @@ func effectKindAt(tokens []Token, index int) EffectKind {
 	if kind == EffectCounter && !counterIsVerb(tokens, index) {
 		return EffectUnknown
 	}
+	if kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control") {
+		return EffectGainControl
+	}
 	if kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike") {
 		return EffectUnknown
 	}
@@ -1519,7 +1564,7 @@ func isEffectVerb(token Token) bool {
 	return effectKind(token) != EffectUnknown
 }
 
-func compileDuration(tokens []Token) DurationKind {
+func compileDuration(tokens []Token, cardName string) DurationKind {
 	words := normalizedWords(tokens)
 	switch {
 	case containsSequence(words, "until", "end", "of", "turn"):
@@ -1530,9 +1575,26 @@ func compileDuration(tokens []Token) DurationKind {
 		return DurationThisCombat
 	case containsSequence(words, "this", "turn"):
 		return DurationThisTurn
-	default:
-		return DurationNone
 	}
+	// Source-tied control durations: "as long as this [type] remains on the
+	// battlefield" and "for as long as this [type] remains on the battlefield".
+	if containsSequence(words, "as", "long", "as", "this") &&
+		(containsSequence(words, "remains", "on", "the", "battlefield") ||
+			containsSequence(words, "is", "on", "the", "battlefield")) {
+		return DurationForAsLongAsSourceOnBattlefield
+	}
+	// "for as long as you control this [type]" — self-referential.
+	if containsSequence(words, "for", "as", "long", "as", "you", "control", "this") {
+		return DurationForAsLongAsYouControlSource
+	}
+	// "for as long as you control [CardName]" — explicit source name match.
+	if containsSequence(words, "for", "as", "long", "as", "you", "control") && cardName != "" {
+		nameWords := strings.Fields(strings.ToLower(cardName))
+		if len(nameWords) > 0 && containsSequence(words, append([]string{"for", "as", "long", "as", "you", "control"}, nameWords...)...) {
+			return DurationForAsLongAsYouControlSource
+		}
+	}
+	return DurationNone
 }
 
 var keywordNames = map[string]string{
@@ -1820,6 +1882,16 @@ func compileReferences(tokens []Token, cardName string) []CompiledReference {
 	if cardName != "" {
 		nameWords := strings.Fields(strings.ToLower(cardName))
 		for i := 0; i+len(nameWords) <= len(tokens); i++ {
+			// Skip the card name when it appears as the subject of a
+			// source-tied duration phrase like "for as long as you control
+			// [CardName]" — the duration is already captured by compileDuration.
+			if i >= 6 {
+				pre := normalizedWords(tokens[i-6 : i])
+				if containsSequence(pre, "for", "as", "long", "as", "you", "control") {
+					i += len(nameWords) - 1
+					continue
+				}
+			}
 			if possessiveNameAt(tokens, i, nameWords) {
 				phrase := tokens[i : i+len(nameWords)]
 				references = append(references, CompiledReference{
@@ -1854,6 +1926,15 @@ func compileReferences(tokens []Token, cardName string) []CompiledReference {
 			})
 			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "this") && objectWord(tokens[i+1]):
+			// Skip "this [object]" when it's the subject of a source-tied
+			// duration like "for as long as you control this [type]".
+			if i >= 6 {
+				pre := normalizedWords(tokens[i-6 : i])
+				if containsSequence(pre, "for", "as", "long", "as", "you", "control") {
+					i++
+					break
+				}
+			}
 			phrase := tokens[i : i+2]
 			references = append(references, CompiledReference{
 				Kind: ReferenceThisObject,

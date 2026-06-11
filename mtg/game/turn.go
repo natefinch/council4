@@ -39,10 +39,12 @@ func (p Phase) String() string {
 	}
 }
 
-// Step represents a step within a phase (CR 500–514).
+// Step identifies a turn step or a synthetic main-phase trigger boundary
+// (CR 500–514).
 type Step int
 
-// Step values identify turn steps in phase order.
+// Step values identify turn steps. Main-phase trigger markers are appended to
+// preserve the numeric values of the existing steps.
 const (
 	// StepNone indicates no specific step (used during main phases which
 	// have no sub-steps).
@@ -61,6 +63,11 @@ const (
 
 	StepEnd     // "At the beginning of the end step" triggers
 	StepCleanup // Discard to hand size, remove damage, "until end of turn" expires
+
+	// StepPrecombatMain marks the precombat-main boundary for trigger events.
+	StepPrecombatMain
+	// StepPostcombatMain marks the postcombat-main boundary for trigger events.
+	StepPostcombatMain
 )
 
 // String returns the step name.
@@ -90,6 +97,10 @@ func (s Step) String() string {
 		return "End Step"
 	case StepCleanup:
 		return "Cleanup"
+	case StepPrecombatMain:
+		return "Precombat Main"
+	case StepPostcombatMain:
+		return "Postcombat Main"
 	default:
 		return "Unknown"
 	}
@@ -107,7 +118,8 @@ type TurnState struct {
 	// Phase is the current phase of the turn.
 	Phase Phase
 
-	// Step is the current step within the phase. StepNone during main phases.
+	// Step is the current step within the phase. Main-phase boundary markers are
+	// transient; StepNone is used while players have priority in main phases.
 	Step Step
 
 	// PriorityPlayer is the player who currently has priority (the right
