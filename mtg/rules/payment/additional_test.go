@@ -4,9 +4,13 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestAdditionalCostSourceZone(t *testing.T) {
@@ -52,4 +56,73 @@ func TestAdditionalCostMatchesAnyCardSubtype(t *testing.T) {
 	if additionalCostMatchesCard(creature, additional) {
 		t.Fatal("Elf matched Forest-or-Mountain reveal cost")
 	}
+}
+
+func TestPreferredReturnPermanentsRejectsInvalidPreference(t *testing.T) {
+	permanent := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	state := fakePaymentState{battlefield: []*game.Permanent{permanent}}
+	additional := cost.Additional{Kind: cost.AdditionalReturnToHand, Amount: 1}
+	prefs := &Preferences{ReturnChoices: []id.ID{999}}
+
+	if chosen := preferredReturnPermanents(state, game.Player1, additional, 1, nil, prefs); chosen != nil {
+		t.Fatalf("chosen = %#v, want invalid preference rejected", chosen)
+	}
+}
+
+type fakePaymentState struct {
+	battlefield []*game.Permanent
+}
+
+func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
+	return &game.Player{ID: playerID, Life: 40}, true
+}
+
+func (s fakePaymentState) Battlefield() []*game.Permanent { return s.battlefield }
+
+func (fakePaymentState) EffectiveController(p *game.Permanent) game.PlayerID {
+	return p.Controller
+}
+
+func (fakePaymentState) PermanentCardDef(*game.Permanent) (*game.CardDef, bool) { return nil, false }
+
+func (s fakePaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent, bool) {
+	for _, permanent := range s.battlefield {
+		if permanent.ObjectID == objectID {
+			return permanent, true
+		}
+	}
+	return nil, false
+}
+
+func (fakePaymentState) CardInstance(id.ID) (*game.CardInstance, bool) { return nil, false }
+func (fakePaymentState) CardFace(*game.CardInstance, game.FaceIndex) *game.CardDef {
+	return nil
+}
+func (fakePaymentState) PermanentHasType(*game.Permanent, types.Card) bool       { return false }
+func (fakePaymentState) PermanentHasSupertype(*game.Permanent, types.Super) bool { return false }
+func (fakePaymentState) PermanentHasSubtype(*game.Permanent, types.Sub) bool     { return false }
+func (fakePaymentState) PermanentEffectiveColors(*game.Permanent) []color.Color  { return nil }
+func (fakePaymentState) PermanentEffectiveAbilities(*game.Permanent) []game.Ability {
+	return nil
+}
+func (fakePaymentState) ActivationConditionSatisfied(game.PlayerID, *game.Permanent, opt.V[game.Condition]) bool {
+	return true
+}
+func (fakePaymentState) ManaAbilityTimingAllowed(game.PlayerID, *game.Permanent, int, game.TimingRestriction) bool {
+	return true
+}
+func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.ID, zone.Type) []game.CostModifier {
+	return nil
+}
+func (fakePaymentState) SetTapped(*game.Permanent, bool)                                   {}
+func (fakePaymentState) RecordManaAbilityUse(*game.Permanent, int, game.TimingRestriction) {}
+func (fakePaymentState) RemoveCounters(*game.Permanent, counter.Kind, int) bool            { return false }
+func (fakePaymentState) LoseLife(game.PlayerID, int)                                       {}
+func (fakePaymentState) SetPlayerEnergyCounters(game.PlayerID, int) bool                   { return true }
+func (fakePaymentState) EmitZoneChange(game.Event)                                         {}
+func (fakePaymentState) EmitCardReveal(game.PlayerID, id.ID, id.ID, zone.Type)             {}
+func (fakePaymentState) MovePermanentToZone(*game.Permanent, zone.Type) bool               { return true }
+func (fakePaymentState) DiscardFromHand(game.PlayerID, id.ID) bool                         { return false }
+func (fakePaymentState) MoveCard(game.PlayerID, id.ID, zone.Type, zone.Type) bool {
+	return false
 }

@@ -1482,6 +1482,127 @@ func TestActivatedAbilityPaysEnergyCost(t *testing.T) {
 	}
 }
 
+func TestActivatedAbilityReturnsPermanentsToOwnersHandAsCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalReturnToHand,
+			Text:        "Return two Islands you control to their owner's hand",
+			Amount:      2,
+			SubtypesAny: cost.SubtypeSet{types.Island},
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	first := addBasicLandPermanent(g, game.Player1, types.Island)
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("return-cost ability was legal with too few Islands")
+	}
+	second := addBasicLandPermanent(g, game.Player1, types.Island)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("return-cost ability was not legal with enough Islands")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(return-cost ability) = false, want true")
+	}
+	if !g.Players[game.Player1].Hand.Contains(first.CardInstanceID) ||
+		!g.Players[game.Player1].Hand.Contains(second.CardInstanceID) {
+		t.Fatal("returned Islands did not move to owner's hand")
+	}
+}
+
+func TestActivatedAbilityReturnToHandCostRequiresTappedPermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalReturnToHand,
+			Text:               "Return a tapped creature you control to its owner's hand",
+			Amount:             1,
+			MatchPermanentType: true,
+			PermanentType:      types.Creature,
+			RequireTapped:      true,
+		}},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Test Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("return-cost ability was legal with only an untapped creature")
+	}
+	creature.Tapped = true
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(tapped return-cost ability) = false, want true")
+	}
+	if !g.Players[game.Player1].Hand.Contains(creature.CardInstanceID) {
+		t.Fatal("returned tapped creature did not move to owner's hand")
+	}
+}
+
+func TestActivatedAbilityReturnToHandCostMovesToOwnerHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Return Engine",
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{
+				Kind:               cost.AdditionalReturnToHand,
+				Text:               "Return a creature you control to its owner's hand",
+				Amount:             1,
+				MatchPermanentType: true,
+				PermanentType:      types.Creature,
+			}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.GainLife{
+					Amount: game.Fixed(1),
+					Player: game.ControllerReference(),
+				}}},
+			}.Ability(),
+		}},
+	}})
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Borrowed Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	creature.Owner = game.Player2
+	g.CardInstances[creature.CardInstanceID].Owner = game.Player2
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(source.ObjectID, 0, nil, 0)) {
+		t.Fatal("applyAction(owner-hand return-cost ability) = false, want true")
+	}
+	if !g.Players[game.Player2].Hand.Contains(creature.CardInstanceID) ||
+		g.Players[game.Player1].Hand.Contains(creature.CardInstanceID) {
+		t.Fatal("returned creature did not move to owner's hand")
+	}
+}
+
 func TestManaAbilityUntapsSourceAsCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

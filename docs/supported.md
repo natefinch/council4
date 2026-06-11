@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,702
+Cards supported: 3,736
 
 - +2 Mace
 - Aang, Air Nomad
@@ -107,6 +107,7 @@ Cards supported: 3,702
 - Angelic Wall
 - Angelo
 - Angler Drake
+- Angrath's Marauders
 - Ankle Biter
 - Annoyed Altisaur
 - Anodet Lurker
@@ -251,6 +252,7 @@ Cards supported: 3,702
 - Barrier of Bones
 - Barrin, Master Wizard
 - Bartizan Bats
+- Bashful Beastie
 - Basilisk Collar
 - Bassara Tower Archer
 - Bastion Enforcer
@@ -394,6 +396,7 @@ Cards supported: 3,702
 - Boros Cluestone
 - Boros Guildgate
 - Boros Locket
+- Boros Recruit
 - Boros Swiftblade
 - Botanical Plaza
 - Botanical Sanctum
@@ -415,6 +418,7 @@ Cards supported: 3,702
 - Brawler's Plate
 - Brazen Buccaneers
 - Brazen Scourge
+- Break Down the Door
 - Breakneck Berserker
 - Breath of Fire
 - Breath of Life
@@ -725,6 +729,7 @@ Cards supported: 3,702
 - Deathgaze Cockatrice
 - Deathless Ancient
 - Debilitating Injury
+- Debtors' Knell
 - Dedicated Martyr
 - Deduce
 - Deepwood Drummer
@@ -793,6 +798,7 @@ Cards supported: 3,702
 - Disentomb
 - Disfigure
 - Dismal Backwater
+- Dismember
 - Disorient
 - Dispersal Technician
 - Dispersing Orb
@@ -955,6 +961,7 @@ Cards supported: 3,702
 - Elvish Visionary
 - Elvish Warrior
 - Embereth Shieldbreaker // Battle Display
+- Embermaw Hellion
 - Embraal Bruiser
 - Emissary of Sunrise
 - Emperor's Vanguard
@@ -1071,6 +1078,7 @@ Cards supported: 3,702
 - Fish
 - Fish
 - Fists of the Anvil
+- Flame Javelin
 - Flame Lash
 - Flame Slash
 - Flameborn Hellion
@@ -1083,6 +1091,8 @@ Cards supported: 3,702
 - Flensermite
 - Flight
 - Flight of Equenauts
+- Floodbringer
+- Flooded Shoreline
 - Floodhound
 - Flowstone Infusion
 - Flowstone Overseer
@@ -1352,6 +1362,7 @@ Cards supported: 3,702
 - Guma
 - Gurmag Angler
 - Gurmag Swiftwing
+- Gut Shot
 - Gutless Ghoul
 - Gutter Skulk
 - Guul Draz Mucklord
@@ -1547,6 +1558,7 @@ Cards supported: 3,702
 - Ingenuity Engine
 - Inkling
 - Inkling
+- Innocuous Rat
 - Inordinate Rage
 - Insatiable Gorgers
 - Insatiable Harpy
@@ -1570,6 +1582,7 @@ Cards supported: 3,702
 - Inspiring Vantage
 - Instant Ramen
 - Into the Maw of Hell
+- Intrepid Rabbit
 - Invisible Stalker
 - Invoke the Firemind
 - Iroas's Champion
@@ -1922,6 +1935,7 @@ Cards supported: 3,702
 - Meteoric Mace
 - Meticulous Archive
 - Midnight Assassin
+- Midnight Scavengers
 - Might of Oaks
 - Might of the Masses
 - Migrating Ketradon
@@ -1935,6 +1949,7 @@ Cards supported: 3,702
 - Minecart Daredevil // Ride the Rails
 - Mineshaft Spider
 - Minion
+- Minister of Impediments
 - Minotaur
 - Minotaur Abomination
 - Minotaur Aggressor
@@ -2010,6 +2025,7 @@ Cards supported: 3,702
 - Murmuring Phantasm
 - Muse Drake
 - Mutagen
+- Mutagenic Growth
 - Mutant
 - Mutant
 - Mutant Town
@@ -2121,6 +2137,7 @@ Cards supported: 3,702
 - Obelisk of Grixis
 - Obelisk of Jund
 - Obelisk of Naya
+- Oboro Breezecaller
 - Obsianus Golem
 - Obsidian Giant
 - Obyra's Attendants // Desperate Parry
@@ -2280,6 +2297,7 @@ Cards supported: 3,702
 - Pirate
 - Pirate
 - Pitchburn Devils
+- Pith Driller
 - Pitiless Gorgon
 - Plague Myr
 - Plague Stinger
@@ -2304,6 +2322,7 @@ Cards supported: 3,702
 - Polluted Dead
 - Polluted Mire
 - Pond Prophet
+- Porcelain Legionnaire
 - Port Town
 - Potion of Healing
 - Pounce
@@ -2361,6 +2380,7 @@ Cards supported: 3,702
 - Quick Study
 - Quiet Purity
 - Quilled Slagwurm
+- Quirion Ranger
 - Rabanastre, Royal City
 - Rabbit
 - Rabid Rats
@@ -2460,6 +2480,7 @@ Cards supported: 3,702
 - Reviving Melody
 - Revolutionist
 - Reya Dawnbringer
+- Rhet-Tomb Mystic
 - Rhino
 - Rhino Warrior
 - Rhox Bodyguard
@@ -2482,6 +2503,7 @@ Cards supported: 3,702
 - Riot Devils
 - Riot Gear
 - Riot Piker
+- Riot Spikes
 - Rip-Clan Crasher
 - Ripchain Razorkin
 - Ripscale Predator
@@ -2645,6 +2667,7 @@ Cards supported: 3,702
 - Scroll Thief
 - Scrounger of Souls
 - Scrubland
+- Scryb Ranger
 - Scryb Sprites
 - Scuzzback Marauders
 - Scuzzback Scrapper
@@ -2833,6 +2856,7 @@ Cards supported: 3,702
 - Skyspear Cavalry
 - Skyswirl Harrier
 - Slagwoods Bridge
+- Slash Panther
 - Slash of Talons
 - Slimebind
 - Slinking Skirge
@@ -2890,6 +2914,8 @@ Cards supported: 3,702
 - Somnomancer
 - Sootfeather Flock
 - Soothing Balm
+- Soratami Mindsweeper
+- Soratami Mirror-Mage
 - Soul Shepherd
 - Soul Summons
 - Soul Warden
@@ -2906,6 +2932,7 @@ Cards supported: 3,702
 - Spark Spray
 - Sparring Construct
 - Sparring Mummy
+- Spatial Contortion
 - Spawn
 - Spectacle Summit
 - Spectator Seating
@@ -2935,6 +2962,7 @@ Cards supported: 3,702
 - Spined Basher
 - Spined Karok
 - Spined Megalodon
+- Spined Thopter
 - Spined Wurm
 - Spineless Thug
 - Spinning Wheel
@@ -2996,6 +3024,7 @@ Cards supported: 3,702
 - Steadfast Sentry
 - Stealer of Secrets
 - Steam Vents
+- Steampath Charger
 - Steel Wall
 - Steeple Roc
 - Sterling Hound
@@ -3125,6 +3154,7 @@ Cards supported: 3,702
 - Tattermunge Maniac
 - Tazeem Roilmage
 - Teacher's Pest
+- Tectonic Reformation
 - Teddy Bear
 - Teetering Peaks
 - Tel-Jilad Justice
@@ -3197,6 +3227,7 @@ Cards supported: 3,702
 - Thunderhead Squadron
 - Thundering Falls
 - Thundering Giant
+- Thundering Tanadon
 - Thunderscape Apprentice
 - Tidal Kraken
 - Tidehollow Strix
@@ -3349,6 +3380,7 @@ Cards supported: 3,702
 - Universal Solvent
 - University Campus
 - Unmake
+- Unsettling Twins
 - Unspeakable Symbol
 - Unstable Obelisk
 - Unsubtle Mockery
@@ -3395,6 +3427,7 @@ Cards supported: 3,702
 - Vassal Soul
 - Vastwood Fortification // Vastwood Thicket
 - Vastwood Gorger
+- Vault Skirge
 - Vault of Champions
 - Vault of Whispers
 - Vecna
@@ -3605,6 +3638,7 @@ Cards supported: 3,702
 - Winterflame
 - Wipe Clean
 - Wirewood Elf
+- Wirewood Symbiote
 - Wishcoin Crab
 - Wistful Selkie
 - Witch's Familiar
