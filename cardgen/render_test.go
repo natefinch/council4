@@ -262,6 +262,12 @@ func TestRenderIssue210AdditionalCosts(t *testing.T) {
 			wants:      []string{"cost.AdditionalPutCounter", `Text: "Put a verse counter on Test Bard"`, "Amount: 1", "CounterKind: counter.Verse"},
 			wantImport: importCounter,
 		},
+		{
+			name:       "collect evidence",
+			additional: cost.Additional{Kind: cost.AdditionalCollectEvidence, Text: "Collect evidence 4", Amount: 4, Source: zone.Graveyard},
+			wants:      []string{"cost.AdditionalCollectEvidence", `Text: "Collect evidence 4"`, "Amount: 4", "Source: zone.Graveyard"},
+			wantImport: importZone,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

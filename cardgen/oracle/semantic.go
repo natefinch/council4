@@ -79,6 +79,7 @@ const (
 	CostExert
 	CostMill
 	CostPutCounter
+	CostCollectEvidence
 	CostLoyalty
 )
 
