@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestLegalActionsIncludesCyclingFromHand(t *testing.T) {
@@ -259,6 +260,145 @@ func TestHandCyclingGrantAddsDifferentCostToPrintedCycling(t *testing.T) {
 	}
 }
 
+func TestCyclingCostReductionPreservesColoredSymbols(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCyclingCostModifierPermanent(g, game.Player1, game.CostModifier{
+		Kind:             game.CostModifierAbility,
+		AbilityKeyword:   game.Cycling,
+		GenericReduction: 2,
+	})
+	cyclingID := addCardToHand(g, game.Player1, typedCyclingCard(types.Creature, cost.Mana{cost.O(2), cost.U}))
+	island := addBasicLandPermanent(g, game.Player1, types.Island)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("cycling was not legal with reduced {2}{U} cost and one Island")
+	}
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want reduced Cycling to be payable")
+	}
+	if !island.Tapped {
+		t.Fatal("reduced Cycling did not still require the colored mana symbol")
+	}
+	if forest.Tapped {
+		t.Fatal("reduced Cycling paid generic mana after the generic portion was reduced away")
+	}
+}
+
+func TestCyclingCostReductionDoesNotPayUnpayableColoredSymbols(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCyclingCostModifierPermanent(g, game.Player1, game.CostModifier{
+		Kind:             game.CostModifierAbility,
+		AbilityKeyword:   game.Cycling,
+		GenericReduction: 2,
+	})
+	cyclingID := addCardToHand(g, game.Player1, typedCyclingCard(types.Creature, cost.Mana{cost.O(2), cost.U}))
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	if actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("cycling was legal even though the reduced cost still required {U}")
+	}
+}
+
+func TestCyclingCostReplacementPaysZeroRegardlessOfPrintedCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCyclingCostModifierPermanent(g, game.Player1, game.CostModifier{
+		Kind:           game.CostModifierAbility,
+		AbilityKeyword: game.Cycling,
+		SetManaCost:    opt.Val(cost.Mana{}),
+	})
+	cyclingID := addCardToHand(g, game.Player1, typedCyclingCard(types.Creature, cost.Mana{cost.O(2), cost.U}))
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("cycling was not legal with zero replacement cost")
+	}
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want zero replacement Cycling to be payable")
+	}
+}
+
+func TestCyclingCostReplacementStillAppliesCostIncreases(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCyclingCostModifierPermanent(g, game.Player1, game.CostModifier{
+		Kind:           game.CostModifierAbility,
+		AbilityKeyword: game.Cycling,
+		SetManaCost:    opt.Val(cost.Mana{}),
+	})
+	addCyclingCostModifierPermanent(g, game.Player1, game.CostModifier{
+		Kind:            game.CostModifierAbility,
+		AbilityKeyword:  game.Cycling,
+		GenericIncrease: 1,
+	})
+	cyclingID := addCardToHand(g, game.Player1, typedCyclingCard(types.Creature, cost.Mana{cost.O(2), cost.U}))
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("cycling was not legal with replacement cost plus {1} increase")
+	}
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want replacement plus increase to be payable")
+	}
+	if !forest.Tapped {
+		t.Fatal("replacement cost ignored additional generic increase")
+	}
+}
+
+func TestCyclingCostReplacementCanRequireHandSize(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCyclingCostModifierPermanentWithCondition(g, game.Player1, game.CostModifier{
+		Kind:           game.CostModifierAbility,
+		AbilityKeyword: game.Cycling,
+		SetManaCost:    opt.Val(cost.Mana{}),
+	}, opt.Val(game.Condition{ControllerHandSizeAtLeast: 7}))
+	for range 5 {
+		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Filler"}})
+	}
+	cyclingID := addCardToHand(g, game.Player1, typedCyclingCard(types.Creature, cost.Mana{cost.O(2), cost.U}))
+	g.Turn.PriorityPlayer = game.Player1
+
+	if actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("cycling was legal before hand-size condition was satisfied")
+	}
+
+	addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Seventh Card"}})
+	if !actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(cyclingID, 0, nil, 0)) {
+		t.Fatal("cycling was not legal after hand-size condition was satisfied")
+	}
+}
+
+func TestFirstCycleEachTurnCostReplacementExpiresAfterCycling(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCyclingCostModifierPermanent(g, game.Player1, game.CostModifier{
+		Kind:               game.CostModifierAbility,
+		AbilityKeyword:     game.Cycling,
+		SetManaCost:        opt.Val(cost.Mana{}),
+		FirstCycleEachTurn: true,
+	})
+	firstID := addCardToHand(g, game.Player1, cyclingCard())
+	secondID := addCardToHand(g, game.Player1, cyclingCard())
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(firstID, 0, nil, 0)) {
+		t.Fatal("first Cycling activation was not legal for zero")
+	}
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(firstID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want first Cycling activation to be free")
+	}
+	if actionsContain(engine.legalActions(g, game.Player1), action.ActivateAbility(secondID, 0, nil, 0)) {
+		t.Fatal("second Cycling activation was still free in the same turn")
+	}
+}
+
 func cyclingCard() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cycling Test Card",
 		ActivatedAbilities: []game.ActivatedAbility{
@@ -299,6 +439,38 @@ func addHandCyclingGrantPermanent(g *game.Game, controller game.PlayerID, select
 					AffectedPlayer: game.PlayerYou,
 					CardSelection:  selection,
 					GrantedAbility: game.CyclingActivatedAbility(manaCost),
+				}},
+			}},
+		}},
+		Owner: controller,
+	}
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: cardID,
+		Owner:          controller,
+		Controller:     controller,
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
+}
+
+func addCyclingCostModifierPermanent(g *game.Game, controller game.PlayerID, modifier game.CostModifier) *game.Permanent {
+	return addCyclingCostModifierPermanentWithCondition(g, controller, modifier, opt.V[game.Condition]{})
+}
+
+func addCyclingCostModifierPermanentWithCondition(g *game.Game, controller game.PlayerID, modifier game.CostModifier, condition opt.V[game.Condition]) *game.Permanent {
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID: cardID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Cycling Modifier",
+			Types: []types.Card{types.Enchantment},
+			StaticAbilities: []game.StaticAbility{{
+				Condition: condition,
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectCostModifier,
+					AffectedPlayer: game.PlayerYou,
+					CostModifier:   modifier,
 				}},
 			}},
 		}},

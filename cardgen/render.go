@@ -696,15 +696,84 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("GrantedAbility: %s,", ability))
 	}
+	if effect.Kind == game.RuleEffectCostModifier {
+		modifier, err := r.renderCostModifier(ctx, effect.CostModifier)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("CostModifier: %s,", modifier))
+	}
 	return structLit("game.RuleEffect", fields), nil
 }
 
 func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 	switch kind {
+	case game.RuleEffectCostModifier:
+		return "game.RuleEffectCostModifier", nil
 	case game.RuleEffectGrantHandCardAbility:
 		return "game.RuleEffectGrantHandCardAbility", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
+	}
+}
+
+func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier) (string, error) {
+	kind, err := renderCostModifierKind(modifier.Kind)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
+	if modifier.MatchCardType {
+		cardType, err := cardTypeLiteral(modifier.CardType)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, "MatchCardType: true,", fmt.Sprintf("CardType: %s,", cardType))
+	}
+	if modifier.AbilityKeyword != game.KeywordNone {
+		keyword, err := renderKeyword(modifier.AbilityKeyword)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AbilityKeyword: %s,", keyword))
+	}
+	if modifier.GenericIncrease != 0 {
+		fields = append(fields, fmt.Sprintf("GenericIncrease: %d,", modifier.GenericIncrease))
+	}
+	if modifier.GenericReduction != 0 {
+		fields = append(fields, fmt.Sprintf("GenericReduction: %d,", modifier.GenericReduction))
+	}
+	if modifier.SetGeneric.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("SetGeneric: opt.Val(%d),", modifier.SetGeneric.Val))
+	}
+	if modifier.SetManaCost.Exists {
+		ctx.need(importOpt)
+		manaCost, err := r.renderManaCost(ctx, modifier.SetManaCost.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SetManaCost: opt.Val(%s),", manaCost))
+	}
+	if modifier.MinimumGeneric != 0 {
+		fields = append(fields, fmt.Sprintf("MinimumGeneric: %d,", modifier.MinimumGeneric))
+	}
+	if modifier.FirstCycleEachTurn {
+		fields = append(fields, "FirstCycleEachTurn: true,")
+	}
+	return structLit("game.CostModifier", fields), nil
+}
+
+func renderCostModifierKind(kind game.CostModifierKind) (string, error) {
+	switch kind {
+	case game.CostModifierSpell:
+		return "game.CostModifierSpell", nil
+	case game.CostModifierAbility:
+		return "game.CostModifierAbility", nil
+	case game.CostModifierAttack:
+		return "game.CostModifierAttack", nil
+	default:
+		return "", fmt.Errorf("render: unsupported cost modifier kind %d", kind)
 	}
 }
 
@@ -1385,6 +1454,7 @@ func (r Renderer) renderStaticAbilityCondition(ctx *renderCtx, cond *game.Condit
 
 func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.Condition, context string) (string, error) {
 	if cond.ControllerLifeAtLeast < 0 ||
+		cond.ControllerHandSizeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
 		cond.OpponentCountAtLeast < 0 {
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
@@ -1426,6 +1496,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.ControllerLifeAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerHandSizeAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerHandSizeAtLeast: %d,", cond.ControllerHandSizeAtLeast))
 		hasPredicate = true
 	}
 	if cond.AnyPlayerLifeAtMost > 0 {

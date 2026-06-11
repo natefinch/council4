@@ -33,8 +33,9 @@ type Condition struct {
 	// ControllerLifeAtLeast requires the context controller's current life total
 	// to meet the threshold. AnyPlayerLifeAtMost checks every non-eliminated
 	// player. Zero values disable these predicates.
-	ControllerLifeAtLeast int
-	AnyPlayerLifeAtMost   int
+	ControllerLifeAtLeast     int
+	ControllerHandSizeAtLeast int
+	AnyPlayerLifeAtMost       int
 
 	// OpponentCountAtLeast requires this many non-eliminated opponents.
 	OpponentCountAtLeast int
@@ -98,6 +99,7 @@ func (c *Condition) Empty() bool {
 	return c.ControllerControls.Empty() &&
 		!c.ControlsMatching.Exists &&
 		c.ControllerLifeAtLeast == 0 &&
+		c.ControllerHandSizeAtLeast == 0 &&
 		c.AnyPlayerLifeAtMost == 0 &&
 		c.OpponentCountAtLeast == 0 &&
 		!c.AnyOpponentControls.Exists &&

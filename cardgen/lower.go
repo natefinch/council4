@@ -252,6 +252,20 @@ func lowerExecutableAbility(
 			sourceSpans: handCyclingGrantSourceSpans(ability, syntax),
 		}, nil
 	}
+	if costModifier, ok, diagnostic := lowerCyclingCostModifier(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: costModifier}},
+			consumed: semanticConsumption{
+				effects:    len(ability.Effects),
+				conditions: len(ability.Conditions),
+				keywords:   len(ability.Keywords),
+			},
+			sourceSpans: []oracle.Span{ability.Span},
+		}, nil
+	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
 		return lowered, diagnostic
 	}
@@ -1980,6 +1994,48 @@ func lowerHandCyclingGrant(
 			GrantedAbility: game.CyclingActivatedAbility(manaCost),
 		}},
 	}, true, nil
+}
+
+func lowerCyclingCostModifier(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if ability.Kind != oracle.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Targets) != 0 ||
+		len(ability.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.StaticAbility{}, false, nil
+	}
+	text := abilityTextWithoutReminders(syntax)
+	baseModifier := game.CostModifier{
+		Kind:           game.CostModifierAbility,
+		AbilityKeyword: game.Cycling,
+	}
+	body := game.StaticAbility{Text: text}
+	effect := game.RuleEffect{
+		Kind:           game.RuleEffectCostModifier,
+		AffectedPlayer: game.PlayerYou,
+		CostModifier:   baseModifier,
+	}
+	switch text {
+	case "Cycling abilities you activate cost up to {2} less to activate.":
+		effect.CostModifier.GenericReduction = 2
+	case "As long as you have seven or more cards in hand, you may pay {0} rather than pay cycling costs.":
+		body.Condition = opt.Val(game.Condition{
+			Text:                      "As long as you have seven or more cards in hand",
+			ControllerHandSizeAtLeast: 7,
+		})
+		effect.CostModifier.SetManaCost = opt.Val(cost.Mana{})
+	case "You may pay {0} rather than pay the cycling cost of the first card you cycle each turn.":
+		effect.CostModifier.SetManaCost = opt.Val(cost.Mana{})
+		effect.CostModifier.FirstCycleEachTurn = true
+	default:
+		return game.StaticAbility{}, false, nil
+	}
+	body.RuleEffects = []game.RuleEffect{effect}
+	return body, true, nil
 }
 
 func handCyclingGrantSelection(text, parameter string) (game.Selection, bool) {
