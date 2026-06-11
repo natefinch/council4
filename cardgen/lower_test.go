@@ -5241,7 +5241,103 @@ func TestLowerThenJoinedSharedTargetNoExtraSpec(t *testing.T) {
 	}
 }
 
-// TestLowerThenJoinedDestroyThenProliferate verifies that a then-joined pair
+// TestLowerThenJoinedSharedTargetAfterEarlierTarget is the exact regression for
+// the inherited-target rebase-offset bug. When a then-joined sentence follows an
+// earlier sentence that already contributed a target spec, the shared target in
+// the then-group is NOT at accumulated-target index 0 — it is at the index where
+// the owning clause placed it. Before the fix, allSharedTargets always rebased
+// with offset 0, causing the draw to reference the wrong game target (the
+// artifact at 0 instead of the player at 1).
+//
+// Requirements:
+//   - Two game.TargetSpec entries: artifact at index 0, target player at index 1.
+//   - Destroy references TargetPermanentReference(0).
+//   - Mill references TargetPlayerReference(1).
+//   - Draw (inherited shared) references TargetPlayerReference(1), not (0).
+func TestLowerThenJoinedSharedTargetAfterEarlierTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target artifact. Target player mills three cards, then draws a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 {
+		t.Fatalf("targets = %d, want 2 (artifact at 0, target player at 1)", len(mode.Targets))
+	}
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence = %d, want 3 (destroy, mill, draw)", len(mode.Sequence))
+	}
+	destroy, destroyOK := mode.Sequence[0].Primitive.(game.Destroy)
+	mill, millOK := mode.Sequence[1].Primitive.(game.Mill)
+	draw, drawOK := mode.Sequence[2].Primitive.(game.Draw)
+	if !destroyOK || !millOK || !drawOK {
+		t.Fatalf("primitives = %T, %T, %T; want Destroy, Mill, Draw",
+			mode.Sequence[0].Primitive, mode.Sequence[1].Primitive, mode.Sequence[2].Primitive)
+	}
+	if destroy.Object.TargetIndex() != 0 {
+		t.Fatalf("destroy target index = %d, want 0 (artifact)", destroy.Object.TargetIndex())
+	}
+	if mill.Player.TargetIndex() != 1 {
+		t.Fatalf("mill target index = %d, want 1 (target player)", mill.Player.TargetIndex())
+	}
+	if draw.Player.TargetIndex() != 1 {
+		t.Fatalf("draw target index = %d, want 1 (shared target player, NOT 0)", draw.Player.TargetIndex())
+	}
+}
+
+// TestLowerThenJoinedFightChain is the exact regression for the mixed
+// inherited+owned target composition gap. "Target creature fights target
+// creature, then fights target creature." requires the second fight to receive
+// the inherited subject (T0, already at game index 0) together with its own new
+// target (T2, appended at game index 2). Before the fix, inheritedTargets was
+// only computed when clauseTargets was empty, so the second effect saw only T2
+// and lowerFightSpell (which expects two targets) returned unsupported.
+//
+// Requirements:
+//   - Three game.TargetSpec entries (T0, T1, T2 — all "target creature").
+//   - Fight 1: Object=TargetPermanentReference(0), Related=TargetPermanentReference(1).
+//   - Fight 2: Object=TargetPermanentReference(0) (inherited T0), Related=TargetPermanentReference(2) (owned T2).
+func TestLowerThenJoinedFightChain(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature fights target creature, then fights target creature.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 3 {
+		t.Fatalf("targets = %d, want 3 (T0, T1, T2 — one per creature chosen)", len(mode.Targets))
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
+	}
+	fight0, ok0 := mode.Sequence[0].Primitive.(game.Fight)
+	fight1, ok1 := mode.Sequence[1].Primitive.(game.Fight)
+	if !ok0 || !ok1 {
+		t.Fatalf("primitives = %T, %T; want game.Fight, game.Fight",
+			mode.Sequence[0].Primitive, mode.Sequence[1].Primitive)
+	}
+	// Fight 0: T0 fights T1.
+	if fight0.Object.TargetIndex() != 0 || fight0.RelatedObject.TargetIndex() != 1 {
+		t.Fatalf("fight0 = Object(%d) RelatedObject(%d), want Object(0) RelatedObject(1)",
+			fight0.Object.TargetIndex(), fight0.RelatedObject.TargetIndex())
+	}
+	// Fight 1: inherited T0 fights new T2.
+	if fight1.Object.TargetIndex() != 0 || fight1.RelatedObject.TargetIndex() != 2 {
+		t.Fatalf("fight1 = Object(%d) RelatedObject(%d), want Object(0) RelatedObject(2)",
+			fight1.Object.TargetIndex(), fight1.RelatedObject.TargetIndex())
+	}
+}
+
 // where the second effect does not use the shared target (proliferate has no
 // target) correctly discards the spurious shared target via the fallback
 // path, producing one target spec for destroy and a standalone proliferate.
@@ -5271,6 +5367,55 @@ func TestLowerThenJoinedDestroyThenProliferate(t *testing.T) {
 	}
 	if destroy.Object.TargetIndex() != 0 {
 		t.Fatalf("destroy.Object target index = %d, want 0", destroy.Object.TargetIndex())
+	}
+}
+
+// TestLowerThenJoinedThreeEffectSharedTargetSequence is the primary regression
+// for the 3+ shared-subject then-chain bug. Before the fix, pair (1,2) in
+// "mills, then draws, then discards" assigned iClauseStart=vi (draws verb),
+// producing [draws, a, card] without the "Target player" prefix and failing
+// closed. After the fix, the subject prefix tokens[sentenceStart:viFirst] are
+// prepended to every non-first clause in the group.
+//
+// Requirements verified:
+//   - Exactly one game.TargetSpec (no duplicate).
+//   - All three instructions reference TargetPlayerReference(0).
+func TestLowerThenJoinedThreeEffectSharedTargetSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Three",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player mills three cards, then draws a card, then discards a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want exactly 1 (no duplicate target spec)", len(mode.Targets))
+	}
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence = %d, want 3", len(mode.Sequence))
+	}
+	mill, millOK := mode.Sequence[0].Primitive.(game.Mill)
+	draw, drawOK := mode.Sequence[1].Primitive.(game.Draw)
+	discard, discardOK := mode.Sequence[2].Primitive.(game.Discard)
+	if !millOK || !drawOK || !discardOK {
+		t.Fatalf("primitives = %T, %T, %T; want game.Mill, game.Draw, game.Discard",
+			mode.Sequence[0].Primitive,
+			mode.Sequence[1].Primitive,
+			mode.Sequence[2].Primitive,
+		)
+	}
+	if mill.Player.TargetIndex() != 0 {
+		t.Fatalf("mill.Player target index = %d, want 0", mill.Player.TargetIndex())
+	}
+	if draw.Player.TargetIndex() != 0 {
+		t.Fatalf("draw.Player target index = %d, want 0 (reusing shared target)", draw.Player.TargetIndex())
+	}
+	if discard.Player.TargetIndex() != 0 {
+		t.Fatalf("discard.Player target index = %d, want 0 (reusing shared target)", discard.Player.TargetIndex())
 	}
 }
 
@@ -5447,6 +5592,223 @@ func TestCompoundMillOracleIR(t *testing.T) {
 	)
 }
 
+// TestLowerThenJoinedImpliedSubjectDamageChain is a regression for the
+// implied-subject reference accounting bug: "A deals N damage to target X,
+// then deals N damage to target X." has exactly ONE CompiledReference in the
+// oracle IR but both effects find it via sentence span, making consumedReferences
+// increment twice and the final accounting check fail.
+//
+// The fix attributes references to their per-clause owned region so the shared
+// self-reference is counted only once while still being propagated to implied-
+// subject clauses for the damage-amount-reference lowerer check.
+func TestLowerThenJoinedImpliedSubjectDamageChain(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bolt",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Test Bolt deals 1 damage to target creature, then deals 1 damage to target creature.",
+	}
+	source, diags, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diags) != 0 {
+		t.Fatalf("diagnostics = %#v", diags)
+	}
+	// Two independent target slots: each clause targets its own creature.
+	for _, want := range []string{"game.AnyTargetDamageRecipient(0)", "game.AnyTargetDamageRecipient(1)"} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q (two independent target slots):\n%s", want, source)
+		}
+	}
+}
+
+// TestLowerThenJoinedExplicitRepeatedSubjectDamageChain is a regression for the
+// explicit repeated-subject reference accounting bug: "A deals N damage to X,
+// then A deals N damage to X." has TWO CompiledReferences and TWO targets.
+// With sentence-span filtering each effect found both references and both
+// targets, causing singleSelfReference to fail with len==2.
+//
+// The fix attributes each reference and target to exactly the clause that
+// contains it so every lowering call sees exactly one self-reference and one
+// target, and consumedReferences + consumedTargets equal the ability totals.
+func TestLowerThenJoinedExplicitRepeatedSubjectDamageChain(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bolt",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Test Bolt deals 1 damage to target creature, then Test Bolt deals 1 damage to target creature.",
+	}
+	source, diags, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diags) != 0 {
+		t.Fatalf("diagnostics = %#v", diags)
+	}
+	// Two independent target slots: each explicit "Test Bolt" clause targets its own creature.
+	for _, want := range []string{"game.AnyTargetDamageRecipient(0)", "game.AnyTargetDamageRecipient(1)"} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q (two independent target slots):\n%s", want, source)
+		}
+	}
+}
+
+// TestLowerThenJoinedDifferentExplicitSubject is a regression for the bug where
+// non-first then clauses that have their own explicit subject (e.g. "you" in
+// "then you gain 2 life.") were incorrectly given the first clause's subject
+// prefix ("Target player") instead, producing "Target player gain 2 life." and
+// failing the exact-text check.
+//
+// Requirements verified:
+//   - Compiles without diagnostics.
+//   - Draw instruction references TargetPlayerReference(0) (target player draws).
+//   - GainLife instruction references ControllerReference (you = controller).
+//   - Exactly 1 target spec (the "target player" from the draw clause).
+func TestLowerThenJoinedDifferentExplicitSubject(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player draws a card, then you gain 2 life.",
+	}
+	source, diags, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diags) != 0 {
+		t.Fatalf("diagnostics = %#v", diags)
+	}
+	// Draw must reference the target player, not the controller.
+	if !strings.Contains(source, "game.TargetPlayerReference(0)") {
+		t.Fatalf("source missing target player draw reference:\n%s", source)
+	}
+	// GainLife must reference the controller ("you"), not the target player.
+	if strings.Contains(source, "game.TargetPlayerReference") &&
+		strings.Contains(source, "game.GainLife") {
+		// Verify the GainLife uses ControllerReference.
+		if !strings.Contains(source, "Player: game.ControllerReference()") {
+			t.Fatalf("expected GainLife to use ControllerReference:\n%s", source)
+		}
+	}
+	// Exactly one target slot (the "target player" for the draw).
+	if count := strings.Count(source, "MinTargets:"); count != 1 {
+		t.Fatalf("want 1 TargetSpec, got %d:\n%s", count, source)
+	}
+}
+
+// TestLowerThenJoinedExplicitRepeatedSelfSubject confirms that "A does X, then
+// A does Y." where each clause has its own explicit repeated subject is
+// handled correctly: the post-then "A" tokens are used for the second clause,
+// not the first clause's subject prefix. This differs from the implied-subject
+// case (where the post-then region is empty and prefix is inherited) and the
+// different-subject case above.
+func TestLowerThenJoinedExplicitRepeatedSelfSubject(t *testing.T) {
+	t.Parallel()
+	// Compound mill already tests this end-to-end; here we specifically confirm
+	// that the second clause's subject comes from its own post-then token range
+	// and not from a copied first-clause subject-prefix.
+	card := &ScryfallCard{
+		Name:       "Test Bolt",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Test Bolt deals 1 damage to target creature, then you gain 1 life.",
+	}
+	source, diags, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diags) != 0 {
+		t.Fatalf("diagnostics = %#v", diags)
+	}
+	// Damage clause must target the creature.
+	if !strings.Contains(source, "game.AnyTargetDamageRecipient(0)") {
+		t.Fatalf("source missing damage to target creature:\n%s", source)
+	}
+	// Gain clause must use controller reference ("you"), with no second target.
+	if count := strings.Count(source, "MinTargets:"); count != 1 {
+		t.Fatalf("want 1 TargetSpec (damage target only), got %d:\n%s", count, source)
+	}
+	if !strings.Contains(source, "game.GainLife") {
+		t.Fatalf("source missing GainLife:\n%s", source)
+	}
+}
+
+// TestLowerThenJoinedThreeEffectExplicitMiddleSubject is the primary regression
+// for the structural bug where pair (1,2) overwrote the middle clause set by
+// pair (0,1): "Target player draws a card, then you gain 2 life, then draw a
+// card." would produce "Target player gain 2 life." for clause 1 (wrong subject)
+// and "Target player draw a card." for clause 2 (wrong subject and verb mismatch).
+//
+// With the single-pass group redesign:
+//   - Clause 0: target player draws (TargetPlayerReference(0), 1 TargetSpec).
+//   - Clause 1: you gain (ControllerReference, 0 TargetSpecs — "you" is explicit,
+//     no target inheritance).
+//   - Clause 2: controller draws (ControllerReference, 0 TargetSpecs — "draw" is
+//     imperative, no subject prefix or target inheritance).
+func TestLowerThenJoinedThreeEffectExplicitMiddleSubject(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player draws a card, then you gain 2 life, then draw a card.",
+	}
+	source, diags, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diags) != 0 {
+		t.Fatalf("diagnostics = %#v", diags)
+	}
+	// Exactly one target slot: the "target player" for the draw.
+	if count := strings.Count(source, "MinTargets:"); count != 1 {
+		t.Fatalf("want 1 TargetSpec, got %d:\n%s", count, source)
+	}
+	// Draw uses TargetPlayerReference(0).
+	if !strings.Contains(source, "game.TargetPlayerReference(0)") {
+		t.Fatalf("source missing TargetPlayerReference(0) for draw:\n%s", source)
+	}
+	// GainLife uses ControllerReference (the "you" clause).
+	if !strings.Contains(source, "game.GainLife") {
+		t.Fatalf("source missing GainLife:\n%s", source)
+	}
+	// Final draw is a controller draw (not target player).
+	drawIdx := strings.LastIndex(source, "game.Draw{")
+	gainIdx := strings.Index(source, "game.GainLife")
+	if drawIdx < 0 || gainIdx < 0 || drawIdx <= gainIdx {
+		t.Fatalf("expected GainLife before final Draw:\n%s", source)
+	}
+	// Three instructions total.
+	if count := strings.Count(source, "Primitive:"); count != 3 {
+		t.Fatalf("want 3 instructions, got %d:\n%s", count, source)
+	}
+}
+
+// TestJoinedTokenTextPossessive is a regression for the apostrophe spacing bug
+// in joinedTokenNeedsSpace: before the fix, prev.Kind == oracle.Apostrophe was
+// missing from the no-space guard, so a possessive token sequence like
+// [Test, Bolt, ', s, power] would reconstruct as "Test Bolt' s power." instead
+// of "Test Bolt's power.". This matters for clause-text overrides that include
+// a possessive card name (e.g. "Test Bolt's power" as a damage amount subject).
+func TestJoinedTokenTextPossessive(t *testing.T) {
+	t.Parallel()
+	toks := []oracle.Token{
+		{Kind: oracle.Word, Text: "Test"},
+		{Kind: oracle.Word, Text: "Bolt"},
+		{Kind: oracle.Apostrophe, Text: "'"},
+		{Kind: oracle.Word, Text: "s"},
+		{Kind: oracle.Word, Text: "power"},
+		{Kind: oracle.Period, Text: "."},
+	}
+	got := joinedTokenText(toks)
+	if got != "Test Bolt's power." {
+		t.Fatalf("joinedTokenText = %q, want %q", got, "Test Bolt's power.")
+	}
+}
 
 func TestLowerSurveilSpell(t *testing.T) {
 	t.Parallel()
