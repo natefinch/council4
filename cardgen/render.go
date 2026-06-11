@@ -1759,7 +1759,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
 		game.PrimitiveExile:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
-	case game.PrimitiveTap, game.PrimitiveRegenerate, game.PrimitiveExplore:
+	case game.PrimitiveTap, game.PrimitiveRegenerate, game.PrimitiveExplore,
+		game.PrimitiveCounterObject:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
@@ -2162,6 +2163,12 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 		}
 		fieldName = "Creature"
 		typeName, object = "game.Explore", value.Creature
+	case game.PrimitiveCounterObject:
+		value, ok := primitive.(game.CounterObject)
+		if !ok {
+			return "", errors.New("render: internal error: CounterObject kind has unexpected concrete type")
+		}
+		typeName, object = "game.CounterObject", value.Object
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}
@@ -2347,6 +2354,22 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 			return "", false, err
 		}
 		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
+	}
+	if len(predicate.SpellCardTypes) > 0 {
+		ctx.need(importTypes)
+		lits, err := renderTypesCardSlice(ctx, predicate.SpellCardTypes)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("SpellCardTypes: %s,", lits))
+	}
+	if len(predicate.ExcludedSpellCardTypes) > 0 {
+		ctx.need(importTypes)
+		lits, err := renderTypesCardSlice(ctx, predicate.ExcludedSpellCardTypes)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedSpellCardTypes: %s,", lits))
 	}
 	if len(predicate.Colors) > 0 {
 		colors, err := renderColorSlice(ctx, predicate.Colors)
