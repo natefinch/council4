@@ -392,6 +392,8 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 		len(selection.SubtypesAny) > 0 ||
 		len(selection.ColorsAny) > 0 ||
 		len(selection.ExcludedColors) > 0 ||
+		selection.Colorless ||
+		selection.Multicolored ||
 		selection.Controller != ControllerAny ||
 		selection.Tapped != TriAny ||
 		selection.CombatState != CombatStateAny ||
@@ -617,6 +619,8 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.ExcludedTypes = nil
 		if pattern.Event == EventSpellCast {
 			unsupported.ColorsAny = nil
+			unsupported.Colorless = false
+			unsupported.Multicolored = false
 		}
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "trigger card Selection uses predicates unavailable from event data")

@@ -1099,6 +1099,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		unsupported.RequiredTypesAny = nil
 		unsupported.ExcludedTypes = nil
 		unsupported.ColorsAny = nil
+		unsupported.Colorless = false
+		unsupported.Multicolored = false
 		if !unsupported.Empty() {
 			return "", errors.New("render: unsupported CardSelection fields in cast trigger pattern")
 		}
@@ -2525,6 +2527,12 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", colorLits))
+	}
+	if selection.Colorless {
+		fields = append(fields, "Colorless: true,")
+	}
+	if selection.Multicolored {
+		fields = append(fields, "Multicolored: true,")
 	}
 
 	if selection.Controller != game.ControllerAny {

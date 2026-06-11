@@ -91,6 +91,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if slices.ContainsFunc(sel.ExcludedColors, s.hasColor) {
 		return false
 	}
+	if sel.Colorless && s.colorCount() != 0 {
+		return false
+	}
+	if sel.Multicolored && s.colorCount() < 2 {
+		return false
+	}
 	if !s.controllerMatches(sel.Controller) {
 		return false
 	}
@@ -204,6 +210,27 @@ func (s *selectionSubject) hasColor(c color.Color) bool {
 
 func (s *selectionSubject) hasAnyColor(colors []color.Color) bool {
 	return slices.ContainsFunc(colors, s.hasColor)
+}
+
+func (s *selectionSubject) colorCount() int {
+	seen := map[color.Color]bool{}
+	var colors []color.Color
+	switch s.kind {
+	case subjectPermanent:
+		colors = s.values.colors
+	case subjectCastSpell:
+		colors = s.event.Colors
+	case subjectCard:
+		if s.card != nil && s.card.Def != nil {
+			colors = s.card.Def.DefaultFace().Colors
+		}
+	default:
+		return 0
+	}
+	for _, c := range colors {
+		seen[c] = true
+	}
+	return len(seen)
 }
 
 func (s *selectionSubject) hasKeyword(keyword game.Keyword) bool {

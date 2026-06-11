@@ -978,6 +978,66 @@ func TestValidateCardDefAllowsColorFilteredSpellCastTrigger(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsColorCardinalitySpellCastTrigger(t *testing.T) {
+	tests := []struct {
+		name      string
+		selection Selection
+	}{
+		{"colorless", Selection{Colorless: true}},
+		{"multicolored", Selection{Multicolored: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Spell Watcher",
+				OracleText: "Whenever you cast a spell, draw a card.",
+				TriggeredAbilities: []TriggeredAbility{{
+					Content: Mode{}.Ability(),
+					Trigger: TriggerCondition{Pattern: TriggerPattern{
+						Event:         EventSpellCast,
+						CardSelection: tt.selection,
+					}},
+				}},
+			}}
+
+			issues := ValidateCardDef(card)
+			if hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+				t.Fatalf("issues = %+v, want color-cardinality spell-cast trigger accepted", issues)
+			}
+		})
+	}
+}
+
+func TestValidateCardDefRejectsContradictoryColorCardinalitySelection(t *testing.T) {
+	tests := []struct {
+		name      string
+		selection Selection
+	}{
+		{"colorless multicolored", Selection{Colorless: true, Multicolored: true}},
+		{"colorless colored", Selection{Colorless: true, ColorsAny: []color.Color{color.Blue}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Impossible Watcher",
+				OracleText: "Whenever you cast a spell, draw a card.",
+				TriggeredAbilities: []TriggeredAbility{{
+					Content: Mode{}.Ability(),
+					Trigger: TriggerCondition{Pattern: TriggerPattern{
+						Event:         EventSpellCast,
+						CardSelection: tt.selection,
+					}},
+				}},
+			}}
+
+			issues := ValidateCardDef(card)
+			if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+				t.Fatalf("issues = %+v, want invalid-selection issue", issues)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefAllowsSelectionOnlyTargetSpec(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Selection Target Spec",

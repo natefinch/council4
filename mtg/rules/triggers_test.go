@@ -2167,6 +2167,63 @@ func TestSpellCastTriggerColorSelectionExcludesWrongColor(t *testing.T) {
 	}
 }
 
+func TestSpellCastTriggerMatchesColorCardinalitySelection(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Spell Watcher",
+		Types: []types.Card{types.Creature},
+	}})
+	tests := []struct {
+		name      string
+		selection game.Selection
+		colors    []color.Color
+		want      bool
+	}{
+		{
+			name:      "colorless matches no colors",
+			selection: game.Selection{Colorless: true},
+			want:      true,
+		},
+		{
+			name:      "colorless rejects colored",
+			selection: game.Selection{Colorless: true},
+			colors:    []color.Color{color.Green},
+		},
+		{
+			name:      "multicolored matches two colors",
+			selection: game.Selection{Multicolored: true},
+			colors:    []color.Color{color.Blue, color.Red},
+			want:      true,
+		},
+		{
+			name:      "multicolored rejects monocolored",
+			selection: game.Selection{Multicolored: true},
+			colors:    []color.Color{color.Blue},
+		},
+		{
+			name:      "multicolored counts distinct colors",
+			selection: game.Selection{Multicolored: true},
+			colors:    []color.Color{color.Blue, color.Blue},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := triggerMatchesEvent(g, source, &game.TriggerPattern{
+				Event:         game.EventSpellCast,
+				Controller:    game.TriggerControllerYou,
+				CardSelection: tt.selection,
+			}, game.Event{
+				Kind:       game.EventSpellCast,
+				Controller: game.Player1,
+				Colors:     tt.colors,
+			})
+			if got != tt.want {
+				t.Fatalf("triggerMatchesEvent = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSpellCastEventPopulatesColors(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

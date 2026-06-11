@@ -4786,6 +4786,8 @@ var castSpellPhrases = map[string]game.Selection{
 	"a black spell":                {ColorsAny: []color.Color{color.Black}},
 	"a red spell":                  {ColorsAny: []color.Color{color.Red}},
 	"a green spell":                {ColorsAny: []color.Color{color.Green}},
+	"a colorless spell":            {Colorless: true},
+	"a multicolored spell":         {Multicolored: true},
 }
 
 // parseCastSpellSelection maps the spell-phrase fragment (what follows the
