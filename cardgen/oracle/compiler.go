@@ -236,6 +236,15 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 			case startsWords(words, "reveal"):
 				component.Kind = CostReveal
 				component.Object = wordsAfterFirst(part)
+			case startsWords(words, "exert"):
+				component.Kind = CostExert
+				component.Object = wordsAfterFirst(part)
+			case startsWords(words, "mill"):
+				component.Kind = CostMill
+				component.Object = wordsAfterFirst(part)
+			case startsWords(words, "put") && containsNoun(words, "counter"):
+				component.Kind = CostPutCounter
+				component.Object = wordsAfterFirst(part)
 			case startsWords(words, "exile"):
 				component.Kind = CostExile
 				component.Object = wordsAfterFirst(part)

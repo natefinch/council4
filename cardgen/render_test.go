@@ -233,6 +233,58 @@ func TestRenderRevealAdditionalCostWithXAndColor(t *testing.T) {
 	}
 }
 
+func TestRenderIssue210AdditionalCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		additional cost.Additional
+		wants      []string
+		wantImport string
+	}{
+		{
+			name:       "exert",
+			additional: cost.Additional{Kind: cost.AdditionalExert, Text: "Exert this creature", Amount: 1},
+			wants:      []string{"cost.AdditionalExert", `Text: "Exert this creature"`, "Amount: 1"},
+		},
+		{
+			name:       "mill",
+			additional: cost.Additional{Kind: cost.AdditionalMill, Text: "Mill four cards", Amount: 4},
+			wants:      []string{"cost.AdditionalMill", `Text: "Mill four cards"`, "Amount: 4"},
+		},
+		{
+			name: "put counter",
+			additional: cost.Additional{
+				Kind:        cost.AdditionalPutCounter,
+				Text:        "Put a verse counter on Test Bard",
+				Amount:      1,
+				CounterKind: counter.Verse,
+			},
+			wants:      []string{"cost.AdditionalPutCounter", `Text: "Put a verse counter on Test Bard"`, "Amount: 1", "CounterKind: counter.Verse"},
+			wantImport: importCounter,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := newRenderCtx()
+			rendered, err := renderAdditional(ctx, test.additional)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(rendered, want) {
+					t.Fatalf("rendered additional missing %q:\n%s", want, rendered)
+				}
+			}
+			if test.wantImport != "" {
+				if _, ok := ctx.imports[test.wantImport]; !ok {
+					t.Fatalf("rendered additional did not request import %q", test.wantImport)
+				}
+			}
+		})
+	}
+}
+
 func TestRenderEveryRecognizedCounterKind(t *testing.T) {
 	t.Parallel()
 	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {

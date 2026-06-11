@@ -45,6 +45,15 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		if effectiveController(g, permanent) == g.Turn.ActivePlayer {
 			if permanent.PhasedOut {
 				permanent.PhasedOut = false
+				if permanent.Exerted {
+					permanent.Exerted = false
+					permanent.SummoningSick = false
+				}
+				continue
+			}
+			if permanent.Exerted {
+				permanent.Exerted = false
+				permanent.SummoningSick = false
 				continue
 			}
 			setPermanentTapped(g, permanent, false)

@@ -2625,6 +2625,7 @@ Cards supported: 3,856
 - Rootwater Diver
 - Rorix Bladewing
 - Rosemane Centaur
+- Rot Farm Skeleton
 - Rotted Hulk
 - Rotted Hystrix
 - Rottenheart Ghoul
@@ -2911,6 +2912,7 @@ Cards supported: 3,856
 - Simic Guildgate
 - Simic Locket
 - Simic Sky Swallower
+- Sinister Concoction
 - Sinister Hideout
 - Sinister Starfish
 - Sinkhole

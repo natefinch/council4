@@ -50,6 +50,10 @@ type Permanent struct {
 	// Tapped is true if the permanent is tapped (turned sideways).
 	Tapped bool
 
+	// Exerted is true if this permanent should not untap during its
+	// controller's next untap step.
+	Exerted bool
+
 	// SummoningSick is true if this permanent has not been under its
 	// controller's control since the start of that player's most recent turn.
 	// It only restricts creatures from attacking and activating abilities with

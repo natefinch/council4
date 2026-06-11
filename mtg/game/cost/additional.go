@@ -32,6 +32,9 @@ const (
 	AdditionalTapPermanents
 	AdditionalEnergy
 	AdditionalReturnToHand
+	AdditionalExert
+	AdditionalMill
+	AdditionalPutCounter
 )
 
 // Additional describes a typed non-mana cost printed on a spell, ability, or

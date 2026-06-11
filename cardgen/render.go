@@ -3109,7 +3109,7 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		}
 		fields = append(fields, fmt.Sprintf("SubtypesAny: cost.SubtypeSet{%s},", strings.Join(literals, ", ")))
 	}
-	if additional.Kind == cost.AdditionalRemoveCounter {
+	if additional.Kind == cost.AdditionalRemoveCounter || additional.Kind == cost.AdditionalPutCounter {
 		counterKind, err := renderCounterKind(additional.CounterKind)
 		if err != nil {
 			return "", err
@@ -3387,6 +3387,12 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalEnergy", nil
 	case cost.AdditionalReturnToHand:
 		return "cost.AdditionalReturnToHand", nil
+	case cost.AdditionalExert:
+		return "cost.AdditionalExert", nil
+	case cost.AdditionalMill:
+		return "cost.AdditionalMill", nil
+	case cost.AdditionalPutCounter:
+		return "cost.AdditionalPutCounter", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
 	}

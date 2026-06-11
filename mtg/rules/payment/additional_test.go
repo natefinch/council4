@@ -116,13 +116,18 @@ func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.I
 }
 func (fakePaymentState) SetTapped(*game.Permanent, bool)                                   {}
 func (fakePaymentState) RecordManaAbilityUse(*game.Permanent, int, game.TimingRestriction) {}
-func (fakePaymentState) RemoveCounters(*game.Permanent, counter.Kind, int) bool            { return false }
-func (fakePaymentState) LoseLife(game.PlayerID, int)                                       {}
-func (fakePaymentState) SetPlayerEnergyCounters(game.PlayerID, int) bool                   { return true }
-func (fakePaymentState) EmitZoneChange(game.Event)                                         {}
-func (fakePaymentState) EmitCardReveal(game.PlayerID, id.ID, id.ID, zone.Type)             {}
-func (fakePaymentState) MovePermanentToZone(*game.Permanent, zone.Type) bool               { return true }
-func (fakePaymentState) DiscardFromHand(game.PlayerID, id.ID) bool                         { return false }
+func (fakePaymentState) AddCounters(game.PlayerID, *game.Permanent, counter.Kind, int) bool {
+	return true
+}
+func (fakePaymentState) ExertPermanent(*game.Permanent) bool                    { return true }
+func (fakePaymentState) MillCards(game.PlayerID, int)                           {}
+func (fakePaymentState) RemoveCounters(*game.Permanent, counter.Kind, int) bool { return false }
+func (fakePaymentState) LoseLife(game.PlayerID, int)                            {}
+func (fakePaymentState) SetPlayerEnergyCounters(game.PlayerID, int) bool        { return true }
+func (fakePaymentState) EmitZoneChange(game.Event)                              {}
+func (fakePaymentState) EmitCardReveal(game.PlayerID, id.ID, id.ID, zone.Type)  {}
+func (fakePaymentState) MovePermanentToZone(*game.Permanent, zone.Type) bool    { return true }
+func (fakePaymentState) DiscardFromHand(game.PlayerID, id.ID) bool              { return false }
 func (fakePaymentState) MoveCard(game.PlayerID, id.ID, zone.Type, zone.Type) bool {
 	return false
 }
