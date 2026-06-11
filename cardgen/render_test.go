@@ -1243,6 +1243,36 @@ func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
 			},
 			wantParts: []string{"CardSelection:", "Multicolored: true"},
 		},
+		{
+			name: "mana value spell",
+			pattern: game.TriggerPattern{
+				Event:      game.EventSpellCast,
+				Controller: game.TriggerControllerYou,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 5}),
+				},
+			},
+			wantParts: []string{"CardSelection:", "ManaValue:", "compare.GreaterOrEqual", "Value: 5"},
+		},
+		{
+			name: "kicked spell",
+			pattern: game.TriggerPattern{
+				Event:             game.EventSpellCast,
+				Controller:        game.TriggerControllerYou,
+				RequireKickerPaid: true,
+			},
+			wantParts: []string{"RequireKickerPaid: true"},
+		},
+		{
+			name: "spell from graveyard",
+			pattern: game.TriggerPattern{
+				Event:         game.EventSpellCast,
+				Controller:    game.TriggerControllerYou,
+				MatchFromZone: true,
+				FromZone:      zone.Graveyard,
+			},
+			wantParts: []string{"MatchFromZone: true", "FromZone: zone.Graveyard"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

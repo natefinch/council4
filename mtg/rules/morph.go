@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 var faceDownCastCost = cost.Mana{cost.O(3)}
@@ -165,6 +166,7 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 		Face:          cast.Face,
 		CardTypes:     []types.Card{types.Creature},
 		Colors:        nil, // Face-down spells are colorless (CR 708.2b).
+		ManaValue:     opt.Val(0),
 		FromZone:      zone.Hand,
 		ToZone:        zone.Stack,
 	})

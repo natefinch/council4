@@ -26,6 +26,21 @@ func canPayCostWithX(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, 
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: xValue})
 }
 
+func stackManaValue(card *game.CardDef, xValue int) int {
+	if card == nil || !card.ManaCost.Exists {
+		return 0
+	}
+	total := 0
+	for _, symbol := range card.ManaCost.Val {
+		if symbol.Kind == cost.VariableSymbol {
+			total += xValue
+			continue
+		}
+		total += cost.Mana{symbol}.ManaValue()
+	}
+	return total
+}
+
 func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canAct(g, playerID) {
 		return []action.Action{actionBuild.pass()}
@@ -508,6 +523,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		Face:          cast.Face,
 		CardTypes:     cardTypes(spellDef),
 		Colors:        spellColors(spellDef),
+		ManaValue:     opt.Val(stackManaValue(spellDef, cast.XValue)),
+		KickerPaid:    cast.KickerPaid,
 		FromZone:      sourceZone,
 		ToZone:        zone.Stack,
 	})
@@ -571,6 +588,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		Face:          game.FaceFront,
 		CardTypes:     cardTypes(spellDef),
 		Colors:        spellColors(spellDef),
+		ManaValue:     opt.Val(stackManaValue(spellDef, 0)),
 		FromZone:      sourceZone,
 		ToZone:        zone.Stack,
 	})
@@ -749,6 +767,9 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		TokenDef:      permanent.TokenDef,
 		CardTypes:     cardTypes(spellDef),
 		Colors:        spellColors(spellDef),
+		ManaValue:     opt.Val(stackManaValue(spellDef, cast.XValue)),
+		FromZone:      zone.Battlefield,
+		ToZone:        zone.Stack,
 	})
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
