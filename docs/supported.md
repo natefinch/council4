@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,898
+Cards supported: 3,912
 
 - +2 Mace
 - Aang, Air Nomad
@@ -523,6 +523,7 @@ Cards supported: 3,898
 - Celestial Force
 - Cemetery Gate
 - Cenote Scout
+- Censor
 - Centaur
 - Centaur
 - Centaur
@@ -636,6 +637,7 @@ Cards supported: 3,898
 - Contemplation
 - Contingency Plan
 - Contraband Kingpin
+- Convolute
 - Copper Host Crusher
 - Copper Longlegs
 - Copper Myr
@@ -759,6 +761,7 @@ Cards supported: 3,898
 - Deathless Ancient
 - Debilitating Injury
 - Debtors' Knell
+- Decisive Denial
 - Dedicated Martyr
 - Deduce
 - Deepwood Drummer
@@ -1159,6 +1162,7 @@ Cards supported: 3,898
 - Foot Skirmisher
 - Foot Soldiers
 - Footlight Fiend
+- Force Spike
 - Force of Savagery
 - Foreboding Ruins
 - Forest
@@ -1664,6 +1668,7 @@ Cards supported: 3,898
 - Isamaru, Hound of Konda
 - Island
 - Isolated Chapel
+- It'll Quench Ya!
 - Ithilien Kingfisher
 - Ixalli's Diviner
 - Izzet Chronarch
@@ -1711,6 +1716,7 @@ Cards supported: 3,898
 - Junk Diver
 - Juvenile Gloomwidow
 - Jwar Isle Refuge
+- Jwari Disruption // Jwari Ruins
 - Jwari Scuttler
 - Kabira Crossroads
 - Kabuto Moth
@@ -1945,6 +1951,8 @@ Cards supported: 3,898
 - Mammoth Spider
 - Man-o'-War
 - Mana Geode
+- Mana Leak
+- Mana Tithe
 - Manaforce Mace
 - Manakin
 - Manalith
@@ -2028,6 +2036,7 @@ Cards supported: 3,898
 - Mind Spring
 - Mind Stone
 - Mindscour Dragon
+- Mindstatic
 - Mindwarper
 - Mine Bearer
 - Minecart Daredevil // Ride the Rails
@@ -2041,6 +2050,7 @@ Cards supported: 3,898
 - Mire's Grasp
 - Mirran Crusader
 - Mirran Spy
+- Miscalculation
 - Misshapen Fiend
 - Mist Leopard
 - Mist Raven
@@ -2489,6 +2499,7 @@ Cards supported: 3,898
 - Quarry Beetle
 - Queen's Agent
 - Queen's Bay Soldier
+- Quench
 - Quick Study
 - Quiet Purity
 - Quilled Slagwurm
@@ -3048,6 +3059,7 @@ Cards supported: 3,898
 - Soratami Mindsweeper
 - Soratami Mirror-Mage
 - Soul Manipulation
+- Soul Read
 - Soul Shepherd
 - Soul Summons
 - Soul Warden
@@ -3072,6 +3084,8 @@ Cards supported: 3,898
 - Spectator Seating
 - Spectral Flight
 - Spectral Sailor
+- Spell Pierce
+- Spell Snip
 - Spellkeeper Weird
 - Sphinx
 - Sphinx

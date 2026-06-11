@@ -337,12 +337,57 @@ func TestLowerCounterSpellWithDrawRider(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellUnlessPays(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Leak",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Counter target spell unless its controller pays {3}.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || mode.Targets[0].Allow != game.TargetAllowStackObject {
+		t.Fatalf("targets = %+v, want one stack-object target", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want pay then counter", len(mode.Sequence))
+	}
+	pay, ok := mode.Sequence[0].Primitive.(game.Pay)
+	if !ok {
+		t.Fatalf("first primitive = %T, want game.Pay", mode.Sequence[0].Primitive)
+	}
+	if mode.Sequence[0].PublishResult != "unless-paid" {
+		t.Fatalf("pay result key = %q, want unless-paid", mode.Sequence[0].PublishResult)
+	}
+	if !pay.Payment.ManaCost.Exists || !slices.Equal(pay.Payment.ManaCost.Val, cost.Mana{cost.O(3)}) {
+		t.Fatalf("payment mana = %+v, want {3}", pay.Payment.ManaCost)
+	}
+	payer, ok := pay.Payment.Payer.Val.Object()
+	if !pay.Payment.Payer.Exists || !ok || payer.Kind() != game.ObjectReferenceTargetStackObject || payer.TargetIndex() != 0 {
+		t.Fatalf("payer = %+v, want controller of target stack object 0", pay.Payment.Payer)
+	}
+	counterObject, ok := mode.Sequence[1].Primitive.(game.CounterObject)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.CounterObject", mode.Sequence[1].Primitive)
+	}
+	if counterObject.Object.Kind() != game.ObjectReferenceTargetStackObject || counterObject.Object.TargetIndex() != 0 {
+		t.Fatalf("counter object = %+v, want target stack object 0", counterObject.Object)
+	}
+	gate := mode.Sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != "unless-paid" || gate.Val.Succeeded != game.TriFalse {
+		t.Fatalf("counter result gate = %+v, want unless-paid succeeded false", gate)
+	}
+}
+
 func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Counter target blue spell.",
 		"Counter target artifact or enchantment spell.",
-		"Counter target spell unless its controller pays {1}.",
+		"Counter target spell unless its controller pays {X}.",
 		"Counter target activated or triggered ability.",
 		"Counter target activated ability from an artifact source.",
 		"Counter target spell or ability that targets a creature.",
