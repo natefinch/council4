@@ -199,6 +199,46 @@ func TestRenderSearchPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderApplyContinuousTemporaryEffects(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ApplyContinuous{
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer: game.LayerPowerToughnessModify,
+				Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+				}),
+				PowerDelta:     2,
+				ToughnessDelta: 2,
+			},
+			{
+				Layer:       game.LayerAbility,
+				AddKeywords: []game.Keyword{game.Trample},
+			},
+		},
+		Duration: game.DurationUntilEndOfTurn,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.BattlefieldGroup",
+		"Controller: game.ControllerYou",
+		"game.LayerPowerToughnessModify",
+		"PowerDelta: 2",
+		"ToughnessDelta: 2",
+		"game.LayerAbility",
+		"game.Trample",
+		"game.DurationUntilEndOfTurn",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered temporary effect missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderCounterObjectPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CounterObject{

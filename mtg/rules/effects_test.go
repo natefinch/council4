@@ -81,6 +81,48 @@ func TestGainLifeGroupEffectAffectsAllOpponents(t *testing.T) {
 	}
 }
 
+func TestApplyContinuousGroupSnapshotsPermanentsAtResolution(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	affected := makeCreaturePermanent(g, game.Player1, "Affected")
+	opponent := makeCreaturePermanent(g, game.Player2, "Opponent")
+	addEffectSpellToStack(g, game.Player1, game.ApplyContinuous{
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer: game.LayerPowerToughnessModify,
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+			}),
+			PowerDelta:     1,
+			ToughnessDelta: 1,
+		}},
+		Duration: game.DurationUntilEndOfTurn,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectivePower(g, affected); got != 3 {
+		t.Fatalf("affected creature power = %d, want 3", got)
+	}
+	if got := effectivePower(g, opponent); got != 2 {
+		t.Fatalf("opponent creature power = %d, want 2", got)
+	}
+	affected.Controller = game.Player2
+	if got := effectivePower(g, affected); got != 3 {
+		t.Fatalf("affected creature power after control change = %d, want 3", got)
+	}
+	later := makeCreaturePermanent(g, game.Player1, "Later")
+	if got := effectivePower(g, later); got != 2 {
+		t.Fatalf("later creature power = %d, want 2", got)
+	}
+	if len(g.ContinuousEffects) != 1 ||
+		g.ContinuousEffects[0].AffectedObjectID != affected.ObjectID ||
+		g.ContinuousEffects[0].Group.Valid() {
+		t.Fatalf("continuous effects = %+v, want one snapshotted object effect", g.ContinuousEffects)
+	}
+}
+
 func TestLoseLifeGroupEffectAffectsAllOpponents(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
