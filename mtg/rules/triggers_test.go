@@ -1428,6 +1428,87 @@ func TestSpellCastTriggerFiltersCardTypesAndController(t *testing.T) {
 	}
 }
 
+func TestSpellCastTriggerFiltersSubtypes(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			SubtypesAny: []types.Sub{types.Spirit, types.Arcane},
+		},
+	}
+
+	event := game.Event{
+		Kind:         game.EventSpellCast,
+		Controller:   game.Player1,
+		CardSubtypes: []types.Sub{types.Spirit},
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("Spirit spell did not match Spirit or Arcane cast trigger")
+	}
+	event.CardSubtypes = []types.Sub{types.Arcane}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("Arcane spell did not match Spirit or Arcane cast trigger")
+	}
+	event.CardSubtypes = []types.Sub{types.Wizard}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("Wizard spell matched Spirit or Arcane cast trigger")
+	}
+}
+
+func TestSpellCastTriggerFiltersHistoric(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:           game.EventSpellCast,
+		Controller:      game.TriggerControllerYou,
+		RequireHistoric: true,
+	}
+	tests := []struct {
+		name  string
+		event game.Event
+		want  bool
+	}{
+		{
+			name:  "artifact",
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, CardTypes: []types.Card{types.Artifact}},
+			want:  true,
+		},
+		{
+			name:  "legendary",
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, CardSupertypes: []types.Super{types.Legendary}},
+			want:  true,
+		},
+		{
+			name:  "Saga",
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, CardSubtypes: []types.Sub{types.Saga}},
+			want:  true,
+		},
+		{
+			name:  "nonhistoric",
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, CardTypes: []types.Card{types.Instant}},
+			want:  false,
+		},
+		{
+			name: "missing event types fails closed",
+			event: game.Event{
+				Kind:       game.EventSpellCast,
+				Controller: game.Player1,
+				CardID:     addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Artifact", Types: []types.Card{types.Artifact}}}),
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := triggerMatchesEvent(g, source, pattern, tt.event); got != tt.want {
+				t.Fatalf("triggerMatchesEvent() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestBlockedAttackerSubjectMatchesAttachedPermanent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanent(g, game.Player1)

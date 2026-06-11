@@ -586,6 +586,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.RequireKickerPaid && !event.KickerPaid {
 		return false
 	}
+	if pattern.RequireHistoric && !eventSpellHistoric(event) {
+		return false
+	}
 	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient != event.DamageRecipient {
 		return false
 	}
@@ -877,6 +880,12 @@ func triggerCardSelection(pattern *game.TriggerPattern) game.Selection {
 		RequiredTypes: pattern.RequireCardTypes,
 		ExcludedTypes: pattern.ExcludeCardTypes,
 	}
+}
+
+func eventSpellHistoric(event game.Event) bool {
+	return slices.Contains(event.CardTypes, types.Artifact) ||
+		slices.Contains(event.CardSupertypes, types.Legendary) ||
+		slices.Contains(event.CardSubtypes, types.Saga)
 }
 
 // eventSpellCardTypes resolves the card types a spell-cast event matches against,

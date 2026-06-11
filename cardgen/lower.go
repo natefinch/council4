@@ -5195,6 +5195,9 @@ func lowerCastTrigger(
 	if predicate.RequireKickerPaid {
 		pattern.RequireKickerPaid = true
 	}
+	if predicate.RequireHistoric {
+		pattern.RequireHistoric = true
+	}
 	if predicate.MatchFromZone {
 		pattern.MatchFromZone = true
 		pattern.FromZone = predicate.FromZone
@@ -5213,6 +5216,7 @@ func lowerCastTrigger(
 type castSpellPredicate struct {
 	CardSelection     game.Selection
 	RequireKickerPaid bool
+	RequireHistoric   bool
 	MatchFromZone     bool
 	FromZone          zone.Type
 }
@@ -5241,6 +5245,8 @@ var castSpellPhrases = map[string]castSpellPredicate{
 	"a multicolored spell":         {CardSelection: game.Selection{Multicolored: true}},
 	"a kicked spell":               {RequireKickerPaid: true},
 	"a spell from your graveyard":  {MatchFromZone: true, FromZone: zone.Graveyard},
+	"a Spirit or Arcane spell":     {CardSelection: game.Selection{SubtypesAny: []types.Sub{types.Spirit, types.Arcane}}},
+	"a historic spell":             {RequireHistoric: true},
 }
 
 // parseCastSpellPredicate maps the spell-phrase fragment (what follows the

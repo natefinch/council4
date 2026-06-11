@@ -7118,6 +7118,53 @@ func TestLowerCastTriggerAcceptsColorCardinalityPhrases(t *testing.T) {
 	}
 }
 
+func TestLowerCastTriggerAcceptsSubtypeAndHistoricPhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		phrase string
+		assert func(t *testing.T, pattern game.TriggerPattern)
+	}{
+		{
+			name:   "Spirit or Arcane",
+			phrase: "a Spirit or Arcane spell",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				if !slices.Equal(pattern.CardSelection.SubtypesAny, []types.Sub{types.Spirit, types.Arcane}) {
+					t.Fatalf("SubtypesAny = %v, want Spirit or Arcane", pattern.CardSelection.SubtypesAny)
+				}
+			},
+		},
+		{
+			name:   "historic",
+			phrase: "a historic spell",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				if !pattern.RequireHistoric {
+					t.Fatal("RequireHistoric = false, want true")
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever you cast " + tc.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			tc.assert(t, face.TriggeredAbilities[0].Trigger.Pattern)
+		})
+	}
+}
+
 func TestLowerCastTriggerAcceptsManaValueKickedAndZonePhrases(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -7187,8 +7234,6 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"unrecognized player", "Whenever each player casts a spell, draw a card."},
 		{"spell copy", "Whenever you cast or copy an instant or sorcery spell, draw a card."},
 		{"ordinal spell", "Whenever you cast your second spell each turn, draw a card."},
-		{"subtype spell", "Whenever you cast a Spirit or Arcane spell, draw a card."},
-		{"historic spell", "Whenever you cast a historic spell, draw a card."},
 		{"unsupported mana value comparison", "Whenever you cast a spell with mana value less than 5, draw a card."},
 		{"unsupported zone-filtered spell", "Whenever you cast a spell from your library, draw a card."},
 		{"any player your graveyard", "Whenever a player casts a spell from your graveyard, draw a card."},

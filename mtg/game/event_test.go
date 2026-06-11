@@ -12,14 +12,18 @@ func TestEventsForTurnReturnsCopy(t *testing.T) {
 	g.Turn.TurnNumber = 1
 	g.EventTurnStarts = []int{0}
 	g.AppendEvent(Event{
-		Kind:      EventSpellCast,
-		CardTypes: []types.Card{types.Instant},
-		Colors:    []color.Color{color.Blue},
+		Kind:           EventSpellCast,
+		CardTypes:      []types.Card{types.Instant},
+		CardSupertypes: []types.Super{types.Legendary},
+		CardSubtypes:   []types.Sub{types.Arcane},
+		Colors:         []color.Color{color.Blue},
 	})
 
 	events := g.EventsForTurn(1)
 	events[0].Kind = EventDamageDealt
 	events[0].CardTypes[0] = types.Creature
+	events[0].CardSupertypes[0] = types.Basic
+	events[0].CardSubtypes[0] = types.Spirit
 	events[0].Colors[0] = color.Red
 
 	if g.Events[0].Kind != EventSpellCast {
@@ -27,6 +31,12 @@ func TestEventsForTurnReturnsCopy(t *testing.T) {
 	}
 	if g.Events[0].CardTypes[0] != types.Instant {
 		t.Fatalf("event card types mutated through EventsForTurn copy: %v", g.Events[0].CardTypes)
+	}
+	if g.Events[0].CardSupertypes[0] != types.Legendary {
+		t.Fatalf("event card supertypes mutated through EventsForTurn copy: %v", g.Events[0].CardSupertypes)
+	}
+	if g.Events[0].CardSubtypes[0] != types.Arcane {
+		t.Fatalf("event card subtypes mutated through EventsForTurn copy: %v", g.Events[0].CardSubtypes)
 	}
 	if g.Events[0].Colors[0] != color.Blue {
 		t.Fatalf("event colors mutated through EventsForTurn copy: %v", g.Events[0].Colors)
@@ -56,14 +66,24 @@ func TestEventsThisTurnAndPreviousTurnReturnCopies(t *testing.T) {
 func TestAppendEventCopiesEventSlices(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
 	cardTypes := []types.Card{types.Sorcery}
+	cardSupertypes := []types.Super{types.Legendary}
+	cardSubtypes := []types.Sub{types.Arcane}
 	colors := []color.Color{color.Green}
 
-	g.AppendEvent(Event{Kind: EventSpellCast, CardTypes: cardTypes, Colors: colors})
+	g.AppendEvent(Event{Kind: EventSpellCast, CardTypes: cardTypes, CardSupertypes: cardSupertypes, CardSubtypes: cardSubtypes, Colors: colors})
 	cardTypes[0] = types.Artifact
+	cardSupertypes[0] = types.Basic
+	cardSubtypes[0] = types.Spirit
 	colors[0] = color.Black
 
 	if g.Events[0].CardTypes[0] != types.Sorcery {
 		t.Fatalf("AppendEvent aliased caller card types: %v", g.Events[0].CardTypes)
+	}
+	if g.Events[0].CardSupertypes[0] != types.Legendary {
+		t.Fatalf("AppendEvent aliased caller card supertypes: %v", g.Events[0].CardSupertypes)
+	}
+	if g.Events[0].CardSubtypes[0] != types.Arcane {
+		t.Fatalf("AppendEvent aliased caller card subtypes: %v", g.Events[0].CardSubtypes)
 	}
 	if g.Events[0].Colors[0] != color.Green {
 		t.Fatalf("AppendEvent aliased caller colors: %v", g.Events[0].Colors)
