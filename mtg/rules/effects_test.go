@@ -1481,6 +1481,75 @@ func TestManifestAppliesGlobalETBReplacementEffects(t *testing.T) {
 	}
 }
 
+func TestManifestDreadChoosesOneCardAndPutsOtherIntoGraveyard(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	bottomOfTwo := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Graveyard Card",
+		Types: []types.Card{types.Instant},
+	}})
+	topOfTwo := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Manifested Card",
+		Types:     []types.Card{types.Creature},
+		ManaCost:  opt.Val(cost.Mana{cost.G}),
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Manifest{Dread: true}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	if !g.Players[game.Player1].Graveyard.Contains(topOfTwo) {
+		t.Fatal("unchosen top card was not put into graveyard")
+	}
+	var manifested *game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == bottomOfTwo {
+			manifested = permanent
+			break
+		}
+	}
+	if manifested == nil {
+		t.Fatal("chosen manifest dread card not found on battlefield")
+	}
+	if !manifested.FaceDown || manifested.FaceDownKind != game.FaceDownManifest {
+		t.Fatalf("manifest dread face-down state = %+v", manifested)
+	}
+	if g.Players[game.Player1].Library.Contains(topOfTwo) || g.Players[game.Player1].Library.Contains(bottomOfTwo) {
+		t.Fatal("manifest dread cards remained in library")
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceManifest || log.Choices[0].Selected[0] != 1 {
+		t.Fatalf("manifest dread choice log = %+v, want selected card index 1", log.Choices)
+	}
+}
+
+func TestManifestDreadWithOneCardManifestsWithoutChoice(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Only Card",
+		Types: []types.Card{types.Instant},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Manifest{Dread: true}, nil)
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	if len(log.Choices) != 0 {
+		t.Fatalf("choices = %+v, want no choice for one-card manifest dread", log.Choices)
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == cardID && permanent.FaceDown && permanent.FaceDownKind == game.FaceDownManifest {
+			return
+		}
+	}
+	t.Fatal("single-card manifest dread did not manifest the only card")
+}
+
 func TestDestroyEffectMovesPermanentToGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -598,8 +598,10 @@ type Explore struct {
 	Creature ObjectReference
 }
 
-// Manifest puts the top card of the controller's library onto the battlefield face down.
-type Manifest struct{}
+// Manifest puts cards from the controller's library onto the battlefield face down.
+type Manifest struct {
+	Dread bool
+}
 
 // Goad goads the referenced creature.
 type Goad struct {

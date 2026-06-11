@@ -85,6 +85,95 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	}
 }
 
+func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return false
+	}
+	cardID, ok := player.Library.Top()
+	if !ok {
+		return false
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok || !player.Library.Remove(cardID) {
+		return false
+	}
+	_, ok = createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
+	return ok
+}
+
+func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return false
+	}
+	cards := peekLibrary(player, 2)
+	if len(cards) == 0 {
+		return false
+	}
+	chosenIndex := 0
+	if len(cards) > 1 {
+		selected := e.chooseChoice(g, agents, manifestDreadChoiceRequest(g, playerID, cards), log)
+		if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(cards) {
+			chosenIndex = selected[0]
+		}
+	}
+	chosenID := cards[chosenIndex]
+	chosen, ok := g.GetCardInstance(chosenID)
+	if !ok || !player.Library.Remove(chosenID) {
+		return false
+	}
+	if _, ok := createCardPermanentFaceDownWithChoices(e, g, chosen, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log); !ok {
+		return false
+	}
+	for _, cardID := range cards {
+		if cardID == chosenID {
+			continue
+		}
+		if !player.Library.Remove(cardID) {
+			continue
+		}
+		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
+		zoneOwner := playerID
+		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
+			zoneOwner = card.Owner
+		}
+		destinationCards, ok := destinationZone(g, zoneOwner, destination)
+		if !ok {
+			continue
+		}
+		destinationCards.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   destination,
+			Amount:   1,
+		})
+	}
+	return true
+}
+
+func manifestDreadChoiceRequest(g *game.Game, playerID game.PlayerID, cards []id.ID) game.ChoiceRequest {
+	options := make([]game.ChoiceOption, 0, len(cards))
+	for i, cardID := range cards {
+		label := "unknown card"
+		if card, ok := g.GetCardInstance(cardID); ok {
+			label = cardFaceOrDefault(card, game.FaceFront).Name
+		}
+		options = append(options, game.ChoiceOption{Index: i, Label: label})
+	}
+	return game.ChoiceRequest{
+		Kind:             game.ChoiceManifest,
+		Player:           playerID,
+		Prompt:           "Manifest dread: choose a card to manifest.",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}
+}
+
 func (e *Engine) exploreCreature(
 	g *game.Game,
 	obj *game.StackObject,
