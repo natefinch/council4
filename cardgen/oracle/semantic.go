@@ -1,6 +1,7 @@
 package oracle
 
 import (
+	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -294,6 +295,7 @@ type CompiledEffect struct {
 	Text              string
 	VerbSpan          Span
 	Duration          DurationKind
+	DelayedTiming     game.DelayedTriggerTiming
 	Selector          CompiledSelector
 	Amount            CompiledAmount
 	PowerDelta        CompiledSignedAmount

@@ -172,6 +172,54 @@ func TestRenderCounterObjectPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderCreateDelayedTriggerPrimitive(t *testing.T) {
+	t.Parallel()
+	content := game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.Sacrifice{Object: game.SourceCardPermanentReference()},
+		}},
+	}.Ability()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{
+			Timing:  game.DelayedAtBeginningOfNextUpkeep,
+			Content: content,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.CreateDelayedTrigger",
+		"game.DelayedAtBeginningOfNextUpkeep",
+		"game.Sacrifice",
+		"game.SourceCardPermanentReference()",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered delayed trigger missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRenderLinkedExilePrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Exile{
+		Object:         game.TargetPermanentReference(1),
+		ExileLinkedKey: game.LinkedKey("delayed-blink-1"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.Exile",
+		"game.TargetPermanentReference(1)",
+		`ExileLinkedKey: game.LinkedKey("delayed-blink-1")`,
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered linked exile missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderTargetPredicateSpellCardTypes(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()

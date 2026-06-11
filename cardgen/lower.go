@@ -5993,6 +5993,140 @@ func lowerSingleEffectSpell(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
+	if len(ability.Effects) == 1 && ability.Effects[0].DelayedTiming != 0 {
+		return lowerDelayedSingleEffectSpell(cardName, ability, syntax)
+	}
+	return lowerImmediateSingleEffectSpell(cardName, ability, syntax)
+}
+
+func lowerDelayedSingleEffectSpell(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
+	ability.Text = textWithoutDelimited(ability.Text, ability.Span, syntax.Reminders)
+	syntax.Tokens = slices.DeleteFunc(
+		append([]oracle.Token(nil), syntax.Tokens...),
+		func(token oracle.Token) bool {
+			return spanCoveredByDelimited(token.Span, syntax.Reminders)
+		},
+	)
+	syntax.Reminders = nil
+	text, textOK := stripDelayedTimingText(ability.Text, effect.DelayedTiming)
+	tokens, tokensOK := stripDelayedTimingTokens(syntax.Tokens, effect.DelayedTiming)
+	if !textOK || !tokensOK {
+		return game.AbilityContent{}, unsupportedDelayedEffectDiagnostic(ability)
+	}
+	ability.Text = text
+	ability.Effects[0].Text = text
+	ability.Effects[0].DelayedTiming = 0
+	syntax.Tokens = tokens
+
+	var content game.AbilityContent
+	if primitive, ok := lowerDelayedSelfPrimitive(ability); ok {
+		content = game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability()
+	} else {
+		var diagnostic *oracle.Diagnostic
+		content, diagnostic = lowerImmediateSingleEffectSpell(cardName, ability, syntax)
+		if diagnostic != nil {
+			return game.AbilityContent{}, unsupportedDelayedEffectDiagnostic(ability)
+		}
+	}
+	if len(content.SharedTargets) != 0 ||
+		content.IsModal() ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Targets) != 0 ||
+		len(content.Modes[0].Sequence) == 0 {
+		return game.AbilityContent{}, unsupportedDelayedEffectDiagnostic(ability)
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{
+			Timing:  effect.DelayedTiming,
+			Content: content,
+		},
+	}}}}.Ability(), nil
+}
+
+func lowerDelayedSelfPrimitive(ability oracle.CompiledAbility) (game.Primitive, bool) {
+	if len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Effects[0].Negated {
+		return nil, false
+	}
+	sourcePermanent := game.SourceCardPermanentReference()
+	switch {
+	case ability.Text == "Exile it." && exactPronounReferences(ability.References, "it"):
+		return game.Exile{Object: sourcePermanent}, true
+	case ability.Text == "Sacrifice it." && exactPronounReferences(ability.References, "it"):
+		return game.Sacrifice{Object: sourcePermanent}, true
+	case ability.Text == "Return it to its owner's hand." && exactPronounReferences(ability.References, "it", "its"):
+		return game.MoveCard{
+			Card:        game.CardReference{Kind: game.CardReferenceSource},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}, true
+	default:
+		return nil, false
+	}
+}
+
+func stripDelayedTimingText(text string, timing game.DelayedTriggerTiming) (string, bool) {
+	var suffix string
+	switch timing {
+	case game.DelayedAtBeginningOfNextEndStep:
+		suffix = " at the beginning of the next end step."
+	case game.DelayedAtBeginningOfNextUpkeep:
+		suffix = " at the beginning of the next turn's upkeep."
+	default:
+		return "", false
+	}
+	base, ok := strings.CutSuffix(text, suffix)
+	if !ok || base == "" {
+		return "", false
+	}
+	return base + ".", true
+}
+
+func stripDelayedTimingTokens(tokens []oracle.Token, timing game.DelayedTriggerTiming) ([]oracle.Token, bool) {
+	var suffix []string
+	switch timing {
+	case game.DelayedAtBeginningOfNextEndStep:
+		suffix = []string{"at", "the", "beginning", "of", "the", "next", "end", "step"}
+	case game.DelayedAtBeginningOfNextUpkeep:
+		suffix = []string{"at", "the", "beginning", "of", "the", "next", "turn's", "upkeep"}
+	default:
+		return nil, false
+	}
+	if len(tokens) < len(suffix)+1 || tokens[len(tokens)-1].Kind != oracle.Period {
+		return nil, false
+	}
+	start := len(tokens) - len(suffix) - 1
+	for i, text := range suffix {
+		if !strings.EqualFold(tokens[start+i].Text, text) {
+			return nil, false
+		}
+	}
+	stripped := append([]oracle.Token(nil), tokens[:start]...)
+	stripped = append(stripped, tokens[len(tokens)-1])
+	return stripped, true
+}
+
+func unsupportedDelayedEffectDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
+	return executableDiagnostic(
+		ability,
+		"unsupported delayed effect",
+		"the executable source backend supports only exact non-target delayed one-shot effects",
+	)
+}
+
+func lowerImmediateSingleEffectSpell(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
 	ability.Text = textWithoutDelimited(ability.Text, ability.Span, syntax.Reminders)
 	syntax.Tokens = slices.DeleteFunc(
 		append([]oracle.Token(nil), syntax.Tokens...),
@@ -6979,7 +7113,10 @@ func lowerOrderedEffectSequence(
 		// default: straightforward lowering with own targets only.
 		var content game.AbilityContent
 		var diagnostic *oracle.Diagnostic
-		if allSharedTargets {
+		if linkedExile, delayedContent, ok := lowerDelayedBlinkReturn(ability.Effects, i, effectAbility, sequence); ok {
+			sequence[len(sequence)-1].Primitive = linkedExile
+			content = delayedContent
+		} else if allSharedTargets {
 			content, diagnostic = lowerSingleEffectSpell(cardName, effectAbility, clauseSyntaxes[i])
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
@@ -7014,6 +7151,68 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func lowerDelayedBlinkReturn(
+	effects []oracle.CompiledEffect,
+	effectIndex int,
+	ability oracle.CompiledAbility,
+	sequence []game.Instruction,
+) (game.Exile, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		effects[effectIndex-1].Kind != oracle.EffectExile ||
+		effects[effectIndex-1].DelayedTiming != 0 ||
+		len(ability.Effects) != 1 ||
+		ability.Effects[0].Kind != oracle.EffectReturn ||
+		ability.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		ability.Effects[0].Negated ||
+		len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	switch ability.Text {
+	case "Return that card to the battlefield under its owner's control at the beginning of the next end step.":
+		if !exactReferenceTexts(ability.References, "that card", "its") {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+	case "Return it to the battlefield under its owner's control at the beginning of the next end step.":
+		if !exactReferenceTexts(ability.References, "it", "its") {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+	default:
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	if !ok ||
+		exile.Group.Valid() ||
+		exile.Object.Kind() != game.ObjectReferenceTargetPermanent ||
+		exile.ExileLinkedKey != "" {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-blink-%d", effectIndex))
+	exile.ExileLinkedKey = key
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
+			Source: game.LinkedBattlefieldSource(key),
+		}}}}.Ability(),
+	}}
+	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+func exactReferenceTexts(references []oracle.CompiledReference, texts ...string) bool {
+	if len(references) != len(texts) {
+		return false
+	}
+	for i, text := range texts {
+		if !strings.EqualFold(references[i].Text, text) {
+			return false
+		}
+	}
+	return true
 }
 
 // joinedTokenText reconstructs the source text from a token slice, inserting
@@ -7370,6 +7569,9 @@ func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.P
 		value.Player, ok = remapPlayerReference(value.Player, localToGame)
 		return value, ok
 	}
+	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
+		return value, true
+	}
 	return nil, false
 }
 
@@ -7552,6 +7754,9 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primiti
 	if value, ok := primitive.(game.LoseLife); ok {
 		value.Player, ok = rebasePlayerReference(value.Player, offset)
 		return value, ok
+	}
+	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
+		return value, true
 	}
 	return nil, false
 }

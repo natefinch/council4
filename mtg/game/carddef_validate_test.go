@@ -246,6 +246,61 @@ func TestValidateCardDefChecksDelayedTriggerContent(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsDelayedTriggerUsingEnclosingLinkedObject(t *testing.T) {
+	const key LinkedKey = "delayed-blink"
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Delayed Blink",
+		OracleText: "Exile target creature. Return it to the battlefield at the beginning of the next end step.",
+		SpellAbility: opt.Val(Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowPermanent,
+			}},
+			Sequence: []Instruction{
+				{Primitive: Exile{
+					Object:         TargetPermanentReference(0),
+					ExileLinkedKey: key,
+				}},
+				{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Timing: DelayedAtBeginningOfNextEndStep,
+					Content: Mode{
+						Sequence: []Instruction{{Primitive: PutOnBattlefield{
+							Source: LinkedBattlefieldSource(key),
+						}}},
+					}.Ability(),
+				}}},
+			},
+		}.Ability()),
+	}}
+
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefRejectsDelayedTriggerUsingUnpublishedLinkedObject(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Delayed Blink",
+		OracleText: "Return it to the battlefield at the beginning of the next end step.",
+		SpellAbility: opt.Val(Mode{
+			Sequence: []Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+				Timing: DelayedAtBeginningOfNextEndStep,
+				Content: Mode{
+					Sequence: []Instruction{{Primitive: PutOnBattlefield{
+						Source: LinkedBattlefieldSource("missing"),
+					}}},
+				}.Ability(),
+			}}}},
+		}.Ability()),
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+}
+
 func TestValidateCardDefChecksDelayedTriggerInstructionCondition(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Delayed Trigger Condition",

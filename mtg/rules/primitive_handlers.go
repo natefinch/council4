@@ -625,7 +625,7 @@ func handleGrantCastPermission(r *effectResolver, prim game.GrantCastPermission)
 func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	res := effectResolved{accepted: true}
 	permanent, ok := r.resolveObject(prim.Object)
-	if !ok {
+	if !ok && prim.Object.Kind() == game.ObjectReferenceNone {
 		permanent, ok = firstPermanentControlledBy(r.game, r.obj.Controller)
 	}
 	if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
@@ -895,7 +895,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 	}
 	cardCondition := r.currentInstruction.CardCondition
 	for _, ref := range refs {
-		if ref.CardID == 0 {
+		if ref.ObjectID != 0 || ref.CardID == 0 {
 			continue
 		}
 		card, ok := r.game.GetCardInstance(ref.CardID)

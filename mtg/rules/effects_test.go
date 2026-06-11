@@ -976,7 +976,7 @@ func TestCounterEffectCannotCounterUnknownFutureStackObjectKind(t *testing.T) {
 	if !ok {
 		t.Fatal("counter spell card missing")
 	}
-	counterCard.Def.CardFace.SpellAbility = opt.Val(game.Mode{
+	counterCard.Def.SpellAbility = opt.Val(game.Mode{
 		Targets: []game.TargetSpec{{
 			MinTargets: 1,
 			MaxTargets: 1,

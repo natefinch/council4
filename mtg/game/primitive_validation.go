@@ -513,6 +513,9 @@ func (p LoseLife) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 }
 
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.ExileLinkedKey != "" && p.Group.Valid() {
+		return errors.New("linked exile requires one object")
+	}
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
@@ -685,10 +688,15 @@ func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 }
 
 func (p CreateDelayedTrigger) validatePrimitive([]TargetSpec, bool) error {
-	if p.Trigger.Timing == 0 {
-		return errors.New("delayed trigger requires timing")
+	switch p.Trigger.Timing {
+	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep:
+	default:
+		return errors.New("delayed trigger requires a recognized timing")
 	}
-	return validateNestedAbilityContent(p.Trigger.Content)
+	if len(p.Trigger.Content.Modes) == 0 {
+		return errors.New("delayed trigger requires content")
+	}
+	return nil
 }
 
 func (p CreateReplacement) validatePrimitive([]TargetSpec, bool) error {
@@ -716,14 +724,11 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
-func validateNestedAbilityContent(content AbilityContent) error {
-	if len(content.Modes) == 0 {
-		return errors.New("delayed trigger requires content")
-	}
+func validateNestedAbilityContent(content AbilityContent, inheritedLinked map[LinkedKey]int) error {
 	for i := range content.Modes {
 		targets := append([]TargetSpec(nil), content.SharedTargets...)
 		targets = append(targets, content.Modes[i].Targets...)
-		if err := ValidateInstructionSequence(content.Modes[i].Sequence, targets); err != nil {
+		if err := validateInstructionSequenceWithLinked(content.Modes[i].Sequence, targets, true, inheritedLinked); err != nil {
 			return fmt.Errorf("mode %d: %w", i, err)
 		}
 	}
