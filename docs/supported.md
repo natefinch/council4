@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,746
+Cards supported: 3,762
 
 - +2 Mace
 - Aang, Air Nomad
@@ -292,6 +292,7 @@ Cards supported: 3,746
 - Benthic Giant
 - Berserkers of Blood Ridge
 - Bestial Bloodline
+- Biblioplex Assistant
 - Bigfin Bouncer
 - Bile Urchin
 - Bilious Skulldweller
@@ -596,6 +597,7 @@ Cards supported: 3,746
 - Conifer Strider
 - Conservatory
 - Constricting Tendrils
+- Construct
 - Construct
 - Construct
 - Construct
@@ -1361,6 +1363,7 @@ Cards supported: 3,746
 - Guardians of Akrasa
 - Guardians of Meletis
 - Guenhwyvar
+- Guidelight Synergist
 - Guma
 - Gurmag Angler
 - Gurmag Swiftwing
@@ -1387,6 +1390,7 @@ Cards supported: 3,746
 - Harpy
 - Harrier Griffin
 - Harrier Naga
+- Harsh Sustenance
 - Harvest Gwyllion
 - Haunted Cloak
 - Haunted Crossroads
@@ -1414,6 +1418,7 @@ Cards supported: 3,746
 - Hedron Crab
 - Hell's Caretaker
 - Hellion
+- Helm of the Gods
 - Helpful Hunter
 - Helping Hand
 - Hengegate Pathway // Mistgate Pathway
@@ -1901,6 +1906,7 @@ Cards supported: 3,746
 - Meandering River
 - Medicine Bag
 - Meditation Pools
+- Meldweb Curator
 - Melesse Spirit
 - Memnite
 - Memorial to Folly
@@ -2096,7 +2102,10 @@ Cards supported: 3,746
 - Nightveil Predator
 - Nightveil Sprite
 - Nightwind Glider
+- Nim Grotesque
+- Nim Lasher
 - Nim Replica
+- Nim Shrieker
 - Nimble Birdsticker
 - Nimble Innovator
 - Nimble-Blade Khenra
@@ -2240,6 +2249,7 @@ Cards supported: 3,746
 - Pelakka Wurm
 - Pendrell Drake
 - Pendulum of Patterns
+- Pennon Blade
 - Pensive Minotaur
 - Pentavite
 - Peregrine Griffin
@@ -2582,6 +2592,7 @@ Cards supported: 3,746
 - Sabretooth Tiger
 - Sacred Armory
 - Sacred Cat
+- Sacred Excavation
 - Sacred Foundry
 - Sacred Nectar
 - Sacred Peaks
@@ -2665,6 +2676,7 @@ Cards supported: 3,746
 - Scour from Existence
 - Scoured Barrens
 - Scourge Servant
+- Scourge of Geier Reach
 - Scragnoth
 - Scrap
 - Scrap
@@ -2797,6 +2809,7 @@ Cards supported: 3,746
 - Siege Wurm
 - Siegecraft
 - Sightless Ghoul
+- Sigil of the Nayan Gods
 - Sigiled Behemoth
 - Sigiled Paladin
 - Sigiled Skink
@@ -3471,6 +3484,7 @@ Cards supported: 3,746
 - Viashino Spearhunter
 - Viashino Warrior
 - Vigilant Baloth
+- Vile Manifestation
 - Vindicate
 - Vine Trellis
 - Vineglimmer Snarl
@@ -3693,6 +3707,7 @@ Cards supported: 3,746
 - Yargle and Multani
 - Yargle, Glutton of Urborg
 - Yavimaya Barbarian
+- Yavimaya Enchantress
 - Yavimaya Hollow
 - Yavimaya Wurm
 - Yellow Scarves Troops
@@ -3712,6 +3727,7 @@ Cards supported: 3,746
 - Zarichi Tiger
 - Zealous Guardian
 - Zealous Lorecaster
+- Zenith Flare
 - Zephid
 - Zephid's Embrace
 - Zephyr Falcon
