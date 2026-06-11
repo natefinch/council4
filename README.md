@@ -2,6 +2,14 @@
 
 Council4 is a Go playtesting engine for Magic: The Gathering Commander decks. The goal is to run many automated 4-player games with AI-controlled agents and produce analytics about deck performance.
 
+## Card support
+
+<!-- card-support:start -->
+Council4 currently supports **4,258 of 31,838 cards eligible for paper support (13.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total. See [`supported.md`](./supported.md) and [`unsupported.md`](./unsupported.md) for the complete lists.
+<!-- card-support:end -->
+
+Run `go run github.com/magefile/mage@v1.15.0 cardSupport` after card-support changes. The target reuses the Scryfall Oracle Cards corpus cached outside the repository, runs cardgen in ignored `.cardwork` scratch space, and updates the support documentation. Set `COUNCIL4_ORACLE_CARDS` to use a specific local corpus file; remove the cached file printed by the target to download the latest corpus.
+
 The current implementation is an early rules-engine slice: land-only games still run, spell-mode games can cast simple creatures, draw/life spells, and player-damage spells through the stack, and combat-mode games can attack players with simple creatures.
 
 ## Run the CLI

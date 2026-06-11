@@ -148,8 +148,19 @@ Never target `mtg/cards` during development. Overwrite repository cards only
 when the user explicitly requests it after the temporary tree is accepted.
 
 The command compares reports by stable card ID, verifies counts and newly
-generated source paths, updates `docs/supported.md`, emits the inspection
-manifest, and tests and vets every generated package.
+generated source paths, writes a scratch supported-card list, emits the
+inspection manifest, and tests and vets every generated package.
+
+At the end of an issue, run the repository support workflow instead of invoking
+`compilecards` manually:
+
+```bash
+go run github.com/magefile/mage@v1.15.0 cardSupport
+```
+
+It reuses the cached Scryfall Oracle Cards corpus, generates definitions in
+ignored `.cardwork` scratch space, and updates `README.md`, `supported.md`, and
+`unsupported.md`.
 
 Record:
 

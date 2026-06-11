@@ -23,6 +23,8 @@ user input.
 - Merge each pull request before starting the next issue.
 - Never silently omit known card-support work. Reuse an existing issue or create
   a concise issue labeled `Card Support TODO`.
+- Run `go run github.com/magefile/mage@v1.15.0 cardSupport` at the end of every
+  implementation issue so card-support measurement and documentation stay current.
 - Keep running without asking for routine confirmation.
 
 ## Process
@@ -109,12 +111,19 @@ For each epic child, in impact order:
    affects card generation.
 4. Implement the complete issue with strict, fail-closed behavior.
 5. Add focused tests for success, rejection, runtime semantics, and regressions.
-6. Measure corpus impact where applicable.
-7. Inspect every newly supported card. Do not accept generated output solely
-   because counts increased.
-8. Update package documentation, supported-card counts, and generated support
-   lists affected by the change.
-9. Run the repository's established full validation commands.
+6. At the end of the implementation, run the repository support workflow instead
+   of invoking cardgen or corpus compilation manually:
+
+   ```bash
+   go run github.com/magefile/mage@v1.15.0 cardSupport
+   ```
+
+7. Measure corpus impact from the resulting `supported.md`, `unsupported.md`,
+   README summary, and support-documentation diff.
+8. Inspect every newly supported card in `.cardwork/card-support-generated`. Do
+   not accept generated output solely because counts increased.
+9. Update any additional package documentation affected by the change.
+10. Run the repository's established full validation commands.
 
 Do not mix unrelated cleanup into the branch.
 
