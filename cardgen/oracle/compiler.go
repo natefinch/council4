@@ -1101,8 +1101,8 @@ func dynamicAmountSubject(tokens []Token, start int, cardName string) (dynamicAm
 }
 
 func dynamicBasicLandTypeAmountSubject(tokens []Token, start int) (dynamicAmountSubjectMatch, bool) {
-	number := dynamicSubjectNumberNone
-	end := start
+	var number dynamicSubjectNumber
+	var end int
 	switch {
 	case wordsAt(tokens, start, "basic", "land", "type", "among", "lands", "you", "control"):
 		number = dynamicSubjectSingular

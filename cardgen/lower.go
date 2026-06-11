@@ -233,90 +233,8 @@ func lowerExecutableAbility(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (abilityLowering, *oracle.Diagnostic) {
-	if len(ability.Modes) > 0 {
-		return lowerModalAbility(cardName, ability, syntax)
-	}
-	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
-		return lowered, nil
-	}
-	if handGrant, ok, diagnostic := lowerHandCyclingGrant(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: handGrant}},
-			consumed: semanticConsumption{
-				effects:  1,
-				keywords: len(ability.Keywords),
-			},
-			sourceSpans: handCyclingGrantSourceSpans(ability, syntax),
-		}, nil
-	}
-	if costModifier, ok, diagnostic := lowerCyclingCostModifier(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: costModifier}},
-			consumed: semanticConsumption{
-				effects:    len(ability.Effects),
-				conditions: len(ability.Conditions),
-				keywords:   len(ability.Keywords),
-			},
-			sourceSpans: []oracle.Span{ability.Span},
-		}, nil
-	}
-	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
+	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, ability, syntax); handled {
 		return lowered, diagnostic
-	}
-	if lowered, ok, diagnostic := lowerStaticRuleDeclaration(ability); ok {
-		return lowered, diagnostic
-	}
-	if staticBuff, ok, diagnostic := lowerStaticPTBuff(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		consumedReferences := 0
-		if len(ability.References) == 1 &&
-			(ability.References[0].Kind == oracle.ReferenceSelfName ||
-				ability.References[0].Kind == oracle.ReferenceThisObject) {
-			consumedReferences = 1
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
-			consumed: semanticConsumption{
-				conditions: len(ability.Conditions),
-				effects:    1,
-				keywords:   len(ability.Keywords),
-				references: consumedReferences,
-			},
-			sourceSpans: staticPTBuffSourceSpans(ability, syntax),
-		}, nil
-	}
-	if keywordGrant, ok, diagnostic := lowerStaticKeywordGrant(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
-			consumed: semanticConsumption{
-				effects:  1,
-				keywords: len(ability.Keywords),
-			},
-			sourceSpans: staticKeywordGrantSourceSpans(ability, syntax),
-		}, nil
-	}
-	if keywordGrant, ok := lowerSourceConditionalKeywordGrant(ability, syntax); ok {
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
-			consumed: semanticConsumption{
-				conditions: 1,
-				effects:    1,
-				keywords:   len(ability.Keywords),
-				references: 1,
-			},
-			sourceSpans: sourceConditionalKeywordGrantSpans(ability, syntax),
-		}, nil
 	}
 	switch ability.Kind {
 	case oracle.AbilityStatic:
@@ -407,6 +325,100 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerExecutableAbilitySpecialCase(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, bool, *oracle.Diagnostic) {
+	if len(ability.Modes) > 0 {
+		lowered, diagnostic := lowerModalAbility(cardName, ability, syntax)
+		return lowered, true, diagnostic
+	}
+	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
+		return lowered, true, nil
+	}
+	if handGrant, ok, diagnostic := lowerHandCyclingGrant(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, true, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: handGrant}},
+			consumed: semanticConsumption{
+				effects:  1,
+				keywords: len(ability.Keywords),
+			},
+			sourceSpans: handCyclingGrantSourceSpans(ability, syntax),
+		}, true, nil
+	}
+	if costModifier, ok, diagnostic := lowerCyclingCostModifier(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, true, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: costModifier}},
+			consumed: semanticConsumption{
+				effects:    len(ability.Effects),
+				conditions: len(ability.Conditions),
+				keywords:   len(ability.Keywords),
+			},
+			sourceSpans: []oracle.Span{ability.Span},
+		}, true, nil
+	}
+	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
+		return lowered, true, diagnostic
+	}
+	if lowered, ok, diagnostic := lowerStaticRuleDeclaration(ability); ok {
+		return lowered, true, diagnostic
+	}
+	if staticBuff, ok, diagnostic := lowerStaticPTBuff(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, true, diagnostic
+		}
+		consumedReferences := 0
+		if len(ability.References) == 1 &&
+			(ability.References[0].Kind == oracle.ReferenceSelfName ||
+				ability.References[0].Kind == oracle.ReferenceThisObject) {
+			consumedReferences = 1
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Conditions),
+				effects:    1,
+				keywords:   len(ability.Keywords),
+				references: consumedReferences,
+			},
+			sourceSpans: staticPTBuffSourceSpans(ability, syntax),
+		}, true, nil
+	}
+	if keywordGrant, ok, diagnostic := lowerStaticKeywordGrant(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, true, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
+			consumed: semanticConsumption{
+				effects:  1,
+				keywords: len(ability.Keywords),
+			},
+			sourceSpans: staticKeywordGrantSourceSpans(ability, syntax),
+		}, true, nil
+	}
+	if keywordGrant, ok := lowerSourceConditionalKeywordGrant(ability, syntax); ok {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
+			consumed: semanticConsumption{
+				conditions: 1,
+				effects:    1,
+				keywords:   len(ability.Keywords),
+				references: 1,
+			},
+			sourceSpans: sourceConditionalKeywordGrantSpans(ability, syntax),
+		}, true, nil
+	}
+	return abilityLowering{}, false, nil
 }
 
 func lowerReplacementAbility(ability oracle.CompiledAbility) (abilityLowering, *oracle.Diagnostic) {
