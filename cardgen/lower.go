@@ -3948,6 +3948,46 @@ func lowerLifeDamageTriggerPattern(ability oracle.CompiledAbility) (game.Trigger
 			Source:          game.TriggerSourceAttachedPermanent,
 			DamageRecipient: game.DamageRecipientPermanent,
 		}, true
+	case "this creature deals damage":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientNone, game.TriggerPlayerAny), true
+	case "this creature deals damage to a player":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
+	case "this creature deals damage to an opponent":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
+	case "this creature deals damage to a creature":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
+	case "this creature deals combat damage":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientNone, game.TriggerPlayerAny), true
+	case "this creature deals combat damage to a player":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
+	case "this creature deals combat damage to an opponent":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
+	case "this creature deals combat damage to a creature":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
+	case "equipped creature deals damage",
+		"enchanted creature deals damage":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientNone, game.TriggerPlayerAny), true
+	case "equipped creature deals damage to a player",
+		"enchanted creature deals damage to a player":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
+	case "equipped creature deals damage to an opponent",
+		"enchanted creature deals damage to an opponent":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
+	case "equipped creature deals damage to a creature",
+		"enchanted creature deals damage to a creature":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
+	case "equipped creature deals combat damage",
+		"enchanted creature deals combat damage":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientNone, game.TriggerPlayerAny), true
+	case "equipped creature deals combat damage to a player",
+		"enchanted creature deals combat damage to a player":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
+	case "equipped creature deals combat damage to an opponent",
+		"enchanted creature deals combat damage to an opponent":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
+	case "equipped creature deals combat damage to a creature",
+		"enchanted creature deals combat damage to a creature":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
 	case "you're dealt damage", "you are dealt damage":
 		return game.TriggerPattern{
 			Event:           game.EventDamageDealt,
@@ -3957,6 +3997,26 @@ func lowerLifeDamageTriggerPattern(ability oracle.CompiledAbility) (game.Trigger
 	default:
 		return game.TriggerPattern{}, false
 	}
+}
+
+func damageSourceTriggerPattern(
+	source game.TriggerSourceFilter,
+	combat bool,
+	recipient game.DamageRecipientKind,
+	player game.TriggerPlayerFilter,
+) game.TriggerPattern {
+	pattern := game.TriggerPattern{
+		Event:               game.EventDamageDealt,
+		Source:              source,
+		Subject:             game.TriggerSubjectDamageSource,
+		Player:              player,
+		DamageRecipient:     recipient,
+		RequireCombatDamage: combat,
+	}
+	if recipient == game.DamageRecipientPermanent {
+		pattern.DamageRecipientTypes = []types.Card{types.Creature}
+	}
+	return pattern
 }
 
 func lowerSelfTriggerBody(
@@ -5057,9 +5117,7 @@ func lowerSingleEffectSpell(
 			return game.Untap{Object: object}
 		})
 	case oracle.EffectExile:
-		return lowerFixedPermanentTargetSpell(ability, "Exile", func(object game.ObjectReference) game.Primitive {
-			return game.Exile{Object: object}
-		})
+		return lowerFixedExileSpell(ability)
 	case oracle.EffectReturn:
 		if content, ok := lowerSelfCardGraveyardReturn(ability); ok {
 			return content, nil
@@ -6663,24 +6721,296 @@ func lowerFixedDestroySpell(
 	}.Ability(), nil
 }
 
+func lowerFixedExileSpell(
+	ability oracle.CompiledAbility,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	if group, ok := exactMassExileGroup(ability); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.Exile{Group: group},
+			}},
+		}.Ability(), nil
+	}
+	return lowerFixedPermanentTargetSpell(ability, "Exile", func(object game.ObjectReference) game.Primitive {
+		return game.Exile{Object: object}
+	})
+}
+
 func exactMassDestroyGroup(ability oracle.CompiledAbility) (game.GroupReference, bool) {
+	return exactMassGroup(ability, "Destroy all ")
+}
+
+func exactMassExileGroup(ability oracle.CompiledAbility) (game.GroupReference, bool) {
+	return exactMassGroup(ability, "Exile all ")
+}
+
+func exactMassGroup(ability oracle.CompiledAbility, verbPrefix string) (game.GroupReference, bool) {
 	if len(ability.Targets) != 0 ||
 		len(ability.Conditions) != 0 ||
-		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
 		len(ability.References) != 0 ||
 		ability.Effects[0].Negated {
 		return game.GroupReference{}, false
 	}
-	switch ability.Text {
-	case "Destroy all creatures.":
-		return game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}), true
-	case "Destroy all artifacts.":
-		return game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Artifact}}), true
-	case "Destroy all enchantments.":
-		return game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Enchantment}}), true
-	default:
+	if !strings.HasPrefix(ability.Text, verbPrefix) || !strings.HasSuffix(ability.Text, ".") {
 		return game.GroupReference{}, false
+	}
+	phrase := ability.Text[len(verbPrefix) : len(ability.Text)-1]
+	selection, ok := parseMassGroupQualifier(phrase)
+	if !ok {
+		return game.GroupReference{}, false
+	}
+	if !massGroupKeywordsMatch(ability.Keywords, phrase, selection) {
+		return game.GroupReference{}, false
+	}
+	return game.BattlefieldGroup(selection), true
+}
+
+func massGroupKeywordsMatch(keywords []oracle.CompiledKeyword, phrase string, selection game.Selection) bool {
+	if selection.Keyword == game.KeywordNone {
+		return len(keywords) == 0
+	}
+	keywordText, ok := strings.CutPrefix(strings.ToLower(phrase), "creatures with ")
+	return ok &&
+		len(keywords) == 1 &&
+		keywords[0].Parameter == "" &&
+		strings.EqualFold(keywords[0].Text, keywordText)
+}
+
+// parseMassGroupQualifier parses the qualifier in "Verb all <qualifier>."
+// sentences. It intentionally accepts only explicit, battlefield-scoped forms.
+func parseMassGroupQualifier(phrase string) (game.Selection, bool) {
+	if phrase == "" || strings.TrimSpace(phrase) != phrase {
+		return game.Selection{}, false
+	}
+	phrase = strings.ToLower(phrase)
+
+	controller := game.ControllerAny
+	hadControllerSuffix := false
+	for _, suffix := range []struct {
+		text       string
+		controller game.ControllerRelation
+	}{
+		{" you don't control", game.ControllerOpponent},
+		{" your opponents control", game.ControllerOpponent},
+		{" you control", game.ControllerYou},
+	} {
+		if remainder, ok := strings.CutSuffix(phrase, suffix.text); ok {
+			phrase = remainder
+			controller = suffix.controller
+			hadControllerSuffix = true
+			break
+		}
+	}
+
+	if selection, ok := parseMassGroupNumericQualifier(phrase); ok {
+		selection.Controller = controller
+		return selection, true
+	}
+	if !hadControllerSuffix {
+		if keywordText, ok := strings.CutPrefix(phrase, "creatures with "); ok {
+			keyword, ok := parseMassGroupKeyword(keywordText)
+			if !ok {
+				return game.Selection{}, false
+			}
+			return game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Keyword:       keyword,
+			}, true
+		}
+	}
+	if selection, ok := parseMassGroupBaseNoun(phrase); ok {
+		selection.Controller = controller
+		return selection, true
+	}
+	if remainder, ok := strings.CutPrefix(phrase, "other "); ok {
+		selection, ok := parseMassGroupBaseNoun(remainder)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.Controller = controller
+		selection.ExcludeSource = true
+		return selection, true
+	}
+	if remainder, ok := strings.CutPrefix(phrase, "tapped "); ok {
+		selection, ok := parseMassGroupBaseNoun(remainder)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.Controller = controller
+		selection.Tapped = game.TriTrue
+		return selection, true
+	}
+	for _, prefix := range []struct {
+		text     string
+		excluded types.Card
+	}{
+		{"nonland ", types.Land},
+		{"nonartifact ", types.Artifact},
+		{"noncreature ", types.Creature},
+		{"nonenchantment ", types.Enchantment},
+	} {
+		remainder, ok := strings.CutPrefix(phrase, prefix.text)
+		if !ok {
+			continue
+		}
+		selection, ok := parseMassGroupBaseNoun(remainder)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.Controller = controller
+		selection.ExcludedTypes = []types.Card{prefix.excluded}
+		return selection, true
+	}
+	for _, prefix := range []struct {
+		text      string
+		cardColor color.Color
+		excluded  bool
+	}{
+		{"white ", color.White, false},
+		{"blue ", color.Blue, false},
+		{"black ", color.Black, false},
+		{"red ", color.Red, false},
+		{"green ", color.Green, false},
+		{"nonwhite ", color.White, true},
+		{"nonblue ", color.Blue, true},
+		{"nonblack ", color.Black, true},
+		{"nonred ", color.Red, true},
+		{"nongreen ", color.Green, true},
+	} {
+		remainder, ok := strings.CutPrefix(phrase, prefix.text)
+		if !ok {
+			continue
+		}
+		if strings.Contains(remainder, " ") {
+			return game.Selection{}, false
+		}
+		selection, ok := parseMassGroupBaseNoun(remainder)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.Controller = controller
+		if prefix.excluded {
+			selection.ExcludedColors = []color.Color{prefix.cardColor}
+		} else {
+			selection.ColorsAny = []color.Color{prefix.cardColor}
+		}
+		return selection, true
+	}
+	return game.Selection{}, false
+}
+
+func parseMassGroupBaseNoun(phrase string) (game.Selection, bool) {
+	switch phrase {
+	case "creatures":
+		return game.Selection{RequiredTypes: []types.Card{types.Creature}}, true
+	case "artifacts":
+		return game.Selection{RequiredTypes: []types.Card{types.Artifact}}, true
+	case "enchantments":
+		return game.Selection{RequiredTypes: []types.Card{types.Enchantment}}, true
+	case "lands":
+		return game.Selection{RequiredTypes: []types.Card{types.Land}}, true
+	case "planeswalkers":
+		return game.Selection{RequiredTypes: []types.Card{types.Planeswalker}}, true
+	case "permanents":
+		return game.Selection{}, true
+	case "creatures and lands":
+		return game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Land}}, true
+	case "creatures and planeswalkers":
+		return game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}}, true
+	case "artifacts and enchantments":
+		return game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment}}, true
+	case "artifacts and creatures":
+		return game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature}}, true
+	case "artifacts, creatures, and enchantments":
+		return game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Enchantment}}, true
+	case "artifacts, creatures, and lands":
+		return game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Land}}, true
+	default:
+		return game.Selection{}, false
+	}
+}
+
+func parseMassGroupKeyword(text string) (game.Keyword, bool) {
+	switch text {
+	case "flying":
+		return game.Flying, true
+	case "reach":
+		return game.Reach, true
+	case "trample":
+		return game.Trample, true
+	case "lifelink":
+		return game.Lifelink, true
+	case "deathtouch":
+		return game.Deathtouch, true
+	case "indestructible":
+		return game.Indestructible, true
+	case "haste":
+		return game.Haste, true
+	case "menace":
+		return game.Menace, true
+	case "vigilance":
+		return game.Vigilance, true
+	default:
+		return game.KeywordNone, false
+	}
+}
+
+func parseMassGroupNumericQualifier(phrase string) (game.Selection, bool) {
+	for _, qualifier := range []struct {
+		text string
+		set  func(*game.Selection, compare.Int)
+	}{
+		{"mana value", func(selection *game.Selection, comparison compare.Int) {
+			selection.ManaValue = opt.Val(comparison)
+		}},
+		{"power", func(selection *game.Selection, comparison compare.Int) {
+			selection.Power = opt.Val(comparison)
+		}},
+		{"toughness", func(selection *game.Selection, comparison compare.Int) {
+			selection.Toughness = opt.Val(comparison)
+		}},
+	} {
+		prefix := "creatures with " + qualifier.text + " "
+		comparisonText, ok := strings.CutPrefix(phrase, prefix)
+		if !ok {
+			continue
+		}
+		comparison, ok := parseMassGroupComparison(comparisonText)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection := game.Selection{RequiredTypes: []types.Card{types.Creature}}
+		qualifier.set(&selection, comparison)
+		return selection, true
+	}
+	return game.Selection{}, false
+}
+
+func parseMassGroupComparison(text string) (compare.Int, bool) {
+	parts := strings.Fields(text)
+	switch {
+	case len(parts) == 1:
+		value, err := strconv.Atoi(parts[0])
+		return compare.Int{Op: compare.Equal, Value: value}, err == nil
+	case len(parts) == 3 && parts[0] == "equal" && parts[1] == "to":
+		value, err := strconv.Atoi(parts[2])
+		return compare.Int{Op: compare.Equal, Value: value}, err == nil
+	case len(parts) == 3 && parts[1] == "or":
+		value, err := strconv.Atoi(parts[0])
+		if err != nil {
+			return compare.Int{}, false
+		}
+		switch parts[2] {
+		case "less":
+			return compare.Int{Op: compare.LessOrEqual, Value: value}, true
+		case "greater":
+			return compare.Int{Op: compare.GreaterOrEqual, Value: value}, true
+		default:
+			return compare.Int{}, false
+		}
+	default:
+		return compare.Int{}, false
 	}
 }
 

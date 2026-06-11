@@ -115,6 +115,9 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []p
 		if source, ok := damageRecipientTriggerSource(g, event); ok {
 			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
+		for _, source := range damageAttachedTriggerSources(g, event) {
+			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+		}
 	}
 	return filterPendingTriggeredAbilities(g, pending)
 }
@@ -489,6 +492,47 @@ func damageRecipientTriggerSource(g *game.Game, event game.Event) (*game.Permane
 		Token:          snapshot.TokenDef != nil || snapshot.CardID == 0,
 		TokenDef:       snapshot.TokenDef,
 	}, true
+}
+
+func damageAttachedTriggerSources(g *game.Game, event game.Event) []*game.Permanent {
+	if event.Kind != game.EventDamageDealt {
+		return nil
+	}
+	var sources []*game.Permanent
+	seen := make(map[id.ID]bool)
+	for _, subjectID := range []id.ID{event.SourceObjectID, event.PermanentID} {
+		subject, ok := lastKnownObject(g, subjectID)
+		if !ok {
+			continue
+		}
+		for _, attachmentID := range subject.Attachments {
+			if attachmentID == 0 || seen[attachmentID] {
+				continue
+			}
+			seen[attachmentID] = true
+			if _, ok := permanentByObjectID(g, attachmentID); ok {
+				continue
+			}
+			snapshot, ok := lastKnownObject(g, attachmentID)
+			if !ok {
+				continue
+			}
+			sources = append(sources, &game.Permanent{
+				ObjectID:       snapshot.ObjectID,
+				CardInstanceID: snapshot.CardID,
+				Owner:          snapshot.Owner,
+				Controller:     snapshot.Controller,
+				Face:           snapshot.Face,
+				FaceDown:       snapshot.FaceDown,
+				FaceDownFace:   snapshot.FaceDownFace,
+				FaceDownKind:   snapshot.FaceDownKind,
+				MergedCards:    append([]game.MergedCard(nil), snapshot.MergedCards...),
+				Token:          snapshot.TokenDef != nil || snapshot.CardID == 0,
+				TokenDef:       snapshot.TokenDef,
+			})
+		}
+	}
+	return sources
 }
 
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
