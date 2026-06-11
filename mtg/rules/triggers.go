@@ -46,8 +46,12 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		return false
 	}
 	orderedTriggers := e.orderTriggeredAbilitiesAPNAP(g, pending, agents, log)
+	placed := false
 	for i := range orderedTriggers {
 		trigger := &orderedTriggers[i]
+		if !e.prepareTriggeredAbility(g, trigger, agents, log) {
+			continue
+		}
 		obj := &game.StackObject{
 			ID:                      g.IDGen.Next(),
 			Kind:                    game.StackTriggeredAbility,
@@ -66,8 +70,9 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			TargetCounts:            append([]int(nil), trigger.targetCounts...),
 		}
 		pushAbilityToStack(g, obj)
+		placed = true
 	}
-	return true
+	return placed
 }
 
 func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
@@ -614,6 +619,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 			return false
 		}
 	}
+	if pattern.MatchCounterKind && pattern.CounterKind != event.CounterKind {
+		return false
+	}
 	if pattern.Event == game.EventBeginningOfStep {
 		if pattern.Step == game.StepNone || pattern.Step != event.Step {
 			return false
@@ -941,7 +949,7 @@ func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTr
 				used[i] = true
 			}
 		}
-		ordered = append(ordered, e.preparePlayerTriggers(g, playerID, playerTriggers, agents, log)...)
+		ordered = append(ordered, e.chooseTriggerOrder(g, playerID, playerTriggers, agents, log)...)
 	}
 	for i := range triggers {
 		if !used[i] {
@@ -951,29 +959,23 @@ func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTr
 	return ordered
 }
 
-func (e *Engine) preparePlayerTriggers(g *game.Game, playerID game.PlayerID, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
-	ordered := e.chooseTriggerOrder(g, playerID, triggers, agents, log)
-	prepared := make([]pendingTriggeredAbility, 0, len(ordered))
-	for i := range ordered {
-		trigger := &ordered[i]
-		source, _ := pendingTriggerSourceDef(g, trigger)
-		ability, ok := pendingTriggerAbilityFromDef(source, trigger)
-		if !ok {
-			continue
-		}
-		targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, ability, agents, log)
-		if !ok {
-			continue
-		}
-		trigger.targets = targets
-		targetCounts, ok := bodyTargetCounts(g, trigger.controller, source, trigger.sourceID, ability, targets)
-		if !ok {
-			panic("validated triggered ability targets could not be segmented")
-		}
-		trigger.targetCounts = targetCounts
-		prepared = append(prepared, *trigger)
+func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	source, _ := pendingTriggerSourceDef(g, trigger)
+	ability, ok := pendingTriggerAbilityFromDef(source, trigger)
+	if !ok {
+		return false
 	}
-	return prepared
+	targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, ability, agents, log)
+	if !ok {
+		return false
+	}
+	trigger.targets = targets
+	targetCounts, ok := bodyTargetCounts(g, trigger.controller, source, trigger.sourceID, ability, targets)
+	if !ok {
+		panic("validated triggered ability targets could not be segmented")
+	}
+	trigger.targetCounts = targetCounts
+	return true
 }
 
 func pendingTriggerAbility(g *game.Game, trigger *pendingTriggeredAbility) (*game.TriggeredAbility, bool) {

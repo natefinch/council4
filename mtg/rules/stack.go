@@ -292,6 +292,7 @@ func counterStackObject(g *game.Game, objectID id.ID) bool {
 		return false
 	}
 	if obj.Kind != game.StackSpell {
+		releaseCounteredStateTriggerLatch(g, obj)
 		return true
 	}
 	if obj.Copy {
@@ -302,6 +303,19 @@ func counterStackObject(g *game.Game, objectID id.ID) bool {
 		return false
 	}
 	return moveStackCardToGraveyard(g, obj, card)
+}
+
+func releaseCounteredStateTriggerLatch(g *game.Game, obj *game.StackObject) {
+	if obj.Kind != game.StackTriggeredAbility ||
+		obj.InlineTrigger == nil ||
+		obj.InlineTrigger.Trigger.Type != game.TriggerState {
+		return
+	}
+	delete(g.StateTriggerLatches, game.StateTriggerKey{
+		SourceObjectID: obj.SourceID,
+		SourceCardID:   obj.SourceCardID,
+		AbilityIndex:   obj.AbilityIndex,
+	})
 }
 
 func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {

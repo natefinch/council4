@@ -924,6 +924,20 @@ func TestRenderCombatTriggerPattern(t *testing.T) {
 	}
 }
 
+func TestRenderTriggerPatternRecipientTypesWithoutRecipient(t *testing.T) {
+	ctx := newRenderCtx()
+	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+		Event:                game.EventDamageDealt,
+		DamageRecipientTypes: []types.Card{types.Creature},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(lit, "DamageRecipientTypes: []types.Card{types.Creature}") {
+		t.Fatalf("trigger pattern literal %q does not contain recipient types", lit)
+	}
+}
+
 func TestRenderLifeTriggerPattern(t *testing.T) {
 	ctx := newRenderCtx()
 	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{

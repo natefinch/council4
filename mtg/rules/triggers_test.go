@@ -1398,6 +1398,38 @@ func TestStateTriggerLatchesUntilConditionBecomesFalse(t *testing.T) {
 	}
 }
 
+func TestCounteredStateTriggerReleasesLatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{}, []game.Instruction{{
+		Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+	}}, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.Type = game.TriggerState
+	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{
+		MatchControllerLifeLessOrEqual: true,
+		ControllerLifeLessOrEqual:      10,
+	})
+	g.Players[game.Player1].Life = 10
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger was not put on stack")
+	}
+	trigger, ok := g.Stack.Peek()
+	if !ok || trigger.Kind != game.StackTriggeredAbility {
+		t.Fatal("state trigger stack object missing")
+	}
+	if !counterStackObject(g, trigger.ID) {
+		t.Fatal("state trigger was not countered")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("countered state trigger did not re-fire while condition remained true")
+	}
+}
+
 func TestSpellCastTriggerFiltersCardTypesAndController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -2004,6 +2036,46 @@ func TestTriggeredAbilitiesUseAgentOrderWithinController(t *testing.T) {
 	}
 }
 
+func TestSimultaneousCounterTriggerCanTargetEarlierTrigger(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
+	addTriggeredPermanent(
+		g,
+		game.Player1,
+		&game.TriggerPattern{Event: game.EventCardDrawn},
+		[]game.Instruction{{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}}},
+		[]game.TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Allow:      game.TargetAllowStackObject,
+			Predicate: game.TargetPredicate{
+				StackObjectKinds: []game.StackObjectKind{game.StackTriggeredAbility},
+			},
+		}},
+	)
+	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	if _, ok := engine.drawCard(g, game.Player2); !ok {
+		t.Fatal("drawCard() = false, want true")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw triggers were not put on stack")
+	}
+	objects := g.Stack.Objects()
+	if len(objects) != 2 {
+		t.Fatalf("stack size = %d, want two triggers", len(objects))
+	}
+	if len(objects[1].Targets) != 1 || objects[1].Targets[0] != game.StackObjectTarget(objects[0].ID) {
+		t.Fatalf("counter trigger targets = %+v, want earlier trigger %v", objects[1].Targets, objects[0].ID)
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !g.Stack.IsEmpty() {
+		t.Fatal("counter trigger did not remove earlier simultaneous trigger")
+	}
+}
+
 func addTriggeredPermanent(g *game.Game, controller game.PlayerID, pattern *game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.Permanent {
 	return addCombatPermanent(g, controller, triggeredCreature(pattern, instructions, targets))
 }
@@ -2475,4 +2547,245 @@ func TestKickedSpellCastEventRecordsKickerPaid(t *testing.T) {
 		}
 	}
 	t.Fatal("missing EventSpellCast")
+}
+
+// --- Issue #125: state-change and counter-added trigger matching ---
+
+func TestSelfTapTriggerMatchesSelfTapEvent(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:  game.EventPermanentTapped,
+		Source: game.TriggerSourceSelf,
+	}
+	event := game.Event{
+		Kind:           game.EventPermanentTapped,
+		SourceObjectID: source.ObjectID,
+		CardID:         source.CardInstanceID,
+		PermanentID:    source.ObjectID,
+		Controller:     game.Player1,
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("self-tap trigger did not match own tap event")
+	}
+
+	other := addCombatCreaturePermanent(g, game.Player2)
+	eventOther := game.Event{
+		Kind:           game.EventPermanentTapped,
+		SourceObjectID: other.ObjectID,
+		CardID:         other.CardInstanceID,
+		PermanentID:    other.ObjectID,
+		Controller:     game.Player2,
+	}
+	if triggerMatchesEvent(g, source, pattern, eventOther) {
+		t.Fatal("self-tap trigger matched an opponent's tap event")
+	}
+}
+
+func TestSelfUntapTriggerMatchesSelfUntapEvent(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:  game.EventPermanentUntapped,
+		Source: game.TriggerSourceSelf,
+	}
+	event := game.Event{
+		Kind:           game.EventPermanentUntapped,
+		SourceObjectID: source.ObjectID,
+		CardID:         source.CardInstanceID,
+		PermanentID:    source.ObjectID,
+		Controller:     game.Player1,
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("self-untap trigger did not match own untap event")
+	}
+
+	other := addCombatCreaturePermanent(g, game.Player2)
+	eventOther := game.Event{
+		Kind:           game.EventPermanentUntapped,
+		SourceObjectID: other.ObjectID,
+		CardID:         other.CardInstanceID,
+		PermanentID:    other.ObjectID,
+		Controller:     game.Player2,
+	}
+	if triggerMatchesEvent(g, source, pattern, eventOther) {
+		t.Fatal("self-untap trigger matched an opponent's untap event")
+	}
+}
+
+func TestCounterKindFilterMatchesSameKind(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Source:           game.TriggerSourceSelf,
+		MatchCounterKind: true,
+		CounterKind:      counter.PlusOnePlusOne,
+	}
+	event := game.Event{
+		Kind:           game.EventCountersAdded,
+		SourceObjectID: source.ObjectID,
+		CardID:         source.CardInstanceID,
+		PermanentID:    source.ObjectID,
+		Controller:     game.Player1,
+		CounterKind:    counter.PlusOnePlusOne,
+		Amount:         2,
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("counter-kind filter did not match matching counter kind")
+	}
+}
+
+func TestCounterKindFilterRejectsDifferentKind(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Source:           game.TriggerSourceSelf,
+		MatchCounterKind: true,
+		CounterKind:      counter.PlusOnePlusOne,
+	}
+	event := game.Event{
+		Kind:           game.EventCountersAdded,
+		SourceObjectID: source.ObjectID,
+		CardID:         source.CardInstanceID,
+		PermanentID:    source.ObjectID,
+		Controller:     game.Player1,
+		CounterKind:    counter.MinusOneMinusOne,
+		Amount:         1,
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("counter-kind filter matched wrong counter kind")
+	}
+}
+
+func TestCounterKindFilterRejectsNonCounterEvent(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Source:           game.TriggerSourceSelf,
+		MatchCounterKind: true,
+		CounterKind:      counter.PlusOnePlusOne,
+	}
+	// EventPermanentTapped has zero CounterKind; MatchCounterKind guard fires.
+	event := game.Event{
+		Kind:           game.EventPermanentTapped,
+		SourceObjectID: source.ObjectID,
+		CardID:         source.CardInstanceID,
+		PermanentID:    source.ObjectID,
+		Controller:     game.Player1,
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("counter-kind filter matched a non-counter event")
+	}
+}
+
+func TestSelfTapTriggerGoesOnStack(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventPermanentTapped,
+		Source: game.TriggerSourceSelf,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	setPermanentTapped(g, source, true)
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-tap trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want self-tap trigger to draw one card", got)
+	}
+}
+
+func TestSelfCounterAddedTriggerGoesOnStack(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Source:           game.TriggerSourceSelf,
+		MatchCounterKind: true,
+		CounterKind:      counter.PlusOnePlusOne,
+		OneOrMore:        true,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	addCountersToPermanent(g, source, counter.PlusOnePlusOne, 2)
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self counter-added trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want counter trigger to draw one card", got)
+	}
+}
+
+func TestSelfCounterAddedTriggerDoesNotFireForWrongKind(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Source:           game.TriggerSourceSelf,
+		MatchCounterKind: true,
+		CounterKind:      counter.PlusOnePlusOne,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	addCountersToPermanent(g, source, counter.MinusOneMinusOne, 1)
+
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("counter trigger fired for wrong counter kind")
+	}
+}
+
+func TestSelfCounterAddedOneOrMoreCoalesces(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Source:           game.TriggerSourceSelf,
+		MatchCounterKind: true,
+		CounterKind:      counter.PlusOnePlusOne,
+		OneOrMore:        true,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Two separate counter-added events in the same detection pass.
+	emitEvent(g, game.Event{
+		Kind:           game.EventCountersAdded,
+		SourceObjectID: source.ObjectID,
+		CardID:         source.CardInstanceID,
+		PermanentID:    source.ObjectID,
+		Controller:     game.Player1,
+		CounterKind:    counter.PlusOnePlusOne,
+		Amount:         1,
+	})
+	emitEvent(g, game.Event{
+		Kind:           game.EventCountersAdded,
+		SourceObjectID: source.ObjectID,
+		CardID:         source.CardInstanceID,
+		PermanentID:    source.ObjectID,
+		Controller:     game.Player1,
+		CounterKind:    counter.PlusOnePlusOne,
+		Amount:         1,
+	})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("counter trigger not put on stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want one coalesced trigger", got)
+	}
 }

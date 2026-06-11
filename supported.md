@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,285 of 31,838 cards eligible for paper support (13.5%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,303 of 31,838 cards eligible for paper support (13.5%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -203,6 +203,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Astartes Warrior
 - Astartes Warrior
 - Atraxa, Praetors' Voice
+- Attentive Sunscribe
 - Auger Spree
 - Augury Owl
 - Auntie's Hovel
@@ -611,6 +612,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Child of Thorns
 - Chitinous Cloak
 - Choked Estuary
+- Chromatic Star
 - Chrome Cat
 - Chrome Prowler
 - Chrome Steed
@@ -1179,6 +1181,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Falkenrath Reaver
 - Fall of the Gavel
 - Fallen Cleric
+- Fallowsage
 - False Defeat
 - False Mourning
 - False Prophet
@@ -1590,6 +1593,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Harrier Strix
 - Harsh Sustenance
 - Harvest Gwyllion
+- Hatching Plans
 - Haunted Cloak
 - Haunted Crossroads
 - Haunted Guardian
@@ -1762,6 +1766,10 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Imperious Inkmage
 - Impervious Greatwurm
 - Impetuous Sunchaser
+- Implement of Examination
+- Implement of Ferocity
+- Implement of Improvement
+- Implement of Malice
 - Imposing Vantasaur
 - Imposing Visage
 - Improvised Armor
@@ -2170,6 +2178,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Master Decoy
 - Maw of the Mire
 - Meandering River
+- Mechan Navigator
 - Medicine Bag
 - Meditation Pools
 - Meldweb Curator
@@ -2280,6 +2289,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Moon Sprite
 - Moon-Eating Dog
 - Moonfolk
+- Moonfolk Puzzlemaker
 - Moonglove Winnower
 - Moonrise Cleric
 - Moorish Cavalry
@@ -2392,6 +2402,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Niblis of Dusk
 - Niblis of the Mist
 - Niblis of the Urn
+- Night Market Lookout
 - Nightdrinker Moroii
 - Nightguard Patrol
 - Nightmare Horror
@@ -2437,6 +2448,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Noxious Newt
 - Nullpriest of Oblivion
 - Nurturing Peatland
+- Nutrient Block
 - Nylea's Forerunner
 - Nyx Weaver
 - Nyx-Fleece Ram
@@ -3227,6 +3239,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Silverchase Fox
 - Silverclaw Griffin
 - Silvercoat Lion
+- Silvergill Peddler
 - Silverquill Campus
 - Silverstrike
 - Simic Cluestone
@@ -3407,6 +3420,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Spike Worker
 - Spiked Baloth
 - Spinal Centipede
+- Spine of Ish Sah
 - Spined Basher
 - Spined Karok
 - Spined Megalodon
@@ -3468,6 +3482,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Standing Stones
 - Standing Troops
 - Stangg Twin
+- Starfighter Pilot
 - Starlight Invoker
 - Starlit Angel
 - Starscape Cleric
@@ -3924,6 +3939,7 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Vampire // Treasure
 - Vampire Champion
 - Vampire Demon
+- Vampire Envoy
 - Vampire Interloper
 - Vampire Knight
 - Vampire Neonate
@@ -4072,11 +4088,13 @@ Council4 currently supports **4,285 of 31,838 cards eligible for paper support (
 - Wall of Vines
 - Wall of Wood
 - Wander Off
+- Wanderbrine Preacher
 - Wanderer's Intervention
 - Wanderer's Strike
 - Wandering Ones
 - Wandering Stream
 - Wandering Tombshell
+- Wanderwine Distracter
 - Wanderwine Hub
 - War Behemoth
 - War Mammoth
