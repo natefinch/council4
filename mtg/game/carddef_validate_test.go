@@ -502,6 +502,21 @@ func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 			wantIssue: true,
 		},
 		{
+			name: "mixed stack target with selection",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowPermanent | TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
+				},
+				Selection: opt.Val(Selection{
+					Controller: ControllerOpponent,
+				}),
+			},
+			wantIssue: true,
+		},
+		{
 			name: "stack target with unknown allow bit",
 			spec: TargetSpec{
 				MinTargets: 1,

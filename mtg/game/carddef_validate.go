@@ -459,6 +459,9 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	if allowsStackObjects && !target.Predicate.Selection().Empty() {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
 	}
+	if allowsStackObjects && target.Selection.Exists {
+		v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidTargetSpec, "stack-object target cannot use Selection")
+	}
 	if allowsStackObjects && len(kinds) == 0 {
 		v.add(faceName, appendPath(path, "Predicate.StackObjectKinds"), CardDefIssueInvalidTargetSpec, "stack-object target must allow at least one stack-object kind")
 		return
