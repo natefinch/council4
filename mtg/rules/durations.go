@@ -80,6 +80,14 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 }
 
 func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {
+	putDelayedTriggersOnStack(g, game.DelayedAtBeginningOfNextEndStep)
+}
+
+func putBeginningOfNextUpkeepDelayedTriggersOnStack(g *game.Game) {
+	putDelayedTriggersOnStack(g, game.DelayedAtBeginningOfNextUpkeep)
+}
+
+func putDelayedTriggersOnStack(g *game.Game, timing game.DelayedTriggerTiming) {
 	if len(g.DelayedTriggers) == 0 {
 		return
 	}
@@ -87,7 +95,7 @@ func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {
 	var ready []game.DelayedTrigger
 	for i := range g.DelayedTriggers {
 		trigger := &g.DelayedTriggers[i]
-		if trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+		if trigger.Timing != timing {
 			remaining = append(remaining, *trigger)
 			continue
 		}

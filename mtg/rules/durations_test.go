@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestUntilEndOfTurnPTModifierUsesRuntimeContinuousEffect(t *testing.T) {
@@ -228,6 +229,124 @@ func TestDelayedNextEndStepTriggerFiresOnce(t *testing.T) {
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 	if g.Players[game.Player1].Hand.Size() != 1 {
 		t.Fatalf("player hand size after second ending phase = %d, want trigger to fire once", g.Players[game.Player1].Hand.Size())
+	}
+}
+
+func TestDelayedNextUpkeepTriggerFiresInUpkeepOnce(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Delayed Card"}})
+	addEffectSpellToStack(g, game.Player1, game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{
+			Timing: game.DelayedAtBeginningOfNextUpkeep,
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		},
+	}, nil)
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+	if len(g.DelayedTriggers) != 1 || g.Players[game.Player1].Hand.Size() != 0 {
+		t.Fatalf("delayed trigger fired before upkeep: triggers=%d hand=%d", len(g.DelayedTriggers), g.Players[game.Player1].Hand.Size())
+	}
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if len(g.DelayedTriggers) != 0 {
+		t.Fatalf("delayed triggers after upkeep = %d, want 0", len(g.DelayedTriggers))
+	}
+	if g.Players[game.Player1].Hand.Size() != 2 {
+		t.Fatalf("player hand size = %d, want delayed draw plus draw-step draw", g.Players[game.Player1].Hand.Size())
+	}
+}
+
+func TestDelayedSourceCardPermanentExileFollowsReturnedCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	if !scheduleDelayedTrigger(g, &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     creature.ObjectID,
+		SourceCardID: creature.CardInstanceID,
+		Controller:   game.Player1,
+	}, &game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Exile{Object: game.SourceCardPermanentReference()}}},
+		}.Ability(),
+	}) {
+		t.Fatal("scheduleDelayedTrigger failed")
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
+		t.Fatal("source-card permanent remained on battlefield")
+	}
+	if !g.Players[game.Player1].Exile.Contains(creature.CardInstanceID) {
+		t.Fatal("source-card permanent was not exiled")
+	}
+}
+
+func TestDelayedSourceCardPermanentSacrificeFailsClosedWhenSourceLeft(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	other := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	if !scheduleDelayedTrigger(g, &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}, &game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Sacrifice{Object: game.SourceCardPermanentReference()}}},
+		}.Ability(),
+	}) {
+		t.Fatal("scheduleDelayedTrigger failed")
+	}
+	if !movePermanentToZone(g, source, zone.Hand) {
+		t.Fatal("failed to move source card from battlefield")
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if _, ok := permanentByObjectID(g, other.ObjectID); !ok {
+		t.Fatal("unresolved source-card reference sacrificed another permanent")
+	}
+}
+
+func TestDelayedSourceCardReturnMovesCardFromGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	if !movePermanentToZone(g, creature, zone.Graveyard) {
+		t.Fatal("failed to move source card to graveyard")
+	}
+	if !scheduleDelayedTrigger(g, &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     creature.ObjectID,
+		SourceCardID: creature.CardInstanceID,
+		Controller:   game.Player1,
+	}, &game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.MoveCard{
+				Card:        game.CardReference{Kind: game.CardReferenceSource},
+				FromZone:    zone.Graveyard,
+				Destination: zone.Hand,
+			}}},
+		}.Ability(),
+	}) {
+		t.Fatal("scheduleDelayedTrigger failed")
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if !g.Players[game.Player1].Hand.Contains(creature.CardInstanceID) {
+		t.Fatal("source card was not returned from graveyard")
 	}
 }
 

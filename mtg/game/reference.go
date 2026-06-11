@@ -21,6 +21,7 @@ const (
 	ObjectReferenceTargetAttachedPermanent
 	ObjectReferenceLinkedObject
 	ObjectReferenceEventPermanent
+	ObjectReferenceSourceCard
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -60,6 +61,12 @@ func TargetStackObjectReference(targetIndex int) ObjectReference {
 // object.
 func SourcePermanentReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceSourcePermanent}
+}
+
+// SourceCardPermanentReference references the battlefield permanent represented
+// by the resolving stack object's source card.
+func SourceCardPermanentReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceSourceCard}
 }
 
 // SourceAttachedPermanentReference references the permanent that the source permanent
@@ -131,6 +138,10 @@ func (r ObjectReference) Validate() []string {
 	case ObjectReferenceEventPermanent:
 		if r.targetIndex != 0 || r.linkID != "" {
 			return []string{"event permanent reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceSourceCard:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"source card permanent reference must not set TargetIndex or LinkID"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}

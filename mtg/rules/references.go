@@ -44,6 +44,7 @@ func newReferenceResolverWithSource(g *game.Game, obj *game.StackObject, source 
 type resolvedObjectReference struct {
 	permanent *game.Permanent
 	snapshot  game.ObjectSnapshot
+	stack     *game.StackObject
 }
 
 func (r *resolvedObjectReference) controller(g *game.Game) (game.PlayerID, bool) {
@@ -53,15 +54,32 @@ func (r *resolvedObjectReference) controller(g *game.Game) (game.PlayerID, bool)
 	if r.snapshot.ObjectID != 0 {
 		return r.snapshot.Controller, true
 	}
+	if r.stack != nil {
+		return r.stack.Controller, true
+	}
 	return 0, false
 }
 
-func (r *resolvedObjectReference) owner() (game.PlayerID, bool) {
+func (r *resolvedObjectReference) owner(g *game.Game) (game.PlayerID, bool) {
 	if r.permanent != nil {
 		return r.permanent.Owner, true
 	}
 	if r.snapshot.ObjectID != 0 {
 		return r.snapshot.Owner, true
+	}
+	if r.stack != nil {
+		if r.stack.Kind != game.StackSpell || r.stack.Copy {
+			return r.stack.Controller, true
+		}
+		if r.stack.SourceCardID != 0 {
+			if card, ok := g.GetCardInstance(r.stack.SourceCardID); ok {
+				return card.Owner, true
+			}
+		}
+		if card, ok := g.GetCardInstance(r.stack.SourceID); ok {
+			return card.Owner, true
+		}
+		return r.stack.Controller, true
 	}
 	return 0, false
 }
@@ -76,6 +94,13 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			return resolvedObjectReference{}, false
 		}
 		return resolvePermanentOrLastKnown(r.g, objectID)
+	case game.ObjectReferenceTargetStackObject:
+		objectID, ok := effectStackObjectID(r.obj, ref.TargetIndex())
+		if !ok {
+			return resolvedObjectReference{}, false
+		}
+		stackObject, ok := stackObjectByID(r.g, objectID)
+		return resolvedObjectReference{stack: stackObject}, ok
 	case game.ObjectReferenceSourcePermanent:
 		if permanent, ok := r.sourcePermanent(); ok {
 			return resolvedObjectReference{permanent: permanent}, true
@@ -84,6 +109,16 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			return resolvedObjectReference{}, false
 		}
 		return resolvePermanentOrLastKnown(r.g, r.obj.SourceID)
+	case game.ObjectReferenceSourceCard:
+		if r.obj == nil || r.obj.SourceCardID == 0 {
+			return resolvedObjectReference{}, false
+		}
+		for _, permanent := range r.g.Battlefield {
+			if permanent.CardInstanceID == r.obj.SourceCardID {
+				return resolvedObjectReference{permanent: permanent}, true
+			}
+		}
+		return resolvedObjectReference{}, false
 	case game.ObjectReferenceSourceAttachedPermanent:
 		permanent, ok := r.sourcePermanent()
 		if !ok || !permanent.AttachedTo.Exists {
@@ -206,7 +241,7 @@ func (r referenceResolver) referencedObjectOwner(ref game.PlayerReference) (game
 	if !ok {
 		return 0, false
 	}
-	return resolved.owner()
+	return resolved.owner(r.g)
 }
 
 // groupMembers enumerates the object IDs of the permanents that belong to a

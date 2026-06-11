@@ -140,7 +140,7 @@ func parseFlags(args []string) (Config, error) {
 	flags.StringVar(&cfg.BaselineReport, "baseline", "", "previous compilecards JSON report")
 	flags.StringVar(&cfg.CurrentReport, "report", ".cardwork/current-report.json", "current compilecards JSON report")
 	flags.StringVar(&cfg.GeneratedRoot, "out", ".cardwork/current-generated", "generated cards root")
-	flags.StringVar(&cfg.SupportedPath, "supported", "docs/supported.md", "supported-card Markdown path")
+	flags.StringVar(&cfg.SupportedPath, "supported", ".cardwork/corpusdelta-supported.md", "supported-card Markdown path")
 	flags.StringVar(&cfg.ManifestPath, "manifest", ".cardwork/current-delta.json", "inspection manifest JSON path")
 	flags.BoolVar(&cfg.Compile, "compile", true, "run compilecards before comparison")
 	flags.BoolVar(&cfg.Validate, "validate", true, "run go test and go vet on generated packages")

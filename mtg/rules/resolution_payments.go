@@ -6,7 +6,10 @@ import (
 )
 
 func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (accepted, succeeded bool) {
-	playerID := stackObjectController(obj)
+	playerID, ok := resolutionPaymentPayer(g, obj, res)
+	if !ok {
+		return false, false
+	}
 	if !canPayResolutionPayment(g, playerID, res) {
 		return false, false
 	}
@@ -29,6 +32,13 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 		return true, false
 	}
 	return true, true
+}
+
+func resolutionPaymentPayer(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment) (game.PlayerID, bool) {
+	if res != nil && res.Payer.Exists {
+		return resolvePlayerReference(g, obj, res.Payer.Val)
+	}
+	return stackObjectController(obj), true
 }
 
 func canPayResolutionPayment(g *game.Game, playerID game.PlayerID, res *game.ResolutionPayment) bool {

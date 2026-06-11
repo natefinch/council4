@@ -7,7 +7,7 @@ Oracle compiler expansion. It:
 2. compares the previous and current reports by stable Scryfall card ID;
 3. verifies input, eligible, excluded, generated, and unsupported report counts
    and every newly generated source path, including categorized token paths;
-4. regenerates `docs/supported.md`;
+4. writes a scratch supported-card list;
 5. writes a deterministic JSON inspection manifest containing Oracle text,
    generated source paths, regressions, and diagnostic-count changes; and
 6. copies the generated tree into a temporary package under `cardgen`, then runs
@@ -35,7 +35,9 @@ Flags:
 - `-report`: current report path. Default `.cardwork/current-report.json`.
 - `-manifest`: inspection manifest path. Default
   `.cardwork/current-delta.json`.
-- `-supported`: supported-card Markdown path. Default `docs/supported.md`.
+- `-supported`: scratch supported-card Markdown path. Default
+  `.cardwork/corpusdelta-supported.md`. Run the repository `cardSupport` Mage
+  target to update the canonical root support documentation.
 - `-compile`: run `compilecards` before comparison. Default `true`.
 - `-validate`: test and vet generated packages. Default `true`.
 

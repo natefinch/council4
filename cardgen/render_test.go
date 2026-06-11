@@ -172,6 +172,34 @@ func TestRenderCounterObjectPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderCreateDelayedTriggerPrimitive(t *testing.T) {
+	t.Parallel()
+	content := game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.Sacrifice{Object: game.SourceCardPermanentReference()},
+		}},
+	}.Ability()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{
+			Timing:  game.DelayedAtBeginningOfNextUpkeep,
+			Content: content,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.CreateDelayedTrigger",
+		"game.DelayedAtBeginningOfNextUpkeep",
+		"game.Sacrifice",
+		"game.SourceCardPermanentReference()",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered delayed trigger missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderTargetPredicateSpellCardTypes(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()
@@ -494,6 +522,78 @@ func TestRenderResolutionPaymentRejectsPromptWithoutCost(t *testing.T) {
 		Prompt: "Pay?",
 	}); err == nil {
 		t.Fatal("expected prompt-only payment error")
+	}
+}
+
+func TestRenderResolutionPaymentPayer(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderResolutionPayment(ctx, game.ResolutionPayment{
+		Prompt:   "Pay {2}?",
+		Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+		ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Prompt: \"Pay {2}?\"",
+		"Payer: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0)))",
+		"cost.O(2)",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered payment missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("resolution payment payer did not request opt import")
+	}
+}
+
+func TestRenderPayPrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Pay{
+		Payment: game.ResolutionPayment{
+			ManaCost: opt.Val(cost.Mana{cost.U}),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.Pay", "Payment: game.ResolutionPayment", "cost.U"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered pay missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRenderInstructionEnvelope(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderInstruction(ctx, &game.Instruction{
+		Primitive:     game.CounterObject{Object: game.TargetStackObjectReference(0)},
+		PublishResult: "countered",
+		ResultGate: opt.Val(game.InstructionResultGate{
+			Key:       "unless-paid",
+			Succeeded: game.TriFalse,
+		}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.CounterObject",
+		"PublishResult: game.ResultKey(\"countered\")",
+		"ResultGate: opt.Val(game.InstructionResultGate",
+		"Key: \"unless-paid\"",
+		"Succeeded: game.TriFalse",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered instruction missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("result gate did not request opt import")
 	}
 }
 

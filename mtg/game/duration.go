@@ -21,6 +21,7 @@ type DelayedTriggerTiming int
 // Delayed trigger timing values identify supported delayed trigger windows.
 const (
 	DelayedAtBeginningOfNextEndStep DelayedTriggerTiming = iota + 1
+	DelayedAtBeginningOfNextUpkeep
 )
 
 // DelayedTriggerDef is the card-definition-side data for creating a delayed

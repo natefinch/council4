@@ -281,13 +281,16 @@ func lowerExecutableAbility(
 		spans := make(
 			[]oracle.Span,
 			0,
-			len(ability.Effects)+len(ability.Targets)+len(ability.References)+len(syntax.Reminders),
+			len(ability.Effects)+len(ability.Targets)+len(ability.Conditions)+len(ability.References)+len(syntax.Reminders),
 		)
 		for _, effect := range ability.Effects {
 			spans = append(spans, effect.Span)
 		}
 		for _, target := range ability.Targets {
 			spans = append(spans, target.Span)
+		}
+		for _, condition := range ability.Conditions {
+			spans = append(spans, condition.Span)
 		}
 		for _, reference := range ability.References {
 			spans = append(spans, reference.Span)
@@ -300,6 +303,7 @@ func lowerExecutableAbility(
 			spellAbility: opt.Val(spellAbility),
 			consumed: semanticConsumption{
 				targets:    len(ability.Targets),
+				conditions: len(ability.Conditions),
 				effects:    len(ability.Effects),
 				keywords:   len(ability.Keywords),
 				references: len(ability.References),
@@ -5989,6 +5993,140 @@ func lowerSingleEffectSpell(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
+	if len(ability.Effects) == 1 && ability.Effects[0].DelayedTiming != 0 {
+		return lowerDelayedSingleEffectSpell(cardName, ability, syntax)
+	}
+	return lowerImmediateSingleEffectSpell(cardName, ability, syntax)
+}
+
+func lowerDelayedSingleEffectSpell(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
+	effect := ability.Effects[0]
+	ability.Text = textWithoutDelimited(ability.Text, ability.Span, syntax.Reminders)
+	syntax.Tokens = slices.DeleteFunc(
+		append([]oracle.Token(nil), syntax.Tokens...),
+		func(token oracle.Token) bool {
+			return spanCoveredByDelimited(token.Span, syntax.Reminders)
+		},
+	)
+	syntax.Reminders = nil
+	text, textOK := stripDelayedTimingText(ability.Text, effect.DelayedTiming)
+	tokens, tokensOK := stripDelayedTimingTokens(syntax.Tokens, effect.DelayedTiming)
+	if !textOK || !tokensOK {
+		return game.AbilityContent{}, unsupportedDelayedEffectDiagnostic(ability)
+	}
+	ability.Text = text
+	ability.Effects[0].Text = text
+	ability.Effects[0].DelayedTiming = 0
+	syntax.Tokens = tokens
+
+	var content game.AbilityContent
+	if primitive, ok := lowerDelayedSelfPrimitive(ability); ok {
+		content = game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability()
+	} else {
+		var diagnostic *oracle.Diagnostic
+		content, diagnostic = lowerImmediateSingleEffectSpell(cardName, ability, syntax)
+		if diagnostic != nil {
+			return game.AbilityContent{}, unsupportedDelayedEffectDiagnostic(ability)
+		}
+	}
+	if len(content.SharedTargets) != 0 ||
+		content.IsModal() ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Targets) != 0 ||
+		len(content.Modes[0].Sequence) == 0 {
+		return game.AbilityContent{}, unsupportedDelayedEffectDiagnostic(ability)
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{
+			Timing:  effect.DelayedTiming,
+			Content: content,
+		},
+	}}}}.Ability(), nil
+}
+
+func lowerDelayedSelfPrimitive(ability oracle.CompiledAbility) (game.Primitive, bool) {
+	if len(ability.Targets) != 0 ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		ability.Effects[0].Negated {
+		return nil, false
+	}
+	sourcePermanent := game.SourceCardPermanentReference()
+	switch {
+	case ability.Text == "Exile it." && exactPronounReferences(ability.References, "it"):
+		return game.Exile{Object: sourcePermanent}, true
+	case ability.Text == "Sacrifice it." && exactPronounReferences(ability.References, "it"):
+		return game.Sacrifice{Object: sourcePermanent}, true
+	case ability.Text == "Return it to its owner's hand." && exactPronounReferences(ability.References, "it", "its"):
+		return game.MoveCard{
+			Card:        game.CardReference{Kind: game.CardReferenceSource},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}, true
+	default:
+		return nil, false
+	}
+}
+
+func stripDelayedTimingText(text string, timing game.DelayedTriggerTiming) (string, bool) {
+	var suffix string
+	switch timing {
+	case game.DelayedAtBeginningOfNextEndStep:
+		suffix = " at the beginning of the next end step."
+	case game.DelayedAtBeginningOfNextUpkeep:
+		suffix = " at the beginning of the next turn's upkeep."
+	default:
+		return "", false
+	}
+	base, ok := strings.CutSuffix(text, suffix)
+	if !ok || base == "" {
+		return "", false
+	}
+	return base + ".", true
+}
+
+func stripDelayedTimingTokens(tokens []oracle.Token, timing game.DelayedTriggerTiming) ([]oracle.Token, bool) {
+	var suffix []string
+	switch timing {
+	case game.DelayedAtBeginningOfNextEndStep:
+		suffix = []string{"at", "the", "beginning", "of", "the", "next", "end", "step"}
+	case game.DelayedAtBeginningOfNextUpkeep:
+		suffix = []string{"at", "the", "beginning", "of", "the", "next", "turn's", "upkeep"}
+	default:
+		return nil, false
+	}
+	if len(tokens) < len(suffix)+1 || tokens[len(tokens)-1].Kind != oracle.Period {
+		return nil, false
+	}
+	start := len(tokens) - len(suffix) - 1
+	for i, text := range suffix {
+		if !strings.EqualFold(tokens[start+i].Text, text) {
+			return nil, false
+		}
+	}
+	stripped := append([]oracle.Token(nil), tokens[:start]...)
+	stripped = append(stripped, tokens[len(tokens)-1])
+	return stripped, true
+}
+
+func unsupportedDelayedEffectDiagnostic(ability oracle.CompiledAbility) *oracle.Diagnostic {
+	return executableDiagnostic(
+		ability,
+		"unsupported delayed effect",
+		"the executable source backend supports only exact non-target delayed one-shot effects",
+	)
+}
+
+func lowerImmediateSingleEffectSpell(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.AbilityContent, *oracle.Diagnostic) {
 	ability.Text = textWithoutDelimited(ability.Text, ability.Span, syntax.Reminders)
 	syntax.Tokens = slices.DeleteFunc(
 		append([]oracle.Token(nil), syntax.Tokens...),
@@ -7361,6 +7499,9 @@ func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.P
 		value.Player, ok = remapPlayerReference(value.Player, localToGame)
 		return value, ok
 	}
+	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
+		return value, true
+	}
 	return nil, false
 }
 
@@ -7543,6 +7684,9 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primiti
 	if value, ok := primitive.(game.LoseLife); ok {
 		value.Player, ok = rebasePlayerReference(value.Player, offset)
 		return value, ok
+	}
+	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
+		return value, true
 	}
 	return nil, false
 }
@@ -9566,6 +9710,9 @@ func lowerCounterSpell(ability oracle.CompiledAbility) (game.AbilityContent, *or
 			"the executable source backend supports only exact counter of one target spell",
 		)
 	}
+	if content, ok := lowerCounterUnlessPaysSpell(ability); ok {
+		return content, nil
+	}
 	if len(ability.Effects) != 1 ||
 		len(ability.Targets) != 1 ||
 		ability.Targets[0].Cardinality.Min != 1 ||
@@ -9587,6 +9734,81 @@ func lowerCounterSpell(ability oracle.CompiledAbility) (game.AbilityContent, *or
 			Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
 		}},
 	}.Ability(), nil
+}
+
+func lowerCounterUnlessPaysSpell(ability oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(ability.Effects) != 1 ||
+		len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		ability.Effects[0].Negated ||
+		len(ability.Conditions) != 1 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	targetText, manaCost, ok := counterUnlessPaysParts(ability)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	target := ability.Targets[0]
+	target.Text = targetText
+	targetSpec, ok := stackSpellTargetSpec(target)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	const resultKey = game.ResultKey("unless-paid")
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{
+			{
+				Primitive: game.Pay{Payment: game.ResolutionPayment{
+					Prompt:   "Pay " + manaCost.String() + "?",
+					Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+					ManaCost: opt.Val(manaCost),
+				}},
+				PublishResult: resultKey,
+			},
+			{
+				Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key:       resultKey,
+					Succeeded: game.TriFalse,
+				}),
+			},
+		},
+	}.Ability(), true
+}
+
+func counterUnlessPaysParts(ability oracle.CompiledAbility) (string, cost.Mana, bool) {
+	const marker = " unless its controller pays "
+	before, after, ok := strings.Cut(ability.Text, marker)
+	if !ok || !strings.HasPrefix(before, "Counter ") || !strings.HasSuffix(after, ".") {
+		return "", nil, false
+	}
+	targetText := strings.TrimPrefix(before, "Counter ")
+	manaText := strings.TrimSuffix(after, ".")
+	manaCost, err := parseManaCostValue(manaText)
+	if err != nil || len(manaCost) == 0 || manaCost.String() != manaText || manaCostHasVariableSymbol(manaCost) {
+		return "", nil, false
+	}
+	conditionText := "unless its controller pays" + manaText
+	if ability.Conditions[0].Kind != oracle.ConditionUnless ||
+		ability.Conditions[0].Text != conditionText ||
+		ability.Targets[0].Text != targetText+" "+conditionText {
+		return "", nil, false
+	}
+	return targetText, manaCost, true
+}
+
+func manaCostHasVariableSymbol(manaCost cost.Mana) bool {
+	for _, symbol := range manaCost {
+		if symbol.Kind == cost.VariableSymbol {
+			return true
+		}
+	}
+	return false
 }
 
 func playerTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {

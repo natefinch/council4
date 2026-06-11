@@ -464,7 +464,14 @@ func (p DiscoverCards) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validateQuantity(p.Amount, targets, checkTargets)
 }
 
-func (Pay) validatePrimitive([]TargetSpec, bool) error {
+func (p Pay) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateResolutionPayment(p.Payment, targets, checkTargets)
+}
+
+func validateResolutionPayment(payment ResolutionPayment, targets []TargetSpec, checkTargets bool) error {
+	if payment.Payer.Exists {
+		return validatePlayerReference(payment.Payer.Val, targets, checkTargets)
+	}
 	return nil
 }
 
@@ -678,8 +685,10 @@ func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 }
 
 func (p CreateDelayedTrigger) validatePrimitive([]TargetSpec, bool) error {
-	if p.Trigger.Timing == 0 {
-		return errors.New("delayed trigger requires timing")
+	switch p.Trigger.Timing {
+	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep:
+	default:
+		return errors.New("delayed trigger requires a recognized timing")
 	}
 	return validateNestedAbilityContent(p.Trigger.Content)
 }

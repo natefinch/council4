@@ -1509,6 +1509,14 @@ func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.Resolutio
 	if payment.Prompt != "" {
 		fields = append(fields, fmt.Sprintf("Prompt: %q,", payment.Prompt))
 	}
+	if payment.Payer.Exists {
+		payer, err := r.renderPlayerReference(payment.Payer.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Payer: opt.Val(%s),", payer))
+	}
 	if payment.ManaCost.Exists {
 		manaCost, err := renderManaCostMultiline(ctx, payment.ManaCost.Val)
 		if err != nil {
@@ -1528,6 +1536,18 @@ func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.Resolutio
 		fields = append(fields, fmt.Sprintf("XValue: %d,", payment.XValue))
 	}
 	return structLit("game.ResolutionPayment", fields), nil
+}
+
+func (r Renderer) renderPay(ctx *renderCtx, pay game.Pay) (string, error) {
+	payment, err := r.renderResolutionPayment(ctx, pay.Payment)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Payment: %s,", payment)}
+	if pay.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", pay.Prompt))
+	}
+	return structLit("game.Pay", fields), nil
 }
 
 // renderConditionForETBReplacement renders a game.Condition for use in a
@@ -1810,10 +1830,46 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Primitive: %s,", primitive)}
+	if instruction.ResultGate.Exists {
+		gate, err := renderInstructionResultGate(instruction.ResultGate.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ResultGate: opt.Val(%s),", gate))
+	}
+	if instruction.Optional {
+		fields = append(fields, "Optional: true,")
+	}
 	if instruction.PublishResult != "" {
 		fields = append(fields, fmt.Sprintf("PublishResult: game.ResultKey(%q),", string(instruction.PublishResult)))
 	}
+	if instruction.Description != "" {
+		fields = append(fields, fmt.Sprintf("Description: %q,", instruction.Description))
+	}
 	return structLit("", fields), nil
+}
+
+func renderInstructionResultGate(gate game.InstructionResultGate) (string, error) {
+	var fields []string
+	if gate.Key != "" {
+		fields = append(fields, fmt.Sprintf("Key: %q,", gate.Key))
+	}
+	if gate.Accepted != game.TriAny {
+		accepted, err := renderTriState(gate.Accepted)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Accepted: %s,", accepted))
+	}
+	if gate.Succeeded != game.TriAny {
+		succeeded, err := renderTriState(gate.Succeeded)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Succeeded: %s,", succeeded))
+	}
+	return structLit("game.InstructionResultGate", fields), nil
 }
 
 func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
@@ -1833,7 +1889,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveExile:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveTap, game.PrimitiveRegenerate, game.PrimitiveExplore,
-		game.PrimitiveCounterObject:
+		game.PrimitiveCounterObject, game.PrimitiveSacrifice:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
@@ -1867,6 +1923,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: Choose kind has unexpected concrete type")
 		}
 		return r.renderChoose(ctx, value)
+	case game.PrimitivePay:
+		value, ok := primitive.(game.Pay)
+		if !ok {
+			return "", errors.New("render: internal error: Pay kind has unexpected concrete type")
+		}
+		return r.renderPay(ctx, value)
 	case game.PrimitivePutOnBattlefield:
 		value, ok := primitive.(game.PutOnBattlefield)
 		if !ok {
@@ -1885,9 +1947,36 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: GrantCastPermission kind has unexpected concrete type")
 		}
 		return r.renderGrantCastPermission(ctx, value)
+	case game.PrimitiveCreateDelayedTrigger:
+		value, ok := primitive.(game.CreateDelayedTrigger)
+		if !ok {
+			return "", errors.New("render: internal error: CreateDelayedTrigger kind has unexpected concrete type")
+		}
+		return r.renderCreateDelayedTrigger(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDelayedTrigger) (string, error) {
+	timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)
+	if err != nil {
+		return "", err
+	}
+	content, err := r.renderAbilityContent(ctx, value.Trigger.Content)
+	if err != nil {
+		return "", err
+	}
+	triggerFields := []string{
+		fmt.Sprintf("Timing: %s,", timing),
+		fmt.Sprintf("Content: %s,", content),
+	}
+	if value.Trigger.Optional {
+		triggerFields = append(triggerFields, "Optional: true,")
+	}
+	return structLit("game.CreateDelayedTrigger", []string{
+		fmt.Sprintf("Trigger: %s,", structLit("game.DelayedTriggerDef", triggerFields)),
+	}), nil
 }
 
 func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlefield) (string, error) {
@@ -2248,6 +2337,12 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", errors.New("render: internal error: CounterObject kind has unexpected concrete type")
 		}
 		typeName, object = "game.CounterObject", value.Object
+	case game.PrimitiveSacrifice:
+		value, ok := primitive.(game.Sacrifice)
+		if !ok {
+			return "", errors.New("render: internal error: Sacrifice kind has unexpected concrete type")
+		}
+		typeName, object = "game.Sacrifice", value.Object
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}
@@ -3055,6 +3150,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return fmt.Sprintf("game.LinkedObjectReference(%q)", reference.LinkID()), nil
 	case game.ObjectReferenceEventPermanent:
 		return "game.EventPermanentReference()", nil
+	case game.ObjectReferenceSourceCard:
+		return "game.SourceCardPermanentReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported object reference kind %d", reference.Kind())
 	}
@@ -3803,6 +3900,17 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 		return "game.DurationUntilEndOfYourNextTurn", nil
 	default:
 		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
+	}
+}
+
+func renderDelayedTriggerTiming(timing game.DelayedTriggerTiming) (string, error) {
+	switch timing {
+	case game.DelayedAtBeginningOfNextEndStep:
+		return "game.DelayedAtBeginningOfNextEndStep", nil
+	case game.DelayedAtBeginningOfNextUpkeep:
+		return "game.DelayedAtBeginningOfNextUpkeep", nil
+	default:
+		return "", fmt.Errorf("render: unsupported delayed trigger timing %d", timing)
 	}
 }
 

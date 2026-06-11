@@ -337,12 +337,57 @@ func TestLowerCounterSpellWithDrawRider(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellUnlessPays(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Leak",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Counter target spell unless its controller pays {3}.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || mode.Targets[0].Allow != game.TargetAllowStackObject {
+		t.Fatalf("targets = %+v, want one stack-object target", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want pay then counter", len(mode.Sequence))
+	}
+	pay, ok := mode.Sequence[0].Primitive.(game.Pay)
+	if !ok {
+		t.Fatalf("first primitive = %T, want game.Pay", mode.Sequence[0].Primitive)
+	}
+	if mode.Sequence[0].PublishResult != "unless-paid" {
+		t.Fatalf("pay result key = %q, want unless-paid", mode.Sequence[0].PublishResult)
+	}
+	if !pay.Payment.ManaCost.Exists || !slices.Equal(pay.Payment.ManaCost.Val, cost.Mana{cost.O(3)}) {
+		t.Fatalf("payment mana = %+v, want {3}", pay.Payment.ManaCost)
+	}
+	payer, ok := pay.Payment.Payer.Val.Object()
+	if !pay.Payment.Payer.Exists || !ok || payer.Kind() != game.ObjectReferenceTargetStackObject || payer.TargetIndex() != 0 {
+		t.Fatalf("payer = %+v, want controller of target stack object 0", pay.Payment.Payer)
+	}
+	counterObject, ok := mode.Sequence[1].Primitive.(game.CounterObject)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.CounterObject", mode.Sequence[1].Primitive)
+	}
+	if counterObject.Object.Kind() != game.ObjectReferenceTargetStackObject || counterObject.Object.TargetIndex() != 0 {
+		t.Fatalf("counter object = %+v, want target stack object 0", counterObject.Object)
+	}
+	gate := mode.Sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != "unless-paid" || gate.Val.Succeeded != game.TriFalse {
+		t.Fatalf("counter result gate = %+v, want unless-paid succeeded false", gate)
+	}
+}
+
 func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Counter target blue spell.",
 		"Counter target artifact or enchantment spell.",
-		"Counter target spell unless its controller pays {1}.",
+		"Counter target spell unless its controller pays {X}.",
 		"Counter target activated or triggered ability.",
 		"Counter target activated ability from an artifact source.",
 		"Counter target spell or ability that targets a creature.",
@@ -496,6 +541,151 @@ func TestLowerSelfCardGraveyardReturnToBattlefieldWithCounters(t *testing.T) {
 		put.EntryCounters[0].Kind != counter.PlusOnePlusOne ||
 		put.EntryCounters[0].Amount != 2 {
 		t.Fatalf("put = %#v", put)
+	}
+}
+
+func TestLowerSimpleDelayedOneShotEffects(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		cardName   string
+		typeLine   string
+		oracleText string
+		timing     game.DelayedTriggerTiming
+		check      func(t *testing.T, primitive game.Primitive)
+	}{
+		{
+			name:       "draw at next upkeep",
+			cardName:   "Test Insight",
+			typeLine:   "Instant",
+			oracleText: "Draw a card at the beginning of the next turn's upkeep.",
+			timing:     game.DelayedAtBeginningOfNextUpkeep,
+			check: func(t *testing.T, primitive game.Primitive) {
+				t.Helper()
+				draw, ok := primitive.(game.Draw)
+				if !ok || draw.Amount.IsDynamic() || draw.Amount.Value() != 1 {
+					t.Fatalf("primitive = %#v, want draw one", primitive)
+				}
+			},
+		},
+		{
+			name:       "self exile at next end step",
+			cardName:   "Test Runner",
+			typeLine:   "Creature — Human",
+			oracleText: "When this creature enters, exile it at the beginning of the next end step.",
+			timing:     game.DelayedAtBeginningOfNextEndStep,
+			check: func(t *testing.T, primitive game.Primitive) {
+				t.Helper()
+				exile, ok := primitive.(game.Exile)
+				if !ok || exile.Object.Kind() != game.ObjectReferenceSourceCard {
+					t.Fatalf("primitive = %#v, want source-card exile", primitive)
+				}
+			},
+		},
+		{
+			name:       "self sacrifice at next end step",
+			cardName:   "Test Runner",
+			typeLine:   "Creature — Human",
+			oracleText: "When this creature enters, sacrifice it at the beginning of the next end step.",
+			timing:     game.DelayedAtBeginningOfNextEndStep,
+			check: func(t *testing.T, primitive game.Primitive) {
+				t.Helper()
+				sacrifice, ok := primitive.(game.Sacrifice)
+				if !ok || sacrifice.Object.Kind() != game.ObjectReferenceSourceCard {
+					t.Fatalf("primitive = %#v, want source-card sacrifice", primitive)
+				}
+			},
+		},
+		{
+			name:       "self return from graveyard at next end step",
+			cardName:   "Test God",
+			typeLine:   "Legendary Creature — God",
+			oracleText: "When Test God dies, return it to its owner's hand at the beginning of the next end step.",
+			timing:     game.DelayedAtBeginningOfNextEndStep,
+			check: func(t *testing.T, primitive game.Primitive) {
+				t.Helper()
+				move, ok := primitive.(game.MoveCard)
+				if !ok ||
+					move.Card.Kind != game.CardReferenceSource ||
+					move.FromZone != zone.Graveyard ||
+					move.Destination != zone.Hand {
+					t.Fatalf("primitive = %#v, want source card graveyard-to-hand move", primitive)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       tt.cardName,
+				Layout:     "normal",
+				TypeLine:   tt.typeLine,
+				OracleText: tt.oracleText,
+			}
+			if strings.Contains(tt.typeLine, "Creature") {
+				card.Power = new("2")
+				card.Toughness = new("2")
+			}
+			face := lowerSingleFace(t, card)
+			var content game.AbilityContent
+			switch {
+			case face.SpellAbility.Exists:
+				content = face.SpellAbility.Val
+			case len(face.TriggeredAbilities) == 1:
+				content = face.TriggeredAbilities[0].Content
+			default:
+				t.Fatalf("lowered face has no single spell or triggered ability: %#v", face)
+			}
+			if len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
+				t.Fatalf("content = %#v, want one delayed-trigger instruction", content)
+			}
+			delayed, ok := content.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger)
+			if !ok || delayed.Trigger.Timing != tt.timing {
+				t.Fatalf("primitive = %#v, want delayed timing %v", content.Modes[0].Sequence[0].Primitive, tt.timing)
+			}
+			if len(delayed.Trigger.Content.Modes) != 1 || len(delayed.Trigger.Content.Modes[0].Sequence) != 1 {
+				t.Fatalf("delayed content = %#v, want one instruction", delayed.Trigger.Content)
+			}
+			tt.check(t, delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
+		})
+	}
+}
+
+func TestLowerDelayedOneShotEffectRejectsTargetReference(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Delay",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Exile target creature at the beginning of the next end step.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected delayed target effect to remain unsupported")
+	}
+}
+
+func TestLowerOrderedSequenceWithDelayedOneShotEffect(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sequence",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Draw a card, then you gain 2 life at the beginning of the next end step.",
+	})
+	content := face.SpellAbility.Val
+	if len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
+		t.Fatalf("content = %#v, want two ordered instructions", content)
+	}
+	if _, ok := content.Modes[0].Sequence[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("first primitive = %#v, want draw", content.Modes[0].Sequence[0].Primitive)
+	}
+	delayed, ok := content.Modes[0].Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+		t.Fatalf("second primitive = %#v, want delayed end-step trigger", content.Modes[0].Sequence[1].Primitive)
+	}
+	if _, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.GainLife); !ok {
+		t.Fatalf("delayed primitive = %#v, want gain life", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
 	}
 }
 
