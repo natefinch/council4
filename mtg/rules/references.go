@@ -84,6 +84,16 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			return resolvedObjectReference{}, false
 		}
 		return resolvePermanentOrLastKnown(r.g, r.obj.SourceID)
+	case game.ObjectReferenceSourceCard:
+		if r.obj == nil || r.obj.SourceCardID == 0 {
+			return resolvedObjectReference{}, false
+		}
+		for _, permanent := range r.g.Battlefield {
+			if permanent.CardInstanceID == r.obj.SourceCardID {
+				return resolvedObjectReference{permanent: permanent}, true
+			}
+		}
+		return resolvedObjectReference{}, false
 	case game.ObjectReferenceSourceAttachedPermanent:
 		permanent, ok := r.sourcePermanent()
 		if !ok || !permanent.AttachedTo.Exists {

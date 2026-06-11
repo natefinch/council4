@@ -1833,7 +1833,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveExile:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveTap, game.PrimitiveRegenerate, game.PrimitiveExplore,
-		game.PrimitiveCounterObject:
+		game.PrimitiveCounterObject, game.PrimitiveSacrifice:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
@@ -1885,9 +1885,36 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: GrantCastPermission kind has unexpected concrete type")
 		}
 		return r.renderGrantCastPermission(ctx, value)
+	case game.PrimitiveCreateDelayedTrigger:
+		value, ok := primitive.(game.CreateDelayedTrigger)
+		if !ok {
+			return "", errors.New("render: internal error: CreateDelayedTrigger kind has unexpected concrete type")
+		}
+		return r.renderCreateDelayedTrigger(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDelayedTrigger) (string, error) {
+	timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)
+	if err != nil {
+		return "", err
+	}
+	content, err := r.renderAbilityContent(ctx, value.Trigger.Content)
+	if err != nil {
+		return "", err
+	}
+	triggerFields := []string{
+		fmt.Sprintf("Timing: %s,", timing),
+		fmt.Sprintf("Content: %s,", content),
+	}
+	if value.Trigger.Optional {
+		triggerFields = append(triggerFields, "Optional: true,")
+	}
+	return structLit("game.CreateDelayedTrigger", []string{
+		fmt.Sprintf("Trigger: %s,", structLit("game.DelayedTriggerDef", triggerFields)),
+	}), nil
 }
 
 func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlefield) (string, error) {
@@ -2248,6 +2275,12 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", errors.New("render: internal error: CounterObject kind has unexpected concrete type")
 		}
 		typeName, object = "game.CounterObject", value.Object
+	case game.PrimitiveSacrifice:
+		value, ok := primitive.(game.Sacrifice)
+		if !ok {
+			return "", errors.New("render: internal error: Sacrifice kind has unexpected concrete type")
+		}
+		typeName, object = "game.Sacrifice", value.Object
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}
@@ -3055,6 +3088,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return fmt.Sprintf("game.LinkedObjectReference(%q)", reference.LinkID()), nil
 	case game.ObjectReferenceEventPermanent:
 		return "game.EventPermanentReference()", nil
+	case game.ObjectReferenceSourceCard:
+		return "game.SourceCardPermanentReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported object reference kind %d", reference.Kind())
 	}
@@ -3803,6 +3838,17 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 		return "game.DurationUntilEndOfYourNextTurn", nil
 	default:
 		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
+	}
+}
+
+func renderDelayedTriggerTiming(timing game.DelayedTriggerTiming) (string, error) {
+	switch timing {
+	case game.DelayedAtBeginningOfNextEndStep:
+		return "game.DelayedAtBeginningOfNextEndStep", nil
+	case game.DelayedAtBeginningOfNextUpkeep:
+		return "game.DelayedAtBeginningOfNextUpkeep", nil
+	default:
+		return "", fmt.Errorf("render: unsupported delayed trigger timing %d", timing)
 	}
 }
 

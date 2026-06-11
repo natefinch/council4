@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -734,6 +735,49 @@ func TestCompileFixedEffectValues(t *testing.T) {
 				effect.Amount.Value != test.amount ||
 				effect.Symbol != test.symbol {
 				t.Fatalf("effect = %#v", effect)
+			}
+		})
+	}
+}
+
+func TestCompileDelayedEffectTiming(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectKind
+		timing game.DelayedTriggerTiming
+	}{
+		{
+			source: "Draw a card at the beginning of the next turn's upkeep.",
+			kind:   EffectDraw,
+			timing: game.DelayedAtBeginningOfNextUpkeep,
+		},
+		{
+			source: "Exile it at the beginning of the next end step.",
+			kind:   EffectExile,
+			timing: game.DelayedAtBeginningOfNextEndStep,
+		},
+		{
+			source: "Sacrifice it at the beginning of the next end step.",
+			kind:   EffectSacrifice,
+			timing: game.DelayedAtBeginningOfNextEndStep,
+		},
+		{
+			source: "Return it to its owner's hand at the beginning of the next end step.",
+			kind:   EffectReturn,
+			timing: game.DelayedAtBeginningOfNextEndStep,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(tt.source, ParseContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := compilation.Abilities[0].Effects
+			if len(effects) != 1 || effects[0].Kind != tt.kind || effects[0].DelayedTiming != tt.timing {
+				t.Fatalf("effects = %#v, want kind %v timing %v", effects, tt.kind, tt.timing)
 			}
 		})
 	}

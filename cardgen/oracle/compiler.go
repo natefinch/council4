@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -485,6 +486,7 @@ func compileEffects(
 			kind := effectKindAt(tokens, tokenIndex)
 			clauseEnd := effectClauseEnd(tokens, effectIndices, effectIndex)
 			clauseTokens := tokens[tokenIndex+1 : clauseEnd]
+			clauseTokens, delayedTiming := stripDelayedTimingSuffix(clauseTokens)
 			powerDelta, toughnessDelta := compilePTChange(clauseTokens)
 			counterKind, counterKindKnown := counterKindWord(clauseTokens)
 			effects = append(effects, CompiledEffect{
@@ -493,6 +495,7 @@ func compileEffects(
 				Text:                 sentence.Text,
 				VerbSpan:             token.Span,
 				Duration:             duration,
+				DelayedTiming:        delayedTiming,
 				Selector:             compileSelector(clauseTokens),
 				Amount:               compileEffectAmount(clauseTokens, cardName),
 				PowerDelta:           powerDelta,
@@ -511,6 +514,49 @@ func compileEffects(
 
 	}
 	return effects
+}
+
+func stripDelayedTimingSuffix(tokens []Token) ([]Token, game.DelayedTriggerTiming) {
+	end := len(tokens)
+	if end > 0 && tokens[end-1].Kind == Period {
+		end--
+	}
+	suffixes := []struct {
+		timing game.DelayedTriggerTiming
+		text   []string
+	}{
+		{
+			timing: game.DelayedAtBeginningOfNextEndStep,
+			text:   []string{"at", "the", "beginning", "of", "the", "next", "end", "step"},
+		},
+		{
+			timing: game.DelayedAtBeginningOfNextUpkeep,
+			text:   []string{"at", "the", "beginning", "of", "the", "next", "turn's", "upkeep"},
+		},
+	}
+	for _, suffix := range suffixes {
+		start := end - len(suffix.text)
+		if start < 0 || !tokenTextsEqual(tokens[start:end], suffix.text) {
+			continue
+		}
+		stripped := make([]Token, 0, len(tokens)-len(suffix.text))
+		stripped = append(stripped, tokens[:start]...)
+		stripped = append(stripped, tokens[end:]...)
+		return stripped, suffix.timing
+	}
+	return tokens, 0
+}
+
+func tokenTextsEqual(tokens []Token, text []string) bool {
+	if len(tokens) != len(text) {
+		return false
+	}
+	for i := range tokens {
+		if !strings.EqualFold(tokens[i].Text, text[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func compileFromZone(tokens []Token) zone.Type {

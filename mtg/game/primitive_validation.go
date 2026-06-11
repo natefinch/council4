@@ -678,8 +678,10 @@ func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 }
 
 func (p CreateDelayedTrigger) validatePrimitive([]TargetSpec, bool) error {
-	if p.Trigger.Timing == 0 {
-		return errors.New("delayed trigger requires timing")
+	switch p.Trigger.Timing {
+	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep:
+	default:
+		return errors.New("delayed trigger requires a recognized timing")
 	}
 	return validateNestedAbilityContent(p.Trigger.Content)
 }
