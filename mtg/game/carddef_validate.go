@@ -258,8 +258,13 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 			v.add(faceName, appendPath(path, "TimeCounters"), CardDefIssueInvalidKeywordAbility, "suspend time counters must be positive")
 		}
 	case ProtectionKeyword:
-		if len(keyword.FromColors) == 0 {
-			v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility, "protection needs at least one protected color")
+		hasAny := len(keyword.FromColors) > 0 ||
+			len(keyword.FromTypes) > 0 ||
+			len(keyword.FromSubtypes) > 0 ||
+			keyword.Multicolored || keyword.Monocolored ||
+			keyword.Everything || keyword.EachColor
+		if !hasAny {
+			v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility, "protection needs at least one protected predicate")
 		}
 	case ToxicKeyword:
 		if keyword.Amount <= 0 {

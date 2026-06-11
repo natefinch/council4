@@ -1767,35 +1767,56 @@ func lowerProtectionAbility(
 	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Protection" {
 		return game.StaticAbility{}, false, nil
 	}
+	// If the ability has effects, it is a grant (e.g., "Enchanted creature has
+	// protection from X") — defer to lowerStaticKeywordGrant instead.
+	if len(ability.Effects) > 0 {
+		return game.StaticAbility{}, false, nil
+	}
 	keyword := ability.Keywords[0]
-	protectedColors, ok := oracleColors(keyword.Parameter)
-	if !ok ||
-		ability.Kind != oracle.AbilityStatic ||
-		ability.Cost != nil ||
-		ability.Trigger != nil ||
-		len(ability.Targets) != 0 ||
-		len(ability.Conditions) != 0 ||
-		len(ability.Effects) != 0 ||
-		len(ability.References) != 0 ||
-		ability.AbilityWord != "" {
+
+	// Common structural checks for all protection variants.
+	structureOK := ability.Kind == oracle.AbilityStatic &&
+		ability.Cost == nil &&
+		ability.Trigger == nil &&
+		len(ability.Targets) == 0 &&
+		len(ability.Conditions) == 0 &&
+		len(ability.Effects) == 0 &&
+		len(ability.References) == 0 &&
+		ability.AbilityWord == ""
+
+	unsupported := func() (game.StaticAbility, bool, *oracle.Diagnostic) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Protection ability",
-			"the executable source backend supports only exact protection from colors",
+			"the executable source backend supports only exact fixed-predicate protection",
 		)
 	}
+
+	if !structureOK {
+		return unsupported()
+	}
+
+	// Validate that the syntax tokens are fully covered by the keyword span.
 	for _, token := range syntax.Tokens {
 		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
 		}
-		return game.StaticAbility{}, true, executableDiagnostic(
-			ability,
-			"unsupported Protection ability",
-			"the executable source backend supports only exact protection from colors",
-		)
+		return unsupported()
 	}
-	return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
+
+	// Try existing color parsing (bare "black,red" format).
+	protectedColors, ok := oracleColors(keyword.Parameter)
+	if ok {
+		return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
+	}
+
+	// Try new prefix-format protection predicates.
+	protKeyword, ok := parseProtectionParameter(keyword.Parameter)
+	if !ok {
+		return unsupported()
+	}
+	return staticAbilityFromProtectionKeyword(protKeyword, ability.Text), true, nil
 }
 
 // lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, Ninjutsu, and
@@ -1912,6 +1933,98 @@ func oracleColor(name string) (color.Color, bool) {
 		return color.Green, true
 	default:
 		return "", false
+	}
+}
+
+// parseProtectionParameter decodes a compiled protection parameter string into
+// a ProtectionKeyword. Handles both the legacy bare-color format and the new
+// prefixed formats produced by the oracle compiler.
+func parseProtectionParameter(param string) (game.ProtectionKeyword, bool) {
+	switch param {
+	case "everything":
+		return game.ProtectionKeyword{Everything: true}, true
+	case "eachcolor":
+		return game.ProtectionKeyword{EachColor: true}, true
+	case "multicolored":
+		return game.ProtectionKeyword{Multicolored: true}, true
+	case "monocolored":
+		return game.ProtectionKeyword{Monocolored: true}, true
+	}
+	if rest, ok := strings.CutPrefix(param, "types:"); ok {
+		names := strings.Split(rest, ",")
+		cardTypes := make([]types.Card, 0, len(names))
+		for _, name := range names {
+			ct, ok := parseProtectionCardType(name)
+			if !ok {
+				return game.ProtectionKeyword{}, false
+			}
+			cardTypes = append(cardTypes, ct)
+		}
+		if len(cardTypes) == 0 {
+			return game.ProtectionKeyword{}, false
+		}
+		return game.ProtectionKeyword{FromTypes: cardTypes}, true
+	}
+	if rest, ok := strings.CutPrefix(param, "subtypes:"); ok {
+		names := strings.Split(rest, ",")
+		subtypes := make([]types.Sub, 0, len(names))
+		for _, name := range names {
+			sub := types.Sub(name)
+			if !types.KnownSubtypeForType(types.Creature, sub) &&
+				!types.KnownSubtypeForType(types.Land, sub) {
+				return game.ProtectionKeyword{}, false
+			}
+			subtypes = append(subtypes, sub)
+		}
+		if len(subtypes) == 0 {
+			return game.ProtectionKeyword{}, false
+		}
+		return game.ProtectionKeyword{FromSubtypes: subtypes}, true
+	}
+	return game.ProtectionKeyword{}, false
+}
+
+func parseProtectionCardType(name string) (types.Card, bool) {
+	switch name {
+	case "artifact":
+		return types.Artifact, true
+	case "creature":
+		return types.Creature, true
+	case "enchantment":
+		return types.Enchantment, true
+	case "instant":
+		return types.Instant, true
+	case "sorcery":
+		return types.Sorcery, true
+	case "planeswalker":
+		return types.Planeswalker, true
+	case "land":
+		return types.Land, true
+	default:
+		return "", false
+	}
+}
+
+// staticAbilityFromProtectionKeyword builds a StaticAbility from a
+// ProtectionKeyword using the appropriate factory function.
+func staticAbilityFromProtectionKeyword(prot game.ProtectionKeyword, text string) game.StaticAbility {
+	switch {
+	case prot.Everything:
+		return game.ProtectionFromEverythingStaticAbility()
+	case prot.EachColor:
+		return game.ProtectionFromEachColorStaticAbility()
+	case prot.Multicolored:
+		return game.ProtectionFromMulticoloredStaticAbility()
+	case prot.Monocolored:
+		return game.ProtectionFromMonocoloredStaticAbility()
+	case len(prot.FromTypes) > 0:
+		return game.ProtectionFromTypesStaticAbility(prot.FromTypes...)
+	case len(prot.FromSubtypes) > 0:
+		return game.ProtectionFromSubtypesStaticAbility(prot.FromSubtypes...)
+	case len(prot.FromColors) > 0:
+		return game.ProtectionFromColorsStaticAbility(prot.FromColors...)
+	default:
+		panic(fmt.Sprintf("lower: empty ProtectionKeyword for %q", text))
 	}
 }
 
@@ -2303,14 +2416,28 @@ func lowerStaticPTBuff(
 	if sourceSelf {
 		syntaxOK = matchesExactSourceStaticPTBuffSyntax(syntax, effect, ability.References[0])
 	}
-	if !keywordsOK ||
-		(len(keywords) == 0 && !syntaxOK) ||
-		(len(keywords) > 0 && !matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, keywordsForBuff)) {
+
+	ptBuffUnsupported := func() (game.StaticAbility, bool, *oracle.Diagnostic) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported static ability",
 			"the executable source backend supports only exact fixed static creature power/toughness buffs, optionally granting supported keywords",
 		)
+	}
+
+	// Ordinary check: plain keywords or no keywords (syntax-matched).
+	// De Morgan's law applied to the original conditions for readability.
+	ordinaryOK := keywordsOK &&
+		(len(keywords) > 0 || syntaxOK) &&
+		(len(keywords) == 0 || matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, keywordsForBuff))
+
+	if !ordinaryOK {
+		// Try a single parameterized Protection keyword as the additional grant
+		// (e.g., "Enchanted creature gets +1/+1 and has protection from creatures.").
+		if sa, ok, diag := lowerStaticPTBuffWithProtectionKeyword(ability, syntax, effect, keywordsForBuff, sourceSelf); ok {
+			return sa, ok, diag
+		}
+		return ptBuffUnsupported()
 	}
 	group := game.GroupReference{}
 	if !sourceSelf {
@@ -2358,6 +2485,59 @@ func lowerStaticPTBuff(
 	}, true, nil
 }
 
+// lowerStaticPTBuffWithProtectionKeyword handles the specific pattern of a PT
+// buff combined with a single parameterized Protection keyword grant, such as
+// "Enchanted creature gets +1/+1 and has protection from creatures.".
+func lowerStaticPTBuffWithProtectionKeyword(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+	keywordsForBuff []oracle.CompiledKeyword,
+	sourceSelf bool,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if len(keywordsForBuff) != 1 ||
+		keywordsForBuff[0].Name != "Protection" ||
+		!matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, keywordsForBuff) {
+		return game.StaticAbility{}, false, nil
+	}
+	group := game.GroupReference{}
+	if !sourceSelf {
+		var ok bool
+		group, ok = staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
+		if !ok {
+			return game.StaticAbility{}, false, nil
+		}
+	}
+	param := keywordsForBuff[0].Parameter
+	var protKeyword game.ProtectionKeyword
+	if colors, ok := oracleColors(param); ok {
+		protKeyword = game.ProtectionKeyword{FromColors: colors}
+	} else if pk, ok := parseProtectionParameter(param); ok {
+		protKeyword = pk
+	} else {
+		return game.StaticAbility{}, false, nil
+	}
+	protBody := staticAbilityFromProtectionKeyword(protKeyword, ability.Text)
+	continuousEffects := []game.ContinuousEffect{
+		{
+			Layer:          game.LayerPowerToughnessModify,
+			AffectedSource: sourceSelf,
+			Group:          group,
+			PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
+			ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
+		},
+		{
+			Layer:        game.LayerAbility,
+			Group:        group,
+			AddAbilities: []game.Ability{protBody},
+		},
+	}
+	return game.StaticAbility{
+		Text:              ability.Text,
+		ContinuousEffects: continuousEffects,
+	}, true, nil
+}
+
 func staticPTBuffSourceSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
 	spans := make([]oracle.Span, 0, 1+len(ability.Keywords)+len(syntax.Reminders))
 	spans = append(spans, ability.Effects[0].Span)
@@ -2388,28 +2568,78 @@ func lowerStaticKeywordGrant(
 		return game.StaticAbility{}, false, nil
 	}
 	effect := ability.Effects[0]
+
+	// Try simple (non-parameterized) keyword grants first.
 	keywords, keywordsOK := mixedStaticKeywords(ability.Keywords)
-	if !keywordsOK || len(keywords) == 0 || !matchesExactStaticKeywordGrantSyntax(syntax, effect, ability.Keywords) {
-		return game.StaticAbility{}, true, executableDiagnostic(
-			ability,
-			"unsupported static ability",
-			"the executable source backend supports only exact standalone grants of runtime-supported keywords",
-		)
+	if keywordsOK && len(keywords) > 0 && matchesExactStaticKeywordGrantSyntax(syntax, effect, ability.Keywords) {
+		group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
+		if !ok {
+			return game.StaticAbility{}, true, executableDiagnostic(
+				ability,
+				"unsupported static ability",
+				"the executable source backend supports only known creature subtypes in standalone keyword grants",
+			)
+		}
+		return game.StaticAbility{
+			Text: ability.Text,
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:       game.LayerAbility,
+				Group:       group,
+				AddKeywords: keywords,
+			}},
+		}, true, nil
+	}
+
+	// Try parameterized protection keyword grants
+	// (e.g., "Enchanted creature has protection from white").
+	if protAbility, ok, diag := lowerProtectionKeywordGrant(ability, syntax, effect); ok {
+		return protAbility, true, diag
+	}
+
+	return game.StaticAbility{}, true, executableDiagnostic(
+		ability,
+		"unsupported static ability",
+		"the executable source backend supports only exact standalone grants of runtime-supported keywords",
+	)
+}
+
+// lowerProtectionKeywordGrant handles static keyword-grant abilities where the
+// only keyword is a parameterized Protection, building a ContinuousEffect with
+// AddAbilities instead of AddKeywords.
+func lowerProtectionKeywordGrant(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	if len(ability.Keywords) != 1 || ability.Keywords[0].Name != "Protection" {
+		return game.StaticAbility{}, false, nil
+	}
+	kw := ability.Keywords[0]
+	if !matchesProtectionKeywordGrantSyntax(syntax, effect, ability.Keywords) {
+		return game.StaticAbility{}, false, nil
 	}
 	group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
 	if !ok {
-		return game.StaticAbility{}, true, executableDiagnostic(
-			ability,
-			"unsupported static ability",
-			"the executable source backend supports only known creature subtypes in standalone keyword grants",
-		)
+		return game.StaticAbility{}, false, nil
 	}
+
+	// Parse protection parameter.
+	var protKeyword game.ProtectionKeyword
+	if colors, ok := oracleColors(kw.Parameter); ok {
+		protKeyword = game.ProtectionKeyword{FromColors: colors}
+	} else if pk, ok := parseProtectionParameter(kw.Parameter); ok {
+		protKeyword = pk
+	} else {
+		return game.StaticAbility{}, false, nil
+	}
+
+	protBody := staticAbilityFromProtectionKeyword(protKeyword, ability.Text)
 	return game.StaticAbility{
 		Text: ability.Text,
 		ContinuousEffects: []game.ContinuousEffect{{
-			Layer:       game.LayerAbility,
-			Group:       group,
-			AddKeywords: keywords,
+			Layer:        game.LayerAbility,
+			Group:        group,
+			AddAbilities: []game.Ability{protBody},
 		}},
 	}, true, nil
 }
@@ -2834,6 +3064,38 @@ func matchesExactStaticKeywordGrantSyntax(
 		return false
 	}
 	return matchesExactKeywordList(tokens[subjectLength+1:len(tokens)-1], keywords)
+}
+
+// matchesProtectionKeywordGrantSyntax is like matchesExactStaticKeywordGrantSyntax
+// but allows additional trailing disclaimer sentences (e.g., "This effect doesn't
+// remove auras.") after the primary keyword clause.
+func matchesProtectionKeywordGrantSyntax(
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	subjectLength := 0
+	for subjectLength < len(tokens) && spanCovered(tokens[subjectLength].Span, []oracle.Span{effect.StaticSubjectSpan}) {
+		subjectLength++
+	}
+	if subjectLength == 0 ||
+		len(tokens) < subjectLength+3 ||
+		(!equalTokenWord(tokens[subjectLength], "has") && !equalTokenWord(tokens[subjectLength], "have")) {
+		return false
+	}
+	// Find the end of the first sentence: the first Period token after the subject+has.
+	sentenceEnd := -1
+	for i := subjectLength + 1; i < len(tokens); i++ {
+		if tokens[i].Kind == oracle.Period {
+			sentenceEnd = i
+			break
+		}
+	}
+	if sentenceEnd < 0 {
+		return false
+	}
+	return matchesExactKeywordList(tokens[subjectLength+1:sentenceEnd], keywords)
 }
 
 func matchesExactStaticPTBuffSyntax(
@@ -4913,25 +5175,10 @@ func lowerKeywordAbility(
 	bodies := make([]loweredStaticAbility, 0, len(ability.Keywords))
 	for _, keyword := range ability.Keywords {
 		if keyword.Parameter != "" {
-			if keyword.Name == "Ward" {
-				manaCost, err := parseManaCostValue(keyword.Parameter)
-				if err == nil && len(manaCost) > 0 {
-					bodies = append(bodies, loweredStaticAbility{
-						Body: game.WardStaticAbility(manaCost),
-					})
-					continue
+			if body, ok, diag := lowerParameterizedKeywordToStaticAbility(ability, keyword); ok {
+				if diag != nil {
+					return nil, diag
 				}
-			}
-			if keyword.Name == "Protection" {
-				protectedColors, ok := oracleColors(keyword.Parameter)
-				if ok {
-					bodies = append(bodies, loweredStaticAbility{
-						Body: game.ProtectionFromColorsStaticAbility(protectedColors...),
-					})
-					continue
-				}
-			}
-			if body, ok := lowerParameterizedStaticKeyword(keyword); ok {
 				bodies = append(bodies, loweredStaticAbility{Body: body})
 				continue
 			}
@@ -5028,6 +5275,35 @@ func readAheadSacrificeChapter(text string) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+// lowerParameterizedKeywordToStaticAbility handles lowering of a single
+// parameterized keyword (Ward, Protection, and others) to a static ability.
+// Returns (body, true, nil) on success, ({}, true, diag) on a recognised but
+// unsupported form, and ({}, false, nil) when no handler matches.
+func lowerParameterizedKeywordToStaticAbility(
+	ability oracle.CompiledAbility,
+	keyword oracle.CompiledKeyword,
+) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	switch keyword.Name {
+	case "Ward":
+		manaCost, err := parseManaCostValue(keyword.Parameter)
+		if err == nil && len(manaCost) > 0 {
+			return game.WardStaticAbility(manaCost), true, nil
+		}
+	case "Protection":
+		if protectedColors, ok := oracleColors(keyword.Parameter); ok {
+			return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
+		}
+		if protKeyword, ok := parseProtectionParameter(keyword.Parameter); ok {
+			return staticAbilityFromProtectionKeyword(protKeyword, ""), true, nil
+		}
+	default:
+	}
+	if body, ok := lowerParameterizedStaticKeyword(keyword); ok {
+		return body, true, nil
+	}
+	return game.StaticAbility{}, false, nil
 }
 
 func lowerParameterizedStaticKeyword(keyword oracle.CompiledKeyword) (game.StaticAbility, bool) {

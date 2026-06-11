@@ -634,7 +634,7 @@ func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellDef *ga
 		target.Owner == owner &&
 		permanentHasType(g, target, types.Creature) &&
 		!permanentHasSubtype(g, target, types.Human) &&
-		!targetProtectedFromSource(g, playerID, spellDef, game.PermanentTarget(targetID))
+		!targetProtectedFromSource(g, playerID, spellDef, 0, game.PermanentTarget(targetID))
 }
 
 func mutateAlternativeCost(manaCost cost.Mana) cost.Alternative {

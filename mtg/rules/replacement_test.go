@@ -135,6 +135,165 @@ func TestProtectionFromColorPreventsDamageAndTargets(t *testing.T) {
 	}
 }
 
+func TestProtectionFromEverythingPreventsDamageAndTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// Use a red source — protection from everything should block any color.
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+	protected := addProtectionFromEverythingPermanent(g, game.Player2)
+
+	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, protected, 3, false)
+	if dealt != 0 {
+		t.Fatalf("dealt = %d, want 0 (protection from everything)", dealt)
+	}
+
+	spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+	if engine.canCastSpell(g, game.Player1, spellID, []game.Target{game.PermanentTarget(protected.ObjectID)}, 0, nil) {
+		t.Fatal("spell could target permanent with protection from everything")
+	}
+}
+
+func TestProtectionFromTypesPreventsDamageFromCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Source is a creature permanent.
+	pt := game.PT{Value: 2}
+	sourceDef := &game.CardDef{CardFace: game.CardFace{
+		Name:      "Attacker",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}}
+	sourcePerm := addCombatPermanent(g, game.Player1, sourceDef)
+	protected := addProtectionFromTypesPermanent(g, game.Player2, types.Creature)
+
+	// Use the permanent's ObjectID as source.
+	dealt := dealPermanentDamage(g, 0, sourcePerm.ObjectID, game.Player1, protected, 2, false)
+	if dealt != 0 {
+		t.Fatalf("dealt = %d, want 0 (protection from creatures)", dealt)
+	}
+}
+
+func TestProtectionFromTypesAllowsDamageFromNonCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Source is an instant spell (not a creature).
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+	protected := addProtectionFromTypesPermanent(g, game.Player2, types.Creature)
+
+	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, protected, 2, false)
+	if dealt != 2 {
+		t.Fatalf("dealt = %d, want 2 (instant is not a creature)", dealt)
+	}
+}
+
+func TestProtectionFromSubtypesPreventsDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 2}
+	dragonDef := &game.CardDef{CardFace: game.CardFace{
+		Name:      "Dragon",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Dragon},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}}
+	dragonPerm := addCombatPermanent(g, game.Player1, dragonDef)
+	protected := addProtectionFromSubtypesPermanent(g, game.Player2, types.Dragon)
+
+	dealt := dealPermanentDamage(g, 0, dragonPerm.ObjectID, game.Player1, protected, 2, false)
+	if dealt != 0 {
+		t.Fatalf("dealt = %d, want 0 (protection from Dragons)", dealt)
+	}
+}
+
+func TestProtectionFromMulticoloredPreventsDamageFromMulticoloredSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Two-color source card.
+	multicolorID := g.IDGen.Next()
+	g.CardInstances[multicolorID] = &game.CardInstance{
+		ID: multicolorID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:   "Multicolor Source",
+			Types:  []types.Card{types.Instant},
+			Colors: []color.Color{color.Red, color.Green},
+		}},
+		Owner: game.Player1,
+	}
+	pt := game.PT{Value: 2}
+	protected := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected from Multicolored",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromMulticoloredStaticAbility()},
+	}})
+
+	dealt := dealPermanentDamage(g, multicolorID, 0, game.Player1, protected, 2, false)
+	if dealt != 0 {
+		t.Fatalf("dealt = %d, want 0 (protection from multicolored)", dealt)
+	}
+
+	// Single-color source should get through.
+	monoID := addColoredSourceCard(g, game.Player1, color.Red)
+	dealt2 := dealPermanentDamage(g, monoID, 0, game.Player1, protected, 2, false)
+	if dealt2 != 2 {
+		t.Fatalf("dealt = %d from mono source, want 2 (not multicolored)", dealt2)
+	}
+}
+
+func TestProtectionFromMonocoloredPreventsDamageFromMonocoloredSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	monoID := addColoredSourceCard(g, game.Player1, color.Blue)
+	pt := game.PT{Value: 2}
+	protected := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected from Monocolored",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromMonocoloredStaticAbility()},
+	}})
+
+	dealt := dealPermanentDamage(g, monoID, 0, game.Player1, protected, 2, false)
+	if dealt != 0 {
+		t.Fatalf("dealt = %d, want 0 (protection from monocolored)", dealt)
+	}
+
+	// Two-color source should get through.
+	multiID := g.IDGen.Next()
+	g.CardInstances[multiID] = &game.CardInstance{
+		ID: multiID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:   "Multicolor Source",
+			Types:  []types.Card{types.Instant},
+			Colors: []color.Color{color.Red, color.Blue},
+		}},
+		Owner: game.Player1,
+	}
+	dealt2 := dealPermanentDamage(g, multiID, 0, game.Player1, protected, 2, false)
+	if dealt2 != 2 {
+		t.Fatalf("dealt = %d from 2-color source, want 2 (not monocolored)", dealt2)
+	}
+}
+
+func TestProtectionFromEachColorPreventsDamageFromColoredSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	sourceID := addColoredSourceCard(g, game.Player1, color.White)
+	pt := game.PT{Value: 2}
+	protected := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected from Each Color",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromEachColorStaticAbility()},
+	}})
+
+	dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, protected, 2, false)
+	if dealt != 0 {
+		t.Fatalf("dealt = %d, want 0 (protection from each color)", dealt)
+	}
+}
+
 func TestDamageAddendReplacementIncreasesMatchingSourceDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	replacementSource := addReplacementPermanent(t, g, game.Player1, damageAddendReplacementCardDef())
@@ -328,6 +487,114 @@ func TestHexproofCounterPreventsOpponentTargets(t *testing.T) {
 
 	if engine.canCastSpell(g, game.Player1, spellID, []game.Target{game.PermanentTarget(target.ObjectID)}, 0, nil) {
 		t.Fatal("opponent spell could target permanent with hexproof counter")
+	}
+}
+
+// TestProtectionTargetingUsesEffectivePermanentSourceCharacteristics verifies
+// that a permanent whose color is granted by a continuous effect (not the base
+// CardDef) is treated as having that color when checking protection on targets
+// of its abilities.
+func TestProtectionTargetingUsesEffectivePermanentSourceCharacteristics(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Source: colorless artifact creature (no colors in base CardDef).
+	pt := game.PT{Value: 2}
+	sourceDef := &game.CardDef{CardFace: game.CardFace{
+		Name:      "Colorless Artifacter",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}}
+	source := addCombatPermanent(g, game.Player1, sourceDef)
+
+	// Target creature has protection from red.
+	protected := addProtectionFromColorPermanent(g, game.Player2, color.Red)
+
+	// Before applying any color effect, the source is colorless — protection
+	// from red should not apply.
+	if permanentProtectedFromPermanentEffective(g, protected, source) {
+		t.Fatal("colorless source should not trigger protection from red before color effect")
+	}
+	if targetProtectedFromSource(g, game.Player1, sourceDef, source.ObjectID, game.PermanentTarget(protected.ObjectID)) {
+		t.Fatal("colorless source should not make protection block targeting before color effect")
+	}
+
+	// Apply a continuous effect that makes the source red.
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               g.IDGen.Next(),
+		AffectedObjectID: source.ObjectID,
+		Layer:            game.LayerColor,
+		AddColors:        []color.Color{color.Red},
+		Duration:         game.DurationPermanent,
+	})
+
+	// Now protection from red must apply via effective characteristics.
+	if !permanentProtectedFromPermanentEffective(g, protected, source) {
+		t.Fatal("red source (via continuous effect) should trigger protection from red")
+	}
+	if !targetProtectedFromSource(g, game.Player1, sourceDef, source.ObjectID, game.PermanentTarget(protected.ObjectID)) {
+		t.Fatal("effectively-red source should make protection block targeting")
+	}
+}
+
+// TestProtectionSourceUsesSelectedStackFace verifies that when an adventure
+// (alternate-face) spell is on the stack, protection checks use the selected
+// face's characteristics rather than the root card def.
+func TestProtectionSourceUsesSelectedStackFace(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Build an adventure card: front face is a red creature, alternate face is
+	// a blue instant.
+	redFace := game.CardFace{
+		Name:   "Red Creature",
+		Types:  []types.Card{types.Creature},
+		Colors: []color.Color{color.Red},
+		Power:  opt.Val(game.PT{Value: 2}),
+	}
+	blueFace := game.CardFace{
+		Name:   "Blue Blast",
+		Types:  []types.Card{types.Instant},
+		Colors: []color.Color{color.Blue},
+	}
+	adventureDef := &game.CardDef{
+		CardFace:  redFace,
+		Alternate: opt.Val(blueFace),
+	}
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID:    cardID,
+		Def:   adventureDef,
+		Owner: game.Player1,
+	}
+
+	// Permanents with protection from each color.
+	protFromRed := addProtectionFromColorPermanent(g, game.Player2, color.Red)
+	protFromBlue := addProtectionFromColorPermanent(g, game.Player2, color.Blue)
+
+	// Push the card as its alternate (blue) face onto the stack.
+	stackObj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   cardID,
+		Face:       game.FaceAlternate,
+		Controller: game.Player1,
+	}
+	g.Stack.Push(stackObj)
+
+	// Protection from blue should apply when the blue face is on the stack.
+	if !permanentProtectedFromSource(g, protFromBlue, 0, stackObj.ID) {
+		t.Fatal("protection from blue should apply against blue adventure face on the stack")
+	}
+	// Protection from red should NOT apply (the spell face is blue, not red).
+	if permanentProtectedFromSource(g, protFromRed, 0, stackObj.ID) {
+		t.Fatal("protection from red should not apply against blue adventure face on the stack")
+	}
+
+	// Also verify the sourceID-only path: selectedFaceForCardInstance finds the
+	// stack object and uses the alternate (blue) face.
+	if !permanentProtectedFromSource(g, protFromBlue, cardID, 0) {
+		t.Fatal("protection from blue should apply using sourceID with blue face on stack")
+	}
+	if permanentProtectedFromSource(g, protFromRed, cardID, 0) {
+		t.Fatal("protection from red should not apply using sourceID with blue face on stack")
 	}
 }
 
@@ -1501,6 +1768,50 @@ func addShroudPermanent(g *game.Game, controller game.PlayerID) *game.Permanent 
 		Toughness:       opt.Val(pt),
 		StaticAbilities: []game.StaticAbility{game.ShroudStaticBody}},
 	})
+}
+
+func addProtectionFromEverythingPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	pt := game.PT{Value: 2}
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected from Everything",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromEverythingStaticAbility()},
+	}})
+}
+
+func addProtectionFromTypesPermanent(g *game.Game, controller game.PlayerID, cardTypes ...types.Card) *game.Permanent {
+	pt := game.PT{Value: 2}
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected from Types",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromTypesStaticAbility(cardTypes...)},
+	}})
+}
+
+func addProtectionFromSubtypesPermanent(g *game.Game, controller game.PlayerID, subtypes ...types.Sub) *game.Permanent {
+	pt := game.PT{Value: 2}
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Protected from Subtypes",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(pt),
+		Toughness:       opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{game.ProtectionFromSubtypesStaticAbility(subtypes...)},
+	}})
+}
+
+func addMulticoloredSourcePermanent(g *game.Game, controller game.PlayerID, colors ...color.Color) *game.Permanent {
+	pt := game.PT{Value: 2}
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Multicolored Creature",
+		Types:     []types.Card{types.Creature},
+		Colors:    colors,
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
 }
 
 func targetCreatureInstant() *game.CardDef {
