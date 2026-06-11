@@ -1158,8 +1158,10 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
 	allowCastFromZone := pattern.Event == game.EventSpellCast && pattern.MatchFromZone && !pattern.MatchToZone
-	if !pattern.SubjectSelection.Empty() ||
-		len(pattern.RequireCardTypes) != 0 ||
+	if !pattern.SubjectSelection.Empty() && pattern.Event != game.EventPermanentDied {
+		return "", errors.New("render: SubjectSelection is only supported for EventPermanentDied trigger patterns")
+	}
+	if len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
 		(pattern.MatchFromZone && !allowCastFromZone) ||
 		pattern.MatchToZone ||
@@ -1172,23 +1174,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
-	if !pattern.CardSelection.Empty() && pattern.Event != game.EventSpellCast {
-		return "", errors.New("render: CardSelection is only supported for EventSpellCast trigger patterns")
-	}
-	if !pattern.CardSelection.Empty() {
-		unsupported := pattern.CardSelection
-		unsupported.RequiredTypes = nil
-		unsupported.RequiredTypesAny = nil
-		unsupported.ExcludedTypes = nil
-		unsupported.Supertypes = nil
-		unsupported.SubtypesAny = nil
-		unsupported.ColorsAny = nil
-		unsupported.Colorless = false
-		unsupported.Multicolored = false
-		unsupported.ManaValue.Exists = false
-		if !unsupported.Empty() {
-			return "", errors.New("render: unsupported CardSelection fields in cast trigger pattern")
-		}
+	if err := validateTriggerPatternCardSelection(pattern); err != nil {
+		return "", err
 	}
 	event, err := renderEventKind(pattern.Event)
 	if err != nil {
@@ -1285,13 +1272,64 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		fields = append(fields, "RequireCombatDamage: true,")
 	}
 	if !pattern.CardSelection.Empty() {
-		sel, err := (Renderer{}).renderSelection(ctx, pattern.CardSelection)
+		cardFields, err := renderTriggerPatternCardSelectionFields(ctx, pattern)
 		if err != nil {
 			return "", err
 		}
-		fields = append(fields, fmt.Sprintf("CardSelection: %s,", sel))
+		fields = append(fields, cardFields...)
+	}
+	if !pattern.SubjectSelection.Empty() {
+		subjectFields, err := renderTriggerPatternSubjectSelection(ctx, pattern)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, subjectFields...)
 	}
 	return structLit("game.TriggerPattern", fields), nil
+}
+
+// validateTriggerPatternCardSelection validates CardSelection constraints for a
+// TriggerPattern and returns an error if they are unsupported.
+func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
+	if !pattern.CardSelection.Empty() && pattern.Event != game.EventSpellCast {
+		return errors.New("render: CardSelection is only supported for EventSpellCast trigger patterns")
+	}
+	if !pattern.CardSelection.Empty() {
+		unsupported := pattern.CardSelection
+		unsupported.RequiredTypes = nil
+		unsupported.RequiredTypesAny = nil
+		unsupported.ExcludedTypes = nil
+		unsupported.Supertypes = nil
+		unsupported.SubtypesAny = nil
+		unsupported.ColorsAny = nil
+		unsupported.Colorless = false
+		unsupported.Multicolored = false
+		unsupported.ManaValue.Exists = false
+		if !unsupported.Empty() {
+			return errors.New("render: unsupported CardSelection fields in cast trigger pattern")
+		}
+	}
+	return nil
+}
+
+// renderTriggerPatternCardSelectionFields renders the CardSelection field for a
+// TriggerPattern and returns it as a slice of struct-literal field strings.
+func renderTriggerPatternCardSelectionFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	sel, err := (Renderer{}).renderSelection(ctx, pattern.CardSelection)
+	if err != nil {
+		return nil, err
+	}
+	return []string{fmt.Sprintf("CardSelection: %s,", sel)}, nil
+}
+
+// renderTriggerPatternSubjectSelection renders the SubjectSelection field for
+// a TriggerPattern and returns it as a slice of struct-literal field strings.
+func renderTriggerPatternSubjectSelection(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	sel, err := (Renderer{}).renderSelection(ctx, pattern.SubjectSelection)
+	if err != nil {
+		return nil, err
+	}
+	return []string{fmt.Sprintf("SubjectSelection: %s,", sel)}, nil
 }
 
 // renderTriggerPatternCounterKind renders the MatchCounterKind and CounterKind

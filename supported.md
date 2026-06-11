@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,320 of 31,838 cards eligible for paper support (13.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,335 of 31,838 cards eligible for paper support (13.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -571,6 +571,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Cathartic Adept
 - Cathedral of War
 - Cathedral Sanctifier
+- Cauldron of Essence
 - Caustic Hound
 - Caustic Rain
 - Cave of Temptation
@@ -990,6 +991,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Dromar's Charm
 - Dromoka Warrior
 - Dross Crocodile
+- Dross Harvester
 - Drossforge Bridge
 - Drown in Ichor
 - Drown in Shapelessness
@@ -1021,6 +1023,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Dwarven Ruins
 - Dwarven Trader
 - Dwarven Weaponsmith
+- Dying Wail
 - Eager Cadet
 - Eagle of the Watch
 - Earth Elemental
@@ -1033,6 +1036,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Eidolon of Inspiration
 - Eidolon of Philosophy
 - Ekundu Griffin
+- Elas il-Kor, Sadistic Pilgrim
 - Elder of Laurels
 - Eldrazi
 - Eldrazi Aggressor
@@ -1178,6 +1182,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Faerie Rogue
 - Faerie Seer
 - Faerie Spy
+- Failed Conversion
 - Failed Inspection
 - Faithbearer Paladin
 - Faithful Watchdog
@@ -1413,6 +1418,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Glidedive Duo
 - Glider Kids
 - Glimmer
+- Glissa, the Traitor
 - Glistener Elf
 - Glistener Seer
 - Glittering Massif
@@ -1543,6 +1549,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Grim Bauble
 - Grim Discovery
 - Grim Flayer
+- Grim Haruspex
 - Grim Physician
 - Grinning Demon
 - Grizzled Leotau
@@ -1597,6 +1604,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Harrier Strix
 - Harsh Sustenance
 - Harvest Gwyllion
+- Harvester of Souls
 - Hatching Plans
 - Haunted Cloak
 - Haunted Crossroads
@@ -2302,6 +2310,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Moonfolk
 - Moonfolk Puzzlemaker
 - Moonglove Winnower
+- Moonlit Wake
 - Moonrise Cleric
 - Moorish Cavalry
 - Moorland Drifter
@@ -2639,6 +2648,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Phyrexian Saproling
 - Phyrexian Tower
 - Phyrexian Vault
+- Phyrexian Vivisector
 - Phyrexian Walker
 - Phyrexian Wurm
 - Phyrexian Wurm
@@ -2684,6 +2694,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Plated Wurm
 - Plover Knights
 - Plumeveil
+- Poison-Tip Archer
 - Polluted Dead
 - Polluted Mire
 - Pond Prophet
@@ -3081,6 +3092,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Scrap
 - Scrap
 - Screaming Phantom
+- Screams from Within
 - Screeching Drake
 - Screeching Skaab
 - Scribe of the Mindful
@@ -3288,6 +3300,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Skull of Orm
 - Skull of Ramos
 - Skull Prophet
+- Skullclamp
 - Skullmead Cauldron
 - Sky Diamond
 - Sky Ruin Drake
@@ -3391,6 +3404,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Soul Shepherd
 - Soul Summons
 - Soul Warden
+- Soul-Strike Technique
 - Soulbound Guardians
 - Soulcage Fiend
 - Soulknife Spy
@@ -3630,6 +3644,7 @@ Council4 currently supports **4,320 of 31,838 cards eligible for paper support (
 - Sworn Guardian
 - Sylvan Brushstrider
 - Sylvan Caryatid
+- Sylvok Lifestaff
 - Symbiote Spawn
 - Syphon Fuel
 - Tah-Crop Skirmisher
