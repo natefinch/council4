@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,664 of 31,838 cards eligible for paper support (14.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,663 of 31,838 cards eligible for paper support (14.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -2166,7 +2166,6 @@ Council4 currently supports **4,664 of 31,838 cards eligible for paper support (
 - Krosan Beast
 - Krosan Colossus
 - Krosan Druid
-- Krovikan Elementalist
 - Krovikan Scoundrel
 - Krumar Bond-Kin
 - Kujar Seedsculptor

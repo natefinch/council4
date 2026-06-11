@@ -7896,7 +7896,7 @@ func lowerOrderedEffectSequence(
 		}
 	}
 	for _, effect := range ability.Effects {
-		if effect.Kind == oracle.EffectSacrifice && effect.DelayedTiming == 0 {
+		if effect.Kind == oracle.EffectSacrifice {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 		}
 	}
