@@ -666,6 +666,8 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.RequiredTypesAny = nil
 		unsupported.ExcludedTypes = nil
 		if pattern.Event == EventSpellCast {
+			unsupported.Supertypes = nil
+			unsupported.SubtypesAny = nil
 			unsupported.ColorsAny = nil
 			unsupported.Colorless = false
 			unsupported.Multicolored = false
@@ -680,6 +682,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.RequireKickerPaid && pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "RequireKickerPaid"), CardDefIssueInvalidSelection, "kicker-paid trigger filter is only supported for spell-cast events")
+	}
+	if pattern.RequireHistoric && pattern.Event != EventSpellCast {
+		v.add(faceName, appendPath(path, "RequireHistoric"), CardDefIssueInvalidSelection, "historic trigger filter is only supported for spell-cast events")
 	}
 	if pattern.MatchFromZone && pattern.FromZone == zone.None {
 		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter must set a source zone")

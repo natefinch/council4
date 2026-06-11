@@ -162,15 +162,17 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 	}
 	stormCopies := stormCopyCount(g, spellDef)
 	pushSpellToStack(g, obj, game.Event{
-		SourceID:      cardID,
-		StackObjectID: obj.ID,
-		Controller:    playerID,
-		CardID:        cardID,
-		CardTypes:     cardTypes(spellDef),
-		Colors:        spellColors(spellDef),
-		ManaValue:     opt.Val(stackManaValue(spellDef, 0)),
-		FromZone:      zone.Exile,
-		ToZone:        zone.Stack,
+		SourceID:       cardID,
+		StackObjectID:  obj.ID,
+		Controller:     playerID,
+		CardID:         cardID,
+		CardTypes:      cardTypes(spellDef),
+		CardSupertypes: cardSupertypes(spellDef),
+		CardSubtypes:   cardSubtypes(spellDef),
+		Colors:         spellColors(spellDef),
+		ManaValue:      opt.Val(stackManaValue(spellDef, 0)),
+		FromZone:       zone.Exile,
+		ToZone:         zone.Stack,
 	})
 	createStormCopies(g, obj, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)

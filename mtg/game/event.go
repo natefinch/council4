@@ -109,6 +109,11 @@ type Event struct {
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).
 	CardTypes []types.Card
 
+	// CardSupertypes and CardSubtypes record spell characteristics at cast time
+	// for spell-cast filters such as "historic spell" or "Spirit or Arcane spell".
+	CardSupertypes []types.Super
+	CardSubtypes   []types.Sub
+
 	// Colors records the colors of the spell as cast on the stack for
 	// color-filtered cast triggers such as "a blue spell". Populated at every
 	// EventSpellCast emission site from the effective face being cast.
@@ -218,6 +223,8 @@ func cloneEvents(events []Event) []Event {
 
 func cloneEvent(event Event) Event {
 	event.CardTypes = append([]types.Card(nil), event.CardTypes...)
+	event.CardSupertypes = append([]types.Super(nil), event.CardSupertypes...)
+	event.CardSubtypes = append([]types.Sub(nil), event.CardSubtypes...)
 	event.Colors = append([]color.Color(nil), event.Colors...)
 	return event
 }

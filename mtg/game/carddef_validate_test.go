@@ -1008,6 +1008,52 @@ func TestValidateCardDefAllowsColorCardinalitySpellCastTrigger(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsSubtypeSupertypeAndHistoricSpellCastTrigger(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern TriggerPattern
+	}{
+		{
+			name: "subtypes",
+			pattern: TriggerPattern{
+				Event:         EventSpellCast,
+				CardSelection: Selection{SubtypesAny: []types.Sub{types.Spirit, types.Arcane}},
+			},
+		},
+		{
+			name: "supertype",
+			pattern: TriggerPattern{
+				Event:         EventSpellCast,
+				CardSelection: Selection{Supertypes: []types.Super{types.Legendary}},
+			},
+		},
+		{
+			name: "historic",
+			pattern: TriggerPattern{
+				Event:           EventSpellCast,
+				RequireHistoric: true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Historic Watcher",
+				OracleText: "Whenever you cast a historic spell, draw a card.",
+				TriggeredAbilities: []TriggeredAbility{{
+					Content: Mode{}.Ability(),
+					Trigger: TriggerCondition{Pattern: tt.pattern},
+				}},
+			}}
+
+			issues := ValidateCardDef(card)
+			if hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+				t.Fatalf("issues = %+v, want spell-cast trigger predicate accepted", issues)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefAllowsManaValueKickedAndZoneSpellCastTrigger(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -1066,6 +1112,25 @@ func TestValidateCardDefRejectsKickerFilterOutsideSpellCastTrigger(t *testing.T)
 			Trigger: TriggerCondition{Pattern: TriggerPattern{
 				Event:             EventPermanentEnteredBattlefield,
 				RequireKickerPaid: true,
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want invalid-selection issue", issues)
+	}
+}
+
+func TestValidateCardDefRejectsHistoricFilterOutsideSpellCastTrigger(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Invalid Historic Watcher",
+		OracleText: "Whenever a creature enters, draw a card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:           EventPermanentEnteredBattlefield,
+				RequireHistoric: true,
 			}},
 		}},
 	}}
