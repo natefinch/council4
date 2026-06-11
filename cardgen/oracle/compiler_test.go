@@ -122,6 +122,22 @@ func TestCompileActivatedAbilityPluralRemoveCounterCost(t *testing.T) {
 	}
 }
 
+func TestCompileActivatedAbilityEnergyCost(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile("Pay {E}{E}: Draw a card.", ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Cost == nil || len(ability.Cost.Components) != 1 {
+		t.Fatalf("cost = %#v", ability.Cost)
+	}
+	component := ability.Cost.Components[0]
+	if component.Kind != CostEnergy || component.Amount != "2" {
+		t.Fatalf("cost component = %#v, want two-energy cost", component)
+	}
+}
+
 func TestCompileTriggeredAbility(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a creature enters, if it was cast, draw a card."

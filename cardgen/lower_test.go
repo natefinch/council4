@@ -840,6 +840,25 @@ func TestLowerActivatedAbilityRejectsVariableRemoveCounterCosts(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedEnergyCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Pay {E}{E}: Draw a card.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	costs := face.ActivatedAbilities[0].AdditionalCosts
+	if len(costs) != 1 ||
+		costs[0].Kind != cost.AdditionalEnergy ||
+		costs[0].Amount != 2 {
+		t.Fatalf("additional costs = %#v, want two-energy cost", costs)
+	}
+}
+
 func TestLowerActivatedAbilityRejectsVariableTapPermanentsCost(t *testing.T) {
 	t.Parallel()
 	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{

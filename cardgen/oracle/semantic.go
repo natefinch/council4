@@ -73,6 +73,7 @@ const (
 	CostExile
 	CostRemoveCounter
 	CostTapPermanents
+	CostEnergy
 	CostLoyalty
 )
 

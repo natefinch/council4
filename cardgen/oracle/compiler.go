@@ -227,6 +227,9 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 			case startsWords(words, "pay") && containsWord(words, "life"):
 				component.Kind = CostPayLife
 				component.Amount = firstInteger(part)
+			case startsWords(words, "pay") && allEnergySymbols(part[1:]):
+				component.Kind = CostEnergy
+				component.Amount = strconv.Itoa(len(part) - 1)
 			case startsWords(words, "exile"):
 				component.Kind = CostExile
 				component.Object = wordsAfterFirst(part)
@@ -1613,6 +1616,18 @@ func allSymbols(tokens []Token) bool {
 	}
 	for _, token := range tokens {
 		if token.Kind != Symbol {
+			return false
+		}
+	}
+	return true
+}
+
+func allEnergySymbols(tokens []Token) bool {
+	if len(tokens) == 0 {
+		return false
+	}
+	for _, token := range tokens {
+		if token.Kind != Symbol || !strings.EqualFold(token.Text, "{E}") {
 			return false
 		}
 	}
