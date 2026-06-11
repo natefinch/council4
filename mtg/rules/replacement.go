@@ -50,6 +50,32 @@ func applyDamagePrevention(g *game.Game, event damageEvent) int {
 	return amount
 }
 
+func replacementDamageAmount(g *game.Game, event damageEvent) int {
+	if event.amount <= 0 {
+		return event.amount
+	}
+	applied := make(map[id.ID]bool)
+	for {
+		matches := matchingDamageReplacementEffects(g, event, applied)
+		if len(matches) == 0 {
+			return event.amount
+		}
+		replacement := matches[0]
+		if len(matches) > 1 {
+			decision := recordReplacementDecision(g, replacementDecisionPlayer(g, event), replacementEffectLabels(matches))
+			replacement = selectedReplacementEffect(matches, decision)
+		}
+		applied[replacement.ID] = true
+		if replacement.DamageMultiplier > 1 {
+			event.amount *= replacement.DamageMultiplier
+		}
+		event.amount += replacement.DamageAddend
+		if event.amount <= 0 {
+			return 0
+		}
+	}
+}
+
 func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	var indices []int
 	var options []string
@@ -100,17 +126,28 @@ func replacementDecisionPlayer(g *game.Game, event damageEvent) game.PlayerID {
 	return event.player
 }
 
-func recordReplacementDecision(g *game.Game, player game.PlayerID, options []string) {
+func recordReplacementDecision(g *game.Game, player game.PlayerID, options []string) game.ReplacementDecision {
 	selected := make([]int, len(options))
 	for i := range options {
 		selected[i] = i
 	}
-	g.ReplacementDecisions = append(g.ReplacementDecisions, game.ReplacementDecision{
+	decision := game.ReplacementDecision{
 		Player:       player,
 		Options:      append([]string(nil), options...),
 		Selected:     selected,
 		UsedFallback: true,
-	})
+	}
+	g.ReplacementDecisions = append(g.ReplacementDecisions, decision)
+	return decision
+}
+
+func selectedReplacementEffect(matches []game.ReplacementEffect, decision game.ReplacementDecision) game.ReplacementEffect {
+	for _, selected := range decision.Selected {
+		if selected >= 0 && selected < len(matches) {
+			return matches[selected]
+		}
+	}
+	return matches[0]
 }
 
 type zoneChangeReplacementResult struct {
@@ -447,6 +484,79 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 		matches = append(matches, *replacement)
 	}
 	return matches
+}
+
+func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied map[id.ID]bool) []game.ReplacementEffect {
+	matchEvent := damageReplacementEvent(g, event)
+	var matches []game.ReplacementEffect
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0 {
+			continue
+		}
+		if len(replacement.DamageSourceColors) > 0 && !damageSourceHasAnyColor(g, event, replacement.DamageSourceColors) {
+			continue
+		}
+		if replacement.DamageExcludeSource && damageSourceIsReplacementSource(event, replacement) {
+			continue
+		}
+		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, matchEvent) {
+			continue
+		}
+		matches = append(matches, *replacement)
+	}
+	return matches
+}
+
+func damageSourceIsReplacementSource(event damageEvent, replacement *game.ReplacementEffect) bool {
+	return (event.sourceObjectID != 0 && event.sourceObjectID == replacement.SourceObjectID) ||
+		(event.sourceID != 0 && event.sourceID == replacement.SourceCardID)
+}
+
+func damageReplacementEvent(g *game.Game, event damageEvent) game.Event {
+	matchEvent := game.Event{
+		Kind:           game.EventDamageDealt,
+		SourceID:       event.sourceID,
+		SourceObjectID: event.sourceObjectID,
+		Controller:     event.controller,
+		Player:         event.player,
+		Amount:         event.amount,
+		Colors:         damageSourceColors(g, event),
+		CombatDamage:   event.combatDamage,
+	}
+	if event.permanent != nil {
+		matchEvent.Player = event.permanent.Owner
+		matchEvent.PermanentID = event.permanent.ObjectID
+		matchEvent.CardID = event.permanent.CardInstanceID
+		matchEvent.TokenName = permanentTokenName(event.permanent)
+		matchEvent.TokenDef = event.permanent.TokenDef
+		matchEvent.DamageRecipient = game.DamageRecipientPermanent
+	} else {
+		matchEvent.DamageRecipient = game.DamageRecipientPlayer
+	}
+	return matchEvent
+}
+
+func damageSourceHasAnyColor(g *game.Game, event damageEvent, colors []color.Color) bool {
+	sourceColors := damageSourceColors(g, event)
+	return slices.ContainsFunc(colors, func(c color.Color) bool {
+		return slices.Contains(sourceColors, c)
+	})
+}
+
+func damageSourceColors(g *game.Game, event damageEvent) []color.Color {
+	if event.sourceObjectID != 0 {
+		if permanent, ok := permanentByObjectID(g, event.sourceObjectID); ok {
+			return permanentEffectiveColors(g, permanent)
+		}
+		if snapshot, ok := lastKnownObject(g, event.sourceObjectID); ok {
+			return append([]color.Color(nil), snapshot.Colors...)
+		}
+	}
+	if source, ok := damageSourceDef(g, event.sourceID, event.sourceObjectID); ok && source != nil {
+		return append([]color.Color(nil), source.Colors...)
+	}
+	return nil
 }
 
 func counterRecipientPermanentMatches(g *game.Game, permanentID id.ID, permanent *game.Permanent, requiredTypes []types.Card) bool {
