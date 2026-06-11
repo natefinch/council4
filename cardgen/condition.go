@@ -33,6 +33,8 @@ func lowerCondition(condition oracle.CompiledCondition, ctx conditionLoweringCon
 	switch condition.Predicate {
 	case oracle.ConditionPredicateControllerLifeAtLeast:
 		result.ControllerLifeAtLeast = condition.Threshold
+	case oracle.ConditionPredicateControllerHandSizeAtLeast:
+		result.ControllerHandSizeAtLeast = condition.Threshold
 	case oracle.ConditionPredicateAnyPlayerLifeAtMost:
 		result.AnyPlayerLifeAtMost = condition.Threshold
 	case oracle.ConditionPredicateOpponentCountAtLeast:
@@ -99,7 +101,8 @@ func conditionPredicateAllowedInContext(predicate oracle.ConditionPredicate, ctx
 			oracle.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
 			return true
 		default:
-			return false
+			return ctx == conditionContextStatic &&
+				predicate == oracle.ConditionPredicateControllerHandSizeAtLeast
 		}
 	}
 	switch predicate {

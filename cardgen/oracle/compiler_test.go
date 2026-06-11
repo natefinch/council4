@@ -1568,6 +1568,131 @@ func TestCompileStaticPTBuffWithKeywordHasOneEffect(t *testing.T) {
 	}
 }
 
+func TestCompileStaticDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T) {
+	t.Parallel()
+	source := "Creatures your opponents control get -1/-0."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+	}
+	declaration := ability.Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationContinuous ||
+		declaration.Continuous.Layer != StaticLayerPowerToughnessModify ||
+		declaration.Continuous.Operation != StaticContinuousModifyPowerToughness {
+		t.Fatalf("declaration = %#v, want power/toughness continuous declaration", declaration)
+	}
+	if declaration.Group.Domain != StaticGroupBattlefield ||
+		declaration.Group.Selection.Controller != ControllerOpponent ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeCreature}) {
+		t.Fatalf("group = %#v, want opponent-controlled battlefield creatures", declaration.Group)
+	}
+	if got := source[declaration.Group.Span.Start.Offset:declaration.Group.Span.End.Offset]; got != "Creatures your opponents control" {
+		t.Fatalf("group span = %q", got)
+	}
+}
+
+func TestCompileStaticDeclarationsCarryConditionsAndRuleDomains(t *testing.T) {
+	t.Parallel()
+	source := "As long as you control an artifact, this creature has flying."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declaration := compilation.Abilities[0].Static.Declarations[0]
+	if declaration.Group.Domain != StaticGroupSource ||
+		declaration.Condition == nil ||
+		declaration.Condition.Predicate != ConditionPredicateControllerControls {
+		t.Fatalf("declaration = %#v, want conditional source declaration", declaration)
+	}
+	if declaration.Continuous.Layer != StaticLayerAbility ||
+		declaration.Continuous.Operation != StaticContinuousGrantKeywords {
+		t.Fatalf("continuous declaration = %#v", declaration.Continuous)
+	}
+
+	compilation, diagnostics = Compile("This spell can't be countered.", ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declaration = compilation.Abilities[0].Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationRule ||
+		declaration.Rule.Domain != StaticRuleDomainCountering ||
+		declaration.Rule.Kind != StaticRuleCantBeCountered ||
+		declaration.Rule.Zone != StaticZoneStack {
+		t.Fatalf("rule declaration = %#v", declaration)
+	}
+}
+
+func TestCompileMixedStaticParagraphProducesExactDeclarations(t *testing.T) {
+	t.Parallel()
+	source := "Delirium — As long as there are four or more card types among cards in your graveyard, Dragon's Rage Channeler gets +2/+2, has flying, and attacks each combat if able."
+	compilation, diagnostics := Compile(source, ParseContext{CardName: "Dragon's Rage Channeler"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 3 {
+		t.Fatalf("static semantics = %#v, want three declarations", ability.Static)
+	}
+	if ability.Static.Declarations[0].Continuous.Layer != StaticLayerPowerToughnessModify ||
+		ability.Static.Declarations[1].Continuous.Layer != StaticLayerAbility ||
+		ability.Static.Declarations[2].Rule.Domain != StaticRuleDomainAttack ||
+		ability.Static.Declarations[2].Rule.Kind != StaticRuleMustAttack {
+		t.Fatalf("static declarations = %#v", ability.Static.Declarations)
+	}
+	for i, declaration := range ability.Static.Declarations {
+		if declaration.Group.Domain != StaticGroupSource || declaration.Condition == nil {
+			t.Fatalf("declaration %d = %#v, want conditional source declaration", i, declaration)
+		}
+		if declaration.Span.Start.Offset != 0 || declaration.Span.End.Offset != len(source) {
+			t.Fatalf("declaration %d span = %#v, want entire paragraph", i, declaration.Span)
+		}
+	}
+}
+
+func TestCompileStaticDeclarationsFailClosedOnAdjacentSemantics(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source  string
+		blocker StaticDeclarationBlocker
+	}{
+		"duration": {
+			source:  "Creatures you control get +1/+1 until end of turn.",
+			blocker: StaticDeclarationBlockerDuration,
+		},
+		"condition": {
+			source:  "As long as the moon is full, creatures you control get +1/+1.",
+			blocker: StaticDeclarationBlockerCondition,
+		},
+		"group": {
+			source:  "All creatures get +1/+1.",
+			blocker: StaticDeclarationBlockerGroup,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil {
+				t.Fatal("static semantics = nil, want blocker")
+			}
+			if len(ability.Static.Declarations) != 0 {
+				t.Fatalf("static declarations = %#v, want none", ability.Static.Declarations)
+			}
+			if ability.Static.Blocker != test.blocker {
+				t.Fatalf("static blocker = %v, want %v", ability.Static.Blocker, test.blocker)
+			}
+		})
+	}
+}
+
 func TestCompileResolvingPTBuffHasNoStaticSubject(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile(

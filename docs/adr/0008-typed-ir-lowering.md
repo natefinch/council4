@@ -78,6 +78,20 @@ correct layer:
    bound references to typed runtime object and card references. Triggering
    event permanents resolve live objects or last-known information; prior
    instruction results use validated linked keys.
+   <br><br>
+   Static wording follows the same boundary without becoming ability body
+   Instructions. `cardgen/oracle` recognizes supported static wording into one
+   or more source-spanned semantic `oracle.StaticDeclaration` values attached
+   directly to `oracle.CompiledAbility`. Their runtime-independent closed
+   vocabulary records affected group domain plus Selection, source exclusion,
+   optional condition, continuous layer operation, rule action domain and
+   operation, function zone, cost modifier, or non-battlefield card-ability
+   grant. Mixed paragraphs may carry multiple declarations. Unsupported groups,
+   conditions, durations, operations, and shells remain explicit blockers.
+   `cardgen/static_declaration.go` owns the single mechanical lowering path from
+   those declarations to typed `game.StaticAbility`, `game.ContinuousEffect`,
+   `game.RuleEffect`, and `game.CostModifier` values. Static Declarations never
+   resolve and are not Instructions.
 2. **Assembly + validation** (`cardgen/executable.go`). `assembleCardDefs`
    combines parsed Scryfall fields with the lowered typed abilities into one or
    more `game.CardDef` values and calls `game.ValidateCardDef`. Any structural

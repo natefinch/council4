@@ -3053,6 +3053,168 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 	}
 }
 
+func TestLowerStaticDeclarationBattlefieldSelectionControllerRelation(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Curse",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Creatures your opponents control get -1/-0.",
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+	}
+	effects := face.StaticAbilities[0].Body.ContinuousEffects
+	if len(effects) != 1 {
+		t.Fatalf("continuous effects = %#v, want one", effects)
+	}
+	effect := effects[0]
+	if effect.Layer != game.LayerPowerToughnessModify ||
+		effect.Group.Domain() != game.GroupDomainBattlefield ||
+		effect.Group.Selection().Controller != game.ControllerOpponent ||
+		!slices.Equal(effect.Group.Selection().RequiredTypes, []types.Card{types.Creature}) ||
+		effect.PowerDelta != -1 ||
+		effect.ToughnessDelta != 0 {
+		t.Fatalf("continuous effect = %#v", effect)
+	}
+}
+
+func TestLowerMixedStaticDeclarationsConsumeWholeParagraph(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Dragon's Rage Channeler",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Shaman",
+		OracleText: "Delirium — As long as there are four or more card types among cards in your graveyard, Dragon's Rage Channeler gets +2/+2, has flying, and attacks each combat if able.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+	}
+	ability := face.StaticAbilities[0].Body
+	if !ability.Condition.Exists ||
+		ability.Condition.Val.ControllerGraveyardCardTypeCountAtLeast != 4 {
+		t.Fatalf("condition = %#v", ability.Condition)
+	}
+	if len(ability.ContinuousEffects) != 2 {
+		t.Fatalf("continuous effects = %#v, want two", ability.ContinuousEffects)
+	}
+	if ability.ContinuousEffects[0].Layer != game.LayerPowerToughnessModify ||
+		!ability.ContinuousEffects[0].AffectedSource ||
+		ability.ContinuousEffects[0].PowerDelta != 2 ||
+		ability.ContinuousEffects[0].ToughnessDelta != 2 {
+		t.Fatalf("power/toughness effect = %#v", ability.ContinuousEffects[0])
+	}
+	if ability.ContinuousEffects[1].Layer != game.LayerAbility ||
+		!ability.ContinuousEffects[1].AffectedSource ||
+		!slices.Equal(ability.ContinuousEffects[1].AddKeywords, []game.Keyword{game.Flying}) {
+		t.Fatalf("keyword effect = %#v", ability.ContinuousEffects[1])
+	}
+	if len(ability.RuleEffects) != 1 ||
+		ability.RuleEffects[0].Kind != game.RuleEffectMustAttack ||
+		!ability.RuleEffects[0].AffectedSource {
+		t.Fatalf("rule effects = %#v", ability.RuleEffects)
+	}
+}
+
+func TestGenerateMixedStaticDeclarationsSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Dragon's Rage Channeler",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Shaman",
+		OracleText: "Delirium — As long as there are four or more card types among cards in your graveyard, Dragon's Rage Channeler gets +2/+2, has flying, and attacks each combat if able.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"ControllerGraveyardCardTypeCountAtLeast: 4",
+		"game.LayerPowerToughnessModify",
+		"game.LayerAbility",
+		"game.Flying",
+		"game.RuleEffectMustAttack",
+		"AffectedSource: true",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestStaticDeclarationBlockersAreCapabilityAware(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		summary    string
+	}{
+		"duration": {
+			oracleText: "Creatures you control get +1/+1 until end of turn.",
+			summary:    "unsupported static declaration duration",
+		},
+		"condition": {
+			oracleText: "As long as the moon is full, creatures you control get +1/+1.",
+			summary:    "unsupported static declaration condition",
+		},
+		"group": {
+			oracleText: "All creatures get +1/+1.",
+			summary:    "unsupported static declaration group",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Enchantment",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			})
+			if len(diagnostics) != 1 || diagnostics[0].Summary != test.summary {
+				t.Fatalf("diagnostics = %#v, want %q", diagnostics, test.summary)
+			}
+		})
+	}
+}
+
+func TestLowerStaticDeclarationsRejectMalformedPayloads(t *testing.T) {
+	t.Parallel()
+	tests := map[string]oracle.StaticDeclaration{
+		"missing payload": {
+			Kind: oracle.StaticDeclarationContinuous,
+		},
+		"mismatched payload": {
+			Kind: oracle.StaticDeclarationContinuous,
+			Rule: &oracle.StaticRuleDeclaration{Kind: oracle.StaticRuleCantBlock},
+		},
+		"multiple payloads": {
+			Kind:       oracle.StaticDeclarationContinuous,
+			Continuous: &oracle.StaticContinuousDeclaration{},
+			Rule:       &oracle.StaticRuleDeclaration{},
+		},
+	}
+	for name, declaration := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			_, handled, diagnostic := lowerStaticDeclarations(oracle.CompiledAbility{
+				Kind: oracle.AbilityStatic,
+				Static: &oracle.CompiledStaticSemantics{
+					Declarations: []oracle.StaticDeclaration{declaration},
+				},
+			})
+			if !handled || diagnostic == nil || diagnostic.Summary != "unsupported static declaration operation" {
+				t.Fatalf("handled = %v, diagnostic = %#v", handled, diagnostic)
+			}
+		})
+	}
+}
+
 func TestRejectUnknownSubtypeStaticKeywordGrant(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
@@ -3061,8 +3223,8 @@ func TestRejectUnknownSubtypeStaticKeywordGrant(t *testing.T) {
 		TypeLine:   "Enchantment",
 		OracleText: "Splorps you control have haste.",
 	})
-	if len(diagnostics) == 0 || diagnostics[0].Summary != "unsupported static ability" {
-		t.Fatalf("diagnostics = %#v, want unsupported static ability", diagnostics)
+	if len(diagnostics) == 0 || diagnostics[0].Summary != "unsupported static declaration operation" {
+		t.Fatalf("diagnostics = %#v, want unsupported static declaration operation", diagnostics)
 	}
 }
 
@@ -3291,9 +3453,8 @@ func TestGenerateSourceConditionalProtectionGrant(t *testing.T) {
 	}
 }
 
-// TestLowerSourceConditionalProtectionKeywordGrant verifies that
-// lowerSourceConditionalKeywordGrant produces a ContinuousEffect with
-// AddAbilities (not AddKeywords) for parameterized Protection.
+// TestLowerSourceConditionalProtectionKeywordGrant verifies that declaration
+// lowering produces AddAbilities (not AddKeywords) for parameterized Protection.
 func TestLowerSourceConditionalProtectionKeywordGrant(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
