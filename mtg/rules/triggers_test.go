@@ -1915,6 +1915,90 @@ func TestControlsPermanentInterveningIfCheckedWhenTriggeringAndResolving(t *test
 	}
 }
 
+func TestStepControlsPermanentInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventBeginningOfStep,
+		Controller: game.TriggerControllerYou,
+		Step:       game.StepUpkeep,
+	}, nil, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("trigger source card not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.InterveningCondition = opt.Val(game.Condition{
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+		}),
+	})
+	event := game.Event{
+		Kind:       game.EventBeginningOfStep,
+		Controller: game.Player1,
+		Player:     game.Player1,
+		Step:       game.StepUpkeep,
+	}
+
+	emitEvent(g, event)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("step trigger fired without a controlled artifact")
+	}
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Relic",
+		Types: []types.Card{types.Artifact},
+	}})
+	emitEvent(g, event)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("step trigger did not fire with a controlled artifact")
+	}
+	artifact.PhasedOut = true
+	log := TurnLog{}
+	engine.resolveTopOfStack(g, &log)
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+		t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+	}
+}
+
+func TestStepLifeInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventBeginningOfStep,
+		Controller: game.TriggerControllerYou,
+		Step:       game.StepUpkeep,
+	}, nil, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("trigger source card not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.InterveningCondition = opt.Val(game.Condition{
+		ControllerLifeAtLeast: 10,
+	})
+	event := game.Event{
+		Kind:       game.EventBeginningOfStep,
+		Controller: game.Player1,
+		Player:     game.Player1,
+		Step:       game.StepUpkeep,
+	}
+
+	g.Players[game.Player1].Life = 9
+	emitEvent(g, event)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("step trigger fired below the life threshold")
+	}
+	g.Players[game.Player1].Life = 10
+	emitEvent(g, event)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("step trigger did not fire at the life threshold")
+	}
+	g.Players[game.Player1].Life = 9
+	log := TurnLog{}
+	engine.resolveTopOfStack(g, &log)
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
+		t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+	}
+}
+
 func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

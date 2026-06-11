@@ -7189,21 +7189,81 @@ func TestLowerAtTriggerPrecombatMainPhaseFailsClosed(t *testing.T) {
 	}
 }
 
-func TestLowerAtTriggerInterveningIfFailsClosed(t *testing.T) {
+func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-		Name:       "Test Bear",
-		Layout:     "normal",
-		TypeLine:   "Creature — Bear",
-		OracleText: "At the beginning of your upkeep, if you control a creature, draw a card.",
-		Power:      new("2"),
-		Toughness:  new("2"),
-	}, "t")
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name      string
+		condition string
+		assert    func(*testing.T, game.Condition)
+	}{
+		{
+			name:      "controls creature",
+			condition: "if you control a creature",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				controls := condition.ControlsMatching
+				if !controls.Exists || !slices.Equal(controls.Val.Selection.RequiredTypes, []types.Card{types.Creature}) {
+					t.Fatalf("condition = %+v, want controls a creature", condition)
+				}
+			},
+		},
+		{
+			name:      "controller life",
+			condition: "if you have 10 or more life",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				if condition.ControllerLifeAtLeast != 10 {
+					t.Fatalf("ControllerLifeAtLeast = %d, want 10", condition.ControllerLifeAtLeast)
+				}
+			},
+		},
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostic for intervening-if on at-trigger, got none")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "At the beginning of your upkeep, " + test.condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.InterveningIf != test.condition || !trigger.InterveningCondition.Exists {
+				t.Fatalf("trigger = %+v, want %q intervening-if condition", trigger, test.condition)
+			}
+			test.assert(t, trigger.InterveningCondition.Val)
+		})
+	}
+}
+
+func TestLowerAtTriggerUnsupportedInterveningIfFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"if you gained 2 or more life this turn",
+		"if this creature came under your control since the beginning of your last upkeep",
+	} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "At the beginning of your upkeep, " + condition + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("unsupported intervening-if condition unexpectedly lowered")
+			}
+			if !strings.Contains(diagnostics[0].Detail, "does not support this intervening-if condition") {
+				t.Fatalf("diagnostics = %#v, want intervening-if diagnostic", diagnostics)
+			}
+		})
 	}
 }
 
