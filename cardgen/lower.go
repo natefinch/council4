@@ -4761,7 +4761,10 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind)
 		game.EventAttackerBecameBlocked,
 		game.EventAttackerDeclared,
 		game.EventBlockerDeclared,
-		game.EventDamageDealt:
+		game.EventDamageDealt,
+		game.EventPermanentTapped,
+		game.EventPermanentUntapped,
+		game.EventCountersAdded:
 		return kind == oracle.TriggerWhenever
 	default:
 		return kind == oracle.TriggerWhen
@@ -4874,7 +4877,12 @@ func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (g
 			Event:  game.EventPermanentEnteredBattlefield,
 			Source: game.TriggerSourceSelf,
 		}, true
-	case "this creature dies", "this permanent dies":
+	case "this creature dies", "this permanent dies",
+		"this aura is put into a graveyard from the battlefield",
+		"this artifact is put into a graveyard from the battlefield",
+		"this enchantment is put into a graveyard from the battlefield",
+		"this vehicle is put into a graveyard from the battlefield",
+		"this equipment is put into a graveyard from the battlefield":
 		return game.TriggerPattern{
 			Event:  game.EventPermanentDied,
 			Source: game.TriggerSourceSelf,
@@ -4916,6 +4924,20 @@ func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (g
 			DamageRecipientTypes: []types.Card{types.Creature},
 			RequireCombatDamage:  true,
 		}, true
+	case "this creature becomes tapped", "this permanent becomes tapped",
+		"this land becomes tapped", "this artifact becomes tapped",
+		"this enchantment becomes tapped", "this vehicle becomes tapped":
+		return game.TriggerPattern{
+			Event:  game.EventPermanentTapped,
+			Source: game.TriggerSourceSelf,
+		}, true
+	case "this creature becomes untapped", "this permanent becomes untapped",
+		"this land becomes untapped", "this artifact becomes untapped",
+		"this enchantment becomes untapped", "this vehicle becomes untapped":
+		return game.TriggerPattern{
+			Event:  game.EventPermanentUntapped,
+			Source: game.TriggerSourceSelf,
+		}, true
 	default:
 		if strings.EqualFold(ability.Trigger.Event, cardName+" dies") {
 			return game.TriggerPattern{
@@ -4923,8 +4945,55 @@ func lowerSelfTriggerPattern(cardName string, ability oracle.CompiledAbility) (g
 				Source: game.TriggerSourceSelf,
 			}, true
 		}
+		if strings.EqualFold(ability.Trigger.Event, cardName+" becomes tapped") {
+			return game.TriggerPattern{
+				Event:  game.EventPermanentTapped,
+				Source: game.TriggerSourceSelf,
+			}, true
+		}
+		if strings.EqualFold(ability.Trigger.Event, cardName+" becomes untapped") {
+			return game.TriggerPattern{
+				Event:  game.EventPermanentUntapped,
+				Source: game.TriggerSourceSelf,
+			}, true
+		}
+		if pattern, ok := lowerCounterAddedSelfTrigger(ability.Trigger.Event); ok {
+			return pattern, true
+		}
 		return game.TriggerPattern{}, false
 	}
+}
+
+// lowerCounterAddedSelfTrigger recognizes supported "N counter(s) added to
+// self" trigger event clauses and returns the corresponding TriggerPattern.
+// Returns false for unsupported counter kinds (fail-closed).
+func lowerCounterAddedSelfTrigger(event string) (game.TriggerPattern, bool) {
+	base := game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Source:           game.TriggerSourceSelf,
+		MatchCounterKind: true,
+	}
+	switch event {
+	case "one or more +1/+1 counters are put on this creature",
+		"one or more +1/+1 counters are put on this permanent":
+		base.CounterKind = counter.PlusOnePlusOne
+		base.OneOrMore = true
+		return base, true
+	case "a +1/+1 counter is put on this creature",
+		"a +1/+1 counter is put on this permanent":
+		base.CounterKind = counter.PlusOnePlusOne
+		return base, true
+	case "one or more -1/-1 counters are put on this creature",
+		"one or more -1/-1 counters are put on this permanent":
+		base.CounterKind = counter.MinusOneMinusOne
+		base.OneOrMore = true
+		return base, true
+	case "a -1/-1 counter is put on this creature",
+		"a -1/-1 counter is put on this permanent":
+		base.CounterKind = counter.MinusOneMinusOne
+		return base, true
+	}
+	return game.TriggerPattern{}, false
 }
 
 func bodyReferences(

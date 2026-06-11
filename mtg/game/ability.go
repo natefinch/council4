@@ -329,6 +329,11 @@ type TriggerPattern struct {
 	// pass into one trigger. The first matching event is retained as TriggerEvent.
 	OneOrMore bool
 
+	// MatchCounterKind restricts EventCountersAdded triggers to a specific
+	// counter type. When false, any counter kind satisfies the pattern.
+	MatchCounterKind bool
+	CounterKind      counter.Kind
+
 	// Step filters EventBeginningOfStep triggers such as "At the beginning of
 	// your upkeep" (CR 603.6c).
 	Step Step
