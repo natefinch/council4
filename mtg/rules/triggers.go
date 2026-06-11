@@ -165,12 +165,13 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 		if !ok {
 			continue
 		}
-		if ability.Trigger.Pattern.OneOrMore {
+		if ability.Trigger.Pattern.OneOrMore && oneOrMoreEventCanCoalesce(trigger.event) {
 			key := triggerBatchKey{
 				sourceID:     trigger.sourceID,
 				abilityIndex: trigger.abilityIndex,
 				event:        trigger.event.Kind,
 				controller:   trigger.controller,
+				simultaneous: trigger.event.SimultaneousID,
 			}
 			if seenOneOrMore[key] {
 				continue
@@ -192,11 +193,16 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 	return filtered
 }
 
+func oneOrMoreEventCanCoalesce(event game.Event) bool {
+	return event.Kind != game.EventPermanentDied || event.SimultaneousID != 0
+}
+
 type triggerBatchKey struct {
 	sourceID     id.ID
 	abilityIndex int
 	event        game.EventKind
 	controller   game.PlayerID
+	simultaneous id.ID
 }
 
 func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {

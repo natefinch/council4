@@ -68,7 +68,7 @@ type Event struct {
 	// StackObjectID is set for spell or ability cast/resolution events.
 	StackObjectID id.ID
 
-	// SimultaneousID groups zone-change events that happened simultaneously.
+	// SimultaneousID groups events that happened simultaneously.
 	SimultaneousID id.ID
 
 	// AbilityIndex identifies an activated or triggered ability on its source.

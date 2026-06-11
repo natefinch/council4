@@ -1778,7 +1778,30 @@ func TestTriggeredAbilityMaxTriggersPerTurn(t *testing.T) {
 	}
 }
 
-func TestOneOrMoreTriggerCoalescesDetectionBatch(t *testing.T) {
+func TestOneOrMoreTriggerCoalescesSimultaneousEvents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                 game.EventPermanentDied,
+		Controller:            game.TriggerControllerYou,
+		RequirePermanentTypes: []types.Card{types.Creature},
+		OneOrMore:             true,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	first := addCombatCreaturePermanent(g, game.Player1)
+	second := addCombatCreaturePermanent(g, game.Player1)
+	simultaneousID := g.IDGen.Next()
+	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: first.ObjectID, CardID: first.CardInstanceID, SimultaneousID: simultaneousID})
+	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: second.ObjectID, CardID: second.CardInstanceID, SimultaneousID: simultaneousID})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("one-or-more trigger was not put on stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want one coalesced trigger", got)
+	}
+}
+
+func TestOneOrMoreTriggerDoesNotCoalesceSequentialEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
@@ -1793,10 +1816,10 @@ func TestOneOrMoreTriggerCoalescesDetectionBatch(t *testing.T) {
 	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: second.ObjectID, CardID: second.CardInstanceID})
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("one-or-more trigger was not put on stack")
+		t.Fatal("one-or-more triggers were not put on stack")
 	}
-	if got := g.Stack.Size(); got != 1 {
-		t.Fatalf("stack size = %d, want one coalesced trigger", got)
+	if got := g.Stack.Size(); got != 2 {
+		t.Fatalf("stack size = %d, want one trigger for each sequential event", got)
 	}
 }
 
@@ -2964,7 +2987,6 @@ func TestSelfCounterAddedOneOrMoreCoalesces(t *testing.T) {
 		OneOrMore:        true,
 	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
-	// Two separate counter-added events in the same detection pass.
 	emitEvent(g, game.Event{
 		Kind:           game.EventCountersAdded,
 		SourceObjectID: source.ObjectID,
