@@ -241,6 +241,36 @@ func TestRenderTokenCreationReplacement(t *testing.T) {
 	}
 }
 
+func TestRenderDamageReplacement(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	ability := game.DamageReplacementExcludingSource(
+		"If another red source you control would deal damage to a permanent or player, it deals that much damage plus 1 to that permanent or player instead.",
+		0,
+		1,
+		[]color.Color{color.Red},
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(ctx, &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.DamageReplacementExcludingSource",
+		"0",
+		"1",
+		"color.Red",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importColor]; !ok {
+		t.Fatal("damage replacement did not request color import")
+	}
+}
+
 func TestRenderCounterPlacementReplacement(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()
