@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **3,858 of 31,838 cards eligible for paper support (12.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **3,863 of 31,838 cards eligible for paper support (12.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1889,6 +1889,7 @@ Council4 currently supports **3,858 of 31,838 cards eligible for paper support (
 - Loxodon Warhammer
 - Loxodon Wayfarer
 - Lucent Liminid
+- Lullmage's Familiar
 - Lumengrid Drake
 - Lumengrid Gargoyle
 - Lumengrid Sentinel
@@ -1970,6 +1971,7 @@ Council4 currently supports **3,858 of 31,838 cards eligible for paper support (
 - Merfolk
 - Merfolk
 - Merfolk Branchwalker
+- Merfolk Falconer
 - Merfolk Mesmerist
 - Merfolk of the Depths
 - Merfolk of the Pearl Trident
@@ -2783,6 +2785,7 @@ Council4 currently supports **3,858 of 31,838 cards eligible for paper support (
 - Secluded Glen
 - Secluded Steppe
 - Secret Passage
+- Secrets of the Dead
 - Sedge Scorpion
 - Seeker of Skybreak
 - Seekers' Squire
@@ -3249,6 +3252,7 @@ Council4 currently supports **3,858 of 31,838 cards eligible for paper support (
 - Tangled Florahedron // Tangled Vale
 - Tangled Islet
 - Tanglepool Bridge
+- Tanufel Rimespeaker
 - Taoist Hermit
 - Tar Snare
 - Tarfire
@@ -3336,6 +3340,7 @@ Council4 currently supports **3,858 of 31,838 cards eligible for paper support (
 - Thundering Falls
 - Thundering Giant
 - Thundering Tanadon
+- Thunderous Snapper
 - Thunderscape Apprentice
 - Tidal Kraken
 - Tidehollow Strix
