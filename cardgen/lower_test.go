@@ -7161,31 +7161,56 @@ func TestLowerAtTriggerOptional(t *testing.T) {
 	}
 }
 
-func TestLowerAtTriggerPrecombatMainPhaseFailsClosed(t *testing.T) {
+func TestLowerAtTriggerMainPhasePhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase string
+		step   game.Step
+	}{
+		{"your first main phase", game.StepPrecombatMain},
+		{"your precombat main phase", game.StepPrecombatMain},
+		{"each of your first main phases", game.StepPrecombatMain},
+		{"your second main phase", game.StepPostcombatMain},
+		{"your postcombat main phase", game.StepPostcombatMain},
+		{"each of your postcombat main phases", game.StepPostcombatMain},
+	}
+	for _, test := range tests {
+		t.Run(test.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Planner",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: "At the beginning of " + test.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Pattern.Step != test.step || trigger.Pattern.Controller != game.TriggerControllerYou {
+				t.Fatalf("trigger pattern = %+v, want step %v controlled by you", trigger.Pattern, test.step)
+			}
+		})
+	}
+}
+
+func TestLowerAtTriggerEnchantedPlayerMainPhaseFailsClosed(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-		Name:       "Test Planeswalker",
+		Name:       "Test Aura",
 		Layout:     "normal",
-		TypeLine:   "Creature — Human",
-		OracleText: "At the beginning of your precombat main phase, draw a card.",
-		Power:      new("2"),
-		Toughness:  new("2"),
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant player\nAt the beginning of each of enchanted player's postcombat main phases, draw a card.",
 	}, "t")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostic for precombat main phase trigger, got none")
+		t.Fatal("enchanted-player main-phase trigger unexpectedly lowered")
 	}
-	found := false
-	for _, d := range diagnostics {
-		if strings.Contains(d.Summary, "unsupported phase/step trigger phrase") {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected 'unsupported phase/step trigger phrase' diagnostic, got: %v", diagnostics)
+	if !slices.ContainsFunc(diagnostics, func(d oracle.Diagnostic) bool {
+		return strings.Contains(d.Summary, "unsupported phase/step trigger phrase")
+	}) {
+		t.Fatalf("diagnostics = %#v, want unsupported phase/step trigger phrase", diagnostics)
 	}
 }
 
