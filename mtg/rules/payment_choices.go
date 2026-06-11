@@ -21,6 +21,8 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalTapPermanents:
 			prefs.TapChoices = append(prefs.TapChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log, tapExclusions...)...)
+		case cost.AdditionalReturnToHand:
+			prefs.ReturnChoices = append(prefs.ReturnChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalDiscard:
 			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalExile:
@@ -182,6 +184,9 @@ func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost 
 		if addCost.Kind == cost.AdditionalTapPermanents && permanent.Tapped {
 			continue
 		}
+		if addCost.RequireTapped && !permanent.Tapped {
+			continue
+		}
 		candidates = append(candidates, permanent)
 	}
 	return candidates
@@ -189,6 +194,9 @@ func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost 
 
 func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, addCost cost.Additional) bool {
 	if addCost.MatchPermanentType && !permanentHasType(g, permanent, addCost.PermanentType) {
+		return false
+	}
+	if addCost.RequireSupertype != "" && !permanentHasSupertype(g, permanent, addCost.RequireSupertype) {
 		return false
 	}
 	if addCost.SubtypesAny != (cost.SubtypeSet{}) {

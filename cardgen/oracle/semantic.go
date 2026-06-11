@@ -74,6 +74,7 @@ const (
 	CostRemoveCounter
 	CostTapPermanents
 	CostEnergy
+	CostReturn
 	CostLoyalty
 )
 
