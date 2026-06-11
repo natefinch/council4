@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,856
+Cards supported: 3,858
 
 - +2 Mace
 - Aang, Air Nomad

@@ -5,7 +5,7 @@ Package `oracle` is the deterministic front end for turning Scryfall
 inside `cardgen` because parsing card text is generation-time tooling, not
 runtime game behavior.
 
-**Cards supported: 3,856 / 31,838**
+**Cards supported: 3,858 / 31,838**
 
 The pipeline is:
 
