@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,738
+Cards supported: 3,746
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1093,6 +1093,8 @@ Cards supported: 3,738
 - Flensermite
 - Flight
 - Flight of Equenauts
+- Floodbringer
+- Flooded Shoreline
 - Floodhound
 - Flowstone Infusion
 - Flowstone Overseer
@@ -2140,6 +2142,7 @@ Cards supported: 3,738
 - Obelisk of Grixis
 - Obelisk of Jund
 - Obelisk of Naya
+- Oboro Breezecaller
 - Obsianus Golem
 - Obsidian Giant
 - Obyra's Attendants // Desperate Parry
@@ -2383,6 +2386,7 @@ Cards supported: 3,738
 - Quick Study
 - Quiet Purity
 - Quilled Slagwurm
+- Quirion Ranger
 - Rabanastre, Royal City
 - Rabbit
 - Rabid Rats
@@ -2670,6 +2674,7 @@ Cards supported: 3,738
 - Scroll Thief
 - Scrounger of Souls
 - Scrubland
+- Scryb Ranger
 - Scryb Sprites
 - Scuzzback Marauders
 - Scuzzback Scrapper
@@ -2916,6 +2921,8 @@ Cards supported: 3,738
 - Somnomancer
 - Sootfeather Flock
 - Soothing Balm
+- Soratami Mindsweeper
+- Soratami Mirror-Mage
 - Soul Shepherd
 - Soul Summons
 - Soul Warden
@@ -3641,6 +3648,7 @@ Cards supported: 3,738
 - Winterflame
 - Wipe Clean
 - Wirewood Elf
+- Wirewood Symbiote
 - Wishcoin Crab
 - Wistful Selkie
 - Witch's Familiar

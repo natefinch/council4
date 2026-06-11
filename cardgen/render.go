@@ -2945,6 +2945,17 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fmt.Sprintf("CardType: %s,", cardType),
 		)
 	}
+	if additional.RequireTapped {
+		fields = append(fields, "RequireTapped: true,")
+	}
+	if additional.RequireSupertype != "" {
+		supertype, err := supertypeLiteral(additional.RequireSupertype)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		fields = append(fields, fmt.Sprintf("RequireSupertype: %s,", supertype))
+	}
 	if additional.SubtypesAny != (cost.SubtypeSet{}) {
 		ctx.need(importTypes)
 		literals := make([]string, 0, len(additional.SubtypesAny))
@@ -3198,6 +3209,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalTapPermanents", nil
 	case cost.AdditionalEnergy:
 		return "cost.AdditionalEnergy", nil
+	case cost.AdditionalReturnToHand:
+		return "cost.AdditionalReturnToHand", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
 	}

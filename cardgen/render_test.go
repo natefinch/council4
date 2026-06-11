@@ -168,6 +168,34 @@ func TestRenderManifestPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderReturnToHandAdditionalCost(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := renderAdditional(ctx, cost.Additional{
+		Kind:               cost.AdditionalReturnToHand,
+		Text:               "Return a tapped creature you control to its owner's hand",
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Creature,
+		RequireTapped:      true,
+		RequireSupertype:   types.Snow,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"cost.AdditionalReturnToHand",
+		"MatchPermanentType: true",
+		"PermanentType: types.Creature",
+		"RequireTapped: true",
+		"RequireSupertype: types.Snow",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered additional missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderEveryRecognizedCounterKind(t *testing.T) {
 	t.Parallel()
 	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {

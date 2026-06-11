@@ -30,6 +30,7 @@ const (
 	AdditionalReturnUnblockedAttacker
 	AdditionalTapPermanents
 	AdditionalEnergy
+	AdditionalReturnToHand
 )
 
 // Additional describes a typed non-mana cost printed on a spell, ability, or
@@ -66,6 +67,13 @@ type Additional struct {
 	// CounterKind identifies the counter removed from the source permanent by
 	// an AdditionalRemoveCounter cost.
 	CounterKind counter.Kind
+
+	// RequireTapped constrains battlefield costs to tapped permanents.
+	RequireTapped bool
+
+	// RequireSupertype constrains battlefield costs to permanents with a
+	// particular supertype, such as Snow.
+	RequireSupertype types.Super
 }
 
 // Alternative describes an optional cost that replaces a spell or ability's

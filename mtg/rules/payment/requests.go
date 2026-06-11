@@ -56,6 +56,7 @@ type Preferences struct {
 	phyrexianIndex       int
 	SacrificeChoices     []id.ID
 	TapChoices           []id.ID
+	ReturnChoices        []id.ID
 	DiscardChoices       []id.ID
 	ExileChoices         []id.ID
 	RevealChoices        []id.ID
@@ -91,6 +92,7 @@ func clonePreferences(prefs *Preferences) *Preferences {
 		phyrexianIndex:       prefs.phyrexianIndex,
 		SacrificeChoices:     append([]id.ID(nil), prefs.SacrificeChoices...),
 		TapChoices:           append([]id.ID(nil), prefs.TapChoices...),
+		ReturnChoices:        append([]id.ID(nil), prefs.ReturnChoices...),
 		DiscardChoices:       append([]id.ID(nil), prefs.DiscardChoices...),
 		ExileChoices:         append([]id.ID(nil), prefs.ExileChoices...),
 		RevealChoices:        append([]id.ID(nil), prefs.RevealChoices...),
