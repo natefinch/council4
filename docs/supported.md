@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,835
+Cards supported: 3,932
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1051,10 +1051,7 @@ Cards supported: 3,835
 - Expel
 - Explosive Impact
 - Explosive Shot
-<<<<<<< HEAD
-=======
 - Extinguish
->>>>>>> origin/main
 - Extinguish All Hope
 - Exultant Cultist
 - Exultant Skymarcher
@@ -1073,18 +1070,12 @@ Cards supported: 3,835
 - Faithbearer Paladin
 - Faithful Watchdog
 - Falkenrath Reaver
-<<<<<<< HEAD
+- Fall of the Gavel
 - Fallen Cleric
 - False Defeat
 - False Mourning
 - False Prophet
-=======
-- Fall of the Gavel
-- False Defeat
-- False Mourning
-- False Prophet
 - False Summoning
->>>>>>> origin/main
 - Fan Bearer
 - Fanatical Devotion
 - Fang of Shigeki
@@ -2198,10 +2189,7 @@ Cards supported: 3,835
 - Neurok Commando
 - Neurok Hoversail
 - Neurok Replica
-<<<<<<< HEAD
-=======
 - Neutralize
->>>>>>> origin/main
 - Nevinyrral's Disk
 - New Benalia
 - New Perspectives
@@ -3096,10 +3084,7 @@ Cards supported: 3,835
 - Soulmender
 - Soulreaper of Mogis
 - Soulscour
-<<<<<<< HEAD
-=======
 - Soulsworn Jury
->>>>>>> origin/main
 - Southern Elephant
 - Spara's Headquarters
 - Spare Supplies
@@ -3239,12 +3224,9 @@ Cards supported: 3,835
 - Stream of Life
 - Streetbreaker Wurm
 - Strength of Cedars
-<<<<<<< HEAD
 - Strength of Isolation
 - Strength of Lunacy
-=======
 - Strength of Unity
->>>>>>> origin/main
 - Strider Harness
 - Strip Mine
 - Striped Bears

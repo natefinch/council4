@@ -1129,6 +1129,38 @@ func TestGenerateExecutableCardSourceProtectionGrantFromEnchant(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceProtectionGrantWithSourcePTBuff(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Guardian",
+		Layout:     "normal",
+		TypeLine:   "Creature — Guardian",
+		OracleText: "This creature gets +1/+1 and has protection from creatures.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"PowerDelta:",
+		"ToughnessDelta:",
+		"AddAbilities:",
+		"game.ProtectionFromTypesStaticAbility(types.Creature)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if got := strings.Count(source, "AffectedSource: true"); got != 2 {
+		t.Fatalf("AffectedSource count = %d, want 2:\n%s", got, source)
+	}
+}
+
 func TestGenerateExecutableCardSourceChosenColorProtectionFails(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

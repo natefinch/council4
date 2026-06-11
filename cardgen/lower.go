@@ -2610,9 +2610,13 @@ func lowerStaticPTBuffWithProtectionKeyword(
 	sourceSelf bool,
 	condition opt.V[game.Condition],
 ) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	syntaxOK := matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, keywordsForBuff)
+	if sourceSelf && len(ability.References) == 1 {
+		syntaxOK = matchesExactSourceStaticPTBuffWithKeywordsSyntax(syntax, effect, ability.References[0], keywordsForBuff)
+	}
 	if len(keywordsForBuff) != 1 ||
 		keywordsForBuff[0].Name != "Protection" ||
-		!matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, keywordsForBuff) {
+		!syntaxOK {
 		return game.StaticAbility{}, false, nil
 	}
 	group := game.GroupReference{}
