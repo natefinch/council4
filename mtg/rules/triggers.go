@@ -46,8 +46,13 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		return false
 	}
 	orderedTriggers := e.orderTriggeredAbilitiesAPNAP(g, pending, agents, log)
+	placed := false
 	for i := range orderedTriggers {
 		trigger := &orderedTriggers[i]
+		if !e.prepareTriggeredAbility(g, trigger, agents, log) {
+			releasePendingStateTriggerLatch(g, trigger)
+			continue
+		}
 		obj := &game.StackObject{
 			ID:                      g.IDGen.Next(),
 			Kind:                    game.StackTriggeredAbility,
@@ -66,8 +71,9 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			TargetCounts:            append([]int(nil), trigger.targetCounts...),
 		}
 		pushAbilityToStack(g, obj)
+		placed = true
 	}
-	return true
+	return placed
 }
 
 func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
@@ -109,6 +115,9 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []p
 		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
 			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
+		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
+			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+		}
 		if source, ok := damageSourceTriggerSource(g, event); ok {
 			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
@@ -120,6 +129,28 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []p
 		}
 	}
 	return filterPendingTriggeredAbilities(g, pending)
+}
+
+func simultaneousLeftBattlefieldTriggerSources(g *game.Game, event game.Event, events []game.Event) []*game.Permanent {
+	if event.SimultaneousID == 0 {
+		return nil
+	}
+	seen := make(map[id.ID]bool)
+	var sources []*game.Permanent
+	for _, candidate := range events {
+		if candidate.SimultaneousID != event.SimultaneousID ||
+			candidate.PermanentID == event.PermanentID ||
+			seen[candidate.PermanentID] {
+			continue
+		}
+		source, ok := leftBattlefieldTriggerSource(g, candidate)
+		if !ok {
+			continue
+		}
+		seen[candidate.PermanentID] = true
+		sources = append(sources, source)
+	}
+	return sources
 }
 
 func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
@@ -140,6 +171,7 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 				abilityIndex: trigger.abilityIndex,
 				event:        trigger.event.Kind,
 				controller:   trigger.controller,
+				simultaneous: trigger.event.SimultaneousID,
 			}
 			if seenOneOrMore[key] {
 				continue
@@ -166,6 +198,7 @@ type triggerBatchKey struct {
 	abilityIndex int
 	event        game.EventKind
 	controller   game.PlayerID
+	simultaneous id.ID
 }
 
 func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {
@@ -348,14 +381,13 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 			}
 			seen[key] = true
 			if !stateTriggerConditionSatisfied(g, controller, &triggeredBody.Trigger.State.Val) {
-				delete(g.StateTriggerLatches, key)
 				continue
 			}
 			if g.StateTriggerLatches[key] {
 				continue
 			}
-			// State triggers fire once while their condition is true and do not
-			// trigger again until the condition becomes false, then true (CR 603.8).
+			// State triggers do not trigger again until the ability leaves the stack
+			// or fails to enter it (CR 603.8).
 			g.StateTriggerLatches[key] = true
 			pending = append(pending, pendingTriggeredAbility{
 				controller:   controller,
@@ -944,7 +976,7 @@ func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTr
 				used[i] = true
 			}
 		}
-		ordered = append(ordered, e.preparePlayerTriggers(g, playerID, playerTriggers, agents, log)...)
+		ordered = append(ordered, e.chooseTriggerOrder(g, playerID, playerTriggers, agents, log)...)
 	}
 	for i := range triggers {
 		if !used[i] {
@@ -954,29 +986,30 @@ func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTr
 	return ordered
 }
 
-func (e *Engine) preparePlayerTriggers(g *game.Game, playerID game.PlayerID, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
-	ordered := e.chooseTriggerOrder(g, playerID, triggers, agents, log)
-	prepared := make([]pendingTriggeredAbility, 0, len(ordered))
-	for i := range ordered {
-		trigger := &ordered[i]
-		source, _ := pendingTriggerSourceDef(g, trigger)
-		ability, ok := pendingTriggerAbilityFromDef(source, trigger)
-		if !ok {
-			continue
-		}
-		targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, ability, agents, log)
-		if !ok {
-			continue
-		}
-		trigger.targets = targets
-		targetCounts, ok := bodyTargetCounts(g, trigger.controller, source, trigger.sourceID, ability, targets)
-		if !ok {
-			panic("validated triggered ability targets could not be segmented")
-		}
-		trigger.targetCounts = targetCounts
-		prepared = append(prepared, *trigger)
+func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	source, _ := pendingTriggerSourceDef(g, trigger)
+	ability, ok := pendingTriggerAbilityFromDef(source, trigger)
+	if !ok {
+		return false
 	}
-	return prepared
+	targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, ability, agents, log)
+	if !ok {
+		return false
+	}
+	trigger.targets = targets
+	targetCounts, ok := bodyTargetCounts(g, trigger.controller, source, trigger.sourceID, ability, targets)
+	if !ok {
+		panic("validated triggered ability targets could not be segmented")
+	}
+	trigger.targetCounts = targetCounts
+	return true
+}
+
+func releasePendingStateTriggerLatch(g *game.Game, trigger *pendingTriggeredAbility) {
+	if trigger.inline == nil || !trigger.inline.Trigger.State.Exists {
+		return
+	}
+	deleteStateTriggerLatch(g, trigger.sourceID, trigger.sourceCardID, trigger.abilityIndex)
 }
 
 func pendingTriggerAbility(g *game.Game, trigger *pendingTriggeredAbility) (*game.TriggeredAbility, bool) {

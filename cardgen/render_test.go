@@ -328,6 +328,33 @@ func TestRenderTargetPredicateSpellCardTypes(t *testing.T) {
 	}
 }
 
+func TestRenderTargetPredicateStackObjectKinds(t *testing.T) {
+	t.Parallel()
+	rendered, ok, err := (Renderer{}).renderTargetPredicate(newRenderCtx(), game.TargetPredicate{
+		StackObjectKinds: []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("predicate rendered empty")
+	}
+	want := "StackObjectKinds: []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility}"
+	if !strings.Contains(rendered, want) {
+		t.Fatalf("rendered predicate missing %q:\n%s", want, rendered)
+	}
+}
+
+func TestRenderTargetPredicateRejectsUnknownStackObjectKind(t *testing.T) {
+	t.Parallel()
+	_, _, err := (Renderer{}).renderTargetPredicate(newRenderCtx(), game.TargetPredicate{
+		StackObjectKinds: []game.StackObjectKind{game.StackObjectKind(99)},
+	})
+	if err == nil {
+		t.Fatal("expected unknown stack-object kind error")
+	}
+}
+
 func TestRenderManifestPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Manifest{})
@@ -1804,5 +1831,59 @@ func TestRenderTriggerPatternSubjectSelectionRejectsNonDiedEvent(t *testing.T) {
 	}
 	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
 		t.Fatal("expected error: SubjectSelection only allowed on EventPermanentDied patterns")
+	}
+}
+
+func TestRenderSacrificePermanentsPrimitive(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		primitive  game.SacrificePermanents
+		wantSubstr string
+	}{
+		{
+			name: "target player creature",
+			primitive: game.SacrificePermanents{
+				Player:    game.TargetPlayerReference(0),
+				Amount:    game.Fixed(1),
+				Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+			wantSubstr: "game.SacrificePermanents",
+		},
+		{
+			name: "opponents reference any permanent",
+			primitive: game.SacrificePermanents{
+				PlayerGroup: game.OpponentsReference(),
+				Amount:      game.Fixed(1),
+			},
+			wantSubstr: "game.OpponentsReference()",
+		},
+		{
+			name: "all players land",
+			primitive: game.SacrificePermanents{
+				PlayerGroup: game.AllPlayersReference(),
+				Amount:      game.Fixed(1),
+				Selection:   game.Selection{RequiredTypes: []types.Card{types.Land}},
+			},
+			wantSubstr: "game.AllPlayersReference()",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := newRenderCtx()
+			rendered, err := (Renderer{}).renderPrimitive(ctx, tt.primitive)
+			if err != nil {
+				t.Fatalf("renderPrimitive() error = %v", err)
+			}
+			if !strings.Contains(rendered, tt.wantSubstr) {
+				t.Fatalf("rendered = %q, want substring %q", rendered, tt.wantSubstr)
+			}
+			// Verify rendered Go is syntactically valid.
+			src := "package p\nvar _ = " + rendered
+			if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+				t.Fatalf("rendered output is not valid Go: %v\n%s", err, rendered)
+			}
+		})
 	}
 }

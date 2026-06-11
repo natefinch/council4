@@ -2051,6 +2051,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ApplyContinuous kind has unexpected concrete type")
 		}
 		return r.renderApplyContinuousPrimitive(ctx, value)
+	case game.PrimitiveSacrificePermanents:
+		value, ok := primitive.(game.SacrificePermanents)
+		if !ok {
+			return "", errors.New("render: internal error: SacrificePermanents kind has unexpected concrete type")
+		}
+		return r.renderSacrificePermanents(ctx, &value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
@@ -2615,6 +2621,40 @@ func (r Renderer) renderAmountPlayerGroup(
 	}), nil
 }
 
+func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.SacrificePermanents) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	renderedSelection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Amount: %s,", renderedAmount)}
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		var renderedGroup string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			renderedGroup = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			renderedGroup = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		fields = append(fields, fmt.Sprintf("PlayerGroup: %s,", renderedGroup))
+	} else {
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Player: %s,", player))
+	}
+	if renderedSelection != "game.Selection{}" {
+		fields = append(fields, fmt.Sprintf("Selection: %s,", renderedSelection))
+	}
+	return structLit("game.SacrificePermanents", fields), nil
+}
+
 func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object game.ObjectReference, group game.GroupReference) (string, error) {
 	if group.Domain() != 0 {
 		rendered, err := r.renderGroupReference(ctx, group)
@@ -2772,6 +2812,13 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("ExcludedSpellCardTypes: %s,", lits))
 	}
+	if len(predicate.StackObjectKinds) > 0 {
+		kinds, err := renderStackObjectKinds(predicate.StackObjectKinds)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("StackObjectKinds: %s,", kinds))
+	}
 	if len(predicate.Colors) > 0 {
 		colors, err := renderColorSlice(ctx, predicate.Colors)
 		if err != nil {
@@ -2859,6 +2906,23 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		return "", false, nil
 	}
 	return structLit("game.TargetPredicate", fields), true, nil
+}
+
+func renderStackObjectKinds(kinds []game.StackObjectKind) (string, error) {
+	lits := make([]string, 0, len(kinds))
+	for _, kind := range kinds {
+		switch kind {
+		case game.StackSpell:
+			lits = append(lits, "game.StackSpell")
+		case game.StackActivatedAbility:
+			lits = append(lits, "game.StackActivatedAbility")
+		case game.StackTriggeredAbility:
+			lits = append(lits, "game.StackTriggeredAbility")
+		default:
+			return "", fmt.Errorf("render: unsupported stack-object kind %d", kind)
+		}
+	}
+	return "[]game.StackObjectKind{" + strings.Join(lits, ", ") + "}", nil
 }
 
 func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference) (string, error) {

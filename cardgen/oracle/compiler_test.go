@@ -1390,6 +1390,33 @@ func TestCompileCounterVerbAndNoun(t *testing.T) {
 	}
 }
 
+func TestCompileExactCounterAbilityTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		text   string
+		kind   SelectorKind
+	}{
+		{"Counter target activated ability.", "target activated ability", SelectorActivatedAbility},
+		{"Counter target triggered ability.", "target triggered ability", SelectorTriggeredAbility},
+		{"Counter target activated or triggered ability.", "target activated or triggered ability", SelectorActivatedOrTriggeredAbility},
+		{"Counter target spell, activated ability, or triggered ability.", "target spell, activated ability, or triggered ability", SelectorSpellActivatedOrTriggeredAbility},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			targets := compilation.Abilities[0].Targets
+			if len(targets) != 1 || targets[0].Text != test.text || targets[0].Selector.Kind != test.kind {
+				t.Fatalf("targets = %#v, want text %q kind %v", targets, test.text, test.kind)
+			}
+		})
+	}
+}
+
 func TestCompileNegatedEffect(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile("Players can't gain life.", ParseContext{})

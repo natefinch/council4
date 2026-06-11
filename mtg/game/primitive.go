@@ -63,10 +63,11 @@ const (
 	PrimitiveGrantCastPermission
 	PrimitiveExplore
 	PrimitiveManifest
+	PrimitiveSacrificePermanents
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveManifest) + 1
+const primitiveKindCount = int(PrimitiveSacrificePermanents) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -555,6 +556,15 @@ type Sacrifice struct {
 	Object ObjectReference
 }
 
+// SacrificePermanents causes the referenced player (or every player in a group)
+// to choose and sacrifice the required number of eligible permanents during resolution.
+type SacrificePermanents struct {
+	Player      PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	Amount      Quantity             // number of permanents to sacrifice
+	Selection   Selection            // eligible permanent filter; zero = any permanent
+}
+
 // Untap untaps one referenced permanent or every permanent in a referenced group.
 type Untap struct {
 	Object ObjectReference
@@ -752,6 +762,9 @@ func (Bounce) Kind() PrimitiveKind { return PrimitiveBounce }
 // Kind implements Primitive for Sacrifice.
 func (Sacrifice) Kind() PrimitiveKind { return PrimitiveSacrifice }
 
+// Kind implements Primitive for SacrificePermanents.
+func (SacrificePermanents) Kind() PrimitiveKind { return PrimitiveSacrificePermanents }
+
 // Kind implements Primitive for Untap.
 func (Untap) Kind() PrimitiveKind { return PrimitiveUntap }
 
@@ -844,6 +857,7 @@ func (LoseLife) isPrimitive()                    {}
 func (Exile) isPrimitive()                       {}
 func (Bounce) isPrimitive()                      {}
 func (Sacrifice) isPrimitive()                   {}
+func (SacrificePermanents) isPrimitive()         {}
 func (Untap) isPrimitive()                       {}
 func (CounterObject) isPrimitive()               {}
 func (Mill) isPrimitive()                        {}
@@ -924,18 +938,19 @@ func (p LoseLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount
 func (p Exile) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.ExileLinkedKey}
 }
-func (Bounce) instructionRefs() primitiveRefs        { return primitiveRefs{} }
-func (Sacrifice) instructionRefs() primitiveRefs     { return primitiveRefs{} }
-func (Untap) instructionRefs() primitiveRefs         { return primitiveRefs{} }
-func (CounterObject) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (p Mill) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
-func (p Scry) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
-func (p Surveil) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
-func (p Investigate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (p Proliferate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (Explore) instructionRefs() primitiveRefs       { return primitiveRefs{} }
-func (Manifest) instructionRefs() primitiveRefs      { return primitiveRefs{} }
-func (Goad) instructionRefs() primitiveRefs          { return primitiveRefs{} }
+func (Bounce) instructionRefs() primitiveRefs                { return primitiveRefs{} }
+func (Sacrifice) instructionRefs() primitiveRefs             { return primitiveRefs{} }
+func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (Untap) instructionRefs() primitiveRefs                 { return primitiveRefs{} }
+func (CounterObject) instructionRefs() primitiveRefs         { return primitiveRefs{} }
+func (p Mill) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
+func (p Scry) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
+func (p Surveil) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
+func (p Investigate) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (p Proliferate) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (Explore) instructionRefs() primitiveRefs               { return primitiveRefs{} }
+func (Manifest) instructionRefs() primitiveRefs              { return primitiveRefs{} }
+func (Goad) instructionRefs() primitiveRefs                  { return primitiveRefs{} }
 
 func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
 func (Transform) instructionRefs() primitiveRefs            { return primitiveRefs{} }

@@ -325,8 +325,8 @@ type TriggerPattern struct {
 	RequireKickerPaid  bool
 	RequireHistoric    bool
 
-	// OneOrMore coalesces matching events consumed in the same trigger detection
-	// pass into one trigger. The first matching event is retained as TriggerEvent.
+	// OneOrMore coalesces matching events that happened as one batch into one
+	// trigger. The first matching event is retained as TriggerEvent.
 	OneOrMore bool
 
 	// MatchCounterKind restricts EventCountersAdded triggers to a specific
