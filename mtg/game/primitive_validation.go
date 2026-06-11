@@ -132,6 +132,12 @@ func validateCardReference(ref CardReference) error {
 		if ref.LinkID != "" {
 			return errors.New("source/event/target card reference must not set LinkID")
 		}
+		if ref.Kind != CardReferenceTarget && ref.TargetIndex != 0 {
+			return errors.New("source/event card reference must not set TargetIndex")
+		}
+		if ref.TargetIndex < 0 {
+			return errors.New("target card reference must not use a negative TargetIndex")
+		}
 	case CardReferenceNone:
 		return errors.New("card reference has no kind")
 	default:
@@ -173,6 +179,17 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCountSelector:
 		return validateGroupReference(dynamic.Group, targets, checkTargets)
+	case DynamicAmountCountCardsInZone:
+		if dynamic.CardZone == zone.None || dynamic.CardZone == zone.Battlefield || dynamic.CardZone == zone.Stack {
+			return errors.New("card-zone count requires a non-battlefield zone")
+		}
+		if dynamic.Selection == nil {
+			return errors.New("card-zone count requires a selection")
+		}
+		if dynamic.Player == nil {
+			return errors.New("card-zone count requires a player")
+		}
+		return validatePlayerReference(*dynamic.Player, targets, checkTargets)
 	case DynamicAmountPreviousEffectResult, DynamicAmountPreviousEffectExcessDamage:
 		if dynamic.ResultKey == "" {
 			return errors.New("previous-result quantity requires a result key")
@@ -506,15 +523,31 @@ func validateTargetCardReference(ref CardReference, targets []TargetSpec, checkT
 	if ref.Kind != CardReferenceTarget {
 		return nil
 	}
+	if ref.TargetIndex < 0 {
+		return errors.New("target card reference must not use a negative TargetIndex")
+	}
 	if !checkTargets || len(targets) == 0 {
 		return errors.New("target card reference requires a target specification")
 	}
+	cardSlot := 0
 	for i := range targets {
-		if targetSpecAllowedKinds(&targets[i])&TargetAllowCard != 0 {
+		target := targets[i]
+		maxTargets := target.MaxTargets
+		if maxTargets == 0 {
+			continue
+		}
+		if targetSpecAllowedKinds(&target)&TargetAllowCard == 0 {
+			continue
+		}
+		if ref.TargetIndex < cardSlot+maxTargets {
 			return nil
 		}
+		cardSlot += maxTargets
 	}
-	return errors.New("target card reference requires a card target specification")
+	if cardSlot == 0 {
+		return errors.New("target card reference requires a card target specification")
+	}
+	return fmt.Errorf("target card reference index %d has no matching target specification", ref.TargetIndex)
 }
 
 func (p GrantCastPermission) validatePrimitive([]TargetSpec, bool) error {

@@ -304,14 +304,19 @@ func compileTargets(tokens []Token) []CompiledTarget {
 		}
 		start := i
 		cardinality := TargetCardinality{Min: 1, Max: 1}
-		if i >= 3 && equalWord(tokens[i-3], "up") && equalWord(tokens[i-2], "to") {
+		switch {
+		case i >= 3 && equalWord(tokens[i-3], "any") && equalWord(tokens[i-2], "number") && equalWord(tokens[i-1], "of"):
+			start = i - 3
+			cardinality.Min = 0
+			cardinality.Max = 99
+		case i >= 3 && equalWord(tokens[i-3], "up") && equalWord(tokens[i-2], "to"):
 			start = i - 3
 			cardinality.Min = 0
 			cardinality.Max = numberWord(tokens[i-1])
 			if cardinality.Max == 0 {
 				cardinality.Max = 1
 			}
-		} else if i >= 1 {
+		case i >= 1:
 			if count := numberWord(tokens[i-1]); count > 0 {
 				start = i - 1
 				cardinality.Min = count
@@ -319,6 +324,7 @@ func compileTargets(tokens []Token) []CompiledTarget {
 			} else if equalWord(tokens[i-1], "any") {
 				start = i - 1
 			}
+		default:
 		}
 		end := targetPhraseEnd(tokens, i+1)
 		phraseTokens := tokens[start:end]
@@ -339,6 +345,7 @@ func targetPhraseEnd(tokens []Token, start int) int {
 	for end < len(tokens) {
 		token := tokens[end]
 		if token.Kind == Comma || token.Kind == Period || token.Kind == Semicolon ||
+			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && isEffectVerb(tokens[end+2])) ||
 			(end > start && isEffectVerb(token)) {
 			break
 		}
@@ -392,7 +399,24 @@ func compileSelector(tokens []Token) CompiledSelector {
 	selector.Blocking = containsWord(words, "blocking")
 	selector.Tapped = containsWord(words, "tapped")
 	selector.Untapped = containsWord(words, "untapped")
+	selector.Keyword = selectorKeyword(words)
 	return selector
+}
+
+func selectorKeyword(words []string) string {
+	for i := 0; i+1 < len(words); i++ {
+		if words[i] == "with" && words[i+1] == "cycling" {
+			return "Cycling"
+		}
+		if i+3 < len(words) &&
+			words[i] == "with" &&
+			words[i+1] == "a" &&
+			words[i+2] == "cycling" &&
+			words[i+3] == "ability" {
+			return "Cycling"
+		}
+	}
+	return ""
 }
 
 func compileConditions(tokens []Token, triggered bool) []CompiledCondition {
@@ -1069,6 +1093,9 @@ func dynamicAmountSubject(tokens []Token, start int, cardName string) (dynamicAm
 }
 
 func dynamicCountAmountSubject(tokens []Token, start int) (dynamicAmountSubjectMatch, bool) {
+	if subject, ok := dynamicCardCountAmountSubject(tokens, start); ok {
+		return subject, true
+	}
 	suffixes := []struct {
 		words      []string
 		controller ControllerKind
@@ -1117,6 +1144,51 @@ func dynamicCountAmountSubject(tokens []Token, start int) (dynamicAmountSubjectM
 		}
 	}
 	return dynamicAmountSubjectMatch{}, false
+}
+
+func dynamicCardCountAmountSubject(tokens []Token, start int) (dynamicAmountSubjectMatch, bool) {
+	if start >= len(tokens) ||
+		(!equalWord(tokens[start], "card") && !equalWord(tokens[start], "cards")) {
+		return dynamicAmountSubjectMatch{}, false
+	}
+	number := dynamicSubjectPlural
+	if equalWord(tokens[start], "card") {
+		number = dynamicSubjectSingular
+	}
+	end := start + 1
+	selector := CompiledSelector{
+		Kind: SelectorCard,
+		Raw:  joinedSourceText(tokens[start:]),
+	}
+	switch {
+	case wordsAt(tokens, end, "with", "cycling"):
+		end += 2
+	case wordsAt(tokens, end, "with", "a", "cycling", "ability"):
+		end += 4
+	default:
+		return dynamicAmountSubjectMatch{}, false
+	}
+	selector.Keyword = "Cycling"
+	switch {
+	case wordsAt(tokens, end, "in", "your", "graveyard"):
+		selector.Controller = ControllerYou
+		selector.Zone = zone.Graveyard
+		end += 3
+	default:
+		return dynamicAmountSubjectMatch{}, false
+	}
+	if !dynamicSubjectBoundary(tokens, end) {
+		return dynamicAmountSubjectMatch{}, false
+	}
+	selector.Raw = joinedSourceText(tokens[start:end])
+	return dynamicAmountSubjectMatch{
+		amount: CompiledAmount{
+			DynamicKind: DynamicAmountCount,
+			Selector:    selector,
+		},
+		end:    end,
+		number: number,
+	}, true
 }
 
 func dynamicSubjectBoundary(tokens []Token, end int) bool {
