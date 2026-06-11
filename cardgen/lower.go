@@ -3892,6 +3892,46 @@ func lowerLifeDamageTriggerPattern(ability oracle.CompiledAbility) (game.Trigger
 			Source:          game.TriggerSourceAttachedPermanent,
 			DamageRecipient: game.DamageRecipientPermanent,
 		}, true
+	case "this creature deals damage":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientNone, game.TriggerPlayerAny), true
+	case "this creature deals damage to a player":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
+	case "this creature deals damage to an opponent":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
+	case "this creature deals damage to a creature":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, false, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
+	case "this creature deals combat damage":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientNone, game.TriggerPlayerAny), true
+	case "this creature deals combat damage to a player":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
+	case "this creature deals combat damage to an opponent":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
+	case "this creature deals combat damage to a creature":
+		return damageSourceTriggerPattern(game.TriggerSourceSelf, true, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
+	case "equipped creature deals damage",
+		"enchanted creature deals damage":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientNone, game.TriggerPlayerAny), true
+	case "equipped creature deals damage to a player",
+		"enchanted creature deals damage to a player":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
+	case "equipped creature deals damage to an opponent",
+		"enchanted creature deals damage to an opponent":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
+	case "equipped creature deals damage to a creature",
+		"enchanted creature deals damage to a creature":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, false, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
+	case "equipped creature deals combat damage",
+		"enchanted creature deals combat damage":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientNone, game.TriggerPlayerAny), true
+	case "equipped creature deals combat damage to a player",
+		"enchanted creature deals combat damage to a player":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPlayer, game.TriggerPlayerAny), true
+	case "equipped creature deals combat damage to an opponent",
+		"enchanted creature deals combat damage to an opponent":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPlayer, game.TriggerPlayerOpponent), true
+	case "equipped creature deals combat damage to a creature",
+		"enchanted creature deals combat damage to a creature":
+		return damageSourceTriggerPattern(game.TriggerSourceAttachedPermanent, true, game.DamageRecipientPermanent, game.TriggerPlayerAny), true
 	case "you're dealt damage", "you are dealt damage":
 		return game.TriggerPattern{
 			Event:           game.EventDamageDealt,
@@ -3901,6 +3941,26 @@ func lowerLifeDamageTriggerPattern(ability oracle.CompiledAbility) (game.Trigger
 	default:
 		return game.TriggerPattern{}, false
 	}
+}
+
+func damageSourceTriggerPattern(
+	source game.TriggerSourceFilter,
+	combat bool,
+	recipient game.DamageRecipientKind,
+	player game.TriggerPlayerFilter,
+) game.TriggerPattern {
+	pattern := game.TriggerPattern{
+		Event:               game.EventDamageDealt,
+		Source:              source,
+		Subject:             game.TriggerSubjectDamageSource,
+		Player:              player,
+		DamageRecipient:     recipient,
+		RequireCombatDamage: combat,
+	}
+	if recipient == game.DamageRecipientPermanent {
+		pattern.DamageRecipientTypes = []types.Card{types.Creature}
+	}
+	return pattern
 }
 
 func lowerSelfTriggerBody(
