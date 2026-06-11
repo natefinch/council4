@@ -218,6 +218,29 @@ func TestReferenceResolverObjectUsesLastKnownInformation(t *testing.T) {
 	}
 }
 
+func TestReferenceResolverSourceCardPermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Returned Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	obj := &game.StackObject{
+		Controller:   game.Player2,
+		SourceCardID: creature.CardInstanceID,
+	}
+	resolver := newReferenceResolver(g, obj)
+
+	resolved, ok := resolver.object(game.SourceCardPermanentReference())
+	if !ok || resolved.permanent != creature {
+		t.Fatalf("source-card permanent = %#v (%v), want %#v", resolved.permanent, ok, creature)
+	}
+
+	obj.SourceCardID = 0
+	if _, ok := resolver.object(game.SourceCardPermanentReference()); ok {
+		t.Fatal("source-card permanent unexpectedly resolved without a source card")
+	}
+}
+
 func TestReferenceResolverControllerAndOwnerReferences(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatPermanent(g, game.Player3, &game.CardDef{CardFace: game.CardFace{

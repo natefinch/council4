@@ -11,6 +11,7 @@ func TestObjectReferenceConstructorsAreValid(t *testing.T) {
 	refs := []ObjectReference{
 		TargetPermanentReference(0),
 		SourcePermanentReference(),
+		SourceCardPermanentReference(),
 		SourceAttachedPermanentReference(),
 		TargetAttachedPermanentReference(1),
 		LinkedObjectReference("imprint"),
@@ -27,6 +28,9 @@ func TestObjectReferenceConstructorsSetExpectedFields(t *testing.T) {
 	if got := SourceAttachedPermanentReference(); got.Kind() != ObjectReferenceSourceAttachedPermanent {
 		t.Fatalf("SourceAttachedPermanentReference() = %+v", got)
 	}
+	if got := SourceCardPermanentReference(); got.Kind() != ObjectReferenceSourceCard {
+		t.Fatalf("SourceCardPermanentReference() = %+v", got)
+	}
 	if got := TargetAttachedPermanentReference(2); got.Kind() != ObjectReferenceTargetAttachedPermanent || got.TargetIndex() != 2 {
 		t.Fatalf("TargetAttachedPermanentReference(2) = %+v", got)
 	}
@@ -41,6 +45,7 @@ func TestObjectReferenceValidateRejectsStructuralProblems(t *testing.T) {
 		"target with link":          objectReferenceForTest(ObjectReferenceTargetPermanent, 0, "x"),
 		"target negative index":     objectReferenceForTest(ObjectReferenceTargetPermanent, -1, ""),
 		"source with index":         objectReferenceForTest(ObjectReferenceSourcePermanent, 3, ""),
+		"source card with index":    objectReferenceForTest(ObjectReferenceSourceCard, 3, ""),
 		"source attached with link": objectReferenceForTest(ObjectReferenceSourceAttachedPermanent, 0, "x"),
 		"target attached with link": objectReferenceForTest(ObjectReferenceTargetAttachedPermanent, 0, "x"),
 		"target attached negative":  objectReferenceForTest(ObjectReferenceTargetAttachedPermanent, -5, ""),
