@@ -165,7 +165,7 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 		if !ok {
 			continue
 		}
-		if ability.Trigger.Pattern.OneOrMore && oneOrMoreEventCanCoalesce(trigger.event) {
+		if ability.Trigger.Pattern.OneOrMore {
 			key := triggerBatchKey{
 				sourceID:     trigger.sourceID,
 				abilityIndex: trigger.abilityIndex,
@@ -191,10 +191,6 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 		filtered = append(filtered, *trigger)
 	}
 	return filtered
-}
-
-func oneOrMoreEventCanCoalesce(event game.Event) bool {
-	return event.Kind != game.EventPermanentDied || event.SimultaneousID != 0
 }
 
 type triggerBatchKey struct {

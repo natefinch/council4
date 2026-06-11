@@ -2035,6 +2035,10 @@ func TestMassDestroyCreaturesUsesSnapshotAndRespectsIndestructible(t *testing.T)
 	creature1 := addCreaturePermanent(g, game.Player1)
 	creature2 := addCreaturePermanent(g, game.Player2)
 	indestructible := addCombatCreaturePermanent(g, game.Player3, game.Indestructible)
+	shielded := addCombatCreaturePermanent(g, game.Player3)
+	shielded.Counters.Add(counter.Shield, 1)
+	regenerated := addCombatCreaturePermanent(g, game.Player4)
+	regenerated.RegenerationShields = 1
 	artifact := addCombatPermanent(g, game.Player4, &game.CardDef{CardFace: game.CardFace{Name: "Relic",
 		Types: []types.Card{types.Artifact}},
 	})
@@ -2053,8 +2057,37 @@ func TestMassDestroyCreaturesUsesSnapshotAndRespectsIndestructible(t *testing.T)
 	if _, ok := permanentByObjectID(g, indestructible.ObjectID); !ok {
 		t.Fatal("indestructible creature did not survive mass destroy")
 	}
+	if _, ok := permanentByObjectID(g, shielded.ObjectID); !ok || shielded.Counters.Get(counter.Shield) != 0 {
+		t.Fatal("shield counter did not replace mass destroy")
+	}
+	if _, ok := permanentByObjectID(g, regenerated.ObjectID); !ok || regenerated.RegenerationShields != 0 {
+		t.Fatal("regeneration shield did not replace mass destroy")
+	}
 	if _, ok := permanentByObjectID(g, artifact.ObjectID); !ok {
 		t.Fatal("noncreature artifact did not survive mass destroy")
+	}
+}
+
+func TestMassDestroyDeathsShareOneOrMoreTriggerBatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                 game.EventPermanentDied,
+		RequirePermanentTypes: []types.Card{types.Creature},
+		OneOrMore:             true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	addCreaturePermanent(g, game.Player1)
+	addCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, game.Destroy{
+		Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("one-or-more death trigger was not put on stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want one trigger for simultaneous mass destroy", got)
 	}
 }
 

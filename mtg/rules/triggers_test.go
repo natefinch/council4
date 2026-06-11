@@ -1812,8 +1812,8 @@ func TestOneOrMoreTriggerDoesNotCoalesceSequentialEvents(t *testing.T) {
 	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 	first := addCombatCreaturePermanent(g, game.Player1)
 	second := addCombatCreaturePermanent(g, game.Player1)
-	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: first.ObjectID, CardID: first.CardInstanceID})
-	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: second.ObjectID, CardID: second.CardInstanceID})
+	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: first.ObjectID, CardID: first.CardInstanceID, SimultaneousID: g.IDGen.Next()})
+	emitEvent(g, game.Event{Kind: game.EventPermanentDied, Controller: game.Player1, PermanentID: second.ObjectID, CardID: second.CardInstanceID, SimultaneousID: g.IDGen.Next()})
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("one-or-more triggers were not put on stack")

@@ -300,7 +300,7 @@ func movePermanentsToZoneSimultaneously(g *game.Game, permanents []*game.Permane
 			moves = append(moves, move)
 		}
 	}
-	if len(moves) > 1 {
+	if len(moves) > 0 {
 		simultaneousID := g.IDGen.Next()
 		for i := range moves {
 			moves[i].event.SimultaneousID = simultaneousID

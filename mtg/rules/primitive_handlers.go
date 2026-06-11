@@ -5,7 +5,6 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
-	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -233,18 +232,14 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.Group.Valid() {
 		permanents := r.groupPermanents(prim.Group)
-		snapshots := make(map[id.ID]game.ObjectSnapshot, len(permanents))
+		destroyed := make([]*game.Permanent, 0, len(permanents))
 		for _, permanent := range permanents {
-			snapshots[permanent.ObjectID] = snapshotPermanent(r.game, permanent, zone.Battlefield)
-		}
-		for _, permanent := range permanents {
-			_, destroyed := destroyPermanent(r.game, permanent.ObjectID)
-			if _, remains := permanentByObjectID(r.game, permanent.ObjectID); !remains {
-				snapshot := snapshots[permanent.ObjectID]
-				rememberLastKnown(r.game, &snapshot)
+			if hasKeyword(r.game, permanent, game.Indestructible) || replaceDestroyPermanent(r.game, permanent) {
+				continue
 			}
-			res.succeeded = destroyed || res.succeeded
+			destroyed = append(destroyed, permanent)
 		}
+		res.succeeded = movePermanentsToZoneSimultaneously(r.game, destroyed, zone.Graveyard)
 		return res
 	}
 	permanent, ok := r.resolveObject(prim.Object)
