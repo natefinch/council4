@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -167,6 +168,7 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 		CardID:        cardID,
 		CardTypes:     cardTypes(spellDef),
 		Colors:        spellColors(spellDef),
+		ManaValue:     opt.Val(stackManaValue(spellDef, 0)),
 		FromZone:      zone.Exile,
 		ToZone:        zone.Stack,
 	})

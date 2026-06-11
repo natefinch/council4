@@ -4826,8 +4826,11 @@ func lowerCastTrigger(
 		return game.TriggeredAbility{}, false
 	}
 
-	cardSelection, ok := parseCastSpellSelection(event)
+	predicate, ok := parseCastSpellPredicate(event)
 	if !ok {
+		return game.TriggeredAbility{}, false
+	}
+	if predicate.MatchFromZone && controller != game.TriggerControllerYou {
 		return game.TriggeredAbility{}, false
 	}
 
@@ -4844,8 +4847,15 @@ func lowerCastTrigger(
 		Event:      game.EventSpellCast,
 		Controller: controller,
 	}
-	if !cardSelection.Empty() {
-		pattern.CardSelection = cardSelection
+	if !predicate.CardSelection.Empty() {
+		pattern.CardSelection = predicate.CardSelection
+	}
+	if predicate.RequireKickerPaid {
+		pattern.RequireKickerPaid = true
+	}
+	if predicate.MatchFromZone {
+		pattern.MatchFromZone = true
+		pattern.FromZone = predicate.FromZone
 	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
@@ -4858,36 +4868,64 @@ func lowerCastTrigger(
 	}, true
 }
 
-// castSpellPhrases maps an oracle spell-phrase fragment to the corresponding
-// game.Selection. "a spell" maps to an empty selection (wildcard).
-var castSpellPhrases = map[string]game.Selection{
-	"a spell":                      {},
-	"a noncreature spell":          {ExcludedTypes: []types.Card{types.Creature}},
-	"a creature spell":             {RequiredTypes: []types.Card{types.Creature}},
-	"an instant or sorcery spell":  {RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}},
-	"an instant spell":             {RequiredTypes: []types.Card{types.Instant}},
-	"an instant":                   {RequiredTypes: []types.Card{types.Instant}},
-	"a sorcery spell":              {RequiredTypes: []types.Card{types.Sorcery}},
-	"an artifact spell":            {RequiredTypes: []types.Card{types.Artifact}},
-	"an enchantment spell":         {RequiredTypes: []types.Card{types.Enchantment}},
-	"a land spell":                 {RequiredTypes: []types.Card{types.Land}},
-	"a planeswalker spell":         {RequiredTypes: []types.Card{types.Planeswalker}},
-	"a noncreature, nonland spell": {ExcludedTypes: []types.Card{types.Creature, types.Land}},
-	"a white spell":                {ColorsAny: []color.Color{color.White}},
-	"a blue spell":                 {ColorsAny: []color.Color{color.Blue}},
-	"a black spell":                {ColorsAny: []color.Color{color.Black}},
-	"a red spell":                  {ColorsAny: []color.Color{color.Red}},
-	"a green spell":                {ColorsAny: []color.Color{color.Green}},
-	"a colorless spell":            {Colorless: true},
-	"a multicolored spell":         {Multicolored: true},
+type castSpellPredicate struct {
+	CardSelection     game.Selection
+	RequireKickerPaid bool
+	MatchFromZone     bool
+	FromZone          zone.Type
 }
 
-// parseCastSpellSelection maps the spell-phrase fragment (what follows the
-// player+casts prefix) to a game.Selection. It returns false for any
-// unrecognized or unsupported phrase.
-func parseCastSpellSelection(phrase string) (game.Selection, bool) {
-	sel, ok := castSpellPhrases[phrase]
-	return sel, ok
+// castSpellPhrases maps an oracle spell-phrase fragment to the corresponding
+// predicate. "a spell" maps to an empty predicate (wildcard).
+var castSpellPhrases = map[string]castSpellPredicate{
+	"a spell":                      {},
+	"a noncreature spell":          {CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Creature}}},
+	"a creature spell":             {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}}},
+	"an instant or sorcery spell":  {CardSelection: game.Selection{RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}}},
+	"an instant spell":             {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Instant}}},
+	"an instant":                   {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Instant}}},
+	"a sorcery spell":              {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Sorcery}}},
+	"an artifact spell":            {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Artifact}}},
+	"an enchantment spell":         {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Enchantment}}},
+	"a land spell":                 {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Land}}},
+	"a planeswalker spell":         {CardSelection: game.Selection{RequiredTypes: []types.Card{types.Planeswalker}}},
+	"a noncreature, nonland spell": {CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Creature, types.Land}}},
+	"a white spell":                {CardSelection: game.Selection{ColorsAny: []color.Color{color.White}}},
+	"a blue spell":                 {CardSelection: game.Selection{ColorsAny: []color.Color{color.Blue}}},
+	"a black spell":                {CardSelection: game.Selection{ColorsAny: []color.Color{color.Black}}},
+	"a red spell":                  {CardSelection: game.Selection{ColorsAny: []color.Color{color.Red}}},
+	"a green spell":                {CardSelection: game.Selection{ColorsAny: []color.Color{color.Green}}},
+	"a colorless spell":            {CardSelection: game.Selection{Colorless: true}},
+	"a multicolored spell":         {CardSelection: game.Selection{Multicolored: true}},
+	"a kicked spell":               {RequireKickerPaid: true},
+	"a spell from your graveyard":  {MatchFromZone: true, FromZone: zone.Graveyard},
+}
+
+// parseCastSpellPredicate maps the spell-phrase fragment (what follows the
+// player+casts prefix) to a predicate. It returns false for any unrecognized or
+// unsupported phrase.
+func parseCastSpellPredicate(phrase string) (castSpellPredicate, bool) {
+	if predicate, ok := castSpellPhrases[phrase]; ok {
+		return predicate, true
+	}
+	const prefix = "a spell with mana value "
+	const suffix = " or greater"
+	if valueText, ok := strings.CutPrefix(phrase, prefix); ok {
+		valueText, ok = strings.CutSuffix(valueText, suffix)
+		if !ok {
+			return castSpellPredicate{}, false
+		}
+		value, err := strconv.Atoi(valueText)
+		if err != nil || value < 0 {
+			return castSpellPredicate{}, false
+		}
+		return castSpellPredicate{
+			CardSelection: game.Selection{
+				ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: value}),
+			},
+		}, true
+	}
+	return castSpellPredicate{}, false
 }
 
 // lowerEventPermanentModifyPTBody handles the narrow case of a triggered body

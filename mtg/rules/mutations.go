@@ -9,8 +9,9 @@ import (
 // zone-change and spell-cast events derived from castEvent.
 //
 // castEvent must have SourceID, StackObjectID (obj.ID), Controller, CardID,
-// Face, CardTypes, Colors, FromZone, and ToZone populated by the caller. The helper
-// sets event Kind for both the zone-change and spell-cast emissions.
+// Face, CardTypes, Colors, ManaValue, FromZone, and ToZone populated by the
+// caller. The helper sets event Kind for both the zone-change and spell-cast
+// emissions.
 // emitTargetEvents fires before the cast event so that became-target events
 // precede EventSpellCast in the event stream (CR 601.2h).
 //

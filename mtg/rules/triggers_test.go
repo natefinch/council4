@@ -8,6 +8,8 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -2224,6 +2226,82 @@ func TestSpellCastTriggerMatchesColorCardinalitySelection(t *testing.T) {
 	}
 }
 
+func TestSpellCastTriggerMatchesManaValueKickerAndSourceZone(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Spell Watcher",
+		Types: []types.Card{types.Creature},
+	}})
+	tests := []struct {
+		name    string
+		pattern game.TriggerPattern
+		event   game.Event
+		want    bool
+	}{
+		{
+			name: "mana value matches",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 5}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, ManaValue: opt.Val(5)},
+			want:  true,
+		},
+		{
+			name: "mana value rejects lower value",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 5}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, ManaValue: opt.Val(4)},
+		},
+		{
+			name: "mana value rejects missing event data",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 5}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1},
+		},
+		{
+			name:    "kicked matches",
+			pattern: game.TriggerPattern{Event: game.EventSpellCast, RequireKickerPaid: true},
+			event:   game.Event{Kind: game.EventSpellCast, Controller: game.Player1, KickerPaid: true},
+			want:    true,
+		},
+		{
+			name:    "kicked rejects unkicked",
+			pattern: game.TriggerPattern{Event: game.EventSpellCast, RequireKickerPaid: true},
+			event:   game.Event{Kind: game.EventSpellCast, Controller: game.Player1},
+		},
+		{
+			name:    "from graveyard matches",
+			pattern: game.TriggerPattern{Event: game.EventSpellCast, MatchFromZone: true, FromZone: zone.Graveyard},
+			event:   game.Event{Kind: game.EventSpellCast, Controller: game.Player1, FromZone: zone.Graveyard},
+			want:    true,
+		},
+		{
+			name:    "from graveyard rejects hand",
+			pattern: game.TriggerPattern{Event: game.EventSpellCast, MatchFromZone: true, FromZone: zone.Graveyard},
+			event:   game.Event{Kind: game.EventSpellCast, Controller: game.Player1, FromZone: zone.Hand},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := triggerMatchesEvent(g, source, &tt.pattern, tt.event)
+			if got != tt.want {
+				t.Fatalf("triggerMatchesEvent = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSpellCastEventPopulatesColors(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -2254,4 +2332,66 @@ func TestSpellCastEventPopulatesColors(t *testing.T) {
 	if len(castEvent.Colors) != 1 || castEvent.Colors[0] != color.Green {
 		t.Fatalf("EventSpellCast.Colors = %v, want [Green]", castEvent.Colors)
 	}
+	if !castEvent.ManaValue.Exists || castEvent.ManaValue.Val != 1 {
+		t.Fatalf("EventSpellCast.ManaValue = %+v, want 1", castEvent.ManaValue)
+	}
+	if castEvent.FromZone != zone.Hand || castEvent.ToZone != zone.Stack {
+		t.Fatalf("EventSpellCast zones = %v -> %v, want Hand -> Stack", castEvent.FromZone, castEvent.ToZone)
+	}
+}
+
+func TestSpellCastEventManaValueIncludesChosenX(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "X Growth",
+		ManaCost: opt.Val(cost.Mana{cost.X, cost.G}),
+		Types:    []types.Card{types.Sorcery},
+	}})
+	for range 5 {
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+	}
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 4, nil)) {
+		t.Fatal("cast X spell failed")
+	}
+	for i := range g.Events {
+		if g.Events[i].Kind == game.EventSpellCast {
+			if !g.Events[i].ManaValue.Exists || g.Events[i].ManaValue.Val != 5 {
+				t.Fatalf("EventSpellCast.ManaValue = %+v, want 5", g.Events[i].ManaValue)
+			}
+			return
+		}
+	}
+	t.Fatal("missing EventSpellCast")
+}
+
+func TestKickedSpellCastEventRecordsKickerPaid(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Kicked Spell",
+		Types: []types.Card{types.Sorcery},
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: greenCost().Val}},
+		}},
+	}})
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastKickedSpell(spellID, nil, 0, nil)) {
+		t.Fatal("kicked spell cast failed")
+	}
+	for i := range g.Events {
+		if g.Events[i].Kind == game.EventSpellCast {
+			if !g.Events[i].KickerPaid {
+				t.Fatal("EventSpellCast.KickerPaid = false, want true")
+			}
+			return
+		}
+	}
+	t.Fatal("missing EventSpellCast")
 }

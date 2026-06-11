@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // EventKind identifies a rules-relevant fact that occurred during a game.
@@ -95,8 +96,8 @@ type Event struct {
 	// is true.
 	FaceDown bool
 
-	// KickerPaid records whether the entering permanent spell's kicker cost was
-	// paid. It is false for permanents that did not enter from a kicked spell.
+	// KickerPaid records whether a spell-cast or entering-permanent spell's
+	// kicker cost was paid. It is false for objects that were not kicked.
 	KickerPaid bool
 
 	// EnterWasCast records whether a permanent entered from resolving a cast,
@@ -112,6 +113,10 @@ type Event struct {
 	// color-filtered cast triggers such as "a blue spell". Populated at every
 	// EventSpellCast emission site from the effective face being cast.
 	Colors []color.Color
+
+	// ManaValue records the mana value of the spell as cast on the stack for
+	// mana-value-filtered cast triggers.
+	ManaValue opt.V[int]
 
 	// PermanentID identifies the permanent that entered, left, was damaged, attacked, or blocked.
 	PermanentID id.ID

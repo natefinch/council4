@@ -1078,16 +1078,18 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
+	allowCastFromZone := pattern.Event == game.EventSpellCast && pattern.MatchFromZone && !pattern.MatchToZone
 	if !pattern.SubjectSelection.Empty() ||
 		len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
-		pattern.MatchFromZone ||
+		(pattern.MatchFromZone && !allowCastFromZone) ||
 		pattern.MatchToZone ||
 		pattern.MatchStackObjectKind ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		pattern.SpellTargetsSource ||
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
-		pattern.SpellTargetPattern.Exists {
+		pattern.SpellTargetPattern.Exists ||
+		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
 	if !pattern.CardSelection.Empty() && pattern.Event != game.EventSpellCast {
@@ -1101,6 +1103,7 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		unsupported.ColorsAny = nil
 		unsupported.Colorless = false
 		unsupported.Multicolored = false
+		unsupported.ManaValue.Exists = false
 		if !unsupported.Empty() {
 			return "", errors.New("render: unsupported CardSelection fields in cast trigger pattern")
 		}
@@ -1140,6 +1143,17 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	}
 	if pattern.ExcludeSelf {
 		fields = append(fields, "ExcludeSelf: true,")
+	}
+	if pattern.MatchFromZone {
+		fromZone, err := renderZone(pattern.FromZone)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		fields = append(fields, "MatchFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
+	}
+	if pattern.RequireKickerPaid {
+		fields = append(fields, "RequireKickerPaid: true,")
 	}
 	if len(pattern.RequirePermanentTypes) > 0 {
 		rpt, err := renderTypesCardSlice(ctx, pattern.RequirePermanentTypes)
