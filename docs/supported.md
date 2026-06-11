@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 3,736
+Cards supported: 3,762
 
 - +2 Mace
 - Aang, Air Nomad
@@ -292,6 +292,7 @@ Cards supported: 3,736
 - Benthic Giant
 - Berserkers of Blood Ridge
 - Bestial Bloodline
+- Biblioplex Assistant
 - Bigfin Bouncer
 - Bile Urchin
 - Bilious Skulldweller
@@ -528,6 +529,7 @@ Cards supported: 3,736
 - Charging Strifeknight
 - Chariot of Victory
 - Charity Extractor
+- Charnelhoard Wurm
 - Checkpoint Officer
 - Cheerful Osteomancer // Raise Dead
 - Cherubael
@@ -603,6 +605,7 @@ Cards supported: 3,736
 - Construct
 - Construct
 - Construct
+- Construct
 - Consulate Skygate
 - Consult the Necrosages
 - Contagion Clasp
@@ -661,6 +664,7 @@ Cards supported: 3,736
 - Cumber Stone
 - Curator of Mysteries
 - Curio Vendor
+- Curiosity
 - Cursebreak
 - Cursed Minotaur
 - Custodian of the Trove
@@ -1359,6 +1363,7 @@ Cards supported: 3,736
 - Guardians of Akrasa
 - Guardians of Meletis
 - Guenhwyvar
+- Guidelight Synergist
 - Guma
 - Gurmag Angler
 - Gurmag Swiftwing
@@ -1385,6 +1390,7 @@ Cards supported: 3,736
 - Harpy
 - Harrier Griffin
 - Harrier Naga
+- Harsh Sustenance
 - Harvest Gwyllion
 - Haunted Cloak
 - Haunted Crossroads
@@ -1412,6 +1418,7 @@ Cards supported: 3,736
 - Hedron Crab
 - Hell's Caretaker
 - Hellion
+- Helm of the Gods
 - Helpful Hunter
 - Helping Hand
 - Hengegate Pathway // Mistgate Pathway
@@ -1665,6 +1672,7 @@ Cards supported: 3,736
 - Kazandu Nectarpot
 - Kazandu Refuge
 - Kederekt Creeper
+- Keen Sense
 - Keen-Eyed Archers
 - Keeneye Aven
 - Keening Apparition
@@ -1898,6 +1906,7 @@ Cards supported: 3,736
 - Meandering River
 - Medicine Bag
 - Meditation Pools
+- Meldweb Curator
 - Melesse Spirit
 - Memnite
 - Memorial to Folly
@@ -1944,6 +1953,7 @@ Cards supported: 3,736
 - Mind Rot
 - Mind Spring
 - Mind Stone
+- Mindscour Dragon
 - Mindwarper
 - Mine Bearer
 - Minecart Daredevil // Ride the Rails
@@ -2055,6 +2065,7 @@ Cards supported: 3,736
 - Necrogen Scudder
 - Necrogen Spellbomb
 - Necromancer's Assistant
+- Necromantic Thirst
 - Necron Warrior
 - Necropanther
 - Necropede
@@ -2091,7 +2102,10 @@ Cards supported: 3,736
 - Nightveil Predator
 - Nightveil Sprite
 - Nightwind Glider
+- Nim Grotesque
+- Nim Lasher
 - Nim Replica
+- Nim Shrieker
 - Nimble Birdsticker
 - Nimble Innovator
 - Nimble-Blade Khenra
@@ -2177,6 +2191,7 @@ Cards supported: 3,736
 - Ooze
 - Opaline Unicorn
 - Open Fire
+- Ophidian Eye
 - Opportunity
 - Opulent Palace
 - Oracle of Nectars
@@ -2234,6 +2249,7 @@ Cards supported: 3,736
 - Pelakka Wurm
 - Pendrell Drake
 - Pendulum of Patterns
+- Pennon Blade
 - Pensive Minotaur
 - Pentavite
 - Peregrine Griffin
@@ -2531,6 +2547,7 @@ Cards supported: 3,736
 - Rockshard Elemental
 - Rogue
 - Rogue
+- Rogue's Gloves
 - Ronom Unicorn
 - Rootbound Crag
 - Rootbreaker Wurm
@@ -2575,6 +2592,7 @@ Cards supported: 3,736
 - Sabretooth Tiger
 - Sacred Armory
 - Sacred Cat
+- Sacred Excavation
 - Sacred Foundry
 - Sacred Nectar
 - Sacred Peaks
@@ -2658,6 +2676,7 @@ Cards supported: 3,736
 - Scour from Existence
 - Scoured Barrens
 - Scourge Servant
+- Scourge of Geier Reach
 - Scragnoth
 - Scrap
 - Scrap
@@ -2790,6 +2809,7 @@ Cards supported: 3,736
 - Siege Wurm
 - Siegecraft
 - Sightless Ghoul
+- Sigil of the Nayan Gods
 - Sigiled Behemoth
 - Sigiled Paladin
 - Sigiled Skink
@@ -3200,6 +3220,8 @@ Cards supported: 3,736
 - The Terror of Serpent's Pass
 - Thermal Glider
 - Thicket Crasher
+- Thieving Magpie
+- Thieving Otter
 - Think Tank
 - Third Path Savant
 - Thopter
@@ -3435,6 +3457,7 @@ Cards supported: 3,736
 - Vedalken Archmage
 - Vedalken Blademaster
 - Vedalken Entrancer
+- Vedalken Heretic
 - Vedalken Infuser
 - Vedalken Mastermind
 - Vedalken Mesmerist
@@ -3461,6 +3484,7 @@ Cards supported: 3,736
 - Viashino Spearhunter
 - Viashino Warrior
 - Vigilant Baloth
+- Vile Manifestation
 - Vindicate
 - Vine Trellis
 - Vineglimmer Snarl
@@ -3683,6 +3707,7 @@ Cards supported: 3,736
 - Yargle and Multani
 - Yargle, Glutton of Urborg
 - Yavimaya Barbarian
+- Yavimaya Enchantress
 - Yavimaya Hollow
 - Yavimaya Wurm
 - Yellow Scarves Troops
@@ -3702,6 +3727,7 @@ Cards supported: 3,736
 - Zarichi Tiger
 - Zealous Guardian
 - Zealous Lorecaster
+- Zenith Flare
 - Zephid
 - Zephid's Embrace
 - Zephyr Falcon
