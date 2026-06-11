@@ -5602,6 +5602,8 @@ func lowerSingleEffectSpell(
 		return lowerCounterPlacementSpell(ability)
 	case oracle.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ability)
+	case oracle.EffectCounter:
+		return lowerCounterSpell(ability)
 	default:
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
@@ -8088,6 +8090,78 @@ func permanentTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 	}
 	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
+}
+
+func stackSpellTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+	if target.Selector.Another || target.Selector.Other ||
+		target.Selector.Controller != oracle.ControllerAny {
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowStackObject,
+	}
+	text := strings.ToLower(target.Text)
+	switch target.Selector.Kind {
+	case oracle.SelectorSpell:
+		switch text {
+		case "target spell":
+		case "target instant spell":
+			spec.Predicate = game.TargetPredicate{SpellCardTypes: []types.Card{types.Instant}}
+		case "target sorcery spell":
+			spec.Predicate = game.TargetPredicate{SpellCardTypes: []types.Card{types.Sorcery}}
+		case "target noncreature spell":
+			spec.Predicate = game.TargetPredicate{ExcludedSpellCardTypes: []types.Card{types.Creature}}
+		default:
+			return game.TargetSpec{}, false
+		}
+	case oracle.SelectorCreature:
+		if text != "target creature spell" {
+			return game.TargetSpec{}, false
+		}
+		spec.Predicate = game.TargetPredicate{SpellCardTypes: []types.Card{types.Creature}}
+	case oracle.SelectorArtifact:
+		if text != "target artifact spell" {
+			return game.TargetSpec{}, false
+		}
+		spec.Predicate = game.TargetPredicate{SpellCardTypes: []types.Card{types.Artifact}}
+	default:
+		return game.TargetSpec{}, false
+	}
+	spec.Constraint = lowerFirst(target.Text)
+	return spec, true
+}
+
+func lowerCounterSpell(ability oracle.CompiledAbility) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, executableDiagnostic(
+			ability,
+			"unsupported counter spell",
+			"the executable source backend supports only exact counter of one target spell",
+		)
+	}
+	if len(ability.Effects) != 1 ||
+		len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		ability.Effects[0].Negated ||
+		len(ability.Conditions) != 0 ||
+		len(ability.Keywords) != 0 ||
+		len(ability.Modes) != 0 ||
+		len(ability.References) != 0 {
+		return unsupported()
+	}
+	targetSpec, ok := stackSpellTargetSpec(ability.Targets[0])
+	if !ok || ability.Text != "Counter "+ability.Targets[0].Text+"." {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
+		}},
+	}.Ability(), nil
 }
 
 func playerTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
