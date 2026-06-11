@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **3,801 of 31,838 cards eligible for paper support (11.9%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **3,858 of 31,838 cards eligible for paper support (12.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -117,6 +117,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Anointer of Champions
 - Antagonize
 - Anthem of Champions
+- Anurid Barkripper
 - Anvilwrought Raptor
 - Ape
 - Apex Devastator
@@ -145,6 +146,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Ardent Elementalist
 - Ardent Militia
 - Ardent Plea
+- Ardent Recruit
 - Argivian Archaeologist
 - Argivian Restoration
 - Argothian Enchantress
@@ -191,6 +193,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Auntie's Hovel
 - Aura Fracture
 - Auramancer
+- Auriok Edgewright
 - Auriok Salvagers
 - Auriok Transfixer
 - Auroral Procession
@@ -229,6 +232,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Azure Mage
 - Back to Nature
 - Backup Agent
+- Backwoods Survivalists
 - Badger
 - Badlands
 - Bala Ged Recovery // Bala Ged Sanctuary
@@ -301,6 +305,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Bile Urchin
 - Bilious Skulldweller
 - Billiard Room
+- Billowing Shriekmass
 - Bird
 - Bird
 - Bird
@@ -382,6 +387,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Boltwing Marauder
 - Bombard
 - Bond Beetle
+- Bonders' Enclave
 - Bone Pit Brute
 - Bone Saw
 - Bonebreaker Giant
@@ -428,6 +434,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Breath of Fire
 - Breath of Life
 - Breeding Pool
+- Briar Hydra
 - Briarpack Alpha
 - Brightblade Stoat
 - Brightclimb Pathway // Grimclimb Pathway
@@ -459,6 +466,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Cabal Evangel
 - Cabal Patriarch
 - Cabal Surgeon
+- Cabal Torturer
 - Cabal Trainee
 - Cackling Imp
 - Cadaver Imp
@@ -475,6 +483,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Capital Guard
 - Captivating Unicorn
 - Captive Flame
+- Carapace Forger
 - Caravan Hurda
 - Carnage Altar
 - Carnage Tyrant
@@ -543,6 +552,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Choked Estuary
 - Chrome Cat
 - Chrome Prowler
+- Chrome Steed
 - Cinder Barrens
 - Cinder Glade
 - Citanul Woodreaders
@@ -591,6 +601,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Colorful Feiyi Sparrow
 - Colossadactyl
 - Colossal Dreadmaw
+- Colossal Majesty
 - Colossapede
 - Colossodon Yearling
 - Commercial District
@@ -735,6 +746,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Death Stroke
 - Death Ward
 - Deathbloom Gardener
+- Deathcap Cultivator
 - Deathcap Glade
 - Deathcap Marionette
 - Deathgaze Cockatrice
@@ -761,6 +773,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Demon
 - Demon Berserker
 - Demon's Grasp
+- Demon's Jester
 - Demystify
 - Deranged Whelp
 - Desert Cerodon
@@ -830,6 +843,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Doomed Necromancer
 - Douser of Lights
 - Dowsing Shaman
+- Drag Down
 - Dragon
 - Dragon
 - Dragon
@@ -1009,6 +1023,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Exclusion Mage
 - Excoriate
 - Exiled Boggart
+- Exotic Curse
 - Expedition Envoy
 - Expedition Healer
 - Expedition Skulker
@@ -1121,6 +1136,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Font of Fortunes
 - Font of Vigor
 - Food
+- Fool's Tome
 - Foot Disciple
 - Foot Headquarters
 - Foot Skirmisher
@@ -1141,6 +1157,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Forum of Amity
 - Foul Imp
 - Foul Orchard
+- Foul Watcher
 - Foundry Assembler
 - Fountain of Renewal
 - Fountain of Youth
@@ -1172,6 +1189,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Fyndhorn Brownie
 - Fyndhorn Elves
 - Gaea's Anthem
+- Gaea's Might
 - Gaea's Skyfolk
 - Galadhrim Guide
 - Galewind Moose
@@ -1195,6 +1213,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Germ
 - Gerrard's Irregulars
 - Get the Point
+- Ghalma's Warden
 - Ghen, Arcanum Weaver
 - Ghirapur Osprey
 - Ghitu Chronicler
@@ -1246,6 +1265,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Glowing Anemone
 - Gnarled Effigy
 - Gnarled Mass
+- Gnarlwood Dryad
 - Gnawing Vermin
 - Gnome
 - Gnottvold Recluse
@@ -1357,6 +1377,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Grim Backwoods
 - Grim Bauble
 - Grim Discovery
+- Grim Flayer
 - Grim Physician
 - Grinning Demon
 - Grizzled Leotau
@@ -1488,6 +1509,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Horse
 - Hostile Minotaur
 - Hound of Griselbrand
+- Hound of the Farbogs
 - Hover Barrier
 - Hovermyr
 - Howling Fury
@@ -1581,6 +1603,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Inkling
 - Innocuous Rat
 - Inordinate Rage
+- Inquisitor's Ox
 - Insatiable Gorgers
 - Insatiable Harpy
 - Insect
@@ -1654,6 +1677,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Jhovall Queen
 - Jhovall Rider
 - Jibbirik Omnivore
+- Jor Kadeen, the Prevailer
 - Joraga Visionary
 - Joust Through
 - Joyous Respite
@@ -1674,6 +1698,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Kalakscion, Hunger Tyrant
 - Kalonian Behemoth
 - Kalonian Tusker
+- Kamahl's Desire
 - Kami of Ancient Law
 - Kami of Old Stone
 - Kami of Twisted Reflection
@@ -1683,6 +1708,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Karox Bladewing
 - Kasimir the Lone Wolf
 - Kavu Climber
+- Kavu Scout
 - Kazandu Nectarpot
 - Kazandu Refuge
 - Kederekt Creeper
@@ -1698,6 +1724,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Keldon Necropolis
 - Kelinore Bat
 - Kemba's Skyguard
+- Kessig Dire Swine
 - Kessig Recluse
 - Ketria Crystal
 - Ketria Triome
@@ -1761,6 +1788,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Kraul Raider
 - Kraul Stinger
 - Kraul Swarm
+- Krosan Beast
 - Krosan Colossus
 - Krosan Druid
 - Krovikan Scoundrel
@@ -1861,6 +1889,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Loxodon Warhammer
 - Loxodon Wayfarer
 - Lucent Liminid
+- Lumengrid Drake
 - Lumengrid Gargoyle
 - Lumengrid Sentinel
 - Lumengrid Warden
@@ -1894,6 +1923,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Mammoth Spider
 - Man-o'-War
 - Mana Geode
+- Manaforce Mace
 - Manakin
 - Manalith
 - Maned Serval
@@ -1957,12 +1987,14 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Metallic Sliver
 - Metallic Sliver
 - Metallurgeon
+- Metamorphic Wurm
 - Metastatic Evangel
 - Metathran Soldier
 - Meteoric Mace
 - Meticulous Archive
 - Midnight Assassin
 - Midnight Scavengers
+- Might of Alara
 - Might of Oaks
 - Might of the Masses
 - Migrating Ketradon
@@ -1999,6 +2031,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Moaning Wall
 - Moat Piranhas
 - Moldering Karok
+- Moldgraf Scavenger
 - Molten Tributary
 - Moment of Craving
 - Moment of Triumph
@@ -2021,6 +2054,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Moonglove Winnower
 - Moonrise Cleric
 - Moorish Cavalry
+- Moorland Drifter
 - Morgue Thrull
 - Moriok Reaver
 - Moroii
@@ -2041,6 +2075,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Mowu // Mowu
 - Mox Emerald
 - Mox Jet
+- Mox Opal
 - Mox Pearl
 - Mox Ruby
 - Mox Sapphire
@@ -2065,10 +2100,12 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Mystic Archaeologist
 - Mystic Monastery
 - Mystic of the Hidden Way
+- Mystic Visionary
 - Mythic Proportions
 - Nacatl Outlander
 - Naga Eternal
 - Naga Oracle
+- Nantuko Calmer
 - Nantuko Disciple
 - Narcissism
 - Narrow Escape
@@ -2129,6 +2166,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Nim Shrieker
 - Nimble Birdsticker
 - Nimble Innovator
+- Nimble Mongoose
 - Nimble-Blade Khenra
 - Nimbus of the Isles
 - Nimbus Wings
@@ -2174,6 +2212,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Obelisk of Jund
 - Obelisk of Naya
 - Oboro Breezecaller
+- Obsessive Skinner
 - Obsianus Golem
 - Obsidian Giant
 - Obyra's Attendants // Desperate Parry
@@ -2257,6 +2296,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Panther Warriors
 - Paradox Gardens
 - Parallel Lives
+- Paranoid Parish-Blade
 - Parcel Myr
 - Pardic Wanderer
 - Path of Discovery
@@ -2369,6 +2409,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Pounce
 - Pouncing Cheetah
 - Pouncing Shoreshark
+- Power Armor
 - Pradesh Gypsies
 - Prairie Stream
 - Prakhata Club Security
@@ -2474,6 +2515,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Ray of Dissolution
 - Raze the Effigy
 - Razor Swine
+- Razorfield Rhino
 - Razorfield Thresher
 - Razorfoot Griffin
 - Razortide Bridge
@@ -2708,6 +2750,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Scoured Barrens
 - Scourge of Geier Reach
 - Scourge Servant
+- Scourge Wolf
 - Scragnoth
 - Scrap
 - Scrap
@@ -2777,6 +2820,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Servant of Nefarox
 - Servo
 - Servo // Thopter
+- Seton's Scout
 - Sewn-Eye Drake
 - Shadow Glider
 - Shadowy Backstreet
@@ -2854,6 +2898,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Silver Knight
 - Silver Myr
 - Silver Raven
+- Silver Seraph
 - Silverback Ape
 - Silverback Shaman
 - Silverbeak Griffin
@@ -2910,6 +2955,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Slagwoods Bridge
 - Slash of Talons
 - Slash Panther
+- Slaughterhouse Bouncer
 - Slimebind
 - Slinking Skirge
 - Slippery Bogle
@@ -2933,6 +2979,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Snake
 - Snake // Zombie
 - Snapping Drake
+- Snapsail Glider
 - Snare Tactician
 - Snare Thopter
 - Snow-Covered Forest
@@ -3019,6 +3066,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Spined Wurm
 - Spineless Thug
 - Spinning Wheel
+- Spiraling Duelist
 - Spire Garden
 - Spire Monitor
 - Spirebluff Canal
@@ -3051,6 +3099,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Sporecap Spider
 - Spotted Griffin
 - Spring of Eternal Peace
+- Springing Tiger
 - Springmane Cervin
 - Squall Drifter
 - Squee, Goblin Nabob
@@ -3113,6 +3162,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Stream of Life
 - Streetbreaker Wurm
 - Strength of Cedars
+- Strength of Unity
 - Strider Harness
 - Strip Mine
 - Striped Bears
@@ -3268,6 +3318,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Thornweald Archer
 - Thornwood Falls
 - Those Who Serve
+- Thraben Foulbloods
 - Thraben Inspector
 - Thraben Purebloods
 - Thraben Valiant
@@ -3368,6 +3419,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Treno, Dark City
 - Tresserhorn Sinks
 - Triangle of War
+- Tribal Flames
 - Trip Noose
 - Triskelavite
 - Triton Shorestalker
@@ -3495,6 +3547,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Vedalken Blademaster
 - Vedalken Entrancer
 - Vedalken Heretic
+- Vedalken Infiltrator
 - Vedalken Infuser
 - Vedalken Mastermind
 - Vedalken Mesmerist
@@ -3609,6 +3662,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Wander Off
 - Wanderer's Intervention
 - Wandering Ones
+- Wandering Stream
 - Wandering Tombshell
 - Wanderwine Hub
 - War Behemoth
@@ -3641,6 +3695,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Watery Grave
 - Waveskimmer Aven
 - Wax // Wane
+- Wayfaring Giant
 - Wayward Giant
 - Weakness
 - Weatherseed Faeries
@@ -3653,6 +3708,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Weird // Goblin
 - Weirded Vampire
 - Welding Jar
+- Werebear
 - Wetland Sambar
 - Whetwheel
 - Whip-Spine Drake
@@ -3674,6 +3730,7 @@ Council4 currently supports **3,801 of 31,838 cards eligible for paper support (
 - Wild Elephant
 - Wild Griffin
 - Wild Jhovall
+- Wildfire Wickerfolk
 - Wildslayer Elves
 - Wildwood Patrol
 - Wildwood Rebirth

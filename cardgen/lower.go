@@ -233,89 +233,8 @@ func lowerExecutableAbility(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (abilityLowering, *oracle.Diagnostic) {
-	if len(ability.Modes) > 0 {
-		return lowerModalAbility(cardName, ability, syntax)
-	}
-	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
-		return lowered, nil
-	}
-	if handGrant, ok, diagnostic := lowerHandCyclingGrant(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: handGrant}},
-			consumed: semanticConsumption{
-				effects:  1,
-				keywords: len(ability.Keywords),
-			},
-			sourceSpans: handCyclingGrantSourceSpans(ability, syntax),
-		}, nil
-	}
-	if costModifier, ok, diagnostic := lowerCyclingCostModifier(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: costModifier}},
-			consumed: semanticConsumption{
-				effects:    len(ability.Effects),
-				conditions: len(ability.Conditions),
-				keywords:   len(ability.Keywords),
-			},
-			sourceSpans: []oracle.Span{ability.Span},
-		}, nil
-	}
-	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
+	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, ability, syntax); handled {
 		return lowered, diagnostic
-	}
-	if lowered, ok, diagnostic := lowerStaticRuleDeclaration(ability); ok {
-		return lowered, diagnostic
-	}
-	if staticBuff, ok, diagnostic := lowerStaticPTBuff(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		consumedReferences := 0
-		if len(ability.References) == 1 &&
-			(ability.References[0].Kind == oracle.ReferenceSelfName ||
-				ability.References[0].Kind == oracle.ReferenceThisObject) {
-			consumedReferences = 1
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
-			consumed: semanticConsumption{
-				effects:    1,
-				keywords:   len(ability.Keywords),
-				references: consumedReferences,
-			},
-			sourceSpans: staticPTBuffSourceSpans(ability, syntax),
-		}, nil
-	}
-	if keywordGrant, ok, diagnostic := lowerStaticKeywordGrant(ability, syntax); ok {
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
-			consumed: semanticConsumption{
-				effects:  1,
-				keywords: len(ability.Keywords),
-			},
-			sourceSpans: staticKeywordGrantSourceSpans(ability, syntax),
-		}, nil
-	}
-	if keywordGrant, ok := lowerSourceConditionalKeywordGrant(ability, syntax); ok {
-		return abilityLowering{
-			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
-			consumed: semanticConsumption{
-				conditions: 1,
-				effects:    1,
-				keywords:   len(ability.Keywords),
-				references: 1,
-			},
-			sourceSpans: sourceConditionalKeywordGrantSpans(ability, syntax),
-		}, nil
 	}
 	switch ability.Kind {
 	case oracle.AbilityStatic:
@@ -347,7 +266,15 @@ func lowerExecutableAbility(
 	case oracle.AbilityLoyalty:
 		return lowerLoyaltyAbility(cardName, ability, syntax)
 	case oracle.AbilitySpell:
-		spellAbility, diagnostic := lowerSpell(cardName, ability, syntax)
+		body, bodySyntax, ok := spellBodyWithoutAbilityWord(ability, syntax)
+		if !ok {
+			return abilityLowering{}, executableDiagnostic(
+				ability,
+				"unsupported ability word",
+				fmt.Sprintf("the executable source backend does not yet lower the %q ability word", ability.AbilityWord),
+			)
+		}
+		spellAbility, diagnostic := lowerSpell(cardName, body, bodySyntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
@@ -398,6 +325,100 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerExecutableAbilitySpecialCase(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (abilityLowering, bool, *oracle.Diagnostic) {
+	if len(ability.Modes) > 0 {
+		lowered, diagnostic := lowerModalAbility(cardName, ability, syntax)
+		return lowered, true, diagnostic
+	}
+	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
+		return lowered, true, nil
+	}
+	if handGrant, ok, diagnostic := lowerHandCyclingGrant(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, true, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: handGrant}},
+			consumed: semanticConsumption{
+				effects:  1,
+				keywords: len(ability.Keywords),
+			},
+			sourceSpans: handCyclingGrantSourceSpans(ability, syntax),
+		}, true, nil
+	}
+	if costModifier, ok, diagnostic := lowerCyclingCostModifier(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, true, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: costModifier}},
+			consumed: semanticConsumption{
+				effects:    len(ability.Effects),
+				conditions: len(ability.Conditions),
+				keywords:   len(ability.Keywords),
+			},
+			sourceSpans: []oracle.Span{ability.Span},
+		}, true, nil
+	}
+	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
+		return lowered, true, diagnostic
+	}
+	if lowered, ok, diagnostic := lowerStaticRuleDeclaration(ability); ok {
+		return lowered, true, diagnostic
+	}
+	if staticBuff, ok, diagnostic := lowerStaticPTBuff(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, true, diagnostic
+		}
+		consumedReferences := 0
+		if len(ability.References) == 1 &&
+			(ability.References[0].Kind == oracle.ReferenceSelfName ||
+				ability.References[0].Kind == oracle.ReferenceThisObject) {
+			consumedReferences = 1
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Conditions),
+				effects:    1,
+				keywords:   len(ability.Keywords),
+				references: consumedReferences,
+			},
+			sourceSpans: staticPTBuffSourceSpans(ability, syntax),
+		}, true, nil
+	}
+	if keywordGrant, ok, diagnostic := lowerStaticKeywordGrant(ability, syntax); ok {
+		if diagnostic != nil {
+			return abilityLowering{}, true, diagnostic
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
+			consumed: semanticConsumption{
+				effects:  1,
+				keywords: len(ability.Keywords),
+			},
+			sourceSpans: staticKeywordGrantSourceSpans(ability, syntax),
+		}, true, nil
+	}
+	if keywordGrant, ok := lowerSourceConditionalKeywordGrant(ability, syntax); ok {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: keywordGrant}},
+			consumed: semanticConsumption{
+				conditions: 1,
+				effects:    1,
+				keywords:   len(ability.Keywords),
+				references: 1,
+			},
+			sourceSpans: sourceConditionalKeywordGrantSpans(ability, syntax),
+		}, true, nil
+	}
+	return abilityLowering{}, false, nil
 }
 
 func lowerReplacementAbility(ability oracle.CompiledAbility) (abilityLowering, *oracle.Diagnostic) {
@@ -603,15 +624,20 @@ func lowerActivatedAbilityKind(
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
-		spans := []oracle.Span{ability.Cost.Span, ability.Effects[0].Span}
+		spans := []oracle.Span{ability.Cost.Span}
+		for _, effect := range ability.Effects {
+			spans = append(spans, effect.Span)
+		}
+		spans = append(spans, activationConditionSourceSpans(ability, syntax)...)
 		if ability.ActivationTiming != oracle.ActivationTimingNone {
 			spans = append(spans, ability.ActivationTimingSpan)
 		}
 		return abilityLowering{
 			manaAbility: opt.Val(manaAbility),
 			consumed: semanticConsumption{
-				cost:    true,
-				effects: 1,
+				cost:       true,
+				conditions: len(ability.Conditions),
+				effects:    len(ability.Effects),
 			},
 			sourceSpans: spans,
 		}, nil
@@ -635,6 +661,7 @@ func lowerActivatedAbilityKind(
 	for _, target := range ability.Targets {
 		spans = append(spans, target.Span)
 	}
+	spans = append(spans, activationConditionSourceSpans(ability, syntax)...)
 	for _, reference := range ability.References {
 		spans = append(spans, reference.Span)
 	}
@@ -647,6 +674,7 @@ func lowerActivatedAbilityKind(
 		consumed: semanticConsumption{
 			cost:       true,
 			targets:    len(ability.Targets),
+			conditions: len(ability.Conditions),
 			effects:    len(ability.Effects),
 			keywords:   len(ability.Keywords),
 			references: len(ability.References),
@@ -976,9 +1004,14 @@ func lowerActivatedAbility(
 ) (game.ActivatedAbility, *oracle.Diagnostic) {
 	if ability.Cost == nil ||
 		len(ability.Cost.Components) == 0 ||
-		len(ability.Conditions) != 0 ||
+		len(ability.Conditions) > 1 ||
 		len(ability.Modes) != 0 ||
-		ability.AbilityWord != "" {
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
+	}
+	originalText := ability.Text
+	activationCondition, ok := prepareActivationCondition(&ability, &syntax)
+	if !ok {
 		return game.ActivatedAbility{}, unsupportedActivatedAbilityDiagnostic(ability)
 	}
 	var manaCost cost.Mana
@@ -1037,6 +1070,7 @@ func lowerActivatedAbility(
 	}
 	body := ability
 	body.Kind = oracle.AbilitySpell
+	body.AbilityWord = ""
 	body.Cost = nil
 	body.ActivationTiming = oracle.ActivationTimingNone
 	body.ActivationTimingSpan = oracle.Span{}
@@ -1052,6 +1086,7 @@ func lowerActivatedAbility(
 	}
 	bodySyntax := syntax
 	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.AbilityWord = nil
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
 	bodySyntax.Tokens = bodyTokens
@@ -1061,16 +1096,65 @@ func lowerActivatedAbility(
 	}
 
 	result := game.ActivatedAbility{
-		Text:            ability.Text,
-		AdditionalCosts: additionalCosts,
-		ZoneOfFunction:  lowerActivatedAbilityZoneOfFunction(body),
-		Timing:          lowerActivationTiming(ability.ActivationTiming),
-		Content:         content,
+		Text:                originalText,
+		AdditionalCosts:     additionalCosts,
+		ZoneOfFunction:      lowerActivatedAbilityZoneOfFunction(body),
+		Timing:              lowerActivationTiming(ability.ActivationTiming),
+		ActivationCondition: activationCondition,
+		Content:             content,
 	}
+
 	if manaCost != nil {
 		result.ManaCost = opt.Val(manaCost)
 	}
 	return result, nil
+}
+
+func prepareActivationCondition(ability *oracle.CompiledAbility, syntax *oracle.Ability) (opt.V[game.Condition], bool) {
+	if len(ability.Conditions) == 0 {
+		*syntax = syntaxWithoutAbilityWord(*syntax)
+		return opt.V[game.Condition]{}, true
+	}
+	if len(ability.Conditions) != 1 {
+		return opt.V[game.Condition]{}, false
+	}
+	condition, ok := lowerKnownCondition(ability.Conditions[0], oracle.ConditionOnlyIf)
+	if !ok {
+		return opt.V[game.Condition]{}, false
+	}
+	conditionSpan := []oracle.Span{ability.Conditions[0].Span}
+	effects := slices.DeleteFunc(append([]oracle.CompiledEffect(nil), ability.Effects...), func(effect oracle.CompiledEffect) bool {
+		return spanCovered(effect.VerbSpan, conditionSpan)
+	})
+	if len(effects) == 0 || slices.ContainsFunc(effects, func(effect oracle.CompiledEffect) bool {
+		return effect.Span.End.Offset > ability.Conditions[0].Span.Start.Offset
+	}) {
+		return opt.V[game.Condition]{}, false
+	}
+	ability.Effects = effects
+	ability.Conditions = nil
+	*syntax = syntaxWithoutAbilityWord(*syntax)
+	lastEffectEnd := effects[len(effects)-1].Span.End.Offset
+	syntax.Tokens = slices.DeleteFunc(append([]oracle.Token(nil), syntax.Tokens...), func(token oracle.Token) bool {
+		return token.Span.Start.Offset >= lastEffectEnd
+	})
+	return opt.Val(condition), true
+}
+
+func activationConditionSourceSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
+	spans := make([]oracle.Span, 0, len(ability.Conditions)+1)
+	for _, condition := range ability.Conditions {
+		spans = append(spans, condition.Span)
+		firstConditionToken := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+			return spanCovered(token.Span, []oracle.Span{condition.Span})
+		})
+		if condition.Kind == oracle.ConditionOnlyIf &&
+			firstConditionToken > 0 &&
+			equalTokenWord(syntax.Tokens[firstConditionToken-1], "activate") {
+			spans = append(spans, syntax.Tokens[firstConditionToken-1].Span)
+		}
+	}
+	return spans
 }
 
 func lowerActivatedAbilityZoneOfFunction(body oracle.CompiledAbility) zone.Type {
@@ -2276,11 +2360,19 @@ func lowerStaticPTBuff(
 		ability.Effects[0].Kind != oracle.EffectModifyPT ||
 		ability.Effects[0].Duration != oracle.DurationNone ||
 		len(ability.Targets) != 0 ||
-		len(ability.Conditions) != 0 ||
+		len(ability.Conditions) > 1 ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
-		ability.AbilityWord != "" {
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.StaticAbility{}, false, nil
+	}
+	var condition opt.V[game.Condition]
+	if len(ability.Conditions) == 1 {
+		lowered, ok := lowerKnownCondition(ability.Conditions[0], oracle.ConditionAsLongAs)
+		if !ok {
+			return game.StaticAbility{}, false, nil
+		}
+		condition = opt.Val(lowered)
 	}
 	effect := ability.Effects[0]
 	sourceSelf := effect.StaticSubject == oracle.StaticSubjectNone &&
@@ -2299,13 +2391,19 @@ func lowerStaticPTBuff(
 	}
 	keywordsForBuff := abilityKeywordsExcludingSelectorPredicates(ability)
 	keywords, keywordsOK := mixedStaticKeywords(keywordsForBuff)
-	syntaxOK := matchesExactStaticPTBuffSyntax(syntax, effect)
+	bodySyntax := syntaxWithoutAbilityWord(syntax)
+	if len(ability.Conditions) == 1 {
+		bodySyntax.Tokens = tokensWithoutSpans(bodySyntax.Tokens, ability.Conditions[0].Span)
+	}
+	syntaxOK := matchesExactStaticPTBuffSyntax(bodySyntax, effect)
+	keywordsSyntaxOK := matchesExactStaticPTBuffWithKeywordsSyntax(bodySyntax, effect, keywordsForBuff)
 	if sourceSelf {
-		syntaxOK = matchesExactSourceStaticPTBuffSyntax(syntax, effect, ability.References[0])
+		syntaxOK = matchesExactSourceStaticPTBuffSyntax(bodySyntax, effect, ability.References[0])
+		keywordsSyntaxOK = matchesExactSourceStaticPTBuffWithKeywordsSyntax(bodySyntax, effect, ability.References[0], keywordsForBuff)
 	}
 	if !keywordsOK ||
 		(len(keywords) == 0 && !syntaxOK) ||
-		(len(keywords) > 0 && !matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, keywordsForBuff)) {
+		(len(keywords) > 0 && !keywordsSyntaxOK) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported static ability",
@@ -2347,13 +2445,15 @@ func lowerStaticPTBuff(
 	}
 	if len(keywords) > 0 {
 		continuousEffects = append(continuousEffects, game.ContinuousEffect{
-			Layer:       game.LayerAbility,
-			Group:       group,
-			AddKeywords: keywords,
+			Layer:          game.LayerAbility,
+			AffectedSource: sourceSelf,
+			Group:          group,
+			AddKeywords:    keywords,
 		})
 	}
 	return game.StaticAbility{
 		Text:              ability.Text,
+		Condition:         condition,
 		ContinuousEffects: continuousEffects,
 	}, true, nil
 }
@@ -2384,12 +2484,12 @@ func lowerStaticKeywordGrant(
 		ability.Effects[0].StaticSubject == oracle.StaticSubjectNone ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
-		ability.AbilityWord != "" {
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.StaticAbility{}, false, nil
 	}
 	effect := ability.Effects[0]
 	keywords, keywordsOK := mixedStaticKeywords(ability.Keywords)
-	if !keywordsOK || len(keywords) == 0 || !matchesExactStaticKeywordGrantSyntax(syntax, effect, ability.Keywords) {
+	if !keywordsOK || len(keywords) == 0 || !matchesExactStaticKeywordGrantSyntax(syntaxWithoutAbilityWord(syntax), effect, ability.Keywords) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported static ability",
@@ -2443,16 +2543,19 @@ func lowerSourceConditionalKeywordGrant(
 		len(ability.Modes) != 0 ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
-		ability.AbilityWord != "" {
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.StaticAbility{}, false
 	}
 	condition, ok := lowerSourceAsLongAsCondition(ability.Conditions[0])
+	if !ok {
+		condition, ok = lowerKnownCondition(ability.Conditions[0], oracle.ConditionAsLongAs)
+	}
 	if !ok {
 		return game.StaticAbility{}, false
 	}
 	keywords, ok := mixedStaticKeywords(ability.Keywords)
 	if !ok || len(keywords) == 0 ||
-		!matchesExactSourceConditionalKeywordGrantSyntax(syntax, ability.Conditions[0], ability.Keywords) {
+		!matchesExactSourceConditionalKeywordGrantSyntax(syntaxWithoutAbilityWord(syntax), ability.Conditions[0], ability.Keywords) {
 		return game.StaticAbility{}, false
 	}
 	return game.StaticAbility{
@@ -2907,8 +3010,35 @@ func matchesExactStaticPTBuffWithKeywordsSyntax(
 	return matchesExactKeywordList(tokens[prefixLength+2:len(tokens)-1], keywords)
 }
 
+func matchesExactSourceStaticPTBuffWithKeywordsSyntax(
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+	reference oracle.CompiledReference,
+	keywords []oracle.CompiledKeyword,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	subjectLength := 0
+	for subjectLength < len(tokens) && spanCovered(tokens[subjectLength].Span, []oracle.Span{reference.Span}) {
+		subjectLength++
+	}
+	prefixLength := subjectLength + 6
+	if subjectLength == 0 ||
+		len(tokens) < prefixLength+4 ||
+		!equalTokenWord(tokens[subjectLength], "gets") ||
+		!tokensMatchSignedAmount(tokens[subjectLength+1], tokens[subjectLength+2], effect.PowerDelta) ||
+		tokens[subjectLength+3].Kind != oracle.Slash ||
+		!tokensMatchSignedAmount(tokens[subjectLength+4], tokens[subjectLength+5], effect.ToughnessDelta) ||
+		!equalTokenWord(tokens[prefixLength], "and") ||
+		!equalTokenWord(tokens[prefixLength+1], "has") ||
+		tokens[len(tokens)-1].Kind != oracle.Period {
+		return false
+	}
+	return matchesExactKeywordList(tokens[prefixLength+2:len(tokens)-1], keywords)
+}
+
 func staticPTBuffKeywordVerb(tokens []oracle.Token, effect oracle.CompiledEffect) string {
-	if effect.StaticSubject == oracle.StaticSubjectAttachedObject ||
+	if effect.StaticSubject == oracle.StaticSubjectNone ||
+		effect.StaticSubject == oracle.StaticSubjectAttachedObject ||
 		(effect.StaticSubject == oracle.StaticSubjectControlledWalls &&
 			len(tokens) > 0 &&
 			equalTokenWord(tokens[0], "each")) {
@@ -3742,14 +3872,19 @@ func lowerAtTrigger(
 			fmt.Sprintf("the executable source backend does not support step trigger phrase %q", ability.Trigger.Event),
 		)
 	}
+	var intervening opt.V[game.Condition]
 	if ability.Trigger.Condition != nil {
-		return game.TriggeredAbility{}, executableDiagnostic(
-			ability,
-			summary,
-			"intervening-if conditions are not supported for phase/step triggers",
-		)
+		condition, ok := lowerKnownCondition(*ability.Trigger.Condition, oracle.ConditionIf)
+		if !ok {
+			return game.TriggeredAbility{}, executableDiagnostic(
+				ability,
+				summary,
+				"the executable source backend does not support this intervening-if condition",
+			)
+		}
+		intervening = opt.Val(condition)
 	}
-	if len(ability.Modes) != 0 || ability.AbilityWord != "" {
+	if len(ability.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
 			summary,
@@ -3781,6 +3916,8 @@ func lowerAtTrigger(
 				Controller: params.controller,
 				Step:       params.step,
 			},
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening,
 		},
 		Optional: ability.Optional,
 		Content:  content,
@@ -3847,7 +3984,7 @@ func lowerCyclingTrigger(
 	if ability.Trigger.Condition != nil ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Modes) != 0 ||
-		ability.AbilityWord != "" {
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, true, executableDiagnostic(
 			ability,
 			summary,
@@ -3951,6 +4088,8 @@ func (lowering *abilityLowering) complete(
 		if token.Kind == oracle.Comma ||
 			token.Kind == oracle.Colon ||
 			token.Kind == oracle.Period ||
+			(syntax.AbilityWord != nil && rulesFreeAbilityWordLabel(ability.AbilityWord) &&
+				(token.Kind == oracle.EmDash || spanCoveredByAbilityWord(token.Span, syntax.AbilityWord))) ||
 			spanCovered(token.Span, lowering.sourceSpans) {
 			continue
 		}
@@ -3981,7 +4120,7 @@ func lowerEnterTrigger(
 		!supportedEvent ||
 		!supportedCondition ||
 		len(ability.Modes) != 0 ||
-		ability.AbilityWord != "" {
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
@@ -4043,7 +4182,7 @@ func lowerLifeDamageTrigger(
 	if !ok ||
 		ability.Trigger.Condition != nil ||
 		len(ability.Modes) != 0 ||
-		ability.AbilityWord != "" {
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, false
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
@@ -4255,6 +4394,11 @@ func lowerSelfInterveningCondition(
 	eventKind game.EventKind,
 	trigger *oracle.CompiledTrigger,
 ) (enterInterveningCondition, bool) {
+	if trigger != nil && trigger.Condition != nil {
+		if condition, ok := lowerKnownCondition(*trigger.Condition, oracle.ConditionIf); ok {
+			return enterInterveningCondition{condition: opt.Val(condition)}, true
+		}
+	}
 	switch eventKind {
 	case game.EventPermanentEnteredBattlefield:
 		return lowerEnterInterveningCondition(trigger)
@@ -4993,6 +5137,103 @@ func rulesFreeAbilityWordLabel(label string) bool {
 	}
 }
 
+func lowerKnownCondition(condition oracle.CompiledCondition, expectedKind oracle.ConditionKind) (game.Condition, bool) {
+	if condition.Kind != expectedKind || condition.Intervening != (expectedKind == oracle.ConditionIf) {
+		return game.Condition{}, false
+	}
+	prefix := ""
+	switch expectedKind {
+	case oracle.ConditionAsLongAs:
+		prefix = "as long as "
+	case oracle.ConditionIf:
+		prefix = "if "
+	case oracle.ConditionOnlyIf:
+		prefix = "only if "
+	default:
+		return game.Condition{}, false
+	}
+	if !strings.HasPrefix(condition.Text, prefix) {
+		return game.Condition{}, false
+	}
+	result := game.Condition{Text: condition.Text}
+	switch strings.TrimPrefix(condition.Text, prefix) {
+	case "there are seven or more cards in your graveyard",
+		"seven or more cards are in your graveyard":
+		result.ControllerGraveyardCardCountAtLeast = 7
+	case "there are four or more card types among cards in your graveyard":
+		result.ControllerGraveyardCardTypeCountAtLeast = 4
+	case "you control three or more artifacts":
+		result.ControlsMatching = opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+			MinCount:  3,
+		})
+	case "you have no cards in hand":
+		result.ControllerHandEmpty = true
+	case "you control a creature with power 4 or greater":
+		result.ControlsMatching = opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Power: opt.Val(compare.Int{
+					Op:    compare.GreaterOrEqual,
+					Value: 4,
+				}),
+			},
+		})
+	case "you control three or more creatures with different powers":
+		result.ControllerCreaturePowerDiversityAtLeast = 3
+	default:
+		return game.Condition{}, false
+	}
+	return result, true
+}
+
+func syntaxWithoutAbilityWord(syntax oracle.Ability) oracle.Ability {
+	if syntax.AbilityWord == nil {
+		return syntax
+	}
+	dash := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+		return token.Kind == oracle.EmDash
+	})
+	if dash >= 0 {
+		syntax.Tokens = syntax.Tokens[dash+1:]
+	}
+	return syntax
+}
+
+func spellBodyWithoutAbilityWord(
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (oracle.CompiledAbility, oracle.Ability, bool) {
+	if ability.AbilityWord == "" {
+		return ability, syntax, true
+	}
+	if !rulesFreeAbilityWordLabel(ability.AbilityWord) || syntax.AbilityWord == nil {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	syntax = syntaxWithoutAbilityWord(syntax)
+	if len(syntax.Tokens) == 0 {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	start := syntax.Tokens[0].Span.Start
+	offset := start.Offset - ability.Span.Start.Offset
+	if offset < 0 || offset >= len(ability.Text) {
+		return oracle.CompiledAbility{}, oracle.Ability{}, false
+	}
+	ability.Text = strings.TrimSpace(ability.Text[offset:])
+	ability.Span.Start = start
+	ability.AbilityWord = ""
+	syntax.Span.Start = start
+	syntax.Text = ability.Text
+	syntax.AbilityWord = nil
+	return ability, syntax, true
+}
+
+func tokensWithoutSpans(tokens []oracle.Token, spans ...oracle.Span) []oracle.Token {
+	return slices.DeleteFunc(append([]oracle.Token(nil), tokens...), func(token oracle.Token) bool {
+		return spanCovered(token.Span, spans)
+	})
+}
+
 func isReadAheadAbility(text string) bool {
 	_, ok := readAheadSacrificeChapter(text)
 	return ok
@@ -5086,6 +5327,15 @@ func lowerTapManaAbility(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.ManaAbility, *oracle.Diagnostic) {
+	originalText := ability.Text
+	activationCondition, ok := prepareActivationCondition(&ability, &syntax)
+	if !ok {
+		return game.ManaAbility{}, executableDiagnostic(
+			ability,
+			"unsupported activated ability",
+			"the executable source backend supports only exact supported tap and untap mana abilities",
+		)
+	}
 	if ability.Cost == nil ||
 		len(ability.Cost.Components) != 1 ||
 		(ability.Cost.Components[0].Kind != oracle.CostTap &&
@@ -5096,7 +5346,7 @@ func lowerTapManaAbility(
 		ability.Effects[0].Amount.Value != 1 ||
 		ability.Effects[0].Negated ||
 		len(ability.Modes) != 0 ||
-		ability.AbilityWord != "" ||
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) ||
 		len(ability.Keywords) != 0 ||
 		len(ability.Targets) != 0 ||
 		len(ability.Conditions) != 0 ||
@@ -5123,12 +5373,12 @@ func lowerTapManaAbility(
 		result := choiceTapManaAbility(
 			[]string{"W", "U", "B", "R", "G"},
 		)
-		applyManaAbilityProperties(&result, ability)
+		applyManaAbilityProperties(&result, ability, originalText, activationCondition)
 		return result, nil
 	}
 	if colors, ok := exactChoiceManaSyntax(syntax.Tokens, costSymbol); ok {
 		result := choiceTapManaAbility(colors)
-		applyManaAbilityProperties(&result, ability)
+		applyManaAbilityProperties(&result, ability, originalText, activationCondition)
 		return result, nil
 	}
 	if !exactManaSyntax(syntax.Tokens, costSymbol) {
@@ -5155,13 +5405,19 @@ func lowerTapManaAbility(
 		)
 	}
 	result := game.TapManaAbility(manaColor)
-	applyManaAbilityProperties(&result, ability)
+	applyManaAbilityProperties(&result, ability, originalText, activationCondition)
 	return result, nil
 }
 
-func applyManaAbilityProperties(result *game.ManaAbility, ability oracle.CompiledAbility) {
-	result.Text = ability.Text
+func applyManaAbilityProperties(
+	result *game.ManaAbility,
+	ability oracle.CompiledAbility,
+	text string,
+	activationCondition opt.V[game.Condition],
+) {
+	result.Text = text
 	result.Timing = lowerActivationTiming(ability.ActivationTiming)
+	result.ActivationCondition = activationCondition
 	if ability.Cost.Components[0].Kind == oracle.CostUntap {
 		result.AdditionalCosts = []cost.Additional{{
 			Kind: cost.AdditionalUntap,
@@ -7272,6 +7528,8 @@ func lowerDynamicAmount(amount oracle.CompiledAmount, object game.ObjectReferenc
 		dynamic.Kind = game.DynamicAmountControllerLife
 	case oracle.DynamicAmountOpponentCount:
 		dynamic.Kind = game.DynamicAmountOpponentCount
+	case oracle.DynamicAmountBasicLandTypes:
+		dynamic.Kind = game.DynamicAmountControllerBasicLandTypeCount
 	case oracle.DynamicAmountSourcePower:
 		if len(object.Validate()) != 0 {
 			return game.DynamicAmount{}, false
