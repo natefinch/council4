@@ -5525,6 +5525,41 @@ func TestLowerCastTriggerAcceptsColorPhrases(t *testing.T) {
 	}
 }
 
+func TestLowerCastTriggerAcceptsColorCardinalityPhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase           string
+		wantColorless    bool
+		wantMulticolored bool
+	}{
+		{"a colorless spell", true, false},
+		{"a multicolored spell", false, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever you cast " + tc.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			sel := face.TriggeredAbilities[0].Trigger.Pattern.CardSelection
+			if sel.Colorless != tc.wantColorless {
+				t.Errorf("Colorless = %v, want %v", sel.Colorless, tc.wantColorless)
+			}
+			if sel.Multicolored != tc.wantMulticolored {
+				t.Errorf("Multicolored = %v, want %v", sel.Multicolored, tc.wantMulticolored)
+			}
+		})
+	}
+}
+
 func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -5539,8 +5574,6 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"subtype spell", "Whenever you cast a Spirit or Arcane spell, draw a card."},
 		{"historic spell", "Whenever you cast a historic spell, draw a card."},
 		{"mana value spell", "Whenever you cast a spell with mana value 5 or greater, draw a card."},
-		{"multicolored spell", "Whenever you cast a multicolored spell, draw a card."},
-		{"colorless spell", "Whenever you cast a colorless spell, draw a card."},
 		{"kicked spell", "Whenever you cast a kicked spell, draw a card."},
 		{"zone-filtered spell", "Whenever you cast a spell from your graveyard, draw a card."},
 		{"intervening if", "Whenever you cast a spell, if you control an artifact, draw a card."},
