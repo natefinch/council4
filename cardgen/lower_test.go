@@ -689,6 +689,99 @@ func TestLowerOrderedSequenceWithDelayedOneShotEffect(t *testing.T) {
 	}
 }
 
+func TestLowerDelayedBlink(t *testing.T) {
+	t.Parallel()
+	for _, reference := range []string{"that card", "it"} {
+		t.Run(reference, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Mist",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: "Exile target creature. Return " + reference + " to the battlefield under its owner's control at the beginning of the next end step.",
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+				t.Fatalf("mode = %#v, want one target and two instructions", mode)
+			}
+			exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+			if !ok || exile.Object != game.TargetPermanentReference(0) || exile.ExileLinkedKey == "" {
+				t.Fatalf("exile = %#v, want linked target exile", mode.Sequence[0].Primitive)
+			}
+			delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+			if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+				t.Fatalf("delayed = %#v, want next-end-step trigger", mode.Sequence[1].Primitive)
+			}
+			put, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+			key, linked := put.Source.LinkedKey()
+			if !ok || !linked || key != exile.ExileLinkedKey {
+				t.Fatalf("delayed put = %#v, want linked source %q", put, exile.ExileLinkedKey)
+			}
+		})
+	}
+}
+
+func TestLowerMultipleDelayedBlinkPairsUseDistinctKeys(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Test Double Mist",
+		Layout:   "normal",
+		TypeLine: "Sorcery",
+		OracleText: "Exile target artifact. Return that card to the battlefield under its owner's control at the beginning of the next end step. " +
+			"Exile target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 || len(mode.Sequence) != 4 {
+		t.Fatalf("mode = %#v, want two targets and four instructions", mode)
+	}
+	var keys []game.LinkedKey
+	for i, targetIndex := range []int{0, 1} {
+		exile, ok := mode.Sequence[i*2].Primitive.(game.Exile)
+		if !ok || exile.Object != game.TargetPermanentReference(targetIndex) || exile.ExileLinkedKey == "" {
+			t.Fatalf("exile %d = %#v, want linked target %d", i, mode.Sequence[i*2].Primitive, targetIndex)
+		}
+		keys = append(keys, exile.ExileLinkedKey)
+		delayed, ok := mode.Sequence[i*2+1].Primitive.(game.CreateDelayedTrigger)
+		if !ok {
+			t.Fatalf("instruction %d = %#v, want delayed trigger", i*2+1, mode.Sequence[i*2+1].Primitive)
+		}
+		put, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+		if !ok {
+			t.Fatalf("delayed instruction %d = %#v, want put on battlefield", i, delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
+		}
+		key, ok := put.Source.LinkedKey()
+		if !ok || key != exile.ExileLinkedKey {
+			t.Fatalf("put %d linked key = %q (%v), want %q", i, key, ok, exile.ExileLinkedKey)
+		}
+	}
+	if keys[0] == keys[1] {
+		t.Fatalf("blink keys = %q/%q, want distinct", keys[0], keys[1])
+	}
+}
+
+func TestLowerDelayedBlinkRejectsUnsupportedVariants(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"Exile target creature. Return it to the battlefield under your control at the beginning of the next end step.",
+		"Exile target creature. Return it to the battlefield under its owner's control with a +1/+1 counter on it at the beginning of the next end step.",
+		"Exile target creature, then return it to the battlefield under its owner's control.",
+		"Exile up to two target creatures you control. Return those cards to the battlefield under their owner's control at the beginning of the next end step.",
+	} {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Unsupported Mist",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: text,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported blink variant to fail closed")
+			}
+		})
+	}
+}
+
 func TestLowerTargetedGraveyardReturnToHand(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

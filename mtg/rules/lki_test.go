@@ -116,8 +116,73 @@ func TestLinkedExileReturnOnlyUsesSameSourceLink(t *testing.T) {
 		t.Fatal("source A's linked exiled card remained in exile")
 	}
 	returned := permanentByCardID(g, first.CardInstanceID)
-	if returned == nil || returned.Controller != game.Player1 {
-		t.Fatalf("returned permanent = %+v, want first card returned under Player1 control", returned)
+	if returned == nil || returned.Controller != game.Player2 {
+		t.Fatalf("returned permanent = %+v, want first card returned under owner Player2 control", returned)
+	}
+}
+
+func TestDelayedLinkedExileReturnUsesOwnerControlAndEmitsEnterEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanent(g, game.Player2)
+	target.Controller = game.Player1
+	source := addCombatCreaturePermanent(g, game.Player1)
+	obj := linkedSourceObject(source)
+	obj.Targets = []game.Target{game.PermanentTarget(target.ObjectID)}
+	key := game.LinkedKey("delayed-blink")
+
+	resolveInstruction(engine, g, obj, game.Exile{
+		Object:         game.TargetPermanentReference(0),
+		ExileLinkedKey: key,
+	}, nil)
+	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
+			Source: game.LinkedBattlefieldSource(key),
+		}}}}.Ability(),
+	}}, nil)
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	returned := permanentByCardID(g, target.CardInstanceID)
+	if returned == nil || returned.Controller != game.Player2 {
+		t.Fatalf("returned permanent = %+v, want owner Player2 control", returned)
+	}
+	assertEvent(t, g.Events, game.EventPermanentEnteredBattlefield, func(event game.Event) bool {
+		return event.CardID == target.CardInstanceID &&
+			event.PermanentID == returned.ObjectID &&
+			event.FromZone == zone.Exile
+	})
+}
+
+func TestDelayedLinkedExileReturnFailsClosedAfterCardLeavesExile(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanent(g, game.Player2)
+	source := addCombatCreaturePermanent(g, game.Player1)
+	obj := linkedSourceObject(source)
+	obj.Targets = []game.Target{game.PermanentTarget(target.ObjectID)}
+	key := game.LinkedKey("delayed-blink")
+
+	resolveInstruction(engine, g, obj, game.Exile{
+		Object:         game.TargetPermanentReference(0),
+		ExileLinkedKey: key,
+	}, nil)
+	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
+			Source: game.LinkedBattlefieldSource(key),
+		}}}}.Ability(),
+	}}, nil)
+	if !moveCardBetweenZones(g, game.Player2, target.CardInstanceID, zone.Exile, zone.Library) {
+		t.Fatal("failed to move linked card out of exile")
+	}
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if returned := permanentByCardID(g, target.CardInstanceID); returned != nil {
+		t.Fatalf("linked card returned after leaving exile: %+v", returned)
+	}
+	if !g.Players[game.Player2].Library.Contains(target.CardInstanceID) {
+		t.Fatal("linked card did not remain in library")
 	}
 }
 
