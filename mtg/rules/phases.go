@@ -95,6 +95,20 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 
 func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, phase game.Phase, log *TurnLog) {
 	g.Turn.Phase = phase
+	step := game.StepNone
+	switch phase {
+	case game.PhasePrecombatMain:
+		step = game.StepPrecombatMain
+	case game.PhasePostcombatMain:
+		step = game.StepPostcombatMain
+	default:
+	}
+	if step != game.StepNone {
+		g.Turn.Step = step
+		emitBeginningOfStepEvent(g, step)
+	}
+	// Main phases have no steps. Reset the synthetic trigger boundary before
+	// priority so sorcery-speed actions remain legal.
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)

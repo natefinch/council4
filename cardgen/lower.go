@@ -4202,6 +4202,24 @@ var atTriggerPhrases = map[string]atTriggerParams{
 	"the beginning of combat on your turn":    {game.StepBeginningOfCombat, game.TriggerControllerYou},
 	"the beginning of each combat":            {game.StepBeginningOfCombat, game.TriggerControllerAny},
 	"the beginning of your draw step":         {game.StepDraw, game.TriggerControllerYou},
+	"the beginning of your first main phase":  {game.StepPrecombatMain, game.TriggerControllerYou},
+	"the beginning of your precombat main phase": {
+		game.StepPrecombatMain,
+		game.TriggerControllerYou,
+	},
+	"the beginning of each of your first main phases": {
+		game.StepPrecombatMain,
+		game.TriggerControllerYou,
+	},
+	"the beginning of your second main phase": {game.StepPostcombatMain, game.TriggerControllerYou},
+	"the beginning of your postcombat main phase": {
+		game.StepPostcombatMain,
+		game.TriggerControllerYou,
+	},
+	"the beginning of each of your postcombat main phases": {
+		game.StepPostcombatMain,
+		game.TriggerControllerYou,
+	},
 }
 
 func lowerAtTrigger(

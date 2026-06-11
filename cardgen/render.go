@@ -3935,6 +3935,10 @@ func renderStep(step game.Step) (string, error) {
 		return "game.StepBeginningOfCombat", nil
 	case game.StepEnd:
 		return "game.StepEnd", nil
+	case game.StepPrecombatMain:
+		return "game.StepPrecombatMain", nil
+	case game.StepPostcombatMain:
+		return "game.StepPostcombatMain", nil
 	default:
 		return "", fmt.Errorf("render: unsupported step %d", step)
 	}

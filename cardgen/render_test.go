@@ -1274,6 +1274,8 @@ func TestRenderStepHelperAcceptsKnownSteps(t *testing.T) {
 		{game.StepDraw, "game.StepDraw"},
 		{game.StepBeginningOfCombat, "game.StepBeginningOfCombat"},
 		{game.StepEnd, "game.StepEnd"},
+		{game.StepPrecombatMain, "game.StepPrecombatMain"},
+		{game.StepPostcombatMain, "game.StepPostcombatMain"},
 	}
 	for _, tc := range tests {
 		got, err := renderStep(tc.step)
@@ -1304,6 +1306,8 @@ func TestRenderTriggerPatternAllSteps(t *testing.T) {
 		{game.StepDraw, "game.StepDraw"},
 		{game.StepBeginningOfCombat, "game.StepBeginningOfCombat"},
 		{game.StepEnd, "game.StepEnd"},
+		{game.StepPrecombatMain, "game.StepPrecombatMain"},
+		{game.StepPostcombatMain, "game.StepPostcombatMain"},
 	}
 	for _, tc := range steps {
 		ctx := newRenderCtx()
