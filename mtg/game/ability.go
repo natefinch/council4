@@ -322,6 +322,7 @@ type TriggerPattern struct {
 	SpellTargetsSource bool
 	SpellTargetAllow   TargetAllow
 	SpellTargetPattern opt.V[TargetPredicate]
+	RequireKickerPaid  bool
 
 	// OneOrMore coalesces matching events consumed in the same trigger detection
 	// pass into one trigger. The first matching event is retained as TriggerEvent.

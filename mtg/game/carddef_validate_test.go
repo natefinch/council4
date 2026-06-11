@@ -1008,6 +1008,74 @@ func TestValidateCardDefAllowsColorCardinalitySpellCastTrigger(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsManaValueKickedAndZoneSpellCastTrigger(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern TriggerPattern
+	}{
+		{
+			name: "mana value",
+			pattern: TriggerPattern{
+				Event: EventSpellCast,
+				CardSelection: Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 5}),
+				},
+			},
+		},
+		{
+			name: "kicked",
+			pattern: TriggerPattern{
+				Event:             EventSpellCast,
+				RequireKickerPaid: true,
+			},
+		},
+		{
+			name: "graveyard",
+			pattern: TriggerPattern{
+				Event:         EventSpellCast,
+				MatchFromZone: true,
+				FromZone:      zone.Graveyard,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Spell Watcher",
+				OracleText: "Whenever you cast a spell, draw a card.",
+				TriggeredAbilities: []TriggeredAbility{{
+					Content: Mode{}.Ability(),
+					Trigger: TriggerCondition{Pattern: tt.pattern},
+				}},
+			}}
+
+			issues := ValidateCardDef(card)
+			if hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+				t.Fatalf("issues = %+v, want spell-cast trigger predicate accepted", issues)
+			}
+		})
+	}
+}
+
+func TestValidateCardDefRejectsKickerFilterOutsideSpellCastTrigger(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Invalid Kicker Watcher",
+		OracleText: "Whenever a creature enters, draw a card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:             EventPermanentEnteredBattlefield,
+				RequireKickerPaid: true,
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want invalid-selection issue", issues)
+	}
+}
+
 func TestValidateCardDefRejectsContradictoryColorCardinalitySelection(t *testing.T) {
 	tests := []struct {
 		name      string

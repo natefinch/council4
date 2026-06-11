@@ -5714,6 +5714,64 @@ func TestLowerCastTriggerAcceptsColorCardinalityPhrases(t *testing.T) {
 	}
 }
 
+func TestLowerCastTriggerAcceptsManaValueKickedAndZonePhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		phrase string
+		assert func(t *testing.T, pattern game.TriggerPattern)
+	}{
+		{
+			name:   "mana value",
+			phrase: "a spell with mana value 5 or greater",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				mv := pattern.CardSelection.ManaValue
+				if !mv.Exists || mv.Val.Op != compare.GreaterOrEqual || mv.Val.Value != 5 {
+					t.Fatalf("ManaValue = %+v, want >= 5", mv)
+				}
+			},
+		},
+		{
+			name:   "kicked",
+			phrase: "a kicked spell",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				if !pattern.RequireKickerPaid {
+					t.Fatal("RequireKickerPaid = false, want true")
+				}
+			},
+		},
+		{
+			name:   "graveyard",
+			phrase: "a spell from your graveyard",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				if !pattern.MatchFromZone || pattern.FromZone != zone.Graveyard {
+					t.Fatalf("from-zone filter = (%v, %v), want graveyard", pattern.MatchFromZone, pattern.FromZone)
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever you cast " + tc.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			tc.assert(t, face.TriggeredAbilities[0].Trigger.Pattern)
+		})
+	}
+}
+
 func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -5727,9 +5785,10 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"ordinal spell", "Whenever you cast your second spell each turn, draw a card."},
 		{"subtype spell", "Whenever you cast a Spirit or Arcane spell, draw a card."},
 		{"historic spell", "Whenever you cast a historic spell, draw a card."},
-		{"mana value spell", "Whenever you cast a spell with mana value 5 or greater, draw a card."},
-		{"kicked spell", "Whenever you cast a kicked spell, draw a card."},
-		{"zone-filtered spell", "Whenever you cast a spell from your graveyard, draw a card."},
+		{"unsupported mana value comparison", "Whenever you cast a spell with mana value less than 5, draw a card."},
+		{"unsupported zone-filtered spell", "Whenever you cast a spell from your library, draw a card."},
+		{"any player your graveyard", "Whenever a player casts a spell from your graveyard, draw a card."},
+		{"opponent your graveyard", "Whenever an opponent casts a spell from your graveyard, draw a card."},
 		{"intervening if", "Whenever you cast a spell, if you control an artifact, draw a card."},
 		{"ability word", "Spellcraft — Whenever you cast a spell, draw a card."},
 		{"unsupported body", "Whenever you cast a spell, counter target spell."},

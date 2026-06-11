@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 func suspendCostForCard(card *game.CardDef) (cost.Mana, int, bool) {
@@ -161,6 +162,7 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 		CardID:        cardID,
 		CardTypes:     cardTypes(spellDef),
 		Colors:        spellColors(spellDef),
+		ManaValue:     opt.Val(stackManaValue(spellDef, 0)),
 		FromZone:      zone.Exile,
 		ToZone:        zone.Stack,
 	})

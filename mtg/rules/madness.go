@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 func madnessCostForCard(card *game.CardDef) (cost.Mana, bool) {
@@ -75,6 +76,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		CardID:        card.ID,
 		CardTypes:     cardTypes(spellDef),
 		Colors:        spellColors(spellDef),
+		ManaValue:     opt.Val(stackManaValue(spellDef, 0)),
 		FromZone:      zone.Exile,
 		ToZone:        zone.Stack,
 	})

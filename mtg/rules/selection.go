@@ -258,6 +258,9 @@ func (s *selectionSubject) combatStateMatches(filter game.CombatStateFilter) boo
 }
 
 func (s *selectionSubject) manaValue() (int, bool) {
+	if s.kind == subjectCastSpell {
+		return s.event.ManaValue.Val, s.event.ManaValue.Exists
+	}
 	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
 		return s.card.Def.ManaValue(), true
 	}

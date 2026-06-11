@@ -583,6 +583,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.MatchToZone && pattern.ToZone != event.ToZone {
 		return false
 	}
+	if pattern.RequireKickerPaid && !event.KickerPaid {
+		return false
+	}
 	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient != event.DamageRecipient {
 		return false
 	}
