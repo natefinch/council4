@@ -162,6 +162,74 @@ func TestConditionControllerLiveStatePredicates(t *testing.T) {
 	}
 }
 
+func TestConditionCardCountsIgnoreTransientTokens(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].Hand.Add(g.IDGen.Next())
+	g.Players[game.Player1].Graveyard.Add(g.IDGen.Next())
+
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, opt.Val(game.Condition{
+		ControllerHandEmpty: true,
+	})) {
+		t.Fatal("transient token in hand prevented empty-hand condition")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, opt.Val(game.Condition{
+		ControllerHandSizeAtLeast: 1,
+	})) {
+		t.Fatal("transient token in hand counted toward hand size")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, opt.Val(game.Condition{
+		ControllerGraveyardCardCountAtLeast: 1,
+	})) {
+		t.Fatal("transient token in graveyard counted as a card")
+	}
+	if got := dynamicAmountValue(g, nil, game.Player1, game.DynamicAmount{
+		Kind:       game.DynamicAmountControllerHandSize,
+		Multiplier: 1,
+	}); got != 0 {
+		t.Fatalf("dynamic hand size = %d, want 0", got)
+	}
+	if got := dynamicAmountValue(g, nil, game.Player1, game.DynamicAmount{
+		Kind:       game.DynamicAmountControllerGraveyardSize,
+		Multiplier: 1,
+	}); got != 0 {
+		t.Fatalf("dynamic graveyard size = %d, want 0", got)
+	}
+}
+
+func TestConditionDeliriumCombinesSplitCardTypesOnly(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{
+		CardFace: game.CardFace{Name: "Split", Types: []types.Card{types.Instant}},
+		Layout:   game.LayoutSplit,
+		Alternate: opt.Val(game.CardFace{
+			Name:  "Other Half",
+			Types: []types.Card{types.Sorcery},
+		}),
+	})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Relic", Types: []types.Card{types.Artifact}}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Aura", Types: []types.Card{types.Enchantment}}})
+
+	delirium := opt.Val(game.Condition{ControllerGraveyardCardTypeCountAtLeast: 4})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, delirium) {
+		t.Fatal("split card did not contribute both card types to Delirium")
+	}
+
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{
+		CardFace: game.CardFace{Name: "Adventurer", Types: []types.Card{types.Creature}},
+		Layout:   game.LayoutAdventure,
+		Alternate: opt.Val(game.CardFace{
+			Name:  "Adventure",
+			Types: []types.Card{types.Instant},
+		}),
+	})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Relic", Types: []types.Card{types.Artifact}}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Aura", Types: []types.Card{types.Enchantment}}})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, delirium) {
+		t.Fatal("Adventure face contributed its card type to Delirium")
+	}
+}
+
 func TestConditionTargetEnteredThisTurn(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "New Creature",

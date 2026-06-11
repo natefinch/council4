@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -47,7 +48,7 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.ControllerHandSizeAtLeast > 0 {
 		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && player.Hand.Size() >= cond.ControllerHandSizeAtLeast
+		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) >= cond.ControllerHandSizeAtLeast
 	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		matches = matches && anyPlayerLifeAtMost(g, cond.AnyPlayerLifeAtMost)
@@ -57,20 +58,20 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.ControllerHandEmpty {
 		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && player.Hand.Size() == 0
+		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) == 0
 	}
 	if cond.ControllerGraveyardCardCountAtLeast > 0 {
 		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && player.Graveyard.Size() >= cond.ControllerGraveyardCardCountAtLeast
+		matches = matches && ok && cardInstanceCount(g, player.Graveyard.All()) >= cond.ControllerGraveyardCardCountAtLeast
 	}
 	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
 		matches = matches && controllerGraveyardCardTypeCount(g, ctx.controller) >= cond.ControllerGraveyardCardTypeCountAtLeast
 	}
 	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
-		matches = matches && controllerBasicLandTypeCount(g, ctx.controller) >= cond.ControllerBasicLandTypeCountAtLeast
+		matches = matches && controllerBasicLandTypeCount(g, ctx) >= cond.ControllerBasicLandTypeCountAtLeast
 	}
 	if cond.ControllerCreaturePowerDiversityAtLeast > 0 {
-		matches = matches && controllerCreaturePowerDiversity(g, ctx.controller) >= cond.ControllerCreaturePowerDiversityAtLeast
+		matches = matches && controllerCreaturePowerDiversity(g, ctx) >= cond.ControllerCreaturePowerDiversityAtLeast
 	}
 	if cond.AnyOpponentControls.Exists {
 		matches = matches && anyOpponentControlsMatchingSelection(g, ctx, cond.AnyOpponentControls.Val)
@@ -109,6 +110,16 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	return matches
 }
 
+func cardInstanceCount(g *game.Game, objectIDs []id.ID) int {
+	count := 0
+	for _, objectID := range objectIDs {
+		if _, ok := g.GetCardInstance(objectID); ok {
+			count++
+		}
+	}
+	return count
+}
+
 func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) int {
 	player, ok := playerByID(g, controller)
 	if !ok {
@@ -123,19 +134,24 @@ func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) in
 		for _, cardType := range cardFaceOrDefault(card, game.FaceFront).Types {
 			distinct[cardType] = true
 		}
+		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
+			for _, cardType := range card.Def.Alternate.Val.Types {
+				distinct[cardType] = true
+			}
+		}
 	}
 	return len(distinct)
 }
 
-func controllerBasicLandTypeCount(g *game.Game, controller game.PlayerID) int {
+func controllerBasicLandTypeCount(g *game.Game, ctx conditionContext) int {
 	basicLandTypes := [...]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest}
 	distinct := make(map[types.Sub]bool)
 	for _, permanent := range g.Battlefield {
 		if permanent.PhasedOut {
 			continue
 		}
-		values := effectivePermanentValues(g, permanent)
-		if values.controller != controller || !slices.Contains(values.types, types.Land) {
+		values := permanentValuesForCondition(g, permanent, ctx)
+		if values.controller != ctx.controller || !slices.Contains(values.types, types.Land) {
 			continue
 		}
 		for _, subtype := range basicLandTypes {
@@ -147,20 +163,31 @@ func controllerBasicLandTypeCount(g *game.Game, controller game.PlayerID) int {
 	return len(distinct)
 }
 
-func controllerCreaturePowerDiversity(g *game.Game, controller game.PlayerID) int {
+func controllerCreaturePowerDiversity(g *game.Game, ctx conditionContext) int {
 	distinct := make(map[int]bool)
 	for _, permanent := range g.Battlefield {
 		if permanent.PhasedOut {
 			continue
 		}
-		values := effectivePermanentValues(g, permanent)
-		if values.controller == controller &&
+		values := permanentValuesForCondition(g, permanent, ctx)
+		if values.controller == ctx.controller &&
 			slices.Contains(values.types, types.Creature) &&
 			values.powerOK {
 			distinct[values.power] = true
 		}
 	}
 	return len(distinct)
+}
+
+func permanentValuesForCondition(g *game.Game, permanent *game.Permanent, ctx conditionContext) permanentEffectiveValues {
+	switch {
+	case ctx.useBaseCharacteristics:
+		return basePermanentValues(g, permanent)
+	case ctx.characteristicsBefore != 0:
+		return permanentValuesBeforeLayer(g, permanent, ctx.characteristicsBefore)
+	default:
+		return effectivePermanentValues(g, permanent)
+	}
 }
 
 func conditionObjectMatches(g *game.Game, ctx conditionContext, cond *game.Condition) bool {
@@ -236,15 +263,7 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 				continue
 			}
 		}
-		var values permanentEffectiveValues
-		switch {
-		case ctx.useBaseCharacteristics:
-			values = basePermanentValues(g, permanent)
-		case ctx.characteristicsBefore != 0:
-			values = permanentValuesBeforeLayer(g, permanent, ctx.characteristicsBefore)
-		default:
-			values = effectivePermanentValues(g, permanent)
-		}
+		values := permanentValuesForCondition(g, permanent, ctx)
 		if !ctx.useBaseCharacteristics && !allowed[values.controller] {
 			continue
 		}

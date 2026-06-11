@@ -174,6 +174,68 @@ func TestStaticPTEffectRaisesLethalDamageThreshold(t *testing.T) {
 	}
 }
 
+func TestStaticDomainDynamicPTUsesLayerBoundedValues(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	domain := opt.Val(game.DynamicAmount{
+		Kind:       game.DynamicAmountControllerBasicLandTypeCount,
+		Multiplier: 1,
+	})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Domain Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:                 game.LayerPowerToughnessModify,
+				AffectedSource:        true,
+				PowerDeltaDynamic:     domain,
+				ToughnessDeltaDynamic: domain,
+			}},
+		}},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Dual Land",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Plains, types.Island},
+	}})
+
+	if got := effectivePower(g, source); got != 4 {
+		t.Fatalf("effective power = %d, want 4", got)
+	}
+	if got, ok := effectiveToughness(g, source); !ok || got != 4 {
+		t.Fatalf("effective toughness = %d ok=%v, want 4 true", got, ok)
+	}
+}
+
+func TestStaticCovenConditionUsesLayerBoundedValues(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Coven Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{ControllerCreaturePowerDiversityAtLeast: 3}),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:          game.LayerPowerToughnessModify,
+				AffectedSource: true,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+			}},
+		}},
+	}})
+	addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+
+	if got := effectivePower(g, source); got != 2 {
+		t.Fatalf("effective power = %d, want 2", got)
+	}
+	if got, ok := effectiveToughness(g, source); !ok || got != 2 {
+		t.Fatalf("effective toughness = %d ok=%v, want 2 true", got, ok)
+	}
+}
+
 func TestStaticPTEffectDisappearingChangesLethalDamageThreshold(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	anthem := addAnthemPermanent(g, game.Player1)
