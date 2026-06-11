@@ -184,7 +184,9 @@ func permanentValuesForCondition(g *game.Game, permanent *game.Permanent, ctx co
 	case ctx.useBaseCharacteristics:
 		return basePermanentValues(g, permanent)
 	case ctx.characteristicsBefore != 0:
-		return permanentValuesBeforeLayer(g, permanent, ctx.characteristicsBefore)
+		values := permanentValuesBeforeLayer(g, permanent, ctx.characteristicsBefore)
+		applyCounterAndTemporaryValues(permanent, &values)
+		return values
 	default:
 		return effectivePermanentValues(g, permanent)
 	}

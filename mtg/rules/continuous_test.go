@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -225,8 +226,10 @@ func TestStaticCovenConditionUsesLayerBoundedValues(t *testing.T) {
 			}},
 		}},
 	}})
-	addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	counterCreature := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
+	counterCreature.Counters.Add(counter.PlusOnePlusOne, 1)
+	temporaryCreature := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
+	temporaryCreature.TemporaryPowerModifier = 2
 
 	if got := effectivePower(g, source); got != 2 {
 		t.Fatalf("effective power = %d, want 2", got)
