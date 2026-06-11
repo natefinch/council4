@@ -8369,3 +8369,278 @@ func TestLowerCreatureDiesRegressionStillWorks(t *testing.T) {
 		t.Fatalf("trigger event = %v, want EventPermanentDied", trigger.Trigger.Pattern.Event)
 	}
 }
+
+// TestLowerNonSelfDiesTriggerAnotherCreatureYouControl verifies the main
+// happy-path non-self dies trigger phrase.
+func TestLowerNonSelfDiesTriggerAnotherCreatureYouControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Death Watcher",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever another creature you control dies, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0]
+	if trigger.Trigger.Type != game.TriggerWhenever {
+		t.Fatalf("trigger type = %v, want TriggerWhenever", trigger.Trigger.Type)
+	}
+	pat := trigger.Trigger.Pattern
+	if pat.Event != game.EventPermanentDied {
+		t.Fatalf("event = %v, want EventPermanentDied", pat.Event)
+	}
+	if pat.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", pat.Controller)
+	}
+	if !pat.ExcludeSelf {
+		t.Fatal("ExcludeSelf = false, want true")
+	}
+	wantTypes := []types.Card{types.Creature}
+	if !reflect.DeepEqual(pat.SubjectSelection.RequiredTypes, wantTypes) {
+		t.Fatalf("SubjectSelection.RequiredTypes = %v, want %v", pat.SubjectSelection.RequiredTypes, wantTypes)
+	}
+	// Verify the body lowers to a draw effect.
+	if len(trigger.Content.Modes) == 0 || len(trigger.Content.Modes[0].Sequence) == 0 {
+		t.Fatal("expected non-empty body content")
+	}
+	if _, ok := trigger.Content.Modes[0].Sequence[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("body primitive = %T, want game.Draw", trigger.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerEnchantedCreature verifies the attached-permanent
+// (enchanted creature) trigger phrase.
+func TestLowerNonSelfDiesTriggerEnchantedCreature(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Elegy Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nWhen enchanted creature dies, draw a card.",
+		Power:      nil,
+		Toughness:  nil,
+	})
+	var ta *game.TriggeredAbility
+	for i := range face.TriggeredAbilities {
+		if strings.Contains(face.TriggeredAbilities[i].Text, "enchanted creature dies") {
+			ta = &face.TriggeredAbilities[i]
+		}
+	}
+	if ta == nil {
+		t.Fatal("enchanted-creature-dies triggered ability not lowered")
+	}
+	if ta.Trigger.Type != game.TriggerWhen {
+		t.Fatalf("trigger type = %v, want TriggerWhen", ta.Trigger.Type)
+	}
+	pat := ta.Trigger.Pattern
+	if pat.Event != game.EventPermanentDied {
+		t.Fatalf("event = %v, want EventPermanentDied", pat.Event)
+	}
+	if pat.Source != game.TriggerSourceAttachedPermanent {
+		t.Fatalf("source = %v, want TriggerSourceAttachedPermanent", pat.Source)
+	}
+	wantTypes := []types.Card{types.Creature}
+	if !reflect.DeepEqual(pat.SubjectSelection.RequiredTypes, wantTypes) {
+		t.Fatalf("SubjectSelection.RequiredTypes = %v, want %v", pat.SubjectSelection.RequiredTypes, wantTypes)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerBodyWithPronounReferenceFailsClosed verifies that
+// bodies referring to the dying permanent via a pronoun are rejected.
+func TestLowerNonSelfDiesTriggerBodyWithPronounReferenceFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Damage Dealer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever a creature dies, this creature deals 1 damage to its controller.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for pronoun reference to dying permanent")
+	}
+	if !strings.Contains(diagnostics[0].Summary, "unsupported dies trigger") {
+		t.Fatalf("diagnostic summary = %q, want 'unsupported dies trigger'", diagnostics[0].Summary)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerUnrecognisedPhraseFailsClosed verifies that an
+// unrecognised trigger phrase produces a fail-closed diagnostic.
+func TestLowerNonSelfDiesTriggerUnrecognisedPhraseFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Haunting Creature",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit",
+		OracleText: "Whenever the haunted creature dies, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported dies trigger diagnostic for unrecognised phrase")
+	}
+	found := false
+	for _, d := range diagnostics {
+		if strings.Contains(d.Summary, "unsupported") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("no unsupported diagnostic found in: %v", diagnostics)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerACreatureDies verifies "a creature dies".
+func TestLowerNonSelfDiesTriggerACreatureDies(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Morbid Counter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever a creature dies, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	pat := face.TriggeredAbilities[0].Trigger.Pattern
+	if pat.Event != game.EventPermanentDied {
+		t.Fatalf("event = %v, want EventPermanentDied", pat.Event)
+	}
+	if pat.Controller != game.TriggerControllerAny {
+		t.Fatalf("controller = %v, want TriggerControllerAny", pat.Controller)
+	}
+	if pat.ExcludeSelf {
+		t.Fatal("ExcludeSelf = true, want false for 'a creature dies'")
+	}
+	if !reflect.DeepEqual(pat.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("SubjectSelection.RequiredTypes = %v", pat.SubjectSelection.RequiredTypes)
+	}
+}
+
+// TestLowerNonSelfDiesTriggerNontokenCreatureYouControl verifies the nontoken
+// creature trigger.
+func TestLowerNonSelfDiesTriggerNontokenCreatureYouControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Soul Collector",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever a nontoken creature you control dies, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	pat := face.TriggeredAbilities[0].Trigger.Pattern
+	if pat.Controller != game.TriggerControllerYou {
+		t.Fatalf("controller = %v, want TriggerControllerYou", pat.Controller)
+	}
+	if !pat.SubjectSelection.NonToken {
+		t.Fatal("SubjectSelection.NonToken = false, want true")
+	}
+}
+
+func TestLowerNonSelfDiesTriggerInterveningIfFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Life Watcher",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever a creature you control dies, if you have 5 or more life, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("intervening-if non-self dies trigger unexpectedly lowered")
+	}
+	if !strings.Contains(diagnostics[0].Detail, "intervening-if conditions are not supported") {
+		t.Fatalf("diagnostic = %#v, want intervening-if detail", diagnostics[0])
+	}
+}
+
+// TestLowerNonSelfDiesTriggerEventLookupTable verifies the complete phrase
+// table: each entry must return ok=true and the correct pattern.
+func TestLowerNonSelfDiesTriggerEventLookupTable(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase      string
+		wantSource  game.TriggerSourceFilter
+		wantCtrl    game.TriggerControllerFilter
+		excludeSelf bool
+		wantTypes   []types.Card
+		nonToken    bool
+		wantKind    game.TriggerType
+	}{
+		{"enchanted creature dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhen},
+		{"equipped creature dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhen},
+		{"enchanted land dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Land}, false, game.TriggerWhen},
+		{"enchanted permanent dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, nil, false, game.TriggerWhen},
+		{"another creature dies", game.TriggerSourceAny, game.TriggerControllerAny, true, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"another creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, true, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"a creature dies", game.TriggerSourceAny, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"a creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, false, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"a creature an opponent controls dies", game.TriggerSourceAny, game.TriggerControllerOpponent, false, []types.Card{types.Creature}, false, game.TriggerWhenever},
+		{"a nontoken creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, false, []types.Card{types.Creature}, true, game.TriggerWhenever},
+		{"another nontoken creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, true, []types.Card{types.Creature}, true, game.TriggerWhenever},
+		{"another nontoken creature dies", game.TriggerSourceAny, game.TriggerControllerAny, true, []types.Card{types.Creature}, true, game.TriggerWhenever},
+		{"a nontoken creature an opponent controls dies", game.TriggerSourceAny, game.TriggerControllerOpponent, false, []types.Card{types.Creature}, true, game.TriggerWhenever},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			params, ok := lowerNonSelfDiesTriggerEvent(tc.phrase)
+			if !ok {
+				t.Fatalf("lowerNonSelfDiesTriggerEvent(%q) returned ok=false", tc.phrase)
+			}
+			if params.triggerType != tc.wantKind {
+				t.Errorf("triggerType = %v, want %v", params.triggerType, tc.wantKind)
+			}
+			if params.pattern.Source != tc.wantSource {
+				t.Errorf("source = %v, want %v", params.pattern.Source, tc.wantSource)
+			}
+			if params.pattern.Controller != tc.wantCtrl {
+				t.Errorf("controller = %v, want %v", params.pattern.Controller, tc.wantCtrl)
+			}
+			if params.pattern.ExcludeSelf != tc.excludeSelf {
+				t.Errorf("ExcludeSelf = %v, want %v", params.pattern.ExcludeSelf, tc.excludeSelf)
+			}
+			if !reflect.DeepEqual(params.pattern.SubjectSelection.RequiredTypes, tc.wantTypes) {
+				t.Errorf("SubjectSelection.RequiredTypes = %v, want %v", params.pattern.SubjectSelection.RequiredTypes, tc.wantTypes)
+			}
+			if params.pattern.SubjectSelection.NonToken != tc.nonToken {
+				t.Errorf("SubjectSelection.NonToken = %v, want %v", params.pattern.SubjectSelection.NonToken, tc.nonToken)
+			}
+		})
+	}
+}
+
+// TestLowerNonSelfDiesTriggerUnknownPhraseReturnsFalse verifies that
+// lowerNonSelfDiesTriggerEvent returns ok=false for unknown phrases.
+func TestLowerNonSelfDiesTriggerUnknownPhraseReturnsFalse(t *testing.T) {
+	t.Parallel()
+	unknownPhrases := []string{
+		"the haunted creature dies",
+		"an elf dies",
+		"a zombie you control dies",
+		"a creature with flying dies",
+		"another artifact dies",
+	}
+	for _, phrase := range unknownPhrases {
+		_, ok := lowerNonSelfDiesTriggerEvent(phrase)
+		if ok {
+			t.Errorf("lowerNonSelfDiesTriggerEvent(%q) returned ok=true, want false", phrase)
+		}
+	}
+}

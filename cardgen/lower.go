@@ -4292,6 +4292,11 @@ func lowerTriggeredAbility(
 			if castAbility, ok := lowerCastTrigger(cardName, ability, syntax); ok {
 				return castAbility, nil
 			}
+			if strings.HasSuffix(ability.Trigger.Event, " dies") {
+				if _, ok := lowerNonSelfDiesTriggerEvent(ability.Trigger.Event); ok {
+					return lowerNonSelfDiesTrigger(cardName, ability, syntax)
+				}
+			}
 		}
 		return triggeredAbility, diagnostic
 	}
@@ -5203,6 +5208,224 @@ func lowerNonSelfEnterTrigger(
 		Optional: ability.Optional,
 		Content:  content,
 	}, true
+}
+
+// nonSelfDiesTriggerParams holds the TriggerType and TriggerPattern values for
+// a recognised non-self dies trigger phrase.
+type nonSelfDiesTriggerParams struct {
+	triggerType game.TriggerType
+	pattern     game.TriggerPattern
+}
+
+// nonSelfDiesPhrases maps exact trigger.Event texts (after the "When[ever] "
+// prefix has been stripped by the oracle compiler) to their lowered forms. Any
+// phrase absent from this table is unsupported — no inference is performed.
+var nonSelfDiesPhrases = map[string]nonSelfDiesTriggerParams{
+	"enchanted creature dies": {
+		triggerType: game.TriggerWhen,
+		pattern: game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceAttachedPermanent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"equipped creature dies": {
+		triggerType: game.TriggerWhen,
+		pattern: game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceAttachedPermanent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"enchanted land dies": {
+		triggerType: game.TriggerWhen,
+		pattern: game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceAttachedPermanent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+			},
+		},
+	},
+	"enchanted permanent dies": {
+		triggerType: game.TriggerWhen,
+		pattern: game.TriggerPattern{
+			Event:  game.EventPermanentDied,
+			Source: game.TriggerSourceAttachedPermanent,
+		},
+	},
+	"another creature dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:       game.EventPermanentDied,
+			ExcludeSelf: true,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"another creature you control dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:       game.EventPermanentDied,
+			Controller:  game.TriggerControllerYou,
+			ExcludeSelf: true,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"a creature dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event: game.EventPermanentDied,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"a creature you control dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:      game.EventPermanentDied,
+			Controller: game.TriggerControllerYou,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"a creature an opponent controls dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:      game.EventPermanentDied,
+			Controller: game.TriggerControllerOpponent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		},
+	},
+	"a nontoken creature you control dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:      game.EventPermanentDied,
+			Controller: game.TriggerControllerYou,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				NonToken:      true,
+			},
+		},
+	},
+	"another nontoken creature you control dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:       game.EventPermanentDied,
+			Controller:  game.TriggerControllerYou,
+			ExcludeSelf: true,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				NonToken:      true,
+			},
+		},
+	},
+	"another nontoken creature dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:       game.EventPermanentDied,
+			ExcludeSelf: true,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				NonToken:      true,
+			},
+		},
+	},
+	"a nontoken creature an opponent controls dies": {
+		triggerType: game.TriggerWhenever,
+		pattern: game.TriggerPattern{
+			Event:      game.EventPermanentDied,
+			Controller: game.TriggerControllerOpponent,
+			SubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				NonToken:      true,
+			},
+		},
+	},
+}
+
+// lowerNonSelfDiesTriggerEvent looks up event text in the recognised non-self
+// dies phrase table and returns the lowered TriggerType and TriggerPattern. If
+// the phrase is not in the table, ok is false; no inference is performed.
+func lowerNonSelfDiesTriggerEvent(event string) (nonSelfDiesTriggerParams, bool) {
+	params, ok := nonSelfDiesPhrases[event]
+	return params, ok
+}
+
+// lowerNonSelfDiesTrigger lowers a non-self dies triggered ability whose event
+// text is in the recognised phrase table. It rejects any body that contains
+// pronoun references (ReferencePronoun) — those require EventPermanentReference
+// dynamics not yet supported by the body lowering pass.
+func lowerNonSelfDiesTrigger(
+	cardName string,
+	ability oracle.CompiledAbility,
+	syntax oracle.Ability,
+) (game.TriggeredAbility, *oracle.Diagnostic) {
+	const unsupportedPhrase = "unsupported dies trigger phrase"
+	const unsupportedBody = "unsupported dies trigger body"
+
+	if ability.Trigger == nil ||
+		(ability.Trigger.Kind != oracle.TriggerWhen && ability.Trigger.Kind != oracle.TriggerWhenever) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"non-self dies trigger requires When or Whenever trigger kind")
+	}
+
+	params, ok := lowerNonSelfDiesTriggerEvent(ability.Trigger.Event)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"unrecognised non-self dies trigger phrase: "+ability.Trigger.Event)
+	}
+	if ability.Trigger.Condition != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"intervening-if conditions are not supported for non-self dies triggers")
+	}
+
+	// Reject bodies that contain pronoun references to the dying permanent.
+	// Those require EventPermanentReference dynamics in body lowering which are
+	// deferred; fail-closed rather than silently produce wrong output.
+	for _, ref := range ability.References {
+		if ref.Kind == oracle.ReferencePronoun {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedBody,
+				"references to dying permanent are not yet lowered")
+		}
+	}
+
+	if len(ability.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"non-self dies trigger does not support modes or ability words")
+	}
+
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
+			"could not prepare trigger body")
+	}
+
+	content, diagnostic := lowerSpell(cardName, body, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedBody+" effect", diagnostic.Detail)
+	}
+
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:    params.triggerType,
+			Pattern: params.pattern,
+		},
+		Optional: ability.Optional,
+		Content:  content,
+	}, nil
 }
 
 // lowerCastTrigger lowers a "whenever ... casts ..." triggered ability into a

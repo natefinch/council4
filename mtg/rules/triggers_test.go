@@ -2717,3 +2717,112 @@ func TestSelfCounterAddedOneOrMoreCoalesces(t *testing.T) {
 		t.Fatalf("stack size = %d, want one coalesced trigger", got)
 	}
 }
+
+// TestNonSelfDiesTriggerControllerFilterFiresOnlyForCorrectController
+// exercises the TriggerControllerYou + ExcludeSelf + SubjectSelection path:
+// the trigger on Player1's creature must NOT fire when an opponent's creature
+// dies and MUST fire when a different Player1-controlled creature dies.
+func TestNonSelfDiesTriggerControllerFilterFiresOnlyForCorrectController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	// Source permanent: watches "another creature you control dies".
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		Controller:  game.TriggerControllerYou,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Opponent's creature dies — trigger must NOT fire.
+	opponentCreature := addCombatCreaturePermanent(g, game.Player2)
+	destroyPermanent(g, opponentCreature.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("non-self dies trigger fired for an opponent-controlled creature")
+	}
+
+	// Another Player1-controlled creature dies — trigger MUST fire once.
+	friendlyCreature := addCombatCreaturePermanent(g, game.Player1)
+	destroyPermanent(g, friendlyCreature.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("non-self dies trigger did not fire for another friendly creature")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+}
+
+// TestNonSelfDiesTriggerExcludeSelfDoesNotFireForSource verifies that a
+// non-self dies trigger with ExcludeSelf=true does not fire when the source
+// permanent itself dies.
+func TestNonSelfDiesTriggerExcludeSelfDoesNotFireForSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	destroyPermanent(g, source.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("ExcludeSelf non-self dies trigger fired for its own source permanent")
+	}
+}
+
+// TestNonSelfDiesTriggerSubjectSelectionCreatureDoesNotMatchNonCreature checks
+// that a trigger with SubjectSelection{RequiredTypes: [Creature]} does not fire
+// when a non-creature permanent dies.
+func TestNonSelfDiesTriggerSubjectSelectionCreatureDoesNotMatchNonCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventPermanentDied,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Add a non-creature (artifact) and destroy it.
+	artifact := addCombatPermanent(g, game.Player2, &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Some Artifact",
+			Types: []types.Card{types.Artifact},
+		},
+	})
+	destroyPermanent(g, artifact.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("creature SubjectSelection trigger fired when a non-creature permanent died")
+	}
+}
+
+// TestNonSelfDiesTriggerSubjectSelectionFiresForMatchingCreature verifies that
+// a SubjectSelection{RequiredTypes: [Creature]} trigger fires when any creature
+// dies — confirming the happy path with LKI-based type matching.
+func TestNonSelfDiesTriggerSubjectSelectionFiresForMatchingCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventPermanentDied,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	creature := addCombatCreaturePermanent(g, game.Player2)
+	destroyPermanent(g, creature.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("SubjectSelection creature trigger did not fire when a creature died")
+	}
+}
