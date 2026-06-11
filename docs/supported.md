@@ -1,6 +1,6 @@
 # Supported Cards
 
-Cards supported: 4,110
+Cards supported: 4,121
 
 - +2 Mace
 - Aang, Air Nomad
@@ -410,6 +410,7 @@ Cards supported: 4,110
 - Boldwyr Aggressor
 - Bolrac-Clan Basher
 - Bolt of Keranos
+- Boltwave
 - Boltwing Marauder
 - Bombard
 - Bond Beetle
@@ -460,6 +461,7 @@ Cards supported: 4,110
 - Breakneck Berserker
 - Breath of Fire
 - Breath of Life
+- Breath of Malfegor
 - Breeding Pool
 - Briar Hydra
 - Briarpack Alpha
@@ -828,6 +830,7 @@ Cards supported: 4,110
 - Deranged Whelp
 - Desert Cerodon
 - Desert Drake
+- Desert Sandstorm
 - Desert Twister
 - Desert of the Fervent
 - Desert of the Glorified
@@ -1192,6 +1195,7 @@ Cards supported: 4,110
 - Fists of the Anvil
 - Flame Javelin
 - Flame Lash
+- Flame Rift
 - Flame Slash
 - Flameborn Hellion
 - Flameborn Viron
@@ -1262,6 +1266,7 @@ Cards supported: 4,110
 - Frost Ogre
 - Frostboil Snarl
 - Frostbridge Guard
+- Fuel the Flames
 - Fugitive Wizard
 - Fugue
 - Fume Spitter
@@ -1682,6 +1687,7 @@ Cards supported: 4,110
 - Immolating Glare
 - Immolation
 - Immortal Phoenix
+- Imp
 - Impale
 - Impassioned Orator
 - Impeccable Timing
@@ -2616,6 +2622,7 @@ Cards supported: 4,110
 - Putrid Goblin
 - Pygmy Razorback
 - Pyre Spawn
+- Pyroclasm
 - Pyromantic Pilgrim
 - Python
 - Qilin's Blessing
@@ -3045,6 +3052,7 @@ Cards supported: 4,110
 - Shipwreck Marsh
 - Shire Scarecrow
 - Shivan Branch-Burner
+- Shivan Gorge
 - Shivan Oasis
 - Shivan Phoenix
 - Shivan Zombie
@@ -3116,6 +3124,7 @@ Cards supported: 4,110
 - Sisay's Ring
 - Sisters of the Flame
 - Sivitri Scarzam
+- Sizzle
 - Skaab Wrangler
 - Skeletal Crocodile
 - Skeletal Snake
@@ -3152,6 +3161,7 @@ Cards supported: 4,110
 - Skysnare Spider
 - Skyspear Cavalry
 - Skyswirl Harrier
+- Slagstorm
 - Slagwoods Bridge
 - Slash Panther
 - Slash of Talons
@@ -3438,6 +3448,7 @@ Cards supported: 4,110
 - Swamp
 - Swashbuckling
 - Sweatworks Brawler
+- Sweltering Suns
 - Swift Response
 - Swift Spinner
 - Swiftblade Vindicator

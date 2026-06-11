@@ -2987,6 +2987,14 @@ func (r Renderer) renderDamageRecipient(ctx *renderCtx, recipient game.DamageRec
 		}
 		return fmt.Sprintf("game.GroupDamageRecipient(%s)", rendered), nil
 	}
+	if group, ok := recipient.PlayerGroupReference(); ok {
+		switch group.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			return "game.PlayerGroupDamageRecipient(game.OpponentsReference())", nil
+		case game.PlayerGroupReferenceAllPlayers:
+			return "game.PlayerGroupDamageRecipient(game.AllPlayersReference())", nil
+		}
+	}
 	return "", errors.New("render: unsupported damage recipient")
 }
 
