@@ -191,6 +191,8 @@ type CompiledSelector struct {
 	Blocking   bool
 	Tapped     bool
 	Untapped   bool
+	Keyword    string
+	Zone       zone.Type
 	Raw        string
 }
 

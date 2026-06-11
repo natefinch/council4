@@ -190,6 +190,44 @@ func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
 	}
 }
 
+func TestDynamicAmountCountsCardsWithCyclingInGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Cycling Creature",
+		ActivatedAbilities: []game.ActivatedAbility{
+			game.CyclingActivatedAbility(cost.Mana{cost.W}),
+		},
+	}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Cycling Land",
+		ActivatedAbilities: []game.ActivatedAbility{
+			game.CyclingActivatedAbility(cost.Mana{cost.O(1)}),
+		},
+	}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "No Cycling"}})
+	addCardToGraveyard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name: "Opponent Cycling",
+		ActivatedAbilities: []game.ActivatedAbility{
+			game.CyclingActivatedAbility(cost.Mana{cost.U}),
+		},
+	}})
+	obj := &game.StackObject{Controller: game.Player1}
+	player := game.ControllerReference()
+
+	got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:     game.DynamicAmountCountCardsInZone,
+		Player:   &player,
+		CardZone: zone.Graveyard,
+		Selection: &game.Selection{
+			Keyword: game.Cycling,
+		},
+	})
+
+	if got != 2 {
+		t.Fatalf("cycling cards in controller graveyard = %d, want 2", got)
+	}
+}
+
 func TestModalResolutionUsesEachModesOwnTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

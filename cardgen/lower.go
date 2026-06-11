@@ -262,11 +262,18 @@ func lowerExecutableAbility(
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
+		consumedReferences := 0
+		if len(ability.References) == 1 &&
+			(ability.References[0].Kind == oracle.ReferenceSelfName ||
+				ability.References[0].Kind == oracle.ReferenceThisObject) {
+			consumedReferences = 1
+		}
 		return abilityLowering{
 			staticAbilities: []loweredStaticAbility{{Body: staticBuff}},
 			consumed: semanticConsumption{
-				effects:  1,
-				keywords: len(ability.Keywords),
+				effects:    1,
+				keywords:   len(ability.Keywords),
+				references: consumedReferences,
 			},
 			sourceSpans: staticPTBuffSourceSpans(ability, syntax),
 		}, nil
@@ -1708,6 +1715,9 @@ func lowerCyclingAbility(
 		return game.ActivatedAbility{}, false, nil
 	}
 	keyword := ability.Keywords[0]
+	if keyword.Parameter == "" && (len(ability.Targets) != 0 || len(ability.Effects) != 0 || len(ability.References) != 0) {
+		return game.ActivatedAbility{}, false, nil
+	}
 	if keyword.Parameter == "" ||
 		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
 		ability.Cost != nil ||
@@ -1941,38 +1951,76 @@ func lowerStaticPTBuff(
 		len(ability.Effects) != 1 ||
 		ability.Effects[0].Kind != oracle.EffectModifyPT ||
 		ability.Effects[0].Duration != oracle.DurationNone ||
-		!ability.Effects[0].PowerDelta.Known ||
-		!ability.Effects[0].ToughnessDelta.Known ||
 		len(ability.Targets) != 0 ||
 		len(ability.Conditions) != 0 ||
-		len(ability.References) != 0 ||
-		ability.Effects[0].StaticSubject == oracle.StaticSubjectNone ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.AbilityWord != "" {
 		return game.StaticAbility{}, false, nil
 	}
 	effect := ability.Effects[0]
-	keywords, keywordsOK := mixedStaticKeywords(ability.Keywords)
+	sourceSelf := effect.StaticSubject == oracle.StaticSubjectNone &&
+		len(ability.References) == 1 &&
+		(ability.References[0].Kind == oracle.ReferenceSelfName ||
+			ability.References[0].Kind == oracle.ReferenceThisObject)
+	if (len(ability.References) != 0 && !sourceSelf) ||
+		(effect.StaticSubject == oracle.StaticSubjectNone && !sourceSelf) {
+		return game.StaticAbility{}, false, nil
+	}
+	dynamicPT := effect.Amount.DynamicKind != oracle.DynamicAmountNone
+	if (!dynamicPT && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) ||
+		(dynamicPT && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known ||
+			!dynamicPTMultiplierMatches(effect.Amount.Multiplier, effect.PowerDelta, effect.ToughnessDelta))) {
+		return game.StaticAbility{}, false, nil
+	}
+	keywordsForBuff := abilityKeywordsExcludingSelectorPredicates(ability)
+	keywords, keywordsOK := mixedStaticKeywords(keywordsForBuff)
+	syntaxOK := matchesExactStaticPTBuffSyntax(syntax, effect)
+	if sourceSelf {
+		syntaxOK = matchesExactSourceStaticPTBuffSyntax(syntax, effect, ability.References[0])
+	}
 	if !keywordsOK ||
-		(len(keywords) == 0 && !matchesExactStaticPTBuffSyntax(syntax, effect)) ||
-		(len(keywords) > 0 && !matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, ability.Keywords)) {
+		(len(keywords) == 0 && !syntaxOK) ||
+		(len(keywords) > 0 && !matchesExactStaticPTBuffWithKeywordsSyntax(syntax, effect, keywordsForBuff)) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported static ability",
 			"the executable source backend supports only exact fixed static creature power/toughness buffs, optionally granting supported keywords",
 		)
 	}
-	group, ok := staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
-	if !ok {
-		return game.StaticAbility{}, false, nil
+	group := game.GroupReference{}
+	if !sourceSelf {
+		var ok bool
+		group, ok = staticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
+		if !ok {
+			return game.StaticAbility{}, false, nil
+		}
 	}
 	continuousEffects := []game.ContinuousEffect{{
 		Layer:          game.LayerPowerToughnessModify,
+		AffectedSource: sourceSelf,
 		Group:          group,
 		PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
 		ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
 	}}
+	if dynamicPT {
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+			return game.StaticAbility{}, true, executableDiagnostic(
+				ability,
+				"unsupported static ability",
+				"the executable source backend supports only exact supported static creature power/toughness buffs",
+			)
+		}
+		continuousEffects[0].PowerDelta = 0
+		continuousEffects[0].ToughnessDelta = 0
+		if powerDelta := dynamicSignedQuantity(dynamic, effect.PowerDelta); powerDelta.IsDynamic() {
+			continuousEffects[0].PowerDeltaDynamic = powerDelta.DynamicAmount()
+		}
+		if toughnessDelta := dynamicSignedQuantity(dynamic, effect.ToughnessDelta); toughnessDelta.IsDynamic() {
+			continuousEffects[0].ToughnessDeltaDynamic = toughnessDelta.DynamicAmount()
+		}
+	}
 	if len(keywords) > 0 {
 		continuousEffects = append(continuousEffects, game.ContinuousEffect{
 			Layer:       game.LayerAbility,
@@ -2304,6 +2352,35 @@ func mixedStaticKeywords(keywords []oracle.CompiledKeyword) ([]game.Keyword, boo
 	return result, true
 }
 
+func abilityKeywordsExcludingSelectorPredicates(ability oracle.CompiledAbility) []oracle.CompiledKeyword {
+	if !abilityUsesCyclingSelectorPredicate(ability) {
+		return ability.Keywords
+	}
+	filtered := make([]oracle.CompiledKeyword, 0, len(ability.Keywords))
+	for _, keyword := range ability.Keywords {
+		if keyword.Name == "Cycling" && keyword.Parameter == "" {
+			continue
+		}
+		filtered = append(filtered, keyword)
+	}
+	return filtered
+}
+
+func abilityUsesCyclingSelectorPredicate(ability oracle.CompiledAbility) bool {
+	for _, target := range ability.Targets {
+		if strings.EqualFold(target.Selector.Keyword, "Cycling") {
+			return true
+		}
+	}
+	for _, effect := range ability.Effects {
+		if strings.EqualFold(effect.Selector.Keyword, "Cycling") ||
+			strings.EqualFold(effect.Amount.Selector.Keyword, "Cycling") {
+			return true
+		}
+	}
+	return false
+}
+
 func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	switch keyword {
 	case game.Deathtouch,
@@ -2441,9 +2518,52 @@ func matchesExactStaticPTBuffSyntax(
 ) bool {
 	tokens := syntaxSemanticTokens(syntax)
 	prefixLength, ok := matchesStaticPTBuffPrefix(tokens, effect)
-	return ok &&
-		len(tokens) == prefixLength+1 &&
+	if !ok {
+		return false
+	}
+	if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+		return len(tokens) > prefixLength+1 &&
+			tokens[len(tokens)-1].Kind == oracle.Period &&
+			lowerTokenText(tokens[prefixLength:len(tokens)-1]) == effect.Amount.Text
+	}
+	return len(tokens) == prefixLength+1 &&
 		tokens[prefixLength].Kind == oracle.Period
+}
+
+func matchesExactSourceStaticPTBuffSyntax(
+	syntax oracle.Ability,
+	effect oracle.CompiledEffect,
+	reference oracle.CompiledReference,
+) bool {
+	tokens := syntaxSemanticTokens(syntax)
+	subjectLength := 0
+	for subjectLength < len(tokens) && spanCovered(tokens[subjectLength].Span, []oracle.Span{reference.Span}) {
+		subjectLength++
+	}
+	prefixLength := subjectLength + 6
+	if subjectLength == 0 ||
+		len(tokens) < prefixLength ||
+		!equalTokenWord(tokens[subjectLength], "gets") ||
+		!tokensMatchSignedAmount(tokens[subjectLength+1], tokens[subjectLength+2], effect.PowerDelta) ||
+		tokens[subjectLength+3].Kind != oracle.Slash ||
+		!tokensMatchSignedAmount(tokens[subjectLength+4], tokens[subjectLength+5], effect.ToughnessDelta) {
+		return false
+	}
+	if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+		return len(tokens) > prefixLength+1 &&
+			tokens[len(tokens)-1].Kind == oracle.Period &&
+			lowerTokenText(tokens[prefixLength:len(tokens)-1]) == effect.Amount.Text
+	}
+	return len(tokens) == prefixLength+1 &&
+		tokens[prefixLength].Kind == oracle.Period
+}
+
+func lowerTokenText(tokens []oracle.Token) string {
+	parts := make([]string, 0, len(tokens))
+	for _, token := range tokens {
+		parts = append(parts, token.Text)
+	}
+	return strings.Join(parts, " ")
 }
 
 func matchesExactStaticPTBuffWithKeywordsSyntax(
@@ -4872,39 +4992,48 @@ func lowerTargetedGraveyardReturn(ability oracle.CompiledAbility) (game.AbilityC
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	targetCard := game.CardReference{Kind: game.CardReferenceTarget}
+	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
 	switch ability.Effects[0].ToZone {
 	case zone.Hand:
-		return game.Mode{
-			Targets: []game.TargetSpec{targetSpec},
-			Sequence: []game.Instruction{{Primitive: game.MoveCard{
-				Card:        targetCard,
+		for i := range targetSpec.MaxTargets {
+			sequence = append(sequence, game.Instruction{Primitive: game.MoveCard{
+				Card:        game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
 				FromZone:    zone.Graveyard,
 				Destination: zone.Hand,
-			}}},
+			}})
+		}
+		return game.Mode{
+			Targets:  []game.TargetSpec{targetSpec},
+			Sequence: sequence,
 		}.Ability(), true
 	case zone.Library:
 		destinationBottom, ok := graveyardReturnLibraryBottom(ability.Targets[0].Text)
 		if !ok {
 			return game.AbilityContent{}, false
 		}
-		return game.Mode{
-			Targets: []game.TargetSpec{targetSpec},
-			Sequence: []game.Instruction{{Primitive: game.MoveCard{
-				Card:              targetCard,
+		for i := range targetSpec.MaxTargets {
+			sequence = append(sequence, game.Instruction{Primitive: game.MoveCard{
+				Card:              game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
 				FromZone:          zone.Graveyard,
 				Destination:       zone.Library,
 				DestinationBottom: destinationBottom,
-			}}},
-		}.Ability(), true
-	case zone.Battlefield:
-		put, ok := targetedGraveyardBattlefieldPut(ability.Text, targetCard)
-		if !ok {
-			return game.AbilityContent{}, false
+			}})
 		}
 		return game.Mode{
 			Targets:  []game.TargetSpec{targetSpec},
-			Sequence: []game.Instruction{{Primitive: put}},
+			Sequence: sequence,
+		}.Ability(), true
+	case zone.Battlefield:
+		for i := range targetSpec.MaxTargets {
+			put, ok := targetedGraveyardBattlefieldPut(ability.Text, game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i})
+			if !ok {
+				return game.AbilityContent{}, false
+			}
+			sequence = append(sequence, game.Instruction{Primitive: put})
+		}
+		return game.Mode{
+			Targets:  []game.TargetSpec{targetSpec},
+			Sequence: sequence,
 		}.Ability(), true
 	default:
 		return game.AbilityContent{}, false
@@ -4947,16 +5076,19 @@ func graveyardReturnLibraryBottom(text string) (destinationBottom, recognized bo
 }
 
 func cardInZoneTargetSpec(target oracle.CompiledTarget, targetZone zone.Type) (game.TargetSpec, bool) {
-	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 ||
+	if target.Cardinality.Min < 0 || target.Cardinality.Max < target.Cardinality.Min ||
+		target.Cardinality.Max == 0 ||
 		target.Selector.Another || target.Selector.Other ||
 		target.Selector.Attacking || target.Selector.Blocking {
 		return game.TargetSpec{}, false
 	}
 	targetText := graveyardCardTargetText(target.Text)
 	const targetPrefix = "target "
-	if !strings.HasPrefix(strings.ToLower(targetText), targetPrefix) {
+	targetIndex := strings.Index(strings.ToLower(targetText), targetPrefix)
+	if targetIndex < 0 {
 		return game.TargetSpec{}, false
 	}
+	targetText = targetText[targetIndex:]
 	targetBody := targetText[len(targetPrefix):]
 	controller := game.ControllerAny
 	switch {
@@ -4973,8 +5105,8 @@ func cardInZoneTargetSpec(target oracle.CompiledTarget, targetZone zone.Type) (g
 	}
 	targetBody = strings.ToLower(targetBody)
 	spec := game.TargetSpec{
-		MinTargets: 1,
-		MaxTargets: 1,
+		MinTargets: target.Cardinality.Min,
+		MaxTargets: target.Cardinality.Max,
 		Constraint: lowerFirst(targetText),
 		Allow:      game.TargetAllowCard,
 		TargetZone: targetZone,
@@ -4982,20 +5114,46 @@ func cardInZoneTargetSpec(target oracle.CompiledTarget, targetZone zone.Type) (g
 	var selection game.Selection
 	switch targetBody {
 	case "card":
+	case "card with cycling", "cards with cycling", "card with a cycling ability", "cards with a cycling ability":
+		selection.Keyword = game.Cycling
 	case "instant or sorcery card":
 		selection.RequiredTypesAny = []types.Card{types.Instant, types.Sorcery}
+	case "instant or sorcery card with cycling", "instant or sorcery cards with cycling", "instant or sorcery card with a cycling ability", "instant or sorcery cards with a cycling ability":
+		selection.RequiredTypesAny = []types.Card{types.Instant, types.Sorcery}
+		selection.Keyword = game.Cycling
 	case "artifact card":
 		selection.RequiredTypes = []types.Card{types.Artifact}
+	case "artifact card with cycling", "artifact cards with cycling", "artifact card with a cycling ability", "artifact cards with a cycling ability":
+		selection.RequiredTypes = []types.Card{types.Artifact}
+		selection.Keyword = game.Cycling
 	case "creature card":
 		selection.RequiredTypes = []types.Card{types.Creature}
+	case "creature card with cycling", "creature cards with cycling", "creature card with a cycling ability", "creature cards with a cycling ability":
+		selection.RequiredTypes = []types.Card{types.Creature}
+		selection.Keyword = game.Cycling
 	case "enchantment card":
 		selection.RequiredTypes = []types.Card{types.Enchantment}
+	case "enchantment card with cycling", "enchantment cards with cycling", "enchantment card with a cycling ability", "enchantment cards with a cycling ability":
+		selection.RequiredTypes = []types.Card{types.Enchantment}
+		selection.Keyword = game.Cycling
 	case "land card":
 		selection.RequiredTypes = []types.Card{types.Land}
+	case "land card with cycling", "land cards with cycling", "land card with a cycling ability", "land cards with a cycling ability":
+		selection.RequiredTypes = []types.Card{types.Land}
+		selection.Keyword = game.Cycling
 	case "planeswalker card":
 		selection.RequiredTypes = []types.Card{types.Planeswalker}
+	case "planeswalker card with cycling", "planeswalker cards with cycling", "planeswalker card with a cycling ability", "planeswalker cards with a cycling ability":
+		selection.RequiredTypes = []types.Card{types.Planeswalker}
+		selection.Keyword = game.Cycling
+	case "permanent card with cycling", "permanent cards with cycling", "permanent card with a cycling ability", "permanent cards with a cycling ability":
+		selection.RequiredTypesAny = []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle}
+		selection.Keyword = game.Cycling
 	case "vehicle card":
 		selection.SubtypesAny = []types.Sub{types.Vehicle}
+	case "vehicle card with cycling", "vehicle cards with cycling", "vehicle card with a cycling ability", "vehicle cards with a cycling ability":
+		selection.SubtypesAny = []types.Sub{types.Vehicle}
+		selection.Keyword = game.Cycling
 	default:
 		if !lowerCardTargetManaValuePredicate(targetBody, &selection) {
 			return game.TargetSpec{}, false
@@ -5453,6 +5611,9 @@ func lowerOrderedEffectSequence(
 	if len(ability.Conditions) != 0 || len(ability.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 	}
+	if content, ok := lowerCyclingCountDamageAndGain(cardName, ability); ok {
+		return content, nil
+	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
 	consumedTargets := 0
@@ -5490,6 +5651,58 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ability)
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func lowerCyclingCountDamageAndGain(cardName string, ability oracle.CompiledAbility) (game.AbilityContent, bool) {
+	if len(ability.Effects) != 2 ||
+		ability.Effects[0].Kind != oracle.EffectDealDamage ||
+		ability.Effects[1].Kind != oracle.EffectGain ||
+		ability.Effects[0].Negated ||
+		ability.Effects[1].Negated ||
+		len(ability.Targets) != 1 ||
+		ability.Targets[0].Cardinality.Min != 1 ||
+		ability.Targets[0].Cardinality.Max != 1 ||
+		len(ability.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ability)) != 0 ||
+		len(ability.Modes) != 0 ||
+		!singleSelfReference(ability.References) {
+		return game.AbilityContent{}, false
+	}
+	amountEffect := ability.Effects[1].Amount
+	if amountEffect.DynamicKind == oracle.DynamicAmountNone ||
+		amountEffect.DynamicForm != oracle.DynamicAmountWhereX {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(amountEffect, game.SourcePermanentReference())
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	target, ok := damageTargetSpec(ability.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	if ability.Text != fmt.Sprintf(
+		"%s deals X damage to %s and you gain X life, %s.",
+		cardName,
+		ability.Targets[0].Text,
+		amountEffect.Text,
+	) {
+		return game.AbilityContent{}, false
+	}
+	amount := game.Dynamic(dynamic)
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{
+			{Primitive: game.Damage{
+				Amount:    amount,
+				Recipient: game.AnyTargetDamageRecipient(0),
+			}},
+			{Primitive: game.GainLife{
+				Amount: amount,
+				Player: game.ControllerReference(),
+			}},
+		},
+	}.Ability(), true
 }
 
 func rebaseTargetedSequence(sequence []game.Instruction, offset int) bool {
@@ -5731,7 +5944,7 @@ func lowerFixedDamageSpell(
 		ability.Targets[0].Cardinality.Min != 1 ||
 		ability.Targets[0].Cardinality.Max != 1 ||
 		len(ability.Conditions) != 0 ||
-		len(ability.Keywords) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ability)) != 0 ||
 		len(ability.Modes) != 0 {
 		return game.AbilityContent{}, executableDiagnostic(
 			ability,
@@ -6304,6 +6517,9 @@ func lowerDynamicAmount(amount oracle.CompiledAmount, object game.ObjectReferenc
 	dynamic := game.DynamicAmount{Multiplier: amount.Multiplier}
 	switch amount.DynamicKind {
 	case oracle.DynamicAmountCount:
+		if dynamic, ok := dynamicCardZoneAmount(amount.Selector, amount.Multiplier); ok {
+			return dynamic, true
+		}
 		selection, ok := dynamicAmountSelection(amount.Selector)
 		if !ok {
 			return game.DynamicAmount{}, false
@@ -6355,7 +6571,44 @@ func dynamicAmountSelection(selector oracle.CompiledSelector) (game.Selection, b
 	if requiredType != "" {
 		selection.RequiredTypes = []types.Card{requiredType}
 	}
+	if selector.Keyword != "" {
+		keyword, ok := oracleKeyword(selector.Keyword)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.Keyword = keyword
+	}
 	return selection, true
+}
+
+func dynamicCardZoneAmount(selector oracle.CompiledSelector, multiplier int) (game.DynamicAmount, bool) {
+	if selector.Kind != oracle.SelectorCard || selector.Zone == zone.None {
+		return game.DynamicAmount{}, false
+	}
+	if selector.Zone != zone.Graveyard || selector.Controller != oracle.ControllerYou {
+		return game.DynamicAmount{}, false
+	}
+	keyword, ok := oracleKeyword(selector.Keyword)
+	if !ok || keyword != game.Cycling {
+		return game.DynamicAmount{}, false
+	}
+	player := game.ControllerReference()
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountCountCardsInZone,
+		Multiplier: multiplier,
+		Player:     &player,
+		CardZone:   selector.Zone,
+		Selection:  &game.Selection{Keyword: keyword},
+	}, true
+}
+
+func oracleKeyword(name string) (game.Keyword, bool) {
+	switch name {
+	case "Cycling":
+		return game.Cycling, true
+	default:
+		return game.KeywordNone, false
+	}
 }
 
 func exactDamageAmountSyntax(

@@ -1796,6 +1796,12 @@ func renderCardReference(reference game.CardReference) (string, error) {
 		if reference.LinkID != "" {
 			return "", errors.New("render: target card reference has LinkID")
 		}
+		if reference.TargetIndex < 0 {
+			return "", errors.New("render: target card reference has negative TargetIndex")
+		}
+		if reference.TargetIndex != 0 {
+			return fmt.Sprintf("game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: %d}", reference.TargetIndex), nil
+		}
 		return "game.CardReference{Kind: game.CardReferenceTarget}", nil
 	case game.CardReferenceLinked:
 		if reference.LinkID == "" {
@@ -3000,6 +3006,28 @@ func (r Renderer) renderQuantity(ctx *renderCtx, quantity game.Quantity) (string
 		}
 		fields = append(fields, fmt.Sprintf("Object: %s,", object))
 	}
+	if dynamic.Val.Player != nil && dynamic.Val.Player.Kind() != game.PlayerReferenceNone {
+		player, err := r.renderPlayerReference(*dynamic.Val.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Player: func() *game.PlayerReference { ref := %s; return &ref }(),", player))
+	}
+	if dynamic.Val.CardZone != zone.None {
+		cardZone, err := renderZone(dynamic.Val.CardZone)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		fields = append(fields, fmt.Sprintf("CardZone: %s,", cardZone))
+	}
+	if dynamic.Val.Selection != nil && !dynamic.Val.Selection.Empty() {
+		selection, err := r.renderSelection(ctx, *dynamic.Val.Selection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Selection: &%s,", selection))
+	}
 	if dynamic.Val.ResultKey != "" {
 		fields = append(fields, fmt.Sprintf("ResultKey: game.ResultKey(%q),", string(dynamic.Val.ResultKey)))
 	}
@@ -3028,6 +3056,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountControllerGraveyardSize", nil
 	case game.DynamicAmountCountSelector:
 		return "game.DynamicAmountCountSelector", nil
+	case game.DynamicAmountCountCardsInZone:
+		return "game.DynamicAmountCountCardsInZone", nil
 	case game.DynamicAmountPreviousEffectResult:
 		return "game.DynamicAmountPreviousEffectResult", nil
 	case game.DynamicAmountOpponentCount:

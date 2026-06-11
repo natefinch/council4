@@ -669,6 +669,40 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 	}
 }
 
+func TestCompileWithCyclingTargetSelector(t *testing.T) {
+	t.Parallel()
+	source := "Return up to two target cards with cycling from your graveyard to your hand."
+	compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	target := compilation.Abilities[0].Targets[0]
+	if target.Cardinality.Min != 0 || target.Cardinality.Max != 2 {
+		t.Fatalf("cardinality = %#v, want up to two", target.Cardinality)
+	}
+	if target.Selector.Kind != SelectorCard || target.Selector.Keyword != "Cycling" {
+		t.Fatalf("selector = %#v, want card with Cycling", target.Selector)
+	}
+}
+
+func TestCompileDynamicCardCountWithCyclingInGraveyard(t *testing.T) {
+	t.Parallel()
+	source := "Flare deals X damage to any target, where X is the number of cards with a cycling ability in your graveyard."
+	compilation, diagnostics := Compile(source, ParseContext{CardName: "Flare", InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	amount := compilation.Abilities[0].Effects[0].Amount
+	if amount.DynamicKind != DynamicAmountCount ||
+		amount.DynamicForm != DynamicAmountWhereX ||
+		amount.Selector.Kind != SelectorCard ||
+		amount.Selector.Keyword != "Cycling" ||
+		amount.Selector.Zone != zone.Graveyard ||
+		amount.Selector.Controller != ControllerYou {
+		t.Fatalf("amount = %#v, want count of cards with Cycling in your graveyard", amount)
+	}
+}
+
 func TestCompileNamedCounterKinds(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
