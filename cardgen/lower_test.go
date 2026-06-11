@@ -5177,6 +5177,78 @@ func TestLowerSpellModifyPTQualifiedTarget(t *testing.T) {
 	}
 }
 
+func TestLowerTemporaryGroupModifyPTSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Guidance",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Creatures you control get +1/+1 until end of turn.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	primitive, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+	}
+	if primitive.Object.Exists || primitive.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("primitive = %+v, want group effect until end of turn", primitive)
+	}
+	if len(primitive.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %d, want 1", len(primitive.ContinuousEffects))
+	}
+	effect := primitive.ContinuousEffects[0]
+	selection := effect.Group.Selection()
+	if effect.Layer != game.LayerPowerToughnessModify ||
+		effect.PowerDelta != 1 ||
+		effect.ToughnessDelta != 1 ||
+		effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.Controller != game.ControllerYou ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("continuous effect = %+v, want controlled creatures +1/+1", effect)
+	}
+}
+
+func TestLowerTemporaryTargetKeywordSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Flight",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Target creature gains flying until end of turn.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	checkKeywordGrantPrimitive(t, mode, 0, game.Flying)
+}
+
+func TestLowerTemporaryTargetPTKeywordSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Growth",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Target creature gets +2/+2 and gains trample until end of turn.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	primitive, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+	}
+	if len(primitive.ContinuousEffects) != 2 {
+		t.Fatalf("continuous effects = %d, want 2", len(primitive.ContinuousEffects))
+	}
+	pt := primitive.ContinuousEffects[0]
+	keyword := primitive.ContinuousEffects[1]
+	if pt.Layer != game.LayerPowerToughnessModify || pt.PowerDelta != 2 || pt.ToughnessDelta != 2 {
+		t.Fatalf("power/toughness effect = %+v", pt)
+	}
+	if keyword.Layer != game.LayerAbility ||
+		len(keyword.AddKeywords) != 1 ||
+		keyword.AddKeywords[0] != game.Trample {
+		t.Fatalf("keyword effect = %+v", keyword)
+	}
+}
+
 func TestLowerOrderedSpellEffects(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
