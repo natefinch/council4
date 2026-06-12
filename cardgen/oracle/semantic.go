@@ -191,6 +191,27 @@ const (
 	ConditionPredicateSourceWouldDie
 	ConditionPredicateSourceWouldGoToGraveyard
 	ConditionPredicateTargetControllerDoesNotPay
+	ConditionPredicateObjectMatches
+	ConditionPredicateObjectExists
+	ConditionPredicateEventSubjectHadCounters
+	// ConditionPredicateEventHistory is satisfied when the event history for the
+	// current or previous turn contains at least one event matching
+	// EventHistoryPattern. When Negated is true the condition is satisfied when
+	// no matching event is found (e.g. "if no spells were cast last turn").
+	ConditionPredicateEventHistory
+)
+
+// ConditionEventHistoryWindow identifies which turn's event log to search.
+type ConditionEventHistoryWindow uint8
+
+// Condition event history window values.
+const (
+	// ConditionEventHistoryWindowCurrentTurn checks events that occurred during
+	// the current turn (e.g. "if you attacked this turn").
+	ConditionEventHistoryWindowCurrentTurn ConditionEventHistoryWindow = iota
+	// ConditionEventHistoryWindowPreviousTurn checks events from the immediately
+	// preceding turn (e.g. "if an opponent lost life last turn").
+	ConditionEventHistoryWindowPreviousTurn
 )
 
 // ConditionCardType identifies a card type in a semantic condition Selection.
@@ -240,6 +261,16 @@ const (
 	ConditionCounterMinusOneMinusOne
 )
 
+// ConditionTriState is a closed semantic true/false selection filter.
+type ConditionTriState uint8
+
+// Condition tri-state values.
+const (
+	ConditionTriAny ConditionTriState = iota
+	ConditionTriTrue
+	ConditionTriFalse
+)
+
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
@@ -249,21 +280,30 @@ type ConditionSelection struct {
 	ColorsAny         []ConditionColor
 	Colorless         bool
 	ExcludeSource     bool
+	Tapped            ConditionTriState
 	PowerAtLeast      int
 	MatchPowerAtLeast bool
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.
 type CompiledCondition struct {
-	Kind        ConditionKind
-	Span        Span
-	Text        string
-	Intervening bool
-	Predicate   ConditionPredicate
-	Negated     bool
-	Threshold   int
-	Selection   ConditionSelection
-	Counter     ConditionCounter
+	Kind          ConditionKind
+	Span          Span
+	Text          string
+	Intervening   bool
+	Predicate     ConditionPredicate
+	Negated       bool
+	Threshold     int
+	Selection     ConditionSelection
+	Counter       ConditionCounter
+	ObjectBinding ReferenceBinding
+
+	// EventHistoryPattern and EventHistoryWindow are set when Predicate is
+	// ConditionPredicateEventHistory. EventHistoryPattern describes the event
+	// kind and optional filters; EventHistoryWindow selects the turn to search.
+	// EventHistoryPattern is a pointer to avoid bloating CompiledCondition.
+	EventHistoryPattern *TriggerPattern
+	EventHistoryWindow  ConditionEventHistoryWindow
 }
 
 // TargetCardinality is an inclusive target count range.
@@ -532,7 +572,13 @@ const (
 	ReferenceBindingSource
 	ReferenceBindingTarget
 	ReferenceBindingEventPermanent
+	ReferenceBindingEventCard
 	ReferenceBindingPriorInstructionResult
+	// ReferenceBindingEventPlayer binds player pronouns (they/their/them) in
+	// trigger bodies where the triggering event has an authoritative player
+	// subject. At runtime EventPlayerReference() resolves this to the player
+	// identified by the event.
+	ReferenceBindingEventPlayer
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.

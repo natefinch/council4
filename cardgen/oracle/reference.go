@@ -60,11 +60,25 @@ func bindReferences(
 			reference.Binding = ReferenceBindingSource
 			continue
 		}
+		if trigger != nil && triggerReferenceBindsEventCard(&trigger.Pattern, *reference, effects) {
+			reference.Binding = ReferenceBindingEventCard
+			continue
+		}
 		if trigger != nil &&
 			reference.Span.Start.Offset >= trigger.Span.Start.Offset &&
 			!trigger.Pattern.OneOrMore &&
 			triggerEventBindsPermanent(trigger.Pattern.Event) {
 			reference.Binding = ReferenceBindingEventPermanent
+			continue
+		}
+		if trigger != nil &&
+			reference.Kind == ReferencePronoun &&
+			reference.Span.Start.Offset >= trigger.Span.Start.Offset &&
+			triggerEventBindsPlayer(trigger.Pattern.Event) &&
+			(strings.EqualFold(reference.Text, "they") ||
+				strings.EqualFold(reference.Text, "their") ||
+				strings.EqualFold(reference.Text, "them")) {
+			reference.Binding = ReferenceBindingEventPlayer
 			continue
 		}
 		if reference.Kind == ReferencePronoun {
@@ -227,6 +241,50 @@ func triggerEventBindsPermanent(event TriggerEvent) bool {
 		TriggerEventObjectBecameTarget,
 		TriggerEventPermanentMutated,
 		TriggerEventAttackerBecameBlocked:
+		return true
+	default:
+		return false
+	}
+}
+
+func triggerReferenceBindsEventCard(
+	trigger *TriggerPattern,
+	reference CompiledReference,
+	effects []CompiledEffect,
+) bool {
+	if trigger.OneOrMore ||
+		(trigger.Event != TriggerEventPermanentDied &&
+			(trigger.Event != TriggerEventZoneChanged ||
+				!trigger.MatchToZone ||
+				trigger.ToZone != TriggerZoneGraveyard)) {
+		return false
+	}
+	for _, effect := range effects {
+		if !spanContains(effect.Span, reference.Span) {
+			continue
+		}
+		switch effect.Kind {
+		case EffectReturn, EffectExile, EffectCast:
+			return true
+		default:
+			return false
+		}
+	}
+	return false
+}
+
+// triggerEventBindsPlayer reports whether the trigger event has an authoritative
+// player subject. When true, player pronouns in the trigger body (they/their/them)
+// are conservatively bound to ReferenceBindingEventPlayer.
+func triggerEventBindsPlayer(event TriggerEvent) bool {
+	switch event {
+	case TriggerEventCardDrawn,
+		TriggerEventCardDiscarded,
+		TriggerEventCycled,
+		TriggerEventScry,
+		TriggerEventSurveil,
+		TriggerEventLifeGained,
+		TriggerEventLifeLost:
 		return true
 	default:
 		return false

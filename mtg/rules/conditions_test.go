@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -109,6 +110,150 @@ func TestConditionControlsMatchingIgnoresPhasedOutPermanents(t *testing.T) {
 	artifact.PhasedOut = true
 	if conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition counted phased-out artifact")
+	}
+}
+
+func TestConditionObjectMatchesSourceLiveState(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Relic",
+		Types: []types.Card{types.Artifact},
+	}})
+	condition := opt.Val(game.Condition{
+		Object: opt.Val(game.SourcePermanentReference()),
+		ObjectMatches: opt.Val(game.Selection{
+			RequiredTypes: []types.Card{types.Artifact},
+			Tapped:        game.TriFalse,
+		}),
+	})
+	ctx := conditionContext{controller: game.Player1, source: source}
+	if !conditionSatisfied(g, ctx, condition) {
+		t.Fatal("source object condition did not match live untapped artifact")
+	}
+	source.Tapped = true
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("source object condition matched tapped artifact")
+	}
+
+	exists := opt.Val(game.Condition{Object: opt.Val(game.SourcePermanentReference())})
+	if !conditionSatisfied(g, ctx, exists) {
+		t.Fatal("source existence condition did not match battlefield source")
+	}
+	g.Battlefield = nil
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, exists) {
+		t.Fatal("source existence condition matched absent source")
+	}
+}
+
+func TestConditionObjectMatchesEventPermanentLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	human := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Departed Human",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Human},
+	}})
+	snapshot := snapshotPermanent(g, human, zone.Battlefield)
+	rememberLastKnown(g, &snapshot)
+	g.Battlefield = nil
+	ctx := conditionContext{
+		controller: game.Player1,
+		event:      &game.Event{Kind: game.EventPermanentDied, PermanentID: human.ObjectID},
+	}
+	condition := opt.Val(game.Condition{
+		Object: opt.Val(game.EventPermanentReference()),
+		ObjectMatches: opt.Val(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			SubtypesAny:   []types.Sub{types.Human},
+		}),
+	})
+	if !conditionSatisfied(g, ctx, condition) {
+		t.Fatal("event object condition did not match creature/Human LKI")
+	}
+	condition.Val.ObjectMatches.Val.SubtypesAny = []types.Sub{types.Elf}
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("event object condition matched wrong LKI subtype")
+	}
+	legacy := opt.Val(game.Condition{
+		Object: opt.Val(game.EventPermanentReference()),
+		Types:  []types.Card{types.Creature},
+	})
+	if !conditionSatisfied(g, ctx, legacy) {
+		t.Fatal("legacy Object+Types condition no longer matched LKI")
+	}
+}
+
+func TestConditionProvenControllerSelections(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for i := range 2 {
+		creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:      fmt.Sprintf("Tapped Creature %d", i),
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(game.PT{Value: 5}),
+			Toughness: opt.Val(game.PT{Value: 5}),
+		}})
+		creature.Tapped = true
+	}
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Gate",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Gate},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Equipment",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
+	}})
+	ctx := conditionContext{controller: game.Player1}
+	for _, condition := range []game.Condition{
+		{ControlsMatching: opt.Val(game.SelectionCount{
+			MinCount:  2,
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Tapped: game.TriTrue},
+		})},
+		{ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 5})},
+		})},
+		{ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}, SubtypesAny: []types.Sub{types.Gate}},
+		})},
+		{ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}, SubtypesAny: []types.Sub{types.Equipment}},
+		})},
+	} {
+		if !conditionSatisfied(g, ctx, opt.Val(condition)) {
+			t.Fatalf("controller selection condition did not match: %+v", condition)
+		}
+	}
+	noCreatures := opt.Val(game.Condition{
+		Negate: true,
+		ControlsMatching: opt.Val(game.SelectionCount{
+			MinCount:  1,
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		}),
+	})
+	if conditionSatisfied(g, ctx, noCreatures) {
+		t.Fatal("no-creatures condition matched controlled creatures")
+	}
+}
+
+func TestInterveningHadCountersUsesEventPermanentLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Charged Relic",
+		Types: []types.Card{types.Artifact},
+	}})
+	permanent.Counters.Add(counter.Charge, 1)
+	snapshot := snapshotPermanent(g, permanent, zone.Battlefield)
+	rememberLastKnown(g, &snapshot)
+	g.Battlefield = nil
+	trigger := game.TriggerCondition{InterveningIfEventPermanentHadCounters: true}
+	event := game.Event{Kind: game.EventZoneChanged, PermanentID: permanent.ObjectID}
+	if !triggerInterveningIf(g, nil, game.Player1, &trigger, &event) {
+		t.Fatal("had-counters intervening condition did not match LKI counters")
+	}
+	snapshot.Counters = counter.Set{}
+	rememberLastKnown(g, &snapshot)
+	if triggerInterveningIf(g, nil, game.Player1, &trigger, &event) {
+		t.Fatal("had-counters intervening condition matched empty LKI counters")
 	}
 }
 
@@ -670,4 +815,194 @@ func cinderLikeLand() *game.CardDef {
 			}),
 		}},
 	}
+}
+
+func TestEventHistoryConditionCurrentTurn(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source1 := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Bear",
+		Types: []types.Card{types.Creature},
+	}})
+	source2 := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Opponent Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	attackedCond := opt.Val(game.Condition{
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{
+				Event:      game.EventAttackerDeclared,
+				Controller: game.TriggerControllerYou,
+			},
+			Window: game.EventHistoryCurrentTurn,
+		}),
+	})
+
+	ctx1 := conditionContext{controller: game.Player1, source: source1}
+	ctx2 := conditionContext{controller: game.Player2, source: source2}
+	if conditionSatisfied(g, ctx1, attackedCond) {
+		t.Fatal("condition satisfied before any attacks")
+	}
+
+	// Player1 attacks — satisfied for Player1's source but not Player2's.
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1})
+
+	if !conditionSatisfied(g, ctx1, attackedCond) {
+		t.Fatal("condition not satisfied after Player1 attacked")
+	}
+	if conditionSatisfied(g, ctx2, attackedCond) {
+		t.Fatal("condition satisfied for Player2 source when only Player1 attacked")
+	}
+}
+
+func TestEventHistoryConditionPreviousTurn(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	lifeLostCond := opt.Val(game.Condition{
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{
+				Event:  game.EventLifeLost,
+				Player: game.TriggerPlayerOpponent,
+			},
+			Window: game.EventHistoryPreviousTurn,
+		}),
+	})
+
+	ctx := conditionContext{controller: game.Player1, source: source}
+	if conditionSatisfied(g, ctx, lifeLostCond) {
+		t.Fatal("condition satisfied before any events")
+	}
+
+	// Emit life-loss on this turn then advance to the next turn so it becomes
+	// "previous turn" for the upkeep check.
+	emitEvent(g, game.Event{Kind: game.EventLifeLost, Player: game.Player2, Amount: 3})
+	g.EventTurnStarts = append(g.EventTurnStarts, len(g.Events))
+	g.Turn.TurnNumber++
+
+	if !conditionSatisfied(g, ctx, lifeLostCond) {
+		t.Fatal("condition not satisfied after opponent lost life last turn")
+	}
+}
+
+func TestEventHistoryConditionNegatedNoSpells(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	noSpellsCond := opt.Val(game.Condition{
+		Negate: true,
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{Event: game.EventSpellCast},
+			Window:  game.EventHistoryPreviousTurn,
+		}),
+	})
+
+	ctx := conditionContext{controller: game.Player1, source: source}
+
+	// No previous turn yet — EventsPreviousTurn returns nil, no spells found →
+	// condition (negated) is satisfied.
+	if !conditionSatisfied(g, ctx, noSpellsCond) {
+		t.Fatal("negated condition not satisfied when no previous-turn events exist")
+	}
+
+	// Emit a spell cast on "last turn" then advance.
+	emitEvent(g, game.Event{Kind: game.EventSpellCast, Controller: game.Player1})
+	g.EventTurnStarts = append(g.EventTurnStarts, len(g.Events))
+	g.Turn.TurnNumber++
+
+	if conditionSatisfied(g, ctx, noSpellsCond) {
+		t.Fatal("negated condition satisfied when a spell was cast last turn")
+	}
+}
+
+func TestEventHistoryConditionCreatureDiedCurrentTurn(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	creatureDiedCond := opt.Val(game.Condition{
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{
+				Event:            game.EventPermanentDied,
+				SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+			Window: game.EventHistoryCurrentTurn,
+		}),
+	})
+
+	ctx := conditionContext{controller: game.Player1, source: source}
+	if conditionSatisfied(g, ctx, creatureDiedCond) {
+		t.Fatal("condition satisfied before any creature deaths")
+	}
+
+	// A non-creature permanent died — should not satisfy.
+	addAndEmitArtifactDied(g)
+	if conditionSatisfied(g, ctx, creatureDiedCond) {
+		t.Fatal("condition satisfied after non-creature died")
+	}
+
+	// A creature dies — now satisfied.
+	emitCreatureDiedEvent(g)
+	if !conditionSatisfied(g, ctx, creatureDiedCond) {
+		t.Fatal("condition not satisfied after creature died")
+	}
+}
+
+func TestEventHistoryConditionFailsClosedWithNilSource(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1})
+
+	cond := opt.Val(game.Condition{
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{
+				Event:      game.EventAttackerDeclared,
+				Controller: game.TriggerControllerYou,
+			},
+			Window: game.EventHistoryCurrentTurn,
+		}),
+	})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1, source: nil}, cond) {
+		t.Fatal("condition satisfied with nil source; should fail closed")
+	}
+}
+
+// addAndEmitArtifactDied registers and emits an EventPermanentDied for a
+// non-creature artifact so tests can verify creature-type filtering.
+func addAndEmitArtifactDied(g *game.Game) {
+	perm := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Dead Relic",
+		Types: []types.Card{types.Artifact},
+	}})
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentDied,
+		PermanentID: perm.ObjectID,
+		CardTypes:   []types.Card{types.Artifact},
+	})
+}
+
+// emitCreatureDiedEvent emits an EventPermanentDied that looks like a creature
+// died by recording creature card types on the event directly.
+func emitCreatureDiedEvent(g *game.Game) {
+	perm := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Dead Bear",
+		Types: []types.Card{types.Creature},
+	}})
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentDied,
+		PermanentID: perm.ObjectID,
+		CardTypes:   []types.Card{types.Creature},
+	})
 }

@@ -680,6 +680,55 @@ func TestValidateCardDefChecksStructuredConditionObjectReferences(t *testing.T) 
 	if !hasCardDefIssue(issues, CardDefIssueTargetIndexOutOfRange) {
 		t.Fatalf("issues = %+v, want target index issue from structured condition object", issues)
 	}
+
+}
+
+func TestValidateCardDefChecksConditionObjectMatches(t *testing.T) {
+	makeCard := func(condition Condition) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:       "Object Condition",
+			OracleText: "Whenever a creature dies, if it was a Human, draw a card.",
+			TriggeredAbilities: []TriggeredAbility{{
+				Content: Mode{}.Ability(),
+				Trigger: TriggerCondition{
+					Pattern:              TriggerPattern{Event: EventPermanentDied},
+					InterveningCondition: opt.Val(condition),
+				},
+			}},
+		}}
+	}
+
+	valid := Condition{
+		Object: opt.Val(EventPermanentReference()),
+		ObjectMatches: opt.Val(Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			SubtypesAny:   []types.Sub{types.Human},
+		}),
+	}
+	if issues := ValidateCardDef(makeCard(valid)); len(issues) != 0 {
+		t.Fatalf("valid object condition issues = %+v", issues)
+	}
+
+	missingObject := valid
+	missingObject.Object = opt.V[ObjectReference]{}
+	if issues := ValidateCardDef(makeCard(missingObject)); !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("missing-object issues = %+v, want %s", issues, CardDefIssueInvalidCondition)
+	}
+
+	dual := valid
+	dual.Types = []types.Card{types.Creature}
+	if issues := ValidateCardDef(makeCard(dual)); !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("dual-selection issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
+	}
+
+	invalid := valid
+	invalid.ObjectMatches = opt.Val(Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		ExcludedTypes: []types.Card{types.Creature},
+	})
+	if issues := ValidateCardDef(makeCard(invalid)); !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("invalid-selection issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
+	}
 }
 
 func TestValidateCardDefReportsStructurallyInvalidReference(t *testing.T) {
@@ -1939,5 +1988,78 @@ func TestValidateProtectionKeywordAcceptsAllFiveColors(t *testing.T) {
 		if hasCardDefIssue(issues, CardDefIssueInvalidKeywordAbility) {
 			t.Fatalf("unexpected invalid-keyword-ability for canonical color %q: %+v", c, issues)
 		}
+	}
+}
+
+func TestValidateCardDefEventHistoryConditionRejectsUnknownEvent(t *testing.T) {
+	t.Parallel()
+	def := CardDef{
+		CardFace: CardFace{
+			Name:  "Test Bear",
+			Types: []types.Card{types.Creature},
+			Power: opt.Val(PT{Value: 2}), Toughness: opt.Val(PT{Value: 2}),
+			TriggeredAbilities: []TriggeredAbility{{
+				Text: "At the beginning of your upkeep, if you attacked this turn, draw a card.",
+				Trigger: TriggerCondition{
+					Type: TriggerWhenever,
+					Pattern: TriggerPattern{
+						Event: EventBeginningOfStep,
+						Step:  StepUpkeep,
+					},
+					InterveningIf: "if you attacked this turn",
+					InterveningCondition: opt.Val(Condition{
+						EventHistory: opt.Val(EventHistoryCondition{
+							Pattern: TriggerPattern{Event: EventUnknown},
+							Window:  EventHistoryCurrentTurn,
+						}),
+					}),
+				},
+				Content: Mode{Sequence: []Instruction{{Primitive: Draw{
+					Amount: Fixed(1), Player: ControllerReference(),
+				}}}}.Ability(),
+			}},
+		},
+	}
+	issues := ValidateCardDef(&def)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("issues = %v, want CardDefIssueInvalidCondition for EventUnknown", issues)
+	}
+}
+
+func TestValidateCardDefEventHistoryConditionAcceptsValidPattern(t *testing.T) {
+	t.Parallel()
+	def := CardDef{
+		CardFace: CardFace{
+			Name:  "Test Bear",
+			Types: []types.Card{types.Creature},
+			Power: opt.Val(PT{Value: 2}), Toughness: opt.Val(PT{Value: 2}),
+			TriggeredAbilities: []TriggeredAbility{{
+				Text: "At the beginning of your upkeep, if you attacked this turn, draw a card.",
+				Trigger: TriggerCondition{
+					Type: TriggerWhen,
+					Pattern: TriggerPattern{
+						Event: EventBeginningOfStep,
+						Step:  StepUpkeep,
+					},
+					InterveningIf: "if you attacked this turn",
+					InterveningCondition: opt.Val(Condition{
+						EventHistory: opt.Val(EventHistoryCondition{
+							Pattern: TriggerPattern{
+								Event:      EventAttackerDeclared,
+								Controller: TriggerControllerYou,
+							},
+							Window: EventHistoryCurrentTurn,
+						}),
+					}),
+				},
+				Content: Mode{Sequence: []Instruction{{Primitive: Draw{
+					Amount: Fixed(1), Player: ControllerReference(),
+				}}}}.Ability(),
+			}},
+		},
+	}
+	issues := ValidateCardDef(&def)
+	if hasCardDefIssue(issues, CardDefIssueInvalidCondition) {
+		t.Fatalf("unexpected CardDefIssueInvalidCondition for valid EventHistory: %v", issues)
 	}
 }

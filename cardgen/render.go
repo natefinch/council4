@@ -1155,6 +1155,9 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("InterveningIfEventPermanentHadNoCounterKind: opt.Val(%s),", kind))
 	}
+	if trigger.InterveningIfEventPermanentHadCounters {
+		fields = append(fields, "InterveningIfEventPermanentHadCounters: true,")
+	}
 	if trigger.InterveningIfEventPermanentWasKicked {
 		fields = append(fields, "InterveningIfEventPermanentWasKicked: true,")
 	}
@@ -1829,9 +1832,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
-	if cond.Object.Exists ||
-		len(cond.Types) != 0 ||
-		cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures ||
+	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures ||
 		cond.SourceClassLevelAtLeast != 0 ||
 		cond.SourceClassLevelLessThan != 0 ||
 		cond.SourceNotMonstrous ||
@@ -1847,7 +1848,11 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	if cond.Negate {
 		fields = append(fields, "Negate: true,")
 	}
-	hasPredicate := false
+	objectFields, hasPredicate, err := r.renderConditionObjectFields(ctx, cond, context)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, objectFields...)
 	if !cond.ControllerControls.Empty() {
 		filter := cond.ControllerControls
 		if filter.Power.Exists ||
@@ -1925,10 +1930,77 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("OpponentsControl: opt.Val(%s),", rendered))
 		hasPredicate = true
 	}
+	if cond.EventHistory.Exists {
+		rendered, err := r.renderEventHistoryCondition(ctx, &cond.EventHistory.Val, context)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("EventHistory: opt.Val(%s),", rendered))
+		hasPredicate = true
+	}
 	if !hasPredicate {
 		return "", fmt.Errorf("render: %s condition has no supported predicate", context)
 	}
 	return structLit("game.Condition", fields), nil
+}
+
+func (r Renderer) renderConditionObjectFields(
+	ctx *renderCtx,
+	cond *game.Condition,
+	context string,
+) (fields []string, hasPredicate bool, err error) {
+	if cond.Object.Exists {
+		object, err := r.renderObjectReference(cond.Object.Val)
+		if err != nil {
+			return nil, false, err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Object: opt.Val(%s),", object))
+	}
+	if cond.ObjectMatches.Exists {
+		if !cond.Object.Exists {
+			return nil, false, fmt.Errorf("render: %s ObjectMatches condition has no Object reference", context)
+		}
+		if len(cond.Types) != 0 {
+			return nil, false, fmt.Errorf("render: %s condition sets both legacy Types and ObjectMatches", context)
+		}
+		selection, err := r.renderSelection(ctx, cond.ObjectMatches.Val)
+		if err != nil {
+			return nil, false, err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ObjectMatches: opt.Val(%s),", selection))
+	}
+	if len(cond.Types) > 0 {
+		cardTypes, err := renderTypesCardSlice(ctx, cond.Types)
+		if err != nil {
+			return nil, false, err
+		}
+		fields = append(fields, fmt.Sprintf("Types: %s,", cardTypes))
+	}
+	return fields, len(fields) > 0, nil
+}
+
+func (r Renderer) renderEventHistoryCondition(
+	ctx *renderCtx,
+	history *game.EventHistoryCondition,
+	context string,
+) (string, error) {
+	pattern, err := r.renderTriggerPattern(ctx, &history.Pattern)
+	if err != nil {
+		return "", err
+	}
+	var window string
+	switch history.Window {
+	case game.EventHistoryCurrentTurn:
+		window = "game.EventHistoryCurrentTurn"
+	case game.EventHistoryPreviousTurn:
+		window = "game.EventHistoryPreviousTurn"
+	default:
+		return "", fmt.Errorf("render: unsupported event-history window for %s condition", context)
+	}
+	return fmt.Sprintf("game.EventHistoryCondition{Pattern: %s, Window: %s}", pattern, window), nil
 }
 
 func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.SelectionCount) (string, error) {

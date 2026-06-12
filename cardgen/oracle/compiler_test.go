@@ -2148,7 +2148,7 @@ func TestCompileConditionsRecognizesClosedSemanticPredicates(t *testing.T) {
 				condition.Negated != test.negated ||
 				condition.Span.Start.Offset >= condition.Span.End.Offset ||
 				test.source[condition.Span.Start.Offset:condition.Span.End.Offset] != condition.Text {
-				t.Fatalf("condition = %#v", condition)
+				t.Fatalf("condition = %#v, references = %#v", condition, compilation.Abilities[0].Content.References)
 			}
 		})
 	}
@@ -2159,6 +2159,7 @@ func TestCompileConditionsRejectsNearMissWordingSemantically(t *testing.T) {
 	for _, source := range []string{
 		"When this creature enters, if you nearly control an artifact, draw a card.",
 		"If a creature dealt damage by this creature this turn would die, exile it instead.",
+		"Whenever you gain life, if it's a creature, draw a card.",
 	} {
 		compilation, _ := Compile(source, ParseContext{CardName: "Test Bear"})
 		condition := compilation.Abilities[0].Content.Conditions[0]
@@ -2178,18 +2179,24 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 		source   string
 		bindings []ReferenceBinding
 	}{
-		{"trigger event subject", "Whenever a creature dies, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingEventPermanent, ReferenceBindingEventPermanent}},
-		{"zone-change event subject", "Whenever an artifact is put into a graveyard from the battlefield, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingEventPermanent, ReferenceBindingEventPermanent}},
+		{"trigger event card", "Whenever a creature dies, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingEventCard, ReferenceBindingEventCard}},
+		{"zone-change event card", "Whenever an artifact is put into a graveyard from the battlefield, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingEventCard, ReferenceBindingEventCard}},
 		{"batched event subject is ambiguous", "Whenever one or more creatures die, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingAmbiguous, ReferenceBindingAmbiguous}},
 		{"explicit source in trigger body", "Whenever a creature dies, this creature deals 1 damage to its controller.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingSource}},
 		{"single target occurrence", "Return target creature to its owner's hand.", []ReferenceBinding{ReferenceBindingTarget}},
 		{"prior instruction result", "Exile target creature. Return it to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingPriorInstructionResult, ReferenceBindingPriorInstructionResult}},
 		{"delayed source", "When this creature enters, exile it at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingSource}},
-		{"delayed non-self event subject", "When enchanted creature dies, return that card to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingEventPermanent, ReferenceBindingEventPermanent}},
+		{"delayed non-self event card", "When enchanted creature dies, return that card to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingEventCard, ReferenceBindingEventCard}},
 		{"activation cost source", "Remove a counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingSource}},
 		{"activation cost prior object", "Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingAmbiguous}},
 		{"activation cost prior source and object", "Remove a charge counter from this artifact, Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingAmbiguous}},
 		{"ambiguous pronoun", "It explores.", []ReferenceBinding{ReferenceBindingAmbiguous}},
+		{"they in draw trigger", "Whenever an opponent draws a card, they lose 1 life.", []ReferenceBinding{ReferenceBindingEventPlayer}},
+		{"they in discard trigger", "Whenever a player discards a card, they lose 2 life.", []ReferenceBinding{ReferenceBindingEventPlayer}},
+		{"their in life trigger", "Whenever an opponent gains life, draw a card.", []ReferenceBinding(nil)},
+		{"they in life trigger", "Whenever an opponent gains life, they draw a card.", []ReferenceBinding{ReferenceBindingEventPlayer}},
+		{"they in scry trigger", "Whenever a player scries, they draw a card.", []ReferenceBinding{ReferenceBindingEventPlayer}},
+		{"they in non-player trigger binds permanent", "Whenever a creature attacks, they deal 1 damage to any target.", []ReferenceBinding{ReferenceBindingEventPermanent}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -2218,4 +2225,215 @@ func hasDiagnosticForSpan(diagnostics []Diagnostic, span Span) bool {
 		}
 	}
 	return false
+}
+
+func TestCompileEventHistoryInterveningConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		source    string
+		predicate ConditionPredicate
+		event     TriggerEvent
+		window    ConditionEventHistoryWindow
+		negated   bool
+	}{
+		{
+			name:      "you attacked this turn",
+			source:    "When this creature enters, if you attacked this turn, draw a card.",
+			predicate: ConditionPredicateEventHistory,
+			event:     TriggerEventAttackerDeclared,
+			window:    ConditionEventHistoryWindowCurrentTurn,
+		},
+		{
+			name:      "a creature died this turn",
+			source:    "At the beginning of your end step, if a creature died this turn, draw a card.",
+			predicate: ConditionPredicateEventHistory,
+			event:     TriggerEventPermanentDied,
+			window:    ConditionEventHistoryWindowCurrentTurn,
+		},
+		{
+			name:      "you gained life this turn",
+			source:    "At the beginning of each end step, if you gained life this turn, draw a card.",
+			predicate: ConditionPredicateEventHistory,
+			event:     TriggerEventLifeGained,
+			window:    ConditionEventHistoryWindowCurrentTurn,
+		},
+		{
+			name:      "an opponent lost life this turn",
+			source:    "At the beginning of your end step, if an opponent lost life this turn, draw a card.",
+			predicate: ConditionPredicateEventHistory,
+			event:     TriggerEventLifeLost,
+			window:    ConditionEventHistoryWindowCurrentTurn,
+		},
+		{
+			name:      "you lost life this turn",
+			source:    "At the beginning of your end step, if you lost life this turn, draw a card.",
+			predicate: ConditionPredicateEventHistory,
+			event:     TriggerEventLifeLost,
+			window:    ConditionEventHistoryWindowCurrentTurn,
+		},
+		{
+			name:      "an opponent lost life last turn",
+			source:    "At the beginning of each upkeep, if an opponent lost life last turn, draw a card.",
+			predicate: ConditionPredicateEventHistory,
+			event:     TriggerEventLifeLost,
+			window:    ConditionEventHistoryWindowPreviousTurn,
+		},
+		{
+			name:      "you lost life last turn",
+			source:    "At the beginning of each upkeep, if you lost life last turn, draw a card.",
+			predicate: ConditionPredicateEventHistory,
+			event:     TriggerEventLifeLost,
+			window:    ConditionEventHistoryWindowPreviousTurn,
+		},
+		{
+			name:      "no spells were cast last turn",
+			source:    "At the beginning of your upkeep, if no spells were cast last turn, draw a card.",
+			predicate: ConditionPredicateEventHistory,
+			event:     TriggerEventSpellCast,
+			window:    ConditionEventHistoryWindowPreviousTurn,
+			negated:   true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{CardName: "Test Bear"})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(compilation.Abilities) != 1 {
+				t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
+			}
+			trigger := compilation.Abilities[0].Trigger
+			if trigger == nil || trigger.Condition == nil {
+				t.Fatal("trigger condition = nil")
+			}
+			cond := trigger.Condition
+			if !cond.Intervening {
+				t.Error("Intervening = false, want true")
+			}
+			if cond.Kind != ConditionIf {
+				t.Errorf("Kind = %v, want ConditionIf", cond.Kind)
+			}
+			if cond.Predicate != test.predicate {
+				t.Errorf("Predicate = %v, want %v", cond.Predicate, test.predicate)
+			}
+			if cond.EventHistoryPattern == nil {
+				t.Fatal("EventHistoryPattern = nil, want non-nil")
+			}
+			if cond.EventHistoryPattern.Event != test.event {
+				t.Errorf("EventHistoryPattern.Event = %v, want %v", cond.EventHistoryPattern.Event, test.event)
+			}
+			if cond.EventHistoryWindow != test.window {
+				t.Errorf("EventHistoryWindow = %v, want %v", cond.EventHistoryWindow, test.window)
+			}
+			if cond.Negated != test.negated {
+				t.Errorf("Negated = %v, want %v", cond.Negated, test.negated)
+			}
+			if cond.Span.Start.Offset >= cond.Span.End.Offset {
+				t.Errorf("Span = %v, want non-empty", cond.Span)
+			}
+			if got := test.source[cond.Span.Start.Offset:cond.Span.End.Offset]; got != cond.Text {
+				t.Errorf("span text = %q, want %q", got, cond.Text)
+			}
+		})
+	}
+}
+
+func TestCompileProvenObjectAndControllerInterveningConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		condition     string
+		predicate     ConditionPredicate
+		binding       ReferenceBinding
+		threshold     int
+		negated       bool
+		requiredTypes []ConditionCardType
+		subtypes      []string
+		tapped        ConditionTriState
+		power         int
+		excludeSource bool
+	}{
+		{"event creature", "if it was a creature", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
+		{"event creature contraction", "IF IT'S A CREATURE", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
+		{"event Human", "if it was a Human", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, []string{"Human"}, ConditionTriAny, 0, false},
+		{"event counters", "if it had counters on it", ConditionPredicateEventSubjectHadCounters, ReferenceBindingEventPermanent, 0, false, nil, nil, ConditionTriAny, 0, false},
+		{"untapped artifact source", "if this artifact is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeArtifact}, nil, ConditionTriFalse, 0, false},
+		{"untapped creature source", "if this creature is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriFalse, 0, false},
+		{"enchantment source", "if this permanent is an enchantment", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeEnchantment}, nil, ConditionTriAny, 0, false},
+		{"source exists", "if this creature is on the battlefield", ConditionPredicateObjectExists, ReferenceBindingSource, 0, false, nil, nil, ConditionTriAny, 0, false},
+		{"two Gates", "if you control two or more Gates", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 2, false, []ConditionCardType{ConditionCardTypeLand}, []string{"Gate"}, ConditionTriAny, 0, false},
+		{"two tapped creatures", "if you control two or more tapped creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 2, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriTrue, 0, false},
+		{"power five creature", "if you control a creature with power 5 or greater", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 5, false},
+		{"another power four creature", "if you control another creature with power 4 or greater", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 4, true},
+		{"Equipment", "if you control an Equipment", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeArtifact}, []string{"Equipment"}, ConditionTriAny, 0, false},
+		{"no creatures", "if you control no creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 1, true, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
+		{"three creatures", "if you control three or more creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 3, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
+		{"tapped creature", "if you control a tapped creature", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriTrue, 0, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source := "Whenever a creature dies, " + test.condition + ", draw a card."
+			compilation, _ := Compile(source, ParseContext{CardName: "Test Relic"})
+			if len(compilation.Abilities) != 1 || len(compilation.Abilities[0].Content.Conditions) != 1 {
+				t.Fatalf("compilation = %#v", compilation)
+			}
+			condition := compilation.Abilities[0].Content.Conditions[0]
+			if condition.Predicate != test.predicate ||
+				condition.ObjectBinding != test.binding ||
+				condition.Threshold != test.threshold ||
+				condition.Negated != test.negated ||
+				condition.Selection.Tapped != test.tapped ||
+				condition.Selection.PowerAtLeast != test.power ||
+				condition.Selection.ExcludeSource != test.excludeSource ||
+				!slices.Equal(condition.Selection.RequiredTypes, test.requiredTypes) ||
+				!slices.Equal(condition.Selection.SubtypesAny, test.subtypes) {
+				t.Fatalf("condition = %#v, references = %#v", condition, compilation.Abilities[0].Content.References)
+			}
+			if test.power > 0 && !condition.Selection.MatchPowerAtLeast {
+				t.Fatalf("condition = %#v, want power-at-least match", condition)
+			}
+		})
+	}
+}
+
+func TestCompileEventHistoryCreatureDiedHasCreatureSelection(t *testing.T) {
+	t.Parallel()
+	compilation, _ := Compile("At the beginning of your end step, if a creature died this turn, draw a card.", ParseContext{CardName: "Test Bear"})
+	if len(compilation.Abilities) != 1 {
+		t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
+	}
+	cond := compilation.Abilities[0].Trigger.Condition
+	if cond == nil || cond.Predicate != ConditionPredicateEventHistory {
+		t.Fatalf("condition = %#v", cond)
+	}
+	if cond.EventHistoryPattern == nil {
+		t.Fatal("EventHistoryPattern = nil, want non-nil")
+	}
+	sel := cond.EventHistoryPattern.SubjectSelection
+	if len(sel.RequiredTypes) != 1 || sel.RequiredTypes[0] != TriggerCardTypeCreature {
+		t.Fatalf("SubjectSelection = %#v, want creature", sel)
+	}
+}
+
+func TestCompileEventHistoryAttackedHasControllerYou(t *testing.T) {
+	t.Parallel()
+	compilation, _ := Compile("When this creature enters, if you attacked this turn, draw a card.", ParseContext{CardName: "Test Bear"})
+	if len(compilation.Abilities) != 1 {
+		t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
+	}
+	cond := compilation.Abilities[0].Trigger.Condition
+	if cond == nil || cond.Predicate != ConditionPredicateEventHistory {
+		t.Fatalf("condition = %#v", cond)
+	}
+	if cond.EventHistoryPattern == nil {
+		t.Fatal("EventHistoryPattern = nil, want non-nil")
+	}
+	if cond.EventHistoryPattern.Controller != ControllerYou {
+		t.Fatalf("Controller = %v, want ControllerYou", cond.EventHistoryPattern.Controller)
+	}
 }

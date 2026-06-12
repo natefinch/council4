@@ -3175,6 +3175,7 @@ func lowerDrawDiscardTrigger(
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
 	const summary = "unsupported draw/discard trigger"
+	const effectSummary = "unsupported draw/discard trigger effect"
 	if ability.Trigger == nil || ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"the executable source backend supports only TriggerWhenever draw and discard triggers")
@@ -3187,20 +3188,18 @@ func lowerDrawDiscardTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"unrecognized semantic draw, discard, or cycling trigger pattern")
 	}
-	if ability.Trigger.Condition != nil {
+	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
+	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"the executable source backend does not support this semantic draw/discard trigger condition")
 	}
-	if len(ability.Content.Effects) == 0 ||
-		len(ability.Content.Keywords) != 0 ||
-		len(ability.Content.Modes) != 0 ||
-		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported draw/discard trigger effect",
-			"the executable source backend supports only simple draw/discard triggers without conditions, modes, keywords, or ability words")
+	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
+			"the executable source backend does not support this draw/discard trigger body")
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported draw/discard trigger effect",
+		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this draw/discard trigger body")
 	}
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
@@ -3210,8 +3209,10 @@ func lowerDrawDiscardTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:    game.TriggerWhenever,
-			Pattern: pattern,
+			Type:                 game.TriggerWhenever,
+			Pattern:              pattern,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening,
 		},
 		Optional: ability.Optional,
 		Content:  content,
@@ -3238,14 +3239,12 @@ func lowerGenericPatternTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic trigger kind")
 	}
-	if ability.Trigger.Condition != nil {
+	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
+	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic trigger condition")
 	}
-	if len(ability.Content.Effects) == 0 ||
-		len(ability.Content.Keywords) != 0 ||
-		len(ability.Content.Modes) != 0 ||
-		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this trigger body")
 	}
@@ -3261,8 +3260,10 @@ func lowerGenericPatternTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:    triggerType,
-			Pattern: pattern,
+			Type:                 triggerType,
+			Pattern:              pattern,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening,
 		},
 		Optional: ability.Optional,
 		Content:  content,
@@ -3520,7 +3521,7 @@ func lowerEnterTrigger(
 	if selfDamage {
 		bodySyntax.Text = body.Text
 	}
-	content, diagnostic := lowerSelfTriggerBody(cardName, eventKind, body, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -3531,10 +3532,11 @@ func lowerEnterTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:                 triggerType,
-			Pattern:              pattern,
-			InterveningIf:        interveningIfText(ability.Trigger),
-			InterveningCondition: intervening.condition,
+			Type:                                   triggerType,
+			Pattern:                                pattern,
+			InterveningIf:                          interveningIfText(ability.Trigger),
+			InterveningCondition:                   intervening.condition,
+			InterveningIfEventPermanentHadCounters: intervening.hadCounters,
 			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
 			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
 			InterveningIfEventPermanentWasCast:          intervening.wasCast,
@@ -3549,9 +3551,9 @@ func lowerLifeDamageTrigger(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
-	if ability.Trigger == nil || ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
+	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
-			"the executable source backend requires a semantic whenever life or damage trigger")
+			"the executable source backend requires a semantic life or damage trigger")
 	}
 	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
 	if !ok ||
@@ -3561,7 +3563,13 @@ func lowerLifeDamageTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic life or damage trigger pattern")
 	}
-	if ability.Trigger.Condition != nil {
+	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
+	if !ok || (triggerType != game.TriggerWhen && triggerType != game.TriggerWhenever) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"life and damage triggers require When or Whenever")
+	}
+	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
+	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic life or damage trigger condition")
 	}
@@ -3574,46 +3582,28 @@ func lowerLifeDamageTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this life or damage trigger body")
 	}
-	content, diagnostic := lowerSelfTriggerBody(cardName, pattern.Event, body, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:    game.TriggerWhenever,
-			Pattern: pattern,
+			Type:                 triggerType,
+			Pattern:              pattern,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening,
 		},
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
 }
 
-func lowerSelfTriggerBody(
-	cardName string,
-	eventKind game.EventKind,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
-	if eventKind == game.EventPermanentDied || eventKind == game.EventZoneChanged {
-		ctx := contentCtx{
-			text:     ability.Text,
-			span:     ability.Span,
-			optional: ability.Optional,
-			content:  ability.Content,
-		}
-		if content, ok := lowerDiesEventCardEffect(ctx); ok {
-			return content, nil
-		}
-	}
-	return lowerAbilityContent(cardName, ability.Content, ability.Optional, syntax)
-}
-
-func lowerDiesEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
+func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 {
 		return game.AbilityContent{}, false
 	}
-	if !referencesBindTo(ctx.content.References, oracle.ReferenceBindingEventPermanent, 0) {
+	if !referencesBindTo(ctx.content.References, oracle.ReferenceBindingEventCard, 0) {
 		return game.AbilityContent{}, false
 	}
 	eventCard, ok := lowerCardReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
@@ -3624,6 +3614,10 @@ func lowerDiesEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	case oracle.EffectReturn:
 		if ctx.text != "Return it to its owner's hand." &&
 			ctx.text != "Return that card to its owner's hand." {
+			return game.AbilityContent{}, false
+		}
+	case oracle.EffectExile:
+		if ctx.text != "Exile it." && ctx.text != "Exile that card." {
 			return game.AbilityContent{}, false
 		}
 	case oracle.EffectCast:
@@ -3657,6 +3651,14 @@ func lowerDiesEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				Duration: game.DurationUntilEndOfYourNextTurn,
 			},
 		}}}.Ability(), true
+	case oracle.EffectExile:
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.MoveCard{
+				Card:        eventCard,
+				FromZone:    zone.Graveyard,
+				Destination: zone.Exile,
+			},
+		}}}.Ability(), true
 	default:
 		return game.AbilityContent{}, false
 	}
@@ -3664,6 +3666,7 @@ func lowerDiesEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 
 type enterInterveningCondition struct {
 	condition        opt.V[game.Condition]
+	hadCounters      bool
 	hadNoCounterKind opt.V[counter.Kind]
 	wasKicked        bool
 	wasCast          bool
@@ -3676,6 +3679,12 @@ func lowerSelfInterveningCondition(
 	if trigger != nil && trigger.Condition != nil {
 		if condition, ok := lowerCondition(*trigger.Condition, conditionContextInterveningTrigger); ok {
 			return enterInterveningCondition{condition: opt.Val(condition)}, true
+		}
+		if trigger.Condition.Predicate == oracle.ConditionPredicateEventSubjectHadCounters {
+			if trigger.Condition.ObjectBinding != oracle.ReferenceBindingEventPermanent {
+				return enterInterveningCondition{}, false
+			}
+			return enterInterveningCondition{hadCounters: true}, true
 		}
 	}
 	switch eventKind {
@@ -3694,7 +3703,8 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind)
 		game.EventPermanentDied,
 		game.EventZoneChanged,
 		game.EventPermanentTurnedFaceUp,
-		game.EventPermanentSacrificed:
+		game.EventPermanentSacrificed,
+		game.EventObjectBecameTarget:
 		return kind == oracle.TriggerWhen || kind == oracle.TriggerWhenever
 	case game.EventPermanentMutated,
 		game.EventAttackerBecameBlocked,
@@ -3703,7 +3713,6 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind)
 		game.EventDamageDealt,
 		game.EventPermanentTapped,
 		game.EventPermanentUntapped,
-		game.EventObjectBecameTarget,
 		game.EventCountersAdded:
 		return kind == oracle.TriggerWhenever
 	default:
@@ -3946,22 +3955,9 @@ func lowerPermanentZoneChangeTrigger(
 		normalizeSelfDamageReference(cardName, &body) {
 		bodySyntax.Text = body.Text
 	}
-	var content game.AbilityContent
-	contentOK := false
-	if pattern.Event == game.EventPermanentEnteredBattlefield && pattern.Source != game.TriggerSourceSelf {
-		content, contentOK = lowerEventPermanentModifyPTBody(contentCtx{
-			text:     body.Text,
-			span:     body.Span,
-			optional: body.Optional,
-			content:  body.Content,
-		})
-	}
-	if !contentOK {
-		content, diagnostic := lowerSelfTriggerBody(cardName, pattern.Event, body, bodySyntax)
-		if diagnostic != nil {
-			return game.TriggeredAbility{}, diagnostic
-		}
-		return permanentZoneChangeTriggeredAbility(ability, triggerType, &pattern, &intervening, content), nil
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, diagnostic
 	}
 	return permanentZoneChangeTriggeredAbility(ability, triggerType, &pattern, &intervening, content), nil
 }
@@ -3972,6 +3968,21 @@ func lowerPermanentZoneChangeInterveningCondition(
 ) (enterInterveningCondition, bool) {
 	if pattern.Source == game.TriggerSourceSelf {
 		return lowerSelfInterveningCondition(pattern.Event, trigger)
+	}
+	if trigger != nil && trigger.Condition != nil {
+		switch trigger.Condition.Predicate {
+		case oracle.ConditionPredicateObjectMatches, oracle.ConditionPredicateObjectExists:
+			if condition, ok := lowerCondition(*trigger.Condition, conditionContextInterveningTrigger); ok {
+				return enterInterveningCondition{condition: opt.Val(condition)}, true
+			}
+		default:
+		}
+		if trigger.Condition.Predicate == oracle.ConditionPredicateEventSubjectHadCounters {
+			if trigger.Condition.ObjectBinding != oracle.ReferenceBindingEventPermanent {
+				return enterInterveningCondition{}, false
+			}
+			return enterInterveningCondition{hadCounters: true}, true
+		}
 	}
 	if pattern.Event == game.EventPermanentEnteredBattlefield {
 		intervening, ok := lowerEnterInterveningCondition(trigger)
@@ -3995,10 +4006,11 @@ func permanentZoneChangeTriggeredAbility(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:                 triggerType,
-			Pattern:              *pattern,
-			InterveningIf:        interveningIfText(ability.Trigger),
-			InterveningCondition: intervening.condition,
+			Type:                                   triggerType,
+			Pattern:                                *pattern,
+			InterveningIf:                          interveningIfText(ability.Trigger),
+			InterveningCondition:                   intervening.condition,
+			InterveningIfEventPermanentHadCounters: intervening.hadCounters,
 			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
 			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
 			InterveningIfEventPermanentWasCast:          intervening.wasCast,
@@ -4026,14 +4038,12 @@ func lowerCastTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic spell-cast trigger pattern")
 	}
-	if ability.Trigger.Condition != nil {
+	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
+	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic spell-cast trigger condition")
 	}
-	if len(ability.Content.Effects) == 0 ||
-		len(ability.Content.Keywords) != 0 ||
-		len(ability.Content.Modes) != 0 ||
-		ability.AbilityWord != "" {
+	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this spell-cast trigger body")
 	}
@@ -4051,58 +4061,14 @@ func lowerCastTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:    game.TriggerWhenever,
-			Pattern: pattern,
+			Type:                 game.TriggerWhenever,
+			Pattern:              pattern,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening,
 		},
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
-}
-
-// lowerEventPermanentModifyPTBody handles the narrow case of a triggered body
-// that modifies the entering permanent via the pronoun "it", e.g.
-// "It gets +2/+0 until end of turn." The pronoun resolves to
-// game.EventPermanentReference(), which identifies the permanent named by the
-// triggering event. Only exact fixed static P/T changes until end of turn are
-// accepted.
-func lowerEventPermanentModifyPTBody(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		ctx.content.Effects[0].Kind != oracle.EffectModifyPT ||
-		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 1 ||
-		ctx.content.References[0].Binding != oracle.ReferenceBindingEventPermanent ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 {
-		return game.AbilityContent{}, false
-	}
-	effect := ctx.content.Effects[0]
-	if !effect.PowerDelta.Known ||
-		!effect.ToughnessDelta.Known ||
-		effect.Negated ||
-		effect.Duration != oracle.DurationUntilEndOfTurn {
-		return game.AbilityContent{}, false
-	}
-	want := fmt.Sprintf("It gets %s/%s until end of turn.",
-		signedAmountText(effect.PowerDelta),
-		signedAmountText(effect.ToughnessDelta))
-	if ctx.text != want {
-		return game.AbilityContent{}, false
-	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
-	if !ok {
-		return game.AbilityContent{}, false
-	}
-	return game.Mode{
-		Sequence: []game.Instruction{{
-			Primitive: game.ModifyPT{
-				Object:         object,
-				PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
-				ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
-				Duration:       game.DurationUntilEndOfTurn,
-			},
-		}},
-	}.Ability(), true
 }
 
 func spanCovered(span oracle.Span, covering []oracle.Span) bool {
@@ -4654,6 +4620,9 @@ func lowerContent(
 	if len(ctx.content.Modes) > 0 {
 		return lowerModalContent(cardName, ctx, syntax)
 	}
+	if content, ok := lowerEventCardEffect(ctx); ok {
+		return content, nil
+	}
 	if exactManifestDreadLongFormPattern(syntax.Tokens) &&
 		len(ctx.content.Targets) == 0 &&
 		len(ctx.content.Conditions) == 0 &&
@@ -4988,6 +4957,78 @@ func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *oracle.Diagnostic {
 	)
 }
 
+// lowerEventPermanentPronounEffect lowers an immediate single-effect body
+// whose sole non-target subject is a no-target ReferenceBindingEventPermanent
+// pronoun ("it"/"its"). All references must bind to EventPermanent; no targets,
+// conditions, keywords, or modes are permitted. Accepted bodies are:
+//
+//   - "Destroy it."      → game.Destroy{Object: EventPermanentReference()}
+//   - "Exile it."        → game.Exile{Object: EventPermanentReference()}
+//   - "Tap it."          → game.Tap{Object: EventPermanentReference()}
+//   - "Untap it."        → game.Untap{Object: EventPermanentReference()}
+//   - "Sacrifice it."    → game.Sacrifice{Object: EventPermanentReference()}
+//   - "Return it to its owner's hand." → game.Bounce{Object: EventPermanentReference()}
+func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) == 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.content.Effects[0].Negated {
+		return game.AbilityContent{}, false
+	}
+	for _, ref := range ctx.content.References {
+		if ref.Binding != oracle.ReferenceBindingEventPermanent {
+			return game.AbilityContent{}, false
+		}
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	var primitive game.Primitive
+	switch ctx.content.Effects[0].Kind {
+	case oracle.EffectDestroy:
+		if ctx.text != "Destroy it." {
+			return game.AbilityContent{}, false
+		}
+		primitive = game.Destroy{Object: object}
+	case oracle.EffectExile:
+		if ctx.text != "Exile it." {
+			return game.AbilityContent{}, false
+		}
+		primitive = game.Exile{Object: object}
+	case oracle.EffectTap:
+		if ctx.text != "Tap it." {
+			return game.AbilityContent{}, false
+		}
+		primitive = game.Tap{Object: object}
+	case oracle.EffectUntap:
+		if ctx.text != "Untap it." {
+			return game.AbilityContent{}, false
+		}
+		primitive = game.Untap{Object: object}
+	case oracle.EffectSacrifice:
+		if ctx.text != "Sacrifice it." {
+			return game.AbilityContent{}, false
+		}
+		primitive = game.Sacrifice{Object: object}
+	case oracle.EffectReturn:
+		if ctx.text != "Return it to its owner's hand." {
+			return game.AbilityContent{}, false
+		}
+		primitive = game.Bounce{Object: object}
+	default:
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(), true
+}
+
 func lowerImmediateSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
@@ -5000,6 +5041,12 @@ func lowerImmediateSingleEffectSpell(
 			return spanCoveredByDelimited(token.Span, syntax.Reminders)
 		},
 	)
+	// Route no-target EventPermanent pronoun bodies through the shared path
+	// before individual effect dispatch so all compatible trigger shells
+	// benefit from the same lowering.
+	if content, ok := lowerEventPermanentPronounEffect(ctx); ok {
+		return content, nil
+	}
 	switch ctx.content.Effects[0].Kind {
 	case oracle.EffectDealDamage:
 		if len(ctx.content.Targets) == 0 {
@@ -7532,11 +7579,19 @@ func lowerGroupDamageSpell(
 		)
 	}
 	amountText := fmt.Sprint(effect.Amount.Value)
+	// When the source is bound to the triggering permanent, the body may use
+	// "It deals" rather than the card name as the damage source subject.
+	textSourceSubject := cardName
+	if len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPermanent &&
+		strings.HasPrefix(ctx.text, "It deals ") {
+		textSourceSubject = "It"
+	}
 	sel := effect.Selector
 	var recipient game.DamageRecipient
 	switch {
 	case sel.Kind == oracle.SelectorOpponent && !sel.Other:
-		if ctx.text != fmt.Sprintf("%s deals %s damage to each opponent.", cardName, amountText) {
+		if ctx.text != fmt.Sprintf("%s deals %s damage to each opponent.", textSourceSubject, amountText) {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported damage spell",
@@ -7545,7 +7600,7 @@ func lowerGroupDamageSpell(
 		}
 		recipient = game.PlayerGroupDamageRecipient(game.OpponentsReference())
 	case sel.Kind == oracle.SelectorPlayer && !sel.Other:
-		if ctx.text != fmt.Sprintf("%s deals %s damage to each player.", cardName, amountText) {
+		if ctx.text != fmt.Sprintf("%s deals %s damage to each player.", textSourceSubject, amountText) {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported damage spell",
@@ -7554,7 +7609,7 @@ func lowerGroupDamageSpell(
 		}
 		recipient = game.PlayerGroupDamageRecipient(game.AllPlayersReference())
 	case sel.Kind == oracle.SelectorCreature && !sel.Other:
-		if ctx.text != fmt.Sprintf("%s deals %s damage to each creature.", cardName, amountText) {
+		if ctx.text != fmt.Sprintf("%s deals %s damage to each creature.", textSourceSubject, amountText) {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported damage spell",
@@ -7565,7 +7620,7 @@ func lowerGroupDamageSpell(
 			RequiredTypes: []types.Card{types.Creature},
 		}))
 	case sel.Kind == oracle.SelectorCreature && sel.Other:
-		if ctx.text != fmt.Sprintf("%s deals %s damage to each other creature.", cardName, amountText) {
+		if ctx.text != fmt.Sprintf("%s deals %s damage to each other creature.", textSourceSubject, amountText) {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported damage spell",
@@ -7646,8 +7701,17 @@ func lowerFixedDamageSpell(
 		amount = game.Dynamic(dynamic)
 	}
 	target, ok := damageTargetSpec(ctx.content.Targets[0])
+	// When the source is the triggering permanent, the body may use "It deals"
+	// rather than the card name. Accept that pronoun only when the source
+	// reference is bound to the triggering event.
+	textSourceSubject := cardName
+	if len(ctx.content.References) > 0 &&
+		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPermanent &&
+		strings.HasPrefix(ctx.text, "It deals ") {
+		textSourceSubject = "It"
+	}
 	if !ok ||
-		!exactDamageAmountSyntax(cardName, ctx, effect.Amount, amountText) ||
+		!exactDamageAmountSyntax(textSourceSubject, ctx, effect.Amount, amountText) ||
 		!exactDamageAmountReferences(effect.Amount, ctx.content.References) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -7681,6 +7745,11 @@ func lowerFixedModifyPTSpell(
 	effect := ctx.content.Effects[0]
 	if effect.StaticSubject != oracle.StaticSubjectNone {
 		return lowerFixedGroupModifyPTSpell(ctx, syntax, effect)
+	}
+	if len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPermanent {
+		return lowerEventPermanentFixedModifyPT(ctx)
 	}
 	dynamicPT := effect.Amount.DynamicKind != oracle.DynamicAmountNone
 	if len(ctx.content.Targets) != 1 ||
@@ -7746,6 +7815,55 @@ func lowerFixedModifyPTSpell(
 				},
 			},
 		},
+	}.Ability(), nil
+}
+
+// lowerEventPermanentFixedModifyPT lowers an exact fixed until-end-of-turn
+// ModifyPT body whose sole non-target subject reference is
+// ReferenceBindingEventPermanent. The text must be exactly
+// "It gets <power>/<toughness> until end of turn." The object lowers to
+// game.EventPermanentReference(), which identifies the permanent named by the
+// triggering event.
+func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported power/toughness spell",
+			"the executable source backend supports only exact fixed until-end-of-turn power/toughness changes to the triggering permanent",
+		)
+	}
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.References) != 1 ||
+		ctx.content.References[0].Binding != oracle.ReferenceBindingEventPermanent ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!effect.PowerDelta.Known ||
+		!effect.ToughnessDelta.Known ||
+		effect.Negated ||
+		effect.Duration != oracle.DurationUntilEndOfTurn {
+		return unsupported()
+	}
+	want := fmt.Sprintf("It gets %s/%s until end of turn.",
+		signedAmountText(effect.PowerDelta),
+		signedAmountText(effect.ToughnessDelta))
+	if ctx.text != want {
+		return unsupported()
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ModifyPT{
+				Object:         object,
+				PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
+				ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
+				Duration:       game.DurationUntilEndOfTurn,
+			},
+		}},
 	}.Ability(), nil
 }
 
@@ -7997,12 +8115,16 @@ func lowerFixedCardCountPlayerSpell(
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	// Allow a single EventPlayer reference for "They {verb} N card(s)." bodies;
+	// reject all other non-zero-reference forms.
+	hasEventPlayerRef := len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPlayer
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+controllerVerb+" spell",
@@ -8020,10 +8142,15 @@ func lowerFixedCardCountPlayerSpell(
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
+	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
+		exactEventPlayerCardCountSyntax(ctx.text, controllerVerb, effect.Amount):
+		playerRef = game.EventPlayerReference()
 	case len(ctx.content.Targets) == 0 &&
+		!hasEventPlayerRef &&
 		(exactCardCountPlayerSyntax(syntax.Tokens, controllerVerb, effect.Amount) ||
 			exactDynamicCardCountPlayerText(ctx.text, "", controllerVerb, effect.Amount)):
 	case len(ctx.content.Targets) == 1 &&
+		!hasEventPlayerRef &&
 		(exactTargetCardCountPlayerSyntax(syntax.Tokens, targetVerb, effect.Amount) ||
 			exactDynamicCardCountPlayerText(ctx.text, titleFirst(ctx.content.Targets[0].Text), targetVerb, effect.Amount)) &&
 		strings.EqualFold(syntax.Tokens[0].Text, "target") &&
@@ -8577,12 +8704,16 @@ func lowerFixedDrawSpell(
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	// Allow a single EventPlayer reference for "They draw N card(s)." bodies;
+	// reject all other non-zero-reference forms.
+	hasEventPlayerRef := len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPlayer
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
@@ -8606,13 +8737,18 @@ func lowerFixedDrawSpell(
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
 	switch {
+	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
+		exactEventPlayerDrawSyntax(ctx.text, effect.Amount):
+		playerRef = game.EventPlayerReference()
 	case len(ctx.content.Targets) == 0 &&
+		!hasEventPlayerRef &&
 		(exactControllerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
 			(!effect.Amount.Known &&
 				effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
 				exactXControllerDrawSyntax(syntax.Tokens)) ||
 			exactDynamicDrawSyntax(ctx.text, "", effect.Amount)):
 	case len(ctx.content.Targets) == 1 &&
+		!hasEventPlayerRef &&
 		(exactTargetPlayerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
 			(!effect.Amount.Known &&
 				effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
@@ -9088,6 +9224,32 @@ func exactDynamicCardCountPlayerText(text, subject, verb string, amount oracle.C
 	}
 }
 
+// exactEventPlayerDrawSyntax reports whether text is the exact "They draw
+// N card(s)." form expected for an event-player draw body. Only fixed known
+// amounts are accepted.
+func exactEventPlayerDrawSyntax(text string, amount oracle.CompiledAmount) bool {
+	if !amount.Known || amount.Value < 1 {
+		return false
+	}
+	if amount.Value == 1 {
+		return text == "They draw a card."
+	}
+	return text == fmt.Sprintf("They draw %d cards.", amount.Value)
+}
+
+// exactEventPlayerCardCountSyntax reports whether text is the exact
+// "They {verb} N card(s)." form expected for an event-player
+// discard/mill/similar body. Only fixed known amounts are accepted.
+func exactEventPlayerCardCountSyntax(text, verb string, amount oracle.CompiledAmount) bool {
+	if !amount.Known || amount.Value < 1 {
+		return false
+	}
+	if amount.Value == 1 {
+		return text == fmt.Sprintf("They %s a card.", verb)
+	}
+	return text == fmt.Sprintf("They %s %d cards.", verb, amount.Value)
+}
+
 func exactControllerAmountSyntax(tokens []oracle.Token, text, verb string, amount oracle.CompiledAmount) bool {
 	if amount.Known {
 		return len(tokens) == 3 &&
@@ -9369,6 +9531,28 @@ func lowerSacrificeSpell(
 	}
 
 	effect := ctx.content.Effects[0]
+	// Exact source-bound or event-permanent-bound "Sacrifice it.": the
+	// controller sacrifices the named object. Only accepted when there are no
+	// targets, no conditions/keywords/modes, and the text is exactly
+	// "Sacrifice it." with a single source or event-permanent reference.
+	if ctx.text == "Sacrifice it." &&
+		len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		len(ctx.content.Conditions) == 0 &&
+		len(ctx.content.Keywords) == 0 &&
+		len(ctx.content.Modes) == 0 &&
+		!effect.Negated {
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource:      true,
+			SourceCardObject: true,
+			AllowEvent:       true,
+		})
+		if ok {
+			return game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Sacrifice{Object: object},
+			}}}.Ability(), nil
+		}
+	}
 	// Strict fail-closed: reject unsupported modifiers and dynamic amounts.
 	if len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||

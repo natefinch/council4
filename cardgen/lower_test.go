@@ -5077,10 +5077,73 @@ func TestLowerLifeDamageReceivedTriggersFailClosed(t *testing.T) {
 	}
 }
 
+func TestLowerLifeDamageTriggerSupportedInterveningCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		oracle    string
+		wantEvent game.EventKind
+	}{
+		{
+			name:      "life gain if you control an artifact",
+			oracle:    "Whenever you gain life, if you control an artifact, draw a card.",
+			wantEvent: game.EventLifeGained,
+		},
+		{
+			name:      "life loss if you have 5 or more life",
+			oracle:    "Whenever you lose life, if you have 5 or more life, you gain 1 life.",
+			wantEvent: game.EventLifeLost,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Cleric",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Cleric",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Pattern.Event != tc.wantEvent {
+				t.Errorf("event = %v, want %v", trigger.Pattern.Event, tc.wantEvent)
+			}
+			if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
+				t.Fatalf("trigger = %+v, want intervening condition", trigger)
+			}
+		})
+	}
+}
+
+func TestLowerLifeDamageTriggerInterveningIfFailsClosedOnUnsupportedCondition(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Cleric",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Cleric",
+		OracleText: "Whenever you gain life, if you have seven or more cards in hand, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("life trigger with unsupported intervening condition unexpectedly lowered")
+	}
+	if !strings.Contains(diagnostics[0].Detail, "condition") {
+		t.Fatalf("diagnostic = %#v, want condition detail", diagnostics[0])
+	}
+}
+
 func TestLowerKickedEnterTrigger(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
-		Name:       "Test Kicker",
 		Layout:     "normal",
 		ManaCost:   "{2}{U}",
 		TypeLine:   "Creature — Wizard",
@@ -5560,6 +5623,131 @@ func TestLowerSelfDiesDamageTrigger(t *testing.T) {
 		!damage.DamageSource.Exists ||
 		damage.DamageSource.Val != game.EventPermanentReference() {
 		t.Fatalf("primitive = %+v, want damage from event permanent", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerDamageEventPermanentSourceInNonZoneChangeTrigger verifies that the
+// shared damage-lowering path handles "It deals X damage to any target." bodies
+// in non-zone-change trigger shells, routing the source through
+// lowerObjectReference and preserving DamageSource as EventPermanentReference.
+func TestLowerDamageEventPermanentSourceInNonZoneChangeTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{
+			name:   "attack trigger it deals",
+			oracle: "Whenever a creature attacks, it deals 1 damage to any target.",
+		},
+		{
+			name:   "tapped trigger it deals",
+			oracle: "Whenever a creature becomes tapped, it deals 2 damage to any target.",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Devil",
+				Layout:     "normal",
+				TypeLine:   "Creature — Devil",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			damage, ok := mode.Sequence[0].Primitive.(game.Damage)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Damage", mode.Sequence[0].Primitive)
+			}
+			if !damage.DamageSource.Exists || damage.DamageSource.Val != game.EventPermanentReference() {
+				t.Fatalf("DamageSource = %+v, want EventPermanentReference", damage.DamageSource)
+			}
+		})
+	}
+}
+
+// TestLowerGroupDamageEventPermanentSourceInTrigger verifies that the shared
+// group-damage-lowering path handles "It deals X damage to each {group}."
+// bodies in non-zone-change trigger shells, preserving DamageSource/LKI.
+func TestLowerGroupDamageEventPermanentSourceInTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		oracle          string
+		wantPlayerGroup bool
+	}{
+		{
+			name:            "each opponent",
+			oracle:          "Whenever a creature enters, it deals 1 damage to each opponent.",
+			wantPlayerGroup: true,
+		},
+		{
+			name:            "each player",
+			oracle:          "Whenever a creature enters, it deals 1 damage to each player.",
+			wantPlayerGroup: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Devil",
+				Layout:     "normal",
+				TypeLine:   "Creature — Devil",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			damage, ok := mode.Sequence[0].Primitive.(game.Damage)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Damage", mode.Sequence[0].Primitive)
+			}
+			if !damage.DamageSource.Exists || damage.DamageSource.Val != game.EventPermanentReference() {
+				t.Fatalf("DamageSource = %+v, want EventPermanentReference", damage.DamageSource)
+			}
+			_, isPlayerGroup := damage.Recipient.PlayerGroupReference()
+			if tc.wantPlayerGroup && !isPlayerGroup {
+				t.Fatal("Recipient has no PlayerGroupReference, want player group recipient")
+			}
+		})
+	}
+}
+
+// TestLowerDamageEventPermanentSourceFailsClosed verifies that the damage
+// lowerer fails closed when the body uses "It deals" but the source reference
+// is not ReferenceBindingEventPermanent, and when the text is wrong.
+func TestLowerDamageEventPermanentSourceFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		// "It deals" without a bound event-permanent source cannot lower.
+		"{1}: It deals 1 damage to any target.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Devil",
+				Layout:     "normal",
+				TypeLine:   "Creature — Devil",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected diagnostic for %q but none produced", oracleText)
+			}
+		})
 	}
 }
 
@@ -7160,6 +7348,106 @@ func TestLowerModifyPTEventPermanentTrigger(t *testing.T) {
 	}
 }
 
+// TestLowerModifyPTEventPermanentInNonZoneChangeTrigger verifies that the
+// shared lowerFixedModifyPTSpell path lowers an EventPermanent ModifyPT body
+// across non-zone-change trigger shells (generic pattern trigger here).
+func TestLowerModifyPTEventPermanentInNonZoneChangeTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{
+			name:   "attack trigger it gets",
+			oracle: "Whenever a creature attacks, it gets +1/+1 until end of turn.",
+		},
+		{
+			name:   "tapped trigger it gets",
+			oracle: "Whenever a creature becomes tapped, it gets +0/+2 until end of turn.",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Pump",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			modify, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
+			if !ok || modify.Object != game.EventPermanentReference() {
+				t.Fatalf("primitive = %+v, want event permanent P/T modification", mode.Sequence[0].Primitive)
+			}
+		})
+	}
+}
+
+// TestLowerModifyPTEventPermanentSharedContentPathRegression verifies that the
+// exact ETB non-self "It gets +2/+0 until end of turn." body still lowers
+// correctly now that lowerEventPermanentModifyPTBody is removed and the shared
+// lowerFixedModifyPTSpell path owns it.
+func TestLowerModifyPTEventPermanentSharedContentPathRegression(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Guide",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Whenever another creature enters, it gets +2/+0 until end of turn.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	modify, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ModifyPT", mode.Sequence[0].Primitive)
+	}
+	if modify.Object != game.EventPermanentReference() {
+		t.Fatalf("Object = %v, want EventPermanentReference", modify.Object)
+	}
+	if modify.PowerDelta.Value() != 2 || modify.ToughnessDelta.Value() != 0 {
+		t.Fatalf("P/T = %v/%v, want +2/+0", modify.PowerDelta, modify.ToughnessDelta)
+	}
+	if modify.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("Duration = %v, want DurationUntilEndOfTurn", modify.Duration)
+	}
+}
+
+// TestLowerModifyPTEventPermanentFailsClosed verifies that EventPermanent
+// ModifyPT bodies fail closed when the text does not match the expected form.
+func TestLowerModifyPTEventPermanentFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		// Wrong subject — uses card name instead of "It".
+		"Whenever a creature attacks, Test Pump gets +1/+1 until end of turn.",
+		// Wrong duration.
+		"Whenever a creature attacks, it gets +1/+1.",
+		// Negated form.
+		"Whenever a creature attacks, it doesn't get +1/+1 until end of turn.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Pump",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected diagnostic for unsupported body %q", oracleText)
+			}
+		})
+	}
+}
+
 func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
@@ -8582,7 +8870,6 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"unsupported zone-filtered spell", "Whenever you cast a spell from your library, draw a card."},
 		{"any player your graveyard", "Whenever a player casts a spell from your graveyard, draw a card."},
 		{"opponent your graveyard", "Whenever an opponent casts a spell from your graveyard, draw a card."},
-		{"intervening if", "Whenever you cast a spell, if you control an artifact, draw a card."},
 		{"ability word", "Spellcraft — Whenever you cast a spell, draw a card."},
 		{"unsupported body", "Whenever you cast a spell, counter target activated ability from an artifact source."},
 		{"partially optional body", "Whenever you cast a spell, draw a card. You may gain 1 life."},
@@ -8628,6 +8915,70 @@ func TestLowerCastTriggerOptionalBody(t *testing.T) {
 	}
 	if !ta.Optional {
 		t.Error("expected optional triggered ability")
+	}
+}
+
+func TestLowerCastTriggerSupportedInterveningCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		oracle    string
+		wantField string
+	}{
+		{
+			name:      "if you control an artifact",
+			oracle:    "Whenever you cast a spell, if you control an artifact, draw a card.",
+			wantField: "ControlsMatching",
+		},
+		{
+			name:      "if you have 5 or more life",
+			oracle:    "Whenever you cast a creature spell, if you have 5 or more life, draw a card.",
+			wantField: "ControllerLifeAtLeast",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Pattern.Event != game.EventSpellCast {
+				t.Errorf("event = %v, want EventSpellCast", trigger.Pattern.Event)
+			}
+			if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
+				t.Fatalf("trigger = %+v, want intervening condition", trigger)
+			}
+		})
+	}
+}
+
+func TestLowerCastTriggerInterveningIfFailsClosedOnUnsupportedCondition(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Whenever you cast a spell, if you have seven or more cards in hand, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("cast trigger with unsupported intervening condition unexpectedly lowered")
+	}
+	if !strings.Contains(diagnostics[0].Detail, "condition") {
+		t.Fatalf("diagnostic = %#v, want condition detail", diagnostics[0])
 	}
 }
 
@@ -9409,6 +9760,70 @@ func TestLowerCounterAddedUnsupportedKindFailsClosed(t *testing.T) {
 	}
 }
 
+func TestLowerGenericPatternTriggerSupportedInterveningCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		oracle    string
+		wantEvent game.EventKind
+	}{
+		{
+			name:      "another creature tapped if you control an artifact",
+			oracle:    "Whenever another creature you control becomes tapped, if you control an artifact, draw a card.",
+			wantEvent: game.EventPermanentTapped,
+		},
+		{
+			name:      "another creature tapped if opponent controls land",
+			oracle:    "Whenever another creature you control becomes tapped, if an opponent controls two or more lands, draw a card.",
+			wantEvent: game.EventPermanentTapped,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.Pattern.Event != tc.wantEvent {
+				t.Errorf("event = %v, want %v", trigger.Pattern.Event, tc.wantEvent)
+			}
+			if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
+				t.Fatalf("trigger = %+v, want intervening condition", trigger)
+			}
+		})
+	}
+}
+
+func TestLowerGenericPatternTriggerInterveningIfFailsClosedOnUnsupportedCondition(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Whenever another creature you control becomes tapped, if you have seven or more cards in hand, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("generic trigger with unsupported intervening condition unexpectedly lowered")
+	}
+	if !strings.Contains(diagnostics[0].Detail, "condition") {
+		t.Fatalf("diagnostic = %#v, want condition detail", diagnostics[0])
+	}
+}
+
 func TestLowerCreatureDiesRegressionStillWorks(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -10140,9 +10555,9 @@ func TestLowerDrawDiscardTriggerRejectsUnknownPhrase(t *testing.T) {
 	}
 }
 
-func TestLowerDrawDiscardTriggerInterveningIfFailsClosed(t *testing.T) {
+func TestLowerDrawDiscardTriggerSupportedInterveningCondition(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Conditional Draw Watcher",
 		Layout:     "normal",
 		ManaCost:   "{1}{U}",
@@ -10151,12 +10566,39 @@ func TestLowerDrawDiscardTriggerInterveningIfFailsClosed(t *testing.T) {
 		Colors:     []string{"U"},
 		Power:      new("1"),
 		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.Pattern.Event != game.EventCardDrawn {
+		t.Errorf("event = %v, want EventCardDrawn", trigger.Pattern.Event)
+	}
+	if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
+		t.Fatalf("trigger = %+v, want intervening condition", trigger)
+	}
+	if trigger.InterveningCondition.Val.ControllerLifeAtLeast != 5 {
+		t.Errorf("condition = %+v, want ControllerLifeAtLeast 5", trigger.InterveningCondition.Val)
+	}
+}
+
+func TestLowerDrawDiscardTriggerInterveningIfFailsClosedOnUnsupportedCondition(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Overflowing Draw Watcher",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever you draw a card, if you have seven or more cards in hand, draw a card.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
 	}, "c")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(diagnostics) == 0 {
-		t.Fatal("intervening-if draw trigger unexpectedly lowered")
+		t.Fatal("draw trigger with unsupported intervening condition unexpectedly lowered")
 	}
 	if !strings.Contains(diagnostics[0].Detail, "condition") {
 		t.Fatalf("diagnostic = %#v, want condition detail", diagnostics[0])
@@ -11222,5 +11664,847 @@ func TestLowerAddManaThroughSharedAbilityContent(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// --- Tranche 3: event-player bodies, event-permanent pronoun actions, source Sacrifice it. ---
+
+func TestLowerEventPlayerDrawInTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		oracle  string
+		wantAmt int
+	}{
+		{"they draw a card", "Whenever an opponent draws a card, they draw a card.", 1},
+		{"they draw 2 cards", "Whenever a player draws a card, they draw 2 cards.", 2},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			draw, ok := mode.Sequence[0].Primitive.(game.Draw)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Draw", mode.Sequence[0].Primitive)
+			}
+			if draw.Amount.Value() != tc.wantAmt {
+				t.Errorf("amount = %v, want %d", draw.Amount, tc.wantAmt)
+			}
+			if draw.Player != game.EventPlayerReference() {
+				t.Errorf("player = %v, want EventPlayerReference", draw.Player)
+			}
+		})
+	}
+}
+
+func TestLowerEventPlayerDiscardInTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		oracle  string
+		wantAmt int
+	}{
+		{"they discard a card", "Whenever a player discards a card, they discard a card.", 1},
+		{"they discard 2 cards", "Whenever a player draws a card, they discard 2 cards.", 2},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			discard, ok := mode.Sequence[0].Primitive.(game.Discard)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Discard", mode.Sequence[0].Primitive)
+			}
+			if discard.Amount.Value() != tc.wantAmt {
+				t.Errorf("amount = %v, want %d", discard.Amount, tc.wantAmt)
+			}
+			if discard.Player != game.EventPlayerReference() {
+				t.Errorf("player = %v, want EventPlayerReference", discard.Player)
+			}
+		})
+	}
+}
+
+func TestLowerEventPlayerMillInTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Watcher",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a player draws a card, they mill 2 cards.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Mill", mode.Sequence[0].Primitive)
+	}
+	if mill.Amount.Value() != 2 {
+		t.Errorf("amount = %v, want 2", mill.Amount)
+	}
+	if mill.Player != game.EventPlayerReference() {
+		t.Errorf("player = %v, want EventPlayerReference", mill.Player)
+	}
+}
+
+func TestLowerEventPlayerDrawFailsClosedOnUnsupportedForm(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		// Non-EventPlayer reference must still fail closed.
+		"Whenever a creature attacks, they draw a card.",
+		// Unsupported dynamic amount.
+		"Whenever an opponent draws a card, they draw X cards.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: oracleText,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected diagnostic for %q but none produced", oracleText)
+			}
+		})
+	}
+}
+
+func TestLowerEventPermanentDestroyItInTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{"dies trigger", "Whenever a creature dies, destroy it."},
+		{"attack trigger", "Whenever a creature attacks, destroy it."},
+		{"tapped trigger", "Whenever a creature becomes tapped, destroy it."},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			destroy, ok := mode.Sequence[0].Primitive.(game.Destroy)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Destroy", mode.Sequence[0].Primitive)
+			}
+			if destroy.Object != game.EventPermanentReference() {
+				t.Errorf("object = %v, want EventPermanentReference", destroy.Object)
+			}
+		})
+	}
+}
+
+func TestLowerEventPermanentExileItInTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Watcher",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a creature becomes tapped, exile it.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Exile", mode.Sequence[0].Primitive)
+	}
+	if exile.Object != game.EventPermanentReference() {
+		t.Errorf("object = %v, want EventPermanentReference", exile.Object)
+	}
+}
+
+func TestLowerEventPermanentTapItInTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Watcher",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a creature becomes tapped, tap it.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	tap, ok := mode.Sequence[0].Primitive.(game.Tap)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Tap", mode.Sequence[0].Primitive)
+	}
+	if tap.Object != game.EventPermanentReference() {
+		t.Errorf("object = %v, want EventPermanentReference", tap.Object)
+	}
+}
+
+func TestLowerEventPermanentUntapItInTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Watcher",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a creature enters, untap it.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	untap, ok := mode.Sequence[0].Primitive.(game.Untap)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Untap", mode.Sequence[0].Primitive)
+	}
+	if untap.Object != game.EventPermanentReference() {
+		t.Errorf("object = %v, want EventPermanentReference", untap.Object)
+	}
+}
+
+func TestLowerEventPermanentReturnToHandInTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{"attack trigger bounce", "Whenever a creature attacks, return it to its owner's hand."},
+		{"tapped trigger bounce", "Whenever a creature becomes tapped, return it to its owner's hand."},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			bounce, ok := mode.Sequence[0].Primitive.(game.Bounce)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Bounce", mode.Sequence[0].Primitive)
+			}
+			if bounce.Object != game.EventPermanentReference() {
+				t.Errorf("object = %v, want EventPermanentReference", bounce.Object)
+			}
+		})
+	}
+}
+
+// TestLowerDiesEventCardReturnStillUsesMoveCard verifies that the dies-trigger
+// "return it to its owner's hand" path still routes through lowerDiesEventCardEffect
+// (MoveCard from graveyard to hand, not Bounce) after the shared pronoun path
+// is in place. Dies-trigger LKI requires MoveCard, not Bounce.
+func TestLowerDiesEventCardReturnStillUsesMoveCard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature dies, return it to its owner's hand.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard for dies trigger return", mode.Sequence[0].Primitive)
+	}
+	if move.Card.Kind != game.CardReferenceEvent ||
+		move.FromZone != zone.Graveyard ||
+		move.Destination != zone.Hand {
+		t.Fatalf("move = %+v, want event card from graveyard to hand", move)
+	}
+}
+
+func TestLowerEventPermanentSacrificeItInTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{"dies trigger sacrifice", "Whenever a creature dies, sacrifice it."},
+		{"attack trigger sacrifice", "Whenever a creature attacks, sacrifice it."},
+		{"ETB trigger sacrifice", "Whenever a creature enters, sacrifice it."},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			sac, ok := mode.Sequence[0].Primitive.(game.Sacrifice)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Sacrifice", mode.Sequence[0].Primitive)
+			}
+			if sac.Object != game.EventPermanentReference() {
+				t.Errorf("object = %v, want EventPermanentReference", sac.Object)
+			}
+		})
+	}
+}
+
+func TestLowerSourceBoundSacrificeItInSelfTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{"ETB self sacrifice", "When this creature enters, sacrifice it."},
+		{"attack self sacrifice", "Whenever this creature attacks, sacrifice it."},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Doomed Soldier",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Soldier",
+				OracleText: tc.oracle,
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			mode := face.TriggeredAbilities[0].Content.Modes[0]
+			sac, ok := mode.Sequence[0].Primitive.(game.Sacrifice)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Sacrifice", mode.Sequence[0].Primitive)
+			}
+			if sac.Object.Kind() == game.ObjectReferenceNone {
+				t.Error("sacrifice object is zero, want source or event reference")
+			}
+		})
+	}
+}
+
+func TestLowerEventPermanentPronounEffectFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		// Text mismatch: "that creature" instead of "it".
+		"Whenever a creature attacks, destroy that creature.",
+		// Negated form is unsupported.
+		"Whenever a creature attacks, don't destroy it.",
+		// Wrong text form for return.
+		"Whenever a creature attacks, return it to the battlefield.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: oracleText,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected diagnostic for unsupported pronoun body %q", oracleText)
+			}
+		})
+	}
+}
+
+func TestLowerEventHistoryInterveningConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracle     string
+		wantEvent  game.EventKind
+		wantNegate bool
+		wantWindow game.EventHistoryWindow
+	}{
+		{
+			name:       "attacked this turn",
+			oracle:     "When this creature enters, if you attacked this turn, draw a card.",
+			wantEvent:  game.EventAttackerDeclared,
+			wantWindow: game.EventHistoryCurrentTurn,
+		},
+		{
+			name:       "creature died this turn",
+			oracle:     "At the beginning of your end step, if a creature died this turn, draw a card.",
+			wantEvent:  game.EventPermanentDied,
+			wantWindow: game.EventHistoryCurrentTurn,
+		},
+		{
+			name:       "you gained life this turn",
+			oracle:     "At the beginning of each end step, if you gained life this turn, draw a card.",
+			wantEvent:  game.EventLifeGained,
+			wantWindow: game.EventHistoryCurrentTurn,
+		},
+		{
+			name:       "an opponent lost life this turn",
+			oracle:     "At the beginning of your end step, if an opponent lost life this turn, draw a card.",
+			wantEvent:  game.EventLifeLost,
+			wantWindow: game.EventHistoryCurrentTurn,
+		},
+		{
+			name:       "you lost life this turn",
+			oracle:     "At the beginning of your end step, if you lost life this turn, draw a card.",
+			wantEvent:  game.EventLifeLost,
+			wantWindow: game.EventHistoryCurrentTurn,
+		},
+		{
+			name:       "an opponent lost life last turn",
+			oracle:     "At the beginning of each upkeep, if an opponent lost life last turn, draw a card.",
+			wantEvent:  game.EventLifeLost,
+			wantWindow: game.EventHistoryPreviousTurn,
+		},
+		{
+			name:       "you lost life last turn",
+			oracle:     "At the beginning of each upkeep, if you lost life last turn, draw a card.",
+			wantEvent:  game.EventLifeLost,
+			wantWindow: game.EventHistoryPreviousTurn,
+		},
+		{
+			name:       "no spells cast last turn",
+			oracle:     "At the beginning of your upkeep, if no spells were cast last turn, draw a card.",
+			wantEvent:  game.EventSpellCast,
+			wantNegate: true,
+			wantWindow: game.EventHistoryPreviousTurn,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0].Trigger
+			if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
+				t.Fatalf("trigger = %+v, want intervening condition", trigger)
+			}
+			cond := trigger.InterveningCondition.Val
+			if !cond.EventHistory.Exists {
+				t.Fatalf("condition = %+v, want EventHistory", cond)
+			}
+			hist := cond.EventHistory.Val
+			if hist.Pattern.Event != tc.wantEvent {
+				t.Errorf("EventHistory.Pattern.Event = %v, want %v", hist.Pattern.Event, tc.wantEvent)
+			}
+			if hist.Window != tc.wantWindow {
+				t.Errorf("EventHistory.Window = %v, want %v", hist.Window, tc.wantWindow)
+			}
+			if cond.Negate != tc.wantNegate {
+				t.Errorf("Condition.Negate = %v, want %v", cond.Negate, tc.wantNegate)
+			}
+		})
+	}
+}
+
+func TestLowerEventHistoryInterveningConditionFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"At the beginning of your upkeep, if you gained 2 or more life this turn, draw a card.",
+		"At the beginning of your upkeep, if no creatures attacked last turn, draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected diagnostic for unsupported event history condition %q", oracleText)
+			}
+		})
+	}
+}
+
+func TestRenderGeneratedEventHistoryInterveningCondition(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "At the beginning of your upkeep, if no spells were cast last turn, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Negate: true",
+		"EventHistory: opt.Val(game.EventHistoryCondition{",
+		"Event: game.EventSpellCast",
+		"Window: game.EventHistoryPreviousTurn",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestLowerEventHistoryCreatureDiedHasCreatureFilter(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "At the beginning of your end step, if a creature died this turn, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if !trigger.InterveningCondition.Exists {
+		t.Fatal("no intervening condition")
+	}
+	hist := trigger.InterveningCondition.Val.EventHistory
+	if !hist.Exists {
+		t.Fatal("no EventHistory")
+	}
+	if !slices.Equal(hist.Val.Pattern.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("SubjectSelection = %#v, want creature", hist.Val.Pattern.SubjectSelection)
+	}
+}
+
+func TestLowerEventHistoryAttackedConditionHasControllerYou(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When this creature enters, if you attacked this turn, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if !trigger.InterveningCondition.Exists {
+		t.Fatal("no intervening condition")
+	}
+
+	hist := trigger.InterveningCondition.Val.EventHistory
+	if !hist.Exists {
+		t.Fatal("no EventHistory")
+	}
+	if hist.Val.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("Controller = %v, want TriggerControllerYou", hist.Val.Pattern.Controller)
+	}
+}
+
+func TestLowerObjectInterveningConditionsUseSharedReferencesAndSelections(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		typeLine    string
+		oracle      string
+		wantRef     game.ObjectReference
+		wantTypes   []types.Card
+		wantSubtype types.Sub
+		wantTapped  game.TriState
+		wantMatches bool
+	}{
+		{
+			name:        "event creature LKI",
+			typeLine:    "Creature — Spirit",
+			oracle:      "When this creature dies, if it was a creature, draw a card.",
+			wantRef:     game.EventPermanentReference(),
+			wantTypes:   []types.Card{types.Creature},
+			wantMatches: true,
+		},
+		{
+			name:        "event creature contraction",
+			typeLine:    "Creature — Spirit",
+			oracle:      "When this creature dies, if it's a creature, draw a card.",
+			wantRef:     game.EventPermanentReference(),
+			wantTypes:   []types.Card{types.Creature},
+			wantMatches: true,
+		},
+		{
+			name:        "event Human LKI",
+			typeLine:    "Creature — Human",
+			oracle:      "When this creature dies, if it was a Human, draw a card.",
+			wantRef:     game.EventPermanentReference(),
+			wantTypes:   []types.Card{types.Creature},
+			wantSubtype: types.Human,
+			wantMatches: true,
+		},
+		{
+			name:        "source artifact untapped",
+			typeLine:    "Artifact",
+			oracle:      "At the beginning of your upkeep, if this artifact is untapped, draw a card.",
+			wantRef:     game.SourcePermanentReference(),
+			wantTypes:   []types.Card{types.Artifact},
+			wantTapped:  game.TriFalse,
+			wantMatches: true,
+		},
+		{
+			name:        "source creature untapped",
+			typeLine:    "Creature — Bear",
+			oracle:      "At the beginning of your upkeep, if this creature is untapped, draw a card.",
+			wantRef:     game.SourcePermanentReference(),
+			wantTypes:   []types.Card{types.Creature},
+			wantTapped:  game.TriFalse,
+			wantMatches: true,
+		},
+		{
+			name:        "source enchantment",
+			typeLine:    "Enchantment",
+			oracle:      "At the beginning of your upkeep, if this permanent is an enchantment, draw a card.",
+			wantRef:     game.SourcePermanentReference(),
+			wantTypes:   []types.Card{types.Enchantment},
+			wantMatches: true,
+		},
+		{
+			name:     "source battlefield existence",
+			typeLine: "Creature — Bear",
+			oracle:   "At the beginning of your upkeep, if this creature is on the battlefield, draw a card.",
+			wantRef:  game.SourcePermanentReference(),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Subject",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracle,
+			}
+			if strings.Contains(test.typeLine, "Creature") {
+				card.Power = new("2")
+				card.Toughness = new("2")
+			}
+			face := lowerSingleFace(t, card)
+			trigger := face.TriggeredAbilities[0].Trigger
+			if !trigger.InterveningCondition.Exists {
+				t.Fatalf("trigger = %+v, want structured condition", trigger)
+			}
+			condition := trigger.InterveningCondition.Val
+			if !condition.Object.Exists || condition.Object.Val != test.wantRef {
+				t.Fatalf("condition = %+v, want object %v", condition, test.wantRef)
+			}
+			if condition.ObjectMatches.Exists != test.wantMatches {
+				t.Fatalf("condition = %+v, ObjectMatches.Exists = %v", condition, condition.ObjectMatches.Exists)
+			}
+			if !test.wantMatches {
+				return
+			}
+			selection := condition.ObjectMatches.Val
+			if !slices.Equal(selection.RequiredTypes, test.wantTypes) ||
+				selection.Tapped != test.wantTapped {
+				t.Fatalf("selection = %+v", selection)
+			}
+			if test.wantSubtype != "" &&
+				!slices.Equal(selection.SubtypesAny, []types.Sub{test.wantSubtype}) {
+				t.Fatalf("selection = %+v, want subtype %v", selection, test.wantSubtype)
+			}
+		})
+	}
+}
+
+func TestLowerHadCountersInterveningConditionUsesSharedTriggerSlot(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Artificer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Artificer",
+		OracleText: "Whenever an artifact is put into a graveyard from the battlefield, if it had counters on it, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.InterveningIf != "if it had counters on it" ||
+		!trigger.InterveningIfEventPermanentHadCounters {
+		t.Fatalf("trigger = %+v, want had-counters intervening-if", trigger)
+	}
+}
+
+func TestLowerProvenControllerSelectionConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase        string
+		threshold     int
+		negated       bool
+		requiredTypes []types.Card
+		subtypes      []types.Sub
+		tapped        game.TriState
+		power         int
+		excludeSource bool
+	}{
+		{"if you control two or more Gates", 2, false, []types.Card{types.Land}, []types.Sub{types.Gate}, game.TriAny, 0, false},
+		{"if you control two or more tapped creatures", 2, false, []types.Card{types.Creature}, nil, game.TriTrue, 0, false},
+		{"if you control a creature with power 5 or greater", 0, false, []types.Card{types.Creature}, nil, game.TriAny, 5, false},
+		{"if you control another creature with power 4 or greater", 0, false, []types.Card{types.Creature}, nil, game.TriAny, 4, true},
+		{"if you control an Equipment", 0, false, []types.Card{types.Artifact}, []types.Sub{types.Equipment}, game.TriAny, 0, false},
+		{"if you control no creatures", 1, true, []types.Card{types.Creature}, nil, game.TriAny, 0, false},
+		{"if you control three or more creatures", 3, false, []types.Card{types.Creature}, nil, game.TriAny, 0, false},
+		{"if you control a tapped creature", 0, false, []types.Card{types.Creature}, nil, game.TriTrue, 0, false},
+	}
+	for _, test := range tests {
+		t.Run(test.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				OracleText: "At the beginning of your upkeep, " + test.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			condition := face.TriggeredAbilities[0].Trigger.InterveningCondition
+			if !condition.Exists || !condition.Val.ControlsMatching.Exists {
+				t.Fatalf("condition = %+v, want ControlsMatching", condition)
+			}
+			count := condition.Val.ControlsMatching.Val
+			selection := count.Selection
+			if count.MinCount != test.threshold ||
+				condition.Val.Negate != test.negated ||
+				!slices.Equal(selection.RequiredTypes, test.requiredTypes) ||
+				!slices.Equal(selection.SubtypesAny, test.subtypes) ||
+				selection.Tapped != test.tapped ||
+				selection.ExcludeSource != test.excludeSource {
+				t.Fatalf("condition = %+v", condition.Val)
+			}
+			if test.power == 0 {
+				if selection.Power.Exists {
+					t.Fatalf("selection = %+v, want no power predicate", selection)
+				}
+			} else if !selection.Power.Exists ||
+				selection.Power.Val.Op != compare.GreaterOrEqual ||
+				selection.Power.Val.Value != test.power {
+				t.Fatalf("selection = %+v, want power >= %d", selection, test.power)
+			}
+		})
+	}
+}
+
+func TestLowerObjectConditionInvalidSemanticShapesFailClosed(t *testing.T) {
+	t.Parallel()
+	tests := []oracle.CompiledCondition{
+		{
+			Kind:          oracle.ConditionIf,
+			Intervening:   true,
+			Predicate:     oracle.ConditionPredicateObjectMatches,
+			ObjectBinding: oracle.ReferenceBindingAmbiguous,
+			Selection: oracle.ConditionSelection{
+				RequiredTypes: []oracle.ConditionCardType{oracle.ConditionCardTypeCreature},
+			},
+		},
+		{
+			Kind:          oracle.ConditionIf,
+			Intervening:   true,
+			Predicate:     oracle.ConditionPredicateObjectExists,
+			ObjectBinding: oracle.ReferenceBindingEventPermanent,
+		},
+		{
+			Kind:          oracle.ConditionIf,
+			Intervening:   true,
+			Predicate:     oracle.ConditionPredicateObjectExists,
+			ObjectBinding: oracle.ReferenceBindingSource,
+			Selection: oracle.ConditionSelection{
+				RequiredTypes: []oracle.ConditionCardType{oracle.ConditionCardTypeCreature},
+			},
+		},
+		{
+			Kind:          oracle.ConditionIf,
+			Intervening:   true,
+			Predicate:     oracle.ConditionPredicateObjectMatches,
+			ObjectBinding: oracle.ReferenceBindingSource,
+			Selection: oracle.ConditionSelection{
+				RequiredTypes: []oracle.ConditionCardType{oracle.ConditionCardTypeCreature},
+				Tapped:        oracle.ConditionTriState(99),
+			},
+		},
+	}
+	for _, condition := range tests {
+		if got, ok := lowerCondition(condition, conditionContextInterveningTrigger); ok {
+			t.Fatalf("lowerCondition(%+v) = %+v, true; want fail closed", condition, got)
+		}
+	}
+}
+
+func TestRenderGeneratedObjectInterveningConditions(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		oracleText string
+		want       string
+	}{
+		{"When this creature dies, if it was a Human, draw a card.", "ObjectMatches:"},
+		{"At the beginning of your upkeep, if this creature is on the battlefield, draw a card.", "Object:"},
+		{"Whenever an artifact is put into a graveyard from the battlefield, if it had counters on it, draw a card.", "InterveningIfEventPermanentHadCounters: true"},
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Human",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human",
+			OracleText: test.oracleText,
+			Power:      new("2"),
+			Toughness:  new("2"),
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("diagnostics = %#v", diagnostics)
+		}
+		if !strings.Contains(source, test.want) {
+			t.Fatalf("source missing %q:\n%s", test.want, source)
+		}
+
+		rendered, err := (Renderer{}).renderControllerControlsCondition(newRenderCtx(), &game.Condition{
+			Object: opt.Val(game.EventPermanentReference()),
+			Types:  []types.Card{types.Creature},
+		}, "legacy object")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(rendered, "Object:") || !strings.Contains(rendered, "Types:") {
+			t.Fatalf("legacy Object+Types condition rendered as %s", rendered)
+		}
 	}
 }

@@ -688,6 +688,21 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.Object.Exists {
 		v.validateObjectRef(faceName, appendPath(path, "Object"), condition.Object.Val, targets)
 	}
+	if condition.ObjectMatches.Exists {
+		v.validateSelection(faceName, appendPath(path, "ObjectMatches"), condition.ObjectMatches.Val)
+		if !condition.Object.Exists {
+			v.add(faceName, appendPath(path, "ObjectMatches"), CardDefIssueInvalidCondition, "ObjectMatches requires an Object reference")
+		}
+		if len(condition.Types) > 0 {
+			v.add(faceName, path, CardDefIssueInvalidSelection, "Condition sets both legacy Types and ObjectMatches")
+		}
+		if condition.ObjectMatches.Val.Player != PlayerAny {
+			v.add(faceName, appendPath(path, "ObjectMatches.Player"), CardDefIssueInvalidSelection, "object Selection cannot use a player relation")
+		}
+	}
+	if condition.EventHistory.Exists {
+		v.validateEventHistoryCondition(faceName, appendPath(path, "EventHistory"), &condition.EventHistory.Val)
+	}
 }
 
 func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string, count SelectionCount) {
@@ -698,6 +713,15 @@ func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string
 	v.validateSelection(faceName, appendPath(path, "Selection"), selection)
 	if selection.Player != PlayerAny {
 		v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "controlled-permanent Selection cannot use a player relation")
+	}
+}
+
+func (v *cardDefValidator) validateEventHistoryCondition(faceName, path string, hist *EventHistoryCondition) {
+	if hist.Pattern.Event == EventUnknown {
+		v.add(faceName, appendPath(path, "Pattern.Event"), CardDefIssueInvalidCondition, "EventHistoryCondition Pattern.Event must not be EventUnknown")
+	}
+	if !hist.Pattern.SubjectSelection.Empty() {
+		v.validateSelection(faceName, appendPath(path, "Pattern.SubjectSelection"), hist.Pattern.SubjectSelection)
 	}
 }
 
