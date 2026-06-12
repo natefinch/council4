@@ -288,10 +288,13 @@ const (
 type TriggerPattern struct {
 	Event EventKind
 
-	Controller  TriggerControllerFilter
-	Source      TriggerSourceFilter
-	ExcludeSelf bool
-	Player      TriggerPlayerFilter
+	Controller TriggerControllerFilter
+	// CauseController constrains the controller of the spell or ability that
+	// caused the event, independently from Controller's event-subject relation.
+	CauseController TriggerControllerFilter
+	Source          TriggerSourceFilter
+	ExcludeSelf     bool
+	Player          TriggerPlayerFilter
 
 	Subject TriggerSubjectObject
 
@@ -360,6 +363,12 @@ type TriggerPattern struct {
 	SpellTargetPattern opt.V[TargetPredicate]
 	RequireKickerPaid  bool
 	RequireHistoric    bool
+	// ExcludeManaAbility is required for EventAbilityActivated patterns until
+	// payment-time mana activations join the authoritative event stream.
+	ExcludeManaAbility bool
+	// PlayerEventOrdinalThisTurn restricts a player event to its occurrence
+	// number during the current turn. Zero does not restrict the event.
+	PlayerEventOrdinalThisTurn int
 
 	// OneOrMore coalesces matching events that happened as one batch into one
 	// trigger. The first matching event is retained as TriggerEvent.

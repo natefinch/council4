@@ -9,6 +9,21 @@ func emitEvent(g *game.Game, event game.Event) {
 	g.AppendEvent(event)
 }
 
+func nextPlayerEventOrdinalThisTurn(g *game.Game, kind game.EventKind, playerID game.PlayerID) int {
+	ordinal := 1
+	start := 0
+	index := g.Turn.TurnNumber - 1
+	if index >= 0 && index < len(g.EventTurnStarts) {
+		start = g.EventTurnStarts[index]
+	}
+	for _, event := range g.Events[start:] {
+		if event.Kind == kind && event.Player == playerID {
+			ordinal++
+		}
+	}
+	return ordinal
+}
+
 func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {
 	if event.CardID != 0 && event.CardZoneVersion == 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
@@ -75,6 +90,45 @@ func emitPermanentUntappedEvent(g *game.Game, permanent *game.Permanent) {
 	})
 }
 
+func sacrificePermanent(g *game.Game, permanent *game.Permanent) bool {
+	return sacrificePermanentsSimultaneously(g, []*game.Permanent{permanent})
+}
+
+func sacrificePermanentsSimultaneously(g *game.Game, permanents []*game.Permanent) bool {
+	if len(permanents) == 0 {
+		return false
+	}
+	simultaneousID := g.IDGen.Next()
+	events := make([]game.Event, 0, len(permanents))
+	for _, permanent := range permanents {
+		if permanent == nil {
+			continue
+		}
+		events = append(events, game.Event{
+			Kind:           game.EventPermanentSacrificed,
+			SimultaneousID: simultaneousID,
+			Controller:     effectiveController(g, permanent),
+			Player:         effectiveController(g, permanent),
+			CardID:         permanent.CardInstanceID,
+			PermanentID:    permanent.ObjectID,
+			TokenName:      permanentTokenName(permanent),
+			TokenDef:       permanent.TokenDef,
+		})
+	}
+	if !movePermanentsToZoneSimultaneously(g, permanents, zone.Graveyard) {
+		return false
+	}
+	succeeded := false
+	for _, event := range events {
+		if _, stillOnBattlefield := permanentByObjectID(g, event.PermanentID); stillOnBattlefield {
+			continue
+		}
+		emitEvent(g, event)
+		succeeded = true
+	}
+	return succeeded
+}
+
 func setPermanentTapped(g *game.Game, permanent *game.Permanent, tapped bool) {
 	if permanent.Tapped == tapped {
 		return
@@ -105,4 +159,20 @@ func emitTargetEvents(g *game.Game, obj *game.StackObject) {
 		}
 		emitEvent(g, event)
 	}
+}
+
+func emitAbilityActivatedEvent(g *game.Game, obj *game.StackObject, permanentID game.ObjectID, manaAbility bool) {
+	emitEvent(g, game.Event{
+		Kind:           game.EventAbilityActivated,
+		SourceID:       obj.SourceCardID,
+		SourceObjectID: permanentID,
+		StackObjectID:  obj.ID,
+		AbilityIndex:   obj.AbilityIndex,
+		ManaAbility:    manaAbility,
+		Controller:     obj.Controller,
+		Player:         obj.Controller,
+		CardID:         obj.SourceCardID,
+		PermanentID:    permanentID,
+		TokenDef:       obj.SourceTokenDef,
+	})
 }

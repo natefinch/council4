@@ -612,6 +612,25 @@ func TestLifePaymentAndDamageEmitLifeLostEvents(t *testing.T) {
 	})
 }
 
+func TestPlayerEventsRecordOrdinalThisTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	if gainLife(g, game.Player1, 1) != 1 || gainLife(g, game.Player1, 2) != 2 {
+		t.Fatal("gain life failed")
+	}
+	if loseLife(g, game.Player1, 1) != 1 {
+		t.Fatal("lose life failed")
+	}
+	assertEvent(t, g.Events, game.EventLifeGained, func(event game.Event) bool {
+		return event.Player == game.Player1 && event.Amount == 1 && event.PlayerEventOrdinalThisTurn == 1
+	})
+	assertEvent(t, g.Events, game.EventLifeGained, func(event game.Event) bool {
+		return event.Player == game.Player1 && event.Amount == 2 && event.PlayerEventOrdinalThisTurn == 2
+	})
+	assertEvent(t, g.Events, game.EventLifeLost, func(event game.Event) bool {
+		return event.Player == game.Player1 && event.PlayerEventOrdinalThisTurn == 1
+	})
+}
+
 func assertEvent(t *testing.T, events []game.Event, kind game.EventKind, matches func(game.Event) bool) {
 	t.Helper()
 	for _, event := range events {

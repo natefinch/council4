@@ -1184,6 +1184,14 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		pattern.SpellTargetPattern.Exists ||
 		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
+		(pattern.ExcludeManaAbility && pattern.Event != game.EventAbilityActivated) ||
+		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
+		(pattern.PlayerEventOrdinalThisTurn > 0 &&
+			pattern.Event != game.EventCardDrawn &&
+			pattern.Event != game.EventLifeGained &&
+			pattern.Event != game.EventLifeLost &&
+			pattern.Event != game.EventScry &&
+			pattern.Event != game.EventSurveil) ||
 		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
@@ -1234,6 +1242,13 @@ func renderTriggerPatternRelationFields(pattern *game.TriggerPattern) ([]string,
 		}
 		fields = append(fields, fmt.Sprintf("Controller: %s,", controller))
 	}
+	if pattern.CauseController != game.TriggerControllerAny {
+		controller, err := renderTriggerController(pattern.CauseController)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("CauseController: %s,", controller))
+	}
 	if pattern.Step != game.StepNone {
 		step, err := renderStep(pattern.Step)
 		if err != nil {
@@ -1271,6 +1286,12 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.RequireHistoric {
 		fields = append(fields, "RequireHistoric: true,")
+	}
+	if pattern.ExcludeManaAbility {
+		fields = append(fields, "ExcludeManaAbility: true,")
+	}
+	if pattern.PlayerEventOrdinalThisTurn > 0 {
+		fields = append(fields, fmt.Sprintf("PlayerEventOrdinalThisTurn: %d,", pattern.PlayerEventOrdinalThisTurn))
 	}
 	if pattern.MatchStackObjectKind {
 		stackObjectKind, err := renderStackObjectKind(pattern.StackObjectKind)
@@ -4305,6 +4326,16 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventPermanentTapped", nil
 	case game.EventPermanentUntapped:
 		return "game.EventPermanentUntapped", nil
+	case game.EventPermanentTurnedFaceUp:
+		return "game.EventPermanentTurnedFaceUp", nil
+	case game.EventPermanentSacrificed:
+		return "game.EventPermanentSacrificed", nil
+	case game.EventScry:
+		return "game.EventScry", nil
+	case game.EventSurveil:
+		return "game.EventSurveil", nil
+	case game.EventAbilityActivated:
+		return "game.EventAbilityActivated", nil
 	case game.EventObjectBecameTarget:
 		return "game.EventObjectBecameTarget", nil
 	case game.EventCountersAdded:

@@ -71,6 +71,34 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "activated ability binds actor source Selection and mana exclusion",
+			event: "an opponent activates an ability of a creature or land that isn't a mana ability",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:               TriggerWhenever,
+				Event:              TriggerEventAbilityActivated,
+				Player:             TriggerPlayerOpponent,
+				ExcludeManaAbility: true,
+				SubjectSelection: TriggerSelection{
+					RequiredTypesAny: []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand},
+				},
+			},
+		},
+		{
+			name:  "target event separates subject and cause controllers",
+			event: "a creature you control becomes the target of a spell or ability an opponent controls",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:            TriggerWhenever,
+				Event:           TriggerEventObjectBecameTarget,
+				Controller:      ControllerYou,
+				CauseController: ControllerOpponent,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
 			name:  "combat event binds relation qualifier and recipient",
 			event: "equipped creature deals combat damage to an opponent",
 			kind:  TriggerWhenever,
@@ -113,6 +141,52 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "face-up event binds self with when",
+			event: "this creature is turned face up",
+			kind:  TriggerWhen,
+			want: TriggerPattern{
+				Kind:   TriggerWhen,
+				Event:  TriggerEventPermanentTurnedFaceUp,
+				Source: TriggerSourceSelf,
+			},
+		},
+		{
+			name:  "face-up event binds selected permanent",
+			event: "a permanent you control is turned face up",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventPermanentTurnedFaceUp,
+				Controller: ControllerYou,
+			},
+		},
+		{
+			name:  "face-up event binds attached creature",
+			event: "enchanted creature is turned face up",
+			kind:  TriggerWhen,
+			want: TriggerPattern{
+				Kind:   TriggerWhen,
+				Event:  TriggerEventPermanentTurnedFaceUp,
+				Source: TriggerSourceAttachedPermanent,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
+			name:  "tap event binds subtype and opponent controller",
+			event: "a forest an opponent controls becomes tapped",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventPermanentTapped,
+				Controller: ControllerOpponent,
+				SubjectSelection: TriggerSelection{
+					SubtypesAny: []TriggerSubtype{"forest"},
+				},
+			},
+		},
+		{
 			name:  "player event binds relation and batching",
 			event: "you discard one or more cards",
 			kind:  TriggerWhenever,
@@ -121,6 +195,39 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 				Event:     TriggerEventCardDiscarded,
 				Player:    TriggerPlayerYou,
 				OneOrMore: true,
+			},
+		},
+		{
+			name:  "player event binds any-player cycling",
+			event: "a player cycles a card",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:   TriggerWhenever,
+				Event:  TriggerEventCycled,
+				Player: TriggerPlayerAny,
+			},
+		},
+		{
+			name:  "sacrifice event binds actor and selected subject",
+			event: "you sacrifice a clue",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:   TriggerWhenever,
+				Event:  TriggerEventPermanentSacrificed,
+				Player: TriggerPlayerYou,
+				SubjectSelection: TriggerSelection{
+					SubtypesAny: []TriggerSubtype{"clue"},
+				},
+			},
+		},
+		{
+			name:  "player event binds scry",
+			event: "you scry",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:   TriggerWhenever,
+				Event:  TriggerEventScry,
+				Player: TriggerPlayerYou,
 			},
 		},
 	}
@@ -149,8 +256,12 @@ func TestTriggerPatternTemplatesFailClosedOnUnsupportedSlots(t *testing.T) {
 		{event: "two or more artifacts you control enter", kind: TriggerWhenever},
 		{event: "a creature you or an opponent controls enters", kind: TriggerWhenever},
 		{event: "you cast a creature or artifact spell", kind: TriggerWhenever},
-		{event: "you activate an ability", kind: TriggerWhenever},
+		{event: "you activate a boast ability", kind: TriggerWhenever},
+		{event: "you turn a permanent face up", kind: TriggerWhenever},
+		{event: "you create or sacrifice a token", kind: TriggerWhenever},
+		{event: "you scry or surveil", kind: TriggerWhenever},
 		{event: "this creature becomes the target of an ability", kind: TriggerWhenever},
+		{event: "this creature becomes the target of a spell or ability for the first time each turn", kind: TriggerWhenever},
 		{event: "this creature attacks alone", kind: TriggerWhenever},
 		{event: "the beginning of a player's upkeep", kind: TriggerAt},
 		{event: "the beginning of your next upkeep", kind: TriggerAt, condition: condition},
@@ -696,6 +807,74 @@ func TestPermanentZoneChangeTriggerRejectsPartialCardName(t *testing.T) {
 	want := TriggerPattern{Kind: TriggerWhen}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("partial-name pattern = %#v, want %#v", got, want)
+	}
+}
+
+func TestCapitalizedEquipmentFaceUpTriggerPattern(t *testing.T) {
+	t.Parallel()
+	got := compileTriggerPattern("this Equipment is turned face up", TriggerWhen, Span{}, "", nil)
+	want := TriggerPattern{
+		Kind:   TriggerWhen,
+		Event:  TriggerEventPermanentTurnedFaceUp,
+		Source: TriggerSourceSelf,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("pattern = %#v, want %#v", got, want)
+	}
+}
+
+func TestActivatedAbilityTriggerPatternsRequireNonManaExclusion(t *testing.T) {
+	t.Parallel()
+	for _, event := range []string{
+		"you activate an ability",
+		"a player activates an ability",
+		"an opponent activates an ability of a creature",
+	} {
+		t.Run(event, func(t *testing.T) {
+			t.Parallel()
+			got := compileTriggerPattern(event, TriggerWhenever, Span{}, "", nil)
+			want := TriggerPattern{Kind: TriggerWhenever}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("unrestricted activation pattern = %#v, want %#v", got, want)
+			}
+		})
+	}
+
+	got := compileTriggerPattern(
+		"an opponent activates an ability of a creature that isn't a mana ability",
+		TriggerWhenever,
+		Span{},
+		"",
+		nil,
+	)
+	if got.Event != TriggerEventAbilityActivated || !got.ExcludeManaAbility {
+		t.Fatalf("non-mana activation pattern = %#v", got)
+	}
+}
+
+func TestPlayerOrdinalTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		event   string
+		kind    TriggerKind
+		want    TriggerEvent
+		player  TriggerPlayerRelation
+		ordinal int
+	}{
+		{event: "you draw your second card each turn", kind: TriggerWhenever, want: TriggerEventCardDrawn, player: TriggerPlayerYou, ordinal: 2},
+		{event: "an opponent draws their first card each turn", kind: TriggerWhenever, want: TriggerEventCardDrawn, player: TriggerPlayerOpponent, ordinal: 1},
+		{event: "you gain life for the first time each turn", kind: TriggerWhenever, want: TriggerEventLifeGained, player: TriggerPlayerYou, ordinal: 1},
+		{event: "you lose life for the first time each turn", kind: TriggerWhen, want: TriggerEventLifeLost, player: TriggerPlayerYou, ordinal: 1},
+		{event: "you surveil for the first time each turn", kind: TriggerWhenever, want: TriggerEventSurveil, player: TriggerPlayerYou, ordinal: 1},
+	}
+	for _, test := range tests {
+		t.Run(test.event, func(t *testing.T) {
+			t.Parallel()
+			got := compileTriggerPattern(test.event, test.kind, Span{}, "", nil)
+			if got.Event != test.want || got.Player != test.player || got.PlayerEventOrdinalThisTurn != test.ordinal {
+				t.Fatalf("pattern = %#v", got)
+			}
+		})
 	}
 }
 

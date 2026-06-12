@@ -568,11 +568,98 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 	}
 }
 
+func TestCompileActionTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		check  func(*testing.T, TriggerPattern)
+	}{
+		{
+			source: "Whenever a Forest an opponent controls becomes tapped, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventPermanentTapped ||
+					pattern.Controller != ControllerOpponent ||
+					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{"forest"}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "When this creature is turned face up, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Kind != TriggerWhen ||
+					pattern.Event != TriggerEventPermanentTurnedFaceUp ||
+					pattern.Source != TriggerSourceSelf {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever a creature you control becomes the target of a spell or ability an opponent controls, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventObjectBecameTarget ||
+					pattern.Controller != ControllerYou ||
+					pattern.CauseController != ControllerOpponent ||
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever a player cycles a card, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventCycled || pattern.Player != TriggerPlayerAny {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever you sacrifice a Clue, you gain 3 life.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventPermanentSacrificed ||
+					pattern.Player != TriggerPlayerYou ||
+					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{"clue"}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever you scry, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventScry || pattern.Player != TriggerPlayerYou {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever an opponent activates an ability of a creature or land that isn't a mana ability, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventAbilityActivated ||
+					pattern.Player != TriggerPlayerOpponent ||
+					!pattern.ExcludeManaAbility ||
+					!slices.Equal(pattern.SubjectSelection.RequiredTypesAny, []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			test.check(t, compilation.Abilities[0].Trigger.Pattern)
+		})
+	}
+}
+
 func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"Whenever this creature attacks alone, draw a card.",
-		"Whenever this creature becomes the target of a spell or ability an opponent controls, draw a card.",
+		"Whenever this creature becomes the target of a spell or ability for the first time each turn, draw a card.",
 		"Whenever creature you control becomes tapped, draw a card.",
 		"At the beginning of your next upkeep, draw a card.",
 		"At the beginning of your declare attackers step, draw a card.",
@@ -587,6 +674,23 @@ func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 				t.Fatalf("near-miss pattern = %#v, want unknown event", pattern)
 			}
 		})
+	}
+}
+
+func TestCompilePlayerOrdinalTriggerPattern(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := Compile(
+		"Whenever you draw your second card each turn, create a 2/2 black Zombie creature token.",
+		ParseContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	pattern := compilation.Abilities[0].Trigger.Pattern
+	if pattern.Event != TriggerEventCardDrawn ||
+		pattern.Player != TriggerPlayerYou ||
+		pattern.PlayerEventOrdinalThisTurn != 2 {
+		t.Fatalf("pattern = %#v", pattern)
 	}
 }
 

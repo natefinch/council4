@@ -795,6 +795,23 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.RequireHistoric && pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "RequireHistoric"), CardDefIssueInvalidSelection, "historic trigger filter is only supported for spell-cast events")
 	}
+	if pattern.ExcludeManaAbility && pattern.Event != EventAbilityActivated {
+		v.add(faceName, appendPath(path, "ExcludeManaAbility"), CardDefIssueInvalidSelection, "mana-ability exclusion is only supported for ability-activated events")
+	}
+	if pattern.Event == EventAbilityActivated && !pattern.ExcludeManaAbility {
+		v.add(faceName, appendPath(path, "ExcludeManaAbility"), CardDefIssueInvalidSelection, "unrestricted ability-activated triggers are unavailable because the runtime event stream omits payment-time mana abilities")
+	}
+	if pattern.PlayerEventOrdinalThisTurn < 0 {
+		v.add(faceName, appendPath(path, "PlayerEventOrdinalThisTurn"), CardDefIssueInvalidSelection, "player-event ordinal cannot be negative")
+	}
+	if pattern.PlayerEventOrdinalThisTurn > 0 &&
+		pattern.Event != EventCardDrawn &&
+		pattern.Event != EventLifeGained &&
+		pattern.Event != EventLifeLost &&
+		pattern.Event != EventScry &&
+		pattern.Event != EventSurveil {
+		v.add(faceName, appendPath(path, "PlayerEventOrdinalThisTurn"), CardDefIssueInvalidSelection, "player-event ordinal is unavailable for this event")
+	}
 	if pattern.MatchFromZone && pattern.FromZone == zone.None {
 		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter must set a source zone")
 	}

@@ -1661,6 +1661,9 @@ func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
 		if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceScry || log.Choices[0].UsedFallback {
 			t.Fatalf("choices = %+v, want non-fallback scry choice", log.Choices)
 		}
+		assertEvent(t, g.Events, game.EventScry, func(event game.Event) bool {
+			return event.Player == game.Player1 && event.Amount == 1
+		})
 	})
 	t.Run("surveil graveyard", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -1678,6 +1681,9 @@ func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
 		if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceSurveil || log.Choices[0].UsedFallback {
 			t.Fatalf("choices = %+v, want non-fallback surveil choice", log.Choices)
 		}
+		assertEvent(t, g.Events, game.EventSurveil, func(event game.Event) bool {
+			return event.Player == game.Player1 && event.Amount == 1
+		})
 	})
 }
 
@@ -1993,6 +1999,12 @@ func TestSacrificeEffectMovesControllerPermanentThroughGraveyardIgnoringIndestru
 	if !g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
 		t.Fatal("sacrificed permanent did not move to graveyard")
 	}
+	assertEvent(t, g.Events, game.EventPermanentSacrificed, func(event game.Event) bool {
+		return event.Controller == game.Player1 &&
+			event.Player == game.Player1 &&
+			event.PermanentID == target.ObjectID &&
+			event.CardID == target.CardInstanceID
+	})
 }
 
 func TestTapAndUntapEffectsChangeTappedState(t *testing.T) {

@@ -185,6 +185,10 @@ func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 	case game.EventCardDrawn,
 		game.EventCardDiscarded,
 		game.EventCycled,
+		game.EventPermanentSacrificed,
+		game.EventScry,
+		game.EventSurveil,
+		game.EventAbilityActivated,
 		game.EventBeginningOfStep,
 		game.EventLifeGained,
 		game.EventLifeLost:

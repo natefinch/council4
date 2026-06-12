@@ -1023,7 +1023,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 		s.MillCards(plan.player, plan.millAmount)
 	}
 	for _, sacrifice := range plan.sacrifices {
-		if !s.MovePermanentToZone(sacrifice, zone.Graveyard) {
+		if !s.SacrificePermanent(sacrifice) {
 			return false
 		}
 	}

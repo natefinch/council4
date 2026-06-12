@@ -3270,8 +3270,14 @@ func lowerGenericPatternTrigger(
 }
 
 func triggerPatternCapabilityDiagnostic(trigger *oracle.CompiledTrigger) string {
-	if trigger == nil || trigger.Pattern.Event != oracle.TriggerEventUnknown {
-		return "the executable source backend does not support this semantic trigger pattern"
+	if trigger == nil {
+		return "the trigger shell is missing a semantic Trigger Pattern"
+	}
+	if trigger.Pattern.Event == oracle.TriggerEventAbilityActivated && !trigger.Pattern.ExcludeManaAbility {
+		return "the runtime ability-activated event stream omits payment-time mana abilities, so unrestricted activated-ability triggers require a missing runtime capability"
+	}
+	if trigger.Pattern.Event != oracle.TriggerEventUnknown {
+		return "the semantic Trigger Pattern contains a field with no runtime lowering adapter"
 	}
 	event := strings.ToLower(trigger.Event)
 	for _, boundary := range []string{
@@ -3295,7 +3301,96 @@ func triggerPatternCapabilityDiagnostic(trigger *oracle.CompiledTrigger) string 
 		strings.Contains(event, "main phase") {
 		return "the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability"
 	}
-	return "the executable source backend does not support this semantic trigger pattern"
+	if strings.Contains(event, " or ") {
+		return "the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot"
+	}
+	if strings.Contains(event, "first time") ||
+		strings.Contains(event, "second time") ||
+		strings.Contains(event, "third time") ||
+		strings.Contains(event, "during your turn") ||
+		strings.Contains(event, "during their turn") ||
+		strings.Contains(event, "once each turn") {
+		return "the runtime event exists, but this trigger requires a missing ordinal, active-turn, or temporal semantic slot"
+	}
+	if strings.Contains(event, "target") {
+		return "the object-became-target event exists, but this trigger requires a missing target-subject, targeting-cause, or source relation slot"
+	}
+	if unrestrictedAbilityActivatedEvent(event) {
+		if trigger.Condition != nil && strings.Contains(strings.ToLower(trigger.Condition.Text), "mana ability") {
+			return "the ability-activated event exists, but non-mana exclusion in an intervening condition requires a missing semantic condition slot"
+		}
+		if !strings.Contains(event, "isn't a mana ability") {
+			return "the runtime ability-activated event stream omits payment-time mana abilities, so unrestricted activated-ability triggers require a missing runtime capability"
+		}
+		return "the ability-activated event exists, but this trigger requires a missing source, activation-cost, or ability-provenance semantic slot"
+	}
+	if strings.Contains(event, "ability") {
+		return "the ability-activated event exists, but this trigger requires a missing source, activation-cost, or ability-provenance semantic slot"
+	}
+	if strings.Contains(event, "cast") || strings.Contains(event, "spell") || strings.Contains(event, "copied") {
+		return "the spell event exists, but this trigger requires a missing spell-event relation, copy, or provenance semantic slot"
+	}
+	if strings.Contains(event, "sacrific") {
+		return "the permanent-sacrificed event exists, but this trigger requires a missing subject, actor, or sacrifice-provenance semantic slot"
+	}
+	if strings.Contains(event, "scry") || strings.Contains(event, "surveil") {
+		return "the player-action event exists, but this trigger requires a missing action amount, provenance, or temporal semantic slot"
+	}
+	if strings.Contains(event, "tap") || strings.Contains(event, "untap") {
+		if strings.Contains(event, "for mana") {
+			return "the permanent-tapped event exists, but the runtime event lacks tapped-for-mana provenance"
+		}
+		return "the permanent-state event exists, but this trigger requires a missing subject, source, or turn-provenance semantic slot"
+	}
+	if strings.Contains(event, "counter") {
+		return "the counter event exists, but this trigger requires a missing counter-kind, subject, controller, or removal semantic slot"
+	}
+	if strings.Contains(event, "draw") || strings.Contains(event, "discard") || strings.Contains(event, "cycl") {
+		return "the player-card event exists, but this trigger requires a missing count, card-selection, source, or turn-provenance semantic slot"
+	}
+	if strings.Contains(event, "turned face up") {
+		return "the permanent-turned-face-up event exists, but this trigger requires a missing subject, source, or Selection semantic slot"
+	}
+	if strings.Contains(event, "turned face down") {
+		return "the runtime does not emit an authoritative permanent-turned-face-down event"
+	}
+	if strings.Contains(event, " enters") ||
+		strings.Contains(event, " dies") ||
+		strings.Contains(event, " leaves") ||
+		strings.Contains(event, "graveyard") ||
+		strings.Contains(event, "exiled") {
+		return "the zone-change event exists, but this trigger requires a missing subject, zone, source, or Selection semantic slot"
+	}
+	if strings.Contains(event, "token") {
+		return "the token-created event exists, but this trigger requires a missing creator, subject, or Selection semantic slot"
+	}
+	if strings.Contains(event, "transform") ||
+		strings.Contains(event, "investigate") ||
+		strings.Contains(event, "proliferate") ||
+		strings.Contains(event, "explore") ||
+		strings.Contains(event, "monstrous") ||
+		strings.Contains(event, "venture") ||
+		strings.Contains(event, "roll") ||
+		strings.Contains(event, "vote") ||
+		strings.Contains(event, "clash") {
+		return "the runtime does not emit an authoritative event for this game action"
+	}
+	return "the runtime does not emit an authoritative event for this trigger action"
+}
+
+func unrestrictedAbilityActivatedEvent(event string) bool {
+	for _, prefix := range []string{
+		"you activate ",
+		"an opponent activates ",
+		"a player activates ",
+	} {
+		ability, ok := strings.CutPrefix(event, prefix)
+		if !ok {
+			continue
+		}
+		return ability == "an ability" || strings.HasPrefix(ability, "an ability of ")
+	}
+	return false
 }
 
 func lowerTriggeredAbilityKind(
@@ -3597,7 +3692,9 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind)
 	switch eventKind {
 	case game.EventPermanentEnteredBattlefield,
 		game.EventPermanentDied,
-		game.EventZoneChanged:
+		game.EventZoneChanged,
+		game.EventPermanentTurnedFaceUp,
+		game.EventPermanentSacrificed:
 		return kind == oracle.TriggerWhen || kind == oracle.TriggerWhenever
 	case game.EventPermanentMutated,
 		game.EventAttackerBecameBlocked,

@@ -618,6 +618,12 @@ func TestActivatedAbilityTapPermanentsCostTapsRequiredMatches(t *testing.T) {
 	if soldier.Tapped {
 		t.Fatal("non-Merfolk creature was tapped")
 	}
+	assertEvent(t, g.Events, game.EventAbilityActivated, func(event game.Event) bool {
+		return event.Player == game.Player1 &&
+			event.PermanentID == source.ObjectID &&
+			event.AbilityIndex == 0 &&
+			!event.ManaAbility
+	})
 }
 
 func TestActivatedAbilityTapPermanentsCostCannotReuseTapSource(t *testing.T) {

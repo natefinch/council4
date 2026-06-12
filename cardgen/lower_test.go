@@ -4384,6 +4384,95 @@ func TestCombatPhaseAndStepTriggerDiagnosticsNameMissingCapability(t *testing.T)
 	}
 }
 
+func TestActionTriggerDiagnosticsNameMissingCapability(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name   string
+		text   string
+		detail string
+	}{
+		{
+			name:   "event union",
+			text:   "Whenever you scry or surveil, draw a card.",
+			detail: "missing event-or-subject-union semantic slot",
+		},
+		{
+			name:   "tapped for mana provenance",
+			text:   "Whenever a land is tapped for mana, draw a card.",
+			detail: "runtime event lacks tapped-for-mana provenance",
+		},
+		{
+			name:   "target relation",
+			text:   "Whenever a spell targets a player, draw a card.",
+			detail: "missing target-subject, targeting-cause, or source relation slot",
+		},
+		{
+			name:   "missing broad event",
+			text:   "Whenever you investigate, draw a card.",
+			detail: "does not emit an authoritative event for this game action",
+		},
+		{
+			name:   "nonmana activation source relation",
+			text:   "Whenever you activate an ability of a card in your graveyard that isn't a mana ability, draw a card.",
+			detail: "missing source, activation-cost, or ability-provenance semantic slot",
+		},
+		{
+			name:   "nonmana activation intervening condition",
+			text:   "Whenever you activate an ability, if it isn't a mana ability, draw a card.",
+			detail: "non-mana exclusion in an intervening condition requires a missing semantic condition slot",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.text,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 || !strings.Contains(diagnostics[0].Detail, test.detail) {
+				t.Fatalf("diagnostics = %#v, want detail containing %q", diagnostics, test.detail)
+			}
+		})
+	}
+}
+
+func TestUnrestrictedActivatedAbilityTriggerFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, event := range []string{
+		"you activate an ability",
+		"a player activates an ability",
+		"an opponent activates an ability of a creature",
+	} {
+		t.Run(event, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Activation Watcher",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: "Whenever " + event + ", draw a card.",
+			}, "a")
+			if err != nil {
+				t.Fatal(err)
+			}
+			const detail = "runtime ability-activated event stream omits payment-time mana abilities"
+			if len(diagnostics) == 0 || !strings.Contains(diagnostics[0].Detail, detail) {
+				t.Fatalf("diagnostics = %#v, want detail containing %q", diagnostics, detail)
+			}
+		})
+	}
+
+	if _, ok := lowerTriggerPattern(&oracle.TriggerPattern{
+		Event:  oracle.TriggerEventAbilityActivated,
+		Player: oracle.TriggerPlayerYou,
+	}); ok {
+		t.Fatal("unrestricted semantic ability-activated pattern lowered")
+	}
+}
+
 func TestLowerExpandedSemanticTriggerPatterns(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -4447,6 +4536,29 @@ func TestLowerExpandedSemanticTriggerPatterns(t *testing.T) {
 			},
 		},
 		{
+			name:     "opponent forest taps",
+			cardName: "Test Lifetap",
+			typeLine: "Enchantment",
+			text:     "Whenever a Forest an opponent controls becomes tapped, you gain 1 life.",
+			want: game.TriggerPattern{
+				Event:      game.EventPermanentTapped,
+				Controller: game.TriggerControllerOpponent,
+				SubjectSelection: game.Selection{
+					SubtypesAny: []types.Sub{types.Forest},
+				},
+			},
+		},
+		{
+			name:     "self turns face up",
+			cardName: "Test Morph",
+			typeLine: "Creature — Human",
+			text:     "When this creature is turned face up, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventPermanentTurnedFaceUp,
+				Source: game.TriggerSourceSelf,
+			},
+		},
+		{
 			name:     "self becomes spell target",
 			cardName: "Test Wardless",
 			typeLine: "Creature — Human",
@@ -4459,6 +4571,20 @@ func TestLowerExpandedSemanticTriggerPatterns(t *testing.T) {
 			},
 		},
 		{
+			name:     "controlled creature targeted by opponent cause",
+			cardName: "Test Sanctuary",
+			typeLine: "Enchantment",
+			text:     "Whenever a creature you control becomes the target of a spell or ability an opponent controls, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventObjectBecameTarget,
+				Controller:      game.TriggerControllerYou,
+				CauseController: game.TriggerControllerOpponent,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
+		{
 			name:     "opponent draw step",
 			cardName: "Test Watcher",
 			typeLine: "Creature — Human",
@@ -4467,6 +4593,52 @@ func TestLowerExpandedSemanticTriggerPatterns(t *testing.T) {
 				Event:      game.EventBeginningOfStep,
 				Controller: game.TriggerControllerOpponent,
 				Step:       game.StepDraw,
+			},
+		},
+		{
+			name:     "any player cycles",
+			cardName: "Test Cycle Watcher",
+			typeLine: "Enchantment",
+			text:     "Whenever a player cycles a card, draw a card.",
+			want: game.TriggerPattern{
+				Event: game.EventCycled,
+			},
+		},
+		{
+			name:     "controller sacrifices clue",
+			cardName: "Test Mole",
+			typeLine: "Creature — Mole",
+			text:     "Whenever you sacrifice a Clue, you gain 3 life.",
+			want: game.TriggerPattern{
+				Event:  game.EventPermanentSacrificed,
+				Player: game.TriggerPlayerYou,
+				SubjectSelection: game.Selection{
+					SubtypesAny: []types.Sub{types.Clue},
+				},
+			},
+		},
+		{
+			name:     "controller scries",
+			cardName: "Test Scry Watcher",
+			typeLine: "Creature — Elf",
+			text:     "Whenever you scry, put a +1/+1 counter on target creature.",
+			want: game.TriggerPattern{
+				Event:  game.EventScry,
+				Player: game.TriggerPlayerYou,
+			},
+		},
+		{
+			name:     "opponent activates nonmana creature or land ability",
+			cardName: "Test Armasaur",
+			typeLine: "Creature — Dinosaur",
+			text:     "Whenever an opponent activates an ability of a creature or land that isn't a mana ability, draw a card.",
+			want: game.TriggerPattern{
+				Event:              game.EventAbilityActivated,
+				Player:             game.TriggerPlayerOpponent,
+				ExcludeManaAbility: true,
+				SubjectSelection: game.Selection{
+					RequiredTypesAny: []types.Card{types.Creature, types.Land},
+				},
 			},
 		},
 	}
@@ -4884,7 +5056,6 @@ func TestLowerLifeDamageReceivedTriggersFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Whenever you gain or lose life, draw a card.",
-		"Whenever you gain life for the first time each turn, draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()
@@ -9945,7 +10116,6 @@ func TestLowerDrawDiscardTriggerRejectsUnknownPhrase(t *testing.T) {
 	t.Parallel()
 	unknownPhrases := []string{
 		"you draw two or more cards",
-		"you draw your second card each turn",
 		"an opponent draws their second card in their draw step",
 		"you discard a land card",
 		"you discard a creature card",
@@ -10210,6 +10380,25 @@ func TestLowerSacrificeSpellRejectsOrderedEffectSequence(t *testing.T) {
 	}
 	if len(diagnostics) == 0 {
 		t.Fatal("ordered sacrifice effect sequence unexpectedly lowered without diagnostic")
+	}
+}
+
+func TestLowerPlayerOrdinalTriggerPattern(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Ordinal Draw",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever you draw your second card each turn, draw a card.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	pattern := face.TriggeredAbilities[0].Trigger.Pattern
+	if pattern.Event != game.EventCardDrawn ||
+		pattern.Player != game.TriggerPlayerYou ||
+		pattern.PlayerEventOrdinalThisTurn != 2 {
+		t.Fatalf("pattern = %#v", pattern)
 	}
 }
 

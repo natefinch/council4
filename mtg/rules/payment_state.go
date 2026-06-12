@@ -171,6 +171,10 @@ func (s *rulesPaymentState) MovePermanentToZone(p *game.Permanent, dest zone.Typ
 	return movePermanentToZone(s.g, p, dest)
 }
 
+func (s *rulesPaymentState) SacrificePermanent(p *game.Permanent) bool {
+	return sacrificePermanent(s.g, p)
+}
+
 func (s *rulesPaymentState) DiscardFromHand(playerID game.PlayerID, cardID id.ID) bool {
 	return discardCardFromHand(s.g, playerID, cardID)
 }
