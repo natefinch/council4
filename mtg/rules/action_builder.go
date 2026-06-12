@@ -56,6 +56,10 @@ func (b actionBuilderType) activateAbility(sourceID id.ID, abilityIndex int, tar
 	return b.mustBuild(action.ActivateAbility(sourceID, abilityIndex, targets, xValue))
 }
 
+func (b actionBuilderType) activateAbilityWithModes(sourceID id.ID, abilityIndex int, targets []game.Target, targetCounts []int, xValue int, modes []int) action.Action {
+	return b.mustBuild(action.ActivateAbilityWithModesAndTargetCounts(sourceID, abilityIndex, targets, targetCounts, xValue, modes))
+}
+
 func (b actionBuilderType) suspendCard(cardID id.ID) action.Action {
 	return b.mustBuild(action.SuspendCard(cardID))
 }

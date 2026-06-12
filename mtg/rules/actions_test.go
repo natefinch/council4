@@ -1258,6 +1258,101 @@ func TestGeneralActivatedAbilityUsesStackAndResolves(t *testing.T) {
 	}
 }
 
+func TestModalActivatedAbilityEnumeratesPaysAndResolvesChosenMode(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		ManaCost: greenCost(),
+		Content: game.AbilityContent{
+			MinModes: 1,
+			MaxModes: 1,
+			Modes: []game.Mode{
+				{
+					Targets:  []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"}},
+					Sequence: []game.Instruction{{Primitive: game.Damage{Recipient: game.AnyTargetDamageRecipient(0), Amount: game.Fixed(2)}}},
+				},
+				{
+					Sequence: []game.Instruction{{Primitive: game.GainLife{Player: game.ControllerReference(), Amount: game.Fixed(3)}}},
+				},
+			},
+		},
+	}))
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+	act := action.ActivateAbilityWithModes(source.ObjectID, 0, nil, 0, []int{1})
+	targetedAct := action.ActivateAbilityWithModes(source.ObjectID, 0, []game.Target{game.PlayerTarget(game.Player2)}, 0, []int{0})
+
+	legal := engine.legalActions(g, game.Player1)
+	if !containsAction(legal, act) || !containsAction(legal, targetedAct) {
+		t.Fatal("modal activated ability choices were not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(modal activated ability) = false, want true")
+	}
+	if !forest.Tapped {
+		t.Fatal("forest was not tapped to pay modal activation cost")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !slices.Equal(obj.ChosenModes, []int{1}) {
+		t.Fatalf("stack chosen modes = %#v, want [1]", obj)
+	}
+	engine.resolveTopOfStack(g, nil)
+	if got := g.Players[game.Player1].Life; got != 43 {
+		t.Fatalf("controller life = %d, want 43", got)
+	}
+	if got := g.Players[game.Player2].Life; got != 40 {
+		t.Fatalf("unchosen damage mode changed player 2 life to %d", got)
+	}
+}
+
+func TestModalActivatedAbilityPreservesOptionalTargetOwnership(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		Content: game.AbilityContent{
+			MinModes: 2,
+			MaxModes: 2,
+			Modes: []game.Mode{
+				{
+					Targets:  []game.TargetSpec{{MinTargets: 0, MaxTargets: 1, Constraint: "creature"}},
+					Sequence: []game.Instruction{{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}}},
+				},
+				{
+					Targets:  []game.TargetSpec{{MinTargets: 0, MaxTargets: 1, Constraint: "creature"}},
+					Sequence: []game.Instruction{{Primitive: game.Untap{Object: game.TargetPermanentReference(0)}}},
+				},
+			},
+		},
+	}))
+	target := addCreaturePermanent(g, game.Player2)
+	g.Turn.PriorityPlayer = game.Player1
+	targets := []game.Target{game.PermanentTarget(target.ObjectID)}
+	modes := []int{0, 1}
+	ambiguous := action.ActivateAbilityWithModes(source.ObjectID, 0, targets, 0, modes)
+	if engine.applyAction(g, game.Player1, ambiguous) {
+		t.Fatal("activation without ambiguous target ownership was accepted")
+	}
+	act := action.ActivateAbilityWithModesAndTargetCounts(source.ObjectID, 0, targets, []int{1, 0}, 0, modes)
+	legal := engine.legalActions(g, game.Player1)
+	if containsAction(legal, ambiguous) {
+		t.Fatal("action equality ignored modal target ownership")
+	}
+	if !containsAction(legal, act) {
+		t.Fatal("modal activation with explicit target ownership was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(modal activation with target ownership) = false, want true")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !slices.Equal(obj.TargetCounts, []int{1, 0}) {
+		t.Fatalf("stack target counts = %#v, want [1 0]", obj)
+	}
+	engine.resolveTopOfStack(g, nil)
+	if !target.Tapped {
+		t.Fatal("target assigned to tap mode was not tapped")
+	}
+}
+
 func TestGeneralActivatedAbilityTapCostRespectsSummoningSickness(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -2033,6 +2128,43 @@ func TestCollectEvidenceRejectsUnsupportedVariableManaValue(t *testing.T) {
 	}
 	if g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("variable evidence card moved to exile")
+	}
+}
+
+func TestGraveyardActivatedAbilityChecksActivationCondition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	sourceID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Conditional Escape",
+		Types: []types.Card{types.Creature},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			ZoneOfFunction: zone.Graveyard,
+			ActivationCondition: opt.Val(game.Condition{
+				ControllerLifeAtLeast: 10,
+			}),
+			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}}}.Ability(),
+		}},
+	}})
+	g.Turn.PriorityPlayer = game.Player1
+	act := action.ActivateAbility(sourceID, 0, nil, 0)
+
+	g.Players[game.Player1].Life = 9
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("graveyard ability was legal while its activation condition was false")
+	}
+	if engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(graveyard ability with false activation condition) = true, want false")
+	}
+
+	g.Players[game.Player1].Life = 10
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("graveyard ability was not legal while its activation condition was true")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(graveyard ability with true activation condition) = false, want true")
 	}
 }
 
@@ -3094,5 +3226,41 @@ func TestPlaneswalkerLoyaltyAbilityPaysLoyaltyAndOncePerTurn(t *testing.T) {
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if g.Players[game.Player1].Hand.Size() != 1 {
 		t.Fatal("loyalty ability did not resolve its effect")
+	}
+}
+
+func TestLoyaltyActionPreservesAmbiguousTargetPartition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	planeswalker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Targeting Walker",
+		Types:   []types.Card{types.Planeswalker},
+		Loyalty: opt.Val(3),
+		LoyaltyAbilities: []game.LoyaltyAbility{{
+			LoyaltyCost: 1,
+			Content: game.Mode{Targets: []game.TargetSpec{
+				{MinTargets: 0, MaxTargets: 1, Constraint: "creature"},
+				{MinTargets: 0, MaxTargets: 1, Constraint: "creature"},
+			}}.Ability(),
+		}},
+	}})
+	planeswalker.Counters.Add(counter.Loyalty, 3)
+	target := addCreaturePermanent(g, game.Player2)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	act := action.ActivateAbilityWithModesAndTargetCounts(
+		planeswalker.ObjectID,
+		0,
+		[]game.Target{game.PermanentTarget(target.ObjectID)},
+		[]int{1, 0},
+		0,
+		nil,
+	)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("loyalty action dropped ambiguous target partition")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(loyalty with target partition) = false, want true")
 	}
 }

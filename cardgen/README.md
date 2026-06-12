@@ -51,7 +51,7 @@ Vanguard cards are excluded with explicit report reasons.
    layer operation, rule domain and operation, cost modifier, or non-battlefield
    card-ability grant. Unsupported groups, conditions, durations, operations,
    and shells remain explicit capability blockers.
-2. **Typed lowering (`lower.go`, `static_declaration.go`, `condition.go`,
+2. **Typed lowering (`lower.go`, `activation.go`, `static_declaration.go`, `condition.go`,
    `reference.go`, `trigger_pattern.go`, and `executable.go`).**
    `lowerTriggerPattern` is the single mechanical adapter from
    `oracle.TriggerPattern` to `game.TriggerPattern`; trigger shell lowerers never
@@ -65,7 +65,13 @@ Vanguard cards are excluded with explicit report reasons.
    explicit static, activation, replacement, or intervening-trigger context.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
-   prior-instruction results. `static_declaration.go` is the single mechanical
+   prior-instruction results. `activation.go` composes the generic activated
+   shell from typed cost components, timing, zone of function, activation
+   condition, bound references, and shared Ability Content. Mana and non-mana
+   activated abilities use that same shell preparation while retaining distinct
+   runtime types. Known shell failures report activation cost, timing, zone,
+   condition, reference, mode, or structure diagnostics instead of a generic
+   activated-ability failure. `static_declaration.go` is the single mechanical
    adapter from semantic Static Declarations to `game.StaticAbility`,
    `game.ContinuousEffect`, `game.RuleEffect`, and `game.CostModifier` values.
    Mixed static paragraphs lower through that adapter as multiple declarations

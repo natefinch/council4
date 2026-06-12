@@ -1,5 +1,7 @@
 package oracle
 
+import "strings"
+
 // bindReferences assigns each recognized reference phrase one conservative
 // referent. It never guesses between multiple target occurrences or an
 // unsupported antecedent.
@@ -72,6 +74,52 @@ func bindReferences(
 
 	}
 	return bound
+}
+
+func bindActivationCostReferences(kind AbilityKind, cost *CompiledCost, references []CompiledReference) []CompiledReference {
+	if kind != AbilityActivated || cost == nil {
+		return references
+	}
+	bound := append([]CompiledReference(nil), references...)
+	for i := range bound {
+		reference := &bound[i]
+		if reference.Kind == ReferencePronoun &&
+			strings.EqualFold(reference.Text, "it") &&
+			spanContains(cost.Span, reference.Span) {
+			if activationCostPronounBindsSource(cost, reference.Span) {
+				reference.Binding = ReferenceBindingSource
+			} else {
+				reference.Binding = ReferenceBindingAmbiguous
+			}
+		}
+	}
+	return bound
+}
+
+func activationCostPronounBindsSource(cost *CompiledCost, reference Span) bool {
+	componentIndex := -1
+	for i, component := range cost.Components {
+		if spanContains(component.Span, reference) {
+			componentIndex = i
+			break
+		}
+	}
+	if componentIndex < 0 {
+		return false
+	}
+	switch cost.Components[componentIndex].Kind {
+	case CostRemoveCounter, CostPutCounter, CostExert:
+	default:
+		return false
+	}
+	for _, component := range cost.Components[:componentIndex] {
+		switch component.Kind {
+		case CostMana, CostTap, CostUntap, CostPayLife, CostEnergy, CostLoyalty:
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func delayedEffectBindsSource(reference CompiledReference, effects []CompiledEffect) bool {

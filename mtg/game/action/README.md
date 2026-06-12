@@ -30,7 +30,7 @@ case action.ActionPass:
 
 The top-level `Kind` field says which payload is meaningful. Payloads are grouped by kind (`PlayLandAction`, `CastSpellAction`, etc.) so action data stays explicit without using an interface hierarchy.
 
-Construct actions with the package constructors (`action.CastSpell`, `action.ActivateAbility`, and so on) instead of struct literals. Constructors copy caller-owned slices such as targets, chosen modes, attackers, and blockers, so later mutation of the input slices cannot change the action. Payloads are stored privately; use the comma-ok payload accessors (`CastSpellPayload`, `DeclareAttackersPayload`, etc.) to read them. Accessors return copied slice fields so callers cannot mutate action-owned slices.
+Construct actions with the package constructors (`action.CastSpell`, `action.ActivateAbility`, and so on) instead of struct literals. Constructors copy caller-owned slices such as targets, target-count partitions, chosen modes, attackers, and blockers, so later mutation of the input slices cannot change the action. Payloads are stored privately; use the comma-ok payload accessors (`CastSpellPayload`, `DeclareAttackersPayload`, etc.) to read them. Accessors return copied slice fields so callers cannot mutate action-owned slices.
 
 Use `act.Validate()` at package boundaries that accept untrusted or hand-built actions. Validation checks that `Kind` matches the populated payload, unrelated payloads are empty, and required IDs and non-negative choice values are present.
 
@@ -39,7 +39,7 @@ Use `act.Validate()` at package boundaries that accept untrusted or hand-built a
 - `ActionPass` - pass priority or decline to take an available action.
 - `ActionPlayLand` - play a land card from hand.
 - `ActionCastSpell` - cast a spell with chosen runtime `game.Target` values.
-- `ActionActivateAbility` - activate an ability from a permanent or other source with chosen runtime `game.Target` values.
+- `ActionActivateAbility` - activate an ability from a permanent or other source with chosen runtime `game.Target` values and modal choices.
 - `ActionSuspendCard` - take the special suspend action from hand.
 - `ActionCastFaceDown` - cast a card face-down via Morph or Disguise.
 - `ActionTurnFaceUp` - take the special action to turn a face-down permanent face up.
@@ -54,7 +54,14 @@ The rules engine validates action legality. Agents should normally return one of
 
 Cast-spell actions identify the card to cast, the source zone (`SourceZone`, defaulting to hand), selected printed face (`Face`, defaulting to `game.FaceFront`), chosen targets, chosen modes, X value, and whether Kicker is paid (`KickerPaid`, usually via `action.CastKickedSpell`). Use `action.CastSpellFace` / `action.CastSpellFaceFromZone` when an action intentionally chooses a modal DFC face. `CastFaceDown` is separate because Morph/Disguise uses hidden characteristics and a fixed `{3}` alternative cost. The rules engine currently generates supported casts for simple targeted or untargeted spells, choose-one modal spells, X spells, Kicker spell variants, modal DFC faces, face-down Morph/Disguise casts, and command-zone commander casts.
 
-Activate-ability actions identify the source object, ability index, chosen targets, and X value. The rules engine currently uses them for simple mana abilities, which resolve immediately, plus Equip and general non-mana activated abilities, which use the stack.
+Activate-ability actions identify the source object, ability index, chosen
+targets, chosen modes, and X value. `action.ActivateAbility` builds the common
+non-modal form; `action.ActivateAbilityWithModes` locks modal choices into the
+action. When selected modes contain target specs whose flattened targets have
+ambiguous ownership, `action.ActivateAbilityWithModesAndTargetCounts` preserves
+the count for each target spec. The rules engine currently uses them for simple
+mana abilities, which resolve immediately, plus Equip and general non-mana
+activated abilities, which use the stack.
 
 Declare-attackers actions carry concrete `game.AttackDeclaration` values. The rules engine offers them only during the declare attackers turn-based action, before the declare attackers priority window; they are not normal priority actions. The current generator keeps attack choices compact and filters them through attack restrictions and goad requirements.
 

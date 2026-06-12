@@ -22,6 +22,7 @@ type CompiledAbility struct {
 	Text                 string
 	ActivationTiming     ActivationTimingKind
 	ActivationTimingSpan Span
+	ActivationZone       zone.Type
 	AbilityWord          string
 	Chapters             []int
 	ChapterSpan          Span
@@ -45,6 +46,7 @@ const (
 	ActivationTimingSorceryOncePerTurn
 	ActivationTimingDuringCombat
 	ActivationTimingDuringUpkeep
+	ActivationTimingUnsupported
 )
 
 // AbilityContent is the reusable semantic content of an ability, independent

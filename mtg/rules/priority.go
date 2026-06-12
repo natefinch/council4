@@ -133,7 +133,9 @@ func actionsEqual(a, b action.Action) bool {
 			aPayload.SourceID == bPayload.SourceID &&
 			aPayload.AbilityIndex == bPayload.AbilityIndex &&
 			aPayload.XValue == bPayload.XValue &&
-			slices.Equal(aPayload.Targets, bPayload.Targets)
+			slices.Equal(aPayload.Targets, bPayload.Targets) &&
+			slices.Equal(aPayload.TargetCounts, bPayload.TargetCounts) &&
+			slices.Equal(aPayload.ChosenModes, bPayload.ChosenModes)
 	case action.ActionSuspendCard:
 		aPayload, aOK := a.SuspendCardPayload()
 		bPayload, bOK := b.SuspendCardPayload()

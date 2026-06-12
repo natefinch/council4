@@ -132,12 +132,14 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 		{"once per turn", "{1}: Draw a card. Activate only once each turn.", ActivationTimingOncePerTurn},
 		{"combat", "{1}: Draw a card. Activate only during combat.", ActivationTimingDuringCombat},
 		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", ActivationTimingDuringUpkeep},
+		{"once per turn before reminder", "{1}: Draw a card. Activate only once each turn. (This is reminder text.)", ActivationTimingOncePerTurn},
 		{
 			"sorcery once per turn",
 			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
 			ActivationTimingSorceryOncePerTurn,
 		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -157,6 +159,58 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 			}
 			if len(ability.Content.References) != 0 {
 				t.Fatalf("references = %#v, want timing references excluded", ability.Content.References)
+			}
+		})
+	}
+}
+
+func TestCompileUnsupportedActivationTiming(t *testing.T) {
+	t.Parallel()
+	text := "{1}: Draw a card. Activate only during your end step."
+	compilation, diagnostics := Compile(text, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.ActivationTiming != ActivationTimingUnsupported {
+		t.Fatalf("activation timing = %v, want unsupported", ability.ActivationTiming)
+	}
+	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
+		t.Fatalf("effects = %#v, want timing restriction excluded from content", ability.Content.Effects)
+	}
+}
+
+func TestCompileActivatedAbilityZone(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+		want zone.Type
+	}{
+		{name: "battlefield", text: "{1}: Draw a card.", want: zone.Battlefield},
+		{name: "graveyard self return", text: "{1}: Return this card from your graveyard to your hand.", want: zone.Graveyard},
+		{name: "graveyard source cost", text: "Exile this card from your graveyard: Draw a card.", want: zone.Graveyard},
+		{name: "battlefield returns target", text: "{1}: Return target card from your graveyard to your hand.", want: zone.Battlefield},
+		{
+			name: "battlefield source reference in another clause",
+			text: "{1}: Exile this card, then return target card from your graveyard to your hand.",
+			want: zone.Battlefield,
+		},
+		{
+			name: "modal graveyard self return",
+			text: "{1}: Choose one —\n• Return this card from your graveyard to your hand.\n• Draw a card.",
+			want: zone.Graveyard,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.text, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if got := compilation.Abilities[0].ActivationZone; got != test.want {
+				t.Fatalf("activation zone = %v, want %v", got, test.want)
 			}
 		})
 	}
@@ -2028,6 +2082,9 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 		{"prior instruction result", "Exile target creature. Return it to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingPriorInstructionResult, ReferenceBindingPriorInstructionResult}},
 		{"delayed source", "When this creature enters, exile it at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingSource}},
 		{"delayed non-self event subject", "When enchanted creature dies, return that card to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingEventPermanent, ReferenceBindingEventPermanent}},
+		{"activation cost source", "Remove a counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingSource}},
+		{"activation cost prior object", "Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingAmbiguous}},
+		{"activation cost prior source and object", "Remove a charge counter from this artifact, Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingAmbiguous}},
 		{"ambiguous pronoun", "It explores.", []ReferenceBinding{ReferenceBindingAmbiguous}},
 	}
 	for _, test := range tests {

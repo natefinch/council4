@@ -32,8 +32,9 @@ const (
 // targetChoiceResult carries the outcome of target enumeration with an
 // explicit kind so all four states are distinguishable without nil inspection.
 type targetChoiceResult struct {
-	choices [][]game.Target
-	kind    targetChoiceKind
+	choices      [][]game.Target
+	targetCounts [][]int
+	kind         targetChoiceKind
 	// err is diagnostic context for invalid card-definition input. Production
 	// enumeration currently treats invalid specs as unavailable actions/triggers.
 	err error
@@ -53,10 +54,20 @@ func targetChoicesForBodyFromSource(g *game.Game, controller game.PlayerID, sour
 }
 
 func targetChoicesForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability) targetChoiceResult {
+	return targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, body, nil)
+}
+
+func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int) targetChoiceResult {
 	if body == nil {
-		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}}
+		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}, targetCounts: [][]int{nil}}
 	}
-	return targetChoicesForSpecs(g, controller, source, sourceObjectID, game.BodyTargets(body))
+	if !modesValidForBody(body, chosenModes) {
+		return targetChoiceResult{
+			kind: targetInvalidSpec,
+			err:  fmt.Errorf("ability has invalid mode selection %v", chosenModes),
+		}
+	}
+	return targetChoicesForSpecs(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes))
 }
 
 // targetChoicesForSpecs enumerates every legal target combination for specs.
@@ -67,7 +78,7 @@ func targetChoicesForBodyFromSourceObject(g *game.Game, controller game.PlayerID
 //   - targetInvalidSpec (with err) when a spec has an invalid min/max range
 func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec) targetChoiceResult {
 	if len(specs) == 0 {
-		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}}
+		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}, targetCounts: [][]int{nil}}
 	}
 	for i := range specs {
 		spec := &specs[i]
@@ -80,16 +91,23 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.
 		}
 	}
 	var result [][]game.Target
-	appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, 0, nil, &result)
+	var targetCounts [][]int
+	appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, 0, nil, nil, &result, &targetCounts)
 	if len(result) == 0 {
 		return targetChoiceResult{kind: targetNoLegalChoices}
 	}
-	return targetChoiceResult{kind: targetLegalChoicesFound, choices: result}
+	for i, targets := range result {
+		if _, unique := uniqueTargetCountsForSpecs(g, controller, source, sourceObjectID, specs, targets); unique {
+			targetCounts[i] = nil
+		}
+	}
+	return targetChoiceResult{kind: targetLegalChoicesFound, choices: result, targetCounts: targetCounts}
 }
 
-func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, specIndex int, prefix []game.Target, result *[][]game.Target) {
+func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, specIndex int, prefix []game.Target, countPrefix []int, result *[][]game.Target, targetCounts *[][]int) {
 	if specIndex >= len(specs) {
 		*result = append(*result, append([]game.Target(nil), prefix...))
+		*targetCounts = append(*targetCounts, append([]int(nil), countPrefix...))
 		return
 	}
 	spec := normalizeTargetSpec(&specs[specIndex])
@@ -101,7 +119,8 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 			return
 		}
 		next := append(append([]game.Target(nil), prefix...), game.DeferredTarget())
-		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, result)
+		nextCounts := append(append([]int(nil), countPrefix...), 1)
+		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, nextCounts, result, targetCounts)
 		return
 	}
 	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, &spec)
@@ -109,7 +128,8 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 	for _, count := range targetCountsForChoices(spec.MinTargets, maxTargets) {
 		for _, combination := range targetCombinations(candidates, count) {
 			next := append(append([]game.Target(nil), prefix...), combination...)
-			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, result)
+			nextCounts := append(append([]int(nil), countPrefix...), count)
+			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, nextCounts, result, targetCounts)
 		}
 	}
 }
@@ -207,10 +227,17 @@ func targetsValidForBodyFromSource(g *game.Game, controller game.PlayerID, sourc
 }
 
 func targetsValidForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target) bool {
+	return targetsValidForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, body, nil, targets)
+}
+
+func targetsValidForBodyFromSourceObjectWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int, targets []game.Target) bool {
 	if body == nil {
 		return len(targets) == 0
 	}
-	return targetsValidForSpecs(g, controller, source, sourceObjectID, game.BodyTargets(body), targets)
+	if !modesValidForBody(body, chosenModes) {
+		return false
+	}
+	return targetsValidForSpecs(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes), targets)
 }
 
 func targetsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) bool {
@@ -255,10 +282,88 @@ func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDe
 }
 
 func bodyTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target) ([]int, bool) {
+	return bodyTargetCountsWithModes(g, controller, source, sourceObjectID, body, nil, targets)
+}
+
+func bodyTargetCountsWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int, targets []game.Target) ([]int, bool) {
 	if body == nil {
 		return nil, len(targets) == 0
 	}
-	return targetCountsForSpecs(g, controller, source, sourceObjectID, game.BodyTargets(body), targets)
+	if !modesValidForBody(body, chosenModes) {
+		return nil, false
+	}
+	return targetCountsForSpecs(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes), targets)
+}
+
+func bodyTargetCountsWithModesAndRecorded(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes, recorded []int, targets []game.Target) ([]int, bool) {
+	if body == nil {
+		return nil, len(recorded) == 0 && len(targets) == 0
+	}
+	if !modesValidForBody(body, chosenModes) {
+		return nil, false
+	}
+	specs := bodyTargetSpecs(body, chosenModes)
+	if len(recorded) > 0 {
+		if !recordedTargetCountsValidForSpecs(g, controller, source, sourceObjectID, specs, recorded, targets) {
+			return nil, false
+		}
+		return append([]int(nil), recorded...), true
+	}
+	return uniqueTargetCountsForSpecs(g, controller, source, sourceObjectID, specs, targets)
+}
+
+func recordedTargetCountsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, recorded []int, targets []game.Target) bool {
+	if len(recorded) != len(specs) {
+		return false
+	}
+	targetIndex := 0
+	for i := range specs {
+		spec := normalizeTargetSpec(&specs[i])
+		count := recorded[i]
+		if !targetSpecValid(&spec) ||
+			count < spec.MinTargets ||
+			count > spec.MaxTargets ||
+			targetIndex+count > len(targets) ||
+			!targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, targets[targetIndex:targetIndex+count]) {
+			return false
+		}
+		targetIndex += count
+	}
+	return targetIndex == len(targets)
+}
+
+func uniqueTargetCountsForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) ([]int, bool) {
+	var matches [][]int
+	appendMatchingTargetCounts(g, controller, source, sourceObjectID, specs, targets, 0, 0, nil, &matches)
+	if len(matches) != 1 {
+		return nil, false
+	}
+	return matches[0], true
+}
+
+func appendMatchingTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, specIndex, targetIndex int, prefix []int, matches *[][]int) {
+	if len(*matches) > 1 {
+		return
+	}
+	if specIndex == len(specs) {
+		if targetIndex == len(targets) {
+			*matches = append(*matches, append([]int(nil), prefix...))
+		}
+		return
+	}
+	spec := normalizeTargetSpec(&specs[specIndex])
+	if !targetSpecValid(&spec) {
+		return
+	}
+	maxTargets := min(spec.MaxTargets, len(targets)-targetIndex)
+	for count := spec.MinTargets; count <= maxTargets; count++ {
+		slice := targets[targetIndex : targetIndex+count]
+		if !targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, slice) {
+			continue
+		}
+		next := append(append([]int(nil), prefix...), count)
+		appendMatchingTargetCounts(g, controller, source, sourceObjectID, specs, targets, specIndex+1, targetIndex+count, next, matches)
+	}
 }
 
 func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, targets []game.Target) bool {
@@ -292,7 +397,10 @@ func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, 
 	if body == nil {
 		return len(obj.Targets) == 0
 	}
-	return stackObjectHasAnyLegalTargetsForSpecs(g, source, sourceObjectID, game.BodyTargets(body), obj)
+	if !modesValidForBody(body, obj.ChosenModes) {
+		return false
+	}
+	return stackObjectHasAnyLegalTargetsForSpecs(g, source, sourceObjectID, bodyTargetSpecs(body, obj.ChosenModes), obj)
 }
 
 func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, obj *game.StackObject) bool {
@@ -381,10 +489,17 @@ func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.
 }
 
 func (e *Engine) completeAbilityAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	return e.completeAbilityAnnouncementTargetsWithModes(g, controller, source, sourceObjectID, body, nil, targets, agents, log)
+}
+
+func (e *Engine) completeAbilityAnnouncementTargetsWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
 	if body == nil {
 		return targets, len(targets) == 0
 	}
-	return e.completeAnnouncementTargets(g, controller, source, sourceObjectID, game.BodyTargets(body), targets, agents, log)
+	if !modesValidForBody(body, chosenModes) {
+		return nil, false
+	}
+	return e.completeAnnouncementTargets(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes), targets, agents, log)
 }
 
 func (e *Engine) completeAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
@@ -515,6 +630,7 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 		if !ok {
 			return nil
 		}
+
 		return []game.TargetSpec{spec}
 	}
 	ability, ok := firstSpellAbility(card)
@@ -539,6 +655,21 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 	return game.BodyTargets(*ability)
 }
 
+func bodyTargetSpecs(body game.Ability, chosenModes []int) []game.TargetSpec {
+	if body == nil {
+		return nil
+	}
+	content := game.BodyContent(body)
+	if !content.IsModal() {
+		return game.BodyTargets(body)
+	}
+	specs := append([]game.TargetSpec(nil), content.SharedTargets...)
+	for _, modeIndex := range chosenModes {
+		specs = append(specs, content.Modes[modeIndex].Targets...)
+	}
+	return specs
+}
+
 func modeChoicesForSpell(card *game.CardDef) [][]int {
 	ability, _ := firstSpellAbility(card)
 	if ability == nil {
@@ -561,7 +692,7 @@ func modeChoicesForContent(content game.AbilityContent) [][]int {
 	// Modal choices are made before targets/costs are finalized and are locked
 	// into the stack object (CR 601.2d, CR 700.2).
 	minModes, maxModes := modeChoiceRangeFromContent(content)
-	if minModes < 0 || maxModes < minModes || maxModes > len(content.Modes) {
+	if !modeChoiceRangeValid(content, minModes, maxModes) {
 		return nil
 	}
 	if content.AllowDuplicateModes {
@@ -594,6 +725,9 @@ func modesValidForContent(content game.AbilityContent, chosenModes []int) bool {
 		return len(chosenModes) == 0
 	}
 	minModes, maxModes := modeChoiceRangeFromContent(content)
+	if !modeChoiceRangeValid(content, minModes, maxModes) {
+		return false
+	}
 	if len(chosenModes) < minModes || len(chosenModes) > maxModes {
 		return false
 	}
@@ -618,6 +752,12 @@ func modesValidForContent(content game.AbilityContent, chosenModes []int) bool {
 		}
 	}
 	return true
+}
+
+func modeChoiceRangeValid(content game.AbilityContent, minModes, maxModes int) bool {
+	return minModes >= 0 &&
+		maxModes >= minModes &&
+		(content.AllowDuplicateModes || maxModes <= len(content.Modes))
 }
 
 func modeChoiceRangeFromContent(content game.AbilityContent) (minModes, maxModes int) {

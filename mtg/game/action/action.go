@@ -66,7 +66,9 @@ type ActivateAbilityAction struct {
 	SourceID     id.ID
 	AbilityIndex int
 	Targets      []game.Target
+	TargetCounts []int
 	XValue       int
+	ChosenModes  []int
 }
 
 // SuspendCardAction is the payload for suspending a card from hand.
@@ -189,13 +191,27 @@ func CastCommanderSpell(cardID id.ID, targets []game.Target, xValue int, chosenM
 
 // ActivateAbility creates an action to activate an ability.
 func ActivateAbility(sourceID id.ID, abilityIndex int, targets []game.Target, xValue int) Action {
+	return ActivateAbilityWithModes(sourceID, abilityIndex, targets, xValue, nil)
+}
+
+// ActivateAbilityWithModes creates an action to activate an ability with the
+// chosen modal options.
+func ActivateAbilityWithModes(sourceID id.ID, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) Action {
+	return ActivateAbilityWithModesAndTargetCounts(sourceID, abilityIndex, targets, nil, xValue, chosenModes)
+}
+
+// ActivateAbilityWithModesAndTargetCounts creates an action to activate an
+// ability with chosen modal options and an explicit target-spec partition.
+func ActivateAbilityWithModesAndTargetCounts(sourceID id.ID, abilityIndex int, targets []game.Target, targetCounts []int, xValue int, chosenModes []int) Action {
 	return Action{
 		Kind: ActionActivateAbility,
 		activateAbility: ActivateAbilityAction{
 			SourceID:     sourceID,
 			AbilityIndex: abilityIndex,
 			Targets:      copyTargets(targets),
+			TargetCounts: copyInts(targetCounts),
 			XValue:       xValue,
+			ChosenModes:  copyInts(chosenModes),
 		},
 	}
 }
@@ -275,6 +291,8 @@ func (a Action) ActivateAbilityPayload() (ActivateAbilityAction, bool) {
 	}
 	payload := a.activateAbility
 	payload.Targets = copyTargets(payload.Targets)
+	payload.TargetCounts = copyInts(payload.TargetCounts)
+	payload.ChosenModes = copyInts(payload.ChosenModes)
 	return payload, true
 }
 
@@ -366,6 +384,11 @@ func (a Action) Validate() error {
 		if a.activateAbility.XValue < 0 {
 			return errors.New("activate ability action has negative X value")
 		}
+		for _, count := range a.activateAbility.TargetCounts {
+			if count < 0 {
+				return errors.New("activate ability action has negative target count")
+			}
+		}
 	case ActionSuspendCard:
 		if a.suspendCard.CardID == 0 {
 			return errors.New("suspend card action missing card ID")
@@ -445,7 +468,9 @@ func activateAbilityActionEmpty(a ActivateAbilityAction) bool {
 	return a.SourceID == 0 &&
 		a.AbilityIndex == 0 &&
 		len(a.Targets) == 0 &&
-		a.XValue == 0
+		len(a.TargetCounts) == 0 &&
+		a.XValue == 0 &&
+		len(a.ChosenModes) == 0
 }
 
 func suspendCardActionEmpty(a SuspendCardAction) bool {

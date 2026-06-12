@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **4,789 of 31,838 cards eligible for paper support (15.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **4,806 of 31,838 cards eligible for paper support (15.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -58,6 +58,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Ajani, Wise Counselor
 - Akki Blizzard-Herder
 - Akki Drillmaster
+- Akki Rockspeaker
 - Akoum Refuge
 - Akoum Warrior // Akoum Teeth
 - Akrasan Squire
@@ -415,6 +416,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Blaze
 - Blazemire Verge
 - Blazethorn Scarecrow
+- Blazing Firesinger // Seething Song
 - Bleachbone Verge
 - Bleeding Woods
 - Blessed Orator
@@ -567,6 +569,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Buoyancy
 - Buried Ruin
 - Burn Bright
+- Burning-Tree Emissary
 - Burrenton Shield-Bearers
 - Burrog Befuddler
 - Burrowing Razormaw
@@ -589,6 +592,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Canal Monitor
 - Cancel
 - Candlelight Vigil
+- Cankerbloom
 - Canopy Gorger
 - Canopy Spider
 - Canopy Vista
@@ -641,6 +645,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Cathartic Adept
 - Cathedral of War
 - Cathedral Sanctifier
+- Cathodion
 - Cauldron of Essence
 - Caustic Hound
 - Caustic Rain
@@ -669,6 +674,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Chain to Memory
 - Chambered Nautilus
 - Champion of Arashin
+- Channel the Suns
 - Channeler Initiate
 - Chant of the Skifsang
 - Chapel Geist
@@ -893,6 +899,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Dark Favor
 - Dark Nourishment
 - Dark Remedy
+- Dark Ritual
 - Darkbore Pathway // Slitherbore Pathway
 - Darkmoss Bridge
 - Darkslick Drake
@@ -1914,6 +1921,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Hulking Devil
 - Hulking Goblin
 - Hulking Ogre
+- Hulking Raptor
 - Hullcarver
 - Human
 - Human
@@ -2345,6 +2353,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Lost Legion
 - Lost Leonin
 - Lothlórien Lookout
+- Lotus Cobra
 - Lotus Guardian
 - Lotus Path Djinn
 - Lotus Petal
@@ -2621,6 +2630,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Myr
 - Myr
 - Myr Convert
+- Myr Moonvessel
 - Myr Retriever
 - Myr Scrapling
 - Mysterio's Phantasm
@@ -3006,7 +3016,9 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Prescient Chimera
 - Prey Upon
 - Pride Guardian
+- Priest of Gix
 - Priest of Iroas
+- Priest of Urabrask
 - Priests of Norn
 - Primal Frenzy
 - Primal Huntbeast
@@ -3050,6 +3062,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Pygmy Razorback
 - Pyknite
 - Pyre Spawn
+- Pyretic Ritual
 - Pyroclasm
 - Pyromantic Pilgrim
 - Python
@@ -3068,6 +3081,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Quill-Blade Laureate // Twofold Intent
 - Quilled Slagwurm
 - Quirion Ranger
+- Quirion Sentinel
 - Rabanastre, Royal City
 - Rabbit
 - Rabid Bloodsucker
@@ -3465,6 +3479,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Seekers' Squire
 - Seer of the Last Tomorrow
 - Seer's Lantern
+- Seething Song
 - Segovian Angel
 - Seismic Mage
 - Seize the Initiative
@@ -3951,6 +3966,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Student of Ojutai
 - Studious First-Year // Rampant Growth
 - Study
+- Su-Chi
 - Submerged Boneyard
 - Subtle Strike
 - Suburban Sanctuary
@@ -4009,6 +4025,7 @@ Council4 currently supports **4,789 of 31,838 cards eligible for paper support (
 - Survivors' Encampment
 - Sustenance
 - Suture Spirit
+- Svyelunite Priest
 - Svyelunite Temple
 - Swab Goblin
 - Swamp

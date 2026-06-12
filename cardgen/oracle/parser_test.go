@@ -169,6 +169,36 @@ func TestParseModalAbility(t *testing.T) {
 	}
 }
 
+func TestParseModalActivatedAbility(t *testing.T) {
+	t.Parallel()
+	source := "{1}, Discard a card: Choose one —\n• Draw a card.\n• You gain 3 life."
+	document, diagnostics := Parse(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v, want one", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if ability.Kind != AbilityActivated || ability.Cost == nil || ability.Modal == nil {
+		t.Fatalf("ability = %#v, want modal activated ability", ability)
+	}
+	if ability.Cost.Text != "{1}, Discard a card" || ability.Modal.Header.Text != "Choose one —" || len(ability.Modal.Options) != 2 {
+		t.Fatalf("cost/header/options = %q/%q/%d", ability.Cost.Text, ability.Modal.Header.Text, len(ability.Modal.Options))
+	}
+
+	withWord, diagnostics := Parse("Hellbent — "+source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("ability-word diagnostics = %#v", diagnostics)
+	}
+	ability = withWord.Abilities[0]
+	if ability.AbilityWord == nil || ability.AbilityWord.Text != "Hellbent" ||
+		ability.Cost == nil || ability.Cost.Text != "{1}, Discard a card" ||
+		ability.Modal == nil {
+		t.Fatalf("ability-word modal activated ability = %#v", ability)
+	}
+}
+
 func TestParseInlineModalAbility(t *testing.T) {
 	t.Parallel()
 	source := "Choose one — Noxious Hydra Breath deals 5 damage to each player; or destroy each tapped non-Head creature."
