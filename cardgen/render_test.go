@@ -514,6 +514,34 @@ func TestRenderReplacementAbilityRejectsMixedETBCounters(t *testing.T) {
 	}
 }
 
+func TestRenderZoneChangeTriggerExclusionAndFaceDownFilters(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		ExcludeToZone: true,
+		ToZone:        zone.Graveyard,
+		MatchFaceDown: true,
+		FaceDown:      true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.EventZoneChanged",
+		"ExcludeToZone: true",
+		"ToZone: zone.Graveyard",
+		"MatchFaceDown: true",
+		"FaceDown: true",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered trigger missing %q:\n%s", wanted, rendered)
+		}
+	}
+}
+
 func TestRenderZoneDestinationReplacement(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()

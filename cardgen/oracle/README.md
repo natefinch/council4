@@ -194,14 +194,18 @@ colors from mana costs when Scryfall omits face colors. An exact
 `This creature enters prepared.` ability lowers to `CardFace.EntersPrepared`;
 other effects that prepare or unprepare permanents remain deferred.
 Supported sentence-sized effects may be lowered in Oracle order with independent
-targets for each supported clause. It also lowers exact supported self-enter and self-dies triggers with
-ordered supported spell-like effects. Self-enter triggers may use exact
+targets for each supported clause. It lowers exact supported permanent
+zone-change triggers with ordered supported spell-like effects. Self-enter
+triggers may use exact
 intervening conditions for `if it was kicked`, cast entry, or controlling a
-permanent of a named permanent card type. Exact non-self permanent
-enters-the-battlefield triggers lower for single-subject (`a`/`an`/`another`,
-optional `nontoken` qualifier) and `one or more` subject forms, with optional
-permanent type filter (creature, artifact, enchantment, land, planeswalker, or
-unfiltered) and optional you-control or opponent-controls controller constraints.
+permanent of a named permanent card type. One shared recognizer covers exact
+self, attached, single-subject (`a`/`an`/`another`), and `one or more` permanent
+enter, die, leave, exile, return-to-hand, and battlefield-to-graveyard clauses.
+It binds exact controller/owner relations, origin/destination zones, self
+exclusion, face-down state, and Selection predicates for type unions,
+supertypes, subtypes (including Outlaw), colors, token/tapped/combat state,
+keywords, mana value, power, and toughness. `Leaves ... without dying` is an
+exact excluded-destination pattern.
 Phase and step triggered abilities with `At the beginning of …` recognize exact
 supported controller-relative upkeep, draw, end, combat, combat-step, and main
 phase variants through shared relation-and-step slots. Common exact self and
@@ -209,11 +213,12 @@ controller-relative attack, block, tap, untap, and self became-target phrases
 likewise bind shared relation, Selection, event, and qualifier slots rather than
 whole-phrase semantic branches. One-or-more wording is accepted only for event
 families whose runtime emission supports correct batching. Unsupported phrase
-variants remain fail-closed.
+variants, compound events, temporal qualifiers, and unavailable Selection
+predicates remain fail-closed.
 Self-dies triggers support exact
 absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.
-Exact self-dies and attached-permanent-dies event-card references support
+Exact singular permanent-zone-change event-card references support
 returning the card from its owner's graveyard to hand, and self-dies references
 support granting its Adventure face graveyard-cast permission through the end
 of the controller's next turn. Bound event permanents also lower through the

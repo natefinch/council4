@@ -715,7 +715,20 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.RequiredTypes = nil
 		unsupported.RequiredTypesAny = nil
 		unsupported.ExcludedTypes = nil
+		unsupported.Supertypes = nil
+		unsupported.SubtypesAny = nil
+		unsupported.ColorsAny = nil
+		unsupported.ExcludedColors = nil
+		unsupported.Colorless = false
+		unsupported.Multicolored = false
 		unsupported.Controller = ControllerAny
+		unsupported.Tapped = TriAny
+		unsupported.CombatState = CombatStateAny
+		unsupported.Keyword = KeywordNone
+		unsupported.ExcludedKeyword = KeywordNone
+		unsupported.ManaValue.Exists = false
+		unsupported.Power.Exists = false
+		unsupported.Toughness.Exists = false
 		unsupported.NonToken = false
 		unsupported.TokenOnly = false
 		if !unsupported.Empty() {
@@ -757,6 +770,15 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.MatchToZone && pattern.ToZone == zone.None {
 		v.add(faceName, appendPath(path, "ToZone"), CardDefIssueInvalidSelection, "to-zone trigger filter must set a destination zone")
+	}
+	if pattern.ExcludeToZone && pattern.ToZone == zone.None {
+		v.add(faceName, appendPath(path, "ToZone"), CardDefIssueInvalidSelection, "excluded to-zone trigger filter must set a destination zone")
+	}
+	if pattern.MatchToZone && pattern.ExcludeToZone {
+		v.add(faceName, appendPath(path, "ToZone"), CardDefIssueInvalidSelection, "to-zone trigger filter cannot both require and exclude its destination")
+	}
+	if pattern.FaceDown && !pattern.MatchFaceDown {
+		v.add(faceName, appendPath(path, "FaceDown"), CardDefIssueInvalidSelection, "face-down trigger filter must be enabled")
 	}
 }
 

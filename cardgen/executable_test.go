@@ -2922,9 +2922,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedNonSelfEnterTriggers(t *t
 		typeLine   string
 		oracleText string
 	}{
-		{name: "subtype filter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another zombie enters, draw a card."},
-		{name: "power filter", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever a creature with power 2 or less enters, draw a card."},
-		{name: "compound type", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature or artifact enters, draw a card."},
 		{name: "missing article", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever creature enters, draw a card."},
 		{name: "unknown suffix", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever another creature that you control enters, draw a card."},
 		{name: "caster-relative condition", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Whenever a creature enters, if you cast it, draw a card."},
@@ -2980,6 +2977,55 @@ func TestGenerateExecutableCardSourceDiesTrigger(t *testing.T) {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
+	}
+}
+
+func TestGenerateExecutableCardSourcePermanentZoneChangeTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "self leaves battlefield",
+			oracleText: "When this creature leaves the battlefield, draw a card.",
+			wants:      []string{"game.EventZoneChanged", "game.TriggerSourceSelf", "MatchFromZone: true", "zone.Battlefield"},
+		},
+		{
+			name:       "batched controlled creatures go to graveyard",
+			oracleText: "Whenever one or more creatures you control are put into a graveyard from the battlefield, draw a card.",
+			wants:      []string{"game.EventZoneChanged", "OneOrMore:", "zone.Graveyard", "game.TriggerControllerYou"},
+		},
+		{
+			name:       "qualified Human dies",
+			oracleText: "Whenever another legendary green Human you control dies, draw a card.",
+			wants:      []string{"game.EventPermanentDied", "SubtypesAny: []types.Sub{types.Sub(\"Human\")}", "Supertypes: []types.Super{types.Legendary}", "ColorsAny: []color.Color{color.Green}", "ExcludeSelf:"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
 	}
 }
 
@@ -3338,7 +3384,7 @@ func TestGenerateExecutableCardSourceRejectsPartiallyOptionalTrigger(t *testing.
 	if source != "" {
 		t.Fatalf("source = %q, want no partial card", source)
 	}
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported enter trigger effect" {
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported permanent zone-change trigger effect" {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 }
@@ -3416,7 +3462,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "until mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills cards until they mill a land card."},
 		{name: "reveal mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player reveals and mills three cards."},
 		{name: "mass mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Each opponent mills three cards."},
-		{name: "leave trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When this creature leaves the battlefield, draw a card."},
 		{name: "cast trigger", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "When you cast this spell, draw a card."},
 	}
 	for _, test := range tests {

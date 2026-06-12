@@ -3155,16 +3155,10 @@ func lowerTriggeredAbility(
 		return lowerDrawDiscardTrigger(cardName, ability, syntax)
 	case oracle.TriggerEventLifeGained, oracle.TriggerEventLifeLost, oracle.TriggerEventDamageDealt:
 		return lowerLifeDamageTrigger(cardName, ability, syntax)
-	case oracle.TriggerEventPermanentEnteredBattlefield:
-		if pattern.Source == oracle.TriggerSourceSelf {
-			return lowerEnterTrigger(cardName, ability, syntax)
-		}
-		return lowerNonSelfEnterTrigger(cardName, ability, syntax)
-	case oracle.TriggerEventPermanentDied:
-		if pattern.Source == oracle.TriggerSourceSelf {
-			return lowerEnterTrigger(cardName, ability, syntax)
-		}
-		return lowerNonSelfDiesTrigger(cardName, ability, syntax)
+	case oracle.TriggerEventPermanentEnteredBattlefield,
+		oracle.TriggerEventPermanentDied,
+		oracle.TriggerEventZoneChanged:
+		return lowerPermanentZoneChangeTrigger(cardName, ability, syntax)
 	case oracle.TriggerEventSpellCast:
 		return lowerCastTrigger(cardName, ability, syntax)
 	default:
@@ -3476,7 +3470,7 @@ func lowerSelfTriggerBody(
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.AbilityContent, *oracle.Diagnostic) {
-	if eventKind == game.EventPermanentDied {
+	if eventKind == game.EventPermanentDied || eventKind == game.EventZoneChanged {
 		ctx := contentCtx{
 			text:     ability.Text,
 			span:     ability.Span,
@@ -3571,6 +3565,10 @@ func lowerSelfInterveningCondition(
 
 func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind) bool {
 	switch eventKind {
+	case game.EventPermanentEnteredBattlefield,
+		game.EventPermanentDied,
+		game.EventZoneChanged:
+		return kind == oracle.TriggerWhen || kind == oracle.TriggerWhenever
 	case game.EventPermanentMutated,
 		game.EventAttackerBecameBlocked,
 		game.EventAttackerDeclared,
@@ -3776,128 +3774,111 @@ func prepareTriggerBody(
 	return body, bodySyntax, true
 }
 
-func lowerNonSelfEnterTrigger(
+func lowerPermanentZoneChangeTrigger(
 	cardName string,
 	ability oracle.CompiledAbility,
 	syntax oracle.Ability,
 ) (game.TriggeredAbility, *oracle.Diagnostic) {
-	if ability.Trigger == nil ||
-		ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger",
-			"the executable source backend requires a semantic whenever enter trigger")
+	const summary = "unsupported permanent zone-change trigger"
+	const effectSummary = "unsupported permanent zone-change trigger effect"
+	if ability.Trigger == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend requires a semantic permanent zone-change trigger")
 	}
-
 	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
-	if !ok || pattern.Event != game.EventPermanentEnteredBattlefield ||
-		pattern.Source != game.TriggerSourceAny {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger",
-			"the executable source backend does not support this semantic enter trigger pattern")
+	if !ok ||
+		(pattern.Event != game.EventPermanentEnteredBattlefield &&
+			pattern.Event != game.EventPermanentDied &&
+			pattern.Event != game.EventZoneChanged) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend does not support this semantic permanent zone-change trigger pattern")
 	}
-
-	intervening, supportedCondition := lowerEnterInterveningCondition(ability.Trigger)
-	if !supportedCondition ||
-		(ability.Trigger.Condition != nil &&
-			ability.Trigger.Condition.Predicate == oracle.ConditionPredicateEventSubjectWasCastByController) {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger",
-			"the executable source backend does not support this semantic enter trigger condition")
+	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
+	if !ok || (triggerType != game.TriggerWhen && triggerType != game.TriggerWhenever) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"permanent zone-change triggers require When or Whenever")
 	}
-	if len(ability.Content.Effects) == 0 || len(ability.Content.Modes) != 0 {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger effect",
-			"the executable source backend does not support this enter trigger body")
+	intervening, ok := lowerPermanentZoneChangeInterveningCondition(&pattern, ability.Trigger)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend does not support this semantic permanent zone-change trigger condition")
+	}
+	if len(ability.Content.Effects) == 0 ||
+		len(ability.Content.Modes) != 0 ||
+		(pattern.Event != game.EventPermanentEnteredBattlefield &&
+			!rulesFreeAbilityWordLabel(ability.AbilityWord)) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
+			"the executable source backend does not support this permanent zone-change trigger body")
 	}
 	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported enter trigger effect",
-			"the executable source backend does not support this enter trigger body")
+		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
+			"the executable source backend does not support this permanent zone-change trigger body")
 	}
-	content, contentOK := lowerEventPermanentModifyPTBody(contentCtx{
-		text:     body.Text,
-		span:     body.Span,
-		optional: body.Optional,
-		content:  body.Content,
-	})
+	if (pattern.Event == game.EventPermanentDied || pattern.Event == game.EventZoneChanged) &&
+		normalizeSelfDamageReference(cardName, &body) {
+		bodySyntax.Text = body.Text
+	}
+	var content game.AbilityContent
+	contentOK := false
+	if pattern.Event == game.EventPermanentEnteredBattlefield && pattern.Source != game.TriggerSourceSelf {
+		content, contentOK = lowerEventPermanentModifyPTBody(contentCtx{
+			text:     body.Text,
+			span:     body.Span,
+			optional: body.Optional,
+			content:  body.Content,
+		})
+	}
 	if !contentOK {
-		var diagnostic *oracle.Diagnostic
-		content, diagnostic = lowerSelfTriggerBody(cardName, game.EventPermanentEnteredBattlefield, body, bodySyntax)
+		content, diagnostic := lowerSelfTriggerBody(cardName, pattern.Event, body, bodySyntax)
 		if diagnostic != nil {
 			return game.TriggeredAbility{}, diagnostic
 		}
+		return permanentZoneChangeTriggeredAbility(ability, triggerType, &pattern, &intervening, content), nil
 	}
-	return game.TriggeredAbility{
-		Text: ability.Text,
-		Trigger: game.TriggerCondition{
-			Type:                                 game.TriggerWhenever,
-			Pattern:                              pattern,
-			InterveningIf:                        interveningIfText(ability.Trigger),
-			InterveningCondition:                 intervening.condition,
-			InterveningIfEventPermanentWasKicked: intervening.wasKicked,
-			InterveningIfEventPermanentWasCast:   intervening.wasCast,
-		},
-		Optional: ability.Optional,
-		Content:  content,
-	}, nil
+	return permanentZoneChangeTriggeredAbility(ability, triggerType, &pattern, &intervening, content), nil
 }
 
-// lowerNonSelfDiesTrigger lowers a recognized semantic non-self dies trigger.
-func lowerNonSelfDiesTrigger(
-	cardName string,
+func lowerPermanentZoneChangeInterveningCondition(
+	pattern *game.TriggerPattern,
+	trigger *oracle.CompiledTrigger,
+) (enterInterveningCondition, bool) {
+	if pattern.Source == game.TriggerSourceSelf {
+		return lowerSelfInterveningCondition(pattern.Event, trigger)
+	}
+	if pattern.Event == game.EventPermanentEnteredBattlefield {
+		intervening, ok := lowerEnterInterveningCondition(trigger)
+		if !ok ||
+			(trigger.Condition != nil &&
+				trigger.Condition.Predicate == oracle.ConditionPredicateEventSubjectWasCastByController) {
+			return enterInterveningCondition{}, false
+		}
+		return intervening, true
+	}
+	return enterInterveningCondition{}, trigger == nil || trigger.Condition == nil
+}
+
+func permanentZoneChangeTriggeredAbility(
 	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
-	const unsupportedPhrase = "unsupported dies trigger phrase"
-	const unsupportedBody = "unsupported dies trigger body"
-
-	if ability.Trigger == nil ||
-		(ability.Trigger.Pattern.Kind != oracle.TriggerWhen &&
-			ability.Trigger.Pattern.Kind != oracle.TriggerWhenever) {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
-			"non-self dies trigger requires When or Whenever trigger kind")
-	}
-
-	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
-	if !ok || pattern.Event != game.EventPermanentDied ||
-		pattern.Source == game.TriggerSourceSelf {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
-			"unrecognised semantic non-self dies trigger pattern")
-	}
-	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
-	if !ok {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
-			"non-self dies trigger requires When or Whenever trigger kind")
-	}
-	if ability.Trigger.Condition != nil {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedPhrase,
-			"intervening-if conditions are not supported for non-self dies triggers")
-	}
-
-	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedBody,
-			"non-self dies trigger does not support modes or ability words")
-	}
-
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
-	if !ok {
-		return game.TriggeredAbility{}, executableDiagnostic(ability, unsupportedBody,
-			"could not prepare trigger body")
-	}
-
-	if normalizeSelfDamageReference(cardName, &body) {
-		bodySyntax.Text = body.Text
-	}
-	content, diagnostic := lowerSelfTriggerBody(cardName, game.EventPermanentDied, body, bodySyntax)
-	if diagnostic != nil {
-		return game.TriggeredAbility{}, diagnostic
-	}
-
+	triggerType game.TriggerType,
+	pattern *game.TriggerPattern,
+	intervening *enterInterveningCondition,
+	content game.AbilityContent,
+) game.TriggeredAbility {
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:    triggerType,
-			Pattern: pattern,
+			Type:                 triggerType,
+			Pattern:              *pattern,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening.condition,
+			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
+			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:          intervening.wasCast,
 		},
 		Optional: ability.Optional,
 		Content:  content,
-	}, nil
+	}
 }
 
 // lowerCastTrigger lowers a recognized semantic spell-cast trigger into a

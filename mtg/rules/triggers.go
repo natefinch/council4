@@ -165,7 +165,8 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 		if !ok {
 			continue
 		}
-		if ability.Trigger.Pattern.OneOrMore {
+		if ability.Trigger.Pattern.OneOrMore &&
+			(trigger.event.SimultaneousID != 0 || !permanentZoneChangeTriggerEvent(trigger.event.Kind)) {
 			key := triggerBatchKey{
 				sourceID:     trigger.sourceID,
 				abilityIndex: trigger.abilityIndex,
@@ -191,6 +192,12 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 		filtered = append(filtered, *trigger)
 	}
 	return filtered
+}
+
+func permanentZoneChangeTriggerEvent(kind game.EventKind) bool {
+	return kind == game.EventPermanentEnteredBattlefield ||
+		kind == game.EventPermanentDied ||
+		kind == game.EventZoneChanged
 }
 
 type triggerBatchKey struct {
@@ -588,6 +595,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.Event == game.EventUnknown || pattern.Event != event.Kind {
 		return false
 	}
+	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 {
+		return false
+	}
 
 	// Trigger patterns are checked when the triggering event is processed, and
 	// LTB/dies checks may need last-known information for the moved permanent
@@ -613,6 +623,12 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		return false
 	}
 	if pattern.MatchToZone && pattern.ToZone != event.ToZone {
+		return false
+	}
+	if pattern.ExcludeToZone && pattern.ToZone == event.ToZone {
+		return false
+	}
+	if pattern.MatchFaceDown && pattern.FaceDown != event.FaceDown {
 		return false
 	}
 	if pattern.RequireKickerPaid && !event.KickerPaid {

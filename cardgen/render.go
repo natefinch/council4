@@ -1168,11 +1168,16 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
-	allowCastFromZone := pattern.Event == game.EventSpellCast && pattern.MatchFromZone && !pattern.MatchToZone
+	allowZoneChangeZones := pattern.Event == game.EventZoneChanged
+	allowFromZone := pattern.MatchFromZone &&
+		(pattern.Event == game.EventSpellCast || pattern.Event == game.EventPermanentEnteredBattlefield || allowZoneChangeZones) &&
+		!pattern.MatchToZone
 	if len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
-		(pattern.MatchFromZone && !allowCastFromZone) ||
-		pattern.MatchToZone ||
+		(pattern.MatchFromZone && !allowFromZone && !allowZoneChangeZones) ||
+		(pattern.MatchToZone && !allowZoneChangeZones) ||
+		(pattern.ExcludeToZone && !allowZoneChangeZones) ||
+		(pattern.MatchToZone && pattern.ExcludeToZone) ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		pattern.SpellTargetsSource ||
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
@@ -1189,44 +1194,76 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Event: %s,", event)}
+	relationFields, err := renderTriggerPatternRelationFields(pattern)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, relationFields...)
+	zoneFields, err := renderTriggerPatternZoneFields(ctx, pattern)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, zoneFields...)
+	flagFields, err := renderTriggerPatternFlagFields(ctx, pattern)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, flagFields...)
+	selectionFields, err := renderTriggerPatternSelectionFields(ctx, pattern)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, selectionFields...)
+	return structLit("game.TriggerPattern", fields), nil
+}
+
+func renderTriggerPatternRelationFields(pattern *game.TriggerPattern) ([]string, error) {
+	var fields []string
 	if pattern.Source != game.TriggerSourceAny {
 		source, err := renderTriggerSource(pattern.Source)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("Source: %s,", source))
 	}
 	if pattern.Controller != game.TriggerControllerAny {
 		controller, err := renderTriggerController(pattern.Controller)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("Controller: %s,", controller))
 	}
 	if pattern.Step != game.StepNone {
 		step, err := renderStep(pattern.Step)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("Step: %s,", step))
 	}
 	if pattern.Subject != game.TriggerSubjectDefault {
 		subject, err := renderTriggerSubject(pattern.Subject)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("Subject: %s,", subject))
 	}
 	if pattern.ExcludeSelf {
 		fields = append(fields, "ExcludeSelf: true,")
 	}
-	if pattern.MatchFromZone {
-		fromZone, err := renderZone(pattern.FromZone)
+	if pattern.Player != game.TriggerPlayerAny {
+		player, err := renderTriggerPlayer(pattern.Player)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		ctx.need(importZone)
-		fields = append(fields, "MatchFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
+		fields = append(fields, fmt.Sprintf("Player: %s,", player))
+	}
+	return fields, nil
+}
+
+func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	var fields []string
+	if pattern.MatchFaceDown {
+		fields = append(fields, "MatchFaceDown: true,", fmt.Sprintf("FaceDown: %t,", pattern.FaceDown))
 	}
 	if pattern.RequireKickerPaid {
 		fields = append(fields, "RequireKickerPaid: true,")
@@ -1237,21 +1274,21 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if pattern.MatchStackObjectKind {
 		stackObjectKind, err := renderStackObjectKind(pattern.StackObjectKind)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, "MatchStackObjectKind: true,", fmt.Sprintf("StackObjectKind: %s,", stackObjectKind))
 	}
 	if len(pattern.RequirePermanentTypes) > 0 {
 		rpt, err := renderTypesCardSlice(ctx, pattern.RequirePermanentTypes)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("RequirePermanentTypes: %s,", rpt))
 	}
 	if len(pattern.ExcludePermanentTypes) > 0 {
 		ept, err := renderTypesCardSlice(ctx, pattern.ExcludePermanentTypes)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("ExcludePermanentTypes: %s,", ept))
 	}
@@ -1264,42 +1301,69 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	if pattern.MatchCounterKind {
 		kindFields, err := renderTriggerPatternCounterKind(ctx, pattern)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, kindFields...)
-	}
-	if pattern.Player != game.TriggerPlayerAny {
-		player, err := renderTriggerPlayer(pattern.Player)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("Player: %s,", player))
-	}
-	if pattern.DamageRecipient != game.DamageRecipientNone || len(pattern.DamageRecipientTypes) > 0 {
-		damageFields, err := renderTriggerPatternDamageFields(ctx, pattern)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, damageFields...)
 	}
 	if pattern.RequireCombatDamage {
 		fields = append(fields, "RequireCombatDamage: true,")
 	}
+	return fields, nil
+}
+
+func renderTriggerPatternSelectionFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	var fields []string
+	if pattern.DamageRecipient != game.DamageRecipientNone || len(pattern.DamageRecipientTypes) > 0 {
+		damageFields, err := renderTriggerPatternDamageFields(ctx, pattern)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, damageFields...)
+	}
 	if !pattern.CardSelection.Empty() {
 		cardFields, err := renderTriggerPatternCardSelectionFields(ctx, pattern)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, cardFields...)
 	}
 	if !pattern.SubjectSelection.Empty() {
 		subjectFields, err := renderTriggerPatternSubjectSelection(ctx, pattern)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fields = append(fields, subjectFields...)
 	}
-	return structLit("game.TriggerPattern", fields), nil
+	return fields, nil
+}
+
+func renderTriggerPatternZoneFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
+	var fields []string
+	if pattern.MatchFromZone {
+		fromZone, err := renderZone(pattern.FromZone)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importZone)
+		fields = append(fields, "MatchFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
+	}
+	if pattern.MatchToZone {
+		toZone, err := renderZone(pattern.ToZone)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importZone)
+		fields = append(fields, "MatchToZone: true,", fmt.Sprintf("ToZone: %s,", toZone))
+	}
+	if pattern.ExcludeToZone {
+		toZone, err := renderZone(pattern.ToZone)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importZone)
+		fields = append(fields, "ExcludeToZone: true,", fmt.Sprintf("ToZone: %s,", toZone))
+	}
+	return fields, nil
 }
 
 func renderStackObjectKind(kind game.StackObjectKind) (string, error) {
@@ -4175,6 +4239,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventPermanentEnteredBattlefield", nil
 	case game.EventPermanentDied:
 		return "game.EventPermanentDied", nil
+	case game.EventZoneChanged:
+		return "game.EventZoneChanged", nil
 	case game.EventCardDiscarded:
 		return "game.EventCardDiscarded", nil
 	case game.EventCycled:

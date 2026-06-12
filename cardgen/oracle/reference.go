@@ -62,6 +62,7 @@ func bindReferences(
 		}
 		if trigger != nil &&
 			reference.Span.Start.Offset >= trigger.Span.Start.Offset &&
+			!trigger.Pattern.OneOrMore &&
 			triggerEventBindsPermanent(trigger.Pattern.Event) {
 			reference.Binding = ReferenceBindingEventPermanent
 			continue
@@ -214,6 +215,7 @@ func triggerEventBindsPermanent(event TriggerEvent) bool {
 	switch event {
 	case TriggerEventPermanentEnteredBattlefield,
 		TriggerEventPermanentDied,
+		TriggerEventZoneChanged,
 		TriggerEventCountersAdded,
 		TriggerEventDamageDealt,
 		TriggerEventAttackerDeclared,

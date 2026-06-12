@@ -135,6 +135,7 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 		Player:       card.Owner,
 		CardID:       card.ID,
 		Face:         face,
+		FaceDown:     true,
 		EnterWasCast: wasCast,
 		PermanentID:  objectID,
 		CardTypes:    []types.Card{types.Creature},
@@ -238,11 +239,11 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 	destinationCards, _ := destinationZone(g, removed.Owner, move.actualDestination)
 	if removed.Token {
 		destinationCards.Add(removed.ObjectID)
-		emitPermanentLeaveEvents(g, removed, move.actualDestination, move.event.SimultaneousID)
+		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.actualDestination, move.event.SimultaneousID)
 	} else {
 		destinationCards.Add(removed.CardInstanceID)
 		shuffleLibraryIfRequested(g, destinationCards, move.actualDestination, move.replacement.shuffleIntoLibrary)
-		emitPermanentLeaveEvents(g, removed, move.actualDestination, move.event.SimultaneousID)
+		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.actualDestination, move.event.SimultaneousID)
 	}
 	for _, component := range move.componentMoves {
 		if component.faceDown {
@@ -480,12 +481,13 @@ func shuffleLibraryIfRequested(g *game.Game, cards *zone.Zone, destination zone.
 	}
 }
 
-func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, destination zone.Type, simultaneousID id.ID) {
+func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controller game.PlayerID, destination zone.Type, simultaneousID id.ID) {
 	event := game.Event{
-		Controller:     permanent.Controller,
+		Controller:     controller,
 		Player:         permanent.Owner,
 		CardID:         permanent.CardInstanceID,
 		Face:           permanent.Face,
+		FaceDown:       permanent.FaceDown,
 		PermanentID:    permanent.ObjectID,
 		TokenName:      permanentTokenName(permanent),
 		TokenDef:       permanent.TokenDef,

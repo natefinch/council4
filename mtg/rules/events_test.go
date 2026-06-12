@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
@@ -124,9 +125,41 @@ func TestPlayLandEmitsHandToBattlefieldZoneChange(t *testing.T) {
 	})
 }
 
+func TestFaceDownEntryEventsPreserveFaceDownState(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:       "Hidden Creature",
+		Types:      []types.Card{types.Creature},
+		Power:      opt.Val(game.PT{Value: 2}),
+		Toughness:  opt.Val(game.PT{Value: 2}),
+		ManaCost:   opt.Val(cost.Mana{cost.O(3)}),
+		OracleText: "Morph {3}",
+	}})
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
+	if _, ok := createCardPermanentFaceDown(g, card, game.Player1, zone.Hand, game.FaceFront, game.FaceDownMorph, true); !ok {
+		t.Fatal("createCardPermanentFaceDown failed")
+	}
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
+		return event.CardID == cardID && event.FaceDown
+	})
+	assertEvent(t, g.Events, game.EventPermanentEnteredBattlefield, func(event game.Event) bool {
+		return event.CardID == cardID && event.FaceDown
+	})
+}
+
 func TestDestroyPermanentEmitsZoneChangeAndDeathEvents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	permanent := addCombatCreaturePermanent(g, game.Player2)
+	permanent.FaceDown = true
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               g.IDGen.Next(),
+		AffectedObjectID: permanent.ObjectID,
+		Layer:            game.LayerControl,
+		NewController:    opt.Val(game.Player1),
+	})
 
 	_, ok := destroyPermanent(g, permanent.ObjectID)
 
@@ -136,13 +169,18 @@ func TestDestroyPermanentEmitsZoneChangeAndDeathEvents(t *testing.T) {
 	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID &&
 			event.CardID == permanent.CardInstanceID &&
+			event.Controller == game.Player1 &&
+			event.Player == game.Player2 &&
+			event.FaceDown &&
 			event.FromZone == zone.Battlefield &&
 			event.ToZone == zone.Graveyard
 	})
 	assertEvent(t, g.Events, game.EventPermanentDied, func(event game.Event) bool {
 		return event.PermanentID == permanent.ObjectID &&
 			event.CardID == permanent.CardInstanceID &&
-			event.Controller == game.Player2
+			event.Controller == game.Player1 &&
+			event.Player == game.Player2 &&
+			event.FaceDown
 	})
 }
 
