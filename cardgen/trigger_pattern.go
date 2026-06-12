@@ -16,11 +16,18 @@ import (
 // lowerTriggerPattern is the only semantic TriggerPattern to runtime
 // game.TriggerPattern lowering path.
 func lowerTriggerPattern(pattern *oracle.TriggerPattern) (game.TriggerPattern, bool) {
+	if pattern.Event == oracle.TriggerEventAbilityActivated && !pattern.ExcludeManaAbility {
+		return game.TriggerPattern{}, false
+	}
 	event, ok := lowerTriggerEvent(pattern.Event)
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
 	controller, ok := lowerTriggerController(pattern.Controller)
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
+	causeController, ok := lowerTriggerController(pattern.CauseController)
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
@@ -85,6 +92,7 @@ func lowerTriggerPattern(pattern *oracle.TriggerPattern) (game.TriggerPattern, b
 	result := game.TriggerPattern{
 		Event:                             event,
 		Controller:                        controller,
+		CauseController:                   causeController,
 		Source:                            source,
 		ExcludeSelf:                       pattern.ExcludeSelf,
 		Player:                            player,
@@ -105,6 +113,8 @@ func lowerTriggerPattern(pattern *oracle.TriggerPattern) (game.TriggerPattern, b
 		OneOrMorePerAttackTarget:          pattern.OneOrMorePerAttackTarget,
 		RequireKickerPaid:                 pattern.RequireKickerPaid,
 		RequireHistoric:                   pattern.RequireHistoric,
+		ExcludeManaAbility:                pattern.ExcludeManaAbility,
+		PlayerEventOrdinalThisTurn:        pattern.PlayerEventOrdinalThisTurn,
 	}
 
 	switch pattern.CombatQualifier {
@@ -239,6 +249,16 @@ func lowerTriggerEvent(event oracle.TriggerEvent) (game.EventKind, bool) {
 		return game.EventPermanentTapped, true
 	case oracle.TriggerEventPermanentUntapped:
 		return game.EventPermanentUntapped, true
+	case oracle.TriggerEventPermanentTurnedFaceUp:
+		return game.EventPermanentTurnedFaceUp, true
+	case oracle.TriggerEventPermanentSacrificed:
+		return game.EventPermanentSacrificed, true
+	case oracle.TriggerEventScry:
+		return game.EventScry, true
+	case oracle.TriggerEventSurveil:
+		return game.EventSurveil, true
+	case oracle.TriggerEventAbilityActivated:
+		return game.EventAbilityActivated, true
 	case oracle.TriggerEventObjectBecameTarget:
 		return game.EventObjectBecameTarget, true
 	case oracle.TriggerEventPermanentMutated:

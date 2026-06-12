@@ -652,7 +652,7 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
 		return res
 	}
-	res.succeeded = movePermanentToZone(r.game, permanent, zone.Graveyard)
+	res.succeeded = sacrificePermanent(r.game, permanent)
 	return res
 }
 
@@ -670,7 +670,7 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 	for _, playerID := range players {
 		chosen = append(chosen, r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, amount, prim.Selection, r.agents, r.log)...)
 	}
-	res.succeeded = movePermanentsToZoneSimultaneously(r.game, chosen, zone.Graveyard)
+	res.succeeded = sacrificePermanentsSimultaneously(r.game, chosen)
 	return res
 }
 

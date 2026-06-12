@@ -592,6 +592,11 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.Event == game.EventUnknown || pattern.Event != event.Kind {
 		return false
 	}
+	// Payment-time mana activations do not emit this event yet, so an
+	// unrestricted pattern would silently under-trigger.
+	if pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility {
+		return false
+	}
 	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 {
 		return false
 	}
@@ -605,6 +610,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		subjectController = effectiveController(g, subject)
 	}
 	if !triggerControllerMatches(sourceController, pattern.Controller, subjectController) {
+		return false
+	}
+	if !triggerControllerMatches(sourceController, pattern.CauseController, event.Controller) {
 		return false
 	}
 	if !triggerSourceMatches(g, source, pattern.Source, pattern.Subject, event) {
@@ -636,6 +644,13 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		return false
 	}
 	if pattern.RequireHistoric && !eventSpellHistoric(event) {
+		return false
+	}
+	if pattern.ExcludeManaAbility && event.ManaAbility {
+		return false
+	}
+	if pattern.PlayerEventOrdinalThisTurn > 0 &&
+		pattern.PlayerEventOrdinalThisTurn != event.PlayerEventOrdinalThisTurn {
 		return false
 	}
 	if !triggerCombatPatternMatches(g, sourceController, source, pattern, event) {

@@ -1194,6 +1194,31 @@ func TestValidateCardDefRejectsInvalidIndependentTriggerPatternFields(t *testing
 	}
 }
 
+func TestValidateCardDefRequiresNonManaAbilityActivatedTrigger(t *testing.T) {
+	t.Parallel()
+	card := &CardDef{CardFace: CardFace{
+		Name: "Activation Watcher",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event: EventAbilityActivated,
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if len(issues) != 1 ||
+		issues[0].Code != CardDefIssueInvalidSelection ||
+		issues[0].Message != "unrestricted ability-activated triggers are unavailable because the runtime event stream omits payment-time mana abilities" {
+		t.Fatalf("issues = %+v", issues)
+	}
+
+	card.TriggeredAbilities[0].Trigger.Pattern.ExcludeManaAbility = true
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("non-mana ability-activated trigger issues = %+v", issues)
+	}
+}
+
 func TestValidateCardDefReportsOneInvalidOneOrMorePerAttackTargetIssue(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name: "Invalid Per-Target Attack Trigger",

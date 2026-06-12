@@ -222,6 +222,8 @@ func triggerEventBindsPermanent(event TriggerEvent) bool {
 		TriggerEventBlockerDeclared,
 		TriggerEventPermanentTapped,
 		TriggerEventPermanentUntapped,
+		TriggerEventPermanentTurnedFaceUp,
+		TriggerEventPermanentSacrificed,
 		TriggerEventObjectBecameTarget,
 		TriggerEventPermanentMutated,
 		TriggerEventAttackerBecameBlocked:

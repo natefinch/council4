@@ -53,6 +53,13 @@ func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, lo
 			player.Library.AddToBottom(cardID)
 		}
 	}
+	emitEvent(g, game.Event{
+		Kind:                       game.EventScry,
+		Controller:                 playerID,
+		Player:                     playerID,
+		Amount:                     amount,
+		PlayerEventOrdinalThisTurn: nextPlayerEventOrdinalThisTurn(g, game.EventScry, playerID),
+	})
 }
 
 func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, amount int) {
@@ -83,6 +90,13 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 			})
 		}
 	}
+	emitEvent(g, game.Event{
+		Kind:                       game.EventSurveil,
+		Controller:                 playerID,
+		Player:                     playerID,
+		Amount:                     amount,
+		PlayerEventOrdinalThisTurn: nextPlayerEventOrdinalThisTurn(g, game.EventSurveil, playerID),
+	})
 }
 
 func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) bool {

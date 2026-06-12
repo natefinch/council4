@@ -1411,6 +1411,19 @@ func TestRenderTriggerPatternRejectsUnsupportedFields(t *testing.T) {
 	}
 }
 
+func TestRenderTriggerPatternRejectsUnrestrictedAbilityActivatedEvent(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{Event: game.EventAbilityActivated}
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		t.Fatal("unrestricted ability-activated trigger pattern rendered")
+	}
+
+	pattern.ExcludeManaAbility = true
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err != nil {
+		t.Fatalf("non-mana ability-activated trigger pattern: %v", err)
+	}
+}
+
 func TestRenderTriggerPatternBeginningOfStep(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()

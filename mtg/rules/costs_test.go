@@ -868,6 +868,9 @@ func TestComplexManaAbilitySacrificeSourceAddsManaThenLeavesField(t *testing.T) 
 	if got := g.Players[game.Player1].ManaPool.Amount(mana.C); got != 1 {
 		t.Fatalf("colorless mana = %d, want 1", got)
 	}
+	assertEvent(t, g.Events, game.EventPermanentSacrificed, func(event game.Event) bool {
+		return event.Player == game.Player1 && event.PermanentID == sourceID
+	})
 	if got := g.Stack.Size(); got != 0 {
 		t.Fatalf("stack size = %d, want 0", got)
 	}

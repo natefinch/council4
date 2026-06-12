@@ -217,6 +217,9 @@ relations. Player-level attack wording and `one or more` attack, block, and
 combat-damage wording bind explicit batch semantics, including per-attack-target
 coalescing. Unsupported phrase variants, compound events, temporal qualifiers,
 and unavailable runtime relations remain fail-closed.
+Exact draw-card ordinals and first-time-this-turn life gain/loss, scry, and
+surveil wording bind a shared player-event ordinal slot rather than a
+phrase-specific runtime matcher.
 Self-dies triggers support exact
 absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.
@@ -258,6 +261,20 @@ zone counts, and ambiguous pronouns remain unsupported.
 This compiler IR is the recognition stage. Trigger phrase tables and Static
 Declaration adapters live here; `cardgen/lower.go` never interprets retained
 raw trigger-event or static-declaration text.
+Permanent action templates recognize exact tapped, untapped, and turned-face-up
+events while binding self, attached, controller-relative, and Selection-filtered
+subject relations.
+Became-target patterns preserve the targeted subject and the targeting
+spell-or-ability controller as independent semantic roles.
+Player-event templates preserve controller-relative and any-player Cycling
+relations through the same closed player-relation slot.
+Sacrifice templates bind the sacrificing player independently from the
+sacrificed permanent's shared Selection subject.
+Scry and surveil remain distinct player-action event templates; compound event
+wordings remain fail-closed.
+Activated-ability templates bind the activating player and source-permanent
+Selection only for exact non-mana-ability wording. Unrestricted forms remain
+unknown until payment-time mana activations join the authoritative event stream.
 The strict backend in `cardgen`
 consumes it and lowers each recognized ability into a second, **typed**
 intermediate representation made of `game.*` values (`game.ActivatedAbility`,

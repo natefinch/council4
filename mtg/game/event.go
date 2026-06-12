@@ -37,6 +37,10 @@ const (
 	EventObjectBecameTarget
 	EventCardRevealed
 	EventPermanentTurnedFaceUp
+	EventPermanentSacrificed
+	EventScry
+	EventSurveil
+	EventAbilityActivated
 	EventFight
 	EventPermanentMutated
 	EventAttackerBecameBlocked
@@ -75,12 +79,15 @@ type Event struct {
 	// AbilityIndex identifies an activated or triggered ability on its source.
 	AbilityIndex int
 
+	// ManaAbility is true when EventAbilityActivated describes a mana ability.
+	ManaAbility bool
+
 	// Controller is the player who controlled the source spell, ability, or permanent.
 	Controller PlayerID
 
-	// Player is the affected player for draw, discard, player-damage, and
-	// player-counter events, or the player in whose direction an attacker was
-	// declared.
+	// Player is the affected player for draw, discard, sacrifice, player-damage,
+	// and player-counter events, or the player in whose direction an attacker
+	// was declared.
 	Player PlayerID
 
 	// CardID identifies the card that moved, was drawn, discarded, or became a permanent.
@@ -148,9 +155,14 @@ type Event struct {
 	FromZone zone.Type
 	ToZone   zone.Type
 
-	// Amount is the number of damage dealt, cards drawn, cards discarded, or
-	// counters added.
+	// Amount is the number of damage dealt, cards drawn, cards discarded,
+	// counters added, or cards instructed to be scried or surveilled.
 	Amount int
+
+	// PlayerEventOrdinalThisTurn is this player's ordinal occurrence of Kind
+	// during the current turn. It is populated only for events with supported
+	// ordinal trigger semantics.
+	PlayerEventOrdinalThisTurn int
 
 	// CounterKind and PreviousCounterAmount describe EventCountersAdded for
 	// either PermanentID or Player.

@@ -270,6 +270,76 @@ func TestTriggerPatternControlledCreatureAttackMatchesOnlyIntendedSubject(t *tes
 	}
 }
 
+func TestTriggerPatternSeparatesTargetSubjectAndCauseControllers(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	subject := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:           game.EventObjectBecameTarget,
+		Controller:      game.TriggerControllerYou,
+		CauseController: game.TriggerControllerOpponent,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+	event := game.Event{
+		Kind:        game.EventObjectBecameTarget,
+		Controller:  game.Player2,
+		PermanentID: subject.ObjectID,
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("opponent-controlled cause targeting controlled creature did not match")
+	}
+	event.Controller = game.Player1
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("controller's own cause matched opponent-cause relation")
+	}
+	event.Controller = game.Player2
+	event.PermanentID = addCombatCreaturePermanent(g, game.Player2).ObjectID
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("opponent-controlled subject matched controlled-subject relation")
+	}
+}
+
+func TestTriggerPatternActivatedAbilityMatchesActorSourceAndManaFilter(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	abilitySource := addCombatCreaturePermanent(g, game.Player2)
+	pattern := &game.TriggerPattern{
+		Event:              game.EventAbilityActivated,
+		Player:             game.TriggerPlayerOpponent,
+		ExcludeManaAbility: true,
+		SubjectSelection: game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature, types.Land},
+		},
+	}
+	event := game.Event{
+		Kind:        game.EventAbilityActivated,
+		Player:      game.Player2,
+		Controller:  game.Player2,
+		PermanentID: abilitySource.ObjectID,
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("opponent nonmana creature ability did not match")
+	}
+	unrestricted := *pattern
+	unrestricted.ExcludeManaAbility = false
+	if triggerMatchesEvent(g, source, &unrestricted, event) {
+		t.Fatal("unrestricted ability-activated pattern matched an incomplete runtime event stream")
+	}
+	event.ManaAbility = true
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("mana ability matched nonmana ability pattern")
+	}
+	event.ManaAbility = false
+	event.Player = game.Player1
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("controller ability matched opponent ability pattern")
+	}
+}
+
 func TestTriggerPatternAttachedCreatureBlocksMatchesOnlyAttachment(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -3974,6 +4044,26 @@ func TestCombatTriggerPatternTypedSelectionsAndRecipients(t *testing.T) {
 		event.Player = game.Player2
 		if triggerMatchesEvent(g, source, &pattern, event) {
 			t.Fatal("attached permanent controller step matched another player's step")
+		}
+	})
+
+	t.Run("player event ordinal this turn", func(t *testing.T) {
+		pattern := game.TriggerPattern{
+			Event:                      game.EventCardDrawn,
+			Player:                     game.TriggerPlayerYou,
+			PlayerEventOrdinalThisTurn: 2,
+		}
+		event := game.Event{
+			Kind:                       game.EventCardDrawn,
+			Player:                     game.Player1,
+			PlayerEventOrdinalThisTurn: 2,
+		}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("second player event did not match")
+		}
+		event.PlayerEventOrdinalThisTurn = 1
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("first player event matched second-event pattern")
 		}
 	})
 }

@@ -862,6 +862,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		if len(manaBody.Content.Modes) > 0 {
 			e.resolveAbilityContentWithChoices(g, obj, manaBody.Content, agents, log)
 		}
+		emitAbilityActivatedEvent(g, obj, permanent.ObjectID, true)
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, manaBody.Timing)
 		return true
 	}
@@ -954,6 +955,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		obj.InlineLoyalty = &loyaltyBody
 	}
 	pushAbilityToStack(g, obj)
+	emitAbilityActivatedEvent(g, obj, permanent.ObjectID, false)
 	recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, timing)
 	if loyaltyOK {
 		recordActivatedAbilityUse(g, permanent.ObjectID, -1, game.OncePerTurn)
@@ -1004,6 +1006,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		XValue:            activate.XValue,
 	}
 	pushAbilityToStack(g, obj)
+	emitAbilityActivatedEvent(g, obj, 0, false)
 	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
 	return true
 }
@@ -1083,6 +1086,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 		InlineActivated:     &ability,
 	}
 	pushAbilityToStack(g, obj)
+	emitAbilityActivatedEvent(g, obj, 0, false)
 	return true
 }
 
@@ -1110,7 +1114,7 @@ func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.Pla
 	if !movePermanentToZone(g, attacker, zone.Hand) {
 		panic("Ninjutsu attacker disappeared after validation")
 	}
-	pushAbilityToStack(g, &game.StackObject{
+	obj := &game.StackObject{
 		ID:                   g.IDGen.Next(),
 		Kind:                 game.StackActivatedAbility,
 		SourceID:             card.ID,
@@ -1122,7 +1126,9 @@ func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.Pla
 		Ninjutsu:             true,
 		NinjutsuAttackTarget: attackTarget,
 		AdditionalCostsPaid:  []string{"Return an unblocked attacker you control to its owner's hand"},
-	})
+	}
+	pushAbilityToStack(g, obj)
+	emitAbilityActivatedEvent(g, obj, 0, false)
 	return true
 }
 

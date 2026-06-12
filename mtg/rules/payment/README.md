@@ -50,8 +50,10 @@ Files are split by responsibility:
 - `modifiers.go` applies cost increases, reductions, set values, and minimums.
 - `additional.go` plans and applies sacrifice, source-only sacrifice, discard,
   exile, source-card exile, reveal, tap, untap, counter-removal, and life
-  additional costs. Reveal costs validate the selected card at commit time,
-  leave it in its source zone, and emit a card-revealed event.
+  additional costs. Sacrifice costs use the rules-owned authoritative sacrifice
+  seam so both sacrifice and zone-change events are emitted. Reveal costs
+  validate the selected card at commit time, leave it in its source zone, and
+  emit a card-revealed event.
 - `plan.go` builds spell, ability, and generic payment plans.
 - `sources.go` discovers and orders mana sources, including timing-restricted
   tap and untap mana abilities, Convoke, and Delve.

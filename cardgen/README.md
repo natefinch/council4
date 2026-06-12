@@ -131,6 +131,20 @@ Vanguard cards are excluded with explicit report reasons.
    Oracle semantics require it. Compound events, temporal qualifiers, and
    unavailable Selection predicates remain fail-closed with missing-event or
    missing-runtime-capability diagnostics. Exact
+   permanent-tapped, permanent-untapped, and turned-face-up action triggers
+   share the semantic Trigger Pattern path; face-up triggers may bind self,
+   attached, controller-relative, and Selection-filtered subjects. Became-target
+   patterns bind the targeted subject's controller independently from the
+   targeting spell or ability's controller. Player action templates include
+   controller-relative and any-player Cycling events. Sacrifice triggers bind
+   the sacrificing player independently from the sacrificed permanent's shared
+   Selection subject. Scry and surveil use distinct player-action Trigger
+   Pattern events. Activated-ability patterns bind the activating player and
+   source-permanent Selection, but lower only when they explicitly exclude mana
+   abilities; unrestricted forms fail closed until payment-time mana
+   activations join the authoritative event stream.
+   Supported draw, life-gain/loss, scry, and surveil patterns may also bind the
+   affected player's exact event ordinal during the current turn.
    self-dies triggers support exact `if it had no +1/+1 counters` and
    `if it had no -1/-1 counters` conditions using the departed permanent's
    last-known information. Fixed-damage bodies preserve that permanent as the

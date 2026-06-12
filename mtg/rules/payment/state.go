@@ -124,6 +124,10 @@ type stateMutations interface {
 	// handling detach, zone-change events, and token cleanup.
 	MovePermanentToZone(p *game.Permanent, dest zone.Type) bool
 
+	// SacrificePermanent moves a permanent to its graveyard as a sacrifice and
+	// emits the corresponding sacrifice and zone-change events.
+	SacrificePermanent(p *game.Permanent) bool
+
 	// DiscardFromHand discards a card from the player's hand, emitting the
 	// appropriate discard and zone-change events.
 	DiscardFromHand(playerID game.PlayerID, cardID id.ID) bool

@@ -178,9 +178,10 @@ func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	}
 	player.Life += amount
 	emitEvent(g, game.Event{
-		Kind:   game.EventLifeGained,
-		Player: playerID,
-		Amount: amount,
+		Kind:                       game.EventLifeGained,
+		Player:                     playerID,
+		Amount:                     amount,
+		PlayerEventOrdinalThisTurn: nextPlayerEventOrdinalThisTurn(g, game.EventLifeGained, playerID),
 	})
 	return amount
 }
@@ -196,9 +197,10 @@ func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	player.Life -= amount
 	increaseActivePlayerSpeedForOpponentLifeLoss(g, playerID)
 	emitEvent(g, game.Event{
-		Kind:   game.EventLifeLost,
-		Player: playerID,
-		Amount: amount,
+		Kind:                       game.EventLifeLost,
+		Player:                     playerID,
+		Amount:                     amount,
+		PlayerEventOrdinalThisTurn: nextPlayerEventOrdinalThisTurn(g, game.EventLifeLost, playerID),
 	})
 	return amount
 }

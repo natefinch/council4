@@ -39,6 +39,7 @@ func (*Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
 	}
 	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventCardDrawn
+	event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCardDrawn, playerID)
 	emitEvent(g, event)
 	return cardID, true
 }

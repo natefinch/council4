@@ -127,6 +127,7 @@ func (fakePaymentState) SetPlayerEnergyCounters(game.PlayerID, int) bool        
 func (fakePaymentState) EmitZoneChange(game.Event)                              {}
 func (fakePaymentState) EmitCardReveal(game.PlayerID, id.ID, id.ID, zone.Type)  {}
 func (fakePaymentState) MovePermanentToZone(*game.Permanent, zone.Type) bool    { return true }
+func (fakePaymentState) SacrificePermanent(*game.Permanent) bool                { return true }
 func (fakePaymentState) DiscardFromHand(game.PlayerID, id.ID) bool              { return false }
 func (fakePaymentState) MoveCard(game.PlayerID, id.ID, zone.Type, zone.Type) bool {
 	return false
