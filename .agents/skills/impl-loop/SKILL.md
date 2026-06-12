@@ -16,13 +16,17 @@ user input.
 - Never select an issue already referenced by an existing issue labeled `Epic`.
 - Reserve a batch in a newly created issue labeled exactly `Epic` before changing
   code.
-- Create one fresh branch from current `origin/main` per implementation issue.
-- Create one pull request per implementation issue.
-- Independently review every completed implementation and fix all substantive
-  findings before opening or merging its pull request.
-- Merge each pull request before starting the next issue.
+- Mark the epic `In Progress`, then obtain the user's pull request strategy as
+  required by the repository work methodology.
+- Follow the selected individual, stacked, or single pull request strategy. Start
+  the first working branch from the current `origin/main`.
+- Mark each child issue `In Progress` when its implementation starts.
+- Independently review every completed issue once. After substantive fixes, run at
+  most one full second review and stop for user input if significant problems
+  remain.
 - Never silently omit known card-support work. Reuse an existing issue or create
-  a concise issue labeled `Card Support TODO`.
+  a concise issue labeled `To Be Triaged` and `Card Support TODO`, then record it
+  in the epic as required by the repository work methodology.
 - Run `go run github.com/magefile/mage@v1.15.0 cardSupport` at the end of every
   implementation issue so card-support measurement and documentation stay current.
 - Keep running without asking for routine confirmation.
@@ -86,7 +90,7 @@ Before implementation, ensure the `Epic` label exists, then create one epic issu
 gh issue create \
   --title "Epic: <cohesive batch outcome>" \
   --label "Epic" \
-  --body $'## Goal\n<short outcome>\n\n## Issues\n- [ ] #123\n- [ ] #124\n\n## Coordination\nReserved for the active impl-loop. Each issue ships in its own branch and pull request.'
+  --body $'## Goal\n<short outcome>\n\n## Issues\n- [ ] #123\n- [ ] #124\n\n## Coordination\nReserved for the active impl-loop.\n\n## Future Work Discovered'
 ```
 
 An epic is an issue carrying the exact `Epic` label; a title alone does not make
@@ -94,59 +98,70 @@ an issue an epic. The epic is the coordination lock. Include every selected issu
 by number so other agents can detect the reservation. Do not add issues already
 present in another epic.
 
+Add the exact `In Progress` label to the epic. If the user did not already select
+individual pull requests, stacked pull requests, or one pull request for the epic,
+ask them to choose before implementation. Record the selected strategy in the
+epic's Coordination section.
+
 ### 4. Implement One Issue
 
 For each epic child, in impact order:
 
-1. Refresh from the remote default branch:
+1. Add the exact `In Progress` label to the child issue.
+2. Fetch `origin`, then follow the epic's selected branch strategy:
 
    ```bash
    git fetch origin
-   git switch -c copilot/<short-issue-slug> origin/main
    ```
 
-2. Read the issue, relevant package documentation, architecture decisions, and
+   - For individual pull requests, create the child branch from `origin/main`.
+   - For stacked pull requests, create the first branch from `origin/main` and each
+     later branch from its preceding stack branch.
+   - For one pull request, create the epic branch from `origin/main` before the
+     first child, then continue on it for every later child.
+3. Read the issue, relevant package documentation, architecture decisions, and
    existing tests.
-3. Establish a baseline before editing, including corpus support when the issue
+4. Establish a baseline before editing, including corpus support when the issue
    affects card generation.
-4. Implement the complete issue with strict, fail-closed behavior.
-5. Add focused tests for success, rejection, runtime semantics, and regressions.
-6. At the end of the implementation, run the repository support workflow instead
+5. Implement the complete issue with strict, fail-closed behavior.
+6. Add focused tests for success, rejection, runtime semantics, and regressions.
+7. At the end of the implementation, run the repository support workflow instead
    of invoking cardgen or corpus compilation manually:
 
    ```bash
    go run github.com/magefile/mage@v1.15.0 cardSupport
    ```
 
-7. Measure corpus impact from the resulting `supported.md`, `unsupported.md`,
+8. Measure corpus impact from the resulting `supported.md`, `unsupported.md`,
    README summary, and support-documentation diff.
-8. Inspect every newly supported card in `.cardwork/card-support-generated`. Do
+9. Inspect every newly supported card in `.cardwork/card-support-generated`. Do
    not accept generated output solely because counts increased.
-9. Update any additional package documentation affected by the change.
-10. Run the repository's established full validation commands.
+10. Update any additional package documentation affected by the change.
+11. Run the repository's established full validation commands.
 
 Do not mix unrelated cleanup into the branch.
+
+For every pull request strategy, complete and review one child's logical change
+before starting the next child. For individual pull requests, open and merge the
+current child's pull request after its review. For stacked pull requests, open the
+current child's pull request after its review but defer merging until the stack is
+complete. For one pull request, keep each child's reviewed change on the epic
+branch and open the combined pull request only after every child is complete and
+reviewed.
 
 ### 5. Preserve Deferred Card Work
 
 When implementation uncovers intentionally excluded wording, mechanics, runtime
 behavior, or compiler support:
 
-1. Search for an existing open issue with the same specific scope.
-2. If none exists, create a concise issue labeled `Card Support TODO`:
-
-   ```bash
-   gh issue create \
-     --title "<actionable missing support>" \
-     --label "Card Support TODO" \
-     --body $'## Deferred work\n<known gap and why it is deferred>\n\n## Done when\n<observable completion condition>'
-   ```
-
+1. Follow the repository work methodology's `Track Future Work Discovered`
+   process, including duplicate search, active-issue provenance, and epic update.
+2. Add both `To Be Triaged` and `Card Support TODO` to a newly created issue.
 3. Resume the active implementation immediately.
 
 Do not file speculative ideas, duplicate issues, or vague umbrella tasks.
 
-### 6. Review Until Clear
+### 6. Review Completed Work
 
 Run an independent code review focused on correctness, regressions, validation
 holes, runtime semantics, and fail-closed behavior.
@@ -156,24 +171,29 @@ For every substantive finding:
 1. Fix the root cause.
 2. Add or strengthen regression coverage.
 3. Re-run relevant tests and full validation.
-4. Request another focused review.
 
-Repeat until the reviewer reports no significant issues. Do not open or merge a
-pull request with unresolved substantive findings.
+Minor nitpicks may be fixed without further review. After substantive fixes, run
+at most one full second review. Do not enter a review-and-fix loop. If significant
+problems remain after the second review, bring them to the user's attention before
+proceeding.
 
 ### 7. Pull Request and Merge
 
-1. Commit with the repository's required commit-message conventions.
-2. Push the branch.
-3. Open a pull request that summarizes behavior and measured impact and closes
-   the child issue.
-4. Confirm the pull request is mergeable and required checks pass.
-5. Merge it using the repository's preferred merge strategy.
-6. Confirm the issue closed.
-7. Update the epic checklist with the merged pull request.
-8. Return to `origin/main` and start the next child from the newly merged commit.
-
-Never stack the next issue on an unmerged implementation branch.
+1. Commit and push each reviewed child's change according to the selected strategy.
+2. Open and merge pull requests according to that strategy:
+   - For individual pull requests, open and merge the current child's pull request
+     before starting the next child.
+   - For stacked pull requests, open the current child's pull request against its
+     parent branch, build the rest of the stack, then merge the completed stack
+     from earliest to latest while retargeting later pull requests as needed.
+   - For one pull request, keep the reviewed child commits on the epic branch,
+     then open and merge one combined pull request after all children are complete.
+3. Summarize behavior and measured impact in every pull request and ensure the
+   appropriate child issues will close when their work merges to the default
+   branch.
+4. Confirm every pull request is mergeable and required checks pass before merge.
+5. Confirm the completed child issues closed.
+6. Update the epic checklist with the merged pull request links.
 
 ### 8. Complete the Epic and Repeat
 
@@ -195,10 +215,11 @@ Continue until there are no open, unreserved issues labeled `Ready For Dev`.
 - **Issue becomes externally blocked:** Record the blocker in the issue and epic,
   move to another reserved child, and ask the user only if no eligible progress
   remains.
-- **Merge conflict:** Merge current `origin/main` into the issue branch, resolve
-  carefully, revalidate, and repeat review if conflict resolution changed code.
+- **Merge conflict:** Resolve against the pull request's intended base branch,
+  revalidate, and stay within the repository's two-review maximum.
 - **Failed checks:** Diagnose and fix them. Never merge by bypassing checks.
-- **Missing labels:** Create `Epic` or `Card Support TODO` only when needed.
+- **Missing labels:** Create `Epic`, `In Progress`, `To Be Triaged`, or
+  `Card Support TODO` only when needed.
 - **Unrelated dirty worktree:** Preserve it. Do not overwrite or revert user work.
 
 ## Output
@@ -228,5 +249,6 @@ Do not pause for routine approval between these milestones.
 - Work on issues without `Ready For Dev`.
 - Work on issues already reserved by any epic.
 - Merge unreviewed, failing, or conflicted pull requests.
-- Combine multiple implementation issues into one branch or pull request.
+- Combine or stack implementation issues unless the user selected that strategy
+  for the active epic.
 - Silently leave discovered card blockers untracked.
