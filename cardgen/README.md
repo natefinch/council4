@@ -28,6 +28,11 @@ diagnostics and exact source consumption. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
+Trigger recognition uses a small registry of exact event-family
+templates. Permanent zone-change, spell/ability, combat, phase/step, permanent
+state, and player-event wording variants share templates that bind only the
+closed semantic slots above; ambiguous or unsupported slot text fails closed.
+
 Before compilation, `CorpusPolicy` limits the working corpus to cards that are
 legal, restricted, or banned in Standard, Pioneer, Modern, Legacy, Pauper,
 Vintage, or Commander. Playable paper token definitions are retained as a

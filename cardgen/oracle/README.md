@@ -110,12 +110,15 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   (`if`, `unless`, `only if`, or `as long as`), negation, threshold, counter,
   and Selection vocabulary. Exact wording recognition lives in the condition
   adapter; unsupported wording remains an explicit predicate;
-- source-spanned semantic trigger patterns. Their closed vocabulary records
-  trigger kind, representable event family, self/attached-source and controller
-  relations, subject Selection, affected player, zones, phase/step, combat
-  qualifiers, one-or-more batching, and an intervening-condition reference.
-  Raw event-clause text is retained only for diagnostics and exact source
-  consumption;
+- source-spanned semantic trigger patterns. A small registry of exact
+  event-family templates recognizes permanent zone changes, spell/ability
+  events, combat events, phase/step events, permanent state events, and player
+  events. Wording variants share those templates and may bind only closed
+  trigger kind, event, self/attached-source and controller relation, Selection,
+  affected-player, zone, phase/step, combat-qualifier, batching, and
+  intervening-condition slots. Unknown, ambiguous, or unsupported slot text
+  fails closed. Raw event-clause text is retained only for diagnostics and exact
+  source consumption;
 - modes and inclusive target cardinalities;
 - conservative selectors and controller constraints;
 - keyword abilities and parameters;
@@ -201,11 +204,12 @@ permanent type filter (creature, artifact, enchantment, land, planeswalker, or
 unfiltered) and optional you-control or opponent-controls controller constraints.
 Phase and step triggered abilities with `At the beginning of …` recognize exact
 supported controller-relative upkeep, draw, end, combat, combat-step, and main
-phase variants. Common exact self and controller-relative attack, block, tap,
-untap, and self became-target phrases also recognize into the same semantic
-pattern vocabulary. One-or-more wording is accepted only for event families
-whose runtime emission supports correct batching. Unsupported phrase variants
-remain fail-closed.
+phase variants through shared relation-and-step slots. Common exact self and
+controller-relative attack, block, tap, untap, and self became-target phrases
+likewise bind shared relation, Selection, event, and qualifier slots rather than
+whole-phrase semantic branches. One-or-more wording is accepted only for event
+families whose runtime emission supports correct batching. Unsupported phrase
+variants remain fail-closed.
 Self-dies triggers support exact
 absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.

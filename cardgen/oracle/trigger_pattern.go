@@ -224,41 +224,18 @@ type TriggerPattern struct {
 	InterveningCondition *CompiledCondition
 }
 
-type stepTriggerPattern struct {
-	step       TriggerStep
-	controller ControllerKind
+type triggerPatternTemplate struct {
+	kinds []TriggerKind
+	bind  func(string, TriggerKind, string) (TriggerPattern, bool)
 }
 
-var stepTriggerPhrases = map[string]stepTriggerPattern{
-	"the beginning of your upkeep":                           {TriggerStepUpkeep, ControllerYou},
-	"the beginning of each upkeep":                           {TriggerStepUpkeep, ControllerAny},
-	"the beginning of each player's upkeep":                  {TriggerStepUpkeep, ControllerAny},
-	"the beginning of each opponent's upkeep":                {TriggerStepUpkeep, ControllerOpponent},
-	"the beginning of your draw step":                        {TriggerStepDraw, ControllerYou},
-	"the beginning of each draw step":                        {TriggerStepDraw, ControllerAny},
-	"the beginning of each player's draw step":               {TriggerStepDraw, ControllerAny},
-	"the beginning of each opponent's draw step":             {TriggerStepDraw, ControllerOpponent},
-	"the beginning of your end step":                         {TriggerStepEnd, ControllerYou},
-	"the beginning of each end step":                         {TriggerStepEnd, ControllerAny},
-	"the beginning of each player's end step":                {TriggerStepEnd, ControllerAny},
-	"the beginning of each opponent's end step":              {TriggerStepEnd, ControllerOpponent},
-	"the beginning of combat on your turn":                   {TriggerStepBeginningOfCombat, ControllerYou},
-	"the beginning of combat on each turn":                   {TriggerStepBeginningOfCombat, ControllerAny},
-	"the beginning of combat on each opponent's turn":        {TriggerStepBeginningOfCombat, ControllerOpponent},
-	"the beginning of each combat":                           {TriggerStepBeginningOfCombat, ControllerAny},
-	"the beginning of the end of combat":                     {TriggerStepEndOfCombat, ControllerAny},
-	"the beginning of the end of combat on your turn":        {TriggerStepEndOfCombat, ControllerYou},
-	"the beginning of each end of combat step":               {TriggerStepEndOfCombat, ControllerAny},
-	"the beginning of your first main phase":                 {TriggerStepPrecombatMain, ControllerYou},
-	"the beginning of your precombat main phase":             {TriggerStepPrecombatMain, ControllerYou},
-	"the beginning of each of your first main phases":        {TriggerStepPrecombatMain, ControllerYou},
-	"the beginning of each player's precombat main phase":    {TriggerStepPrecombatMain, ControllerAny},
-	"the beginning of your second main phase":                {TriggerStepPostcombatMain, ControllerYou},
-	"the beginning of your postcombat main phase":            {TriggerStepPostcombatMain, ControllerYou},
-	"the beginning of each of your postcombat main phases":   {TriggerStepPostcombatMain, ControllerYou},
-	"the beginning of each player's postcombat main phase":   {TriggerStepPostcombatMain, ControllerAny},
-	"the beginning of each opponent's postcombat main phase": {TriggerStepPostcombatMain, ControllerOpponent},
-	"the beginning of each opponent's precombat main phase":  {TriggerStepPrecombatMain, ControllerOpponent},
+var triggerPatternTemplates = []triggerPatternTemplate{
+	{kinds: []TriggerKind{TriggerAt}, bind: recognizePhaseStepTrigger},
+	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizePermanentZoneChangeTrigger},
+	{kinds: []TriggerKind{TriggerWhenever}, bind: recognizeSpellAbilityTrigger},
+	{kinds: []TriggerKind{TriggerWhenever}, bind: recognizeCombatTrigger},
+	{kinds: []TriggerKind{TriggerWhenever}, bind: recognizePermanentStateTrigger},
+	{kinds: []TriggerKind{TriggerWhenever}, bind: recognizePlayerEventTrigger},
 }
 
 func compileTriggerPattern(
@@ -274,39 +251,37 @@ func compileTriggerPattern(
 		Kind:                 kind,
 		InterveningCondition: condition,
 	}
-	if kind == TriggerAt {
-		if step, ok := stepTriggerPhrases[event]; ok {
-			pattern.Event = TriggerEventBeginningOfStep
-			pattern.Step = step.step
-			pattern.Controller = step.controller
-		}
-		return pattern
-	}
-	if kind != TriggerWhen && kind != TriggerWhenever {
-		return pattern
-	}
-	if recognized, ok := recognizeSimpleTrigger(event, kind); ok {
-		return completeTriggerPattern(&recognized, &pattern)
-	}
-	if recognized, ok := recognizeSelfTrigger(event, kind, cardName); ok {
-		return completeTriggerPattern(&recognized, &pattern)
-	}
-	if recognized, ok := recognizeDamageTrigger(event, kind); ok {
-		return completeTriggerPattern(&recognized, &pattern)
-	}
-	if recognized, ok := recognizeCastTrigger(event, kind); ok {
-		return completeTriggerPattern(&recognized, &pattern)
-	}
-	if recognized, ok := recognizeEnterTrigger(event, kind); ok {
-		return completeTriggerPattern(&recognized, &pattern)
-	}
-	if recognized, ok := recognizeDiesTrigger(event, kind); ok {
-		return completeTriggerPattern(&recognized, &pattern)
-	}
-	if recognized, ok := recognizePermanentActionTrigger(event, kind); ok {
+	recognized, ok := bindTriggerPatternTemplates(event, kind, cardName, triggerPatternTemplates)
+	if ok {
 		return completeTriggerPattern(&recognized, &pattern)
 	}
 	return pattern
+}
+
+func bindTriggerPatternTemplates(
+	event string,
+	kind TriggerKind,
+	cardName string,
+	templates []triggerPatternTemplate,
+) (TriggerPattern, bool) {
+	var recognized TriggerPattern
+	matched := false
+	for _, template := range templates {
+		if !slices.Contains(template.kinds, kind) {
+			continue
+		}
+		candidate, ok := template.bind(event, kind, cardName)
+		if !ok {
+			continue
+		}
+		if matched {
+			// Overlapping templates make the event clause ambiguous.
+			return TriggerPattern{}, false
+		}
+		recognized = candidate
+		matched = true
+	}
+	return recognized, matched
 }
 
 func completeTriggerPattern(recognized, source *TriggerPattern) TriggerPattern {
@@ -316,223 +291,352 @@ func completeTriggerPattern(recognized, source *TriggerPattern) TriggerPattern {
 	return *recognized
 }
 
+type controllerPhraseSlot struct {
+	text       string
+	controller ControllerKind
+}
+
+type phaseStepTemplate struct {
+	prefix    string
+	suffix    string
+	step      TriggerStep
+	relations []controllerPhraseSlot
+}
+
+var standardStepControllerSlots = []controllerPhraseSlot{
+	{text: "your", controller: ControllerYou},
+	{text: "each", controller: ControllerAny},
+	{text: "each player's", controller: ControllerAny},
+	{text: "each opponent's", controller: ControllerOpponent},
+}
+
+var phaseStepTemplates = []phaseStepTemplate{
+	{suffix: " upkeep", step: TriggerStepUpkeep, relations: standardStepControllerSlots},
+	{suffix: " draw step", step: TriggerStepDraw, relations: standardStepControllerSlots},
+	{suffix: " end step", step: TriggerStepEnd, relations: standardStepControllerSlots},
+	{
+		prefix: "combat on ",
+		suffix: " turn",
+		step:   TriggerStepBeginningOfCombat,
+		relations: []controllerPhraseSlot{
+			{text: "your", controller: ControllerYou},
+			{text: "each", controller: ControllerAny},
+			{text: "each opponent's", controller: ControllerOpponent},
+		},
+	},
+	{
+		suffix:    " combat",
+		step:      TriggerStepBeginningOfCombat,
+		relations: []controllerPhraseSlot{{text: "each", controller: ControllerAny}},
+	},
+	{
+		suffix:    " end of combat",
+		step:      TriggerStepEndOfCombat,
+		relations: []controllerPhraseSlot{{text: "the", controller: ControllerAny}},
+	},
+	{
+		prefix:    "the end of combat on ",
+		suffix:    " turn",
+		step:      TriggerStepEndOfCombat,
+		relations: []controllerPhraseSlot{{text: "your", controller: ControllerYou}},
+	},
+	{
+		suffix:    " end of combat step",
+		step:      TriggerStepEndOfCombat,
+		relations: []controllerPhraseSlot{{text: "each", controller: ControllerAny}},
+	},
+	{
+		suffix: " precombat main phase",
+		step:   TriggerStepPrecombatMain,
+		relations: []controllerPhraseSlot{
+			{text: "your", controller: ControllerYou},
+			{text: "each player's", controller: ControllerAny},
+			{text: "each opponent's", controller: ControllerOpponent},
+		},
+	},
+	{
+		suffix: " postcombat main phase",
+		step:   TriggerStepPostcombatMain,
+		relations: []controllerPhraseSlot{
+			{text: "your", controller: ControllerYou},
+			{text: "each player's", controller: ControllerAny},
+			{text: "each opponent's", controller: ControllerOpponent},
+		},
+	},
+}
+
+var phaseStepAliases = map[string]TriggerPattern{
+	"your first main phase":               {Step: TriggerStepPrecombatMain, Controller: ControllerYou},
+	"each of your first main phases":      {Step: TriggerStepPrecombatMain, Controller: ControllerYou},
+	"your second main phase":              {Step: TriggerStepPostcombatMain, Controller: ControllerYou},
+	"each of your postcombat main phases": {Step: TriggerStepPostcombatMain, Controller: ControllerYou},
+}
+
+func recognizePhaseStepTrigger(event string, _ TriggerKind, _ string) (TriggerPattern, bool) {
+	event, ok := strings.CutPrefix(event, "the beginning of ")
+	if !ok {
+		return TriggerPattern{}, false
+	}
+	if pattern, ok := phaseStepAliases[event]; ok {
+		pattern.Event = TriggerEventBeginningOfStep
+		return pattern, true
+	}
+	for _, template := range phaseStepTemplates {
+		slot, ok := strings.CutPrefix(event, template.prefix)
+		if !ok {
+			continue
+		}
+		slot, ok = strings.CutSuffix(slot, template.suffix)
+		if !ok {
+			continue
+		}
+		for _, relation := range template.relations {
+			if slot == relation.text {
+				return TriggerPattern{
+					Event:      TriggerEventBeginningOfStep,
+					Step:       template.step,
+					Controller: relation.controller,
+				}, true
+			}
+		}
+	}
+	return TriggerPattern{}, false
+}
+
+func recognizePermanentZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
+	if pattern, ok := recognizeSelfZoneChangeTrigger(event, kind, cardName); ok {
+		return pattern, true
+	}
+	if pattern, ok := recognizeEnterTrigger(event, kind); ok {
+		return pattern, true
+	}
+	return recognizeDiesTrigger(event, kind)
+}
+
+func recognizeSpellAbilityTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
+	if pattern, ok := recognizeCastTrigger(event, kind); ok {
+		return pattern, true
+	}
+	return recognizeBecameTargetTrigger(event, cardName)
+}
+
+func recognizeCombatTrigger(event string, kind TriggerKind, _ string) (TriggerPattern, bool) {
+	if pattern, ok := recognizeSelfCombatTrigger(event, kind); ok {
+		return pattern, true
+	}
+	if pattern, ok := recognizeDamageTrigger(event, kind); ok {
+		return pattern, true
+	}
+	return recognizePermanentActionTrigger(event, kind, combatPermanentActions)
+}
+
+func recognizePermanentStateTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
+	if pattern, ok := recognizeSelfPermanentStateTrigger(event, kind, cardName); ok {
+		return pattern, true
+	}
+	return recognizePermanentActionTrigger(event, kind, statePermanentActions)
+}
+
+func recognizePlayerEventTrigger(event string, kind TriggerKind, _ string) (TriggerPattern, bool) {
+	return recognizeSimpleTrigger(event, kind)
+}
+
+type playerEventTemplate struct {
+	suffix      string
+	event       TriggerEvent
+	relations   []TriggerPlayerRelation
+	oneOrMore   bool
+	excludeSelf bool
+}
+
+var playerRelationSlots = []struct {
+	text     string
+	relation TriggerPlayerRelation
+}{
+	{text: "you", relation: TriggerPlayerYou},
+	{text: "an opponent", relation: TriggerPlayerOpponent},
+	{text: "a player", relation: TriggerPlayerAny},
+}
+
+var playerEventTemplates = []playerEventTemplate{
+	{suffix: " draw a card", event: TriggerEventCardDrawn, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
+	{suffix: " draws a card", event: TriggerEventCardDrawn, relations: []TriggerPlayerRelation{TriggerPlayerOpponent, TriggerPlayerAny}},
+	{suffix: " discard a card", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
+	{suffix: " discards a card", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerOpponent, TriggerPlayerAny}},
+	{suffix: " discard one or more cards", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerYou}, oneOrMore: true},
+	{suffix: " cycle a card", event: TriggerEventCycled, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
+	{suffix: " cycle another card", event: TriggerEventCycled, relations: []TriggerPlayerRelation{TriggerPlayerYou}, excludeSelf: true},
+	{suffix: " cycle or discard a card", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
+	{suffix: " cycle or discard another card", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerYou}, excludeSelf: true},
+	{suffix: " gain life", event: TriggerEventLifeGained, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
+	{suffix: " gains life", event: TriggerEventLifeGained, relations: []TriggerPlayerRelation{TriggerPlayerOpponent}},
+	{suffix: " lose life", event: TriggerEventLifeLost, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
+	{suffix: " loses life", event: TriggerEventLifeLost, relations: []TriggerPlayerRelation{TriggerPlayerOpponent}},
+}
+
 func recognizeSimpleTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
 	if kind != TriggerWhenever {
 		return TriggerPattern{}, false
 	}
-	patterns := map[string]TriggerPattern{
-		"you draw a card": {
-			Event:  TriggerEventCardDrawn,
-			Player: TriggerPlayerYou,
-		},
-		"an opponent draws a card": {
-			Event:  TriggerEventCardDrawn,
-			Player: TriggerPlayerOpponent,
-		},
-		"a player draws a card": {
-			Event: TriggerEventCardDrawn,
-		},
-		"you discard a card": {
-			Event:  TriggerEventCardDiscarded,
-			Player: TriggerPlayerYou,
-		},
-		"you discard one or more cards": {
-			Event:     TriggerEventCardDiscarded,
-			Player:    TriggerPlayerYou,
-			OneOrMore: true,
-		},
-		"an opponent discards a card": {
-			Event:  TriggerEventCardDiscarded,
-			Player: TriggerPlayerOpponent,
-		},
-		"a player discards a card": {
-			Event: TriggerEventCardDiscarded,
-		},
-		"you cycle a card": {
-			Event:  TriggerEventCycled,
-			Player: TriggerPlayerYou,
-		},
-		"you cycle another card": {
-			Event:       TriggerEventCycled,
-			Player:      TriggerPlayerYou,
-			ExcludeSelf: true,
-		},
-		"you cycle or discard a card": {
-			Event:  TriggerEventCardDiscarded,
-			Player: TriggerPlayerYou,
-		},
-		"you cycle or discard another card": {
-			Event:       TriggerEventCardDiscarded,
-			Player:      TriggerPlayerYou,
-			ExcludeSelf: true,
-		},
-		"you gain life": {
-			Event:  TriggerEventLifeGained,
-			Player: TriggerPlayerYou,
-		},
-		"an opponent gains life": {
-			Event:  TriggerEventLifeGained,
-			Player: TriggerPlayerOpponent,
-		},
-		"you lose life": {
-			Event:  TriggerEventLifeLost,
-			Player: TriggerPlayerYou,
-		},
-		"an opponent loses life": {
-			Event:  TriggerEventLifeLost,
-			Player: TriggerPlayerOpponent,
-		},
+	for _, template := range playerEventTemplates {
+		relationText, ok := strings.CutSuffix(event, template.suffix)
+		if !ok {
+			continue
+		}
+		for _, slot := range playerRelationSlots {
+			if relationText != slot.text || !slices.Contains(template.relations, slot.relation) {
+				continue
+			}
+			return TriggerPattern{
+				Event:       template.event,
+				Player:      slot.relation,
+				OneOrMore:   template.oneOrMore,
+				ExcludeSelf: template.excludeSelf,
+			}, true
+		}
 	}
-	pattern, ok := patterns[event]
-	return pattern, ok
+	return TriggerPattern{}, false
 }
 
-func recognizeSelfTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
-	whenPatterns := map[string]TriggerEvent{
-		"this creature enters":     TriggerEventPermanentEnteredBattlefield,
-		"this permanent enters":    TriggerEventPermanentEnteredBattlefield,
-		"this aura enters":         TriggerEventPermanentEnteredBattlefield,
-		"this artifact enters":     TriggerEventPermanentEnteredBattlefield,
-		"this equipment enters":    TriggerEventPermanentEnteredBattlefield,
-		"this land enters":         TriggerEventPermanentEnteredBattlefield,
-		"this vehicle enters":      TriggerEventPermanentEnteredBattlefield,
-		"this enchantment enters":  TriggerEventPermanentEnteredBattlefield,
-		"this battle enters":       TriggerEventPermanentEnteredBattlefield,
-		"this case enters":         TriggerEventPermanentEnteredBattlefield,
-		"this class enters":        TriggerEventPermanentEnteredBattlefield,
-		"this planeswalker enters": TriggerEventPermanentEnteredBattlefield,
-		"this spacecraft enters":   TriggerEventPermanentEnteredBattlefield,
-		"this creature dies":       TriggerEventPermanentDied,
-		"this permanent dies":      TriggerEventPermanentDied,
-		"this aura is put into a graveyard from the battlefield":        TriggerEventPermanentDied,
-		"this artifact is put into a graveyard from the battlefield":    TriggerEventPermanentDied,
-		"this enchantment is put into a graveyard from the battlefield": TriggerEventPermanentDied,
-		"this vehicle is put into a graveyard from the battlefield":     TriggerEventPermanentDied,
-		"this equipment is put into a graveyard from the battlefield":   TriggerEventPermanentDied,
+var selfEnterSubjectSlots = []string{
+	"this creature",
+	"this permanent",
+	"this aura",
+	"this artifact",
+	"this equipment",
+	"this land",
+	"this vehicle",
+	"this enchantment",
+	"this battle",
+	"this case",
+	"this class",
+	"this planeswalker",
+	"this spacecraft",
+}
+
+var selfGraveyardSubjectSlots = []string{
+	"this aura",
+	"this artifact",
+	"this enchantment",
+	"this vehicle",
+	"this equipment",
+}
+
+var selfStateSubjectSlots = []string{
+	"this creature",
+	"this permanent",
+	"this land",
+	"this artifact",
+	"this enchantment",
+	"this vehicle",
+}
+
+func recognizeSelfZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
+	if kind != TriggerWhen {
+		return TriggerPattern{}, false
 	}
-	if kind == TriggerWhen {
-		if family, ok := whenPatterns[event]; ok {
-			return TriggerPattern{Event: family, Source: TriggerSourceSelf}, true
-		}
-		if cardName != "" {
-			switch {
-			case strings.EqualFold(event, cardName+" enters"):
-				return TriggerPattern{Event: TriggerEventPermanentEnteredBattlefield, Source: TriggerSourceSelf}, true
-			case strings.EqualFold(event, cardName+" dies"):
-				return TriggerPattern{Event: TriggerEventPermanentDied, Source: TriggerSourceSelf}, true
-			}
-		}
+	templates := []struct {
+		suffix        string
+		event         TriggerEvent
+		subjects      []string
+		allowCardName bool
+	}{
+		{suffix: " enters", event: TriggerEventPermanentEnteredBattlefield, subjects: selfEnterSubjectSlots, allowCardName: true},
+		{suffix: " dies", event: TriggerEventPermanentDied, subjects: []string{"this creature", "this permanent"}, allowCardName: true},
+		{suffix: " is put into a graveyard from the battlefield", event: TriggerEventPermanentDied, subjects: selfGraveyardSubjectSlots},
 	}
+	for _, template := range templates {
+		subject, ok := strings.CutSuffix(event, template.suffix)
+		if !ok || !matchesSelfSubjectSlot(subject, cardName, template.subjects, template.allowCardName) {
+			continue
+		}
+		return TriggerPattern{Event: template.event, Source: TriggerSourceSelf}, true
+	}
+	return TriggerPattern{}, false
+}
+
+func recognizeSelfCombatTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
 	if kind != TriggerWhenever {
 		return TriggerPattern{}, false
 	}
-	wheneverPatterns := map[string]TriggerPattern{
-		"this creature mutates": {
-			Event:  TriggerEventPermanentMutated,
-			Source: TriggerSourceSelf,
-		},
-		"this creature attacks": {
-			Event:  TriggerEventAttackerDeclared,
-			Source: TriggerSourceSelf,
-		},
-		"this creature blocks": {
-			Event:  TriggerEventBlockerDeclared,
-			Source: TriggerSourceSelf,
-		},
-		"this creature becomes blocked": {
-			Event:  TriggerEventAttackerBecameBlocked,
-			Source: TriggerSourceSelf,
-		},
-		"this creature becomes tapped": {
-			Event:  TriggerEventPermanentTapped,
-			Source: TriggerSourceSelf,
-		},
-		"this permanent becomes tapped": {
-			Event:  TriggerEventPermanentTapped,
-			Source: TriggerSourceSelf,
-		},
-		"this land becomes tapped": {
-			Event:  TriggerEventPermanentTapped,
-			Source: TriggerSourceSelf,
-		},
-		"this artifact becomes tapped": {
-			Event:  TriggerEventPermanentTapped,
-			Source: TriggerSourceSelf,
-		},
-		"this enchantment becomes tapped": {
-			Event:  TriggerEventPermanentTapped,
-			Source: TriggerSourceSelf,
-		},
-		"this vehicle becomes tapped": {
-			Event:  TriggerEventPermanentTapped,
-			Source: TriggerSourceSelf,
-		},
-		"this creature becomes untapped": {
-			Event:  TriggerEventPermanentUntapped,
-			Source: TriggerSourceSelf,
-		},
-		"this permanent becomes untapped": {
-			Event:  TriggerEventPermanentUntapped,
-			Source: TriggerSourceSelf,
-		},
-		"this land becomes untapped": {
-			Event:  TriggerEventPermanentUntapped,
-			Source: TriggerSourceSelf,
-		},
-		"this artifact becomes untapped": {
-			Event:  TriggerEventPermanentUntapped,
-			Source: TriggerSourceSelf,
-		},
-		"this enchantment becomes untapped": {
-			Event:  TriggerEventPermanentUntapped,
-			Source: TriggerSourceSelf,
-		},
-		"this vehicle becomes untapped": {
-			Event:  TriggerEventPermanentUntapped,
-			Source: TriggerSourceSelf,
-		},
-	}
-	if pattern, ok := wheneverPatterns[event]; ok {
-		return pattern, true
-	}
-	if cardName != "" {
-		switch {
-		case strings.EqualFold(event, cardName+" becomes tapped"):
-			return TriggerPattern{Event: TriggerEventPermanentTapped, Source: TriggerSourceSelf}, true
-		case strings.EqualFold(event, cardName+" becomes untapped"):
-			return TriggerPattern{Event: TriggerEventPermanentUntapped, Source: TriggerSourceSelf}, true
+	for _, template := range []permanentActionTemplate{
+		{suffix: " attacks", event: TriggerEventAttackerDeclared},
+		{suffix: " blocks", event: TriggerEventBlockerDeclared},
+		{suffix: " becomes blocked", event: TriggerEventAttackerBecameBlocked},
+	} {
+		subject, ok := strings.CutSuffix(event, template.suffix)
+		if ok && subject == "this creature" {
+			return TriggerPattern{Event: template.event, Source: TriggerSourceSelf}, true
 		}
 	}
-	counterPatterns := map[string]TriggerPattern{
-		"one or more +1/+1 counters are put on this creature": {
-			Event: TriggerEventCountersAdded, Source: TriggerSourceSelf, Counter: TriggerCounterPlusOnePlusOne, OneOrMore: true,
-		},
-		"one or more +1/+1 counters are put on this permanent": {
-			Event: TriggerEventCountersAdded, Source: TriggerSourceSelf, Counter: TriggerCounterPlusOnePlusOne, OneOrMore: true,
-		},
-		"a +1/+1 counter is put on this creature": {
-			Event: TriggerEventCountersAdded, Source: TriggerSourceSelf, Counter: TriggerCounterPlusOnePlusOne,
-		},
-		"a +1/+1 counter is put on this permanent": {
-			Event: TriggerEventCountersAdded, Source: TriggerSourceSelf, Counter: TriggerCounterPlusOnePlusOne,
-		},
-		"one or more -1/-1 counters are put on this creature": {
-			Event: TriggerEventCountersAdded, Source: TriggerSourceSelf, Counter: TriggerCounterMinusOneMinusOne, OneOrMore: true,
-		},
-		"one or more -1/-1 counters are put on this permanent": {
-			Event: TriggerEventCountersAdded, Source: TriggerSourceSelf, Counter: TriggerCounterMinusOneMinusOne, OneOrMore: true,
-		},
-		"a -1/-1 counter is put on this creature": {
-			Event: TriggerEventCountersAdded, Source: TriggerSourceSelf, Counter: TriggerCounterMinusOneMinusOne,
-		},
-		"a -1/-1 counter is put on this permanent": {
-			Event: TriggerEventCountersAdded, Source: TriggerSourceSelf, Counter: TriggerCounterMinusOneMinusOne,
-		},
+	return TriggerPattern{}, false
+}
+
+func recognizeSelfPermanentStateTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
+	if kind != TriggerWhenever {
+		return TriggerPattern{}, false
 	}
-	if pattern, ok := counterPatterns[event]; ok {
-		return pattern, true
+	if event == "this creature mutates" {
+		return TriggerPattern{Event: TriggerEventPermanentMutated, Source: TriggerSourceSelf}, true
 	}
-	return recognizeBecameTargetTrigger(event, cardName)
+	for _, template := range []struct {
+		suffix string
+		event  TriggerEvent
+	}{
+		{suffix: " becomes tapped", event: TriggerEventPermanentTapped},
+		{suffix: " becomes untapped", event: TriggerEventPermanentUntapped},
+	} {
+		subject, ok := strings.CutSuffix(event, template.suffix)
+		if ok && matchesSelfSubjectSlot(subject, cardName, selfStateSubjectSlots, true) {
+			return TriggerPattern{Event: template.event, Source: TriggerSourceSelf}, true
+		}
+	}
+	return recognizeSelfCounterTrigger(event)
+}
+
+func recognizeSelfCounterTrigger(event string) (TriggerPattern, bool) {
+	oneOrMore := false
+	counterText, subject, ok := strings.Cut(event, " counter is put on ")
+	if !ok {
+		counterText, subject, ok = strings.Cut(event, " counters are put on ")
+		if !ok {
+			return TriggerPattern{}, false
+		}
+		counterText, oneOrMore = strings.CutPrefix(counterText, "one or more ")
+		if !oneOrMore {
+			return TriggerPattern{}, false
+		}
+	} else {
+		counterText, ok = strings.CutPrefix(counterText, "a ")
+		if !ok {
+			return TriggerPattern{}, false
+		}
+	}
+	if subject != "this creature" && subject != "this permanent" {
+		return TriggerPattern{}, false
+	}
+	var counter TriggerCounter
+	switch counterText {
+	case "+1/+1":
+		counter = TriggerCounterPlusOnePlusOne
+	case "-1/-1":
+		counter = TriggerCounterMinusOneMinusOne
+	default:
+		return TriggerPattern{}, false
+	}
+	return TriggerPattern{
+		Event:     TriggerEventCountersAdded,
+		Source:    TriggerSourceSelf,
+		Counter:   counter,
+		OneOrMore: oneOrMore,
+	}, true
+}
+
+func matchesSelfSubjectSlot(subject, cardName string, slots []string, allowCardName bool) bool {
+	if slices.Contains(slots, subject) {
+		return true
+	}
+	return allowCardName && cardName != "" && strings.EqualFold(subject, cardName)
 }
 
 func recognizeBecameTargetTrigger(event, cardName string) (TriggerPattern, bool) {
@@ -547,16 +651,24 @@ func recognizeBecameTargetTrigger(event, cardName string) (TriggerPattern, bool)
 	if cardName != "" {
 		subjects = append(subjects, cardName)
 	}
-	for _, subject := range subjects {
-		if !strings.EqualFold(event, subject+" becomes the target of a spell") &&
-			!strings.EqualFold(event, subject+" becomes the target of a spell or ability") {
+	for _, template := range []struct {
+		suffix      string
+		stackObject TriggerStackObject
+	}{
+		{suffix: " becomes the target of a spell", stackObject: TriggerStackObjectSpell},
+		{suffix: " becomes the target of a spell or ability"},
+	} {
+		subject, ok := strings.CutSuffix(event, template.suffix)
+		if !ok || !slices.ContainsFunc(subjects, func(candidate string) bool {
+			return strings.EqualFold(subject, candidate)
+		}) {
 			continue
 		}
-		pattern := TriggerPattern{Event: TriggerEventObjectBecameTarget, Source: TriggerSourceSelf}
-		if strings.HasSuffix(strings.ToLower(event), " of a spell") {
-			pattern.StackObject = TriggerStackObjectSpell
-		}
-		return pattern, true
+		return TriggerPattern{
+			Event:       TriggerEventObjectBecameTarget,
+			Source:      TriggerSourceSelf,
+			StackObject: template.stackObject,
+		}, true
 	}
 	return TriggerPattern{}, false
 }
@@ -565,31 +677,29 @@ func recognizeDamageTrigger(event string, kind TriggerKind) (TriggerPattern, boo
 	if kind != TriggerWhenever {
 		return TriggerPattern{}, false
 	}
-	patterns := map[string]TriggerPattern{
-		"this creature is dealt damage": {
-			Event: TriggerEventDamageDealt, Source: TriggerSourceSelf, Subject: TriggerSubjectPermanent, DamageRecipient: TriggerDamageRecipientPermanent,
-		},
-		"this permanent is dealt damage": {
-			Event: TriggerEventDamageDealt, Source: TriggerSourceSelf, Subject: TriggerSubjectPermanent, DamageRecipient: TriggerDamageRecipientPermanent,
-		},
-		"enchanted creature is dealt damage": {
-			Event: TriggerEventDamageDealt, Source: TriggerSourceAttachedPermanent, DamageRecipient: TriggerDamageRecipientPermanent,
-		},
-		"enchanted permanent is dealt damage": {
-			Event: TriggerEventDamageDealt, Source: TriggerSourceAttachedPermanent, DamageRecipient: TriggerDamageRecipientPermanent,
-		},
-		"equipped creature is dealt damage": {
-			Event: TriggerEventDamageDealt, Source: TriggerSourceAttachedPermanent, DamageRecipient: TriggerDamageRecipientPermanent,
-		},
-		"you're dealt damage": {
-			Event: TriggerEventDamageDealt, Player: TriggerPlayerYou, DamageRecipient: TriggerDamageRecipientPlayer,
-		},
-		"you are dealt damage": {
-			Event: TriggerEventDamageDealt, Player: TriggerPlayerYou, DamageRecipient: TriggerDamageRecipientPlayer,
-		},
+	if event == "you're dealt damage" || event == "you are dealt damage" {
+		return TriggerPattern{
+			Event:           TriggerEventDamageDealt,
+			Player:          TriggerPlayerYou,
+			DamageRecipient: TriggerDamageRecipientPlayer,
+		}, true
 	}
-	if pattern, ok := patterns[event]; ok {
-		return pattern, true
+	if subject, ok := strings.CutSuffix(event, " is dealt damage"); ok {
+		switch subject {
+		case "this creature", "this permanent":
+			return TriggerPattern{
+				Event:           TriggerEventDamageDealt,
+				Source:          TriggerSourceSelf,
+				Subject:         TriggerSubjectPermanent,
+				DamageRecipient: TriggerDamageRecipientPermanent,
+			}, true
+		case "enchanted creature", "enchanted permanent", "equipped creature":
+			return TriggerPattern{
+				Event:           TriggerEventDamageDealt,
+				Source:          TriggerSourceAttachedPermanent,
+				DamageRecipient: TriggerDamageRecipientPermanent,
+			}, true
+		}
 	}
 	for _, source := range []struct {
 		text     string
@@ -638,16 +748,18 @@ func recognizeCastTrigger(event string, kind TriggerKind) (TriggerPattern, bool)
 	}
 	pattern := TriggerPattern{Event: TriggerEventSpellCast}
 	var phrase string
-	switch {
-	case strings.HasPrefix(event, "you cast "):
-		pattern.Controller = ControllerYou
-		phrase = strings.TrimPrefix(event, "you cast ")
-	case strings.HasPrefix(event, "a player casts "):
-		phrase = strings.TrimPrefix(event, "a player casts ")
-	case strings.HasPrefix(event, "an opponent casts "):
-		pattern.Controller = ControllerOpponent
-		phrase = strings.TrimPrefix(event, "an opponent casts ")
-	default:
+	for _, relation := range []controllerPhraseSlot{
+		{text: "you cast ", controller: ControllerYou},
+		{text: "a player casts ", controller: ControllerAny},
+		{text: "an opponent casts ", controller: ControllerOpponent},
+	} {
+		if rest, ok := strings.CutPrefix(event, relation.text); ok {
+			pattern.Controller = relation.controller
+			phrase = rest
+			break
+		}
+	}
+	if phrase == "" {
 		return TriggerPattern{}, false
 	}
 	if !compileCastSelection(phrase, &pattern) {
@@ -759,13 +871,14 @@ func recognizeEnterTrigger(event string, kind TriggerKind) (TriggerPattern, bool
 
 func recognizeDiesTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
 	attached := map[string]TriggerSelection{
-		"enchanted creature dies":  {RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
-		"equipped creature dies":   {RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
-		"enchanted land dies":      {RequiredTypes: []TriggerCardType{TriggerCardTypeLand}},
-		"enchanted permanent dies": {},
+		"enchanted creature":  {RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+		"equipped creature":   {RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+		"enchanted land":      {RequiredTypes: []TriggerCardType{TriggerCardTypeLand}},
+		"enchanted permanent": {},
 	}
 	if kind == TriggerWhen || kind == TriggerWhenever {
-		if selection, ok := attached[event]; ok {
+		subject, matchesDiesTemplate := strings.CutSuffix(event, " dies")
+		if selection, ok := attached[subject]; matchesDiesTemplate && ok {
 			return TriggerPattern{
 				Event:            TriggerEventPermanentDied,
 				Source:           TriggerSourceAttachedPermanent,
@@ -791,18 +904,24 @@ func recognizeDiesTrigger(event string, kind TriggerKind) (TriggerPattern, bool)
 	}, true
 }
 
-func recognizePermanentActionTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
+type permanentActionTemplate struct {
+	suffix string
+	event  TriggerEvent
+}
+
+var combatPermanentActions = []permanentActionTemplate{
+	{suffix: " attacks", event: TriggerEventAttackerDeclared},
+	{suffix: " blocks", event: TriggerEventBlockerDeclared},
+}
+
+var statePermanentActions = []permanentActionTemplate{
+	{suffix: " becomes tapped", event: TriggerEventPermanentTapped},
+	{suffix: " becomes untapped", event: TriggerEventPermanentUntapped},
+}
+
+func recognizePermanentActionTrigger(event string, kind TriggerKind, actions []permanentActionTemplate) (TriggerPattern, bool) {
 	if kind != TriggerWhenever {
 		return TriggerPattern{}, false
-	}
-	actions := []struct {
-		suffix string
-		event  TriggerEvent
-	}{
-		{" attacks", TriggerEventAttackerDeclared},
-		{" blocks", TriggerEventBlockerDeclared},
-		{" becomes tapped", TriggerEventPermanentTapped},
-		{" becomes untapped", TriggerEventPermanentUntapped},
 	}
 	for _, action := range actions {
 		if !strings.HasSuffix(event, action.suffix) {
