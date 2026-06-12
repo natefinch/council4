@@ -4188,7 +4188,6 @@ func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
 	for _, oracleText := range []string{
 		"Whenever this creature attacks alone, draw a card.",
 		"Whenever this creature attacks and isn't blocked, draw a card.",
-		"Whenever this creature attacks a player, draw a card.",
 		"Whenever this creature attacks or blocks, draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
@@ -4206,6 +4205,180 @@ func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
 			}
 			if len(diagnostics) == 0 {
 				t.Fatal("unsupported combat trigger unexpectedly lowered")
+			}
+		})
+	}
+}
+
+func TestLowerSaturatedCombatPhaseAndStepTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		text  string
+		check func(*testing.T, game.TriggerPattern)
+	}{
+		{
+			name: "one or more controlled creatures attack",
+			text: "Whenever one or more creatures you control attack, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if pattern.Event != game.EventAttackerDeclared ||
+					pattern.Controller != game.TriggerControllerYou ||
+					!pattern.OneOrMore ||
+					!reflect.DeepEqual(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "attacker exact recipient",
+			text: "Whenever a creature attacks you or a planeswalker you control, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if pattern.AttackRecipient != game.AttackRecipientPlayer|game.AttackRecipientPlaneswalker ||
+					pattern.Player != game.TriggerPlayerYou ||
+					pattern.AttackRecipientSelection.Controller != game.ControllerYou {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "player attack per recipient batch",
+			text: "Whenever you attack a player, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if !pattern.OneOrMore || !pattern.OneOrMorePerAttackTarget ||
+					pattern.Controller != game.TriggerControllerYou ||
+					pattern.AttackRecipient != game.AttackRecipientPlayer {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "block related Selection",
+			text: "Whenever this creature blocks a creature with flying, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if pattern.Event != game.EventBlockerDeclared ||
+					pattern.RelatedSubjectSelection.Keyword != game.Flying {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "selected combat damage source batch",
+			text: "Whenever one or more creatures you control deal combat damage to a player, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if pattern.Subject != game.TriggerSubjectDamageSource ||
+					pattern.Controller != game.TriggerControllerYou ||
+					!pattern.OneOrMore ||
+					!pattern.RequireCombatDamage ||
+					!reflect.DeepEqual(pattern.DamageSourceSelection.RequiredTypes, []types.Card{types.Creature}) {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "noncombat damage",
+			text: "Whenever this creature deals noncombat damage to an opponent, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if !pattern.RequireNonCombatDamage ||
+					pattern.Player != game.TriggerPlayerOpponent ||
+					pattern.DamageRecipient != game.DamageRecipientPlayer {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "player or planeswalker damage recipient",
+			text: "Whenever this creature deals damage to a player or planeswalker, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if pattern.DamageRecipient != game.DamageRecipientPlayer|game.DamageRecipientPermanent ||
+					!reflect.DeepEqual(pattern.DamageRecipientSelection.RequiredTypes, []types.Card{types.Planeswalker}) {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "ability source damage recipient",
+			text: "Whenever a source deals damage to this creature, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if !pattern.DamageRecipientIsSource || pattern.DamageRecipient != game.DamageRecipientPermanent {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "all end steps",
+			text: "At the beginning of the end step, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if pattern.Event != game.EventBeginningOfStep ||
+					pattern.Step != game.StepEnd ||
+					pattern.Controller != game.TriggerControllerAny {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+		{
+			name: "attached permanent controller upkeep",
+			text: "At the beginning of the upkeep of enchanted creature's controller, draw a card.",
+			check: func(t *testing.T, pattern game.TriggerPattern) {
+				if pattern.Event != game.EventBeginningOfStep ||
+					pattern.Step != game.StepUpkeep ||
+					!reflect.DeepEqual(pattern.StepPlayerSourceAttachedSelection.RequiredTypes, []types.Card{types.Creature}) {
+					t.Fatalf("pattern = %+v", pattern)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Fighter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Warrior",
+				OracleText: test.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+			}
+			test.check(t, face.TriggeredAbilities[0].Trigger.Pattern)
+		})
+	}
+}
+
+func TestCombatPhaseAndStepTriggerDiagnosticsNameMissingCapability(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name   string
+		text   string
+		detail string
+	}{
+		{
+			name:   "missing boundary event",
+			text:   "At the beginning of your declare attackers step, draw a card.",
+			detail: "runtime does not emit a beginning-of-declare attackers step event",
+		},
+		{
+			name:   "missing combat relation",
+			text:   "Whenever this creature attacks alone, draw a card.",
+			detail: "requires a missing runtime capability",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Fighter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Warrior",
+				OracleText: test.text,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 || !strings.Contains(diagnostics[0].Detail, test.detail) {
+				t.Fatalf("diagnostics = %#v, want detail containing %q", diagnostics, test.detail)
 			}
 		})
 	}
@@ -4500,6 +4673,9 @@ func TestLowerDamageSourceTriggers(t *testing.T) {
 				Subject:             game.TriggerSubjectDamageSource,
 				DamageRecipient:     game.DamageRecipientPlayer,
 				RequireCombatDamage: true,
+				DamageSourceSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 		{
@@ -4509,6 +4685,9 @@ func TestLowerDamageSourceTriggers(t *testing.T) {
 				Event:   game.EventDamageDealt,
 				Source:  game.TriggerSourceAttachedPermanent,
 				Subject: game.TriggerSubjectDamageSource,
+				DamageSourceSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 		{
@@ -4520,6 +4699,9 @@ func TestLowerDamageSourceTriggers(t *testing.T) {
 				Subject:         game.TriggerSubjectDamageSource,
 				Player:          game.TriggerPlayerOpponent,
 				DamageRecipient: game.DamageRecipientPlayer,
+				DamageSourceSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 		{
@@ -4531,6 +4713,9 @@ func TestLowerDamageSourceTriggers(t *testing.T) {
 				Subject:              game.TriggerSubjectDamageSource,
 				DamageRecipient:      game.DamageRecipientPermanent,
 				DamageRecipientTypes: []types.Card{types.Creature},
+				DamageSourceSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 	}
@@ -4563,9 +4748,6 @@ func TestLowerDamageSourceTriggers(t *testing.T) {
 func TestLowerDamageSourceTriggersFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"Whenever this creature deals damage to a player or planeswalker, draw a card.",
-		"Whenever one or more creatures you control deal damage to a player, draw a card.",
-		"Whenever a creature you control deals combat damage to a player, draw a card.",
 		"Whenever this creature deals combat damage to defending player, draw a card.",
 		"Whenever equipped creature or this Equipment deals damage, draw a card.",
 	} {
@@ -4645,6 +4827,9 @@ func TestLowerLifeDamageReceivedTriggers(t *testing.T) {
 				Event:           game.EventDamageDealt,
 				Source:          game.TriggerSourceAttachedPermanent,
 				DamageRecipient: game.DamageRecipientPermanent,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 		{
@@ -4654,6 +4839,9 @@ func TestLowerLifeDamageReceivedTriggers(t *testing.T) {
 				Event:           game.EventDamageDealt,
 				Source:          game.TriggerSourceAttachedPermanent,
 				DamageRecipient: game.DamageRecipientPermanent,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 		{
@@ -4697,7 +4885,6 @@ func TestLowerLifeDamageReceivedTriggersFailClosed(t *testing.T) {
 	for _, oracleText := range []string{
 		"Whenever you gain or lose life, draw a card.",
 		"Whenever you gain life for the first time each turn, draw a card.",
-		"Whenever this creature is dealt combat damage, draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()

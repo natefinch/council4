@@ -738,6 +738,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			v.add(faceName, path, CardDefIssueInvalidSelection, "TriggerPattern sets both permanent-type filters and SubjectSelection")
 		}
 	}
+	if !pattern.RelatedSubjectSelection.Empty() {
+		v.validateSelection(faceName, appendPath(path, "RelatedSubjectSelection"), pattern.RelatedSubjectSelection)
+	}
 	if !pattern.CardSelection.Empty() {
 		v.validateSelection(faceName, appendPath(path, "CardSelection"), pattern.CardSelection)
 		unsupported := pattern.CardSelection
@@ -757,6 +760,33 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		}
 		if len(pattern.RequireCardTypes) > 0 || len(pattern.ExcludeCardTypes) > 0 {
 			v.add(faceName, path, CardDefIssueInvalidSelection, "TriggerPattern sets both card-type filters and CardSelection")
+		}
+	}
+	if !pattern.DamageRecipientSelection.Empty() {
+		v.validateSelection(faceName, appendPath(path, "DamageRecipientSelection"), pattern.DamageRecipientSelection)
+		if len(pattern.DamageRecipientTypes) > 0 {
+			v.add(faceName, path, CardDefIssueInvalidSelection, "TriggerPattern sets both damage-recipient type filters and DamageRecipientSelection")
+		}
+	}
+	if !pattern.DamageSourceSelection.Empty() {
+		v.validateSelection(faceName, appendPath(path, "DamageSourceSelection"), pattern.DamageSourceSelection)
+	}
+	if pattern.DamageRecipientIsSource && pattern.DamageRecipient&DamageRecipientPermanent == 0 {
+		v.add(faceName, path, CardDefIssueInvalidSelection, "DamageRecipientIsSource requires a permanent damage recipient")
+	}
+	if !pattern.AttackRecipientSelection.Empty() {
+		v.validateSelection(faceName, appendPath(path, "AttackRecipientSelection"), pattern.AttackRecipientSelection)
+	}
+	if pattern.RequireCombatDamage && pattern.RequireNonCombatDamage {
+		v.add(faceName, path, CardDefIssueInvalidSelection, "trigger pattern cannot require both combat and noncombat damage")
+	}
+	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
+		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
+	}
+	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
+		v.validateSelection(faceName, appendPath(path, "StepPlayerSourceAttachedSelection"), pattern.StepPlayerSourceAttachedSelection)
+		if pattern.Event != EventBeginningOfStep {
+			v.add(faceName, path, CardDefIssueInvalidSelection, "StepPlayerSourceAttachedSelection requires a beginning-of-step pattern")
 		}
 	}
 	if pattern.RequireKickerPaid && pattern.Event != EventSpellCast {

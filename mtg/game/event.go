@@ -43,7 +43,8 @@ const (
 	EventTokenCreated
 )
 
-// DamageRecipientKind identifies what received damage.
+// DamageRecipientKind identifies what received damage. Values are flags so a
+// trigger pattern can match either kind.
 type DamageRecipientKind int
 
 // Damage recipient values identify what received damage.
@@ -78,7 +79,8 @@ type Event struct {
 	Controller PlayerID
 
 	// Player is the affected player for draw, discard, player-damage, and
-	// player-counter events.
+	// player-counter events, or the player in whose direction an attacker was
+	// declared.
 	Player PlayerID
 
 	// CardID identifies the card that moved, was drawn, discarded, or became a permanent.
@@ -130,7 +132,7 @@ type Event struct {
 	PermanentID id.ID
 
 	// RelatedPermanentID identifies a secondary permanent for paired events such
-	// as fights.
+	// as fights, or the other combatant for block declarations.
 	RelatedPermanentID id.ID
 
 	// TokenName gives token events a stable human-readable identity when CardID is zero.

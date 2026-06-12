@@ -3080,7 +3080,7 @@ func lowerAtTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
 			summary,
-			"the executable source backend does not support this semantic step trigger pattern",
+			triggerPatternCapabilityDiagnostic(ability.Trigger),
 		)
 	}
 	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
@@ -3229,8 +3229,9 @@ func lowerGenericPatternTrigger(
 	}
 	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
 	if !ok {
+		detail := triggerPatternCapabilityDiagnostic(ability.Trigger)
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
-			"the executable source backend does not support this semantic trigger pattern")
+			detail)
 	}
 	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
 	if !ok || triggerType == game.TriggerAt {
@@ -3266,6 +3267,35 @@ func lowerGenericPatternTrigger(
 		Optional: ability.Optional,
 		Content:  content,
 	}, nil
+}
+
+func triggerPatternCapabilityDiagnostic(trigger *oracle.CompiledTrigger) string {
+	if trigger == nil || trigger.Pattern.Event != oracle.TriggerEventUnknown {
+		return "the executable source backend does not support this semantic trigger pattern"
+	}
+	event := strings.ToLower(trigger.Event)
+	for _, boundary := range []string{
+		"declare attackers step",
+		"declare blockers step",
+		"first strike damage step",
+		"combat damage step",
+		"cleanup step",
+	} {
+		if strings.Contains(event, boundary) {
+			return fmt.Sprintf("the runtime does not emit a beginning-of-%s event", boundary)
+		}
+	}
+	if strings.Contains(event, "attack") ||
+		strings.Contains(event, "block") ||
+		strings.Contains(event, "damage") ||
+		strings.Contains(event, "combat") ||
+		strings.Contains(event, "upkeep") ||
+		strings.Contains(event, "draw step") ||
+		strings.Contains(event, "end step") ||
+		strings.Contains(event, "main phase") {
+		return "the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability"
+	}
+	return "the executable source backend does not support this semantic trigger pattern"
 }
 
 func lowerTriggeredAbilityKind(

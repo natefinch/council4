@@ -2,6 +2,7 @@ package oracle
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -81,6 +82,9 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 				Player:          TriggerPlayerOpponent,
 				CombatQualifier: TriggerCombatDamage,
 				DamageRecipient: TriggerDamageRecipientPlayer,
+				DamageSourceSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
 			},
 		},
 		{
@@ -148,7 +152,6 @@ func TestTriggerPatternTemplatesFailClosedOnUnsupportedSlots(t *testing.T) {
 		{event: "you activate an ability", kind: TriggerWhenever},
 		{event: "this creature becomes the target of an ability", kind: TriggerWhenever},
 		{event: "this creature attacks alone", kind: TriggerWhenever},
-		{event: "one or more creatures you control attack", kind: TriggerWhenever},
 		{event: "the beginning of a player's upkeep", kind: TriggerAt},
 		{event: "the beginning of your next upkeep", kind: TriggerAt, condition: condition},
 		{event: "you cast a spell", kind: TriggerWhen},
@@ -162,6 +165,217 @@ func TestTriggerPatternTemplatesFailClosedOnUnsupportedSlots(t *testing.T) {
 				t.Fatalf("near-miss pattern = %#v, want %#v", got, want)
 			}
 		})
+	}
+}
+
+func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		event    string
+		kind     TriggerKind
+		cardName string
+		want     TriggerPattern
+	}{
+		{
+			name:     "named source attacks with when",
+			event:    "Example attacks",
+			kind:     TriggerWhen,
+			cardName: "Example",
+			want:     TriggerPattern{Kind: TriggerWhen, Event: TriggerEventAttackerDeclared, Source: TriggerSourceSelf},
+		},
+		{
+			name:  "one or more selected attackers",
+			event: "one or more artifact creatures you control attack",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventAttackerDeclared,
+				Controller: ControllerYou,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
+				},
+				OneOrMore: true,
+			},
+		},
+		{
+			name:  "attacks exact player or planeswalker recipient",
+			event: "a creature attacks you or a planeswalker you control",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:            TriggerWhenever,
+				Event:           TriggerEventAttackerDeclared,
+				Player:          TriggerPlayerYou,
+				AttackRecipient: TriggerAttackRecipientPlayer | TriggerAttackRecipientPlaneswalker,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+				AttackRecipientSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker},
+					Controller:    ControllerYou,
+				},
+			},
+		},
+		{
+			name:  "player attack batches per recipient",
+			event: "you attack a player",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:                     TriggerWhenever,
+				Event:                    TriggerEventAttackerDeclared,
+				Controller:               ControllerYou,
+				AttackRecipient:          TriggerAttackRecipientPlayer,
+				OneOrMore:                true,
+				OneOrMorePerAttackTarget: true,
+			},
+		},
+		{
+			name:  "block related Selection",
+			event: "this creature blocks a creature with flying",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:   TriggerWhenever,
+				Event:  TriggerEventBlockerDeclared,
+				Source: TriggerSourceSelf,
+				RelatedSubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					Keyword:       TriggerKeywordFlying,
+				},
+			},
+		},
+		{
+			name:  "selected combat damage sources batch",
+			event: "one or more artifact creatures you control deal combat damage to a player",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:            TriggerWhenever,
+				Event:           TriggerEventDamageDealt,
+				Subject:         TriggerSubjectDamageSource,
+				Controller:      ControllerYou,
+				CombatQualifier: TriggerCombatDamage,
+				DamageRecipient: TriggerDamageRecipientPlayer,
+				DamageSourceSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
+				},
+				OneOrMore: true,
+			},
+		},
+		{
+			name:  "noncombat damage exact opponent",
+			event: "this creature deals noncombat damage to an opponent",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:            TriggerWhenever,
+				Event:           TriggerEventDamageDealt,
+				Source:          TriggerSourceSelf,
+				Subject:         TriggerSubjectDamageSource,
+				Player:          TriggerPlayerOpponent,
+				CombatQualifier: TriggerNonCombatDamage,
+				DamageRecipient: TriggerDamageRecipientPlayer,
+			},
+		},
+		{
+			name:  "damage player or planeswalker union",
+			event: "this creature deals damage to a player or planeswalker",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:            TriggerWhenever,
+				Event:           TriggerEventDamageDealt,
+				Source:          TriggerSourceSelf,
+				Subject:         TriggerSubjectDamageSource,
+				DamageRecipient: TriggerDamageRecipientPlayer | TriggerDamageRecipientPermanent,
+				DamageRecipientSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker},
+				},
+			},
+		},
+		{
+			name:  "any damage source to ability source",
+			event: "a source deals damage to this creature",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:                    TriggerWhenever,
+				Event:                   TriggerEventDamageDealt,
+				Subject:                 TriggerSubjectDamageSource,
+				DamageRecipient:         TriggerDamageRecipientPermanent,
+				DamageRecipientIsSource: true,
+			},
+		},
+		{
+			name:  "selected recipient is dealt combat damage",
+			event: "a creature an opponent controls is dealt combat damage",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:            TriggerWhenever,
+				Event:           TriggerEventDamageDealt,
+				Controller:      ControllerOpponent,
+				CombatQualifier: TriggerCombatDamage,
+				DamageRecipient: TriggerDamageRecipientPermanent,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
+			name:  "all player end step",
+			event: "the beginning of the end step",
+			kind:  TriggerAt,
+			want:  TriggerPattern{Kind: TriggerAt, Event: TriggerEventBeginningOfStep, Step: TriggerStepEnd},
+		},
+		{
+			name:  "opponent first main phase",
+			event: "the beginning of each opponent's first main phase",
+			kind:  TriggerAt,
+			want:  TriggerPattern{Kind: TriggerAt, Event: TriggerEventBeginningOfStep, Controller: ControllerOpponent, Step: TriggerStepPrecombatMain},
+		},
+		{
+			name:  "at end of combat",
+			event: "end of combat",
+			kind:  TriggerAt,
+			want:  TriggerPattern{Kind: TriggerAt, Event: TriggerEventBeginningOfStep, Step: TriggerStepEndOfCombat},
+		},
+		{
+			name:  "attached permanent controller upkeep",
+			event: "the beginning of the upkeep of enchanted creature's controller",
+			kind:  TriggerAt,
+			want: TriggerPattern{
+				Kind:  TriggerAt,
+				Event: TriggerEventBeginningOfStep,
+				Step:  TriggerStepUpkeep,
+				StepPlayerSourceAttachedSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			pattern := compileTriggerPattern(test.event, test.kind, Span{}, test.cardName, nil)
+			if !reflect.DeepEqual(pattern, test.want) {
+				t.Fatalf("pattern = %#v, want %#v", pattern, test.want)
+			}
+		})
+	}
+}
+
+func TestCombatPhaseAndStepTriggerPatternsFailClosedOnMissingCapabilities(t *testing.T) {
+	t.Parallel()
+	for _, event := range []string{
+		"this creature attacks alone",
+		"this creature becomes blocked by a nonblack creature",
+		"you attack with two or more creatures",
+		"the beginning of your declare attackers step",
+		"the beginning of your next upkeep",
+	} {
+		kind := TriggerWhenever
+		if strings.HasPrefix(event, "the beginning") {
+			kind = TriggerAt
+		}
+		pattern := compileTriggerPattern(event, kind, Span{}, "", nil)
+		if pattern.Event != TriggerEventUnknown {
+			t.Fatalf("%q pattern = %#v, want unknown event", event, pattern)
+		}
 	}
 }
 

@@ -280,6 +280,7 @@ func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controlle
 		SourceID:        sourceID,
 		SourceObjectID:  sourceObjectID,
 		Controller:      controller,
+		Player:          effectiveController(g, permanent),
 		PermanentID:     permanent.ObjectID,
 		CardID:          permanent.CardInstanceID,
 		TokenName:       permanentTokenName(permanent),

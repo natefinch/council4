@@ -104,9 +104,23 @@ type TriggerCombatQualifier uint8
 const (
 	TriggerCombatAny TriggerCombatQualifier = iota
 	TriggerCombatDamage
+	TriggerNonCombatDamage
 )
 
-// TriggerDamageRecipient identifies what received damage.
+// TriggerAttackRecipient identifies what an attacker was declared against.
+type TriggerAttackRecipient uint8
+
+// Trigger attack recipient values are flags so exact recipient unions remain
+// representable.
+const (
+	TriggerAttackRecipientAny    TriggerAttackRecipient = 0
+	TriggerAttackRecipientPlayer TriggerAttackRecipient = 1 << (iota - 1)
+	TriggerAttackRecipientPlaneswalker
+	TriggerAttackRecipientBattle
+)
+
+// TriggerDamageRecipient identifies what received damage. Values are flags so a
+// pattern can match either kind.
 type TriggerDamageRecipient uint8
 
 // Trigger damage recipient kinds.
@@ -259,6 +273,7 @@ type TriggerSelection struct {
 	ManaValue        TriggerNumberFilter
 	Power            TriggerNumberFilter
 	Toughness        TriggerNumberFilter
+	Controller       ControllerKind
 }
 
 // TriggerPattern is a source-spanned semantic description of a representable
@@ -275,8 +290,11 @@ type TriggerPattern struct {
 	Player     TriggerPlayerRelation
 
 	SubjectSelection         TriggerSelection
+	RelatedSubjectSelection  TriggerSelection
 	CardSelection            TriggerSelection
 	DamageRecipientSelection TriggerSelection
+	DamageSourceSelection    TriggerSelection
+	AttackRecipientSelection TriggerSelection
 
 	MatchFromZone bool
 	FromZone      TriggerZone
@@ -287,16 +305,20 @@ type TriggerPattern struct {
 	MatchFaceDown bool
 	FaceDown      bool
 
-	Step            TriggerStep
-	CombatQualifier TriggerCombatQualifier
-	DamageRecipient TriggerDamageRecipient
-	StackObject     TriggerStackObject
-	Counter         TriggerCounter
+	Step                              TriggerStep
+	StepPlayerSourceAttachedSelection TriggerSelection
+	CombatQualifier                   TriggerCombatQualifier
+	DamageRecipient                   TriggerDamageRecipient
+	DamageRecipientIsSource           bool
+	AttackRecipient                   TriggerAttackRecipient
+	StackObject                       TriggerStackObject
+	Counter                           TriggerCounter
 
-	ExcludeSelf       bool
-	OneOrMore         bool
-	RequireKickerPaid bool
-	RequireHistoric   bool
+	ExcludeSelf              bool
+	OneOrMore                bool
+	OneOrMorePerAttackTarget bool
+	RequireKickerPaid        bool
+	RequireHistoric          bool
 
 	InterveningCondition *CompiledCondition
 }
@@ -310,7 +332,7 @@ var triggerPatternTemplates = []triggerPatternTemplate{
 	{kinds: []TriggerKind{TriggerAt}, bind: recognizePhaseStepTrigger},
 	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizePermanentZoneChangeTrigger},
 	{kinds: []TriggerKind{TriggerWhenever}, bind: recognizeSpellAbilityTrigger},
-	{kinds: []TriggerKind{TriggerWhenever}, bind: recognizeCombatTrigger},
+	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizeCombatTrigger},
 	{kinds: []TriggerKind{TriggerWhenever}, bind: recognizePermanentStateTrigger},
 	{kinds: []TriggerKind{TriggerWhenever}, bind: recognizePlayerEventTrigger},
 }
@@ -382,6 +404,8 @@ type phaseStepTemplate struct {
 
 var standardStepControllerSlots = []controllerPhraseSlot{
 	{text: "your", controller: ControllerYou},
+	{text: "its controller's", controller: ControllerYou},
+	{text: "the", controller: ControllerAny},
 	{text: "each", controller: ControllerAny},
 	{text: "each player's", controller: ControllerAny},
 	{text: "each opponent's", controller: ControllerOpponent},
@@ -445,11 +469,23 @@ var phaseStepTemplates = []phaseStepTemplate{
 var phaseStepAliases = map[string]TriggerPattern{
 	"your first main phase":               {Step: TriggerStepPrecombatMain, Controller: ControllerYou},
 	"each of your first main phases":      {Step: TriggerStepPrecombatMain, Controller: ControllerYou},
+	"each player's first main phase":      {Step: TriggerStepPrecombatMain, Controller: ControllerAny},
+	"each opponent's first main phase":    {Step: TriggerStepPrecombatMain, Controller: ControllerOpponent},
 	"your second main phase":              {Step: TriggerStepPostcombatMain, Controller: ControllerYou},
+	"each player's second main phase":     {Step: TriggerStepPostcombatMain, Controller: ControllerAny},
+	"each opponent's second main phase":   {Step: TriggerStepPostcombatMain, Controller: ControllerOpponent},
 	"each of your postcombat main phases": {Step: TriggerStepPostcombatMain, Controller: ControllerYou},
+	"your combat step":                    {Step: TriggerStepBeginningOfCombat, Controller: ControllerYou},
 }
 
 func recognizePhaseStepTrigger(event string, _ TriggerKind, _ string) (TriggerPattern, bool) {
+	if event == "end of combat" || event == "the end of combat" {
+		return TriggerPattern{
+			Event:      TriggerEventBeginningOfStep,
+			Step:       TriggerStepEndOfCombat,
+			Controller: ControllerAny,
+		}, true
+	}
 	event, ok := strings.CutPrefix(event, "the beginning of ")
 	if !ok {
 		return TriggerPattern{}, false
@@ -458,11 +494,15 @@ func recognizePhaseStepTrigger(event string, _ TriggerKind, _ string) (TriggerPa
 		pattern.Event = TriggerEventBeginningOfStep
 		return pattern, true
 	}
+	if pattern, ok := recognizeAttachedControllerPhaseStep(event); ok {
+		return pattern, true
+	}
 	for _, template := range phaseStepTemplates {
 		slot, ok := strings.CutPrefix(event, template.prefix)
 		if !ok {
 			continue
 		}
+
 		slot, ok = strings.CutSuffix(slot, template.suffix)
 		if !ok {
 			continue
@@ -480,6 +520,36 @@ func recognizePhaseStepTrigger(event string, _ TriggerKind, _ string) (TriggerPa
 	return TriggerPattern{}, false
 }
 
+func recognizeAttachedControllerPhaseStep(event string) (TriggerPattern, bool) {
+	for _, template := range []struct {
+		prefix string
+		step   TriggerStep
+	}{
+		{prefix: "the upkeep of enchanted ", step: TriggerStepUpkeep},
+		{prefix: "the draw step of enchanted ", step: TriggerStepDraw},
+		{prefix: "the end step of enchanted ", step: TriggerStepEnd},
+	} {
+		subject, ok := strings.CutPrefix(event, template.prefix)
+		if !ok {
+			continue
+		}
+		subject, ok = strings.CutSuffix(subject, "'s controller")
+		if !ok {
+			return TriggerPattern{}, false
+		}
+		parsed := parseCombatPermanentSelection("a "+subject, false)
+		if !parsed.ok {
+			return TriggerPattern{}, false
+		}
+		return TriggerPattern{
+			Event:                             TriggerEventBeginningOfStep,
+			Step:                              template.step,
+			StepPlayerSourceAttachedSelection: parsed.selection,
+		}, true
+	}
+	return TriggerPattern{}, false
+}
+
 func recognizePermanentZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
 	return recognizeZoneChangeTrigger(event, kind, cardName)
 }
@@ -491,14 +561,304 @@ func recognizeSpellAbilityTrigger(event string, kind TriggerKind, cardName strin
 	return recognizeBecameTargetTrigger(event, cardName)
 }
 
-func recognizeCombatTrigger(event string, kind TriggerKind, _ string) (TriggerPattern, bool) {
-	if pattern, ok := recognizeSelfCombatTrigger(event, kind); ok {
+func recognizeCombatTrigger(event string, kind TriggerKind, sourceName string) (TriggerPattern, bool) {
+	if pattern, ok := recognizeAttackBlockTrigger(event, sourceName); ok {
 		return pattern, true
 	}
-	if pattern, ok := recognizeDamageTrigger(event, kind); ok {
+	if pattern, ok := recognizeParameterizedDamageTrigger(event, sourceName); ok {
 		return pattern, true
 	}
 	return recognizePermanentActionTrigger(event, kind, combatPermanentActions)
+}
+
+func recognizeAttackBlockTrigger(event, sourceName string) (TriggerPattern, bool) {
+	if pattern, ok := recognizePlayerAttackTrigger(event); ok {
+		return pattern, true
+	}
+	for _, template := range []struct {
+		marker  string
+		event   TriggerEvent
+		plural  bool
+		related bool
+	}{
+		{marker: " becomes blocked by ", event: TriggerEventAttackerBecameBlocked, related: true},
+		{marker: " blocks ", event: TriggerEventBlockerDeclared, related: true},
+		{marker: " block ", event: TriggerEventBlockerDeclared, plural: true, related: true},
+		{marker: " attacks ", event: TriggerEventAttackerDeclared},
+		{marker: " attack ", event: TriggerEventAttackerDeclared, plural: true},
+	} {
+		subject, remainder, ok := strings.Cut(event, template.marker)
+		if !ok {
+			continue
+		}
+		pattern, ok := combatSubjectPattern(subject, sourceName, template.event, template.plural)
+		if !ok {
+			return TriggerPattern{}, false
+		}
+		if template.related {
+			related, ok := parseRelatedCombatSelection(remainder)
+			if !ok {
+				return TriggerPattern{}, false
+			}
+			if template.event == TriggerEventAttackerBecameBlocked {
+				if !basicCreatureSelection(related) {
+					return TriggerPattern{}, false
+				}
+			} else {
+				pattern.RelatedSubjectSelection = related
+			}
+			return pattern, true
+		}
+		recipient := parseAttackRecipient(remainder)
+		if !recipient.ok {
+			return TriggerPattern{}, false
+		}
+		pattern.AttackRecipient = recipient.recipient
+		pattern.Player = recipient.player
+		pattern.AttackRecipientSelection = recipient.selection
+		return pattern, true
+	}
+	for _, template := range []struct {
+		suffix string
+		event  TriggerEvent
+		plural bool
+	}{
+		{suffix: " becomes blocked", event: TriggerEventAttackerBecameBlocked},
+		{suffix: " attacks", event: TriggerEventAttackerDeclared},
+		{suffix: " attack", event: TriggerEventAttackerDeclared, plural: true},
+		{suffix: " blocks", event: TriggerEventBlockerDeclared},
+		{suffix: " block", event: TriggerEventBlockerDeclared, plural: true},
+	} {
+		if !strings.HasSuffix(event, template.suffix) {
+			continue
+		}
+		return combatSubjectPattern(strings.TrimSuffix(event, template.suffix), sourceName, template.event, template.plural)
+	}
+	return TriggerPattern{}, false
+}
+
+func recognizePlayerAttackTrigger(event string) (TriggerPattern, bool) {
+	for _, template := range []struct {
+		text       string
+		controller ControllerKind
+		player     TriggerPlayerRelation
+		recipient  TriggerAttackRecipient
+		perTarget  bool
+	}{
+		{text: "you attack", controller: ControllerYou},
+		{text: "you attack with one or more creatures", controller: ControllerYou},
+		{text: "an opponent attacks", controller: ControllerOpponent},
+		{text: "a player attacks", controller: ControllerAny},
+		{text: "you attack a player", controller: ControllerYou, recipient: TriggerAttackRecipientPlayer, perTarget: true},
+		{text: "an opponent attacks you", controller: ControllerOpponent, player: TriggerPlayerYou, recipient: TriggerAttackRecipientPlayer, perTarget: true},
+		{text: "a player attacks you", controller: ControllerAny, player: TriggerPlayerYou, recipient: TriggerAttackRecipientPlayer, perTarget: true},
+		{text: "a player attacks one of your opponents", controller: ControllerAny, player: TriggerPlayerOpponent, recipient: TriggerAttackRecipientPlayer, perTarget: true},
+	} {
+		if event != template.text {
+			continue
+		}
+		return TriggerPattern{
+			Event:                    TriggerEventAttackerDeclared,
+			Controller:               template.controller,
+			Player:                   template.player,
+			AttackRecipient:          template.recipient,
+			OneOrMore:                true,
+			OneOrMorePerAttackTarget: template.perTarget,
+		}, true
+	}
+	return TriggerPattern{}, false
+}
+
+var selfCombatSubjectSlots = []string{
+	"this creature",
+	"this permanent",
+	"this artifact",
+	"this battle",
+	"this enchantment",
+	"this land",
+	"this planeswalker",
+	"this vehicle",
+}
+
+func combatSubjectPattern(subject, sourceName string, event TriggerEvent, plural bool) (TriggerPattern, bool) {
+	oneOrMore := false
+	if rest, ok := strings.CutPrefix(subject, "one or more "); ok {
+		subject = rest
+		plural = true
+		oneOrMore = true
+	}
+	if matchesSelfSubjectSlot(subject, sourceName, selfCombatSubjectSlots, true) {
+		return TriggerPattern{
+			Event:     event,
+			Source:    TriggerSourceSelf,
+			OneOrMore: oneOrMore,
+		}, true
+	}
+	if subject == "enchanted creature" || subject == "equipped creature" {
+		return TriggerPattern{
+			Event:     event,
+			Source:    TriggerSourceAttachedPermanent,
+			OneOrMore: oneOrMore,
+			SubjectSelection: TriggerSelection{
+				RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			},
+		}, true
+	}
+	parsed := parseCombatPermanentSelection(subject, plural)
+	if !parsed.ok {
+		return TriggerPattern{}, false
+	}
+	return TriggerPattern{
+		Event:            event,
+		Controller:       parsed.controller,
+		ExcludeSelf:      parsed.excludeSelf,
+		OneOrMore:        oneOrMore,
+		SubjectSelection: parsed.selection,
+	}, true
+}
+
+type combatPermanentSelection struct {
+	selection   TriggerSelection
+	controller  ControllerKind
+	excludeSelf bool
+	ok          bool
+}
+
+func parseCombatPermanentSelection(subject string, plural bool) combatPermanentSelection {
+	relations := parsePermanentSubjectRelations(subject)
+	if !relations.ok || relations.player != TriggerPlayerAny {
+		return combatPermanentSelection{}
+	}
+	subject = relations.subject
+	excludeSelf := false
+	if plural {
+		subject, excludeSelf = strings.CutPrefix(subject, "other ")
+	} else {
+		switch {
+		case strings.HasPrefix(subject, "another "):
+			subject = strings.TrimPrefix(subject, "another ")
+			excludeSelf = true
+		case strings.HasPrefix(subject, "a "):
+			subject = strings.TrimPrefix(subject, "a ")
+		case strings.HasPrefix(subject, "an "):
+			subject = strings.TrimPrefix(subject, "an ")
+		default:
+			return combatPermanentSelection{}
+		}
+	}
+	if subject == "source" || subject == "sources" || subject == "player" || subject == "players" {
+		return combatPermanentSelection{}
+	}
+	selection, ok := parsePermanentTriggerSelection(subject, plural)
+	if !ok {
+		return combatPermanentSelection{}
+	}
+	return combatPermanentSelection{
+		selection:   selection,
+		controller:  relations.controller,
+		excludeSelf: excludeSelf,
+		ok:          true,
+	}
+}
+
+func parseRelatedCombatSelection(subject string) (TriggerSelection, bool) {
+	parsed := parseCombatPermanentSelection(subject, false)
+	if !parsed.ok {
+		return TriggerSelection{}, false
+	}
+	parsed.selection.Controller = parsed.controller
+	return parsed.selection, true
+}
+
+func basicCreatureSelection(selection TriggerSelection) bool {
+	return len(selection.RequiredTypes) == 1 &&
+		selection.RequiredTypes[0] == TriggerCardTypeCreature &&
+		selection.Controller == ControllerAny &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.SubtypesAny) == 0 &&
+		len(selection.ColorsAny) == 0 &&
+		len(selection.ExcludedColors) == 0 &&
+		!selection.Colorless &&
+		!selection.Multicolored &&
+		selection.Tapped == TriggerTriAny &&
+		selection.CombatState == TriggerCombatStateAny &&
+		selection.Keyword == TriggerKeywordUnknown &&
+		selection.ExcludedKeyword == TriggerKeywordUnknown &&
+		selection.ManaValueAtLeast == 0 &&
+		!selection.MatchManaValue &&
+		selection.ManaValue.Comparison == TriggerComparisonUnknown &&
+		selection.Power.Comparison == TriggerComparisonUnknown &&
+		selection.Toughness.Comparison == TriggerComparisonUnknown &&
+		!selection.NonToken &&
+		!selection.TokenOnly
+}
+
+type attackRecipientPattern struct {
+	recipient TriggerAttackRecipient
+	player    TriggerPlayerRelation
+	selection TriggerSelection
+	ok        bool
+}
+
+func parseAttackRecipient(recipient string) attackRecipientPattern {
+	switch recipient {
+	case "you":
+		return attackRecipientPattern{recipient: TriggerAttackRecipientPlayer, player: TriggerPlayerYou, ok: true}
+	case "an opponent", "one of your opponents":
+		return attackRecipientPattern{recipient: TriggerAttackRecipientPlayer, player: TriggerPlayerOpponent, ok: true}
+	case "a player":
+		return attackRecipientPattern{recipient: TriggerAttackRecipientPlayer, ok: true}
+	case "a player or planeswalker":
+		return attackRecipientPattern{
+			recipient: TriggerAttackRecipientPlayer | TriggerAttackRecipientPlaneswalker,
+			selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker}},
+			ok:        true,
+		}
+	case "a player or battle":
+		return attackRecipientPattern{
+			recipient: TriggerAttackRecipientPlayer | TriggerAttackRecipientBattle,
+			selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeBattle}},
+			ok:        true,
+		}
+	case "you or a planeswalker you control":
+		return attackRecipientPattern{
+			recipient: TriggerAttackRecipientPlayer | TriggerAttackRecipientPlaneswalker,
+			player:    TriggerPlayerYou,
+			selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker}, Controller: ControllerYou},
+			ok:        true,
+		}
+	case "you or a battle you protect":
+		return attackRecipientPattern{
+			recipient: TriggerAttackRecipientPlayer | TriggerAttackRecipientBattle,
+			player:    TriggerPlayerYou,
+			selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeBattle}},
+			ok:        true,
+		}
+	}
+	parsed := parseCombatPermanentSelection(recipient, false)
+	if !parsed.ok || len(parsed.selection.RequiredTypes) != 1 {
+		return attackRecipientPattern{}
+	}
+	var result TriggerAttackRecipient
+	switch parsed.selection.RequiredTypes[0] {
+	case TriggerCardTypePlaneswalker:
+		result = TriggerAttackRecipientPlaneswalker
+	case TriggerCardTypeBattle:
+		result = TriggerAttackRecipientBattle
+	default:
+		return attackRecipientPattern{}
+	}
+	parsed.selection.Controller = parsed.controller
+	player := TriggerPlayerAny
+	switch parsed.controller {
+	case ControllerYou:
+		player = TriggerPlayerYou
+	case ControllerOpponent:
+		player = TriggerPlayerOpponent
+	default:
+	}
+	return attackRecipientPattern{recipient: result, player: player, selection: parsed.selection, ok: true}
 }
 
 func recognizePermanentStateTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
@@ -733,6 +1093,243 @@ func recognizeBecameTargetTrigger(event, cardName string) (TriggerPattern, bool)
 		}, true
 	}
 	return TriggerPattern{}, false
+}
+
+func recognizeParameterizedDamageTrigger(event, sourceName string) (TriggerPattern, bool) {
+	for _, template := range []struct {
+		text      string
+		qualifier TriggerCombatQualifier
+	}{
+		{text: "you're dealt combat damage", qualifier: TriggerCombatDamage},
+		{text: "you are dealt combat damage", qualifier: TriggerCombatDamage},
+		{text: "you're dealt noncombat damage", qualifier: TriggerNonCombatDamage},
+		{text: "you are dealt noncombat damage", qualifier: TriggerNonCombatDamage},
+		{text: "you're dealt damage"},
+		{text: "you are dealt damage"},
+	} {
+		if event == template.text {
+			return TriggerPattern{
+				Event:           TriggerEventDamageDealt,
+				Player:          TriggerPlayerYou,
+				CombatQualifier: template.qualifier,
+				DamageRecipient: TriggerDamageRecipientPlayer,
+			}, true
+		}
+	}
+	for _, template := range []struct {
+		suffix    string
+		qualifier TriggerCombatQualifier
+		plural    bool
+	}{
+		{suffix: " is dealt combat damage", qualifier: TriggerCombatDamage},
+		{suffix: " is dealt noncombat damage", qualifier: TriggerNonCombatDamage},
+		{suffix: " is dealt damage"},
+		{suffix: " are dealt combat damage", qualifier: TriggerCombatDamage, plural: true},
+		{suffix: " are dealt noncombat damage", qualifier: TriggerNonCombatDamage, plural: true},
+		{suffix: " are dealt damage", plural: true},
+	} {
+		subject, ok := strings.CutSuffix(event, template.suffix)
+		if !ok {
+			continue
+		}
+		pattern, ok := damageRecipientSubjectPattern(subject, sourceName, template.plural)
+		if !ok {
+			return TriggerPattern{}, false
+		}
+		pattern.CombatQualifier = template.qualifier
+		return pattern, true
+	}
+	for _, template := range []struct {
+		marker    string
+		qualifier TriggerCombatQualifier
+		plural    bool
+	}{
+		{marker: " deals combat damage", qualifier: TriggerCombatDamage},
+		{marker: " deals noncombat damage", qualifier: TriggerNonCombatDamage},
+		{marker: " deals damage"},
+		{marker: " deal combat damage", qualifier: TriggerCombatDamage, plural: true},
+		{marker: " deal noncombat damage", qualifier: TriggerNonCombatDamage, plural: true},
+		{marker: " deal damage", plural: true},
+	} {
+		source, remainder, ok := strings.Cut(event, template.marker)
+		if !ok {
+			continue
+		}
+		pattern, ok := damageSourcePattern(source, sourceName, template.plural)
+		if !ok {
+			return TriggerPattern{}, false
+		}
+		pattern.CombatQualifier = template.qualifier
+		if remainder == "" {
+			return pattern, true
+		}
+		target, ok := strings.CutPrefix(remainder, " to ")
+		if !ok {
+			return TriggerPattern{}, false
+		}
+		recipient := parseDamageRecipient(target, sourceName)
+		if !recipient.ok {
+			return TriggerPattern{}, false
+		}
+		pattern.DamageRecipient = recipient.recipient
+		pattern.Player = recipient.player
+		pattern.DamageRecipientSelection = recipient.selection
+		pattern.DamageRecipientIsSource = recipient.isSource
+		return pattern, true
+	}
+	return TriggerPattern{}, false
+}
+
+func damageSourcePattern(subject, sourceName string, plural bool) (TriggerPattern, bool) {
+	oneOrMore := false
+	if rest, ok := strings.CutPrefix(subject, "one or more "); ok {
+		subject = rest
+		plural = true
+		oneOrMore = true
+	}
+	if subject == "a source" {
+		return TriggerPattern{
+			Event:   TriggerEventDamageDealt,
+			Subject: TriggerSubjectDamageSource,
+		}, true
+	}
+	if matchesSelfSubjectSlot(subject, sourceName, selfCombatSubjectSlots, true) {
+		return TriggerPattern{
+			Event:     TriggerEventDamageDealt,
+			Source:    TriggerSourceSelf,
+			Subject:   TriggerSubjectDamageSource,
+			OneOrMore: oneOrMore,
+		}, true
+	}
+	if subject == "enchanted creature" || subject == "equipped creature" {
+		return TriggerPattern{
+			Event:     TriggerEventDamageDealt,
+			Source:    TriggerSourceAttachedPermanent,
+			Subject:   TriggerSubjectDamageSource,
+			OneOrMore: oneOrMore,
+			DamageSourceSelection: TriggerSelection{
+				RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			},
+		}, true
+	}
+	parsed := parseCombatPermanentSelection(subject, plural)
+	if !parsed.ok {
+		return TriggerPattern{}, false
+	}
+	return TriggerPattern{
+		Event:                 TriggerEventDamageDealt,
+		Subject:               TriggerSubjectDamageSource,
+		Controller:            parsed.controller,
+		ExcludeSelf:           parsed.excludeSelf,
+		OneOrMore:             oneOrMore,
+		DamageSourceSelection: parsed.selection,
+	}, true
+}
+
+func damageRecipientSubjectPattern(subject, sourceName string, plural bool) (TriggerPattern, bool) {
+	oneOrMore := false
+	if rest, ok := strings.CutPrefix(subject, "one or more "); ok {
+		subject = rest
+		plural = true
+		oneOrMore = true
+	}
+	if matchesSelfSubjectSlot(subject, sourceName, selfCombatSubjectSlots, true) {
+		return TriggerPattern{
+			Event:           TriggerEventDamageDealt,
+			Source:          TriggerSourceSelf,
+			Subject:         TriggerSubjectPermanent,
+			OneOrMore:       oneOrMore,
+			DamageRecipient: TriggerDamageRecipientPermanent,
+		}, true
+	}
+	if subject == "enchanted creature" || subject == "equipped creature" || subject == "enchanted permanent" {
+		selection := TriggerSelection{}
+		if subject != "enchanted permanent" {
+			selection.RequiredTypes = []TriggerCardType{TriggerCardTypeCreature}
+		}
+		return TriggerPattern{
+			Event:            TriggerEventDamageDealt,
+			Source:           TriggerSourceAttachedPermanent,
+			OneOrMore:        oneOrMore,
+			DamageRecipient:  TriggerDamageRecipientPermanent,
+			SubjectSelection: selection,
+		}, true
+	}
+	parsed := parseCombatPermanentSelection(subject, plural)
+	if !parsed.ok {
+		return TriggerPattern{}, false
+	}
+	return TriggerPattern{
+		Event:            TriggerEventDamageDealt,
+		Controller:       parsed.controller,
+		ExcludeSelf:      parsed.excludeSelf,
+		OneOrMore:        oneOrMore,
+		DamageRecipient:  TriggerDamageRecipientPermanent,
+		SubjectSelection: parsed.selection,
+	}, true
+}
+
+type damageRecipientPattern struct {
+	recipient TriggerDamageRecipient
+	player    TriggerPlayerRelation
+	selection TriggerSelection
+	isSource  bool
+	ok        bool
+}
+
+func parseDamageRecipient(recipient, sourceName string) damageRecipientPattern {
+	if matchesSelfSubjectSlot(recipient, sourceName, selfCombatSubjectSlots, true) {
+		return damageRecipientPattern{recipient: TriggerDamageRecipientPermanent, isSource: true, ok: true}
+	}
+	switch recipient {
+	case "you":
+		return damageRecipientPattern{recipient: TriggerDamageRecipientPlayer, player: TriggerPlayerYou, ok: true}
+	case "an opponent", "one of your opponents":
+		return damageRecipientPattern{recipient: TriggerDamageRecipientPlayer, player: TriggerPlayerOpponent, ok: true}
+	case "a player":
+		return damageRecipientPattern{recipient: TriggerDamageRecipientPlayer, ok: true}
+	case "a player or planeswalker":
+		return damageRecipientPattern{
+			recipient: TriggerDamageRecipientPlayer | TriggerDamageRecipientPermanent,
+			selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker}},
+			ok:        true,
+		}
+	case "a player or battle":
+		return damageRecipientPattern{
+			recipient: TriggerDamageRecipientPlayer | TriggerDamageRecipientPermanent,
+			selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeBattle}},
+			ok:        true,
+		}
+	case "any target":
+		return damageRecipientPattern{
+			recipient: TriggerDamageRecipientPlayer | TriggerDamageRecipientPermanent,
+			selection: TriggerSelection{RequiredTypesAny: []TriggerCardType{
+				TriggerCardTypeCreature,
+				TriggerCardTypePlaneswalker,
+				TriggerCardTypeBattle,
+			}},
+			ok: true,
+		}
+	}
+	parsed := parseCombatPermanentSelection(recipient, false)
+	if !parsed.ok {
+		return damageRecipientPattern{}
+	}
+	parsed.selection.Controller = parsed.controller
+	player := TriggerPlayerAny
+	switch parsed.controller {
+	case ControllerYou:
+		player = TriggerPlayerYou
+	case ControllerOpponent:
+		player = TriggerPlayerOpponent
+	default:
+	}
+	return damageRecipientPattern{
+		recipient: TriggerDamageRecipientPermanent,
+		player:    player,
+		selection: parsed.selection,
+		ok:        true,
+	}
 }
 
 func recognizeDamageTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {

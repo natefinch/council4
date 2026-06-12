@@ -1143,6 +1143,76 @@ func TestValidateCardDefReportsTriggerPatternDualSpecification(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefRejectsInvalidIndependentTriggerPatternFields(t *testing.T) {
+	invalidSelection := Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		ExcludedTypes: []types.Card{types.Creature},
+	}
+	tests := []struct {
+		name    string
+		pattern TriggerPattern
+	}{
+		{
+			name: "damage source selection",
+			pattern: TriggerPattern{
+				Event:                 EventDamageDealt,
+				DamageSourceSelection: invalidSelection,
+			},
+		},
+		{
+			name: "damage recipient is source",
+			pattern: TriggerPattern{
+				Event:                   EventDamageDealt,
+				DamageRecipient:         DamageRecipientPlayer,
+				DamageRecipientIsSource: true,
+			},
+		},
+		{
+			name: "attack recipient selection",
+			pattern: TriggerPattern{
+				Event:                    EventAttackerDeclared,
+				AttackRecipientSelection: invalidSelection,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name: "Invalid Trigger Pattern",
+				TriggeredAbilities: []TriggeredAbility{{
+					Content: Mode{}.Ability(),
+					Trigger: TriggerCondition{Pattern: tt.pattern},
+				}},
+			}}
+
+			issues := ValidateCardDef(card)
+
+			if len(issues) != 1 || issues[0].Code != CardDefIssueInvalidSelection {
+				t.Fatalf("issues = %+v, want one %s", issues, CardDefIssueInvalidSelection)
+			}
+		})
+	}
+}
+
+func TestValidateCardDefReportsOneInvalidOneOrMorePerAttackTargetIssue(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name: "Invalid Per-Target Attack Trigger",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:                    EventAttackerDeclared,
+				OneOrMorePerAttackTarget: true,
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if len(issues) != 1 || issues[0].Code != CardDefIssueInvalidSelection {
+		t.Fatalf("issues = %+v, want one %s", issues, CardDefIssueInvalidSelection)
+	}
+}
+
 func TestValidateCardDefAllowsTokenOnlyTriggerSubject(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Token Watcher",

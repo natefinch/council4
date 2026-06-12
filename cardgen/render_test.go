@@ -1034,6 +1034,43 @@ func TestRenderCombatTriggerPattern(t *testing.T) {
 	}
 }
 
+func TestRenderSaturatedCombatTriggerPattern(t *testing.T) {
+	ctx := newRenderCtx()
+	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+		Event:                    game.EventAttackerDeclared,
+		RelatedSubjectSelection:  game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		DamageRecipientSelection: game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}},
+		DamageRecipientIsSource:  true,
+		DamageSourceSelection:    game.Selection{Controller: game.ControllerYou},
+		AttackRecipient:          game.AttackRecipientPlayer | game.AttackRecipientPlaneswalker,
+		AttackRecipientSelection: game.Selection{Controller: game.ControllerYou},
+		RequireNonCombatDamage:   true,
+		OneOrMore:                true,
+		OneOrMorePerAttackTarget: true,
+		StepPlayerSourceAttachedSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"RelatedSubjectSelection:",
+		"DamageRecipientSelection:",
+		"DamageRecipientIsSource: true",
+		"DamageSourceSelection:",
+		"AttackRecipient: game.AttackRecipientPlayer | game.AttackRecipientPlaneswalker",
+		"AttackRecipientSelection:",
+		"RequireNonCombatDamage: true",
+		"OneOrMorePerAttackTarget: true",
+		"StepPlayerSourceAttachedSelection:",
+	} {
+		if !strings.Contains(lit, want) {
+			t.Fatalf("trigger pattern literal %q does not contain %q", lit, want)
+		}
+	}
+}
+
 func TestRenderTriggerPatternRecipientTypesWithoutRecipient(t *testing.T) {
 	ctx := newRenderCtx()
 	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{

@@ -67,4 +67,9 @@ type CombatState struct {
 	// amount of damage it deals in combat. Populated during the combat
 	// damage step.
 	DamageAssignment map[id.ID]int
+
+	// BlockDeclarationBatchID groups blocker events from the one simultaneous
+	// declare-blockers turn-based action, including declarations made by
+	// different defending players.
+	BlockDeclarationBatchID id.ID
 }

@@ -208,13 +208,15 @@ keywords, mana value, power, and toughness. `Leaves ... without dying` is an
 exact excluded-destination pattern.
 Phase and step triggered abilities with `At the beginning of …` recognize exact
 supported controller-relative upkeep, draw, end, combat, combat-step, and main
-phase variants through shared relation-and-step slots. Common exact self and
-controller-relative attack, block, tap, untap, and self became-target phrases
-likewise bind shared relation, Selection, event, and qualifier slots rather than
-whole-phrase semantic branches. One-or-more wording is accepted only for event
-families whose runtime emission supports correct batching. Unsupported phrase
-variants, compound events, temporal qualifiers, and unavailable Selection
-predicates remain fail-closed.
+phase variants through shared relation-and-step slots, including a step
+belonging to the controller of an enchanted permanent. Combat templates bind
+named/self/attached and semantic Selection subjects, the other blocking
+combatant, attacked player or permanent recipients, damage-source and
+damage-recipient Selections, combat/noncombat qualifiers, and exact player
+relations. Player-level attack wording and `one or more` attack, block, and
+combat-damage wording bind explicit batch semantics, including per-attack-target
+coalescing. Unsupported phrase variants, compound events, temporal qualifiers,
+and unavailable runtime relations remain fail-closed.
 Self-dies triggers support exact
 absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.
