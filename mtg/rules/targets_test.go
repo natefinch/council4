@@ -34,6 +34,51 @@ func TestSingleModeContentDoesNotRequireModeChoice(t *testing.T) {
 	}
 }
 
+func TestBodyTargetsRejectMissingModalChoice(t *testing.T) {
+	body := &game.ActivatedAbility{
+		Content: game.AbilityContent{
+			SharedTargets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "player"}},
+			MinModes:      1,
+			MaxModes:      1,
+			Modes:         []game.Mode{{}, {}},
+		},
+	}
+
+	result := targetChoicesForBodyFromSourceObjectWithModes(nil, game.Player1, nil, 0, body, nil)
+	if result.kind != targetInvalidSpec {
+		t.Fatalf("target choice kind = %v, want targetInvalidSpec", result.kind)
+	}
+	if targetsValidForBodyFromSourceObjectWithModes(nil, game.Player1, nil, 0, body, nil, nil) {
+		t.Fatal("targets accepted without a required modal choice")
+	}
+}
+
+func TestModeChoiceRangeWithDuplicateModes(t *testing.T) {
+	content := game.AbilityContent{
+		MinModes:            3,
+		MaxModes:            3,
+		AllowDuplicateModes: true,
+		Modes:               []game.Mode{{}, {}},
+	}
+
+	choices := modeChoicesForContent(content)
+	want := [][]int{{0, 0, 0}, {0, 0, 1}, {0, 1, 1}, {1, 1, 1}}
+	if !slices.EqualFunc(choices, want, slices.Equal) {
+		t.Fatalf("mode choices = %v, want %v", choices, want)
+	}
+	if !modesValidForContent(content, []int{0, 1, 1}) {
+		t.Fatal("valid repeated mode choice was rejected")
+	}
+
+	content.AllowDuplicateModes = false
+	if choices := modeChoicesForContent(content); len(choices) != 0 {
+		t.Fatalf("choices for impossible nonduplicate range = %v, want none", choices)
+	}
+	if modesValidForContent(content, []int{0, 1, 1}) {
+		t.Fatal("impossible nonduplicate mode choice was accepted")
+	}
+}
+
 func TestPlayerTargetedSpellCreatesOneLegalActionPerAlivePlayer(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

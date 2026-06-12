@@ -63,7 +63,8 @@ func compileAbility(
 	}
 
 	body := abilityBodyTokens(ability)
-	timing, timingSpan := compileActivationTiming(ability.Kind, parseSentences(source, body))
+	timingTokens := semanticTokens(body, ability.Reminders, ability.Quoted)
+	timing, timingSpan := compileActivationTiming(ability.Kind, parseSentences(source, timingTokens))
 	if timing != ActivationTimingNone {
 		body = tokensOutsideSpan(body, timingSpan)
 		compiled.ActivationTiming = timing
@@ -109,7 +110,9 @@ func compileAbility(
 		compiled.Content.Effects,
 		compiled.Trigger,
 	)
+	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References)
+	recognizeActivationZone(&compiled)
 	if compiled.Trigger != nil && compiled.Trigger.Condition != nil {
 		for i := range compiled.Content.Conditions {
 			if compiled.Content.Conditions[i].Span == compiled.Trigger.Condition.Span {
@@ -162,6 +165,10 @@ func compileActivationTiming(kind AbilityKind, sentences []Sentence) (Activation
 	last := len(sentences) - 1
 	lastKind := activationTimingSentence(sentences[last].Text)
 	if lastKind == ActivationTimingNone {
+		if strings.HasPrefix(sentences[last].Text, "Activate only ") &&
+			!strings.HasPrefix(sentences[last].Text, "Activate only if ") {
+			return ActivationTimingUnsupported, sentences[last].Span
+		}
 		return ActivationTimingNone, Span{}
 	}
 	if last > 0 {
@@ -174,10 +181,80 @@ func compileActivationTiming(kind AbilityKind, sentences []Sentence) (Activation
 					End:   sentences[last].Span.End,
 				}
 			}
-			return ActivationTimingNone, Span{}
+			return ActivationTimingUnsupported, Span{
+				Start: sentences[last-1].Span.Start,
+				End:   sentences[last].Span.End,
+			}
 		}
 	}
 	return lastKind, sentences[last].Span
+}
+
+func recognizeActivationZone(ability *CompiledAbility) {
+	if ability.Kind != AbilityActivated {
+		return
+	}
+	ability.ActivationZone = zone.Battlefield
+	if activationCostUsesSourceFromGraveyard(*ability) ||
+		contentReturnsSourceFromGraveyard(ability.Content) {
+		ability.ActivationZone = zone.Graveyard
+	}
+}
+
+func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
+	if ability.Cost == nil {
+		return false
+	}
+	for _, reference := range ability.Content.References {
+		if reference.Binding != ReferenceBindingSource || !spanContains(ability.Cost.Span, reference.Span) {
+			continue
+		}
+		for _, component := range ability.Cost.Components {
+			if spanContains(component.Span, reference.Span) &&
+				strings.Contains(strings.ToLower(component.Text), "from your graveyard") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func contentReturnsSourceFromGraveyard(content AbilityContent) bool {
+	for effectIndex, effect := range content.Effects {
+		if effect.Kind != EffectReturn || effect.FromZone != zone.Graveyard {
+			continue
+		}
+		for _, reference := range content.References {
+			if reference.Binding == ReferenceBindingSource &&
+				referenceFollowsEffectVerbInClause(effectIndex, content.Effects, reference.Span) {
+				return true
+			}
+		}
+	}
+	for _, mode := range content.Modes {
+		if contentReturnsSourceFromGraveyard(mode.Content) {
+			return true
+		}
+	}
+	return false
+}
+
+func referenceFollowsEffectVerbInClause(effectIndex int, effects []CompiledEffect, reference Span) bool {
+	effect := effects[effectIndex]
+	if reference.Start.Offset < effect.VerbSpan.End.Offset || reference.End.Offset > effect.Span.End.Offset {
+		return false
+	}
+	for i := effectIndex + 1; i < len(effects); i++ {
+		next := effects[i]
+		if next.Span != effect.Span {
+			continue
+		}
+		if next.VerbSpan.Start.Offset < reference.End.Offset {
+			return false
+		}
+		break
+	}
+	return true
 }
 
 func activationTimingSentence(text string) ActivationTimingKind {

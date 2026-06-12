@@ -72,8 +72,10 @@ func TestActivateAbilityPreservesTargets(t *testing.T) {
 		game.PlayerTarget(game.Player3),
 		game.PermanentTarget(id.ID(100)),
 	}
+	modes := []int{1}
+	targetCounts := []int{1, 1}
 
-	got := ActivateAbility(sourceID, 2, targets, 0)
+	got := ActivateAbilityWithModesAndTargetCounts(sourceID, 2, targets, targetCounts, 0, modes)
 	if got.Kind != ActionActivateAbility {
 		t.Fatalf("ActivateAbility() kind = %v, want %v", got.Kind, ActionActivateAbility)
 	}
@@ -87,10 +89,21 @@ func TestActivateAbilityPreservesTargets(t *testing.T) {
 	if !slices.Equal(activate.Targets, targets) {
 		t.Fatalf("ActivateAbility() targets = %+v, want %+v", activate.Targets, targets)
 	}
+	if !slices.Equal(activate.TargetCounts, targetCounts) {
+		t.Fatalf("ActivateAbility() target counts = %+v, want %+v", activate.TargetCounts, targetCounts)
+	}
 	targets[0] = game.PlayerTarget(game.Player4)
+	targetCounts[0] = 0
+	modes[0] = 0
 	activate, _ = got.ActivateAbilityPayload()
 	if activate.Targets[0] != game.PlayerTarget(game.Player3) {
 		t.Fatalf("ActivateAbility() targets aliased caller slice: %+v", activate.Targets)
+	}
+	if !slices.Equal(activate.TargetCounts, []int{1, 1}) {
+		t.Fatalf("ActivateAbility() target counts aliased caller slice: %+v", activate.TargetCounts)
+	}
+	if !slices.Equal(activate.ChosenModes, []int{1}) {
+		t.Fatalf("ActivateAbility() chosen modes aliased caller slice: %+v", activate.ChosenModes)
 	}
 }
 

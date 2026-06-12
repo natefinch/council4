@@ -294,14 +294,16 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 			}
 			if body, ok := ability.(game.ActivatedAbility); ok {
 				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
-					targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, &body)
-					if targetResult.kind == targetInvalidSpec {
-						continue
-					}
-					for _, targets := range targetResult.choices {
-						if canActivateEquipAbility(g, playerID, permanent, &body, idx, targets, xValue) ||
-							canActivateGeneralAbility(g, playerID, permanent, &body, idx, targets, xValue) {
-							actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, append([]game.Target(nil), targets...), xValue))
+					for _, modes := range modeChoicesForBody(&body) {
+						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, &body, modes)
+						if targetResult.kind == targetInvalidSpec {
+							continue
+						}
+						for choiceIndex, targets := range targetResult.choices {
+							if canActivateEquipAbilityWithModes(g, playerID, permanent, &body, idx, targets, xValue, modes) ||
+								canActivateGeneralAbilityWithModes(g, playerID, permanent, &body, idx, targets, xValue, modes) {
+								actions = append(actions, actionBuild.activateAbilityWithModes(permanent.ObjectID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
+							}
 						}
 					}
 				}
@@ -315,9 +317,9 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 			if targetResult.kind == targetInvalidSpec {
 				continue
 			}
-			for _, targets := range targetResult.choices {
+			for choiceIndex, targets := range targetResult.choices {
 				if canActivateLoyaltyAbility(g, playerID, permanent, &body, idx, targets, 0) {
-					actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, append([]game.Target(nil), targets...), 0))
+					actions = append(actions, actionBuild.activateAbilityWithModes(permanent.ObjectID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], 0, nil))
 				}
 			}
 		}
@@ -342,13 +344,15 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 			body := &def.ActivatedAbilities[i]
 			idx := def.ActivatedAbilityIndex(i)
 			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
-				targetResult := targetChoicesForBodyFromSourceObject(g, playerID, def, 0, body)
-				if targetResult.kind == targetInvalidSpec {
-					continue
-				}
-				for _, targets := range targetResult.choices {
-					if canActivateGraveyardAbility(g, playerID, cardID, body, idx, targets, xValue) {
-						actions = append(actions, actionBuild.activateAbility(cardID, idx, append([]game.Target(nil), targets...), xValue))
+				for _, modes := range modeChoicesForBody(body) {
+					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, modes)
+					if targetResult.kind == targetInvalidSpec {
+						continue
+					}
+					for choiceIndex, targets := range targetResult.choices {
+						if canActivateGraveyardAbilityWithModes(g, playerID, cardID, body, idx, targets, xValue, modes) {
+							actions = append(actions, actionBuild.activateAbilityWithModes(cardID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
+						}
 					}
 				}
 			}
@@ -831,7 +835,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	}
 
 	if manaBody, ok := body.(game.ManaAbility); ok && canActivateManaAbility(g, playerID, permanent, &manaBody, activate.AbilityIndex) {
-		if len(activate.Targets) != 0 || activate.XValue != 0 {
+		if len(activate.Targets) != 0 || len(activate.TargetCounts) != 0 || activate.XValue != 0 || len(activate.ChosenModes) != 0 {
 			return false
 		}
 		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), 0, agents, log)
@@ -872,30 +876,30 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		return false
 	}
 	if activatedOK &&
-		!canActivateEquipAbility(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue) &&
-		!canActivateGeneralAbility(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue) &&
+		!canActivateEquipAbilityWithModes(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
+		!canActivateGeneralAbilityWithModes(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
 		!loyaltyOK {
 		return false
 	}
-	if loyaltyOK && !canActivateLoyaltyAbility(g, playerID, permanent, &loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue) {
+	if loyaltyOK && (len(activate.ChosenModes) != 0 || !canActivateLoyaltyAbility(g, playerID, permanent, &loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue)) {
 		return false
 	}
-	completedTargets, ok := e.completeAbilityAnnouncementTargets(g, playerID, card, permanent.ObjectID, body, activate.Targets, agents, log)
+	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, card, permanent.ObjectID, body, activate.ChosenModes, activate.Targets, agents, log)
 	if !ok {
 		return false
 	}
 	activate.Targets = completedTargets
-	targetCounts, ok := bodyTargetCounts(g, playerID, card, permanent.ObjectID, body, activate.Targets)
+	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, card, permanent.ObjectID, body, activate.ChosenModes, activate.TargetCounts, activate.Targets)
 	if !ok {
-		panic("validated ability targets could not be segmented")
+		return false
 	}
 	if activatedOK &&
-		!canActivateEquipAbility(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue) &&
-		!canActivateGeneralAbility(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue) &&
+		!canActivateEquipAbilityWithModes(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
+		!canActivateGeneralAbilityWithModes(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
 		!loyaltyOK {
 		return false
 	}
-	if loyaltyOK && !canActivateLoyaltyAbility(g, playerID, permanent, &loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue) {
+	if loyaltyOK && (len(activate.ChosenModes) != 0 || !canActivateLoyaltyAbility(g, playerID, permanent, &loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue)) {
 		return false
 	}
 	sourceCardID := permanent.CardInstanceID
@@ -940,6 +944,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		Controller:     playerID,
 		Targets:        append([]game.Target(nil), activate.Targets...),
 		TargetCounts:   targetCounts,
+		ChosenModes:    append([]int(nil), activate.ChosenModes...),
 		XValue:         activate.XValue,
 	}
 	if activatedOK {
@@ -958,18 +963,18 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 
 func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	card, ability, ok := graveyardAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
-	if !ok || !canActivateGraveyardAbility(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
+	if !ok || !canActivateGraveyardAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
 		return false
 	}
 	sourceZoneVersion := card.ZoneVersion
 	def := cardFaceOrDefault(card, game.FaceFront)
-	completedTargets, ok := e.completeAbilityAnnouncementTargets(g, playerID, def, 0, &ability, activate.Targets, agents, log)
-	if !ok || !canActivateGraveyardAbility(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue) {
+	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, def, 0, &ability, activate.ChosenModes, activate.Targets, agents, log)
+	if !ok || !canActivateGraveyardAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
 		return false
 	}
-	targetCounts, ok := bodyTargetCounts(g, playerID, def, 0, &ability, completedTargets)
+	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets)
 	if !ok {
-		panic("validated graveyard ability targets could not be segmented")
+		return false
 	}
 	prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
@@ -995,6 +1000,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		Controller:        playerID,
 		Targets:           append([]game.Target(nil), completedTargets...),
 		TargetCounts:      targetCounts,
+		ChosenModes:       append([]int(nil), activate.ChosenModes...),
 		XValue:            activate.XValue,
 	}
 	pushAbilityToStack(g, obj)
@@ -1039,6 +1045,9 @@ func (e *Engine) applyCyclingAbility(g *game.Game, playerID game.PlayerID, activ
 }
 
 func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if len(activate.TargetCounts) != 0 || len(activate.ChosenModes) != 0 {
+		return false
+	}
 	card, ability, ok := cyclingAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
 	if !ok {
 		return false
@@ -1078,6 +1087,9 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if len(activate.TargetCounts) != 0 || len(activate.ChosenModes) != 0 {
+		return false
+	}
 	card, ability, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
 	if !ok || !canActivateNinjutsuAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
@@ -1633,6 +1645,10 @@ func graveyardAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 }
 
 func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
+	return canActivateEquipAbilityWithModes(g, playerID, permanent, body, abilityIndex, targets, xValue, nil)
+}
+
+func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
@@ -1649,7 +1665,8 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 		return false
 	}
 	card, ok := permanentCardDef(g, permanent)
-	if !ok || !targetsValidForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, body, targets) {
+	if !ok || !modesValidForBody(body, chosenModes) ||
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) {
 		return false
 	}
 	if len(targets) != 1 || targets[0].Kind != game.TargetPermanent {
@@ -1663,6 +1680,10 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 }
 
 func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
+	return canActivateGeneralAbilityWithModes(g, playerID, permanent, body, abilityIndex, targets, xValue, nil)
+}
+
+func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
@@ -1676,7 +1697,8 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 		return false
 	}
 	card, ok := permanentCardDef(g, permanent)
-	if !ok || !targetsValidForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, body, targets) {
+	if !ok || !modesValidForBody(body, chosenModes) ||
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) {
 		return false
 	}
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
@@ -1711,6 +1733,10 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 }
 
 func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
+	return canActivateGraveyardAbilityWithModes(g, playerID, cardID, body, abilityIndex, targets, xValue, nil)
+}
+
+func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -1720,12 +1746,16 @@ func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing) {
 		return false
 	}
+	if !activationConditionSatisfied(g, playerID, nil, body.ActivationCondition) {
+		return false
+	}
 	card, _, ok := graveyardAbilitySource(g, playerID, cardID, abilityIndex)
 	if !ok {
 		return false
 	}
 	def := cardFaceOrDefault(card, game.FaceFront)
-	if !targetsValidForBodyFromSourceObject(g, playerID, def, 0, body, targets) {
+	if !modesValidForBody(body, chosenModes) ||
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) {
 		return false
 	}
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{

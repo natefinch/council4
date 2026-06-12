@@ -510,7 +510,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedActivatedCost(t *testing.
 			if source != "" {
 				t.Fatalf("source = %q, want no partial card", source)
 			}
-			if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported activated ability" {
+			if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported activation cost" {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 		})
@@ -3533,8 +3533,8 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		"activated": {
 			typeLine:   "Creature — Bear",
 			oracleText: "Remove a +1/+1 counter from target creature: Draw a card.",
-			summary:    "unsupported activated ability",
-			detail:     "supports only exact typed costs",
+			summary:    "unsupported activation cost",
+			detail:     "cannot lower every typed activation cost component",
 		},
 		"parameterized keyword": {
 			typeLine:   "Creature — Snake",
@@ -4061,6 +4061,7 @@ func TestGenerateExecutableCardSourceTourachDreadCantor(t *testing.T) {
 		Power:      new("2"),
 		Toughness:  new("1"),
 	}
+
 	_, diagnostics, err := GenerateExecutableCardSource(card, "t")
 	if err != nil {
 		t.Fatal(err)
@@ -4080,5 +4081,33 @@ func TestGenerateExecutableCardSourceTourachDreadCantor(t *testing.T) {
 	}
 	if !foundBodyDiagnostic {
 		t.Fatalf("diagnostics = %#v, want unsupported counter placement", diagnostics)
+	}
+}
+
+func TestGenerateExecutableCardSourceModalActivatedAbility(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Console",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{1}, Discard a card: Choose one —\n• Draw a card.\n• You gain 3 life.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ActivatedAbility{",
+		"AdditionalDiscard",
+		"MinModes: 1",
+		"MaxModes: 1",
+		"game.Draw{",
+		"game.GainLife{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
 	}
 }

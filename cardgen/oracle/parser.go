@@ -25,16 +25,17 @@ func Parse(source string, context ParseContext) (Document, []Diagnostic) {
 		}
 		ability, abilityDiagnostics := parseAbility(source, lines[i], context)
 		diagnostics = append(diagnostics, abilityDiagnostics...)
-		if isModalHeader(lines[i]) {
-			dash := topLevelIndex(lines[i], EmDash)
-			headerTokens := lines[i]
-			if dash+1 < len(lines[i]) {
-				headerTokens = lines[i][:dash+1]
+		if modalStart := modalHeaderStart(lines[i]); modalStart >= 0 {
+			modalTokens := lines[i][modalStart:]
+			dash := topLevelIndex(modalTokens, EmDash)
+			headerTokens := modalTokens
+			if dash+1 < len(modalTokens) {
+				headerTokens = modalTokens[:dash+1]
 			}
 			modal := &Modal{Header: phraseFromTokens(source, headerTokens)}
 			j := i + 1
-			if dash+1 < len(lines[i]) {
-				for _, modeTokens := range inlineModeTokens(lines[i][dash+1:]) {
+			if dash+1 < len(modalTokens) {
+				for _, modeTokens := range inlineModeTokens(modalTokens[dash+1:]) {
 					mode, modeDiagnostics := parseMode(source, modeTokens)
 					modal.Options = append(modal.Options, mode)
 					diagnostics = append(diagnostics, modeDiagnostics...)
@@ -79,7 +80,7 @@ func parseAbility(
 		Tokens: cloneTokens(tokens),
 	}
 	body := tokens
-	if dash := topLevelIndex(tokens, EmDash); dash > 0 && !isModalHeader(tokens) {
+	if dash, modalStart := topLevelIndex(tokens, EmDash), modalHeaderStart(tokens); dash > 0 && (modalStart < 0 || dash < modalStart) {
 		if chapters, ok := parseChapterHeading(tokens[:dash]); context.Saga && ok {
 			ability.Chapters = chapters
 			ability.ChapterSpan = spanOf(tokens[:dash])
@@ -442,12 +443,24 @@ func isModalHeader(tokens []Token) bool {
 	if !startsWithWord(tokens, "choose") {
 		return false
 	}
+
 	dash := topLevelIndex(tokens, EmDash)
 	if dash < 0 {
 		return false
 	}
 	period := topLevelIndex(tokens, Period)
 	return period < 0 || dash < period
+}
+
+func modalHeaderStart(tokens []Token) int {
+	if isModalHeader(tokens) {
+		return 0
+	}
+	colon := topLevelIndex(tokens, Colon)
+	if colon >= 0 && colon+1 < len(tokens) && isModalHeader(tokens[colon+1:]) {
+		return colon + 1
+	}
+	return -1
 }
 
 func topLevelIndex(tokens []Token, wanted Kind) int {

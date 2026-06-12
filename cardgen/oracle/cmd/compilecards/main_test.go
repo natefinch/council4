@@ -110,7 +110,7 @@ func TestRunReportsCompilerAndBackendDiagnostics(t *testing.T) {
 	}
 	for _, want := range []string{
 		"unsupported cost",
-		"unsupported activated ability",
+		"unsupported activation cost",
 		"unsupported triggered ability",
 	} {
 		if !summaries[want] {

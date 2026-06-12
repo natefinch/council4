@@ -4743,22 +4743,35 @@ func TestLowerKickedEnterTrigger(t *testing.T) {
 
 func TestLowerWasCastEnterTriggers(t *testing.T) {
 	t.Parallel()
-	for _, condition := range []string{"if it was cast", "if you cast it"} {
-		t.Run(condition, func(t *testing.T) {
-			t.Parallel()
-			face := lowerSingleFace(t, &ScryfallCard{
-				Name:       "Test Construct",
-				Layout:     "normal",
-				TypeLine:   "Artifact Creature — Construct",
-				OracleText: "When this creature enters, " + condition + ", draw a card.",
-				Power:      new("2"),
-				Toughness:  new("2"),
-			})
-			trigger := face.TriggeredAbilities[0].Trigger
-			if trigger.InterveningIf != condition || !trigger.InterveningIfEventPermanentWasCast {
-				t.Fatalf("trigger = %+v, want was-cast intervening-if", trigger)
-			}
-		})
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Construct",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "When this creature enters, if it was cast, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.InterveningIf != "if it was cast" || !trigger.InterveningIfEventPermanentWasCast {
+		t.Fatalf("trigger = %+v, want was-cast intervening-if", trigger)
+	}
+}
+
+func TestLowerSelfEnterTriggerRejectsCasterRelativeCondition(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Construct",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "When this creature enters, if you cast it, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("caster-relative self-enter condition unexpectedly lowered")
 	}
 }
 
@@ -10229,6 +10242,7 @@ func TestLowerContentDiagnosticDistinguishesShellFromContent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if len(diagnostics) == 0 {
 			t.Fatal("want at least one diagnostic, got none")
 		}
@@ -10556,4 +10570,194 @@ func TestLowerContentSpanContract(t *testing.T) {
 			t.Fatal("expected no spell ability for unsupported text, got one")
 		}
 	})
+}
+
+func TestLowerGenericModalActivatedAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Console",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{1}, Discard a card: Choose one —\n• Draw a card.\n• You gain 3 life.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	ability := face.ActivatedAbilities[0]
+	if !ability.ManaCost.Exists || len(ability.ManaCost.Val) != 1 {
+		t.Fatalf("mana cost = %#v, want {1}", ability.ManaCost)
+	}
+	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0].Kind != cost.AdditionalDiscard {
+		t.Fatalf("additional costs = %#v, want discard", ability.AdditionalCosts)
+	}
+	if !ability.Content.IsModal() || ability.Content.MinModes != 1 || ability.Content.MaxModes != 1 || len(ability.Content.Modes) != 2 {
+		t.Fatalf("content = %#v, want choose-one modal content", ability.Content)
+	}
+	if _, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("first mode primitive = %T, want game.Draw", ability.Content.Modes[0].Sequence[0].Primitive)
+	}
+	if _, ok := ability.Content.Modes[1].Sequence[0].Primitive.(game.GainLife); !ok {
+		t.Fatalf("second mode primitive = %T, want game.GainLife", ability.Content.Modes[1].Sequence[0].Primitive)
+	}
+}
+
+func TestPrepareModalActivationCondition(t *testing.T) {
+	t.Parallel()
+	ability := oracle.CompiledAbility{
+		Content: oracle.AbilityContent{
+			Modes: []oracle.CompiledMode{{Content: oracle.AbilityContent{
+				Effects: []oracle.CompiledEffect{{
+					Kind: oracle.EffectDraw,
+					Span: oracle.Span{
+						Start: oracle.Position{Offset: 10},
+						End:   oracle.Position{Offset: 20},
+					},
+				}},
+			}}},
+			Conditions: []oracle.CompiledCondition{{
+				Kind:      oracle.ConditionOnlyIf,
+				Text:      "only if you have no cards in hand",
+				Predicate: oracle.ConditionPredicateControllerHandEmpty,
+				Span: oracle.Span{
+					Start: oracle.Position{Offset: 30},
+					End:   oracle.Position{Offset: 40},
+				},
+			}},
+		},
+	}
+	syntax := oracle.Ability{}
+	condition, ok := prepareActivationCondition(&ability, &syntax)
+	if !ok || !condition.Exists || !condition.Val.ControllerHandEmpty {
+		t.Fatalf("condition = %#v, ok = %v, want modal activation condition", condition, ok)
+	}
+	if len(ability.Content.Conditions) != 0 {
+		t.Fatalf("remaining conditions = %#v, want none", ability.Content.Conditions)
+	}
+}
+
+func TestLowerActivatedAbilityComposesCostTimingAndCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Console",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{1}, {T}, Pay 2 life: Draw a card. Activate only if you control an artifact. Activate only as a sorcery.",
+	})
+	ability := face.ActivatedAbilities[0]
+	if ability.Timing != game.SorceryOnly || !ability.ActivationCondition.Exists {
+		t.Fatalf("timing/condition = %v/%#v, want sorcery and condition", ability.Timing, ability.ActivationCondition)
+	}
+	if len(ability.AdditionalCosts) != 2 ||
+		ability.AdditionalCosts[0].Kind != cost.AdditionalTap ||
+		ability.AdditionalCosts[1].Kind != cost.AdditionalPayLife {
+		t.Fatalf("additional costs = %#v, want printed tap then pay-life order", ability.AdditionalCosts)
+	}
+}
+
+func TestActivatedAbilityCapabilityDiagnostics(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		summary    string
+	}{
+		{name: "cost", oracleText: "Exile a card: Draw a card.", summary: "unsupported activation cost"},
+		{name: "timing", oracleText: "{1}: Draw a card. Activate only during your end step.", summary: "unsupported activation timing"},
+		{name: "condition", oracleText: "{1}: Draw a card. Activate only if you have one or fewer cards in hand.", summary: "unsupported activation condition"},
+		{name: "references", oracleText: "{1}: It deals 1 damage to any target.", summary: "unsupported activation references"},
+		{name: "ambiguous cost references", oracleText: "Put a +1/+1 counter on them: Draw a card.", summary: "unsupported activation references"},
+		{name: "cost reference to prior object", oracleText: "Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", summary: "unsupported activation references"},
+		{name: "cost reference after source and prior object", oracleText: "Remove a charge counter from this artifact, Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", summary: "unsupported activation references"},
+		{name: "modes", oracleText: "{1}: Choose any number —\n• Draw a card.\n• You gain 3 life.", summary: "unsupported activation modes"},
+		{name: "partially understood mode", oracleText: "{1}: Choose one —\n• Gain control of target creature until end of turn. The Ring tempts you.\n• You gain 3 life.", summary: "unsupported activation modes"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Console",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.ContainsFunc(diagnostics, func(diagnostic oracle.Diagnostic) bool {
+				return diagnostic.Summary == test.summary
+			}) {
+				t.Fatalf("diagnostics = %#v, want %q", diagnostics, test.summary)
+			}
+		})
+	}
+}
+
+func TestActivatedAbilityZoneDiagnostic(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := oracle.Compile("{1}: Draw a card.", oracle.ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("compile diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	ability.ActivationZone = zone.Hand
+	_, diagnostic := lowerActivationShell("", ability, compilation.Syntax.Abilities[0])
+	if diagnostic == nil || diagnostic.Summary != "unsupported activation zone" {
+		t.Fatalf("diagnostic = %#v, want unsupported activation zone", diagnostic)
+	}
+}
+
+func TestSemanticManaAbilityRequiresNoTargets(t *testing.T) {
+	t.Parallel()
+	untargeted, diagnostics := oracle.Compile("{T}: Add {G}.", oracle.ParseContext{})
+	if len(diagnostics) != 0 || !isSemanticManaAbility(untargeted.Abilities[0]) {
+		t.Fatalf("untargeted add-mana ability classification = false, diagnostics %#v", diagnostics)
+	}
+	targeted, diagnostics := oracle.Compile("{T}: Target player adds {G}.", oracle.ParseContext{})
+	if len(diagnostics) != 0 || isSemanticManaAbility(targeted.Abilities[0]) {
+		t.Fatalf("targeted add-mana ability classification = true, diagnostics %#v", diagnostics)
+	}
+}
+
+func TestLowerAddManaThroughSharedAbilityContent(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		content    func(loweredFaceAbilities) game.AbilityContent
+	}{
+		{
+			name:       "spell",
+			typeLine:   "Instant",
+			oracleText: "Add {B}{B}{B}.",
+			content:    func(face loweredFaceAbilities) game.AbilityContent { return face.SpellAbility.Val },
+		},
+		{
+			name:       "trigger",
+			typeLine:   "Creature — Goblin",
+			oracleText: "When this creature enters, add {R}.",
+			content:    func(face loweredFaceAbilities) game.AbilityContent { return face.TriggeredAbilities[0].Content },
+		},
+		{
+			name:       "mana ability",
+			typeLine:   "Land",
+			oracleText: "{T}: Add {G}.",
+			content:    func(face loweredFaceAbilities) game.AbilityContent { return face.ManaAbilities[0].Content },
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{Name: "Test Card", Layout: "normal", TypeLine: test.typeLine, OracleText: test.oracleText})
+			content := test.content(face)
+			if len(content.Modes) != 1 || len(content.Modes[0].Sequence) == 0 {
+				t.Fatalf("content = %#v, want add-mana sequence", content)
+			}
+			for _, instruction := range content.Modes[0].Sequence {
+				if _, ok := instruction.Primitive.(game.AddMana); !ok {
+					t.Fatalf("primitive = %T, want game.AddMana", instruction.Primitive)
+				}
+			}
+		})
+	}
 }

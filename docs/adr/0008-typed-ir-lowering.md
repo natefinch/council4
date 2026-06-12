@@ -58,6 +58,15 @@ correct layer:
    diagnostics (effect, target, keyword, reference failures) are owned by
    `lowerAbilityContent`.
    <br><br>
+   Activated shells use one focused `activation.go` composition path for typed
+   costs, activation timing, semantic zone of function, activation conditions,
+   bound references, modes, and shared Ability Content. Ordinary and mana
+   abilities share compatible shell modules but remain distinct runtime types;
+   unsupported capabilities fail closed with capability-specific diagnostics.
+   Modal activated abilities use the same `game.AbilityContent` mode
+   representation and lock chosen modes into their activation action and stack
+   object.
+   <br><br>
    Trigger shells follow the same boundary. `cardgen/oracle` recognizes exact
    Oracle event clauses into a source-spanned semantic `oracle.TriggerPattern`
    whose enums and Selection vocabulary do not depend on runtime `game` values.

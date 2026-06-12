@@ -74,7 +74,8 @@ Saga faces so Roman-numeral chapter headings are not confused with ability words
 The syntax tree preserves ordered abilities and exact source spans. It
 represents ability-word prefixes, top-level activation costs, sentences,
 parenthesized reminder text, quoted granted abilities, Saga chapter numbers, and
-modal choose headers with bullet options. Mode spans exclude the bullet marker. Delimiters inside
+modal choose headers with bullet options, including modal headers after an
+activated-ability cost. Mode spans exclude the bullet marker. Delimiters inside
 quotes or reminder text remain owned by that enclosing construct rather than
 creating overlapping sibling nodes. The parser classifies spell, activated, loyalty, triggered,
 chapter, replacement, static, and reminder paragraphs. This classification is syntactic;
@@ -97,7 +98,8 @@ The intermediate representation mirrors the information needed by categorized
 reusable body content — targets, conditions, effects, keywords, references, and
 nested modes — is grouped into a single `oracle.AbilityContent` value. Each
 `oracle.CompiledAbility` carries its shell semantics (cost, trigger clause,
-loyalty change, chapter numbers, text, span, optional flag) plus one
+activation timing and typed zone of function, loyalty change, chapter numbers,
+text, span, optional flag) plus one
 `oracle.AbilityContent`; each `oracle.CompiledMode` likewise carries its mode
 text and span plus one `oracle.AbilityContent`. The content group is the unit
 passed to `lowerAbilityContent` in `cardgen`. It records:
@@ -143,8 +145,9 @@ keywords, exact `Devoid (This card has no color.)`, positive-integer Toxic, and
 mana-cost Kicker, Madness, Morph, Disguise, Ward, Cycling, Ninjutsu, and Equip. It also
 lowers base-type Enchant, fixed color, card-type, subtype, multicolored,
 monocolored, each-color, and everything Protection, supported fixed and choice
-mana outputs with exact typed activation costs, ordinary activated abilities with exact typed costs and supported
-effect bodies, and exact trailing activation timing restrictions,
+mana outputs with exact typed activation costs, ordinary and modal activated
+abilities with exact typed costs and supported effect bodies, and exact trailing
+activation timing restrictions,
 unconditional enters-tapped replacements and common land-count or basic-land-subtype
 conditions, fixed, `X`, or supported typed dynamic single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes with common
