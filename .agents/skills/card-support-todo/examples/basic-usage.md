@@ -7,4 +7,6 @@
 ## Result
 
 The agent briefly checks for a duplicate, creates a concise issue labeled
-`Card Support TODO`, reports its URL, and resumes the current implementation.
+`To Be Triaged` and `Card Support TODO`, links it to the active issue, records it
+in the active epic without making it a child, reports its URL, and resumes the
+current implementation.
