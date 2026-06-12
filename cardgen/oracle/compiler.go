@@ -111,7 +111,7 @@ func compileAbility(
 		compiled.Trigger,
 	)
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
-	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References)
+	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)
 	recognizeActivationZone(&compiled)
 	if compiled.Trigger != nil && compiled.Trigger.Condition != nil {
 		for i := range compiled.Content.Conditions {

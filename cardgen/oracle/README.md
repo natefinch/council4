@@ -108,8 +108,13 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   and counter-removal costs;
 - trigger clauses and conditions. Conditions use a closed predicate, kind
   (`if`, `unless`, `only if`, or `as long as`), negation, threshold, counter,
-  and Selection vocabulary. Exact wording recognition lives in the condition
-  adapter; unsupported wording remains an explicit predicate;
+  bound source/event object reference, and Selection vocabulary (including
+  tapped state). Exact wording recognition lives in the condition adapter;
+  unsupported wording remains an explicit predicate. Event-history
+  conditions (`ConditionPredicateEventHistory`) carry a `TriggerPattern` and a
+  window (current-turn or previous-turn) so the lowering layer can delegate
+  directly to `lowerTriggerPattern` and runtime evaluation reuses
+  `triggerMatchesEvent`;
 - source-spanned semantic trigger patterns. A small registry of exact
   event-family templates recognizes permanent zone changes, spell/ability
   events, combat events, phase/step events, permanent state events, and player
@@ -126,9 +131,15 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   negation, and common durations;
 - card-name, `this`-object, `that`-object, and pronoun references. A conservative
   binding pass records whether each occurrence denotes the source, a specific
-  target occurrence, the triggering event permanent, or a prior instruction
-  result. Ambiguous and unsupported occurrences remain explicit and fail
-  closed; the compiler never guesses an antecedent;
+  target occurrence, the triggering event permanent, the triggering event
+  player, or a prior instruction result. Player-event trigger bodies
+  (`ReferenceBindingEventPlayer`) bind "they/their/them" when the trigger
+  event's subject role is authoritatively a player (draw, discard, cycle,
+  scry, surveil, life events); permanent-event trigger bodies continue to
+  bind "they/their/them" via `ReferenceBindingEventPermanent` when the
+  trigger event's subject role is authoritatively a permanent (attack,
+  die, tap, untap, and related events). Ambiguous and unsupported occurrences
+  remain explicit and fail closed; the compiler never guesses an antecedent;
 - source-spanned Static Declarations attached directly to a static ability,
   separate from resolving `AbilityContent`. Their closed semantic vocabulary
   records affected group domain plus Selection, source exclusion, optional
@@ -240,7 +251,13 @@ spell`, `an artifact spell`, `an enchantment spell`, `a land spell`, `a
 planeswalker spell`, `a noncreature, nonland spell`, and single-color forms `a
 white/blue/black/red/green spell`. Exact Threshold, Delirium, Domain, Metalcraft,
 Hellbent, Ferocious, and Coven conditions lower into typed live-state
-predicates and dynamic amounts. Self-cast (`when you cast this spell`),
+predicates and dynamic amounts. Event-history intervening conditions recognize
+eight exact phrases covering current-turn attacked/died/gained-life/lost-life
+and previous-turn lost-life/no-spells-cast; each carries a `TriggerPattern` and
+an `EventHistoryWindow` so the lowering path reuses `lowerTriggerPattern` and
+runtime evaluation reuses `triggerMatchesEvent`. `Negated` semantics are
+preserved for "no spells were cast last turn" and the predicate is only allowed
+in the intervening-trigger context. Self-cast (`when you cast this spell`),
 `TriggerWhen`, unsupported intervening-if conditions, unknown or non-exact
 ability-word forms, modes, and all other player or spell-phrase forms are
 fail-closed. An exact

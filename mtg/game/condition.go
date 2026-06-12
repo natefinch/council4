@@ -56,7 +56,10 @@ type Condition struct {
 
 	// Object tests a referenced object in the current condition context, such as
 	// a triggering event permanent. It may use last-known information.
+	// ObjectMatches, when present, applies the shared Selection semantics to that
+	// object. An empty ObjectMatches Selection is a wildcard existence check.
 	Object                                                       opt.V[ObjectReference]
+	ObjectMatches                                                opt.V[Selection]
 	Types                                                        []types.Card
 	EventPermanentNameUniqueAmongControlledAndGraveyardCreatures bool
 	SourceClassLevelAtLeast                                      int
@@ -65,6 +68,11 @@ type Condition struct {
 	ControllerHasMaxSpeed                                        bool
 	TargetEnteredThisTurn                                        opt.V[int]
 	CastFromZone                                                 opt.V[zone.Type]
+
+	// EventHistory is satisfied when the selected turn's event history contains
+	// at least one event matching the stored pattern. When Condition.Negate is
+	// true the predicate is inverted (e.g. "if no spells were cast last turn").
+	EventHistory opt.V[EventHistoryCondition]
 }
 
 // PermanentFilter matches permanents for reusable condition predicates. Empty
@@ -119,6 +127,7 @@ func (c *Condition) Empty() bool {
 		!c.AnyOpponentControls.Exists &&
 		!c.OpponentsControl.Exists &&
 		!c.Object.Exists &&
+		!c.ObjectMatches.Exists &&
 		len(c.Types) == 0 &&
 		!c.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures &&
 		c.SourceClassLevelAtLeast == 0 &&
@@ -126,5 +135,27 @@ func (c *Condition) Empty() bool {
 		!c.SourceNotMonstrous &&
 		!c.ControllerHasMaxSpeed &&
 		!c.TargetEnteredThisTurn.Exists &&
-		!c.CastFromZone.Exists
+		!c.CastFromZone.Exists &&
+		!c.EventHistory.Exists
+}
+
+// EventHistoryWindow selects which turn's event log an EventHistoryCondition
+// searches.
+type EventHistoryWindow uint8
+
+// Event history window values.
+const (
+	// EventHistoryCurrentTurn checks events emitted during the current turn.
+	EventHistoryCurrentTurn EventHistoryWindow = iota
+	// EventHistoryPreviousTurn checks events emitted during the immediately
+	// preceding turn.
+	EventHistoryPreviousTurn
+)
+
+// EventHistoryCondition checks that the chosen turn's event log contains at
+// least one event matching Pattern. Negate on the enclosing Condition inverts
+// the result (e.g. "if no spells were cast last turn").
+type EventHistoryCondition struct {
+	Pattern TriggerPattern
+	Window  EventHistoryWindow
 }

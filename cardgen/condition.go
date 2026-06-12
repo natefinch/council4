@@ -65,6 +65,43 @@ func lowerCondition(condition oracle.CompiledCondition, ctx conditionLoweringCon
 		result.ControllerGraveyardCardTypeCountAtLeast = condition.Threshold
 	case oracle.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
 		result.ControllerCreaturePowerDiversityAtLeast = condition.Threshold
+	case oracle.ConditionPredicateObjectMatches:
+		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
+		if !ok {
+			return game.Condition{}, false
+		}
+		selection, ok := lowerConditionSelection(condition.Selection)
+		if !ok || selection.Empty() {
+			return game.Condition{}, false
+		}
+		result.Object = opt.Val(object)
+		result.ObjectMatches = opt.Val(selection)
+	case oracle.ConditionPredicateObjectExists:
+		if condition.ObjectBinding != oracle.ReferenceBindingSource ||
+			!conditionSelectionEmpty(condition.Selection) {
+			return game.Condition{}, false
+		}
+		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
+		if !ok {
+			return game.Condition{}, false
+		}
+		result.Object = opt.Val(object)
+	case oracle.ConditionPredicateEventHistory:
+		if condition.EventHistoryPattern == nil {
+			return game.Condition{}, false
+		}
+		pattern, ok := lowerTriggerPattern(condition.EventHistoryPattern)
+		if !ok {
+			return game.Condition{}, false
+		}
+		window, ok := lowerEventHistoryWindow(condition.EventHistoryWindow)
+		if !ok {
+			return game.Condition{}, false
+		}
+		result.EventHistory = opt.Val(game.EventHistoryCondition{
+			Pattern: pattern,
+			Window:  window,
+		})
 	default:
 		return game.Condition{}, false
 	}
@@ -98,8 +135,12 @@ func conditionPredicateAllowedInContext(predicate oracle.ConditionPredicate, ctx
 			oracle.ConditionPredicateControllerHandEmpty,
 			oracle.ConditionPredicateControllerGraveyardCardCountAtLeast,
 			oracle.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
-			oracle.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
+			oracle.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
+			oracle.ConditionPredicateObjectMatches,
+			oracle.ConditionPredicateObjectExists:
 			return true
+		case oracle.ConditionPredicateEventHistory:
+			return ctx == conditionContextInterveningTrigger
 		default:
 			return ctx == conditionContextStatic &&
 				predicate == oracle.ConditionPredicateControllerHandSizeAtLeast
@@ -142,6 +183,10 @@ func lowerConditionSelection(selection oracle.ConditionSelection) (game.Selectio
 	if !ok {
 		return game.Selection{}, false
 	}
+	tapped, ok := lowerConditionTriState(selection.Tapped)
+	if !ok {
+		return game.Selection{}, false
+	}
 	subtypes := make([]types.Sub, 0, len(selection.SubtypesAny))
 	for _, subtype := range selection.SubtypesAny {
 		if subtype == "" {
@@ -156,6 +201,7 @@ func lowerConditionSelection(selection oracle.ConditionSelection) (game.Selectio
 		ColorsAny:     colors,
 		Colorless:     selection.Colorless,
 		ExcludeSource: selection.ExcludeSource,
+		Tapped:        tapped,
 	}
 	if selection.MatchPowerAtLeast {
 		result.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.PowerAtLeast})
@@ -163,6 +209,31 @@ func lowerConditionSelection(selection oracle.ConditionSelection) (game.Selectio
 		return game.Selection{}, false
 	}
 	return result, len(result.Validate()) == 0
+}
+
+func lowerConditionObjectReference(binding oracle.ReferenceBinding) (game.ObjectReference, bool) {
+	return lowerObjectReference(oracle.CompiledReference{Binding: binding}, referenceLoweringContext{
+		AllowSource: true,
+		AllowEvent:  true,
+	})
+}
+
+func conditionSelectionEmpty(selection oracle.ConditionSelection) bool {
+	lowered, ok := lowerConditionSelection(selection)
+	return ok && lowered.Empty()
+}
+
+func lowerConditionTriState(value oracle.ConditionTriState) (game.TriState, bool) {
+	switch value {
+	case oracle.ConditionTriAny:
+		return game.TriAny, true
+	case oracle.ConditionTriTrue:
+		return game.TriTrue, true
+	case oracle.ConditionTriFalse:
+		return game.TriFalse, true
+	default:
+		return game.TriAny, false
+	}
 }
 
 func lowerConditionCardTypes(values []oracle.ConditionCardType) ([]types.Card, bool) {
@@ -222,4 +293,15 @@ func lowerConditionColors(values []oracle.ConditionColor) ([]color.Color, bool) 
 		}
 	}
 	return result, true
+}
+
+func lowerEventHistoryWindow(window oracle.ConditionEventHistoryWindow) (game.EventHistoryWindow, bool) {
+	switch window {
+	case oracle.ConditionEventHistoryWindowCurrentTurn:
+		return game.EventHistoryCurrentTurn, true
+	case oracle.ConditionEventHistoryWindowPreviousTurn:
+		return game.EventHistoryPreviousTurn, true
+	default:
+		return game.EventHistoryCurrentTurn, false
+	}
 }

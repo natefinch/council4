@@ -79,7 +79,7 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.OpponentsControl.Exists {
 		matches = matches && playersControlMatchingSelection(g, ctx, aliveOpponents(g, ctx.controller), cond.OpponentsControl.Val)
 	}
-	if cond.Object.Exists || len(cond.Types) > 0 {
+	if cond.Object.Exists || cond.ObjectMatches.Exists || len(cond.Types) > 0 {
 		matches = matches && conditionObjectMatches(g, ctx, &cond)
 	}
 	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
@@ -103,6 +103,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.CastFromZone.Exists {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.SourceZone == cond.CastFromZone.Val
+	}
+	if cond.EventHistory.Exists {
+		matches = matches && conditionEventHistorySatisfied(g, ctx, &cond.EventHistory.Val)
 	}
 	if cond.Negate {
 		return !matches
@@ -193,16 +196,33 @@ func permanentValuesForCondition(g *game.Game, permanent *game.Permanent, ctx co
 }
 
 func conditionObjectMatches(g *game.Game, ctx conditionContext, cond *game.Condition) bool {
+	if cond == nil || cond.ObjectMatches.Exists && !cond.Object.Exists {
+		return false
+	}
 	obj := ctx.obj
-	if obj == nil && ctx.event != nil {
-		obj = &game.StackObject{HasTriggerEvent: true, TriggerEvent: *ctx.event, Controller: ctx.controller}
+	if obj == nil && (ctx.event != nil || ctx.source != nil) {
+		obj = &game.StackObject{Controller: ctx.controller}
+		if ctx.event != nil {
+			obj.HasTriggerEvent = true
+			obj.TriggerEvent = *ctx.event
+		}
+		if ctx.source != nil {
+			obj.SourceID = ctx.source.ObjectID
+		}
 	}
 	ref := game.EventPermanentReference()
 	if cond.Object.Exists {
 		ref = cond.Object.Val
 	}
+	if obj == nil {
+		return false
+	}
 	resolved, ok := resolveObjectReference(g, obj, ref)
 	if !ok {
+		return false
+	}
+	if cond.ObjectMatches.Exists &&
+		!resolvedObjectMatchesConditionSelection(g, ctx, &resolved, &cond.ObjectMatches.Val) {
 		return false
 	}
 	for _, cardType := range cond.Types {
@@ -211,6 +231,50 @@ func conditionObjectMatches(g *game.Game, ctx conditionContext, cond *game.Condi
 		}
 	}
 	return true
+}
+
+func resolvedObjectMatchesConditionSelection(
+	g *game.Game,
+	ctx conditionContext,
+	resolved *resolvedObjectReference,
+	selection *game.Selection,
+) bool {
+	if resolved == nil || selection == nil {
+		return false
+	}
+	if resolved.permanent != nil {
+		values := permanentValuesForCondition(g, resolved.permanent, ctx)
+		subject := selectionSubject{
+			kind:      subjectPermanent,
+			g:         g,
+			permanent: resolved.permanent,
+			values:    &values,
+			viewer:    ctx.controller,
+		}
+		if selection.Controller != game.ControllerAny {
+			subject.controller = values.controller
+		}
+		if ctx.source != nil {
+			subject.sourceObjectID = ctx.source.ObjectID
+		}
+		return matchSelection(&subject, selection)
+	}
+	if resolved.snapshot.ObjectID == 0 {
+		return false
+	}
+	subject := selectionSubject{
+		kind:   subjectEventPermanent,
+		g:      g,
+		event:  game.Event{PermanentID: resolved.snapshot.ObjectID},
+		viewer: ctx.controller,
+	}
+	if selection.Controller != game.ControllerAny {
+		subject.controller = resolved.snapshot.Controller
+	}
+	if ctx.source != nil {
+		subject.sourceObjectID = ctx.source.ObjectID
+	}
+	return matchSelection(&subject, selection)
 }
 
 func resolvedObjectHasType(g *game.Game, resolved *resolvedObjectReference, cardType types.Card) bool {
@@ -391,4 +455,30 @@ func activationConditionSatisfied(g *game.Game, playerID game.PlayerID, permanen
 		controller: playerID,
 		source:     permanent,
 	}, condition)
+}
+
+// conditionEventHistorySatisfied returns true when the chosen turn's event
+// history contains at least one event matching hist.Pattern. The source
+// permanent is passed to triggerMatchesEvent so controller-relative filters
+// (TriggerControllerYou, TriggerPlayerYou, etc.) resolve correctly. A nil
+// source permanent fails closed for any pattern that requires a controller.
+func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *game.EventHistoryCondition) bool {
+	if ctx.source == nil {
+		return false
+	}
+	var events []game.Event
+	switch hist.Window {
+	case game.EventHistoryCurrentTurn:
+		events = g.EventsThisTurn()
+	case game.EventHistoryPreviousTurn:
+		events = g.EventsPreviousTurn()
+	default:
+		return false
+	}
+	for _, event := range events {
+		if triggerMatchesEvent(g, ctx.source, &hist.Pattern, event) {
+			return true
+		}
+	}
+	return false
 }

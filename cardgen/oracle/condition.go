@@ -18,6 +18,9 @@ func recognizeCondition(condition *CompiledCondition) {
 
 	normalized := strings.ToLower(remainder)
 	condition.Negated = condition.Kind == ConditionUnless
+	if recognizeTriggerCompositionCondition(condition, normalized) {
+		return
+	}
 
 	switch normalized {
 	case "there are seven or more cards in your graveyard", "seven or more cards are in your graveyard":
@@ -135,7 +138,136 @@ func recognizeCondition(condition *CompiledCondition) {
 	}
 }
 
-func bindConditionReferences(conditions []CompiledCondition, references []CompiledReference) {
+func recognizeTriggerCompositionCondition(condition *CompiledCondition, normalized string) bool {
+	switch normalized {
+	case "you control two or more gates":
+		condition.Predicate = ConditionPredicateControllerControls
+		condition.Threshold = 2
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeLand}
+		condition.Selection.SubtypesAny = []string{string(types.Gate)}
+	case "you control two or more tapped creatures":
+		condition.Predicate = ConditionPredicateControllerControls
+		condition.Threshold = 2
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+		condition.Selection.Tapped = ConditionTriTrue
+	case "you control a creature with power 5 or greater":
+		condition.Predicate = ConditionPredicateControllerControls
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+		condition.Selection.PowerAtLeast = 5
+		condition.Selection.MatchPowerAtLeast = true
+	case "you control another creature with power 4 or greater":
+		condition.Predicate = ConditionPredicateControllerControls
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+		condition.Selection.ExcludeSource = true
+		condition.Selection.PowerAtLeast = 4
+		condition.Selection.MatchPowerAtLeast = true
+	case "you control an equipment":
+		condition.Predicate = ConditionPredicateControllerControls
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeArtifact}
+		condition.Selection.SubtypesAny = []string{string(types.Equipment)}
+	case "you control no creatures":
+		condition.Predicate = ConditionPredicateControllerControls
+		condition.Negated = true
+		condition.Threshold = 1
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+	case "you control three or more creatures":
+		condition.Predicate = ConditionPredicateControllerControls
+		condition.Threshold = 3
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+	case "you control a tapped creature":
+		condition.Predicate = ConditionPredicateControllerControls
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+		condition.Selection.Tapped = ConditionTriTrue
+	case "it was a creature", "it's a creature":
+		condition.Predicate = ConditionPredicateObjectMatches
+		condition.ObjectBinding = ReferenceBindingEventPermanent
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+	case "it was a human":
+		condition.Predicate = ConditionPredicateObjectMatches
+		condition.ObjectBinding = ReferenceBindingEventPermanent
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+		condition.Selection.SubtypesAny = []string{string(types.Human)}
+	case "it had counters on it":
+		condition.Predicate = ConditionPredicateEventSubjectHadCounters
+		condition.ObjectBinding = ReferenceBindingEventPermanent
+	case "this artifact is untapped":
+		condition.Predicate = ConditionPredicateObjectMatches
+		condition.ObjectBinding = ReferenceBindingSource
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeArtifact}
+		condition.Selection.Tapped = ConditionTriFalse
+	case "this creature is untapped":
+		condition.Predicate = ConditionPredicateObjectMatches
+		condition.ObjectBinding = ReferenceBindingSource
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeCreature}
+		condition.Selection.Tapped = ConditionTriFalse
+	case "this permanent is an enchantment":
+		condition.Predicate = ConditionPredicateObjectMatches
+		condition.ObjectBinding = ReferenceBindingSource
+		condition.Selection.RequiredTypes = []ConditionCardType{ConditionCardTypeEnchantment}
+	case "this creature is on the battlefield":
+		condition.Predicate = ConditionPredicateObjectExists
+		condition.ObjectBinding = ReferenceBindingSource
+	case "you attacked this turn":
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.EventHistoryPattern = &TriggerPattern{
+			Event:      TriggerEventAttackerDeclared,
+			Controller: ControllerYou,
+		}
+		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
+	case "a creature died this turn":
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.EventHistoryPattern = &TriggerPattern{
+			Event:            TriggerEventPermanentDied,
+			SubjectSelection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+		}
+		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
+	case "you gained life this turn":
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.EventHistoryPattern = &TriggerPattern{
+			Event:  TriggerEventLifeGained,
+			Player: TriggerPlayerYou,
+		}
+		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
+	case "an opponent lost life this turn":
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.EventHistoryPattern = &TriggerPattern{
+			Event:  TriggerEventLifeLost,
+			Player: TriggerPlayerOpponent,
+		}
+		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
+	case "you lost life this turn":
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.EventHistoryPattern = &TriggerPattern{
+			Event:  TriggerEventLifeLost,
+			Player: TriggerPlayerYou,
+		}
+		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
+	case "an opponent lost life last turn":
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.EventHistoryPattern = &TriggerPattern{
+			Event:  TriggerEventLifeLost,
+			Player: TriggerPlayerOpponent,
+		}
+		condition.EventHistoryWindow = ConditionEventHistoryWindowPreviousTurn
+	case "you lost life last turn":
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.EventHistoryPattern = &TriggerPattern{
+			Event:  TriggerEventLifeLost,
+			Player: TriggerPlayerYou,
+		}
+		condition.EventHistoryWindow = ConditionEventHistoryWindowPreviousTurn
+	case "no spells were cast last turn":
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.Negated = true
+		condition.EventHistoryPattern = &TriggerPattern{Event: TriggerEventSpellCast}
+		condition.EventHistoryWindow = ConditionEventHistoryWindowPreviousTurn
+	default:
+		return false
+	}
+	return true
+}
+
+func bindConditionReferences(conditions []CompiledCondition, references []CompiledReference, trigger *CompiledTrigger) {
 	for i := range conditions {
 		switch conditions[i].Predicate {
 		case ConditionPredicateSourceWouldDie:
@@ -150,9 +282,42 @@ func bindConditionReferences(conditions []CompiledCondition, references []Compil
 			) {
 				conditions[i].Predicate = ConditionPredicateUnsupported
 			}
+		case ConditionPredicateObjectMatches,
+			ConditionPredicateObjectExists,
+			ConditionPredicateEventSubjectHadCounters:
+			binding, ok := conditionObjectBinding(conditions[i], references)
+			if !ok ||
+				binding == ReferenceBindingEventPermanent &&
+					(trigger == nil || trigger.Pattern.OneOrMore || !triggerEventBindsPermanent(trigger.Pattern.Event)) ||
+				conditions[i].Predicate == ConditionPredicateObjectExists && binding != ReferenceBindingSource ||
+				conditions[i].Predicate == ConditionPredicateEventSubjectHadCounters && binding != ReferenceBindingEventPermanent {
+				conditions[i].Predicate = ConditionPredicateUnsupported
+				continue
+			}
+			conditions[i].ObjectBinding = binding
 		default:
 		}
 	}
+}
+
+func conditionObjectBinding(condition CompiledCondition, references []CompiledReference) (ReferenceBinding, bool) {
+	binding := condition.ObjectBinding
+	found := binding == ReferenceBindingSource || binding == ReferenceBindingEventPermanent
+	for _, reference := range references {
+		if !spanContains(condition.Span, reference.Span) {
+			continue
+		}
+		if reference.Binding != ReferenceBindingSource &&
+			reference.Binding != ReferenceBindingEventPermanent {
+			return ReferenceBindingUnsupported, false
+		}
+		if found && reference.Binding != binding {
+			return ReferenceBindingUnsupported, false
+		}
+		binding = reference.Binding
+		found = true
+	}
+	return binding, found
 }
 
 func conditionSubjectBindsSource(

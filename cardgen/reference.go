@@ -69,7 +69,7 @@ func lowerCardReference(reference oracle.CompiledReference, ctx referenceLowerin
 			return game.CardReference{}, false
 		}
 		return game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: reference.Occurrence}, true
-	case oracle.ReferenceBindingEventPermanent:
+	case oracle.ReferenceBindingEventPermanent, oracle.ReferenceBindingEventCard:
 		if !ctx.AllowEvent {
 			return game.CardReference{}, false
 		}
@@ -81,6 +81,26 @@ func lowerCardReference(reference oracle.CompiledReference, ctx referenceLowerin
 		return game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(ctx.PriorLinkedKey)}, true
 	default:
 		return game.CardReference{}, false
+	}
+}
+
+// lowerPlayerReference maps a CompiledReference to a game.PlayerReference.
+// It handles EventPlayer → EventPlayerReference() and Source → ControllerReference()
+// bindings. AllowEvent must be set for EventPlayer; AllowSource for Source.
+func lowerPlayerReference(reference oracle.CompiledReference, ctx referenceLoweringContext) (game.PlayerReference, bool) {
+	switch reference.Binding {
+	case oracle.ReferenceBindingEventPlayer:
+		if !ctx.AllowEvent {
+			return game.PlayerReference{}, false
+		}
+		return game.EventPlayerReference(), true
+	case oracle.ReferenceBindingSource:
+		if !ctx.AllowSource {
+			return game.PlayerReference{}, false
+		}
+		return game.ControllerReference(), true
+	default:
+		return game.PlayerReference{}, false
 	}
 }
 

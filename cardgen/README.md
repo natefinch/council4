@@ -118,7 +118,30 @@ Vanguard cards are excluded with explicit report reasons.
    Selection predicates for type unions, supertypes, subtypes (including
    Outlaw), colors, token state, tapped state, combat state, keywords, mana
    value, power, and toughness. `Leaves ... without dying` excludes the
-   graveyard destination. Phase and step triggered abilities
+   graveyard destination. Exact fixed until-end-of-turn power/toughness
+   changes to the triggering permanent (`It gets +X/+Y until end of turn.`)
+   lower through the shared `lowerFixedModifyPTSpell` path when the sole
+   non-target subject reference is `ReferenceBindingEventPermanent`; the
+   object lowers via `lowerObjectReference` to `game.EventPermanentReference()`
+   and is available in every saturated trigger shell, not only zone-change
+   triggers. Exact fixed and dynamic damage bodies whose damage source
+   reference is `ReferenceBindingEventPermanent` also lower through shared
+   `lowerFixedDamageSpell` and `lowerGroupDamageSpell` paths; the `It deals`
+   pronoun form is accepted alongside the card-name form when the source
+   binding is `ReferenceBindingEventPermanent`, and `DamageSource` is
+   preserved as `game.EventPermanentReference()` for LKI. Exact destroy,
+   exile, tap, untap, bounce-to-owner's-hand, and sacrifice bodies whose
+   sole subject reference is `ReferenceBindingEventPermanent` lower through
+   the shared `lowerEventPermanentPronounEffect` path using exact "it"
+   pronoun forms only; this path is gated on no-target, no-negation, and
+   exact wording. Exact fixed-count draw, discard, and mill bodies whose
+   sole subject reference is `ReferenceBindingEventPlayer` lower through the
+   shared event-player draw/discard/mill paths using exact "they" pronoun
+   forms, resolving the player via `game.EventPlayerReference()`. Exact
+   source-bound `Sacrifice it.` with `ReferenceBindingSource` or
+   `ReferenceBindingEventPermanent` and no targets lowers to a
+   `game.Sacrifice` primitive using `lowerObjectReference` in the
+   `lowerSacrificeSpell` path. Phase and step triggered abilities
    using `At the beginning of …` lower for
    exact supported controller-relative upkeep, draw, end, combat, combat-step,
    and main-phase variants, including steps belonging to the controller of an
@@ -159,8 +182,24 @@ Vanguard cards are excluded with explicit report reasons.
    `a sorcery spell`, `an artifact spell`, `an enchantment spell`,
    `a land spell`, `a planeswalker spell`, `a noncreature, nonland spell`, and single-color forms
    `a white/blue/black/red/green spell`. Self-cast (`when you cast this spell`),
-   `TriggerWhen`, unsupported intervening-if conditions, unknown or non-exact
-   ability-word forms, modes, and all other spell-phrase forms are fail-closed.
+   `TriggerWhen`, unknown or non-exact ability-word forms, modes, and all other
+   spell-phrase forms are fail-closed. Draw, discard, cycling, life-gain/loss,
+   damage, spell-cast, and generic-pattern triggers all support recognized
+   `lowerCondition`-compatible intervening-if conditions (life threshold,
+   controls-permanent selection (including tapped, subtype, power, and
+   source-exclusion predicates), referenced source/event-permanent existence or
+   Selection matching, any-player-life-at-most, opponent-count, graveyard-card
+   counts, hand empty, creature-power diversity, and event-history). Referenced
+   objects lower through the shared reference adapter; event permanents retain
+   current/LKI matching. Event-history intervening conditions carry a lowered
+   `game.TriggerPattern` plus an `EventHistoryWindow`; the shared
+   `lowerTriggerPattern` path ensures consistent filter semantics and runtime
+   evaluation reuses `triggerMatchesEvent`. Recognized phrases: `if you attacked
+   this turn`, `if a creature died this turn`, `if you gained life this turn`,
+   `if an opponent lost life this turn`, `if you lost life this turn`, `if an
+   opponent lost life last turn`, `if you lost life last turn`, and `if no spells
+   were cast last turn` (negated). Conditions not in that shared set fail closed
+   with a condition diagnostic.
    Exact Threshold, Delirium, Domain, Metalcraft, Hellbent, Ferocious, and Coven
    conditions lower into typed live-state predicates and dynamic amounts.
    Ordinary battlefield activations
