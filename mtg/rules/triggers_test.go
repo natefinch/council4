@@ -1901,6 +1901,48 @@ func TestOneOrMoreTriggerDoesNotCoalesceSequentialEvents(t *testing.T) {
 	}
 }
 
+func TestOneOrMoreTriggerDoesNotInferBatchFromQueue(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:     game.EventCardDiscarded,
+		Player:    game.TriggerPlayerYou,
+		OneOrMore: true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("one-or-more triggers were not put on stack")
+	}
+	if got := g.Stack.Size(); got != 2 {
+		t.Fatalf("stack size = %d, want queued events without a batch ID to remain distinct", got)
+	}
+}
+
+func TestOneOrMoreAttackTriggerCoalescesPerAttackTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                    game.EventAttackerDeclared,
+		Controller:               game.TriggerControllerYou,
+		AttackRecipient:          game.AttackRecipientPlayer,
+		OneOrMore:                true,
+		OneOrMorePerAttackTarget: true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	batchID := g.IDGen.Next()
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1, Player: game.Player2, AttackTarget: game.AttackTarget{Player: game.Player2}, SimultaneousID: batchID})
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1, Player: game.Player2, AttackTarget: game.AttackTarget{Player: game.Player2}, SimultaneousID: batchID})
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1, Player: game.Player3, AttackTarget: game.AttackTarget{Player: game.Player3}, SimultaneousID: batchID})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("one-or-more attack triggers were not put on stack")
+	}
+	if got := g.Stack.Size(); got != 2 {
+		t.Fatalf("stack size = %d, want one trigger for each attacked player", got)
+	}
+}
+
 func TestOneOrMoreZoneChangeTriggerCoalescesActualSimultaneousMove(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -2059,6 +2101,77 @@ func TestFightEventTriggersForControlledFighter(t *testing.T) {
 	}
 	if got := g.Stack.Size(); got != 1 {
 		t.Fatalf("stack size = %d, want only controlled fighter trigger", got)
+	}
+}
+
+func TestOneOrMoreFightTriggerCoalescesBothControlledFighters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                 game.EventFight,
+		Controller:            game.TriggerControllerYou,
+		RequirePermanentTypes: []types.Card{types.Creature},
+		OneOrMore:             true,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+
+	resolveFightPermanents(g, first, second)
+
+	var fights []game.Event
+	for _, event := range g.Events {
+		if event.Kind == game.EventFight {
+			fights = append(fights, event)
+		}
+	}
+	if len(fights) != 2 {
+		t.Fatalf("fight events = %d, want one per fighter", len(fights))
+	}
+	if fights[0].SimultaneousID == 0 || fights[0].SimultaneousID != fights[1].SimultaneousID {
+		t.Fatalf("fight event batch IDs = %v and %v, want one shared nonzero ID", fights[0].SimultaneousID, fights[1].SimultaneousID)
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("one-or-more fight trigger was not put on stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want one trigger for the fight resolution", got)
+	}
+}
+
+func TestOneOrMoreFightTriggerKeepsSeparateFightResolutions(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                 game.EventFight,
+		Controller:            game.TriggerControllerYou,
+		RequirePermanentTypes: []types.Card{types.Creature},
+		OneOrMore:             true,
+	}, nil, nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	third := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	fourth := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+
+	resolveFightPermanents(g, first, second)
+	resolveFightPermanents(g, third, fourth)
+
+	var fightBatchIDs []id.ID
+	for _, event := range g.Events {
+		if event.Kind == game.EventFight {
+			fightBatchIDs = append(fightBatchIDs, event.SimultaneousID)
+		}
+	}
+	if len(fightBatchIDs) != 4 {
+		t.Fatalf("fight events = %d, want two per fight resolution", len(fightBatchIDs))
+	}
+	if fightBatchIDs[0] == 0 || fightBatchIDs[0] != fightBatchIDs[1] || fightBatchIDs[2] == 0 || fightBatchIDs[2] != fightBatchIDs[3] || fightBatchIDs[0] == fightBatchIDs[2] {
+		t.Fatalf("fight event batch IDs = %v, want a distinct shared nonzero ID per fight resolution", fightBatchIDs)
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("one-or-more fight triggers were not put on stack")
+	}
+	if got := g.Stack.Size(); got != 2 {
+		t.Fatalf("stack size = %d, want one trigger per fight resolution", got)
 	}
 }
 
@@ -3189,6 +3302,7 @@ func TestSelfCounterAddedOneOrMoreCoalesces(t *testing.T) {
 		OneOrMore:        true,
 	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
+	simultaneousID := g.IDGen.Next()
 	emitEvent(g, game.Event{
 		Kind:           game.EventCountersAdded,
 		SourceObjectID: source.ObjectID,
@@ -3197,6 +3311,7 @@ func TestSelfCounterAddedOneOrMoreCoalesces(t *testing.T) {
 		Controller:     game.Player1,
 		CounterKind:    counter.PlusOnePlusOne,
 		Amount:         1,
+		SimultaneousID: simultaneousID,
 	})
 	emitEvent(g, game.Event{
 		Kind:           game.EventCountersAdded,
@@ -3206,6 +3321,7 @@ func TestSelfCounterAddedOneOrMoreCoalesces(t *testing.T) {
 		Controller:     game.Player1,
 		CounterKind:    counter.PlusOnePlusOne,
 		Amount:         1,
+		SimultaneousID: simultaneousID,
 	})
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -3685,10 +3801,11 @@ func TestDiscardOneOrMoreCoalesces(t *testing.T) {
 		OneOrMore: true,
 	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
 
-	// Three discard events in one detection pass → triggers exactly once
-	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
-	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
-	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+	// Three events from one explicit discard batch trigger exactly once.
+	simultaneousID := g.IDGen.Next()
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID})
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID})
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID})
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("discard one-or-more trigger did not fire")
@@ -3696,4 +3813,167 @@ func TestDiscardOneOrMoreCoalesces(t *testing.T) {
 	if got := g.Stack.Size(); got != 1 {
 		t.Fatalf("stack size = %d, want 1 coalesced trigger for three discards", got)
 	}
+}
+
+func TestCombatTriggerPatternTypedSelectionsAndRecipients(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	attacker := addCombatCreaturePermanent(g, game.Player1, game.Flying)
+	blocker := addCombatCreaturePermanent(g, game.Player2)
+	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Defending Planeswalker",
+		Types: []types.Card{types.Planeswalker},
+	}})
+
+	t.Run("attack recipient", func(t *testing.T) {
+		event := game.Event{
+			Kind:        game.EventAttackerDeclared,
+			Controller:  game.Player1,
+			Player:      game.Player2,
+			PermanentID: attacker.ObjectID,
+			AttackTarget: game.AttackTarget{
+				Player:         game.Player2,
+				PlaneswalkerID: planeswalker.ObjectID,
+			},
+		}
+		pattern := game.TriggerPattern{
+			Event:           game.EventAttackerDeclared,
+			AttackRecipient: game.AttackRecipientPlaneswalker,
+			Player:          game.TriggerPlayerOpponent,
+			AttackRecipientSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Planeswalker},
+				Controller:    game.ControllerNotYou,
+			},
+		}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("planeswalker recipient pattern did not match")
+		}
+		pattern.AttackRecipient = game.AttackRecipientPlayer
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("player recipient pattern matched a planeswalker attack")
+		}
+	})
+
+	t.Run("related blocker subject", func(t *testing.T) {
+		pattern := game.TriggerPattern{
+			Event: game.EventBlockerDeclared,
+			RelatedSubjectSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Keyword:       game.Flying,
+			},
+		}
+		event := game.Event{
+			Kind:               game.EventBlockerDeclared,
+			Controller:         game.Player2,
+			PermanentID:        blocker.ObjectID,
+			RelatedPermanentID: attacker.ObjectID,
+			BlockedAttackerID:  attacker.ObjectID,
+		}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("related flying attacker pattern did not match")
+		}
+		event.RelatedPermanentID = blocker.ObjectID
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("related flying attacker pattern matched a nonflying creature")
+		}
+	})
+
+	t.Run("damage source and recipient", func(t *testing.T) {
+		pattern := game.TriggerPattern{
+			Event:      game.EventDamageDealt,
+			Controller: game.TriggerControllerYou,
+			Player:     game.TriggerPlayerOpponent,
+			Subject:    game.TriggerSubjectDamageSource,
+			DamageSourceSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+			DamageRecipient: game.DamageRecipientPermanent,
+			DamageRecipientSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerNotYou,
+			},
+			RequireNonCombatDamage: true,
+		}
+		event := game.Event{
+			Kind:            game.EventDamageDealt,
+			Controller:      game.Player1,
+			Player:          game.Player2,
+			SourceObjectID:  attacker.ObjectID,
+			PermanentID:     blocker.ObjectID,
+			DamageRecipient: game.DamageRecipientPermanent,
+		}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("typed damage source and recipient pattern did not match")
+		}
+		pattern.Controller = game.TriggerControllerAny
+		event.SourceObjectID = planeswalker.ObjectID
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("creature damage-source Selection matched a planeswalker")
+		}
+		event.SourceObjectID = attacker.ObjectID
+		event.CombatDamage = true
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("noncombat pattern matched combat damage")
+		}
+	})
+
+	t.Run("player or permanent damage union", func(t *testing.T) {
+		pattern := game.TriggerPattern{
+			Event:           game.EventDamageDealt,
+			Player:          game.TriggerPlayerOpponent,
+			DamageRecipient: game.DamageRecipientPlayer | game.DamageRecipientPermanent,
+			DamageRecipientSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Planeswalker},
+			},
+		}
+		event := game.Event{
+			Kind:            game.EventDamageDealt,
+			Player:          game.Player2,
+			DamageRecipient: game.DamageRecipientPlayer,
+		}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("player branch of player-or-planeswalker damage pattern did not match")
+		}
+	})
+
+	t.Run("ability source damage recipient", func(t *testing.T) {
+		pattern := game.TriggerPattern{
+			Event:                   game.EventDamageDealt,
+			DamageRecipient:         game.DamageRecipientPermanent,
+			DamageRecipientIsSource: true,
+		}
+		event := game.Event{
+			Kind:            game.EventDamageDealt,
+			PermanentID:     source.ObjectID,
+			CardID:          source.CardInstanceID,
+			DamageRecipient: game.DamageRecipientPermanent,
+		}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("ability-source damage recipient did not match")
+		}
+		event.PermanentID = blocker.ObjectID
+		event.CardID = blocker.CardInstanceID
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("ability-source damage recipient matched another permanent")
+		}
+	})
+
+	t.Run("attached permanent controller step", func(t *testing.T) {
+		source.AttachedTo = opt.Val(attacker.ObjectID)
+		pattern := game.TriggerPattern{
+			Event: game.EventBeginningOfStep,
+			Step:  game.StepUpkeep,
+			StepPlayerSourceAttachedSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
+		}
+		event := game.Event{Kind: game.EventBeginningOfStep, Step: game.StepUpkeep, Player: game.Player1}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("attached permanent controller step did not match")
+		}
+		event.Player = game.Player2
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("attached permanent controller step matched another player's step")
+		}
+	})
 }

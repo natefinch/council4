@@ -40,15 +40,41 @@ func lowerTriggerPattern(pattern *oracle.TriggerPattern) (game.TriggerPattern, b
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
+	relatedSelection, ok := lowerTriggerSelection(pattern.RelatedSubjectSelection)
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
 	cardSelection, ok := lowerTriggerSelection(pattern.CardSelection)
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
 	damageSelection, ok := lowerTriggerSelection(pattern.DamageRecipientSelection)
-	if !ok || !triggerDamageSelectionSupported(damageSelection) {
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
+	damageRecipientTypes := []types.Card(nil)
+	if pattern.DamageRecipient == oracle.TriggerDamageRecipientPermanent &&
+		triggerSelectionIsRequiredTypesOnly(damageSelection) {
+		damageRecipientTypes = damageSelection.RequiredTypes
+		damageSelection = game.Selection{}
+	}
+	damageSourceSelection, ok := lowerTriggerSelection(pattern.DamageSourceSelection)
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
+	attackSelection, ok := lowerTriggerSelection(pattern.AttackRecipientSelection)
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
+	stepAttachedSelection, ok := lowerTriggerSelection(pattern.StepPlayerSourceAttachedSelection)
+	if !ok {
 		return game.TriggerPattern{}, false
 	}
 	damageRecipient, ok := lowerTriggerDamageRecipient(pattern.DamageRecipient)
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
+	attackRecipient, ok := lowerTriggerAttackRecipient(pattern.AttackRecipient)
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
@@ -57,24 +83,37 @@ func lowerTriggerPattern(pattern *oracle.TriggerPattern) (game.TriggerPattern, b
 		return game.TriggerPattern{}, false
 	}
 	result := game.TriggerPattern{
-		Event:                event,
-		Controller:           controller,
-		Source:               source,
-		ExcludeSelf:          pattern.ExcludeSelf,
-		Player:               player,
-		Subject:              subject,
-		SubjectSelection:     subjectSelection,
-		CardSelection:        cardSelection,
-		DamageRecipient:      damageRecipient,
-		DamageRecipientTypes: damageSelection.RequiredTypes,
-		Step:                 step,
-		OneOrMore:            pattern.OneOrMore,
-		RequireKickerPaid:    pattern.RequireKickerPaid,
-		RequireHistoric:      pattern.RequireHistoric,
+		Event:                             event,
+		Controller:                        controller,
+		Source:                            source,
+		ExcludeSelf:                       pattern.ExcludeSelf,
+		Player:                            player,
+		Subject:                           subject,
+		SubjectSelection:                  subjectSelection,
+		RelatedSubjectSelection:           relatedSelection,
+		CardSelection:                     cardSelection,
+		DamageRecipient:                   damageRecipient,
+		DamageRecipientIsSource:           pattern.DamageRecipientIsSource,
+		DamageRecipientTypes:              damageRecipientTypes,
+		DamageRecipientSelection:          damageSelection,
+		DamageSourceSelection:             damageSourceSelection,
+		AttackRecipient:                   attackRecipient,
+		AttackRecipientSelection:          attackSelection,
+		Step:                              step,
+		StepPlayerSourceAttachedSelection: stepAttachedSelection,
+		OneOrMore:                         pattern.OneOrMore,
+		OneOrMorePerAttackTarget:          pattern.OneOrMorePerAttackTarget,
+		RequireKickerPaid:                 pattern.RequireKickerPaid,
+		RequireHistoric:                   pattern.RequireHistoric,
 	}
-	if pattern.CombatQualifier == oracle.TriggerCombatDamage {
+
+	switch pattern.CombatQualifier {
+	case oracle.TriggerCombatDamage:
 		result.RequireCombatDamage = true
-	} else if pattern.CombatQualifier != oracle.TriggerCombatAny {
+	case oracle.TriggerNonCombatDamage:
+		result.RequireNonCombatDamage = true
+	case oracle.TriggerCombatAny:
+	default:
 		return game.TriggerPattern{}, false
 	}
 	if pattern.StackObject == oracle.TriggerStackObjectSpell {
@@ -124,6 +163,32 @@ func lowerTriggerPattern(pattern *oracle.TriggerPattern) (game.TriggerPattern, b
 	}
 	result.MatchFaceDown = pattern.MatchFaceDown
 	result.FaceDown = pattern.FaceDown
+	return result, true
+}
+
+func triggerSelectionIsRequiredTypesOnly(selection game.Selection) bool {
+	requiredTypes := selection.RequiredTypes
+	selection.RequiredTypes = nil
+	return len(requiredTypes) > 0 && selection.Empty()
+}
+
+func lowerTriggerAttackRecipient(recipient oracle.TriggerAttackRecipient) (game.AttackRecipientKind, bool) {
+	const known = oracle.TriggerAttackRecipientPlayer |
+		oracle.TriggerAttackRecipientPlaneswalker |
+		oracle.TriggerAttackRecipientBattle
+	if recipient&^known != 0 {
+		return game.AttackRecipientAny, false
+	}
+	result := game.AttackRecipientAny
+	if recipient&oracle.TriggerAttackRecipientPlayer != 0 {
+		result |= game.AttackRecipientPlayer
+	}
+	if recipient&oracle.TriggerAttackRecipientPlaneswalker != 0 {
+		result |= game.AttackRecipientPlaneswalker
+	}
+	if recipient&oracle.TriggerAttackRecipientBattle != 0 {
+		result |= game.AttackRecipientBattle
+	}
 	return result, true
 }
 
@@ -240,16 +305,18 @@ func lowerTriggerSubject(subject oracle.TriggerSubject) (game.TriggerSubjectObje
 }
 
 func lowerTriggerDamageRecipient(recipient oracle.TriggerDamageRecipient) (game.DamageRecipientKind, bool) {
-	switch recipient {
-	case oracle.TriggerDamageRecipientAny:
-		return game.DamageRecipientNone, true
-	case oracle.TriggerDamageRecipientPlayer:
-		return game.DamageRecipientPlayer, true
-	case oracle.TriggerDamageRecipientPermanent:
-		return game.DamageRecipientPermanent, true
-	default:
+	const known = oracle.TriggerDamageRecipientPlayer | oracle.TriggerDamageRecipientPermanent
+	if recipient&^known != 0 {
 		return game.DamageRecipientNone, false
 	}
+	result := game.DamageRecipientNone
+	if recipient&oracle.TriggerDamageRecipientPlayer != 0 {
+		result |= game.DamageRecipientPlayer
+	}
+	if recipient&oracle.TriggerDamageRecipientPermanent != 0 {
+		result |= game.DamageRecipientPermanent
+	}
+	return result, true
 }
 
 func lowerTriggerStep(step oracle.TriggerStep) (game.Step, bool) {
@@ -373,6 +440,10 @@ func lowerTriggerSelection(selection oracle.TriggerSelection) (game.Selection, b
 		NonToken:         selection.NonToken,
 		TokenOnly:        selection.TokenOnly,
 	}
+	result.Controller, ok = lowerTriggerSelectionController(selection.Controller)
+	if !ok {
+		return game.Selection{}, false
+	}
 	if selection.MatchManaValue {
 		if selection.ManaValue.Comparison != oracle.TriggerComparisonUnknown {
 			return game.Selection{}, false
@@ -385,6 +456,19 @@ func lowerTriggerSelection(selection oracle.TriggerSelection) (game.Selection, b
 		return game.Selection{}, false
 	}
 	return result, true
+}
+
+func lowerTriggerSelectionController(controller oracle.ControllerKind) (game.ControllerRelation, bool) {
+	switch controller {
+	case oracle.ControllerAny:
+		return game.ControllerAny, true
+	case oracle.ControllerYou:
+		return game.ControllerYou, true
+	case oracle.ControllerOpponent, oracle.ControllerNotYou:
+		return game.ControllerNotYou, true
+	default:
+		return game.ControllerAny, false
+	}
 }
 
 func lowerTriggerCombatState(state oracle.TriggerCombatState) (game.CombatStateFilter, bool) {
@@ -567,27 +651,4 @@ func lowerTriggerColors(colors []oracle.TriggerColor) ([]color.Color, bool) {
 		}
 	}
 	return result, true
-}
-
-func triggerDamageSelectionSupported(selection game.Selection) bool {
-	return len(selection.RequiredTypesAny) == 0 &&
-		len(selection.ExcludedTypes) == 0 &&
-		len(selection.Supertypes) == 0 &&
-		len(selection.SubtypesAny) == 0 &&
-		len(selection.ColorsAny) == 0 &&
-		len(selection.ExcludedColors) == 0 &&
-		!selection.Colorless &&
-		!selection.Multicolored &&
-		selection.Controller == game.ControllerAny &&
-		selection.Player == game.PlayerAny &&
-		selection.Tapped == game.TriAny &&
-		selection.CombatState == game.CombatStateAny &&
-		selection.Keyword == game.KeywordNone &&
-		selection.ExcludedKeyword == game.KeywordNone &&
-		!selection.ManaValue.Exists &&
-		!selection.Power.Exists &&
-		!selection.Toughness.Exists &&
-		!selection.ExcludeSource &&
-		!selection.NonToken &&
-		!selection.TokenOnly
 }

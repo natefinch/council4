@@ -22,8 +22,9 @@ func resolveFightPermanents(g *game.Game, first, second *game.Permanent) {
 	if first == nil || second == nil || first.ObjectID == second.ObjectID || !permanentHasType(g, first, types.Creature) || !permanentHasType(g, second, types.Creature) {
 		return
 	}
-	emitFightEvent(g, first, second)
-	emitFightEvent(g, second, first)
+	simultaneousID := g.IDGen.Next()
+	emitFightEvent(g, first, second, simultaneousID)
+	emitFightEvent(g, second, first, simultaneousID)
 	dealPermanentDamage(g, first.CardInstanceID, first.ObjectID, effectiveController(g, first), second, effectivePower(g, first), false)
 	dealPermanentDamage(g, second.CardInstanceID, second.ObjectID, effectiveController(g, second), first, effectivePower(g, second), false)
 }
@@ -39,7 +40,7 @@ func effectPermanentTarget(g *game.Game, obj *game.StackObject, targetIndex int)
 	return permanentByObjectID(g, target.PermanentID)
 }
 
-func emitFightEvent(g *game.Game, permanent, related *game.Permanent) {
+func emitFightEvent(g *game.Game, permanent, related *game.Permanent, simultaneousID id.ID) {
 	emitEvent(g, game.Event{
 		Kind:               game.EventFight,
 		SourceID:           permanent.CardInstanceID,
@@ -47,6 +48,7 @@ func emitFightEvent(g *game.Game, permanent, related *game.Permanent) {
 		Controller:         effectiveController(g, permanent),
 		PermanentID:        permanent.ObjectID,
 		RelatedPermanentID: related.ObjectID,
+		SimultaneousID:     simultaneousID,
 	})
 }
 

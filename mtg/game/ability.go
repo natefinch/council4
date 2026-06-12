@@ -271,6 +271,18 @@ const (
 	TriggerPlayerOpponent
 )
 
+// AttackRecipientKind identifies what an attacker was declared against.
+type AttackRecipientKind uint8
+
+// Attack recipient values are flags so exact player-or-permanent unions remain
+// representable without interpreting Oracle wording at runtime.
+const (
+	AttackRecipientAny    AttackRecipientKind = 0
+	AttackRecipientPlayer AttackRecipientKind = 1 << (iota - 1)
+	AttackRecipientPlaneswalker
+	AttackRecipientBattle
+)
+
 // TriggerPattern matches a Event for triggered-ability detection.
 // Zero-valued filters are wildcards except Event, which must be set.
 type TriggerPattern struct {
@@ -292,6 +304,11 @@ type TriggerPattern struct {
 	// RequireNonToken). It is wildcard by default; the rules matcher adapts the
 	// legacy fields when it is empty, and the two forms must not both be set.
 	SubjectSelection Selection
+
+	// RelatedSubjectSelection matches a secondary combat permanent, such as the
+	// attacker a creature blocks or the blocker that caused an attacker to
+	// become blocked.
+	RelatedSubjectSelection Selection
 
 	// RequireCardTypes and ExcludeCardTypes filter spell-cast events by the
 	// spell's types as chosen/cast on the stack (CR 601.2, CR 603.2).
@@ -320,8 +337,23 @@ type TriggerPattern struct {
 	DamageRecipientCombatState CombatStateFilter
 	DamageRecipientTypes       []types.Card
 
+	// DamageRecipientSelection is the Selection-based form of
+	// DamageRecipientTypes. The two forms must not both be set.
+	DamageRecipientSelection Selection
+	// DamageRecipientIsSource restricts damage to the ability's source.
+	DamageRecipientIsSource bool
+	// DamageSourceSelection restricts the permanent that dealt damage.
+	DamageSourceSelection Selection
+
+	// AttackRecipient restricts attacker-declared events by what was attacked.
+	AttackRecipient AttackRecipientKind
+	// AttackRecipientSelection restricts attacked planeswalkers and battles.
+	AttackRecipientSelection Selection
+
 	// RequireCombatDamage restricts damage triggers to combat damage events.
 	RequireCombatDamage bool
+	// RequireNonCombatDamage restricts damage triggers to noncombat damage events.
+	RequireNonCombatDamage bool
 
 	SpellTargetsSource bool
 	SpellTargetAllow   TargetAllow
@@ -332,6 +364,9 @@ type TriggerPattern struct {
 	// OneOrMore coalesces matching events that happened as one batch into one
 	// trigger. The first matching event is retained as TriggerEvent.
 	OneOrMore bool
+	// OneOrMorePerAttackTarget coalesces attack events separately for each
+	// attacked player, planeswalker, or battle.
+	OneOrMorePerAttackTarget bool
 
 	// MatchCounterKind restricts EventCountersAdded triggers to a specific
 	// counter type. When false, any counter kind satisfies the pattern.
@@ -341,6 +376,9 @@ type TriggerPattern struct {
 	// Step filters EventBeginningOfStep triggers such as "At the beginning of
 	// your upkeep" (CR 603.6c).
 	Step Step
+	// StepPlayerSourceAttachedSelection matches a step whose active player
+	// controls the permanent the ability source is attached to.
+	StepPlayerSourceAttachedSelection Selection
 }
 
 // TimingRestriction constrains when an activated ability can be used.

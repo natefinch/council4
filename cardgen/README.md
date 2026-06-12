@@ -121,13 +121,16 @@ Vanguard cards are excluded with explicit report reasons.
    graveyard destination. Phase and step triggered abilities
    using `At the beginning of …` lower for
    exact supported controller-relative upkeep, draw, end, combat, combat-step,
-   and main-phase variants. Common exact creature attack/block, permanent
-   tap/untap, and self became-target event clauses lower through the same
-   semantic pattern path; controller-relative subjects use
-   `game.TriggerPattern.SubjectSelection`. One-or-more zone-change wording
-   lowers only where runtime simultaneous-event IDs preserve its batching
-   semantics. Compound events, temporal qualifiers, and unavailable Selection
-   predicates remain fail-closed. Exact
+   and main-phase variants, including steps belonging to the controller of an
+   enchanted permanent. Combat templates bind named/self/attached and semantic
+   Selection subjects, the other blocking combatant, attacked player or
+   permanent recipients, damage-source and damage-recipient Selections,
+   combat/noncombat qualifiers, and exact player relations. Player-level attack
+   wording and `one or more` attack, block, and combat-damage wording lower only
+   through declaration/damage batch IDs, with per-attack-target batching where
+   Oracle semantics require it. Compound events, temporal qualifiers, and
+   unavailable Selection predicates remain fail-closed with missing-event or
+   missing-runtime-capability diagnostics. Exact
    self-dies triggers support exact `if it had no +1/+1 counters` and
    `if it had no -1/-1 counters` conditions using the departed permanent's
    last-known information. Fixed-damage bodies preserve that permanent as the

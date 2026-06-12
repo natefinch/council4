@@ -422,6 +422,90 @@ func TestDeclareAttackersAndBlockersEmitEvents(t *testing.T) {
 	})
 }
 
+func TestCombatEventsCarryDeclarationAndDamageBatches(t *testing.T) {
+	t.Run("attackers and blockers", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		firstAttacker := addCombatCreaturePermanent(g, game.Player1)
+		secondAttacker := addCombatCreaturePermanent(g, game.Player1)
+		firstBlocker := addCombatCreaturePermanent(g, game.Player2)
+		secondBlocker := addCombatCreaturePermanent(g, game.Player2)
+		g.Turn.Phase = game.PhaseCombat
+		g.Turn.Step = game.StepDeclareAttackers
+		g.Combat = &game.CombatState{}
+
+		attackers, _ := action.DeclareAttackers([]game.AttackDeclaration{
+			{Attacker: firstAttacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: secondAttacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		}).DeclareAttackersPayload()
+		if !engine.applyDeclareAttackers(g, game.Player1, attackers) {
+			t.Fatal("applyDeclareAttackers() = false, want true")
+		}
+		var attackEvents []game.Event
+		for _, event := range g.Events {
+			if event.Kind == game.EventAttackerDeclared {
+				attackEvents = append(attackEvents, event)
+			}
+		}
+		if len(attackEvents) != 2 {
+			t.Fatalf("attack events = %+v, want two", attackEvents)
+		}
+		attackBatch := attackEvents[0].SimultaneousID
+		if attackBatch == 0 || attackEvents[1].SimultaneousID != attackBatch {
+			t.Fatalf("attack events do not share a nonzero batch: %+v", attackEvents)
+		}
+		for _, event := range attackEvents {
+			if event.Player != game.Player2 {
+				t.Fatalf("attack recipient player = %v, want Player2", event.Player)
+			}
+		}
+
+		g.Turn.Step = game.StepDeclareBlockers
+		eventStart := len(g.Events)
+		blockers, _ := action.DeclareBlockers([]game.BlockDeclaration{
+			{Blocker: firstBlocker.ObjectID, Blocking: firstAttacker.ObjectID},
+			{Blocker: secondBlocker.ObjectID, Blocking: secondAttacker.ObjectID},
+		}).DeclareBlockersPayload()
+		if !engine.applyDeclareBlockers(g, game.Player2, blockers) {
+			t.Fatal("applyDeclareBlockers() = false, want true")
+		}
+		blockBatch := g.Combat.BlockDeclarationBatchID
+		if blockBatch == 0 {
+			t.Fatal("block declaration batch ID = 0")
+		}
+		for _, event := range g.Events[eventStart:] {
+			if (event.Kind == game.EventBlockerDeclared || event.Kind == game.EventAttackerBecameBlocked) &&
+				(event.SimultaneousID != blockBatch || event.RelatedPermanentID == 0) {
+				t.Fatalf("block event lacks shared batch or related combatant: %+v", event)
+			}
+		}
+	})
+
+	t.Run("combat damage", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+		second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+		g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{
+			{Attacker: first.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		}}
+
+		combatEngine{}.resolveDamagePass(g, normalCombatDamage, &TurnLog{})
+
+		var damageEvents []game.Event
+		for _, event := range g.Events {
+			if event.Kind == game.EventDamageDealt && event.CombatDamage {
+				damageEvents = append(damageEvents, event)
+			}
+		}
+		if len(damageEvents) != 2 ||
+			damageEvents[0].SimultaneousID == 0 ||
+			damageEvents[0].SimultaneousID != damageEvents[1].SimultaneousID {
+			t.Fatalf("combat damage events = %+v, want one nonzero shared batch", damageEvents)
+		}
+	})
+}
+
 func TestEventsArePartitionedByTurn(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

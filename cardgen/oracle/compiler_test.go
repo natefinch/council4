@@ -572,7 +572,6 @@ func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"Whenever this creature attacks alone, draw a card.",
-		"Whenever one or more creatures you control attack, draw a card.",
 		"Whenever this creature becomes the target of a spell or ability an opponent controls, draw a card.",
 		"Whenever creature you control becomes tapped, draw a card.",
 		"At the beginning of your next upkeep, draw a card.",

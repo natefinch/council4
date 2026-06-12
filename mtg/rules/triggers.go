@@ -165,14 +165,16 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 		if !ok {
 			continue
 		}
-		if ability.Trigger.Pattern.OneOrMore &&
-			(trigger.event.SimultaneousID != 0 || !permanentZoneChangeTriggerEvent(trigger.event.Kind)) {
+		if ability.Trigger.Pattern.OneOrMore && trigger.event.SimultaneousID != 0 {
 			key := triggerBatchKey{
 				sourceID:     trigger.sourceID,
 				abilityIndex: trigger.abilityIndex,
 				event:        trigger.event.Kind,
 				controller:   trigger.controller,
 				simultaneous: trigger.event.SimultaneousID,
+			}
+			if ability.Trigger.Pattern.OneOrMorePerAttackTarget {
+				key.attackTarget = trigger.event.AttackTarget
 			}
 			if seenOneOrMore[key] {
 				continue
@@ -194,18 +196,13 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 	return filtered
 }
 
-func permanentZoneChangeTriggerEvent(kind game.EventKind) bool {
-	return kind == game.EventPermanentEnteredBattlefield ||
-		kind == game.EventPermanentDied ||
-		kind == game.EventZoneChanged
-}
-
 type triggerBatchKey struct {
 	sourceID     id.ID
 	abilityIndex int
 	event        game.EventKind
 	controller   game.PlayerID
 	simultaneous id.ID
+	attackTarget game.AttackTarget
 }
 
 func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {
@@ -619,6 +616,10 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if !triggerPlayerMatches(sourceController, pattern.Player, event.Player) {
 		return false
 	}
+	if !pattern.StepPlayerSourceAttachedSelection.Empty() &&
+		!stepPlayerSourceAttachedMatches(g, sourceController, source, event, &pattern.StepPlayerSourceAttachedSelection) {
+		return false
+	}
 	if pattern.MatchFromZone && pattern.FromZone != event.FromZone {
 		return false
 	}
@@ -637,30 +638,8 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.RequireHistoric && !eventSpellHistoric(event) {
 		return false
 	}
-	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient != event.DamageRecipient {
+	if !triggerCombatPatternMatches(g, sourceController, source, pattern, event) {
 		return false
-	}
-	if pattern.RequireCombatDamage && !event.CombatDamage {
-		return false
-	}
-	if len(pattern.DamageRecipientTypes) != 0 {
-		if event.DamageRecipient != game.DamageRecipientPermanent {
-			return false
-		}
-		for _, cardType := range pattern.DamageRecipientTypes {
-			if !eventPermanentHasType(g, event, cardType) {
-				return false
-			}
-		}
-	}
-	if pattern.DamageRecipientCombatState != game.CombatStateAny {
-		if event.DamageRecipient != game.DamageRecipientPermanent {
-			return false
-		}
-		permanent, ok := permanentByObjectID(g, event.PermanentID)
-		if !ok || !combatStateMatches(g, permanent, pattern.DamageRecipientCombatState) {
-			return false
-		}
 	}
 	if pattern.MatchCounterKind && pattern.CounterKind != event.CounterKind {
 		return false
@@ -671,14 +650,7 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		}
 	}
 	if subjectSel := triggerSubjectSelection(pattern); !subjectSel.Empty() {
-		subject := selectionSubject{
-			kind:       subjectEventPermanent,
-			g:          g,
-			event:      event,
-			controller: event.Controller,
-			viewer:     sourceController,
-		}
-		if !matchSelection(&subject, &subjectSel) {
+		if !triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel) {
 			return false
 		}
 	}
@@ -703,6 +675,133 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		return false
 	}
 	return true
+}
+
+func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {
+	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient&event.DamageRecipient == 0 {
+		return false
+	}
+	if pattern.DamageRecipientIsSource && !damageRecipientIsSource(source, event) {
+		return false
+	}
+	if pattern.RequireCombatDamage && !event.CombatDamage {
+		return false
+	}
+	if pattern.RequireNonCombatDamage && event.CombatDamage {
+		return false
+	}
+	if !attackRecipientMatches(pattern.AttackRecipient, event) ||
+		!attackRecipientSelectionMatches(g, viewer, &pattern.AttackRecipientSelection, event) ||
+		!damageRecipientTypesMatch(g, pattern.DamageRecipientTypes, event) {
+		return false
+	}
+	if !pattern.DamageRecipientSelection.Empty() &&
+		event.DamageRecipient == game.DamageRecipientPermanent &&
+		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection) {
+		return false
+	}
+	if !pattern.DamageSourceSelection.Empty() &&
+		!triggerSelectionMatches(g, viewer, event, event.SourceObjectID, &pattern.DamageSourceSelection) {
+		return false
+	}
+	if !pattern.RelatedSubjectSelection.Empty() &&
+		!triggerSelectionMatches(g, viewer, event, event.RelatedPermanentID, &pattern.RelatedSubjectSelection) {
+		return false
+	}
+	if pattern.DamageRecipientCombatState == game.CombatStateAny {
+		return true
+	}
+	permanent, ok := permanentByObjectID(g, event.PermanentID)
+	return event.DamageRecipient == game.DamageRecipientPermanent &&
+		ok &&
+		combatStateMatches(g, permanent, pattern.DamageRecipientCombatState)
+}
+
+func damageRecipientIsSource(source *game.Permanent, event game.Event) bool {
+	return source.ObjectID != 0 && event.PermanentID == source.ObjectID ||
+		source.CardInstanceID != 0 && event.CardID == source.CardInstanceID
+}
+
+func attackRecipientSelectionMatches(g *game.Game, viewer game.PlayerID, selection *game.Selection, event game.Event) bool {
+	if selection.Empty() {
+		return true
+	}
+	recipientID := event.AttackTarget.PlaneswalkerID
+	if recipientID == 0 {
+		recipientID = event.AttackTarget.BattleID
+	}
+	return recipientID == 0 || triggerSelectionMatches(g, viewer, event, recipientID, selection)
+}
+
+func damageRecipientTypesMatch(g *game.Game, required []types.Card, event game.Event) bool {
+	if len(required) == 0 {
+		return true
+	}
+	if event.DamageRecipient != game.DamageRecipientPermanent {
+		return false
+	}
+	for _, cardType := range required {
+		if !eventPermanentHasType(g, event, cardType) {
+			return false
+		}
+	}
+	return true
+}
+
+func stepPlayerSourceAttachedMatches(g *game.Game, viewer game.PlayerID, source *game.Permanent, event game.Event, selection *game.Selection) bool {
+	if !source.AttachedTo.Exists {
+		return false
+	}
+	attached, ok := resolvePermanentOrLastKnown(g, source.AttachedTo.Val)
+	if !ok || attached.permanent == nil || effectiveController(g, attached.permanent) != event.Player {
+		return false
+	}
+	return triggerSelectionMatches(g, viewer, event, source.AttachedTo.Val, selection)
+}
+
+func attackRecipientMatches(filter game.AttackRecipientKind, event game.Event) bool {
+	if filter == game.AttackRecipientAny {
+		return true
+	}
+	if event.Kind != game.EventAttackerDeclared {
+		return false
+	}
+	switch {
+	case event.AttackTarget.PlaneswalkerID != 0:
+		return filter&game.AttackRecipientPlaneswalker != 0
+	case event.AttackTarget.BattleID != 0:
+		return filter&game.AttackRecipientBattle != 0
+	default:
+		return filter&game.AttackRecipientPlayer != 0
+	}
+}
+
+func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Event, objectID id.ID, selection *game.Selection) bool {
+	if objectID == 0 {
+		return false
+	}
+	subjectEvent := event
+	if objectID != event.PermanentID {
+		subjectEvent.PermanentID = objectID
+		subjectEvent.CardID = 0
+		subjectEvent.TokenName = ""
+		subjectEvent.TokenDef = nil
+		if objectID == event.SourceObjectID {
+			subjectEvent.CardID = event.SourceID
+		}
+	}
+	controller := event.Controller
+	if resolved, ok := resolvePermanentOrLastKnown(g, objectID); ok && resolved.permanent != nil {
+		controller = effectiveController(g, resolved.permanent)
+	}
+	subject := selectionSubject{
+		kind:       subjectEventPermanent,
+		g:          g,
+		event:      subjectEvent,
+		controller: controller,
+		viewer:     viewer,
+	}
+	return matchSelection(&subject, selection)
 }
 
 func eventStackObjectKindMatches(g *game.Game, event game.Event, kind game.StackObjectKind) bool {

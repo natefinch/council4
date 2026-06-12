@@ -1183,7 +1183,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
 		pattern.SpellTargetPattern.Exists ||
 		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
-		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) {
+		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
+		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
 	if err := validateTriggerPatternCardSelection(pattern); err != nil {
@@ -1298,6 +1299,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	if pattern.OneOrMore {
 		fields = append(fields, "OneOrMore: true,")
 	}
+	if pattern.OneOrMorePerAttackTarget {
+		fields = append(fields, "OneOrMorePerAttackTarget: true,")
+	}
 	if pattern.MatchCounterKind {
 		kindFields, err := renderTriggerPatternCounterKind(ctx, pattern)
 		if err != nil {
@@ -1308,12 +1312,27 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	if pattern.RequireCombatDamage {
 		fields = append(fields, "RequireCombatDamage: true,")
 	}
+	if pattern.RequireNonCombatDamage {
+		fields = append(fields, "RequireNonCombatDamage: true,")
+	}
+	if pattern.DamageRecipientIsSource {
+		fields = append(fields, "DamageRecipientIsSource: true,")
+	}
+	if pattern.AttackRecipient != game.AttackRecipientAny {
+		recipient, err := renderAttackRecipient(pattern.AttackRecipient)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("AttackRecipient: %s,", recipient))
+	}
 	return fields, nil
 }
 
 func renderTriggerPatternSelectionFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
 	var fields []string
-	if pattern.DamageRecipient != game.DamageRecipientNone || len(pattern.DamageRecipientTypes) > 0 {
+	if pattern.DamageRecipient != game.DamageRecipientNone ||
+		len(pattern.DamageRecipientTypes) > 0 ||
+		!pattern.DamageRecipientSelection.Empty() {
 		damageFields, err := renderTriggerPatternDamageFields(ctx, pattern)
 		if err != nil {
 			return nil, err
@@ -1328,11 +1347,39 @@ func renderTriggerPatternSelectionFields(ctx *renderCtx, pattern *game.TriggerPa
 		fields = append(fields, cardFields...)
 	}
 	if !pattern.SubjectSelection.Empty() {
-		subjectFields, err := renderTriggerPatternSubjectSelection(ctx, pattern)
+		subjectFields, err := renderTriggerPatternSelection(ctx, "SubjectSelection", pattern.SubjectSelection)
 		if err != nil {
 			return nil, err
 		}
 		fields = append(fields, subjectFields...)
+	}
+	if !pattern.RelatedSubjectSelection.Empty() {
+		relatedFields, err := renderTriggerPatternSelection(ctx, "RelatedSubjectSelection", pattern.RelatedSubjectSelection)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, relatedFields...)
+	}
+	if !pattern.AttackRecipientSelection.Empty() {
+		attackFields, err := renderTriggerPatternSelection(ctx, "AttackRecipientSelection", pattern.AttackRecipientSelection)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, attackFields...)
+	}
+	if !pattern.DamageSourceSelection.Empty() {
+		sourceFields, err := renderTriggerPatternSelection(ctx, "DamageSourceSelection", pattern.DamageSourceSelection)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, sourceFields...)
+	}
+	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
+		stepFields, err := renderTriggerPatternSelection(ctx, "StepPlayerSourceAttachedSelection", pattern.StepPlayerSourceAttachedSelection)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, stepFields...)
 	}
 	return fields, nil
 }
@@ -1413,14 +1460,14 @@ func renderTriggerPatternCardSelectionFields(ctx *renderCtx, pattern *game.Trigg
 	return []string{fmt.Sprintf("CardSelection: %s,", sel)}, nil
 }
 
-// renderTriggerPatternSubjectSelection renders the SubjectSelection field for
-// a TriggerPattern and returns it as a slice of struct-literal field strings.
-func renderTriggerPatternSubjectSelection(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
-	sel, err := (Renderer{}).renderSelection(ctx, pattern.SubjectSelection)
+// renderTriggerPatternSelection renders a Selection-valued TriggerPattern
+// field and returns it as a slice of struct-literal field strings.
+func renderTriggerPatternSelection(ctx *renderCtx, field string, selection game.Selection) ([]string, error) {
+	sel, err := (Renderer{}).renderSelection(ctx, selection)
 	if err != nil {
 		return nil, err
 	}
-	return []string{fmt.Sprintf("SubjectSelection: %s,", sel)}, nil
+	return []string{fmt.Sprintf("%s: %s,", field, sel)}, nil
 }
 
 // renderTriggerPatternCounterKind renders the MatchCounterKind and CounterKind
@@ -1451,6 +1498,13 @@ func renderTriggerPatternDamageFields(ctx *renderCtx, pattern *game.TriggerPatte
 			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("DamageRecipientTypes: %s,", recipientTypes))
+	}
+	if !pattern.DamageRecipientSelection.Empty() {
+		selection, err := (Renderer{}).renderSelection(ctx, pattern.DamageRecipientSelection)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("DamageRecipientSelection: %s,", selection))
 	}
 	return fields, nil
 }
@@ -4263,14 +4317,38 @@ func renderEventKind(event game.EventKind) (string, error) {
 }
 
 func renderDamageRecipient(recipient game.DamageRecipientKind) (string, error) {
-	switch recipient {
-	case game.DamageRecipientPlayer:
-		return "game.DamageRecipientPlayer", nil
-	case game.DamageRecipientPermanent:
-		return "game.DamageRecipientPermanent", nil
-	default:
+	const known = game.DamageRecipientPlayer | game.DamageRecipientPermanent
+	if recipient == game.DamageRecipientNone || recipient&^known != 0 {
 		return "", fmt.Errorf("render: unsupported damage recipient %d", recipient)
 	}
+	var values []string
+	if recipient&game.DamageRecipientPlayer != 0 {
+		values = append(values, "game.DamageRecipientPlayer")
+	}
+	if recipient&game.DamageRecipientPermanent != 0 {
+		values = append(values, "game.DamageRecipientPermanent")
+	}
+	return strings.Join(values, " | "), nil
+}
+
+func renderAttackRecipient(recipient game.AttackRecipientKind) (string, error) {
+	const known = game.AttackRecipientPlayer |
+		game.AttackRecipientPlaneswalker |
+		game.AttackRecipientBattle
+	if recipient == game.AttackRecipientAny || recipient&^known != 0 {
+		return "", fmt.Errorf("render: unsupported attack recipient %d", recipient)
+	}
+	var values []string
+	if recipient&game.AttackRecipientPlayer != 0 {
+		values = append(values, "game.AttackRecipientPlayer")
+	}
+	if recipient&game.AttackRecipientPlaneswalker != 0 {
+		values = append(values, "game.AttackRecipientPlaneswalker")
+	}
+	if recipient&game.AttackRecipientBattle != 0 {
+		values = append(values, "game.AttackRecipientBattle")
+	}
+	return strings.Join(values, " | "), nil
 }
 
 func renderDuration(duration game.EffectDuration) (string, error) {

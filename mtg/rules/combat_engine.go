@@ -328,6 +328,10 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	}
 
 	g.Combat.Attackers = append([]game.AttackDeclaration(nil), declare.Attackers...)
+	simultaneousID := id.ID(0)
+	if len(declare.Attackers) > 1 {
+		simultaneousID = g.IDGen.Next()
+	}
 	for _, declaration := range declare.Attackers {
 		attacker := eligibleByID[declaration.Attacker]
 		if !hasKeyword(g, attacker, game.Vigilance) {
@@ -339,8 +343,10 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 			SourceID:       attacker.CardInstanceID,
 			SourceObjectID: attacker.ObjectID,
 			Controller:     effectiveController(g, attacker),
+			Player:         declaration.Target.Player,
 			PermanentID:    attacker.ObjectID,
 			AttackTarget:   declaration.Target,
+			SimultaneousID: simultaneousID,
 		})
 	}
 	return true
@@ -405,6 +411,9 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 	if len(declare.Blockers) > 0 && g.Combat.BlockerOrder == nil {
 		g.Combat.BlockerOrder = make(map[id.ID][]id.ID)
 	}
+	if len(declare.Blockers) > 0 && g.Combat.BlockDeclarationBatchID == 0 {
+		g.Combat.BlockDeclarationBatchID = g.IDGen.Next()
+	}
 	for _, block := range declare.Blockers {
 		attackerBecameBlocked := !g.Combat.BlockedAttackers[block.Blocking]
 		g.Combat.BlockedAttackers[block.Blocking] = true
@@ -412,11 +421,13 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 		if attackerBecameBlocked {
 			if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
 				emitEvent(g, game.Event{
-					Kind:           game.EventAttackerBecameBlocked,
-					SourceID:       attacker.CardInstanceID,
-					SourceObjectID: attacker.ObjectID,
-					Controller:     effectiveController(g, attacker),
-					PermanentID:    attacker.ObjectID,
+					Kind:               game.EventAttackerBecameBlocked,
+					SourceID:           attacker.CardInstanceID,
+					SourceObjectID:     attacker.ObjectID,
+					Controller:         effectiveController(g, attacker),
+					PermanentID:        attacker.ObjectID,
+					RelatedPermanentID: block.Blocker,
+					SimultaneousID:     g.Combat.BlockDeclarationBatchID,
 				})
 			}
 		}
@@ -425,12 +436,14 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 			continue
 		}
 		emitEvent(g, game.Event{
-			Kind:              game.EventBlockerDeclared,
-			SourceID:          blocker.CardInstanceID,
-			SourceObjectID:    blocker.ObjectID,
-			Controller:        effectiveController(g, blocker),
-			PermanentID:       blocker.ObjectID,
-			BlockedAttackerID: block.Blocking,
+			Kind:               game.EventBlockerDeclared,
+			SourceID:           blocker.CardInstanceID,
+			SourceObjectID:     blocker.ObjectID,
+			Controller:         effectiveController(g, blocker),
+			PermanentID:        blocker.ObjectID,
+			RelatedPermanentID: block.Blocking,
+			BlockedAttackerID:  block.Blocking,
+			SimultaneousID:     g.Combat.BlockDeclarationBatchID,
 		})
 	}
 	return true
@@ -442,6 +455,7 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 	if g.Combat == nil {
 		return
 	}
+	eventStart := len(g.Events)
 	blockerMap := blockersByAttacker(g)
 	for _, declaration := range g.Combat.Attackers {
 		attacker, ok := permanentByObjectID(g, declaration.Attacker)
@@ -457,6 +471,25 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 			continue
 		}
 		resolveUnblockedCombatDamage(g, attacker, declaration.Target, pass, log)
+	}
+	batchCombatDamageEvents(g, eventStart)
+}
+
+func batchCombatDamageEvents(g *game.Game, eventStart int) {
+	damageEvents := 0
+	for i := eventStart; i < len(g.Events); i++ {
+		if g.Events[i].Kind == game.EventDamageDealt && g.Events[i].CombatDamage {
+			damageEvents++
+		}
+	}
+	if damageEvents < 2 {
+		return
+	}
+	simultaneousID := g.IDGen.Next()
+	for i := eventStart; i < len(g.Events); i++ {
+		if g.Events[i].Kind == game.EventDamageDealt && g.Events[i].CombatDamage {
+			g.Events[i].SimultaneousID = simultaneousID
+		}
 	}
 }
 
