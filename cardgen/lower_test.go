@@ -8900,8 +8900,8 @@ func TestLowerAuraDiesTrigger(t *testing.T) {
 	if trigger.Trigger.Type != game.TriggerWhen {
 		t.Fatalf("trigger type = %v, want TriggerWhen", trigger.Trigger.Type)
 	}
-	if trigger.Trigger.Pattern.Event != game.EventPermanentDied {
-		t.Fatalf("trigger event = %v, want EventPermanentDied", trigger.Trigger.Pattern.Event)
+	if trigger.Trigger.Pattern.Event != game.EventZoneChanged {
+		t.Fatalf("trigger event = %v, want EventZoneChanged", trigger.Trigger.Pattern.Event)
 	}
 	if trigger.Trigger.Pattern.Source != game.TriggerSourceSelf {
 		t.Fatalf("trigger source = %v, want TriggerSourceSelf", trigger.Trigger.Pattern.Source)
@@ -8923,8 +8923,8 @@ func TestLowerArtifactDiesTrigger(t *testing.T) {
 	if trigger.Trigger.Type != game.TriggerWhen {
 		t.Fatalf("trigger type = %v, want TriggerWhen", trigger.Trigger.Type)
 	}
-	if trigger.Trigger.Pattern.Event != game.EventPermanentDied {
-		t.Fatalf("trigger event = %v, want EventPermanentDied", trigger.Trigger.Pattern.Event)
+	if trigger.Trigger.Pattern.Event != game.EventZoneChanged {
+		t.Fatalf("trigger event = %v, want EventZoneChanged", trigger.Trigger.Pattern.Event)
 	}
 	if trigger.Trigger.Pattern.Source != game.TriggerSourceSelf {
 		t.Fatalf("trigger source = %v, want TriggerSourceSelf", trigger.Trigger.Pattern.Source)
@@ -8943,8 +8943,8 @@ func TestLowerEnchantmentDiesTrigger(t *testing.T) {
 		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
 	}
 	trigger := face.TriggeredAbilities[0]
-	if trigger.Trigger.Pattern.Event != game.EventPermanentDied {
-		t.Fatalf("trigger event = %v, want EventPermanentDied", trigger.Trigger.Pattern.Event)
+	if trigger.Trigger.Pattern.Event != game.EventZoneChanged {
+		t.Fatalf("trigger event = %v, want EventZoneChanged", trigger.Trigger.Pattern.Event)
 	}
 	if trigger.Trigger.Pattern.Source != game.TriggerSourceSelf {
 		t.Fatalf("trigger source = %v, want TriggerSourceSelf", trigger.Trigger.Pattern.Source)
@@ -9423,7 +9423,7 @@ func TestLowerNonSelfDiesTriggerInterveningIfFailsClosed(t *testing.T) {
 	if len(diagnostics) == 0 {
 		t.Fatal("intervening-if non-self dies trigger unexpectedly lowered")
 	}
-	if !strings.Contains(diagnostics[0].Detail, "intervening-if conditions are not supported") {
+	if !strings.Contains(diagnostics[0].Detail, "does not support this semantic permanent zone-change trigger condition") {
 		t.Fatalf("diagnostic = %#v, want intervening-if detail", diagnostics[0])
 	}
 }
@@ -9443,8 +9443,8 @@ func TestLowerNonSelfDiesSemanticPatterns(t *testing.T) {
 	}{
 		{"enchanted creature dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhen},
 		{"equipped creature dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhen},
-		{"enchanted land dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Land}, false, game.TriggerWhen},
-		{"enchanted permanent dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, nil, false, game.TriggerWhen},
+		{"enchanted land dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Land, types.Creature}, false, game.TriggerWhen},
+		{"enchanted permanent dies", game.TriggerSourceAttachedPermanent, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhen},
 		{"another creature dies", game.TriggerSourceAny, game.TriggerControllerAny, true, []types.Card{types.Creature}, false, game.TriggerWhenever},
 		{"another creature you control dies", game.TriggerSourceAny, game.TriggerControllerYou, true, []types.Card{types.Creature}, false, game.TriggerWhenever},
 		{"a creature dies", game.TriggerSourceAny, game.TriggerControllerAny, false, []types.Card{types.Creature}, false, game.TriggerWhenever},
@@ -9498,10 +9498,7 @@ func TestLowerNonSelfDiesUnknownSemanticPatternReturnsFalse(t *testing.T) {
 	t.Parallel()
 	unknownPhrases := []string{
 		"the haunted creature dies",
-		"an elf dies",
-		"a zombie you control dies",
-		"a creature with flying dies",
-		"another artifact dies",
+		"a madeup dies",
 	}
 	for _, phrase := range unknownPhrases {
 		compilation, diagnostics := oracle.Compile("Whenever "+phrase+", draw a card.", oracle.ParseContext{})
@@ -9512,6 +9509,96 @@ func TestLowerNonSelfDiesUnknownSemanticPatternReturnsFalse(t *testing.T) {
 		if ok {
 			t.Errorf("lowerTriggerPattern(%q) returned ok=true, want false", phrase)
 		}
+	}
+}
+
+func TestLowerPermanentZoneChangeSemanticPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase string
+		want   game.TriggerPattern
+	}{
+		{
+			phrase: "Whenever an artifact is returned to your hand, draw a card.",
+			want: game.TriggerPattern{
+				Event:         game.EventZoneChanged,
+				Player:        game.TriggerPlayerYou,
+				MatchFromZone: true,
+				FromZone:      zone.Battlefield,
+				MatchToZone:   true,
+				ToZone:        zone.Hand,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Artifact},
+				},
+			},
+		},
+		{
+			phrase: "Whenever another nontoken legendary green Dragon you control with power 4 or greater enters, draw a card.",
+			want: game.TriggerPattern{
+				Event:       game.EventPermanentEnteredBattlefield,
+				Controller:  game.TriggerControllerYou,
+				ExcludeSelf: true,
+				SubjectSelection: game.Selection{
+					Supertypes:  []types.Super{types.Legendary},
+					SubtypesAny: []types.Sub{types.Dragon},
+					ColorsAny:   []color.Color{color.Green},
+					Power:       opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+					NonToken:    true,
+				},
+			},
+		},
+		{
+			phrase: "Whenever one or more creatures are put into a graveyard from the battlefield, draw a card.",
+			want: game.TriggerPattern{
+				Event:         game.EventZoneChanged,
+				MatchFromZone: true,
+				FromZone:      zone.Battlefield,
+				MatchToZone:   true,
+				ToZone:        zone.Graveyard,
+				OneOrMore:     true,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
+		{
+			phrase: "Whenever a creature leaves the battlefield without dying, draw a card.",
+			want: game.TriggerPattern{
+				Event:         game.EventZoneChanged,
+				MatchFromZone: true,
+				FromZone:      zone.Battlefield,
+				ExcludeToZone: true,
+				ToZone:        zone.Graveyard,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
+		{
+			phrase: "Whenever a face-down attacking creature dies, draw a card.",
+			want: game.TriggerPattern{
+				Event:         game.EventPermanentDied,
+				MatchFaceDown: true,
+				FaceDown:      true,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					CombatState:   game.CombatStateAttacking,
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.phrase, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := oracle.Compile(test.phrase, oracle.ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			got, ok := lowerTriggerPattern(&compilation.Abilities[0].Trigger.Pattern)
+			if !ok || !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("pattern = %#v, %v, want %#v, true", got, ok, test.want)
+			}
+		})
 	}
 }
 

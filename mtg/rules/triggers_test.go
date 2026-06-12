@@ -1901,6 +1901,130 @@ func TestOneOrMoreTriggerDoesNotCoalesceSequentialEvents(t *testing.T) {
 	}
 }
 
+func TestOneOrMoreZoneChangeTriggerCoalescesActualSimultaneousMove(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		OneOrMore:     true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	first := addCombatCreaturePermanent(g, game.Player1)
+	second := addCombatCreaturePermanent(g, game.Player2)
+
+	if !movePermanentsToZoneSimultaneously(g, []*game.Permanent{first, second}, zone.Exile) {
+		t.Fatal("simultaneous move failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("one-or-more zone-change trigger was not put on stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want one coalesced trigger", got)
+	}
+}
+
+func TestOneOrMoreZoneChangeTriggerDoesNotCoalesceSequentialMoves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		OneOrMore:     true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	first := addCombatCreaturePermanent(g, game.Player1)
+	second := addCombatCreaturePermanent(g, game.Player2)
+
+	if !movePermanentToZone(g, first, zone.Exile) || !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("first sequential move did not trigger")
+	}
+	if !movePermanentToZone(g, second, zone.Exile) || !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("second sequential move did not trigger")
+	}
+	if got := g.Stack.Size(); got != 2 {
+		t.Fatalf("stack size = %d, want one trigger for each sequential move", got)
+	}
+}
+
+func TestOneOrMoreZoneChangeTriggerDoesNotCoalesceQueuedSequentialMoves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		OneOrMore:     true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	first := addCombatCreaturePermanent(g, game.Player1)
+	second := addCombatCreaturePermanent(g, game.Player2)
+
+	if !movePermanentToZone(g, first, zone.Exile) || !movePermanentToZone(g, second, zone.Exile) {
+		t.Fatal("sequential moves failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("queued sequential moves did not trigger")
+	}
+	if got := g.Stack.Size(); got != 2 {
+		t.Fatalf("stack size = %d, want one trigger for each queued sequential move", got)
+	}
+}
+
+func TestOneOrMoreEnterTriggerUsesTokenCreationBatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:     game.EventPermanentEnteredBattlefield,
+		OneOrMore: true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	token := &game.CardDef{CardFace: game.CardFace{
+		Name:       "Bat",
+		Types:      []types.Card{types.Creature},
+		Power:      opt.Val(game.PT{Value: 1}),
+		Toughness:  opt.Val(game.PT{Value: 1}),
+		OracleText: "Flying",
+	}}
+
+	if !createTokenPermanentsWithChoices(engine, g, game.Player1, token, 3, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("token creation batch failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("token creation batch did not trigger")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want one trigger for one token-creation batch", got)
+	}
+}
+
+func TestOneOrMoreEnterTriggerDoesNotCoalesceQueuedSequentialEntries(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:     game.EventPermanentEnteredBattlefield,
+		OneOrMore: true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	token := &game.CardDef{CardFace: game.CardFace{
+		Name:       "Bat",
+		Types:      []types.Card{types.Creature},
+		Power:      opt.Val(game.PT{Value: 1}),
+		Toughness:  opt.Val(game.PT{Value: 1}),
+		OracleText: "Flying",
+	}}
+
+	if _, ok := createTokenPermanent(g, game.Player1, token); !ok {
+		t.Fatal("first token creation failed")
+	}
+	if _, ok := createTokenPermanent(g, game.Player1, token); !ok {
+		t.Fatal("second token creation failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("queued sequential entries did not trigger")
+	}
+	if got := g.Stack.Size(); got != 2 {
+		t.Fatalf("stack size = %d, want one trigger for each queued sequential entry", got)
+	}
+}
+
 func TestFightEventTriggersForControlledFighter(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -3222,6 +3346,182 @@ func TestNonSelfDiesTriggerSubjectSelectionFiresForMatchingCreature(t *testing.T
 	destroyPermanent(g, creature.ObjectID)
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("SubjectSelection creature trigger did not fire when a creature died")
+	}
+}
+
+func TestZoneChangeTriggerSubjectSelectionUsesLastKnownCharacteristics(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	subject := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Legendary Dragon",
+		ManaCost:        opt.Val(cost.Mana{cost.O(4)}),
+		Colors:          []color.Color{color.Green},
+		Supertypes:      []types.Super{types.Legendary},
+		Types:           []types.Card{types.Creature},
+		Subtypes:        []types.Sub{types.Dragon},
+		Power:           opt.Val(game.PT{Value: 4}),
+		Toughness:       opt.Val(game.PT{Value: 4}),
+		StaticAbilities: []game.StaticAbility{game.FlyingStaticBody},
+	}})
+	subject.Tapped = true
+	if !movePermanentToZone(g, subject, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	event := g.Events[len(g.Events)-2]
+	if event.Kind != game.EventZoneChanged || event.PermanentID != subject.ObjectID {
+		t.Fatalf("zone-change event = %+v", event)
+	}
+	pattern := &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		MatchToZone:   true,
+		ToZone:        zone.Graveyard,
+		SubjectSelection: game.Selection{
+			Supertypes:  []types.Super{types.Legendary},
+			SubtypesAny: []types.Sub{types.Dragon},
+			ColorsAny:   []color.Color{color.Green},
+			Tapped:      game.TriTrue,
+			Keyword:     game.Flying,
+			ManaValue:   opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+			Power:       opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+			Toughness:   opt.Val(compare.Int{Op: compare.Equal, Value: 4}),
+		},
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("zone-change pattern did not match last-known characteristics")
+	}
+	pattern.SubjectSelection.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 5})
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("zone-change pattern matched a last-known power near miss")
+	}
+}
+
+func TestZoneChangeTriggerMatchesFaceDownCombatLKIAndExcludedDestination(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	attacker := addCombatCreaturePermanent(g, game.Player2)
+	attacker.FaceDown = true
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID}},
+	}
+	if !movePermanentToZone(g, attacker, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	diedEvent := g.Events[len(g.Events)-1]
+	if diedEvent.Kind != game.EventPermanentDied || !diedEvent.FaceDown {
+		t.Fatalf("died event = %+v, want face-down permanent-died event", diedEvent)
+	}
+	pattern := &game.TriggerPattern{
+		Event:         game.EventPermanentDied,
+		MatchFaceDown: true,
+		FaceDown:      true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			CombatState:   game.CombatStateAttacking,
+		},
+	}
+	if !triggerMatchesEvent(g, source, pattern, diedEvent) {
+		t.Fatal("died pattern did not match face-down attacking last-known information")
+	}
+	pattern.FaceDown = false
+	if triggerMatchesEvent(g, source, pattern, diedEvent) {
+		t.Fatal("face-up near-miss pattern matched face-down event")
+	}
+
+	zoneEvent := g.Events[len(g.Events)-2]
+	leaveWithoutDying := &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		ExcludeToZone: true,
+		ToZone:        zone.Graveyard,
+	}
+	if triggerMatchesEvent(g, source, leaveWithoutDying, zoneEvent) {
+		t.Fatal("leave-without-dying pattern matched a move to the graveyard")
+	}
+	exiled := addCombatCreaturePermanent(g, game.Player2)
+	if !movePermanentToZone(g, exiled, zone.Exile) {
+		t.Fatal("movePermanentToZone to exile failed")
+	}
+	exileEvent := g.Events[len(g.Events)-1]
+	if !triggerMatchesEvent(g, source, leaveWithoutDying, exileEvent) {
+		t.Fatal("leave-without-dying pattern did not match a move to exile")
+	}
+}
+
+func TestPermanentZoneChangeTriggerRejectsCardOnlyZoneChange(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	event := game.Event{
+		Kind:       game.EventZoneChanged,
+		Controller: game.Player2,
+		Player:     game.Player2,
+		FromZone:   zone.Battlefield,
+		ToZone:     zone.Graveyard,
+	}
+	pattern := &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("permanent zone-change pattern matched a card-only zone change")
+	}
+}
+
+func TestSelfZoneChangeTriggerUsesDepartedSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		Source:        game.TriggerSourceSelf,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		MatchToZone:   true,
+		ToZone:        zone.Exile,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !movePermanentToZone(g, source, zone.Exile) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("departed source zone-change trigger was not put on stack")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want departed source trigger", obj)
+	}
+}
+
+func TestAttachedZoneChangeTriggerUsesDepartedSubjectLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	subject := addCombatCreaturePermanent(g, game.Player2)
+	equipment := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Equipment",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
+	}})
+	if !attachPermanent(g, equipment, subject) {
+		t.Fatal("attachPermanent failed")
+	}
+	if !movePermanentToZone(g, subject, zone.Hand) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	event := g.Events[len(g.Events)-1]
+	pattern := &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		Source:        game.TriggerSourceAttachedPermanent,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		MatchToZone:   true,
+		ToZone:        zone.Hand,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+	if !triggerMatchesEvent(g, equipment, pattern, event) {
+		t.Fatal("attached zone-change trigger did not use departed subject LKI")
 	}
 }
 

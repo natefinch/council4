@@ -24,6 +24,9 @@ type ObjectSnapshot struct {
 	Owner          PlayerID
 	Controller     PlayerID
 	FromZone       zone.Type
+	Tapped         bool
+	Attacking      bool
+	Blocking       bool
 	Colors         []color.Color
 	Supertypes     []types.Super
 	Types          []types.Card

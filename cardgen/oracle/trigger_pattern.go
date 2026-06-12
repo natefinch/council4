@@ -15,6 +15,7 @@ const (
 	TriggerEventSpellCast
 	TriggerEventPermanentEnteredBattlefield
 	TriggerEventPermanentDied
+	TriggerEventZoneChanged
 	TriggerEventCountersAdded
 	TriggerEventDamageDealt
 	TriggerEventCardDrawn
@@ -78,6 +79,7 @@ const (
 	TriggerZoneExile
 	TriggerZoneLibrary
 	TriggerZoneStack
+	TriggerZoneCommand
 )
 
 // TriggerStep identifies a phase or step boundary used by a trigger pattern.
@@ -163,14 +165,75 @@ const (
 )
 
 // TriggerSubtype identifies a subtype used by a semantic trigger Selection.
-type TriggerSubtype uint8
+// The runtime adapter validates values against its closed subtype vocabulary.
+type TriggerSubtype string
 
 // Trigger subtypes.
 const (
-	TriggerSubtypeUnknown TriggerSubtype = iota
-	TriggerSubtypeSpirit
-	TriggerSubtypeArcane
+	TriggerSubtypeUnknown TriggerSubtype = ""
+	TriggerSubtypeSpirit  TriggerSubtype = "Spirit"
+	TriggerSubtypeArcane  TriggerSubtype = "Arcane"
 )
+
+// TriggerSupertype identifies a supertype used by a semantic trigger Selection.
+type TriggerSupertype uint8
+
+// Trigger supertypes.
+const (
+	TriggerSupertypeUnknown TriggerSupertype = iota
+	TriggerSupertypeLegendary
+	TriggerSupertypeSnow
+)
+
+// TriggerKeyword identifies a keyword used by a semantic trigger Selection.
+type TriggerKeyword uint8
+
+// Trigger keywords.
+const (
+	TriggerKeywordUnknown TriggerKeyword = iota
+	TriggerKeywordDefender
+	TriggerKeywordFlash
+	TriggerKeywordFlying
+	TriggerKeywordHaste
+	TriggerKeywordShadow
+)
+
+// TriggerTriState is a closed semantic true/false filter.
+type TriggerTriState uint8
+
+// Trigger tri-state values.
+const (
+	TriggerTriAny TriggerTriState = iota
+	TriggerTriTrue
+	TriggerTriFalse
+)
+
+// TriggerCombatState identifies a permanent's combat involvement.
+type TriggerCombatState uint8
+
+// Trigger combat-state values.
+const (
+	TriggerCombatStateAny TriggerCombatState = iota
+	TriggerCombatStateAttacking
+	TriggerCombatStateBlocking
+)
+
+// TriggerComparison identifies an integer-comparison relation.
+type TriggerComparison uint8
+
+// Trigger comparison relations.
+const (
+	TriggerComparisonUnknown TriggerComparison = iota
+	TriggerComparisonEqual
+	TriggerComparisonAtMost
+	TriggerComparisonAtLeast
+)
+
+// TriggerNumberFilter is a closed semantic integer predicate.
+type TriggerNumberFilter struct {
+	Comparison TriggerComparison
+	Value      int
+}
 
 // TriggerSelection is the closed semantic Selection vocabulary currently used
 // by representable event subjects and cast spells. Its zero value is a
@@ -179,13 +242,23 @@ type TriggerSelection struct {
 	RequiredTypes    []TriggerCardType
 	RequiredTypesAny []TriggerCardType
 	ExcludedTypes    []TriggerCardType
+	Supertypes       []TriggerSupertype
 	SubtypesAny      []TriggerSubtype
 	ColorsAny        []TriggerColor
+	ExcludedColors   []TriggerColor
 	Colorless        bool
 	Multicolored     bool
+	Tapped           TriggerTriState
+	CombatState      TriggerCombatState
+	Keyword          TriggerKeyword
+	ExcludedKeyword  TriggerKeyword
 	NonToken         bool
+	TokenOnly        bool
 	ManaValueAtLeast int
 	MatchManaValue   bool
+	ManaValue        TriggerNumberFilter
+	Power            TriggerNumberFilter
+	Toughness        TriggerNumberFilter
 }
 
 // TriggerPattern is a source-spanned semantic description of a representable
@@ -209,6 +282,10 @@ type TriggerPattern struct {
 	FromZone      TriggerZone
 	MatchToZone   bool
 	ToZone        TriggerZone
+	ExcludeToZone bool
+
+	MatchFaceDown bool
+	FaceDown      bool
 
 	Step            TriggerStep
 	CombatQualifier TriggerCombatQualifier
@@ -404,13 +481,7 @@ func recognizePhaseStepTrigger(event string, _ TriggerKind, _ string) (TriggerPa
 }
 
 func recognizePermanentZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
-	if pattern, ok := recognizeSelfZoneChangeTrigger(event, kind, cardName); ok {
-		return pattern, true
-	}
-	if pattern, ok := recognizeEnterTrigger(event, kind); ok {
-		return pattern, true
-	}
-	return recognizeDiesTrigger(event, kind)
+	return recognizeZoneChangeTrigger(event, kind, cardName)
 }
 
 func recognizeSpellAbilityTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
@@ -501,6 +572,7 @@ func recognizeSimpleTrigger(event string, kind TriggerKind) (TriggerPattern, boo
 var selfEnterSubjectSlots = []string{
 	"this creature",
 	"this permanent",
+	"this token",
 	"this aura",
 	"this artifact",
 	"this equipment",
@@ -508,18 +580,11 @@ var selfEnterSubjectSlots = []string{
 	"this vehicle",
 	"this enchantment",
 	"this battle",
+	"this siege",
 	"this case",
 	"this class",
 	"this planeswalker",
 	"this spacecraft",
-}
-
-var selfGraveyardSubjectSlots = []string{
-	"this aura",
-	"this artifact",
-	"this enchantment",
-	"this vehicle",
-	"this equipment",
 }
 
 var selfStateSubjectSlots = []string{
@@ -529,30 +594,6 @@ var selfStateSubjectSlots = []string{
 	"this artifact",
 	"this enchantment",
 	"this vehicle",
-}
-
-func recognizeSelfZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
-	if kind != TriggerWhen {
-		return TriggerPattern{}, false
-	}
-	templates := []struct {
-		suffix        string
-		event         TriggerEvent
-		subjects      []string
-		allowCardName bool
-	}{
-		{suffix: " enters", event: TriggerEventPermanentEnteredBattlefield, subjects: selfEnterSubjectSlots, allowCardName: true},
-		{suffix: " dies", event: TriggerEventPermanentDied, subjects: []string{"this creature", "this permanent"}, allowCardName: true},
-		{suffix: " is put into a graveyard from the battlefield", event: TriggerEventPermanentDied, subjects: selfGraveyardSubjectSlots},
-	}
-	for _, template := range templates {
-		subject, ok := strings.CutSuffix(event, template.suffix)
-		if !ok || !matchesSelfSubjectSlot(subject, cardName, template.subjects, template.allowCardName) {
-			continue
-		}
-		return TriggerPattern{Event: template.event, Source: TriggerSourceSelf}, true
-	}
-	return TriggerPattern{}, false
 }
 
 func recognizeSelfCombatTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
@@ -636,7 +677,28 @@ func matchesSelfSubjectSlot(subject, cardName string, slots []string, allowCardN
 	if slices.Contains(slots, subject) {
 		return true
 	}
-	return allowCardName && cardName != "" && strings.EqualFold(subject, cardName)
+	return allowCardName && matchesCardNameSubject(subject, cardName)
+}
+
+func matchesCardNameSubject(subject, cardName string) bool {
+	if cardName == "" {
+		return false
+	}
+	if strings.EqualFold(subject, cardName) {
+		return true
+	}
+	shortName, _, hasComma := strings.Cut(cardName, ",")
+	if hasComma && strings.EqualFold(subject, shortName) {
+		return true
+	}
+	frontName, _, hasBackFace := strings.Cut(cardName, " // ")
+	if hasBackFace && strings.EqualFold(subject, frontName) {
+		return true
+	}
+	firstWord, _, hasMore := strings.Cut(cardName, " ")
+	return hasMore &&
+		!slices.Contains([]string{"a", "an", "the"}, strings.ToLower(firstWord)) &&
+		strings.EqualFold(subject, firstWord)
 }
 
 func recognizeBecameTargetTrigger(event, cardName string) (TriggerPattern, bool) {
@@ -844,64 +906,771 @@ func compileCastSelection(phrase string, pattern *TriggerPattern) bool {
 	return true
 }
 
-func recognizeEnterTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
-	if kind != TriggerWhenever {
+type permanentZoneChangeTemplate struct {
+	singularSuffix string
+	pluralSuffix   string
+	event          TriggerEvent
+	matchFromZone  bool
+	fromZone       TriggerZone
+	matchToZone    bool
+	toZone         TriggerZone
+	excludeToZone  bool
+	controller     ControllerKind
+	player         TriggerPlayerRelation
+	tapped         TriggerTriState
+}
+
+var permanentZoneChangeTemplates = []permanentZoneChangeTemplate{
+	{singularSuffix: " enters tapped", pluralSuffix: " enter tapped", event: TriggerEventPermanentEnteredBattlefield, tapped: TriggerTriTrue},
+	{singularSuffix: " enters untapped", pluralSuffix: " enter untapped", event: TriggerEventPermanentEnteredBattlefield, tapped: TriggerTriFalse},
+	{singularSuffix: " enters", pluralSuffix: " enter", event: TriggerEventPermanentEnteredBattlefield},
+	{singularSuffix: " enters the battlefield", pluralSuffix: " enter the battlefield", event: TriggerEventPermanentEnteredBattlefield},
+	{singularSuffix: " enters under your control", pluralSuffix: " enter under your control", event: TriggerEventPermanentEnteredBattlefield, controller: ControllerYou},
+	{singularSuffix: " enters the battlefield under your control", pluralSuffix: " enter the battlefield under your control", event: TriggerEventPermanentEnteredBattlefield, controller: ControllerYou},
+	{singularSuffix: " enters under an opponent's control", pluralSuffix: " enter under an opponent's control", event: TriggerEventPermanentEnteredBattlefield, controller: ControllerOpponent},
+	{singularSuffix: " enters the battlefield under an opponent's control", pluralSuffix: " enter the battlefield under an opponent's control", event: TriggerEventPermanentEnteredBattlefield, controller: ControllerOpponent},
+	{singularSuffix: " enters from a graveyard", pluralSuffix: " enter from a graveyard", event: TriggerEventPermanentEnteredBattlefield, matchFromZone: true, fromZone: TriggerZoneGraveyard},
+	{singularSuffix: " enters from your graveyard", pluralSuffix: " enter from your graveyard", event: TriggerEventPermanentEnteredBattlefield, matchFromZone: true, fromZone: TriggerZoneGraveyard, player: TriggerPlayerYou},
+	{singularSuffix: " enters from an opponent's graveyard", pluralSuffix: " enter from an opponent's graveyard", event: TriggerEventPermanentEnteredBattlefield, matchFromZone: true, fromZone: TriggerZoneGraveyard, player: TriggerPlayerOpponent},
+	{singularSuffix: " enters from exile", pluralSuffix: " enter from exile", event: TriggerEventPermanentEnteredBattlefield, matchFromZone: true, fromZone: TriggerZoneExile},
+	{singularSuffix: " enters from your hand", pluralSuffix: " enter from your hand", event: TriggerEventPermanentEnteredBattlefield, matchFromZone: true, fromZone: TriggerZoneHand, player: TriggerPlayerYou},
+	{singularSuffix: " dies", pluralSuffix: " die", event: TriggerEventPermanentDied},
+	{
+		singularSuffix: " is put into a graveyard from the battlefield",
+		pluralSuffix:   " are put into a graveyard from the battlefield",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneGraveyard,
+	},
+	{
+		singularSuffix: " is put into a graveyard",
+		pluralSuffix:   " are put into a graveyard",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneGraveyard,
+	},
+	{
+		singularSuffix: " is put into your graveyard from the battlefield",
+		pluralSuffix:   " are put into your graveyard from the battlefield",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneGraveyard,
+		player:         TriggerPlayerYou,
+	},
+	{
+		singularSuffix: " is put into an opponent's graveyard from the battlefield",
+		pluralSuffix:   " are put into an opponent's graveyard from the battlefield",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneGraveyard,
+		player:         TriggerPlayerOpponent,
+	},
+	{
+		singularSuffix: " is put into its owner's graveyard from the battlefield",
+		pluralSuffix:   " are put into their owners' graveyards from the battlefield",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneGraveyard,
+	},
+	{
+		singularSuffix: " leaves the battlefield without dying",
+		pluralSuffix:   " leave the battlefield without dying",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		excludeToZone:  true,
+		toZone:         TriggerZoneGraveyard,
+	},
+	{
+		singularSuffix: " leaves the battlefield",
+		pluralSuffix:   " leave the battlefield",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+	},
+	{
+		singularSuffix: " is exiled from the battlefield",
+		pluralSuffix:   " are exiled from the battlefield",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneExile,
+	},
+	{
+		singularSuffix: " is put into exile from the battlefield",
+		pluralSuffix:   " are put into exile from the battlefield",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneExile,
+	},
+	{
+		singularSuffix: " is put into exile",
+		pluralSuffix:   " are put into exile",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneExile,
+	},
+	{
+		singularSuffix: " is returned to its owner's hand",
+		pluralSuffix:   " are returned to their owners' hands",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneHand,
+	},
+	{
+		singularSuffix: " is returned to your hand",
+		pluralSuffix:   " are returned to your hand",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneHand,
+		player:         TriggerPlayerYou,
+	},
+	{
+		singularSuffix: " is returned to a player's hand",
+		pluralSuffix:   " are returned to a player's hand",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneHand,
+	},
+	{
+		singularSuffix: " is returned to hand",
+		pluralSuffix:   " are returned to hand",
+		event:          TriggerEventZoneChanged,
+		matchFromZone:  true,
+		fromZone:       TriggerZoneBattlefield,
+		matchToZone:    true,
+		toZone:         TriggerZoneHand,
+	},
+}
+
+var attachedPermanentSubjects = map[string]TriggerSelection{
+	"enchanted artifact":    {RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact}},
+	"enchanted creature":    {RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+	"enchanted enchantment": {RequiredTypes: []TriggerCardType{TriggerCardTypeEnchantment}},
+	"enchanted land":        {RequiredTypes: []TriggerCardType{TriggerCardTypeLand}},
+	"enchanted permanent":   {},
+	"equipped creature":     {RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+	"fortified land":        {RequiredTypes: []TriggerCardType{TriggerCardTypeLand}},
+}
+
+func recognizeZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
+	if kind != TriggerWhen && kind != TriggerWhenever {
 		return TriggerPattern{}, false
 	}
-	pattern := TriggerPattern{Event: TriggerEventPermanentEnteredBattlefield}
-	if rest, ok := strings.CutPrefix(event, "one or more "); ok {
-		pattern.OneOrMore = true
-		selection, controller, ok := parsePluralPermanentEventSubject(rest, " enter")
-		if !ok {
-			return TriggerPattern{}, false
+	for _, template := range permanentZoneChangeTemplates {
+		if subject, ok := strings.CutSuffix(event, template.singularSuffix); ok {
+			pattern, ok := bindSinglePermanentZoneChangeSubject(subject, cardName)
+			if !ok {
+				continue
+			}
+			if !completePermanentZoneChangePattern(&pattern, template) {
+				return TriggerPattern{}, false
+			}
+			return pattern, true
 		}
-		pattern.SubjectSelection = selection
-		pattern.Controller = controller
-		return pattern, true
+		if subject, ok := strings.CutSuffix(event, template.pluralSuffix); ok {
+			pattern, ok := bindPluralPermanentZoneChangeSubject(subject, cardName)
+			if !ok {
+				continue
+			}
+			if !completePermanentZoneChangePattern(&pattern, template) {
+				return TriggerPattern{}, false
+			}
+			return pattern, true
+		}
 	}
-	subject, ok := parseSinglePermanentEventSubject(event, " enters")
+	return TriggerPattern{}, false
+}
+
+func bindSinglePermanentZoneChangeSubject(subject, cardName string) (TriggerPattern, bool) {
+	if matchesSelfSubjectSlot(subject, cardName, selfEnterSubjectSlots, true) {
+		return TriggerPattern{Source: TriggerSourceSelf}, true
+	}
+	if selection, ok := parseAttachedPermanentZoneChangeSubject(subject); ok {
+		return TriggerPattern{Source: TriggerSourceAttachedPermanent, SubjectSelection: selection}, true
+	}
+
+	subject, otherThanSelf := stripOtherThanSelfSubject(subject, cardName)
+	parsed, ok := parseZoneChangePermanentSubject(subject, false)
 	if !ok {
 		return TriggerPattern{}, false
 	}
-	pattern.SubjectSelection = subject.selection
-	pattern.Controller = subject.controller
-	pattern.ExcludeSelf = subject.excludeSelf
-	return pattern, true
+	return TriggerPattern{
+		Controller:       parsed.controller,
+		Player:           parsed.player,
+		ExcludeSelf:      parsed.excludeSelf || otherThanSelf,
+		SubjectSelection: parsed.selection,
+		MatchFaceDown:    parsed.faceDown,
+		FaceDown:         parsed.faceDown,
+	}, true
 }
 
-func recognizeDiesTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
-	attached := map[string]TriggerSelection{
-		"enchanted creature":  {RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
-		"equipped creature":   {RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
-		"enchanted land":      {RequiredTypes: []TriggerCardType{TriggerCardTypeLand}},
-		"enchanted permanent": {},
+func stripOtherThanSelfSubject(subject, cardName string) (string, bool) {
+	before, excluded, ok := strings.Cut(subject, " other than ")
+	if !ok {
+		return subject, false
 	}
-	if kind == TriggerWhen || kind == TriggerWhenever {
-		subject, matchesDiesTemplate := strings.CutSuffix(event, " dies")
-		if selection, ok := attached[subject]; matchesDiesTemplate && ok {
-			return TriggerPattern{
-				Event:            TriggerEventPermanentDied,
-				Source:           TriggerSourceAttachedPermanent,
-				SubjectSelection: selection,
-			}, true
+	if matchesSelfSubjectSlot(excluded, cardName, selfEnterSubjectSlots, true) {
+		return before, true
+	}
+	return subject, false
+}
+
+func parseAttachedPermanentZoneChangeSubject(subject string) (TriggerSelection, bool) {
+	if selection, ok := attachedPermanentSubjects[subject]; ok {
+		return selection, true
+	}
+	for _, prefix := range []string{"enchanted ", "equipped ", "fortified "} {
+		rest, ok := strings.CutPrefix(subject, prefix)
+		if !ok {
+			continue
 		}
+		selection, ok := parsePermanentTriggerSelection(rest, false)
+		if !ok {
+			return TriggerSelection{}, false
+		}
+		switch prefix {
+		case "equipped ":
+			addRequiredTriggerType(&selection, TriggerCardTypeCreature)
+		case "fortified ":
+			addRequiredTriggerType(&selection, TriggerCardTypeLand)
+		default:
+		}
+		return selection, true
 	}
-	if kind == TriggerWhen {
+	return TriggerSelection{}, false
+}
+
+func bindPluralPermanentZoneChangeSubject(subject, cardName string) (TriggerPattern, bool) {
+	if matchesCardNameSubject(subject, cardName) {
+		return TriggerPattern{Source: TriggerSourceSelf}, true
+	}
+	subject, oneOrMore := strings.CutPrefix(subject, "one or more ")
+	if !oneOrMore {
 		return TriggerPattern{}, false
 	}
-	if kind != TriggerWhenever {
-		return TriggerPattern{}, false
-	}
-	subject, ok := parseSinglePermanentEventSubject(event, " dies")
-	if !ok || !slices.Contains(subject.selection.RequiredTypes, TriggerCardTypeCreature) {
+	parsed, ok := parseZoneChangePermanentSubject(subject, true)
+	if !ok {
 		return TriggerPattern{}, false
 	}
 	return TriggerPattern{
-		Event:            TriggerEventPermanentDied,
-		Controller:       subject.controller,
-		ExcludeSelf:      subject.excludeSelf,
-		SubjectSelection: subject.selection,
+		Controller:       parsed.controller,
+		Player:           parsed.player,
+		ExcludeSelf:      parsed.excludeSelf,
+		SubjectSelection: parsed.selection,
+		MatchFaceDown:    parsed.faceDown,
+		FaceDown:         parsed.faceDown,
+		OneOrMore:        true,
 	}, true
+}
+
+func completePermanentZoneChangePattern(pattern *TriggerPattern, template permanentZoneChangeTemplate) bool {
+	if !mergeControllerKind(&pattern.Controller, template.controller) ||
+		!mergeTriggerPlayerRelation(&pattern.Player, template.player) {
+		return false
+	}
+	pattern.Event = template.event
+	pattern.MatchFromZone = template.matchFromZone
+	pattern.FromZone = template.fromZone
+	pattern.MatchToZone = template.matchToZone
+	pattern.ToZone = template.toZone
+	pattern.ExcludeToZone = template.excludeToZone
+	if template.tapped != TriggerTriAny {
+		if pattern.SubjectSelection.Tapped != TriggerTriAny &&
+			pattern.SubjectSelection.Tapped != template.tapped {
+			return false
+		}
+		pattern.SubjectSelection.Tapped = template.tapped
+	}
+	if template.event == TriggerEventPermanentDied {
+		addRequiredTriggerType(&pattern.SubjectSelection, TriggerCardTypeCreature)
+	}
+	return true
+}
+
+func mergeControllerKind(current *ControllerKind, additional ControllerKind) bool {
+	if additional == ControllerAny {
+		return true
+	}
+	if *current != ControllerAny && *current != additional {
+		return false
+	}
+	*current = additional
+	return true
+}
+
+func mergeTriggerPlayerRelation(current *TriggerPlayerRelation, additional TriggerPlayerRelation) bool {
+	if additional == TriggerPlayerAny {
+		return true
+	}
+	if *current != TriggerPlayerAny && *current != additional {
+		return false
+	}
+	*current = additional
+	return true
+}
+
+func addRequiredTriggerType(selection *TriggerSelection, cardType TriggerCardType) {
+	if !slices.Contains(selection.RequiredTypes, cardType) {
+		selection.RequiredTypes = append(selection.RequiredTypes, cardType)
+	}
+}
+
+type zoneChangePermanentSubject struct {
+	selection   TriggerSelection
+	controller  ControllerKind
+	player      TriggerPlayerRelation
+	excludeSelf bool
+	faceDown    bool
+}
+
+func parseZoneChangePermanentSubject(subject string, plural bool) (zoneChangePermanentSubject, bool) {
+	result := zoneChangePermanentSubject{}
+	relations := parsePermanentSubjectRelations(subject)
+	if !relations.ok {
+		return zoneChangePermanentSubject{}, false
+	}
+	subject = relations.subject
+	result.controller = relations.controller
+	result.player = relations.player
+	if plural {
+		subject, result.excludeSelf = strings.CutPrefix(subject, "other ")
+	} else {
+		switch {
+		case strings.HasPrefix(subject, "another "):
+			result.excludeSelf = true
+			subject = strings.TrimPrefix(subject, "another ")
+		case strings.HasPrefix(subject, "a "):
+			subject = strings.TrimPrefix(subject, "a ")
+		case strings.HasPrefix(subject, "an "):
+			subject = strings.TrimPrefix(subject, "an ")
+		default:
+			return zoneChangePermanentSubject{}, false
+		}
+	}
+	if rest, ok := strings.CutPrefix(subject, "face-down "); ok {
+		subject = rest
+		result.faceDown = true
+	}
+	var ok bool
+	result.selection, ok = parsePermanentTriggerSelection(subject, plural)
+	if !ok {
+		return zoneChangePermanentSubject{}, false
+	}
+	return result, true
+}
+
+type permanentSubjectRelations struct {
+	subject    string
+	controller ControllerKind
+	player     TriggerPlayerRelation
+	ok         bool
+}
+
+func parsePermanentSubjectRelations(subject string) permanentSubjectRelations {
+	controller := ControllerAny
+	player := TriggerPlayerAny
+	for _, relation := range []struct {
+		phrase     string
+		controller ControllerKind
+	}{
+		{phrase: " you control", controller: ControllerYou},
+		{phrase: " an opponent controls", controller: ControllerOpponent},
+		{phrase: " your opponents control", controller: ControllerOpponent},
+		{phrase: " you don't control", controller: ControllerOpponent},
+	} {
+		for _, qualifier := range []string{" with ", " without "} {
+			if strings.Contains(subject, relation.phrase+qualifier) {
+				subject = strings.Replace(subject, relation.phrase+qualifier, qualifier, 1)
+				controller = relation.controller
+				break
+			}
+		}
+	}
+	switch {
+	case strings.HasSuffix(subject, " you control but don't own"):
+		subject = strings.TrimSuffix(subject, " you control but don't own")
+		controller = ControllerYou
+		player = TriggerPlayerOpponent
+	case strings.HasSuffix(subject, " you control"):
+		subject = strings.TrimSuffix(subject, " you control")
+		controller = ControllerYou
+	case strings.HasSuffix(subject, " an opponent controls"):
+		subject = strings.TrimSuffix(subject, " an opponent controls")
+		controller = ControllerOpponent
+	case strings.HasSuffix(subject, " your opponents control"):
+		subject = strings.TrimSuffix(subject, " your opponents control")
+		controller = ControllerOpponent
+	case strings.HasSuffix(subject, " you don't control"):
+		subject = strings.TrimSuffix(subject, " you don't control")
+		controller = ControllerOpponent
+	case strings.HasSuffix(subject, " you own"):
+		subject = strings.TrimSuffix(subject, " you own")
+		player = TriggerPlayerYou
+	case strings.HasSuffix(subject, " an opponent owns"):
+		subject = strings.TrimSuffix(subject, " an opponent owns")
+		player = TriggerPlayerOpponent
+	case strings.HasSuffix(subject, " owned by another player"):
+		subject = strings.TrimSuffix(subject, " owned by another player")
+		player = TriggerPlayerOpponent
+	default:
+	}
+	return permanentSubjectRelations{subject: subject, controller: controller, player: player, ok: subject != ""}
+}
+
+func parsePermanentTriggerSelection(subject string, plural bool) (TriggerSelection, bool) {
+	selection := TriggerSelection{}
+	if plural && strings.HasSuffix(subject, " tokens") {
+		subject = strings.TrimSuffix(subject, " tokens")
+		selection.TokenOnly = true
+	} else if !plural && strings.HasSuffix(subject, " token") {
+		subject = strings.TrimSuffix(subject, " token")
+		selection.TokenOnly = true
+	}
+	if plural && strings.HasSuffix(subject, " cards") {
+		subject = strings.TrimSuffix(subject, " cards")
+	} else if !plural && strings.HasSuffix(subject, " card") {
+		subject = strings.TrimSuffix(subject, " card")
+	}
+	var ok bool
+	subject, ok = parsePermanentTriggerSelectionSuffix(subject, &selection)
+	if !ok {
+		return TriggerSelection{}, false
+	}
+	for {
+		rest, matched := parsePermanentTriggerSelectionAdjective(subject, &selection)
+		if !matched {
+			break
+		}
+		subject = rest
+	}
+	for _, separator := range []string{" and/or ", " or "} {
+		left, right, ok := strings.Cut(subject, separator)
+		if !ok {
+			continue
+		}
+		leftType, leftOK := parseSingleTriggerPermanentType(left, plural)
+		rightType, rightOK := parseSingleTriggerPermanentType(right, plural)
+		if leftOK && rightOK && leftType != TriggerCardTypeUnknown && rightType != TriggerCardTypeUnknown {
+			selection.RequiredTypesAny = []TriggerCardType{leftType, rightType}
+			return selection, true
+		}
+		if leftOK || rightOK {
+			return TriggerSelection{}, false
+		}
+		left = singularTriggerSubtype(left, plural)
+		right = singularTriggerSubtype(right, plural)
+		if !looksLikeTriggerSubtype(left) || !looksLikeTriggerSubtype(right) {
+			return TriggerSelection{}, false
+		}
+		selection.SubtypesAny = []TriggerSubtype{
+			TriggerSubtype(left),
+			TriggerSubtype(right),
+		}
+		return selection, true
+	}
+	if strings.HasPrefix(subject, "non") {
+		excluded, rest, ok := parseExcludedTriggerPermanentType(subject, plural)
+		if !ok {
+			return TriggerSelection{}, false
+		}
+		selection.ExcludedTypes = []TriggerCardType{excluded}
+		subject = rest
+	}
+	words := strings.Fields(subject)
+	if len(words) == 0 {
+		return TriggerSelection{}, false
+	}
+	if words[len(words)-1] == "token" || words[len(words)-1] == "tokens" {
+		selection.TokenOnly = true
+		words = words[:len(words)-1]
+	}
+	if len(words) == 0 {
+		return selection, true
+	}
+	var subtypeWords []string
+	for _, word := range words {
+		cardType, ok := parseSingleTriggerPermanentType(word, plural)
+		if !ok {
+			subtypeWords = append(subtypeWords, word)
+			continue
+		}
+		if cardType != TriggerCardTypeUnknown {
+			addRequiredTriggerType(&selection, cardType)
+		}
+	}
+	if len(subtypeWords) > 0 {
+		subtype := singularTriggerSubtype(strings.Join(subtypeWords, " "), plural)
+		if subtype == "outlaw" {
+			selection.SubtypesAny = []TriggerSubtype{"assassin", "mercenary", "pirate", "rogue", "warlock"}
+			return selection, true
+		}
+		if !looksLikeTriggerSubtype(subtype) {
+			return TriggerSelection{}, false
+		}
+		selection.SubtypesAny = []TriggerSubtype{TriggerSubtype(subtype)}
+	}
+	return selection, true
+}
+
+func looksLikeTriggerSubtype(subject string) bool {
+	fields := strings.Fields(subject)
+	if len(fields) == 0 || len(fields) > 2 {
+		return false
+	}
+	for _, word := range fields {
+		if _, ok := triggerPermanentType(word); ok ||
+			strings.HasPrefix(word, "non") ||
+			slices.Contains([]string{
+				"base", "chosen", "commander", "double-faced", "face-down", "historic", "modified",
+				"an", "a", "the", "you", "your", "opponent", "or", "and", "but",
+			}, word) {
+			return false
+		}
+	}
+	for _, r := range subject {
+		if (r >= 'a' && r <= 'z') ||
+			r == ' ' ||
+			r == '-' ||
+			r == '\'' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func parsePermanentTriggerSelectionAdjective(subject string, selection *TriggerSelection) (string, bool) {
+	adjectives := []struct {
+		prefix string
+		bind   func()
+	}{
+		{prefix: "nontoken ", bind: func() { selection.NonToken = true }},
+		{prefix: "token ", bind: func() { selection.TokenOnly = true }},
+		{prefix: "legendary ", bind: func() {
+			selection.Supertypes = append(selection.Supertypes, TriggerSupertypeLegendary)
+		}},
+		{prefix: "snow ", bind: func() {
+			selection.Supertypes = append(selection.Supertypes, TriggerSupertypeSnow)
+		}},
+		{prefix: "white ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorWhite) }},
+		{prefix: "blue ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorBlue) }},
+		{prefix: "black ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorBlack) }},
+		{prefix: "red ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorRed) }},
+		{prefix: "green ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorGreen) }},
+		{prefix: "nonwhite ", bind: func() {
+			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorWhite)
+		}},
+		{prefix: "nonblue ", bind: func() {
+			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorBlue)
+		}},
+		{prefix: "nonblack ", bind: func() {
+			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorBlack)
+		}},
+		{prefix: "nonred ", bind: func() {
+			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorRed)
+		}},
+		{prefix: "nongreen ", bind: func() {
+			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorGreen)
+		}},
+		{prefix: "colorless ", bind: func() { selection.Colorless = true }},
+		{prefix: "multicolored ", bind: func() { selection.Multicolored = true }},
+		{prefix: "attacking ", bind: func() { selection.CombatState = TriggerCombatStateAttacking }},
+		{prefix: "blocking ", bind: func() { selection.CombatState = TriggerCombatStateBlocking }},
+	}
+	for _, adjective := range adjectives {
+		if rest, ok := strings.CutPrefix(subject, adjective.prefix); ok {
+			adjective.bind()
+			return rest, true
+		}
+	}
+	return subject, false
+}
+
+func parsePermanentTriggerSelectionSuffix(subject string, selection *TriggerSelection) (string, bool) {
+	switch {
+	case strings.HasSuffix(subject, " tapped"):
+		selection.Tapped = TriggerTriTrue
+		return strings.TrimSuffix(subject, " tapped"), true
+	case strings.HasSuffix(subject, " untapped"):
+		selection.Tapped = TriggerTriFalse
+		return strings.TrimSuffix(subject, " untapped"), true
+	}
+	if before, qualifier, ok := strings.Cut(subject, " with "); ok {
+		if !parsePermanentTriggerSelectionQualifier(qualifier, selection) {
+			return "", false
+		}
+		return before, true
+	}
+	if before, qualifier, ok := strings.Cut(subject, " without "); ok {
+		keyword, ok := parseTriggerKeyword(qualifier)
+		if !ok {
+			return "", false
+		}
+		selection.ExcludedKeyword = keyword
+		return before, true
+	}
+	fields := strings.Fields(subject)
+	if len(fields) > 1 {
+		powerText, toughnessText, hasSlash := strings.Cut(fields[0], "/")
+		power, powerOK := parseTriggerNonNegativeInt(powerText)
+		toughness, toughnessOK := parseTriggerNonNegativeInt(toughnessText)
+		if hasSlash && powerOK && toughnessOK {
+			selection.Power = TriggerNumberFilter{Comparison: TriggerComparisonEqual, Value: power}
+			selection.Toughness = TriggerNumberFilter{Comparison: TriggerComparisonEqual, Value: toughness}
+			return strings.Join(fields[1:], " "), true
+		}
+	}
+	return subject, true
+}
+
+func parsePermanentTriggerSelectionQualifier(qualifier string, selection *TriggerSelection) bool {
+	if keyword, ok := parseTriggerKeyword(qualifier); ok {
+		selection.Keyword = keyword
+		return true
+	}
+	for _, characteristic := range []struct {
+		prefix string
+		bind   func(TriggerNumberFilter)
+	}{
+		{prefix: "mana value ", bind: func(filter TriggerNumberFilter) { selection.ManaValue = filter }},
+		{prefix: "power ", bind: func(filter TriggerNumberFilter) { selection.Power = filter }},
+		{prefix: "toughness ", bind: func(filter TriggerNumberFilter) { selection.Toughness = filter }},
+	} {
+		if rest, ok := strings.CutPrefix(qualifier, characteristic.prefix); ok {
+			filter, ok := parseTriggerNumberFilter(rest)
+			if !ok {
+				return false
+			}
+			characteristic.bind(filter)
+			return true
+		}
+	}
+	return false
+}
+
+func parseTriggerKeyword(word string) (TriggerKeyword, bool) {
+	switch word {
+	case "defender":
+		return TriggerKeywordDefender, true
+	case "flash":
+		return TriggerKeywordFlash, true
+	case "flying":
+		return TriggerKeywordFlying, true
+	case "haste":
+		return TriggerKeywordHaste, true
+	case "shadow":
+		return TriggerKeywordShadow, true
+	default:
+		return TriggerKeywordUnknown, false
+	}
+}
+
+func parseTriggerNumberFilter(phrase string) (TriggerNumberFilter, bool) {
+	comparison := TriggerComparisonEqual
+	switch {
+	case strings.HasSuffix(phrase, " or less"):
+		comparison = TriggerComparisonAtMost
+		phrase = strings.TrimSuffix(phrase, " or less")
+	case strings.HasSuffix(phrase, " or greater"):
+		comparison = TriggerComparisonAtLeast
+		phrase = strings.TrimSuffix(phrase, " or greater")
+	default:
+	}
+	value, ok := parseTriggerNonNegativeInt(phrase)
+	return TriggerNumberFilter{Comparison: comparison, Value: value}, ok
+}
+
+func parseTriggerNonNegativeInt(phrase string) (int, bool) {
+	if phrase == "" {
+		return 0, false
+	}
+	value := 0
+	for _, r := range phrase {
+		if r < '0' || r > '9' {
+			return 0, false
+		}
+		value = value*10 + int(r-'0')
+	}
+	return value, true
+}
+
+func singularTriggerSubtype(subject string, plural bool) string {
+	if !plural {
+		return subject
+	}
+	switch subject {
+	case "children":
+		return "child"
+	case "dwarves":
+		return "dwarf"
+	case "elves":
+		return "elf"
+	case "faeries":
+		return "faerie"
+	case "mice":
+		return "mouse"
+	case "oxen":
+		return "ox"
+	case "wolves":
+		return "wolf"
+	}
+	switch {
+	case strings.HasSuffix(subject, "ies"):
+		return strings.TrimSuffix(subject, "ies") + "y"
+	case strings.HasSuffix(subject, "ses"),
+		strings.HasSuffix(subject, "xes"),
+		strings.HasSuffix(subject, "zes"),
+		strings.HasSuffix(subject, "ches"),
+		strings.HasSuffix(subject, "shes"):
+		return strings.TrimSuffix(subject, "es")
+	case strings.HasSuffix(subject, "s"):
+		return strings.TrimSuffix(subject, "s")
+	default:
+		return subject
+	}
+}
+
+func parseExcludedTriggerPermanentType(subject string, plural bool) (TriggerCardType, string, bool) {
+	for _, word := range []string{"artifact", "battle", "creature", "enchantment", "land", "planeswalker"} {
+		prefix := "non" + word + " "
+		if strings.HasPrefix(subject, prefix) {
+			cardType, _ := parseSingleTriggerPermanentType(word, plural)
+			return cardType, strings.TrimPrefix(subject, prefix), true
+		}
+	}
+	return TriggerCardTypeUnknown, "", false
+}
+
+func parseSingleTriggerPermanentType(word string, plural bool) (TriggerCardType, bool) {
+	word = strings.TrimPrefix(strings.TrimPrefix(word, "a "), "an ")
+	if plural {
+		if cardType, ok := triggerPermanentPluralType(word); ok {
+			return cardType, true
+		}
+	}
+	return triggerPermanentType(word)
 }
 
 type permanentActionTemplate struct {

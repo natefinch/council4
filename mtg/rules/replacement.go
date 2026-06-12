@@ -108,6 +108,7 @@ func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent) bool {
 			Controller:  effectiveController(g, permanent),
 			Player:      permanent.Owner,
 			CardID:      permanent.CardInstanceID,
+			FaceDown:    permanent.FaceDown,
 			PermanentID: permanent.ObjectID,
 			TokenName:   permanentTokenName(permanent),
 			TokenDef:    permanent.TokenDef,

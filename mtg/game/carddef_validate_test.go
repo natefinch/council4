@@ -1451,16 +1451,6 @@ func TestValidateCardDefRejectsSelectionFieldsUnavailableInContext(t *testing.T)
 			}}},
 		},
 		{
-			name: "trigger subject with color",
-			face: CardFace{TriggeredAbilities: []TriggeredAbility{{
-				Content: Mode{}.Ability(),
-				Trigger: TriggerCondition{Pattern: TriggerPattern{
-					Event:            EventPermanentDied,
-					SubjectSelection: Selection{ColorsAny: []color.Color{color.Red}},
-				}},
-			}}},
-		},
-		{
 			name: "trigger card with power",
 			face: CardFace{TriggeredAbilities: []TriggeredAbility{{
 				Content: Mode{}.Ability(),
@@ -1493,6 +1483,33 @@ func TestValidateCardDefRejectsSelectionFieldsUnavailableInContext(t *testing.T)
 				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
 			}
 		})
+	}
+}
+
+func TestValidateCardDefAllowsTriggerSubjectLastKnownSelectionFields(t *testing.T) {
+	def := &CardDef{CardFace: CardFace{
+		Name:       "LKI Watcher",
+		OracleText: "Whenever a legendary green Dragon with flying dies, draw a card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event: EventPermanentDied,
+				SubjectSelection: Selection{
+					Supertypes:  []types.Super{types.Legendary},
+					SubtypesAny: []types.Sub{types.Dragon},
+					ColorsAny:   []color.Color{color.Green},
+					Tapped:      TriTrue,
+					Keyword:     Flying,
+					ManaValue:   opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+					Power:       opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+					Toughness:   opt.Val(compare.Int{Op: compare.Equal, Value: 4}),
+				},
+			}},
+			Content: Mode{}.Ability(),
+		}},
+	}}
+
+	if issues := ValidateCardDef(def); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
 	}
 }
 

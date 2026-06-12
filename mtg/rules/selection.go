@@ -171,6 +171,14 @@ func (s *selectionSubject) hasSupertype(supertype types.Super) bool {
 	if s.kind == subjectPermanent {
 		return slices.Contains(s.values.supertypes, supertype)
 	}
+	if s.kind == subjectEventPermanent {
+		if values, ok := s.eventPermanentValues(); ok {
+			return slices.Contains(values.supertypes, supertype)
+		}
+		if def, ok := s.eventPermanentCardDef(); ok {
+			return slices.Contains(def.DefaultFace().Supertypes, supertype)
+		}
+	}
 	if s.kind == subjectCastSpell {
 		return slices.Contains(s.event.CardSupertypes, supertype)
 	}
@@ -186,6 +194,18 @@ func (s *selectionSubject) hasAnySubtype(subtypes []types.Sub) bool {
 			if slices.Contains(s.values.subtypes, subtype) {
 				return true
 			}
+		}
+	}
+	if s.kind == subjectEventPermanent {
+		if values, ok := s.eventPermanentValues(); ok {
+			return slices.ContainsFunc(subtypes, func(subtype types.Sub) bool {
+				return slices.Contains(values.subtypes, subtype)
+			})
+		}
+		if def, ok := s.eventPermanentCardDef(); ok {
+			return slices.ContainsFunc(subtypes, func(subtype types.Sub) bool {
+				return def.HasSubtype(subtype)
+			})
 		}
 	}
 	if s.kind == subjectCastSpell {
@@ -209,6 +229,14 @@ func (s *selectionSubject) hasColor(c color.Color) bool {
 	if s.kind == subjectPermanent {
 		return slices.Contains(s.values.colors, c)
 	}
+	if s.kind == subjectEventPermanent {
+		if values, ok := s.eventPermanentValues(); ok {
+			return slices.Contains(values.colors, c)
+		}
+		if def, ok := s.eventPermanentCardDef(); ok {
+			return slices.Contains(def.DefaultFace().Colors, c)
+		}
+	}
 	if s.kind == subjectCastSpell {
 		return slices.Contains(s.event.Colors, c)
 	}
@@ -228,6 +256,12 @@ func (s *selectionSubject) colorCount() int {
 	switch s.kind {
 	case subjectPermanent:
 		colors = s.values.colors
+	case subjectEventPermanent:
+		if values, ok := s.eventPermanentValues(); ok {
+			colors = values.colors
+		} else if def, ok := s.eventPermanentCardDef(); ok {
+			colors = def.DefaultFace().Colors
+		}
 	case subjectCastSpell:
 		colors = s.event.Colors
 	case subjectCard:
@@ -247,6 +281,14 @@ func (s *selectionSubject) hasKeyword(keyword game.Keyword) bool {
 	if s.kind == subjectPermanent {
 		return s.values.keywords[keyword]
 	}
+	if s.kind == subjectEventPermanent {
+		if values, ok := s.eventPermanentValues(); ok {
+			return values.keywords[keyword]
+		}
+		if def, ok := s.eventPermanentCardDef(); ok {
+			return def.HasKeyword(keyword)
+		}
+	}
 	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
 		return s.card.Def.HasKeyword(keyword)
 	}
@@ -254,6 +296,17 @@ func (s *selectionSubject) hasKeyword(keyword game.Keyword) bool {
 }
 
 func (s *selectionSubject) tapped() bool {
+	if s.kind == subjectEventPermanent {
+		if s.event.PermanentID != 0 {
+			if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+				return permanent.Tapped
+			}
+			if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+				return snapshot.Tapped
+			}
+		}
+		return false
+	}
 	return s.kind == subjectPermanent && s.permanent != nil && s.permanent.Tapped
 }
 
@@ -261,10 +314,29 @@ func (s *selectionSubject) combatStateMatches(filter game.CombatStateFilter) boo
 	if filter == game.CombatStateAny {
 		return true
 	}
-	if s.kind != subjectPermanent || s.permanent == nil {
+	if s.kind == subjectPermanent && s.permanent != nil {
+		return combatStateMatches(s.g, s.permanent, filter)
+	}
+	if s.kind != subjectEventPermanent || s.event.PermanentID == 0 {
 		return false
 	}
-	return combatStateMatches(s.g, s.permanent, filter)
+	if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+		return combatStateMatches(s.g, permanent, filter)
+	}
+	snapshot, ok := lastKnownObject(s.g, s.event.PermanentID)
+	if !ok {
+		return false
+	}
+	switch filter {
+	case game.CombatStateAttacking:
+		return snapshot.Attacking
+	case game.CombatStateBlocking:
+		return snapshot.Blocking
+	case game.CombatStateAttackingOrBlocking:
+		return snapshot.Attacking || snapshot.Blocking
+	default:
+		return false
+	}
 }
 
 func (s *selectionSubject) manaValue() (int, bool) {
@@ -273,6 +345,13 @@ func (s *selectionSubject) manaValue() (int, bool) {
 	}
 	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
 		return s.card.Def.ManaValue(), true
+	}
+	if s.kind == subjectEventPermanent {
+		def, ok := s.eventPermanentCardDef()
+		if !ok {
+			return 0, false
+		}
+		return def.ManaValue(), true
 	}
 	if s.kind != subjectPermanent {
 		return 0, false
@@ -285,6 +364,10 @@ func (s *selectionSubject) manaValue() (int, bool) {
 }
 
 func (s *selectionSubject) power() (int, bool) {
+	if s.kind == subjectEventPermanent {
+		values, ok := s.eventPermanentValues()
+		return values.power, ok && values.powerOK
+	}
 	if s.kind != subjectPermanent || s.useBase {
 		return 0, false
 	}
@@ -298,10 +381,58 @@ func (s *selectionSubject) power() (int, bool) {
 }
 
 func (s *selectionSubject) toughness() (int, bool) {
+	if s.kind == subjectEventPermanent {
+		values, ok := s.eventPermanentValues()
+		return values.toughness, ok && values.toughnessOK
+	}
 	if s.kind != subjectPermanent || s.useBase {
 		return 0, false
 	}
 	return s.values.toughness, s.values.toughnessOK
+}
+
+func (s *selectionSubject) eventPermanentValues() (permanentEffectiveValues, bool) {
+	if s.event.PermanentID == 0 {
+		return permanentEffectiveValues{}, false
+	}
+	if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+		return effectivePermanentValues(s.g, permanent), true
+	}
+	snapshot, ok := lastKnownObject(s.g, s.event.PermanentID)
+	if !ok {
+		return permanentEffectiveValues{}, false
+	}
+	keywords := make(map[game.Keyword]bool, len(snapshot.Keywords))
+	for _, keyword := range snapshot.Keywords {
+		keywords[keyword] = true
+	}
+	return permanentEffectiveValues{
+		name:        snapshot.Name,
+		colors:      snapshot.Colors,
+		supertypes:  snapshot.Supertypes,
+		types:       snapshot.Types,
+		subtypes:    snapshot.Subtypes,
+		controller:  snapshot.Controller,
+		power:       snapshot.Power.Val,
+		powerOK:     snapshot.Power.Exists,
+		toughness:   snapshot.Toughness.Val,
+		toughnessOK: snapshot.Toughness.Exists,
+		keywords:    keywords,
+	}, true
+}
+
+func (s *selectionSubject) eventPermanentCardDef() (*game.CardDef, bool) {
+	if s.event.TokenDef != nil {
+		return s.event.TokenDef.FaceDef(s.event.Face)
+	}
+	if s.event.CardID == 0 {
+		return nil, false
+	}
+	card, ok := s.g.GetCardInstance(s.event.CardID)
+	if !ok || card.Def == nil {
+		return nil, false
+	}
+	return card.Def.FaceDef(s.event.Face)
 }
 
 func (s *selectionSubject) controllerMatches(relation game.ControllerRelation) bool {

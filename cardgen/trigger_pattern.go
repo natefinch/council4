@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"strings"
+
 	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -101,15 +103,27 @@ func lowerTriggerPattern(pattern *oracle.TriggerPattern) (game.TriggerPattern, b
 	} else if pattern.FromZone != oracle.TriggerZoneNone {
 		return game.TriggerPattern{}, false
 	}
-	if pattern.MatchToZone {
+	if pattern.MatchToZone && pattern.ExcludeToZone {
+		return game.TriggerPattern{}, false
+	}
+	if pattern.MatchToZone || pattern.ExcludeToZone {
 		result.ToZone, ok = lowerTriggerZone(pattern.ToZone)
 		if !ok {
 			return game.TriggerPattern{}, false
 		}
 		result.MatchToZone = true
+		result.ExcludeToZone = pattern.ExcludeToZone
+		if pattern.ExcludeToZone {
+			result.MatchToZone = false
+		}
 	} else if pattern.ToZone != oracle.TriggerZoneNone {
 		return game.TriggerPattern{}, false
 	}
+	if pattern.FaceDown && !pattern.MatchFaceDown {
+		return game.TriggerPattern{}, false
+	}
+	result.MatchFaceDown = pattern.MatchFaceDown
+	result.FaceDown = pattern.FaceDown
 	return result, true
 }
 
@@ -134,6 +148,8 @@ func lowerTriggerEvent(event oracle.TriggerEvent) (game.EventKind, bool) {
 		return game.EventPermanentEnteredBattlefield, true
 	case oracle.TriggerEventPermanentDied:
 		return game.EventPermanentDied, true
+	case oracle.TriggerEventZoneChanged:
+		return game.EventZoneChanged, true
 	case oracle.TriggerEventCountersAdded:
 		return game.EventCountersAdded, true
 	case oracle.TriggerEventDamageDealt:
@@ -273,6 +289,8 @@ func lowerTriggerZone(triggerZone oracle.TriggerZone) (zone.Type, bool) {
 		return zone.Library, true
 	case oracle.TriggerZoneStack:
 		return zone.Stack, true
+	case oracle.TriggerZoneCommand:
+		return zone.Command, true
 	default:
 		return 0, false
 	}
@@ -291,6 +309,10 @@ func lowerTriggerSelection(selection oracle.TriggerSelection) (game.Selection, b
 	if !ok {
 		return game.Selection{}, false
 	}
+	supertypes, ok := lowerTriggerSupertypes(selection.Supertypes)
+	if !ok {
+		return game.Selection{}, false
+	}
 	subtypes, ok := lowerTriggerSubtypes(selection.SubtypesAny)
 	if !ok {
 		return game.Selection{}, false
@@ -299,23 +321,99 @@ func lowerTriggerSelection(selection oracle.TriggerSelection) (game.Selection, b
 	if !ok {
 		return game.Selection{}, false
 	}
+	excludedColors, ok := lowerTriggerColors(selection.ExcludedColors)
+	if !ok {
+		return game.Selection{}, false
+	}
+	tapped, ok := lowerTriggerTriState(selection.Tapped)
+	if !ok {
+		return game.Selection{}, false
+	}
+	combatState, ok := lowerTriggerCombatState(selection.CombatState)
+	if !ok {
+		return game.Selection{}, false
+	}
+	keyword, ok := lowerTriggerKeyword(selection.Keyword)
+	if !ok {
+		return game.Selection{}, false
+	}
+	excludedKeyword, ok := lowerTriggerKeyword(selection.ExcludedKeyword)
+	if !ok {
+		return game.Selection{}, false
+	}
+	manaValue, ok := lowerTriggerNumberFilter(selection.ManaValue)
+	if !ok {
+		return game.Selection{}, false
+	}
+	power, ok := lowerTriggerNumberFilter(selection.Power)
+	if !ok {
+		return game.Selection{}, false
+	}
+	toughness, ok := lowerTriggerNumberFilter(selection.Toughness)
+	if !ok {
+		return game.Selection{}, false
+	}
 	result := game.Selection{
 		RequiredTypes:    required,
 		RequiredTypesAny: requiredAny,
 		ExcludedTypes:    excluded,
+		Supertypes:       supertypes,
 		SubtypesAny:      subtypes,
 		ColorsAny:        colors,
+		ExcludedColors:   excludedColors,
 		Colorless:        selection.Colorless,
 		Multicolored:     selection.Multicolored,
+		Tapped:           tapped,
+		CombatState:      combatState,
+		Keyword:          keyword,
+		ExcludedKeyword:  excludedKeyword,
+		ManaValue:        manaValue,
+		Power:            power,
+		Toughness:        toughness,
 		NonToken:         selection.NonToken,
+		TokenOnly:        selection.TokenOnly,
 	}
 	if selection.MatchManaValue {
+		if selection.ManaValue.Comparison != oracle.TriggerComparisonUnknown {
+			return game.Selection{}, false
+		}
 		result.ManaValue = opt.Val(compare.Int{
 			Op:    compare.GreaterOrEqual,
 			Value: selection.ManaValueAtLeast,
 		})
 	} else if selection.ManaValueAtLeast != 0 {
 		return game.Selection{}, false
+	}
+	return result, true
+}
+
+func lowerTriggerCombatState(state oracle.TriggerCombatState) (game.CombatStateFilter, bool) {
+	switch state {
+	case oracle.TriggerCombatStateAny:
+		return game.CombatStateAny, true
+	case oracle.TriggerCombatStateAttacking:
+		return game.CombatStateAttacking, true
+	case oracle.TriggerCombatStateBlocking:
+		return game.CombatStateBlocking, true
+	default:
+		return game.CombatStateAny, false
+	}
+}
+
+func lowerTriggerSupertypes(supertypes []oracle.TriggerSupertype) ([]types.Super, bool) {
+	if len(supertypes) == 0 {
+		return nil, true
+	}
+	result := make([]types.Super, 0, len(supertypes))
+	for _, supertype := range supertypes {
+		switch supertype {
+		case oracle.TriggerSupertypeLegendary:
+			result = append(result, types.Legendary)
+		case oracle.TriggerSupertypeSnow:
+			result = append(result, types.Snow)
+		default:
+			return nil, false
+		}
 	}
 	return result, true
 }
@@ -356,16 +454,95 @@ func lowerTriggerSubtypes(subtypes []oracle.TriggerSubtype) ([]types.Sub, bool) 
 	}
 	result := make([]types.Sub, 0, len(subtypes))
 	for _, subtype := range subtypes {
-		switch subtype {
-		case oracle.TriggerSubtypeSpirit:
-			result = append(result, types.Spirit)
-		case oracle.TriggerSubtypeArcane:
-			result = append(result, types.Arcane)
-		default:
+		runtimeSubtype := types.Sub(canonicalTriggerSubtype(string(subtype)))
+		if !knownTriggerSubtype(runtimeSubtype) {
 			return nil, false
 		}
+		result = append(result, runtimeSubtype)
 	}
 	return result, true
+}
+
+func canonicalTriggerSubtype(value string) string {
+	var result strings.Builder
+	result.Grow(len(value))
+	uppercaseNext := true
+	for _, r := range value {
+		if uppercaseNext && r >= 'a' && r <= 'z' {
+			r -= 'a' - 'A'
+		}
+		_, _ = result.WriteRune(r)
+		uppercaseNext = r == ' ' || r == '-'
+	}
+	return result.String()
+}
+
+func knownTriggerSubtype(subtype types.Sub) bool {
+	for _, cardType := range []types.Card{
+		types.Artifact,
+		types.Battle,
+		types.Creature,
+		types.Enchantment,
+		types.Instant,
+		types.Land,
+		types.Planeswalker,
+		types.Sorcery,
+	} {
+		if types.KnownSubtypeForType(cardType, subtype) {
+			return true
+		}
+	}
+	return false
+}
+
+func lowerTriggerTriState(state oracle.TriggerTriState) (game.TriState, bool) {
+	switch state {
+	case oracle.TriggerTriAny:
+		return game.TriAny, true
+	case oracle.TriggerTriTrue:
+		return game.TriTrue, true
+	case oracle.TriggerTriFalse:
+		return game.TriFalse, true
+	default:
+		return game.TriAny, false
+	}
+}
+
+func lowerTriggerKeyword(keyword oracle.TriggerKeyword) (game.Keyword, bool) {
+	switch keyword {
+	case oracle.TriggerKeywordUnknown:
+		return game.KeywordNone, true
+	case oracle.TriggerKeywordDefender:
+		return game.Defender, true
+	case oracle.TriggerKeywordFlash:
+		return game.Flash, true
+	case oracle.TriggerKeywordFlying:
+		return game.Flying, true
+	case oracle.TriggerKeywordHaste:
+		return game.Haste, true
+	default:
+		return game.KeywordNone, false
+	}
+}
+
+func lowerTriggerNumberFilter(filter oracle.TriggerNumberFilter) (opt.V[compare.Int], bool) {
+	var op compare.Op
+	switch filter.Comparison {
+	case oracle.TriggerComparisonUnknown:
+		if filter.Value != 0 {
+			return opt.V[compare.Int]{}, false
+		}
+		return opt.V[compare.Int]{}, true
+	case oracle.TriggerComparisonEqual:
+		op = compare.Equal
+	case oracle.TriggerComparisonAtMost:
+		op = compare.LessOrEqual
+	case oracle.TriggerComparisonAtLeast:
+		op = compare.GreaterOrEqual
+	default:
+		return opt.V[compare.Int]{}, false
+	}
+	return opt.Val(compare.Int{Op: op, Value: filter.Value}), true
 }
 
 func lowerTriggerColors(colors []oracle.TriggerColor) ([]color.Color, bool) {

@@ -308,6 +308,10 @@ type TriggerPattern struct {
 	FromZone      zone.Type
 	MatchToZone   bool
 	ToZone        zone.Type
+	ExcludeToZone bool
+
+	MatchFaceDown bool
+	FaceDown      bool
 
 	MatchStackObjectKind bool
 	StackObjectKind      StackObjectKind

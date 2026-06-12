@@ -577,7 +577,6 @@ func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 		"Whenever creature you control becomes tapped, draw a card.",
 		"At the beginning of your next upkeep, draw a card.",
 		"At the beginning of your declare attackers step, draw a card.",
-		"When another creature dies, draw a card.",
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
@@ -2077,6 +2076,8 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 		bindings []ReferenceBinding
 	}{
 		{"trigger event subject", "Whenever a creature dies, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingEventPermanent, ReferenceBindingEventPermanent}},
+		{"zone-change event subject", "Whenever an artifact is put into a graveyard from the battlefield, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingEventPermanent, ReferenceBindingEventPermanent}},
+		{"batched event subject is ambiguous", "Whenever one or more creatures die, return it to its owner's hand.", []ReferenceBinding{ReferenceBindingAmbiguous, ReferenceBindingAmbiguous}},
 		{"explicit source in trigger body", "Whenever a creature dies, this creature deals 1 damage to its controller.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingSource}},
 		{"single target occurrence", "Return target creature to its owner's hand.", []ReferenceBinding{ReferenceBindingTarget}},
 		{"prior instruction result", "Exile target creature. Return it to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingPriorInstructionResult, ReferenceBindingPriorInstructionResult}},

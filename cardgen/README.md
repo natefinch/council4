@@ -110,20 +110,24 @@ Vanguard cards are excluded with explicit report reasons.
    implemented ([#222](https://github.com/natefinch/council4/issues/222),
    [#223](https://github.com/natefinch/council4/issues/223)). Self-enter triggers support exact intervening
    conditions for kicked or cast entry and controlling one
-   permanent of a named permanent card type. Non-self permanent
-   enters-the-battlefield triggers lower for exact single-subject
-   (`a`/`an`/`another`, optional `nontoken` qualifier) and `one or more`
-   subject forms, with optional permanent type filter (creature, artifact,
-   enchantment, land, planeswalker, or unfiltered) and optional you-control or
-   opponent-controls controller constraints. Phase and step triggered abilities
+   permanent of a named permanent card type. Permanent zone-change triggers
+   share one lowering path for self, attached, single-subject, and `one or more`
+   enter, die, leave, exile, return-to-hand, and battlefield-to-graveyard
+   clauses. Exact patterns may bind controller and owner relations, origin and
+   destination zones, self exclusion, face-down state, and event-subject
+   Selection predicates for type unions, supertypes, subtypes (including
+   Outlaw), colors, token state, tapped state, combat state, keywords, mana
+   value, power, and toughness. `Leaves ... without dying` excludes the
+   graveyard destination. Phase and step triggered abilities
    using `At the beginning of …` lower for
    exact supported controller-relative upkeep, draw, end, combat, combat-step,
    and main-phase variants. Common exact creature attack/block, permanent
    tap/untap, and self became-target event clauses lower through the same
    semantic pattern path; controller-relative subjects use
-   `game.TriggerPattern.SubjectSelection`. Unsupported variants, including
-   one-or-more combat wording without correctly batched runtime emission, remain
-   fail-closed. Exact
+   `game.TriggerPattern.SubjectSelection`. One-or-more zone-change wording
+   lowers only where runtime simultaneous-event IDs preserve its batching
+   semantics. Compound events, temporal qualifiers, and unavailable Selection
+   predicates remain fail-closed. Exact
    self-dies triggers support exact `if it had no +1/+1 counters` and
    `if it had no -1/-1 counters` conditions using the departed permanent's
    last-known information. Fixed-damage bodies preserve that permanent as the

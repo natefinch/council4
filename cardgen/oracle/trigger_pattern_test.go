@@ -43,6 +43,7 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 				Kind:                 TriggerWhen,
 				Event:                TriggerEventPermanentDied,
 				Source:               TriggerSourceSelf,
+				SubjectSelection:     TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
 				InterveningCondition: condition,
 			},
 		},
@@ -161,6 +162,326 @@ func TestTriggerPatternTemplatesFailClosedOnUnsupportedSlots(t *testing.T) {
 				t.Fatalf("near-miss pattern = %#v, want %#v", got, want)
 			}
 		})
+	}
+}
+
+func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		event    string
+		kind     TriggerKind
+		cardName string
+		want     TriggerPattern
+	}{
+		{
+			name:     "short printed name is self",
+			event:    "Sharuum enters",
+			kind:     TriggerWhen,
+			cardName: "Sharuum the Hegemon",
+			want: TriggerPattern{
+				Kind:   TriggerWhen,
+				Event:  TriggerEventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		{
+			name:  "attached subtype leaves for graveyard",
+			event: "enchanted Plains is put into a graveyard from the battlefield",
+			kind:  TriggerWhen,
+			want: TriggerPattern{
+				Kind:          TriggerWhen,
+				Event:         TriggerEventZoneChanged,
+				Source:        TriggerSourceAttachedPermanent,
+				MatchFromZone: true,
+				FromZone:      TriggerZoneBattlefield,
+				MatchToZone:   true,
+				ToZone:        TriggerZoneGraveyard,
+				SubjectSelection: TriggerSelection{
+					SubtypesAny: []TriggerSubtype{"plains"},
+				},
+			},
+		},
+		{
+			name:  "batched other creatures die",
+			event: "one or more other creatures an opponent controls die",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:        TriggerWhenever,
+				Event:       TriggerEventPermanentDied,
+				Controller:  ControllerOpponent,
+				ExcludeSelf: true,
+				OneOrMore:   true,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
+			name:  "qualified subtype enters",
+			event: "another nontoken legendary green Dragon you control with power 4 or greater enters",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:        TriggerWhenever,
+				Event:       TriggerEventPermanentEnteredBattlefield,
+				Controller:  ControllerYou,
+				ExcludeSelf: true,
+				SubjectSelection: TriggerSelection{
+					Supertypes:  []TriggerSupertype{TriggerSupertypeLegendary},
+					SubtypesAny: []TriggerSubtype{"dragon"},
+					ColorsAny:   []TriggerColor{TriggerColorGreen},
+					NonToken:    true,
+					Power:       TriggerNumberFilter{Comparison: TriggerComparisonAtLeast, Value: 4},
+				},
+			},
+		},
+		{
+			name:  "keyword and creature dies",
+			event: "a creature with flying dies",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:  TriggerWhenever,
+				Event: TriggerEventPermanentDied,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					Keyword:       TriggerKeywordFlying,
+				},
+			},
+		},
+		{
+			name:  "power toughness and tapped entry",
+			event: "a 1/1 creature you control enters tapped",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventPermanentEnteredBattlefield,
+				Controller: ControllerYou,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					Tapped:        TriggerTriTrue,
+					Power:         TriggerNumberFilter{Comparison: TriggerComparisonEqual, Value: 1},
+					Toughness:     TriggerNumberFilter{Comparison: TriggerComparisonEqual, Value: 1},
+				},
+			},
+		},
+		{
+			name:  "type union and untapped entry",
+			event: "an artifact or creature an opponent controls enters untapped",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventPermanentEnteredBattlefield,
+				Controller: ControllerOpponent,
+				SubjectSelection: TriggerSelection{
+					RequiredTypesAny: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
+					Tapped:           TriggerTriFalse,
+				},
+			},
+		},
+		{
+			name:  "owner-relative origin",
+			event: "a creature enters from your graveyard",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:          TriggerWhenever,
+				Event:         TriggerEventPermanentEnteredBattlefield,
+				Player:        TriggerPlayerYou,
+				MatchFromZone: true,
+				FromZone:      TriggerZoneGraveyard,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
+			name:  "controller and owner relations",
+			event: "a permanent you control but don't own leaves the battlefield",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:          TriggerWhenever,
+				Event:         TriggerEventZoneChanged,
+				Controller:    ControllerYou,
+				Player:        TriggerPlayerOpponent,
+				MatchFromZone: true,
+				FromZone:      TriggerZoneBattlefield,
+			},
+		},
+		{
+			name:  "owner-relative destination",
+			event: "an artifact is returned to your hand",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:          TriggerWhenever,
+				Event:         TriggerEventZoneChanged,
+				Player:        TriggerPlayerYou,
+				MatchFromZone: true,
+				FromZone:      TriggerZoneBattlefield,
+				MatchToZone:   true,
+				ToZone:        TriggerZoneHand,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact},
+				},
+			},
+		},
+		{
+			name:  "nonblack entry",
+			event: "a nonblack creature enters",
+			kind:  TriggerWhen,
+			want: TriggerPattern{
+				Kind:  TriggerWhen,
+				Event: TriggerEventPermanentEnteredBattlefield,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes:  []TriggerCardType{TriggerCardTypeCreature},
+					ExcludedColors: []TriggerColor{TriggerColorBlack},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			got := compileTriggerPattern(test.event, test.kind, Span{}, test.cardName, nil)
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("pattern = %#v, want %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		event    string
+		cardName string
+		want     TriggerPattern
+	}{
+		{
+			name:  "leaves without dying",
+			event: "a creature leaves the battlefield without dying",
+			want: TriggerPattern{
+				Event:         TriggerEventZoneChanged,
+				MatchFromZone: true,
+				FromZone:      TriggerZoneBattlefield,
+				ExcludeToZone: true,
+				ToZone:        TriggerZoneGraveyard,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
+			name:  "face-down creature dies",
+			event: "a face-down creature dies",
+			want: TriggerPattern{
+				Event:         TriggerEventPermanentDied,
+				MatchFaceDown: true,
+				FaceDown:      true,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
+			name:  "attacking creature dies",
+			event: "an attacking creature dies",
+			want: TriggerPattern{
+				Event: TriggerEventPermanentDied,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					CombatState:   TriggerCombatStateAttacking,
+				},
+			},
+		},
+		{
+			name:  "subtype and type",
+			event: "a Dragon creature dies",
+			want: TriggerPattern{
+				Event: TriggerEventPermanentDied,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					SubtypesAny:   []TriggerSubtype{"dragon"},
+				},
+			},
+		},
+		{
+			name:  "composite outlaw subtype",
+			event: "an outlaw you control dies",
+			want: TriggerPattern{
+				Event:      TriggerEventPermanentDied,
+				Controller: ControllerYou,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					SubtypesAny: []TriggerSubtype{
+						"assassin", "mercenary", "pirate", "rogue", "warlock",
+					},
+				},
+			},
+		},
+		{
+			name:  "noun suffix token",
+			event: "a creature token you control dies",
+			want: TriggerPattern{
+				Event:      TriggerEventPermanentDied,
+				Controller: ControllerYou,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					TokenOnly:     true,
+				},
+			},
+		},
+		{
+			name:     "other than named self",
+			cardName: "Yomiji, Who Bars the Way",
+			event:    "a legendary permanent other than Yomiji dies",
+			want: TriggerPattern{
+				Event:       TriggerEventPermanentDied,
+				ExcludeSelf: true,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			test.want.Kind = TriggerWhenever
+			got := compileTriggerPattern(test.event, TriggerWhenever, Span{}, test.cardName, nil)
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("pattern = %#v, want %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.T) {
+	t.Parallel()
+	for _, event := range []string{
+		"this creature or another creature you control enters",
+		"a creature you control with a +1/+1 counter on it dies",
+		"a non-Human creature dies",
+		"a creature dies during your turn",
+		"a creature card is put into your graveyard from anywhere",
+	} {
+		t.Run(event, func(t *testing.T) {
+			t.Parallel()
+			got := compileTriggerPattern(event, TriggerWhenever, Span{}, "", nil)
+			want := TriggerPattern{Kind: TriggerWhenever}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("near-miss pattern = %#v, want %#v", got, want)
+			}
+		})
+	}
+}
+
+func TestPermanentZoneChangeTriggerRejectsPartialCardName(t *testing.T) {
+	t.Parallel()
+	got := compileTriggerPattern("The dies", TriggerWhen, Span{}, "The One Ring", nil)
+	want := TriggerPattern{Kind: TriggerWhen}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("partial-name pattern = %#v, want %#v", got, want)
 	}
 }
 

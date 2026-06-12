@@ -1006,9 +1006,10 @@ func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, l
 
 func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.CardDef) (*game.Permanent, bool) {
 	amount := replacementTokenCreationAmount(g, controller, 1)
+	simultaneousID := tokenCreationSimultaneousID(g, amount)
 	var first *game.Permanent
 	for range amount {
-		permanent, ok := createTokenPermanentWithChoices(NewEngine(nil), g, controller, token, [game.NumPlayers]PlayerAgent{}, nil)
+		permanent, ok := createTokenPermanentWithChoicesInBatch(NewEngine(nil), g, controller, token, simultaneousID, [game.NumPlayers]PlayerAgent{}, nil)
 		if !ok {
 			return nil, false
 		}
@@ -1024,8 +1025,9 @@ func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.P
 	if amount <= 0 {
 		return false
 	}
+	simultaneousID := tokenCreationSimultaneousID(g, amount)
 	for range amount {
-		if _, ok := createTokenPermanentWithChoices(e, g, controller, token, agents, log); !ok {
+		if _, ok := createTokenPermanentWithChoicesInBatch(e, g, controller, token, simultaneousID, agents, log); !ok {
 			return false
 		}
 	}
@@ -1033,6 +1035,17 @@ func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.P
 }
 
 func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	return createTokenPermanentWithChoicesInBatch(e, g, controller, token, 0, agents, log)
+}
+
+func tokenCreationSimultaneousID(g *game.Game, amount int) id.ID {
+	if amount > 1 {
+		return g.IDGen.Next()
+	}
+	return 0
+}
+
+func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, simultaneousID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	if token == nil {
 		return nil, false
 	}
@@ -1059,13 +1072,14 @@ func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.Pl
 		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 	}
 	event := game.Event{
-		Controller:  controller,
-		Player:      controller,
-		PermanentID: objectID,
-		TokenName:   token.Name,
-		TokenDef:    token,
-		FromZone:    zone.None,
-		ToZone:      zone.Battlefield,
+		Controller:     controller,
+		Player:         controller,
+		PermanentID:    objectID,
+		TokenName:      token.Name,
+		TokenDef:       token,
+		FromZone:       zone.None,
+		ToZone:         zone.Battlefield,
+		SimultaneousID: simultaneousID,
 	}
 	emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
