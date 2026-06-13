@@ -17,7 +17,14 @@ It also owns the reusable, composable semantic atoms that downstream stages
 consume without re-inspecting source spelling. `atoms.go` recognizes colors,
 card types, supertypes, subtypes, object nouns, zones, counter kinds, cardinal
 and ordinal number words, selection modifiers, and plural→singular noun
-normalization, returning typed values. `references.go`
+normalization, returning typed values. `keyword.go` owns the complete supported
+keyword vocabulary and emits source-spanned `Keyword` syntax with composable
+typed parameter shapes: mana costs, integers, Enchant targets, and Protection
+predicates over colors, card types, and creature/land subtypes. It also emits
+typed `with`/`without` keyword-selector syntax. Mana-symbol parsing, canonical
+keyword names, Protection list grammar, and Enchant target normalization live
+only in the parser; malformed or ambiguous parameter grammar leaves the keyword
+unparameterized and therefore fails closed downstream. `references.go`
 recognizes explicit self/source references (the card's own name, `this`/`that`
 objects, and exact pronouns) as typed `Reference` values. `Parse` emits these atoms
 as source-spanned typed values attached to each `Ability` and modal `Mode` node

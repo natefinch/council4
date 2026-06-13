@@ -146,8 +146,10 @@ type semanticAtom struct {
 // are examining rather than by re-recognizing spelling. The zero value contains
 // no atoms and therefore fails closed.
 type Atoms struct {
-	semantic   []semanticAtom
-	references []Reference
+	semantic         []semanticAtom
+	references       []Reference
+	keywords         []Keyword
+	keywordSelectors []KeywordSelector
 	// SelfNameSpans records every occurrence of the card's own name, including
 	// possessive forms. It is the parser-owned source of self-name recognition
 	// so the compiler need not inspect name spelling.
@@ -246,6 +248,20 @@ func WithSelectionFlags(flags ...SelectionFlagAtom) AtomOption {
 func WithReferences(references ...Reference) AtomOption {
 	return func(atoms *Atoms) {
 		atoms.references = append(atoms.references, references...)
+	}
+}
+
+// WithKeywords adds typed keywords to NewAtoms.
+func WithKeywords(keywords ...Keyword) AtomOption {
+	return func(atoms *Atoms) {
+		atoms.keywords = append(atoms.keywords, keywords...)
+	}
+}
+
+// WithKeywordSelectors adds typed keyword selectors to NewAtoms.
+func WithKeywordSelectors(selectors ...KeywordSelector) AtomOption {
+	return func(atoms *Atoms) {
+		atoms.keywordSelectors = append(atoms.keywordSelectors, selectors...)
 	}
 }
 
@@ -406,6 +422,63 @@ func (a Atoms) Controllers() []ControllerRelationAtom {
 // References returns explicit references in source order.
 func (a Atoms) References() []Reference {
 	return append([]Reference(nil), a.references...)
+}
+
+// Keywords returns recognized keywords in source order.
+func (a Atoms) Keywords() []Keyword {
+	return append([]Keyword(nil), a.keywords...)
+}
+
+// KeywordSelectors returns recognized keyword selectors in source order.
+func (a Atoms) KeywordSelectors() []KeywordSelector {
+	return append([]KeywordSelector(nil), a.keywordSelectors...)
+}
+
+// KeywordsWithin returns keywords whose name starts at one of the supplied
+// tokens. This supports semantic token subsets without re-recognizing spelling.
+func (a Atoms) KeywordsWithin(tokens []shared.Token) []Keyword {
+	starts := make(map[int]struct{}, len(tokens))
+	for _, token := range tokens {
+		starts[token.Span.Start.Offset] = struct{}{}
+	}
+	var result []Keyword
+	for i := range a.keywords {
+		if _, ok := starts[a.keywords[i].NameSpan.Start.Offset]; ok {
+			result = append(result, a.keywords[i])
+		}
+	}
+	return result
+}
+
+// KeywordSelectorIn returns the first keyword selector contained by span with
+// the requested inclusion relation.
+func (a Atoms) KeywordSelectorIn(span shared.Span, excluded bool) (KeywordSelector, bool) {
+	for _, selector := range a.keywordSelectors {
+		if selector.Excluded == excluded && spanCovers(span, selector.Span) {
+			return selector, true
+		}
+	}
+	return KeywordSelector{}, false
+}
+
+// KeywordSelectorAt returns the keyword selector whose full span equals span.
+func (a Atoms) KeywordSelectorAt(span shared.Span) (KeywordSelector, bool) {
+	for _, selector := range a.keywordSelectors {
+		if spanEquals(span, selector.Span) {
+			return selector, true
+		}
+	}
+	return KeywordSelector{}, false
+}
+
+// KeywordSelectorStartingAt returns the keyword selector beginning at span.
+func (a Atoms) KeywordSelectorStartingAt(span shared.Span) (KeywordSelector, bool) {
+	for _, selector := range a.keywordSelectors {
+		if spanStartsAt(selector.Span, span) {
+			return selector, true
+		}
+	}
+	return KeywordSelector{}, false
 }
 
 // SelfNameSpans returns self-name spans in source order.
@@ -784,6 +857,8 @@ func collectAtoms(tokens []shared.Token, reminders, quoted []Delimited, cardName
 	for _, atom := range scanCounters(tokens) {
 		appendAtomCounter(&atoms, atom.Kind, atom.Span)
 	}
+	atoms.keywords = scanKeywords(tokens, atoms)
+	atoms.keywordSelectors = scanKeywordSelectors(tokens)
 	return atoms
 }
 

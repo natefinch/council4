@@ -204,7 +204,7 @@ func lowerFaceAbilities(
 	}
 	for _, ability := range compilation.Abilities {
 		for _, keyword := range ability.Content.Keywords {
-			if keyword.Name != "Read ahead" {
+			if keyword.Kind != parser.KeywordReadAhead {
 				continue
 			}
 			sacrificeChapter, ok := readAheadSacrificeChapter(ability.Text)
@@ -1347,11 +1347,11 @@ func lowerEnchantAbility(
 	ability compiler.CompiledAbility,
 	syntax parser.Ability,
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Enchant" {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEnchant {
 		return game.StaticAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
-	target, ok := enchantTargetSpec(keyword.Parameter)
+	target, ok := enchantTargetSpec(keyword.EnchantTarget)
 	if !ok ||
 		ability.Kind != compiler.AbilityStatic ||
 		ability.Cost != nil ||
@@ -1385,7 +1385,7 @@ func lowerProtectionAbility(
 	ability compiler.CompiledAbility,
 	syntax parser.Ability,
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Protection" {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordProtection {
 		return game.StaticAbility{}, false, nil
 	}
 	// If the ability has effects, it is a grant (e.g., "Enchanted creature has
@@ -1546,28 +1546,34 @@ func staticAbilityFromProtectionKeyword(prot game.ProtectionKeyword, text string
 	}
 }
 
-func enchantTargetSpec(parameter string) (game.TargetSpec, bool) {
+func enchantTargetSpec(targetKind parser.ObjectNoun) (game.TargetSpec, bool) {
 	target := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
-		Constraint: parameter,
 	}
-	if parameter == "player" {
+	if targetKind == parser.ObjectNounPlayer {
+		target.Constraint = "player"
 		target.Allow = game.TargetAllowPlayer
 		return target, true
 	}
 	target.Allow = game.TargetAllowPermanent
-	switch parameter {
-	case "artifact":
+	switch targetKind {
+	case parser.ObjectNounArtifact:
+		target.Constraint = "artifact"
 		target.Predicate.PermanentTypes = []types.Card{types.Artifact}
-	case "creature":
+	case parser.ObjectNounCreature:
+		target.Constraint = "creature"
 		target.Predicate.PermanentTypes = []types.Card{types.Creature}
-	case "enchantment":
+	case parser.ObjectNounEnchantment:
+		target.Constraint = "enchantment"
 		target.Predicate.PermanentTypes = []types.Card{types.Enchantment}
-	case "land":
+	case parser.ObjectNounLand:
+		target.Constraint = "land"
 		target.Predicate.PermanentTypes = []types.Card{types.Land}
-	case "permanent":
-	case "planeswalker":
+	case parser.ObjectNounPermanent:
+		target.Constraint = "permanent"
+	case parser.ObjectNounPlaneswalker:
+		target.Constraint = "planeswalker"
 		target.Predicate.PermanentTypes = []types.Card{types.Planeswalker}
 	default:
 		return game.TargetSpec{}, false
@@ -1579,11 +1585,11 @@ func lowerEquipAbility(
 	ability compiler.CompiledAbility,
 	syntax parser.Ability,
 ) (game.ActivatedAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Equip" {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEquip {
 		return game.ActivatedAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
-	if keyword.Parameter == "" ||
+	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
 		ability.Kind != compiler.AbilityStatic ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
@@ -1598,8 +1604,7 @@ func lowerEquipAbility(
 			"the executable source backend supports only exact Equip with a mana cost",
 		)
 	}
-	manaCost, err := parseManaCostValue(keyword.Parameter)
-	if err != nil || len(manaCost) == 0 {
+	if len(keyword.ManaCost) == 0 {
 		return game.ActivatedAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Equip ability",
@@ -1617,21 +1622,22 @@ func lowerEquipAbility(
 			"the executable source backend supports only exact Equip with a mana cost",
 		)
 	}
-	return game.EquipActivatedAbility(manaCost), true, nil
+	return game.EquipActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }
 
 func lowerCyclingAbility(
 	ability compiler.CompiledAbility,
 	syntax parser.Ability,
 ) (game.ActivatedAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Cycling" {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordCycling {
 		return game.ActivatedAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
-	if keyword.Parameter == "" && (len(ability.Content.Targets) != 0 || len(ability.Content.Effects) != 0 || len(ability.Content.References) != 0) {
+	if keyword.ParameterKind == parser.KeywordParameterNone &&
+		(len(ability.Content.Targets) != 0 || len(ability.Content.Effects) != 0 || len(ability.Content.References) != 0) {
 		return game.ActivatedAbility{}, false, nil
 	}
-	if keyword.Parameter == "" ||
+	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
 		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
@@ -1646,8 +1652,7 @@ func lowerCyclingAbility(
 			"the executable source backend supports only exact Cycling with a mana cost",
 		)
 	}
-	manaCost, err := parseManaCostValue(keyword.Parameter)
-	if err != nil || len(manaCost) == 0 {
+	if len(keyword.ManaCost) == 0 {
 		return game.ActivatedAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Cycling ability",
@@ -1665,18 +1670,18 @@ func lowerCyclingAbility(
 			"the executable source backend supports only exact Cycling with a mana cost",
 		)
 	}
-	return game.CyclingActivatedAbility(manaCost), true, nil
+	return game.CyclingActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }
 
 func lowerNinjutsuAbility(
 	ability compiler.CompiledAbility,
 	syntax parser.Ability,
 ) (game.ActivatedAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Ninjutsu" {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordNinjutsu {
 		return game.ActivatedAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
-	if keyword.Parameter == "" ||
+	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
 		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
@@ -1691,8 +1696,7 @@ func lowerNinjutsuAbility(
 			"the executable source backend supports only exact Ninjutsu with a mana cost",
 		)
 	}
-	manaCost, err := parseManaCostValue(keyword.Parameter)
-	if err != nil || len(manaCost) == 0 {
+	if len(keyword.ManaCost) == 0 {
 		return game.ActivatedAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Ninjutsu ability",
@@ -1710,18 +1714,18 @@ func lowerNinjutsuAbility(
 			"the executable source backend supports only exact Ninjutsu with a mana cost",
 		)
 	}
-	return game.NinjutsuActivatedAbility(manaCost), true, nil
+	return game.NinjutsuActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }
 
 func lowerMutateAbility(
 	ability compiler.CompiledAbility,
 	syntax parser.Ability,
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Mutate" {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordMutate {
 		return game.StaticAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
-	if keyword.Parameter == "" ||
+	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
 		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
@@ -1736,8 +1740,7 @@ func lowerMutateAbility(
 			"the executable source backend supports only exact Mutate with a mana cost",
 		)
 	}
-	manaCost, err := parseManaCostValue(keyword.Parameter)
-	if err != nil || len(manaCost) == 0 {
+	if len(keyword.ManaCost) == 0 {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Mutate ability",
@@ -1755,16 +1758,16 @@ func lowerMutateAbility(
 			"the executable source backend supports only exact Mutate with a mana cost",
 		)
 	}
-	return game.MutateStaticAbility(manaCost), true, nil
+	return game.MutateStaticAbility(slices.Clone(keyword.ManaCost)), true, nil
 }
 
 func mixedStaticKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, bool) {
 	result := make([]game.Keyword, 0, len(keywords))
 	for _, keyword := range keywords {
-		if keyword.Parameter != "" {
+		if keyword.ParameterKind != parser.KeywordParameterNone {
 			return nil, false
 		}
-		body, ok := keywordStaticBodies[keyword.Name]
+		body, ok := keywordStaticBodies[keyword.Kind]
 		if !ok || len(body.Body.KeywordAbilities) != 1 {
 			return nil, false
 		}
@@ -1783,7 +1786,7 @@ func abilityKeywordsExcludingSelectorPredicates(content compiler.AbilityContent)
 	}
 	filtered := make([]compiler.CompiledKeyword, 0, len(content.Keywords))
 	for _, keyword := range content.Keywords {
-		if keyword.Name == "Cycling" && keyword.Parameter == "" {
+		if keyword.Kind == parser.KeywordCycling && keyword.ParameterKind == parser.KeywordParameterNone {
 			continue
 		}
 		filtered = append(filtered, keyword)
@@ -1793,13 +1796,13 @@ func abilityKeywordsExcludingSelectorPredicates(content compiler.AbilityContent)
 
 func abilityUsesCyclingSelectorPredicate(content compiler.AbilityContent) bool {
 	for _, target := range content.Targets {
-		if strings.EqualFold(target.Selector.Keyword, "Cycling") {
+		if target.Selector.Keyword == parser.KeywordCycling {
 			return true
 		}
 	}
 	for _, effect := range content.Effects {
-		if strings.EqualFold(effect.Selector.Keyword, "Cycling") ||
-			strings.EqualFold(effect.Amount.Selector().Keyword, "Cycling") {
+		if effect.Selector.Keyword == parser.KeywordCycling ||
+			effect.Amount.Selector().Keyword == parser.KeywordCycling {
 			return true
 		}
 	}
@@ -3622,14 +3625,14 @@ func lowerKeywordAbility(
 	syntax parser.Ability,
 ) ([]loweredStaticAbility, *shared.Diagnostic) {
 	for _, keyword := range ability.Content.Keywords {
-		if keyword.Name == "Devoid" && ability.Text != "Devoid (This card has no color.)" {
+		if keyword.Kind == parser.KeywordDevoid && ability.Text != "Devoid (This card has no color.)" {
 			return nil, executableDiagnostic(
 				ability,
 				"unsupported Devoid ability",
 				"the executable source backend supports only exact \"Devoid (This card has no color.)\" abilities",
 			)
 		}
-		if keyword.Name == "Read ahead" && !isReadAheadAbility(ability.Text) {
+		if keyword.Kind == parser.KeywordReadAhead && !isReadAheadAbility(ability.Text) {
 			return nil, executableDiagnostic(
 				ability,
 				"unsupported Read ahead ability",
@@ -3660,7 +3663,7 @@ func lowerKeywordAbility(
 	}
 	bodies := make([]loweredStaticAbility, 0, len(ability.Content.Keywords))
 	for _, keyword := range ability.Content.Keywords {
-		if keyword.Parameter != "" {
+		if keyword.ParameterKind != parser.KeywordParameterNone {
 			if body, ok, diag := lowerParameterizedKeywordToStaticAbility(ability, keyword); ok {
 				if diag != nil {
 					return nil, diag
@@ -3678,7 +3681,7 @@ func lowerKeywordAbility(
 				),
 			)
 		}
-		body, ok := keywordStaticBodies[keyword.Name]
+		body, ok := keywordStaticBodies[keyword.Kind]
 		if !ok {
 			return nil, executableDiagnostic(
 				ability,
@@ -3818,13 +3821,12 @@ func lowerParameterizedKeywordToStaticAbility(
 	ability compiler.CompiledAbility,
 	keyword compiler.CompiledKeyword,
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
-	switch keyword.Name {
-	case "Ward":
-		manaCost, err := parseManaCostValue(keyword.Parameter)
-		if err == nil && len(manaCost) > 0 {
-			return game.WardStaticAbility(manaCost), true, nil
+	switch keyword.Kind {
+	case parser.KeywordWard:
+		if keyword.ParameterKind == parser.KeywordParameterManaCost && len(keyword.ManaCost) > 0 {
+			return game.WardStaticAbility(slices.Clone(keyword.ManaCost)), true, nil
 		}
-	case "Protection":
+	case parser.KeywordProtection:
 		if keyword.ProtectionKnown {
 			return staticAbilityFromProtectionKeyword(keyword.Protection, ""), true, nil
 		}
@@ -3838,54 +3840,52 @@ func lowerParameterizedKeywordToStaticAbility(
 
 func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {
 	body := game.StaticAbility{Text: keyword.Name + " " + keyword.Parameter}
-	switch keyword.Name {
-	case "Kicker":
-		manaCost, ok := parseFixedKeywordManaCost(keyword.Parameter)
+	switch keyword.Kind {
+	case parser.KeywordKicker:
+		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{Cost: manaCost}}
-	case "Madness":
-		manaCost, ok := parseFixedKeywordManaCost(keyword.Parameter)
+	case parser.KeywordMadness:
+		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.MadnessKeyword{Cost: manaCost}}
-	case "Morph":
-		manaCost, ok := parseFixedKeywordManaCost(keyword.Parameter)
+	case parser.KeywordMorph:
+		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.MorphKeyword{Cost: manaCost}}
-	case "Disguise":
-		manaCost, ok := parseFixedKeywordManaCost(keyword.Parameter)
+	case parser.KeywordDisguise:
+		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.DisguiseKeyword{Cost: manaCost}}
-	case "Toxic":
-		amount, err := strconv.Atoi(keyword.Parameter)
-		if err != nil || amount <= 0 {
+	case parser.KeywordToxic:
+		if keyword.ParameterKind != parser.KeywordParameterInteger || keyword.Integer <= 0 {
 			return game.StaticAbility{}, false
 		}
-		body.KeywordAbilities = []game.KeywordAbility{game.ToxicKeyword{Amount: amount}}
+		body.KeywordAbilities = []game.KeywordAbility{game.ToxicKeyword{Amount: keyword.Integer}}
 	default:
 		return game.StaticAbility{}, false
 	}
 	return body, true
 }
 
-func parseFixedKeywordManaCost(parameter string) (cost.Mana, bool) {
-	manaCost, err := parseManaCostValue(parameter)
-	if err != nil || len(manaCost) == 0 {
+func fixedKeywordManaCost(keyword compiler.CompiledKeyword) (cost.Mana, bool) {
+	if keyword.ParameterKind != parser.KeywordParameterManaCost || len(keyword.ManaCost) == 0 {
 		return nil, false
 	}
-	for _, symbol := range manaCost {
+	for _, symbol := range keyword.ManaCost {
 		if symbol.Kind == cost.VariableSymbol {
 			return nil, false
 		}
 	}
-	return manaCost, true
+	return slices.Clone(keyword.ManaCost), true
 }
 
 // lowerManaAbility lowers an activated mana ability into a game.ManaAbility.
@@ -7968,24 +7968,24 @@ func exactMassGroup(ctx contentCtx, verbPrefix string) (game.GroupReference, boo
 	if !ok {
 		return game.GroupReference{}, false
 	}
-	if !massGroupSyntaxAccepted(phrase) {
+	if !massGroupSyntaxAccepted(phrase, len(ctx.content.Keywords) > 0) {
 		return game.GroupReference{}, false
 	}
-	if !massGroupKeywordsMatch(ctx.content.Keywords, phrase, selection) {
+	if !massGroupKeywordsMatch(ctx.content.Keywords, selection) {
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
 }
 
-func massGroupKeywordsMatch(keywords []compiler.CompiledKeyword, phrase string, selection game.Selection) bool {
+func massGroupKeywordsMatch(keywords []compiler.CompiledKeyword, selection game.Selection) bool {
 	if selection.Keyword == game.KeywordNone {
 		return len(keywords) == 0
 	}
-	keywordText, ok := strings.CutPrefix(strings.ToLower(phrase), "creatures with ")
-	return ok &&
-		len(keywords) == 1 &&
-		keywords[0].Parameter == "" &&
-		strings.EqualFold(keywords[0].Text, keywordText)
+	if len(keywords) != 1 || keywords[0].ParameterKind != parser.KeywordParameterNone {
+		return false
+	}
+	keyword, ok := runtimeKeyword(keywords[0].Kind)
+	return ok && keyword == selection.Keyword
 }
 
 func massGroupSelection(selector compiler.CompiledSelector, keywords []compiler.CompiledKeyword) (game.Selection, bool) {
@@ -8025,10 +8025,10 @@ func massGroupSelection(selector compiler.CompiledSelector, keywords []compiler.
 		selection.Toughness = opt.Val(selector.Toughness)
 	}
 	if len(keywords) > 0 {
-		if len(keywords) != 1 || keywords[0].Parameter != "" {
+		if len(keywords) != 1 || keywords[0].ParameterKind != parser.KeywordParameterNone {
 			return game.Selection{}, false
 		}
-		keyword, ok := oracleKeyword(keywords[0].Name)
+		keyword, ok := runtimeKeyword(keywords[0].Kind)
 		if !ok {
 			return game.Selection{}, false
 		}
@@ -8057,7 +8057,7 @@ func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 // massGroupSyntaxAccepted parses the qualifier in "Verb all <qualifier>."
 // sentences only to prove exact supported syntax. Selection values come from the
 // compiler's typed selector IR.
-func massGroupSyntaxAccepted(phrase string) bool {
+func massGroupSyntaxAccepted(phrase string, hasKeyword bool) bool {
 	if phrase == "" || strings.TrimSpace(phrase) != phrase {
 		return false
 	}
@@ -8077,7 +8077,7 @@ func massGroupSyntaxAccepted(phrase string) bool {
 	}
 	if !hadControllerSuffix {
 		if keywordText, ok := strings.CutPrefix(phrase, "creatures with "); ok {
-			return massGroupKeywordSyntaxAccepted(keywordText)
+			return hasKeyword && keywordText != "" && !strings.Contains(keywordText, " ")
 		}
 	}
 	if massGroupBaseNounSyntaxAccepted(phrase) {
@@ -8115,15 +8115,6 @@ func massGroupBaseNounSyntaxAccepted(phrase string) bool {
 		"creatures and lands", "creatures and planeswalkers", "artifacts and enchantments",
 		"artifacts and creatures", "artifacts, creatures, and enchantments",
 		"artifacts, creatures, and lands":
-		return true
-	default:
-		return false
-	}
-}
-
-func massGroupKeywordSyntaxAccepted(text string) bool {
-	switch text {
-	case "flying", "reach", "trample", "lifelink", "deathtouch", "indestructible", "haste", "menace", "vigilance":
 		return true
 	default:
 		return false
@@ -8317,8 +8308,8 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 	if requiredType != "" {
 		selection.RequiredTypes = []types.Card{requiredType}
 	}
-	if selector.Keyword != "" {
-		keyword, ok := oracleKeyword(selector.Keyword)
+	if selector.Keyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selector.Keyword)
 		if !ok {
 			return game.Selection{}, false
 		}
@@ -8334,7 +8325,7 @@ func dynamicCardZoneAmount(selector compiler.CompiledSelector, multiplier int) (
 	if selector.Zone != zone.Graveyard || selector.Controller != compiler.ControllerYou {
 		return game.DynamicAmount{}, false
 	}
-	keyword, ok := oracleKeyword(selector.Keyword)
+	keyword, ok := runtimeKeyword(selector.Keyword)
 	if !ok || keyword != game.Cycling {
 		return game.DynamicAmount{}, false
 	}
@@ -8348,27 +8339,27 @@ func dynamicCardZoneAmount(selector compiler.CompiledSelector, multiplier int) (
 	}, true
 }
 
-func oracleKeyword(name string) (game.Keyword, bool) {
-	switch name {
-	case "Cycling":
+func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
+	switch keyword {
+	case parser.KeywordCycling:
 		return game.Cycling, true
-	case "Flying":
+	case parser.KeywordFlying:
 		return game.Flying, true
-	case "Reach":
+	case parser.KeywordReach:
 		return game.Reach, true
-	case "Trample":
+	case parser.KeywordTrample:
 		return game.Trample, true
-	case "Lifelink":
+	case parser.KeywordLifelink:
 		return game.Lifelink, true
-	case "Deathtouch":
+	case parser.KeywordDeathtouch:
 		return game.Deathtouch, true
-	case "Indestructible":
+	case parser.KeywordIndestructible:
 		return game.Indestructible, true
-	case "Haste":
+	case parser.KeywordHaste:
 		return game.Haste, true
-	case "Menace":
+	case parser.KeywordMenace:
 		return game.Menace, true
-	case "Vigilance":
+	case parser.KeywordVigilance:
 		return game.Vigilance, true
 	default:
 		return game.KeywordNone, false
@@ -9469,36 +9460,36 @@ func parseManaSymbolValue(sym string) (cost.Symbol, error) {
 	return cost.Symbol{}, fmt.Errorf("unsupported mana symbol: %s", sym)
 }
 
-// keywordStaticBodies maps a keyword name to its reusable typed StaticAbility and
+// keywordStaticBodies maps a typed keyword to its reusable typed StaticAbility and
 // the package-level variable reference the Renderer emits for it.
-var keywordStaticBodies = map[string]loweredStaticAbility{
-	"Devoid":         {Body: game.DevoidStaticBody, VarName: "game.DevoidStaticBody"},
-	"Deathtouch":     {Body: game.DeathtouchStaticBody, VarName: "game.DeathtouchStaticBody"},
-	"Defender":       {Body: game.DefenderStaticBody, VarName: "game.DefenderStaticBody"},
-	"Delve":          {Body: game.DelveStaticBody, VarName: "game.DelveStaticBody"},
-	"Double strike":  {Body: game.DoubleStrikeStaticBody, VarName: "game.DoubleStrikeStaticBody"},
-	"Exalted":        {Body: game.ExaltedStaticBody, VarName: "game.ExaltedStaticBody"},
-	"First strike":   {Body: game.FirstStrikeStaticBody, VarName: "game.FirstStrikeStaticBody"},
-	"Flash":          {Body: game.FlashStaticBody, VarName: "game.FlashStaticBody"},
-	"Flying":         {Body: game.FlyingStaticBody, VarName: "game.FlyingStaticBody"},
-	"Haste":          {Body: game.HasteStaticBody, VarName: "game.HasteStaticBody"},
-	"Hexproof":       {Body: game.HexproofStaticBody, VarName: "game.HexproofStaticBody"},
-	"Improvise":      {Body: game.ImproviseStaticBody, VarName: "game.ImproviseStaticBody"},
-	"Indestructible": {Body: game.IndestructibleStaticBody, VarName: "game.IndestructibleStaticBody"},
-	"Infect":         {Body: game.InfectStaticBody, VarName: "game.InfectStaticBody"},
-	"Lifelink":       {Body: game.LifelinkStaticBody, VarName: "game.LifelinkStaticBody"},
-	"Menace":         {Body: game.MenaceStaticBody, VarName: "game.MenaceStaticBody"},
-	"Persist":        {Body: game.PersistStaticBody, VarName: "game.PersistStaticBody"},
-	"Prowess":        {Body: game.ProwessStaticBody, VarName: "game.ProwessStaticBody"},
-	"Read ahead":     {Body: game.ReadAheadStaticBody, VarName: "game.ReadAheadStaticBody"},
-	"Reach":          {Body: game.ReachStaticBody, VarName: "game.ReachStaticBody"},
-	"Shroud":         {Body: game.ShroudStaticBody, VarName: "game.ShroudStaticBody"},
-	"Split second":   {Body: game.SplitSecondStaticBody, VarName: "game.SplitSecondStaticBody"},
-	"Storm":          {Body: game.StormStaticBody, VarName: "game.StormStaticBody"},
-	"Trample":        {Body: game.TrampleStaticBody, VarName: "game.TrampleStaticBody"},
-	"Undying":        {Body: game.UndyingStaticBody, VarName: "game.UndyingStaticBody"},
-	"Vigilance":      {Body: game.VigilanceStaticBody, VarName: "game.VigilanceStaticBody"},
-	"Wither":         {Body: game.WitherStaticBody, VarName: "game.WitherStaticBody"},
-	"Cascade":        {Body: game.CascadeStaticBody, VarName: "game.CascadeStaticBody"},
-	"Convoke":        {Body: game.ConvokeStaticBody, VarName: "game.ConvokeStaticBody"},
+var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
+	parser.KeywordDevoid:         {Body: game.DevoidStaticBody, VarName: "game.DevoidStaticBody"},
+	parser.KeywordDeathtouch:     {Body: game.DeathtouchStaticBody, VarName: "game.DeathtouchStaticBody"},
+	parser.KeywordDefender:       {Body: game.DefenderStaticBody, VarName: "game.DefenderStaticBody"},
+	parser.KeywordDelve:          {Body: game.DelveStaticBody, VarName: "game.DelveStaticBody"},
+	parser.KeywordDoubleStrike:   {Body: game.DoubleStrikeStaticBody, VarName: "game.DoubleStrikeStaticBody"},
+	parser.KeywordExalted:        {Body: game.ExaltedStaticBody, VarName: "game.ExaltedStaticBody"},
+	parser.KeywordFirstStrike:    {Body: game.FirstStrikeStaticBody, VarName: "game.FirstStrikeStaticBody"},
+	parser.KeywordFlash:          {Body: game.FlashStaticBody, VarName: "game.FlashStaticBody"},
+	parser.KeywordFlying:         {Body: game.FlyingStaticBody, VarName: "game.FlyingStaticBody"},
+	parser.KeywordHaste:          {Body: game.HasteStaticBody, VarName: "game.HasteStaticBody"},
+	parser.KeywordHexproof:       {Body: game.HexproofStaticBody, VarName: "game.HexproofStaticBody"},
+	parser.KeywordImprovise:      {Body: game.ImproviseStaticBody, VarName: "game.ImproviseStaticBody"},
+	parser.KeywordIndestructible: {Body: game.IndestructibleStaticBody, VarName: "game.IndestructibleStaticBody"},
+	parser.KeywordInfect:         {Body: game.InfectStaticBody, VarName: "game.InfectStaticBody"},
+	parser.KeywordLifelink:       {Body: game.LifelinkStaticBody, VarName: "game.LifelinkStaticBody"},
+	parser.KeywordMenace:         {Body: game.MenaceStaticBody, VarName: "game.MenaceStaticBody"},
+	parser.KeywordPersist:        {Body: game.PersistStaticBody, VarName: "game.PersistStaticBody"},
+	parser.KeywordProwess:        {Body: game.ProwessStaticBody, VarName: "game.ProwessStaticBody"},
+	parser.KeywordReadAhead:      {Body: game.ReadAheadStaticBody, VarName: "game.ReadAheadStaticBody"},
+	parser.KeywordReach:          {Body: game.ReachStaticBody, VarName: "game.ReachStaticBody"},
+	parser.KeywordShroud:         {Body: game.ShroudStaticBody, VarName: "game.ShroudStaticBody"},
+	parser.KeywordSplitSecond:    {Body: game.SplitSecondStaticBody, VarName: "game.SplitSecondStaticBody"},
+	parser.KeywordStorm:          {Body: game.StormStaticBody, VarName: "game.StormStaticBody"},
+	parser.KeywordTrample:        {Body: game.TrampleStaticBody, VarName: "game.TrampleStaticBody"},
+	parser.KeywordUndying:        {Body: game.UndyingStaticBody, VarName: "game.UndyingStaticBody"},
+	parser.KeywordVigilance:      {Body: game.VigilanceStaticBody, VarName: "game.VigilanceStaticBody"},
+	parser.KeywordWither:         {Body: game.WitherStaticBody, VarName: "game.WitherStaticBody"},
+	parser.KeywordCascade:        {Body: game.CascadeStaticBody, VarName: "game.CascadeStaticBody"},
+	parser.KeywordConvoke:        {Body: game.ConvokeStaticBody, VarName: "game.ConvokeStaticBody"},
 }

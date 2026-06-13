@@ -1297,25 +1297,15 @@ func selectorKindFromAtom(noun parser.ObjectNoun) SelectorKind {
 	}
 }
 
-func selectorKeyword(tokens []shared.Token, atoms parser.Atoms) string {
+func selectorKeyword(tokens []shared.Token, atoms parser.Atoms) parser.KeywordKind {
 	span := shared.SpanOf(tokens)
-	if !atoms.SelectionFlagIn(span, parser.SelectionFlagCycling) {
-		return ""
+	selector, ok := atoms.KeywordSelectorIn(span, false)
+	if !ok ||
+		selector.Form == parser.KeywordSelectorFormUnknown ||
+		selector.Keyword != parser.KeywordCycling {
+		return parser.KeywordUnknown
 	}
-	words := shared.NormalizedWords(tokens)
-	for i := 0; i+1 < len(words); i++ {
-		if words[i] == "with" && words[i+1] == "cycling" {
-			return "Cycling"
-		}
-		if i+3 < len(words) &&
-			words[i] == "with" &&
-			words[i+1] == "a" &&
-			words[i+2] == "cycling" &&
-			words[i+3] == "ability" {
-			return "Cycling"
-		}
-	}
-	return ""
+	return selector.Keyword
 }
 
 func compileConditions(tokens []shared.Token, triggered bool, atoms parser.Atoms) []CompiledCondition {
@@ -2023,7 +2013,7 @@ func dynamicAmountSubject(tokens []shared.Token, start int, atoms parser.Atoms) 
 	if subject, ok := dynamicBasicLandTypeAmountSubject(tokens, start); ok {
 		return subject, true
 	}
-	if subject, ok := dynamicCountAmountSubject(tokens, start); ok {
+	if subject, ok := dynamicCountAmountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
 
@@ -2132,8 +2122,8 @@ func dynamicBasicLandTypeAmountSubject(tokens []shared.Token, start int) (dynami
 	}, true
 }
 
-func dynamicCountAmountSubject(tokens []shared.Token, start int) (dynamicAmountSubjectMatch, bool) {
-	if subject, ok := dynamicCardCountAmountSubject(tokens, start); ok {
+func dynamicCountAmountSubject(tokens []shared.Token, start int, atoms parser.Atoms) (dynamicAmountSubjectMatch, bool) {
+	if subject, ok := dynamicCardCountAmountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
 	suffixes := []struct {
@@ -2186,7 +2176,7 @@ func dynamicCountAmountSubject(tokens []shared.Token, start int) (dynamicAmountS
 	return dynamicAmountSubjectMatch{}, false
 }
 
-func dynamicCardCountAmountSubject(tokens []shared.Token, start int) (dynamicAmountSubjectMatch, bool) {
+func dynamicCardCountAmountSubject(tokens []shared.Token, start int, atoms parser.Atoms) (dynamicAmountSubjectMatch, bool) {
 	if start >= len(tokens) ||
 		(!equalWord(tokens[start], "card") && !equalWord(tokens[start], "cards")) {
 		return dynamicAmountSubjectMatch{}, false
@@ -2200,15 +2190,20 @@ func dynamicCardCountAmountSubject(tokens []shared.Token, start int) (dynamicAmo
 		Kind: SelectorCard,
 		Raw:  joinedSourceText(tokens[start:]),
 	}
-	switch {
-	case wordsAt(tokens, end, "with", "cycling"):
-		end += 2
-	case wordsAt(tokens, end, "with", "a", "cycling", "ability"):
-		end += 4
-	default:
+	if end >= len(tokens) {
 		return dynamicAmountSubjectMatch{}, false
 	}
-	selector.Keyword = "Cycling"
+	keywordSelector, ok := atoms.KeywordSelectorStartingAt(tokens[end].Span)
+	if !ok ||
+		keywordSelector.Excluded ||
+		keywordSelector.Form == parser.KeywordSelectorFormUnknown ||
+		keywordSelector.Keyword != parser.KeywordCycling {
+		return dynamicAmountSubjectMatch{}, false
+	}
+	for end < len(tokens) && tokens[end].Span.End.Offset <= keywordSelector.Span.End.Offset {
+		end++
+	}
+	selector.Keyword = keywordSelector.Keyword
 	switch {
 	case wordsAt(tokens, end, "in", "your", "graveyard"):
 		selector.Controller = ControllerYou
@@ -2493,276 +2488,70 @@ func compileDuration(tokens []shared.Token, atoms parser.Atoms) DurationKind {
 	return DurationNone
 }
 
-var keywordNames = map[string]string{
-	"affinity": "Affinity", "annihilator": "Annihilator", "cascade": "Cascade",
-	"companion": "Companion", "convoke": "Convoke", "cycling": "Cycling",
-	"deathtouch": "Deathtouch", "defender": "Defender", "delve": "Delve", "devoid": "Devoid",
-	"disguise": "Disguise", "double strike": "Double strike", "emerge": "Emerge",
-	"enchant": "Enchant", "equip": "Equip", "escape": "Escape",
-	"eternalize": "Eternalize", "exalted": "Exalted", "first strike": "First strike",
-	"flash": "Flash", "flashback": "Flashback", "flying": "Flying",
-	"foretell": "Foretell", "haste": "Haste", "hexproof": "Hexproof",
-	"improvise": "Improvise", "indestructible": "Indestructible", "infect": "Infect",
-	"kicker": "Kicker", "lifelink": "Lifelink", "madness": "Madness",
-	"menace": "Menace", "morph": "Morph", "mutate": "Mutate",
-	"ninjutsu": "Ninjutsu", "persist": "Persist", "protection": "Protection",
-	"prowess": "Prowess", "read ahead": "Read ahead", "reach": "Reach", "shroud": "Shroud",
-	"split second": "Split second", "storm": "Storm", "suspend": "Suspend",
-	"toxic": "Toxic", "trample": "Trample", "undying": "Undying",
-	"vigilance": "Vigilance", "ward": "Ward", "wither": "Wither",
-}
-
 func compileKeywords(tokens []shared.Token, atoms parser.Atoms) []CompiledKeyword {
-	var keywords []CompiledKeyword
-	for i := 0; i < len(tokens); i++ {
-		for width := 2; width >= 1; width-- {
-			if i+width > len(tokens) {
-				continue
-			}
-			name := strings.ToLower(joinWords(tokens[i : i+width]))
-			canonical, ok := keywordNames[name]
-			if !ok {
-				continue
-			}
-			end := i + width
-			parameter := compileKeywordParameter(tokens, canonical, end, atoms)
-			end = parameter.end
-			phrase := tokens[i:end]
-			keywords = append(keywords, CompiledKeyword{
-				Name:            canonical,
-				Span:            shared.SpanOf(phrase),
-				Text:            joinedSourceText(phrase),
-				Parameter:       parameter.text,
-				Protection:      parameter.protection,
-				ProtectionKnown: parameter.protectionKnown,
-			})
-			i = end - 1
-			break
+	syntaxKeywords := atoms.KeywordsWithin(tokens)
+	keywords := make([]CompiledKeyword, 0, len(syntaxKeywords))
+	for i := range syntaxKeywords {
+		keyword := &syntaxKeywords[i]
+		compiled := CompiledKeyword{
+			Kind:          keyword.Kind,
+			Name:          keyword.Kind.String(),
+			Span:          keyword.Span,
+			Text:          keyword.Text,
+			Parameter:     keyword.Parameter.Text,
+			ParameterKind: keyword.Parameter.Kind,
+			ManaCost:      keyword.Parameter.ManaCost(),
+			Integer:       keyword.Parameter.Integer(),
+			EnchantTarget: keyword.Parameter.EnchantTarget(),
 		}
+		if keyword.Parameter.Kind == parser.KeywordParameterProtection {
+			compiled.Protection, compiled.ProtectionKnown = compileProtectionKeyword(keyword.Parameter.Protection())
+		}
+		keywords = append(keywords, compiled)
 	}
 	return keywords
 }
 
-type keywordParameter struct {
-	text            string
-	protection      game.ProtectionKeyword
-	protectionKnown bool
-	end             int
-}
-
-func compileKeywordParameter(tokens []shared.Token, keyword string, start int, atoms parser.Atoms) keywordParameter {
-	switch keyword {
-	case "Protection":
-		protection := compileProtectionParameter(tokens, start, atoms)
-		return keywordParameter{
-			text:            protection.text,
-			protection:      protection.protection,
-			protectionKnown: protection.ok,
-			end:             protection.end,
+func compileProtectionKeyword(parameter parser.ProtectionParameter) (game.ProtectionKeyword, bool) {
+	families := 0
+	for _, present := range []bool{
+		parameter.Everything,
+		parameter.EachColor,
+		parameter.Multicolored,
+		parameter.Monocolored,
+		len(parameter.FromColors) > 0,
+		len(parameter.FromTypes) > 0,
+		len(parameter.FromSubtypes) > 0,
+	} {
+		if present {
+			families++
 		}
-	case "Enchant":
-		if start < len(tokens) && isEnchantObjectWord(tokens[start], atoms) {
-			return keywordParameter{text: strings.ToLower(tokens[start].Text), end: start + 1}
+	}
+	if families != 1 {
+		return game.ProtectionKeyword{}, false
+	}
+	protection := game.ProtectionKeyword{
+		Everything:   parameter.Everything,
+		EachColor:    parameter.EachColor,
+		Multicolored: parameter.Multicolored,
+		Monocolored:  parameter.Monocolored,
+		FromSubtypes: append([]types.Sub(nil), parameter.FromSubtypes...),
+	}
+	for _, value := range parameter.FromColors {
+		compiled, ok := compilerColor(value)
+		if !ok {
+			return game.ProtectionKeyword{}, false
 		}
-		return keywordParameter{end: start}
+		protection.FromColors = append(protection.FromColors, compiled)
 	}
-	end := start
-	if end < len(tokens) && tokens[end].Kind == shared.Symbol {
-		var symbols strings.Builder
-		for end < len(tokens) && tokens[end].Kind == shared.Symbol {
-			_, _ = symbols.WriteString(tokens[end].Text)
-			end++
+	for _, value := range parameter.FromTypes {
+		compiled, ok := runtimeCardTypeFromParser(value)
+		if !ok {
+			return game.ProtectionKeyword{}, false
 		}
-		return keywordParameter{text: symbols.String(), end: end}
+		protection.FromTypes = append(protection.FromTypes, compiled)
 	}
-	if end < len(tokens) && tokens[end].Kind == shared.Integer {
-		return keywordParameter{text: tokens[end].Text, end: end + 1}
-	}
-	return keywordParameter{end: end}
-}
-
-type protectionParameter struct {
-	text       string
-	end        int
-	protection game.ProtectionKeyword
-	ok         bool
-}
-
-func compileProtectionParameter(tokens []shared.Token, start int, atoms parser.Atoms) protectionParameter {
-	if start >= len(tokens) || !equalWord(tokens[start], "from") {
-		return protectionParameter{end: start}
-	}
-	if start+1 >= len(tokens) {
-		return protectionParameter{end: start}
-	}
-
-	// Boolean / special single-clause predicates that don't repeat.
-	if equalWord(tokens[start+1], "everything") {
-		return protectionParameter{text: "everything", end: start + 2, protection: game.ProtectionKeyword{Everything: true}, ok: true}
-	}
-	if equalWord(tokens[start+1], "multicolored") {
-		return protectionParameter{text: "multicolored", end: start + 2, protection: game.ProtectionKeyword{Multicolored: true}, ok: true}
-	}
-	if equalWord(tokens[start+1], "monocolored") {
-		return protectionParameter{text: "monocolored", end: start + 2, protection: game.ProtectionKeyword{Monocolored: true}, ok: true}
-	}
-	// "from each color" or "from all colors"
-	if equalWord(tokens[start+1], "each") && start+2 < len(tokens) && equalWord(tokens[start+2], "color") {
-		return protectionParameter{text: "eachcolor", end: start + 3, protection: game.ProtectionKeyword{EachColor: true}, ok: true}
-	}
-	if equalWord(tokens[start+1], "all") && start+2 < len(tokens) &&
-		(equalWord(tokens[start+2], "colors") || equalWord(tokens[start+2], "color")) {
-		return protectionParameter{text: "eachcolor", end: start + 3, protection: game.ProtectionKeyword{EachColor: true}, ok: true}
-	}
-
-	// Colors: keep existing bare "black,red" format for backward compatibility.
-	if firstColor, ok2 := protectionColor(tokens[start+1], atoms); ok2 {
-		colorNames := []string{strings.ToLower(string(firstColor))}
-		colors := []color.Color{firstColor}
-		end := start + 2
-		for end < len(tokens) {
-			next := end
-			if tokens[next].Kind == shared.Comma {
-				next++
-			} else if !equalWord(tokens[next], "and") {
-				break
-			}
-			if next < len(tokens) && equalWord(tokens[next], "and") {
-				next++
-			}
-			if next+1 >= len(tokens) || !equalWord(tokens[next], "from") {
-				break
-			}
-			nextColor, ok3 := protectionColor(tokens[next+1], atoms)
-			if !ok3 {
-				break
-			}
-			colorNames = append(colorNames, strings.ToLower(string(nextColor)))
-			colors = append(colors, nextColor)
-			end = next + 2
-		}
-		return protectionParameter{text: strings.Join(colorNames, ","), end: end, protection: game.ProtectionKeyword{FromColors: colors}, ok: true}
-	}
-
-	// Card types: "from artifacts", "from creatures", etc.
-	if ct, ok2 := protectionCardType(tokens[start+1], atoms); ok2 {
-		cardTypeNames := []string{strings.ToLower(string(ct))}
-		cardTypes := []types.Card{ct}
-		end := start + 2
-		for end < len(tokens) {
-			next := end
-			if tokens[next].Kind == shared.Comma {
-				next++
-			} else if !equalWord(tokens[next], "and") {
-				break
-			}
-			if next < len(tokens) && equalWord(tokens[next], "and") {
-				next++
-			}
-			if next+1 >= len(tokens) || !equalWord(tokens[next], "from") {
-				break
-			}
-			ct2, ok3 := protectionCardType(tokens[next+1], atoms)
-			if !ok3 {
-				break
-			}
-			cardTypeNames = append(cardTypeNames, strings.ToLower(string(ct2)))
-			cardTypes = append(cardTypes, ct2)
-			end = next + 2
-		}
-		return protectionParameter{text: "types:" + strings.Join(cardTypeNames, ","), end: end, protection: game.ProtectionKeyword{FromTypes: cardTypes}, ok: true}
-	}
-
-	// Creature/land subtypes: "from Dragons", "from Humans", etc.
-	if sub, ok2 := protectionSubtype(tokens[start+1], atoms); ok2 {
-		subtypeNames := []string{string(sub)}
-		subtypes := []types.Sub{sub}
-		end := start + 2
-		for end < len(tokens) {
-			next := end
-			if tokens[next].Kind == shared.Comma {
-				next++
-			} else if !equalWord(tokens[next], "and") {
-				break
-			}
-			if next < len(tokens) && equalWord(tokens[next], "and") {
-				next++
-			}
-			if next+1 >= len(tokens) || !equalWord(tokens[next], "from") {
-				break
-			}
-			sub2, ok3 := protectionSubtype(tokens[next+1], atoms)
-			if !ok3 {
-				break
-			}
-			subtypeNames = append(subtypeNames, string(sub2))
-			subtypes = append(subtypes, sub2)
-			end = next + 2
-		}
-		return protectionParameter{text: "subtypes:" + strings.Join(subtypeNames, ","), end: end, protection: game.ProtectionKeyword{FromSubtypes: subtypes}, ok: true}
-	}
-
-	return protectionParameter{end: start}
-}
-
-func protectionColor(token shared.Token, atoms parser.Atoms) (color.Color, bool) {
-	value, ok := atoms.ColorAt(token.Span)
-	if !ok {
-		return "", false
-	}
-	return compilerColor(value)
-}
-
-// protectionCardType reports whether token carries a known card-type atom used
-// in protection.
-func protectionCardType(token shared.Token, atoms parser.Atoms) (types.Card, bool) {
-	cardType, ok := atoms.CardTypeAt(token.Span)
-	if !ok {
-		return "", false
-	}
-	switch cardType {
-	case parser.CardTypeArtifact:
-		return types.Artifact, true
-	case parser.CardTypeCreature:
-		return types.Creature, true
-	case parser.CardTypeEnchantment:
-		return types.Enchantment, true
-	case parser.CardTypeInstant:
-		return types.Instant, true
-	case parser.CardTypeSorcery:
-		return types.Sorcery, true
-	case parser.CardTypePlaneswalker:
-		return types.Planeswalker, true
-	case parser.CardTypeLand:
-		return types.Land, true
-	default:
-		return "", false
-	}
-}
-
-// protectionSubtype reports whether token carries a recognized creature or land
-// subtype atom used in protection.
-func protectionSubtype(token shared.Token, atoms parser.Atoms) (types.Sub, bool) {
-	sub, ok := atoms.SubtypeAt(token.Span)
-	if !ok || !parser.SubtypeMatchesAnyRuntimeCardType(sub, []types.Card{types.Creature, types.Land}) {
-		return "", false
-	}
-	return sub, true
-}
-
-func isEnchantObjectWord(token shared.Token, atoms parser.Atoms) bool {
-	noun, ok := atoms.ObjectNounAt(token.Span)
-	if !ok {
-		return false
-	}
-	switch noun {
-	case parser.ObjectNounArtifact, parser.ObjectNounCreature, parser.ObjectNounEnchantment,
-		parser.ObjectNounLand, parser.ObjectNounPermanent, parser.ObjectNounPlaneswalker,
-		parser.ObjectNounPlayer:
-		return true
-	default:
-		return false
-	}
+	return protection, true
 }
 
 func compileReferences(tokens []shared.Token, atoms parser.Atoms) []CompiledReference {

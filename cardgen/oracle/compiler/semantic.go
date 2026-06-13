@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -431,7 +432,7 @@ type CompiledSelector struct {
 	Blocking       bool
 	Tapped         bool
 	Untapped       bool
-	Keyword        string
+	Keyword        parser.KeywordKind
 	Zone           zone.Type
 	ManaValue      compare.Int
 	MatchManaValue bool
@@ -752,10 +753,15 @@ type CompiledSignedAmount struct {
 
 // CompiledKeyword is a recognized keyword ability.
 type CompiledKeyword struct {
+	Kind            parser.KeywordKind
 	Name            string
 	Span            shared.Span
 	Text            string
 	Parameter       string
+	ParameterKind   parser.KeywordParameterKind
+	ManaCost        cost.Mana
+	Integer         int
+	EnchantTarget   parser.ObjectNoun
 	Protection      game.ProtectionKeyword
 	ProtectionKnown bool
 }

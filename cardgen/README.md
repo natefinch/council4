@@ -86,6 +86,10 @@ Vanguard cards are excluded with explicit report reasons.
    template. `assembleCardDefs` combines
    those values with printed Scryfall fields and calls
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
+   Keyword identity, keyword-selector identity, and keyword parameters arrive
+   from parser-owned typed syntax. Lowering maps typed keyword kinds to runtime
+   templates and consumes already-parsed mana costs, integers, Enchant targets,
+   and Protection predicates; it never parses keyword names or parameter text.
    Parameterized Kicker, Madness, Morph, Disguise, Mutate, and Toxic lines lower
    into their corresponding sealed `game.KeywordAbility` values; unsupported
    parameter forms remain fail-closed. Exact "Whenever this creature mutates"

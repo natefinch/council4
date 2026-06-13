@@ -165,7 +165,7 @@ const (
 // StaticCostModifierDeclaration is a semantic cost change.
 type StaticCostModifierDeclaration struct {
 	Kind               StaticCostModifierKind
-	AbilityKeyword     string
+	AbilityKeyword     parser.KeywordKind
 	GenericReduction   int
 	SetManaCost        string
 	ReplaceManaCost    bool
@@ -516,8 +516,8 @@ func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, syntax p
 func staticDeclarationGrantKeywords(content AbilityContent) []CompiledKeyword {
 	usesCyclingPredicate := false
 	for _, effect := range content.Effects {
-		if strings.EqualFold(effect.Selector.Keyword, "Cycling") ||
-			strings.EqualFold(effect.Amount.Selector().Keyword, "Cycling") {
+		if effect.Selector.Keyword == parser.KeywordCycling ||
+			effect.Amount.Selector().Keyword == parser.KeywordCycling {
 			usesCyclingPredicate = true
 			break
 		}
@@ -527,7 +527,7 @@ func staticDeclarationGrantKeywords(content AbilityContent) []CompiledKeyword {
 	}
 	filtered := make([]CompiledKeyword, 0, len(content.Keywords))
 	for _, keyword := range content.Keywords {
-		if keyword.Name == "Cycling" && keyword.Parameter == "" {
+		if keyword.Kind == parser.KeywordCycling && keyword.ParameterKind == parser.KeywordParameterNone {
 			continue
 		}
 		filtered = append(filtered, keyword)
@@ -685,7 +685,10 @@ func recognizeStaticCostModifierDeclaration(ability CompiledAbility) (StaticDecl
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.References) != 0 {
+		len(ability.Content.References) != 0 ||
+		len(ability.Content.Keywords) != 1 ||
+		ability.Content.Keywords[0].Kind != parser.KeywordCycling ||
+		ability.Content.Keywords[0].ParameterKind != parser.KeywordParameterNone {
 		return StaticDeclaration{}, false
 	}
 	condition, ok := staticDeclarationCondition(ability.Content.Conditions)
@@ -694,7 +697,7 @@ func recognizeStaticCostModifierDeclaration(ability CompiledAbility) (StaticDecl
 	}
 	cost := StaticCostModifierDeclaration{
 		Kind:           StaticCostModifierAbility,
-		AbilityKeyword: "Cycling",
+		AbilityKeyword: ability.Content.Keywords[0].Kind,
 	}
 	switch ability.Text {
 	case "Cycling abilities you activate cost up to {2} less to activate.":
@@ -739,8 +742,8 @@ func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, syntax 
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.References) != 0 ||
 		len(ability.Content.Keywords) != 1 ||
-		ability.Content.Keywords[0].Name != "Cycling" ||
-		ability.Content.Keywords[0].Parameter == "" {
+		ability.Content.Keywords[0].Kind != parser.KeywordCycling ||
+		ability.Content.Keywords[0].ParameterKind != parser.KeywordParameterManaCost {
 		return StaticDeclaration{}, false
 	}
 
@@ -780,8 +783,8 @@ func isHistoricCardAbilityGrant(ability CompiledAbility, syntax parser.Ability) 
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.References) != 0 ||
 		len(ability.Content.Keywords) != 1 ||
-		ability.Content.Keywords[0].Name != "Cycling" ||
-		ability.Content.Keywords[0].Parameter == "" {
+		ability.Content.Keywords[0].Kind != parser.KeywordCycling ||
+		ability.Content.Keywords[0].ParameterKind != parser.KeywordParameterManaCost {
 		return false
 	}
 	return joinedSourceText(staticDeclarationTokens(syntax)) ==
