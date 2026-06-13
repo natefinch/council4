@@ -1934,7 +1934,7 @@ func TestCompileWithCyclingTargetSelector(t *testing.T) {
 	if target.Cardinality.Min != 0 || target.Cardinality.Max != 2 {
 		t.Fatalf("cardinality = %#v, want up to two", target.Cardinality)
 	}
-	if target.Selector.Kind != SelectorCard || target.Selector.Keyword != "Cycling" {
+	if target.Selector.Kind != SelectorCard || target.Selector.Keyword != parser.KeywordCycling {
 		t.Fatalf("selector = %#v, want card with Cycling", target.Selector)
 	}
 }
@@ -1950,7 +1950,7 @@ func TestCompileDynamicCardCountWithCyclingInGraveyard(t *testing.T) {
 	if amount.DynamicKind != DynamicAmountCount ||
 		amount.DynamicForm != DynamicAmountWhereX ||
 		amount.Selector().Kind != SelectorCard ||
-		amount.Selector().Keyword != "Cycling" ||
+		amount.Selector().Keyword != parser.KeywordCycling ||
 		amount.Selector().Zone != zone.Graveyard ||
 		amount.Selector().Controller != ControllerYou {
 		t.Fatalf("amount = %#v, want count of cards with Cycling in your graveyard", amount)

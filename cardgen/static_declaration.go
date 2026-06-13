@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -296,7 +297,7 @@ func lowerStaticContinuousLayer(layer compiler.StaticContinuousLayer) (game.Cont
 }
 
 func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.StaticAbility, bool) {
-	if len(keywords) != 1 || keywords[0].Name != "Protection" {
+	if len(keywords) != 1 || keywords[0].Kind != parser.KeywordProtection {
 		return game.StaticAbility{}, false
 	}
 	if !keywords[0].ProtectionKnown {
@@ -373,7 +374,7 @@ func lowerStaticZone(value compiler.StaticZone) (zone.Type, bool) {
 func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	if declaration.Group.Domain != compiler.StaticGroupControllerHandCards ||
 		declaration.Cost.Kind != compiler.StaticCostModifierAbility ||
-		declaration.Cost.AbilityKeyword != "Cycling" {
+		declaration.Cost.AbilityKeyword != parser.KeywordCycling {
 		return false
 	}
 	modifier := game.CostModifier{
@@ -399,22 +400,22 @@ func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration c
 
 func appendStaticCardAbilityGrantDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	if declaration.Group.Domain != compiler.StaticGroupControllerHandCards ||
-		declaration.CardGrant.Keyword.Name != "Cycling" {
+		declaration.CardGrant.Keyword.Kind != parser.KeywordCycling ||
+		declaration.CardGrant.Keyword.ParameterKind != parser.KeywordParameterManaCost {
 		return false
 	}
 	selection, ok := lowerStaticSelection(declaration.Group.Selection)
 	if !ok || selection.Empty() {
 		return false
 	}
-	manaCost, err := parseManaCostValue(declaration.CardGrant.Keyword.Parameter)
-	if err != nil || len(manaCost) == 0 {
+	if len(declaration.CardGrant.Keyword.ManaCost) == 0 {
 		return false
 	}
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind:           game.RuleEffectGrantHandCardAbility,
 		AffectedPlayer: game.PlayerYou,
 		CardSelection:  selection,
-		GrantedAbility: game.CyclingActivatedAbility(manaCost),
+		GrantedAbility: game.CyclingActivatedAbility(slices.Clone(declaration.CardGrant.Keyword.ManaCost)),
 	})
 	return true
 }

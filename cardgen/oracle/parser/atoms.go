@@ -337,7 +337,6 @@ const (
 	SelectionFlagUntapped
 	SelectionFlagToken
 	SelectionFlagNonToken
-	SelectionFlagCycling
 )
 
 func recognizeSelectionFlag(word string) (SelectionFlag, bool) {
@@ -358,8 +357,6 @@ func recognizeSelectionFlag(word string) (SelectionFlag, bool) {
 		return SelectionFlagToken, true
 	case "nontoken":
 		return SelectionFlagNonToken, true
-	case "cycling":
-		return SelectionFlagCycling, true
 	default:
 		return SelectionFlagUnknown, false
 	}

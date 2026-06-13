@@ -2546,7 +2546,7 @@ func parsePermanentTriggerSelection(event triggerEventSyntax, subject string, pl
 		subject = strings.TrimSuffix(subject, " card")
 	}
 	var ok bool
-	subject, ok = parsePermanentTriggerSelectionSuffix(subject, &selection)
+	subject, ok = parsePermanentTriggerSelectionSuffix(event, subject, &selection)
 	if !ok {
 		return TriggerSelection{}, false
 	}
@@ -2660,7 +2660,7 @@ func parsePermanentTriggerSelectionAdjective(event triggerEventSyntax, subject s
 	return subject, false
 }
 
-func parsePermanentTriggerSelectionSuffix(subject string, selection *TriggerSelection) (string, bool) {
+func parsePermanentTriggerSelectionSuffix(event triggerEventSyntax, subject string, selection *TriggerSelection) (string, bool) {
 	switch {
 	case strings.HasSuffix(subject, " tapped"):
 		selection.Tapped = TriggerTriTrue
@@ -2670,13 +2670,13 @@ func parsePermanentTriggerSelectionSuffix(subject string, selection *TriggerSele
 		return strings.TrimSuffix(subject, " untapped"), true
 	}
 	if before, qualifier, ok := strings.Cut(subject, " with "); ok {
-		if !parsePermanentTriggerSelectionQualifier(qualifier, selection) {
+		if !parsePermanentTriggerSelectionQualifier(event, qualifier, selection) {
 			return "", false
 		}
 		return before, true
 	}
 	if before, qualifier, ok := strings.Cut(subject, " without "); ok {
-		keyword, ok := parseTriggerKeyword(qualifier)
+		keyword, ok := triggerSelectorKeyword(event, "without", qualifier)
 		if !ok {
 			return "", false
 		}
@@ -2697,8 +2697,8 @@ func parsePermanentTriggerSelectionSuffix(subject string, selection *TriggerSele
 	return subject, true
 }
 
-func parsePermanentTriggerSelectionQualifier(qualifier string, selection *TriggerSelection) bool {
-	if keyword, ok := parseTriggerKeyword(qualifier); ok {
+func parsePermanentTriggerSelectionQualifier(event triggerEventSyntax, qualifier string, selection *TriggerSelection) bool {
+	if keyword, ok := triggerSelectorKeyword(event, "with", qualifier); ok {
 		selection.Keyword = keyword
 		return true
 	}
@@ -2722,17 +2722,29 @@ func parsePermanentTriggerSelectionQualifier(qualifier string, selection *Trigge
 	return false
 }
 
-func parseTriggerKeyword(word string) (TriggerKeyword, bool) {
-	switch word {
-	case "defender":
+func triggerSelectorKeyword(event triggerEventSyntax, relation, qualifier string) (TriggerKeyword, bool) {
+	tokens := event.tokensFor(relation + " " + qualifier)
+	if len(tokens) == 0 {
+		return TriggerKeywordUnknown, false
+	}
+	selector, ok := event.atoms.KeywordSelectorAt(shared.SpanOf(tokens))
+	if !ok || selector.Form != parser.KeywordSelectorFormDirect {
+		return TriggerKeywordUnknown, false
+	}
+	return triggerKeywordFromParser(selector.Keyword)
+}
+
+func triggerKeywordFromParser(keyword parser.KeywordKind) (TriggerKeyword, bool) {
+	switch keyword {
+	case parser.KeywordDefender:
 		return TriggerKeywordDefender, true
-	case "flash":
+	case parser.KeywordFlash:
 		return TriggerKeywordFlash, true
-	case "flying":
+	case parser.KeywordFlying:
 		return TriggerKeywordFlying, true
-	case "haste":
+	case parser.KeywordHaste:
 		return TriggerKeywordHaste, true
-	case "shadow":
+	case parser.KeywordShadow:
 		return TriggerKeywordShadow, true
 	default:
 		return TriggerKeywordUnknown, false

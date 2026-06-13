@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -87,44 +88,103 @@ func TestNumberWordFollowsTypedAtom(t *testing.T) {
 	}
 }
 
-// TestCompileProtectionParameterFollowsTypedSubtype: "from gnomes" is not a known
-// subtype, but the emitted atom types it as Dragon.
-func TestCompileProtectionParameterFollowsTypedSubtype(t *testing.T) {
+// TestCompileKeywordFollowsTypedParserSyntax proves keyword identity and
+// parameter meaning come from typed parser syntax, not irrelevant source text.
+func TestCompileKeywordFollowsTypedParserSyntax(t *testing.T) {
 	t.Parallel()
-	tokens := compilerTokens(t, "from gnomes")
-	atoms := parser.NewAtoms(parser.WithSubtypes(parser.SubtypeAtom{
-		Identity: types.Dragon,
-		Span:     tokens[1].Span, // span over "gnomes"
+	tokens := compilerTokens(t, "irrelevant")
+	parameter := parser.NewProtectionKeywordParameter(tokens[0].Span, "subtypes:Dragon", parser.ProtectionParameter{
+		FromSubtypes: []types.Sub{types.Dragon},
+	})
+	atoms := parser.NewAtoms(parser.WithKeywords(parser.Keyword{
+		Kind:      parser.KeywordProtection,
+		NameSpan:  tokens[0].Span,
+		Span:      tokens[0].Span,
+		Text:      "irrelevant",
+		Parameter: parameter,
 	}))
-	parameter := compileProtectionParameter(tokens, 0, atoms)
-	if !parameter.ok || parameter.text != "subtypes:Dragon" {
-		t.Errorf("compileProtectionParameter = %q, %v; want subtypes:Dragon, true", parameter.text, parameter.ok)
+	keywords := compileKeywords(tokens, atoms)
+	if len(keywords) != 1 ||
+		keywords[0].Kind != parser.KeywordProtection ||
+		keywords[0].Name != "Protection" ||
+		!keywords[0].ProtectionKnown ||
+		len(keywords[0].Protection.FromSubtypes) != 1 ||
+		keywords[0].Protection.FromSubtypes[0] != types.Dragon {
+		t.Fatalf("compiled keywords = %+v; want typed Protection from Dragon", keywords)
+	}
+
+	if keywords[0].Text != "irrelevant" {
+		t.Fatalf("keyword source metadata = %q; want irrelevant", keywords[0].Text)
 	}
 }
 
-func TestProtectionSubtypePreservesSupportedFamilies(t *testing.T) {
+func TestCompileKeywordParameterShapesFollowTypedParserSyntax(t *testing.T) {
 	t.Parallel()
-	tokens := compilerTokens(t, "from gnomes")
-	for _, test := range []struct {
-		name string
-		sub  types.Sub
-		ok   bool
+	tokens := compilerTokens(t, "irrelevant")
+	tests := []struct {
+		name      string
+		kind      parser.KeywordKind
+		parameter parser.KeywordParameter
+		check     func(CompiledKeyword) bool
 	}{
-		{name: "creature", sub: types.Dragon, ok: true},
-		{name: "land", sub: types.Forest, ok: true},
-		{name: "artifact", sub: types.Equipment},
-	} {
+		{
+			name:      "mana",
+			kind:      parser.KeywordWard,
+			parameter: parser.NewManaKeywordParameter(tokens[0].Span, cost.Mana{cost.U}),
+			check: func(keyword CompiledKeyword) bool {
+				return keyword.ParameterKind == parser.KeywordParameterManaCost &&
+					len(keyword.ManaCost) == 1 && keyword.ManaCost[0] == cost.U
+			},
+		},
+		{
+			name:      "integer",
+			kind:      parser.KeywordToxic,
+			parameter: parser.NewIntegerKeywordParameter(tokens[0].Span, 7),
+			check: func(keyword CompiledKeyword) bool {
+				return keyword.ParameterKind == parser.KeywordParameterInteger && keyword.Integer == 7
+			},
+		},
+		{
+			name:      "enchant target",
+			kind:      parser.KeywordEnchant,
+			parameter: parser.NewEnchantTargetKeywordParameter(tokens[0].Span, parser.ObjectNounPlayer),
+			check: func(keyword CompiledKeyword) bool {
+				return keyword.ParameterKind == parser.KeywordParameterEnchantTarget &&
+					keyword.EnchantTarget == parser.ObjectNounPlayer
+			},
+		},
+	}
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			atoms := parser.NewAtoms(parser.WithSubtypes(parser.SubtypeAtom{
-				Identity: test.sub,
-				Span:     tokens[1].Span,
+			atoms := parser.NewAtoms(parser.WithKeywords(parser.Keyword{
+				Kind:      test.kind,
+				NameSpan:  tokens[0].Span,
+				Span:      tokens[0].Span,
+				Text:      "irrelevant",
+				Parameter: test.parameter,
 			}))
-			got, ok := protectionSubtype(tokens[1], atoms)
-			if ok != test.ok || ok && got != test.sub {
-				t.Fatalf("protectionSubtype = %q, %v; want %q, %v", got, ok, test.sub, test.ok)
+			keywords := compileKeywords(tokens, atoms)
+			if len(keywords) != 1 || keywords[0].Kind != test.kind || !test.check(keywords[0]) {
+				t.Fatalf("compiled keywords = %+v; want typed %v", keywords, test.kind)
 			}
 		})
+	}
+}
+
+func TestSelectorKeywordFollowsTypedParserSyntax(t *testing.T) {
+	t.Parallel()
+	tokens := compilerTokens(t, "irrelevant")
+	atoms := parser.NewAtoms(parser.WithKeywordSelectors(parser.KeywordSelector{
+		Keyword: parser.KeywordCycling,
+		Form:    parser.KeywordSelectorFormDirect,
+		Span:    tokens[0].Span,
+	}))
+	if got := selectorKeyword(tokens, atoms); got != parser.KeywordCycling {
+		t.Fatalf("selectorKeyword = %v; want typed Cycling", got)
+	}
+	if got := selectorKeyword(tokens, parser.Atoms{}); got != parser.KeywordUnknown {
+		t.Fatalf("selectorKeyword without typed syntax = %v; want unknown", got)
 	}
 }
 

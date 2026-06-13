@@ -20,6 +20,11 @@ including excluded/non-type forms, supertypes, subtypes, object nouns, zones,
 counters, cardinal and ordinal numbers, and explicit self/source references—are
 recognized by the parser and mapped here to engine types (`color.Color`,
 `types.Card`, `types.Sub`, `zone.Type`, `counter.Kind`, and reference kinds).
+Keywords and keyword selectors are likewise parser-owned typed syntax.
+`CompiledKeyword` carries the parser-recognized keyword kind plus typed mana,
+integer, Enchant-target, or Protection parameter data; canonical name and
+parameter text remain metadata only. The compiler maps typed Protection atoms
+to engine predicates but performs no keyword-name or parameter recognition.
 The core effect, keyword, target, reference, amount, zone, counter, trigger, and
 condition compilation consumes parser atoms by span rather than deriving these
 meanings from token spelling. Genuine identity values, such as subtypes, remain

@@ -102,6 +102,7 @@ func TestLoweringUsesTypedProtectionKeywordTextBlind(t *testing.T) {
 	t.Parallel()
 
 	ability, ok := lowerStaticGrantedAbility([]compiler.CompiledKeyword{{
+		Kind:            parser.KeywordProtection,
 		Name:            "Protection",
 		Parameter:       "from malformed text",
 		ProtectionKnown: true,
@@ -162,6 +163,42 @@ func TestLowerKeywordAbilityWard(t *testing.T) {
 	}
 	if len(ward.Cost) != 1 || ward.Cost[0].Kind != cost.GenericSymbol || ward.Cost[0].Generic != 2 {
 		t.Fatalf("ward cost = %#v, want {2}", ward.Cost)
+	}
+}
+
+func TestLowerParameterizedKeywordsUseTypedValuesTextBlind(t *testing.T) {
+	t.Parallel()
+	wardBody, ok, diagnostic := lowerParameterizedKeywordToStaticAbility(
+		compiler.CompiledAbility{},
+		compiler.CompiledKeyword{
+			Kind:          parser.KeywordWard,
+			Name:          "irrelevant",
+			Parameter:     "not mana",
+			ParameterKind: parser.KeywordParameterManaCost,
+			ManaCost:      cost.Mana{cost.U},
+		},
+	)
+	if !ok || diagnostic != nil || len(wardBody.KeywordAbilities) != 1 {
+		t.Fatalf("typed Ward lowering = %+v, %v, %+v", wardBody, ok, diagnostic)
+	}
+	ward, ok := wardBody.KeywordAbilities[0].(game.WardKeyword)
+	if !ok || !slices.Equal(ward.Cost, cost.Mana{cost.U}) {
+		t.Fatalf("typed Ward keyword = %+v; want {U}", wardBody.KeywordAbilities[0])
+	}
+
+	toxicBody, ok := lowerParameterizedStaticKeyword(compiler.CompiledKeyword{
+		Kind:          parser.KeywordToxic,
+		Name:          "irrelevant",
+		Parameter:     "not an integer",
+		ParameterKind: parser.KeywordParameterInteger,
+		Integer:       4,
+	})
+	if !ok || len(toxicBody.KeywordAbilities) != 1 {
+		t.Fatalf("typed Toxic lowering = %+v, %v", toxicBody, ok)
+	}
+	toxic, ok := toxicBody.KeywordAbilities[0].(game.ToxicKeyword)
+	if !ok || toxic.Amount != 4 {
+		t.Fatalf("typed Toxic keyword = %+v; want amount 4", toxicBody.KeywordAbilities[0])
 	}
 }
 
@@ -6335,7 +6372,7 @@ func TestMassGroupQualifierSyntax(t *testing.T) {
 	for _, phrase := range tests {
 		t.Run(phrase, func(t *testing.T) {
 			t.Parallel()
-			if !massGroupSyntaxAccepted(phrase) {
+			if !massGroupSyntaxAccepted(phrase, false) {
 				t.Fatalf("massGroupSyntaxAccepted(%q) = false", phrase)
 			}
 		})
@@ -6360,7 +6397,7 @@ func TestMassGroupQualifierSyntax(t *testing.T) {
 	} {
 		t.Run("reject "+phrase, func(t *testing.T) {
 			t.Parallel()
-			if massGroupSyntaxAccepted(phrase) {
+			if massGroupSyntaxAccepted(phrase, false) {
 				t.Fatalf("massGroupSyntaxAccepted(%q) = true; want rejection", phrase)
 			}
 		})
