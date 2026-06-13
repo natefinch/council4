@@ -395,7 +395,7 @@ func compileCost(phrase parser.Phrase, abilityKind AbilityKind, atoms parser.Ato
 			case startsWords(words, "discard"):
 				component.Kind = CostDiscard
 				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "pay") && shared.ContainsWord(words, "life"):
+			case startsWords(words, "pay") && slices.Contains(words, "life"):
 				component.Kind = CostPayLife
 				component.Amount = firstInteger(part)
 			case startsWords(words, "pay") && allEnergySymbols(part[1:]):
@@ -403,7 +403,7 @@ func compileCost(phrase parser.Phrase, abilityKind AbilityKind, atoms parser.Ato
 				component.Amount = strconv.Itoa(len(part) - 1)
 				component.AmountValue = len(part) - 1
 				component.AmountKnown = true
-			case startsWords(words, "return") && shared.ContainsWord(words, "hand"):
+			case startsWords(words, "return") && slices.Contains(words, "hand"):
 				component.Kind = CostReturn
 				component.Object = wordsAfterFirst(part)
 			case startsWords(words, "reveal"):
@@ -424,7 +424,7 @@ func compileCost(phrase parser.Phrase, abilityKind AbilityKind, atoms parser.Ato
 			case startsWords(words, "exile"):
 				component.Kind = CostExile
 				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "remove") && (shared.ContainsWord(words, "counter") || shared.ContainsWord(words, "counters")):
+			case startsWords(words, "remove") && (slices.Contains(words, "counter") || slices.Contains(words, "counters")):
 				component.Kind = CostRemoveCounter
 				component.Object = wordsAfterFirst(part)
 			case startsWords(words, "tap"):
@@ -1626,7 +1626,7 @@ func triggerBodyComma(tokens []shared.Token) int {
 }
 
 func containsNoun(words []string, singular string) bool {
-	return shared.ContainsWord(words, singular) || shared.ContainsWord(words, singular+"s")
+	return slices.Contains(words, singular) || slices.Contains(words, singular+"s")
 }
 
 func unsupportedDiagnostic(span shared.Span, text string) shared.Diagnostic {

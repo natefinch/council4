@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/lexer"
@@ -291,14 +292,14 @@ func loyaltyValue(token shared.Token) bool {
 
 func replacementWording(tokens []shared.Token) bool {
 	words := shared.NormalizedWords(tokens)
-	if len(words) >= 2 && words[0] == "as" && shared.ContainsWord(words, "enters") {
+	if len(words) >= 2 && words[0] == "as" && slices.Contains(words, "enters") {
 		return true
 	}
-	if shared.ContainsWord(words, "enters") &&
-		(shared.ContainsWord(words, "tapped") || shared.ContainsWord(words, "with") || shared.ContainsWord(words, "as")) {
+	if slices.Contains(words, "enters") &&
+		(slices.Contains(words, "tapped") || slices.Contains(words, "with") || slices.Contains(words, "as")) {
 		return true
 	}
-	return shared.ContainsWord(words, "would") && shared.ContainsWord(words, "instead")
+	return slices.Contains(words, "would") && slices.Contains(words, "instead")
 }
 
 // ParseSentences parses top-level sentences from tokens. It remains available

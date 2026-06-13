@@ -1,7 +1,6 @@
 package shared
 
 import (
-	"slices"
 	"strings"
 )
 
@@ -56,9 +55,4 @@ func NormalizedWords(tokens []Token) []string {
 		}
 	}
 	return words
-}
-
-// ContainsWord reports whether words contains wanted.
-func ContainsWord(words []string, wanted string) bool {
-	return slices.Contains(words, wanted)
 }
