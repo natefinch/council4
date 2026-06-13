@@ -52,8 +52,8 @@ type Context struct {
 type Document struct {
 	Source    string
 	CardName  string
+	Span      shared.Span
 	Abilities []Ability
-	span      shared.Span
 }
 
 // Ability is one Oracle-text paragraph, or one modal header and its options.
