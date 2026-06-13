@@ -116,19 +116,6 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
-			name:      "phase template binds relation step and condition",
-			event:     "the beginning of each opponent's postcombat main phase",
-			kind:      TriggerAt,
-			condition: condition,
-			want: TriggerPattern{
-				Kind:                 TriggerAt,
-				Event:                TriggerEventBeginningOfStep,
-				Controller:           ControllerOpponent,
-				Step:                 TriggerStepPostcombatMain,
-				InterveningCondition: condition,
-			},
-		},
-		{
 			name:  "state event binds counter and batching",
 			event: "one or more -1/-1 counters are put on this permanent",
 			kind:  TriggerWhenever,
@@ -423,37 +410,6 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				CombatQualifier: TriggerCombatDamage,
 				DamageRecipient: TriggerDamageRecipientPermanent,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-				},
-			},
-		},
-		{
-			name:  "all player end step",
-			event: "the beginning of the end step",
-			kind:  TriggerAt,
-			want:  TriggerPattern{Kind: TriggerAt, Event: TriggerEventBeginningOfStep, Step: TriggerStepEnd},
-		},
-		{
-			name:  "opponent first main phase",
-			event: "the beginning of each opponent's first main phase",
-			kind:  TriggerAt,
-			want:  TriggerPattern{Kind: TriggerAt, Event: TriggerEventBeginningOfStep, Controller: ControllerOpponent, Step: TriggerStepPrecombatMain},
-		},
-		{
-			name:  "at end of combat",
-			event: "end of combat",
-			kind:  TriggerAt,
-			want:  TriggerPattern{Kind: TriggerAt, Event: TriggerEventBeginningOfStep, Step: TriggerStepEndOfCombat},
-		},
-		{
-			name:  "attached permanent controller upkeep",
-			event: "the beginning of the upkeep of enchanted creature's controller",
-			kind:  TriggerAt,
-			want: TriggerPattern{
-				Kind:  TriggerAt,
-				Event: TriggerEventBeginningOfStep,
-				Step:  TriggerStepUpkeep,
-				StepPlayerSourceAttachedSelection: TriggerSelection{
 					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
 				},
 			},

@@ -75,12 +75,17 @@ The syntax tree preserves ordered abilities and exact source spans. It
 represents ability-word prefixes, top-level activation costs, sentences,
 parenthesized reminder text, quoted granted abilities, Saga chapter numbers, and
 modal choose headers with bullet options, including modal headers after an
-activated-ability cost. Mode spans exclude the bullet marker. Delimiters inside
-quotes or reminder text remain owned by that enclosing construct rather than
-creating overlapping sibling nodes. The parser classifies spell, activated, loyalty, triggered,
-chapter, replacement, static, and reminder paragraphs. This classification is syntactic;
-lowering English phrases into executable game primitives is a separate compiler
-stage.
+activated-ability cost. Triggered abilities carry a source-spanned trigger
+clause and typed introduction. Recognized phase and step clauses additionally
+carry composable quantifier, player/controller relation, attached-subject, and
+literal phase/step-name nodes. Their raw clause text and tokens remain only as
+lossless source metadata; unsupported or ambiguous grammar keeps that metadata
+without receiving a typed phase/step node. Mode spans exclude the bullet marker.
+Delimiters inside quotes or reminder text remain owned by that enclosing
+construct rather than creating overlapping sibling nodes. The parser classifies
+spell, activated, loyalty, triggered, chapter, replacement, static, and reminder
+paragraphs. This classification is syntactic; lowering typed syntax into
+executable game primitives is a separate compiler stage.
 
 Malformed delimiters and lexical errors produce localized diagnostics. Parsing
 continues at paragraph boundaries, so callers receive a partial tree rather
@@ -115,15 +120,15 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   window (current-turn or previous-turn) so the lowering layer can delegate
   directly to `lowerTriggerPattern` and runtime evaluation reuses
   `triggerMatchesEvent`;
-- source-spanned semantic trigger patterns. A small registry of exact
-  event-family templates recognizes permanent zone changes, spell/ability
-  events, combat events, phase/step events, permanent state events, and player
-  events. Wording variants share those templates and may bind only closed
-  trigger kind, event, self/attached-source and controller relation, Selection,
-  affected-player, zone, phase/step, combat-qualifier, batching, and
-  intervening-condition slots. Unknown, ambiguous, or unsupported slot text
-  fails closed. Raw event-clause text is retained only for diagnostics and exact
-  source consumption;
+- source-spanned semantic trigger patterns. Typed phase/step syntax lowers
+  directly without consulting event wording. A small registry of exact
+  event-family templates recognizes the remaining permanent zone-change,
+  spell/ability, combat, permanent-state, and player events. Wording variants
+  share those templates and may bind only closed trigger kind, event,
+  self/attached-source and controller relation, Selection, affected-player,
+  zone, combat-qualifier, batching, and intervening-condition slots. Unknown,
+  ambiguous, or unsupported syntax fails closed. Raw event-clause text is
+  retained only for diagnostics and exact source consumption;
 - modes and inclusive target cardinalities;
 - conservative selectors and controller constraints;
 - keyword abilities and parameters;
@@ -217,10 +222,13 @@ exclusion, face-down state, and Selection predicates for type unions,
 supertypes, subtypes (including Outlaw), colors, token/tapped/combat state,
 keywords, mana value, power, and toughness. `Leaves ... without dying` is an
 exact excluded-destination pattern.
-Phase and step triggered abilities with `At the beginning of …` recognize exact
-supported controller-relative upkeep, draw, end, combat, combat-step, and main
-phase variants through shared relation-and-step slots, including a step
-belonging to the controller of an enchanted permanent. Combat templates bind
+The parser grammatically composes supported phase and step triggered abilities
+from `At`, an exact boundary introduction, a quantifier, a player/controller
+relation, and a literal upkeep, draw, end, combat, combat-step, or main-phase
+name. It explicitly parses irregular first/second-main-phase, end-of-combat,
+turn-qualified combat, and enchanted-permanent-controller forms. The semantic
+compiler maps those typed nodes to shared relation-and-step slots without
+inspecting Oracle wording. Combat templates bind
 named/self/attached and semantic Selection subjects, the other blocking
 combatant, attacked player or permanent recipients, damage-source and
 damage-recipient Selections, combat/noncombat qualifiers, and exact player

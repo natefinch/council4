@@ -338,8 +338,12 @@ type triggerPatternTemplate struct {
 	bind  func(string, TriggerKind, string) (TriggerPattern, bool)
 }
 
+type controllerPhraseSlot struct {
+	text       string
+	controller ControllerKind
+}
+
 var triggerPatternTemplates = []triggerPatternTemplate{
-	{kinds: []TriggerKind{TriggerAt}, bind: recognizePhaseStepTrigger},
 	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizePermanentZoneChangeTrigger},
 	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizeSpellAbilityTrigger},
 	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizeCombatTrigger},
@@ -400,164 +404,114 @@ func completeTriggerPattern(recognized, source *TriggerPattern) TriggerPattern {
 	return *recognized
 }
 
-type controllerPhraseSlot struct {
-	text       string
-	controller ControllerKind
-}
-
-type phaseStepTemplate struct {
-	prefix    string
-	suffix    string
-	step      TriggerStep
-	relations []controllerPhraseSlot
-}
-
-var standardStepControllerSlots = []controllerPhraseSlot{
-	{text: "your", controller: ControllerYou},
-	{text: "its controller's", controller: ControllerYou},
-	{text: "the", controller: ControllerAny},
-	{text: "each", controller: ControllerAny},
-	{text: "each player's", controller: ControllerAny},
-	{text: "each opponent's", controller: ControllerOpponent},
-}
-
-var phaseStepTemplates = []phaseStepTemplate{
-	{suffix: " upkeep", step: TriggerStepUpkeep, relations: standardStepControllerSlots},
-	{suffix: " draw step", step: TriggerStepDraw, relations: standardStepControllerSlots},
-	{suffix: " end step", step: TriggerStepEnd, relations: standardStepControllerSlots},
-	{
-		prefix: "combat on ",
-		suffix: " turn",
-		step:   TriggerStepBeginningOfCombat,
-		relations: []controllerPhraseSlot{
-			{text: "your", controller: ControllerYou},
-			{text: "each", controller: ControllerAny},
-			{text: "each opponent's", controller: ControllerOpponent},
-		},
-	},
-	{
-		suffix:    " combat",
-		step:      TriggerStepBeginningOfCombat,
-		relations: []controllerPhraseSlot{{text: "each", controller: ControllerAny}},
-	},
-	{
-		suffix:    " end of combat",
-		step:      TriggerStepEndOfCombat,
-		relations: []controllerPhraseSlot{{text: "the", controller: ControllerAny}},
-	},
-	{
-		prefix:    "the end of combat on ",
-		suffix:    " turn",
-		step:      TriggerStepEndOfCombat,
-		relations: []controllerPhraseSlot{{text: "your", controller: ControllerYou}},
-	},
-	{
-		suffix:    " end of combat step",
-		step:      TriggerStepEndOfCombat,
-		relations: []controllerPhraseSlot{{text: "each", controller: ControllerAny}},
-	},
-	{
-		suffix: " precombat main phase",
-		step:   TriggerStepPrecombatMain,
-		relations: []controllerPhraseSlot{
-			{text: "your", controller: ControllerYou},
-			{text: "each player's", controller: ControllerAny},
-			{text: "each opponent's", controller: ControllerOpponent},
-		},
-	},
-	{
-		suffix: " postcombat main phase",
-		step:   TriggerStepPostcombatMain,
-		relations: []controllerPhraseSlot{
-			{text: "your", controller: ControllerYou},
-			{text: "each player's", controller: ControllerAny},
-			{text: "each opponent's", controller: ControllerOpponent},
-		},
-	},
-}
-
-var phaseStepAliases = map[string]TriggerPattern{
-	"your first main phase":               {Step: TriggerStepPrecombatMain, Controller: ControllerYou},
-	"each of your first main phases":      {Step: TriggerStepPrecombatMain, Controller: ControllerYou},
-	"each player's first main phase":      {Step: TriggerStepPrecombatMain, Controller: ControllerAny},
-	"each opponent's first main phase":    {Step: TriggerStepPrecombatMain, Controller: ControllerOpponent},
-	"your second main phase":              {Step: TriggerStepPostcombatMain, Controller: ControllerYou},
-	"each player's second main phase":     {Step: TriggerStepPostcombatMain, Controller: ControllerAny},
-	"each opponent's second main phase":   {Step: TriggerStepPostcombatMain, Controller: ControllerOpponent},
-	"each of your postcombat main phases": {Step: TriggerStepPostcombatMain, Controller: ControllerYou},
-	"your combat step":                    {Step: TriggerStepBeginningOfCombat, Controller: ControllerYou},
-}
-
-func recognizePhaseStepTrigger(event string, _ TriggerKind, _ string) (TriggerPattern, bool) {
-	if event == "end of combat" || event == "the end of combat" {
-		return TriggerPattern{
-			Event:      TriggerEventBeginningOfStep,
-			Step:       TriggerStepEndOfCombat,
-			Controller: ControllerAny,
-		}, true
+func compilePhaseStepTriggerPattern(
+	clause *PhaseStepTriggerClause,
+	kind TriggerKind,
+	condition *CompiledCondition,
+) TriggerPattern {
+	pattern := TriggerPattern{
+		Span:                 clause.Span,
+		Kind:                 kind,
+		InterveningCondition: condition,
 	}
-	event, ok := strings.CutPrefix(event, "the beginning of ")
+	if kind != TriggerAt || !knownPhaseStepQuantifier(clause.Quantifier.Kind) {
+		return pattern
+	}
+	step, ok := compilePhaseStepName(clause.Name.Kind)
 	if !ok {
-		return TriggerPattern{}, false
+		return pattern
 	}
-	if pattern, ok := phaseStepAliases[event]; ok {
-		pattern.Event = TriggerEventBeginningOfStep
-		return pattern, true
+	controller, attached, ok := compilePhaseStepPlayer(clause.Player)
+	if !ok {
+		return pattern
 	}
-	if pattern, ok := recognizeAttachedControllerPhaseStep(event); ok {
-		return pattern, true
-	}
-	for _, template := range phaseStepTemplates {
-		slot, ok := strings.CutPrefix(event, template.prefix)
-		if !ok {
-			continue
-		}
-
-		slot, ok = strings.CutSuffix(slot, template.suffix)
-		if !ok {
-			continue
-		}
-		for _, relation := range template.relations {
-			if slot == relation.text {
-				return TriggerPattern{
-					Event:      TriggerEventBeginningOfStep,
-					Step:       template.step,
-					Controller: relation.controller,
-				}, true
-			}
-		}
-	}
-	return TriggerPattern{}, false
+	pattern.Event = TriggerEventBeginningOfStep
+	pattern.Step = step
+	pattern.Controller = controller
+	pattern.StepPlayerSourceAttachedSelection = attached
+	return pattern
 }
 
-func recognizeAttachedControllerPhaseStep(event string) (TriggerPattern, bool) {
-	for _, template := range []struct {
-		prefix string
-		step   TriggerStep
-	}{
-		{prefix: "the upkeep of enchanted ", step: TriggerStepUpkeep},
-		{prefix: "the draw step of enchanted ", step: TriggerStepDraw},
-		{prefix: "the end step of enchanted ", step: TriggerStepEnd},
-	} {
-		subject, ok := strings.CutPrefix(event, template.prefix)
-		if !ok {
-			continue
-		}
-		subject, ok = strings.CutSuffix(subject, "'s controller")
-		if !ok {
-			return TriggerPattern{}, false
-		}
-		parsed := parseCombatPermanentSelection("a "+subject, false)
-		if !parsed.ok {
-			return TriggerPattern{}, false
-		}
-		return TriggerPattern{
-			Event:                             TriggerEventBeginningOfStep,
-			Step:                              template.step,
-			StepPlayerSourceAttachedSelection: parsed.selection,
-		}, true
+func knownPhaseStepQuantifier(kind PhaseStepQuantifierKind) bool {
+	switch kind {
+	case PhaseStepQuantifierNone,
+		PhaseStepQuantifierSingle,
+		PhaseStepQuantifierEach,
+		PhaseStepQuantifierEachOf:
+		return true
+	default:
+		return false
 	}
-	return TriggerPattern{}, false
+}
+
+func compilePhaseStepName(name PhaseStepNameKind) (TriggerStep, bool) {
+	switch name {
+	case PhaseStepNameUpkeep:
+		return TriggerStepUpkeep, true
+	case PhaseStepNameDrawStep:
+		return TriggerStepDraw, true
+	case PhaseStepNameEndStep:
+		return TriggerStepEnd, true
+	case PhaseStepNameCombat, PhaseStepNameCombatStep:
+		return TriggerStepBeginningOfCombat, true
+	case PhaseStepNameEndOfCombat, PhaseStepNameEndOfCombatStep:
+		return TriggerStepEndOfCombat, true
+	case PhaseStepNamePrecombatMainPhase, PhaseStepNameFirstMainPhase:
+		return TriggerStepPrecombatMain, true
+	case PhaseStepNamePostcombatMainPhase, PhaseStepNameSecondMainPhase:
+		return TriggerStepPostcombatMain, true
+	default:
+		return TriggerStepNone, false
+	}
+}
+
+func compilePhaseStepPlayer(player PhaseStepPlayerRelation) (ControllerKind, TriggerSelection, bool) {
+	switch player.Kind {
+	case PhaseStepPlayerRelationAny:
+		return ControllerAny, TriggerSelection{}, true
+	case PhaseStepPlayerRelationYou, PhaseStepPlayerRelationSourceController:
+		return ControllerYou, TriggerSelection{}, true
+	case PhaseStepPlayerRelationOpponent:
+		return ControllerOpponent, TriggerSelection{}, true
+	case PhaseStepPlayerRelationAttachedController:
+		selection, ok := compilePhaseStepAttachedSubject(player.AttachedSubject)
+		return ControllerAny, selection, ok
+	default:
+		return ControllerAny, TriggerSelection{}, false
+	}
+}
+
+func compilePhaseStepAttachedSubject(subject PhaseStepAttachedSubject) (TriggerSelection, bool) {
+	if phaseStepAttachedSelectionEmpty(subject.Selection) {
+		// A wildcard Selection is empty, which the runtime interprets as no
+		// attached-controller relation rather than any attached permanent.
+		return TriggerSelection{}, false
+	}
+	return subject.Selection, true
+}
+
+func phaseStepAttachedSelectionEmpty(selection TriggerSelection) bool {
+	return len(selection.RequiredTypes) == 0 &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.Supertypes) == 0 &&
+		len(selection.SubtypesAny) == 0 &&
+		len(selection.ColorsAny) == 0 &&
+		len(selection.ExcludedColors) == 0 &&
+		!selection.Colorless &&
+		!selection.Multicolored &&
+		selection.Tapped == TriggerTriAny &&
+		selection.CombatState == TriggerCombatStateAny &&
+		selection.Keyword == TriggerKeywordUnknown &&
+		selection.ExcludedKeyword == TriggerKeywordUnknown &&
+		!selection.NonToken &&
+		!selection.TokenOnly &&
+		selection.ManaValueAtLeast == 0 &&
+		!selection.MatchManaValue &&
+		selection.ManaValue.Comparison == TriggerComparisonUnknown &&
+		selection.Power.Comparison == TriggerComparisonUnknown &&
+		selection.Toughness.Comparison == TriggerComparisonUnknown &&
+		selection.Controller == ControllerAny
 }
 
 func recognizePermanentZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
