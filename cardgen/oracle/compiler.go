@@ -63,8 +63,7 @@ func compileAbility(
 	}
 
 	body := abilityBodyTokens(ability)
-	timingTokens := semanticTokens(body, ability.Reminders, ability.Quoted)
-	timing, timingSpan := compileActivationTiming(ability.Kind, parseSentences(source, timingTokens))
+	timing, timingSpan := compileActivationTiming(ability.Kind, ability.ActivationRestrictions)
 	if timing != ActivationTimingNone {
 		body = tokensOutsideSpan(body, timingSpan)
 		compiled.ActivationTiming = timing
@@ -163,36 +162,54 @@ func compileAbility(
 	return compiled, diagnostics
 }
 
-func compileActivationTiming(kind AbilityKind, sentences []Sentence) (ActivationTimingKind, Span) {
-	if kind != AbilityActivated || len(sentences) == 0 {
+func compileActivationTiming(kind AbilityKind, restrictions []ActivationRestriction) (ActivationTimingKind, Span) {
+	if kind != AbilityActivated || len(restrictions) == 0 {
 		return ActivationTimingNone, Span{}
 	}
-	last := len(sentences) - 1
-	lastKind := activationTimingSentence(sentences[last].Text)
-	if lastKind == ActivationTimingNone {
-		if strings.HasPrefix(sentences[last].Text, "Activate only ") &&
-			!strings.HasPrefix(sentences[last].Text, "Activate only if ") {
-			return ActivationTimingUnsupported, sentences[last].Span
-		}
-		return ActivationTimingNone, Span{}
+	span := Span{
+		Start: restrictions[0].Span.Start,
+		End:   restrictions[len(restrictions)-1].Span.End,
 	}
-	if last > 0 {
-		previousKind := activationTimingSentence(sentences[last-1].Text)
-		if previousKind != ActivationTimingNone {
-			if (previousKind == ActivationTimingSorcery && lastKind == ActivationTimingOncePerTurn) ||
-				(previousKind == ActivationTimingOncePerTurn && lastKind == ActivationTimingSorcery) {
-				return ActivationTimingSorceryOncePerTurn, Span{
-					Start: sentences[last-1].Span.Start,
-					End:   sentences[last].Span.End,
-				}
-			}
-			return ActivationTimingUnsupported, Span{
-				Start: sentences[last-1].Span.Start,
-				End:   sentences[last].Span.End,
-			}
-		}
+	compiled := make([]ActivationTimingKind, 0, len(restrictions))
+	for i := range restrictions {
+		compiled = append(compiled, compileActivationRestriction(&restrictions[i]))
 	}
-	return lastKind, sentences[last].Span
+	if len(compiled) == 1 {
+		return compiled[0], span
+	}
+	if len(compiled) == 2 &&
+		(compiled[0] == ActivationTimingSorcery && compiled[1] == ActivationTimingOncePerTurn ||
+			compiled[0] == ActivationTimingOncePerTurn && compiled[1] == ActivationTimingSorcery) {
+		return ActivationTimingSorceryOncePerTurn, span
+	}
+	return ActivationTimingUnsupported, span
+}
+
+func compileActivationRestriction(restriction *ActivationRestriction) ActivationTimingKind {
+	switch restriction.Kind {
+	case ActivationRestrictionSorceryTiming:
+		return ActivationTimingSorcery
+	case ActivationRestrictionFrequency:
+		if restriction.Frequency.Count.Kind == ActivationFrequencyCountOnce &&
+			restriction.Frequency.Period.Kind == ActivationFrequencyPeriodTurn {
+			return ActivationTimingOncePerTurn
+		}
+	case ActivationRestrictionPhaseStep:
+		if restriction.PhaseStep.Name.Kind == PhaseStepNameCombat &&
+			restriction.PhaseStep.Player.Kind == PhaseStepPlayerRelationAny &&
+			(restriction.PhaseStep.Quantifier.Kind == PhaseStepQuantifierNone ||
+				restriction.PhaseStep.Quantifier.Kind == PhaseStepQuantifierEach) {
+			return ActivationTimingDuringCombat
+		}
+		if restriction.PhaseStep.Name.Kind == PhaseStepNameUpkeep &&
+			restriction.PhaseStep.Player.Kind == PhaseStepPlayerRelationYou &&
+			(restriction.PhaseStep.Quantifier.Kind == PhaseStepQuantifierSingle ||
+				restriction.PhaseStep.Quantifier.Kind == PhaseStepQuantifierEachOf) {
+			return ActivationTimingDuringUpkeep
+		}
+	default:
+	}
+	return ActivationTimingUnsupported
 }
 
 func recognizeActivationZone(ability *CompiledAbility) {
@@ -260,21 +277,6 @@ func referenceFollowsEffectVerbInClause(effectIndex int, effects []CompiledEffec
 		break
 	}
 	return true
-}
-
-func activationTimingSentence(text string) ActivationTimingKind {
-	switch text {
-	case "Activate only as a sorcery.":
-		return ActivationTimingSorcery
-	case "Activate only once each turn.":
-		return ActivationTimingOncePerTurn
-	case "Activate only during combat.":
-		return ActivationTimingDuringCombat
-	case "Activate only during your upkeep.":
-		return ActivationTimingDuringUpkeep
-	default:
-		return ActivationTimingNone
-	}
 }
 
 func tokensOutsideSpan(tokens []Token, span Span) []Token {

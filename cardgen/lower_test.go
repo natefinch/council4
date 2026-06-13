@@ -1872,6 +1872,11 @@ func TestLowerActivatedAbilityTiming(t *testing.T) {
 		{"once per turn", "{1}: Draw a card. Activate only once each turn.", game.OncePerTurn},
 		{"combat", "{1}: Draw a card. Activate only during combat.", game.DuringCombat},
 		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", game.DuringUpkeep},
+		{"sorcery speed variant", "{1}: Draw a card. Activate only at sorcery speed.", game.SorceryOnly},
+		{"cast sorcery variant", "{1}: Draw a card. Activate only any time you could cast a sorcery.", game.SorceryOnly},
+		{"per turn variant", "{1}: Draw a card. Activate only once per turn.", game.OncePerTurn},
+		{"each combat variant", "{1}: Draw a card. Activate only during each combat.", game.DuringCombat},
+		{"each controller upkeep variant", "{1}: Draw a card. Activate only during each of your upkeeps.", game.DuringUpkeep},
 		{
 			"sorcery once per turn",
 			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
@@ -11649,6 +11654,7 @@ func TestActivatedAbilityCapabilityDiagnostics(t *testing.T) {
 	}{
 		{name: "cost", oracleText: "Exile a card: Draw a card.", summary: "unsupported activation cost"},
 		{name: "timing", oracleText: "{1}: Draw a card. Activate only during your end step.", summary: "unsupported activation timing"},
+		{name: "unrecognized timing grammar", oracleText: "{1}: Draw a card. Activate only before combat.", summary: "unsupported activation timing"},
 		{name: "condition", oracleText: "{1}: Draw a card. Activate only if you have one or fewer cards in hand.", summary: "unsupported activation condition"},
 		{name: "references", oracleText: "{1}: It deals 1 damage to any target.", summary: "unsupported activation references"},
 		{name: "ambiguous cost references", oracleText: "Put a +1/+1 counter on them: Draw a card.", summary: "unsupported activation references"},

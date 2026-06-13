@@ -134,6 +134,7 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 		{"combat", "{1}: Draw a card. Activate only during combat.", ActivationTimingDuringCombat},
 		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", ActivationTimingDuringUpkeep},
 		{"once per turn before reminder", "{1}: Draw a card. Activate only once each turn. (This is reminder text.)", ActivationTimingOncePerTurn},
+		{"once per turn after reminder", "{1}: Draw a card. (This is reminder text.) Activate only once each turn.", ActivationTimingOncePerTurn},
 		{
 			"sorcery once per turn",
 			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
@@ -167,17 +168,128 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 
 func TestCompileUnsupportedActivationTiming(t *testing.T) {
 	t.Parallel()
-	text := "{1}: Draw a card. Activate only during your end step."
-	compilation, diagnostics := Compile(text, ParseContext{})
-	if len(diagnostics) != 0 {
-		t.Fatalf("diagnostics = %#v", diagnostics)
+	for _, text := range []string{
+		"{1}: Draw a card. Activate only during your end step.",
+		"{1}: Draw a card. Activate only before combat.",
+	} {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(text, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.ActivationTiming != ActivationTimingUnsupported {
+				t.Fatalf("activation timing = %v, want unsupported", ability.ActivationTiming)
+			}
+			if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
+				t.Fatalf("effects = %#v, want timing restriction excluded from content", ability.Content.Effects)
+			}
+		})
 	}
-	ability := compilation.Abilities[0]
-	if ability.ActivationTiming != ActivationTimingUnsupported {
-		t.Fatalf("activation timing = %v, want unsupported", ability.ActivationTiming)
+}
+
+func TestCompileConstructedActivationRestrictions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		restrictions []ActivationRestriction
+		want         ActivationTimingKind
+	}{
+		{
+			name: "sorcery timing",
+			restrictions: []ActivationRestriction{{
+				Kind: ActivationRestrictionSorceryTiming,
+			}},
+			want: ActivationTimingSorcery,
+		},
+		{
+			name: "once per turn",
+			restrictions: []ActivationRestriction{{
+				Kind: ActivationRestrictionFrequency,
+				Frequency: ActivationFrequencyRestriction{
+					Count:  ActivationFrequencyCount{Kind: ActivationFrequencyCountOnce},
+					Period: ActivationFrequencyPeriod{Kind: ActivationFrequencyPeriodTurn},
+				},
+			}},
+			want: ActivationTimingOncePerTurn,
+		},
+		{
+			name: "combat",
+			restrictions: []ActivationRestriction{{
+				Kind: ActivationRestrictionPhaseStep,
+				PhaseStep: ActivationPhaseStepRestriction{
+					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEach},
+					Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationAny},
+					Name:       PhaseStepName{Kind: PhaseStepNameCombat},
+				},
+			}},
+			want: ActivationTimingDuringCombat,
+		},
+		{
+			name: "controller upkeep",
+			restrictions: []ActivationRestriction{{
+				Kind: ActivationRestrictionPhaseStep,
+				PhaseStep: ActivationPhaseStepRestriction{
+					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEachOf},
+					Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+					Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
+				},
+			}},
+			want: ActivationTimingDuringUpkeep,
+		},
+		{
+			name: "composed",
+			restrictions: []ActivationRestriction{
+				{
+					Kind: ActivationRestrictionFrequency,
+					Frequency: ActivationFrequencyRestriction{
+						Count:  ActivationFrequencyCount{Kind: ActivationFrequencyCountOnce},
+						Period: ActivationFrequencyPeriod{Kind: ActivationFrequencyPeriodTurn},
+					},
+				},
+				{Kind: ActivationRestrictionSorceryTiming},
+			},
+			want: ActivationTimingSorceryOncePerTurn,
+		},
+		{
+			name: "unsupported",
+			restrictions: []ActivationRestriction{{
+				Kind: ActivationRestrictionUnsupported,
+			}},
+			want: ActivationTimingUnsupported,
+		},
+		{
+			name: "unsupported typed phase",
+			restrictions: []ActivationRestriction{{
+				Kind: ActivationRestrictionPhaseStep,
+				PhaseStep: ActivationPhaseStepRestriction{
+					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
+					Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+					Name:       PhaseStepName{Kind: PhaseStepNameEndStep},
+				},
+			}},
+			want: ActivationTimingUnsupported,
+		},
 	}
-	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
-		t.Fatalf("effects = %#v, want timing restriction excluded from content", ability.Content.Effects)
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			for i := range test.restrictions {
+				test.restrictions[i].Span = Span{
+					Start: Position{Offset: 10 + i*20},
+					End:   Position{Offset: 20 + i*20},
+				}
+			}
+			got, span := compileActivationTiming(AbilityActivated, test.restrictions)
+			if got != test.want {
+				t.Fatalf("timing = %v, want %v", got, test.want)
+			}
+			if span.Start.Offset != 10 || span.End.Offset != 20+(len(test.restrictions)-1)*20 {
+				t.Fatalf("span = %#v, want span derived from constructed nodes", span)
+			}
+		})
 	}
 }
 
