@@ -68,6 +68,7 @@ type Ability struct {
 	Cost                   *Phrase
 	Trigger                *TriggerClause
 	conditionSyntax        *AbilityConditions
+	staticSyntax           *AbilityStaticDeclarations
 	ActivationRestrictions []ActivationRestriction
 	Sentences              []Sentence
 	Reminders              []Delimited

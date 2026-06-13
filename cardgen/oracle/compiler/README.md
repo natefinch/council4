@@ -39,6 +39,21 @@ classifies each introducer kind, intervening-if, and duration-skip structurally;
 that boundary framing is deliberately retained there, separate from the
 text-blind predicate mapping in `condition.go`.
 
+`static_declaration.go` compiles static declarations from the typed
+`StaticDeclarationSyntax` nodes the parser emits, matched to the ability by
+declaration family and consumed mechanically. It dispatches on the parser's
+ordered declaration kinds—power/toughness change, keyword grant, rule,
+cost modifier, and card-ability grant—and reads the affected group, deltas,
+granted keywords, rule meaning, cost shape, and card filter from already-compiled
+content and typed parser payloads. It contains no Oracle static-declaration
+wording recognition: no `matches*`/token-sequence recognizers, no
+prefix/suffix/contains text matching, and no token-spelling interpretation.
+Source/group asymmetries (a source keyword grant requires a condition; a group
+grant forbids one), the dynamic-amount agreement check, and the supported-rule
+table are enforced over typed nodes and compiled effects alone. Any ability whose
+typed declarations or compiled content fall outside the closed vocabulary records
+a structural blocker instead of a declaration.
+
 Reusable semantic atoms—colors including excluded/non-color forms, card types
 including excluded/non-type forms, supertypes, subtypes, object nouns, zones,
 counters, cardinal and ordinal numbers, and explicit self/source references—are

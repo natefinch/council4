@@ -2,8 +2,6 @@ package compiler
 
 import (
 	"slices"
-	"strconv"
-	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -202,41 +200,57 @@ type CompiledStaticSemantics struct {
 	Blocker      StaticDeclarationBlocker
 }
 
+// recognizeStaticDeclarations maps the typed static-declaration syntax the
+// parser emitted for this ability onto closed semantic declarations. It consumes
+// typed parser nodes and already-compiled semantic content only; it inspects no
+// Oracle source text or tokens to derive meaning. Retained spans support exact
+// source-consumption accounting and diagnostics.
 func recognizeStaticDeclarations(compiled *CompiledAbility, syntax parser.Ability) {
 	if compiled.Kind != AbilityStatic {
 		return
 	}
+	statics := syntax.StaticDeclarations()
 	if declarations, ok := recognizeTypedStaticRuleDeclarations(*compiled, syntax); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
-	if declarations, ok := recognizeMixedSourceStaticDeclarations(*compiled, syntax); ok {
+	if declarations, ok := recognizeMixedSourceStaticDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
-	if declarations, ok := recognizeStaticPowerToughnessDeclarations(*compiled, syntax); ok {
+	if declarations, ok := recognizeStaticPowerToughnessDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
-	if declarations, ok := recognizeStaticKeywordGrantDeclarations(*compiled, syntax); ok {
+	if declarations, ok := recognizeStaticKeywordGrantDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
-	if declaration, ok := recognizeStaticCostModifierDeclaration(*compiled); ok {
+	if declaration, ok := recognizeStaticCostModifierDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
-	if declaration, ok := recognizeStaticCardAbilityGrantDeclaration(*compiled, syntax); ok {
+	if declaration, ok := recognizeStaticCardAbilityGrantDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
-	if isHistoricCardAbilityGrant(*compiled, syntax) {
+	if staticSyntaxIsHistoricCardGrant(*compiled, statics) {
 		compiled.Static = &CompiledStaticSemantics{Blocker: StaticDeclarationBlockerHistoricCardSelection}
 		return
 	}
 	if blocker := classifyStaticDeclarationBlocker(*compiled); blocker != StaticDeclarationBlockerNone {
 		compiled.Static = &CompiledStaticSemantics{Blocker: blocker}
 	}
+}
+
+// staticSyntaxKindsAre reports whether the parser emitted exactly the given
+// declaration kinds in order.
+func staticSyntaxKindsAre(statics []parser.StaticDeclarationSyntax, kinds ...parser.StaticDeclarationKind) bool {
+	actual := make([]parser.StaticDeclarationKind, len(statics))
+	for i := range statics {
+		actual[i] = statics[i].Kind
+	}
+	return slices.Equal(actual, kinds)
 }
 
 func classifyStaticDeclarationBlocker(ability CompiledAbility) StaticDeclarationBlocker {
@@ -409,7 +423,17 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	}
 }
 
-func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax parser.Ability) ([]StaticDeclaration, bool) {
+func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics,
+		parser.StaticDeclarationContinuousPowerToughness,
+		parser.StaticDeclarationKeywordGrant,
+		parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	rule, _, ok := semanticStaticRuleForSyntax(statics[2].Rule)
+	if !ok || rule != StaticRuleMustAttack {
+		return nil, false
+	}
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -428,11 +452,6 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax pars
 	if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known {
 		return nil, false
 	}
-	tokens := staticDeclarationTokens(syntax)
-	tokens = staticTokensWithoutCondition(tokens, ability.Content.Conditions[0].Span)
-	if !matchesMixedSourcePTKeywordMustAttack(tokens, effect, ability.Content.References[0], ability.Content.Keywords) {
-		return nil, false
-	}
 	condition := &ability.Content.Conditions[0]
 	group := StaticGroupReference{Span: ability.Content.References[0].Span, Domain: StaticGroupSource}
 	return []StaticDeclaration{
@@ -442,35 +461,14 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax pars
 	}, true
 }
 
-func matchesMixedSourcePTKeywordMustAttack(tokens []shared.Token, effect *CompiledEffect, reference CompiledReference, keywords []CompiledKeyword) bool {
-	subjectLength := tokensCoveredBySpan(tokens, reference.Span)
-	prefixLength := subjectLength + 6
-	if subjectLength == 0 ||
-		len(tokens) < prefixLength+10 ||
-		!equalWord(tokens[subjectLength], "gets") ||
-		!staticTokensMatchSignedAmount(tokens[subjectLength+1], tokens[subjectLength+2], effect.PowerDelta) ||
-		tokens[subjectLength+3].Kind != shared.Slash ||
-		!staticTokensMatchSignedAmount(tokens[subjectLength+4], tokens[subjectLength+5], effect.ToughnessDelta) ||
-		tokens[prefixLength].Kind != shared.Comma ||
-		!equalWord(tokens[prefixLength+1], "has") {
-		return false
+func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	plain := staticSyntaxKindsAre(statics, parser.StaticDeclarationContinuousPowerToughness)
+	withKeywords := staticSyntaxKindsAre(statics,
+		parser.StaticDeclarationContinuousPowerToughness,
+		parser.StaticDeclarationKeywordGrant)
+	if !plain && !withKeywords {
+		return nil, false
 	}
-	ruleStart := len(tokens) - 8
-	if ruleStart <= prefixLength+2 ||
-		tokens[ruleStart].Kind != shared.Comma ||
-		!equalWord(tokens[ruleStart+1], "and") ||
-		!equalWord(tokens[ruleStart+2], "attacks") ||
-		!equalWord(tokens[ruleStart+3], "each") ||
-		!equalWord(tokens[ruleStart+4], "combat") ||
-		!equalWord(tokens[ruleStart+5], "if") ||
-		!equalWord(tokens[ruleStart+6], "able") ||
-		tokens[len(tokens)-1].Kind != shared.Period {
-		return false
-	}
-	return matchesStaticKeywordList(tokens[prefixLength+2:ruleStart], keywords)
-}
-
-func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, syntax parser.Ability) ([]StaticDeclaration, bool) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -486,24 +484,22 @@ func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, syntax p
 		return nil, false
 	}
 	effect := &ability.Content.Effects[0]
-	keywords := staticDeclarationGrantKeywords(ability.Content)
 	group, ok := staticDeclarationEffectGroup(ability, effect)
 	if !ok {
 		return nil, false
 	}
-	dynamic := effect.Amount.DynamicKind != DynamicAmountNone
-	if (!dynamic && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) ||
-		(dynamic && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) {
+	if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known {
 		return nil, false
 	}
-	tokens := staticDeclarationTokens(syntax)
-	if condition != nil {
-		tokens = staticTokensWithoutCondition(tokens, condition.Span)
+	if statics[0].Dynamic != (effect.Amount.DynamicKind != DynamicAmountNone) {
+		return nil, false
 	}
-	plain := matchesStaticPTBuffSyntax(tokens, effect, group.AffectedSource, ability.Content.References)
-	withKeywords := len(keywords) > 0 &&
-		matchesStaticPTBuffWithKeywordsSyntax(tokens, effect, group.AffectedSource, ability.Content.References, keywords)
-	if (!plain && len(keywords) == 0) || (!withKeywords && len(keywords) > 0) {
+	keywords := staticDeclarationGrantKeywords(ability.Content)
+	if len(keywords) == 0 {
+		if !plain {
+			return nil, false
+		}
+	} else if !withKeywords {
 		return nil, false
 	}
 	declarations := []StaticDeclaration{staticPTDeclaration(ability.Span, group.Group, condition, effect)}
@@ -536,7 +532,10 @@ func staticDeclarationGrantKeywords(content AbilityContent) []CompiledKeyword {
 	return filtered
 }
 
-func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, syntax parser.Ability) ([]StaticDeclaration, bool) {
+func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationKeywordGrant) {
+		return nil, false
+	}
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -557,12 +556,11 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, syntax par
 	if !ok {
 		return nil, false
 	}
-	tokens := staticDeclarationTokens(syntax)
 	if group.AffectedSource {
-		if condition == nil || !matchesSourceConditionalKeywordGrant(tokens, *condition, ability.Content.Keywords) {
+		if condition == nil {
 			return nil, false
 		}
-	} else if condition != nil || !matchesStaticKeywordGrant(tokens, effect.StaticSubjectSpan, ability.Content.Keywords) {
+	} else if condition != nil {
 		return nil, false
 	}
 	return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group.Group, condition, ability.Content.Keywords)}, true
@@ -681,7 +679,10 @@ func staticKeywordGrantDeclaration(span shared.Span, group StaticGroupReference,
 	}
 }
 
-func recognizeStaticCostModifierDeclaration(ability CompiledAbility) (StaticDeclaration, bool) {
+func recognizeStaticCostModifierDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCostModifier) {
+		return StaticDeclaration{}, false
+	}
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -696,28 +697,31 @@ func recognizeStaticCostModifierDeclaration(ability CompiledAbility) (StaticDecl
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	node := statics[0]
 	cost := StaticCostModifierDeclaration{
 		Kind:           StaticCostModifierAbility,
 		AbilityKeyword: ability.Content.Keywords[0].Kind,
 	}
-	switch ability.Text {
-	case "Cycling abilities you activate cost up to {2} less to activate.":
+	switch node.CostModifier {
+	case parser.StaticDeclarationCostModifierAbilityReduction:
 		if condition != nil {
 			return StaticDeclaration{}, false
 		}
-		cost.GenericReduction = 2
-	case "As long as you have seven or more cards in hand, you may pay {0} rather than pay cycling costs.":
-		if condition == nil || condition.Predicate != ConditionPredicateControllerHandSizeAtLeast || condition.Threshold != 7 {
+		cost.GenericReduction = node.CostReductionAmount
+	case parser.StaticDeclarationCostModifierReplaceCost:
+		if condition == nil ||
+			condition.Predicate != ConditionPredicateControllerHandSizeAtLeast ||
+			condition.Threshold != 7 {
 			return StaticDeclaration{}, false
 		}
 		cost.ReplaceManaCost = true
-		cost.SetManaCost = ""
-	case "You may pay {0} rather than pay the cycling cost of the first card you cycle each turn.":
+		cost.SetManaCost = node.CostReplacement
+	case parser.StaticDeclarationCostModifierReplaceFirstCost:
 		if condition != nil {
 			return StaticDeclaration{}, false
 		}
 		cost.ReplaceManaCost = true
-		cost.SetManaCost = ""
+		cost.SetManaCost = node.CostReplacement
 		cost.FirstCycleEachTurn = true
 	default:
 		return StaticDeclaration{}, false
@@ -735,274 +739,62 @@ func recognizeStaticCostModifierDeclaration(ability CompiledAbility) (StaticDecl
 	}, true
 }
 
-func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, syntax parser.Ability) (StaticDeclaration, bool) {
-	if ability.Cost != nil ||
-		ability.Trigger != nil ||
-		len(ability.Content.Modes) != 0 ||
-		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.Conditions) != 0 ||
-		len(ability.Content.References) != 0 ||
-		len(ability.Content.Keywords) != 1 ||
-		ability.Content.Keywords[0].Kind != parser.KeywordCycling ||
-		ability.Content.Keywords[0].ParameterKind != parser.KeywordParameterManaCost {
+func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCardAbilityGrant) {
 		return StaticDeclaration{}, false
 	}
-
-	text := joinedSourceText(staticDeclarationTokens(syntax))
-	parameter := ability.Content.Keywords[0].Parameter
+	node := statics[0]
+	if !staticCardAbilityGrantGatingHolds(ability) {
+		return StaticDeclaration{}, false
+	}
+	keyword := ability.Content.Keywords[0]
 	group := StaticGroupReference{
 		Span:   ability.Span,
 		Domain: StaticGroupControllerHandCards,
 	}
-	switch text {
-	case "Each land card in your hand has cycling" + parameter + ".":
+	var text string
+	switch node.Subject.CardFilter {
+	case parser.StaticDeclarationCardFilterLand:
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
-		text = "Each land card in your hand has cycling " + parameter + "."
-	case "Each creature card in your hand has cycling" + parameter + ".":
+		text = "Each land card in your hand has cycling " + keyword.Parameter + "."
+	case parser.StaticDeclarationCardFilterCreature:
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
-		text = "Each creature card in your hand has cycling " + parameter + "."
+		text = "Each creature card in your hand has cycling " + keyword.Parameter + "."
 	default:
 		return StaticDeclaration{}, false
 	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationCardAbilityGrant,
 		Span:          ability.Span,
-		OperationSpan: ability.Content.Keywords[0].Span,
+		OperationSpan: keyword.Span,
 		Group:         group,
 		CardGrant: &StaticCardAbilityGrantDeclaration{
-			Keyword: ability.Content.Keywords[0],
+			Keyword: keyword,
 			Text:    text,
 		},
 	}, true
 }
 
-func isHistoricCardAbilityGrant(ability CompiledAbility, syntax parser.Ability) bool {
-	if ability.Cost != nil ||
-		ability.Trigger != nil ||
-		len(ability.Content.Modes) != 0 ||
-		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.Conditions) != 0 ||
-		len(ability.Content.References) != 0 ||
-		len(ability.Content.Keywords) != 1 ||
-		ability.Content.Keywords[0].Kind != parser.KeywordCycling ||
-		ability.Content.Keywords[0].ParameterKind != parser.KeywordParameterManaCost {
-		return false
-	}
-	return joinedSourceText(staticDeclarationTokens(syntax)) ==
-		"Each historic card in your hand has cycling"+ability.Content.Keywords[0].Parameter+"."
+func staticSyntaxIsHistoricCardGrant(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) bool {
+	return staticSyntaxKindsAre(statics, parser.StaticDeclarationCardAbilityGrant) &&
+		statics[0].Subject.CardFilter == parser.StaticDeclarationCardFilterHistoric &&
+		staticCardAbilityGrantGatingHolds(ability)
 }
 
-func staticDeclarationTokens(syntax parser.Ability) []shared.Token {
-	tokens := semanticTokens(syntax.Tokens, syntax.Reminders, syntax.Quoted)
-	if syntax.AbilityWord == nil {
-		return tokens
-	}
-	dash := slices.IndexFunc(tokens, func(token shared.Token) bool {
-		return token.Kind == shared.EmDash
-	})
-	if dash < 0 {
-		return tokens
-	}
-	return tokens[dash+1:]
-}
-
-func staticTokensWithoutCondition(tokens []shared.Token, span shared.Span) []shared.Token {
-	filtered := slices.DeleteFunc(append([]shared.Token(nil), tokens...), func(token shared.Token) bool {
-		return spanContains(span, token.Span)
-	})
-	if len(filtered) > 0 && filtered[0].Kind == shared.Comma {
-		filtered = filtered[1:]
-	}
-	return filtered
+func staticCardAbilityGrantGatingHolds(ability CompiledAbility) bool {
+	return ability.Cost == nil &&
+		ability.Trigger == nil &&
+		len(ability.Content.Modes) == 0 &&
+		len(ability.Content.Targets) == 0 &&
+		len(ability.Content.Conditions) == 0 &&
+		len(ability.Content.References) == 0 &&
+		len(ability.Content.Keywords) == 1 &&
+		ability.Content.Keywords[0].Kind == parser.KeywordCycling &&
+		ability.Content.Keywords[0].ParameterKind == parser.KeywordParameterManaCost
 }
 
 func spanContains(outer, inner shared.Span) bool {
 	return outer.Start.Offset <= inner.Start.Offset && outer.End.Offset >= inner.End.Offset
-}
-
-func tokensCoveredBySpan(tokens []shared.Token, span shared.Span) int {
-	length := 0
-	for length < len(tokens) && spanContains(span, tokens[length].Span) {
-		length++
-	}
-	return length
-}
-
-func matchesStaticKeywordGrant(tokens []shared.Token, subject shared.Span, keywords []CompiledKeyword) bool {
-	subjectLength := tokensCoveredBySpan(tokens, subject)
-	if subjectLength == 0 ||
-		len(tokens) < subjectLength+3 ||
-		(!equalWord(tokens[subjectLength], "has") && !equalWord(tokens[subjectLength], "have")) ||
-		tokens[len(tokens)-1].Kind != shared.Period {
-		return false
-	}
-	return matchesStaticKeywordList(tokens[subjectLength+1:len(tokens)-1], keywords)
-}
-
-func matchesSourceConditionalKeywordGrant(tokens []shared.Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
-	return matchesPrefixSourceConditionalKeywordGrant(tokens, condition, keywords) ||
-		matchesPostfixSourceConditionalKeywordGrant(tokens, condition, keywords)
-}
-
-func matchesPrefixSourceConditionalKeywordGrant(tokens []shared.Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
-	conditionLength := tokensCoveredBySpan(tokens, condition.Span)
-	if conditionLength == 0 ||
-		len(tokens) < conditionLength+6 ||
-		tokens[conditionLength].Kind != shared.Comma ||
-		!equalWord(tokens[conditionLength+1], "this") ||
-		!equalWord(tokens[conditionLength+2], "creature") ||
-		!equalWord(tokens[conditionLength+3], "has") ||
-		tokens[len(tokens)-1].Kind != shared.Period {
-		return false
-	}
-	return matchesStaticKeywordList(tokens[conditionLength+4:len(tokens)-1], keywords)
-}
-
-func matchesPostfixSourceConditionalKeywordGrant(tokens []shared.Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
-	if len(tokens) < 8 ||
-		!equalWord(tokens[0], "this") ||
-		!equalWord(tokens[1], "creature") ||
-		!equalWord(tokens[2], "has") ||
-		tokens[len(tokens)-1].Kind != shared.Period {
-		return false
-	}
-	conditionStart := slices.IndexFunc(tokens, func(token shared.Token) bool {
-		return spanContains(condition.Span, token.Span)
-	})
-	if conditionStart <= 3 {
-		return false
-	}
-	for _, token := range tokens[conditionStart : len(tokens)-1] {
-		if !spanContains(condition.Span, token.Span) {
-			return false
-		}
-	}
-	return matchesStaticKeywordList(tokens[3:conditionStart], keywords)
-}
-
-func matchesStaticPTBuffSyntax(tokens []shared.Token, effect *CompiledEffect, source bool, references []CompiledReference) bool {
-	prefixLength, ok := staticPTBuffPrefix(tokens, effect, source, references)
-	if !ok {
-		return false
-	}
-	if effect.Amount.DynamicKind != DynamicAmountNone {
-		return len(tokens) > prefixLength+1 &&
-			tokens[len(tokens)-1].Kind == shared.Period &&
-			strings.ToLower(joinedSourceText(tokens[prefixLength:len(tokens)-1])) == effect.Amount.Text
-	}
-	return len(tokens) == prefixLength+1 && tokens[prefixLength].Kind == shared.Period
-}
-
-func matchesStaticPTBuffWithKeywordsSyntax(tokens []shared.Token, effect *CompiledEffect, source bool, references []CompiledReference, keywords []CompiledKeyword) bool {
-	prefixLength, ok := staticPTBuffPrefix(tokens, effect, source, references)
-	if !ok ||
-		len(tokens) < prefixLength+4 ||
-		!equalWord(tokens[prefixLength], "and") ||
-		tokens[len(tokens)-1].Kind != shared.Period {
-		return false
-	}
-	verb := "have"
-	if source || effect.StaticSubject == StaticSubjectAttachedObject ||
-		(effect.StaticSubject == StaticSubjectControlledWalls && equalWord(tokens[0], "each")) {
-		verb = "has"
-	}
-	return equalWord(tokens[prefixLength+1], verb) &&
-		matchesStaticKeywordList(tokens[prefixLength+2:len(tokens)-1], keywords)
-}
-
-func staticPTBuffPrefix(tokens []shared.Token, effect *CompiledEffect, source bool, references []CompiledReference) (int, bool) {
-	if source {
-		if len(references) != 1 {
-			return 0, false
-		}
-		subjectLength := tokensCoveredBySpan(tokens, references[0].Span)
-		prefixLength := subjectLength + 6
-		return prefixLength, subjectLength > 0 &&
-			len(tokens) >= prefixLength &&
-			equalWord(tokens[subjectLength], "gets") &&
-			staticTokensMatchSignedAmount(tokens[subjectLength+1], tokens[subjectLength+2], effect.PowerDelta) &&
-			tokens[subjectLength+3].Kind == shared.Slash &&
-			staticTokensMatchSignedAmount(tokens[subjectLength+4], tokens[subjectLength+5], effect.ToughnessDelta)
-	}
-	subjectLength := tokensCoveredBySpan(tokens, effect.StaticSubjectSpan)
-	prefixLength := subjectLength + 6
-	return prefixLength, subjectLength > 0 &&
-		len(tokens) >= prefixLength &&
-		(equalWord(tokens[subjectLength], "get") || equalWord(tokens[subjectLength], "gets")) &&
-		staticTokensMatchSignedAmount(tokens[subjectLength+1], tokens[subjectLength+2], effect.PowerDelta) &&
-		tokens[subjectLength+3].Kind == shared.Slash &&
-		staticTokensMatchSignedAmount(tokens[subjectLength+4], tokens[subjectLength+5], effect.ToughnessDelta)
-}
-
-func staticTokensMatchSignedAmount(sign, amount shared.Token, want CompiledSignedAmount) bool {
-	expectedSign := shared.Plus
-	if want.Negative {
-		expectedSign = shared.Minus
-	}
-	return sign.Kind == expectedSign && amount.Kind == shared.Integer && amount.Text == strconv.Itoa(want.Value)
-}
-
-func matchesStaticKeywordList(tokens []shared.Token, keywords []CompiledKeyword) bool {
-	elements := make([]string, 0, len(tokens))
-	lastKeyword := -1
-	for _, token := range tokens {
-		keywordIndex := -1
-		for i, keyword := range keywords {
-			if spanContains(keyword.Span, token.Span) {
-				keywordIndex = i
-				break
-			}
-		}
-		if keywordIndex >= 0 {
-			if keywordIndex != lastKeyword {
-				elements = append(elements, "keyword")
-				lastKeyword = keywordIndex
-			}
-			continue
-		}
-		lastKeyword = -1
-		switch {
-		case token.Kind == shared.Comma:
-			elements = append(elements, "comma")
-		case equalWord(token, "and"):
-			elements = append(elements, "and")
-		default:
-			return false
-		}
-
-	}
-	if len(keywords) == 1 {
-		return slices.Equal(elements, []string{"keyword"})
-	}
-	if len(keywords) == 2 {
-		return slices.Equal(elements, []string{"keyword", "and", "keyword"})
-	}
-	position := 0
-	for keywordIndex := range keywords {
-		if position >= len(elements) || elements[position] != "keyword" {
-			return false
-		}
-
-		position++
-		if keywordIndex == len(keywords)-1 {
-			return position == len(elements)
-		}
-		if keywordIndex == len(keywords)-2 {
-			if position < len(elements) && elements[position] == "comma" {
-				position++
-			}
-			if position >= len(elements) || elements[position] != "and" {
-				return false
-			}
-			position++
-			continue
-		}
-		if position >= len(elements) || elements[position] != "comma" {
-			return false
-		}
-		position++
-	}
-	return false
 }
 
 func staticRuleQualifiersAre(qualifiers []parser.StaticRuleQualifier, kinds ...parser.StaticRuleQualifierKind) bool {

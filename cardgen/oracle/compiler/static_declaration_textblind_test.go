@@ -1,0 +1,237 @@
+package compiler
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+)
+
+// These tests drive the static-declaration recognizers with constructed typed
+// parser nodes and compiled semantic content only. The CompiledAbility carries
+// no Oracle wording, proving the compiler derives every static-declaration
+// meaning from typed syntax rather than from source text or tokens.
+
+func staticTextBlindPTEffect() CompiledEffect {
+	return CompiledEffect{
+		Kind:           EffectModifyPT,
+		PowerDelta:     CompiledSignedAmount{Value: 1, Known: true},
+		ToughnessDelta: CompiledSignedAmount{Value: 1, Known: true},
+	}
+}
+
+func sourceReference() CompiledReference {
+	return CompiledReference{Binding: ReferenceBindingSource}
+}
+
+func TestRecognizeStaticPowerToughnessFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects:    []CompiledEffect{staticTextBlindPTEffect()},
+			References: []CompiledReference{sourceReference()},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationContinuousPowerToughness}}
+	declarations, ok := recognizeStaticPowerToughnessDeclarations(ability, statics)
+	if !ok || len(declarations) != 1 {
+		t.Fatalf("declarations = %#v ok = %v, want one", declarations, ok)
+	}
+	if declarations[0].Continuous == nil ||
+		declarations[0].Continuous.Layer != StaticLayerPowerToughnessModify ||
+		declarations[0].Group.Domain != StaticGroupSource {
+		t.Fatalf("declaration = %#v", declarations[0])
+	}
+}
+
+func TestRecognizeStaticPowerToughnessWithKeywordFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects:    []CompiledEffect{staticTextBlindPTEffect()},
+			Keywords:   []CompiledKeyword{{Kind: parser.KeywordFlying}},
+			References: []CompiledReference{sourceReference()},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{
+		{Kind: parser.StaticDeclarationContinuousPowerToughness},
+		{Kind: parser.StaticDeclarationKeywordGrant},
+	}
+	declarations, ok := recognizeStaticPowerToughnessDeclarations(ability, statics)
+	if !ok || len(declarations) != 2 {
+		t.Fatalf("declarations = %#v ok = %v, want two", declarations, ok)
+	}
+	if declarations[1].Continuous == nil ||
+		declarations[1].Continuous.Operation != StaticContinuousGrantKeywords {
+		t.Fatalf("declaration = %#v, want keyword grant", declarations[1])
+	}
+}
+
+func TestRecognizeStaticPowerToughnessDynamicMismatchFailsClosed(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects:    []CompiledEffect{staticTextBlindPTEffect()},
+			References: []CompiledReference{sourceReference()},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{
+		{Kind: parser.StaticDeclarationContinuousPowerToughness, Dynamic: true},
+	}
+	if _, ok := recognizeStaticPowerToughnessDeclarations(ability, statics); ok {
+		t.Fatal("recognized dynamic PT against a static effect, want fail closed")
+	}
+}
+
+func TestRecognizeStaticKeywordGrantGroupFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects: []CompiledEffect{{
+				Kind:          EffectGrantKeyword,
+				StaticSubject: StaticSubjectControlledCreatures,
+			}},
+			Keywords: []CompiledKeyword{{Kind: parser.KeywordTrample}},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationKeywordGrant}}
+	declarations, ok := recognizeStaticKeywordGrantDeclarations(ability, statics)
+	if !ok || len(declarations) != 1 {
+		t.Fatalf("declarations = %#v ok = %v, want one", declarations, ok)
+	}
+	if declarations[0].Group.Domain != StaticGroupSourceControllerPermanents {
+		t.Fatalf("declaration = %#v, want controlled-creature group", declarations[0])
+	}
+}
+
+func TestRecognizeStaticKeywordGrantSourceRequiresConditionFailsClosed(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects:    []CompiledEffect{{Kind: EffectGrantKeyword}},
+			Keywords:   []CompiledKeyword{{Kind: parser.KeywordFlying}},
+			References: []CompiledReference{sourceReference()},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationKeywordGrant}}
+	if _, ok := recognizeStaticKeywordGrantDeclarations(ability, statics); ok {
+		t.Fatal("recognized unconditional source keyword grant, want fail closed")
+	}
+}
+
+func TestRecognizeMixedSourceStaticDeclarationsFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects:    []CompiledEffect{staticTextBlindPTEffect()},
+			Conditions: []CompiledCondition{{Predicate: ConditionPredicateControllerLifeAtLeast, Threshold: 7}},
+			Keywords:   []CompiledKeyword{{Kind: parser.KeywordFlying}},
+			References: []CompiledReference{sourceReference()},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{
+		{Kind: parser.StaticDeclarationContinuousPowerToughness},
+		{Kind: parser.StaticDeclarationKeywordGrant},
+		{Kind: parser.StaticDeclarationRule, Rule: parser.StaticRuleSyntax{
+			Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourceCreature},
+			Constraint: parser.StaticRuleConstraint{Kind: parser.StaticRuleConstraintRequirement},
+			Operation:  parser.StaticRuleOperation{Kind: parser.StaticRuleOperationAttack, Voice: parser.StaticRuleVoiceActive},
+			Qualifiers: []parser.StaticRuleQualifier{
+				{Kind: parser.StaticRuleQualifierEachCombat},
+				{Kind: parser.StaticRuleQualifierIfAble},
+			},
+		}},
+	}
+	declarations, ok := recognizeMixedSourceStaticDeclarations(ability, statics)
+	if !ok || len(declarations) != 3 {
+		t.Fatalf("declarations = %#v ok = %v, want three", declarations, ok)
+	}
+	if declarations[2].Rule == nil || declarations[2].Rule.Kind != StaticRuleMustAttack {
+		t.Fatalf("declaration = %#v, want must-attack rule", declarations[2])
+	}
+	for i, declaration := range declarations {
+		if declaration.Condition == nil || declaration.Group.Domain != StaticGroupSource {
+			t.Fatalf("declaration %d = %#v, want conditional source declaration", i, declaration)
+		}
+	}
+}
+
+func TestRecognizeStaticCostModifierFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Keywords: []CompiledKeyword{{Kind: parser.KeywordCycling, ParameterKind: parser.KeywordParameterNone}},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind:                parser.StaticDeclarationCostModifier,
+		CostModifier:        parser.StaticDeclarationCostModifierAbilityReduction,
+		CostReductionAmount: 2,
+	}}
+	declaration, ok := recognizeStaticCostModifierDeclaration(ability, statics)
+	if !ok {
+		t.Fatal("did not recognize typed cost modifier")
+	}
+	if declaration.Cost == nil ||
+		declaration.Cost.GenericReduction != 2 ||
+		declaration.Group.Domain != StaticGroupControllerHandCards {
+		t.Fatalf("declaration = %#v", declaration)
+	}
+}
+
+func TestRecognizeStaticCardAbilityGrantFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Keywords: []CompiledKeyword{{
+				Kind:          parser.KeywordCycling,
+				Parameter:     "{2}",
+				ParameterKind: parser.KeywordParameterManaCost,
+			}},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind: parser.StaticDeclarationCardAbilityGrant,
+		Subject: parser.StaticDeclarationSubject{
+			Kind:       parser.StaticDeclarationSubjectControllerHand,
+			CardFilter: parser.StaticDeclarationCardFilterLand,
+		},
+	}}
+	declaration, ok := recognizeStaticCardAbilityGrantDeclaration(ability, statics)
+	if !ok {
+		t.Fatal("did not recognize typed card-ability grant")
+	}
+	if declaration.CardGrant == nil ||
+		declaration.CardGrant.Text != "Each land card in your hand has cycling {2}." ||
+		len(declaration.Group.Selection.RequiredTypes) != 1 ||
+		declaration.Group.Selection.RequiredTypes[0] != StaticCardTypeLand {
+		t.Fatalf("declaration = %#v", declaration)
+	}
+}
+
+func TestRecognizeStaticDeclarationsFailClosedOnMismatchedKinds(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects:    []CompiledEffect{staticTextBlindPTEffect()},
+			References: []CompiledReference{sourceReference()},
+		},
+	}
+	// The parser emitted a keyword-grant node, but the compiled effect is a
+	// power/toughness change: the PT recognizer must decline rather than guess.
+	statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationKeywordGrant}}
+	if _, ok := recognizeStaticPowerToughnessDeclarations(ability, statics); ok {
+		t.Fatal("PT recognizer matched a keyword-grant node, want fail closed")
+	}
+	if _, ok := recognizeStaticPowerToughnessDeclarations(ability, nil); ok {
+		t.Fatal("PT recognizer matched absent syntax, want fail closed")
+	}
+}
