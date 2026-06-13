@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -1060,7 +1061,7 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventPermanentTapped ||
 					pattern.Controller != ControllerOpponent ||
-					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{"forest"}) {
+					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{types.Forest}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -1099,7 +1100,7 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventPermanentSacrificed ||
 					pattern.Player != TriggerPlayerYou ||
-					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{"clue"}) {
+					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{types.Clue}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -1805,7 +1806,7 @@ func TestCompileFixedEffectValues(t *testing.T) {
 			if effect.Kind != test.kind ||
 				!effect.Amount.Known ||
 				effect.Amount.Value != test.amount ||
-				effect.Symbol != test.symbol {
+				effect.Symbol() != test.symbol {
 				t.Fatalf("effect = %#v", effect)
 			}
 		})
@@ -1910,8 +1911,8 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 			if amount.DynamicKind != test.kind ||
 				amount.DynamicForm != test.form ||
 				amount.Multiplier != test.multiplier ||
-				amount.Selector.Kind != test.selector ||
-				amount.Selector.Controller != test.controller ||
+				amount.Selector().Kind != test.selector ||
+				amount.Selector().Controller != test.controller ||
 				amount.Text != test.text {
 				t.Fatalf("amount = %#v tokens = %#v", amount, compilation.Syntax.Abilities[0].Tokens)
 			}
@@ -1948,10 +1949,10 @@ func TestCompileDynamicCardCountWithCyclingInGraveyard(t *testing.T) {
 	amount := compilation.Abilities[0].Content.Effects[0].Amount
 	if amount.DynamicKind != DynamicAmountCount ||
 		amount.DynamicForm != DynamicAmountWhereX ||
-		amount.Selector.Kind != SelectorCard ||
-		amount.Selector.Keyword != "Cycling" ||
-		amount.Selector.Zone != zone.Graveyard ||
-		amount.Selector.Controller != ControllerYou {
+		amount.Selector().Kind != SelectorCard ||
+		amount.Selector().Keyword != "Cycling" ||
+		amount.Selector().Zone != zone.Graveyard ||
+		amount.Selector().Controller != ControllerYou {
 		t.Fatalf("amount = %#v, want count of cards with Cycling in your graveyard", amount)
 	}
 }
@@ -2323,7 +2324,7 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 			if got := ability.Content.Effects[0].StaticSubject; got != test.wantSubject {
 				t.Fatalf("static subject = %v, want %v", got, test.wantSubject)
 			}
-			if got := ability.Content.Effects[0].StaticSubjectSubtype; got != test.wantSubjectSubtype {
+			if got := ability.Content.Effects[0].StaticSubjectSubtype(); got != test.wantSubjectSubtype {
 				t.Fatalf("static subject subtype = %q, want %q", got, test.wantSubjectSubtype)
 			}
 			if len(ability.Content.Keywords) != len(test.keywords) {
@@ -2505,7 +2506,8 @@ func TestCompileSurveilEffect(t *testing.T) {
 	effects := compilation.Abilities[0].Content.Effects
 	if len(effects) != 1 ||
 		effects[0].Kind != EffectSurveil ||
-		effects[0].Amount != (CompiledAmount{Value: 2, Known: true}) {
+		effects[0].Amount.Value != 2 ||
+		!effects[0].Amount.Known {
 		t.Fatalf("effects = %#v, want surveil 2", effects)
 	}
 }

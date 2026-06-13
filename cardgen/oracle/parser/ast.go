@@ -43,11 +43,15 @@ type Context struct {
 	InstantOrSorcery bool
 	Planeswalker     bool
 	Saga             bool
+	// CardName is the card's own name. The parser uses it to recognize explicit
+	// self-name references so the compiler need not inspect name spelling.
+	CardName string
 }
 
 // Document is a lossless syntax tree for one card face's Oracle text.
 type Document struct {
 	Source    string
+	CardName  string
 	Span      shared.Span
 	Abilities []Ability
 }
@@ -68,6 +72,10 @@ type Ability struct {
 	Reminders              []Delimited
 	Quoted                 []Delimited
 	Modal                  *Modal
+	// Atoms holds the source-spanned typed semantic atoms recognized within this
+	// ability's semantic tokens. Downstream stages consume these typed values by
+	// span instead of re-recognizing Oracle spelling.
+	Atoms Atoms
 }
 
 // ActivationRestrictionKind identifies a typed trailing activation restriction.
@@ -433,6 +441,7 @@ type Delimited struct {
 type Modal struct {
 	Header  Phrase
 	Options []Mode
+	Atoms   Atoms
 }
 
 // Mode is one bullet option in a modal ability.
@@ -443,4 +452,7 @@ type Mode struct {
 	Sentences []Sentence
 	Reminders []Delimited
 	Quoted    []Delimited
+	// Atoms holds the source-spanned typed semantic atoms recognized within this
+	// mode's semantic tokens.
+	Atoms Atoms
 }

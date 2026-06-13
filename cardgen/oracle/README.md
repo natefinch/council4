@@ -100,6 +100,16 @@ nodes. The parser classifies spell, activated, loyalty, triggered, chapter,
 replacement, static, and reminder paragraphs. This classification is syntactic;
 lowering typed syntax and other English phrases into executable game primitives
 is a separate compiler stage.
+
+The parser also owns the reusable, composable semantic atoms that downstream
+stages consume by type rather than by re-reading source spelling: colors and
+excluded/non-colors, card types and excluded/non-types, supertypes, subtypes
+across Oracle subtype families, object nouns, zones, counters, cardinal and
+ordinal number words, plural→singular noun normalization, and explicit
+self/source references (the card's own name via `Context.CardName`, `this`/`that`
+objects, and pronouns). These recognizers fail closed on unknown or ambiguous
+spelling, so the compiler and cardgen lowering map typed values to engine types
+without owning Oracle vocabulary.
 Activated abilities also carry ordered, source-spanned typed nodes for trailing
 `Activate only` restrictions. The grammar composes sorcery-timing forms,
 once-per-turn count and period forms, and the shared phase/step quantifier,
@@ -124,10 +134,9 @@ document, parseDiagnostics := parser.Parse(source, parser.Context{
 	InstantOrSorcery: instantOrSorcery,
 	Planeswalker:     planeswalker,
 	Saga:             saga,
+	CardName:         cardName,
 })
-compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{
-	CardName: cardName,
-})
+compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
 diagnostics := append(parseDiagnostics, compilerDiagnostics...)
 ```
 
@@ -167,7 +176,11 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
 - keyword abilities and parameters;
 - instruction verbs, fixed, exact `X`, and typed dynamic amounts, mana symbols,
   negation, and common durations;
-- card-name, `this`-object, `that`-object, and pronoun references. A conservative
+- card-name, `this`-object, `that`-object, and pronoun references. The parser
+  recognizes these explicit self/source references from `Context.CardName` and
+  reference spelling, emitting typed `Reference` atoms; the compiler maps the
+  typed reference kind and never re-derives self identity from card-name
+  spelling. A conservative
   binding pass records whether each occurrence denotes the source, a specific
   target occurrence, the triggering event permanent, the triggering event
   player, or a prior instruction result. Player-event trigger bodies

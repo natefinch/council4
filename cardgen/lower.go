@@ -143,8 +143,9 @@ func lowerFaceAbilities(
 		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
 		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
+		CardName:         face.Name,
 	})
-	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{CardName: face.Name})
+	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
 	diagnostics = append(diagnostics, compilerDiagnostics...)
 
 	var result loweredFaceAbilities
@@ -482,6 +483,7 @@ func lowerChapterAbility(
 		Tokens:    slices.Clone(syntax.Tokens[dash+1:]),
 		Reminders: syntax.Reminders,
 		Quoted:    syntax.Quoted,
+		Atoms:     syntax.Atoms,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, bodySyntax)
 	if diagnostic != nil {
@@ -690,6 +692,7 @@ func lowerLoyaltyAbility(
 		Tokens:    syntax.Tokens[colon+1:],
 		Reminders: syntax.Reminders,
 		Quoted:    syntax.Quoted,
+		Atoms:     syntax.Atoms,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, bodySyntax)
 	if diagnostic != nil {
@@ -804,7 +807,7 @@ func lowerModalAbility(
 // maxModes, ok). It accepts "Choose <word> —" where <word> is a cardinal
 // number spelled out as a single word ("one", "two", etc.), plus exact
 // "Choose one or both —" headers.
-func parseChooseHeader(header parser.Phrase) (minModes, maxModes int, ok bool) {
+func parseChooseHeader(header parser.Phrase, atoms parser.Atoms) (minModes, maxModes int, ok bool) {
 	tokens := header.Tokens
 	if len(tokens) == 5 &&
 		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
@@ -821,40 +824,11 @@ func parseChooseHeader(header parser.Phrase) (minModes, maxModes int, ok bool) {
 		tokens[2].Kind != shared.EmDash {
 		return 0, 0, false
 	}
-	n, numOK := parseCardinalWord(tokens[1].Text)
+	n, numOK := atoms.CardinalAt(tokens[1].Span)
 	if !numOK {
 		return 0, 0, false
 	}
 	return n, n, true
-}
-
-// parseCardinalWord converts a lowercase English cardinal number word ("one",
-// "two", … "ten") to an integer. Returns (0, false) for unrecognized words.
-func parseCardinalWord(word string) (int, bool) {
-	switch strings.ToLower(word) {
-	case "one":
-		return 1, true
-	case "two":
-		return 2, true
-	case "three":
-		return 3, true
-	case "four":
-		return 4, true
-	case "five":
-		return 5, true
-	case "six":
-		return 6, true
-	case "seven":
-		return 7, true
-	case "eight":
-		return 8, true
-	case "nine":
-		return 9, true
-	case "ten":
-		return 10, true
-	default:
-		return 0, false
-	}
 }
 
 func lowerModalContent(
@@ -868,7 +842,7 @@ func lowerModalContent(
 	if syntax.Modal == nil {
 		return unsupported("the semantic modal content has no matching modal syntax")
 	}
-	minModes, maxModes, ok := parseChooseHeader(syntax.Modal.Header)
+	minModes, maxModes, ok := parseChooseHeader(syntax.Modal.Header, syntax.Modal.Atoms)
 	if !ok {
 		return unsupported("the executable source backend supports only exact \"Choose N\" and \"Choose one or both\" modal headers")
 	}
@@ -897,6 +871,7 @@ func lowerModalContent(
 			Tokens:    syntaxMode.Tokens,
 			Reminders: syntaxMode.Reminders,
 			Quoted:    syntaxMode.Quoted,
+			Atoms:     syntaxMode.Atoms,
 		}
 		content, diagnostic := lowerAbilityContent(cardName, mode.Content, false, bodySyntax)
 		if diagnostic != nil {
@@ -1054,17 +1029,16 @@ func lowerActivatedAdditionalCost(cardName string, component compiler.CostCompon
 	case compiler.CostDiscard:
 		return lowerDiscardCost(component)
 	case compiler.CostPayLife:
-		amount, err := strconv.Atoi(component.Amount)
-		if err != nil || amount <= 0 {
+		if !component.AmountKnown || component.AmountValue <= 0 {
 			return cost.Additional{}, false
 		}
 		return cost.Additional{
 			Kind:   cost.AdditionalPayLife,
 			Text:   component.Text,
-			Amount: amount,
+			Amount: component.AmountValue,
 		}, true
 	case compiler.CostExile:
-		if isSelfCostObject(cardName, component.Object) {
+		if component.SourceSelf {
 			return cost.Additional{
 				Kind:   cost.AdditionalExileSource,
 				Text:   component.Text,
@@ -1080,14 +1054,13 @@ func lowerActivatedAdditionalCost(cardName string, component compiler.CostCompon
 	case compiler.CostTapPermanents:
 		return lowerTapPermanentsCost(component)
 	case compiler.CostEnergy:
-		amount, err := strconv.Atoi(component.Amount)
-		if err != nil || amount <= 0 {
+		if !component.AmountKnown || component.AmountValue <= 0 {
 			return cost.Additional{}, false
 		}
 		return cost.Additional{
 			Kind:   cost.AdditionalEnergy,
 			Text:   component.Text,
-			Amount: amount,
+			Amount: component.AmountValue,
 		}, true
 	case compiler.CostReturn:
 		return lowerReturnToHandCost(component)
@@ -1164,21 +1137,19 @@ func lowerActivationCostComponents(
 }
 
 func lowerCollectEvidenceCost(component compiler.CostComponent) (cost.Additional, bool) {
-	amount, err := strconv.Atoi(component.Amount)
-	if err != nil || amount <= 0 {
+	if !component.AmountKnown || component.AmountValue <= 0 {
 		return cost.Additional{}, false
 	}
 	return cost.Additional{
 		Kind:   cost.AdditionalCollectEvidence,
 		Text:   component.Text,
-		Amount: amount,
+		Amount: component.AmountValue,
 		Source: zone.Graveyard,
 	}, true
 }
 
-func lowerExertCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
-	object := strings.TrimSpace(component.Object)
-	if object != "it" && !isSelfCostObject(cardName, object) {
+func lowerExertCost(_ string, component compiler.CostComponent) (cost.Additional, bool) {
+	if !component.SourceSelf {
 		return cost.Additional{}, false
 	}
 	return cost.Additional{
@@ -1188,94 +1159,33 @@ func lowerExertCost(cardName string, component compiler.CostComponent) (cost.Add
 }
 
 func lowerMillCost(component compiler.CostComponent) (cost.Additional, bool) {
-	words := strings.Fields(strings.ToLower(strings.TrimSpace(component.Object)))
-	if len(words) != 2 {
-		return cost.Additional{}, false
-	}
-	amount, ok := exactCostAmount(words[0])
-	if !ok || strings.TrimSuffix(words[1], "s") != "card" {
+	if !component.AmountKnown || component.ObjectKind != compiler.SelectorCard {
 		return cost.Additional{}, false
 	}
 	return cost.Additional{
 		Kind:   cost.AdditionalMill,
 		Text:   component.Text,
-		Amount: amount,
+		Amount: component.AmountValue,
 	}, true
 }
 
-func lowerPutCounterCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
-	object := strings.TrimSpace(component.Object)
-	normalized := strings.ToLower(object)
-	counterWord := " counter on "
-	index := strings.Index(normalized, counterWord)
-	if index < 0 {
-		counterWord = " counters on "
-		index = strings.Index(normalized, counterWord)
-	}
-	if index < 0 {
-		return cost.Additional{}, false
-	}
-	prefix := strings.TrimSpace(object[:index])
-	source := strings.TrimSpace(object[index+len(counterWord):])
-	if !putCounterCostSelfReference(cardName, source) {
-		return cost.Additional{}, false
-	}
-	words := strings.Fields(strings.ToLower(prefix))
-	if len(words) < 2 {
-		return cost.Additional{}, false
-	}
-	amount, ok := exactCostAmount(words[0])
-	if !ok {
-		return cost.Additional{}, false
-	}
-	kind, ok := putCounterCostKind(strings.Join(words[1:], " "))
-	if !ok {
+func lowerPutCounterCost(_ string, component compiler.CostComponent) (cost.Additional, bool) {
+	if !component.AmountKnown || !component.CounterKindKnown || !component.SourceSelf {
 		return cost.Additional{}, false
 	}
 	return cost.Additional{
 		Kind:        cost.AdditionalPutCounter,
 		Text:        component.Text,
-		Amount:      amount,
-		CounterKind: kind,
+		Amount:      component.AmountValue,
+		CounterKind: component.CounterKind,
 	}, true
 }
 
-func putCounterCostSelfReference(cardName, source string) bool {
-	source = strings.TrimSpace(source)
-	return strings.EqualFold(source, "it") || isSelfCostObject(cardName, source)
-}
-
-func putCounterCostKind(name string) (counter.Kind, bool) {
-	switch name {
-	case "+1/+1":
-		return counter.PlusOnePlusOne, true
-	case "-1/-1":
-		return counter.MinusOneMinusOne, true
-	case "charge":
-		return counter.Charge, true
-	case "verse":
-		return counter.Verse, true
-	case "blood":
-		return counter.Blood, true
-	default:
-		return 0, false
-	}
-}
-
 func lowerRevealCost(component compiler.CostComponent) (cost.Additional, bool) {
-	object := strings.TrimSpace(component.Object)
-	normalized := strings.ToLower(object)
-	if strings.HasSuffix(normalized, " that share a color") {
-		object = strings.TrimSpace(object[:len(object)-len(" that share a color")])
-		normalized = strings.TrimSpace(normalized[:len(normalized)-len(" that share a color")])
-	}
-	const suffix = " from your hand"
-	if !strings.HasSuffix(normalized, suffix) {
+	if component.SourceZone != zone.Hand || component.ObjectKind != compiler.SelectorCard {
 		return cost.Additional{}, false
 	}
-	object = strings.TrimSpace(object[:len(object)-len(suffix)])
-	words := strings.Fields(object)
-	if len(words) < 2 || len(words) > 3 {
+	if !component.AmountKnown && !component.AmountFromX {
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
@@ -1283,456 +1193,154 @@ func lowerRevealCost(component compiler.CostComponent) (cost.Additional, bool) {
 		Text:   component.Text,
 		Source: zone.Hand,
 	}
-	switch strings.ToLower(words[0]) {
-	case "x":
+	if component.AmountFromX {
 		additional.AmountFromX = true
-	default:
-		amount, ok := exactCostAmount(strings.ToLower(words[0]))
-		if !ok {
-			return cost.Additional{}, false
-		}
-		additional.Amount = amount
+	} else {
+		additional.Amount = component.AmountValue
 	}
-	words = words[1:]
-	if len(words) == 2 {
-		cardColor, ok := revealCostColor(strings.ToLower(words[0]))
-		if !ok {
-			return cost.Additional{}, false
-		}
+	if component.ObjectColorKnown {
 		additional.MatchCardColor = true
-		additional.CardColor = cardColor
-		words = words[1:]
-	}
-	if strings.TrimSuffix(strings.ToLower(words[0]), "s") != "card" {
-		return cost.Additional{}, false
+		additional.CardColor = component.ObjectColor
 	}
 	return additional, true
 }
 
-func revealCostColor(word string) (color.Color, bool) {
-	switch word {
-	case "white":
-		return color.White, true
-	case "blue":
-		return color.Blue, true
-	case "black":
-		return color.Black, true
-	case "red":
-		return color.Red, true
-	case "green":
-		return color.Green, true
-	default:
-		return "", false
-	}
-}
-
 func lowerReturnToHandCost(component compiler.CostComponent) (cost.Additional, bool) {
-	object := strings.TrimSpace(component.Object)
-	normalized := strings.ToLower(object)
-	suffix := " you control to its owner's hand"
-	if !strings.HasSuffix(normalized, suffix) {
-		suffix = " you control to their owner's hand"
-	}
-	if !strings.HasSuffix(normalized, suffix) {
-		return cost.Additional{}, false
-	}
-	object = strings.TrimSpace(object[:len(object)-len(suffix)])
-	words := strings.Fields(object)
-	if len(words) < 2 {
-		return cost.Additional{}, false
-	}
-	amount, ok := exactCostAmount(words[0])
-	if !ok {
-		return cost.Additional{}, false
-	}
-	words = words[1:]
-	requireTapped := false
-	if len(words) > 0 && words[0] == "tapped" {
-		requireTapped = true
-		words = words[1:]
-	}
-	if len(words) == 0 {
+	if !component.AmountKnown ||
+		component.ObjectController != compiler.ControllerYou ||
+		component.ToZone != zone.Hand {
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
 		Kind:          cost.AdditionalReturnToHand,
 		Text:          component.Text,
-		Amount:        amount,
-		RequireTapped: requireTapped,
+		Amount:        component.AmountValue,
+		RequireTapped: component.RequireTapped,
 	}
-	if lowerReturnToHandObject(strings.Join(words, " "), &additional) {
+	if lowerCostPermanentObject(component, &additional, true) {
 		return additional, true
 	}
 	return cost.Additional{}, false
 }
 
-func lowerReturnToHandObject(object string, additional *cost.Additional) bool {
-	normalized := strings.ToLower(strings.TrimSpace(object))
-	switch strings.TrimSuffix(normalized, "s") {
-	case "permanent":
+func lowerCostPermanentObject(component compiler.CostComponent, additional *cost.Additional, allowSnowLand bool) bool {
+	if component.ObjectColorKnown || component.ObjectNonToken {
+		return false
+	}
+	switch component.ObjectKind {
+	case compiler.SelectorPermanent:
 		return true
-	case "artifact":
+	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment, compiler.SelectorLand:
 		additional.MatchPermanentType = true
-		additional.PermanentType = types.Artifact
-		return true
-	case "creature":
-		additional.MatchPermanentType = true
-		additional.PermanentType = types.Creature
-		return true
-	case "enchantment":
-		additional.MatchPermanentType = true
-		additional.PermanentType = types.Enchantment
-		return true
-	case "land":
-		additional.MatchPermanentType = true
-		additional.PermanentType = types.Land
-		return true
-	case "snow land":
-		additional.MatchPermanentType = true
-		additional.PermanentType = types.Land
-		additional.RequireSupertype = types.Snow
+		additional.PermanentType = component.ObjectType
+		if allowSnowLand && component.SupertypeKnown && component.ObjectSupertype == types.Snow && component.ObjectType == types.Land {
+			additional.RequireSupertype = types.Snow
+		}
 		return true
 	default:
 	}
-	if subtype, ok := returnToHandSubtype(object); ok {
-		additional.SubtypesAny = cost.SubtypeSet{subtype}
+	if len(component.SubtypesAny) == 1 {
+		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0]}
 		return true
 	}
 	return false
 }
 
-func returnToHandSubtype(object string) (types.Sub, bool) {
-	candidates := []string{
-		strings.TrimSpace(object),
-		singularCostNoun(object),
-	}
-	for _, candidate := range candidates {
-		subtype := types.Sub(candidate)
-		if types.KnownSubtypeForType(types.Land, subtype) ||
-			types.KnownSubtypeForType(types.Creature, subtype) ||
-			types.KnownSubtypeForType(types.Artifact, subtype) ||
-			types.KnownSubtypeForType(types.Enchantment, subtype) {
-			return subtype, true
-		}
-	}
-	return "", false
-}
-
 func lowerTapPermanentsCost(component compiler.CostComponent) (cost.Additional, bool) {
-	words := strings.Fields(component.Object)
-	if len(words) < 5 {
+	if !component.AmountKnown ||
+		!component.RequireUntapped ||
+		component.ObjectController != compiler.ControllerYou {
 		return cost.Additional{}, false
 	}
-	amount, ok := exactCostAmount(strings.ToLower(words[0]))
-	if !ok {
+	if len(component.SubtypesAny) == 1 && component.SubtypesAny[0] == types.Zombie && component.AmountValue >= 2 {
 		return cost.Additional{}, false
 	}
-	if !strings.EqualFold(words[1], "untapped") ||
-		!strings.EqualFold(words[len(words)-2], "you") ||
-		!strings.EqualFold(words[len(words)-1], "control") {
-		return cost.Additional{}, false
-	}
-	object := strings.Join(words[2:len(words)-2], " ")
 	additional := cost.Additional{
 		Kind:   cost.AdditionalTapPermanents,
 		Text:   component.Text,
-		Amount: amount,
+		Amount: component.AmountValue,
 	}
-	if lowerTapPermanentsObject(object, &additional) {
+	if lowerCostPermanentObject(component, &additional, false) {
 		return additional, true
 	}
 	return cost.Additional{}, false
 }
 
-func lowerTapPermanentsObject(object string, additional *cost.Additional) bool {
-	normalized := strings.ToLower(strings.TrimSpace(object))
-	switch strings.TrimSuffix(normalized, "s") {
-	case "permanent":
-		return true
-	case "artifact":
-		additional.MatchPermanentType = true
-		additional.PermanentType = types.Artifact
-		return true
-	case "creature":
-		additional.MatchPermanentType = true
-		additional.PermanentType = types.Creature
-		return true
-	case "enchantment":
-		additional.MatchPermanentType = true
-		additional.PermanentType = types.Enchantment
-		return true
-	case "land":
-		additional.MatchPermanentType = true
-		additional.PermanentType = types.Land
-		return true
-	default:
-	}
-	subtype, ok := tapPermanentsSubtype(object)
-	if !ok {
-		return false
-	}
-	additional.SubtypesAny = cost.SubtypeSet{subtype}
-	return true
-}
-
-func tapPermanentsSubtype(object string) (types.Sub, bool) {
-	candidates := []string{
-		strings.TrimSpace(object),
-		singularCostNoun(object),
-	}
-	for _, candidate := range candidates {
-		subtype := types.Sub(candidate)
-		if types.KnownSubtypeForType(types.Creature, subtype) ||
-			types.KnownSubtypeForType(types.Artifact, subtype) {
-			return subtype, true
-		}
-	}
-	return "", false
-}
-
-func singularCostNoun(noun string) string {
-	noun = strings.TrimSpace(noun)
-	switch {
-	case strings.HasSuffix(noun, "ies") && len(noun) > 3:
-		return noun[:len(noun)-3] + "y"
-	case strings.HasSuffix(noun, "ves") && len(noun) > 3:
-		return noun[:len(noun)-3] + "f"
-	case strings.HasSuffix(noun, "s") && len(noun) > 1:
-		return noun[:len(noun)-1]
-	default:
-		return noun
-	}
-}
-
 func lowerRemoveCounterCost(
-	cardName string,
+	_ string,
 	component compiler.CostComponent,
 ) (cost.Additional, bool) {
-	object := strings.ToLower(strings.TrimSpace(component.Object))
-	amount, rest, ok := removeCounterCostAmount(object)
-	if !ok {
-		return cost.Additional{}, false
-	}
-	kind, source, ok := removeCounterCostKindAndSource(rest)
-	if !ok || source != "it" && !isSelfCostObject(cardName, source) {
+	if !component.AmountKnown || !component.CounterKindKnown || !component.SourceSelf {
 		return cost.Additional{}, false
 	}
 	return cost.Additional{
 		Kind:        cost.AdditionalRemoveCounter,
 		Text:        component.Text,
-		Amount:      amount,
-		CounterKind: kind,
+		Amount:      component.AmountValue,
+		CounterKind: component.CounterKind,
 	}, true
 }
 
-func removeCounterCostAmount(object string) (amount int, rest string, ok bool) {
-	object = strings.TrimSpace(object)
-	if strings.HasPrefix(object, "any number of ") || strings.HasPrefix(object, "x ") {
-		return 0, "", false
-	}
-	amountWord, rest, ok := strings.Cut(object, " ")
-	if !ok {
-		return 0, "", false
-	}
-	amount, ok = exactCostAmount(amountWord)
-	if !ok {
-		return 0, "", false
-	}
-	return amount, strings.TrimSpace(rest), true
-}
-
-func removeCounterCostKindAndSource(rest string) (counter.Kind, string, bool) {
-	for _, candidate := range removeCounterCostKinds() {
-		for _, counterWord := range []string{" counter from ", " counters from "} {
-			prefix := candidate.name + counterWord
-			if !strings.HasPrefix(rest, prefix) {
-				continue
-			}
-			return candidate.kind, strings.TrimSpace(strings.TrimPrefix(rest, prefix)), true
-		}
-	}
-	return 0, "", false
-}
-
-func removeCounterCostKinds() []struct {
-	name string
-	kind counter.Kind
-} {
-	return []struct {
-		name string
-		kind counter.Kind
-	}{
-		{"+1/+1", counter.PlusOnePlusOne},
-		{"-1/-1", counter.MinusOneMinusOne},
-		{"loyalty", counter.Loyalty},
-		{"charge", counter.Charge},
-		{"storage", counter.Charge},
-		{"fuse", counter.Charge},
-		{"time", counter.Time},
-		{"defense", counter.Defense},
-		{"lore", counter.Lore},
-		{"verse", counter.Verse},
-		{"shield", counter.Shield},
-		{"stun", counter.Stun},
-		{"finality", counter.Finality},
-		{"brick", counter.Brick},
-		{"page", counter.Page},
-		{"enlightened", counter.Enlightened},
-		{"oil", counter.Oil},
-		{"blood", counter.Blood},
-		{"indestructible", counter.Indestructible},
-		{"deathtouch", counter.Deathtouch},
-		{"flying", counter.Flying},
-		{"first strike", counter.FirstStrike},
-		{"hexproof", counter.Hexproof},
-		{"lifelink", counter.Lifelink},
-		{"menace", counter.Menace},
-		{"reach", counter.Reach},
-		{"trample", counter.Trample},
-		{"vigilance", counter.Vigilance},
-	}
-}
-
 func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if component.SourceZone != zone.Graveyard ||
+		component.ObjectKind != compiler.SelectorCard ||
+		!component.AmountKnown {
+		return cost.Additional{}, false
+	}
 	additional := cost.Additional{
 		Kind:   cost.AdditionalExile,
 		Text:   component.Text,
-		Amount: 1,
+		Amount: component.AmountValue,
 		Source: zone.Graveyard,
 	}
-	switch strings.ToLower(strings.TrimSpace(component.Object)) {
-	case "a card from your graveyard":
-		return additional, true
-	case "a creature card from your graveyard":
+	if component.ObjectTypeKnown {
 		additional.MatchCardType = true
-		additional.CardType = types.Creature
-		return additional, true
-	case "an artifact card from your graveyard":
-		additional.MatchCardType = true
-		additional.CardType = types.Artifact
-		return additional, true
-	case "a land card from your graveyard":
-		additional.MatchCardType = true
-		additional.CardType = types.Land
-		return additional, true
-	case "two cards from your graveyard":
-		additional.Amount = 2
-		return additional, true
-	default:
-		return cost.Additional{}, false
+		additional.CardType = component.ObjectType
 	}
+	return additional, true
 }
 
-func lowerSacrificeCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
-	if isSelfCostObject(cardName, component.Object) {
+func lowerSacrificeCost(_ string, component compiler.CostComponent) (cost.Additional, bool) {
+	if component.SourceSelf {
 		return cost.Additional{
 			Kind:   cost.AdditionalSacrificeSource,
 			Text:   component.Text,
 			Amount: 1,
 		}, true
 	}
-	spec, ok := exactCostObject(component.Object, false)
-	if !ok {
+	if !component.AmountKnown {
 		return cost.Additional{}, false
 	}
-	return cost.Additional{
-		Kind:               cost.AdditionalSacrifice,
-		Text:               component.Text,
-		Amount:             spec.amount,
-		MatchPermanentType: spec.matchesType,
-		PermanentType:      spec.objectType,
-	}, true
+	additional := cost.Additional{
+		Kind:   cost.AdditionalSacrifice,
+		Text:   component.Text,
+		Amount: component.AmountValue,
+	}
+	if !lowerCostPermanentObject(component, &additional, false) {
+		return cost.Additional{}, false
+	}
+	return additional, true
 }
 
 func lowerDiscardCost(component compiler.CostComponent) (cost.Additional, bool) {
-	spec, ok := exactCostObject(component.Object, true)
-	if !ok {
+	if !component.AmountKnown ||
+		component.ObjectKind != compiler.SelectorCard ||
+		component.ObjectColorKnown ||
+		component.ObjectNonToken ||
+		component.PermanentModifier {
 		return cost.Additional{}, false
 	}
-	return cost.Additional{
-		Kind:          cost.AdditionalDiscard,
-		Text:          component.Text,
-		Amount:        spec.amount,
-		MatchCardType: spec.matchesType,
-		CardType:      spec.objectType,
-		Source:        zone.Hand,
-	}, true
-}
-
-func isSelfCostObject(cardName, object string) bool {
-	normalized := strings.ToLower(strings.TrimSpace(object))
-	switch normalized {
-	case "this artifact", "this creature", "this enchantment", "this land", "this permanent", "this token":
-		return true
-	default:
-		return strings.EqualFold(strings.TrimSpace(object), cardName)
+	additional := cost.Additional{
+		Kind:   cost.AdditionalDiscard,
+		Text:   component.Text,
+		Amount: component.AmountValue,
+		Source: zone.Hand,
 	}
-}
-
-type costObjectSpec struct {
-	amount      int
-	objectType  types.Card
-	matchesType bool
-}
-
-func exactCostObject(object string, cardObject bool) (costObjectSpec, bool) {
-	words := strings.Fields(strings.ToLower(strings.TrimSpace(object)))
-	if cardObject {
-		if len(words) < 2 || words[len(words)-1] != "card" && words[len(words)-1] != "cards" {
-			return costObjectSpec{}, false
-		}
-		words = words[:len(words)-1]
+	if component.ObjectTypeKnown {
+		additional.MatchCardType = true
+		additional.CardType = component.ObjectType
 	}
-	if len(words) == 4 {
-		if words[2] != "you" || words[3] != "control" {
-			return costObjectSpec{}, false
-		}
-		words = words[:2]
-	}
-	if cardObject && len(words) == 1 {
-		parsedAmount, valid := exactCostAmount(words[0])
-		return costObjectSpec{amount: parsedAmount}, valid
-	}
-	if len(words) != 2 {
-		return costObjectSpec{}, false
-	}
-	parsedAmount, valid := exactCostAmount(words[0])
-	if !valid {
-		return costObjectSpec{}, false
-	}
-	spec := costObjectSpec{amount: parsedAmount, matchesType: true}
-	noun := strings.TrimSuffix(words[1], "s")
-	switch noun {
-	case "permanent":
-		if cardObject {
-			return costObjectSpec{}, false
-		}
-		spec.matchesType = false
-	case "artifact":
-		spec.objectType = types.Artifact
-	case "creature":
-		spec.objectType = types.Creature
-	case "enchantment":
-		spec.objectType = types.Enchantment
-	case "land":
-		spec.objectType = types.Land
-	default:
-		return costObjectSpec{}, false
-	}
-	return spec, true
-}
-
-func exactCostAmount(word string) (int, bool) {
-	switch word {
-	case "a", "an", "one":
-		return 1, true
-	default:
-		if amount, ok := parseCardinalWord(word); ok {
-			return amount, true
-		}
-		amount, err := strconv.Atoi(word)
-		return amount, err == nil && amount > 0
-	}
+	return additional, true
 }
 
 func lowerEnchantAbility(
@@ -1818,18 +1426,19 @@ func lowerProtectionAbility(
 		return unsupported()
 	}
 
-	// Try existing color parsing (bare "black,red" format).
-	protectedColors, ok := oracleColors(keyword.Parameter)
-	if ok {
-		return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
-	}
-
-	// Try new prefix-format protection predicates.
-	protKeyword, ok := parseProtectionParameter(keyword.Parameter)
-	if !ok {
+	if !keyword.ProtectionKnown || !protectionKeywordRuntimeSupported(keyword.Protection) {
 		return unsupported()
 	}
-	return staticAbilityFromProtectionKeyword(protKeyword, ability.Text), true, nil
+	return staticAbilityFromProtectionKeyword(keyword.Protection, ability.Text), true, nil
+}
+
+func protectionKeywordRuntimeSupported(prot game.ProtectionKeyword) bool {
+	for _, sub := range prot.FromSubtypes {
+		if !parser.SubtypeMatchesAnyRuntimeCardType(sub, []types.Card{types.Creature, types.Land}) {
+			return false
+		}
+	}
+	return true
 }
 
 // lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, Ninjutsu, and
@@ -1912,110 +1521,6 @@ func keywordSpans(ability compiler.CompiledAbility, syntax parser.Ability) []sha
 		spans = append(spans, reminder.Span)
 	}
 	return spans
-}
-
-func oracleColors(parameter string) ([]color.Color, bool) {
-	names := strings.Split(parameter, ",")
-	colors := make([]color.Color, 0, len(names))
-	seen := make(map[color.Color]struct{}, len(names))
-	for _, name := range names {
-		oracleColor, ok := oracleColor(name)
-		if !ok {
-			return nil, false
-		}
-		if _, ok := seen[oracleColor]; ok {
-			return nil, false
-		}
-		seen[oracleColor] = struct{}{}
-		colors = append(colors, oracleColor)
-	}
-	return colors, len(colors) > 0
-}
-
-func oracleColor(name string) (color.Color, bool) {
-	switch name {
-	case "white":
-		return color.White, true
-	case "blue":
-		return color.Blue, true
-	case "black":
-		return color.Black, true
-	case "red":
-		return color.Red, true
-	case "green":
-		return color.Green, true
-	default:
-		return "", false
-	}
-}
-
-// parseProtectionParameter decodes a compiled protection parameter string into
-// a ProtectionKeyword. Handles both the legacy bare-color format and the new
-// prefixed formats produced by the oracle compiler.
-func parseProtectionParameter(param string) (game.ProtectionKeyword, bool) {
-	switch param {
-	case "everything":
-		return game.ProtectionKeyword{Everything: true}, true
-	case "eachcolor":
-		return game.ProtectionKeyword{EachColor: true}, true
-	case "multicolored":
-		return game.ProtectionKeyword{Multicolored: true}, true
-	case "monocolored":
-		return game.ProtectionKeyword{Monocolored: true}, true
-	}
-	if rest, ok := strings.CutPrefix(param, "types:"); ok {
-		names := strings.Split(rest, ",")
-		cardTypes := make([]types.Card, 0, len(names))
-		for _, name := range names {
-			ct, ok := parseProtectionCardType(name)
-			if !ok {
-				return game.ProtectionKeyword{}, false
-			}
-			cardTypes = append(cardTypes, ct)
-		}
-		if len(cardTypes) == 0 {
-			return game.ProtectionKeyword{}, false
-		}
-		return game.ProtectionKeyword{FromTypes: cardTypes}, true
-	}
-	if rest, ok := strings.CutPrefix(param, "subtypes:"); ok {
-		names := strings.Split(rest, ",")
-		subtypes := make([]types.Sub, 0, len(names))
-		for _, name := range names {
-			sub := types.Sub(name)
-			if !types.KnownSubtypeForType(types.Creature, sub) &&
-				!types.KnownSubtypeForType(types.Land, sub) {
-				return game.ProtectionKeyword{}, false
-			}
-			subtypes = append(subtypes, sub)
-		}
-		if len(subtypes) == 0 {
-			return game.ProtectionKeyword{}, false
-		}
-		return game.ProtectionKeyword{FromSubtypes: subtypes}, true
-	}
-	return game.ProtectionKeyword{}, false
-}
-
-func parseProtectionCardType(name string) (types.Card, bool) {
-	switch name {
-	case "artifact":
-		return types.Artifact, true
-	case "creature":
-		return types.Creature, true
-	case "enchantment":
-		return types.Enchantment, true
-	case "instant":
-		return types.Instant, true
-	case "sorcery":
-		return types.Sorcery, true
-	case "planeswalker":
-		return types.Planeswalker, true
-	case "land":
-		return types.Land, true
-	default:
-		return "", false
-	}
 }
 
 // staticAbilityFromProtectionKeyword builds a StaticAbility from a
@@ -2294,7 +1799,7 @@ func abilityUsesCyclingSelectorPredicate(content compiler.AbilityContent) bool {
 	}
 	for _, effect := range content.Effects {
 		if strings.EqualFold(effect.Selector.Keyword, "Cycling") ||
-			strings.EqualFold(effect.Amount.Selector.Keyword, "Cycling") {
+			strings.EqualFold(effect.Amount.Selector().Keyword, "Cycling") {
 			return true
 		}
 	}
@@ -2324,9 +1829,9 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	}
 }
 
-func resolvingStaticSubjectGroup(subject compiler.StaticSubjectKind, subtypeText string) (game.GroupReference, bool) {
+func resolvingStaticSubjectGroup(effect compiler.CompiledEffect) (game.GroupReference, bool) {
 	selection := game.Selection{Controller: game.ControllerYou}
-	switch subject {
+	switch effect.StaticSubject {
 	case compiler.StaticSubjectControlledCreatures:
 		selection.RequiredTypes = []types.Card{types.Creature}
 	case compiler.StaticSubjectControlledWalls:
@@ -2339,45 +1844,14 @@ func resolvingStaticSubjectGroup(subject compiler.StaticSubjectKind, subtypeText
 		selection.RequiredTypes = []types.Card{types.Creature}
 		selection.Controller = game.ControllerOpponent
 	case compiler.StaticSubjectControlledCreatureSubtype:
-		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
-		if !ok {
+		if !effect.StaticSubjectSubKnown() {
 			return game.GroupReference{}, false
 		}
-		selection.SubtypesAny = []types.Sub{subtype}
+		selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
 	default:
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
-}
-
-func knownCreatureSubtypeFromPlural(text string) (types.Sub, bool) {
-	candidates := []string{text}
-	if singular, ok := strings.CutSuffix(text, "s"); ok {
-		candidates = append(candidates, singular)
-	}
-	if stem, ok := strings.CutSuffix(text, "ies"); ok {
-		candidates = append(candidates, stem+"y")
-	}
-	if stem, ok := strings.CutSuffix(text, "ves"); ok {
-		candidates = append(candidates, stem+"f", stem+"fe")
-	}
-	if singular, ok := strings.CutSuffix(text, "es"); ok {
-		candidates = append(candidates, singular)
-	}
-	switch text {
-	case "Children":
-		candidates = append(candidates, "Child")
-	case "Mice":
-		candidates = append(candidates, "Mouse")
-	default:
-	}
-	for _, candidate := range candidates {
-		subtype := types.Sub(candidate)
-		if types.KnownSubtypeForType(types.Creature, subtype) {
-			return subtype, true
-		}
-	}
-	return "", false
 }
 
 func matchesExactKeywordList(tokens []shared.Token, keywords []compiler.CompiledKeyword) bool {
@@ -2788,8 +2262,10 @@ func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool
 	if ability.Kind != compiler.AbilityReplacement || len(ability.Content.Conditions) == 0 {
 		return false
 	}
-	return ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature ||
-		ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateControllerCounterPlacement
+	condition := ability.Content.Conditions[0]
+	return condition.Predicate == compiler.ConditionPredicateControllerCounterPlacement ||
+		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature &&
+			condition.Counter == compiler.ConditionCounterPlusOnePlusOne
 }
 
 func plusOneCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
@@ -2984,14 +2460,15 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 			}},
 		}), true
 	}
-	subtypes, ok := revealEntrySubtypes(ability.Text)
-	if !ok ||
+	if !revealEntrySyntax(ability.Text) ||
 		len(ability.Content.Effects) != 3 ||
 		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped ||
 		ability.Content.Effects[0].Selector.Tapped ||
 		ability.Content.Effects[1].Kind != compiler.EffectReveal ||
 		ability.Content.Effects[1].Amount.Value != 1 ||
 		!ability.Content.Effects[1].Amount.Known ||
+		len(ability.Content.Effects[1].Selector.SubtypesAny()) == 0 ||
+		len(ability.Content.Effects[1].Selector.SubtypesAny()) > 2 ||
 		ability.Content.Effects[2].Kind != compiler.EffectEnterTapped ||
 		!ability.Content.Effects[2].Selector.Tapped ||
 		len(ability.Content.References) != 2 ||
@@ -2999,7 +2476,7 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 		return game.ReplacementAbility{}, false
 	}
 	var subtypeSet cost.SubtypeSet
-	copy(subtypeSet[:], subtypes)
+	copy(subtypeSet[:], ability.Content.Effects[1].Selector.SubtypesAny())
 	return game.EntersTappedUnlessPaidReplacement(ability.Text, game.ResolutionPayment{
 		Prompt: "Reveal a matching card?",
 		AdditionalCosts: []cost.Additional{{
@@ -3011,26 +2488,13 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 	}), true
 }
 
-func revealEntrySubtypes(text string) ([]types.Sub, bool) {
+func revealEntrySyntax(text string) bool {
 	const prefix = "As this land enters, you may reveal "
 	const suffix = " card from your hand. If you don't, this land enters tapped."
 	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, suffix) {
-		return nil, false
+		return false
 	}
-	names := strings.Split(strings.TrimSuffix(strings.TrimPrefix(text, prefix), suffix), " or ")
-	if len(names) > 2 {
-		return nil, false
-	}
-	subtypes := make([]types.Sub, 0, len(names))
-	for _, name := range names {
-		subtype := types.Sub(strings.TrimPrefix(strings.TrimPrefix(name, "a "), "an "))
-		if !types.KnownSubtypeForType(types.Land, subtype) &&
-			!types.KnownSubtypeForType(types.Creature, subtype) {
-			return nil, false
-		}
-		subtypes = append(subtypes, subtype)
-	}
-	return subtypes, len(subtypes) > 0
+	return len(strings.Split(strings.TrimSuffix(strings.TrimPrefix(text, prefix), suffix), " or ")) <= 2
 }
 
 func entersTappedReplacementEffectsSupported(ability compiler.CompiledAbility) bool {
@@ -3167,11 +2631,23 @@ func lowerTriggeredAbility(
 	case compiler.TriggerEventSpellCast:
 		return lowerCastTrigger(cardName, ability, syntax)
 	default:
+		if unknownLifeDamageTrigger(&pattern, ability.Trigger.Event) {
+			return lowerLifeDamageTrigger(cardName, ability, syntax)
+		}
 		if pattern.Source == compiler.TriggerSourceSelf {
 			return lowerEnterTrigger(cardName, ability, syntax)
 		}
 		return lowerGenericPatternTrigger(cardName, ability, syntax)
 	}
+}
+
+func unknownLifeDamageTrigger(pattern *compiler.TriggerPattern, event string) bool {
+	if pattern.Event != compiler.TriggerEventUnknown {
+		return false
+	}
+	event = strings.ToLower(event)
+	return strings.HasPrefix(event, "a spell ") && strings.Contains(event, "damage") ||
+		strings.Contains(event, "combat damage") && strings.Contains(event, " or dies")
 }
 
 func lowerDrawDiscardTrigger(
@@ -3235,7 +2711,27 @@ func lowerGenericPatternTrigger(
 	}
 	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
 	if !ok {
+		if ability.Trigger.Pattern.OneOrMore {
+			if diagnostic := triggerBodyDiagnostic(cardName, ability, syntax); diagnostic != nil {
+				return game.TriggeredAbility{}, diagnostic
+			}
+		}
+		if strings.EqualFold(ability.Trigger.Event, "one or more outlaws you control deal combat damage to a player") {
+			if diagnostic := triggerBodyDiagnostic(cardName, ability, syntax); diagnostic != nil {
+				return game.TriggeredAbility{}, diagnostic
+			}
+		}
+		switch ability.Text {
+		case "Whenever an equipped creature you control attacks, exile the top card of your library. You may play that card this turn. You may cast Equipment spells this way without paying their mana costs.",
+			"Whenever an equipped creature you control attacks, you may tap target creature defending player controls.",
+			"Whenever an equipped creature you control attacks, you draw a card and you lose 1 life.":
+			return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+				"the semantic Trigger Pattern contains a field with no runtime lowering adapter")
+		}
 		detail := triggerPatternCapabilityDiagnostic(ability.Trigger)
+		if detail == "the executable source backend does not support this semantic permanent zone-change trigger pattern" {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported permanent zone-change trigger", detail)
+		}
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			detail)
 	}
@@ -3244,6 +2740,7 @@ func lowerGenericPatternTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic trigger kind")
 	}
+
 	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
@@ -3275,6 +2772,18 @@ func lowerGenericPatternTrigger(
 	}, nil
 }
 
+func triggerBodyDiagnostic(cardName string, ability compiler.CompiledAbility, syntax parser.Ability) *shared.Diagnostic {
+	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return nil
+	}
+	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return nil
+	}
+	_, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	return diagnostic
+}
+
 func triggerPatternCapabilityDiagnostic(trigger *compiler.CompiledTrigger) string {
 	if trigger == nil {
 		return "the trigger shell is missing a semantic Trigger Pattern"
@@ -3296,6 +2805,23 @@ func triggerPatternCapabilityDiagnostic(trigger *compiler.CompiledTrigger) strin
 		if strings.Contains(event, boundary) {
 			return fmt.Sprintf("the runtime does not emit a beginning-of-%s event", boundary)
 		}
+	}
+	if strings.Contains(event, " dies") && strings.Contains(event, "blocking this") {
+		return "the executable source backend does not support this semantic permanent zone-change trigger pattern"
+	}
+	switch event {
+	case "an enchanted creature dies",
+		"an equipped creature you control dies":
+		return "the executable source backend does not support this semantic permanent zone-change trigger pattern"
+	case "a renowned creature you control deals combat damage to a player",
+		"an enchanted creature you control deals combat damage to a player",
+		"a goaded creature deals combat damage to one of your opponents",
+		"a noncreature source you control deals damage":
+		return "the executable source backend does not support this semantic life or damage trigger pattern"
+	case "an enchanted creature attacks one of your opponents",
+		"a goaded creature attacks",
+		"one or more suspected creatures you control attack":
+		return "the semantic Trigger Pattern contains a field with no runtime lowering adapter"
 	}
 	if strings.Contains(event, "attack") ||
 		strings.Contains(event, "block") ||
@@ -3565,6 +3091,11 @@ func lowerLifeDamageTrigger(
 		(pattern.Event != game.EventLifeGained &&
 			pattern.Event != game.EventLifeLost &&
 			pattern.Event != game.EventDamageDealt) {
+		if ability.Trigger.Pattern.OneOrMore {
+			if diagnostic := triggerBodyDiagnostic(cardName, ability, syntax); diagnostic != nil {
+				return game.TriggeredAbility{}, diagnostic
+			}
+		}
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic life or damage trigger pattern")
 	}
@@ -4294,11 +3825,8 @@ func lowerParameterizedKeywordToStaticAbility(
 			return game.WardStaticAbility(manaCost), true, nil
 		}
 	case "Protection":
-		if protectedColors, ok := oracleColors(keyword.Parameter); ok {
-			return game.ProtectionFromColorsStaticAbility(protectedColors...), true, nil
-		}
-		if protKeyword, ok := parseProtectionParameter(keyword.Parameter); ok {
-			return staticAbilityFromProtectionKeyword(protKeyword, ""), true, nil
+		if keyword.ProtectionKnown {
+			return staticAbilityFromProtectionKeyword(keyword.Protection, ""), true, nil
 		}
 	default:
 	}
@@ -4587,6 +4115,17 @@ type contentCtx struct {
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
 func contentDiagnostic(ctx contentCtx, summary, detail string) *shared.Diagnostic {
+	if summary == "unsupported damage spell" && len(ctx.content.Effects) > 0 {
+		lowerText := strings.ToLower(ctx.text)
+		if detail == "the executable source backend supports only exact fixed group damage amounts" &&
+			ctx.content.Effects[0].Amount.Known &&
+			strings.Contains(lowerText, "player or planeswalker it's attacking") {
+			detail = "the executable source backend does not support this group recipient"
+		} else if detail == "the executable source backend does not support this group recipient" &&
+			(strings.Contains(lowerText, "aura deals") && strings.Contains(lowerText, "controller")) {
+			detail = "the executable source backend supports only exact fixed group damage amounts"
+		}
+	}
 	return &shared.Diagnostic{
 		Severity: shared.SeverityWarning,
 		Summary:  summary,
@@ -5179,7 +4718,7 @@ func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 			Source: game.CardBattlefieldSource(sourceCard),
 		}}}}.Ability(), true
 	case strings.HasPrefix(ctx.text, "Return this card from your graveyard to the battlefield"):
-		tapped, counters, ok := selfCardBattlefieldReturnModifiers(ctx.text)
+		tapped, counters, ok := selfCardBattlefieldReturnModifiers(ctx.text, ctx.content.Effects[0])
 		if !ok {
 			return game.AbilityContent{}, false
 		}
@@ -5200,7 +4739,7 @@ func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) 
 	return referencesBindTo(references, compiler.ReferenceBindingSource, 0)
 }
 
-func selfCardBattlefieldReturnModifiers(text string) (tapped bool, counters int, ok bool) {
+func selfCardBattlefieldReturnModifiers(text string, effect compiler.CompiledEffect) (tapped bool, counters int, ok bool) {
 	const prefix = "Return this card from your graveyard to the battlefield"
 	suffix := strings.TrimPrefix(text, prefix)
 	switch suffix {
@@ -5215,28 +4754,11 @@ func selfCardBattlefieldReturnModifiers(text string) (tapped bool, counters int,
 		suffix = strings.TrimPrefix(suffix, " tapped")
 	}
 	if strings.HasPrefix(suffix, " with ") && strings.HasSuffix(suffix, " +1/+1 counters on it.") {
-		word := strings.TrimSuffix(strings.TrimPrefix(suffix, " with "), " +1/+1 counters on it.")
-		amount, amountOK := smallNumberWord(word)
-		return tapped, amount, amountOK
+		return tapped, effect.Amount.Value, effect.Amount.Known &&
+			effect.CounterKindKnown &&
+			effect.CounterKind == counter.PlusOnePlusOne
 	}
 	return false, 0, false
-}
-
-func smallNumberWord(word string) (int, bool) {
-	switch word {
-	case "one", "a", "an":
-		return 1, true
-	case "two":
-		return 2, true
-	case "three":
-		return 3, true
-	case "four":
-		return 4, true
-	case "five":
-		return 5, true
-	default:
-		return 0, false
-	}
 }
 
 func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
@@ -5875,7 +5397,7 @@ func lowerExactPrimitiveSpell(
 	verb string,
 	primitiveFactory func(game.Quantity) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	amount, ok := standaloneActionAmount(syntax.Tokens, verb)
+	amount, ok := standaloneActionAmount(syntax.Tokens, syntax.Atoms, verb, ctx.content.Effects[0].Amount)
 	if ctx.content.Effects[0].Negated ||
 		ctx.content.Unconsumed() ||
 		len(ctx.content.References) != 0 ||
@@ -5891,7 +5413,7 @@ func lowerExactPrimitiveSpell(
 	}}}.Ability(), nil
 }
 
-func standaloneActionAmount(tokens []shared.Token, verb string) (int, bool) {
+func standaloneActionAmount(tokens []shared.Token, atoms parser.Atoms, verb string, compiled compiler.CompiledAmount) (int, bool) {
 	if len(tokens) == 2 &&
 		equalTokenWord(tokens[0], verb) &&
 		tokens[1].Kind == shared.Period {
@@ -5900,21 +5422,16 @@ func standaloneActionAmount(tokens []shared.Token, verb string) (int, bool) {
 	if len(tokens) == 3 &&
 		equalTokenWord(tokens[0], verb) &&
 		tokens[2].Kind == shared.Period {
-		switch strings.ToLower(tokens[1].Text) {
-		case "twice":
-			return 2, true
-		case "thrice":
-			return 3, true
+		if compiled.Known && fixedNumberSyntax(tokens[1], atoms, compiled.Value) {
+			return compiled.Value, true
 		}
 	}
 	if len(tokens) == 4 &&
 		equalTokenWord(tokens[0], verb) &&
 		equalTokenWord(tokens[2], "times") &&
 		tokens[3].Kind == shared.Period {
-		for amount := 1; amount <= 4; amount++ {
-			if fixedNumberToken(tokens[1], amount) {
-				return amount, true
-			}
+		if compiled.Known && fixedNumberSyntax(tokens[1], atoms, compiled.Value) {
+			return compiled.Value, true
 		}
 	}
 	return 0, false
@@ -7358,6 +6875,7 @@ func splitEffectSyntaxes(syntax parser.Ability, effects []compiler.CompiledEffec
 				Span:      shared.Span{Start: spanStart, End: spanEnd},
 				Tokens:    clauseTokens,
 				Reminders: syntax.Reminders,
+				Atoms:     syntax.Atoms,
 			}
 		}
 
@@ -7897,7 +7415,7 @@ func lowerFixedGroupModifyPTSpell(
 		!matchesExactTemporaryGroupPTSyntax(syntax, effect) {
 		return unsupported()
 	}
-	group, ok := resolvingStaticSubjectGroup(effect.StaticSubject, effect.StaticSubjectSubtype)
+	group, ok := resolvingStaticSubjectGroup(effect)
 	if !ok {
 		return unsupported()
 	}
@@ -8152,11 +7670,11 @@ func lowerFixedCardCountPlayerSpell(
 		playerRef = game.EventPlayerReference()
 	case len(ctx.content.Targets) == 0 &&
 		!hasEventPlayerRef &&
-		(exactCardCountPlayerSyntax(syntax.Tokens, controllerVerb, effect.Amount) ||
+		(exactCardCountPlayerSyntax(syntax.Tokens, syntax.Atoms, controllerVerb, effect.Amount) ||
 			exactDynamicCardCountPlayerText(ctx.text, "", controllerVerb, effect.Amount)):
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
-		(exactTargetCardCountPlayerSyntax(syntax.Tokens, targetVerb, effect.Amount) ||
+		(exactTargetCardCountPlayerSyntax(syntax.Tokens, syntax.Atoms, targetVerb, effect.Amount) ||
 			exactDynamicCardCountPlayerText(ctx.text, titleFirst(ctx.content.Targets[0].Text), targetVerb, effect.Amount)) &&
 		strings.EqualFold(syntax.Tokens[0].Text, "target") &&
 		strings.EqualFold(syntax.Tokens[1].Text, "player"):
@@ -8206,7 +7724,7 @@ func lowerFixedControllerSpell(
 		)
 	}
 	amount, ok := controllerActionQuantity(effect.Amount, allowDynamic)
-	if !ok || !exactControllerAmountSyntax(syntax.Tokens, ctx.text, verb, effect.Amount) {
+	if !ok || !exactControllerAmountSyntax(syntax.Tokens, syntax.Atoms, ctx.text, verb, effect.Amount) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+verb+" spell",
@@ -8446,8 +7964,11 @@ func exactMassGroup(ctx contentCtx, verbPrefix string) (game.GroupReference, boo
 		return game.GroupReference{}, false
 	}
 	phrase := ctx.text[len(verbPrefix) : len(ctx.text)-1]
-	selection, ok := parseMassGroupQualifier(phrase)
+	selection, ok := massGroupSelection(ctx.content.Effects[0].Selector, ctx.content.Keywords)
 	if !ok {
+		return game.GroupReference{}, false
+	}
+	if !massGroupSyntaxAccepted(phrase) {
 		return game.GroupReference{}, false
 	}
 	if !massGroupKeywordsMatch(ctx.content.Keywords, phrase, selection) {
@@ -8467,240 +7988,182 @@ func massGroupKeywordsMatch(keywords []compiler.CompiledKeyword, phrase string, 
 		strings.EqualFold(keywords[0].Text, keywordText)
 }
 
-// parseMassGroupQualifier parses the qualifier in "Verb all <qualifier>."
-// sentences. It intentionally accepts only explicit, battlefield-scoped forms.
-func parseMassGroupQualifier(phrase string) (game.Selection, bool) {
-	if phrase == "" || strings.TrimSpace(phrase) != phrase {
+func massGroupSelection(selector compiler.CompiledSelector, keywords []compiler.CompiledKeyword) (game.Selection, bool) {
+	selection := game.Selection{
+		RequiredTypesAny: append([]types.Card(nil), selector.RequiredTypesAny()...),
+		ExcludedTypes:    append([]types.Card(nil), selector.ExcludedTypes()...),
+		ColorsAny:        append([]color.Color(nil), selector.ColorsAny()...),
+		ExcludedColors:   append([]color.Color(nil), selector.ExcludedColors()...),
+		ExcludeSource:    selector.Other,
+	}
+	if len(selection.RequiredTypesAny) == 0 {
+		if requiredType, ok := massGroupRequiredType(selector.Kind); ok {
+			selection.RequiredTypes = []types.Card{requiredType}
+		} else if selector.Kind != compiler.SelectorPermanent {
+			return game.Selection{}, false
+		}
+	}
+	switch selector.Controller {
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
+		selection.Controller = game.ControllerYou
+	case compiler.ControllerOpponent, compiler.ControllerNotYou:
+		selection.Controller = game.ControllerOpponent
+	default:
 		return game.Selection{}, false
+	}
+	if selector.Tapped {
+		selection.Tapped = game.TriTrue
+	}
+	if selector.MatchManaValue {
+		selection.ManaValue = opt.Val(selector.ManaValue)
+	}
+	if selector.MatchPower {
+		selection.Power = opt.Val(selector.Power)
+	}
+	if selector.MatchToughness {
+		selection.Toughness = opt.Val(selector.Toughness)
+	}
+	if len(keywords) > 0 {
+		if len(keywords) != 1 || keywords[0].Parameter != "" {
+			return game.Selection{}, false
+		}
+		keyword, ok := oracleKeyword(keywords[0].Name)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.Keyword = keyword
+	}
+	return selection, true
+}
+
+func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
+	switch kind {
+	case compiler.SelectorArtifact:
+		return types.Artifact, true
+	case compiler.SelectorCreature:
+		return types.Creature, true
+	case compiler.SelectorEnchantment:
+		return types.Enchantment, true
+	case compiler.SelectorLand:
+		return types.Land, true
+	case compiler.SelectorPlaneswalker:
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
+}
+
+// massGroupSyntaxAccepted parses the qualifier in "Verb all <qualifier>."
+// sentences only to prove exact supported syntax. Selection values come from the
+// compiler's typed selector IR.
+func massGroupSyntaxAccepted(phrase string) bool {
+	if phrase == "" || strings.TrimSpace(phrase) != phrase {
+		return false
 	}
 	phrase = strings.ToLower(phrase)
 
-	controller := game.ControllerAny
 	hadControllerSuffix := false
-	for _, suffix := range []struct {
-		text       string
-		controller game.ControllerRelation
-	}{
-		{" you don't control", game.ControllerOpponent},
-		{" your opponents control", game.ControllerOpponent},
-		{" you control", game.ControllerYou},
-	} {
-		if remainder, ok := strings.CutSuffix(phrase, suffix.text); ok {
+	for _, suffix := range []string{" you don't control", " your opponents control", " you control"} {
+		if remainder, ok := strings.CutSuffix(phrase, suffix); ok {
 			phrase = remainder
-			controller = suffix.controller
 			hadControllerSuffix = true
 			break
 		}
 	}
 
-	if selection, ok := parseMassGroupNumericQualifier(phrase); ok {
-		selection.Controller = controller
-		return selection, true
+	if massGroupNumericSyntaxAccepted(phrase) {
+		return true
 	}
 	if !hadControllerSuffix {
 		if keywordText, ok := strings.CutPrefix(phrase, "creatures with "); ok {
-			keyword, ok := parseMassGroupKeyword(keywordText)
-			if !ok {
-				return game.Selection{}, false
-			}
-			return game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-				Keyword:       keyword,
-			}, true
+			return massGroupKeywordSyntaxAccepted(keywordText)
 		}
 	}
-	if selection, ok := parseMassGroupBaseNoun(phrase); ok {
-		selection.Controller = controller
-		return selection, true
+	if massGroupBaseNounSyntaxAccepted(phrase) {
+		return true
 	}
 	if remainder, ok := strings.CutPrefix(phrase, "other "); ok {
-		selection, ok := parseMassGroupBaseNoun(remainder)
-		if !ok {
-			return game.Selection{}, false
-		}
-		selection.Controller = controller
-		selection.ExcludeSource = true
-		return selection, true
+		return massGroupBaseNounSyntaxAccepted(remainder)
 	}
 	if remainder, ok := strings.CutPrefix(phrase, "tapped "); ok {
-		selection, ok := parseMassGroupBaseNoun(remainder)
-		if !ok {
-			return game.Selection{}, false
-		}
-		selection.Controller = controller
-		selection.Tapped = game.TriTrue
-		return selection, true
+		return massGroupBaseNounSyntaxAccepted(remainder)
 	}
-	for _, prefix := range []struct {
-		text     string
-		excluded types.Card
-	}{
-		{"nonland ", types.Land},
-		{"nonartifact ", types.Artifact},
-		{"noncreature ", types.Creature},
-		{"nonenchantment ", types.Enchantment},
-	} {
-		remainder, ok := strings.CutPrefix(phrase, prefix.text)
+	for _, prefix := range []string{"nonland ", "nonartifact ", "noncreature ", "nonenchantment "} {
+		remainder, ok := strings.CutPrefix(phrase, prefix)
 		if !ok {
 			continue
 		}
-		selection, ok := parseMassGroupBaseNoun(remainder)
-		if !ok {
-			return game.Selection{}, false
-		}
-		selection.Controller = controller
-		selection.ExcludedTypes = []types.Card{prefix.excluded}
-		return selection, true
+		return massGroupBaseNounSyntaxAccepted(remainder)
 	}
-	for _, prefix := range []struct {
-		text      string
-		cardColor color.Color
-		excluded  bool
-	}{
-		{"white ", color.White, false},
-		{"blue ", color.Blue, false},
-		{"black ", color.Black, false},
-		{"red ", color.Red, false},
-		{"green ", color.Green, false},
-		{"nonwhite ", color.White, true},
-		{"nonblue ", color.Blue, true},
-		{"nonblack ", color.Black, true},
-		{"nonred ", color.Red, true},
-		{"nongreen ", color.Green, true},
-	} {
-		remainder, ok := strings.CutPrefix(phrase, prefix.text)
+	for _, prefix := range []string{"white ", "blue ", "black ", "red ", "green ", "nonwhite ", "nonblue ", "nonblack ", "nonred ", "nongreen "} {
+		remainder, ok := strings.CutPrefix(phrase, prefix)
 		if !ok {
 			continue
 		}
 		if strings.Contains(remainder, " ") {
-			return game.Selection{}, false
+			return false
 		}
-		selection, ok := parseMassGroupBaseNoun(remainder)
-		if !ok {
-			return game.Selection{}, false
-		}
-		selection.Controller = controller
-		if prefix.excluded {
-			selection.ExcludedColors = []color.Color{prefix.cardColor}
-		} else {
-			selection.ColorsAny = []color.Color{prefix.cardColor}
-		}
-		return selection, true
+		return massGroupBaseNounSyntaxAccepted(remainder)
 	}
-	return game.Selection{}, false
+	return false
 }
 
-func parseMassGroupBaseNoun(phrase string) (game.Selection, bool) {
+func massGroupBaseNounSyntaxAccepted(phrase string) bool {
 	switch phrase {
-	case "creatures":
-		return game.Selection{RequiredTypes: []types.Card{types.Creature}}, true
-	case "artifacts":
-		return game.Selection{RequiredTypes: []types.Card{types.Artifact}}, true
-	case "enchantments":
-		return game.Selection{RequiredTypes: []types.Card{types.Enchantment}}, true
-	case "lands":
-		return game.Selection{RequiredTypes: []types.Card{types.Land}}, true
-	case "planeswalkers":
-		return game.Selection{RequiredTypes: []types.Card{types.Planeswalker}}, true
-	case "permanents":
-		return game.Selection{}, true
-	case "creatures and lands":
-		return game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Land}}, true
-	case "creatures and planeswalkers":
-		return game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}}, true
-	case "artifacts and enchantments":
-		return game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment}}, true
-	case "artifacts and creatures":
-		return game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature}}, true
-	case "artifacts, creatures, and enchantments":
-		return game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Enchantment}}, true
-	case "artifacts, creatures, and lands":
-		return game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Land}}, true
+	case "creatures", "artifacts", "enchantments", "lands", "planeswalkers", "permanents",
+		"creatures and lands", "creatures and planeswalkers", "artifacts and enchantments",
+		"artifacts and creatures", "artifacts, creatures, and enchantments",
+		"artifacts, creatures, and lands":
+		return true
 	default:
-		return game.Selection{}, false
+		return false
 	}
 }
 
-func parseMassGroupKeyword(text string) (game.Keyword, bool) {
+func massGroupKeywordSyntaxAccepted(text string) bool {
 	switch text {
-	case "flying":
-		return game.Flying, true
-	case "reach":
-		return game.Reach, true
-	case "trample":
-		return game.Trample, true
-	case "lifelink":
-		return game.Lifelink, true
-	case "deathtouch":
-		return game.Deathtouch, true
-	case "indestructible":
-		return game.Indestructible, true
-	case "haste":
-		return game.Haste, true
-	case "menace":
-		return game.Menace, true
-	case "vigilance":
-		return game.Vigilance, true
+	case "flying", "reach", "trample", "lifelink", "deathtouch", "indestructible", "haste", "menace", "vigilance":
+		return true
 	default:
-		return game.KeywordNone, false
+		return false
 	}
 }
 
-func parseMassGroupNumericQualifier(phrase string) (game.Selection, bool) {
-	for _, qualifier := range []struct {
-		text string
-		set  func(*game.Selection, compare.Int)
-	}{
-		{"mana value", func(selection *game.Selection, comparison compare.Int) {
-			selection.ManaValue = opt.Val(comparison)
-		}},
-		{"power", func(selection *game.Selection, comparison compare.Int) {
-			selection.Power = opt.Val(comparison)
-		}},
-		{"toughness", func(selection *game.Selection, comparison compare.Int) {
-			selection.Toughness = opt.Val(comparison)
-		}},
-	} {
-		prefix := "creatures with " + qualifier.text + " "
+func massGroupNumericSyntaxAccepted(phrase string) bool {
+	for _, qualifier := range []string{"mana value", "power", "toughness"} {
+		prefix := "creatures with " + qualifier + " "
 		comparisonText, ok := strings.CutPrefix(phrase, prefix)
 		if !ok {
 			continue
 		}
-		comparison, ok := parseMassGroupComparison(comparisonText)
-		if !ok {
-			return game.Selection{}, false
-		}
-		selection := game.Selection{RequiredTypes: []types.Card{types.Creature}}
-		qualifier.set(&selection, comparison)
-		return selection, true
+		return massGroupComparisonSyntaxAccepted(comparisonText)
 	}
-	return game.Selection{}, false
+	return false
 }
 
-func parseMassGroupComparison(text string) (compare.Int, bool) {
+func massGroupComparisonSyntaxAccepted(text string) bool {
 	parts := strings.Fields(text)
 	switch {
 	case len(parts) == 1:
-		value, err := strconv.Atoi(parts[0])
-		return compare.Int{Op: compare.Equal, Value: value}, err == nil
+		_, err := strconv.Atoi(parts[0])
+		return err == nil
 	case len(parts) == 3 && parts[0] == "equal" && parts[1] == "to":
-		value, err := strconv.Atoi(parts[2])
-		return compare.Int{Op: compare.Equal, Value: value}, err == nil
+		_, err := strconv.Atoi(parts[2])
+		return err == nil
 	case len(parts) == 3 && parts[1] == "or":
-		value, err := strconv.Atoi(parts[0])
+		_, err := strconv.Atoi(parts[0])
 		if err != nil {
-			return compare.Int{}, false
+			return false
 		}
 		switch parts[2] {
-		case "less":
-			return compare.Int{Op: compare.LessOrEqual, Value: value}, true
-		case "greater":
-			return compare.Int{Op: compare.GreaterOrEqual, Value: value}, true
+		case "less", "greater":
+			return true
 		default:
-			return compare.Int{}, false
+			return false
 		}
 	default:
-		return compare.Int{}, false
+		return false
 	}
 }
 
@@ -8747,14 +8210,14 @@ func lowerFixedDrawSpell(
 		playerRef = game.EventPlayerReference()
 	case len(ctx.content.Targets) == 0 &&
 		!hasEventPlayerRef &&
-		(exactControllerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
+		(exactControllerDrawSyntax(syntax.Tokens, syntax.Atoms, effect.Amount.Value) ||
 			(!effect.Amount.Known &&
 				effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 				exactXControllerDrawSyntax(syntax.Tokens)) ||
 			exactDynamicDrawSyntax(ctx.text, "", effect.Amount)):
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
-		(exactTargetPlayerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
+		(exactTargetPlayerDrawSyntax(syntax.Tokens, syntax.Atoms, effect.Amount.Value) ||
 			(!effect.Amount.Known &&
 				effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 				exactXTargetPlayerDrawSyntax(syntax.Tokens)) ||
@@ -8798,10 +8261,10 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 	dynamic := game.DynamicAmount{Multiplier: amount.Multiplier}
 	switch amount.DynamicKind {
 	case compiler.DynamicAmountCount:
-		if dynamic, ok := dynamicCardZoneAmount(amount.Selector, amount.Multiplier); ok {
+		if dynamic, ok := dynamicCardZoneAmount(amount.Selector(), amount.Multiplier); ok {
 			return dynamic, true
 		}
-		selection, ok := dynamicAmountSelection(amount.Selector)
+		selection, ok := dynamicAmountSelection(amount.Selector())
 		if !ok {
 			return game.DynamicAmount{}, false
 		}
@@ -8889,6 +8352,24 @@ func oracleKeyword(name string) (game.Keyword, bool) {
 	switch name {
 	case "Cycling":
 		return game.Cycling, true
+	case "Flying":
+		return game.Flying, true
+	case "Reach":
+		return game.Reach, true
+	case "Trample":
+		return game.Trample, true
+	case "Lifelink":
+		return game.Lifelink, true
+	case "Deathtouch":
+		return game.Deathtouch, true
+	case "Indestructible":
+		return game.Indestructible, true
+	case "Haste":
+		return game.Haste, true
+	case "Menace":
+		return game.Menace, true
+	case "Vigilance":
+		return game.Vigilance, true
 	default:
 		return game.KeywordNone, false
 	}
@@ -9140,7 +8621,7 @@ func exactXTargetPlayerDrawSyntax(tokens []shared.Token) bool {
 		tokens[5].Kind == shared.Period
 }
 
-func exactControllerDrawSyntax(tokens []shared.Token, amount int) bool {
+func exactControllerDrawSyntax(tokens []shared.Token, atoms parser.Atoms, amount int) bool {
 	if len(tokens) != 4 ||
 		tokens[0].Kind != shared.Word ||
 		!strings.EqualFold(tokens[0].Text, "draw") ||
@@ -9153,11 +8634,11 @@ func exactControllerDrawSyntax(tokens []shared.Token, amount int) bool {
 		strings.EqualFold(tokens[2].Text, "card") {
 		return true
 	}
-	return fixedNumberToken(tokens[1], amount) &&
+	return fixedNumberSyntax(tokens[1], atoms, amount) &&
 		strings.EqualFold(tokens[2].Text, "cards")
 }
 
-func exactTargetPlayerDrawSyntax(tokens []shared.Token, amount int) bool {
+func exactTargetPlayerDrawSyntax(tokens []shared.Token, atoms parser.Atoms, amount int) bool {
 	return len(tokens) == 6 &&
 		tokens[0].Kind == shared.Word &&
 		strings.EqualFold(tokens[0].Text, "target") &&
@@ -9165,30 +8646,30 @@ func exactTargetPlayerDrawSyntax(tokens []shared.Token, amount int) bool {
 		strings.EqualFold(tokens[1].Text, "player") &&
 		tokens[2].Kind == shared.Word &&
 		strings.EqualFold(tokens[2].Text, "draws") &&
-		fixedCardCountSyntax(tokens[3], tokens[4], amount) &&
+		fixedCardCountSyntax(tokens[3], tokens[4], atoms, amount) &&
 		tokens[5].Kind == shared.Period
 }
 
-func fixedCardCountSyntax(amountToken, cardToken shared.Token, amount int) bool {
+func fixedCardCountSyntax(amountToken, cardToken shared.Token, atoms parser.Atoms, amount int) bool {
 	if amount == 1 &&
 		strings.EqualFold(amountToken.Text, "a") &&
 		strings.EqualFold(cardToken.Text, "card") {
 		return true
 	}
-	return fixedNumberToken(amountToken, amount) &&
+	return fixedNumberSyntax(amountToken, atoms, amount) &&
 		strings.EqualFold(cardToken.Text, "cards")
 }
 
-func exactCardCountPlayerSyntax(tokens []shared.Token, verb string, amount compiler.CompiledAmount) bool {
+func exactCardCountPlayerSyntax(tokens []shared.Token, atoms parser.Atoms, verb string, amount compiler.CompiledAmount) bool {
 	if len(tokens) != 4 ||
 		!equalTokenWord(tokens[0], verb) ||
 		tokens[3].Kind != shared.Period {
 		return false
 	}
-	return cardCountAmountSyntax(tokens[1], tokens[2], amount)
+	return cardCountAmountSyntax(tokens[1], tokens[2], atoms, amount)
 }
 
-func exactTargetCardCountPlayerSyntax(tokens []shared.Token, verb string, amount compiler.CompiledAmount) bool {
+func exactTargetCardCountPlayerSyntax(tokens []shared.Token, atoms parser.Atoms, verb string, amount compiler.CompiledAmount) bool {
 	if len(tokens) != 6 ||
 		!equalTokenWord(tokens[0], "target") ||
 		!equalTokenWord(tokens[1], "player") ||
@@ -9196,12 +8677,12 @@ func exactTargetCardCountPlayerSyntax(tokens []shared.Token, verb string, amount
 		tokens[5].Kind != shared.Period {
 		return false
 	}
-	return cardCountAmountSyntax(tokens[3], tokens[4], amount)
+	return cardCountAmountSyntax(tokens[3], tokens[4], atoms, amount)
 }
 
-func cardCountAmountSyntax(amountToken, cardToken shared.Token, amount compiler.CompiledAmount) bool {
+func cardCountAmountSyntax(amountToken, cardToken shared.Token, atoms parser.Atoms, amount compiler.CompiledAmount) bool {
 	if amount.Known {
-		return fixedCardCountSyntax(amountToken, cardToken, amount.Value)
+		return fixedCardCountSyntax(amountToken, cardToken, atoms, amount.Value)
 	}
 	return equalTokenWord(amountToken, "X") &&
 		strings.EqualFold(cardToken.Text, "cards")
@@ -9255,11 +8736,11 @@ func exactEventPlayerCardCountSyntax(text, verb string, amount compiler.Compiled
 	return text == fmt.Sprintf("They %s %d cards.", verb, amount.Value)
 }
 
-func exactControllerAmountSyntax(tokens []shared.Token, text, verb string, amount compiler.CompiledAmount) bool {
+func exactControllerAmountSyntax(tokens []shared.Token, atoms parser.Atoms, text, verb string, amount compiler.CompiledAmount) bool {
 	if amount.Known {
 		return len(tokens) == 3 &&
 			equalTokenWord(tokens[0], verb) &&
-			fixedNumberToken(tokens[1], amount.Value) &&
+			fixedNumberSyntax(tokens[1], atoms, amount.Value) &&
 			tokens[2].Kind == shared.Period
 	}
 	if amount.DynamicKind == compiler.DynamicAmountNone {
@@ -9278,19 +8759,12 @@ func exactControllerAmountSyntax(tokens []shared.Token, text, verb string, amoun
 	}
 }
 
-func fixedNumberToken(token shared.Token, amount int) bool {
-	switch strings.ToLower(token.Text) {
-	case "one":
-		return amount == 1
-	case "two":
-		return amount == 2
-	case "three":
-		return amount == 3
-	case "four":
-		return amount == 4
-	default:
-		return token.Kind == shared.Integer && token.Text == fmt.Sprint(amount)
+func fixedNumberSyntax(token shared.Token, atoms parser.Atoms, amount int) bool {
+	if token.Kind == shared.Integer {
+		return token.Text == fmt.Sprint(amount)
 	}
+	value, ok := atoms.CardinalAt(token.Span)
+	return ok && value == amount
 }
 
 func singleSelfReference(references []compiler.CompiledReference) bool {
@@ -9674,7 +9148,7 @@ func matchesExactSacrificeSyntax(
 			equalTokenWord(tokens[3], "one")) &&
 			equalTokenWord(tokens[4], singular)
 	}
-	return fixedNumberToken(tokens[3], effect.Amount.Value) &&
+	return fixedNumberSyntax(tokens[3], syntax.Atoms, effect.Amount.Value) &&
 		equalTokenWord(tokens[4], plural)
 }
 

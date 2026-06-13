@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // TriggerCardType identifies a literal card type in trigger syntax.
@@ -36,8 +37,8 @@ const (
 	TriggerColorGreen
 )
 
-// TriggerSubtype is a literal subtype in trigger syntax.
-type TriggerSubtype string
+// TriggerSubtype is a canonical subtype identity in trigger syntax.
+type TriggerSubtype = types.Sub
 
 // TriggerSupertype identifies a literal supertype in trigger syntax.
 type TriggerSupertype uint8
@@ -132,10 +133,12 @@ noun:
 			selection.RequiredTypesAny = []TriggerCardType{left, right}
 			return selection, true
 		}
-		if leftOK || rightOK || !looksLikeTriggerSubtype(words[0]) || !looksLikeTriggerSubtype(words[2]) {
+		leftSub, leftSubOK := recognizeSubtypePhrase(words[0])
+		rightSub, rightSubOK := recognizeSubtypePhrase(words[2])
+		if leftOK || rightOK || !leftSubOK || !rightSubOK {
 			return TriggerSelection{}, false
 		}
-		selection.SubtypesAny = []TriggerSubtype{TriggerSubtype(singularTriggerWord(words[0])), TriggerSubtype(singularTriggerWord(words[2]))}
+		selection.SubtypesAny = []TriggerSubtype{leftSub, rightSub}
 		return selection, true
 	}
 	var subtypeWords []string
@@ -156,10 +159,11 @@ noun:
 	}
 	if len(subtypeWords) > 0 {
 		subtype := strings.Join(subtypeWords, " ")
-		if !looksLikeTriggerSubtype(subtype) {
+		sub, ok := recognizeSubtypePhrase(subtype)
+		if !ok || !looksLikeTriggerSubtype(subtype) {
 			return TriggerSelection{}, false
 		}
-		selection.SubtypesAny = []TriggerSubtype{TriggerSubtype(singularTriggerWord(subtype))}
+		selection.SubtypesAny = []TriggerSubtype{sub}
 	}
 	return selection, true
 }
@@ -182,16 +186,16 @@ func cutTriggerController(words []string) ([]string, TriggerController) {
 }
 
 func triggerColor(word string) TriggerColor {
-	switch word {
-	case "white":
+	switch value, _ := recognizeColorWord(word); value {
+	case ColorWhite:
 		return TriggerColorWhite
-	case "blue":
+	case ColorBlue:
 		return TriggerColorBlue
-	case "black":
+	case ColorBlack:
 		return TriggerColorBlack
-	case "red":
+	case ColorRed:
 		return TriggerColorRed
-	case "green":
+	case ColorGreen:
 		return TriggerColorGreen
 	default:
 		return TriggerColorUnknown

@@ -96,6 +96,7 @@ func checkParser(text corpuscheck.Text) []corpuscheck.Issue {
 		InstantOrSorcery: hasCardType(text.TypeLine, "Instant") || hasCardType(text.TypeLine, "Sorcery"),
 		Planeswalker:     hasCardType(text.TypeLine, "Planeswalker"),
 		Saga:             hasSubtype(text.TypeLine, "Saga"),
+		CardName:         text.FaceName,
 	})
 	issues := make([]corpuscheck.Issue, 0, len(diagnostics))
 	for _, diagnostic := range diagnostics {

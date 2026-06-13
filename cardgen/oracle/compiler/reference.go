@@ -1,10 +1,6 @@
 package compiler
 
-import (
-	"strings"
-
-	"github.com/natefinch/council4/cardgen/oracle/shared"
-)
+import "github.com/natefinch/council4/cardgen/oracle/shared"
 
 // bindReferences assigns each recognized reference phrase one conservative
 // referent. It never guesses between multiple target occurrences or an
@@ -79,9 +75,9 @@ func bindReferences(
 			reference.Kind == ReferencePronoun &&
 			reference.Span.Start.Offset >= trigger.Span.Start.Offset &&
 			triggerEventBindsPlayer(trigger.Pattern.Event) &&
-			(strings.EqualFold(reference.Text, "they") ||
-				strings.EqualFold(reference.Text, "their") ||
-				strings.EqualFold(reference.Text, "them")) {
+			(reference.Pronoun == ReferencePronounThey ||
+				reference.Pronoun == ReferencePronounTheir ||
+				reference.Pronoun == ReferencePronounThem) {
 			reference.Binding = ReferenceBindingEventPlayer
 			continue
 		}
@@ -103,7 +99,7 @@ func bindActivationCostReferences(kind AbilityKind, cost *CompiledCost, referenc
 	for i := range bound {
 		reference := &bound[i]
 		if reference.Kind == ReferencePronoun &&
-			strings.EqualFold(reference.Text, "it") &&
+			reference.Pronoun == ReferencePronounIt &&
 			spanContains(cost.Span, reference.Span) {
 			if activationCostPronounBindsSource(cost, reference.Span) {
 				reference.Binding = ReferenceBindingSource

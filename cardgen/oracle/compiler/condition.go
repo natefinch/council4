@@ -4,13 +4,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // recognizeCondition assigns closed semantic data to an exact condition
 // phrase. Unrecognized wording remains explicitly unsupported.
-func recognizeCondition(condition *CompiledCondition) {
+func recognizeCondition(condition *CompiledCondition, phrase []shared.Token, atoms parser.Atoms) {
 	condition.Predicate = ConditionPredicateUnsupported
 	remainder, ok := conditionRemainder(condition.Kind, condition.Text)
 	if !ok {
@@ -20,6 +22,9 @@ func recognizeCondition(condition *CompiledCondition) {
 	normalized := strings.ToLower(remainder)
 	condition.Negated = condition.Kind == ConditionUnless
 	if recognizeTriggerCompositionCondition(condition, normalized) {
+		return
+	}
+	if recognizeCounterCondition(condition, normalized, phrase, atoms) {
 		return
 	}
 
@@ -83,17 +88,8 @@ func recognizeCondition(condition *CompiledCondition) {
 		condition.Predicate = ConditionPredicateEventSubjectWasCast
 	case "you cast it":
 		condition.Predicate = ConditionPredicateEventSubjectWasCastByController
-	case "it had no +1/+1 counters", "it had no +1/+1 counters on it":
-		condition.Predicate = ConditionPredicateEventSubjectHadNoCounter
-		condition.Counter = ConditionCounterPlusOnePlusOne
-	case "it had no -1/-1 counters", "it had no -1/-1 counters on it":
-		condition.Predicate = ConditionPredicateEventSubjectHadNoCounter
-		condition.Counter = ConditionCounterMinusOneMinusOne
 	case "you don't":
 		condition.Predicate = ConditionPredicatePriorInstructionNotAccepted
-	case "one or more +1/+1 counters would be put on a creature you control":
-		condition.Predicate = ConditionPredicateCounterPlacementOnControlledCreature
-		condition.Counter = ConditionCounterPlusOnePlusOne
 	case "you would put one or more counters on a permanent or player":
 		condition.Predicate = ConditionPredicateControllerCounterPlacement
 	case "another red source you control would deal damage to a permanent or player":
@@ -127,15 +123,51 @@ func recognizeCondition(condition *CompiledCondition) {
 			condition.Threshold = threshold
 			return
 		}
-		if selection, ok := controllerControlsSelection(remainder); ok {
+		if selection, ok := controllerControlsSelection(remainder, phrase, atoms); ok {
 			condition.Predicate = ConditionPredicateControllerControls
 			condition.Selection = selection
 			return
 		}
-		if selection, ok := controlledLandSubtypeSelection(remainder); ok {
+		if selection, ok := controlledLandSubtypeSelection(remainder, phrase, atoms); ok {
 			condition.Predicate = ConditionPredicateControllerControls
 			condition.Selection = selection
 		}
+	}
+}
+
+func recognizeCounterCondition(condition *CompiledCondition, normalized string, phrase []shared.Token, atoms parser.Atoms) bool {
+	counterValue, ok := conditionCounterAtom(shared.SpanOf(phrase), atoms)
+	if !ok {
+		return false
+	}
+	switch {
+	case strings.HasPrefix(normalized, "it had no ") &&
+		(strings.HasSuffix(normalized, " counters") || strings.HasSuffix(normalized, " counters on it")):
+		condition.Predicate = ConditionPredicateEventSubjectHadNoCounter
+		condition.Counter = counterValue
+		return true
+	case strings.HasPrefix(normalized, "one or more ") &&
+		strings.HasSuffix(normalized, " counters would be put on a creature you control"):
+		condition.Predicate = ConditionPredicateCounterPlacementOnControlledCreature
+		condition.Counter = counterValue
+		return true
+	default:
+		return false
+	}
+}
+
+func conditionCounterAtom(span shared.Span, atoms parser.Atoms) (ConditionCounter, bool) {
+	kind, _, ok := atoms.CounterIn(span)
+	if !ok {
+		return ConditionCounterUnknown, false
+	}
+	switch kind {
+	case counter.PlusOnePlusOne:
+		return ConditionCounterPlusOnePlusOne, true
+	case counter.MinusOneMinusOne:
+		return ConditionCounterMinusOneMinusOne, true
+	default:
+		return ConditionCounterUnknown, false
 	}
 }
 
@@ -379,7 +411,7 @@ func controllerLifeThreshold(remainder string) (int, bool) {
 	return value, err == nil && value > 0
 }
 
-func controllerControlsSelection(remainder string) (ConditionSelection, bool) {
+func controllerControlsSelection(remainder string, phrase []shared.Token, atoms parser.Atoms) (ConditionSelection, bool) {
 	lowered := strings.ToLower(remainder)
 	prefixes := []struct {
 		text          string
@@ -394,7 +426,15 @@ func controllerControlsSelection(remainder string) (ConditionSelection, bool) {
 			continue
 		}
 		noun := remainder[len(prefix.text):]
-		selection, ok := conditionSelectionForNoun(noun)
+		if strings.Contains(strings.ToLower(noun), " or ") {
+			selection, ok := colorQualifiedConditionSelection(noun, phrase, atoms)
+			if !ok {
+				return ConditionSelection{}, false
+			}
+			selection.ExcludeSource = prefix.excludeSource
+			return selection, true
+		}
+		selection, ok := conditionSelectionForNoun(noun, phrase, atoms)
 		if !ok {
 			return ConditionSelection{}, false
 		}
@@ -404,7 +444,7 @@ func controllerControlsSelection(remainder string) (ConditionSelection, bool) {
 	return ConditionSelection{}, false
 }
 
-func controlledLandSubtypeSelection(remainder string) (ConditionSelection, bool) {
+func controlledLandSubtypeSelection(remainder string, phrase []shared.Token, atoms parser.Atoms) (ConditionSelection, bool) {
 	const prefix = "you control "
 	if len(remainder) < len(prefix) || !strings.EqualFold(remainder[:len(prefix)], prefix) {
 		return ConditionSelection{}, false
@@ -416,7 +456,11 @@ func controlledLandSubtypeSelection(remainder string) (ConditionSelection, bool)
 	selection := ConditionSelection{RequiredTypes: []ConditionCardType{ConditionCardTypeLand}}
 	for _, part := range parts {
 		name := strings.TrimPrefix(strings.TrimPrefix(part, "a "), "an ")
-		subtype, ok := canonicalConditionSubtype(name, types.Land)
+		span, ok := wordTokenSpan(phrase, name)
+		if !ok {
+			return ConditionSelection{}, false
+		}
+		subtype, ok := conditionSubtypeAtom(span, atoms, parser.CardTypeLand)
 		if !ok {
 			return ConditionSelection{}, false
 		}
@@ -425,41 +469,54 @@ func controlledLandSubtypeSelection(remainder string) (ConditionSelection, bool)
 	return selection, true
 }
 
-func conditionSelectionForNoun(noun string) (ConditionSelection, bool) {
+func conditionSelectionForNoun(noun string, phrase []shared.Token, atoms parser.Atoms) (ConditionSelection, bool) {
+	nounSpan, ok := phraseSuffixSpan(phrase, noun)
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	nounTokens := tokensInSpan(phrase, nounSpan)
 	switch strings.ToLower(noun) {
 	case "artifact":
-		return ConditionSelection{RequiredTypes: []ConditionCardType{ConditionCardTypeArtifact}}, true
+		return conditionSelectionForCardTypes(nounTokens, atoms, parser.CardTypeArtifact)
 	case "artifact creature":
-		return ConditionSelection{RequiredTypes: []ConditionCardType{ConditionCardTypeArtifact, ConditionCardTypeCreature}}, true
+		return conditionSelectionForCardTypes(nounTokens, atoms, parser.CardTypeArtifact, parser.CardTypeCreature)
 	case "battle":
-		return ConditionSelection{RequiredTypes: []ConditionCardType{ConditionCardTypeBattle}}, true
+		return conditionSelectionForCardTypes(nounTokens, atoms, parser.CardTypeBattle)
 	case "creature":
-		return ConditionSelection{RequiredTypes: []ConditionCardType{ConditionCardTypeCreature}}, true
+		return conditionSelectionForCardTypes(nounTokens, atoms, parser.CardTypeCreature)
 	case "enchantment":
-		return ConditionSelection{RequiredTypes: []ConditionCardType{ConditionCardTypeEnchantment}}, true
+		return conditionSelectionForCardTypes(nounTokens, atoms, parser.CardTypeEnchantment)
 	case "land":
-		return ConditionSelection{RequiredTypes: []ConditionCardType{ConditionCardTypeLand}}, true
+		return conditionSelectionForCardTypes(nounTokens, atoms, parser.CardTypeLand)
 	case "planeswalker":
-		return ConditionSelection{RequiredTypes: []ConditionCardType{ConditionCardTypePlaneswalker}}, true
+		return conditionSelectionForCardTypes(nounTokens, atoms, parser.CardTypePlaneswalker)
 	case "snow land":
+		if len(nounTokens) != 2 {
+			return ConditionSelection{}, false
+		}
+		supertype, superOK := atoms.SupertypeAt(nounTokens[0].Span)
+		cardType, typeOK := atoms.CardTypeAt(nounTokens[1].Span)
+		if !superOK || supertype != parser.SupertypeSnow || !typeOK || cardType != parser.CardTypeLand {
+			return ConditionSelection{}, false
+		}
 		return ConditionSelection{
 			RequiredTypes: []ConditionCardType{ConditionCardTypeLand},
 			Supertypes:    []ConditionSupertype{ConditionSupertypeSnow},
 		}, true
 	default:
 	}
-	if selection, ok := colorQualifiedConditionSelection(noun); ok {
+	if selection, ok := colorQualifiedConditionSelection(noun, phrase, atoms); ok {
 		return selection, true
 	}
-	for _, cardType := range []types.Card{types.Creature, types.Land} {
-		if subtype, ok := canonicalConditionSubtype(noun, cardType); ok {
-			return ConditionSelection{SubtypesAny: []string{subtype}}, true
-		}
+	if subtype, ok := conditionSubtypeAtom(nounSpan, atoms, parser.CardTypeCreature); ok {
+		return ConditionSelection{SubtypesAny: []string{subtype}}, true
 	}
-	const planeswalkerSuffix = " planeswalker"
-	if strings.HasSuffix(strings.ToLower(noun), planeswalkerSuffix) {
-		name := noun[:len(noun)-len(planeswalkerSuffix)]
-		if subtype, ok := canonicalConditionSubtype(name, types.Planeswalker); ok {
+	if subtype, ok := conditionSubtypeAtom(nounSpan, atoms, parser.CardTypeLand); ok {
+		return ConditionSelection{SubtypesAny: []string{subtype}}, true
+	}
+	if len(nounTokens) >= 2 && equalWord(nounTokens[len(nounTokens)-1], "planeswalker") {
+		nameSpan := shared.SpanOf(nounTokens[:len(nounTokens)-1])
+		if subtype, ok := conditionSubtypeAtom(nameSpan, atoms, parser.CardTypePlaneswalker); ok {
 			return ConditionSelection{
 				RequiredTypes: []ConditionCardType{ConditionCardTypePlaneswalker},
 				SubtypesAny:   []string{subtype},
@@ -469,7 +526,82 @@ func conditionSelectionForNoun(noun string) (ConditionSelection, bool) {
 	return ConditionSelection{}, false
 }
 
-func colorQualifiedConditionSelection(noun string) (ConditionSelection, bool) {
+func conditionSelectionForCardTypes(tokens []shared.Token, atoms parser.Atoms, cardTypes ...parser.CardType) (ConditionSelection, bool) {
+	if len(tokens) != len(cardTypes) {
+		return ConditionSelection{}, false
+	}
+	selection := ConditionSelection{RequiredTypes: make([]ConditionCardType, 0, len(cardTypes))}
+	for i, want := range cardTypes {
+		cardType, ok := atoms.CardTypeAt(tokens[i].Span)
+		if !ok || cardType != want {
+			return ConditionSelection{}, false
+		}
+		compiled, ok := conditionCardType(cardType)
+		if !ok {
+			return ConditionSelection{}, false
+		}
+		selection.RequiredTypes = append(selection.RequiredTypes, compiled)
+	}
+	return selection, true
+}
+
+func conditionCardType(cardType parser.CardType) (ConditionCardType, bool) {
+	switch cardType {
+	case parser.CardTypeArtifact:
+		return ConditionCardTypeArtifact, true
+	case parser.CardTypeBattle:
+		return ConditionCardTypeBattle, true
+	case parser.CardTypeCreature:
+		return ConditionCardTypeCreature, true
+	case parser.CardTypeEnchantment:
+		return ConditionCardTypeEnchantment, true
+	case parser.CardTypeLand:
+		return ConditionCardTypeLand, true
+	case parser.CardTypePlaneswalker:
+		return ConditionCardTypePlaneswalker, true
+	default:
+		return ConditionCardTypeUnknown, false
+	}
+}
+
+func conditionSupertype(supertype parser.Supertype) (ConditionSupertype, bool) {
+	switch supertype {
+	case parser.SupertypeSnow:
+		return ConditionSupertypeSnow, true
+	default:
+		return ConditionSupertypeUnknown, false
+	}
+}
+
+func conditionColor(color parser.Color) (ConditionColor, bool) {
+	switch color {
+	case parser.ColorWhite:
+		return ConditionColorWhite, true
+	case parser.ColorBlue:
+		return ConditionColorBlue, true
+	case parser.ColorBlack:
+		return ConditionColorBlack, true
+	case parser.ColorRed:
+		return ConditionColorRed, true
+	case parser.ColorGreen:
+		return ConditionColorGreen, true
+	default:
+		return ConditionColorUnknown, false
+	}
+}
+
+func conditionSubtypeAtom(span shared.Span, atoms parser.Atoms, cardType parser.CardType) (string, bool) {
+	sub, ok := atoms.SubtypeAt(span)
+	if !ok {
+		return "", false
+	}
+	if !parser.SubtypeMatchesCardType(sub, cardType) {
+		return "", false
+	}
+	return string(sub), true
+}
+
+func colorQualifiedConditionSelection(noun string, phrase []shared.Token, atoms parser.Atoms) (ConditionSelection, bool) {
 	lowered := strings.ToLower(noun)
 	var selection ConditionSelection
 	colorsText := ""
@@ -487,7 +619,7 @@ func colorQualifiedConditionSelection(noun string) (ConditionSelection, bool) {
 		return selection, true
 	}
 	for part := range strings.SplitSeq(colorsText, " or ") {
-		color, ok := conditionColor(part)
+		color, ok := conditionColorAtom(phrase, atoms, part)
 		if !ok {
 			return ConditionSelection{}, false
 		}
@@ -496,33 +628,63 @@ func colorQualifiedConditionSelection(noun string) (ConditionSelection, bool) {
 	return selection, len(selection.ColorsAny) > 0
 }
 
-func conditionColor(word string) (ConditionColor, bool) {
-	switch word {
-	case "white":
+// conditionColorAtom resolves a color word to its condition color identity using
+// the parser-emitted color atom that spans the matching token, rather than
+// re-recognizing the color from spelling.
+func conditionColorAtom(phrase []shared.Token, atoms parser.Atoms, word string) (ConditionColor, bool) {
+	span, ok := wordTokenSpan(phrase, word)
+	if !ok {
+		return ConditionColorUnknown, false
+	}
+	color, ok := atoms.ColorAt(span)
+	if !ok {
+		return ConditionColorUnknown, false
+	}
+	switch color {
+	case parser.ColorWhite:
 		return ConditionColorWhite, true
-	case "blue":
+	case parser.ColorBlue:
 		return ConditionColorBlue, true
-	case "black":
+	case parser.ColorBlack:
 		return ConditionColorBlack, true
-	case "red":
+	case parser.ColorRed:
 		return ConditionColorRed, true
-	case "green":
+	case parser.ColorGreen:
 		return ConditionColorGreen, true
 	default:
 		return ConditionColorUnknown, false
 	}
 }
 
-func canonicalConditionSubtype(name string, cardType types.Card) (string, bool) {
-	candidates := []string{name}
-	if name != "" {
-		candidates = append(candidates, strings.ToUpper(name[:1])+strings.ToLower(name[1:]))
-	}
-	for _, candidate := range candidates {
-		subtype := types.Sub(candidate)
-		if types.KnownSubtypeForType(cardType, subtype) {
-			return string(subtype), true
+// wordTokenSpan returns the span of the first word token in phrase whose text
+// equals word (case-insensitively). The condition grammar identifies which word
+// fills an atom slot; the span links that slot to its parser-emitted atom.
+func wordTokenSpan(phrase []shared.Token, word string) (shared.Span, bool) {
+	word = strings.TrimSpace(word)
+	for _, token := range phrase {
+		if token.Kind == shared.Word && strings.EqualFold(token.Text, word) {
+			return token.Span, true
 		}
 	}
-	return "", false
+	return shared.Span{}, false
+}
+
+func phraseSuffixSpan(phrase []shared.Token, text string) (shared.Span, bool) {
+	want := strings.ToLower(strings.TrimSpace(text))
+	for start := range phrase {
+		if strings.EqualFold(joinedSourceText(phrase[start:]), want) {
+			return shared.SpanOf(phrase[start:]), true
+		}
+	}
+	return shared.Span{}, false
+}
+
+func tokensInSpan(tokens []shared.Token, span shared.Span) []shared.Token {
+	var result []shared.Token
+	for _, token := range tokens {
+		if token.Span.Start.Offset >= span.Start.Offset && token.Span.End.Offset <= span.End.Offset {
+			result = append(result, token)
+		}
+	}
+	return result
 }

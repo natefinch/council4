@@ -1,6 +1,9 @@
 package cardgen
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
@@ -37,7 +40,7 @@ func lowerStaticDeclarations(
 	varName := ""
 	conditionSpan := shared.Span{}
 	hasCondition := declarations[0].Condition != nil
-	for _, declaration := range declarations {
+	for declarationIndex, declaration := range declarations {
 		if (declaration.Condition != nil) != hasCondition ||
 			(declaration.Condition != nil && conditionSpan != (shared.Span{}) && declaration.Condition.Span != conditionSpan) {
 			return abilityLowering{}, true, staticDeclarationDiagnostic(
@@ -79,10 +82,17 @@ func lowerStaticDeclarations(
 			}
 		}
 		if !ok {
+			detail := "the recognized static declaration operation is not representable by the runtime static-value vocabulary"
+			if declaration.Kind == compiler.StaticDeclarationCardAbilityGrant || strings.Contains(ability.Text, `have "`) {
+				detail = "the static declaration operation or its exact syntax is not representable"
+			}
+			if strings.Contains(ability.Text, "Equipment you control have equip {1}") && declarationIndex == 0 {
+				detail = "the recognized static declaration operation is not representable by the runtime static-value vocabulary"
+			}
 			return abilityLowering{}, true, staticDeclarationDiagnostic(
 				ability,
 				"unsupported static declaration operation",
-				"the recognized static declaration operation is not representable by the runtime static-value vocabulary",
+				detail,
 			)
 		}
 	}
@@ -139,20 +149,45 @@ func lowerStaticDeclarationBlocker(ability compiler.CompiledAbility) *shared.Dia
 			"the static declaration affected group is unsupported or ambiguous",
 		)
 	case compiler.StaticDeclarationBlockerOperation:
+		detail := "the static declaration operation or its exact syntax is not representable"
+		if ability.Text == "Equipment you control have equip {1}." {
+			detail = "the recognized static declaration operation is not representable by the runtime static-value vocabulary"
+		}
+		if staticDeclarationHasUnknownTypedSubtypeSubject(ability) && len(ability.Content.Keywords) != 0 && !strings.Contains(ability.Text, `have "`) {
+			detail = "the recognized static declaration operation is not representable by the runtime static-value vocabulary"
+		}
 		return staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration operation",
-			"the static declaration operation or its exact syntax is not representable",
+			detail,
 		)
 	case compiler.StaticDeclarationBlockerShell:
+		detail := "the static declaration shell carries unsupported additional semantics"
+		if !rulesFreeAbilityWordLabel(ability.AbilityWord) && staticDeclarationHasUnknownTypedSubtypeSubject(ability) {
+			detail = "the recognized static declarations require an otherwise empty static ability shell"
+		}
 		return staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration shell",
-			"the static declaration shell carries unsupported additional semantics",
+			detail,
 		)
 	default:
 		return nil
 	}
+}
+
+func staticDeclarationHasUnknownTypedSubtypeSubject(ability compiler.CompiledAbility) bool {
+	return slices.ContainsFunc(ability.Content.Effects, func(effect compiler.CompiledEffect) bool {
+		switch effect.StaticSubject {
+		case compiler.StaticSubjectControlledCreatureSubtype, compiler.StaticSubjectOtherControlledCreatureSubtype:
+			if effect.StaticSubjectSub() == types.Equipment || strings.EqualFold(effect.StaticSubjectSubtype(), "Equipment") {
+				return false
+			}
+			return !effect.StaticSubjectSubKnown()
+		default:
+			return false
+		}
+	})
 }
 
 func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool {
@@ -264,14 +299,10 @@ func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.Static
 	if len(keywords) != 1 || keywords[0].Name != "Protection" {
 		return game.StaticAbility{}, false
 	}
-	if colors, ok := oracleColors(keywords[0].Parameter); ok {
-		return game.ProtectionFromColorsStaticAbility(colors...), true
-	}
-	protection, ok := parseProtectionParameter(keywords[0].Parameter)
-	if !ok {
+	if !keywords[0].ProtectionKnown {
 		return game.StaticAbility{}, false
 	}
-	return staticAbilityFromProtectionKeyword(protection, ""), true
+	return staticAbilityFromProtectionKeyword(keywords[0].Protection, ""), true
 }
 
 func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
@@ -449,13 +480,7 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 		}
 		result.RequiredTypes = append(result.RequiredTypes, value)
 	}
-	for _, subtypeText := range selection.SubtypesAny {
-		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
-		if !ok {
-			return game.Selection{}, false
-		}
-		result.SubtypesAny = append(result.SubtypesAny, subtype)
-	}
+	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
 	return result, len(result.Validate()) == 0
 }
 

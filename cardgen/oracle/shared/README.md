@@ -11,7 +11,8 @@ pipeline stages:
 The package contains no Oracle words, grammatical recognition, semantic
 recognition, stage dispatch, parser context, or compiler context. It is
 transitional: when a helper no longer has multiple stage consumers, move it to
-the stage that owns it rather than growing `shared`.
+the stage that owns it rather than growing `shared`. Source-spanned typed Oracle
+atoms and their vocabulary belong to `parser`, not here.
 
 Dependency direction starts here:
 
