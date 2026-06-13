@@ -11,7 +11,6 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -22,7 +21,7 @@ func Compile(document parser.Document, context Context) (Compilation, []shared.D
 	compilation := Compilation{Syntax: document}
 	var diagnostics []shared.Diagnostic
 	for _, ability := range document.Abilities {
-		compiled, abilityDiagnostics := compileAbility(document.Source, ability, context)
+		compiled, abilityDiagnostics := compileAbility(ability, context)
 		compilation.Abilities = append(compilation.Abilities, compiled)
 		diagnostics = append(diagnostics, abilityDiagnostics...)
 	}
@@ -30,7 +29,6 @@ func Compile(document parser.Document, context Context) (Compilation, []shared.D
 }
 
 func compileAbility(
-	source string,
 	ability parser.Ability,
 	context Context,
 ) (CompiledAbility, []shared.Diagnostic) {
@@ -56,7 +54,7 @@ func compileAbility(
 	}
 	if ability.Modal != nil {
 		for _, mode := range ability.Modal.Options {
-			compiledMode, modeDiagnostics := compileMode(source, mode, context)
+			compiledMode, modeDiagnostics := compileMode(mode, context)
 			compiled.Content.Modes = append(compiled.Content.Modes, compiledMode)
 			diagnostics = append(diagnostics, modeDiagnostics...)
 		}
@@ -78,11 +76,12 @@ func compileAbility(
 		compiled.OptionalSpan = shared.Span{Start: tokens[0].Span.Start, End: tokens[1].Span.End}
 	}
 	if kind == AbilityStatic && staticRuleSentencesOnly(ability.Sentences) {
-		compiled.Content.Effects = compileEffects(ability.Sentences, nil, nil, ability.Atoms)
+		compiled.Content.Effects = compileEffects(ability.Sentences)
+		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 		compiled.Content.References = compileStaticRuleReferences(ability.Sentences)
 	} else {
 		compiled.Content.Keywords = compileKeywords(tokens, ability.Atoms)
-		compiled.Content.Targets = compileTargets(tokens, ability.Atoms)
+		compiled.Content.Targets = compileTypedTargets(ability.Sentences)
 		conditionTokens := tokens
 		if kind == AbilityTriggered {
 			conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
@@ -93,12 +92,8 @@ func compileAbility(
 				return strings.EqualFold(condition.Text, "if able")
 			})
 		}
-		compiled.Content.Effects = compileEffects(
-			parser.ParseSentences(source, body),
-			ability.Reminders,
-			ability.Quoted,
-			ability.Atoms,
-		)
+		compiled.Content.Effects = compileEffects(ability.Sentences)
+		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 		referenceTokens := semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 		if timing != ActivationTimingNone {
 			referenceTokens = tokensOutsideSpan(referenceTokens, timingSpan)
@@ -116,6 +111,7 @@ func compileAbility(
 	}
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)
+	applyEffectReferenceBindings(compiled.Content.Effects, compiled.Content.References)
 	recognizeActivationZone(&compiled)
 	if compiled.Trigger != nil && compiled.Trigger.Condition != nil {
 		for i := range compiled.Content.Conditions {
@@ -125,6 +121,7 @@ func compileAbility(
 				compiled.Trigger.Pattern.InterveningCondition = &condition
 				break
 			}
+
 		}
 	}
 	recognizeStaticDeclarations(&compiled, ability)
@@ -136,6 +133,7 @@ func compileAbility(
 	}
 	if kind != AbilityReminder && ability.Modal == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
+		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {
 		diagnostics = append(diagnostics, unsupportedDiagnostic(ability.Span, ability.Text))
 	}
@@ -161,6 +159,30 @@ func compileAbility(
 		}
 	}
 	return compiled, diagnostics
+}
+
+func legacyEffectsPresent(sentences []parser.Sentence) bool {
+	return slices.ContainsFunc(sentences, func(sentence parser.Sentence) bool {
+		return sentence.LegacyEffects
+	})
+}
+
+func applyEffectReferenceBindings(effects []CompiledEffect, references []CompiledReference) {
+	for effectIndex := range effects {
+		applyReferenceBindings(effects[effectIndex].References, references)
+		applyReferenceBindings(effects[effectIndex].SubjectReferences, references)
+	}
+}
+
+func applyReferenceBindings(ownedReferences, references []CompiledReference) {
+	for referenceIndex, owned := range ownedReferences {
+		for _, reference := range references {
+			if reference.Span == owned.Span {
+				ownedReferences[referenceIndex] = reference
+				break
+			}
+		}
+	}
 }
 
 func compileAbilityKind(kind parser.AbilityKind) AbilityKind {
@@ -266,7 +288,8 @@ func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
 }
 
 func contentReturnsSourceFromGraveyard(content AbilityContent) bool {
-	for effectIndex, effect := range content.Effects {
+	for effectIndex := range content.Effects {
+		effect := &content.Effects[effectIndex]
 		if effect.Kind != EffectReturn || effect.FromZone != zone.Graveyard {
 			continue
 		}
@@ -311,37 +334,26 @@ func tokensOutsideSpan(tokens []shared.Token, span shared.Span) []shared.Token {
 }
 
 func compileMode(
-	source string,
 	mode parser.Mode,
 	context Context,
 ) (CompiledMode, []shared.Diagnostic) {
 	tokens := semanticTokens(mode.Tokens, mode.Reminders, mode.Quoted)
+	targets := compileTypedTargets(mode.Sentences)
+	effects := compileEffects(mode.Sentences)
+	references := bindReferences(compileReferences(tokens, mode.Atoms), targets, effects, nil)
+	applyEffectReferenceBindings(effects, references)
 	compiled := CompiledMode{
 		Span: mode.Span,
 		Text: mode.Text,
 		Content: AbilityContent{
-			Targets:    compileTargets(tokens, mode.Atoms),
+			Targets:    targets,
 			Conditions: compileConditions(tokens, false, mode.Atoms),
-			Effects: compileEffects(
-				parser.ParseSentences(source, mode.Tokens),
-				mode.Reminders,
-				mode.Quoted,
-				mode.Atoms,
-			),
-			Keywords: compileKeywords(tokens, mode.Atoms),
-			References: bindReferences(
-				compileReferences(tokens, mode.Atoms),
-				compileTargets(tokens, mode.Atoms),
-				compileEffects(
-					parser.ParseSentences(source, mode.Tokens),
-					mode.Reminders,
-					mode.Quoted,
-					mode.Atoms,
-				),
-				nil,
-			),
+			Effects:    effects,
+			Keywords:   compileKeywords(tokens, mode.Atoms),
+			References: references,
 		},
 	}
+	applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 	// Set Content.Span to the mode's full source span: a modal option has no
 	// shell cost or trigger, so the mode body IS the content.
 	compiled.Content.Span = mode.Span
@@ -1009,170 +1021,6 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 	return trigger
 }
 
-func compileTargets(tokens []shared.Token, atoms parser.Atoms) []CompiledTarget {
-	var targets []CompiledTarget
-	for i, token := range tokens {
-		if token.Kind != shared.Word || !strings.EqualFold(token.Text, "target") {
-			continue
-		}
-		start := i
-		cardinality := TargetCardinality{Min: 1, Max: 1}
-		switch {
-		case i >= 3 && equalWord(tokens[i-3], "any") && equalWord(tokens[i-2], "number") && equalWord(tokens[i-1], "of"):
-			start = i - 3
-			cardinality.Min = 0
-			cardinality.Max = 99
-		case i >= 3 && equalWord(tokens[i-3], "up") && equalWord(tokens[i-2], "to"):
-			start = i - 3
-			cardinality.Min = 0
-			cardinality.Max = numberWord(tokens[i-1], atoms)
-			if cardinality.Max == 0 {
-				cardinality.Max = 1
-			}
-		case i >= 1:
-			if count := numberWord(tokens[i-1], atoms); count > 0 {
-				start = i - 1
-				cardinality.Min = count
-				cardinality.Max = count
-			} else if equalWord(tokens[i-1], "any") {
-				start = i - 1
-			}
-		default:
-		}
-		end := targetPhraseEnd(tokens, i+1)
-		phraseTokens := tokens[start:end]
-		selectorTokens := append([]shared.Token(nil), tokens[start:i]...)
-		selectorTokens = append(selectorTokens, tokens[i+1:end]...)
-		targets = append(targets, CompiledTarget{
-			Span:        shared.SpanOf(phraseTokens),
-			Text:        joinedSourceText(phraseTokens),
-			Cardinality: cardinality,
-			Selector:    compileSelector(selectorTokens, atoms),
-		})
-	}
-	return targets
-}
-
-func targetPhraseEnd(tokens []shared.Token, start int) int {
-	const spellOrAbility = "spell, activated ability, or triggered ability"
-	for end := start + 1; end <= len(tokens); end++ {
-		if joinedSourceText(tokens[start:end]) == spellOrAbility {
-			return end
-		}
-	}
-	end := start
-	for end < len(tokens) {
-		token := tokens[end]
-		if token.Kind == shared.Comma || token.Kind == shared.Period || token.Kind == shared.Semicolon ||
-			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && isEffectVerb(tokens[end+2])) ||
-			(equalWord(token, "and") && end+1 < len(tokens) && isEffectVerb(tokens[end+1])) ||
-			(end > start && isEffectVerb(token)) ||
-			(equalWord(token, "until") && end+1 < len(tokens) && equalWord(tokens[end+1], "end")) ||
-			(equalWord(token, "until") && end+2 < len(tokens) && equalWord(tokens[end+1], "your") && equalWord(tokens[end+2], "next")) ||
-			// "for as long as" marks a source-tied duration, not part of the target.
-			(equalWord(token, "for") && end+3 < len(tokens) &&
-				equalWord(tokens[end+1], "as") && equalWord(tokens[end+2], "long") && equalWord(tokens[end+3], "as")) ||
-			// "as long as this" marks a source-on-battlefield duration.
-			(equalWord(token, "as") && end+3 < len(tokens) &&
-				equalWord(tokens[end+1], "long") && equalWord(tokens[end+2], "as") && equalWord(tokens[end+3], "this")) {
-			break
-		}
-		end++
-	}
-	return end
-}
-
-func compileSelector(tokens []shared.Token, atoms parser.Atoms) CompiledSelector {
-	selector := CompiledSelector{Raw: joinedSourceText(tokens)}
-	span := shared.SpanOf(tokens)
-	if selector.Raw == "activated ability" {
-		selector.Kind = SelectorActivatedAbility
-		return selector
-	}
-	if selector.Raw == "triggered ability" {
-		selector.Kind = SelectorTriggeredAbility
-		return selector
-	}
-	if selector.Raw == "activated or triggered ability" {
-		selector.Kind = SelectorActivatedOrTriggeredAbility
-		return selector
-	}
-	if selector.Raw == "spell, activated ability, or triggered ability" {
-		selector.Kind = SelectorSpellActivatedOrTriggeredAbility
-		return selector
-	}
-	for _, token := range tokens {
-		noun, ok := atoms.ObjectNounAt(token.Span)
-		if !ok {
-			continue
-		}
-		if kind := selectorKindFromAtom(noun); kind != SelectorUnknown && selector.Kind == SelectorUnknown {
-			selector.Kind = kind
-		}
-	}
-	var requiredTypes []types.Card
-	for _, token := range tokens {
-		_, excludedCardType := atoms.ExcludedCardTypeAt(token.Span)
-		if cardType, ok := atoms.CardTypeAt(token.Span); ok && !excludedCardType {
-			if runtimeType, typeOK := runtimeCardTypeFromParser(cardType); typeOK && !slices.Contains(requiredTypes, runtimeType) {
-				requiredTypes = append(requiredTypes, runtimeType)
-			}
-			if cardType == parser.CardTypeBattle && selector.Kind == SelectorUnknown {
-				selector.Kind = SelectorBattle
-			}
-		}
-		if cardType, ok := atoms.ExcludedCardTypeAt(token.Span); ok {
-			if runtimeType, typeOK := runtimeCardTypeFromParser(cardType); typeOK && !slices.Contains(selector.ExcludedTypes(), runtimeType) {
-				appendSelectorExcludedType(&selector, runtimeType)
-			}
-		}
-		if colorValue, ok := atoms.ColorAt(token.Span); ok {
-			if runtimeColor, colorOK := runtimeColorFromParser(colorValue); colorOK && !slices.Contains(selector.ColorsAny(), runtimeColor) {
-				appendSelectorColorAny(&selector, runtimeColor)
-			}
-		}
-		if colorValue, ok := atoms.ExcludedColorAt(token.Span); ok {
-			if runtimeColor, colorOK := runtimeColorFromParser(colorValue); colorOK && !slices.Contains(selector.ExcludedColors(), runtimeColor) {
-				appendSelectorExcludedColor(&selector, runtimeColor)
-			}
-		}
-	}
-	if len(requiredTypes) > 1 {
-		setSelectorRequiredTypesAny(&selector, requiredTypes)
-	}
-	if shared.ContainsWord(shared.NormalizedWords(tokens), "any") && selector.Kind == SelectorUnknown {
-		selector.Kind = SelectorAny
-	}
-	appendSelectorSubtypesAny(&selector, atoms.SubtypesIn(span)...)
-	if relation, ok := atoms.ControllerIn(span); ok {
-		switch relation {
-		case parser.ControllerRelationYouDontControl:
-			selector.Controller = ControllerNotYou
-		case parser.ControllerRelationYouControl:
-			selector.Controller = ControllerYou
-		case parser.ControllerRelationOpponentControls:
-			selector.Controller = ControllerOpponent
-		default:
-		}
-	}
-	if selector.Controller == ControllerAny {
-		for _, token := range tokens {
-			if noun, ok := atoms.ObjectNounAt(token.Span); ok && noun == parser.ObjectNounOpponent {
-				selector.Controller = ControllerOpponent
-			}
-		}
-	}
-	selector.Another = atoms.SelectionFlagIn(span, parser.SelectionFlagAnother)
-	selector.Other = atoms.SelectionFlagIn(span, parser.SelectionFlagOther)
-	selector.Attacking = atoms.SelectionFlagIn(span, parser.SelectionFlagAttacking)
-	selector.Blocking = atoms.SelectionFlagIn(span, parser.SelectionFlagBlocking)
-	selector.Tapped = atoms.SelectionFlagIn(span, parser.SelectionFlagTapped)
-	selector.Untapped = atoms.SelectionFlagIn(span, parser.SelectionFlagUntapped)
-	selector.Keyword = selectorKeyword(tokens, atoms)
-	compileSelectorNumberFilters(tokens, atoms, &selector)
-	return selector
-}
-
 func runtimeCardTypeFromParser(cardType parser.CardType) (types.Card, bool) {
 	switch cardType {
 	case parser.CardTypeArtifact:
@@ -1211,101 +1059,6 @@ func runtimeColorFromParser(colorValue parser.Color) (color.Color, bool) {
 	default:
 		return "", false
 	}
-}
-
-func compileSelectorNumberFilters(tokens []shared.Token, atoms parser.Atoms, selector *CompiledSelector) {
-	for i := range len(tokens) {
-		switch {
-		case i+2 < len(tokens) && equalWord(tokens[i], "mana") && equalWord(tokens[i+1], "value"):
-			if comparison, ok := selectorNumberComparison(tokens[i+2:], atoms); ok {
-				selector.ManaValue = comparison
-				selector.MatchManaValue = true
-			}
-		case equalWord(tokens[i], "power"):
-			if comparison, ok := selectorNumberComparison(tokens[i+1:], atoms); ok {
-				selector.Power = comparison
-				selector.MatchPower = true
-			}
-		case equalWord(tokens[i], "toughness"):
-			if comparison, ok := selectorNumberComparison(tokens[i+1:], atoms); ok {
-				selector.Toughness = comparison
-				selector.MatchToughness = true
-			}
-		default:
-		}
-	}
-}
-
-func selectorNumberComparison(tokens []shared.Token, atoms parser.Atoms) (compare.Int, bool) {
-	if len(tokens) == 0 {
-		return compare.Int{}, false
-	}
-	if value, ok := selectorNumberValue(tokens[0], atoms); ok {
-		if len(tokens) >= 3 && equalWord(tokens[1], "or") {
-			switch {
-			case equalWord(tokens[2], "less"):
-				return compare.Int{Op: compare.LessOrEqual, Value: value}, true
-			case equalWord(tokens[2], "greater"):
-				return compare.Int{Op: compare.GreaterOrEqual, Value: value}, true
-			default:
-				return compare.Int{}, false
-			}
-		}
-		return compare.Int{Op: compare.Equal, Value: value}, true
-	}
-	if len(tokens) >= 3 && equalWord(tokens[0], "equal") && equalWord(tokens[1], "to") {
-		if value, ok := selectorNumberValue(tokens[2], atoms); ok {
-			return compare.Int{Op: compare.Equal, Value: value}, true
-		}
-	}
-	return compare.Int{}, false
-}
-
-func selectorNumberValue(token shared.Token, atoms parser.Atoms) (int, bool) {
-	if token.Kind == shared.Integer {
-		value, err := strconv.Atoi(token.Text)
-		return value, err == nil
-	}
-	value, ok := atoms.CardinalAt(token.Span)
-	return value, ok
-}
-
-func selectorKindFromAtom(noun parser.ObjectNoun) SelectorKind {
-	switch noun {
-	case parser.ObjectNounArtifact:
-		return SelectorArtifact
-	case parser.ObjectNounCard:
-		return SelectorCard
-	case parser.ObjectNounCreature:
-		return SelectorCreature
-	case parser.ObjectNounEnchantment:
-		return SelectorEnchantment
-	case parser.ObjectNounLand:
-		return SelectorLand
-	case parser.ObjectNounOpponent:
-		return SelectorOpponent
-	case parser.ObjectNounPermanent:
-		return SelectorPermanent
-	case parser.ObjectNounPlaneswalker:
-		return SelectorPlaneswalker
-	case parser.ObjectNounPlayer:
-		return SelectorPlayer
-	case parser.ObjectNounSpell:
-		return SelectorSpell
-	default:
-		return SelectorUnknown
-	}
-}
-
-func selectorKeyword(tokens []shared.Token, atoms parser.Atoms) parser.KeywordKind {
-	span := shared.SpanOf(tokens)
-	selector, ok := atoms.KeywordSelectorIn(span, false)
-	if !ok ||
-		selector.Form == parser.KeywordSelectorFormUnknown ||
-		selector.Keyword != parser.KeywordCycling {
-		return parser.KeywordUnknown
-	}
-	return selector.Keyword
 }
 
 func compileConditions(tokens []shared.Token, triggered bool, atoms parser.Atoms) []CompiledCondition {
@@ -1361,11 +1114,7 @@ func conditionEnd(tokens []shared.Token, start int) int {
 	return len(tokens)
 }
 
-func compileEffects(
-	sentences []parser.Sentence,
-	reminders, quoted []parser.Delimited,
-	atoms parser.Atoms,
-) []CompiledEffect {
+func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 	var effects []CompiledEffect
 	for _, sentence := range sentences {
 		if sentence.StaticRule != nil {
@@ -1374,254 +1123,59 @@ func compileEffects(
 			}
 			continue
 		}
-		tokens := semanticTokens(sentence.Tokens, reminders, quoted)
-		duration := compileDuration(tokens, atoms)
-		staticSubject := compileStaticSubject(tokens, atoms)
-		effectIndices := effectTokenIndices(tokens, atoms)
-		for effectIndex, tokenIndex := range effectIndices {
-			token := tokens[tokenIndex]
-			kind := effectKindAt(tokens, tokenIndex)
-			clauseEnd := effectClauseEnd(tokens, effectIndices, effectIndex)
-			clauseTokens := tokens[tokenIndex+1 : clauseEnd]
-			clauseTokens, delayedTiming := stripDelayedTimingSuffix(clauseTokens)
-			powerDelta, toughnessDelta := compilePTChange(clauseTokens)
-			counterKind, counterKindKnown := counterKindWord(clauseTokens, atoms)
-			if !counterKindKnown && kind == EffectReturn {
-				counterKind, _, counterKindKnown = atoms.CounterIn(shared.SpanOf(clauseTokens))
-			}
+		for syntaxIndex := range sentence.Effects {
+			syntax := &sentence.Effects[syntaxIndex]
 			effects = append(effects, CompiledEffect{
-				Kind:              kind,
-				Span:              sentence.Span,
-				Text:              sentence.Text,
-				VerbSpan:          token.Span,
-				Duration:          duration,
-				DelayedTiming:     delayedTiming,
-				Selector:          compileSelector(clauseTokens, atoms),
-				Amount:            compileEffectAmount(clauseTokens, atoms),
-				PowerDelta:        powerDelta,
-				ToughnessDelta:    toughnessDelta,
-				StaticSubject:     staticSubject.kind,
-				StaticSubjectSpan: staticSubject.span,
-				Details:           compiledEffectDetails(staticSubjectType(staticSubject.subtype, staticSubject.sub, staticSubject.subKnown), firstSymbol(clauseTokens)),
-				CounterKind:       counterKind,
-				CounterKindKnown:  counterKindKnown,
-				FromZone:          compileFromZone(clauseTokens, atoms),
-				ToZone:            compileToZone(clauseTokens, atoms),
-				Negated:           effectNegated(tokens, tokenIndex),
+				Kind:               compileEffectKind(syntax.Kind),
+				Context:            syntax.Context,
+				Connection:         syntax.Connection,
+				ConnectionSpan:     syntax.ConnectionSpan,
+				Span:               syntax.Span,
+				ClauseSpan:         syntax.ClauseSpan,
+				Text:               syntax.Text,
+				VerbSpan:           syntax.VerbSpan,
+				References:         compileTypedReferences(syntax.References),
+				SubjectReferences:  compileTypedReferences(syntax.SubjectReferences),
+				Targets:            compileTypedTargetList(syntax.Targets),
+				SubjectTargets:     compileTypedTargetList(syntax.SubjectTargets),
+				Duration:           compileEffectDuration(syntax.Duration),
+				DelayedTiming:      compileDelayedTiming(syntax.DelayedTiming),
+				Selector:           compileTypedSelection(syntax.Selection),
+				Amount:             compileTypedAmount(syntax.Amount),
+				PowerDelta:         compileSignedAmount(syntax.PowerDelta),
+				ToughnessDelta:     compileSignedAmount(syntax.ToughnessDelta),
+				StaticSubject:      compileStaticSubjectKind(syntax.StaticSubject.Kind),
+				StaticSubjectSpan:  syntax.StaticSubject.Span,
+				Details:            compiledEffectDetails(staticSubjectType(syntax.StaticSubject.SubtypeText, syntax.StaticSubject.Subtype, syntax.StaticSubject.SubtypeKnown), syntax.Symbol),
+				CounterKind:        syntax.CounterKind,
+				CounterKindKnown:   syntax.CounterKnown,
+				FromZone:           syntax.FromZone,
+				ToZone:             syntax.ToZone,
+				Destination:        syntax.Destination,
+				EntersTapped:       syntax.EntersTapped,
+				EntersWithCounters: syntax.EntersWithCounters,
+				UnderYourControl:   syntax.UnderYourControl,
+				CastAsAdventure:    syntax.CastAsAdventure,
+				Negated:            syntax.Negated,
+				Optional:           syntax.Optional,
+				OptionalSpan:       syntax.OptionalSpan,
+				Mana: CompiledEffectMana{
+					Span:            syntax.Mana.Span,
+					Symbols:         slices.Clone(syntax.Mana.Symbols),
+					Choice:          syntax.Mana.Choice,
+					AnyColor:        syntax.Mana.AnyColor,
+					LegacyBodyExact: syntax.Mana.LegacyBodyExact,
+				},
+				Replacement:             syntax.Replacement,
+				Payment:                 compileEffectPayment(syntax.Payment),
+				Exact:                   syntax.Exact,
+				RequiresOrderedLowering: syntax.RequiresOrderedLowering,
+				HasUnrecognizedSibling:  syntax.HasUnrecognizedSibling,
+				UnsupportedDetail:       syntax.UnsupportedDetail,
 			})
 		}
-
 	}
 	return effects
-}
-
-func stripDelayedTimingSuffix(tokens []shared.Token) ([]shared.Token, game.DelayedTriggerTiming) {
-	end := len(tokens)
-	if end > 0 && tokens[end-1].Kind == shared.Period {
-		end--
-	}
-	suffixes := []struct {
-		timing game.DelayedTriggerTiming
-		text   []string
-	}{
-		{
-			timing: game.DelayedAtBeginningOfNextEndStep,
-			text:   []string{"at", "the", "beginning", "of", "the", "next", "end", "step"},
-		},
-		{
-			timing: game.DelayedAtBeginningOfNextUpkeep,
-			text:   []string{"at", "the", "beginning", "of", "the", "next", "turn's", "upkeep"},
-		},
-	}
-	for _, suffix := range suffixes {
-		start := end - len(suffix.text)
-		if start < 0 || !tokenTextsEqual(tokens[start:end], suffix.text) {
-			continue
-		}
-		stripped := make([]shared.Token, 0, len(tokens)-len(suffix.text))
-		stripped = append(stripped, tokens[:start]...)
-		stripped = append(stripped, tokens[end:]...)
-		return stripped, suffix.timing
-	}
-	return tokens, 0
-}
-
-func tokenTextsEqual(tokens []shared.Token, text []string) bool {
-	if len(tokens) != len(text) {
-		return false
-	}
-	for i := range tokens {
-		if !strings.EqualFold(tokens[i].Text, text[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func compileFromZone(tokens []shared.Token, atoms parser.Atoms) zone.Type {
-	for i := 0; i+2 < len(tokens); i++ {
-		if !equalWord(tokens[i], "from") || !legacyGraveyardZonePhrase(tokens[i+1:]) {
-			continue
-		}
-		if z, ok := atoms.ZoneIn(tokens[i].Span, parser.ZoneRoleFrom); ok {
-			return z
-		}
-	}
-	return zone.None
-}
-
-func compileToZone(tokens []shared.Token, atoms parser.Atoms) zone.Type {
-	for i := range len(tokens) {
-		switch {
-		case equalWord(tokens[i], "to") && i+2 < len(tokens) && legacyHandZonePhrase(tokens[i+1:]):
-			if z, ok := atoms.ZoneIn(tokens[i].Span, parser.ZoneRoleTo); ok {
-				return z
-			}
-		case equalWord(tokens[i], "to") && i+2 < len(tokens) && legacyBattlefieldZonePhrase(tokens[i+1:]):
-			if z, ok := atoms.ZoneIn(tokens[i].Span, parser.ZoneRoleTo); ok {
-				return z
-			}
-		case equalWord(tokens[i], "onto") && i+2 < len(tokens) && legacyBattlefieldZonePhrase(tokens[i+1:]):
-			if z, ok := atoms.ZoneIn(tokens[i].Span, parser.ZoneRoleTo); ok {
-				return z
-			}
-		case equalWord(tokens[i], "on") && i+4 < len(tokens) &&
-			(equalWord(tokens[i+1], "top") || equalWord(tokens[i+1], "bottom")) &&
-			equalWord(tokens[i+2], "of") &&
-			legacyLibraryZonePhrase(tokens[i+3:]):
-			if z, ok := atoms.ZoneIn(tokens[i].Span, parser.ZoneRoleTo); ok {
-				return z
-			}
-		case equalWord(tokens[i], "on") && i+5 < len(tokens) &&
-			equalWord(tokens[i+1], "the") &&
-			(equalWord(tokens[i+2], "top") || equalWord(tokens[i+2], "bottom")) &&
-			equalWord(tokens[i+3], "of") &&
-			legacyLibraryZonePhrase(tokens[i+4:]):
-			if z, ok := atoms.ZoneIn(tokens[i].Span, parser.ZoneRoleTo); ok {
-				return z
-			}
-		case equalWord(tokens[i], "into") && i+2 < len(tokens) && legacyLibraryZonePhrase(tokens[i+1:]):
-			if z, ok := atoms.ZoneIn(tokens[i].Span, parser.ZoneRoleTo); ok {
-				return z
-			}
-		default:
-		}
-	}
-	return zone.None
-}
-
-func legacyGraveyardZonePhrase(tokens []shared.Token) bool {
-	switch {
-	case len(tokens) >= 2 &&
-		(equalWord(tokens[0], "your") || equalWord(tokens[0], "a") || equalWord(tokens[0], "an")) &&
-		equalWord(tokens[1], "graveyard"):
-		return true
-	case len(tokens) >= 3 &&
-		equalWord(tokens[0], "an") &&
-		strings.EqualFold(tokens[1].Text, "opponent's") &&
-		equalWord(tokens[2], "graveyard"):
-		return true
-	default:
-		return false
-	}
-}
-
-func legacyHandZonePhrase(tokens []shared.Token) bool {
-	return len(tokens) >= 2 &&
-		(equalWord(tokens[0], "your") || equalWord(tokens[0], "their")) &&
-		equalWord(tokens[1], "hand")
-}
-
-func legacyBattlefieldZonePhrase(tokens []shared.Token) bool {
-	return len(tokens) >= 2 && equalWord(tokens[0], "the") && equalWord(tokens[1], "battlefield")
-}
-
-func legacyLibraryZonePhrase(tokens []shared.Token) bool {
-	return len(tokens) >= 2 && equalWord(tokens[0], "your") && equalWord(tokens[1], "library")
-}
-
-func counterKindWord(tokens []shared.Token, atoms parser.Atoms) (counter.Kind, bool) {
-	counterIndex := -1
-	for index, token := range tokens {
-		if equalWord(token, "counter") || equalWord(token, "counters") {
-			if counterIndex >= 0 {
-				return 0, false
-			}
-			counterIndex = index
-		}
-	}
-	if counterIndex <= 0 {
-		return 0, false
-	}
-	kind, nameSpan, ok := atoms.CounterIn(shared.SpanOf(tokens))
-	if !ok {
-		return 0, false
-	}
-	nameStart := counterIndex
-	for nameStart > 0 && tokens[nameStart-1].Span.Start.Offset >= nameSpan.Start.Offset {
-		nameStart--
-	}
-	amountTokens := tokens[:nameStart]
-	if len(amountTokens) > 0 && equalWord(amountTokens[0], "with") {
-		amountTokens = amountTokens[1:]
-	}
-	if len(amountTokens) != 1 {
-		return 0, false
-	}
-	amount := amountTokens[0]
-	switch {
-	case equalWord(amount, "a"), equalWord(amount, "an"), equalWord(amount, "x"):
-		return kind, CounterKindPlacementSupported(kind)
-	}
-	if value, ok := atoms.CardinalAt(amount.Span); ok && value <= 4 {
-		return kind, CounterKindPlacementSupported(kind)
-	}
-	if amount.Kind == shared.Integer {
-		if value, err := strconv.Atoi(amount.Text); err == nil && value > 0 {
-			return kind, CounterKindPlacementSupported(kind)
-		}
-	}
-	return 0, false
-}
-
-func effectTokenIndices(tokens []shared.Token, atoms parser.Atoms) []int {
-	var indices []int
-	for index := range tokens {
-		if effectKindAt(tokens, index) != EffectUnknown &&
-			!atoms.SelfNameAt(tokens[index].Span) {
-			indices = append(indices, index)
-		}
-	}
-	return indices
-}
-
-func effectClauseEnd(tokens []shared.Token, effectIndices []int, effectIndex int) int {
-	start := effectIndices[effectIndex] + 1
-	end := len(tokens)
-	for _, nextEffect := range effectIndices[effectIndex+1:] {
-		if coordination := effectCoordinationStart(tokens, start, nextEffect); coordination >= 0 {
-			end = coordination
-			break
-		}
-	}
-	for index := start; index < end; index++ {
-		if conditionKindAt(tokens, index) != ConditionUnknown {
-			return index
-		}
-	}
-	return end
-}
-
-func effectCoordinationStart(tokens []shared.Token, start, effectIndex int) int {
-	for index := effectIndex - 1; index >= start; index-- {
-		if tokens[index].Kind == shared.Comma || tokens[index].Kind == shared.Semicolon {
-			return -1
-		}
-		if equalWord(tokens[index], "then") || equalWord(tokens[index], "and") {
-			return index
-		}
-	}
-	return -1
 }
 
 func conditionKindAt(tokens []shared.Token, index int) ConditionKind {
@@ -1719,634 +1273,6 @@ func compileStaticRuleReferences(sentences []parser.Sentence) []CompiledReferenc
 	return references
 }
 
-type compiledStaticSubject struct {
-	kind     StaticSubjectKind
-	span     shared.Span
-	subtype  string
-	sub      types.Sub
-	subKnown bool
-}
-
-func compileStaticSubject(tokens []shared.Token, atoms parser.Atoms) compiledStaticSubject {
-	subtypeAt := func(index int) (types.Sub, bool) {
-		if index < len(tokens) {
-			if sub, ok := atoms.SubtypeAt(tokens[index].Span); ok {
-				if parser.SubtypeMatchesAnyRuntimeCardType(sub, []types.Card{types.Creature, types.Kindred}) {
-					return sub, true
-				}
-			}
-		}
-		return "", false
-	}
-	switch {
-	case len(tokens) >= 3 &&
-		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
-		equalWord(tokens[1], "creature") &&
-		(equalWord(tokens[2], "gets") || equalWord(tokens[2], "has")):
-		return compiledStaticSubject{kind: StaticSubjectAttachedObject, span: shared.SpanOf(tokens[:2])}
-	case len(tokens) >= 5 &&
-		equalWord(tokens[0], "other") &&
-		equalWord(tokens[1], "creatures") &&
-		equalWord(tokens[2], "you") &&
-		equalWord(tokens[3], "control") &&
-		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
-		return compiledStaticSubject{kind: StaticSubjectOtherControlledCreatures, span: shared.SpanOf(tokens[:4])}
-	case len(tokens) >= 4 &&
-		equalWord(tokens[0], "creatures") &&
-		equalWord(tokens[1], "you") &&
-		equalWord(tokens[2], "control") &&
-		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
-		return compiledStaticSubject{kind: StaticSubjectControlledCreatures, span: shared.SpanOf(tokens[:3])}
-	case len(tokens) >= 6 &&
-		equalWord(tokens[0], "creatures") &&
-		equalWord(tokens[1], "your") &&
-		equalWord(tokens[2], "opponents") &&
-		equalWord(tokens[3], "control") &&
-		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
-		return compiledStaticSubject{kind: StaticSubjectOpponentControlledCreatures, span: shared.SpanOf(tokens[:4])}
-	case len(tokens) >= 5 &&
-		equalWord(tokens[0], "each") &&
-		equalWord(tokens[1], "wall") &&
-		equalWord(tokens[2], "you") &&
-		equalWord(tokens[3], "control") &&
-		(equalWord(tokens[4], "gets") || equalWord(tokens[4], "has")):
-		return compiledStaticSubject{kind: StaticSubjectControlledWalls, span: shared.SpanOf(tokens[:4]), sub: types.Wall, subKnown: true}
-	case len(tokens) >= 4 &&
-		equalWord(tokens[0], "walls") &&
-		equalWord(tokens[1], "you") &&
-		equalWord(tokens[2], "control") &&
-		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
-		return compiledStaticSubject{kind: StaticSubjectControlledWalls, span: shared.SpanOf(tokens[:3]), sub: types.Wall, subKnown: true}
-	case len(tokens) >= 4 &&
-		equalWord(tokens[0], "artifacts") &&
-		equalWord(tokens[1], "you") &&
-		equalWord(tokens[2], "control") &&
-		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
-		return compiledStaticSubject{kind: StaticSubjectControlledArtifacts, span: shared.SpanOf(tokens[:3])}
-	case len(tokens) >= 4 &&
-		equalWord(tokens[0], "tokens") &&
-		equalWord(tokens[1], "you") &&
-		equalWord(tokens[2], "control") &&
-		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
-		return compiledStaticSubject{kind: StaticSubjectControlledTokens, span: shared.SpanOf(tokens[:3])}
-	case len(tokens) >= 5 &&
-		equalWord(tokens[0], "other") &&
-		tokens[1].Kind == shared.Word &&
-		equalWord(tokens[2], "you") &&
-		equalWord(tokens[3], "control") &&
-		equalWord(tokens[4], "have"):
-		sub, ok := subtypeAt(1)
-		return compiledStaticSubject{
-			kind:     StaticSubjectOtherControlledCreatureSubtype,
-			span:     shared.SpanOf(tokens[:4]),
-			subtype:  tokens[1].Text,
-			sub:      sub,
-			subKnown: ok,
-		}
-	case len(tokens) >= 4 &&
-		tokens[0].Kind == shared.Word &&
-		equalWord(tokens[1], "you") &&
-		equalWord(tokens[2], "control") &&
-		equalWord(tokens[3], "have"):
-		sub, ok := subtypeAt(0)
-		return compiledStaticSubject{
-			kind:     StaticSubjectControlledCreatureSubtype,
-			span:     shared.SpanOf(tokens[:3]),
-			subtype:  tokens[0].Text,
-			sub:      sub,
-			subKnown: ok,
-		}
-	default:
-		return compiledStaticSubject{}
-	}
-}
-
-func compilePTChange(tokens []shared.Token) (power, toughness CompiledSignedAmount) {
-	for i := 0; i+4 < len(tokens); i++ {
-		power, powerOK := signedAmount(tokens[i], tokens[i+1])
-		toughness, toughnessOK := signedAmount(tokens[i+3], tokens[i+4])
-		if powerOK && tokens[i+2].Kind == shared.Slash && toughnessOK {
-			return power, toughness
-		}
-	}
-	return CompiledSignedAmount{}, CompiledSignedAmount{}
-}
-
-func signedAmount(sign, amount shared.Token) (CompiledSignedAmount, bool) {
-	if amount.Kind != shared.Integer || (sign.Kind != shared.Plus && sign.Kind != shared.Minus) {
-		return CompiledSignedAmount{}, false
-	}
-	value, err := strconv.Atoi(amount.Text)
-	if err != nil {
-		return CompiledSignedAmount{}, false
-	}
-	negative := sign.Kind == shared.Minus
-	return CompiledSignedAmount{Value: value, Known: true, Negative: negative}, true
-}
-
-func compileEffectAmount(tokens []shared.Token, atoms parser.Atoms) CompiledAmount {
-	dynamic := compileDynamicEffectAmount(tokens, atoms)
-	if dynamic.matched {
-		return dynamic.amount
-	}
-	if dynamic.attempted {
-		return CompiledAmount{}
-	}
-	for _, token := range tokens {
-		if value := numberWord(token, atoms); value > 0 {
-			return CompiledAmount{Value: value, Known: true}
-		}
-		if equalWord(token, "a") || equalWord(token, "an") {
-			return CompiledAmount{Value: 1, Known: true}
-		}
-	}
-	for _, token := range tokens {
-		if token.Kind == shared.Symbol {
-			return CompiledAmount{Value: 1, Known: true}
-		}
-	}
-	return CompiledAmount{}
-}
-
-type compiledDynamicAmount struct {
-	amount    CompiledAmount
-	matched   bool
-	attempted bool
-}
-
-func compileDynamicEffectAmount(tokens []shared.Token, atoms parser.Atoms) compiledDynamicAmount {
-	var matches []CompiledAmount
-	attempted := false
-	for i := range tokens {
-		prefix, ok := dynamicAmountPrefix(tokens, i, atoms)
-		if !ok {
-			continue
-		}
-		attempted = true
-		if subject, matched := dynamicAmountSubject(tokens, prefix.subjectStart, atoms); matched {
-			if !prefix.allows(subject) {
-				continue
-			}
-			amount := subject.amount
-			amount.DynamicForm = prefix.form
-			if amount.Multiplier == 0 {
-				amount.Multiplier = prefix.multiplier
-			}
-			amount.Text = joinedSourceText(tokens[i:subject.end])
-			matches = append(matches, amount)
-		}
-	}
-	if len(matches) != 1 {
-		return compiledDynamicAmount{attempted: attempted}
-	}
-	return compiledDynamicAmount{
-		amount:    matches[0],
-		matched:   true,
-		attempted: true,
-	}
-}
-
-type dynamicAmountPrefixMatch struct {
-	form          DynamicAmountForm
-	subjectStart  int
-	multiplier    int
-	subjectClass  dynamicAmountSubjectClass
-	subjectNumber dynamicSubjectNumber
-}
-
-type dynamicAmountSubjectClass uint8
-
-const (
-	dynamicAmountCountSubject dynamicAmountSubjectClass = iota
-	dynamicAmountValueSubject
-)
-
-type dynamicSubjectNumber uint8
-
-const (
-	dynamicSubjectNumberNone dynamicSubjectNumber = iota
-	dynamicSubjectSingular
-	dynamicSubjectPlural
-	dynamicSubjectInvariant
-)
-
-type dynamicAmountSubjectMatch struct {
-	amount CompiledAmount
-	end    int
-	number dynamicSubjectNumber
-}
-
-func (m dynamicAmountPrefixMatch) allows(subject dynamicAmountSubjectMatch) bool {
-	switch m.subjectClass {
-	case dynamicAmountCountSubject:
-		if subject.amount.DynamicKind != DynamicAmountCount &&
-			subject.amount.DynamicKind != DynamicAmountOpponentCount &&
-			subject.amount.DynamicKind != DynamicAmountBasicLandTypes {
-			return false
-		}
-		return subject.number == dynamicSubjectInvariant || subject.number == m.subjectNumber
-	case dynamicAmountValueSubject:
-		return subject.number == dynamicSubjectNumberNone &&
-			(subject.amount.DynamicKind == DynamicAmountControllerLife ||
-				subject.amount.DynamicKind == DynamicAmountSourcePower)
-	default:
-		return false
-	}
-}
-
-func dynamicAmountPrefix(tokens []shared.Token, index int, atoms parser.Atoms) (dynamicAmountPrefixMatch, bool) {
-	switch {
-	case wordsAt(tokens, index, "equal", "to", "twice", "the", "number", "of"):
-		return dynamicAmountPrefixMatch{DynamicAmountEqual, index + 6, 2, dynamicAmountCountSubject, dynamicSubjectPlural}, true
-	case wordsAt(tokens, index, "equal", "to", "the", "number", "of"):
-		return dynamicAmountPrefixMatch{DynamicAmountEqual, index + 5, 1, dynamicAmountCountSubject, dynamicSubjectPlural}, true
-	case wordsAt(tokens, index, "for", "each"):
-		multiplier := precedingAmountMultiplier(tokens[:index], atoms)
-		return dynamicAmountPrefixMatch{DynamicAmountForEach, index + 2, multiplier, dynamicAmountCountSubject, dynamicSubjectSingular}, multiplier > 0
-	case wordsAt(tokens, index, "equal", "to"):
-		return dynamicAmountPrefixMatch{DynamicAmountEqual, index + 2, 1, dynamicAmountValueSubject, dynamicSubjectNumberNone}, true
-	case wordsAt(tokens, index, "where", "X", "is", "twice", "the", "number", "of"):
-		return dynamicAmountPrefixMatch{DynamicAmountWhereX, index + 7, 2, dynamicAmountCountSubject, dynamicSubjectPlural}, true
-	case wordsAt(tokens, index, "where", "X", "is", "the", "number", "of"):
-		return dynamicAmountPrefixMatch{DynamicAmountWhereX, index + 6, 1, dynamicAmountCountSubject, dynamicSubjectPlural}, true
-	case wordsAt(tokens, index, "where", "X", "is"):
-		return dynamicAmountPrefixMatch{DynamicAmountWhereX, index + 3, 1, dynamicAmountValueSubject, dynamicSubjectNumberNone}, true
-	default:
-		return dynamicAmountPrefixMatch{}, false
-	}
-}
-
-type dynamicCountNoun struct {
-	singular  string
-	plural    string
-	invariant string
-	kind      DynamicAmountKind
-	selector  SelectorKind
-}
-
-var dynamicCountNouns = []dynamicCountNoun{
-	{singular: "creature", plural: "creatures", kind: DynamicAmountCount, selector: SelectorCreature},
-	{singular: "artifact", plural: "artifacts", kind: DynamicAmountCount, selector: SelectorArtifact},
-	{singular: "enchantment", plural: "enchantments", kind: DynamicAmountCount, selector: SelectorEnchantment},
-	{singular: "land", plural: "lands", kind: DynamicAmountCount, selector: SelectorLand},
-	{singular: "permanent", plural: "permanents", kind: DynamicAmountCount, selector: SelectorPermanent},
-	{singular: "opponent", plural: "opponents", kind: DynamicAmountOpponentCount},
-}
-
-func (n dynamicCountNoun) numberAt(tokens []shared.Token, start int) (dynamicSubjectNumber, bool) {
-	switch {
-	case equalWord(tokens[start], n.singular):
-		return dynamicSubjectSingular, true
-	case equalWord(tokens[start], n.plural):
-		return dynamicSubjectPlural, true
-	case n.invariant != "" && equalWord(tokens[start], n.invariant):
-		return dynamicSubjectInvariant, true
-	default:
-		return dynamicSubjectNumberNone, false
-	}
-}
-
-func dynamicAmountSubject(tokens []shared.Token, start int, atoms parser.Atoms) (dynamicAmountSubjectMatch, bool) {
-	if start >= len(tokens) {
-		return dynamicAmountSubjectMatch{}, false
-	}
-	if subject, ok := dynamicBasicLandTypeAmountSubject(tokens, start); ok {
-		return subject, true
-	}
-	if subject, ok := dynamicCountAmountSubject(tokens, start, atoms); ok {
-		return subject, true
-	}
-
-	switch {
-	case wordsAt(tokens, start, "your", "life", "total") &&
-		dynamicSubjectBoundary(tokens, start+3):
-		return dynamicAmountSubjectMatch{
-			amount: CompiledAmount{DynamicKind: DynamicAmountControllerLife},
-			end:    start + 3,
-		}, true
-	case wordsAt(tokens, start, "its", "power") &&
-		dynamicSubjectBoundary(tokens, start+2):
-		return dynamicAmountSubjectMatch{
-			amount: CompiledAmount{
-				DynamicKind:   DynamicAmountSourcePower,
-				ReferenceSpan: tokens[start].Span,
-			},
-			end: start + 2,
-		}, true
-	case wordsAt(tokens, start, "this", "creature") &&
-		start+4 < len(tokens) &&
-		tokens[start+2].Kind == shared.Apostrophe &&
-		equalWord(tokens[start+3], "s") &&
-		equalWord(tokens[start+4], "power") &&
-		dynamicSubjectBoundary(tokens, start+5):
-		return dynamicAmountSubjectMatch{
-			amount: CompiledAmount{
-				DynamicKind:   DynamicAmountSourcePower,
-				ReferenceSpan: shared.SpanOf(tokens[start : start+2]),
-			},
-			end: start + 5,
-		}, true
-	case start+2 < len(tokens) &&
-		equalWord(tokens[start], "this") &&
-		strings.EqualFold(tokens[start+1].Text, "creature's") &&
-		equalWord(tokens[start+2], "power") &&
-		dynamicSubjectBoundary(tokens, start+3):
-		return dynamicAmountSubjectMatch{
-			amount: CompiledAmount{
-				DynamicKind:   DynamicAmountSourcePower,
-				ReferenceSpan: shared.SpanOf(tokens[start : start+2]),
-			},
-			end: start + 3,
-		}, true
-	default:
-		// The card's own name as a power source is recognized from the
-		// parser-emitted self-name span, not from name spelling.
-		nameSpan, ok := atoms.SelfNameSpanStartingAt(tokens[start].Span)
-		if !ok {
-			return dynamicAmountSubjectMatch{}, false
-		}
-		end := start
-		for end < len(tokens) && tokens[end].Span.End.Offset <= nameSpan.End.Offset {
-			end++
-		}
-		// Possessive fused into the name's final token ("[Name]'s power").
-		if end < len(tokens) &&
-			equalWord(tokens[end], "power") &&
-			dynamicSubjectBoundary(tokens, end+1) {
-			return dynamicAmountSubjectMatch{
-				amount: CompiledAmount{
-					DynamicKind:   DynamicAmountSourcePower,
-					ReferenceSpan: shared.SpanOf(tokens[start:end]),
-				},
-				end: end + 1,
-			}, true
-		}
-		// Plain name followed by a separate possessive marker.
-		if end+2 < len(tokens) &&
-			tokens[end].Kind == shared.Apostrophe &&
-			equalWord(tokens[end+1], "s") &&
-			equalWord(tokens[end+2], "power") &&
-			dynamicSubjectBoundary(tokens, end+3) {
-			return dynamicAmountSubjectMatch{
-				amount: CompiledAmount{
-					DynamicKind:   DynamicAmountSourcePower,
-					ReferenceSpan: shared.SpanOf(tokens[start:end]),
-				},
-				end: end + 3,
-			}, true
-		}
-		return dynamicAmountSubjectMatch{}, false
-	}
-}
-
-func dynamicBasicLandTypeAmountSubject(tokens []shared.Token, start int) (dynamicAmountSubjectMatch, bool) {
-	var number dynamicSubjectNumber
-	var end int
-	switch {
-	case wordsAt(tokens, start, "basic", "land", "type", "among", "lands", "you", "control"):
-		number = dynamicSubjectSingular
-		end = start + 7
-	case wordsAt(tokens, start, "basic", "land", "types", "among", "lands", "you", "control"):
-		number = dynamicSubjectPlural
-		end = start + 7
-	default:
-		return dynamicAmountSubjectMatch{}, false
-	}
-	if !dynamicSubjectBoundary(tokens, end) {
-		return dynamicAmountSubjectMatch{}, false
-	}
-	return dynamicAmountSubjectMatch{
-		amount: CompiledAmount{DynamicKind: DynamicAmountBasicLandTypes},
-		end:    end,
-		number: number,
-	}, true
-}
-
-func dynamicCountAmountSubject(tokens []shared.Token, start int, atoms parser.Atoms) (dynamicAmountSubjectMatch, bool) {
-	if subject, ok := dynamicCardCountAmountSubject(tokens, start, atoms); ok {
-		return subject, true
-	}
-	suffixes := []struct {
-		words      []string
-		controller ControllerKind
-	}{
-		{words: []string{"you", "control"}, controller: ControllerYou},
-		{words: []string{"your", "opponents", "control"}, controller: ControllerOpponent},
-		{words: []string{"on", "the", "battlefield"}, controller: ControllerAny},
-	}
-	for _, noun := range dynamicCountNouns {
-		number, ok := noun.numberAt(tokens, start)
-		if !ok {
-			continue
-		}
-		end := start + 1
-		if noun.kind == DynamicAmountOpponentCount {
-			if wordsAt(tokens, end, "you", "have") {
-				end += 2
-			}
-			if dynamicSubjectBoundary(tokens, end) {
-				return dynamicAmountSubjectMatch{
-					amount: CompiledAmount{DynamicKind: noun.kind},
-					end:    end,
-					number: number,
-				}, true
-			}
-			continue
-		}
-		for _, suffix := range suffixes {
-			subjectEnd := end + len(suffix.words)
-			if !wordsAt(tokens, end, suffix.words...) ||
-				!dynamicSubjectBoundary(tokens, subjectEnd) {
-				continue
-			}
-			return dynamicAmountSubjectMatch{
-				amount: CompiledAmount{
-					DynamicKind: noun.kind,
-					selector: &CompiledSelector{
-						Kind:       noun.selector,
-						Controller: suffix.controller,
-						Raw:        joinedSourceText(tokens[start:subjectEnd]),
-					},
-				},
-				end:    subjectEnd,
-				number: number,
-			}, true
-		}
-	}
-	return dynamicAmountSubjectMatch{}, false
-}
-
-func dynamicCardCountAmountSubject(tokens []shared.Token, start int, atoms parser.Atoms) (dynamicAmountSubjectMatch, bool) {
-	if start >= len(tokens) ||
-		(!equalWord(tokens[start], "card") && !equalWord(tokens[start], "cards")) {
-		return dynamicAmountSubjectMatch{}, false
-	}
-	number := dynamicSubjectPlural
-	if equalWord(tokens[start], "card") {
-		number = dynamicSubjectSingular
-	}
-	end := start + 1
-	selector := CompiledSelector{
-		Kind: SelectorCard,
-		Raw:  joinedSourceText(tokens[start:]),
-	}
-	if end >= len(tokens) {
-		return dynamicAmountSubjectMatch{}, false
-	}
-	keywordSelector, ok := atoms.KeywordSelectorStartingAt(tokens[end].Span)
-	if !ok ||
-		keywordSelector.Excluded ||
-		keywordSelector.Form == parser.KeywordSelectorFormUnknown ||
-		keywordSelector.Keyword != parser.KeywordCycling {
-		return dynamicAmountSubjectMatch{}, false
-	}
-	for end < len(tokens) && tokens[end].Span.End.Offset <= keywordSelector.Span.End.Offset {
-		end++
-	}
-	selector.Keyword = keywordSelector.Keyword
-	switch {
-	case wordsAt(tokens, end, "in", "your", "graveyard"):
-		selector.Controller = ControllerYou
-		selector.Zone = zone.Graveyard
-		end += 3
-	default:
-		return dynamicAmountSubjectMatch{}, false
-	}
-	if !dynamicSubjectBoundary(tokens, end) {
-		return dynamicAmountSubjectMatch{}, false
-	}
-	selector.Raw = joinedSourceText(tokens[start:end])
-	return dynamicAmountSubjectMatch{
-		amount: CompiledAmount{
-			DynamicKind: DynamicAmountCount,
-			selector:    &selector,
-		},
-		end:    end,
-		number: number,
-	}, true
-}
-
-func dynamicSubjectBoundary(tokens []shared.Token, end int) bool {
-	if end >= len(tokens) {
-		return true
-	}
-	switch tokens[end].Kind {
-	case shared.Comma, shared.Period:
-		return true
-	default:
-		return equalWord(tokens[end], "to") || equalWord(tokens[end], "until")
-	}
-}
-
-func precedingAmountMultiplier(tokens []shared.Token, atoms parser.Atoms) int {
-	multiplier := 0
-	for _, token := range tokens {
-		value := numberWord(token, atoms)
-		if value == 0 {
-			continue
-		}
-		if multiplier != 0 && multiplier != value {
-			return 0
-		}
-		multiplier = value
-	}
-	if multiplier == 0 {
-		return 1
-	}
-	return multiplier
-}
-
-func wordsAt(tokens []shared.Token, start int, words ...string) bool {
-	if start < 0 || start+len(words) > len(tokens) {
-		return false
-	}
-	for i, word := range words {
-		if !equalWord(tokens[start+i], word) {
-			return false
-		}
-	}
-	return true
-}
-
-func firstSymbol(tokens []shared.Token) string {
-	for _, token := range tokens {
-		if token.Kind == shared.Symbol {
-			return token.Text
-		}
-	}
-	return ""
-}
-
-func effectKindAt(tokens []shared.Token, index int) EffectKind {
-	kind := effectKind(tokens[index])
-	if kind == EffectGrantKeyword &&
-		index >= 2 &&
-		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
-		equalWord(tokens[index-1], "you") {
-		return EffectUnknown
-	}
-	if kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared") {
-		return EffectEnterPrepared
-	}
-	if kind == EffectCast && index > 0 &&
-		(equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")) {
-		return EffectUnknown
-	}
-	if kind == EffectCounter && !counterIsVerb(tokens, index) {
-		return EffectUnknown
-	}
-	if kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control") {
-		return EffectGainControl
-	}
-	if kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike") {
-		return EffectUnknown
-	}
-	if kind == EffectGrantKeyword && keywordGrantContinuesPTBuff(tokens, index) {
-		return EffectUnknown
-	}
-	return kind
-}
-
-func keywordGrantContinuesPTBuff(tokens []shared.Token, index int) bool {
-	for i := range index {
-		if !equalWord(tokens[i], "get") && !equalWord(tokens[i], "gets") {
-			continue
-		}
-		power, toughness := compilePTChange(tokens[i+1 : index])
-		return power.Known && toughness.Known
-	}
-	return false
-}
-
-func counterIsVerb(tokens []shared.Token, index int) bool {
-	if index == 0 {
-		return true
-	}
-	previous := tokens[index-1]
-	if previous.Kind == shared.Comma || previous.Kind == shared.Period || previous.Kind == shared.Semicolon {
-		return true
-	}
-	if equalWord(previous, "then") || equalWord(previous, "may") ||
-		equalWord(previous, "can") {
-		return true
-	}
-	if index+1 >= len(tokens) {
-		return false
-	}
-	return equalWord(tokens[index+1], "target") || equalWord(tokens[index+1], "it") ||
-		equalWord(tokens[index+1], "that")
-}
-
-func effectNegated(tokens []shared.Token, verbIndex int) bool {
-	start := max(0, verbIndex-3)
-	for _, token := range tokens[start:verbIndex] {
-		if equalWord(token, "can't") || equalWord(token, "cannot") {
-			return true
-		}
-	}
-	return false
-}
-
 func abilityBodyTokens(ability parser.Ability) []shared.Token {
 	tokens := ability.Tokens
 	if ability.AbilityWord != nil {
@@ -2366,126 +1292,6 @@ func abilityBodyTokens(ability parser.Ability) []shared.Token {
 	default:
 	}
 	return tokens
-}
-
-func effectKind(token shared.Token) EffectKind {
-	if token.Kind != shared.Word {
-		return EffectUnknown
-	}
-	switch strings.ToLower(token.Text) {
-	case "add", "adds":
-		return EffectAddMana
-	case "attach", "attaches":
-		return EffectAttach
-	case "cast", "casts":
-		return EffectCast
-	case "counter", "counters":
-		return EffectCounter
-	case "create", "creates":
-		return EffectCreate
-	case "deal", "deals":
-		return EffectDealDamage
-	case "destroy", "destroys":
-		return EffectDestroy
-	case "discard", "discards":
-		return EffectDiscard
-	case "discover", "discovers":
-		return EffectDiscover
-	case "double", "doubles":
-		return EffectDouble
-	case "draw", "draws":
-		return EffectDraw
-	case "enters":
-		return EffectEnterTapped
-	case "exile", "exiles":
-		return EffectExile
-	case "fight", "fights":
-		return EffectFight
-	case "gain", "gains":
-		return EffectGain
-	case "has", "have":
-		return EffectGrantKeyword
-	case "investigate", "investigates":
-		return EffectInvestigate
-	case "explore", "explores":
-		return EffectExplore
-	case "lose", "loses":
-		return EffectLose
-	case "manifest":
-		return EffectManifest
-	case "look":
-		return EffectManifestDread
-	case "mill", "mills":
-		return EffectMill
-	case "get", "gets":
-		return EffectModifyPT
-	case "put", "puts":
-		return EffectPut
-	case "proliferate", "proliferates":
-		return EffectProliferate
-	case "regenerate", "regenerates":
-		return EffectRegenerate
-	case "return", "returns":
-		return EffectReturn
-	case "reveal", "reveals":
-		return EffectReveal
-	case "sacrifice", "sacrifices":
-		return EffectSacrifice
-	case "scry", "scries":
-		return EffectScry
-	case "surveil", "surveils":
-		return EffectSurveil
-	case "search", "searches":
-		return EffectSearch
-	case "shuffle", "shuffles":
-		return EffectShuffle
-	case "tap", "taps":
-		return EffectTap
-	case "untap", "untaps":
-		return EffectUntap
-	case "transform", "transforms":
-		return EffectTransform
-	default:
-		return EffectUnknown
-	}
-}
-
-func isEffectVerb(token shared.Token) bool {
-	return effectKind(token) != EffectUnknown
-}
-
-func compileDuration(tokens []shared.Token, atoms parser.Atoms) DurationKind {
-	words := shared.NormalizedWords(tokens)
-	switch {
-	case containsSequence(words, "until", "end", "of", "turn"):
-		return DurationUntilEndOfTurn
-	case containsSequence(words, "until", "your", "next", "turn"):
-		return DurationUntilYourNextTurn
-	case containsSequence(words, "this", "combat"):
-		return DurationThisCombat
-	case containsSequence(words, "this", "turn"):
-		return DurationThisTurn
-	}
-	// Source-tied control durations: "as long as this [type] remains on the
-	// battlefield" and "for as long as this [type] remains on the battlefield".
-	if containsSequence(words, "as", "long", "as", "this") &&
-		(containsSequence(words, "remains", "on", "the", "battlefield") ||
-			containsSequence(words, "is", "on", "the", "battlefield")) {
-		return DurationForAsLongAsSourceOnBattlefield
-	}
-	// "for as long as you control this [type]" — self-referential.
-	if containsSequence(words, "for", "as", "long", "as", "you", "control", "this") {
-		return DurationForAsLongAsYouControlSource
-	}
-	// "for as long as you control [CardName]" — explicit source name, recognized
-	// from the parser-emitted self-name span rather than name spelling.
-	for index := 0; index+6 < len(tokens); index++ {
-		if wordsAt(tokens, index, "for", "as", "long", "as", "you", "control") &&
-			atoms.SelfNameStartingAt(tokens[index+6].Span) {
-			return DurationForAsLongAsYouControlSource
-		}
-	}
-	return DurationNone
 }
 
 func compileKeywords(tokens []shared.Token, atoms parser.Atoms) []CompiledKeyword {
@@ -2565,6 +1371,20 @@ func compileReferences(tokens []shared.Token, atoms parser.Atoms) []CompiledRefe
 			Text:    joinedSourceText(reference.Tokens),
 		})
 	}
+
+	return references
+}
+
+func compileTypedReferences(recognized []parser.Reference) []CompiledReference {
+	references := make([]CompiledReference, 0, len(recognized))
+	for _, reference := range recognized {
+		references = append(references, CompiledReference{
+			Kind:    compileReferenceKind(reference.Kind),
+			Pronoun: compileReferencePronoun(reference.Pronoun),
+			Span:    reference.Span,
+			Text:    joinedSourceText(reference.Tokens),
+		})
+	}
 	return references
 }
 
@@ -2595,6 +1415,8 @@ func compileReferenceKind(kind parser.ReferenceKind) ReferenceKind {
 		return ReferenceThisObject
 	case parser.ReferenceThatObject:
 		return ReferenceThatObject
+	case parser.ReferenceThatPlayer:
+		return ReferenceThatPlayer
 	case parser.ReferencePronoun:
 		return ReferencePronoun
 	default:
@@ -2768,20 +1590,6 @@ func containsSequence(words []string, expected ...string) bool {
 
 func equalWord(token shared.Token, word string) bool {
 	return token.Kind == shared.Word && strings.EqualFold(token.Text, word)
-}
-
-func numberWord(token shared.Token, atoms parser.Atoms) int {
-	if token.Kind == shared.Integer {
-		value, _ := strconv.Atoi(token.Text)
-		return value
-	}
-	// The parser owns the cardinal vocabulary and emits a typed value per
-	// cardinal word; the compiler keeps its conservative numeric range policy of
-	// recognizing only "one" through "four".
-	if value, ok := atoms.CardinalAt(token.Span); ok && value <= 4 {
-		return value
-	}
-	return 0
 }
 
 func isInterveningIf(tokens []shared.Token, index int) bool {

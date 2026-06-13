@@ -164,6 +164,12 @@ func lowerActivationShell(
 }
 
 func activationReferencesSupported(content compiler.AbilityContent) bool {
+	for i := range content.Effects {
+		if content.Effects[i].Kind == compiler.EffectManifestDread && !content.Effects[i].Exact &&
+			len(content.References) != 0 {
+			return false
+		}
+	}
 	for _, reference := range content.References {
 		if reference.Binding == compiler.ReferenceBindingUnsupported ||
 			reference.Binding == compiler.ReferenceBindingAmbiguous {

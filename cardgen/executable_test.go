@@ -3456,7 +3456,7 @@ func TestGenerateExecutableCardSourceRejectsOptionalKickedEnterTrigger(t *testin
 	if source != "" {
 		t.Fatalf("source = %q, want no partial card", source)
 	}
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported draw spell" {
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported optional effect" {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 }
@@ -3480,9 +3480,14 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "divided damage", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals 3 damage divided as you choose among any number of targets."},
 		{name: "variable surveil", cardName: "Test Surveil", typeLine: "Sorcery", oracleText: "Surveil X."},
 		{name: "repeated proliferate", cardName: "Test Proliferate", typeLine: "Sorcery", oracleText: "Proliferate X times."},
+		{name: "scry with unrecognized sibling", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry 1, then celebrate."},
+		{name: "surveil with unrecognized sibling", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Surveil 1, then celebrate."},
+		{name: "investigate with unrecognized sibling", cardName: "Test Clue", typeLine: "Sorcery", oracleText: "Investigate, then celebrate."},
+		{name: "proliferate with unrecognized sibling", cardName: "Test Counter", typeLine: "Sorcery", oracleText: "Proliferate, then celebrate."},
 		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
 		{name: "conditional draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "If you control a creature, draw two cards."},
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
+		{name: "optional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "You may destroy target creature."},
 		{name: "regeneration destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. It can't be regenerated."},
 		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack creature."},
 		{name: "linked exile", cardName: "Test Exile", typeLine: "Instant", oracleText: "Exile target creature, then return it to the battlefield."},
@@ -3492,6 +3497,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "permanent power toughness", cardName: "Test Growth", typeLine: "Sorcery", oracleText: "Target creature gets +2/+2."},
 		{name: "dynamic group power toughness", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +X/+X until end of turn."},
 		{name: "unsupported group power toughness duration", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +2/+2 until your next turn."},
+		{name: "group power toughness with unrecognized sibling", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +2/+2 until end of turn, then celebrate."},
 		{name: "group keyword grant", cardName: "Test Flight", typeLine: "Instant", oracleText: "Creatures you control gain flying until end of turn."},
 		{name: "parameterized temporary keyword", cardName: "Test Ward", typeLine: "Instant", oracleText: "Target creature gains ward {2} until end of turn."},
 		{name: "set life total", cardName: "Test Life", typeLine: "Sorcery", oracleText: "Your life total becomes 10."},
@@ -3505,6 +3511,14 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "optional discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "You may discard a card."},
 		{name: "mass tap", cardName: "Test Sleep", typeLine: "Sorcery", oracleText: "Tap all creatures."},
 		{name: "optional tap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "You may tap target creature."},
+		{name: "optional counter", cardName: "Test Denial", typeLine: "Instant", oracleText: "You may counter target spell."},
+		{name: "optional counter placement", cardName: "Test Growth", typeLine: "Instant", oracleText: "You may put a +1/+1 counter on target creature."},
+		{name: "optional gain control", cardName: "Test Theft", typeLine: "Sorcery", oracleText: "You may gain control of target creature."},
+		{name: "gain control with unrecognized sibling", cardName: "Test Theft", typeLine: "Sorcery", oracleText: "Gain control of target creature until end of turn, then celebrate."},
+		{name: "gain control with negated untap", cardName: "Test Theft", typeLine: "Sorcery", oracleText: "Gain control of target creature until end of turn. Don't untap it."},
+		{name: "multiple effects with unrecognized sibling", cardName: "Test Command", typeLine: "Sorcery", oracleText: "Destroy target artifact. Draw a card. Celebrate."},
+		{name: "multiple effects with unknown sibling", cardName: "Test Command", typeLine: "Sorcery", oracleText: "Destroy target artifact. Draw a card. Perform a ritual."},
+		{name: "mass destroy with unknown keyword filter", cardName: "Test Purge", typeLine: "Sorcery", oracleText: "Destroy all creatures with celebrate."},
 		{name: "unsupported tap qualifier", cardName: "Test Sleep", typeLine: "Instant", oracleText: "Tap target creature with flying."},
 		{name: "freeze tap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "Tap target creature. It doesn't untap during its controller's next untap step."},
 		{name: "conditional untap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "If it is tapped, untap target creature."},

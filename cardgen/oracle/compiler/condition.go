@@ -104,12 +104,6 @@ func recognizeCondition(condition *CompiledCondition, phrase []shared.Token, ato
 	case "an effect would create one or more tokens under your control":
 		condition.Predicate = ConditionPredicateTokenCreationUnderController
 	default:
-		if (strings.HasPrefix(normalized, "its controller pays {") ||
-			strings.HasPrefix(normalized, "its controller pays{")) &&
-			strings.HasSuffix(normalized, "}") {
-			condition.Predicate = ConditionPredicateTargetControllerDoesNotPay
-			return
-		}
 		if strings.HasSuffix(normalized, " would die") {
 			condition.Predicate = ConditionPredicateSourceWouldDie
 			return

@@ -43,8 +43,10 @@ Vanguard cards are excluded with explicit report reasons.
 ## Compiler stages
 
 1. **Recognition (`cardgen/oracle`).** The lexer and parser preserve exact source
-   spans. The semantic compiler recognizes costs, targets, triggers, keywords,
-   Saga chapter headings, references, and ordered effects conservatively. Reusable
+   spans. The parser recognizes resolving effects, targets, selections, amounts,
+   durations, zones, embedded effect payments, keywords, and references; the
+   semantic compiler maps that syntax and recognizes remaining shell and
+   declaration families conservatively. Reusable
    body content (targets, conditions, effects, keywords, references, nested modes)
    is grouped into `oracle.AbilityContent`; each `oracle.CompiledAbility` and
    `oracle.CompiledMode` carries one `oracle.AbilityContent` value alongside its
@@ -98,12 +100,21 @@ Vanguard cards are excluded with explicit report reasons.
    continuous effects. Standalone keyword grants to supported controlled,
    creature-subtype-filtered, and attached permanent groups lower to layer-6
    continuous effects. Exact
-   source-relative keyword grants gated by controlling supported permanent
+   Resolving-effect identity, target cardinality and Selection, amount, duration,
+   zones, counters, add-mana output, replacement modifiers, references, and embedded payments arrive from parser-owned
+   typed syntax. Target lowering builds runtime predicates from typed selectors
+   rather than target wording; retained text is display metadata and diagnostic
+   context. Replacement and add-mana lowering likewise consume typed fields rather
+   than effect wording. Single-object lowerers require exact one-target
+   cardinality, and replacement lowerers reject typed qualifiers they cannot
+   represent. Source-relative keyword grants gated by controlling supported permanent
    types, subtypes, colors, or colorless permanents use condition-gated layer-6
    effects. Exact `X` quantities, supported count/life/opponent/source-power
    formulas, parser-owned reusable Oracle atom values, and common target
    restrictions lower into runtime quantities and structured target predicates.
-   Ordered effect clauses retain independent target specifications and references.
+   Ordered effect clauses retain parser-owned independent target, reference,
+   grammatical-subject, and clause ownership; lowering clips diagnostic syntax
+   to those spans rather than rediscovering ownership from Oracle wording.
    Exact fixed, `X`, and supported dynamic placement of recognized named
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`

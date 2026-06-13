@@ -1487,7 +1487,7 @@ func TestCompileReturnToOwnersHand(t *testing.T) {
 	}
 	if len(ability.Content.Targets) != 1 ||
 		ability.Content.Targets[0].Selector.Kind != SelectorCreature ||
-		ability.Content.Targets[0].Text != "target creature to its owner's hand" {
+		ability.Content.Targets[0].Text != "target creature" {
 		t.Fatalf("targets = %#v", ability.Content.Targets)
 	}
 	if len(ability.Content.References) != 1 ||
@@ -2139,7 +2139,8 @@ func TestCompileEffectAmountsAreClauseLocal(t *testing.T) {
 
 func assertFixedEffectAmount(t *testing.T, effects []CompiledEffect, kind EffectKind, value int) {
 	t.Helper()
-	for _, effect := range effects {
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind == kind {
 			if !effect.Amount.Known ||
 				effect.Amount.Value != value ||
@@ -2154,7 +2155,8 @@ func assertFixedEffectAmount(t *testing.T, effects []CompiledEffect, kind Effect
 
 func assertDynamicEffectAmount(t *testing.T, effects []CompiledEffect, kind EffectKind, dynamicKind DynamicAmountKind) {
 	t.Helper()
-	for _, effect := range effects {
+	for i := range effects {
+		effect := &effects[i]
 		if effect.Kind == kind {
 			if effect.Amount.Known || effect.Amount.DynamicKind != dynamicKind {
 				t.Fatalf("%v amount = %#v, want dynamic %v", kind, effect.Amount, dynamicKind)
