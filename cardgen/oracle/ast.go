@@ -184,9 +184,100 @@ type PhaseStepTriggerClause struct {
 
 // Sentence is a top-level sentence in an ability.
 type Sentence struct {
-	Span   Span
-	Text   string
-	Tokens []Token
+	Span       Span
+	Text       string
+	Tokens     []Token
+	StaticRule *StaticRuleSyntax
+}
+
+// StaticRuleSubjectKind identifies the source object constrained by a simple
+// static rule.
+type StaticRuleSubjectKind uint8
+
+// Simple static-rule subjects.
+const (
+	StaticRuleSubjectUnknown StaticRuleSubjectKind = iota
+	StaticRuleSubjectSourceCreature
+	StaticRuleSubjectSourceSpell
+)
+
+// StaticRuleConstraintKind identifies whether a rule prohibits or requires an
+// operation.
+type StaticRuleConstraintKind uint8
+
+// Simple static-rule constraints.
+const (
+	StaticRuleConstraintUnknown StaticRuleConstraintKind = iota
+	StaticRuleConstraintProhibition
+	StaticRuleConstraintRequirement
+)
+
+// StaticRuleOperationKind identifies the rules operation being constrained.
+type StaticRuleOperationKind uint8
+
+// Simple static-rule operations.
+const (
+	StaticRuleOperationUnknown StaticRuleOperationKind = iota
+	StaticRuleOperationAttack
+	StaticRuleOperationBlock
+	StaticRuleOperationCounter
+)
+
+// StaticRuleVoice identifies the grammatical role the subject has in an
+// operation.
+type StaticRuleVoice uint8
+
+// Simple static-rule voices.
+const (
+	StaticRuleVoiceUnknown StaticRuleVoice = iota
+	StaticRuleVoiceActive
+	StaticRuleVoicePassive
+)
+
+// StaticRuleQualifierKind identifies a composable restriction on an operation.
+type StaticRuleQualifierKind uint8
+
+// Simple static-rule qualifiers.
+const (
+	StaticRuleQualifierUnknown StaticRuleQualifierKind = iota
+	StaticRuleQualifierEachCombat
+	StaticRuleQualifierIfAble
+)
+
+// StaticRuleSubject is a source-spanned simple static-rule subject.
+type StaticRuleSubject struct {
+	Kind StaticRuleSubjectKind
+	Span Span
+}
+
+// StaticRuleConstraint is a source-spanned requirement or prohibition.
+type StaticRuleConstraint struct {
+	Kind StaticRuleConstraintKind
+	Span Span
+}
+
+// StaticRuleOperation is a source-spanned operation and the subject's
+// grammatical role in it.
+type StaticRuleOperation struct {
+	Kind  StaticRuleOperationKind
+	Voice StaticRuleVoice
+	Span  Span
+}
+
+// StaticRuleQualifier is a source-spanned restriction on a rule operation.
+type StaticRuleQualifier struct {
+	Kind StaticRuleQualifierKind
+	Span Span
+}
+
+// StaticRuleSyntax is a composable typed simple static-rule declaration.
+// Sentence text and tokens remain available only as source metadata.
+type StaticRuleSyntax struct {
+	Span       Span
+	Subject    StaticRuleSubject
+	Constraint StaticRuleConstraint
+	Operation  StaticRuleOperation
+	Qualifiers []StaticRuleQualifier
 }
 
 // Delimited is parenthesized reminder text or a quoted granted ability.

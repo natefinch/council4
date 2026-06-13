@@ -78,38 +78,43 @@ func compileAbility(
 		compiled.Optional = true
 		compiled.OptionalSpan = Span{Start: tokens[0].Span.Start, End: tokens[1].Span.End}
 	}
-	compiled.Content.Keywords = compileKeywords(tokens)
-	compiled.Content.Targets = compileTargets(tokens)
-	conditionTokens := tokens
-	if ability.Kind == AbilityTriggered {
-		conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
+	if ability.Kind == AbilityStatic && staticRuleSentencesOnly(ability.Sentences) {
+		compiled.Content.Effects = compileEffects(ability.Sentences, nil, nil, "")
+		compiled.Content.References = compileStaticRuleReferences(ability.Sentences)
+	} else {
+		compiled.Content.Keywords = compileKeywords(tokens)
+		compiled.Content.Targets = compileTargets(tokens)
+		conditionTokens := tokens
+		if ability.Kind == AbilityTriggered {
+			conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
+		}
+		compiled.Content.Conditions = compileConditions(conditionTokens, ability.Kind == AbilityTriggered)
+		if containsSequence(normalizedWords(tokens), "attacks", "each", "combat", "if", "able") {
+			compiled.Content.Conditions = slices.DeleteFunc(compiled.Content.Conditions, func(condition CompiledCondition) bool {
+				return strings.EqualFold(condition.Text, "if able")
+			})
+		}
+		compiled.Content.Effects = compileEffects(
+			parseSentences(source, body),
+			ability.Reminders,
+			ability.Quoted,
+			context.CardName,
+		)
+		referenceTokens := semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
+		if timing != ActivationTimingNone {
+			referenceTokens = tokensOutsideSpan(referenceTokens, timingSpan)
+		}
+		compiled.Content.References = compileReferences(
+			referenceTokens,
+			context.CardName,
+		)
+		compiled.Content.References = bindReferences(
+			compiled.Content.References,
+			compiled.Content.Targets,
+			compiled.Content.Effects,
+			compiled.Trigger,
+		)
 	}
-	compiled.Content.Conditions = compileConditions(conditionTokens, ability.Kind == AbilityTriggered)
-	if containsSequence(normalizedWords(tokens), "attacks", "each", "combat", "if", "able") {
-		compiled.Content.Conditions = slices.DeleteFunc(compiled.Content.Conditions, func(condition CompiledCondition) bool {
-			return strings.EqualFold(condition.Text, "if able")
-		})
-	}
-	compiled.Content.Effects = compileEffects(
-		parseSentences(source, body),
-		ability.Reminders,
-		ability.Quoted,
-		context.CardName,
-	)
-	referenceTokens := semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
-	if timing != ActivationTimingNone {
-		referenceTokens = tokensOutsideSpan(referenceTokens, timingSpan)
-	}
-	compiled.Content.References = compileReferences(
-		referenceTokens,
-		context.CardName,
-	)
-	compiled.Content.References = bindReferences(
-		compiled.Content.References,
-		compiled.Content.Targets,
-		compiled.Content.Effects,
-		compiled.Trigger,
-	)
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)
 	recognizeActivationZone(&compiled)
@@ -642,11 +647,13 @@ func compileEffects(
 ) []CompiledEffect {
 	var effects []CompiledEffect
 	for _, sentence := range sentences {
-		tokens := semanticTokens(sentence.Tokens, reminders, quoted)
-		if effect, ok := compileStaticRuleEffect(sentence, tokens); ok {
-			effects = append(effects, effect)
+		if sentence.StaticRule != nil {
+			if effect, ok := compileStaticRuleEffect(sentence); ok {
+				effects = append(effects, effect)
+			}
 			continue
 		}
+		tokens := semanticTokens(sentence.Tokens, reminders, quoted)
 		duration := compileDuration(tokens, cardName)
 		staticSubject, staticSubjectSpan, staticSubjectSubtype := compileStaticSubject(tokens)
 		effectIndices := effectTokenIndices(tokens, cardName)
@@ -947,52 +954,67 @@ func isSourceOnBattlefieldPhrase(tokens []Token, index int) bool {
 			containsSequence(words, "is", "on", "the", "battlefield"))
 }
 
-func compileStaticRuleEffect(sentence Sentence, tokens []Token) (CompiledEffect, bool) {
-	var kind EffectKind
-	var verb string
-	var selector CompiledSelector
-	switch sentence.Text {
-	case "This creature can't block.":
-		kind = EffectCantBlock
-		verb = "block"
-		selector = CompiledSelector{
-			Kind: SelectorCreature,
-			Raw:  "this creature",
-		}
-	case "This creature can't be blocked.":
-		kind = EffectCantBeBlocked
-		verb = "blocked"
-		selector = CompiledSelector{
-			Kind: SelectorCreature,
-			Raw:  "this creature",
-		}
-	case "This creature attacks each combat if able.":
-		kind = EffectMustAttack
-		verb = "attacks"
-		selector = CompiledSelector{
-			Kind: SelectorCreature,
-			Raw:  "this creature",
-		}
-	case "This spell can't be countered.":
-		kind = EffectCantBeCountered
-		verb = "countered"
-		selector = CompiledSelector{Raw: "this spell"}
-	default:
+func compileStaticRuleEffect(sentence Sentence) (CompiledEffect, bool) {
+	rule, _, ok := semanticStaticRuleForSyntax(*sentence.StaticRule)
+	if !ok {
 		return CompiledEffect{}, false
 	}
-	for _, token := range tokens {
-		if equalWord(token, verb) {
-			return CompiledEffect{
-				Kind:     kind,
-				Span:     sentence.Span,
-				Text:     sentence.Text,
-				VerbSpan: token.Span,
-				Selector: selector,
-				Negated:  kind != EffectMustAttack,
-			}, true
+	kind := effectKindForStaticRule(rule)
+	if kind == EffectUnknown {
+		return CompiledEffect{}, false
+	}
+	selector := CompiledSelector{}
+	if sentence.StaticRule.Subject.Kind == StaticRuleSubjectSourceCreature {
+		selector.Kind = SelectorCreature
+	}
+	return CompiledEffect{
+		Kind:     kind,
+		Span:     sentence.StaticRule.Span,
+		Text:     sentence.Text,
+		VerbSpan: sentence.StaticRule.Operation.Span,
+		Selector: selector,
+		Negated:  sentence.StaticRule.Constraint.Kind == StaticRuleConstraintProhibition,
+	}, true
+}
+
+func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
+	switch rule {
+	case StaticRuleCantBlock:
+		return EffectCantBlock
+	case StaticRuleCantBeBlocked:
+		return EffectCantBeBlocked
+	case StaticRuleMustAttack:
+		return EffectMustAttack
+	case StaticRuleCantBeCountered:
+		return EffectCantBeCountered
+	default:
+		return EffectUnknown
+	}
+}
+
+func staticRuleSentencesOnly(sentences []Sentence) bool {
+	if len(sentences) == 0 {
+		return false
+	}
+	for _, sentence := range sentences {
+		if sentence.StaticRule == nil {
+			return false
 		}
 	}
-	return CompiledEffect{}, false
+	return true
+}
+
+func compileStaticRuleReferences(sentences []Sentence) []CompiledReference {
+	references := make([]CompiledReference, 0, len(sentences))
+	for i, sentence := range sentences {
+		references = append(references, CompiledReference{
+			Kind:       ReferenceThisObject,
+			Span:       sentence.StaticRule.Subject.Span,
+			Binding:    ReferenceBindingSource,
+			Occurrence: i,
+		})
+	}
+	return references
 }
 
 func compileStaticSubject(tokens []Token) (StaticSubjectKind, Span, string) {

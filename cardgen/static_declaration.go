@@ -86,7 +86,7 @@ func lowerStaticDeclarations(
 		}
 	}
 	if len(declarations) == 1 {
-		varName = canonicalStaticDeclarationVarName(&body)
+		varName = canonicalStaticDeclarationVarName(declarations[0])
 	}
 	spans := make([]oracle.Span, 0, len(declarations))
 	for _, declaration := range declarations {
@@ -484,15 +484,20 @@ func lowerStaticCardType(cardType oracle.StaticCardType) (types.Card, bool) {
 	}
 }
 
-func canonicalStaticDeclarationVarName(body *game.StaticAbility) string {
-	switch body.Text {
-	case game.CantBlockStaticBody.Text:
+func canonicalStaticDeclarationVarName(declaration oracle.StaticDeclaration) string {
+	if declaration.Kind != oracle.StaticDeclarationRule ||
+		declaration.Rule == nil ||
+		declaration.Condition != nil {
+		return ""
+	}
+	switch declaration.Rule.Kind {
+	case oracle.StaticRuleCantBlock:
 		return "game.CantBlockStaticBody"
-	case game.CantBeBlockedStaticBody.Text:
+	case oracle.StaticRuleCantBeBlocked:
 		return "game.CantBeBlockedStaticBody"
-	case game.MustAttackStaticBody.Text:
+	case oracle.StaticRuleMustAttack:
 		return "game.MustAttackStaticBody"
-	case game.CantBeCounteredStaticBody.Text:
+	case oracle.StaticRuleCantBeCountered:
 		return "game.CantBeCounteredStaticBody"
 	default:
 		return ""

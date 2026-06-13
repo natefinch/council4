@@ -284,6 +284,55 @@ func TestGenerateExecutableCardSourceSelfUncounterable(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceComposedSimpleStaticRuleVariants(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		typeLine   string
+		oracleText string
+		want       string
+	}{
+		"cannot block": {
+			typeLine:   "Creature — Bear",
+			oracleText: "This creature cannot block.",
+			want:       "game.CantBlockStaticBody",
+		},
+		"cannot be blocked": {
+			typeLine:   "Creature — Bear",
+			oracleText: "This creature cannot be blocked.",
+			want:       "game.CantBeBlockedStaticBody",
+		},
+		"explicit must attack": {
+			typeLine:   "Creature — Bear",
+			oracleText: "This creature must attack each combat if able.",
+			want:       "game.MustAttackStaticBody",
+		},
+		"cannot be countered": {
+			typeLine:   "Sorcery",
+			oracleText: "This spell cannot be countered.\nDestroy target creature.",
+			want:       "game.CantBeCounteredStaticBody",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Card",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 || !strings.Contains(source, test.want) {
+				t.Fatalf("source = %q, diagnostics = %#v, want %q", source, diagnostics, test.want)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsNoncanonicalSelfUncounterable(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

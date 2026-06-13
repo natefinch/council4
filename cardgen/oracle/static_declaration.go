@@ -202,7 +202,7 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax Ability) {
 	if compiled.Kind != AbilityStatic {
 		return
 	}
-	if declarations, ok := recognizeExactStaticRuleDeclarations(*compiled); ok {
+	if declarations, ok := recognizeTypedStaticRuleDeclarations(*compiled, syntax); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
@@ -295,37 +295,63 @@ func recognizedStaticAbilityWord(word string) bool {
 	}
 }
 
-func recognizeExactStaticRuleDeclarations(ability CompiledAbility) ([]StaticDeclaration, bool) {
+func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax Ability) ([]StaticDeclaration, bool) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" ||
+		len(syntax.Sentences) != 1 ||
+		syntax.Sentences[0].StaticRule == nil ||
+		len(syntax.Reminders) != 0 ||
+		len(syntax.Quoted) != 0 {
+		return nil, false
+	}
+	node := syntax.Sentences[0].StaticRule
+	rule, zone, ok := semanticStaticRuleForSyntax(*node)
+	if !ok {
+		return nil, false
+	}
+	if len(ability.Content.Effects) != 1 ||
+		staticRuleForEffect(ability.Content.Effects[0].Kind) != rule ||
 		len(ability.Content.References) != 1 ||
-		ability.Content.References[0].Binding != ReferenceBindingSource ||
-		ability.AbilityWord != "" {
+		ability.Content.References[0].Binding != ReferenceBindingSource {
 		return nil, false
 	}
-	var rule StaticRuleKind
-	zone := StaticZoneBattlefield
-	switch ability.Text {
-	case "This creature can't block.":
-		rule = StaticRuleCantBlock
-	case "This creature can't be blocked.":
-		rule = StaticRuleCantBeBlocked
-	case "This creature attacks each combat if able.":
-		rule = StaticRuleMustAttack
-	case "This spell can't be countered.":
-		rule = StaticRuleCantBeCountered
-		zone = StaticZoneStack
-	default:
-		return nil, false
+	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, nil)}, true
+}
+
+func semanticStaticRuleForSyntax(rule StaticRuleSyntax) (StaticRuleKind, StaticZone, bool) {
+	if rule.Subject.Kind == StaticRuleSubjectSourceCreature &&
+		rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == StaticRuleOperationBlock &&
+		len(rule.Qualifiers) == 0 {
+		switch rule.Operation.Voice {
+		case StaticRuleVoiceActive:
+			return StaticRuleCantBlock, StaticZoneBattlefield, true
+		case StaticRuleVoicePassive:
+			return StaticRuleCantBeBlocked, StaticZoneBattlefield, true
+		default:
+			return StaticRuleUnknown, StaticZoneBattlefield, false
+		}
 	}
-	if len(ability.Content.Effects) != 1 || staticRuleForEffect(ability.Content.Effects[0].Kind) != rule {
-		return nil, false
+	if rule.Subject.Kind == StaticRuleSubjectSourceCreature &&
+		rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == StaticRuleOperationAttack &&
+		rule.Operation.Voice == StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble) {
+		return StaticRuleMustAttack, StaticZoneBattlefield, true
 	}
-	return []StaticDeclaration{staticRuleDeclaration(ability.Span, ability.Content.Effects[0].VerbSpan, rule, zone, nil)}, true
+	if rule.Subject.Kind == StaticRuleSubjectSourceSpell &&
+		rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == StaticRuleOperationCounter &&
+		rule.Operation.Voice == StaticRuleVoicePassive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleCantBeCountered, StaticZoneStack, true
+	}
+	return StaticRuleUnknown, StaticZoneBattlefield, false
 }
 
 func staticRuleForEffect(kind EffectKind) StaticRuleKind {
@@ -343,13 +369,18 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 	}
 }
 
-func staticRuleDeclaration(span, operationSpan Span, rule StaticRuleKind, zone StaticZone, condition *CompiledCondition) StaticDeclaration {
+func staticRuleDeclaration(
+	span, subjectSpan, operationSpan Span,
+	rule StaticRuleKind,
+	zone StaticZone,
+	condition *CompiledCondition,
+) StaticDeclaration {
 	return StaticDeclaration{
 		Kind:          StaticDeclarationRule,
 		Span:          span,
 		OperationSpan: operationSpan,
 		Group: StaticGroupReference{
-			Span:   span,
+			Span:   subjectSpan,
 			Domain: StaticGroupSource,
 		},
 		Condition: condition,
@@ -403,7 +434,7 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax Abil
 	return []StaticDeclaration{
 		staticPTDeclaration(ability.Span, group, condition, effect),
 		staticKeywordGrantDeclaration(ability.Span, group, condition, ability.Content.Keywords),
-		staticRuleDeclaration(ability.Span, ability.Span, StaticRuleMustAttack, StaticZoneBattlefield, condition),
+		staticRuleDeclaration(ability.Span, group.Span, ability.Span, StaticRuleMustAttack, StaticZoneBattlefield, condition),
 	}, true
 }
 
