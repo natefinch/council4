@@ -36,6 +36,24 @@ func lowerSingleFace(t *testing.T, card *ScryfallCard) loweredFaceAbilities {
 	return faces[0]
 }
 
+func TestLowerEventPlayerCoordinatedSubjectInTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Watcher",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a player draws a card, they discard a card, then draw a card.",
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v", mode.Sequence)
+	}
+	draw, ok := mode.Sequence[1].Primitive.(game.Draw)
+	if !ok || draw.Player != game.EventPlayerReference() {
+		t.Fatalf("coordinated draw = %#v", mode.Sequence[1].Primitive)
+	}
+}
+
 func compileTestOracle(source string, parserContext parser.Context, compilerContext compiler.Context) (compiler.Compilation, []shared.Diagnostic) {
 	document, diagnostics := parser.Parse(source, parserContext)
 	compilation, compilerDiagnostics := compiler.Compile(document, compilerContext)
@@ -2639,6 +2657,19 @@ func TestLowerTokenCreationReplacement(t *testing.T) {
 		replacement.TokenMultiplier != 2 ||
 		replacement.Duration != game.DurationPermanent {
 		t.Fatalf("replacement = %+v, want token creation doubler", replacement)
+	}
+}
+
+func TestLowerRejectsOptionalReplacementEffect(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Optional Procession",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If an effect would create one or more tokens under your control, it may create twice that many of those tokens instead.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatalf("faces = %#v, want unsupported optional replacement diagnostic", faces)
 	}
 }
 
@@ -6359,51 +6390,6 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 	}
 }
 
-func TestMassGroupQualifierSyntax(t *testing.T) {
-	t.Parallel()
-	tests := []string{
-		"artifacts, creatures, and enchantments",
-		"tapped creatures",
-		"red planeswalkers",
-		"nonartifact creatures",
-		"creatures your opponents control",
-		"creatures with power equal to 2",
-	}
-	for _, phrase := range tests {
-		t.Run(phrase, func(t *testing.T) {
-			t.Parallel()
-			if !massGroupSyntaxAccepted(phrase, false) {
-				t.Fatalf("massGroupSyntaxAccepted(%q) = false", phrase)
-			}
-		})
-	}
-	for _, phrase := range []string{
-		"creature",
-		"all creatures",
-		"token creatures",
-		"white creatures and lands",
-		"creatures with hexproof",
-		"creatures with flying you control",
-		"untapped creatures",
-		"other tapped creatures",
-		"nonland",
-		"creatures with mana value X or less",
-		"creatures with power 3 or more",
-		"creatures with flying and reach",
-		"creatures controlled by you",
-		"creatures except Dragons",
-		"nonland cards",
-		"white artifacts and creatures",
-	} {
-		t.Run("reject "+phrase, func(t *testing.T) {
-			t.Parallel()
-			if massGroupSyntaxAccepted(phrase, false) {
-				t.Fatalf("massGroupSyntaxAccepted(%q) = true; want rejection", phrase)
-			}
-		})
-	}
-}
-
 func TestLowerSpellReturnQualifiedTarget(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -7213,12 +7199,6 @@ func TestCompoundMillOracleIR(t *testing.T) {
 	if len(execDiags) != 0 {
 		t.Fatalf("executable diagnostics: %v", execDiags)
 	}
-	fmt.Printf("compound mill IR: effects=%d same-span=%v verb-spans-distinct=%v targets=%d\n",
-		len(ab.Content.Effects),
-		ab.Content.Effects[0].Span == ab.Content.Effects[1].Span,
-		ab.Content.Effects[0].VerbSpan != ab.Content.Effects[1].VerbSpan,
-		len(ab.Content.Targets),
-	)
 }
 
 // TestLowerThenJoinedImpliedSubjectDamageChain is a regression for the
@@ -9641,6 +9621,19 @@ func TestLowerGainControlRejectsMultipleEffectsWithoutBackRef(t *testing.T) {
 	}
 }
 
+func TestLowerGainControlRejectsSourceBoundFollowOn(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Relic",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Gain control of target creature until end of turn. Untap this artifact.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostic for source-bound gain-control follow-on")
+	}
+}
+
 func TestGenerateExecutableCardSourceGainControlRendersApplyContinuous(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -11417,47 +11410,19 @@ func TestLowerContentDiagnosticDistinguishesShellFromContent(t *testing.T) {
 	})
 }
 
-// TestLowerOrderedEffectsShellLimitations proves that when a shell (e.g. a
-// triggered-body phase trigger) currently rejects an ordered-effect body, the
-// failure is a shell-level diagnostic, NOT a content-level one. This validates
-// that lowerAbilityContent is not at fault, and that the shell boundary is
-// doing the rejection.
-func TestLowerOrderedEffectsShellLimitations(t *testing.T) {
+func TestLowerOrderedEffectsInPhaseTrigger(t *testing.T) {
 	t.Parallel()
 
-	// Phase triggers reject ordered effect sequences: the diagnostic comes from
-	// lowerOrderedEffectSequence (dispatched through lowerAbilityContent), but the
-	// test validates that the summary is "unsupported ordered effect sequence" —
-	// not "unsupported activated ability" or "unsupported ability content" — so
-	// callers can distinguish shell from content boundaries.
-	t.Run("phase trigger ordered effects rejected with content diagnostic", func(t *testing.T) {
-		t.Parallel()
-		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-			Name:       "Test Card",
-			Layout:     "normal",
-			TypeLine:   "Enchantment",
-			OracleText: "At the beginning of your upkeep, destroy target artifact. Draw a card.",
-		}, "t")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(diagnostics) == 0 {
-			t.Fatal("want diagnostic for unsupported ordered effect in trigger body, got none")
-		}
-		// The rejection must come with a content-level summary — not wrapped in
-		// a generic shell summary — because lowerAbilityContent propagates
-		// content diagnostics directly.
-		for _, d := range diagnostics {
-			if d.Summary == "unsupported ordered effect sequence" {
-				return // correct: content diagnostic surfaced
-			}
-		}
-		var summaries []string
-		for _, d := range diagnostics {
-			summaries = append(summaries, d.Summary)
-		}
-		t.Errorf("no 'unsupported ordered effect sequence' diagnostic found; got summaries %v", summaries)
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Card",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "At the beginning of your upkeep, destroy target artifact. Draw a card.",
 	})
+	sequence := face.TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want destroy then draw", sequence)
+	}
 }
 
 // TestLowerOrderedEffectsOrderPreservedAcrossShells verifies that the
@@ -11776,7 +11741,7 @@ func TestActivatedAbilityCapabilityDiagnostics(t *testing.T) {
 		{name: "cost reference to prior object", oracleText: "Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", summary: "unsupported activation references"},
 		{name: "cost reference after source and prior object", oracleText: "Remove a charge counter from this artifact, Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", summary: "unsupported activation references"},
 		{name: "modes", oracleText: "{1}: Choose any number —\n• Draw a card.\n• You gain 3 life.", summary: "unsupported activation modes"},
-		{name: "partially understood mode", oracleText: "{1}: Choose one —\n• Gain control of target creature until end of turn. The Ring tempts you.\n• You gain 3 life.", summary: "unsupported activation modes"},
+		{name: "partially understood mode", oracleText: "{1}: Choose one —\n• Gain control of target creature until end of turn. The Ring tempts you.\n• You gain 3 life.", summary: "unsupported gain-control spell"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -12691,6 +12656,7 @@ func TestRenderGeneratedObjectInterveningConditions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if len(diagnostics) != 0 {
 			t.Fatalf("diagnostics = %#v", diagnostics)
 		}
@@ -12708,5 +12674,160 @@ func TestRenderGeneratedObjectInterveningConditions(t *testing.T) {
 		if !strings.Contains(rendered, "Object:") || !strings.Contains(rendered, "Types:") {
 			t.Fatalf("legacy Object+Types condition rendered as %s", rendered)
 		}
+	}
+}
+
+func TestTargetLoweringFollowsTypedMeaningNotText(t *testing.T) {
+	t.Parallel()
+	permanent, ok := permanentTargetSpec(compiler.CompiledTarget{
+		Text:        "irrelevant",
+		Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
+		Exact:       true,
+		Selector: compiler.CompiledSelector{
+			Kind:       compiler.SelectorCreature,
+			Controller: compiler.ControllerOpponent,
+		},
+	})
+	if !ok ||
+		permanent.Allow != game.TargetAllowPermanent ||
+		permanent.Predicate.Controller != game.ControllerOpponent ||
+		!slices.Equal(permanent.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		t.Fatalf("permanent target = %#v, %v", permanent, ok)
+	}
+	if _, ok := permanentTargetSpec(compiler.CompiledTarget{
+		Cardinality: compiler.TargetCardinality{Min: 0, Max: 2},
+		Selector:    compiler.CompiledSelector{Kind: compiler.SelectorCreature},
+	}); ok {
+		t.Fatal("multi-object cardinality lowered through single-object target spec")
+	}
+
+	damage, ok := damageTargetSpec(compiler.CompiledTarget{
+		Text:        "irrelevant",
+		Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
+		Exact:       true,
+		Selector:    compiler.CompiledSelector{Kind: compiler.SelectorAny},
+	})
+	if !ok || damage.Allow != game.TargetAllowPermanent|game.TargetAllowPlayer {
+		t.Fatalf("damage target = %#v, %v", damage, ok)
+	}
+
+	ability, ok := counterAbilityTargetSpec(compiler.CompiledTarget{
+		Text:        "irrelevant",
+		Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
+		Selector:    compiler.CompiledSelector{Kind: compiler.SelectorActivatedOrTriggeredAbility},
+	})
+	if !ok || !slices.Equal(
+		ability.Predicate.StackObjectKinds,
+		[]game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility},
+	) {
+		t.Fatalf("ability target = %#v, %v", ability, ok)
+	}
+
+	player, ok := playerTargetSpec(compiler.CompiledTarget{
+		Text:        "irrelevant",
+		Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
+		Exact:       true,
+		Selector:    compiler.CompiledSelector{Kind: compiler.SelectorOpponent},
+	})
+	if !ok || player.Predicate.Player != game.PlayerOpponent {
+		t.Fatalf("player target = %#v, %v", player, ok)
+	}
+}
+
+func TestManifestLoweringFollowsTypedMeaningNotText(t *testing.T) {
+	t.Parallel()
+	content, diagnostic := lowerManifestSpell(contentCtx{
+		text: "irrelevant",
+		content: compiler.AbilityContent{
+			Effects: []compiler.CompiledEffect{{Kind: compiler.EffectManifestDread, Exact: true}},
+		},
+	})
+	if diagnostic != nil {
+		t.Fatalf("diagnostic = %#v", diagnostic)
+	}
+	mode := content.Modes[0]
+	manifest, ok := mode.Sequence[0].Primitive.(game.Manifest)
+	if !ok {
+		t.Fatalf("primitive = %#v, want game.Manifest", mode.Sequence[0].Primitive)
+	}
+	if !manifest.Dread {
+		t.Fatal("typed manifest dread lowered with Dread=false")
+	}
+}
+
+func TestReplacementLoweringFollowsTypedMeaningNotText(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"If another red source you control would deal damage to a permanent or player, it deals that much damage plus 1 to that permanent or player instead.",
+		"If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
+		"If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+		"If this creature would die, exile it instead.",
+		"This creature enters with three +1/+1 counters on it.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileTestOracle(
+				source,
+				parser.Context{CardName: "Test Card"},
+				compiler.Context{},
+			)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			ability.Text = "irrelevant"
+			for i := range ability.Content.Effects {
+				ability.Content.Effects[i].Text = "irrelevant"
+				ability.Content.Effects[i].Amount.Text = "irrelevant"
+			}
+			lowered, diagnostic := lowerReplacementAbility(ability)
+			if diagnostic != nil || !lowered.replacementAbility.Exists {
+				t.Fatalf("lowering = %#v, diagnostic = %#v", lowered, diagnostic)
+			}
+		})
+	}
+}
+
+func TestReplacementLoweringRejectsUnrepresentedTypedModifier(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileTestOracle(
+		"If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+		parser.Context{CardName: "Test Card"},
+		compiler.Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	ability.Text = "irrelevant"
+	ability.Content.Effects[1].Text = "irrelevant"
+	ability.Content.Effects[1].Selector.Tapped = true
+	_, diagnostic := lowerReplacementAbility(ability)
+	if diagnostic == nil {
+		t.Fatal("expected unrepresented tapped-token modifier to fail closed")
+	}
+
+	compilation, diagnostics = compileTestOracle(
+		"If an effect would create one or more tokens under your control, it creates twice that many Treasure tokens instead.",
+		parser.Context{CardName: "Test Card"},
+		compiler.Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("Treasure parse/compile diagnostics = %#v", diagnostics)
+	}
+	_, diagnostic = lowerReplacementAbility(compilation.Abilities[0])
+	if diagnostic == nil {
+		t.Fatal("expected unrepresented Treasure-token modifier to fail closed")
+	}
+}
+
+func TestManaLoweringFollowsTypedMeaningNotText(t *testing.T) {
+	t.Parallel()
+	content, ok := typedManaEffectContent(compiler.CompiledEffectMana{
+		Symbols: []string{"{G}", "{W}"},
+		Choice:  true,
+	})
+	if !ok || len(content.Modes) != 1 || len(content.Modes[0].Sequence) == 0 {
+		t.Fatalf("content = %#v, ok = %v", content, ok)
 	}
 }

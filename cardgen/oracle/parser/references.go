@@ -19,6 +19,7 @@ const (
 	ReferenceSelfName
 	ReferenceThisObject
 	ReferenceThatObject
+	ReferenceThatPlayer
 	ReferencePronoun
 )
 
@@ -118,8 +119,12 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "that") && referenceObjectNoun(tokens[i+1]):
 			phrase := tokens[i : i+2]
+			kind := ReferenceThatObject
+			if equalWord(tokens[i+1], "player") {
+				kind = ReferenceThatPlayer
+			}
 			references = append(references, Reference{
-				Kind:   ReferenceThatObject,
+				Kind:   kind,
 				Span:   shared.SpanOf(phrase),
 				Tokens: phrase,
 			})
@@ -169,7 +174,7 @@ func referenceObjectNoun(token shared.Token) bool {
 	}
 	switch noun {
 	case ObjectNounArtifact, ObjectNounCard, ObjectNounCreature, ObjectNounEnchantment,
-		ObjectNounEquipment, ObjectNounLand, ObjectNounPermanent, ObjectNounSpell, ObjectNounToken:
+		ObjectNounEquipment, ObjectNounLand, ObjectNounPermanent, ObjectNounPlayer, ObjectNounSpell, ObjectNounToken:
 		return true
 	default:
 		return false

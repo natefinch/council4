@@ -18,7 +18,7 @@ func bindReferences(
 		case ReferenceSelfName, ReferenceThisObject:
 			reference.Binding = ReferenceBindingSource
 			continue
-		case ReferencePronoun, ReferenceThatObject:
+		case ReferencePronoun, ReferenceThatObject, ReferenceThatPlayer:
 		default:
 			reference.Binding = ReferenceBindingUnsupported
 			continue
@@ -40,6 +40,13 @@ func bindReferences(
 				reference.Binding = ReferenceBindingPriorInstructionResult
 				reference.PriorInstruction = prior
 			}
+			continue
+		}
+		if trigger != nil &&
+			reference.Kind == ReferenceThatPlayer &&
+			reference.Span.Start.Offset >= trigger.Span.Start.Offset &&
+			triggerEventBindsPlayer(trigger.Pattern.Event) {
+			reference.Binding = ReferenceBindingEventPlayer
 			continue
 		}
 		if occurrence, ok, ambiguous := targetAntecedent(*reference, targets); ok || ambiguous {
@@ -153,7 +160,8 @@ func delayedEffectBindsSource(reference CompiledReference, effects []CompiledEff
 
 func priorInstructionAntecedent(reference CompiledReference, effects []CompiledEffect) (int, bool) {
 	current := -1
-	for i, effect := range effects {
+	for i := range effects {
+		effect := &effects[i]
 		if effect.VerbSpan.Start.Offset >= reference.Span.Start.Offset {
 			continue
 		}
@@ -165,7 +173,8 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 		return 0, false
 	}
 	prior := -1
-	for i, effect := range effects {
+	for i := range effects {
+		effect := &effects[i]
 		if effect.VerbSpan.Start.Offset >= effects[current].VerbSpan.Start.Offset {
 			continue
 		}
@@ -177,7 +186,7 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 		return 0, false
 	}
 	switch effects[prior].Kind {
-	case EffectExile, EffectReveal, EffectSearch:
+	case EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
 		return prior, true
 	default:
 		return 0, false
@@ -259,7 +268,8 @@ func triggerReferenceBindsEventCard(
 				trigger.ToZone != TriggerZoneGraveyard)) {
 		return false
 	}
-	for _, effect := range effects {
+	for i := range effects {
+		effect := &effects[i]
 		if !spanContains(effect.Span, reference.Span) {
 			continue
 		}

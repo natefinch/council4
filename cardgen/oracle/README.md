@@ -41,8 +41,8 @@ The lexer recognizes structural Oracle-text syntax:
 
 English vocabulary is intentionally not encoded as token kinds. For example,
 `Whenever`, `target`, and `destroy` are all `Word` tokens. Their meaning depends
-on surrounding syntax and card-face context, so the parser and compiler own
-that interpretation.
+on surrounding syntax and card-face context, so the parser owns that
+interpretation and emits typed syntax for downstream stages.
 
 Horizontal whitespace is skipped. Every emitted token stores its exact source
 slice and a half-open byte span. Positions also include one-based rune line and
@@ -118,6 +118,17 @@ separate nodes so supported combinations compose without sentence aliases.
 Unknown or ambiguous `Activate only` grammar becomes an explicit unsupported
 restriction, while `Activate only if` remains activation-condition syntax.
 
+Every resolving sentence also carries ordered typed effects and targets.
+Composable effect productions identify contextual verbs, local selections,
+fixed and dynamic amounts, power/toughness deltas, common durations and delayed
+timings, zones, counter kinds, static subjects, references, and embedded
+resolution payments, plus exact add-mana output and replacement modifiers.
+Each effect owns its clause, targets, references, and grammatical subject;
+coordinated follow-ons explicitly identify prior-subject context. Target
+productions carry cardinality and typed Selection filters. This keeps Oracle
+vocabulary in the parser while the compiler maps typed values without re-reading
+effect spelling.
+
 Malformed delimiters and lexical errors produce localized diagnostics. Parsing
 continues at paragraph boundaries, so callers receive a partial tree rather
 than losing the remainder of the card.
@@ -171,11 +182,12 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   zone, combat-qualifier, batching, and intervening-condition slots. Unknown,
   ambiguous, or unsupported syntax fails closed. Raw event-clause text is
   retained only for diagnostics and exact source consumption;
-- modes and inclusive target cardinalities;
-- conservative selectors and controller constraints;
+- modes and inclusive parser-typed target cardinalities;
+- parser-typed conservative selectors and controller constraints;
 - keyword abilities and parameters;
-- instruction verbs, fixed, exact `X`, and typed dynamic amounts, mana symbols,
-  negation, and common durations;
+- parser-typed instruction verbs and contextual variants, fixed and dynamic
+  amounts, mana symbols, negation, common durations and delayed timings, zones,
+  counter kinds, static subjects, and embedded resolution payments;
 - card-name, `this`-object, `that`-object, and pronoun references. The parser
   recognizes these explicit self/source references from `Context.CardName` and
   reference spelling, emitting typed `Reference` atoms; the compiler maps the

@@ -385,6 +385,7 @@ type CompiledTarget struct {
 	Text        string
 	Cardinality TargetCardinality
 	Selector    CompiledSelector
+	Exact       bool
 }
 
 // SelectorKind identifies the broad object selected by a phrase.
@@ -426,6 +427,7 @@ const (
 type CompiledSelector struct {
 	Kind           SelectorKind
 	Controller     ControllerKind
+	All            bool
 	Another        bool
 	Other          bool
 	Attacking      bool
@@ -440,7 +442,6 @@ type CompiledSelector struct {
 	MatchPower     bool
 	Toughness      compare.Int
 	MatchToughness bool
-	Raw            string
 	atoms          *CompiledSelectorAtoms
 }
 
@@ -450,9 +451,20 @@ type CompiledSelector struct {
 type CompiledSelectorAtoms struct {
 	RequiredTypesAny []types.Card
 	ExcludedTypes    []types.Card
+	Supertypes       []types.Super
 	ColorsAny        []color.Color
 	ExcludedColors   []color.Color
 	SubtypesAny      []types.Sub
+}
+
+// Supertypes returns supertype filters accepted by this selector.
+func (s CompiledSelector) Supertypes() []types.Super {
+	return selectorAtoms(s).Supertypes
+}
+
+func appendSelectorSupertype(selector *CompiledSelector, supertype types.Super) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.Supertypes = append(atoms.Supertypes, supertype)
 }
 
 func selectorAtoms(s CompiledSelector) CompiledSelectorAtoms {
@@ -611,24 +623,62 @@ const (
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind              EffectKind
-	Span              shared.Span
-	Text              string
-	VerbSpan          shared.Span
-	Duration          DurationKind
-	DelayedTiming     game.DelayedTriggerTiming
-	Selector          CompiledSelector
-	Amount            CompiledAmount
-	PowerDelta        CompiledSignedAmount
-	ToughnessDelta    CompiledSignedAmount
-	StaticSubject     StaticSubjectKind
-	StaticSubjectSpan shared.Span
-	Details           *CompiledEffectDetails
-	CounterKind       counter.Kind
-	CounterKindKnown  bool
-	FromZone          zone.Type
-	ToZone            zone.Type
-	Negated           bool
+	Kind                    EffectKind
+	Context                 parser.EffectContextKind
+	Connection              parser.EffectConnectionKind
+	ConnectionSpan          shared.Span
+	Span                    shared.Span
+	ClauseSpan              shared.Span
+	Text                    string
+	VerbSpan                shared.Span
+	References              []CompiledReference
+	SubjectReferences       []CompiledReference
+	Targets                 []CompiledTarget
+	SubjectTargets          []CompiledTarget
+	Duration                DurationKind
+	DelayedTiming           game.DelayedTriggerTiming
+	Selector                CompiledSelector
+	Amount                  CompiledAmount
+	PowerDelta              CompiledSignedAmount
+	ToughnessDelta          CompiledSignedAmount
+	StaticSubject           StaticSubjectKind
+	StaticSubjectSpan       shared.Span
+	Details                 *CompiledEffectDetails
+	CounterKind             counter.Kind
+	CounterKindKnown        bool
+	FromZone                zone.Type
+	ToZone                  zone.Type
+	Destination             parser.EffectDestinationPosition
+	EntersTapped            bool
+	EntersWithCounters      bool
+	UnderYourControl        bool
+	CastAsAdventure         bool
+	Negated                 bool
+	Optional                bool
+	OptionalSpan            shared.Span
+	Mana                    CompiledEffectMana
+	Replacement             parser.EffectReplacementSyntax
+	Payment                 CompiledEffectPayment
+	Exact                   bool
+	RequiresOrderedLowering bool
+	HasUnrecognizedSibling  bool
+	UnsupportedDetail       string
+}
+
+// CompiledEffectMana describes exact typed add-mana output.
+type CompiledEffectMana struct {
+	Span            shared.Span
+	Symbols         []string
+	Choice          bool
+	AnyColor        bool
+	LegacyBodyExact bool
+}
+
+// CompiledEffectPayment is a typed resolution payment embedded in an effect.
+type CompiledEffectPayment struct {
+	Span     shared.Span
+	Payer    parser.EffectPaymentPayerKind
+	ManaCost cost.Mana
 }
 
 // CompiledEffectDetails holds rarely-used effect details outside the hot effect
@@ -661,7 +711,7 @@ func compiledEffectDetails(staticType *CompiledStaticSubjectType, symbol string)
 }
 
 // StaticSubjectSubtype returns the printed subtype text on a static subject.
-func (e CompiledEffect) StaticSubjectSubtype() string {
+func (e *CompiledEffect) StaticSubjectSubtype() string {
 	if e.Details == nil || e.Details.StaticSubjectType == nil {
 		return ""
 	}
@@ -669,7 +719,7 @@ func (e CompiledEffect) StaticSubjectSubtype() string {
 }
 
 // StaticSubjectSub returns the parser-resolved static subject subtype.
-func (e CompiledEffect) StaticSubjectSub() types.Sub {
+func (e *CompiledEffect) StaticSubjectSub() types.Sub {
 	if e.Details == nil || e.Details.StaticSubjectType == nil {
 		return ""
 	}
@@ -677,12 +727,12 @@ func (e CompiledEffect) StaticSubjectSub() types.Sub {
 }
 
 // StaticSubjectSubKnown reports whether the static subject subtype was resolved.
-func (e CompiledEffect) StaticSubjectSubKnown() bool {
+func (e *CompiledEffect) StaticSubjectSubKnown() bool {
 	return e.Details != nil && e.Details.StaticSubjectType != nil && e.Details.StaticSubjectType.Known
 }
 
 // Symbol returns the first mana symbol recognized in this effect.
-func (e CompiledEffect) Symbol() string {
+func (e *CompiledEffect) Symbol() string {
 	if e.Details == nil {
 		return ""
 	}
@@ -728,6 +778,7 @@ const (
 type CompiledAmount struct {
 	Value         int
 	Known         bool
+	VariableX     bool
 	DynamicKind   DynamicAmountKind
 	DynamicForm   DynamicAmountForm
 	Multiplier    int
@@ -777,6 +828,7 @@ const (
 	ReferenceThisObject
 	ReferencePronoun
 	ReferenceThatObject
+	ReferenceThatPlayer
 )
 
 // ReferenceBinding identifies the intended referent of a reference occurrence.

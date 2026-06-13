@@ -11,7 +11,6 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -279,6 +278,15 @@ func lowerExecutableAbility(
 				fmt.Sprintf("the executable source backend does not yet lower the %q ability word", ability.AbilityWord),
 			)
 		}
+		if len(body.Content.Effects) == 1 &&
+			body.Content.Effects[0].Kind == compiler.EffectAddMana &&
+			body.Content.Effects[0].Mana.AnyColor {
+			return abilityLowering{}, executableDiagnostic(
+				ability,
+				"unsupported mana symbol",
+				"the executable source backend cannot lower this add-mana content",
+			)
+		}
 		spellAbility, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
@@ -288,8 +296,8 @@ func lowerExecutableAbility(
 			0,
 			len(ability.Content.Effects)+len(ability.Content.Targets)+len(ability.Content.Conditions)+len(ability.Content.References)+len(syntax.Reminders),
 		)
-		for _, effect := range ability.Content.Effects {
-			spans = append(spans, effect.Span)
+		for i := range ability.Content.Effects {
+			spans = append(spans, ability.Content.Effects[i].Span)
 		}
 		for _, target := range ability.Content.Targets {
 			spans = append(spans, target.Span)
@@ -361,6 +369,16 @@ func lowerExecutableAbilitySpecialCase(
 }
 
 func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if hasOptionalResolvingEffect(ability.Content.Effects) {
+		if replacementAbility, ok := lowerOptionalEntryPayment(ability); ok {
+			return replacementAbilityLowering(ability, &replacementAbility, nil)
+		}
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported optional replacement effect",
+			"the executable source backend does not yet lower optional replacement effects",
+		)
+	}
 	if replacementAbility, handled, diagnostic := lowerDamageReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -404,8 +422,8 @@ func appendKeywordSpans(spans []shared.Span, keywords []compiler.CompiledKeyword
 
 func replacementSourceSpans(ability compiler.CompiledAbility) []shared.Span {
 	spans := make([]shared.Span, 0, len(ability.Content.Effects))
-	for _, effect := range ability.Content.Effects {
-		spans = append(spans, effect.Span)
+	for i := range ability.Content.Effects {
+		spans = append(spans, ability.Content.Effects[i].Span)
 	}
 	return spans
 }
@@ -490,8 +508,8 @@ func lowerChapterAbility(
 		return abilityLowering{}, diagnostic
 	}
 	spans := []shared.Span{ability.ChapterSpan, syntax.Tokens[dash].Span}
-	for _, effect := range ability.Content.Effects {
-		spans = append(spans, effect.Span)
+	for i := range ability.Content.Effects {
+		spans = append(spans, ability.Content.Effects[i].Span)
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
@@ -522,9 +540,7 @@ func lowerChapterAbility(
 }
 
 func lowerEntersPrepared(ability compiler.CompiledAbility, syntax parser.Ability) (abilityLowering, bool) {
-	const text = "This creature enters prepared."
 	if ability.Kind != compiler.AbilityStatic ||
-		(ability.Text != text && !strings.HasPrefix(ability.Text, text+" (")) ||
 		len(ability.Content.Effects) != 1 ||
 		ability.Content.Effects[0].Kind != compiler.EffectEnterPrepared ||
 		len(ability.Content.References) != 1 ||
@@ -558,8 +574,8 @@ func lowerActivatedAbilityKind(
 			return abilityLowering{}, diagnostic
 		}
 		spans := []shared.Span{ability.Cost.Span}
-		for _, effect := range ability.Content.Effects {
-			spans = append(spans, effect.Span)
+		for i := range ability.Content.Effects {
+			spans = append(spans, ability.Content.Effects[i].Span)
 		}
 		spans = append(spans, activationConditionSourceSpans(ability, syntax)...)
 		if ability.ActivationTiming != compiler.ActivationTimingNone {
@@ -592,8 +608,8 @@ func lowerActivatedAbilityKind(
 	if ability.ActivationTiming != compiler.ActivationTimingNone {
 		spans = append(spans, ability.ActivationTimingSpan)
 	}
-	for _, effect := range ability.Content.Effects {
-		spans = append(spans, effect.Span)
+	for i := range ability.Content.Effects {
+		spans = append(spans, ability.Content.Effects[i].Span)
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
@@ -705,8 +721,8 @@ func lowerLoyaltyAbility(
 		1+len(ability.Content.Effects)+len(ability.Content.Targets)+len(ability.Content.References)+len(syntax.Reminders),
 	)
 	spans = append(spans, ability.Cost.Span)
-	for _, effect := range ability.Content.Effects {
-		spans = append(spans, effect.Span)
+	for i := range ability.Content.Effects {
+		spans = append(spans, ability.Content.Effects[i].Span)
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
@@ -894,8 +910,8 @@ func lowerModalContent(
 
 func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax parser.Mode) bool {
 	var spans []shared.Span
-	for _, effect := range content.Effects {
-		spans = append(spans, effect.Span)
+	for i := range content.Effects {
+		spans = append(spans, content.Effects[i].Span)
 	}
 	for _, target := range content.Targets {
 		spans = append(spans, target.Span)
@@ -970,8 +986,8 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 	ability.Content.Conditions = nil
 	*syntax = syntaxWithoutAbilityWord(*syntax)
 	lastEffectEnd := bodyEffects[0].Span.End.Offset
-	for _, effect := range bodyEffects[1:] {
-		lastEffectEnd = max(lastEffectEnd, effect.Span.End.Offset)
+	for i := 1; i < len(bodyEffects); i++ {
+		lastEffectEnd = max(lastEffectEnd, bodyEffects[i].Span.End.Offset)
 	}
 	syntax.Tokens = slices.DeleteFunc(append([]shared.Token(nil), syntax.Tokens...), func(token shared.Token) bool {
 		return token.Span.Start.Offset >= lastEffectEnd
@@ -1800,9 +1816,9 @@ func abilityUsesCyclingSelectorPredicate(content compiler.AbilityContent) bool {
 			return true
 		}
 	}
-	for _, effect := range content.Effects {
-		if effect.Selector.Keyword == parser.KeywordCycling ||
-			effect.Amount.Selector().Keyword == parser.KeywordCycling {
+	for i := range content.Effects {
+		if content.Effects[i].Selector.Keyword == parser.KeywordCycling ||
+			content.Effects[i].Amount.Selector().Keyword == parser.KeywordCycling {
 			return true
 		}
 	}
@@ -1832,7 +1848,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	}
 }
 
-func resolvingStaticSubjectGroup(effect compiler.CompiledEffect) (game.GroupReference, bool) {
+func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupReference, bool) {
 	selection := game.Selection{Controller: game.ControllerYou}
 	switch effect.StaticSubject {
 	case compiler.StaticSubjectControlledCreatures:
@@ -1855,166 +1871,6 @@ func resolvingStaticSubjectGroup(effect compiler.CompiledEffect) (game.GroupRefe
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
-}
-
-func matchesExactKeywordList(tokens []shared.Token, keywords []compiler.CompiledKeyword) bool {
-	elements := make([]string, 0, len(tokens))
-	lastKeyword := -1
-	for _, token := range tokens {
-		keywordIndex := -1
-		for i, keyword := range keywords {
-			if spanCovered(token.Span, []shared.Span{keyword.Span}) {
-				keywordIndex = i
-				break
-			}
-		}
-		if keywordIndex >= 0 {
-			if keywordIndex != lastKeyword {
-				elements = append(elements, "keyword")
-				lastKeyword = keywordIndex
-			}
-			continue
-		}
-		lastKeyword = -1
-		switch {
-		case token.Kind == shared.Comma:
-			elements = append(elements, "comma")
-		case equalTokenWord(token, "and"):
-			elements = append(elements, "and")
-		default:
-			return false
-		}
-	}
-	if len(keywords) == 1 {
-		return slices.Equal(elements, []string{"keyword"})
-	}
-	if len(keywords) == 2 {
-		return slices.Equal(elements, []string{"keyword", "and", "keyword"})
-	}
-	position := 0
-	for keywordIndex := range keywords {
-		if position >= len(elements) || elements[position] != "keyword" {
-			return false
-		}
-		position++
-		if keywordIndex == len(keywords)-1 {
-			return position == len(elements)
-		}
-		if keywordIndex == len(keywords)-2 {
-			if position < len(elements) && elements[position] == "comma" {
-				position++
-			}
-			if position >= len(elements) || elements[position] != "and" {
-				return false
-			}
-			position++
-			continue
-		}
-		if position >= len(elements) || elements[position] != "comma" {
-			return false
-		}
-		position++
-	}
-	return false
-}
-
-func matchesStaticPTBuffPrefix(
-	tokens []shared.Token,
-	effect compiler.CompiledEffect,
-) (int, bool) {
-	switch effect.StaticSubject {
-	case compiler.StaticSubjectAttachedObject:
-		return 8, len(tokens) >= 8 &&
-			(equalTokenWord(tokens[0], "enchanted") || equalTokenWord(tokens[0], "equipped")) &&
-			equalTokenWord(tokens[1], "creature") &&
-			equalTokenWord(tokens[2], "gets") &&
-			tokensMatchSignedAmount(tokens[3], tokens[4], effect.PowerDelta) &&
-			tokens[5].Kind == shared.Slash &&
-			tokensMatchSignedAmount(tokens[6], tokens[7], effect.ToughnessDelta)
-	case compiler.StaticSubjectControlledCreatures:
-		return 9, len(tokens) >= 9 &&
-			equalTokenWord(tokens[0], "creatures") &&
-			equalTokenWord(tokens[1], "you") &&
-			equalTokenWord(tokens[2], "control") &&
-			equalTokenWord(tokens[3], "get") &&
-			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
-			tokens[6].Kind == shared.Slash &&
-			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta)
-	case compiler.StaticSubjectOtherControlledCreatures:
-		return 10, len(tokens) >= 10 &&
-			equalTokenWord(tokens[0], "other") &&
-			equalTokenWord(tokens[1], "creatures") &&
-			equalTokenWord(tokens[2], "you") &&
-			equalTokenWord(tokens[3], "control") &&
-			equalTokenWord(tokens[4], "get") &&
-			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
-			tokens[7].Kind == shared.Slash &&
-			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta)
-	case compiler.StaticSubjectControlledWalls:
-		offset := 0
-		noun := "walls"
-		verb := "get"
-		if len(tokens) > 0 && equalTokenWord(tokens[0], "each") {
-			offset = 1
-			noun = "wall"
-			verb = "gets"
-		}
-		return 9 + offset, len(tokens) >= 9+offset &&
-			equalTokenWord(tokens[offset], noun) &&
-			equalTokenWord(tokens[offset+1], "you") &&
-			equalTokenWord(tokens[offset+2], "control") &&
-			equalTokenWord(tokens[offset+3], verb) &&
-			tokensMatchSignedAmount(tokens[offset+4], tokens[offset+5], effect.PowerDelta) &&
-			tokens[offset+6].Kind == shared.Slash &&
-			tokensMatchSignedAmount(tokens[offset+7], tokens[offset+8], effect.ToughnessDelta)
-	case compiler.StaticSubjectControlledArtifacts, compiler.StaticSubjectControlledTokens:
-		noun := "artifacts"
-		if effect.StaticSubject == compiler.StaticSubjectControlledTokens {
-			noun = "tokens"
-		}
-		return 9, len(tokens) >= 9 &&
-			equalTokenWord(tokens[0], noun) &&
-			equalTokenWord(tokens[1], "you") &&
-			equalTokenWord(tokens[2], "control") &&
-			equalTokenWord(tokens[3], "get") &&
-			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
-			tokens[6].Kind == shared.Slash &&
-			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta)
-	case compiler.StaticSubjectOpponentControlledCreatures:
-		return 10, len(tokens) >= 10 &&
-			equalTokenWord(tokens[0], "creatures") &&
-			equalTokenWord(tokens[1], "your") &&
-			equalTokenWord(tokens[2], "opponents") &&
-			equalTokenWord(tokens[3], "control") &&
-			equalTokenWord(tokens[4], "get") &&
-			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
-			tokens[7].Kind == shared.Slash &&
-			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta)
-	default:
-		return 0, false
-	}
-}
-
-func syntaxSemanticTokens(syntax parser.Ability) []shared.Token {
-	tokens := make([]shared.Token, 0, len(syntax.Tokens))
-	for _, token := range syntax.Tokens {
-		if spanCoveredByDelimited(token.Span, syntax.Reminders) ||
-			spanCoveredByDelimited(token.Span, syntax.Quoted) {
-			continue
-		}
-		tokens = append(tokens, token)
-	}
-	return tokens
-}
-
-func tokensMatchSignedAmount(sign, amount shared.Token, want compiler.CompiledSignedAmount) bool {
-	expectedSign := shared.Plus
-	if want.Negative {
-		expectedSign = shared.Minus
-	}
-	return sign.Kind == expectedSign &&
-		amount.Kind == shared.Integer &&
-		amount.Text == strconv.Itoa(want.Value)
 }
 
 // lowerReminderManaAbility preserves a parenthesized reminder mana ability such
@@ -2136,8 +1992,8 @@ func lowerSelfZoneDestinationReplacement(
 		!selfZoneDestinationReferencesSupported(ability) {
 		return unsupported("the executable source backend supports only exact self graveyard-destination replacements")
 	}
-	destination, ok := selfZoneReplacementDestination(ability.Text)
-	if !ok {
+	destination, ok := selfZoneReplacementDestination(ability.Content.Effects)
+	if !ok || replacementSelectorHasUnsupportedQualifier(ability.Content.Effects[len(ability.Content.Effects)-1].Selector) {
 		return unsupported("the executable source backend supports only exile or shuffle-into-library self zone-destination replacements")
 	}
 	return game.ReplacementAbility{
@@ -2221,14 +2077,18 @@ func lowerDamageReplacement(
 		ability.Optional {
 		return unsupported("the executable source backend supports only exact additive or multiplicative damage replacements")
 	}
-	raw := damageReplacementRawEffects(ability.Content.Effects)
+	replacement := damageReplacementEffect(ability.Content.Effects)
+	if replacementSelectorHasUnsupportedQualifier(replacement.Selector) {
+		return unsupported("the executable source backend supports only exact additive or multiplicative damage replacements")
+	}
 	condition := ability.Content.Conditions[0]
 	if condition.Predicate != compiler.ConditionPredicateDamageByControlledSource {
 		return unsupported("the executable source backend supports only controlled-source red +1 damage or controlled-source double-damage replacements")
 	}
 	if len(condition.Selection.ColorsAny) == 1 &&
 		condition.Selection.ColorsAny[0] == compiler.ConditionColorRed {
-		if !strings.Contains(raw, "that much damage plus 1 to that permanent or player instead.") {
+		if replacement.Replacement.Kind != parser.EffectReplacementThatMuchPlus ||
+			replacement.Replacement.Amount != 1 {
 			return unsupported("the executable source backend supports only +1 red-source damage replacements")
 		}
 		if condition.Selection.ExcludeSource {
@@ -2237,8 +2097,7 @@ func lowerDamageReplacement(
 		return game.DamageReplacement(ability.Text, 0, 1, []color.Color{color.Red}, game.TriggerControllerYou), true, nil
 	}
 	if len(condition.Selection.ColorsAny) == 0 && !condition.Selection.ExcludeSource {
-		if !strings.Contains(raw, "double that damage to that permanent or player instead.") &&
-			!strings.Contains(raw, "twice that damage to that permanent or player instead.") {
+		if replacement.Replacement.Kind != parser.EffectReplacementDoubleThat {
 			return unsupported("the executable source backend supports only double-damage replacements")
 		}
 		return game.DamageReplacement(ability.Text, 2, 0, nil, game.TriggerControllerYou), true, nil
@@ -2253,12 +2112,14 @@ func damageReplacementCandidate(ability compiler.CompiledAbility) bool {
 	return ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateDamageByControlledSource
 }
 
-func damageReplacementRawEffects(effects []compiler.CompiledEffect) string {
-	raw := make([]string, 0, len(effects))
+func damageReplacementEffect(effects []compiler.CompiledEffect) compiler.CompiledEffect {
 	for i := range effects {
-		raw = append(raw, effects[i].Selector.Raw)
+		if effects[i].Kind == compiler.EffectDealDamage &&
+			effects[i].Replacement.Kind != parser.EffectReplacementNone {
+			return effects[i]
+		}
 	}
-	return strings.Join(raw, " ")
+	return compiler.CompiledEffect{}
 }
 
 func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool {
@@ -2272,23 +2133,16 @@ func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool
 }
 
 func plusOneCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
-	first, second := effects[0], effects[1]
-	if first.PowerDelta.Value != 1 || !first.PowerDelta.Known ||
-		first.ToughnessDelta.Value != 1 || !first.ToughnessDelta.Known {
-		return false
-	}
-	raw := first.Selector.Raw + " " + second.Selector.Raw
-	if !strings.Contains(raw, "twice that many +1/+1 counters") {
-		return false
-	}
-	return strings.Contains(raw, "on that creature instead.") ||
-		strings.Contains(raw, "on it instead.")
+	second := effects[1]
+	return second.Replacement.Kind == parser.EffectReplacementTwiceThatMany &&
+		!second.Replacement.EachCounterKind &&
+		!replacementSelectorHasUnsupportedQualifier(second.Selector)
 }
 
 func anyCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
-	raw := effects[0].Selector.Raw + " " + effects[1].Selector.Raw
-	return strings.Contains(raw, "twice that many of each of those kinds of counters") &&
-		strings.Contains(raw, "on that permanent or player instead.")
+	return effects[1].Replacement.Kind == parser.EffectReplacementTwiceThatMany &&
+		effects[1].Replacement.EachCounterKind &&
+		!replacementSelectorHasUnsupportedQualifier(effects[1].Selector)
 }
 
 func lowerTokenCreationReplacement(
@@ -2317,12 +2171,21 @@ func lowerTokenCreationReplacement(
 		ability.Optional {
 		return unsupported("the executable source backend supports only exact token-doubling replacements under your control")
 	}
-	switch ability.Content.Effects[1].Selector.Raw {
-	case "twice that many of those tokens instead.", "twice that many tokens instead.":
-	default:
+	if ability.Content.Effects[1].Replacement.Kind != parser.EffectReplacementTwiceThatMany ||
+		replacementSelectorHasUnsupportedQualifier(ability.Content.Effects[1].Selector) {
 		return unsupported("the executable source backend supports only token-doubling replacement amounts")
 	}
 	return game.TokenCreationReplacement(ability.Text, 2, game.TriggerControllerYou), true, nil
+}
+
+func replacementSelectorHasUnsupportedQualifier(selector compiler.CompiledSelector) bool {
+	return selector.Controller != compiler.ControllerAny ||
+		selector.Another || selector.Other || selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped || selector.Keyword != parser.KeywordUnknown ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		len(selector.ExcludedTypes()) != 0 || len(selector.Supertypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 || len(selector.ExcludedColors()) != 0 ||
+		len(selector.SubtypesAny()) != 0
 }
 
 func tokenCreationReplacementCandidate(ability compiler.CompiledAbility) bool {
@@ -2362,12 +2225,19 @@ func selfZoneDestinationReferencesSupported(ability compiler.CompiledAbility) bo
 	return referencesBindTo(ability.Content.References, compiler.ReferenceBindingSource, 0)
 }
 
-func selfZoneReplacementDestination(text string) (zone.Type, bool) {
-	if strings.Contains(text, " exile it instead.") {
-		return zone.Exile, true
-	}
-	if strings.Contains(text, " shuffle it into its owner's library instead.") {
-		return zone.Library, true
+func selfZoneReplacementDestination(effects []compiler.CompiledEffect) (zone.Type, bool) {
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Replacement.Kind == parser.EffectReplacementNone {
+			continue
+		}
+		switch effect.Kind {
+		case compiler.EffectExile:
+			return zone.Exile, true
+		case compiler.EffectShuffle:
+			return zone.Library, true
+		default:
+		}
 	}
 	return zone.None, false
 }
@@ -2402,14 +2272,15 @@ func lowerEntersWithCountersReplacement(
 	if effect.Duration != compiler.DurationNone || effect.Negated {
 		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
 	}
-	if strings.Contains(effect.Selector.Raw, " X ") ||
-		strings.Contains(effect.Selector.Raw, " for each ") ||
-		!effect.Amount.Known ||
+	if !effect.Amount.Known ||
 		effect.Amount.Value <= 0 {
 		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
 	}
 	if !effect.CounterKindKnown {
 		return unsupported("the executable source backend does not support this enters-with-counters counter kind")
+	}
+	if !effect.Exact {
+		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
 	}
 	return game.EntersWithCountersReplacement(ability.Text, game.CounterPlacement{
 		Kind:   effect.CounterKind,
@@ -2419,13 +2290,11 @@ func lowerEntersWithCountersReplacement(
 
 func isEntersWithCountersReplacement(ability compiler.CompiledAbility) bool {
 	if len(ability.Content.Effects) == 0 ||
-		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped {
+		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped ||
+		!ability.Content.Effects[0].EntersWithCounters {
 		return false
 	}
-	raw := ability.Content.Effects[0].Selector.Raw
-	return strings.HasPrefix(raw, "with ") &&
-		strings.Contains(raw, " counter") &&
-		strings.HasSuffix(raw, " on it.")
+	return true
 }
 
 func selfEntersWithCountersReferences(references []compiler.CompiledReference) bool {
@@ -2511,8 +2380,8 @@ func entersTappedReplacementEffectsSupported(ability compiler.CompiledAbility) b
 		return false
 	}
 	conditionSpans := []shared.Span{ability.Content.Conditions[0].Span}
-	for _, effect := range ability.Content.Effects[1:] {
-		if !spanCovered(effect.VerbSpan, conditionSpans) {
+	for i := 1; i < len(ability.Content.Effects); i++ {
+		if !spanCovered(ability.Content.Effects[i].VerbSpan, conditionSpans) {
 			return false
 		}
 	}
@@ -2944,8 +2813,8 @@ func lowerTriggeredAbilityKind(
 			End:   ability.Trigger.Span.Start,
 		})
 	}
-	for _, effect := range ability.Content.Effects {
-		spans = append(spans, effect.Span)
+	for i := range ability.Content.Effects {
+		spans = append(spans, ability.Content.Effects[i].Span)
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
@@ -3050,11 +2919,6 @@ func lowerEnterTrigger(
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
-	selfDamage := eventKind == game.EventPermanentDied &&
-		normalizeSelfDamageReference(cardName, &body)
-	if selfDamage {
-		bodySyntax.Text = body.Text
-	}
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -3149,18 +3013,21 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	switch ctx.content.Effects[0].Kind {
+	effect := ctx.content.Effects[0]
+	if effect.Negated || effect.DelayedTiming != 0 {
+		return game.AbilityContent{}, false
+	}
+	switch effect.Kind {
 	case compiler.EffectReturn:
-		if ctx.text != "Return it to its owner's hand." &&
-			ctx.text != "Return that card to its owner's hand." {
+		if (!effect.Exact && !referencesContainKind(ctx.content.References, compiler.ReferenceThatObject)) ||
+			effect.ToZone != zone.Hand || ctx.optional {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectExile:
-		if ctx.text != "Exile it." && ctx.text != "Exile that card." {
-			return game.AbilityContent{}, false
-		}
 	case compiler.EffectCast:
-		if ctx.text != "Cast it from your graveyard as an Adventure until the end of your next turn." ||
+		if effect.FromZone != zone.Graveyard ||
+			effect.Duration != compiler.DurationUntilYourNextTurn ||
+			!effect.CastAsAdventure ||
 			len(ctx.content.References) != 1 {
 			return game.AbilityContent{}, false
 		}
@@ -3172,7 +3039,7 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, false
 	}
-	switch ctx.content.Effects[0].Kind {
+	switch effect.Kind {
 	case compiler.EffectReturn:
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
@@ -3306,26 +3173,6 @@ func lowerDiesInterveningCondition(trigger *compiler.CompiledTrigger) (enterInte
 	}
 }
 
-func normalizeSelfDamageReference(cardName string, ability *compiler.CompiledAbility) bool {
-	if ability == nil ||
-		len(ability.Content.Effects) != 1 ||
-		(len(ability.Content.References) != 1 && len(ability.Content.References) != 2) ||
-		ability.Content.References[0].Binding != compiler.ReferenceBindingEventPermanent ||
-		!strings.HasPrefix(ability.Text, "It deals ") ||
-		!strings.HasPrefix(strings.ToLower(ability.Content.Effects[0].Text), "it deals ") {
-		return false
-	}
-	if len(ability.Content.References) == 2 &&
-		(ability.Content.Effects[0].Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
-			ability.Content.References[1].Binding != compiler.ReferenceBindingEventPermanent ||
-			ability.Content.References[1].Span != ability.Content.Effects[0].Amount.ReferenceSpan) {
-		return false
-	}
-	ability.Text = cardName + ability.Text[len("It"):]
-	ability.Content.Effects[0].Text = cardName + ability.Content.Effects[0].Text[len("It"):]
-	return true
-}
-
 func bodyReferences(
 	references []compiler.CompiledReference,
 	excludedSpans ...shared.Span,
@@ -3362,8 +3209,7 @@ func prepareTriggerBody(
 	hasInterveningCondition := ability.Trigger.Condition != nil
 	if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
 		(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
-			ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span ||
-			ability.Optional)) {
+			ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span)) {
 		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	resolvingEffects := ability.Content.Effects
@@ -3423,22 +3269,34 @@ func prepareTriggerBody(
 	bodySyntax.Kind = parser.AbilitySpell
 	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
 	if ability.Optional {
-		if len(ability.Content.Effects) != 1 ||
-			len(bodySyntax.Tokens) < 3 ||
-			!equalTokenWord(bodySyntax.Tokens[0], "you") ||
-			!equalTokenWord(bodySyntax.Tokens[1], "may") ||
-			ability.OptionalSpan.Start != ability.Content.Effects[0].Span.Start {
+		if len(ability.Content.Effects) != 1 {
 			return compiler.CompiledAbility{}, parser.Ability{}, false
 		}
 		effect := body.Content.Effects[0]
-		effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
-		effect.Span.Start = effect.VerbSpan.Start
-		body.Content.Effects = []compiler.CompiledEffect{effect}
-		body.Span.Start = effect.Span.Start
-		body.Text = titleFirst(
-			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
-		)
-		bodySyntax.Tokens = bodySyntax.Tokens[2:]
+		switch {
+		case hasInterveningCondition:
+			body.Optional = true
+			body.OptionalSpan = ability.OptionalSpan
+		case ability.OptionalSpan.Start != effect.Span.Start:
+			return compiler.CompiledAbility{}, parser.Ability{}, false
+		default:
+			effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
+			effect.Span.Start = effect.VerbSpan.Start
+			effect.Optional = false
+			effect.OptionalSpan = shared.Span{}
+			body.Content.Effects = []compiler.CompiledEffect{effect}
+			body.Span.Start = effect.Span.Start
+			body.Text = titleFirst(
+				ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+			)
+			bodyTokenStart = slices.IndexFunc(bodySyntax.Tokens, func(token shared.Token) bool {
+				return token.Span.Start.Offset >= effect.VerbSpan.Start.Offset
+			})
+			if bodyTokenStart < 0 {
+				return compiler.CompiledAbility{}, parser.Ability{}, false
+			}
+			bodySyntax.Tokens = bodySyntax.Tokens[bodyTokenStart:]
+		}
 	}
 	body.Content.Keywords = keywordsWithinSpan(ability.Content.Keywords, body.Span)
 	if len(body.Content.Keywords) != len(ability.Content.Keywords) {
@@ -3489,10 +3347,6 @@ func lowerPermanentZoneChangeTrigger(
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this permanent zone-change trigger body")
-	}
-	if (pattern.Event == game.EventPermanentDied || pattern.Event == game.EventZoneChanged) &&
-		normalizeSelfDamageReference(cardName, &body) {
-		bodySyntax.Text = body.Text
 	}
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
 	if diagnostic != nil {
@@ -3919,6 +3773,13 @@ func lowerManaAbility(
 			"the executable source backend supports only exact non-targeting add-mana content in mana abilities",
 		)
 	}
+	if shell.semanticContent.Effects[0].HasUnrecognizedSibling {
+		return game.ManaAbility{}, executableDiagnostic(
+			ability,
+			"unsupported mana symbol",
+			"the executable source backend cannot lower this add-mana content",
+		)
+	}
 	if shell.zoneOfFunction != zone.Battlefield {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
@@ -3937,8 +3798,15 @@ func lowerManaAbility(
 	}, nil
 }
 
-func lowerAddManaContent(ctx contentCtx, bodyTokens []shared.Token) (game.AbilityContent, *shared.Diagnostic) {
+func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || len(effect.Mana.Symbols) != 0) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported mana symbol",
+			"the executable source backend cannot lower this add-mana content",
+		)
+	}
 	if ctx.optional ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
@@ -3950,7 +3818,7 @@ func lowerAddManaContent(ctx contentCtx, bodyTokens []shared.Token) (game.Abilit
 			"the executable source backend supports only exact unconditional add-mana content",
 		)
 	}
-	content, ok := manaBodyContent(bodyTokens)
+	content, ok := typedManaEffectContent(effect.Mana)
 	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -3961,41 +3829,26 @@ func lowerAddManaContent(ctx contentCtx, bodyTokens []shared.Token) (game.Abilit
 	return content, nil
 }
 
-// manaBodyContent builds game.AbilityContent for exact add-mana content. It
-// matches three patterns:
-//
-//   - "Add one mana of any color." → choice of all five colors
-//   - "Add {X} or {Y}." (two or more mana symbols with separators) → choice
-//   - "Add {X}." or "Add {X}{Y}." (one or more consecutive mana symbols) → fixed
-//
-// Any other body returns false.
-func manaBodyContent(bodyTokens []shared.Token) (game.AbilityContent, bool) {
-	if manaBodyIsAnyColor(bodyTokens) {
+func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityContent, bool) {
+	if effect.AnyColor {
 		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true
 	}
-	if colorNames, ok := manaBodyChoiceColors(bodyTokens); ok {
-		colors := make([]mana.Color, 0, len(colorNames))
-		for _, name := range colorNames {
-			c, ok := manaColorValue(name)
-			if !ok {
-				return game.AbilityContent{}, false
-			}
-			colors = append(colors, c)
-		}
-		if len(colors) < 2 {
+	colors := make([]mana.Color, 0, len(effect.Symbols))
+	for _, symbol := range effect.Symbols {
+		name, ok := manaColorName(symbol)
+		if !ok {
 			return game.AbilityContent{}, false
 		}
+		value, ok := manaColorValue(name)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		colors = append(colors, value)
+	}
+	if effect.Choice && len(colors) >= 2 {
 		return game.TapManaChoiceAbility(colors...).Content, true
 	}
-	if colorNames, ok := manaBodyFixedColors(bodyTokens); ok {
-		colors := make([]mana.Color, 0, len(colorNames))
-		for _, name := range colorNames {
-			c, ok := manaColorValue(name)
-			if !ok {
-				return game.AbilityContent{}, false
-			}
-			colors = append(colors, c)
-		}
+	if !effect.Choice && len(colors) > 0 {
 		return manaFixedContent(colors), true
 	}
 	return game.AbilityContent{}, false
@@ -4015,80 +3868,6 @@ func manaFixedContent(colors []mana.Color) game.AbilityContent {
 		})
 	}
 	return game.Mode{Sequence: seq}.Ability()
-}
-
-// manaBodyIsAnyColor reports whether bodyTokens matches the pattern
-// "Add one mana of any color.".
-func manaBodyIsAnyColor(tokens []shared.Token) bool {
-	return len(tokens) == 7 &&
-		equalTokenWord(tokens[0], "add") &&
-		equalTokenWord(tokens[1], "one") &&
-		equalTokenWord(tokens[2], "mana") &&
-		equalTokenWord(tokens[3], "of") &&
-		equalTokenWord(tokens[4], "any") &&
-		equalTokenWord(tokens[5], "color") &&
-		tokens[6].Kind == shared.Period
-}
-
-// manaBodyChoiceColors extracts the mana color names from a body like
-// "Add {R} or {G}." or "Add {W}, {U}, or {B}." Returns false if the pattern
-// does not match or fewer than two colors are present.
-func manaBodyChoiceColors(tokens []shared.Token) ([]string, bool) {
-	if len(tokens) < 4 ||
-		!equalTokenWord(tokens[0], "add") ||
-		tokens[len(tokens)-1].Kind != shared.Period {
-		return nil, false
-	}
-	inner := tokens[1 : len(tokens)-1]
-	var colors []string
-	for i := 0; i < len(inner); {
-		token := inner[i]
-		manaColor, ok := manaColorName(token.Text)
-		if token.Kind != shared.Symbol || !ok {
-			return nil, false
-		}
-		colors = append(colors, manaColor)
-		i++
-		if i == len(inner) {
-			break
-		}
-		if inner[i].Kind == shared.Comma {
-			i++
-			if i < len(inner) && equalTokenWord(inner[i], "or") {
-				i++
-			}
-			continue
-		}
-		if !equalTokenWord(inner[i], "or") {
-			return nil, false
-		}
-		i++
-	}
-	return colors, len(colors) >= 2
-}
-
-// manaBodyFixedColors extracts the mana color names from a body like "Add {G}."
-// or "Add {G}{W}." (one or more consecutive mana symbols). Returns false if
-// any inner token is not a recognised mana symbol.
-func manaBodyFixedColors(tokens []shared.Token) ([]string, bool) {
-	if len(tokens) < 3 ||
-		!equalTokenWord(tokens[0], "add") ||
-		tokens[len(tokens)-1].Kind != shared.Period {
-		return nil, false
-	}
-	inner := tokens[1 : len(tokens)-1]
-	if len(inner) == 0 {
-		return nil, false
-	}
-	var colors []string
-	for _, token := range inner {
-		name, ok := manaColorName(token.Text)
-		if token.Kind != shared.Symbol || !ok {
-			return nil, false
-		}
-		colors = append(colors, name)
-	}
-	return colors, len(colors) >= 1
 }
 
 func choiceTapManaAbility(colorNames []string) game.ManaAbility {
@@ -4115,17 +3894,6 @@ type contentCtx struct {
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
 func contentDiagnostic(ctx contentCtx, summary, detail string) *shared.Diagnostic {
-	if summary == "unsupported damage spell" && len(ctx.content.Effects) > 0 {
-		lowerText := strings.ToLower(ctx.text)
-		if detail == "the executable source backend supports only exact fixed group damage amounts" &&
-			ctx.content.Effects[0].Amount.Known &&
-			strings.Contains(lowerText, "player or planeswalker it's attacking") {
-			detail = "the executable source backend does not support this group recipient"
-		} else if detail == "the executable source backend does not support this group recipient" &&
-			(strings.Contains(lowerText, "aura deals") && strings.Contains(lowerText, "controller")) {
-			detail = "the executable source backend supports only exact fixed group damage amounts"
-		}
-	}
 	return &shared.Diagnostic{
 		Severity: shared.SeverityWarning,
 		Summary:  summary,
@@ -4161,17 +3929,20 @@ func lowerContent(
 	ctx contentCtx,
 	syntax parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if hasOptionalResolvingEffect(ctx.content.Effects) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported optional effect",
+			"the executable source backend does not yet lower optional resolving effects",
+		)
+	}
 	if len(ctx.content.Modes) > 0 {
 		return lowerModalContent(cardName, ctx, syntax)
 	}
 	if content, ok := lowerEventCardEffect(ctx); ok {
 		return content, nil
 	}
-	if exactManifestDreadLongFormPattern(syntax.Tokens) &&
-		len(ctx.content.Targets) == 0 &&
-		len(ctx.content.Conditions) == 0 &&
-		len(ctx.content.Keywords) == 0 &&
-		len(ctx.content.Modes) == 0 {
+	if typedManifestDreadSequence(ctx.content) {
 		return manifestDreadAbility(), nil
 	}
 	if len(ctx.content.Effects) > 0 && ctx.content.Effects[0].Kind == compiler.EffectSearch {
@@ -4187,8 +3958,11 @@ func lowerContent(
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
+		if ctx.content.Effects[0].RequiresOrderedLowering {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+		}
 		if ctx.content.Effects[0].Kind == compiler.EffectAddMana {
-			return lowerAddManaContent(ctx, syntax.Tokens)
+			return lowerAddManaContent(ctx)
 		}
 		return lowerSingleEffectSpell(cardName, ctx, syntax)
 	}
@@ -4197,6 +3971,15 @@ func lowerContent(
 		"unsupported ability content",
 		"the executable source backend does not yet lower this ability content",
 	)
+}
+
+func hasOptionalResolvingEffect(effects []compiler.CompiledEffect) bool {
+	for i := range effects {
+		if effects[i].Optional {
+			return true
+		}
+	}
+	return false
 }
 
 func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
@@ -4225,36 +4008,38 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	if !search.Amount.Known || search.Amount.Value != 1 {
 		return unsupported("the executable source backend supports only searches for exactly one card")
 	}
-	text := search.Text
-	for _, effect := range ctx.content.Effects {
-		if effect.Text != text ||
-			effect.DelayedTiming != 0 ||
-			effect.Duration != compiler.DurationNone ||
-			effect.Negated {
+	for i := range ctx.content.Effects {
+		if ctx.content.Effects[i].Span != search.Span ||
+			ctx.content.Effects[i].DelayedTiming != 0 ||
+			ctx.content.Effects[i].Duration != compiler.DurationNone ||
+			ctx.content.Effects[i].Negated {
 			return unsupported("the executable source backend supports only exact same-sentence library-search sequences")
 		}
 	}
-	if !strings.HasPrefix(text, "Search your library for ") || !strings.HasSuffix(text, ", then shuffle.") {
+	if search.UnsupportedDetail != "" {
+		return unsupported(search.UnsupportedDetail)
+	}
+	if search.Context != parser.EffectContextController ||
+		ctx.content.Effects[len(ctx.content.Effects)-1].Connection != parser.EffectConnectionThen {
 		return unsupported("the executable source backend supports only searches of your library ending with \"then shuffle\"")
 	}
-
-	filter, ok := searchFilterPhrase(text)
+	spec, ok := searchSpecForSelector(search.Selector)
 	if !ok {
-		return unsupported("the executable source backend supports only exact singular-card search wording")
-	}
-	spec, ok := searchSpecForFilter(filter)
-	if !ok {
-		return unsupported(fmt.Sprintf("unsupported library-search filter %q", filter))
+		return unsupported("unsupported library-search filter")
 	}
 	spec.SourceZone = zone.Library
 
 	spec.Reveal = len(ctx.content.Effects) == 4
-	destination, entersTapped, ok := searchDestination(text, spec.Reveal)
-	if !ok {
+	putIndex := 1
+	if spec.Reveal {
+		putIndex = 2
+	}
+	put := ctx.content.Effects[putIndex]
+	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield {
 		return unsupported("the executable source backend supports only exact hand or battlefield search destinations")
 	}
-	spec.Destination = destination
-	spec.EntersTapped = entersTapped
+	spec.Destination = put.ToZone
+	spec.EntersTapped = put.EntersTapped
 
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.Search{
 		Player: game.ControllerReference(),
@@ -4276,81 +4061,49 @@ func exactSearchEffectSequence(effects []compiler.CompiledEffect) bool {
 		effects[3].Kind == compiler.EffectShuffle
 }
 
-func searchFilterPhrase(text string) (string, bool) {
-	for _, prefix := range []string{
-		"Search your library for a ",
-		"Search your library for an ",
-	} {
-		rest, ok := strings.CutPrefix(text, prefix)
-		if !ok {
-			continue
-		}
-		if strings.HasPrefix(rest, "card,") {
-			return "", true
-		}
-		filter, _, ok := strings.Cut(rest, " card,")
-		return filter, ok
-	}
-	return "", false
-}
-
-func searchSpecForFilter(filter string) (game.SearchSpec, bool) {
+func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec, bool) {
 	var spec game.SearchSpec
-	switch filter {
-	case "":
-	case "basic land":
+	if selector.Controller != compiler.ControllerAny ||
+		selector.All ||
+		selector.Another ||
+		selector.Other ||
+		selector.Attacking ||
+		selector.Blocking ||
+		selector.Tapped ||
+		selector.Untapped ||
+		selector.Keyword != parser.KeywordUnknown ||
+		selector.Zone != zone.None ||
+		selector.MatchManaValue ||
+		selector.MatchPower ||
+		selector.MatchToughness ||
+		len(selector.RequiredTypesAny()) != 0 ||
+		len(selector.ExcludedTypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		len(selector.ExcludedColors()) != 0 {
+		return game.SearchSpec{}, false
+	}
+	switch selector.Kind {
+	case compiler.SelectorCard:
+	case compiler.SelectorLand:
 		spec.CardType = opt.Val(types.Land)
-		spec.Supertype = opt.Val(types.Basic)
-	case "land":
-		spec.CardType = opt.Val(types.Land)
-	case "creature":
+	case compiler.SelectorCreature:
 		spec.CardType = opt.Val(types.Creature)
-	case "artifact":
+	case compiler.SelectorArtifact:
 		spec.CardType = opt.Val(types.Artifact)
-	case "enchantment":
+	case compiler.SelectorEnchantment:
 		spec.CardType = opt.Val(types.Enchantment)
-	case "Forest":
-		spec.SubtypesAny = []types.Sub{types.Forest}
-	case "Plains":
-		spec.SubtypesAny = []types.Sub{types.Plains}
-	case "Island":
-		spec.SubtypesAny = []types.Sub{types.Island}
-	case "Swamp":
-		spec.SubtypesAny = []types.Sub{types.Swamp}
-	case "Mountain":
-		spec.SubtypesAny = []types.Sub{types.Mountain}
-	case "Forest or Plains":
-		spec.SubtypesAny = []types.Sub{types.Forest, types.Plains}
-	case "Plains, Island, Swamp, or Mountain":
-		spec.SubtypesAny = []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}
 	default:
 		return game.SearchSpec{}, false
 	}
+	supertypes := selector.Supertypes()
+	if len(supertypes) > 1 || len(supertypes) == 1 && supertypes[0] != types.Basic {
+		return game.SearchSpec{}, false
+	}
+	if len(supertypes) == 1 {
+		spec.Supertype = opt.Val(types.Basic)
+	}
+	spec.SubtypesAny = slices.Clone(selector.SubtypesAny())
 	return spec, true
-}
-
-func searchDestination(text string, reveal bool) (destination zone.Type, entersTapped, ok bool) {
-	type searchDestinationPattern struct {
-		suffix        string
-		destination   zone.Type
-		entersTapped  bool
-		revealsSearch bool
-	}
-	for _, pattern := range []searchDestinationPattern{
-		{suffix: ", put it into your hand, then shuffle.", destination: zone.Hand},
-		{suffix: ", put that card into your hand, then shuffle.", destination: zone.Hand},
-		{suffix: ", reveal it, put it into your hand, then shuffle.", destination: zone.Hand, revealsSearch: true},
-		{suffix: ", reveal that card, put it into your hand, then shuffle.", destination: zone.Hand, revealsSearch: true},
-		{suffix: ", put it onto the battlefield, then shuffle.", destination: zone.Battlefield},
-		{suffix: ", put that card onto the battlefield, then shuffle.", destination: zone.Battlefield},
-		{suffix: ", put it onto the battlefield tapped, then shuffle.", destination: zone.Battlefield, entersTapped: true},
-		{suffix: ", put that card onto the battlefield tapped, then shuffle.", destination: zone.Battlefield, entersTapped: true},
-	} {
-		if reveal == pattern.revealsSearch && strings.HasSuffix(text, pattern.suffix) {
-			return pattern.destination, pattern.entersTapped, true
-		}
-	}
-	return zone.None, false, false
 }
 
 func lowerSingleEffectSpell(
@@ -4370,23 +4123,7 @@ func lowerDelayedSingleEffectSpell(
 	syntax parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
-	ctx.text = textWithoutDelimited(ctx.text, ctx.span, syntax.Reminders)
-	syntax.Tokens = slices.DeleteFunc(
-		append([]shared.Token(nil), syntax.Tokens...),
-		func(token shared.Token) bool {
-			return spanCoveredByDelimited(token.Span, syntax.Reminders)
-		},
-	)
-	syntax.Reminders = nil
-	text, textOK := stripDelayedTimingText(ctx.text, effect.DelayedTiming)
-	tokens, tokensOK := stripDelayedTimingTokens(syntax.Tokens, effect.DelayedTiming)
-	if !textOK || !tokensOK {
-		return game.AbilityContent{}, unsupportedDelayedEffectDiagnostic(ctx)
-	}
-	ctx.text = text
-	ctx.content.Effects[0].Text = text
 	ctx.content.Effects[0].DelayedTiming = 0
-	syntax.Tokens = tokens
 
 	var content game.AbilityContent
 	if primitive, ok := lowerDelayedSelfPrimitive(ctx); ok {
@@ -4432,12 +4169,16 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	if !ok {
 		return nil, false
 	}
-	switch ctx.text {
-	case "Exile it.":
+	effect := ctx.content.Effects[0]
+	switch effect.Kind {
+	case compiler.EffectExile:
 		return game.Exile{Object: sourcePermanent}, true
-	case "Sacrifice it.":
+	case compiler.EffectSacrifice:
 		return game.Sacrifice{Object: sourcePermanent}, true
-	case "Return it to its owner's hand.":
+	case compiler.EffectReturn:
+		if effect.ToZone != zone.Hand {
+			return nil, false
+		}
 		sourceCard, ok := lowerCardReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
 		if !ok {
 			return nil, false
@@ -4450,47 +4191,6 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	default:
 		return nil, false
 	}
-}
-
-func stripDelayedTimingText(text string, timing game.DelayedTriggerTiming) (string, bool) {
-	var suffix string
-	switch timing {
-	case game.DelayedAtBeginningOfNextEndStep:
-		suffix = " at the beginning of the next end step."
-	case game.DelayedAtBeginningOfNextUpkeep:
-		suffix = " at the beginning of the next turn's upkeep."
-	default:
-		return "", false
-	}
-	base, ok := strings.CutSuffix(text, suffix)
-	if !ok || base == "" {
-		return "", false
-	}
-	return base + ".", true
-}
-
-func stripDelayedTimingTokens(tokens []shared.Token, timing game.DelayedTriggerTiming) ([]shared.Token, bool) {
-	var suffix []string
-	switch timing {
-	case game.DelayedAtBeginningOfNextEndStep:
-		suffix = []string{"at", "the", "beginning", "of", "the", "next", "end", "step"}
-	case game.DelayedAtBeginningOfNextUpkeep:
-		suffix = []string{"at", "the", "beginning", "of", "the", "next", "turn's", "upkeep"}
-	default:
-		return nil, false
-	}
-	if len(tokens) < len(suffix)+1 || tokens[len(tokens)-1].Kind != shared.Period {
-		return nil, false
-	}
-	start := len(tokens) - len(suffix) - 1
-	for i, text := range suffix {
-		if !strings.EqualFold(tokens[start+i].Text, text) {
-			return nil, false
-		}
-	}
-	stripped := append([]shared.Token(nil), tokens[:start]...)
-	stripped = append(stripped, tokens[len(tokens)-1])
-	return stripped, true
 }
 
 func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
@@ -4518,13 +4218,22 @@ func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		ctx.content.Effects[0].Negated {
+		ctx.content.Effects[0].Negated ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Context != parser.EffectContextController {
 		return game.AbilityContent{}, false
 	}
+	hasDirectPronoun := false
 	for _, ref := range ctx.content.References {
-		if ref.Binding != compiler.ReferenceBindingEventPermanent {
+		if ref.Binding != compiler.ReferenceBindingEventPermanent ||
+			ref.Kind != compiler.ReferencePronoun ||
+			(ref.Pronoun != compiler.ReferencePronounIt && ref.Pronoun != compiler.ReferencePronounIts) {
 			return game.AbilityContent{}, false
 		}
+		hasDirectPronoun = hasDirectPronoun || ref.Pronoun == compiler.ReferencePronounIt
+	}
+	if !hasDirectPronoun {
+		return game.AbilityContent{}, false
 	}
 	consumed := ctx
 	consumed.content.References = nil
@@ -4536,34 +4245,20 @@ func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool
 		return game.AbilityContent{}, false
 	}
 	var primitive game.Primitive
-	switch ctx.content.Effects[0].Kind {
+	effect := ctx.content.Effects[0]
+	switch effect.Kind {
 	case compiler.EffectDestroy:
-		if ctx.text != "Destroy it." {
-			return game.AbilityContent{}, false
-		}
 		primitive = game.Destroy{Object: object}
 	case compiler.EffectExile:
-		if ctx.text != "Exile it." {
-			return game.AbilityContent{}, false
-		}
 		primitive = game.Exile{Object: object}
 	case compiler.EffectTap:
-		if ctx.text != "Tap it." {
-			return game.AbilityContent{}, false
-		}
 		primitive = game.Tap{Object: object}
 	case compiler.EffectUntap:
-		if ctx.text != "Untap it." {
-			return game.AbilityContent{}, false
-		}
 		primitive = game.Untap{Object: object}
 	case compiler.EffectSacrifice:
-		if ctx.text != "Sacrifice it." {
-			return game.AbilityContent{}, false
-		}
 		primitive = game.Sacrifice{Object: object}
 	case compiler.EffectReturn:
-		if ctx.text != "Return it to its owner's hand." {
+		if effect.ToZone != zone.Hand {
 			return game.AbilityContent{}, false
 		}
 		primitive = game.Bounce{Object: object}
@@ -4604,7 +4299,7 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectGain:
 		if len(ctx.content.Keywords) != 0 &&
 			ctx.content.Effects[0].Duration == compiler.DurationUntilEndOfTurn {
-			return lowerTemporaryKeywordSpell(ctx, syntax)
+			return lowerTemporaryKeywordSpell(ctx)
 		}
 		return lowerFixedLifeSpell(ctx, "gain", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.GainLife{Amount: amount, Player: player}
@@ -4634,9 +4329,9 @@ func lowerImmediateSingleEffectSpell(
 			return game.Proliferate{Amount: amount}
 		})
 	case compiler.EffectExplore:
-		return lowerExploreSpell(ctx, syntax)
+		return lowerExploreSpell(ctx)
 	case compiler.EffectManifest, compiler.EffectManifestDread:
-		return lowerManifestSpell(ctx, syntax)
+		return lowerManifestSpell(ctx)
 	case compiler.EffectRegenerate:
 		return lowerFixedPermanentTargetSpell(ctx, "Regenerate", func(object game.ObjectReference) game.Primitive {
 			return game.Regenerate{Object: object}
@@ -4683,7 +4378,7 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectCounter:
 		return lowerCounterSpell(ctx)
 	case compiler.EffectSacrifice:
-		return lowerSacrificeSpell(ctx, syntax)
+		return lowerSacrificeSpell(ctx)
 	default:
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -4694,9 +4389,19 @@ func lowerImmediateSingleEffectSpell(
 }
 
 func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		ctx.content.Effects[0].Kind != compiler.EffectReturn ||
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		!effect.Exact ||
+		effect.FromZone != zone.Graveyard ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.UnderYourControl ||
 		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		!selfCardGraveyardReturnReferences(ctx.content.References) {
@@ -4706,28 +4411,27 @@ func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	switch {
-	case ctx.text == "Return this card from your graveyard to your hand.":
+	switch effect.ToZone {
+	case zone.Hand:
+		if effect.EntersTapped || effect.CounterKindKnown || effect.Amount.Known {
+			return game.AbilityContent{}, false
+		}
 		return game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
 			Card:        sourceCard,
 			FromZone:    zone.Graveyard,
 			Destination: zone.Hand,
 		}}}}.Ability(), true
-	case ctx.text == "Return this card from your graveyard to the battlefield.":
-		return game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
-			Source: game.CardBattlefieldSource(sourceCard),
-		}}}}.Ability(), true
-	case strings.HasPrefix(ctx.text, "Return this card from your graveyard to the battlefield"):
-		tapped, counters, ok := selfCardBattlefieldReturnModifiers(ctx.text, ctx.content.Effects[0])
-		if !ok {
+	case zone.Battlefield:
+		if effect.CounterKindKnown &&
+			(effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1) {
 			return game.AbilityContent{}, false
 		}
 		put := game.PutOnBattlefield{
 			Source:      game.CardBattlefieldSource(sourceCard),
-			EntryTapped: tapped,
+			EntryTapped: effect.EntersTapped,
 		}
-		if counters > 0 {
-			put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: counters}}
+		if effect.CounterKindKnown {
+			put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
 		}
 		return game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
 	default:
@@ -4739,31 +4443,10 @@ func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) 
 	return referencesBindTo(references, compiler.ReferenceBindingSource, 0)
 }
 
-func selfCardBattlefieldReturnModifiers(text string, effect compiler.CompiledEffect) (tapped bool, counters int, ok bool) {
-	const prefix = "Return this card from your graveyard to the battlefield"
-	suffix := strings.TrimPrefix(text, prefix)
-	switch suffix {
-	case ".":
-		return false, 0, true
-	case " tapped.":
-		return true, 0, true
-	default:
-	}
-	if strings.HasPrefix(suffix, " tapped with ") {
-		tapped = true
-		suffix = strings.TrimPrefix(suffix, " tapped")
-	}
-	if strings.HasPrefix(suffix, " with ") && strings.HasSuffix(suffix, " +1/+1 counters on it.") {
-		return tapped, effect.Amount.Value, effect.Amount.Known &&
-			effect.CounterKindKnown &&
-			effect.CounterKind == counter.PlusOnePlusOne
-	}
-	return false, 0, false
-}
-
 func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Effects) != 1 ||
+		!ctx.content.Effects[0].Exact ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		ctx.content.Effects[0].FromZone != zone.Graveyard {
@@ -4788,10 +4471,11 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 			Sequence: sequence,
 		}.Ability(), true
 	case zone.Library:
-		destinationBottom, ok := graveyardReturnLibraryBottom(ctx.content.Targets[0].Text)
-		if !ok {
+		if ctx.content.Effects[0].Destination != parser.EffectDestinationTop &&
+			ctx.content.Effects[0].Destination != parser.EffectDestinationBottom {
 			return game.AbilityContent{}, false
 		}
+		destinationBottom := ctx.content.Effects[0].Destination == parser.EffectDestinationBottom
 		for i := range targetSpec.MaxTargets {
 			sequence = append(sequence, game.Instruction{Primitive: game.MoveCard{
 				Card:              game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
@@ -4806,9 +4490,12 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 		}.Ability(), true
 	case zone.Battlefield:
 		for i := range targetSpec.MaxTargets {
-			put, ok := targetedGraveyardBattlefieldPut(ctx.text, game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i})
-			if !ok {
-				return game.AbilityContent{}, false
+			put := game.PutOnBattlefield{
+				Source:      game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i}),
+				EntryTapped: ctx.content.Effects[0].EntersTapped,
+			}
+			if ctx.content.Effects[0].UnderYourControl {
+				put.Recipient = opt.Val(game.ControllerReference())
 			}
 			sequence = append(sequence, game.Instruction{Primitive: put})
 		}
@@ -4821,196 +4508,78 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 }
 
-func targetedGraveyardBattlefieldPut(text string, targetCard game.CardReference) (game.PutOnBattlefield, bool) {
-	put := game.PutOnBattlefield{
-		Source: game.CardBattlefieldSource(targetCard),
-	}
-	text = strings.TrimSuffix(text, ".")
-	for {
-		switch {
-		case strings.HasSuffix(text, " under your control"):
-			text = strings.TrimSuffix(text, " under your control")
-			put.Recipient = opt.Val(game.ControllerReference())
-		case strings.HasSuffix(text, " tapped"):
-			text = strings.TrimSuffix(text, " tapped")
-			put.EntryTapped = true
-		default:
-			if strings.HasSuffix(text, " to the battlefield") || strings.HasSuffix(text, " onto the battlefield") {
-				return put, true
-			}
-			return game.PutOnBattlefield{}, false
-		}
-	}
-}
-
-func graveyardReturnLibraryBottom(text string) (destinationBottom, recognized bool) {
-	switch {
-	case strings.HasSuffix(text, " on top of your library") ||
-		strings.HasSuffix(text, " on the top of your library"):
-		return false, true
-	case strings.HasSuffix(text, " on bottom of your library") ||
-		strings.HasSuffix(text, " on the bottom of your library"):
-		return true, true
-	default:
-		return false, false
-	}
-}
-
 func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) (game.TargetSpec, bool) {
 	if target.Cardinality.Min < 0 || target.Cardinality.Max < target.Cardinality.Min ||
 		target.Cardinality.Max == 0 ||
-		target.Selector.Another || target.Selector.Other ||
-		target.Selector.Attacking || target.Selector.Blocking {
+		target.Selector.Zone != targetZone ||
+		target.Selector.Other ||
+		target.Selector.Attacking || target.Selector.Blocking ||
+		target.Selector.Tapped || target.Selector.Untapped {
 		return game.TargetSpec{}, false
 	}
-	targetText := graveyardCardTargetText(target.Text)
-	const targetPrefix = "target "
-	targetIndex := strings.Index(strings.ToLower(targetText), targetPrefix)
-	if targetIndex < 0 {
+	selection, ok := cardSelectionForSelector(target.Selector)
+	if !ok {
 		return game.TargetSpec{}, false
 	}
-	targetText = targetText[targetIndex:]
-	targetBody := targetText[len(targetPrefix):]
-	controller := game.ControllerAny
-	switch {
-	case strings.HasSuffix(targetBody, " from your graveyard"):
-		targetBody = strings.TrimSuffix(targetBody, " from your graveyard")
-		controller = game.ControllerYou
-	case strings.HasSuffix(targetBody, " from a graveyard"):
-		targetBody = strings.TrimSuffix(targetBody, " from a graveyard")
-	case strings.HasSuffix(targetBody, " from an opponent's graveyard"):
-		targetBody = strings.TrimSuffix(targetBody, " from an opponent's graveyard")
-		controller = game.ControllerOpponent
-	default:
-		return game.TargetSpec{}, false
-	}
-	targetBody = strings.ToLower(targetBody)
-	spec := game.TargetSpec{
+	return game.TargetSpec{
 		MinTargets: target.Cardinality.Min,
 		MaxTargets: target.Cardinality.Max,
-		Constraint: lowerFirst(targetText),
+		Constraint: lowerFirst(target.Text),
 		Allow:      game.TargetAllowCard,
 		TargetZone: targetZone,
+		Selection:  opt.Val(selection),
+	}, true
+}
+
+func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
+	selection := game.Selection{
+		RequiredTypesAny: slices.Clone(selector.RequiredTypesAny()),
+		ExcludedTypes:    slices.Clone(selector.ExcludedTypes()),
+		Supertypes:       slices.Clone(selector.Supertypes()),
+		ColorsAny:        slices.Clone(selector.ColorsAny()),
+		ExcludedColors:   slices.Clone(selector.ExcludedColors()),
+		SubtypesAny:      slices.Clone(selector.SubtypesAny()),
 	}
-	var selection game.Selection
-	switch targetBody {
-	case "card":
-	case "card with cycling", "cards with cycling", "card with a cycling ability", "cards with a cycling ability":
-		selection.Keyword = game.Cycling
-	case "instant or sorcery card":
-		selection.RequiredTypesAny = []types.Card{types.Instant, types.Sorcery}
-	case "instant or sorcery card with cycling", "instant or sorcery cards with cycling", "instant or sorcery card with a cycling ability", "instant or sorcery cards with a cycling ability":
-		selection.RequiredTypesAny = []types.Card{types.Instant, types.Sorcery}
-		selection.Keyword = game.Cycling
-	case "artifact card":
+	switch selector.Kind {
+	case compiler.SelectorCard:
+	case compiler.SelectorArtifact:
 		selection.RequiredTypes = []types.Card{types.Artifact}
-	case "artifact card with cycling", "artifact cards with cycling", "artifact card with a cycling ability", "artifact cards with a cycling ability":
-		selection.RequiredTypes = []types.Card{types.Artifact}
-		selection.Keyword = game.Cycling
-	case "creature card":
+	case compiler.SelectorCreature:
 		selection.RequiredTypes = []types.Card{types.Creature}
-	case "creature card with cycling", "creature cards with cycling", "creature card with a cycling ability", "creature cards with a cycling ability":
-		selection.RequiredTypes = []types.Card{types.Creature}
-		selection.Keyword = game.Cycling
-	case "enchantment card":
+	case compiler.SelectorEnchantment:
 		selection.RequiredTypes = []types.Card{types.Enchantment}
-	case "enchantment card with cycling", "enchantment cards with cycling", "enchantment card with a cycling ability", "enchantment cards with a cycling ability":
-		selection.RequiredTypes = []types.Card{types.Enchantment}
-		selection.Keyword = game.Cycling
-	case "land card":
+	case compiler.SelectorLand:
 		selection.RequiredTypes = []types.Card{types.Land}
-	case "land card with cycling", "land cards with cycling", "land card with a cycling ability", "land cards with a cycling ability":
-		selection.RequiredTypes = []types.Card{types.Land}
-		selection.Keyword = game.Cycling
-	case "planeswalker card":
+	case compiler.SelectorPlaneswalker:
 		selection.RequiredTypes = []types.Card{types.Planeswalker}
-	case "planeswalker card with cycling", "planeswalker cards with cycling", "planeswalker card with a cycling ability", "planeswalker cards with a cycling ability":
-		selection.RequiredTypes = []types.Card{types.Planeswalker}
-		selection.Keyword = game.Cycling
-	case "permanent card with cycling", "permanent cards with cycling", "permanent card with a cycling ability", "permanent cards with a cycling ability":
+	case compiler.SelectorPermanent:
 		selection.RequiredTypesAny = []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle}
-		selection.Keyword = game.Cycling
-	case "vehicle card":
-		selection.SubtypesAny = []types.Sub{types.Vehicle}
-	case "vehicle card with cycling", "vehicle cards with cycling", "vehicle card with a cycling ability", "vehicle cards with a cycling ability":
-		selection.SubtypesAny = []types.Sub{types.Vehicle}
-		selection.Keyword = game.Cycling
 	default:
-		if !lowerCardTargetManaValuePredicate(targetBody, &selection) {
-			return game.TargetSpec{}, false
+		return game.Selection{}, false
+	}
+	switch selector.Controller {
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
+		selection.Controller = game.ControllerYou
+	case compiler.ControllerOpponent:
+		selection.Controller = game.ControllerOpponent
+	default:
+		return game.Selection{}, false
+	}
+	if selector.Keyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selector.Keyword)
+		if !ok {
+			return game.Selection{}, false
 		}
+		selection.Keyword = keyword
 	}
-	selection.Controller = controller
-	spec.Selection = opt.Val(selection)
-	return spec, true
-}
-
-func lowerCardTargetManaValuePredicate(targetBody string, selection *game.Selection) bool {
-	const predicate = " with mana value "
-	cardType, comparisonText, ok := strings.Cut(targetBody, predicate)
-	if !ok {
-		return false
+	if selector.MatchManaValue {
+		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
-	switch cardType {
-	case "artifact card":
-		selection.RequiredTypes = []types.Card{types.Artifact}
-	case "creature card":
-		selection.RequiredTypes = []types.Card{types.Creature}
-	case "enchantment card":
-		selection.RequiredTypes = []types.Card{types.Enchantment}
-	case "instant or sorcery card":
-		selection.RequiredTypesAny = []types.Card{types.Instant, types.Sorcery}
-	case "land card":
-		selection.RequiredTypes = []types.Card{types.Land}
-	case "planeswalker card":
-		selection.RequiredTypes = []types.Card{types.Planeswalker}
-	case "vehicle card":
-		selection.SubtypesAny = []types.Sub{types.Vehicle}
-	default:
-		return false
+	if selector.MatchPower || selector.MatchToughness {
+		return game.Selection{}, false
 	}
-	parts := strings.Fields(comparisonText)
-	if len(parts) != 3 {
-		return false
-	}
-	value, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return false
-	}
-	switch strings.Join(parts[1:], " ") {
-	case "or less":
-		selection.ManaValue = opt.Val(compare.Int{Op: compare.LessOrEqual, Value: value})
-	case "or greater", "or more":
-		selection.ManaValue = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: value})
-	default:
-		return false
-	}
-	return true
-}
-
-func graveyardCardTargetText(text string) string {
-	for _, suffix := range []string{
-		" to your hand",
-		" to their hand",
-		" to the battlefield under your control",
-		" onto the battlefield under your control",
-		" to the battlefield tapped under your control",
-		" onto the battlefield tapped under your control",
-		" to the battlefield tapped",
-		" onto the battlefield tapped",
-		" to the battlefield",
-		" onto the battlefield",
-		" on top of your library",
-		" on the top of your library",
-		" on bottom of your library",
-		" on the bottom of your library",
-		" into your library",
-	} {
-		if trimmed, ok := strings.CutSuffix(text, suffix); ok {
-			return trimmed
-		}
-	}
-	return text
+	return selection, true
 }
 
 func lowerCounterPlacementSpell(
@@ -5021,16 +4590,18 @@ func lowerCounterPlacementSpell(
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		(effect.Amount.Known && effect.Amount.Value <= 0) ||
+		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.CounterKindKnown ||
 		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		!effect.Exact ||
 		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 
 	kind := effect.CounterKind
-	counterName := kind.String()
 	var target game.TargetSpec
 	var primitive game.Primitive
 	if kind.PlayerOnly() {
@@ -5048,27 +4619,24 @@ func lowerCounterPlacementSpell(
 	}
 
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	exactText := exactXCounterText(ctx, counterName) && len(ctx.content.References) == 0
-	if effect.Amount.Known {
+	switch {
+	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
-		exactText = isExactPutCounterText(
-			ctx.text,
-			ctx.content.Targets[0].Text,
-			effect.Amount.Value,
-			counterName,
-		) && len(ctx.content.References) == 0
-	} else if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		if len(ctx.content.References) != 0 {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+	case effect.Amount.VariableX:
+		if len(ctx.content.References) != 0 {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, supported := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		if !supported ||
-			!exactDynamicCounterText(ctx, counterName) ||
 			!exactDynamicAmountReference(effect.Amount, ctx.content.References) {
 			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 		}
 		amount = game.Dynamic(dynamic)
-		exactText = true
-	}
-	if !exactText {
-		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	default:
 	}
 	if kind.PlayerOnly() {
 		primitive = game.AddPlayerCounter{
@@ -5099,25 +4667,6 @@ func unsupportedCounterPlacementDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	)
 }
 
-func exactXCounterText(ctx contentCtx, counterName string) bool {
-	return ctx.text == fmt.Sprintf(
-		"Put X %s counters on %s.",
-		counterName,
-		ctx.content.Targets[0].Text,
-	)
-}
-
-func exactDynamicCounterText(ctx contentCtx, counterName string) bool {
-	amount := ctx.content.Effects[0].Amount
-	return amount.DynamicForm == compiler.DynamicAmountWhereX &&
-		ctx.text == fmt.Sprintf(
-			"Put X %s counters on %s, %s.",
-			counterName,
-			ctx.content.Targets[0].Text,
-			amount.Text,
-		)
-}
-
 func exactDynamicAmountReference(
 	amount compiler.CompiledAmount,
 	references []compiler.CompiledReference,
@@ -5129,33 +4678,6 @@ func exactDynamicAmountReference(
 		return false
 	}
 	return references[0].Binding == compiler.ReferenceBindingSource
-}
-
-func isExactPutCounterText(text, targetText string, amount int, counterName string) bool {
-	amountWords := []string{strconv.Itoa(amount)}
-	switch amount {
-	case 1:
-		amountWords = append(amountWords, "a", "an", "one")
-	case 2:
-		amountWords = append(amountWords, "two")
-	case 3:
-		amountWords = append(amountWords, "three")
-	case 4:
-		amountWords = append(amountWords, "four")
-	case 5:
-		amountWords = append(amountWords, "five")
-	default:
-	}
-	noun := "counters"
-	if amount == 1 {
-		noun = "counter"
-	}
-	for _, amountWord := range amountWords {
-		if text == fmt.Sprintf("Put %s %s %s on %s.", amountWord, counterName, noun, targetText) {
-			return true
-		}
-	}
-	return false
 }
 
 func textWithoutDelimited(text string, span shared.Span, groups []parser.Delimited) string {
@@ -5180,11 +4702,14 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 		ctx.content.Targets[0].Cardinality != (compiler.TargetCardinality{Min: 1, Max: 1}) ||
 		ctx.content.Targets[1].Cardinality != (compiler.TargetCardinality{Min: 1, Max: 1}) ||
 		ctx.content.Effects[0].Negated ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Selector.Another ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.References) != 0 ||
-		ctx.text != titleFirst(ctx.content.Targets[0].Text)+" fights "+ctx.content.Targets[1].Text+"." {
+		(ctx.content.Effects[0].Context != parser.EffectContextTarget &&
+			ctx.content.Effects[0].Context != parser.EffectContextPriorSubject) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported fight spell",
@@ -5212,7 +4737,8 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 }
 
 func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if target.Selector.Kind != compiler.SelectorCreature ||
+	if !targetCardinalityIsOne(target) ||
+		target.Selector.Kind != compiler.SelectorCreature ||
 		target.Selector.Another ||
 		target.Selector.Other ||
 		target.Selector.Attacking ||
@@ -5230,23 +4756,18 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, b
 			PermanentTypes: []types.Card{types.Creature},
 		},
 	}
-	var expected string
 	switch target.Selector.Controller {
 	case compiler.ControllerAny:
-		expected = "target creature"
 	case compiler.ControllerYou:
-		expected = "target creature you control"
 		spec.Predicate.Controller = game.ControllerYou
 	case compiler.ControllerOpponent:
-		expected = "target creature an opponent controls"
 		spec.Predicate.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
-		expected = "target creature you don't control"
 		spec.Predicate.Controller = game.ControllerNotYou
 	default:
 		return game.TargetSpec{}, false
 	}
-	return spec, strings.EqualFold(target.Text, expected)
+	return spec, true
 }
 
 func lowerInvestigateSpell(
@@ -5263,21 +4784,15 @@ func lowerInvestigateSpell(
 	)
 }
 
-func lowerExploreSpell(
-	ctx contentCtx,
-	syntax parser.Ability,
-) (game.AbilityContent, *shared.Diagnostic) {
-	tokens := syntax.Tokens
+func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupportedExplore := contentDiagnostic(
 		ctx,
 		"unsupported explore spell",
 		"the executable source backend supports only the source permanent pattern \"it explores\"",
 	)
 	if ctx.content.Effects[0].Negated ||
-		len(tokens) != 3 ||
-		!equalTokenWord(tokens[0], "it") ||
-		!equalTokenWord(tokens[1], "explores") ||
-		tokens[2].Kind != shared.Period ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Context != parser.EffectContextReferencedObject ||
 		len(ctx.content.References) != 1 ||
 		(ctx.content.References[0].Binding != compiler.ReferenceBindingSource &&
 			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent) {
@@ -5301,25 +4816,19 @@ func lowerExploreSpell(
 	}}}.Ability(), nil
 }
 
-func lowerManifestSpell(
-	ctx contentCtx,
-	syntax parser.Ability,
-) (game.AbilityContent, *shared.Diagnostic) {
-	tokens := syntax.Tokens
+func lowerManifestSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
 	if ctx.content.Effects[0].Negated ||
+		!effect.Exact ||
 		ctx.content.Unconsumed() ||
-		len(ctx.content.References) != 0 ||
-		!exactManifestTopLibraryPattern(tokens) &&
-			!exactManifestDreadShorthandPattern(tokens) &&
-			!exactManifestDreadLongFormPattern(tokens) {
+		len(ctx.content.References) != 0 {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported manifest spell",
 			"the executable source backend supports only \"manifest the top card of your library\" and manifest dread",
 		)
 	}
-	dread := exactManifestDreadShorthandPattern(tokens) || exactManifestDreadLongFormPattern(tokens)
-	if dread {
+	if effect.Kind == compiler.EffectManifestDread {
 		return manifestDreadAbility(), nil
 	}
 	return game.Mode{Sequence: []game.Instruction{{
@@ -5333,75 +4842,45 @@ func manifestDreadAbility() game.AbilityContent {
 	}}}.Ability()
 }
 
-func exactManifestTopLibraryPattern(tokens []shared.Token) bool {
-	return len(tokens) == 8 &&
-		equalTokenWord(tokens[0], "manifest") &&
-		equalTokenWord(tokens[1], "the") &&
-		equalTokenWord(tokens[2], "top") &&
-		equalTokenWord(tokens[3], "card") &&
-		equalTokenWord(tokens[4], "of") &&
-		equalTokenWord(tokens[5], "your") &&
-		equalTokenWord(tokens[6], "library") &&
-		tokens[7].Kind == shared.Period
-}
-
-func exactManifestDreadShorthandPattern(tokens []shared.Token) bool {
-	return len(tokens) == 3 &&
-		equalTokenWord(tokens[0], "manifest") &&
-		equalTokenWord(tokens[1], "dread") &&
-		tokens[2].Kind == shared.Period
-}
-
-func exactManifestDreadLongFormPattern(tokens []shared.Token) bool {
-	return len(tokens) == 33 &&
-		equalTokenWord(tokens[0], "look") &&
-		equalTokenWord(tokens[1], "at") &&
-		equalTokenWord(tokens[2], "the") &&
-		equalTokenWord(tokens[3], "top") &&
-		equalTokenWord(tokens[4], "two") &&
-		equalTokenWord(tokens[5], "cards") &&
-		equalTokenWord(tokens[6], "of") &&
-		equalTokenWord(tokens[7], "your") &&
-		equalTokenWord(tokens[8], "library") &&
-		tokens[9].Kind == shared.Period &&
-		equalTokenWord(tokens[10], "put") &&
-		equalTokenWord(tokens[11], "one") &&
-		equalTokenWord(tokens[12], "of") &&
-		equalTokenWord(tokens[13], "them") &&
-		equalTokenWord(tokens[14], "onto") &&
-		equalTokenWord(tokens[15], "the") &&
-		equalTokenWord(tokens[16], "battlefield") &&
-		equalTokenWord(tokens[17], "face") &&
-		equalTokenWord(tokens[18], "down") &&
-		equalTokenWord(tokens[19], "as") &&
-		equalTokenWord(tokens[20], "a") &&
-		tokens[21].Kind == shared.Integer &&
-		tokens[21].Text == "2" &&
-		tokens[22].Kind == shared.Slash &&
-		tokens[23].Kind == shared.Integer &&
-		tokens[23].Text == "2" &&
-		equalTokenWord(tokens[24], "creature") &&
-		tokens[25].Kind == shared.Period &&
-		equalTokenWord(tokens[26], "put") &&
-		equalTokenWord(tokens[27], "the") &&
-		equalTokenWord(tokens[28], "other") &&
-		equalTokenWord(tokens[29], "into") &&
-		equalTokenWord(tokens[30], "your") &&
-		equalTokenWord(tokens[31], "graveyard") &&
-		tokens[32].Kind == shared.Period
+func typedManifestDreadSequence(content compiler.AbilityContent) bool {
+	if len(content.Effects) != 3 ||
+		len(content.Targets) != 0 ||
+		len(content.Conditions) != 0 ||
+		len(content.Keywords) != 0 ||
+		len(content.Modes) != 0 ||
+		len(content.References) != 1 {
+		return false
+	}
+	look := content.Effects[0]
+	battlefield := content.Effects[1]
+	graveyard := content.Effects[2]
+	reference := content.References[0]
+	return look.Kind == compiler.EffectManifestDread &&
+		look.Amount.Known && look.Amount.Value == 2 &&
+		battlefield.Kind == compiler.EffectPut &&
+		battlefield.Amount.Known && battlefield.Amount.Value == 1 &&
+		battlefield.ToZone == zone.Battlefield &&
+		graveyard.Kind == compiler.EffectPut &&
+		graveyard.Selector.Other &&
+		graveyard.ToZone == zone.Graveyard &&
+		reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
+		reference.PriorInstruction == 0
 }
 
 func lowerExactPrimitiveSpell(
 	ctx contentCtx,
-	syntax parser.Ability,
+	_ parser.Ability,
 	verb string,
 	primitiveFactory func(game.Quantity) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	amount, ok := standaloneActionAmount(syntax.Tokens, syntax.Atoms, verb, ctx.content.Effects[0].Amount)
-	if ctx.content.Effects[0].Negated ||
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
 		ctx.content.Unconsumed() ||
-		len(ctx.content.References) != 0 ||
-		!ok {
+		len(ctx.content.References) != 0 {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+verb+" spell",
@@ -5409,32 +4888,8 @@ func lowerExactPrimitiveSpell(
 		)
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: primitiveFactory(game.Fixed(amount)),
+		Primitive: primitiveFactory(game.Fixed(effect.Amount.Value)),
 	}}}.Ability(), nil
-}
-
-func standaloneActionAmount(tokens []shared.Token, atoms parser.Atoms, verb string, compiled compiler.CompiledAmount) (int, bool) {
-	if len(tokens) == 2 &&
-		equalTokenWord(tokens[0], verb) &&
-		tokens[1].Kind == shared.Period {
-		return 1, true
-	}
-	if len(tokens) == 3 &&
-		equalTokenWord(tokens[0], verb) &&
-		tokens[2].Kind == shared.Period {
-		if compiled.Known && fixedNumberSyntax(tokens[1], atoms, compiled.Value) {
-			return compiled.Value, true
-		}
-	}
-	if len(tokens) == 4 &&
-		equalTokenWord(tokens[0], verb) &&
-		equalTokenWord(tokens[2], "times") &&
-		tokens[3].Kind == shared.Period {
-		if compiled.Known && fixedNumberSyntax(tokens[1], atoms, compiled.Value) {
-			return compiled.Value, true
-		}
-	}
-	return 0, false
 }
 
 // lowerControlSpellSequence lowers an ordered effect sequence whose first
@@ -5479,6 +4934,12 @@ func lowerControlSpellSequence(
 		gainControlIdx = 1
 	}
 	controlEffect := ctx.content.Effects[gainControlIdx]
+	if !controlEffect.Exact || controlEffect.Negated {
+		return unsupported()
+	}
+	if isPatternB && (!ctx.content.Effects[0].Exact || ctx.content.Effects[0].Negated) {
+		return unsupported()
+	}
 
 	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
 	if !ok {
@@ -5536,7 +4997,7 @@ func lowerControlSpellSequence(
 			game.Instruction{Primitive: gainControlPrim},
 		)
 		for i := 2; i < len(ctx.content.Effects); i++ {
-			effAbility := contextForEffect(ctx, ctx.content.Effects[i])
+			effAbility := contextForEffect(ctx, &ctx.content.Effects[i])
 			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, clauseSyntaxes[i])
 			if !ok {
 				return unsupported()
@@ -5551,14 +5012,11 @@ func lowerControlSpellSequence(
 		}
 	} else {
 		// Pattern A: effects[0] is GainControl; subsequent effects are follow-ons.
-		effAbility0 := contextForEffect(ctx, ctx.content.Effects[0])
+		effAbility0 := contextForEffect(ctx, &ctx.content.Effects[0])
 		consumedTargets += len(effAbility0.content.Targets)
-		for _, r := range effAbility0.content.References {
-			consumedRefSpans[r.Span] = true
-		}
 		sequence = append(sequence, game.Instruction{Primitive: gainControlPrim})
 		for i := 1; i < len(ctx.content.Effects); i++ {
-			effAbility := contextForEffect(ctx, ctx.content.Effects[i])
+			effAbility := contextForEffect(ctx, &ctx.content.Effects[i])
 			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, clauseSyntaxes[i])
 			if !ok {
 				return unsupported()
@@ -5575,8 +5033,7 @@ func lowerControlSpellSequence(
 
 	if consumedTargets != len(ctx.content.Targets) ||
 		len(consumedKwSpans) != len(ctx.content.Keywords) ||
-		len(consumedRefSpans) != len(ctx.content.References) ||
-		len(sequence) != len(ctx.content.Effects) {
+		len(consumedRefSpans) != len(ctx.content.References) {
 		return unsupported()
 	}
 
@@ -5592,18 +5049,22 @@ func lowerControlSequenceFollowOn(
 	clauseSyntax parser.Ability,
 ) (game.Primitive, bool) {
 	effect := ctx.content.Effects[0]
+	if !effect.Exact || effect.Negated {
+		return nil, false
+	}
 
 	switch effect.Kind {
 	case compiler.EffectUntap:
 		// Back-reference untap: "Untap that creature." — no new targets.
-		if len(ctx.content.Targets) != 0 {
+		if len(ctx.content.Targets) != 0 || !referencesTargetZero(ctx.content.References) {
 			return nil, false
 		}
 		return game.Untap{Object: game.TargetPermanentReference(0)}, true
 
 	case compiler.EffectGain:
 		// Keyword grant: "It gains haste until end of turn." — back-ref, no new targets.
-		if len(ctx.content.Targets) != 0 || len(ctx.content.Keywords) == 0 {
+		if len(ctx.content.Targets) != 0 || len(ctx.content.Keywords) == 0 ||
+			!referencesTargetZero(ctx.content.References) {
 			return nil, false
 		}
 		if effect.Duration != compiler.DurationUntilEndOfTurn {
@@ -5624,7 +5085,7 @@ func lowerControlSequenceFollowOn(
 
 	case compiler.EffectPut:
 		// Counter placement: "Put a +1/+1 counter on it." — back-ref, no new targets.
-		if len(ctx.content.Targets) != 0 {
+		if len(ctx.content.Targets) != 0 || !referencesTargetZero(ctx.content.References) {
 			return nil, false
 		}
 		if !effect.CounterKindKnown || !compiler.CounterKindPlacementSupported(effect.CounterKind) {
@@ -5659,6 +5120,12 @@ func lowerControlSequenceFollowOn(
 	}
 }
 
+func referencesTargetZero(references []compiler.CompiledReference) bool {
+	return len(references) == 1 &&
+		references[0].Binding == compiler.ReferenceBindingTarget &&
+		references[0].Occurrence == 0
+}
+
 // lowerSingleControlSpell lowers a single EffectGainControl spell with no
 // Untap or keyword grant (e.g. "Gain control of target permanent." or the
 // DurationUntilEndOfTurn variant).
@@ -5677,6 +5144,7 @@ func lowerSingleControlSpell(
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
+		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Negated {
 		return unsupported()
 	}
@@ -5715,6 +5183,26 @@ func lowerSingleControlSpell(
 	}.Ability(), nil
 }
 
+func legacyOrderedEffectSequenceExact(effects []compiler.CompiledEffect) bool {
+	if len(effects) != 2 {
+		return true
+	}
+	first, second := effects[0], effects[1]
+	if first.Kind == compiler.EffectPut && second.Kind == compiler.EffectProliferate {
+		return false
+	}
+	if first.Kind == compiler.EffectModifyPT && second.Kind == compiler.EffectModifyPT &&
+		second.Connection == parser.EffectConnectionAnd {
+		return false
+	}
+	if first.Kind == compiler.EffectExile &&
+		second.Kind == compiler.EffectReturn &&
+		second.DelayedTiming != 0 {
+		return referencesBindTo(second.References, compiler.ReferenceBindingPriorInstructionResult, 0)
+	}
+	return true
+}
+
 func lowerOrderedEffectSequence(
 	cardName string,
 	ctx contentCtx,
@@ -5728,12 +5216,7 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 		}
 	}
-	for _, effect := range ctx.content.Effects {
-		if effect.Kind == compiler.EffectSacrifice {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
-		}
-	}
-	if content, ok := lowerTemporaryPTKeywordSpell(ctx, syntax); ok {
+	if content, ok := lowerTemporaryPTKeywordSpell(ctx); ok {
 		return content, nil
 	}
 	if content, ok := lowerCyclingCountDamageAndGain(cardName, ctx); ok {
@@ -5741,6 +5224,18 @@ func lowerOrderedEffectSequence(
 	}
 	if content, ok := lowerGroupLinkedLifeSpell(ctx); ok {
 		return content, nil
+	}
+	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+	}
+	for i := range ctx.content.Effects {
+		effect := &ctx.content.Effects[i]
+		if effect.Kind == compiler.EffectSacrifice ||
+			(effect.Connection == parser.EffectConnectionAnd &&
+				sequenceHasLifeEffect(ctx.content.Effects)) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+		}
+
 	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
@@ -5756,18 +5251,13 @@ func lowerOrderedEffectSequence(
 	// contributed target specs before the then-joined group.
 	oracleSpanToGameIdx := make(map[shared.Span]int)
 	clauseSyntaxes := splitEffectSyntaxes(syntax, ctx.content.Effects)
-	// clauseRefSpans gives the per-clause "owned" sentence region for reference
-	// and target accounting. For then-joined effects sharing a sentence Span,
-	// each effect owns a distinct non-overlapping sub-region so that
-	// CompiledTargets and CompiledReferences are attributed exactly once.
-	// For effects NOT in a then-joined pair the region defaults to effect.Span.
-	// subjectPrefixRefSpans carries the span of any subject phrase that precedes
-	// the first verb in the sentence group; it is used to propagate shared
-	// targets/references (e.g. "Target player" or "CardName") to implied-subject
-	// clauses whose own clause span contains none.
-	clauseRefSpans, subjectPrefixRefSpans := splitEffectRefSpans(syntax, ctx.content.Effects)
-	for i, effect := range ctx.content.Effects {
-		effectAbility := contextForEffect(ctx, effect)
+	for i := range ctx.content.Effects {
+		effect := &ctx.content.Effects[i]
+		resolvedEffect := *effect
+		if effect.Context == parser.EffectContextPriorSubject {
+			resolvedEffect.Context = priorSubjectContext(ctx.content.Effects, i)
+		}
+		effectAbility := contextForEffect(ctx, &resolvedEffect)
 		// Build the clause parser.Ability for routing through lowerAbilityContent.
 		// syntaxWithinSpan always sets Text = ""; restore it from the effect text
 		// for independent effects (same span), or capitalise the joined token text
@@ -5781,22 +5271,13 @@ func lowerOrderedEffectSequence(
 		} else {
 			clauseAbility.Text = effect.Text
 		}
-		// Per-clause target and reference scoping. Each effect owns only the
-		// targets and references whose spans fall within its clause ref span.
-		// Effects with an implied subject also inherit the subject-prefix targets
-		// so the lowerer can match exact-text patterns ("Target creature fights…").
-		// Inherited targets whose spans already appear in clauseTargets are pruned
-		// to avoid duplicates (this can happen for the first effect in a group
-		// whose clause ref span contains its own subject prefix).
-		clauseTargets := targetsWithinSpan(ctx.content.Targets, clauseRefSpans[i])
-		clauseRefs := referencesWithinSpan(ctx.content.References, clauseRefSpans[i])
+		clauseTargets := effect.Targets
+		clauseRefs := effect.References
+		ownedReferenceCount := len(clauseRefs)
 		var inheritedTargets []compiler.CompiledTarget
-		if subjectPrefixRefSpans[i] != (shared.Span{}) {
-			for _, t := range targetsWithinSpan(ctx.content.Targets, subjectPrefixRefSpans[i]) {
-				if !oracleTargetSpanIn(t.Span, clauseTargets) {
-					inheritedTargets = append(inheritedTargets, t)
-				}
-			}
+		if effect.Context == parser.EffectContextPriorSubject {
+			inheritedTargets = priorSubjectTargets(ctx.content.Effects, i)
+			clauseRefs = append(clauseRefs, priorSubjectReferences(ctx.content.Effects, i)...)
 		}
 		inheritedTargets = appendReferenceAntecedentTargets(
 			inheritedTargets,
@@ -5804,9 +5285,6 @@ func lowerOrderedEffectSequence(
 			ctx.content.Targets,
 			clauseTargets,
 		)
-		if len(clauseRefs) == 0 && subjectPrefixRefSpans[i] != (shared.Span{}) {
-			clauseRefs = referencesWithinSpan(ctx.content.References, subjectPrefixRefSpans[i])
-		}
 		// Three target-handling modes:
 		//   allSharedTargets: only inherited, no own — compound-mill "then draws".
 		//   mixedTargets:     inherited + own — "then fights target creature" where
@@ -5835,10 +5313,10 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 		}
 		effectAbility.content.References = localReferences
-		effectAbility.content.Keywords = keywordsWithinSpan(ctx.content.Keywords, clauseRefSpans[i])
+		effectAbility.content.Keywords = keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)
 		consumedTargets += len(clauseTargets)
 		consumedKeywords += len(effectAbility.content.Keywords)
-		consumedReferences += len(referencesWithinSpan(ctx.content.References, clauseRefSpans[i]))
+		consumedReferences += ownedReferenceCount
 		// Lower the effect through the shared lowerAbilityContent entry point.
 		// allSharedTargets: try with inherited targets; if that fails, retry
 		//   with targets cleared (e.g. "then proliferate" rejects any target).
@@ -5887,6 +5365,15 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func sequenceHasLifeEffect(effects []compiler.CompiledEffect) bool {
+	for i := range effects {
+		if effects[i].Kind == compiler.EffectGain || effects[i].Kind == compiler.EffectLose {
+			return true
+		}
+	}
+	return false
 }
 
 func localizeTargetReferences(
@@ -5946,7 +5433,10 @@ func lowerDelayedTargetReturn(
 		ctx.content.Effects[0].Kind != compiler.EffectReturn ||
 		ctx.content.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
 		ctx.content.Effects[0].Negated ||
-		ctx.text != "Return it to its owner's hand at the beginning of the next end step." ||
+		ctx.optional ||
+		ctx.content.Effects[0].Context != parser.EffectContextController ||
+		ctx.content.Effects[0].ToZone != zone.Hand ||
+		ctx.content.Effects[0].CounterKindKnown ||
 		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
 		return game.ModifyPT{}, game.AbilityContent{}, false
 	}
@@ -5997,8 +5487,9 @@ func lowerDelayedBlinkReturn(
 		ctx.content.Effects[0].Kind != compiler.EffectReturn ||
 		ctx.content.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
 		ctx.content.Effects[0].Negated ||
-		(ctx.text != "Return it to the battlefield under its owner's control at the beginning of the next end step." &&
-			ctx.text != "Return that card to the battlefield under its owner's control at the beginning of the next end step.") {
+		ctx.content.Effects[0].ToZone != zone.Battlefield ||
+		ctx.content.Effects[0].UnderYourControl ||
+		ctx.content.Effects[0].CounterKindKnown {
 		return game.Exile{}, game.AbilityContent{}, false
 	}
 	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1) {
@@ -6162,10 +5653,13 @@ func joinedTokenNeedsSpace(prev, cur shared.Token) bool {
 	return true
 }
 
-func lowerCyclingCountDamageAndGain(cardName string, ctx contentCtx) (game.AbilityContent, bool) {
+func lowerCyclingCountDamageAndGain(_ string, ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
 		ctx.content.Effects[0].Kind != compiler.EffectDealDamage ||
 		ctx.content.Effects[1].Kind != compiler.EffectGain ||
+		ctx.content.Effects[0].Context != parser.EffectContextSource ||
+		ctx.content.Effects[1].Context != parser.EffectContextController ||
+		ctx.content.Effects[1].Connection != parser.EffectConnectionAnd ||
 		ctx.content.Effects[0].Negated ||
 		ctx.content.Effects[1].Negated ||
 		len(ctx.content.Targets) != 1 ||
@@ -6179,7 +5673,8 @@ func lowerCyclingCountDamageAndGain(cardName string, ctx contentCtx) (game.Abili
 	}
 	amountEffect := ctx.content.Effects[1].Amount
 	if amountEffect.DynamicKind == compiler.DynamicAmountNone ||
-		amountEffect.DynamicForm != compiler.DynamicAmountWhereX {
+		amountEffect.DynamicForm != compiler.DynamicAmountWhereX ||
+		!ctx.content.Effects[0].Amount.VariableX {
 		return game.AbilityContent{}, false
 	}
 	dynamic, ok := lowerDynamicAmount(amountEffect, game.SourcePermanentReference())
@@ -6188,14 +5683,6 @@ func lowerCyclingCountDamageAndGain(cardName string, ctx contentCtx) (game.Abili
 	}
 	target, ok := damageTargetSpec(ctx.content.Targets[0])
 	if !ok {
-		return game.AbilityContent{}, false
-	}
-	if ctx.text != fmt.Sprintf(
-		"%s deals X damage to %s and you gain X life, %s.",
-		cardName,
-		ctx.content.Targets[0].Text,
-		amountEffect.Text,
-	) {
 		return game.AbilityContent{}, false
 	}
 	amount := game.Dynamic(dynamic)
@@ -6222,6 +5709,9 @@ func lowerGroupLinkedLifeSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
 		ctx.content.Effects[0].Kind != compiler.EffectLose ||
 		ctx.content.Effects[1].Kind != compiler.EffectGain ||
+		ctx.content.Effects[0].Context != parser.EffectContextEachOpponent ||
+		ctx.content.Effects[1].Context != parser.EffectContextController ||
+		ctx.content.Effects[1].Connection != parser.EffectConnectionAnd ||
 		ctx.content.Effects[0].Negated ||
 		ctx.content.Effects[1].Negated ||
 		!ctx.content.Effects[0].Amount.Known ||
@@ -6234,17 +5724,6 @@ func lowerGroupLinkedLifeSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	loseAmount := game.Fixed(ctx.content.Effects[0].Amount.Value)
-	amountText := fmt.Sprint(ctx.content.Effects[0].Amount.Value)
-
-	// Determine player group from full sentence text.
-	var group game.PlayerGroupReference
-	switch {
-	case ctx.text == fmt.Sprintf("Each opponent loses %s life and you gain %s life.", amountText, amountText) ||
-		ctx.text == fmt.Sprintf("Each opponent loses %s life and you gain that much life.", amountText):
-		group = game.OpponentsReference()
-	default:
-		return game.AbilityContent{}, false
-	}
 
 	// Determine the gain amount: fixed if effects[1] has a known value, dynamic ("that much") otherwise.
 	var gainAmount game.Quantity
@@ -6263,7 +5742,7 @@ func lowerGroupLinkedLifeSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{
 		Sequence: []game.Instruction{
 			{
-				Primitive:     game.LoseLife{PlayerGroup: group, Amount: loseAmount},
+				Primitive:     game.LoseLife{PlayerGroup: game.OpponentsReference(), Amount: loseAmount},
 				PublishResult: "life-change",
 			},
 			{
@@ -6642,14 +6121,16 @@ func rebasePlayerReference(reference game.PlayerReference, offset int) (game.Pla
 
 func contextForEffect(
 	ctx contentCtx,
-	effect compiler.CompiledEffect,
+	effect *compiler.CompiledEffect,
 ) contentCtx {
 	ctx.text = effect.Text
 	ctx.span = effect.Span
-	ctx.content.Effects = []compiler.CompiledEffect{effect}
-	ctx.content.Targets = targetsWithinSpan(ctx.content.Targets, effect.Span)
-	ctx.content.Keywords = keywordsWithinSpan(ctx.content.Keywords, effect.Span)
-	ctx.content.References = referencesWithinSpan(ctx.content.References, effect.Span)
+	resolvedEffect := *effect
+	resolvedEffect.RequiresOrderedLowering = false
+	ctx.content.Effects = []compiler.CompiledEffect{resolvedEffect}
+	ctx.content.Targets = effect.Targets
+	ctx.content.Keywords = keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)
+	ctx.content.References = effect.References
 	return ctx
 }
 
@@ -6695,374 +6176,54 @@ func syntaxWithinSpan(syntax parser.Ability, span shared.Span) parser.Ability {
 	return syntax
 }
 
-// splitEffectSyntaxes returns per-clause syntax for each effect in an ordered
-// sequence. For effects sharing the same sentence Span, the entire same-span
-// group is processed in a single pass so that each clause's subject ownership
-// is stable and never overwritten by a later pair.
-//
-// For each clause k in a then-joined group of n effects:
-//   - Subject tokens:
-//     k == 0: tokens[sentenceStart .. verb[0]] (any subject phrase before the first verb).
-//     k  > 0: tokens immediately after the preceding "then" up to verb[k].
-//     If that post-then region is non-empty it is the explicit subject
-//     (e.g. "you" in "then you gain 2 life.").
-//     If it is empty the subject is implied; it is inherited from the first
-//     clause when the verb form ends in 's' (third-person singular, e.g.
-//     "draws", "mills"), indicating the same grammatical subject continues.
-//     Otherwise (imperative/controller verb, e.g. "draw", "proliferate")
-//     no subject prefix is prepended.
-//   - Verb clause tokens: from verb[k] to just before the next comma-then
-//     connector for non-final clauses, or through the sentence period for the
-//     final clause.
-//   - The terminal period is appended to each non-final clause.
-//
-// The function is fail-closed: any invalid boundary for any pair in the group
-// causes the entire group to fall back to syntaxWithinSpan(syntax, effect.Span).
+// splitEffectSyntaxes clips retained diagnostic syntax to parser-owned clause
+// spans. Appending sentence punctuation does not derive semantic ownership.
 func splitEffectSyntaxes(syntax parser.Ability, effects []compiler.CompiledEffect) []parser.Ability {
 	clauses := make([]parser.Ability, len(effects))
-	for i, effect := range effects {
-		clauses[i] = syntaxWithinSpan(syntax, effect.Span)
-	}
-	tokens := syntax.Tokens
-
-	// Process each same-span then-joined group in one pass. Groups are
-	// contiguous runs of effects that share the same sentence Span.
-	for i := 0; i < len(effects); {
-		sentenceSpan := effects[i].Span
-		j := i + 1
-		for j < len(effects) && effects[j].Span == sentenceSpan {
-			j++
-		}
-		n := j - i
-		if n < 2 {
-			i = j
+	for i := range effects {
+		clauses[i] = syntaxWithinSpan(syntax, effects[i].ClauseSpan)
+		if len(clauses[i].Tokens) == 0 || clauses[i].Tokens[len(clauses[i].Tokens)-1].Kind == shared.Period {
 			continue
 		}
-
-		// Find sentenceStart: first token index within the sentence span.
-		sentenceStart := -1
-		for k, tok := range tokens {
-			if spanCovered(tok.Span, []shared.Span{sentenceSpan}) {
-				sentenceStart = k
-				break
-			}
+		sentence := syntaxWithinSpan(syntax, effects[i].Span)
+		if len(sentence.Tokens) > 0 && sentence.Tokens[len(sentence.Tokens)-1].Kind == shared.Period {
+			clauses[i].Tokens = append(clauses[i].Tokens, sentence.Tokens[len(sentence.Tokens)-1])
 		}
-		if sentenceStart < 0 {
-			i = j
-			continue
-		}
-
-		// Find terminal period for the sentence.
-		period, hasPeriod := lastPeriodTokenInSpan(tokens, sentenceSpan)
-		if !hasPeriod {
-			i = j
-			continue
-		}
-		periodIdx := -1
-		for k := len(tokens) - 1; k >= sentenceStart; k-- {
-			if tokens[k].Span == period.Span {
-				periodIdx = k
-				break
-			}
-		}
-		if periodIdx < 0 {
-			i = j
-			continue
-		}
-
-		// Collect verb token indices for each effect in the group.
-		verbs := make([]int, n)
-		valid := true
-		for k := range n {
-			v := findVerbTokenIndex(tokens, effects[i+k].VerbSpan)
-			if v < 0 || v < sentenceStart {
-				valid = false
-				break
-			}
-			verbs[k] = v
-		}
-		if !valid {
-			i = j
-			continue
-		}
-
-		// Collect "then" positions and clause-end positions for each pair.
-		thens := make([]int, n-1)
-		ends := make([]int, n-1) // tokens[ends[k]] is the first token NOT in clause k
-		for k := 0; k < n-1; k++ {
-			thenIdx := -1
-			for m := verbs[k] + 1; m < verbs[k+1]; m++ {
-				if tokens[m].Kind == shared.Word && strings.EqualFold(tokens[m].Text, "then") {
-					thenIdx = m
-					break
-				}
-			}
-			if thenIdx < 0 {
-				valid = false
-				break
-			}
-			thens[k] = thenIdx
-			end := thenIdx
-			if end > sentenceStart && tokens[end-1].Kind == shared.Comma {
-				end--
-			}
-			if end <= sentenceStart {
-				valid = false
-				break
-			}
-			ends[k] = end
-		}
-		if !valid {
-			i = j
-			continue
-		}
-
-		// Compute the subject token slice for each clause.
-		// Clause 0: tokens[sentenceStart:verbs[0]] — any sentence-opening subject.
-		// Clause k>0: post-then pre-verb tokens; if empty, either inherit the
-		// first clause's subject (third-person 's' verb) or use no prefix.
-		firstSubject := append([]shared.Token(nil), tokens[sentenceStart:verbs[0]]...)
-		subjects := make([][]shared.Token, n)
-		subjects[0] = firstSubject
-		for k := 1; k < n; k++ {
-			postThen := tokens[thens[k-1]+1 : verbs[k]]
-			switch {
-			case len(postThen) > 0:
-				// Explicit subject in the post-then region (e.g. "you", "Test Bolt").
-				subjects[k] = append([]shared.Token(nil), postThen...)
-			case len(firstSubject) > 0 && verbImpliesInheritedSubject(tokens[verbs[k]]):
-				// Implied subject: verb is third-person ('s'-ending) and the
-				// first clause has a subject prefix — inherit it.
-				// Example: "Target player mills …, then draws …"
-				subjects[k] = firstSubject
-			default:
-				// Implied subject with controller verb (imperative, no 's'):
-				// e.g. "then draw a card" or "then proliferate".
-				subjects[k] = nil
-			}
-		}
-
-		// Build clause tokens and spans for each effect in the group.
-		for k := range n {
-			var clauseTokens []shared.Token
-			clauseTokens = append(clauseTokens, subjects[k]...)
-
-			if k < n-1 {
-				clauseTokens = append(clauseTokens, tokens[verbs[k]:ends[k]]...)
-				clauseTokens = append(clauseTokens, period)
-			} else {
-				clauseTokens = append(clauseTokens, tokens[verbs[k]:periodIdx+1]...)
-			}
-
-			// Span.Start: use sentenceStart for the first clause (to cover the
-			// subject phrase), verbs[k].Start for subsequent clauses (ensuring
-			// clause.Span != sentence.Span even when subject tokens are prepended
-			// from the sentence start).
-			var spanStart shared.Position
-			if k == 0 {
-				spanStart = tokens[sentenceStart].Span.Start
-			} else {
-				spanStart = tokens[verbs[k]].Span.Start
-			}
-			var spanEnd shared.Position
-			if k < n-1 {
-				spanEnd = tokens[ends[k]-1].Span.End
-			} else {
-				spanEnd = period.Span.End
-			}
-
-			clauses[i+k] = parser.Ability{
-				Span:      shared.Span{Start: spanStart, End: spanEnd},
-				Tokens:    clauseTokens,
-				Reminders: syntax.Reminders,
-				Atoms:     syntax.Atoms,
-			}
-		}
-
-		i = j
 	}
 	return clauses
 }
 
-// verbImpliesInheritedSubject reports whether a verb token uses the third-
-// person singular form (ends in 's', e.g. "draws", "mills", "discards").
-// When a then-joined clause has no explicit post-then subject and the verb
-// ends in 's', the first clause's subject prefix is inherited (e.g. "Target
-// player mills …, then draws …"). An imperative verb ("draw", "mill",
-// "proliferate") receives no subject prefix and is lowered as a controller
-// action.
-func verbImpliesInheritedSubject(tok shared.Token) bool {
-	return strings.HasSuffix(strings.ToLower(tok.Text), "s")
+func priorSubjectTargets(effects []compiler.CompiledEffect, index int) []compiler.CompiledTarget {
+	for i := index - 1; i >= 0; i-- {
+		if len(effects[i].SubjectTargets) > 0 {
+			return effects[i].SubjectTargets
+		}
+		if effects[i].Context != parser.EffectContextPriorSubject {
+			break
+		}
+	}
+	return nil
 }
 
-// splitEffectRefSpans returns two parallel slices keyed by effect index.
-// It uses the same single-pass group strategy as splitEffectSyntaxes.
-//
-//   - clauseRefSpans: the "owned" sentence region for reference and target
-//     accounting. For a then-joined group, effect k's region is:
-//     k == 0: sentenceStart .. just before the first comma-then connector
-//     k  > 0: immediately after the preceding "then" .. just before the next
-//     comma-then connector (or sentence end for the final effect)
-//     This partitions the sentence so every CompiledTarget/Reference is
-//     attributed to exactly one clause without overlap.
-//
-//   - subjectPrefixRefSpans: the span of the first-clause subject phrase
-//     ({sentenceStart..before verb[0]}). Set only for clauses whose
-//     clauseRefSpan will contain no targets/references but whose implied
-//     subject carries shared ones — specifically, when the post-then pre-verb
-//     region is empty AND the verb implies inheritance (third-person 's').
-//     Callers use this to propagate subject-carried targets/references to the
-//     lowerer without double-counting them in the accounting totals.
-func splitEffectRefSpans(syntax parser.Ability, effects []compiler.CompiledEffect) (clauseRefSpans, subjectPrefixRefSpans []shared.Span) {
-	clauseRefSpans = make([]shared.Span, len(effects))
-	subjectPrefixRefSpans = make([]shared.Span, len(effects))
-	for i, effect := range effects {
-		clauseRefSpans[i] = effect.Span
+func priorSubjectContext(effects []compiler.CompiledEffect, index int) parser.EffectContextKind {
+	for i := index - 1; i >= 0; i-- {
+		if effects[i].Context != parser.EffectContextPriorSubject {
+			return effects[i].Context
+		}
 	}
-	tokens := syntax.Tokens
-
-	for i := 0; i < len(effects); {
-		sentenceSpan := effects[i].Span
-		j := i + 1
-		for j < len(effects) && effects[j].Span == sentenceSpan {
-			j++
-		}
-		n := j - i
-		if n < 2 {
-			i = j
-			continue
-		}
-
-		sentenceStart := -1
-		for k, tok := range tokens {
-			if spanCovered(tok.Span, []shared.Span{sentenceSpan}) {
-				sentenceStart = k
-				break
-			}
-		}
-		if sentenceStart < 0 {
-			i = j
-			continue
-		}
-
-		verbs := make([]int, n)
-		valid := true
-		for k := range n {
-			v := findVerbTokenIndex(tokens, effects[i+k].VerbSpan)
-			if v < 0 {
-				valid = false
-				break
-			}
-			verbs[k] = v
-		}
-		if !valid {
-			i = j
-			continue
-		}
-
-		thens := make([]int, n-1)
-		ends := make([]int, n-1)
-		for k := 0; k < n-1; k++ {
-			thenIdx := -1
-			for m := verbs[k] + 1; m < verbs[k+1]; m++ {
-				if tokens[m].Kind == shared.Word && strings.EqualFold(tokens[m].Text, "then") {
-					thenIdx = m
-					break
-				}
-			}
-			if thenIdx < 0 {
-				valid = false
-				break
-			}
-			thens[k] = thenIdx
-			end := thenIdx
-			if end > sentenceStart && tokens[end-1].Kind == shared.Comma {
-				end--
-			}
-			if end <= sentenceStart {
-				valid = false
-				break
-			}
-			ends[k] = end
-		}
-		if !valid {
-			i = j
-			continue
-		}
-
-		// Clause 0 ref span: from sentenceStart through just before the first then.
-		clauseRefSpans[i] = shared.Span{
-			Start: tokens[sentenceStart].Span.Start,
-			End:   tokens[ends[0]-1].Span.End,
-		}
-		// Clause k (1..n-1) ref span: from immediately after the preceding "then"
-		// through just before the next comma-then (or sentence end for the last).
-		for k := 1; k < n; k++ {
-			if thens[k-1]+1 >= len(tokens) {
-				valid = false
-				break
-			}
-			var end shared.Position
-			if k < n-1 {
-				end = tokens[ends[k]-1].Span.End
-			} else {
-				end = sentenceSpan.End
-			}
-			clauseRefSpans[i+k] = shared.Span{
-				Start: tokens[thens[k-1]+1].Span.Start,
-				End:   end,
-			}
-		}
-		if !valid {
-			i = j
-			continue
-		}
-
-		// Subject prefix span: tokens[sentenceStart..verb[0]-1].
-		// Set for all effects in the group that use implied-subject inheritance,
-		// i.e. those whose post-then pre-verb region is empty AND whose verb
-		// implies the same subject continues (third-person 's').
-		if verbs[0] > sentenceStart {
-			subjectSpan := shared.Span{
-				Start: tokens[sentenceStart].Span.Start,
-				End:   tokens[verbs[0]-1].Span.End,
-			}
-			// Clause 0 always gets the subject prefix span.
-			subjectPrefixRefSpans[i] = subjectSpan
-			// Subsequent clauses get it only when implied-subject inheritance applies.
-			for k := 1; k < n; k++ {
-				postThen := tokens[thens[k-1]+1 : verbs[k]]
-				if len(postThen) == 0 && verbImpliesInheritedSubject(tokens[verbs[k]]) {
-					subjectPrefixRefSpans[i+k] = subjectSpan
-				}
-			}
-		}
-
-		i = j
-	}
-	return clauseRefSpans, subjectPrefixRefSpans
+	return parser.EffectContextUnknown
 }
 
-// lastPeriodTokenInSpan returns the last Period token in tokens whose own span
-// lies within span, or the zero Token and false if none is found.
-func lastPeriodTokenInSpan(tokens []shared.Token, span shared.Span) (shared.Token, bool) {
-	for i := len(tokens) - 1; i >= 0; i-- {
-		if tokens[i].Kind == shared.Period && spanCovered(tokens[i].Span, []shared.Span{span}) {
-			return tokens[i], true
+func priorSubjectReferences(effects []compiler.CompiledEffect, index int) []compiler.CompiledReference {
+	for i := index - 1; i >= 0; i-- {
+		if len(effects[i].SubjectReferences) > 0 {
+			return effects[i].SubjectReferences
+		}
+		if effects[i].Context != parser.EffectContextPriorSubject {
+			break
 		}
 	}
-	return shared.Token{}, false
-}
-
-// findVerbTokenIndex returns the index in tokens of the token whose span start
-// matches verbSpan.Start, or -1 if not found.
-func findVerbTokenIndex(tokens []shared.Token, verbSpan shared.Span) int {
-	for i, token := range tokens {
-		if token.Span.Start.Offset == verbSpan.Start.Offset {
-			return i
-		}
-	}
-	return -1
+	return nil
 }
 
 func unsupportedEffectSequenceDiagnostic(ctx contentCtx) *shared.Diagnostic {
@@ -7074,7 +6235,7 @@ func unsupportedEffectSequenceDiagnostic(ctx contentCtx) *shared.Diagnostic {
 }
 
 func lowerGroupDamageSpell(
-	cardName string,
+	_ string,
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
@@ -7101,55 +6262,18 @@ func lowerGroupDamageSpell(
 			"the executable source backend supports only exact fixed group damage amounts",
 		)
 	}
-	amountText := fmt.Sprint(effect.Amount.Value)
-	// When the source is bound to the triggering permanent, the body may use
-	// "It deals" rather than the card name as the damage source subject.
-	textSourceSubject := cardName
-	if len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent &&
-		strings.HasPrefix(ctx.text, "It deals ") {
-		textSourceSubject = "It"
-	}
 	sel := effect.Selector
 	var recipient game.DamageRecipient
 	switch {
 	case sel.Kind == compiler.SelectorOpponent && !sel.Other:
-		if ctx.text != fmt.Sprintf("%s deals %s damage to each opponent.", textSourceSubject, amountText) {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported damage spell",
-				"the executable source backend supports only exact fixed group damage amounts",
-			)
-		}
 		recipient = game.PlayerGroupDamageRecipient(game.OpponentsReference())
 	case sel.Kind == compiler.SelectorPlayer && !sel.Other:
-		if ctx.text != fmt.Sprintf("%s deals %s damage to each player.", textSourceSubject, amountText) {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported damage spell",
-				"the executable source backend supports only exact fixed group damage amounts",
-			)
-		}
 		recipient = game.PlayerGroupDamageRecipient(game.AllPlayersReference())
 	case sel.Kind == compiler.SelectorCreature && !sel.Other:
-		if ctx.text != fmt.Sprintf("%s deals %s damage to each creature.", textSourceSubject, amountText) {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported damage spell",
-				"the executable source backend supports only exact fixed group damage amounts",
-			)
-		}
 		recipient = game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
 			RequiredTypes: []types.Card{types.Creature},
 		}))
 	case sel.Kind == compiler.SelectorCreature && sel.Other:
-		if ctx.text != fmt.Sprintf("%s deals %s damage to each other creature.", textSourceSubject, amountText) {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported damage spell",
-				"the executable source backend supports only exact fixed group damage amounts",
-			)
-		}
 		recipient = game.GroupDamageRecipient(game.BattlefieldGroupExcluding(
 			game.Selection{RequiredTypes: []types.Card{types.Creature}},
 			game.SourcePermanentReference(),
@@ -7159,6 +6283,13 @@ func lowerGroupDamageSpell(
 			ctx,
 			"unsupported damage spell",
 			"the executable source backend does not support this group recipient",
+		)
+	}
+	if !effect.Exact || !exactDamageSourceSyntax(ctx.content.References) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported damage spell",
+			"the executable source backend supports only exact fixed group damage amounts",
 		)
 	}
 	damage := game.Damage{
@@ -7178,13 +6309,18 @@ func lowerGroupDamageSpell(
 }
 
 func lowerFixedDamageSpell(
-	cardName string,
+	_ string,
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		(effect.Context != parser.EffectContextSource &&
+			effect.Context != parser.EffectContextReferencedObject &&
+			effect.Context != parser.EffectContextPriorSubject) ||
 		(effect.Amount.Known && effect.Amount.Value < 1) ||
+		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
@@ -7199,7 +6335,6 @@ func lowerFixedDamageSpell(
 		)
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	amountText := "X"
 	var damageSource game.ObjectReference
 	var sourceBound bool
 	if len(ctx.content.References) > 0 {
@@ -7207,7 +6342,6 @@ func lowerFixedDamageSpell(
 	}
 	if effect.Amount.Known {
 		amount = game.Fixed(effect.Amount.Value)
-		amountText = fmt.Sprint(effect.Amount.Value)
 	} else if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
 		amountObject := game.SourcePermanentReference()
 		if sourceBound {
@@ -7224,17 +6358,8 @@ func lowerFixedDamageSpell(
 		amount = game.Dynamic(dynamic)
 	}
 	target, ok := damageTargetSpec(ctx.content.Targets[0])
-	// When the source is the triggering permanent, the body may use "It deals"
-	// rather than the card name. Accept that pronoun only when the source
-	// reference is bound to the triggering event.
-	textSourceSubject := cardName
-	if len(ctx.content.References) > 0 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent &&
-		strings.HasPrefix(ctx.text, "It deals ") {
-		textSourceSubject = "It"
-	}
 	if !ok ||
-		!exactDamageAmountSyntax(textSourceSubject, ctx, effect.Amount, amountText) ||
+		!exactDamageSourceSyntax(ctx.content.References) ||
 		!exactDamageAmountReferences(effect.Amount, ctx.content.References) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -7242,6 +6367,7 @@ func lowerFixedDamageSpell(
 			"the executable source backend supports only exact supported damage amounts to one target",
 		)
 	}
+
 	damage := game.Damage{
 		Amount:    amount,
 		Recipient: game.AnyTargetDamageRecipient(0),
@@ -7261,13 +6387,24 @@ func lowerFixedDamageSpell(
 	}.Ability(), nil
 }
 
+func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
+	if len(references) == 0 {
+		return false
+	}
+	reference := references[0]
+	if reference.Kind == compiler.ReferencePronoun && reference.Pronoun == compiler.ReferencePronounIt {
+		return reference.Binding == compiler.ReferenceBindingEventPermanent
+	}
+	return reference.Kind == compiler.ReferenceSelfName
+}
+
 func lowerFixedModifyPTSpell(
 	ctx contentCtx,
 	syntax parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	effect := ctx.content.Effects[0]
+	effect := &ctx.content.Effects[0]
 	if effect.StaticSubject != compiler.StaticSubjectNone {
-		return lowerFixedGroupModifyPTSpell(ctx, syntax, effect)
+		return lowerFixedGroupModifyPTSpell(ctx, effect)
 	}
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
@@ -7280,12 +6417,13 @@ func lowerFixedModifyPTSpell(
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		ctx.content.Targets[0].Selector.Kind != compiler.SelectorCreature ||
 		(!dynamicPT && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) ||
+		!effect.Exact ||
 		effect.Negated ||
 		effect.Duration != compiler.DurationUntilEndOfTurn ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		!exactModifyPTAmountSyntax(ctx, effect) {
+		!validModifyPTAmount(effect, len(ctx.content.References)) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported power/toughness spell",
@@ -7364,14 +6502,10 @@ func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *sha
 		len(ctx.content.Modes) != 0 ||
 		!effect.PowerDelta.Known ||
 		!effect.ToughnessDelta.Known ||
+		!effect.Exact ||
 		effect.Negated ||
-		effect.Duration != compiler.DurationUntilEndOfTurn {
-		return unsupported()
-	}
-	want := fmt.Sprintf("It gets %s/%s until end of turn.",
-		signedAmountText(effect.PowerDelta),
-		signedAmountText(effect.ToughnessDelta))
-	if ctx.text != want {
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		effect.Context != parser.EffectContextReferencedObject {
 		return unsupported()
 	}
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
@@ -7392,8 +6526,7 @@ func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *sha
 
 func lowerFixedGroupModifyPTSpell(
 	ctx contentCtx,
-	syntax parser.Ability,
-	effect compiler.CompiledEffect,
+	effect *compiler.CompiledEffect,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -7407,12 +6540,12 @@ func lowerFixedGroupModifyPTSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
+		!effect.Exact ||
 		effect.Negated ||
 		effect.Duration != compiler.DurationUntilEndOfTurn ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
 		!effect.PowerDelta.Known ||
-		!effect.ToughnessDelta.Known ||
-		!matchesExactTemporaryGroupPTSyntax(syntax, effect) {
+		!effect.ToughnessDelta.Known {
 		return unsupported()
 	}
 	group, ok := resolvingStaticSubjectGroup(effect)
@@ -7434,10 +6567,7 @@ func lowerFixedGroupModifyPTSpell(
 	}.Ability(), nil
 }
 
-func lowerTemporaryKeywordSpell(
-	ctx contentCtx,
-	syntax parser.Ability,
-) (game.AbilityContent, *shared.Diagnostic) {
+func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -7451,11 +6581,13 @@ func lowerTemporaryKeywordSpell(
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
+		effect.Kind != compiler.EffectGain ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextTarget ||
 		effect.Negated ||
 		effect.StaticSubject != compiler.StaticSubjectNone ||
 		effect.Duration != compiler.DurationUntilEndOfTurn ||
-		!temporaryKeywordTarget(ctx.content.Targets[0]) ||
-		!matchesExactTemporaryKeywordSyntax(syntax, ctx.content.Targets[0], ctx.content.Keywords) {
+		!temporaryKeywordTarget(ctx.content.Targets[0]) {
 		return unsupported()
 	}
 	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
@@ -7481,10 +6613,7 @@ func lowerTemporaryKeywordSpell(
 	}.Ability(), nil
 }
 
-func lowerTemporaryPTKeywordSpell(
-	ctx contentCtx,
-	syntax parser.Ability,
-) (game.AbilityContent, bool) {
+func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
 		ctx.content.Effects[0].Kind != compiler.EffectModifyPT ||
 		ctx.content.Effects[1].Kind != compiler.EffectGain ||
@@ -7498,6 +6627,8 @@ func lowerTemporaryPTKeywordSpell(
 	modifyEffect := ctx.content.Effects[0]
 	keywordEffect := ctx.content.Effects[1]
 	if modifyEffect.Span != keywordEffect.Span ||
+		!modifyEffect.Exact ||
+		!keywordEffect.Exact ||
 		modifyEffect.Negated ||
 		keywordEffect.Negated ||
 		modifyEffect.StaticSubject != compiler.StaticSubjectNone ||
@@ -7506,8 +6637,7 @@ func lowerTemporaryPTKeywordSpell(
 		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
 		modifyEffect.Amount.DynamicKind != compiler.DynamicAmountNone ||
 		!modifyEffect.PowerDelta.Known ||
-		!modifyEffect.ToughnessDelta.Known ||
-		!matchesExactTemporaryPTKeywordSyntax(syntax, ctx.content.Targets[0], modifyEffect, ctx.content.Keywords) {
+		!modifyEffect.ToughnessDelta.Known {
 		return game.AbilityContent{}, false
 	}
 	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
@@ -7552,6 +6682,11 @@ func lowerFixedBounceSpell(
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		ctx.content.Effects[0].Negated ||
+		ctx.content.Effects[0].Optional ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.optional ||
+		ctx.content.Effects[0].Context != parser.EffectContextController ||
+		ctx.content.Effects[0].ToZone != zone.Hand ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -7563,9 +6698,8 @@ func lowerFixedBounceSpell(
 		)
 	}
 	target := ctx.content.Targets[0]
-	target.Text = strings.TrimSuffix(target.Text, " to its owner's hand")
 	targetSpec, ok := permanentTargetSpec(target)
-	if !ok || ctx.text != "Return "+target.Text+" to its owner's hand." {
+	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported return spell",
@@ -7601,6 +6735,10 @@ func lowerFixedPermanentTargetSpell(
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		ctx.content.Effects[0].Negated ||
+		ctx.content.Effects[0].Optional ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.optional ||
+		ctx.content.Effects[0].Context != parser.EffectContextController ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -7612,7 +6750,7 @@ func lowerFixedPermanentTargetSpell(
 		)
 	}
 	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
-	if !ok || ctx.text != verb+" "+ctx.content.Targets[0].Text+"." {
+	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+strings.ToLower(verb)+" spell",
@@ -7631,7 +6769,7 @@ func lowerFixedPermanentTargetSpell(
 
 func lowerFixedCardCountPlayerSpell(
 	ctx contentCtx,
-	syntax parser.Ability,
+	_ parser.Ability,
 	controllerVerb string,
 	targetVerb string,
 	allowDynamic bool,
@@ -7643,7 +6781,12 @@ func lowerFixedCardCountPlayerSpell(
 	hasEventPlayerRef := len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPlayer
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
+		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
+		!effect.Exact ||
 		effect.Negated ||
+		effect.Optional ||
+		effect.Selector.Kind != compiler.SelectorCard ||
+		ctx.optional ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -7666,18 +6809,15 @@ func lowerFixedCardCountPlayerSpell(
 	var targets []game.TargetSpec
 	switch {
 	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
-		exactEventPlayerCardCountSyntax(ctx.text, controllerVerb, effect.Amount):
+		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer) &&
+		effect.Amount.Known:
 		playerRef = game.EventPlayerReference()
 	case len(ctx.content.Targets) == 0 &&
 		!hasEventPlayerRef &&
-		(exactCardCountPlayerSyntax(syntax.Tokens, syntax.Atoms, controllerVerb, effect.Amount) ||
-			exactDynamicCardCountPlayerText(ctx.text, "", controllerVerb, effect.Amount)):
+		effect.Context == parser.EffectContextController:
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
-		(exactTargetCardCountPlayerSyntax(syntax.Tokens, syntax.Atoms, targetVerb, effect.Amount) ||
-			exactDynamicCardCountPlayerText(ctx.text, titleFirst(ctx.content.Targets[0].Text), targetVerb, effect.Amount)) &&
-		strings.EqualFold(syntax.Tokens[0].Text, "target") &&
-		strings.EqualFold(syntax.Tokens[1].Text, "player"):
+		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
 		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
@@ -7707,14 +6847,16 @@ func lowerFixedCardCountPlayerSpell(
 
 func lowerFixedControllerSpell(
 	ctx contentCtx,
-	syntax parser.Ability,
+	_ parser.Ability,
 	verb string,
 	allowDynamic bool,
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
+		!effect.Exact ||
 		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
 		ctx.content.Unconsumed() ||
 		len(ctx.content.References) != 0 {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -7724,7 +6866,7 @@ func lowerFixedControllerSpell(
 		)
 	}
 	amount, ok := controllerActionQuantity(effect.Amount, allowDynamic)
-	if !ok || !exactControllerAmountSyntax(syntax.Tokens, syntax.Atoms, ctx.text, verb, effect.Amount) {
+	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+verb+" spell",
@@ -7748,7 +6890,7 @@ func cardCountQuantity(amount compiler.CompiledAmount, allowDynamic bool) (game.
 		return game.Quantity{}, false
 	}
 	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), amount.VariableX
 	}
 	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
 	if !ok || amount.DynamicKind == compiler.DynamicAmountSourcePower {
@@ -7765,7 +6907,7 @@ func controllerActionQuantity(amount compiler.CompiledAmount, allowDynamic bool)
 		return game.Quantity{}, false
 	}
 	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), amount.VariableX
 	}
 	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
 	if !ok || amount.DynamicKind == compiler.DynamicAmountSourcePower {
@@ -7783,6 +6925,7 @@ func lowerFixedLifeSpell(
 	effect := ctx.content.Effects[0]
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
+		ctx.optional ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
@@ -7793,11 +6936,9 @@ func lowerFixedLifeSpell(
 		)
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	amountText := "X"
 	switch {
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
-		amountText = fmt.Sprint(effect.Amount.Value)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower ||
@@ -7817,17 +6958,23 @@ func lowerFixedLifeSpell(
 		)
 	default:
 	}
-	// Group patterns: "Each opponent gains/loses N life." / "Each player gains/loses N life."
-	// These require a known fixed amount and no targets.
+	if !effect.Exact ||
+		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported life spell",
+			"the executable source backend supports only exact fixed life changes",
+		)
+	}
 	if len(ctx.content.Targets) == 0 && effect.Amount.Known {
-		switch {
-		case exactLifeAmountSyntax("Each opponent", verb+"s", ctx.text, effect.Amount, amountText):
+		switch effect.Context {
+		case parser.EffectContextEachOpponent:
 			return game.Mode{
 				Sequence: []game.Instruction{{
 					Primitive: groupPrimitiveFactory(amount, game.OpponentsReference()),
 				}},
 			}.Ability(), nil
-		case exactLifeAmountSyntax("Each player", verb+"s", ctx.text, effect.Amount, amountText):
+		case parser.EffectContextEachPlayer:
 			return game.Mode{
 				Sequence: []game.Instruction{{
 					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
@@ -7839,31 +6986,27 @@ func lowerFixedLifeSpell(
 	var targets []game.TargetSpec
 	switch {
 	case len(ctx.content.Targets) == 0 &&
-		exactLifeAmountSyntax("You", verb, ctx.text, effect.Amount, amountText):
+		effect.Context == parser.EffectContextController:
 	case len(ctx.content.Targets) == 0 &&
-		exactLifeAmountSyntax("That player", verb+"s", ctx.text, effect.Amount, amountText):
+		len(ctx.content.References) == 1 &&
+		(effect.Context == parser.EffectContextEventPlayer &&
+			ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+			ctx.content.References[0].Pronoun == compiler.ReferencePronounThey ||
+			effect.Context == parser.EffectContextReferencedPlayer &&
+				ctx.content.References[0].Kind == compiler.ReferenceThatPlayer &&
+				ctx.content.References[0].Binding != compiler.ReferenceBindingTarget):
 		playerRef = game.EventPlayerReference()
-	case len(ctx.content.Targets) == 0 &&
-		exactLifeAmountSyntax("They", verb, ctx.text, effect.Amount, amountText):
-		// "They" is a pronoun for the player who triggered the event (e.g. "they lose 2 life"
-		// in "Whenever an opponent draws a card, they lose 2 life.").
-		playerRef = game.EventPlayerReference()
-	case len(ctx.content.Targets) == 1:
+	case len(ctx.content.Targets) == 1 &&
+		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
 		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
-		if !ok ||
-			!exactLifeAmountSyntax(
-				titleFirst(ctx.content.Targets[0].Text),
-				verb+"s",
-				ctx.text,
-				effect.Amount,
-				amountText,
-			) {
+		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported life spell",
 				"the executable source backend supports only exact fixed life changes",
 			)
 		}
+
 		targets = []game.TargetSpec{targetSpec}
 		playerRef = game.TargetPlayerReference(0)
 	default:
@@ -7902,7 +7045,9 @@ func lowerFixedDestroySpell(
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.References) != 0 ||
-		ctx.content.Effects[0].Negated {
+		ctx.content.Effects[0].Negated ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Context != parser.EffectContextController {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported destroy spell",
@@ -7910,7 +7055,7 @@ func lowerFixedDestroySpell(
 		)
 	}
 	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
-	if !ok || ctx.text != "Destroy "+ctx.content.Targets[0].Text+"." {
+	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported destroy spell",
@@ -7945,30 +7090,25 @@ func lowerFixedExileSpell(
 }
 
 func exactMassDestroyGroup(ctx contentCtx) (game.GroupReference, bool) {
-	return exactMassGroup(ctx, "Destroy all ")
+	return exactMassGroup(ctx)
 }
 
 func exactMassExileGroup(ctx contentCtx) (game.GroupReference, bool) {
-	return exactMassGroup(ctx, "Exile all ")
+	return exactMassGroup(ctx)
 }
 
-func exactMassGroup(ctx contentCtx, verbPrefix string) (game.GroupReference, bool) {
+func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.References) != 0 ||
-		ctx.content.Effects[0].Negated {
+		ctx.content.Effects[0].Negated ||
+		!ctx.content.Effects[0].Exact ||
+		!ctx.content.Effects[0].Selector.All {
 		return game.GroupReference{}, false
 	}
-	if !strings.HasPrefix(ctx.text, verbPrefix) || !strings.HasSuffix(ctx.text, ".") {
-		return game.GroupReference{}, false
-	}
-	phrase := ctx.text[len(verbPrefix) : len(ctx.text)-1]
 	selection, ok := massGroupSelection(ctx.content.Effects[0].Selector, ctx.content.Keywords)
 	if !ok {
-		return game.GroupReference{}, false
-	}
-	if !massGroupSyntaxAccepted(phrase, len(ctx.content.Keywords) > 0) {
 		return game.GroupReference{}, false
 	}
 	if !massGroupKeywordsMatch(ctx.content.Keywords, selection) {
@@ -8054,113 +7194,9 @@ func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	}
 }
 
-// massGroupSyntaxAccepted parses the qualifier in "Verb all <qualifier>."
-// sentences only to prove exact supported syntax. Selection values come from the
-// compiler's typed selector IR.
-func massGroupSyntaxAccepted(phrase string, hasKeyword bool) bool {
-	if phrase == "" || strings.TrimSpace(phrase) != phrase {
-		return false
-	}
-	phrase = strings.ToLower(phrase)
-
-	hadControllerSuffix := false
-	for _, suffix := range []string{" you don't control", " your opponents control", " you control"} {
-		if remainder, ok := strings.CutSuffix(phrase, suffix); ok {
-			phrase = remainder
-			hadControllerSuffix = true
-			break
-		}
-	}
-
-	if massGroupNumericSyntaxAccepted(phrase) {
-		return true
-	}
-	if !hadControllerSuffix {
-		if keywordText, ok := strings.CutPrefix(phrase, "creatures with "); ok {
-			return hasKeyword && keywordText != "" && !strings.Contains(keywordText, " ")
-		}
-	}
-	if massGroupBaseNounSyntaxAccepted(phrase) {
-		return true
-	}
-	if remainder, ok := strings.CutPrefix(phrase, "other "); ok {
-		return massGroupBaseNounSyntaxAccepted(remainder)
-	}
-	if remainder, ok := strings.CutPrefix(phrase, "tapped "); ok {
-		return massGroupBaseNounSyntaxAccepted(remainder)
-	}
-	for _, prefix := range []string{"nonland ", "nonartifact ", "noncreature ", "nonenchantment "} {
-		remainder, ok := strings.CutPrefix(phrase, prefix)
-		if !ok {
-			continue
-		}
-		return massGroupBaseNounSyntaxAccepted(remainder)
-	}
-	for _, prefix := range []string{"white ", "blue ", "black ", "red ", "green ", "nonwhite ", "nonblue ", "nonblack ", "nonred ", "nongreen "} {
-		remainder, ok := strings.CutPrefix(phrase, prefix)
-		if !ok {
-			continue
-		}
-		if strings.Contains(remainder, " ") {
-			return false
-		}
-		return massGroupBaseNounSyntaxAccepted(remainder)
-	}
-	return false
-}
-
-func massGroupBaseNounSyntaxAccepted(phrase string) bool {
-	switch phrase {
-	case "creatures", "artifacts", "enchantments", "lands", "planeswalkers", "permanents",
-		"creatures and lands", "creatures and planeswalkers", "artifacts and enchantments",
-		"artifacts and creatures", "artifacts, creatures, and enchantments",
-		"artifacts, creatures, and lands":
-		return true
-	default:
-		return false
-	}
-}
-
-func massGroupNumericSyntaxAccepted(phrase string) bool {
-	for _, qualifier := range []string{"mana value", "power", "toughness"} {
-		prefix := "creatures with " + qualifier + " "
-		comparisonText, ok := strings.CutPrefix(phrase, prefix)
-		if !ok {
-			continue
-		}
-		return massGroupComparisonSyntaxAccepted(comparisonText)
-	}
-	return false
-}
-
-func massGroupComparisonSyntaxAccepted(text string) bool {
-	parts := strings.Fields(text)
-	switch {
-	case len(parts) == 1:
-		_, err := strconv.Atoi(parts[0])
-		return err == nil
-	case len(parts) == 3 && parts[0] == "equal" && parts[1] == "to":
-		_, err := strconv.Atoi(parts[2])
-		return err == nil
-	case len(parts) == 3 && parts[1] == "or":
-		_, err := strconv.Atoi(parts[0])
-		if err != nil {
-			return false
-		}
-		switch parts[2] {
-		case "less", "greater":
-			return true
-		default:
-			return false
-		}
-	default:
-		return false
-	}
-}
-
 func lowerFixedDrawSpell(
 	ctx contentCtx,
-	syntax parser.Ability,
+	_ parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	// Allow a single EventPlayer reference for "They draw N card(s)." bodies;
@@ -8168,7 +7204,11 @@ func lowerFixedDrawSpell(
 	hasEventPlayerRef := len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPlayer
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
+		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
+		!effect.Exact ||
 		effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -8197,34 +7237,26 @@ func lowerFixedDrawSpell(
 	var targets []game.TargetSpec
 	switch {
 	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
-		exactEventPlayerDrawSyntax(ctx.text, effect.Amount):
+		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer) &&
+		effect.Amount.Known:
 		playerRef = game.EventPlayerReference()
 	case len(ctx.content.Targets) == 0 &&
 		!hasEventPlayerRef &&
-		(exactControllerDrawSyntax(syntax.Tokens, syntax.Atoms, effect.Amount.Value) ||
-			(!effect.Amount.Known &&
-				effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
-				exactXControllerDrawSyntax(syntax.Tokens)) ||
-			exactDynamicDrawSyntax(ctx.text, "", effect.Amount)):
+		effect.Context == parser.EffectContextController:
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
-		(exactTargetPlayerDrawSyntax(syntax.Tokens, syntax.Atoms, effect.Amount.Value) ||
-			(!effect.Amount.Known &&
-				effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
-				exactXTargetPlayerDrawSyntax(syntax.Tokens)) ||
-			exactDynamicDrawSyntax(ctx.text, titleFirst(ctx.content.Targets[0].Text), effect.Amount)) &&
-		ctx.content.Targets[0].Cardinality.Min == 1 &&
-		ctx.content.Targets[0].Cardinality.Max == 1 &&
-		ctx.content.Targets[0].Selector.Kind == compiler.SelectorPlayer:
-		playerRef = game.TargetPlayerReference(0)
-		targets = []game.TargetSpec{
-			{
-				MinTargets: 1,
-				MaxTargets: 1,
-				Constraint: "target player",
-				Allow:      game.TargetAllowPlayer,
-			},
+		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
+		target, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported draw spell",
+				"the executable source backend supports only exact fixed card draw",
+			)
 		}
+		playerRef = game.TargetPlayerReference(0)
+		target.Constraint = "target player"
+		targets = []game.TargetSpec{target}
 	default:
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -8366,38 +7398,6 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 	}
 }
 
-func exactDamageAmountSyntax(
-	cardName string,
-	ctx contentCtx,
-	amount compiler.CompiledAmount,
-	fixedText string,
-) bool {
-	target := ctx.content.Targets[0].Text
-	switch amount.DynamicForm {
-	case compiler.DynamicAmountFormNone:
-		return ctx.text == fmt.Sprintf("%s deals %s damage to %s.", cardName, fixedText, target)
-	case compiler.DynamicAmountEqual:
-		return ctx.text == fmt.Sprintf("%s deals damage %s to %s.", cardName, amount.Text, target)
-	case compiler.DynamicAmountForEach:
-		return ctx.text == fmt.Sprintf(
-			"%s deals %d damage %s to %s.",
-			cardName,
-			amount.Multiplier,
-			amount.Text,
-			target,
-		)
-	case compiler.DynamicAmountWhereX:
-		return ctx.text == fmt.Sprintf(
-			"%s deals X damage to %s, %s.",
-			cardName,
-			target,
-			amount.Text,
-		)
-	default:
-		return false
-	}
-}
-
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {
 	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
 		_, ok := lowerDamageSourceReference(references)
@@ -8421,63 +7421,15 @@ func lowerDamageSourceReference(references []compiler.CompiledReference) (game.O
 	})
 }
 
-func exactLifeAmountSyntax(
-	subject, verb, text string,
-	amount compiler.CompiledAmount,
-	fixedText string,
-) bool {
-	switch amount.DynamicForm {
-	case compiler.DynamicAmountFormNone:
-		return text == fmt.Sprintf("%s %s %s life.", subject, verb, fixedText)
-	case compiler.DynamicAmountEqual:
-		return text == fmt.Sprintf("%s %s life %s.", subject, verb, amount.Text)
-	case compiler.DynamicAmountForEach:
-		return text == fmt.Sprintf("%s %s %d life %s.", subject, verb, amount.Multiplier, amount.Text)
-	case compiler.DynamicAmountWhereX:
-		return text == fmt.Sprintf("%s %s X life, %s.", subject, verb, amount.Text)
-	default:
+func validModifyPTAmount(effect *compiler.CompiledEffect, referenceCount int) bool {
+	if effect.Context != parser.EffectContextTarget && effect.Context != parser.EffectContextPriorSubject {
 		return false
 	}
-}
-
-func exactDynamicDrawSyntax(text, subject string, amount compiler.CompiledAmount) bool {
-	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return false
-	}
-	prefix := "Draw"
-	if subject != "" {
-		prefix = subject + " draws"
-	}
-	switch amount.DynamicForm {
-	case compiler.DynamicAmountEqual:
-		return text == fmt.Sprintf("%s cards %s.", prefix, amount.Text)
-	case compiler.DynamicAmountForEach:
-		noun := "cards"
-		if amount.Multiplier == 1 {
-			return text == fmt.Sprintf("%s 1 card %s.", prefix, amount.Text) ||
-				text == fmt.Sprintf("%s a card %s.", prefix, amount.Text)
-		}
-		return text == fmt.Sprintf("%s %d %s %s.", prefix, amount.Multiplier, noun, amount.Text)
-	case compiler.DynamicAmountWhereX:
-		return text == fmt.Sprintf("%s X cards, %s.", prefix, amount.Text)
-	default:
-		return false
-	}
-}
-
-func exactModifyPTAmountSyntax(ctx contentCtx, effect compiler.CompiledEffect) bool {
-	subject := titleFirst(ctx.content.Targets[0].Text)
 	amount := effect.Amount
 	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return len(ctx.content.References) == 0 &&
-			ctx.text == fmt.Sprintf(
-				"%s gets %s/%s until end of turn.",
-				subject,
-				signedAmountText(effect.PowerDelta),
-				signedAmountText(effect.ToughnessDelta),
-			)
+		return true
 	}
-	if len(ctx.content.References) != 0 || amount.DynamicKind == compiler.DynamicAmountSourcePower {
+	if referenceCount != 0 || amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		return false
 	}
 	switch amount.DynamicForm {
@@ -8486,89 +7438,13 @@ func exactModifyPTAmountSyntax(ctx contentCtx, effect compiler.CompiledEffect) b
 			!dynamicPTMultiplierMatches(amount.Multiplier, effect.PowerDelta, effect.ToughnessDelta) {
 			return false
 		}
-		return ctx.text == fmt.Sprintf(
-			"%s gets %s/%s %s until end of turn.",
-			subject,
-			signedAmountText(effect.PowerDelta),
-			signedAmountText(effect.ToughnessDelta),
-			amount.Text,
-		) || ctx.text == fmt.Sprintf(
-			"%s gets %s/%s until end of turn %s.",
-			subject,
-			signedAmountText(effect.PowerDelta),
-			signedAmountText(effect.ToughnessDelta),
-			amount.Text,
-		)
+		return true
 	case compiler.DynamicAmountWhereX:
 		return !effect.PowerDelta.Known &&
-			!effect.ToughnessDelta.Known &&
-			ctx.text == fmt.Sprintf("%s gets +X/+X until end of turn, %s.", subject, amount.Text)
+			!effect.ToughnessDelta.Known
 	default:
 		return false
 	}
-}
-
-func matchesExactTemporaryGroupPTSyntax(syntax parser.Ability, effect compiler.CompiledEffect) bool {
-	tokens := syntaxSemanticTokens(syntax)
-	prefixLength, ok := matchesStaticPTBuffPrefix(tokens, effect)
-	return ok &&
-		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
-		matchesUntilEndOfTurnSuffix(tokens, prefixLength)
-}
-
-func matchesExactTemporaryKeywordSyntax(
-	syntax parser.Ability,
-	target compiler.CompiledTarget,
-	keywords []compiler.CompiledKeyword,
-) bool {
-	tokens := syntaxSemanticTokens(syntax)
-	targetLength := leadingSpanTokenCount(tokens, target.Span)
-	suffixStart := len(tokens) - 5
-	return targetLength > 0 &&
-		suffixStart > targetLength+1 &&
-		equalTokenWord(tokens[targetLength], "gains") &&
-		matchesExactKeywordList(tokens[targetLength+1:suffixStart], keywords) &&
-		matchesUntilEndOfTurnSuffix(tokens, suffixStart)
-}
-
-func matchesExactTemporaryPTKeywordSyntax(
-	syntax parser.Ability,
-	target compiler.CompiledTarget,
-	effect compiler.CompiledEffect,
-	keywords []compiler.CompiledKeyword,
-) bool {
-	tokens := syntaxSemanticTokens(syntax)
-	targetLength := leadingSpanTokenCount(tokens, target.Span)
-	keywordStart := targetLength + 8
-	suffixStart := len(tokens) - 5
-	return targetLength > 0 &&
-		suffixStart > keywordStart &&
-		equalTokenWord(tokens[targetLength], "gets") &&
-		tokensMatchSignedAmount(tokens[targetLength+1], tokens[targetLength+2], effect.PowerDelta) &&
-		tokens[targetLength+3].Kind == shared.Slash &&
-		tokensMatchSignedAmount(tokens[targetLength+4], tokens[targetLength+5], effect.ToughnessDelta) &&
-		equalTokenWord(tokens[targetLength+6], "and") &&
-		equalTokenWord(tokens[targetLength+7], "gains") &&
-		matchesExactKeywordList(tokens[keywordStart:suffixStart], keywords) &&
-		matchesUntilEndOfTurnSuffix(tokens, suffixStart)
-}
-
-func leadingSpanTokenCount(tokens []shared.Token, span shared.Span) int {
-	length := 0
-	for length < len(tokens) && spanCovered(tokens[length].Span, []shared.Span{span}) {
-		length++
-	}
-	return length
-}
-
-func matchesUntilEndOfTurnSuffix(tokens []shared.Token, start int) bool {
-	return start >= 0 &&
-		len(tokens) == start+5 &&
-		equalTokenWord(tokens[start], "until") &&
-		equalTokenWord(tokens[start+1], "end") &&
-		equalTokenWord(tokens[start+2], "of") &&
-		equalTokenWord(tokens[start+3], "turn") &&
-		tokens[start+4].Kind == shared.Period
 }
 
 func dynamicPTMultiplierMatches(
@@ -8594,162 +7470,6 @@ func dynamicSignedQuantity(
 	return game.Dynamic(dynamic)
 }
 
-func exactXControllerDrawSyntax(tokens []shared.Token) bool {
-	return len(tokens) == 4 &&
-		equalTokenWord(tokens[0], "draw") &&
-		equalTokenWord(tokens[1], "X") &&
-		equalTokenWord(tokens[2], "cards") &&
-		tokens[3].Kind == shared.Period
-}
-
-func exactXTargetPlayerDrawSyntax(tokens []shared.Token) bool {
-	return len(tokens) == 6 &&
-		equalTokenWord(tokens[0], "target") &&
-		equalTokenWord(tokens[1], "player") &&
-		equalTokenWord(tokens[2], "draws") &&
-		equalTokenWord(tokens[3], "X") &&
-		equalTokenWord(tokens[4], "cards") &&
-		tokens[5].Kind == shared.Period
-}
-
-func exactControllerDrawSyntax(tokens []shared.Token, atoms parser.Atoms, amount int) bool {
-	if len(tokens) != 4 ||
-		tokens[0].Kind != shared.Word ||
-		!strings.EqualFold(tokens[0].Text, "draw") ||
-		tokens[2].Kind != shared.Word ||
-		tokens[3].Kind != shared.Period {
-		return false
-	}
-	if amount == 1 &&
-		strings.EqualFold(tokens[1].Text, "a") &&
-		strings.EqualFold(tokens[2].Text, "card") {
-		return true
-	}
-	return fixedNumberSyntax(tokens[1], atoms, amount) &&
-		strings.EqualFold(tokens[2].Text, "cards")
-}
-
-func exactTargetPlayerDrawSyntax(tokens []shared.Token, atoms parser.Atoms, amount int) bool {
-	return len(tokens) == 6 &&
-		tokens[0].Kind == shared.Word &&
-		strings.EqualFold(tokens[0].Text, "target") &&
-		tokens[1].Kind == shared.Word &&
-		strings.EqualFold(tokens[1].Text, "player") &&
-		tokens[2].Kind == shared.Word &&
-		strings.EqualFold(tokens[2].Text, "draws") &&
-		fixedCardCountSyntax(tokens[3], tokens[4], atoms, amount) &&
-		tokens[5].Kind == shared.Period
-}
-
-func fixedCardCountSyntax(amountToken, cardToken shared.Token, atoms parser.Atoms, amount int) bool {
-	if amount == 1 &&
-		strings.EqualFold(amountToken.Text, "a") &&
-		strings.EqualFold(cardToken.Text, "card") {
-		return true
-	}
-	return fixedNumberSyntax(amountToken, atoms, amount) &&
-		strings.EqualFold(cardToken.Text, "cards")
-}
-
-func exactCardCountPlayerSyntax(tokens []shared.Token, atoms parser.Atoms, verb string, amount compiler.CompiledAmount) bool {
-	if len(tokens) != 4 ||
-		!equalTokenWord(tokens[0], verb) ||
-		tokens[3].Kind != shared.Period {
-		return false
-	}
-	return cardCountAmountSyntax(tokens[1], tokens[2], atoms, amount)
-}
-
-func exactTargetCardCountPlayerSyntax(tokens []shared.Token, atoms parser.Atoms, verb string, amount compiler.CompiledAmount) bool {
-	if len(tokens) != 6 ||
-		!equalTokenWord(tokens[0], "target") ||
-		!equalTokenWord(tokens[1], "player") ||
-		!equalTokenWord(tokens[2], verb) ||
-		tokens[5].Kind != shared.Period {
-		return false
-	}
-	return cardCountAmountSyntax(tokens[3], tokens[4], atoms, amount)
-}
-
-func cardCountAmountSyntax(amountToken, cardToken shared.Token, atoms parser.Atoms, amount compiler.CompiledAmount) bool {
-	if amount.Known {
-		return fixedCardCountSyntax(amountToken, cardToken, atoms, amount.Value)
-	}
-	return equalTokenWord(amountToken, "X") &&
-		strings.EqualFold(cardToken.Text, "cards")
-}
-
-func exactDynamicCardCountPlayerText(text, subject, verb string, amount compiler.CompiledAmount) bool {
-	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return false
-	}
-	prefix := titleFirst(verb)
-	if subject != "" {
-		prefix = subject + " " + verb
-	}
-	switch amount.DynamicForm {
-	case compiler.DynamicAmountForEach:
-		if amount.Multiplier == 1 {
-			return text == fmt.Sprintf("%s 1 card %s.", prefix, amount.Text) ||
-				text == fmt.Sprintf("%s a card %s.", prefix, amount.Text)
-		}
-		return text == fmt.Sprintf("%s %d cards %s.", prefix, amount.Multiplier, amount.Text)
-	case compiler.DynamicAmountWhereX:
-		return text == fmt.Sprintf("%s X cards, %s.", prefix, amount.Text)
-	default:
-		return false
-	}
-}
-
-// exactEventPlayerDrawSyntax reports whether text is the exact "They draw
-// N card(s)." form expected for an event-player draw body. Only fixed known
-// amounts are accepted.
-func exactEventPlayerDrawSyntax(text string, amount compiler.CompiledAmount) bool {
-	if !amount.Known || amount.Value < 1 {
-		return false
-	}
-	if amount.Value == 1 {
-		return text == "They draw a card."
-	}
-	return text == fmt.Sprintf("They draw %d cards.", amount.Value)
-}
-
-// exactEventPlayerCardCountSyntax reports whether text is the exact
-// "They {verb} N card(s)." form expected for an event-player
-// discard/mill/similar body. Only fixed known amounts are accepted.
-func exactEventPlayerCardCountSyntax(text, verb string, amount compiler.CompiledAmount) bool {
-	if !amount.Known || amount.Value < 1 {
-		return false
-	}
-	if amount.Value == 1 {
-		return text == fmt.Sprintf("They %s a card.", verb)
-	}
-	return text == fmt.Sprintf("They %s %d cards.", verb, amount.Value)
-}
-
-func exactControllerAmountSyntax(tokens []shared.Token, atoms parser.Atoms, text, verb string, amount compiler.CompiledAmount) bool {
-	if amount.Known {
-		return len(tokens) == 3 &&
-			equalTokenWord(tokens[0], verb) &&
-			fixedNumberSyntax(tokens[1], atoms, amount.Value) &&
-			tokens[2].Kind == shared.Period
-	}
-	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return len(tokens) == 3 &&
-			equalTokenWord(tokens[0], verb) &&
-			equalTokenWord(tokens[1], "X") &&
-			tokens[2].Kind == shared.Period
-	}
-	switch amount.DynamicForm {
-	case compiler.DynamicAmountForEach:
-		return text == fmt.Sprintf("%s %d %s.", titleFirst(verb), amount.Multiplier, amount.Text)
-	case compiler.DynamicAmountWhereX:
-		return text == fmt.Sprintf("%s X, %s.", titleFirst(verb), amount.Text)
-	default:
-		return false
-	}
-}
-
 func fixedNumberSyntax(token shared.Token, atoms parser.Atoms, amount int) bool {
 	if token.Kind == shared.Integer {
 		return token.Text == fmt.Sprint(amount)
@@ -8763,6 +7483,9 @@ func singleSelfReference(references []compiler.CompiledReference) bool {
 }
 
 func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !target.Exact || !targetCardinalityIsOne(target) {
+		return game.TargetSpec{}, false
+	}
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
@@ -8770,9 +7493,6 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	}
 	switch target.Selector.Kind {
 	case compiler.SelectorAny:
-		if target.Text != "any target" {
-			return game.TargetSpec{}, false
-		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
 	case compiler.SelectorCreature, compiler.SelectorPlaneswalker, compiler.SelectorBattle:
 		permanent, ok := permanentTargetSpec(target)
@@ -8781,14 +7501,8 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 		}
 		return permanent, true
 	case compiler.SelectorPlayer:
-		if target.Text != "target player" {
-			return game.TargetSpec{}, false
-		}
 		spec.Allow = game.TargetAllowPlayer
 	case compiler.SelectorOpponent:
-		if target.Text != "target opponent" {
-			return game.TargetSpec{}, false
-		}
 		spec.Allow = game.TargetAllowPlayer
 		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
 	default:
@@ -8798,32 +7512,27 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 }
 
 func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !target.Exact || !targetCardinalityIsOne(target) {
+		return game.TargetSpec{}, false
+	}
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
 	}
-	var noun string
 	switch target.Selector.Kind {
 	case compiler.SelectorArtifact:
-		noun = "artifact"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Artifact}}
 	case compiler.SelectorCreature:
-		noun = "creature"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}}
 	case compiler.SelectorEnchantment:
-		noun = "enchantment"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Enchantment}}
 	case compiler.SelectorLand:
-		noun = "land"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Land}}
 	case compiler.SelectorPermanent:
-		noun = "permanent"
 	case compiler.SelectorPlaneswalker:
-		noun = "planeswalker"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
 	case compiler.SelectorBattle:
-		noun = "battle"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Battle}}
 	default:
 		return game.TargetSpec{}, false
@@ -8831,54 +7540,68 @@ func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool)
 	if target.Selector.Another || target.Selector.Other ||
 		(target.Selector.Tapped && target.Selector.Untapped) ||
 		((target.Selector.Tapped || target.Selector.Untapped) &&
-			(target.Selector.Attacking || target.Selector.Blocking)) {
+			(target.Selector.Attacking || target.Selector.Blocking)) ||
+		selectorHasUnsupportedPermanentFilters(target.Selector) {
 		return game.TargetSpec{}, false
 	}
 
-	expected := "target "
 	switch {
 	case target.Selector.Attacking && target.Selector.Blocking:
-		expected += "attacking or blocking "
 		spec.Predicate.CombatState = game.CombatStateAttackingOrBlocking
 	case target.Selector.Attacking:
-		expected += "attacking "
 		spec.Predicate.CombatState = game.CombatStateAttacking
 	case target.Selector.Blocking:
-		expected += "blocking "
 		spec.Predicate.CombatState = game.CombatStateBlocking
 	case target.Selector.Tapped:
-		expected += "tapped "
 		spec.Predicate.Tapped = game.TriTrue
 	case target.Selector.Untapped:
-		expected += "untapped "
 		spec.Predicate.Tapped = game.TriFalse
 	default:
 	}
-	expected += noun
 	switch target.Selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
-		expected += " you control"
 		spec.Predicate.Controller = game.ControllerYou
 	case compiler.ControllerOpponent:
-		expected += " an opponent controls"
 		spec.Predicate.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
-		expected += " you don't control"
 		spec.Predicate.Controller = game.ControllerNotYou
 	default:
-		return game.TargetSpec{}, false
-	}
-	if !strings.EqualFold(target.Text, expected) {
 		return game.TargetSpec{}, false
 	}
 	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
 }
 
+func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) bool {
+	return len(selector.RequiredTypesAny()) != 0 ||
+		len(selector.ExcludedTypes()) != 0 ||
+		len(selector.Supertypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		len(selector.ExcludedColors()) != 0 ||
+		len(selector.SubtypesAny()) != 0 ||
+		selector.Keyword != parser.KeywordUnknown ||
+		selector.Zone != zone.None ||
+		selector.MatchManaValue ||
+		selector.MatchPower ||
+		selector.MatchToughness
+}
+
 func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if target.Selector.Another || target.Selector.Other ||
-		target.Selector.Controller != compiler.ControllerAny {
+	if !targetCardinalityIsOne(target) ||
+		target.Selector.Another || target.Selector.Other ||
+		target.Selector.Controller != compiler.ControllerAny ||
+		target.Selector.Attacking || target.Selector.Blocking ||
+		target.Selector.Tapped || target.Selector.Untapped ||
+		len(target.Selector.Supertypes()) != 0 ||
+		len(target.Selector.ColorsAny()) != 0 ||
+		len(target.Selector.ExcludedColors()) != 0 ||
+		len(target.Selector.SubtypesAny()) != 0 ||
+		target.Selector.Keyword != parser.KeywordUnknown ||
+		target.Selector.Zone != zone.None ||
+		target.Selector.MatchManaValue ||
+		target.Selector.MatchPower ||
+		target.Selector.MatchToughness {
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
@@ -8889,30 +7612,15 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 			StackObjectKinds: []game.StackObjectKind{game.StackSpell},
 		},
 	}
-	text := strings.ToLower(target.Text)
 	switch target.Selector.Kind {
 	case compiler.SelectorSpell:
-		switch text {
-		case "target spell":
-		case "target instant spell":
-			spec.Predicate.SpellCardTypes = []types.Card{types.Instant}
-		case "target sorcery spell":
-			spec.Predicate.SpellCardTypes = []types.Card{types.Sorcery}
-		case "target noncreature spell":
-			spec.Predicate.ExcludedSpellCardTypes = []types.Card{types.Creature}
-		default:
+		required := target.Selector.RequiredTypesAny()
+		excluded := target.Selector.ExcludedTypes()
+		if len(required) > 1 || len(excluded) > 1 || len(required) > 0 && len(excluded) > 0 {
 			return game.TargetSpec{}, false
 		}
-	case compiler.SelectorCreature:
-		if text != "target creature spell" {
-			return game.TargetSpec{}, false
-		}
-		spec.Predicate.SpellCardTypes = []types.Card{types.Creature}
-	case compiler.SelectorArtifact:
-		if text != "target artifact spell" {
-			return game.TargetSpec{}, false
-		}
-		spec.Predicate.SpellCardTypes = []types.Card{types.Artifact}
+		spec.Predicate.SpellCardTypes = append([]types.Card(nil), required...)
+		spec.Predicate.ExcludedSpellCardTypes = append([]types.Card(nil), excluded...)
 	default:
 		return game.TargetSpec{}, false
 	}
@@ -8921,19 +7629,20 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 }
 
 func counterAbilityTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if target.Selector.Another || target.Selector.Other ||
+	if !targetCardinalityIsOne(target) ||
+		target.Selector.Another || target.Selector.Other ||
 		target.Selector.Controller != compiler.ControllerAny {
 		return game.TargetSpec{}, false
 	}
 	var kinds []game.StackObjectKind
-	switch {
-	case target.Selector.Kind == compiler.SelectorActivatedAbility && target.Text == "target activated ability":
+	switch target.Selector.Kind {
+	case compiler.SelectorActivatedAbility:
 		kinds = []game.StackObjectKind{game.StackActivatedAbility}
-	case target.Selector.Kind == compiler.SelectorTriggeredAbility && target.Text == "target triggered ability":
+	case compiler.SelectorTriggeredAbility:
 		kinds = []game.StackObjectKind{game.StackTriggeredAbility}
-	case target.Selector.Kind == compiler.SelectorActivatedOrTriggeredAbility && target.Text == "target activated or triggered ability":
+	case compiler.SelectorActivatedOrTriggeredAbility:
 		kinds = []game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility}
-	case target.Selector.Kind == compiler.SelectorSpellActivatedOrTriggeredAbility && target.Text == "target spell, activated ability, or triggered ability":
+	case compiler.SelectorSpellActivatedOrTriggeredAbility:
 		kinds = []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility}
 	default:
 		return game.TargetSpec{}, false
@@ -8970,6 +7679,9 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		ctx.content.Effects[0].Negated ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Context != parser.EffectContextController ||
+		ctx.content.Effects[0].Amount.Known ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -8977,7 +7689,7 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 		return unsupported()
 	}
 	targetSpec, ok := counterTargetSpec(ctx.content.Targets[0])
-	if !ok || ctx.text != "Counter "+ctx.content.Targets[0].Text+"." {
+	if !ok {
 		return unsupported()
 	}
 	return game.Mode{
@@ -8988,10 +7700,7 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	}.Ability(), nil
 }
 
-func lowerSacrificeSpell(
-	ctx contentCtx,
-	syntax parser.Ability,
-) (game.AbilityContent, *shared.Diagnostic) {
+func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -9001,13 +7710,15 @@ func lowerSacrificeSpell(
 	}
 
 	effect := ctx.content.Effects[0]
-	// Exact source-bound or event-permanent-bound "Sacrifice it.": the
-	// controller sacrifices the named object. Only accepted when there are no
-	// targets, no conditions/keywords/modes, and the text is exactly
-	// "Sacrifice it." with a single source or event-permanent reference.
-	if ctx.text == "Sacrifice it." &&
+	if !effect.Exact {
+		return unsupported()
+	}
+	// Source-bound or event-permanent-bound sacrifice of the direct pronoun.
+	if effect.Context == parser.EffectContextController &&
 		len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+		ctx.content.References[0].Pronoun == compiler.ReferencePronounIt &&
 		len(ctx.content.Conditions) == 0 &&
 		len(ctx.content.Keywords) == 0 &&
 		len(ctx.content.Modes) == 0 &&
@@ -9060,19 +7771,9 @@ func lowerSacrificeSpell(
 			return unsupported()
 		}
 		targetSpec, ok := playerTargetSpec(target)
-		if !ok {
-			return unsupported()
-		}
-		var actor string
-		switch target.Selector.Kind {
-		case compiler.SelectorPlayer:
-			actor = "player"
-		case compiler.SelectorOpponent:
-			actor = "opponent"
-		default:
-			return unsupported()
-		}
-		if !matchesExactSacrificeSyntax(syntax, "target", actor, effect) {
+		if !ok ||
+			effect.Context != parser.EffectContextTarget ||
+			!sacrificeChoiceReferences(ctx.content.References) {
 			return unsupported()
 		}
 		return game.Mode{
@@ -9088,19 +7789,16 @@ func lowerSacrificeSpell(
 
 	case len(ctx.content.Targets) == 0:
 		// "Each opponent/player sacrifices <N> <type>."
-		var group game.PlayerGroupReference
-		var actor string
-		switch {
-		case strings.HasPrefix(ctx.text, "Each opponent "):
-			group = game.OpponentsReference()
-			actor = "opponent"
-		case strings.HasPrefix(ctx.text, "Each player "):
-			group = game.AllPlayersReference()
-			actor = "player"
-		default:
+		if !sacrificeChoiceReferences(ctx.content.References) {
 			return unsupported()
 		}
-		if !matchesExactSacrificeSyntax(syntax, "each", actor, effect) {
+		var group game.PlayerGroupReference
+		switch effect.Context {
+		case parser.EffectContextEachOpponent:
+			group = game.OpponentsReference()
+		case parser.EffectContextEachPlayer:
+			group = game.AllPlayersReference()
+		default:
 			return unsupported()
 		}
 		return game.Mode{
@@ -9118,57 +7816,14 @@ func lowerSacrificeSpell(
 	}
 }
 
-func matchesExactSacrificeSyntax(
-	syntax parser.Ability,
-	actorQuantifier, actor string,
-	effect compiler.CompiledEffect,
-) bool {
-	tokens := syntaxSemanticTokens(syntax)
-	singular, plural, ok := sacrificeSelectorNouns(effect.Selector.Kind)
-	if !ok ||
-		(len(tokens) != 6 && len(tokens) != 9) ||
-		!equalTokenWord(tokens[0], actorQuantifier) ||
-		!equalTokenWord(tokens[1], actor) ||
-		!equalTokenWord(tokens[2], "sacrifices") ||
-		!matchesExactSacrificeChoiceSuffix(tokens) {
-		return false
+func sacrificeChoiceReferences(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind != compiler.ReferencePronoun ||
+			reference.Pronoun != compiler.ReferencePronounTheir {
+			return false
+		}
 	}
-	if effect.Amount.Value == 1 {
-		return (equalTokenWord(tokens[3], "a") ||
-			equalTokenWord(tokens[3], "an") ||
-			equalTokenWord(tokens[3], "one")) &&
-			equalTokenWord(tokens[4], singular)
-	}
-	return fixedNumberSyntax(tokens[3], syntax.Atoms, effect.Amount.Value) &&
-		equalTokenWord(tokens[4], plural)
-}
-
-func matchesExactSacrificeChoiceSuffix(tokens []shared.Token) bool {
-	if len(tokens) == 6 {
-		return tokens[5].Kind == shared.Period
-	}
-	return len(tokens) == 9 &&
-		equalTokenWord(tokens[5], "of") &&
-		equalTokenWord(tokens[6], "their") &&
-		equalTokenWord(tokens[7], "choice") &&
-		tokens[8].Kind == shared.Period
-}
-
-func sacrificeSelectorNouns(kind compiler.SelectorKind) (singular, plural string, ok bool) {
-	switch kind {
-	case compiler.SelectorCreature:
-		return "creature", "creatures", true
-	case compiler.SelectorArtifact:
-		return "artifact", "artifacts", true
-	case compiler.SelectorLand:
-		return "land", "lands", true
-	case compiler.SelectorEnchantment:
-		return "enchantment", "enchantments", true
-	case compiler.SelectorPermanent:
-		return "permanent", "permanents", true
-	default:
-		return "", "", false
-	}
+	return true
 }
 
 func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
@@ -9177,18 +7832,21 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		ctx.content.Effects[0].Negated ||
+		!ctx.content.Effects[0].Exact ||
 		len(ctx.content.Conditions) != 1 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
 		return game.AbilityContent{}, false
 	}
-	targetText, manaCost, ok := counterUnlessPaysParts(ctx)
-	if !ok {
+	payment := ctx.content.Effects[0].Payment
+	if payment.Payer != parser.EffectPaymentPayerTargetController ||
+		len(payment.ManaCost) == 0 ||
+		manaCostHasVariableSymbol(payment.ManaCost) ||
+		ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateTargetControllerDoesNotPay {
 		return game.AbilityContent{}, false
 	}
 	target := ctx.content.Targets[0]
-	target.Text = targetText
 	targetSpec, ok := stackSpellTargetSpec(target)
 	if !ok {
 		return game.AbilityContent{}, false
@@ -9199,9 +7857,9 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		Sequence: []game.Instruction{
 			{
 				Primitive: game.Pay{Payment: game.ResolutionPayment{
-					Prompt:   "Pay " + manaCost.String() + "?",
+					Prompt:   "Pay " + payment.ManaCost.String() + "?",
 					Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
-					ManaCost: opt.Val(manaCost),
+					ManaCost: opt.Val(payment.ManaCost),
 				}},
 				PublishResult: resultKey,
 			},
@@ -9216,24 +7874,6 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-func counterUnlessPaysParts(ctx contentCtx) (string, cost.Mana, bool) {
-	const marker = " unless its controller pays "
-	before, after, ok := strings.Cut(ctx.text, marker)
-	if !ok || !strings.HasPrefix(before, "Counter ") || !strings.HasSuffix(after, ".") {
-		return "", nil, false
-	}
-	targetText := strings.TrimPrefix(before, "Counter ")
-	manaText := strings.TrimSuffix(after, ".")
-	manaCost, err := parseManaCostValue(manaText)
-	if err != nil || len(manaCost) == 0 || manaCost.String() != manaText || manaCostHasVariableSymbol(manaCost) {
-		return "", nil, false
-	}
-	if ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateTargetControllerDoesNotPay {
-		return "", nil, false
-	}
-	return targetText, manaCost, true
-}
-
 func manaCostHasVariableSymbol(manaCost cost.Mana) bool {
 	for _, symbol := range manaCost {
 		if symbol.Kind == cost.VariableSymbol {
@@ -9244,6 +7884,9 @@ func manaCostHasVariableSymbol(manaCost cost.Mana) bool {
 }
 
 func playerTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !target.Exact || !targetCardinalityIsOne(target) {
+		return game.TargetSpec{}, false
+	}
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
@@ -9252,18 +7895,16 @@ func playerTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	}
 	switch target.Selector.Kind {
 	case compiler.SelectorPlayer:
-		if !strings.EqualFold(target.Text, "target player") {
-			return game.TargetSpec{}, false
-		}
 	case compiler.SelectorOpponent:
-		if !strings.EqualFold(target.Text, "target opponent") {
-			return game.TargetSpec{}, false
-		}
 		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
 	default:
 		return game.TargetSpec{}, false
 	}
 	return spec, true
+}
+
+func targetCardinalityIsOne(target compiler.CompiledTarget) bool {
+	return target.Cardinality.Min == 1 && target.Cardinality.Max == 1
 }
 
 func signedAmountText(amount compiler.CompiledSignedAmount) string {

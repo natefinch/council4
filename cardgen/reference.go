@@ -130,3 +130,12 @@ func referencesBindTo(
 	}
 	return true
 }
+
+func referencesContainKind(references []compiler.CompiledReference, kind compiler.ReferenceKind) bool {
+	for _, reference := range references {
+		if reference.Kind == kind {
+			return true
+		}
+	}
+	return false
+}

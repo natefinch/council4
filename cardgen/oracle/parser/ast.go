@@ -334,10 +334,13 @@ type PlayerEventTriggerClause struct {
 
 // Sentence is a top-level sentence in an ability.
 type Sentence struct {
-	Span       shared.Span
-	Text       string
-	Tokens     []shared.Token
-	StaticRule *StaticRuleSyntax
+	Span          shared.Span
+	Text          string
+	Tokens        []shared.Token
+	StaticRule    *StaticRuleSyntax
+	Targets       []TargetSyntax
+	Effects       []EffectSyntax
+	LegacyEffects bool
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

@@ -911,6 +911,10 @@ func scanZones(tokens []shared.Token) []ZoneAtom {
 			if zoneValue, ok := zonePhrase(tokens[i+4:]); ok {
 				atoms = appendZone(atoms, tokens, i, zoneValue, ZoneRoleTo)
 			}
+		case equalWord(tokens[i], "or") && i+1 < len(tokens):
+			if zoneValue, ok := zonePhrase(tokens[i+1:]); ok {
+				atoms = appendZone(atoms, tokens, i, zoneValue, ZoneRoleTo)
+			}
 		default:
 		}
 	}

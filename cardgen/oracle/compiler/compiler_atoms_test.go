@@ -11,6 +11,105 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+func TestCompileEffectFollowsTypedParserSyntax(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := parser.Parse("irrelevant", parser.Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("parse diagnostics = %#v", diagnostics)
+	}
+	sentence := &document.Abilities[0].Sentences[0]
+	sentence.Targets = []parser.TargetSyntax{{
+		Span:        sentence.Span,
+		Text:        "irrelevant",
+		Cardinality: parser.TargetCardinalitySyntax{Min: 0, Max: 2},
+		Selection: parser.SelectionSyntax{
+			Span:       sentence.Span,
+			Text:       "irrelevant",
+			Kind:       parser.SelectionCreature,
+			Controller: parser.SelectionControllerOpponent,
+			Supertypes: []parser.Supertype{parser.SupertypeLegendary},
+		},
+	}}
+	sentence.Effects = []parser.EffectSyntax{{
+		Kind:           parser.EffectReturn,
+		Span:           sentence.Span,
+		ClauseSpan:     sentence.Span,
+		VerbSpan:       sentence.Span,
+		Text:           "irrelevant",
+		Targets:        sentence.Targets,
+		SubjectTargets: sentence.Targets,
+		References: []parser.Reference{{
+			Kind: parser.ReferenceThatObject,
+			Span: sentence.Span,
+		}},
+		Duration:     parser.EffectDurationUntilYourNextTurn,
+		Selection:    sentence.Targets[0].Selection,
+		Amount:       parser.EffectAmountSyntax{Value: 3, Known: true},
+		CounterKind:  counter.Charge,
+		CounterKnown: true,
+		FromZone:     zone.Graveyard,
+		ToZone:       zone.Hand,
+		Mana: parser.EffectManaSyntax{
+			Symbols: []string{"{G}", "{W}"},
+			Choice:  true,
+		},
+		Replacement: parser.EffectReplacementSyntax{
+			Kind:   parser.EffectReplacementThatMuchPlus,
+			Amount: 2,
+		},
+	}}
+
+	compilation, compileDiagnostics := Compile(document, Context{})
+	if len(compileDiagnostics) != 0 {
+		t.Fatalf("compile diagnostics = %#v", compileDiagnostics)
+	}
+	content := compilation.Abilities[0].Content
+	if len(content.Effects) != 1 || content.Effects[0].Kind != EffectReturn ||
+		content.Effects[0].Duration != DurationUntilYourNextTurn ||
+		content.Effects[0].Amount.Value != 3 ||
+		content.Effects[0].CounterKind != counter.Charge ||
+		content.Effects[0].FromZone != zone.Graveyard ||
+		content.Effects[0].ToZone != zone.Hand ||
+		!content.Effects[0].Mana.Choice ||
+		len(content.Effects[0].Mana.Symbols) != 2 ||
+		content.Effects[0].Replacement.Kind != parser.EffectReplacementThatMuchPlus ||
+		content.Effects[0].Replacement.Amount != 2 ||
+		content.Effects[0].ClauseSpan != sentence.Span ||
+		len(content.Effects[0].Targets) != 1 ||
+		len(content.Effects[0].SubjectTargets) != 1 ||
+		len(content.Effects[0].References) != 1 {
+		t.Fatalf("effect = %#v", content.Effects)
+	}
+	if len(content.Targets) != 1 ||
+		content.Targets[0].Cardinality != (TargetCardinality{Min: 0, Max: 2}) ||
+		content.Targets[0].Selector.Kind != SelectorCreature ||
+		content.Targets[0].Selector.Controller != ControllerOpponent ||
+		len(content.Targets[0].Selector.Supertypes()) != 1 ||
+		content.Targets[0].Selector.Supertypes()[0] != types.Legendary {
+		t.Fatalf("targets = %#v", content.Targets)
+	}
+}
+
+func TestCompileModalEffectOwnershipReceivesReferenceBindings(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := parser.Parse(
+		"Choose one —\n• Return target creature to its owner's hand, then draw a card.\n• Draw two cards.",
+		parser.Context{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("parse diagnostics = %#v", diagnostics)
+	}
+	compilation, diagnostics := Compile(document, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("compile diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Content.Modes[0].Content.Effects
+	if len(effects) != 2 || len(effects[0].References) != 1 ||
+		effects[0].References[0].Binding != ReferenceBindingTarget {
+		t.Fatalf("modal effects = %#v", effects)
+	}
+}
+
 // These tests construct typed parser atoms over deliberately irrelevant source
 // text and assert that the compiler's lowered meaning follows the typed atom,
 // not the token spelling. The compiler no longer recognizes these atoms from
@@ -30,66 +129,6 @@ func compilerTokens(t *testing.T, source string) []shared.Token {
 
 // TestCompileFromZoneFollowsTypedAtom: the spelling says "graveyard" but the
 // emitted atom says Exile, so the compiler must return Exile.
-func TestCompileFromZoneFollowsTypedAtom(t *testing.T) {
-	t.Parallel()
-	tokens := compilerTokens(t, "from your graveyard")
-	atoms := parser.NewAtoms(parser.WithZones(parser.ZoneAtom{
-		Zone: zone.Exile,
-		Role: parser.ZoneRoleFrom,
-		Span: tokens[0].Span,
-	}))
-	if got := compileFromZone(tokens, atoms); got != zone.Exile {
-		t.Errorf("compileFromZone = %v; want %v (typed atom, not spelling)", got, zone.Exile)
-	}
-	// With no emitted zone atom the compiler reports no zone regardless of text.
-	if got := compileFromZone(tokens, parser.Atoms{}); got != zone.None {
-		t.Errorf("compileFromZone(no atom) = %v; want none", got)
-	}
-}
-
-// TestCounterKindWordFollowsTypedAtom: "lorwyn" is not a counter name, but the
-// emitted atom types it as a Charge counter.
-func TestCounterKindWordFollowsTypedAtom(t *testing.T) {
-	t.Parallel()
-	tokens := compilerTokens(t, "a lorwyn counter")
-	atoms := parser.NewAtoms(parser.WithCounters(parser.CounterAtom{
-		Kind: counter.Charge,
-		Span: tokens[1].Span, // span over "lorwyn"
-	}))
-	kind, ok := counterKindWord(tokens, atoms)
-	if !ok || kind != counter.Charge {
-		t.Errorf("counterKindWord = %v, %v; want charge, true (typed atom)", kind, ok)
-	}
-	// Without the typed atom the counter kind is unknown even though the text is
-	// unchanged.
-	if _, ok := counterKindWord(tokens, parser.Atoms{}); ok {
-		t.Error("counterKindWord(no atom) = true; want false")
-	}
-}
-
-// TestNumberWordFollowsTypedAtom: a cardinal value comes from the emitted atom,
-// not from the word's spelling, and the compiler keeps its <=4 range policy.
-func TestNumberWordFollowsTypedAtom(t *testing.T) {
-	t.Parallel()
-	tokens := compilerTokens(t, "zzz")
-	three := parser.NewAtoms(parser.WithCardinals(parser.CardinalAtom{Value: 3, Span: tokens[0].Span}))
-	if got := numberWord(tokens[0], three); got != 3 {
-		t.Errorf("numberWord = %d; want 3 (typed atom)", got)
-	}
-	// Values above the compiler's conservative cap are rejected.
-	seven := parser.NewAtoms(parser.WithCardinals(parser.CardinalAtom{Value: 7, Span: tokens[0].Span}))
-	if got := numberWord(tokens[0], seven); got != 0 {
-		t.Errorf("numberWord(7) = %d; want 0 (capped)", got)
-	}
-	// Integer literals are read structurally, not via atoms.
-	intTokens := compilerTokens(t, "5")
-	if got := numberWord(intTokens[0], parser.Atoms{}); got != 5 {
-		t.Errorf("numberWord(integer) = %d; want 5", got)
-	}
-}
-
-// TestCompileKeywordFollowsTypedParserSyntax proves keyword identity and
-// parameter meaning come from typed parser syntax, not irrelevant source text.
 func TestCompileKeywordFollowsTypedParserSyntax(t *testing.T) {
 	t.Parallel()
 	tokens := compilerTokens(t, "irrelevant")
@@ -172,24 +211,6 @@ func TestCompileKeywordParameterShapesFollowTypedParserSyntax(t *testing.T) {
 	}
 }
 
-func TestSelectorKeywordFollowsTypedParserSyntax(t *testing.T) {
-	t.Parallel()
-	tokens := compilerTokens(t, "irrelevant")
-	atoms := parser.NewAtoms(parser.WithKeywordSelectors(parser.KeywordSelector{
-		Keyword: parser.KeywordCycling,
-		Form:    parser.KeywordSelectorFormDirect,
-		Span:    tokens[0].Span,
-	}))
-	if got := selectorKeyword(tokens, atoms); got != parser.KeywordCycling {
-		t.Fatalf("selectorKeyword = %v; want typed Cycling", got)
-	}
-	if got := selectorKeyword(tokens, parser.Atoms{}); got != parser.KeywordUnknown {
-		t.Fatalf("selectorKeyword without typed syntax = %v; want unknown", got)
-	}
-}
-
-// TestCompileReferencesFollowsTypedAtoms: the lowered references follow the typed
-// reference atoms, including their span and kind, irrespective of token text.
 func TestCompileReferencesFollowsTypedAtoms(t *testing.T) {
 	t.Parallel()
 	tokens := compilerTokens(t, "Mistform Ultimus attacks")
@@ -221,6 +242,7 @@ func TestCompileReferenceKindMapping(t *testing.T) {
 		parser.ReferenceSelfName:   ReferenceSelfName,
 		parser.ReferenceThisObject: ReferenceThisObject,
 		parser.ReferenceThatObject: ReferenceThatObject,
+		parser.ReferenceThatPlayer: ReferenceThatPlayer,
 		parser.ReferencePronoun:    ReferencePronoun,
 		parser.ReferenceUnknown:    ReferenceUnknown,
 	}
@@ -228,22 +250,6 @@ func TestCompileReferenceKindMapping(t *testing.T) {
 		if got := compileReferenceKind(atom); got != want {
 			t.Errorf("compileReferenceKind(%v) = %v; want %v", atom, got, want)
 		}
-	}
-}
-
-func TestCompileSelectorFollowsTypedNounAndModifiers(t *testing.T) {
-	t.Parallel()
-	tokens := compilerTokens(t, "sparkly zed")
-	atoms := parser.NewAtoms(
-		parser.WithObjectNouns(parser.ObjectNounAtom{Noun: parser.ObjectNounCreature, Span: tokens[1].Span}),
-		parser.WithSelectionFlags(parser.SelectionFlagAtom{Flag: parser.SelectionFlagTapped, Span: tokens[0].Span}),
-	)
-	selector := compileSelector(tokens, atoms)
-	if selector.Kind != SelectorCreature || !selector.Tapped {
-		t.Fatalf("selector = %+v; want typed creature and tapped", selector)
-	}
-	if selector := compileSelector(tokens, parser.Atoms{}); selector.Kind != SelectorUnknown || selector.Tapped {
-		t.Fatalf("selector without atoms = %+v; want unknown untapped", selector)
 	}
 }
 

@@ -424,7 +424,7 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax pars
 		len(ability.Content.Keywords) == 0 {
 		return nil, false
 	}
-	effect := ability.Content.Effects[0]
+	effect := &ability.Content.Effects[0]
 	if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known {
 		return nil, false
 	}
@@ -442,7 +442,7 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax pars
 	}, true
 }
 
-func matchesMixedSourcePTKeywordMustAttack(tokens []shared.Token, effect CompiledEffect, reference CompiledReference, keywords []CompiledKeyword) bool {
+func matchesMixedSourcePTKeywordMustAttack(tokens []shared.Token, effect *CompiledEffect, reference CompiledReference, keywords []CompiledKeyword) bool {
 	subjectLength := tokensCoveredBySpan(tokens, reference.Span)
 	prefixLength := subjectLength + 6
 	if subjectLength == 0 ||
@@ -485,7 +485,7 @@ func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, syntax p
 	if !ok {
 		return nil, false
 	}
-	effect := ability.Content.Effects[0]
+	effect := &ability.Content.Effects[0]
 	keywords := staticDeclarationGrantKeywords(ability.Content)
 	group, ok := staticDeclarationEffectGroup(ability, effect)
 	if !ok {
@@ -515,7 +515,8 @@ func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, syntax p
 
 func staticDeclarationGrantKeywords(content AbilityContent) []CompiledKeyword {
 	usesCyclingPredicate := false
-	for _, effect := range content.Effects {
+	for i := range content.Effects {
+		effect := &content.Effects[i]
 		if effect.Selector.Keyword == parser.KeywordCycling ||
 			effect.Amount.Selector().Keyword == parser.KeywordCycling {
 			usesCyclingPredicate = true
@@ -551,7 +552,7 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, syntax par
 	if !ok {
 		return nil, false
 	}
-	effect := ability.Content.Effects[0]
+	effect := &ability.Content.Effects[0]
 	group, ok := staticDeclarationEffectGroup(ability, effect)
 	if !ok {
 		return nil, false
@@ -582,7 +583,7 @@ type staticDeclarationEffectGroupResult struct {
 	AffectedSource bool
 }
 
-func staticDeclarationEffectGroup(ability CompiledAbility, effect CompiledEffect) (staticDeclarationEffectGroupResult, bool) {
+func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffect) (staticDeclarationEffectGroupResult, bool) {
 	if effect.StaticSubject != StaticSubjectNone {
 		if len(ability.Content.References) != 0 {
 			return staticDeclarationEffectGroupResult{}, false
@@ -646,7 +647,7 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	return group, true
 }
 
-func staticPTDeclaration(span shared.Span, group StaticGroupReference, condition *CompiledCondition, effect CompiledEffect) StaticDeclaration {
+func staticPTDeclaration(span shared.Span, group StaticGroupReference, condition *CompiledCondition, effect *CompiledEffect) StaticDeclaration {
 	return StaticDeclaration{
 		Kind:          StaticDeclarationContinuous,
 		Span:          span,
@@ -879,7 +880,7 @@ func matchesPostfixSourceConditionalKeywordGrant(tokens []shared.Token, conditio
 	return matchesStaticKeywordList(tokens[3:conditionStart], keywords)
 }
 
-func matchesStaticPTBuffSyntax(tokens []shared.Token, effect CompiledEffect, source bool, references []CompiledReference) bool {
+func matchesStaticPTBuffSyntax(tokens []shared.Token, effect *CompiledEffect, source bool, references []CompiledReference) bool {
 	prefixLength, ok := staticPTBuffPrefix(tokens, effect, source, references)
 	if !ok {
 		return false
@@ -892,7 +893,7 @@ func matchesStaticPTBuffSyntax(tokens []shared.Token, effect CompiledEffect, sou
 	return len(tokens) == prefixLength+1 && tokens[prefixLength].Kind == shared.Period
 }
 
-func matchesStaticPTBuffWithKeywordsSyntax(tokens []shared.Token, effect CompiledEffect, source bool, references []CompiledReference, keywords []CompiledKeyword) bool {
+func matchesStaticPTBuffWithKeywordsSyntax(tokens []shared.Token, effect *CompiledEffect, source bool, references []CompiledReference, keywords []CompiledKeyword) bool {
 	prefixLength, ok := staticPTBuffPrefix(tokens, effect, source, references)
 	if !ok ||
 		len(tokens) < prefixLength+4 ||
@@ -909,7 +910,7 @@ func matchesStaticPTBuffWithKeywordsSyntax(tokens []shared.Token, effect Compile
 		matchesStaticKeywordList(tokens[prefixLength+2:len(tokens)-1], keywords)
 }
 
-func staticPTBuffPrefix(tokens []shared.Token, effect CompiledEffect, source bool, references []CompiledReference) (int, bool) {
+func staticPTBuffPrefix(tokens []shared.Token, effect *CompiledEffect, source bool, references []CompiledReference) (int, bool) {
 	if source {
 		if len(references) != 1 {
 			return 0, false

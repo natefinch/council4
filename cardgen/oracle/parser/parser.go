@@ -70,6 +70,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		document.Abilities = append(document.Abilities, ability)
 	}
 	emitAtoms(document.Abilities, context.CardName)
+	emitResolvingSyntax(document.Abilities)
 	return document, diagnostics
 }
 
@@ -126,7 +127,7 @@ func parseAbility(
 	if ability.Kind == AbilityTriggered {
 		ability.Trigger = parseTriggerClause(source, body)
 	}
-	ability.Sentences = ParseSentences(source, body)
+	ability.Sentences = ParseSentences(source, resolvingBodyTokens(body, ability.Kind))
 	var diagnostics []shared.Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
 	if ability.Kind == AbilityActivated {
@@ -137,7 +138,23 @@ func parseAbility(
 			ability.Quoted,
 		)
 	}
+
 	return ability, diagnostics
+}
+
+func resolvingBodyTokens(tokens []shared.Token, kind AbilityKind) []shared.Token {
+	switch kind {
+	case AbilityActivated, AbilityLoyalty:
+		if colon := shared.TopLevelIndex(tokens, shared.Colon); colon >= 0 {
+			return tokens[colon+1:]
+		}
+	case AbilityTriggered:
+		if comma := triggerBodyComma(tokens); comma >= 0 {
+			return tokens[comma+1:]
+		}
+	default:
+	}
+	return tokens
 }
 
 func parseChapterHeading(tokens []shared.Token) ([]int, bool) {
