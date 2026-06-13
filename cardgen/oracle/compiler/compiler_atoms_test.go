@@ -252,20 +252,3 @@ func TestCompileReferenceKindMapping(t *testing.T) {
 		}
 	}
 }
-
-func TestTriggerSelfSubjectFollowsTypedReference(t *testing.T) {
-	t.Parallel()
-	tokens := compilerTokens(t, "this creature enters")
-	syntax := newTriggerEventSyntax("gibberish enters", tokens, parser.NewAtoms(parser.WithReferences(parser.Reference{
-		Kind:   parser.ReferenceThisObject,
-		Span:   shared.SpanOf(tokens[:2]),
-		Tokens: tokens[:2],
-	})))
-	if !syntax.selfSubject("this creature", selfEnterSubjectSlots, true) {
-		t.Fatal("typed this-object reference was not accepted as source subject")
-	}
-	without := newTriggerEventSyntax("this creature enters", tokens, parser.Atoms{})
-	if without.selfSubject("this creature", selfEnterSubjectSlots, true) {
-		t.Fatal("source subject recognized without typed reference atom")
-	}
-}

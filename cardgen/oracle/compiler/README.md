@@ -14,6 +14,17 @@ zones, counters, add-mana output, replacement modifiers, references, embedded ef
 player-event triggers, activation restrictions, and static-rule syntax—compile
 from typed nodes without consulting retained literal text.
 
+Every supported trigger family reaches `TriggerPattern` through a mechanical
+typed adapter. Phase/step, player-event, zone-change, spell/ability, combat,
+damage, permanent-state, counter, sacrifice, mutate, and targeting meaning is
+already present in parser syntax. `trigger_pattern.go` maps only closed enums,
+typed selections, relations, zones, recipients, causes, and qualifiers; it
+contains no Oracle trigger wording recognizers or subject-text parsing. Invalid
+or partial constructed syntax fails closed, and retained event text and tokens
+cannot change compilation. Event-history conditions likewise arrive as typed
+parser event syntax and a typed turn window; condition compilation reuses the
+same mechanical trigger adapters.
+
 Reusable semantic atoms—colors including excluded/non-color forms, card types
 including excluded/non-type forms, supertypes, subtypes, object nouns, zones,
 counters, cardinal and ordinal numbers, and explicit self/source references—are
@@ -33,9 +44,10 @@ values, such as subtypes, remain typed engine values. Compiled effects preserve
 parser-owned clause, target, reference, and grammatical-subject ownership so
 ordered-effect lowering does not rediscover clause boundaries from tokens.
 
-Later-family grammar outside resolving effects may still inspect retained text
-to identify a whole phrase production, but reusable atom meanings inside those
-productions are consumed from parser-emitted, source-spanned atoms.
+Later-family grammar outside resolving effects and trigger events may still
+inspect retained text to identify a whole phrase production, but reusable atom
+meanings inside those productions are consumed from parser-emitted,
+source-spanned atoms.
 
 `compiler` imports `parser` and `shared`. Cardgen lowering consumes compiler IR;
 retained source metadata remains available for diagnostics and strict source

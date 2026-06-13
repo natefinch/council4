@@ -86,7 +86,12 @@ func compileAbility(
 		if kind == AbilityTriggered {
 			conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 		}
-		compiled.Content.Conditions = compileConditions(conditionTokens, kind == AbilityTriggered, ability.Atoms)
+		compiled.Content.Conditions = compileConditions(
+			conditionTokens,
+			kind == AbilityTriggered,
+			ability.Atoms,
+			ability.EventHistoryConditions,
+		)
 		if containsSequence(shared.NormalizedWords(tokens), "attacks", "each", "combat", "if", "able") {
 			compiled.Content.Conditions = slices.DeleteFunc(compiled.Content.Conditions, func(condition CompiledCondition) bool {
 				return strings.EqualFold(condition.Text, "if able")
@@ -347,7 +352,7 @@ func compileMode(
 		Text: mode.Text,
 		Content: AbilityContent{
 			Targets:    targets,
-			Conditions: compileConditions(tokens, false, mode.Atoms),
+			Conditions: compileConditions(tokens, false, mode.Atoms, mode.EventHistoryConditions),
 			Effects:    effects,
 			Keywords:   compileKeywords(tokens, mode.Atoms),
 			References: references,
@@ -987,7 +992,7 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 		trigger.Kind = TriggerAt
 	default:
 	}
-	conditions := compileConditions(ability.Tokens, true, ability.Atoms)
+	conditions := compileConditions(ability.Tokens, true, ability.Atoms, ability.EventHistoryConditions)
 	for i := range conditions {
 		if conditions[i].Intervening {
 			condition := conditions[i]
@@ -1008,15 +1013,18 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 			trigger.Kind,
 			trigger.Condition,
 		)
-	default:
-		trigger.Pattern = compileTriggerPatternForSyntax(
-			joinedSourceText(ability.Trigger.Event.Tokens),
+	case ability.Trigger.TriggerEvent != nil:
+		trigger.Pattern = compileTriggerEventPattern(
+			ability.Trigger.TriggerEvent,
 			trigger.Kind,
-			ability.Trigger.Event.Span,
-			ability.Trigger.Event.Tokens,
-			ability.Atoms,
 			trigger.Condition,
 		)
+	default:
+		trigger.Pattern = TriggerPattern{
+			Span:                 ability.Trigger.Event.Span,
+			Kind:                 trigger.Kind,
+			InterveningCondition: trigger.Condition,
+		}
 	}
 	return trigger
 }
@@ -1061,7 +1069,12 @@ func runtimeColorFromParser(colorValue parser.Color) (color.Color, bool) {
 	}
 }
 
-func compileConditions(tokens []shared.Token, triggered bool, atoms parser.Atoms) []CompiledCondition {
+func compileConditions(
+	tokens []shared.Token,
+	triggered bool,
+	atoms parser.Atoms,
+	eventHistories []parser.EventHistoryCondition,
+) []CompiledCondition {
 	var conditions []CompiledCondition
 	for i := 0; i < len(tokens); i++ {
 		kind := conditionKindAt(tokens, i)
@@ -1098,7 +1111,7 @@ func compileConditions(tokens []shared.Token, triggered bool, atoms parser.Atoms
 			Text:        joinedSourceText(phrase),
 			Intervening: triggered && kind == ConditionIf && isInterveningIf(tokens, start),
 		}
-		recognizeCondition(&condition, phrase, atoms)
+		recognizeCondition(&condition, phrase, atoms, eventHistories)
 		conditions = append(conditions, condition)
 		i = end - 1
 	}

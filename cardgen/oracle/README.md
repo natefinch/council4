@@ -85,7 +85,11 @@ clause and typed introduction. Recognized phase/step and player-event clauses
 share one composable player/controller selector. Phase/step clauses additionally
 carry quantifier, attached-subject, and literal phase/step-name nodes.
 Player-event clauses carry action, card-object (`a`, `one or more`, or
-`another`), and supported turn-relative occurrence nodes. Their raw clause text
+`another`), and supported turn-relative occurrence nodes. Every other supported
+trigger event composes a typed event family with source-spanned subjects, actors,
+selections, zone changes, recipients, causes, stack objects, counters, and
+qualifiers. These nodes cover zone-change, spell/ability, combat, damage,
+permanent-state, sacrifice, mutate, and targeting events. Their raw clause text
 and tokens remain only as lossless source metadata; unsupported or ambiguous
 grammar keeps that metadata without receiving a typed event-family node. Simple
 source-rule sentences carry a composable typed declaration: source creature or
@@ -167,21 +171,19 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
 - trigger clauses and conditions. Conditions use a closed predicate, kind
   (`if`, `unless`, `only if`, or `as long as`), negation, threshold, counter,
   bound source/event object reference, and Selection vocabulary (including
-  tapped state). Exact wording recognition lives in the condition adapter;
-  unsupported wording remains an explicit predicate. Event-history
-  conditions (`ConditionPredicateEventHistory`) carry a `TriggerPattern` and a
-  window (current-turn or previous-turn) so the lowering layer can delegate
-  directly to `lowerTriggerPattern` and runtime evaluation reuses
-  `triggerMatchesEvent`;
-- source-spanned semantic trigger patterns. Typed phase/step and player-event
-  syntax lowers directly without consulting event wording. A small registry of
-  exact event-family templates recognizes the remaining permanent zone-change,
-  spell/ability, combat, permanent-state, and mechanic-specific events. Wording
-  variants share those templates and may bind only closed trigger kind, event,
-  self/attached-source and controller relation, Selection, affected-player,
-  zone, combat-qualifier, batching, and intervening-condition slots. Unknown,
-  ambiguous, or unsupported syntax fails closed. Raw event-clause text is
-  retained only for diagnostics and exact source consumption;
+  tapped state). Exact wording recognition for other condition families lives
+  in the condition adapter; unsupported wording remains an explicit predicate.
+  Event-history conditions arrive as parser-owned typed event and turn-window
+  syntax, then carry a `TriggerPattern` and a current-turn or previous-turn
+  window so the lowering layer can delegate directly to `lowerTriggerPattern`
+  and runtime evaluation reuses `triggerMatchesEvent`;
+- source-spanned semantic trigger patterns. All event-family syntax lowers
+  mechanically without consulting event wording. Parser-owned typed clauses bind
+  only closed trigger kind, event, self/attached-source and controller relation,
+  Selection, affected-player, zone, recipient, cause, combat qualifier, batching,
+  and intervening-condition slots. Unknown, ambiguous, partial, or unsupported
+  syntax fails closed. Raw event-clause text is retained only for diagnostics
+  and exact source consumption;
 - modes and inclusive parser-typed target cardinalities;
 - parser-typed conservative selectors and controller constraints;
 - keyword abilities and parameters;
@@ -303,7 +305,7 @@ supported occurrence restrictions. The semantic compiler maps those typed
 values without inspecting event text; combinations such as `an opponent
 discards one or more cards`, `a player discards another card`, and `an opponent
 cycles or discards another card` require no compiler-specific phrase aliases.
-Combat templates bind
+Typed combat-event syntax binds
 named/self/attached and semantic Selection subjects, the other blocking
 combatant, attacked player or permanent recipients, damage-source and
 damage-recipient Selections, combat/noncombat qualifiers, and exact player
@@ -341,8 +343,8 @@ spell`, `an artifact spell`, `an enchantment spell`, `a land spell`, `a
 planeswalker spell`, `a noncreature, nonland spell`, and single-color forms `a
 white/blue/black/red/green spell`. Exact Threshold, Delirium, Domain, Metalcraft,
 Hellbent, Ferocious, and Coven conditions lower into typed live-state
-predicates and dynamic amounts. Event-history intervening conditions recognize
-eight exact phrases covering current-turn attacked/died/gained-life/lost-life
+predicates and dynamic amounts. The parser composes typed event-history
+intervening conditions covering current-turn attacked/died/gained-life/lost-life
 and previous-turn lost-life/no-spells-cast; each carries a `TriggerPattern` and
 an `EventHistoryWindow` so the lowering path reuses `lowerTriggerPattern` and
 runtime evaluation reuses `triggerMatchesEvent`. `Negated` semantics are
@@ -365,22 +367,21 @@ exactly referenced source object's power. Count and opponent formulas may use
 their printed integer multiplier or “twice.” Arithmetic offsets, mixed groups,
 zone counts, and ambiguous pronouns remain unsupported.
 
-This compiler IR is the recognition stage. Trigger phrase tables and Static
-Declaration adapters live here; simple source rules arrive from typed parser
-syntax, and `cardgen/lower.go` never interprets retained raw trigger-event or
-static-declaration text.
-Permanent action templates recognize exact tapped, untapped, and turned-face-up
-events while binding self, attached, controller-relative, and Selection-filtered
-subject relations.
+This compiler IR is the semantic adaptation stage. Trigger grammar lives in the
+parser, while Static Declaration adapters still live here; simple source rules
+arrive from typed parser syntax, and `cardgen/lower.go` never interprets retained
+raw trigger-event or static-declaration text. Typed permanent-action syntax
+represents exact tapped, untapped, and turned-face-up events while binding self,
+attached, controller-relative, and Selection-filtered subject relations.
 Became-target patterns preserve the targeted subject and the targeting
 spell-or-ability controller as independent semantic roles.
-Player-event templates preserve controller-relative and any-player Cycling
+Typed player-event syntax preserves controller-relative and any-player Cycling
 relations through the same closed player-relation slot.
-Sacrifice templates bind the sacrificing player independently from the
+Typed sacrifice-event syntax binds the sacrificing player independently from the
 sacrificed permanent's shared Selection subject.
-Scry and surveil remain distinct player-action event templates; compound event
+Scry and surveil remain distinct typed player-action events; compound event
 wordings remain fail-closed.
-Activated-ability templates bind the activating player and source-permanent
+Typed activated-ability-event syntax binds the activating player and source-permanent
 Selection only for exact non-mana-ability wording. Unrestricted forms remain
 unknown until payment-time mana activations join the authoritative event stream.
 The strict backend in `cardgen`

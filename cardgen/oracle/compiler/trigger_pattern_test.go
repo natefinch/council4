@@ -10,7 +10,32 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
+func compileParsedTriggerPattern(
+	event string,
+	kind TriggerKind,
+	span shared.Span,
+	cardName string,
+	condition *CompiledCondition,
+) TriggerPattern {
+	introduction := "When"
+	switch kind {
+	case TriggerAt:
+		introduction = "At"
+	case TriggerWhenever:
+		introduction = "Whenever"
+	default:
+	}
+	document, _ := parser.Parse(introduction+" "+event+", draw a card.", parser.Context{CardName: cardName})
+	if len(document.Abilities) != 1 || document.Abilities[0].Trigger == nil ||
+		document.Abilities[0].Trigger.TriggerEvent == nil {
+		return TriggerPattern{Span: span, Kind: kind, InterveningCondition: condition}
+	}
+	clause := *document.Abilities[0].Trigger.TriggerEvent
+	clause.Span = span
+	return compileTriggerEventPattern(&clause, kind, condition)
+}
+
+func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 	t.Parallel()
 	condition := &CompiledCondition{
 		Kind:      ConditionIf,
@@ -191,10 +216,11 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, test.condition)
+			got := compileParsedTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, test.condition)
 			if !reflect.DeepEqual(got, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", got, test.want)
 			}
@@ -202,7 +228,7 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 	}
 }
 
-func TestTriggerPatternTemplatesFailClosedOnUnsupportedSlots(t *testing.T) {
+func TestTypedTriggerEventsFailClosedOnUnsupportedSlots(t *testing.T) {
 	t.Parallel()
 	condition := &CompiledCondition{
 		Kind:      ConditionIf,
@@ -230,7 +256,7 @@ func TestTriggerPatternTemplatesFailClosedOnUnsupportedSlots(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(test.event, test.kind, shared.Span{}, "", test.condition)
+			got := compileParsedTriggerPattern(test.event, test.kind, shared.Span{}, "", test.condition)
 			want := TriggerPattern{Kind: test.kind, InterveningCondition: test.condition}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("near-miss pattern = %#v, want %#v", got, want)
@@ -332,6 +358,24 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 			},
 		},
 		{
+			name:  "instant or sorcery damage source",
+			event: "an instant or sorcery spell you control deals damage to an opponent",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:                      TriggerWhenever,
+				Event:                     TriggerEventDamageDealt,
+				Subject:                   TriggerSubjectDamageSource,
+				Controller:                ControllerYou,
+				Player:                    TriggerPlayerOpponent,
+				StackObject:               TriggerStackObjectSpell,
+				DamageSourceIsStackObject: true,
+				DamageSourceSelection: TriggerSelection{
+					RequiredTypesAny: []TriggerCardType{TriggerCardTypeInstant, TriggerCardTypeSorcery},
+				},
+				DamageRecipient: TriggerDamageRecipientPlayer,
+			},
+		},
+		{
 			name:  "noncombat damage exact opponent",
 			event: "this creature deals noncombat damage to an opponent",
 			kind:  TriggerWhenever,
@@ -388,10 +432,11 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 			},
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			pattern := compileTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, nil)
+			pattern := compileParsedTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, nil)
 			if !reflect.DeepEqual(pattern, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", pattern, test.want)
 			}
@@ -412,7 +457,7 @@ func TestCombatPhaseAndStepTriggerPatternsFailClosedOnMissingCapabilities(t *tes
 		if strings.HasPrefix(event, "the beginning") {
 			kind = TriggerAt
 		}
-		pattern := compileTriggerPattern(event, kind, shared.Span{}, "", nil)
+		pattern := compileParsedTriggerPattern(event, kind, shared.Span{}, "", nil)
 		if pattern.Event != TriggerEventUnknown {
 			t.Fatalf("%q pattern = %#v, want unknown event", event, pattern)
 		}
@@ -594,7 +639,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, nil)
+			got := compileParsedTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, nil)
 			if !reflect.DeepEqual(got, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", got, test.want)
 			}
@@ -702,7 +747,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			test.want.Kind = TriggerWhenever
-			got := compileTriggerPattern(test.event, TriggerWhenever, shared.Span{}, test.cardName, nil)
+			got := compileParsedTriggerPattern(test.event, TriggerWhenever, shared.Span{}, test.cardName, nil)
 			if !reflect.DeepEqual(got, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", got, test.want)
 			}
@@ -721,7 +766,7 @@ func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
+			got := compileParsedTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
 			want := TriggerPattern{Kind: TriggerWhenever}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("near-miss pattern = %#v, want %#v", got, want)
@@ -732,7 +777,7 @@ func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.
 
 func TestPermanentZoneChangeTriggerRejectsPartialCardName(t *testing.T) {
 	t.Parallel()
-	got := compileTriggerPattern("The dies", TriggerWhen, shared.Span{}, "The One Ring", nil)
+	got := compileParsedTriggerPattern("The dies", TriggerWhen, shared.Span{}, "The One Ring", nil)
 	want := TriggerPattern{Kind: TriggerWhen}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("partial-name pattern = %#v, want %#v", got, want)
@@ -741,7 +786,7 @@ func TestPermanentZoneChangeTriggerRejectsPartialCardName(t *testing.T) {
 
 func TestCapitalizedEquipmentFaceUpTriggerPattern(t *testing.T) {
 	t.Parallel()
-	got := compileTriggerPattern("this Equipment is turned face up", TriggerWhen, shared.Span{}, "", nil)
+	got := compileParsedTriggerPattern("this Equipment is turned face up", TriggerWhen, shared.Span{}, "", nil)
 	want := TriggerPattern{
 		Kind:   TriggerWhen,
 		Event:  TriggerEventPermanentTurnedFaceUp,
@@ -761,7 +806,7 @@ func TestActivatedAbilityTriggerPatternsRequireNonManaExclusion(t *testing.T) {
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
+			got := compileParsedTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
 			want := TriggerPattern{Kind: TriggerWhenever}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("unrestricted activation pattern = %#v, want %#v", got, want)
@@ -769,7 +814,7 @@ func TestActivatedAbilityTriggerPatternsRequireNonManaExclusion(t *testing.T) {
 		})
 	}
 
-	got := compileTriggerPattern(
+	got := compileParsedTriggerPattern(
 		"an opponent activates an ability of a creature that isn't a mana ability",
 		TriggerWhenever,
 		shared.Span{},
@@ -781,7 +826,7 @@ func TestActivatedAbilityTriggerPatternsRequireNonManaExclusion(t *testing.T) {
 	}
 }
 
-func TestTriggerPatternTemplatesDoNotRecognizeTypedPlayerEvents(t *testing.T) {
+func TestTypedTriggerEventPathDoesNotRecognizePlayerEvents(t *testing.T) {
 	t.Parallel()
 	for _, event := range []string{
 		"you draw a card",
@@ -794,7 +839,7 @@ func TestTriggerPatternTemplatesDoNotRecognizeTypedPlayerEvents(t *testing.T) {
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
+			got := compileParsedTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
 			if got.Event != TriggerEventUnknown {
 				t.Fatalf("pattern = %#v, want text-blind unknown event", got)
 			}
@@ -802,34 +847,131 @@ func TestTriggerPatternTemplatesDoNotRecognizeTypedPlayerEvents(t *testing.T) {
 	}
 }
 
-func TestTriggerPatternTemplatesFailClosedOnOverlappingTemplates(t *testing.T) {
+func TestCompileConstructedTriggerEventIsTextBlind(t *testing.T) {
 	t.Parallel()
-	templates := []triggerPatternTemplate{
-		{
-			kinds: []TriggerKind{TriggerWhenever},
-			bind: func(triggerEventSyntax, TriggerKind) (TriggerPattern, bool) {
-				return TriggerPattern{Event: TriggerEventSpellCast}, true
+	trigger := compileTrigger(parser.Ability{
+		Kind: parser.AbilityTriggered,
+		Trigger: &parser.TriggerClause{
+			Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionWhenever},
+			Event:        parser.Phrase{Text: "text must not determine trigger meaning"},
+			TriggerEvent: &parser.TriggerEventClause{
+				Kind:  parser.TriggerEventKindSpellCast,
+				Actor: parser.TriggerEventActor{Kind: parser.TriggerEventActorOpponent},
 			},
 		},
-		{
-			kinds: []TriggerKind{TriggerWhenever},
-			bind: func(triggerEventSyntax, TriggerKind) (TriggerPattern, bool) {
-				return TriggerPattern{Event: TriggerEventCardDrawn}, true
-			},
-		},
+	}, Context{})
+	want := TriggerPattern{
+		Kind:       TriggerWhenever,
+		Event:      TriggerEventSpellCast,
+		Controller: ControllerOpponent,
 	}
-	if pattern, ok := bindTriggerPatternTemplates(newTriggerEventSyntax("ambiguous", nil, parser.Atoms{}), TriggerWhenever, templates); ok {
-		t.Fatalf("overlapping templates returned pattern %#v", pattern)
+	if !reflect.DeepEqual(trigger.Pattern, want) {
+		t.Fatalf("pattern = %#v, want %#v", trigger.Pattern, want)
 	}
 }
 
-func TestTriggerPatternTemplatesPreserveSpan(t *testing.T) {
+func TestCompileConstructedTriggerEventsFailClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		clause parser.TriggerEventClause
+	}{
+		{
+			name: "partial zone destination",
+			clause: parser.TriggerEventClause{
+				Kind:       parser.TriggerEventKindZoneChange,
+				ZoneChange: parser.TriggerEventZoneChange{Kind: parser.TriggerEventZoneChangeMoved},
+				Subject: parser.TriggerEventSubject{
+					Kind:      parser.TriggerEventSubjectSelection,
+					Selection: parser.TriggerSelection{RequiredTypes: []parser.TriggerCardType{parser.TriggerCardTypeCreature}},
+				},
+				Zone: parser.TriggerEventZoneContext{MatchToZone: true},
+			},
+		},
+		{
+			name:   "missing spell actor",
+			clause: parser.TriggerEventClause{Kind: parser.TriggerEventKindSpellCast},
+		},
+		{
+			name: "missing counter kind",
+			clause: parser.TriggerEventClause{
+				Kind:    parser.TriggerEventKindCounterAdded,
+				Subject: parser.TriggerEventSubject{Kind: parser.TriggerEventSubjectSelf},
+			},
+		},
+		{
+			name: "unsupported targeting stack object",
+			clause: parser.TriggerEventClause{
+				Kind:    parser.TriggerEventKindBecameTarget,
+				Subject: parser.TriggerEventSubject{Kind: parser.TriggerEventSubjectSelf},
+				StackObject: parser.TriggerEventStackObject{
+					Kind: parser.TriggerEventStackObjectKind(99),
+				},
+			},
+		},
+		{
+			name: "damage source spell with kicker qualifier",
+			clause: parser.TriggerEventClause{
+				Kind:                      parser.TriggerEventKindDamageDealt,
+				DamageSourceIsStackObject: true,
+				DamageSourceSpellSelection: parser.TriggerEventSpellSelection{
+					Kicker: true,
+				},
+				StackObject:     parser.TriggerEventStackObject{Kind: parser.TriggerEventStackObjectSpell},
+				DamageRecipient: parser.TriggerEventDamageRecipient{Kind: parser.TriggerEventDamageRecipientPlayer},
+			},
+		},
+		{
+			name: "damage source spell with historic qualifier",
+			clause: parser.TriggerEventClause{
+				Kind:                      parser.TriggerEventKindDamageDealt,
+				DamageSourceIsStackObject: true,
+				DamageSourceSpellSelection: parser.TriggerEventSpellSelection{
+					Historic: true,
+				},
+				StackObject:     parser.TriggerEventStackObject{Kind: parser.TriggerEventStackObjectSpell},
+				DamageRecipient: parser.TriggerEventDamageRecipient{Kind: parser.TriggerEventDamageRecipientPlayer},
+			},
+		},
+		{
+			name: "damage source spell with origin zone",
+			clause: parser.TriggerEventClause{
+				Kind:                      parser.TriggerEventKindDamageDealt,
+				DamageSourceIsStackObject: true,
+				DamageSourceSpellSelection: parser.TriggerEventSpellSelection{
+					FromZone: parser.TriggerEventZone{Kind: parser.TriggerEventZoneGraveyard},
+				},
+				StackObject:     parser.TriggerEventStackObject{Kind: parser.TriggerEventStackObjectSpell},
+				DamageRecipient: parser.TriggerEventDamageRecipient{Kind: parser.TriggerEventDamageRecipientPlayer},
+			},
+		},
+	}
+	for i := range tests {
+		test := &tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			trigger := compileTrigger(parser.Ability{
+				Kind: parser.AbilityTriggered,
+				Trigger: &parser.TriggerClause{
+					Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionWhenever},
+					Event:        parser.Phrase{Text: "this creature attacks"},
+					TriggerEvent: &test.clause,
+				},
+			}, Context{})
+			if trigger.Pattern.Event != TriggerEventUnknown {
+				t.Fatalf("pattern = %#v, want unknown event", trigger.Pattern)
+			}
+		})
+	}
+}
+
+func TestTypedTriggerEventsPreserveSpan(t *testing.T) {
 	t.Parallel()
 	span := shared.Span{
 		Start: shared.Position{Offset: 5, Line: 2, Column: 3},
 		End:   shared.Position{Offset: 28, Line: 2, Column: 26},
 	}
-	pattern := compileTriggerPattern("this creature attacks", TriggerWhenever, span, "", nil)
+	pattern := compileParsedTriggerPattern("this creature attacks", TriggerWhenever, span, "", nil)
 	if pattern.Span != span {
 		t.Fatalf("span = %#v, want %#v", pattern.Span, span)
 	}

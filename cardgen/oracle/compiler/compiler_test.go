@@ -3070,3 +3070,43 @@ func TestCompileEventHistoryAttackedHasControllerYou(t *testing.T) {
 		t.Fatalf("Controller = %v, want ControllerYou", cond.EventHistoryPattern.Controller)
 	}
 }
+
+func TestCompileConstructedEventHistoryConditionIsTextBlind(t *testing.T) {
+	t.Parallel()
+	span := shared.Span{
+		Start: shared.Position{Offset: 1, Line: 1, Column: 2},
+		End:   shared.Position{Offset: 26, Line: 1, Column: 27},
+	}
+	syntax := []parser.EventHistoryCondition{
+		{
+			Span:    span,
+			Negated: true,
+			Window:  parser.EventHistoryWindow{Kind: parser.EventHistoryWindowPreviousTurn},
+			TriggerEvent: &parser.TriggerEventClause{
+				Kind:  parser.TriggerEventKindSpellCast,
+				Actor: parser.TriggerEventActor{Kind: parser.TriggerEventActorPlayer},
+			},
+		},
+	}
+	condition := CompiledCondition{
+		Kind: ConditionIf,
+		Span: span,
+		Text: "if you attacked this turn",
+	}
+	recognizeCondition(&condition, nil, parser.Atoms{}, syntax)
+	if condition.Predicate != ConditionPredicateEventHistory ||
+		condition.EventHistoryPattern == nil ||
+		condition.EventHistoryPattern.Event != TriggerEventSpellCast {
+		t.Fatalf("condition = %#v, want typed spell-cast history", condition)
+	}
+
+	condition = CompiledCondition{
+		Kind: ConditionIf,
+		Span: span,
+		Text: "if you attacked this turn",
+	}
+	recognizeCondition(&condition, nil, parser.Atoms{}, nil)
+	if condition.Predicate != ConditionPredicateUnsupported {
+		t.Fatalf("condition = %#v, want text-blind unsupported predicate", condition)
+	}
+}

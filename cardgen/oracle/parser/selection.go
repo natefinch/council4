@@ -60,6 +60,44 @@ const (
 	ControllerOpponent
 )
 
+// TriggerSelectionTappedState identifies a selected permanent's tapped state.
+type TriggerSelectionTappedState uint8
+
+// Tapped-state predicates recognized in trigger selections.
+const (
+	TriggerSelectionTappedAny TriggerSelectionTappedState = iota
+	TriggerSelectionTapped
+	TriggerSelectionUntapped
+)
+
+// TriggerSelectionCombatState identifies a selected permanent's combat state.
+type TriggerSelectionCombatState uint8
+
+// Combat-state predicates recognized in trigger selections.
+const (
+	TriggerSelectionCombatAny TriggerSelectionCombatState = iota
+	TriggerSelectionAttacking
+	TriggerSelectionBlocking
+)
+
+// TriggerSelectionComparison identifies an integer comparison.
+type TriggerSelectionComparison uint8
+
+// Integer comparisons recognized in trigger selections.
+const (
+	TriggerSelectionComparisonUnknown TriggerSelectionComparison = iota
+	TriggerSelectionComparisonEqual
+	TriggerSelectionComparisonAtMost
+	TriggerSelectionComparisonAtLeast
+)
+
+// TriggerSelectionNumber is a source-spanned integer predicate.
+type TriggerSelectionNumber struct {
+	Comparison TriggerSelectionComparison
+	Value      int
+	Span       shared.Span
+}
+
 // TriggerSelection is typed syntax for a permanent noun phrase in a trigger.
 type TriggerSelection struct {
 	RequiredTypes    []TriggerCardType
@@ -74,9 +112,33 @@ type TriggerSelection struct {
 	NonToken         bool
 	TokenOnly        bool
 	Controller       TriggerController
+	Tapped           TriggerSelectionTappedState
+	CombatState      TriggerSelectionCombatState
+	Keyword          KeywordKind
+	ExcludedKeyword  KeywordKind
+	ManaValue        TriggerSelectionNumber
+	Power            TriggerSelectionNumber
+	Toughness        TriggerSelectionNumber
 }
 
 func parseTriggerSelection(tokens []shared.Token) (TriggerSelection, bool) {
+	words, ok := triggerSelectionWords(tokens)
+	if !ok || len(words) == 0 {
+		return TriggerSelection{}, false
+	}
+	selection := TriggerSelection{}
+	words, ok = prepareTriggerSelection(words, tokens, &selection)
+	if !ok {
+		return TriggerSelection{}, false
+	}
+	if len(words) == 0 {
+		return selection, selection.TokenOnly
+	}
+	words = consumeTriggerSelectionModifiers(words, &selection)
+	return parseTriggerSelectionNoun(words, selection)
+}
+
+func triggerSelectionWords(tokens []shared.Token) ([]string, bool) {
 	words := make([]string, 0, len(tokens))
 	for i := 0; i < len(tokens); i++ {
 		token := tokens[i]
@@ -88,16 +150,77 @@ func parseTriggerSelection(tokens []shared.Token) (TriggerSelection, bool) {
 			i += 2
 			continue
 		}
+		if i+2 < len(tokens) &&
+			token.Kind == shared.Integer &&
+			tokens[i+1].Kind == shared.Slash &&
+			tokens[i+2].Kind == shared.Integer {
+			words = append(words, token.Text+"/"+tokens[i+2].Text)
+			i += 2
+			continue
+		}
+		if token.Kind == shared.Integer {
+			words = append(words, token.Text)
+			continue
+		}
 		if token.Kind != shared.Word {
-			return TriggerSelection{}, false
+			return nil, false
 		}
 		words = append(words, strings.ToLower(token.Text))
 	}
-	if len(words) == 0 {
-		return TriggerSelection{}, false
+	return words, true
+}
+
+func prepareTriggerSelection(
+	words []string,
+	tokens []shared.Token,
+	selection *TriggerSelection,
+) ([]string, bool) {
+	var ok bool
+	words, selection.Controller, ok = cutEmbeddedTriggerController(words)
+	if !ok {
+		return nil, false
 	}
-	selection := TriggerSelection{}
-	words, selection.Controller = cutTriggerController(words)
+	if len(words) > 0 && (words[len(words)-1] == "token" || words[len(words)-1] == "tokens") {
+		selection.TokenOnly = true
+		words = words[:len(words)-1]
+	}
+	if len(words) > 0 && (words[len(words)-1] == "card" || words[len(words)-1] == "cards") {
+		words = words[:len(words)-1]
+	}
+	if len(words) == 0 {
+		return words, selection.TokenOnly
+	}
+	switch words[len(words)-1] {
+	case "tapped":
+		selection.Tapped = TriggerSelectionTapped
+		words = words[:len(words)-1]
+	case "untapped":
+		selection.Tapped = TriggerSelectionUntapped
+		words = words[:len(words)-1]
+	default:
+	}
+	if qualifier := slices.Index(words, "with"); qualifier >= 0 {
+		if !parseTriggerSelectionQualifier(words[qualifier+1:], false, selection) {
+			return nil, false
+		}
+		words = words[:qualifier]
+	} else if qualifier := slices.Index(words, "without"); qualifier >= 0 {
+		if !parseTriggerSelectionQualifier(words[qualifier+1:], true, selection) {
+			return nil, false
+		}
+		words = words[:qualifier]
+	}
+	if len(words) > 1 {
+		if powerToughness := parseTriggerPowerToughness(words[0], tokens); powerToughness.ok {
+			selection.Power = powerToughness.power
+			selection.Toughness = powerToughness.toughness
+			words = words[1:]
+		}
+	}
+	return words, true
+}
+
+func consumeTriggerSelectionModifiers(words []string, selection *TriggerSelection) []string {
 	for len(words) > 0 {
 		switch words[0] {
 		case "nontoken":
@@ -116,30 +239,24 @@ func parseTriggerSelection(tokens []shared.Token) (TriggerSelection, bool) {
 			selection.Colorless = true
 		case "multicolored":
 			selection.Multicolored = true
+		case "attacking":
+			selection.CombatState = TriggerSelectionAttacking
+		case "blocking":
+			selection.CombatState = TriggerSelectionBlocking
 		default:
-			goto noun
+			return words
 		}
 		words = words[1:]
 	}
+	return words
+}
 
-noun:
+func parseTriggerSelectionNoun(words []string, selection TriggerSelection) (TriggerSelection, bool) {
 	if len(words) == 0 {
 		return TriggerSelection{}, false
 	}
 	if len(words) == 3 && (words[1] == "and/or" || words[1] == "or") {
-		left, leftOK := triggerCardType(words[0])
-		right, rightOK := triggerCardType(words[2])
-		if leftOK && rightOK {
-			selection.RequiredTypesAny = []TriggerCardType{left, right}
-			return selection, true
-		}
-		leftSub, leftSubOK := recognizeSubtypePhrase(words[0])
-		rightSub, rightSubOK := recognizeSubtypePhrase(words[2])
-		if leftOK || rightOK || !leftSubOK || !rightSubOK {
-			return TriggerSelection{}, false
-		}
-		selection.SubtypesAny = []TriggerSubtype{leftSub, rightSub}
-		return selection, true
+		return parseTriggerSelectionAlternativeNouns(words, selection)
 	}
 	var subtypeWords []string
 	for _, word := range words {
@@ -159,6 +276,16 @@ noun:
 	}
 	if len(subtypeWords) > 0 {
 		subtype := strings.Join(subtypeWords, " ")
+		if subtype == "outlaw" || subtype == "outlaws" {
+			selection.SubtypesAny = []TriggerSubtype{
+				types.Assassin,
+				types.Mercenary,
+				types.Pirate,
+				types.Rogue,
+				types.Warlock,
+			}
+			return selection, true
+		}
 		sub, ok := recognizeSubtypePhrase(subtype)
 		if !ok || !looksLikeTriggerSubtype(subtype) {
 			return TriggerSelection{}, false
@@ -166,6 +293,167 @@ noun:
 		selection.SubtypesAny = []TriggerSubtype{sub}
 	}
 	return selection, true
+}
+
+func parseTriggerSelectionAlternativeNouns(words []string, selection TriggerSelection) (TriggerSelection, bool) {
+	left, leftOK := triggerCardType(words[0])
+	right, rightOK := triggerCardType(words[2])
+	if leftOK && rightOK {
+		selection.RequiredTypesAny = []TriggerCardType{left, right}
+		return selection, true
+	}
+	leftSub, leftSubOK := recognizeSubtypePhrase(words[0])
+	rightSub, rightSubOK := recognizeSubtypePhrase(words[2])
+	if leftOK || rightOK || !leftSubOK || !rightSubOK {
+		return TriggerSelection{}, false
+	}
+	selection.SubtypesAny = []TriggerSubtype{leftSub, rightSub}
+	return selection, true
+}
+
+func cutEmbeddedTriggerController(words []string) ([]string, TriggerController, bool) {
+	result := append([]string(nil), words...)
+	controller := ControllerAny
+	for _, relation := range []struct {
+		words      []string
+		controller TriggerController
+	}{
+		{[]string{"you", "control"}, ControllerYou},
+		{[]string{"an", "opponent", "controls"}, ControllerOpponent},
+		{[]string{"your", "opponents", "control"}, ControllerOpponent},
+		{[]string{"you", "don't", "control"}, ControllerOpponent},
+	} {
+		for start := 0; start+len(relation.words) <= len(result); start++ {
+			if !slices.Equal(result[start:start+len(relation.words)], relation.words) {
+				continue
+			}
+			if controller != ControllerAny && controller != relation.controller {
+				return nil, ControllerAny, false
+			}
+			controller = relation.controller
+			result = append(result[:start], result[start+len(relation.words):]...)
+			break
+		}
+	}
+	return result, controller, len(result) > 0
+}
+
+func parseTriggerSelectionQualifier(words []string, excluded bool, selection *TriggerSelection) bool {
+	if len(words) == 1 {
+		keyword := triggerSelectionKeyword(words[0])
+		if keyword == KeywordUnknown {
+			return false
+		}
+		if excluded {
+			selection.ExcludedKeyword = keyword
+		} else {
+			selection.Keyword = keyword
+		}
+		return true
+	}
+	if excluded || len(words) < 2 {
+		return false
+	}
+	var destination *TriggerSelectionNumber
+	switch {
+	case words[0] == "power":
+		destination = &selection.Power
+	case words[0] == "toughness":
+		destination = &selection.Toughness
+	case len(words) >= 3 && words[0] == "mana" && words[1] == "value":
+		destination = &selection.ManaValue
+		words = words[1:]
+	default:
+		return false
+	}
+	number, ok := parseTriggerSelectionNumber(words[1:])
+	if !ok {
+		return false
+	}
+	*destination = number
+	return true
+}
+
+func parseTriggerSelectionNumber(words []string) (TriggerSelectionNumber, bool) {
+	if len(words) == 0 {
+		return TriggerSelectionNumber{}, false
+	}
+	value, ok := parseTriggerSelectionInt(words[0])
+	if !ok {
+		return TriggerSelectionNumber{}, false
+	}
+	comparison := TriggerSelectionComparisonEqual
+	if len(words) == 3 && words[1] == "or" {
+		switch words[2] {
+		case "less":
+			comparison = TriggerSelectionComparisonAtMost
+		case "greater":
+			comparison = TriggerSelectionComparisonAtLeast
+		default:
+			return TriggerSelectionNumber{}, false
+		}
+	} else if len(words) != 1 {
+		return TriggerSelectionNumber{}, false
+	}
+	return TriggerSelectionNumber{Comparison: comparison, Value: value}, true
+}
+
+func parseTriggerSelectionInt(word string) (int, bool) {
+	if word == "" {
+		return 0, false
+	}
+	value := 0
+	for _, r := range word {
+		if r < '0' || r > '9' {
+			return 0, false
+		}
+		value = value*10 + int(r-'0')
+	}
+	return value, true
+}
+
+type triggerPowerToughness struct {
+	power     TriggerSelectionNumber
+	toughness TriggerSelectionNumber
+	ok        bool
+}
+
+func parseTriggerPowerToughness(word string, tokens []shared.Token) triggerPowerToughness {
+	powerText, toughnessText, ok := strings.Cut(word, "/")
+	if !ok {
+		return triggerPowerToughness{}
+	}
+	power, powerOK := parseTriggerSelectionInt(powerText)
+	toughness, toughnessOK := parseTriggerSelectionInt(toughnessText)
+	if !powerOK || !toughnessOK {
+		return triggerPowerToughness{}
+	}
+	span := shared.Span{}
+	if len(tokens) >= 3 {
+		span = shared.SpanOf(tokens[:3])
+	}
+	return triggerPowerToughness{
+		power:     TriggerSelectionNumber{Comparison: TriggerSelectionComparisonEqual, Value: power, Span: span},
+		toughness: TriggerSelectionNumber{Comparison: TriggerSelectionComparisonEqual, Value: toughness, Span: span},
+		ok:        true,
+	}
+}
+
+func triggerSelectionKeyword(word string) KeywordKind {
+	switch word {
+	case "defender":
+		return KeywordDefender
+	case "flash":
+		return KeywordFlash
+	case "flying":
+		return KeywordFlying
+	case "haste":
+		return KeywordHaste
+	case "shadow":
+		return KeywordShadow
+	default:
+		return KeywordUnknown
+	}
 }
 
 func cutTriggerController(words []string) ([]string, TriggerController) {
